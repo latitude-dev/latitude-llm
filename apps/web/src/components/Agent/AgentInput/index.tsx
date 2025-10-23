@@ -13,11 +13,15 @@ import { KeyboardEvent, useCallback, useMemo, useState } from 'react'
 import { RunProps } from '../types'
 import { useRefreshPromptMetadata } from '$/hooks/useDocumentValueContext'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { ParameterType } from '@latitude-data/constants'
+import { ParameterInput } from '$/components/ParameterInput'
 
 function InputField({
   placeholder,
   className,
   large,
+  inputType,
+  parameterName,
   value,
   onChange,
   onSubmit,
@@ -25,6 +29,8 @@ function InputField({
   placeholder: string
   className?: string
   large: boolean
+  inputType: ParameterType
+  parameterName: string
   value: string
   onChange: (value: string) => void
   onSubmit: () => void
@@ -38,6 +44,19 @@ function InputField({
     },
     [onSubmit],
   )
+
+  if (inputType === ParameterType.File || inputType === ParameterType.Image) {
+    return (
+      <ParameterInput
+        name={parameterName}
+        type={inputType}
+        value={value}
+        onChange={onChange}
+        withBorder={false}
+        inputSize='medium'
+      />
+    )
+  }
 
   return (
     <TextArea
@@ -117,6 +136,13 @@ export function AgentInput({
     })
   }, [runPromptFn, document, value])
 
+  const inputType = useCallback(
+    (parameter: string): ParameterType => {
+      return parametersObject[parameter]?.metadata.type || ParameterType.Text
+    },
+    [parametersObject],
+  )
+
   return (
     <div className='relative'>
       <div
@@ -137,13 +163,15 @@ export function AgentInput({
                 'border-t border-border': i > 0,
               })}
             >
-              <div className='pl-3 pt-2'>
+              <div className={cn('pl-3 pt-2')}>
                 <Badge variant='accent'>{parameter}</Badge>
               </div>
               <InputField
                 placeholder='Enter value...'
                 className='p-3'
                 large={parameters.length === 1}
+                inputType={inputType(parameter)}
+                parameterName={parameter}
                 value={value.parameters[parameter] ?? ''}
                 onChange={(value) => setParameter(parameter, value)}
                 onSubmit={onSubmit}
@@ -155,6 +183,8 @@ export function AgentInput({
             <InputField
               placeholder='Type your message here...'
               large
+              inputType={ParameterType.Text}
+              parameterName='userMessage'
               value={value.userMessage}
               onChange={setUserMessage}
               onSubmit={onSubmit}

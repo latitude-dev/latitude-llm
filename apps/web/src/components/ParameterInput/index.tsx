@@ -20,20 +20,26 @@ export function ParameterInput({
   value,
   onChange,
   disabled = false,
+  withBorder = true,
+  inputSize = 'large',
 }: {
   name: string
   type: ParameterType
   value?: string
   onChange: (value: string) => void
   disabled?: boolean
+  withBorder?: boolean
+  inputSize?: 'small' | 'medium' | 'large'
 }) {
   if (type === ParameterType.File || type === ParameterType.Image) {
     return (
       <FileParameterInput
         type={type}
+        withBorder={withBorder}
         value={value}
         onChange={onChange}
         disabled={disabled}
+        inputSize={inputSize}
       />
     )
   }
@@ -108,11 +114,15 @@ function FileParameterInput({
   value,
   onChange,
   disabled = false,
+  withBorder = true,
+  inputSize = 'large',
 }: {
   type: ParameterType.File | ParameterType.Image
   value?: string
   onChange: (value: string) => void
   disabled?: boolean
+  withBorder?: boolean
+  inputSize?: 'small' | 'medium' | 'large'
 }) {
   const { uploadFile, isLoading } = useFiles()
   const onFileChange = useCallback(
@@ -150,13 +160,14 @@ function FileParameterInput({
   return (
     <DropzoneInput
       icon={isImage ? 'imageUp' : 'fileUp'}
-      inputSize='small'
+      inputSize={inputSize}
       placeholder={isImage ? 'Upload image' : 'Upload file'}
       defaultFilename={filename}
       onChange={onFileChange}
       accept={isImage ? SUPPORTED_IMAGE_TYPES.join(',') : undefined}
       multiple={false}
       disabled={disabled}
+      withBorder={withBorder}
     />
   )
 }
