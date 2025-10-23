@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 const searchParamsSchema = z.object({
-  cursor: z.string().optional(),
+  cursor: z.string().optional().default(''),
   limit: z.coerce.number().min(1).max(100).default(50),
   type: z
     .enum(Object.values(SpanType) as [string, ...string[]])

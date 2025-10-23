@@ -2,7 +2,7 @@ import { database } from '../../../client'
 import { AssembledSpan, AssembledTrace, Span } from '../../../constants'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { SpansRepository } from '../../../repositories'
+import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 
 export async function assembleTrace(
@@ -45,8 +45,10 @@ export async function assembleTrace(
     .filter((span) => !span.parentId)
     .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
 
-  const assembledSpans = roots.map((span) =>
-    assembleSpan(span, 0, startedAt, childrens),
+  const assembledSpans = await Promise.all(
+    roots.map((span) =>
+      assembleSpan({ span, depth: 0, startedAt, childrens, workspace }),
+    ),
   )
 
   const trace: AssembledTrace = {
@@ -61,23 +63,47 @@ export async function assembleTrace(
   return Result.ok({ trace })
 }
 
-function assembleSpan(
-  span: Span,
-  depth: number,
-  startedAt: Date,
-  childrens: Map<string, Span[]>,
-): AssembledSpan {
+async function assembleSpan({
+  span,
+  depth,
+  startedAt,
+  childrens,
+  workspace,
+}: {
+  span: Span
+  depth: number
+  startedAt: Date
+  childrens: Map<string, Span[]>
+  workspace: Workspace
+}): Promise<AssembledSpan> {
   const children = childrens.get(span.id) || []
 
   const startOffset = span.startedAt.getTime() - startedAt.getTime()
   const endOffset = span.endedAt.getTime() - startedAt.getTime()
 
-  const assembledSpans = children.map((child) =>
-    assembleSpan(child, depth + 1, startedAt, childrens),
+  const assembledSpans = await Promise.all(
+    children.map((child) =>
+      assembleSpan({
+        span: child,
+        depth: depth + 1,
+        startedAt,
+        childrens,
+        workspace,
+      }),
+    ),
   )
+  // TODO:(tracing): N+1 to disk storage. Ok since N is small but not a good idea. Needed
+  // because we need to perform aggregations over multiple spans of a single
+  // trace. A better approach is to denormalize all the aggregable attributes
+  // into columns in the span table.
+  const repo = new SpanMetadatasRepository(workspace.id)
+  const metadata = await repo
+    .get({ spanId: span.id, traceId: span.traceId })
+    .then((r) => r.value)
 
   return {
     ...span,
+    metadata,
     children: assembledSpans,
     depth: depth,
     startOffset: startOffset,

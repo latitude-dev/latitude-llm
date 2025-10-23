@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { Span, SpanType } from './span'
+import { Span, SpanMetadata, SpanType } from './span'
 
 // Note: Traces are unmaterialized but this context is used to propagate the trace
 // See www.w3.org/TR/trace-context and w3c.github.io/baggage
@@ -16,6 +16,7 @@ export type AssembledSpan<T extends SpanType = SpanType> = Span<T> & {
   depth: number
   startOffset: number
   endOffset: number
+  metadata?: SpanMetadata<T>
 }
 
 // Note: full trace structure ready to be drawn, parts are ordered by timestamp

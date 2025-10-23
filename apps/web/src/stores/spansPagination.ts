@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import useFetcher from '$/hooks/useFetcher'
-import { Span } from '@latitude-data/constants'
+import { Span, SpanType } from '@latitude-data/constants'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export interface SpansPaginationResult {
@@ -18,6 +18,7 @@ export function useSpansPaginationStore(
     documentUuid,
     initialSpans,
     initialHasMore,
+    type = SpanType.Prompt,
     limit = 50,
   }: {
     projectId: string
@@ -25,6 +26,7 @@ export function useSpansPaginationStore(
     documentUuid: string
     initialSpans: Span[]
     initialHasMore: boolean
+    type?: SpanType
     limit?: number
   },
   opts?: SWRConfiguration,
@@ -42,6 +44,9 @@ export function useSpansPaginationStore(
   }
   if (limit) {
     params.set('limit', limit.toString())
+  }
+  if (type) {
+    params.set('type', type)
   }
 
   const url =

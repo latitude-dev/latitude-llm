@@ -10,12 +10,12 @@ export function useTrace(
   {
     traceId,
   }: {
-    traceId: string
+    traceId?: string | null
   },
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher<AssembledTrace>(
-    ROUTES.api.traces.detail(traceId).root,
+    traceId ? ROUTES.api.traces.detail(traceId).root : undefined,
     { fallback: null },
   )
 

@@ -7,7 +7,6 @@ import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs from '$/stores/providerLogs'
-import { useSpan } from '$/stores/spans'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import {
   DocumentLogFilterOptions,
@@ -37,6 +36,8 @@ import { ResizableLayout } from './ResizableLayout'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
 import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
 import { useSelectedLogFromUrl } from './useSelectedLogFromUrl'
+import { findSpanById } from '@latitude-data/core/services/tracing/spans/findSpanById'
+import { useTrace } from '$/stores/traces'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -153,10 +154,10 @@ export function DocumentLogs({
 
   const [selectedSpan, setSelectedSpan] =
     useState<Parameters<OnSelectedSpanFn>[0]>()
-  const { data: span, isLoading: isSpanLoading } = useSpan({
-    traceId: selectedSpan?.traceId ?? '',
-    spanId: selectedSpan?.spanId ?? '',
+  const { data: trace, isLoading: isTraceLoading } = useTrace({
+    traceId: selectedSpan?.traceId,
   })
+  const span = findSpanById(trace?.children ?? [], selectedSpan?.spanId ?? '')
 
   if (
     !documentLogFilterOptions.logSources.length &&
@@ -255,7 +256,7 @@ export function DocumentLogs({
                 sidebarWrapperRef={sidebarWrapperRef}
                 offset={{ top: 12, bottom: 12 }}
                 span={span}
-                isSpanLoading={isSpanLoading}
+                isSpanLoading={isTraceLoading}
               >
                 {manualEvaluations.length > 0 && !!responseLog && (
                   <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
