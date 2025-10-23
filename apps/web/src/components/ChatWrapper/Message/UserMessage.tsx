@@ -27,7 +27,7 @@ export function UserMessage({
       >
         <Content
           content={content}
-          color='primary'
+          color='accentForeground'
           size={size}
           parameters={parameters}
           toolContentMap={toolContentMap}

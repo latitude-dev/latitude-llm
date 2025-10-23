@@ -1,7 +1,7 @@
 import { memo, Ref, ReactNode, useMemo } from 'react'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Markdown } from '@latitude-data/web-ui/atoms/Markdown'
+import { Markdown, MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 import type { Components } from 'react-markdown'
@@ -34,8 +34,8 @@ function MarkdownLink({
       target={linkTarget(href)}
       className='px-1 no-underline inline-flex items-center gap-1'
     >
-      <Text.H4 color='primary'>{children}</Text.H4>
-      <Icon name='externalLink' color='primary' className='w-4 h-4' />
+      <Text.H4 color='accentForeground'>{children}</Text.H4>
+      <Icon name='externalLink' color='accentForeground' className='w-4 h-4' />
     </Link>
   )
 }
@@ -49,7 +49,7 @@ export const MarkdownContent = memo(
   }: {
     className?: string
     text: string
-    size?: 'sm' | 'md' | 'lg'
+    size?: MarkdownSize
     color: ProseColor
   }) {
     const components = useMemo<Components>(

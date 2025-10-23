@@ -3,10 +3,11 @@ import { memo, useMemo } from 'react'
 import { PromptlSourceRef } from '@latitude-data/constants/legacyCompiler'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TextColor } from '@latitude-data/web-ui/tokens'
+import { ProseColor, TextColor } from '@latitude-data/web-ui/tokens'
 import { computeSegments, groupSegments } from './helpers'
 import { ReferenceComponent } from './_components/Reference'
 import { MarkdownContent } from './_components/MarkdownContent'
+import { MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
 
 const ContentJson = memo(({ json }: { json: string }) => {
   return (
@@ -72,7 +73,7 @@ const ContentText = memo(
   },
 )
 
-export function TextMessageContent({
+export function TextMessageContent<M extends MarkdownSize | 'none'>({
   index = 0,
   text,
   debugMode,
@@ -84,12 +85,12 @@ export function TextMessageContent({
 }: {
   index?: number
   text: string | undefined
-  color: 'foreground' | 'primary' | 'foregroundMuted'
+  color: M extends 'none' ? TextColor : Extract<TextColor, ProseColor>
   size?: 'default' | 'small'
   parameters?: string[]
   debugMode?: boolean
   sourceMap?: PromptlSourceRef[]
-  markdownSize: 'none' | 'sm' | 'md' | 'lg'
+  markdownSize: M
 }) {
   const stringifiedJson = useMemo(() => {
     if (!text) return undefined
@@ -106,7 +107,13 @@ export function TextMessageContent({
   }
 
   if (!debugMode && text && markdownSize !== 'none') {
-    return <MarkdownContent text={text} size={markdownSize} color={color} />
+    return (
+      <MarkdownContent
+        text={text}
+        size={markdownSize}
+        color={color as ProseColor}
+      />
+    )
   }
 
   return (

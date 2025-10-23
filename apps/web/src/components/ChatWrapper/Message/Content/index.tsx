@@ -10,21 +10,23 @@ import { ImageMessageContent } from './Image'
 import { FileMessageContent } from './File'
 import { ReasoningMessageContent } from './Reasoning'
 import { cn } from '@latitude-data/web-ui/utils'
+import { ProseColor, TextColor } from '@latitude-data/web-ui/tokens'
+import { MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
 
-export function Content({
+export function Content<M extends MarkdownSize | 'none'>({
   content,
   debugMode,
   limitVerticalPadding = false,
   ...rest
 }: {
   index?: number
-  color: 'foreground' | 'primary' | 'foregroundMuted'
+  color: M extends 'none' ? TextColor : Extract<TextColor, ProseColor>
   content: MessageContent[] | MessageContent | string
   size?: 'default' | 'small'
   parameters?: string[]
   debugMode?: boolean
   toolContentMap?: Record<string, ToolContent>
-  markdownSize: 'none' | 'sm' | 'md' | 'lg'
+  markdownSize: M
   limitVerticalPadding?: boolean
 }) {
   const contentArr = useMemo<MessageContent[]>(() => {
@@ -75,7 +77,7 @@ export function Content({
   })
 }
 
-function ContentItem({
+function ContentItem<M extends MarkdownSize | 'none'>({
   index = 0,
   value,
   debugMode,
@@ -86,13 +88,13 @@ function ContentItem({
   markdownSize,
 }: {
   index?: number
-  color: 'foreground' | 'primary' | 'foregroundMuted'
+  color: M extends 'none' ? TextColor : Extract<TextColor, ProseColor>
   value: MessageContent
   size?: 'default' | 'small'
   parameters?: string[]
   debugMode?: boolean
   toolContentMap?: Record<string, ToolContent>
-  markdownSize: 'none' | 'sm' | 'md' | 'lg'
+  markdownSize: M
 }) {
   if (value.type === 'text') {
     return (

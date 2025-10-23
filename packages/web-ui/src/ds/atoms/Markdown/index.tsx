@@ -8,12 +8,14 @@ import remarkBreaks from 'remark-breaks'
 import { cn } from '../../../lib/utils'
 import { colors, ProseColor } from '../../tokens'
 
+export type MarkdownSize = 'sm' | 'md' | 'lg'
+
 export const Markdown = forwardRef<
   HTMLDivElement,
   {
     children: string
     color: ProseColor
-    size: 'sm' | 'md' | 'lg'
+    size: MarkdownSize
     className?: string
     components?: Components
   }
