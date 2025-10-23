@@ -13,7 +13,7 @@ export const SubscriptionPlans = {
   [SubscriptionPlan.HobbyV1]: {
     name: 'Hobby',
     credits: 50_000, // runs
-    users: 1,
+    users: 2,
     retention_period: 30, // days
     rate_limit: 10, // per second
     latte_credits: 30,
@@ -22,7 +22,7 @@ export const SubscriptionPlans = {
   [SubscriptionPlan.TeamV1]: {
     name: 'Team',
     credits: 100_000, // runs
-    users: 5,
+    users: 'unlimited' as const,
     retention_period: 1825, // days
     rate_limit: 166, // per second
     latte_credits: 300,
@@ -31,7 +31,7 @@ export const SubscriptionPlans = {
   [SubscriptionPlan.HobbyV2]: {
     name: 'Hobby',
     credits: 10_000, // runs
-    users: 1,
+    users: 2,
     retention_period: 30, // days
     rate_limit: 10, // per second
     latte_credits: 30,
@@ -49,7 +49,7 @@ export const SubscriptionPlans = {
   [SubscriptionPlan.TeamV2]: {
     name: 'Team',
     credits: 200_000, // runs
-    users: 5,
+    users: 'unlimited' as const,
     retention_period: 1825, // days
     rate_limit: 166, // per second
     latte_credits: 300,
