@@ -253,6 +253,12 @@ export const ROUTES = {
                   root: `${root}/runs/${uuid}`,
                 }),
               },
+              issues: {
+                root: `${root}/issues`,
+                detail: ({ id }: { id: string }) => ({
+                  root: `${root}/issues/${id}`,
+                }),
+              },
             }
           },
         },
