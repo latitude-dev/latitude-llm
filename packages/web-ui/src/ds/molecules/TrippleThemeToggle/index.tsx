@@ -1,6 +1,6 @@
 'use client'
 import { useTheme } from 'next-themes'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Button } from '../../atoms/Button'
 import { ClientOnly } from '../../atoms/ClientOnly'
 import { cn } from '../../../lib/utils'
@@ -8,14 +8,24 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '../../../lib/hooks/useLocalStorage'
+import { IconName } from '../../atoms/Icons'
 
-export const THEMES = ['light', 'dark', 'system'] as const
+export const THEMES = ['light', 'dark', 'pink', 'system'] as const
 export type ThemeValue = (typeof THEMES)[number]
+
+const THEME_ICON: Record<ThemeValue, IconName> = {
+  light: 'sun',
+  dark: 'moon',
+  pink: 'heart',
+  system: 'monitor',
+}
 
 export function TripleThemeToggle({
   direction = 'horizontal',
+  pinkThemeAvailable = false,
 }: {
   direction?: 'horizontal' | 'vertical'
+  pinkThemeAvailable?: boolean
 }) {
   const { theme: initialTheme, setTheme } = useTheme()
   const { value: theme, setValue: setLocalTheme } = useLocalStorage<ThemeValue>(
@@ -24,6 +34,11 @@ export function TripleThemeToggle({
       defaultValue: initialTheme as ThemeValue,
     },
   )
+  const AVAILABLE_THEMES = useMemo(() => {
+    if (pinkThemeAvailable) return THEMES
+    return THEMES.filter((t) => t !== 'pink')
+  }, [pinkThemeAvailable])
+
   const onClick = useCallback(
     (t: ThemeValue) => () => {
       setLocalTheme(t)
@@ -46,7 +61,7 @@ export function TripleThemeToggle({
             'flex-col': direction === 'vertical',
           })}
         >
-          {THEMES.map((t) => (
+          {AVAILABLE_THEMES.map((t) => (
             <Button
               key={t}
               variant='nope'
@@ -55,7 +70,7 @@ export function TripleThemeToggle({
               aria-label={`Switch to ${t} theme`}
               className='rounded-full relative z-10'
               iconProps={{
-                name: t === 'light' ? 'sun' : t === 'dark' ? 'moon' : 'monitor',
+                name: THEME_ICON[t],
                 color: 'foreground',
                 darkColor: theme === t ? 'background' : 'foregroundMuted',
               }}

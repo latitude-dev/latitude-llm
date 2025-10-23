@@ -148,6 +148,7 @@ import {
   Youtube,
   Zap,
   BaselineIcon,
+  Heart,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -289,6 +290,7 @@ const Icons = {
   googleWorkspace: Google,
   gridVertical: GridVertical,
   headset: Headset,
+  heart: Heart,
   history: History,
   house: House,
   hyperbrowser: Hyperbrowser,

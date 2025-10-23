@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { getUserInfoFromSession } from '$/lib/getUserInfo'
+import useFeature from '$/stores/useFeature'
 
 type DropdownItemProps = {
   label: string
@@ -54,6 +55,11 @@ export default function AvatarDropdown({
   const onClickLogout = useCallback(async () => {
     await logoutAction()
   }, [])
+
+  const { isEnabled: pinkThemeAvailable } = useFeature('pink-theme', {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  })
 
   const options = useMemo(
     () =>
@@ -104,7 +110,10 @@ export default function AvatarDropdown({
         </div>
 
         <div className='flex flex-row items-center justify-start px-2'>
-          <TripleThemeToggle direction='horizontal' />
+          <TripleThemeToggle
+            direction='horizontal'
+            pinkThemeAvailable={pinkThemeAvailable}
+          />
         </div>
       </Popover.Content>
     </Popover.Root>

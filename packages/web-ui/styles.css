@@ -266,6 +266,25 @@
     --latte-input-foreground: 43 100% 23%;
     --latte-output-foreground: 43 25% 83%;
   }
+
+  .pink {
+    --background: 350 90% 99%;
+    --background-shadow: 350 90% 1%;
+
+    --primary: 330 91% 52%;
+    --primary-foreground: 0 0% 98%;
+    --primary-muted: 330 100% 96%;
+    --primary-muted-hover: 330 100% 96% / 0.8;
+
+    --secondary: 330 40% 96%;
+    --secondary-foreground: 330 30% 25%;
+
+    --accent: 330 100% 97%;
+    --accent-button: 330 78% 46%;
+    --accent-foreground: 330 78% 46%;
+
+    --ring: 330 91% 52%;
+  }
 }
 
 @layer base {
