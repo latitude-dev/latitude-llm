@@ -6,6 +6,7 @@ export type DiffOptions = {
   oldValue?: string
   newValue: string
   description?: string
+  source: 'latte' | 'refine' | 'suggestion' | 'experiment'
   onAccept?: (newValue: string) => void
   onReject?: () => void
 }

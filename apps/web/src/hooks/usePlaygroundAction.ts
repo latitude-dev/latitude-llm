@@ -6,7 +6,7 @@ import {
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { omit } from 'lodash-es'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useCallback, useState } from 'react'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
@@ -49,8 +49,6 @@ export function usePlaygroundAction<
   commit: Pick<Commit, 'uuid'>
   document?: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
 }) {
-  const navigate = useRouter()
-
   const base = ROUTES.projects
     .detail({ id: project.id })
     .commits.detail({ uuid: commit.uuid })
@@ -89,7 +87,8 @@ export function usePlaygroundAction<
         },
       })
       const query = new URLSearchParams({ actionId })
-      navigate.push(`${route}?${query.toString()}`)
+      const newUrl = `${route}?${query.toString()}`
+      window.history.pushState(null, '', newUrl)
     },
     [
       playgroundActions,
@@ -98,7 +97,6 @@ export function usePlaygroundAction<
       project,
       commit,
       document,
-      navigate,
       route,
     ],
   )
@@ -107,14 +105,13 @@ export function usePlaygroundAction<
     const clean = !!action && !!actionId
     setAction(undefined)
     if (clean) setPlaygroundActions(omit(playgroundActions, actionId))
-    navigate.replace(route)
+    window.history.replaceState(null, '', route) // We are not using react's navigate because that will trigger a full page reload, which reset Providers state
   }, [
     action,
     actionId,
     setAction,
     playgroundActions,
     setPlaygroundActions,
-    navigate,
     route,
   ])
 
@@ -126,8 +123,6 @@ export function usePlaygroundAction<
 }
 
 export function useDeferredPlaygroundAction() {
-  const navigate = useRouter()
-
   const { value: playgroundActions, setValue: setPlaygroundActions } =
     useLocalStorage<PlaygroundActions>({
       key: AppLocalStorage.playgroundActions,
@@ -166,9 +161,10 @@ export function useDeferredPlaygroundAction() {
         ? base.documents.detail({ uuid: document.documentUuid }).root
         : base.home.root
       const query = new URLSearchParams({ actionId })
-      navigate.push(`${route}?${query.toString()}`)
+      const newUrl = `${route}?${query.toString()}`
+      window.history.pushState(null, '', newUrl)
     },
-    [playgroundActions, setPlaygroundActions, navigate],
+    [playgroundActions, setPlaygroundActions],
   )
 
   return {

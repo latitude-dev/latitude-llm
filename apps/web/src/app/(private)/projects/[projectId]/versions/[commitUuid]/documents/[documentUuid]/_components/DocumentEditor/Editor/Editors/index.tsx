@@ -3,13 +3,10 @@ import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useMemo } from 'react'
 import { PlaygroundBlocksEditor } from '../BlocksEditor'
 import { PlaygroundTextEditor } from '../TextEditor'
-import { useLatteDiff } from '$/hooks/useLatteDiff'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-
-import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 
 export const Editors = memo(function Editors({
   document,
@@ -20,35 +17,24 @@ export const Editors = memo(function Editors({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { devMode, setDevMode } = useDevMode()
+  const { devMode } = useDevMode()
   const { metadata } = useMetadata()
-  const { value, updateDocumentContent, isSaved } = useDocumentValue()
-  const { diff: latteDiff } = useLatteDiff()
-  const [experimentDiff, setEditorDiff] = useState<DiffOptions | undefined>()
+  const { value, updateDocumentContent, isSaved, diffOptions } =
+    useDocumentValue()
+
   const readOnlyMessage = useMemo(() => {
     if (commit.mergedAt !== null) {
       return 'Version published. Create a draft to edit prompts.'
     }
 
-    if (latteDiff) {
+    if (diffOptions) {
       return 'Keep or undo changes to edit prompts.'
     }
 
     return undefined
-  }, [commit.mergedAt, latteDiff])
-  const diff = useMemo(
-    () => experimentDiff ?? latteDiff,
-    [experimentDiff, latteDiff],
-  )
+  }, [commit.mergedAt, diffOptions])
 
-  useEffect(() => {
-    if (!diff) return
-    if (devMode) return
-
-    setDevMode(true)
-  }, [setDevMode, devMode, diff])
-
-  return devMode ? (
+  return devMode || diffOptions ? (
     <PlaygroundTextEditor
       copilotEnabled={false}
       refinementEnabled={refinementEnabled}
@@ -56,8 +42,6 @@ export const Editors = memo(function Editors({
       project={project}
       document={document}
       commit={commit}
-      setDiff={setEditorDiff}
-      diff={diff}
       value={value}
       defaultValue={document.content}
       readOnlyMessage={readOnlyMessage}

@@ -13,6 +13,25 @@ import { MetadataProvider } from '$/components/MetadataProvider'
 import { DevModeProvider } from '$/hooks/useDevMode'
 import { DocumentValueProvider } from '$/hooks/useDocumentValueContext'
 import DocumentEditor from './_components/DocumentEditor/Editor'
+import { ExperimentsRepository } from '@latitude-data/core/repositories'
+
+async function getDiffFromExperimentId({
+  workspaceId,
+  experimentId,
+}: {
+  workspaceId: number
+  experimentId?: number
+}): Promise<string | undefined> {
+  if (!experimentId || isNaN(experimentId)) {
+    return undefined
+  }
+  const experimentsScope = new ExperimentsRepository(workspaceId)
+  const experimentResult = await experimentsScope.find(experimentId)
+  if (!experimentResult.ok) return undefined
+
+  const newValue = experimentResult.unwrap().metadata.prompt
+  return newValue
+}
 
 export default async function DocumentPage({
   params,
@@ -23,10 +42,15 @@ export default async function DocumentPage({
     commitUuid: string
     documentUuid: string
   }>
-  searchParams: Promise<{ showPreview?: string }>
+  searchParams: Promise<{ showPreview?: string; applyExperimentId?: string }>
 }) {
-  const queryParams = await searchParams
-  const showPreview = queryParams.showPreview === 'true'
+  const { showPreview: _showPreview, applyExperimentId: _applyExperimentId } =
+    await searchParams
+  const showPreview = _showPreview === 'true'
+  const applyExperimentId = _applyExperimentId
+    ? Number(_applyExperimentId)
+    : undefined
+
   const { projectId: pjid, commitUuid, documentUuid } = await params
   const projectId = Number(pjid)
   const { workspace } = await getCurrentUserOrRedirect()
@@ -50,10 +74,27 @@ export default async function DocumentPage({
   const documents = await getDocumentsAtCommitCached({ commit })
   const freeRunsCount = await getFreeRuns(workspace.id)
 
+  const experimentDiff = await getDiffFromExperimentId({
+    workspaceId: workspace.id,
+    experimentId: applyExperimentId,
+  })
+
   return (
     <MetadataProvider>
       <DevModeProvider>
-        <DocumentValueProvider document={document} documents={documents}>
+        <DocumentValueProvider
+          document={document}
+          documents={documents}
+          initialDiffOptions={
+            experimentDiff
+              ? {
+                  newValue: experimentDiff,
+                  description: 'Restore prompt from experiment',
+                  source: 'experiment',
+                }
+              : undefined
+          }
+        >
           <DocumentEditor
             freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
             showPreview={showPreview}

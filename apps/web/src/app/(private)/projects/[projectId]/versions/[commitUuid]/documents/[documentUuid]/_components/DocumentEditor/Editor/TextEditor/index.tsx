@@ -2,9 +2,7 @@ import { requestSuggestionAction } from '$/actions/copilot/requestSuggestion'
 import { publishEventAction } from '$/actions/events/publishEventAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import type { AstError } from '@latitude-data/constants/promptl'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
-import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import type { IProjectContextType } from '$/app/providers/ProjectProvider'
@@ -14,6 +12,7 @@ import { DocumentSuggestions } from '../DocumentSuggestions'
 import { EditorSettings } from '../EditorSettings'
 import { LatteDiffManager } from './LatteDiffManager'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 
 export const PlaygroundTextEditor = memo(
   ({
@@ -22,8 +21,6 @@ export const PlaygroundTextEditor = memo(
     document,
     commit,
     onChange,
-    setDiff,
-    diff,
     value,
     defaultValue,
     copilotEnabled,
@@ -36,8 +33,6 @@ export const PlaygroundTextEditor = memo(
     project: IProjectContextType['project']
     commit: ICommitContextType['commit']
     document: DocumentVersion
-    setDiff: ReactStateDispatch<DiffOptions | undefined>
-    diff: DiffOptions | undefined
     copilotEnabled: boolean
     refinementEnabled: boolean
     value: string
@@ -48,6 +43,7 @@ export const PlaygroundTextEditor = memo(
     highlightedCursorIndex?: number
   }) => {
     const { execute: publishEvent } = useLatitudeAction(publishEventAction)
+    const { diffOptions, setDiffOptions } = useDocumentValue()
     const {
       execute: executeRequestSuggestionAction,
       isPending: isCopilotLoading,
@@ -59,11 +55,12 @@ export const PlaygroundTextEditor = memo(
       }) => {
         if (!suggestion) return
 
-        setDiff({
+        setDiffOptions({
           newValue: suggestion.code,
           description: suggestion.response,
+          source: 'suggestion',
           onAccept: (newValue: string) => {
-            setDiff(undefined)
+            setDiffOptions(undefined)
             publishEvent({
               eventType: 'copilotSuggestionApplied',
               payload: {
@@ -75,7 +72,7 @@ export const PlaygroundTextEditor = memo(
             onChange(newValue)
           },
           onReject: () => {
-            setDiff(undefined)
+            setDiffOptions(undefined)
           },
         })
       },
@@ -105,7 +102,7 @@ export const PlaygroundTextEditor = memo(
           defaultValue={defaultValue}
           compileErrors={compileErrors}
           onChange={onChange}
-          diff={diff}
+          diff={diffOptions}
           readOnlyMessage={readOnlyMessage}
           isSaved={isSaved}
           highlightedCursorIndex={highlightedCursorIndex}
@@ -116,16 +113,16 @@ export const PlaygroundTextEditor = memo(
                 commit={commit}
                 document={document}
                 prompt={value}
-                diff={diff}
-                setDiff={setDiff}
+                diff={diffOptions}
+                setDiff={setDiffOptions}
                 setPrompt={onChange}
               />
               <DocumentRefinement
                 project={project}
                 commit={commit}
                 document={document}
-                diff={diff}
-                setDiff={setDiff}
+                diff={diffOptions}
+                setDiff={setDiffOptions}
                 setPrompt={onChange}
                 refinementEnabled={refinementEnabled}
               />

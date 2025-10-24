@@ -24,6 +24,8 @@ import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { useEvents } from '$/lib/events'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 
 export type updateContentFn = (
   content: string,
@@ -35,6 +37,8 @@ type DocumentValueContextType = {
   isSaved: boolean
   isUpdatingContent: boolean
   updateDocumentContent: updateContentFn
+  diffOptions: DiffOptions | undefined
+  setDiffOptions: ReactStateDispatch<DiffOptions | undefined>
 }
 
 const DocumentValueContext = createContext<
@@ -45,11 +49,13 @@ type DocumentValueProviderProps = {
   children: ReactNode
   document: DocumentVersion
   documents?: DocumentVersion[]
+  initialDiffOptions?: DiffOptions
 }
 
 export function DocumentValueProvider({
   children,
   document: _document,
+  initialDiffOptions,
 }: DocumentValueProviderProps) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -115,6 +121,28 @@ export function DocumentValueProvider({
     { leading: false, trailing: true },
   )
 
+  const [diffOptions, setDiffOptions] = useState<DiffOptions | undefined>(() =>
+    initialDiffOptions
+      ? {
+          oldValue: value,
+          newValue: initialDiffOptions.newValue,
+          description: initialDiffOptions.description,
+          source: initialDiffOptions.source,
+          onAccept:
+            initialDiffOptions.onAccept ??
+            ((newValue: string) => {
+              setDiffOptions(undefined)
+              updateDocumentContent(newValue)
+            }),
+          onReject:
+            initialDiffOptions.onReject ??
+            (() => {
+              setDiffOptions(undefined)
+            }),
+        }
+      : undefined,
+  )
+
   useRefreshPromptMetadata({
     value: value,
     document: document,
@@ -137,6 +165,8 @@ export function DocumentValueProvider({
         updateDocumentContent,
         isUpdatingContent,
         isSaved: !isUpdatingContent,
+        diffOptions,
+        setDiffOptions,
       }}
     >
       {children}
