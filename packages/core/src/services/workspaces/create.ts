@@ -15,7 +15,7 @@ export async function createWorkspace(
     user,
     createdAt,
     source = 'default',
-    subscriptionPlan = SubscriptionPlan.HobbyV2,
+    subscriptionPlan = SubscriptionPlan.HobbyV3,
   }: {
     name: string
     user: User
