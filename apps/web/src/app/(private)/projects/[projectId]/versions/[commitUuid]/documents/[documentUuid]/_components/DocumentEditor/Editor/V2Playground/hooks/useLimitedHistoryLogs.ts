@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { UseLogHistoryParams } from '../../Playground/DocumentParams/HistoryLogParams/useLogHistoryParams'
+import { UseLogHistoryParams } from '../DocumentParams/HistoryLogParams/useLogHistoryParams'
 
 const MAX_HISTORY_LOGS = 100
 

@@ -5,7 +5,7 @@ import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFe
 import { redirect } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
 
-import { DocumentTracesPage } from './_components'
+import { DocumentTracesPage } from './_components/DocumentTracesPage'
 import { SpanType } from '@latitude-data/constants'
 
 export const metadata = buildMetatags({
@@ -41,18 +41,17 @@ export default async function TracesPage({
 
   const spansRepository = new SpansRepository(workspace.id)
   const result = await spansRepository
-    .findByDocumentAndCommit({
+    .findByDocumentAndCommitLimited({
       documentUuid,
       commitUuid,
       type: SpanType.Prompt,
-      limit: 50, // Initial load limit
+      limit: 25, // Initial load limit
     })
     .then((r) => r.unwrap())
 
   return (
     <DocumentTracesPage
-      initialSpans={result.spans}
-      hasMore={result.hasMore}
+      initialSpans={result.items}
       projectId={projectId}
       commitUuid={commitUuid}
       documentUuid={documentUuid}

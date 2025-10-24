@@ -41,7 +41,13 @@ export function SpanRow({ span, isSelected }: SpanRowProps) {
         )}
       >
         <TableCell>
-          <Text.H5 noWrap>{relativeTime(span.startedAt)}</Text.H5>
+          <Text.H5 noWrap>
+            {relativeTime(
+              span.startedAt instanceof Date
+                ? span.startedAt
+                : new Date(span.startedAt),
+            )}
+          </Text.H5>
         </TableCell>
         <TableCell>
           <div className='flex flex-row gap-1 items-center truncate'>
