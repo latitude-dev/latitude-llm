@@ -59,9 +59,9 @@ export async function setupSchedules() {
     { opts: { attempts: 1 } },
   )
 
-  // Every day at 11 AM CEST - Grant additional seat to Hobby users
+  // Every day at 11 AM CEST - Upgrade Hobby users to HobbyV3
   await maintenanceQueue.upsertJobScheduler(
-    'grantAdditionalSeatToHobbyUsersJob',
+    'upgradeHobbyUsersToV3Job',
     { pattern: '0 10 * * *' },
     { opts: { attempts: 1 } },
   )

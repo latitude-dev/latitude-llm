@@ -6,19 +6,19 @@ import { SubscriptionPlan } from '../../../plans'
 import { database } from '../../../client'
 import { queues } from '../../queues'
 
-export type GrantAdditionalSeatToHobbyUsersJobData = Record<string, never>
+export type UpgradeHobbyUsersToV3JobData = Record<string, never>
 
 /**
- * Job that runs daily at 9am CEST to schedule individual jobs for granting
- * additional seats to all users with HobbyV1 or HobbyV2 subscriptions.
+ * Job that runs daily at 11am CEST to schedule individual jobs for upgrading
+ * all users with HobbyV1 or HobbyV2 subscriptions to HobbyV3.
  *
  * This job:
  * 1. Finds all workspaces with HobbyV1 or HobbyV2 plans
- * 2. Enqueues individual grant jobs for each workspace
- * 3. Each individual job will grant 1 additional seat to that workspace
+ * 2. Enqueues individual upgrade jobs for each workspace
+ * 3. Each individual job will upgrade the workspace to HobbyV3 subscription
  */
-export const grantAdditionalSeatToHobbyUsersJob = async (
-  _: Job<GrantAdditionalSeatToHobbyUsersJobData>,
+export const upgradeHobbyUsersToV3Job = async (
+  _: Job<UpgradeHobbyUsersToV3JobData>,
 ) => {
   try {
     const hobbyPlans = [SubscriptionPlan.HobbyV1, SubscriptionPlan.HobbyV2]
@@ -43,7 +43,7 @@ export const grantAdditionalSeatToHobbyUsersJob = async (
       try {
         const { maintenanceQueue } = await queues()
         await maintenanceQueue.add(
-          'grantAdditionalSeatToWorkspaceJob',
+          'upgradeHobbyWorkspaceToV3Job',
           { workspaceId: workspace.id },
           { attempts: 3 },
         )
@@ -57,9 +57,9 @@ export const grantAdditionalSeatToHobbyUsersJob = async (
     }
 
     console.log(
-      `Scheduled additional seat grants for ${_enqueuedJobs} hobby workspaces`,
+      `Scheduled HobbyV3 upgrades for ${_enqueuedJobs} hobby workspaces`,
     )
   } catch (error) {
-    console.error('Failed to schedule additional seat grants:', error)
+    console.error('Failed to schedule HobbyV3 upgrades:', error)
   }
 }

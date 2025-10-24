@@ -1,20 +1,21 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { Job } from 'bullmq'
-import { grantAdditionalSeatToHobbyUsersJob } from './grantAdditionalSeatToHobbyUsersJob'
+import { upgradeHobbyUsersToV3Job } from './upgradeHobbyUsersToV3Job'
 import { SubscriptionPlan } from '../../../plans'
 import * as factories from '../../../tests/factories'
 import { database } from '../../../client'
 import { workspaces } from '../../../schema/models/workspaces'
 import { subscriptions } from '../../../schema/models/subscriptions'
 import { eq, or } from 'drizzle-orm'
+import { Workspace } from '../../../schema/models/types/Workspace'
 
-describe('grantAdditionalSeatToHobbyUsersJob', () => {
-  let hobbyWorkspace1: any
-  let hobbyWorkspace2: any
-  let teamWorkspace: any
+describe('upgradeHobbyUsersToV3Job', () => {
+  let hobbyWorkspace1: Workspace
+  let hobbyWorkspace2: Workspace
+  let hobbyV3Workspace: Workspace
+  let teamWorkspace: Workspace
 
   beforeEach(async () => {
-    // Create HobbyV1 workspace
     const { workspace: w1 } = await factories.createProject({
       workspace: {
         subscriptionPlan: SubscriptionPlan.HobbyV1,
@@ -22,7 +23,6 @@ describe('grantAdditionalSeatToHobbyUsersJob', () => {
     })
     hobbyWorkspace1 = w1
 
-    // Create HobbyV2 workspace
     const { workspace: w2 } = await factories.createProject({
       workspace: {
         subscriptionPlan: SubscriptionPlan.HobbyV2,
@@ -30,22 +30,25 @@ describe('grantAdditionalSeatToHobbyUsersJob', () => {
     })
     hobbyWorkspace2 = w2
 
-    // Create TeamV1 workspace (should not be processed)
     const { workspace: w3 } = await factories.createProject({
+      workspace: {
+        subscriptionPlan: SubscriptionPlan.HobbyV3,
+      },
+    })
+    hobbyV3Workspace = w3
+
+    const { workspace: w4 } = await factories.createProject({
       workspace: {
         subscriptionPlan: SubscriptionPlan.TeamV1,
       },
     })
-    teamWorkspace = w3
+    teamWorkspace = w4
   })
 
   it('should schedule individual jobs for hobby workspaces', async () => {
     const mockJob = {} as Job<Record<string, never>>
+    await upgradeHobbyUsersToV3Job(mockJob)
 
-    // Execute the job
-    await grantAdditionalSeatToHobbyUsersJob(mockJob)
-
-    // Verify that the workspaces exist and have the correct plans
     const hobbyWorkspaces = await database
       .select({
         id: workspaces.id,
@@ -73,7 +76,6 @@ describe('grantAdditionalSeatToHobbyUsersJob', () => {
   })
 
   it('should handle empty workspace list gracefully', async () => {
-    // Delete all hobby workspaces to test empty case
     await database
       .update(workspaces)
       .set({ currentSubscriptionId: null })
@@ -87,18 +89,28 @@ describe('grantAdditionalSeatToHobbyUsersJob', () => {
     const mockJob = {} as Job<Record<string, never>>
 
     // Execute the job - should not throw
-    await expect(
-      grantAdditionalSeatToHobbyUsersJob(mockJob),
-    ).resolves.not.toThrow()
+    await expect(upgradeHobbyUsersToV3Job(mockJob)).resolves.not.toThrow()
   })
 
-  it('should only process hobby workspaces', async () => {
+  it('should only process hobby workspaces (not HobbyV3 or Team)', async () => {
     const mockJob = {} as Job<Record<string, never>>
+    await upgradeHobbyUsersToV3Job(mockJob)
 
-    // Execute the job
-    await grantAdditionalSeatToHobbyUsersJob(mockJob)
+    const hobbyV3WorkspaceData = await database
+      .select({
+        id: workspaces.id,
+        plan: subscriptions.plan,
+      })
+      .from(workspaces)
+      .innerJoin(
+        subscriptions,
+        eq(subscriptions.id, workspaces.currentSubscriptionId),
+      )
+      .where(eq(workspaces.id, hobbyV3Workspace.id))
 
-    // Verify team workspace still has TeamV1 plan
+    expect(hobbyV3WorkspaceData).toHaveLength(1)
+    expect(hobbyV3WorkspaceData[0].plan).toBe(SubscriptionPlan.HobbyV3)
+
     const teamWorkspaceData = await database
       .select({
         id: workspaces.id,
