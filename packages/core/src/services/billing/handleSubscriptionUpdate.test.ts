@@ -68,6 +68,7 @@ describe('handleSubscriptionUpdate', () => {
 
     const { workspace, user } = await createProject({
       name: 'Test Workspace',
+      workspace: { subscriptionPlan: SubscriptionPlan.HobbyV2 },
     })
     testWorkspace = workspace
     testUser = user

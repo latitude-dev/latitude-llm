@@ -37,7 +37,7 @@ describe('createWorkspace', () => {
       r.unwrap(),
     )
     expect(workspace.currentSubscription).toEqual(
-      expect.objectContaining({ plan: 'hobby_v2' }),
+      expect.objectContaining({ plan: 'hobby_v3' }),
     )
     expect(
       await computeQuota({
