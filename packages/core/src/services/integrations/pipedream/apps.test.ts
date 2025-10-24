@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest'
 import { Result } from '../../../lib/Result'
-import { listApps, getApp } from './apps'
+import { listApps, getApp, PipedreamNotConfiguredError } from './apps'
 import { cache } from '../../../cache'
 import { REDIS_KEY_PREFIX } from '../../../redis'
 import type { Cache } from '../../../cache'
@@ -187,6 +187,21 @@ describe('listApps', () => {
 
     if (!Result.isOk(result)) {
       expect(result.error.message).toBe('Failed to create client')
+    }
+  })
+
+  it('should return empty result when Pipedream credentials are not configured', async () => {
+    // Mock the getPipedreamClient to return a PipedreamNotConfiguredError
+    const result = await listApps({
+      pipedreamClientBuilder: () =>
+        Result.error(new PipedreamNotConfiguredError()),
+    })
+
+    expect(result.ok).toBe(true)
+    if (Result.isOk(result)) {
+      expect(result.value.apps).toEqual([])
+      expect(result.value.totalCount).toBe(0)
+      expect(result.value.cursor).toBe('')
     }
   })
 

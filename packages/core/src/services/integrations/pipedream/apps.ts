@@ -1,4 +1,7 @@
-import { UnprocessableEntityError } from '@latitude-data/constants/errors'
+import {
+  LatitudeErrorCodes,
+  UnprocessableEntityError,
+} from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { PipedreamClient } from '@pipedream/sdk/server'
 import { App, ExtendedPipedreamApp } from '../../../constants'
@@ -10,6 +13,18 @@ import { AppsListRequestSortKey } from '@pipedream/sdk'
 import { AppsListRequestSortDirection } from '@pipedream/sdk'
 import { getComponentsForApp } from './components/getComponents'
 import { getCachedApps, getCachedApp, CachedAppResponse } from './cache/apps'
+
+/**
+ * Custom error for when Pipedream credentials are not configured
+ */
+export class PipedreamNotConfiguredError extends UnprocessableEntityError {
+  constructor() {
+    super(
+      'Pipedream credentials are not set. Please set PIPEDREAM_ENVIRONMENT, PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET and PIPEDREAM_PROJECT_ID in your environment variables.',
+    )
+    this.name = LatitudeErrorCodes.UnprocessableEntityError
+  }
+}
 
 const LIST_APPS_LIMIT = 30
 const DISALLOW_LIST = ['openai', 'anthropic']
@@ -28,11 +43,7 @@ export function getPipedreamClient(): TypedResult<PipedreamClient> {
     !PIPEDREAM_CLIENT_SECRET ||
     !PIPEDREAM_PROJECT_ID
   ) {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Pipedream credentials are not set. Please set PIPEDREAM_ENVIRONMENT, PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET and PIPEDREAM_PROJECT_ID in your environment variables.',
-      ),
-    )
+    return Result.error(new PipedreamNotConfiguredError())
   }
 
   const client = new PipedreamClient({
@@ -55,53 +66,53 @@ const fetchAppsBuilder =
     cursor?: string
     pipedreamClientBuilder: () => TypedResult<PipedreamClient, Error>
   }) =>
-  async () => {
-    // Initialize the Pipedream client only on cache miss
-    const pipedreamResult = pipedreamClientBuilder()
-    if (!Result.isOk(pipedreamResult)) {
-      throw pipedreamResult.error
+    async () => {
+      // Initialize the Pipedream client only on cache miss
+      const pipedreamResult = pipedreamClientBuilder()
+      if (!Result.isOk(pipedreamResult)) {
+        throw pipedreamResult.error
+      }
+      const pipedream = pipedreamResult.unwrap()
+
+      const appsParams: AppsListRequest = {
+        q: query,
+        limit: LIST_APPS_LIMIT,
+        after: cursor,
+        sortKey: AppsListRequestSortKey.FeaturedWeight,
+        sortDirection: AppsListRequestSortDirection.Desc,
+      }
+
+      const page = await pipedream.apps.list(appsParams)
+      const apps = page.data as ExtendedPipedreamApp[]
+      const filteredApps = apps
+        .filter((app) => {
+          // Filter out apps that do not require authentication, as they are not supported yet
+          if (app.authType === undefined) return false
+
+          // Filter out disallowed apps
+          if (DISALLOW_LIST.includes(app.nameSlug)) return false
+
+          return true
+        })
+        .map((app) => {
+          // Exclude customFieldsJson and connect from the response to reduce payload size
+          // These fields exist at runtime but may not be in the SDK type definition
+          const {
+            customFieldsJson: _cf,
+            connect: _cn,
+            ...appWithoutCustomFields
+          } = app as typeof app & { customFieldsJson?: string; connect?: unknown }
+          return appWithoutCustomFields
+        })
+
+      const pageInfo = getPageInfo(page)
+
+      return {
+        apps: filteredApps,
+        totalCount: pageInfo.totalCount ?? apps.length,
+        cursor: pageInfo.endCursor ?? '',
+      }
     }
-    const pipedream = pipedreamResult.unwrap()
-
-    const appsParams: AppsListRequest = {
-      q: query,
-      limit: LIST_APPS_LIMIT,
-      after: cursor,
-      sortKey: AppsListRequestSortKey.FeaturedWeight,
-      sortDirection: AppsListRequestSortDirection.Desc,
-    }
-
-    const page = await pipedream.apps.list(appsParams)
-    const apps = page.data as ExtendedPipedreamApp[]
-    const filteredApps = apps
-      .filter((app) => {
-        // Filter out apps that do not require authentication, as they are not supported yet
-        if (app.authType === undefined) return false
-
-        // Filter out disallowed apps
-        if (DISALLOW_LIST.includes(app.nameSlug)) return false
-
-        return true
-      })
-      .map((app) => {
-        // Exclude customFieldsJson and connect from the response to reduce payload size
-        // These fields exist at runtime but may not be in the SDK type definition
-        const {
-          customFieldsJson: _cf,
-          connect: _cn,
-          ...appWithoutCustomFields
-        } = app as typeof app & { customFieldsJson?: string; connect?: unknown }
-        return appWithoutCustomFields
-      })
-
-    const pageInfo = getPageInfo(page)
-
-    return {
-      apps: filteredApps,
-      totalCount: pageInfo.totalCount ?? apps.length,
-      cursor: pageInfo.endCursor ?? '',
-    }
-  }
 
 export async function listApps({
   query,
@@ -129,6 +140,16 @@ export async function listApps({
 
     return Result.ok(result)
   } catch (error) {
+    // Check if the error is about missing Pipedream credentials
+    if (error instanceof PipedreamNotConfiguredError) {
+      // Return empty result instead of failing when Pipedream is not configured
+      return Result.ok({
+        apps: [],
+        totalCount: 0,
+        cursor: '',
+      })
+    }
+
     return Result.error(error as Error)
   }
 }
@@ -167,13 +188,13 @@ export async function getApp<C extends boolean>({
     const processedComponents = withConfig
       ? components
       : ({
-          tools: components.tools.map(
-            ({ configurableProps: _, ...tool }) => tool,
-          ),
-          triggers: components.triggers.map(
-            ({ configurableProps: _, ...trigger }) => trigger,
-          ),
-        } as typeof components)
+        tools: components.tools.map(
+          ({ configurableProps: _, ...tool }) => tool,
+        ),
+        triggers: components.triggers.map(
+          ({ configurableProps: _, ...trigger }) => trigger,
+        ),
+      } as typeof components)
 
     return {
       ...appWithoutCustomFields,
