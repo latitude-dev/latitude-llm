@@ -40,41 +40,43 @@ function ConfigurationSimpleForm({
   }, [])
 
   return (
-    <FormFieldGroup
-      layout='horizontal'
-      description='The minimum and maximum percentage of similarity of the response'
-    >
-      <NumberInput
-        value={configuration.minSimilarity ?? undefined}
-        name='minSimilarity'
-        label='Minimum similarity'
-        placeholder='No minimum'
-        min={0}
-        max={100}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, minSimilarity: value })
-        }
-        errors={errors?.['minSimilarity']}
-        className='w-full'
-        disabled={disabled}
-        required
-      />
-      <NumberInput
-        value={configuration.maxSimilarity ?? undefined}
-        name='maxSimilarity'
-        label='Maximum similarity'
-        placeholder='No maximum'
-        min={0}
-        max={100}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, maxSimilarity: value })
-        }
-        errors={errors?.['maxSimilarity']}
-        className='w-full'
-        disabled={disabled}
-        required
-      />
-    </FormFieldGroup>
+    <>
+      <FormFieldGroup
+        layout='horizontal'
+        description='The minimum and maximum percentage of similarity of the response'
+      >
+        <NumberInput
+          value={configuration.minSimilarity ?? undefined}
+          name='minSimilarity'
+          label='Minimum similarity'
+          placeholder='No minimum'
+          min={0}
+          max={100}
+          onChange={(value) =>
+            setConfiguration({ ...configuration, minSimilarity: value })
+          }
+          errors={errors?.['minSimilarity']}
+          className='w-full'
+          disabled={disabled}
+          required
+        />
+        <NumberInput
+          value={configuration.maxSimilarity ?? undefined}
+          name='maxSimilarity'
+          label='Maximum similarity'
+          placeholder='No maximum'
+          min={0}
+          max={100}
+          onChange={(value) =>
+            setConfiguration({ ...configuration, maxSimilarity: value })
+          }
+          errors={errors?.['maxSimilarity']}
+          className='w-full'
+          disabled={disabled}
+          required
+        />
+      </FormFieldGroup>
+    </>
   )
 }
 

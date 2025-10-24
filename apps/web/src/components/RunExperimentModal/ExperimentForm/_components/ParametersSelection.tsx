@@ -42,6 +42,7 @@ function DatasetLabelSelector({
     [evaluation.uuid, setDatasetLabels],
   )
 
+  // TODO(AO): Composite evaluations should be given a dataset label when any of its sub-evaluations requires it
   if (!specification.requiresExpectedOutput) return null
 
   return (

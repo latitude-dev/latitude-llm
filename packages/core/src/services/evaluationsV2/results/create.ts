@@ -31,6 +31,7 @@ export async function createEvaluationResultV2<
     value,
     usedForSuggestion,
     workspace,
+    dry = false,
   }: {
     uuid?: string
     evaluation: EvaluationV2<T, M>
@@ -42,41 +43,53 @@ export async function createEvaluationResultV2<
     value: EvaluationResultValue<T, M>
     usedForSuggestion?: boolean
     workspace: Workspace
+    dry?: boolean
   },
   transaction = new Transaction(),
 ) {
-  return await transaction.call(async (tx) => {
-    const result = (await tx
-      .insert(evaluationResultsV2)
-      .values({
-        uuid: uuid,
-        workspaceId: workspace.id,
-        commitId: commit.id,
-        experimentId: experiment?.id,
-        evaluationUuid: evaluation.uuid,
-        datasetId: dataset?.id,
-        evaluatedRowId: datasetRow?.id,
-        evaluatedLogId: providerLog.id,
-        ...value,
-        usedForSuggestion: usedForSuggestion,
+  const values = {
+    uuid: uuid,
+    workspaceId: workspace.id,
+    commitId: commit.id,
+    experimentId: experiment?.id,
+    evaluationUuid: evaluation.uuid,
+    datasetId: dataset?.id,
+    evaluatedRowId: datasetRow?.id,
+    evaluatedLogId: providerLog.id,
+    ...value,
+    usedForSuggestion: usedForSuggestion,
+  }
+
+  if (dry) {
+    return Result.ok({ result: values as EvaluationResultV2<T, M> })
+  }
+
+  return await transaction.call(
+    async (tx) => {
+      const result = (await tx
+        .insert(evaluationResultsV2)
+        .values(values)
+        .returning()
+        .then((r) => r[0]!)) as EvaluationResultV2<T, M>
+
+      return Result.ok({ result })
+    },
+    async ({ result }) => {
+      if (dry) return
+
+      await publisher.publishLater({
+        type: 'evaluationResultV2Created',
+        data: {
+          result: result,
+          evaluation: evaluation,
+          commit: commit,
+          providerLog: providerLog,
+          experiment: experiment,
+          dataset: dataset,
+          datasetRow: datasetRow,
+          workspaceId: workspace.id,
+        },
       })
-      .returning()
-      .then((r) => r[0]!)) as EvaluationResultV2<T, M>
-
-    await publisher.publishLater({
-      type: 'evaluationResultV2Created',
-      data: {
-        result: result,
-        evaluation: evaluation,
-        commit: commit,
-        providerLog: providerLog,
-        experiment: experiment,
-        dataset: dataset,
-        datasetRow: datasetRow,
-        workspaceId: workspace.id,
-      },
-    })
-
-    return Result.ok({ result })
-  })
+    },
+  )
 }

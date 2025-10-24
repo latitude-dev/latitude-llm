@@ -18,15 +18,17 @@ import { type Commit } from '../../schema/models/types/Commit'
 import { type Dataset } from '../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Experiment } from '../../schema/models/types/Experiment'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { ProviderLogDto } from '../../schema/types'
+import { ProviderLogDto, ResultWithEvaluationV2 } from '../../schema/types'
 
 export type EvaluationMetricValidateArgs<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   mode: 'create' | 'update'
+  uuid?: string
   configuration: EvaluationConfiguration<T, M>
   document: DocumentVersion
   evaluations: EvaluationV2[]
@@ -46,12 +48,15 @@ export type EvaluationMetricRunArgs<
   providerLog: ProviderLogDto
   documentLog: DocumentLog
   document: DocumentVersion
+  experiment?: Experiment
   dataset?: Dataset
   datasetLabel?: string
   datasetRow?: DatasetRow
   providers?: Map<string, ProviderApiKey>
+  results?: ResultWithEvaluationV2[]
   commit: Commit
   workspace: Workspace
+  dry?: boolean
 }
 
 export type EvaluationMetricAnnotateArgs<

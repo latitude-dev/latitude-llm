@@ -1,6 +1,7 @@
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import {
+  CompositeEvaluationMetric,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -81,6 +82,9 @@ const EVALUATION_METRIC_OPTIONS = <
     case EvaluationType.Human:
       metrics = Object.values(HumanEvaluationMetric) as M[]
       break
+    case EvaluationType.Composite:
+      metrics = Object.values(CompositeEvaluationMetric) as M[]
+      break
   }
 
   return metrics.map((metric) => {
@@ -100,6 +104,7 @@ export default function EvaluationV2Form<
   M extends EvaluationMetric<T>,
 >({
   mode,
+  uuid,
   settings,
   setSettings,
   options,
@@ -109,6 +114,7 @@ export default function EvaluationV2Form<
   disabled,
 }: {
   mode: 'create' | 'update'
+  uuid?: string
   settings: EvaluationSettings<T, M>
   setSettings: (settings: EvaluationSettings<T, M>) => void
   options: Partial<EvaluationOptions>
@@ -214,6 +220,7 @@ export default function EvaluationV2Form<
         )}
         <ConfigurationSimpleForm
           mode={mode}
+          uuid={uuid}
           type={settings.type}
           metric={settings.metric}
           configuration={settings.configuration}
@@ -225,6 +232,7 @@ export default function EvaluationV2Form<
           errors={errors}
           disabled={disabled || commitMerged}
         />
+        {/*TODO(AO): Composite evaluations should be given a dataset label when any of its sub-evaluations requires it*/}
         {mode === 'create' && metricSpecification?.requiresExpectedOutput && (
           <Alert
             variant='default'
@@ -249,6 +257,7 @@ export default function EvaluationV2Form<
             <FormWrapper>
               <ConfigurationAdvancedForm
                 mode={mode}
+                uuid={uuid}
                 type={settings.type}
                 metric={settings.metric}
                 configuration={settings.configuration}

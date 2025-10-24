@@ -32,7 +32,7 @@ function SelectValueWithIcon({
   return (
     <div className='w-full flex flex-row items-center gap-x-2 min-w-0 truncate'>
       {typeof icon === 'string' ? <Icon name={icon as IconName} /> : icon}
-      {typeof children === 'string' ? <Text.H6>{children}</Text.H6> : children}
+      {typeof children === 'string' ? <Text.H5>{children}</Text.H5> : children}
     </div>
   )
 }

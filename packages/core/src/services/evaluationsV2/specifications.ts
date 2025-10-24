@@ -1,4 +1,5 @@
 import { EvaluationMetric, EvaluationType, EvaluationV2 } from '../../constants'
+import { CompositeEvaluationSpecification } from './composite'
 import { HumanEvaluationSpecification } from './human'
 import { LlmEvaluationSpecification } from './llm'
 import { RuleEvaluationSpecification } from './rule'
@@ -10,6 +11,7 @@ export const EVALUATION_SPECIFICATIONS: {
   [EvaluationType.Rule]: RuleEvaluationSpecification,
   [EvaluationType.Llm]: LlmEvaluationSpecification,
   [EvaluationType.Human]: HumanEvaluationSpecification,
+  [EvaluationType.Composite]: CompositeEvaluationSpecification,
 }
 
 export function getEvaluationTypeSpecification<

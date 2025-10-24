@@ -79,6 +79,14 @@ describe('extractActualOutput', () => {
               ],
             },
           },
+          {
+            type: 'tool-call',
+            toolCallId: 'tool-call-2',
+            toolName: 'tool-2',
+            args: {
+              answer: 'Some answer',
+            },
+          },
         ],
       },
     ] as Message[]
@@ -181,7 +189,10 @@ describe('extractActualOutput', () => {
     expect(result).toEqual(
       `
 Some assistant response 1
+
 {"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}
+
+{"type":"tool-call","toolCallId":"tool-call-2","toolName":"tool-2","args":{"answer":"Some answer"}}
 
 Some assistant response 2
 `.trim(),
@@ -199,7 +210,11 @@ Some assistant response 2
     }).then((r) => r.unwrap())
 
     expect(result).toEqual(
-      '{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}',
+      `
+{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}
+
+{"type":"tool-call","toolCallId":"tool-call-2","toolName":"tool-2","args":{"answer":"Some answer"}}
+`.trim(),
     )
   })
 
@@ -214,7 +229,7 @@ Some assistant response 2
     }).then((r) => r.unwrap())
 
     expect(result).toEqual(
-      '[{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}]',
+      '[{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}},{"type":"tool-call","toolCallId":"tool-call-2","toolName":"tool-2","args":{"answer":"Some answer"}}]',
     )
   })
 
@@ -225,7 +240,7 @@ Some assistant response 2
         messageSelection: 'all',
         contentFilter: 'tool_call',
         parsingFormat: 'json',
-        fieldAccessor: '[-1].args.classes[1].variants[-1]',
+        fieldAccessor: '[-2].args.classes[1].variants[-1]',
       },
     }).then((r) => r.unwrap())
 

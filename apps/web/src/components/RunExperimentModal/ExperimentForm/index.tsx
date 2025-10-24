@@ -19,6 +19,7 @@ function hasToSelectDataset({
   selectedEvaluations: EvaluationV2[]
 }): boolean {
   const evaluationRequiresLabel = selectedEvaluations.some((evaluation) => {
+    // TODO(AO): Composite evaluations should be given a dataset label when any of its sub-evaluations requires it
     const specification = getEvaluationMetricSpecification(evaluation)
     return specification.requiresExpectedOutput
   })

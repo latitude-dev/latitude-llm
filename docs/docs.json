@@ -96,7 +96,8 @@
                 "pages": [
                   "guides/evaluations/llm-as-judges",
                   "guides/evaluations/programmatic_rules",
-                  "guides/evaluations/humans-in-the-loop"
+                  "guides/evaluations/humans-in-the-loop",
+                  "guides/evaluations/combined_composites"
                 ]
               },
               "guides/evaluations/running-evaluations",

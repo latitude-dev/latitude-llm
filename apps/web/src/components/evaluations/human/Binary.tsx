@@ -1,4 +1,3 @@
-import { useCallback, useMemo, useState } from 'react'
 import {
   EvaluationType,
   EvaluationV2,
@@ -8,6 +7,10 @@ import {
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useCallback, useMemo, useState } from 'react'
+import { CriteriaDescription as CriteriaWrapper } from '../Annotation/CriteriaDescription'
+import { AnnotationFormWrapper as AForm } from '../Annotation/FormWrapper'
+import { ThumbsUpDownInput } from '../Annotation/ThumbsUpDownInput'
 import {
   AnnotationFormProps,
   ChartConfigurationArgs,
@@ -15,62 +18,8 @@ import {
   ResultBadgeProps,
 } from '../index'
 import { useAnnotationFormState } from './useAnnotationForm'
-import { AnnotationFormWrapper as AForm } from '../Annotation/FormWrapper'
-import { ThumbsUpDownInput } from '../Annotation/ThumbsUpDownInput'
-import { CriteriaDescription as CriteriaWrapper } from '../Annotation/CriteriaDescription'
 
 const specification = HumanEvaluationBinarySpecification
-
-function getCriteria(
-  evaluation: EvaluationV2<EvaluationType.Human, HumanEvaluationMetric.Binary>,
-) {
-  const config = evaluation.configuration
-  const criteria = config.criteria
-  const reverseScale = config.reverseScale
-  const passDescription = config.passDescription
-  const failDescription = config.failDescription
-  const isEmpty =
-    !passDescription && !failDescription && !criteria && !reverseScale
-
-  if (isEmpty) return null
-
-  return {
-    criteria,
-    passDescription,
-    failDescription,
-    reverseScale,
-  }
-}
-
-type ICriteria = ReturnType<typeof getCriteria>
-function CriteriaDescription({
-  criteria,
-  passDescription,
-  failDescription,
-  reverseScale,
-}: NonNullable<ICriteria>) {
-  return (
-    <CriteriaWrapper reverseScale={reverseScale} criteria={criteria}>
-      {failDescription ? (
-        <div>
-          <Text.H5M color='background' display='block'>
-            Fail criteria
-          </Text.H5M>
-          <Text.H6 color='primaryForeground'>{failDescription}</Text.H6>
-        </div>
-      ) : null}
-      {passDescription ? (
-        <div>
-          <Text.H5M color='background' display='block'>
-            Pass criteria
-          </Text.H5M>
-          <Text.H6 color='primaryForeground'>{passDescription}</Text.H6>
-        </div>
-      ) : null}
-    </CriteriaWrapper>
-  )
-}
-
 export default {
   ...specification,
   icon: 'thumbsUp' as IconName,
@@ -130,6 +79,56 @@ function ResultBadge({
   result,
 }: ResultBadgeProps<EvaluationType.Human, HumanEvaluationMetric.Binary>) {
   return <>{result.score === 1 ? 'Passed' : 'Failed'}</>
+}
+
+function getCriteria(
+  evaluation: EvaluationV2<EvaluationType.Human, HumanEvaluationMetric.Binary>,
+) {
+  const config = evaluation.configuration
+  const criteria = config.criteria
+  const reverseScale = config.reverseScale
+  const passDescription = config.passDescription
+  const failDescription = config.failDescription
+  const isEmpty =
+    !passDescription && !failDescription && !criteria && !reverseScale
+
+  if (isEmpty) return null
+
+  return {
+    criteria,
+    passDescription,
+    failDescription,
+    reverseScale,
+  }
+}
+
+type ICriteria = ReturnType<typeof getCriteria>
+function CriteriaDescription({
+  criteria,
+  passDescription,
+  failDescription,
+  reverseScale,
+}: NonNullable<ICriteria>) {
+  return (
+    <CriteriaWrapper reverseScale={reverseScale} criteria={criteria}>
+      {failDescription ? (
+        <div>
+          <Text.H5M color='background' display='block'>
+            Fail criteria
+          </Text.H5M>
+          <Text.H6 color='primaryForeground'>{failDescription}</Text.H6>
+        </div>
+      ) : null}
+      {passDescription ? (
+        <div>
+          <Text.H5M color='background' display='block'>
+            Pass criteria
+          </Text.H5M>
+          <Text.H6 color='primaryForeground'>{passDescription}</Text.H6>
+        </div>
+      ) : null}
+    </CriteriaWrapper>
+  )
 }
 
 function AnnotationForm({
