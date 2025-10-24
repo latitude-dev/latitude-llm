@@ -26,6 +26,10 @@ export function RewardItem({
     return claimedRewards.some((r) => r.rewardType === type)
   }, [isLoading, claimedRewards, type])
 
+  const rewardCount = useMemo(() => {
+    return formatCount(REWARD_VALUES[type])
+  }, [type])
+
   return (
     <span className='w-full'>
       <Button
@@ -63,7 +67,7 @@ export function RewardItem({
             size='large'
             className='flex-shrink-0'
           >
-            +{formatCount(REWARD_VALUES[type])} runs
+            +{rewardCount} runs
           </Badge>
         </div>
       </Button>
