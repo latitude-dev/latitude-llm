@@ -174,6 +174,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     .getDocumentsAtCommit(commit)
     .then((r) => r.unwrap())
 
+  console.log(`🔥🔥🔥 Documents created: ${documents.length}`)
   return {
     project,
     user,
