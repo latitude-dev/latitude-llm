@@ -5,4 +5,4 @@ export const ISSUE_STATUSES = {
   IGNORED: 'ignored',
 } as const
 
-export type IssueStatus = typeof ISSUE_STATUSES[keyof typeof ISSUE_STATUSES]
+export type IssueStatus = (typeof ISSUE_STATUSES)[keyof typeof ISSUE_STATUSES]
