@@ -49,7 +49,7 @@ export async function getUserFromCredentials({
 export function getPlanFromSubscriptionSlug(
   slug: SubscriptionPlan | undefined,
 ) {
-  const plan = slug || SubscriptionPlan.HobbyV2
+  const plan = slug || SubscriptionPlan.HobbyV3
   const planData = SubscriptionPlans[plan]
   return { ...planData, plan }
 }
