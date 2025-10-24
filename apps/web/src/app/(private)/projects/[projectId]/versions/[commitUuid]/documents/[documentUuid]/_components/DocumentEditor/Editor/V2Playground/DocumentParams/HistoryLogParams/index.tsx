@@ -1,12 +1,10 @@
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
-import type { UseLogHistoryParams } from './useLogHistoryParams'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { ChangeEvent, useCallback, useEffect, useState } from 'react'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { ParametersWrapper } from '../ParametersWrapper'
 import { PlaygroundInput } from '@latitude-data/core/lib/documentPersistedInputs'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
   ParameterType,
   PromptSpanMetadata,
@@ -17,7 +15,6 @@ import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { UseDocumentParameters } from '$/hooks/useDocumentParameters'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useDebouncedCallback } from 'use-debounce'
-import { useSpansPaginationStore } from '$/stores/spansPaginationCompat'
 import { useSpan } from '$/stores/spans'
 import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
 
@@ -67,13 +64,11 @@ function DebouncedTextArea({
 }
 
 export function HistoryLogParams({
-  data,
   commit,
   document,
 }: {
   document: DocumentVersion
   commit: ICommitContextType['commit']
-  data: UseLogHistoryParams
 }) {
   const {
     items: spans,
@@ -88,7 +83,7 @@ export function HistoryLogParams({
   })
   const spanId = spans?.[0]?.id
   const traceId = spans?.[0]?.traceId
-  const { data: span } = useSpan({
+  const { data: span, isLoading } = useSpan({
     spanId,
     traceId,
   })
@@ -98,15 +93,9 @@ export function HistoryLogParams({
   return (
     <div className='flex flex-col gap-y-4'>
       <div className='flex flex-row gap-x-4 justify-between items-center border-border border-b pb-4'>
-        {data.isLoading || hasLogs ? (
+        {hasLogs ? (
           <>
             <div className='flex flex-grow min-w-0'>
-              {data.isLoadingLog ? (
-                <div className='flex flex-row gap-x-2 w-full'>
-                  <Skeleton height='h3' className='w-2/3' />
-                  <Skeleton height='h3' className='w-1/3' />
-                </div>
-              ) : null}
               {!!span && (
                 <Text.H5 ellipsis noWrap>
                   {span?.startedAt.toISOString()}
@@ -114,7 +103,7 @@ export function HistoryLogParams({
               )}
             </div>
             <ParametersPaginationNav
-              disabled={data.isLoadingLog}
+              disabled={isLoading || !hasLogs}
               label='history logs'
               onPrevPage={goToPrevPage}
               onNextPage={goToNextPage}
@@ -126,7 +115,7 @@ export function HistoryLogParams({
           </div>
         )}
       </div>
-      <div className={cn({ 'opacity-50': data.isLoading })}>
+      <div className={cn({ 'opacity-50': isLoading })}>
         <ParametersWrapper document={document} commit={commit}>
           {({ metadataParameters }) =>
             metadataParameters.map((param, idx) => {

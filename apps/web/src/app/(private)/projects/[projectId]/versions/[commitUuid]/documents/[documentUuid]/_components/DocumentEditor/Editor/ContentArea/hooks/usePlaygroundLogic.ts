@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from 'react'
-import { LogSources } from '@latitude-data/core/constants'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { INPUT_SOURCE } from '@latitude-data/core/lib/documentPersistedInputs'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
@@ -35,7 +34,6 @@ export function usePlaygroundLogic({
   parameters,
   userMessage,
   togglePlaygroundOpen,
-  setHistoryLog,
   setSelectedTab,
 }: {
   commit: Commit
@@ -43,19 +41,9 @@ export function usePlaygroundLogic({
   document: DocumentVersion
   parameters: Record<string, any> | undefined
   togglePlaygroundOpen: () => void
-  setHistoryLog: (log: { uuid: string; source: LogSources }) => void
   setSelectedTab: ReactStateDispatch<TabValue>
   userMessage?: string
 }) {
-  const onPromptRan = useCallback(
-    (documentLogUuid?: string, error?: Error) => {
-      if (!documentLogUuid || error) return
-
-      setHistoryLog({ uuid: documentLogUuid, source: LogSources.Playground })
-    },
-    [setHistoryLog],
-  )
-
   const { runPromptFn, addMessagesFn, abortCurrentStream, hasActiveStream } =
     useRunPlaygroundPrompt({
       commit,
@@ -68,7 +56,6 @@ export function usePlaygroundLogic({
   const playground = usePlaygroundChat({
     runPromptFn,
     addMessagesFn,
-    onPromptRan,
   })
 
   const resetChat = useCallback(() => {

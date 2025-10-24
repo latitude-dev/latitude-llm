@@ -18,10 +18,6 @@ import {
   useSelectDataset,
 } from './DatasetParams/useSelectDataset'
 import { HistoryLogParams } from './HistoryLogParams'
-import {
-  UseLogHistoryParams,
-  useLogHistoryParams,
-} from './HistoryLogParams/useLogHistoryParams'
 import { ManualParams } from './ManualParams'
 
 import {
@@ -46,7 +42,6 @@ type ContentProps = Props & {
   source: InputSource
   setSource: ReturnType<typeof useDocumentParameters>['setSource']
   datasetInfo: UseSelectDataset
-  historyInfo: UseLogHistoryParams
 }
 
 function ParamsTabs({
@@ -57,7 +52,6 @@ function ParamsTabs({
   setSource,
   source,
   datasetInfo,
-  historyInfo,
 }: ContentProps) {
   return (
     <div className='w-full flex flex-col gap-4'>
@@ -79,11 +73,7 @@ function ParamsTabs({
         <DatasetParams data={datasetInfo} document={document} commit={commit} />
       )}
       {source === INPUT_SOURCE.history && (
-        <HistoryLogParams
-          data={historyInfo}
-          document={document}
-          commit={commit}
-        />
+        <HistoryLogParams document={document} commit={commit} />
       )}
     </div>
   )
@@ -104,17 +94,11 @@ export default memo(function DocumentParams({
     commitVersionUuid: commit.uuid,
     source,
   })
-  const historyInfo = useLogHistoryParams({
-    document: props.document,
-    commitVersionUuid: commit.uuid,
-  })
-
   const contentProps = {
     ...props,
     source,
     setSource,
     datasetInfo,
-    historyInfo,
   }
 
   return (

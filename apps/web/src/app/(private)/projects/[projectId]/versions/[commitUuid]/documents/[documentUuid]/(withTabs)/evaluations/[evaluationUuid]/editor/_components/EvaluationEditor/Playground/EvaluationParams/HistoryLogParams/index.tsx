@@ -17,6 +17,7 @@ import {
   EvaluationV2,
   LlmEvaluationMetricAnyCustom,
 } from '@latitude-data/core/constants'
+import { useCallback } from 'react'
 
 function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {
   const urlData = usePaginatedDocumentLogUrl({
@@ -24,6 +25,14 @@ function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {
     page: data.page,
     isLoading: data.isLoadingLog,
   })
+  const onPrevPage = useCallback(
+    () => data.onPrevPage(data.page ? data.page - 1 : 1),
+    [data],
+  )
+  const onNextPage = useCallback(
+    () => data.onNextPage(data.page ? data.page + 1 : 1),
+    [data],
+  )
 
   const hasLogs = data.count > 0
   return (
@@ -57,10 +66,8 @@ function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {
           <ParametersPaginationNav
             disabled={data.isLoadingLog}
             label='history logs'
-            currentIndex={data.position}
-            totalCount={data.count}
-            onPrevPage={data.onPrevPage}
-            onNextPage={data.onNextPage}
+            onPrevPage={onPrevPage}
+            onNextPage={onNextPage}
           />
         </>
       ) : (

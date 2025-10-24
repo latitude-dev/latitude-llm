@@ -21,9 +21,11 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import {
+  AssembledSpan,
   DocumentLog,
   DocumentLogWithMetadataAndError,
   PromptSpanMetadata,
+  SpanType,
   SpanWithDetails,
 } from '@latitude-data/core/constants'
 import { ProviderLogDto } from '@latitude-data/core/schema/types'
@@ -36,6 +38,11 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { FinishReasonItem } from '../../../../../../[documentUuid]/_components/FinishReasonItem'
+import { useConversation } from '$/stores/conversations'
+import { useTrace } from '$/stores/traces'
+import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
+import { useSelectedSpan } from '../../../../traces/_components/SelectedSpansContext'
+import { useSelectedTraceId } from '../../../../traces/_components/SelectedTraceIdContext'
 
 function costNotCalculatedReason({
   provider,
@@ -237,61 +244,54 @@ export function DocumentLogParameters({
 }: {
   documentLog: DocumentLog
 }) {
-  const parameters = useMemo(() => {
-    return Object.entries(documentLog.parameters).map(([parameter, value]) => {
-      if (value === undefined || value === null) {
-        value = ''
-      } else if (typeof value === 'object' || Array.isArray(value)) {
-        try {
-          value = JSON.stringify(value)
-        } catch (error) {
-          value = String(value)
-        }
-      } else {
-        value = String(value)
-      }
-
-      return {
-        parameter,
-        value,
-      }
-    })
-  }, [documentLog.parameters])
+  const { data: traces } = useConversation({
+    conversationId: documentLog.uuid,
+  })
+  const { data: trace } = useTrace({ traceId: traces?.[0] })
+  const promptSpan = useMemo(
+    () => findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt),
+    [trace],
+  )
+  const promptSpanMetadata = promptSpan?.metadata as
+    | PromptSpanMetadata
+    | undefined
 
   return (
     <div className='flex flex-col gap-y-1'>
       <div className='flex flex-row items-center justify-between'>
         <Text.H5M color='foreground'>Parameters</Text.H5M>
-        <UseDocumentLogInPlaygroundButton documentLog={documentLog} />
+        <UseDocumentLogInPlaygroundButton span={promptSpan} />
       </div>
       <div className='grid grid-cols-[auto_1fr] gap-y-3'>
-        {parameters.map(({ parameter, value }, index) => {
-          const file = asPromptLFile(value)
-          return (
-            <div
-              key={index}
-              className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
-            >
-              <div className='flex flex-row items-center gap-x-2 min-h-8'>
-                <Badge variant='accent'>
-                  &#123;&#123;{parameter}&#125;&#125;
-                </Badge>
+        {Object.entries(promptSpanMetadata?.parameters ?? {}).map(
+          ([parameter, value], index) => {
+            const file = asPromptLFile(value)
+            return (
+              <div
+                key={index}
+                className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
+              >
+                <div className='flex flex-row items-center gap-x-2 min-h-8'>
+                  <Badge variant='accent'>
+                    &#123;&#123;{parameter}&#125;&#125;
+                  </Badge>
+                </div>
+                <div className='flex flex-grow w-full min-w-0'>
+                  {file ? (
+                    <PromptLFileParameter file={file} />
+                  ) : (
+                    <TextArea
+                      value={String(value || '')}
+                      minRows={1}
+                      maxRows={6}
+                      disabled={true}
+                    />
+                  )}
+                </div>
               </div>
-              <div className='flex flex-grow w-full min-w-0'>
-                {file ? (
-                  <PromptLFileParameter file={file} />
-                ) : (
-                  <TextArea
-                    value={String(value || '')}
-                    minRows={1}
-                    maxRows={6}
-                    disabled={true}
-                  />
-                )}
-              </div>
-            </div>
-          )
-        })}
+            )
+          },
+        )}
       </div>
     </div>
   )
@@ -454,44 +454,49 @@ export function DocumentLogMetadata({
 }
 
 function UseDocumentLogInPlaygroundButton({
-  documentLog,
+  span,
 }: {
-  documentLog: DocumentLogWithMetadataAndError | DocumentLog
+  span?: AssembledSpan<SpanType.Prompt>
 }) {
+  const { setSelectedSpanId } = useSelectedSpan()
+  const { setSelectedTraceId } = useSelectedTraceId()
+  const { document } = useCurrentDocument()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const documentUuid = documentLog.documentUuid
-  const { document } = useCurrentDocument()
-  const {
-    setSource,
-    history: { setHistoryLog },
-  } = useDocumentParameters({
+  const { setSource } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
   })
   const navigate = useNavigate()
   const employLogAsDocumentParameters = useCallback(() => {
+    if (!span) return
+
     setSource('history')
-    setHistoryLog(documentLog)
+    setSelectedTraceId(span.traceId)
+    setSelectedSpanId(span.id)
+
     navigate.push(
       ROUTES.projects
         .detail({ id: project.id })
         .commits.detail({
           uuid: commit.uuid,
         })
-        .documents.detail({ uuid: documentUuid }).root,
+        .documents.detail({ uuid: document.documentUuid }).root,
     )
   }, [
-    setHistoryLog,
+    setSelectedTraceId,
+    setSelectedSpanId,
     setSource,
     navigate,
     project.id,
     commit.uuid,
-    documentUuid,
-    documentLog,
+    document.documentUuid,
+    span,
   ])
-  const hasError = 'error' in documentLog && !!documentLog.error.message
 
+  if (!span) return
+
+  const hasError = span.status === 'error'
   if (hasError) return null
 
   return (
