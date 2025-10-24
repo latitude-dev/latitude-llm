@@ -24,7 +24,7 @@ export const SubscriptionPlans = {
   [SubscriptionPlan.TeamV1]: {
     name: 'Team',
     credits: 100_000, // runs
-    users: 'unlimited' as const,
+    users: 5,
     retention_period: 1825, // days
     rate_limit: 166, // per second
     latte_credits: 300,
