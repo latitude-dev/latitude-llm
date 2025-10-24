@@ -10,19 +10,20 @@ import {
   createWorkspace,
 } from '../../../tests/factories'
 import { applyUserPlanLimit } from './applyUserPlanLimit'
+import { type User } from '../../../schema/models/types/User'
 
 describe('applyUserPlanLimit', () => {
   let workspace: Workspace & { currentSubscription: Subscription }
-  let creatorUser: any
+  let creatorUser: User
 
   beforeEach(async () => {
-    // Create a test workspace with HobbyV2 plan (1 user limit)
+    // Create a test workspace with HobbyV3 plan (2 users limit)
     const result = await createWorkspace({
-      subscriptionPlan: SubscriptionPlan.HobbyV2,
+      subscriptionPlan: SubscriptionPlan.HobbyV3,
     })
     const subscription = await createSubscription({
       workspaceId: result.workspace.id,
-      plan: SubscriptionPlan.HobbyV2,
+      plan: SubscriptionPlan.HobbyV3,
     })
 
     workspace = {
@@ -56,7 +57,7 @@ describe('applyUserPlanLimit', () => {
       ...workspace,
       currentSubscription: {
         ...workspace.currentSubscription,
-        plan: SubscriptionPlan.TeamV1,
+        plan: SubscriptionPlan.TeamV3,
       },
     }
 
@@ -71,7 +72,7 @@ describe('applyUserPlanLimit', () => {
   })
 
   it('returns PaymentRequiredError when users reach limit', async () => {
-    // Arrange - for HobbyV2, limit is 2 users, and creator already counts as 1
+    // Arrange - for HobbyV3, limit is 2 users, and creator already counts as 1
     // So having exactly 2 users (the creator and a new user) should trigger the error
     const user = await createUser()
     await createMembership({ user, workspace, author: creatorUser })
@@ -88,7 +89,7 @@ describe('applyUserPlanLimit', () => {
   })
 
   it('returns PaymentRequiredError when users exceed limit', async () => {
-    // Arrange - create 2 additional users (creator + 2 = 3 users > limit of 2 for HobbyV2)
+    // Arrange - create 3 additional users (creator + 2 = 3 users > limit of 2 for HobbyV3)
     const user = await createUser()
     await createMembership({ user, workspace, author: creatorUser })
     const user2 = await createUser()
@@ -106,29 +107,33 @@ describe('applyUserPlanLimit', () => {
   })
 
   describe('different subscription plans', () => {
-    it.each(FREE_PLANS)('works with free plan: %s', async (plan) => {
-      // Arrange
-      const result = await createWorkspace({
-        subscriptionPlan: plan,
-      })
-      const subscription = await createSubscription({
-        workspaceId: result.workspace.id,
-        plan,
-      })
-      const workspaceWithPlan = {
-        ...result.workspace,
-        currentSubscription: subscription,
-      }
+    it.each(FREE_PLANS.filter((plan) => plan !== SubscriptionPlan.HobbyV3))(
+      'works with free plan: %s',
+      async (plan) => {
+        // Arrange
+        const result = await createWorkspace({
+          subscriptionPlan: plan,
+        })
+        const subscription = await createSubscription({
+          workspaceId: result.workspace.id,
+          plan,
+        })
+        const workspaceWithPlan = {
+          ...result.workspace,
+          currentSubscription: subscription,
+        }
 
-      // For free plans with 1 user limit, having 1 user should return error
-      // Act
-      const result2 = await applyUserPlanLimit({
-        workspace: workspaceWithPlan,
-      })
+        // For free plans with 1 user limit, having 1 user should return error
+        // Act
+        const result2 = await applyUserPlanLimit({
+          workspace: workspaceWithPlan,
+        })
 
-      // Assert
-      expect(result2.ok).toBe(true)
-    })
+        // Assert
+        expect(result2.ok).toBe(false)
+        expect(result2.error).toBeInstanceOf(PaymentRequiredError)
+      },
+    )
 
     it.each(PRO_PLANS)('works with pro plan: %s', async (plan) => {
       // Arrange
