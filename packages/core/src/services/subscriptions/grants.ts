@@ -19,7 +19,7 @@ export async function issueSubscriptionGrants(
 ) {
   const plan =
     SubscriptionPlans[subscription.plan] ??
-    SubscriptionPlans[SubscriptionPlan.HobbyV2]
+    SubscriptionPlans[SubscriptionPlan.HobbyV3]
 
   return await tx.call(async () => {
     const revoking = await revokeGrants(

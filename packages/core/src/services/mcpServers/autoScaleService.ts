@@ -39,6 +39,7 @@ export async function autoScaleInactiveServers(db = database) {
           inArray(subscriptions.plan, [
             SubscriptionPlan.HobbyV1,
             SubscriptionPlan.HobbyV2,
+            SubscriptionPlan.HobbyV3,
           ]),
         ),
       )
