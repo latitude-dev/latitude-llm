@@ -21,7 +21,7 @@ export function ResizableLayout({
   initialRightPaneWidth?: number
 }) {
   const [rightPaneWidth, setRightPaneWidth] = useState<number | null>(
-    initialRightPaneWidth ?? window.innerWidth / 3,
+    initialRightPaneWidth ?? null,
   )
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
@@ -58,7 +58,7 @@ export function ResizableLayout({
       const availableWidth =
         containerWidth > 0 ? containerWidth : window.innerWidth
       const initialWidth = Math.max(
-        availableWidth * 0.3, // 30% of available width
+        availableWidth * 0.33, // 30% of available width
         MIN_RIGHT_PANE_WIDTH, // But at least the minimum width
       )
       setRightPaneWidth(initialWidth)
