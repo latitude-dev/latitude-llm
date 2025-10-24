@@ -39,7 +39,6 @@ export async function createIssue(
       .values({
         workspaceId: workspace.id,
         projectId: project.id,
-        commitId: commit.id,
         documentUuid,
         title,
         description,

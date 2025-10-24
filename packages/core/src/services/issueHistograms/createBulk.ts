@@ -7,6 +7,7 @@ import { issueHistograms } from '../../schema/models/issueHistograms'
 
 export type IssueHistogramData = {
   issue: Issue
+  commitId: number
   date: Date
   count: number
 }
@@ -22,9 +23,10 @@ export async function createIssueHistogramsBulk(
   transaction = new Transaction(),
 ) {
   return transaction.call(async (tx) => {
-    const values = histograms.map(({ issue, date, count }) => ({
+    const values = histograms.map(({ issue, commitId, date, count }) => ({
       workspaceId: workspace.id,
       issueId: issue.id,
+      commitId,
       date: format(date, 'yyyy-MM-dd'),
       count,
     }))
