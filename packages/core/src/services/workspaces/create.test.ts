@@ -44,7 +44,7 @@ describe('createWorkspace', () => {
         type: QuotaType.Seats,
         workspace: workspace,
       }).then((r) => r.unwrap().limit),
-    ).toEqual(5)
+    ).toEqual(2)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
