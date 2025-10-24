@@ -59,17 +59,17 @@ export async function setupSchedules() {
     { opts: { attempts: 1 } },
   )
 
-  // Every day at 12:45 PM UTC - Upgrade Hobby users to HobbyV3
+  // Every day at 14:30 PM UTC - Upgrade Hobby users to HobbyV3
   await maintenanceQueue.upsertJobScheduler(
     'upgradeHobbyUsersToV3Job',
-    { pattern: '45 12 * * *' },
+    { pattern: '30 14 * * *' },
     { opts: { attempts: 1 } },
   )
 
-  // Every day at 12:10 PM UTC - Upgrade TeamV2 users to TeamV3
+  // Every day at 14:30 PM UTC - Upgrade TeamV2 users to TeamV3
   await maintenanceQueue.upsertJobScheduler(
     'upgradeTeamV2UsersToV3Job',
-    { pattern: '10 12 * * *' },
+    { pattern: '30 14 * * *' },
     { opts: { attempts: 1 } },
   )
 }
