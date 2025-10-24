@@ -6,7 +6,7 @@ import * as factories from '../../../tests/factories'
 import { database } from '../../../client'
 import { workspaces } from '../../../schema/models/workspaces'
 import { subscriptions } from '../../../schema/models/subscriptions'
-import { eq, or } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 describe('upgradeTeamV2UsersToV3Job', () => {
   let teamV1Workspace: any
