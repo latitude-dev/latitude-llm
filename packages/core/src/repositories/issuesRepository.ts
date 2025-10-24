@@ -1,17 +1,22 @@
 import { and, desc, eq, getTableColumns, or, sql } from 'drizzle-orm'
 import { type Issue } from '../schema/models/types/Issue'
+import { type Project } from '../schema/models/types/Project'
+import { type Commit } from '../schema/models/types/Commit'
 import { issues } from '../schema/models/issues'
 import { Result } from '../lib/Result'
 import RepositoryLegacy from './repository'
 import { IssueHistogramsRepository } from './issueHistogramsRepository'
 import { CommitsRepository } from './commitsRepository'
-import { HEAD_COMMIT } from '@latitude-data/constants'
 import { IssueStatus } from '@latitude-data/constants/issues'
 
 const tt = getTableColumns(issues)
 
 export type IssueSort = 'relevance' | 'lastSeen' | 'firstSeen' | 'title'
-const EMPTY_STATUSES: IssueStatus[] = []
+
+export type IssueFilters = {
+  statuses?: IssueStatus[]
+  // Future filters will be added here (dates, etc.)
+}
 
 export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
   get scope() {
@@ -23,36 +28,28 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
   }
 
   async filterIssues({
-    projectId,
-    commitUuid,
-    statuses = EMPTY_STATUSES,
+    project,
+    commit,
+    filters = {},
     sort = 'relevance',
     cursor,
     limit = 20,
   }: {
-    projectId?: number
-    commitUuid?: string
-    statuses?: IssueStatus[]
+    project: Project
+    commit: Commit
+    filters?: IssueFilters
     sort?: IssueSort
     cursor?: string
     limit?: number
   }) {
-    const commitsResult = await this.getCommits({ projectId, commitUuid })
-    if (commitsResult.error) return commitsResult
+    // Get commit IDs from the provided commit and its history
+    const commitIdsResult = await this.getCommitIds({ commit })
+    if (commitIdsResult.error) return commitIdsResult
 
-    const commitIds = commitsResult.value.map((c) => c.id)
+    const commitIds = commitIdsResult.value
 
-    if (commitIds.length === 0) {
-      // Early return if no commits
-      return Result.ok({
-        issues: [],
-        hasMore: false,
-        nextCursor: null,
-      })
-    }
-
-    const whereConditions = this.buildWhereConditions({ projectId, cursor })
-    const havingConditions = this.buildHavingConditions({ statuses })
+    const whereConditions = this.buildWhereConditions({ project, cursor })
+    const havingConditions = this.buildHavingConditions({ filters })
     const orderByClause = this.buildOrderByClause(sort)
 
     const histogramRepo = new IssueHistogramsRepository(
@@ -121,16 +118,16 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
   }
 
   private buildWhereConditions({
-    projectId,
+    project,
     cursor,
   }: {
-    projectId?: number
+    project: Project
     cursor?: string
   }) {
     const conditions = [
       eq(issues.workspaceId, this.workspaceId),
-      projectId ? eq(issues.projectId, projectId) : undefined,
-    ].filter(Boolean)
+      eq(issues.projectId, project.id),
+    ]
 
     if (cursor) {
       const cursorId = this.parseCursor(cursor)
@@ -142,11 +139,11 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
     return conditions
   }
 
-  private buildHavingConditions({ statuses }: { statuses?: IssueStatus[] }) {
+  private buildHavingConditions({ filters }: { filters: IssueFilters }) {
     const conditions = []
 
-    if (statuses && statuses.length > 0) {
-      const statusConditions = statuses.map((status) => {
+    if (filters.statuses && filters.statuses.length > 0) {
+      const statusConditions = filters.statuses.map((status) => {
         switch (status) {
           case 'new':
             return sql`is_new = true`
@@ -182,43 +179,10 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
     }
   }
 
-  /**
-   * Read `getCommitsHistory` docs for more info
-   */
-  private async getCommits({
-    commitUuid,
-    projectId,
-  }: {
-    commitUuid?: string
-    projectId?: number
-  }) {
-    const repo = new CommitsRepository(this.workspaceId, this.db)
-    const commitResult = await this.getCommit({
-      commitUuid: commitUuid ?? HEAD_COMMIT,
-      projectId,
-    })
-    if (commitResult.error) return commitResult
-
-    return Result.ok(
-      await repo.getCommitsHistory({ commit: commitResult.value }),
-    )
-  }
-
-  private async getCommit({
-    commitUuid,
-    projectId,
-  }: {
-    commitUuid: string
-    projectId?: number
-  }) {
-    const commitsScope = new CommitsRepository(this.workspaceId, this.db)
-    const commitResult = await commitsScope.getCommitByUuid({
-      projectId,
-      uuid: commitUuid,
-    })
-    if (commitResult.error) return commitResult
-
-    return Result.ok(commitResult.unwrap())
+  private async getCommitIds({ commit }: { commit: Commit }) {
+    const commitsRepo = new CommitsRepository(this.workspaceId, this.db)
+    const commits = await commitsRepo.getCommitsHistory({ commit })
+    return Result.ok(commits.map((c: { id: number }) => c.id))
   }
 
   private parseCursor(cursor: string): number | null {
