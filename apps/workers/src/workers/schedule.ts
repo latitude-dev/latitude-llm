@@ -66,9 +66,9 @@ export async function setupSchedules() {
     { opts: { attempts: 1 } },
   )
 
-  // Every day at 30th minute of 11 AM CEST - Grant unlimited seats to Team users
+  // Every day at 11:30 AM CEST - Upgrade TeamV2 users to TeamV3
   await maintenanceQueue.upsertJobScheduler(
-    'grantUnlimitedSeatsToTeamUsersJob',
+    'upgradeTeamV2UsersToV3Job',
     { pattern: '0 10 30 * *' },
     { opts: { attempts: 1 } },
   )
