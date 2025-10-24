@@ -58,4 +58,18 @@ export async function setupSchedules() {
     { pattern: '0 0 1 * * *' },
     { opts: { attempts: 1 } },
   )
+
+  // Every day at 11 AM CEST - Grant additional seat to Hobby users
+  await maintenanceQueue.upsertJobScheduler(
+    'grantAdditionalSeatToHobbyUsersJob',
+    { pattern: '0 10 * * *' },
+    { opts: { attempts: 1 } },
+  )
+
+  // Every day at 30th minute of 11 AM CEST - Grant unlimited seats to Team users
+  await maintenanceQueue.upsertJobScheduler(
+    'grantUnlimitedSeatsToTeamUsersJob',
+    { pattern: '0 10 30 * *' },
+    { opts: { attempts: 1 } },
+  )
 }
