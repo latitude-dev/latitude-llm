@@ -8,6 +8,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo } from 'react'
 import { REWARD_VALUES, RewardType } from '@latitude-data/core/constants'
+import { formatCount } from '$/lib/formatCount'
 
 export function RewardItem({
   description,
@@ -62,7 +63,7 @@ export function RewardItem({
             size='large'
             className='flex-shrink-0'
           >
-            +{REWARD_VALUES[type]} runs
+            +{formatCount(REWARD_VALUES[type])} runs
           </Badge>
         </div>
       </Button>
