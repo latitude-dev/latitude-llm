@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import useFetcher from '$/hooks/useFetcher'
 import { Span, SpanType } from '@latitude-data/constants'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -10,7 +10,6 @@ import { API_ROUTES } from '$/services/routes/api'
 export interface SpansKeysetPaginationResult {
   items: Span[]
   next: string | null
-  prev: string | null
 }
 
 export function useSpansKeysetPaginationStore(
@@ -20,28 +19,38 @@ export function useSpansKeysetPaginationStore(
     documentUuid,
     type = SpanType.Prompt,
     initialItems = [],
+    limit = 50,
   }: {
     projectId: string
     commitUuid: string
     documentUuid: string
     type?: SpanType
     initialItems?: Span[]
+    limit?: number
   },
   opts?: SWRConfiguration,
 ) {
-  const [from, setFrom] = useState<string | null>(null)
-  const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
+  // Store cursor history for navigation - current cursor and previous cursors
+  const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([])
+  const [currentCursor, setCurrentCursor] = useState<string | null>(null)
 
   const apiUrl = API_ROUTES.projects
     .detail(parseInt(projectId))
     .commits.detail(commitUuid)
     .documents.detail(documentUuid).spans.limited
 
-  const fetcher = useFetcher<SpansKeysetPaginationResult>(apiUrl, {
+  const fetcher = useFetcher<
+    SpansKeysetPaginationResult,
+    SpansKeysetPaginationResult
+  >(apiUrl, {
+    serializer: ({ items, ...rest }) => ({
+      items: serializeSpans(items),
+      ...rest,
+    }),
     searchParams: compactObject({
-      from: from ?? undefined,
-      direction,
+      from: currentCursor ?? undefined,
       type,
+      limit: limit.toString(),
     }) as Record<string, string>,
   })
 
@@ -51,39 +60,76 @@ export function useSpansKeysetPaginationStore(
       projectId,
       commitUuid,
       documentUuid,
-      from,
-      direction,
+      currentCursor,
       type,
+      limit,
     ],
     fetcher,
-    { ...opts, fallbackData: { items: initialItems, next: null, prev: null } },
+    {
+      ...opts,
+      keepPreviousData: true,
+      fallbackData:
+        initialItems.length > 0
+          ? {
+              items: initialItems,
+              next: initialItems.at(-1)!.startedAt.toISOString(),
+            }
+          : undefined,
+    },
   )
 
   const goToNextPage = useCallback(() => {
     if (!data?.next || isLoading) return
-    setFrom(data.next)
-    setDirection('forward')
-  }, [data?.next, isLoading])
+
+    setCursorHistory((prev) => [...prev, currentCursor])
+    setCurrentCursor(data.next)
+  }, [data?.next, isLoading, currentCursor])
 
   const goToPrevPage = useCallback(() => {
-    if (!data?.prev || isLoading) return
-    setFrom(data.prev)
-    setDirection('backward')
-  }, [data?.prev, isLoading])
+    if (cursorHistory.length === 0 || isLoading) return
+
+    const previousCursor = cursorHistory[cursorHistory.length - 1]
+    setCursorHistory((prev) => prev.slice(0, -1))
+    setCurrentCursor(previousCursor)
+  }, [cursorHistory, isLoading])
 
   const reset = useCallback(() => {
-    setFrom(null)
-    setDirection('forward')
+    setCursorHistory([])
+    setCurrentCursor(null)
   }, [])
 
-  return {
-    items: data?.items ?? [],
-    hasNext: !!data?.next,
-    hasPrev: !!data?.prev,
-    isLoading,
-    error,
-    goToNextPage,
-    goToPrevPage,
-    reset,
-  }
+  return useMemo(
+    () => ({
+      items: data?.items ?? [],
+      hasNext: !!data?.next,
+      hasPrev: cursorHistory.length > 0, // Can go back if we have history
+      isLoading,
+      error,
+      goToNextPage,
+      goToPrevPage,
+      reset,
+      // Expose current state for debugging if needed
+      currentCursor,
+      cursorHistoryLength: cursorHistory.length,
+    }),
+    [
+      data?.items,
+      data?.next,
+      cursorHistory.length,
+      isLoading,
+      error,
+      goToNextPage,
+      goToPrevPage,
+      reset,
+      currentCursor,
+      limit,
+    ],
+  )
+}
+
+function serializeSpans(spans: Span[]) {
+  return spans.map((span) => ({
+    ...span,
+    startedAt: new Date(span.startedAt),
+  }))
 }

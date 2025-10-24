@@ -57,14 +57,18 @@ function DocumenTracesPageContent({
     isLoading,
     goToNextPage,
     goToPrevPage,
+    currentCursor,
+    cursorHistoryLength,
   } = useSpansKeysetPaginationStore({
     projectId,
     commitUuid,
     documentUuid,
   })
 
-  // Use initial spans for the first render, then switch to loaded data
-  const displaySpans = spans.length > 0 ? spans : initialSpans
+  // Only use initial spans on the very first load (when no cursor is set)
+  // Don't fall back to initial spans when navigating between pages
+  const displaySpans =
+    currentCursor === null && spans.length === 0 ? initialSpans : spans
 
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-2 min-w-0'>
@@ -81,7 +85,7 @@ function DocumenTracesPageContent({
                   <DocumentTraces
                     spans={displaySpans as Span<SpanType.Prompt>[]}
                   />
-                  {(hasNext || hasPrev) && (
+                  {(hasNext || hasPrev || isLoading) && (
                     <div className='flex justify-between items-center p-4 border-t gap-4'>
                       <Button
                         onClick={goToPrevPage}
@@ -89,15 +93,24 @@ function DocumenTracesPageContent({
                         variant='outline'
                         size='small'
                       >
-                        Previous
+                        {isLoading && cursorHistoryLength === 0
+                          ? 'Loading...'
+                          : 'Previous'}
                       </Button>
+                      <div className='text-sm text-muted-foreground'>
+                        {isLoading && cursorHistoryLength > 0
+                          ? 'Loading page...'
+                          : ''}
+                      </div>
                       <Button
                         onClick={goToNextPage}
                         disabled={isLoading || !hasNext}
                         variant='outline'
                         size='small'
                       >
-                        Next
+                        {isLoading && cursorHistoryLength === 0
+                          ? 'Loading...'
+                          : 'Next'}
                       </Button>
                     </div>
                   )}

@@ -19,6 +19,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { useDebouncedCallback } from 'use-debounce'
 import { useSpansPaginationStore } from '$/stores/spansPaginationCompat'
 import { useSpan } from '$/stores/spans'
+import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
 
 function DebouncedTextArea({
   input,
@@ -75,16 +76,15 @@ export function HistoryLogParams({
   data: UseLogHistoryParams
 }) {
   const {
-    spans,
-    approximateTotalPages,
-    currentPage,
+    items: spans,
     goToNextPage,
     goToPrevPage,
-  } = useSpansPaginationStore({
+  } = useSpansKeysetPaginationStore({
     projectId: String(commit.projectId),
     commitUuid: commit.uuid,
     documentUuid: document.documentUuid,
     type: SpanType.Prompt,
+    limit: 1,
   })
   const spanId = spans?.[0]?.id
   const traceId = spans?.[0]?.traceId
@@ -92,7 +92,6 @@ export function HistoryLogParams({
     spanId,
     traceId,
   })
-
   const hasLogs = spans.length > 0
   const spanPromptMetadata = span?.metadata as PromptSpanMetadata | undefined
 
@@ -117,8 +116,6 @@ export function HistoryLogParams({
             <ParametersPaginationNav
               disabled={data.isLoadingLog}
               label='history logs'
-              currentIndex={currentPage}
-              totalCount={approximateTotalPages}
               onPrevPage={goToPrevPage}
               onNextPage={goToNextPage}
             />

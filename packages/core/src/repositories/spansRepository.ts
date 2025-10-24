@@ -2,6 +2,7 @@ import { parseJSON } from 'date-fns'
 import { and, asc, desc, eq, getTableColumns, sql, SQL } from 'drizzle-orm'
 import { cache as redis } from '../cache'
 import {
+  DEFAULT_PAGINATION_SIZE,
   Span,
   SPAN_METADATA_CACHE_TTL,
   SPAN_METADATA_STORAGE_KEY,
@@ -69,16 +70,14 @@ export class SpansRepository extends Repository<Span> {
   async findByDocumentAndCommitLimited({
     documentUuid,
     commitUuid,
-    type = SpanType.Prompt,
+    type,
     from,
-    direction = 'forward',
-    limit = 25,
+    limit = DEFAULT_PAGINATION_SIZE,
   }: {
     documentUuid: string
     commitUuid: string
     type?: SpanType
-    from?: { startedAt: string; id: string } | null
-    direction?: 'forward' | 'backward'
+    from?: { startedAt: string; id: string }
     limit?: number
   }) {
     const conditions = [
@@ -88,102 +87,37 @@ export class SpansRepository extends Repository<Span> {
       type ? eq(spans.type, type) : undefined,
     ].filter(Boolean) as SQL<unknown>[]
 
-    let result: any[]
-    let next: { startedAt: string; id: string } | null = null
-    let prev: { startedAt: string; id: string } | null = null
+    // Filter by cursor if provided (same pattern as document logs)
+    const cursorConditions = [
+      ...conditions,
+      from
+        ? sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
+        : undefined,
+    ].filter(Boolean) as SQL<unknown>[]
 
-    if (direction === 'forward') {
-      // Forward pagination: get items before the cursor
-      const forwardConditions = [
-        ...conditions,
-        from
-          ? sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
-          : undefined,
-      ].filter(Boolean) as SQL<unknown>[]
+    const result = await this.db
+      .select(tt)
+      .from(spans)
+      .where(and(...cursorConditions))
+      .orderBy(desc(spans.startedAt), desc(spans.id))
+      .limit(limit + 1)
 
-      result = await this.db
-        .select(tt)
-        .from(spans)
-        .where(and(...forwardConditions))
-        .orderBy(desc(spans.startedAt), desc(spans.id))
-        .limit(limit + 1)
-
-      const hasMore = result.length > limit
-      const spansResult = hasMore ? result.slice(0, limit) : result
-      next = hasMore
-        ? {
-            startedAt: result[limit - 1].startedAt.toISOString(),
-            id: result[limit - 1].id,
-          }
-        : null
-
-      // For previous cursor, we need to check if there are items after the current page
-      if (from && spansResult.length > 0) {
-        const prevCheck = await this.db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(spans)
-          .where(
-            and(
-              ...conditions,
-              sql`(${spans.startedAt}, ${spans.id}) > (${from.startedAt}, ${from.id})`,
-            ),
-          )
-          .then((r) => r[0]?.count ?? 0)
-
-        if (prevCheck > 0) {
-          prev = from // The current cursor becomes the previous cursor
+    const hasMore = result.length > limit
+    const items = hasMore ? result.slice(0, limit) : result
+    const next = hasMore
+      ? {
+          startedAt: result[limit - 1].startedAt.toISOString(),
+          id: result[limit - 1].id,
         }
-      }
+      : null
 
-      return Result.ok<{
-        items: Span[]
-        next: { startedAt: string; id: string } | null
-        prev: { startedAt: string; id: string } | null
-      }>({
-        items: spansResult as Span[],
-        next,
-        prev,
-      })
-    } else {
-      // Backward pagination: get items after the cursor, then reverse
-      const backwardConditions = [
-        ...conditions,
-        from
-          ? sql`(${spans.startedAt}, ${spans.id}) > (${from.startedAt}, ${from.id})`
-          : undefined,
-      ].filter(Boolean) as SQL<unknown>[]
-
-      result = await this.db
-        .select(tt)
-        .from(spans)
-        .where(and(...backwardConditions))
-        .orderBy(asc(spans.startedAt), asc(spans.id))
-        .limit(limit + 1)
-
-      const hasMore = result.length > limit
-      const spansResult = hasMore ? result.slice(0, limit) : result
-
-      // Reverse to maintain descending order
-      spansResult.reverse()
-
-      prev = hasMore
-        ? {
-            startedAt: result[limit - 1].startedAt.toISOString(),
-            id: result[limit - 1].id,
-          }
-        : null
-      next = from || null // The current cursor becomes the next cursor when going backward
-
-      return Result.ok<{
-        items: Span[]
-        next: { startedAt: string; id: string } | null
-        prev: { startedAt: string; id: string } | null
-      }>({
-        items: spansResult as Span[],
-        next,
-        prev,
-      })
-    }
+    return Result.ok<{
+      items: Span[]
+      next: { startedAt: string; id: string } | null
+    }>({
+      items: items as Span[],
+      next,
+    })
   }
 }
 

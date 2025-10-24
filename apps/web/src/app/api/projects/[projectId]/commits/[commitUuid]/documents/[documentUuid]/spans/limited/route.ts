@@ -9,10 +9,10 @@ import { z } from 'zod'
 
 const searchParamsSchema = z.object({
   from: z.string().optional(),
-  direction: z.enum(['forward', 'backward']).default('forward'),
   type: z
     .enum(Object.values(SpanType) as [string, ...string[]])
     .default(SpanType.Prompt),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
 })
 
 export const GET = errorHandler(
@@ -37,6 +37,7 @@ export const GET = errorHandler(
       const parsedParams = searchParamsSchema.parse({
         from: searchParams.get('from') ?? undefined,
         type: searchParams.get('type'),
+        limit: searchParams.get('limit'),
       })
 
       const repository = new DocumentVersionsRepository(workspace.id)
@@ -52,15 +53,15 @@ export const GET = errorHandler(
         documentUuid,
         commitUuid,
         from: fromCursor,
-        direction: parsedParams.direction,
         type: parsedParams.type,
+        workspaceId: workspace.id,
+        limit: parsedParams.limit,
       })
 
       return NextResponse.json(
         {
           items: spansResult.items,
           next: spansResult.next ? JSON.stringify(spansResult.next) : null,
-          prev: spansResult.prev ? JSON.stringify(spansResult.prev) : null,
         },
         { status: 200 },
       )
