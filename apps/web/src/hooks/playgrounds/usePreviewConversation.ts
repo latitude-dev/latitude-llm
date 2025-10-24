@@ -10,10 +10,12 @@ import { AppliedRules } from '@latitude-data/core/services/ai/providers/rules/ty
 import { applyProviderRules } from '@latitude-data/core/services/ai/providers/rules/index'
 
 export function usePreviewConversation({
+  documentUuid,
   promptlVersion,
   parameters,
   metadata,
 }: {
+  documentUuid: string
   promptlVersion: number
   metadata: ResolvedMetadata | undefined
   parameters: Record<string, unknown> | undefined
@@ -84,7 +86,12 @@ export function usePreviewConversation({
 
     setFixedMessages(rule?.messages ?? conversation.messages)
     setWarningRule(rule)
-  }, [provider, conversation])
+
+    return () => {
+      setFixedMessages(undefined)
+      setWarningRule(undefined)
+    }
+  }, [provider, conversation, documentUuid])
 
   return {
     error,

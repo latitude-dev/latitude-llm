@@ -72,6 +72,7 @@ export default function PreviewPrompt({
     parameters,
     metadata,
     promptlVersion: document.promptlVersion,
+    documentUuid: document.documentUuid,
   })
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
