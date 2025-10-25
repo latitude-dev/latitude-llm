@@ -85,7 +85,7 @@
     "cohere-ai": "^7.17.1",
     "langchain": "^0.3.27",
     "openai": "^5.22.0",
-    "together-ai": "^0.16.0",
+    "together-ai": "^0.23.0",
     "promptl-ai": "catalog:",
     "@types/uuid": "^10.0.0",
     "msw": "^2.3.5"
