@@ -18,7 +18,7 @@ interface IssuesProps {
   commitUuid: string
 }
 
-export function Issues({ issues, hasMore, nextCursor, isLoading, projectId, commitUuid }: IssuesProps) {
+export function IssuesTable({ issues, hasMore, nextCursor, isLoading, projectId, commitUuid }: IssuesProps) {
   const router = useRouter()
 
   const loadMore = () => {

@@ -107,12 +107,12 @@ export class IssuesCusrorBuilder {
     nextCursor,
   }: {
     results: IssueWithStats[]
-    nextCursor: string | null
-  }): string | null {
-    if (!nextCursor) return null // no prev page
+    nextCursor: string | undefined
+  }) {
+    if (!nextCursor) return undefined
 
     const firstRow = results[0]
-    if (!firstRow) return null
+    if (!firstRow) return undefined
 
     return this.encode(this.extractPayload(firstRow))
   }
@@ -129,10 +129,10 @@ export class IssuesCusrorBuilder {
     limit: number
   }) {
     const hasMore = results.length > limit
-    if (!hasMore) return null
+    if (!hasMore) return undefined
 
     const lastRow = results[limit - 1]
-    if (!lastRow) return null
+    if (!lastRow) return undefined
 
     const payload: CursorPayload = this.extractPayload(lastRow)
     return this.encode(payload)
@@ -188,15 +188,15 @@ export class IssuesCusrorBuilder {
    * Compress and Base64URL-encode a JSON object.
    * Short url-friendly representation of the cursor.
    */
-  private encode<T extends object>(data: T | null): string | null {
-    if (!data) return null
+  private encode<T extends object>(data: T | null) {
+    if (!data) return undefined
 
     try {
       const json = JSON.stringify(data)
       const compressed = deflateSync(Buffer.from(json))
       return compressed.toString('base64url')
     } catch {
-      return null
+      return undefined
     }
   }
 

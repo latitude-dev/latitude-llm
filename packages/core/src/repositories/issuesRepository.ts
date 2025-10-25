@@ -35,6 +35,9 @@ export class IssuesRepository extends Repository<Issue> {
     return this.db.select(tt).from(issues).where(this.scopeFilter).$dynamic()
   }
 
+  /**
+   * Cursor based pagination for issues with filtering and sorting.
+   */
   async fetchIssuesFiltered({
     project,
     commit,
@@ -83,11 +86,9 @@ export class IssuesRepository extends Repository<Issue> {
     })
 
     // 3. Process results for pagination
-    const cursors = cursorHelper.buildCursors({ results, limit })
     return Result.ok({
-      ...cursors,
       issues: results.slice(0, limit),
-      hasMore: Boolean(cursors.nextCursor),
+      ...cursorHelper.buildCursors({ results, limit })
     })
   }
 
