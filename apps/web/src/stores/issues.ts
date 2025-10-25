@@ -18,14 +18,13 @@ const EMPTY_RESPONSE: IssuesServerResponse = {
 
 export function useIssues(
   {
-    data: { commitUuid, projectId, searchParams },
+    data: { projectId, searchParams, cacheKey },
     onSuccess,
   }: {
     data: {
       projectId: number
-      commitUuid: string
       searchParams: any // Zustand state
-      issuesKey: string // Zustand state
+      cacheKey: string[] // Zustand state
     }
     onSuccess: (data: IssuesServerResponse | void) => void
   },
@@ -43,19 +42,23 @@ export function useIssues(
   )
 
   const { data = EMPTY_RESPONSE, isLoading } = useSWR<IssuesServerResponse>(
-    [
-      'issues',
-      projectId,
-      commitUuid,
-      documentUuid,
-      `statuses:${statuses}`,
-      `seenAtRelative:${seenAtRelative}`,
-      `seenAtFrom:${seenAtFrom}`,
-      `seenAtTo:${seenAtTo}`,
-      `sort:${sort}`,
-      `sortDirection:${sortDirection}`,
-      `cursor:${cursor}`,
-    ],
+    /* [ */
+    /*   'issues', */
+    /*   projectId, */
+    /*   commitUuid, */
+    /*   documentUuid, */
+    /*   `statuses:${statuses}`, */
+    /*   `seenAtRelative:${seenAtRelative}`, */
+    /*   `seenAtFrom:${seenAtFrom}`, */
+    /*   `seenAtTo:${seenAtTo}`, */
+    /*   `sort:${sort}`, */
+    /*   `sortDirection:${sortDirection}`, */
+    /*   `direction:${direction}`, */
+    /*   NOTE: cusor keeps in memory the page state */
+    /*  good for back and forth navigation */
+    /*   `cursor:${cursor}`, */
+    /* ], */
+    cacheKey,
     fetcher,
     swrConfig,
   )

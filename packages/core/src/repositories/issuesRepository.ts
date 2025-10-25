@@ -35,6 +35,9 @@ export class IssuesRepository extends Repository<Issue> {
     return this.db.select(tt).from(issues).where(this.scopeFilter).$dynamic()
   }
 
+  // TODO: By defauklt filter out ignored/resolved issues
+  // unless specified in filters
+
   /**
    * Cursor based pagination for issues with filtering and sorting.
    */
@@ -44,14 +47,14 @@ export class IssuesRepository extends Repository<Issue> {
     cursor,
     filters = {},
     sorting: { sort, sortDirection: originalSortDirection, direction },
-    limit = 20,
+    limit,
   }: {
     project: Project
     commit: Commit
     filters: IssueFilters
     sorting: Sorting
     cursor?: string
-    limit?: number
+    limit: number
   }) {
     // 1. Prepare query components
     const sortDirection = this.getDirection({
@@ -88,7 +91,7 @@ export class IssuesRepository extends Repository<Issue> {
     // 3. Process results for pagination
     return Result.ok({
       issues: results.slice(0, limit),
-      ...cursorHelper.buildCursors({ results, limit })
+      ...cursorHelper.buildCursors({ results, limit }),
     })
   }
 
@@ -107,9 +110,11 @@ export class IssuesRepository extends Repository<Issue> {
   }) {
     const commitIds = await this.getCommitIds({ commit })
     const subquery = this.buildHistogramSubquery({ commitIds })
+    // Make listing lighter by excluding description field
+    const { description: _ , ...issueColumns } = tt
     return this.db
       .select({
-        ...tt,
+        ...issueColumns,
         last7DaysCount: sql<number>`COALESCE(${subquery.last7DaysCount}, 0)`,
         lastSeenDate: subquery.lastSeenDate,
         escalatingCount: sql<number>`COALESCE(${subquery.escalatingCount}, 0)`,

@@ -7,6 +7,8 @@ import {
 } from '@latitude-data/constants/issues'
 import { parseISO, isValid } from 'date-fns'
 
+const DEFAULT_ISSUES_LIMIT = 25
+const MAX_ISSUES_LIMIT = 100
 export const issuesFiltersQueryParamsParser = z
   .object({
     documentUuid: z.string().optional(),
@@ -20,7 +22,13 @@ export const issuesFiltersQueryParamsParser = z
     lastSeenFrom: z.string().optional(),
     lastSeenTo: z.string().optional(),
     cursor: z.string().optional(),
-    limit: z.coerce.number().min(1).max(100).optional().default(25),
+    limit: z.union([z.string(), z.number()]).transform((val) => {
+      const num = typeof val === 'string' ? Number(val) : val
+
+      if (Number.isNaN(num) || num < 1) return DEFAULT_ISSUES_LIMIT
+
+      return Math.min(num, MAX_ISSUES_LIMIT)
+    }),
   })
   .transform(
     ({
@@ -33,6 +41,7 @@ export const issuesFiltersQueryParamsParser = z
       const common = {
         limit: rest.limit,
         direction: rest.direction,
+        cursor: rest.cursor,
         sorting: {
           sort: rest.sort,
           sortDirection: rest.sortDirection,
