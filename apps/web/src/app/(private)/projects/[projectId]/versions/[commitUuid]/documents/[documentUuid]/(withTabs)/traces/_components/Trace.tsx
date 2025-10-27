@@ -6,7 +6,7 @@ import { TimelineScale } from '$/components/tracing/traces/Timeline/Scale'
 import { TimelineTree } from '$/components/tracing/traces/Timeline/Tree'
 import { useTrace } from '$/stores/traces'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { useSelectedSpan } from './SelectedSpansContext'
+import { useTraceSpanSelection } from './TraceSpanSelectionContext'
 import { AssembledSpan, AssembledTrace } from '@latitude-data/core/constants'
 
 export function Trace({ traceId }: { traceId: string }) {
@@ -62,11 +62,11 @@ function findSpanByIdBFS(
 }
 
 function Timeline({ trace }: { trace: AssembledTrace }) {
-  const { selectedSpanId, setSelectedSpanId } = useSelectedSpan()
+  const { selection, selectTraceSpan } = useTraceSpanSelection()
   const setSelectedSpan = (span?: AssembledSpan) =>
-    span && setSelectedSpanId(span.id)
+    span && selectTraceSpan(selection.traceId!, span.id)
 
-  const selectedSpan = findSpanByIdBFS(trace, selectedSpanId)
+  const selectedSpan = findSpanByIdBFS(trace, selection.spanId)
   const treeRef = useRef<HTMLDivElement>(null)
   const [treeWidth, setTreeWidth] = useState(0)
   const graphRef = useRef<HTMLDivElement>(null)

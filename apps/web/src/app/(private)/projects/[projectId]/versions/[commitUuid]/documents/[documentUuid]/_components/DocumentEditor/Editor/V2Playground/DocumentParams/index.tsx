@@ -12,23 +12,23 @@ import { DocumentVersion } from '@latitude-data/core/schema/models/types/Documen
 
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
-import { DatasetParams } from '../../Playground/DocumentParams/DatasetParams'
+import { DatasetParams } from './DatasetParams'
 import {
   UseSelectDataset,
   useSelectDataset,
-} from '../../Playground/DocumentParams/DatasetParams/useSelectDataset'
-import { HistoryLogParams } from '../../Playground/DocumentParams/HistoryLogParams'
-import {
-  UseLogHistoryParams,
-  useLogHistoryParams,
-} from '../../Playground/DocumentParams/HistoryLogParams/useLogHistoryParams'
-import { ManualParams } from '../../Playground/DocumentParams/ManualParams'
+} from './DatasetParams/useSelectDataset'
+import { HistoryLogParams } from './HistoryLogParams'
+import { ManualParams } from './ManualParams'
 
 import {
   INPUT_SOURCE,
   InputSource,
 } from '@latitude-data/core/lib/documentPersistedInputs'
 import { memo } from 'react'
+import {
+  useLogHistoryParams,
+  UseLogHistoryParams,
+} from './HistoryLogParams/useLogHistoryParams'
 
 export const TABS: TabSelectorOption<InputSource>[] = [
   { label: 'Manual', value: INPUT_SOURCE.manual },

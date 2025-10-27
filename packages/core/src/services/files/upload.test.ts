@@ -35,6 +35,7 @@ describe('uploadFile', () => {
   })
 
   it('not uploads empty file', async () => {
+    // @ts-ignore
     const file = new File([Buffer.from('')], 'file')
     const result = await uploadFile({ file, workspace }, disk)
     expect(result.ok).toBeFalsy()
@@ -45,6 +46,7 @@ describe('uploadFile', () => {
   it('not uploads large file', async () => {
     vi.spyOn(constants, 'MAX_UPLOAD_SIZE_IN_MB', 'get').mockReturnValue(1)
 
+    // @ts-ignore
     const file = new File([Buffer.from('Too large!')], 'file')
     const result = await uploadFile({ file, workspace }, disk)
     expect(result.ok).toBeFalsy()
@@ -59,6 +61,7 @@ describe('uploadFile', () => {
 
     const name = 'file.png'
     const content = await readFile(join(IMAGES_PATH, name))
+    // @ts-ignore
     const file = new File([content], name)
     const result = await uploadFile({ file, workspace }, disk)
     expect(result.ok).toBeFalsy()
@@ -70,6 +73,7 @@ describe('uploadFile', () => {
     const files = await readdir(IMAGES_PATH)
     for (const name of files) {
       const content = await readFile(join(IMAGES_PATH, name))
+      // @ts-ignore
       const file = new File([content], name)
       const result = await uploadFile({ file, workspace }, disk)
       expect(result.ok).toBeTruthy()
@@ -87,6 +91,7 @@ describe('uploadFile', () => {
     const files = await readdir(DOCUMENTS_PATH)
     for (const name of files) {
       const content = await readFile(join(DOCUMENTS_PATH, name))
+      // @ts-ignore
       const file = new File([content], name)
       const result = await uploadFile({ file, workspace }, disk)
       expect(result.ok).toBeTruthy()
@@ -104,6 +109,7 @@ describe('uploadFile', () => {
     const files = await readdir(AUDIO_PATH)
     for (const name of files) {
       const content = await readFile(join(AUDIO_PATH, name))
+      // @ts-ignore
       const file = new File([content], name)
       const result = await uploadFile({ file, workspace }, disk)
       expect(result.ok).toBeTruthy()
@@ -120,6 +126,7 @@ describe('uploadFile', () => {
   it('it uploads files with a workspace prefix', async () => {
     const name = 'file.png'
     const content = await readFile(join(IMAGES_PATH, name))
+    // @ts-ignore
     const file = new File([content], name)
     const result = await uploadFile({ file, workspace }, disk)
     expect(result.ok).toBeTruthy()
@@ -135,6 +142,7 @@ describe('uploadFile', () => {
   it('it uploads files with a custom prefix', async () => {
     const name = 'file.png'
     const content = await readFile(join(IMAGES_PATH, name))
+    // @ts-ignore
     const file = new File([content], name)
     const result = await uploadFile({ file, prefix: 'custom' }, disk)
     expect(result.ok).toBeTruthy()
@@ -148,6 +156,7 @@ describe('uploadFile', () => {
   it('it uploads files with an unknown prefix', async () => {
     const name = 'file.png'
     const content = await readFile(join(IMAGES_PATH, name))
+    // @ts-ignore
     const file = new File([content], name)
     const result = await uploadFile({ file }, disk)
     expect(result.ok).toBeTruthy()

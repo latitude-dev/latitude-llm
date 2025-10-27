@@ -1,6 +1,6 @@
 import { TABS } from '../index'
 import { ParameterInputSkeleton } from '$/components/ParameterInput'
-import { ParameterTypeSelector } from '../ManualParams/ParameterTypeSelector'
+import { ParameterTypeSelector } from '../../../V2Playground/DocumentParams/ManualParams/ParameterTypeSelector'
 import { ParameterType } from '@latitude-data/constants'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'

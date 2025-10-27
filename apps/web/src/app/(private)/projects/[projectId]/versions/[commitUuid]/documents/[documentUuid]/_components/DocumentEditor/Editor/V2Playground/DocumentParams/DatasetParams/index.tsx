@@ -10,6 +10,7 @@ import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { InputMapper } from './InputsMapper'
 import { type OnSelectRowCellFn } from './InputsMapper/InputsMapperItem'
 import { type UseSelectDataset } from './useSelectDataset'
+import { useCallback } from 'react'
 
 function BlankSlate() {
   return (
@@ -35,6 +36,14 @@ export function DatasetParams({
 }) {
   const selectedId = data.selectedDataset?.id
   const isLoading = data.loadingState.datasets || data.loadingState.position
+  const onPrevPage = useCallback(
+    () => data.onPrevPage(data.position ? data.position - 1 : 1),
+    [data],
+  )
+  const onNextPage = useCallback(
+    () => data.onNextPage(data.position ? data.position + 1 : 1),
+    [data],
+  )
   return (
     <div className='flex flex-col gap-y-4'>
       <div className='flex flex-row items-center justify-between gap-x-4 border-b border-border pb-4'>
@@ -58,8 +67,8 @@ export function DatasetParams({
                 <ParametersPaginationNav
                   currentIndex={data.position}
                   totalCount={data.count}
-                  onPrevPage={data.onPrevPage}
-                  onNextPage={data.onNextPage}
+                  onPrevPage={onPrevPage}
+                  onNextPage={onNextPage}
                   disabled={
                     data.loadingState.position || data.loadingState.rows
                   }

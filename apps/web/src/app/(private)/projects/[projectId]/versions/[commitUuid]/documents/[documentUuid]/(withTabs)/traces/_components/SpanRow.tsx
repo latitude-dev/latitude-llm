@@ -9,8 +9,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Fragment } from 'react'
 import { Trace } from './Trace'
-import { useSelectedTraceId } from './SelectedTraceIdContext'
-import { useSelectedSpan } from './SelectedSpansContext'
+import { useTraceSpanSelection } from './TraceSpanSelectionContext'
 import { useCommits } from '$/stores/commitsStore'
 
 type SpanRowProps = {
@@ -19,20 +18,15 @@ type SpanRowProps = {
 }
 
 export function SpanRow({ span, isSelected }: SpanRowProps) {
-  const { setSelectedTraceId } = useSelectedTraceId()
-  const { setSelectedSpanId } = useSelectedSpan()
+  const { selectTraceSpan } = useTraceSpanSelection()
   const { data: commits } = useCommits()
   const commit = commits?.find((c) => c.uuid === span.commitUuid)
-  const handleSpanSelect = (traceId: string, spanId: string) => {
-    setSelectedTraceId(traceId)
-    setSelectedSpanId(spanId)
-  }
   if (!commit) return null
 
   return (
     <Fragment>
       <TableRow
-        onClick={() => handleSpanSelect(span.traceId, span.id)}
+        onClick={() => selectTraceSpan(span.traceId, span.id)}
         className={cn(
           'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
           {
@@ -41,7 +35,13 @@ export function SpanRow({ span, isSelected }: SpanRowProps) {
         )}
       >
         <TableCell>
-          <Text.H5 noWrap>{relativeTime(span.startedAt)}</Text.H5>
+          <Text.H5 noWrap>
+            {relativeTime(
+              span.startedAt instanceof Date
+                ? span.startedAt
+                : new Date(span.startedAt),
+            )}
+          </Text.H5>
         </TableCell>
         <TableCell>
           <div className='flex flex-row gap-1 items-center truncate'>
