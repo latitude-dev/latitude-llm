@@ -14,7 +14,7 @@ import {
 import { ConfiguredTriggers } from './_components/ConfiguredTriggers'
 import { IsLoadingOnboardingItem } from '../../../lib/IsLoadingOnboardingItem'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
-import { OnboardingStep } from '../../../lib/OnboardingStep'
+import { OnboardingStep } from '../../../../../_lib/OnboardingStep'
 
 export function ConfigureTriggersHeader() {
   const { project } = useCurrentProject()

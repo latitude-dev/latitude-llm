@@ -98,6 +98,7 @@ export function BlocksEditor({
   onToggleDevEditor,
   readOnlyMessage,
   autoFocus = false,
+  greyTheme = false,
 }: BlocksEditorProps) {
   const readOnly = Boolean(readOnlyMessage)
   const [floatingAnchorElem, setFloatingAnchorElem] =
@@ -135,8 +136,9 @@ export function BlocksEditor({
     >
       <LexicalComposer initialConfig={initialConfig}>
         <div
-          className={cn('relative', {
-            'border border-border bg-backgroundCode rounded-xl p-3': readOnly,
+          className={cn('relative h-full', {
+            'border border-border bg-backgroundCode rounded-xl p-3':
+              readOnly || greyTheme,
           })}
           ref={onRef}
         >
@@ -192,14 +194,18 @@ export function BlocksEditor({
           <MessageEditPlugin />
           <TypeaheadMenuPlugin />
           <VariableMenuPlugin />
-          <ReferencesPlugin
-            prompts={prompts}
-            onRequestPromptMetadata={onRequestPromptMetadata}
-            onToggleDevEditor={onToggleDevEditor}
-          />
-          <ReferenceEditPlugin
-            onRequestPromptMetadata={onRequestPromptMetadata}
-          />
+          {onRequestPromptMetadata && onToggleDevEditor && prompts && (
+            <ReferencesPlugin
+              prompts={prompts}
+              onRequestPromptMetadata={onRequestPromptMetadata}
+              onToggleDevEditor={onToggleDevEditor}
+            />
+          )}
+          {onRequestPromptMetadata && (
+            <ReferenceEditPlugin
+              onRequestPromptMetadata={onRequestPromptMetadata}
+            />
+          )}
           <HierarchyValidationPlugin />
           <VariableEditPlugin />
           <VariableTransformPlugin />

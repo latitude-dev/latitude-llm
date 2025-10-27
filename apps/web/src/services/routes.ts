@@ -46,6 +46,7 @@ export const ROUTES = {
       start: '/onboarding-agents/start',
     },
     promptEngineering: '/onboarding-prompt-engineering',
+    dataset: '/onboarding-dataset',
   },
   backoffice: {
     root: BACKOFFICE_ROOT,

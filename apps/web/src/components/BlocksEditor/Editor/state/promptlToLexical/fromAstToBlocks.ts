@@ -82,7 +82,7 @@ function createParagraph({
   }
 }
 
-function createEmptyParagraph({
+export function createEmptyParagraph({
   content,
 }: {
   content: string

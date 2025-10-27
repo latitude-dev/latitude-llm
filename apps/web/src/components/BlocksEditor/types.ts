@@ -21,14 +21,15 @@ export type BlocksEditorProps = {
   currentDocument: { path: string }
   initialValue: BlockRootNode
   placeholder: string
-  onToggleDevEditor: () => void
+  onToggleDevEditor?: () => void
   onError: (error: Error) => void
   prompts: Record<string, IncludedPrompt>
-  onRequestPromptMetadata: (
+  onRequestPromptMetadata?: (
     prompt: IncludedPrompt,
   ) => Promise<ConversationMetadata>
   onChange: updateContentFn
   className?: string
   readOnlyMessage?: string
   autoFocus?: boolean
+  greyTheme?: boolean
 }

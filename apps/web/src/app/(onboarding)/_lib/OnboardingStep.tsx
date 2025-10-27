@@ -25,3 +25,15 @@ export const OnboardingStep = {
   Body: OnboardingStepBody,
   Header: OnboardingStepHeader,
 }
+
+export const DatasetOnboardingStepRoot = ({
+  children,
+}: {
+  children: ReactNode
+}) => {
+  return (
+    <div className='flex flex-col h-full w-full items-center gap-18 p-20'>
+      {children}
+    </div>
+  )
+}

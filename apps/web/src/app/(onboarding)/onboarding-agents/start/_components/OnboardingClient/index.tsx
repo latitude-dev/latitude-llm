@@ -14,7 +14,7 @@ import {
 import { TriggerAgentHeader, TriggerAgentBody } from './TriggerAgent'
 import { useState } from 'react'
 import { RunAgentHeader, RunAgentBody } from './RunAgent'
-import { OnboardingStep } from '$/app/(onboarding)/onboarding-agents/start/lib/OnboardingStep'
+import { OnboardingStep } from '$/app/(onboarding)/_lib/OnboardingStep'
 import { PlaygroundProvider } from '../../lib/PlaygroundProvider'
 import { MetadataProvider } from '$/components/MetadataProvider'
 import { User } from '@latitude-data/core/schema/models/types/User'
