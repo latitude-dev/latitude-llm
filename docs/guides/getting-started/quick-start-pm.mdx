@@ -1,9 +1,9 @@
 ---
 title: No Code
-description: 'Get started with Latitude without writing code'
+description: 'Get started with Latitude without writing code.'
 ---
 
-This guide will walk you through creating and testing your first prompt in Latitude without writing any code.
+This guide will walk you through creating and testing your first prompt in Latitude.
 
 ## 1. Add a Provider
 
@@ -21,7 +21,7 @@ This guide will walk you through creating and testing your first prompt in Latit
 
 ## 3. Create Your First Prompt
 
-1. Notice the 3 icons in the sidebar to create a new folder, prompt, and file, respectively
+1. Notice the 3 icons in the sidebar to create a new folder, prompt and agent respectively
 2. Click the second icon, a new prompt input will appear in the sidebar
 3. Enter a name for your prompt and hit "Enter" key
 
@@ -31,35 +31,48 @@ You will get redirected to the prompt editor. Write the following prompt in the 
 
 ```
 ---
-provider: Latitude
-model: gpt-4o-mini
+provider: OpenAI
+model: gpt-4.1-mini
 ---
 
-Write a compelling product description for {{product_name}} with the following features:
-{{features}}
+This is a response from an NPS survey:
 
-The description should be appropriate for {{target_audience}} and highlight the main benefits.
-Tone: {{tone}}
-Length: {{word_count}} words
+Score out of 10: {{ score }}
+Message: {{ message }}
+
+Analyze the sentiment based on both the score and message. Prioritize identifying the primary concern in the feedback, focusing on the core issue mentioned by the user. Categorize the sentiment into one of the following categories:
+
+- Product Features and Functionality
+- User Interface (UI) and User Experience (UX)
+- Performance and Reliability
+- Customer Support and Service
+- Onboarding and Learning Curve
+- Pricing and Value Perception
+- Integrations and Compatibility
+- Scalability and Customization
+- Feature Requests and Product Roadmap
+- Competitor Comparison
+- General Feedback (Neutral/Non-specific)
+
+Return only one of the categories.
 ```
 
 The prompt is automatically saved as you write it.
 
+<Note>
+  Notice how every prompt run has a human-in-the-loop evaluation automatically
+  generated for it
+</Note>
 ## 4. Test in the Playground
 
 1. In the prompt editor, notice the parameter inputs in the right side
 2. Fill in the parameter values:
-   - `product_name`: "Smart Home Assistant"
-   - `features`: "Voice control, Smart home integration, AI-powered recommendations"
-   - `target_audience`: "Tech-savvy homeowners"
-   - `tone`: "Professional but friendly"
-   - `word_count`: "150"
+   - `score`: "5"
+   - `message`: "Product is working but occasionally laggy."
 3. Click "Run" in the bottom right corner to see the generated output
 4. Try different inputs to test how your prompt performs in various scenarios
 
 ![Testing in Playground](/assets/prompt_parameters.png)
-
-Bonus: notice how every prompt run has an evaluation automatically generated for it
 
 ## 5. Observe Results and Logs
 
@@ -81,7 +94,7 @@ Bonus: notice how every prompt run has an evaluation automatically generated for
 1. In the prompt editor, go to the "Evaluations" tab
 2. Click "Add Evaluation"
 3. Select "LLM as Judge" as the evaluation type
-4. Choose a title, description and select a result type: number, boolean, or text
+4. Choose a title, description, critera, pass-fail conditions and select a result type: number, boolean, or text
    ![Create Evaluation](/assets/create-evaluation.png)
 5. Click "Create evaluation"
 6. In the evaluation page, click "Run Experiment"

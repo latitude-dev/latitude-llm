@@ -13,7 +13,12 @@
     "dark": "/logo/dark.svg"
   },
   "contextual": {
-    "options": ["copy", "view", "chatgpt", "claude"]
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
   },
   "navbar": {
     "primary": {
@@ -113,7 +118,9 @@
           },
           {
             "group": "Experiments",
-            "pages": ["guides/experiments/overview"]
+            "pages": [
+              "guides/experiments/overview"
+            ]
           },
           {
             "group": "Deployment",
@@ -121,7 +128,10 @@
               "guides/integration/publishing-deployment",
               {
                 "group": "Latitude SDK",
-                "pages": ["guides/sdk/typescript", "guides/sdk/python"]
+                "pages": [
+                  "guides/sdk/typescript",
+                  "guides/sdk/python"
+                ]
               },
               {
                 "group": "HTTP API",
@@ -150,11 +160,15 @@
           },
           {
             "group": "Changelog",
-            "pages": ["changelog/overview"]
+            "pages": [
+              "changelog/overview"
+            ]
           },
           {
             "group": "Support",
-            "pages": ["guides/integration/community-support"]
+            "pages": [
+              "guides/integration/community-support"
+            ]
           }
         ]
       },
@@ -163,7 +177,9 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["promptl/getting-started/introduction"]
+            "pages": [
+              "promptl/getting-started/introduction"
+            ]
           },
           {
             "group": "Syntax",
