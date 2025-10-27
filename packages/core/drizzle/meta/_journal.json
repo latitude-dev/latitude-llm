@@ -1576,6 +1576,13 @@
       "when": 1761564908533,
       "tag": "0225_bitter_dark_beast",
       "breakpoints": true
+    },
+    {
+      "idx": 226,
+      "version": "7",
+      "when": 1761575618365,
+      "tag": "0226_brief_thunderbolt_ross",
+      "breakpoints": true
     }
   ]
 }
