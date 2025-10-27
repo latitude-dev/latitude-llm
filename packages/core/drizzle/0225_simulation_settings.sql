@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."document_logs" ADD COLUMN "simulation_settings" jsonb;
