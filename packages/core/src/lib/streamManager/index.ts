@@ -277,6 +277,15 @@ export abstract class StreamManager {
       input: messages,
       model: config.model,
       provider: provider.provider,
+      // TODO: add experiment uuid
+      promptUuid:
+        'document' in this.promptSource
+          ? this.promptSource.document.documentUuid
+          : undefined,
+      versionUuid:
+        'commit' in this.promptSource
+          ? this.promptSource.commit.uuid
+          : undefined,
     })
 
     this.sendEvent({ type: ChainEventTypes.ProviderStarted, config })

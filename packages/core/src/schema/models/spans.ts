@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   bigint,
   index,
+  integer,
   primaryKey,
   timestamp,
   uuid,
@@ -37,6 +38,13 @@ export const spans = latitudeSchema.table(
     documentUuid: uuid('document_uuid'),
     commitUuid: uuid('commit_uuid'),
     experimentUuid: uuid('experiment_uuid'),
+
+    tokensPrompt: integer('tokens_prompt'),
+    tokensCached: integer('tokens_cached'),
+    tokensReasoning: integer('tokens_reasoning'),
+    tokensCompletion: integer('tokens_completion'),
+    cost: integer('cost'),
+
     ...timestamps(),
   },
   (table) => [

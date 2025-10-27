@@ -178,6 +178,19 @@ export const API_ROUTES = {
                   spans: {
                     limited: `${documentRoot}/spans/limited`,
                   },
+                  traces: {
+                    aggregations: `${documentRoot}/traces/aggregations`,
+                    dailyCount: ({ days }: { days?: number }) => {
+                      const params = new URLSearchParams()
+                      if (days !== undefined) {
+                        params.append('days', days.toString())
+                      }
+                      const query = params.toString()
+                      return query
+                        ? `${documentRoot}/traces/daily-count?${query}`
+                        : `${documentRoot}/traces/daily-count`
+                    },
+                  },
                 }
               },
             },

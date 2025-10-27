@@ -161,6 +161,11 @@ async function process(
     tokens: tokens,
     cost: cost,
     finishReason: finishReason,
+
+    // References
+    promptUuid: attributes['latitude.documentUuid'] as string,
+    versionUuid: attributes['latitude.commitUuid'] as string,
+    experimentUuid: attributes['latitude.experimentUuid'] as string,
   })
 }
 

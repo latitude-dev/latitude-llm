@@ -24,6 +24,7 @@ import {
   ATTR_LATITUDE_TYPE,
   ATTR_LLM_REQUEST_TYPE,
   BaseSpanMetadata,
+  CompletionSpanMetadata,
   GEN_AI_OPERATION_NAME_VALUE_COMPLETION,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDING,
   GEN_AI_OPERATION_NAME_VALUE_RERANKING,
@@ -262,39 +263,55 @@ export async function processSpansBulk(
   // Bulk insert spans and save metadata
   return await transaction.call(async (tx) => {
     // Prepare bulk insert data
-    const insertData = processedSpans.map((processed) => ({
-      id: processed.id,
-      traceId: processed.traceId,
-      parentId: processed.parentId,
-      workspaceId: workspace.id,
-      apiKeyId: apiKey.id,
-      name: processed.name,
-      kind: processed.kind,
-      type: processed.type,
-      status: processed.status,
-      message: processed.message,
-      duration: processed.duration,
-      startedAt: processed.startedAt,
-      endedAt: processed.endedAt,
+    const insertData = processedSpans.map((processed) => {
+      let metadata
+      if (processed.type === SpanType.Completion) {
+        metadata = processed.metadata as CompletionSpanMetadata
+      }
 
-      // References
-      documentLogUuid:
-        'documentLogUuid' in processed.metadata
-          ? (processed.metadata.documentLogUuid as string)
-          : undefined,
-      documentUuid:
-        'promptUuid' in processed.metadata
-          ? (processed.metadata.promptUuid as string)
-          : undefined,
-      commitUuid:
-        'versionUuid' in processed.metadata
-          ? (processed.metadata.versionUuid as string)
-          : undefined,
-      experimentUuid:
-        'experimentUuid' in processed.metadata
-          ? (processed.metadata.experimentUuid as string)
-          : undefined,
-    }))
+      return {
+        id: processed.id,
+        traceId: processed.traceId,
+        parentId: processed.parentId,
+        workspaceId: workspace.id,
+        apiKeyId: apiKey.id,
+        name: processed.name,
+        kind: processed.kind,
+        type: processed.type,
+        status: processed.status,
+        message: processed.message,
+        duration: processed.duration,
+        startedAt: processed.startedAt,
+        endedAt: processed.endedAt,
+
+        // Tokens
+        tokensPrompt: metadata?.tokens?.prompt,
+        tokensCompletion: metadata?.tokens?.completion,
+        tokensCached: metadata?.tokens?.cached,
+        tokensReasoning: metadata?.tokens?.reasoning,
+
+        // Cost
+        cost: metadata?.cost,
+
+        // References
+        documentLogUuid:
+          'documentLogUuid' in processed.metadata
+            ? (processed.metadata.documentLogUuid as string)
+            : undefined,
+        documentUuid:
+          'promptUuid' in processed.metadata
+            ? (processed.metadata.promptUuid as string)
+            : undefined,
+        commitUuid:
+          'versionUuid' in processed.metadata
+            ? (processed.metadata.versionUuid as string)
+            : undefined,
+        experimentUuid:
+          'experimentUuid' in processed.metadata
+            ? (processed.metadata.experimentUuid as string)
+            : undefined,
+      }
+    })
 
     // Bulk insert spans
     const insertedSpans = await tx
