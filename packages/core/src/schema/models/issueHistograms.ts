@@ -12,6 +12,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { workspaces } from './workspaces'
 import { issues } from './issues'
+import { commits } from './commits'
 
 export const issueHistograms = latitudeSchema.table(
   'issue_histograms',
@@ -23,6 +24,9 @@ export const issueHistograms = latitudeSchema.table(
     issueId: bigint('issue_id', { mode: 'number' })
       .notNull()
       .references(() => issues.id, { onDelete: 'cascade' }),
+    commitId: bigint('commit_id', { mode: 'number' })
+      .notNull()
+      .references(() => commits.id, { onDelete: 'restrict' }),
     date: date('date').notNull(),
     count: integer('count').notNull(),
     ...timestamps(),
@@ -30,6 +34,7 @@ export const issueHistograms = latitudeSchema.table(
   (table) => [
     index('issue_histograms_workspace_id_idx').on(table.workspaceId),
     index('issue_histograms_issue_id_idx').on(table.issueId),
+    index('issue_histograms_commit_id_idx').on(table.commitId),
     index('issue_histograms_date_idx').on(table.date),
     unique('issue_histograms_unique_workspace_issue_date').on(
       table.issueId,
