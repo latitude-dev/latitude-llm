@@ -95,8 +95,9 @@
                 "group": "Types",
                 "pages": [
                   "guides/evaluations/llm-as-judges",
-                  "guides/evaluations/programmatic_rules",
-                  "guides/evaluations/humans-in-the-loop"
+                  "guides/evaluations/programmatic-rules",
+                  "guides/evaluations/humans-in-the-loop",
+                  "guides/evaluations/composite-scores"
                 ]
               },
               "guides/evaluations/running-evaluations",

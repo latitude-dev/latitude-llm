@@ -63,7 +63,9 @@ export function ConfigurationSimpleForm<
 
   return (
     <>
-      <typeSpecification.ConfigurationSimpleForm metric={metric} {...rest} />
+      {!!typeSpecification.ConfigurationSimpleForm && (
+        <typeSpecification.ConfigurationSimpleForm metric={metric} {...rest} />
+      )}
     </>
   )
 }
@@ -166,7 +168,7 @@ export function ConfigurationAdvancedForm<
       >
         <FormFieldGroup
           label='Message selection'
-          description='Which assistant messages to use'
+          description='Which assistant messages to use. Messages with multiple content are flattened into individual ones'
           layout='horizontal'
         >
           <Select
@@ -473,7 +475,7 @@ function ActualOutputTest({
       </div>
       <div className='w-full flex flex-col gap-2'>
         <div className='w-full max-h-60 custom-scrollbar scrollable-indicator'>
-          <MessageList messages={log.messages.all} />
+          <MessageList messages={log.messages.all} debugMode />
         </div>
         <LineSeparator text='Actual output' />
         <div className='w-full max-h-60 custom-scrollbar scrollable-indicator'>

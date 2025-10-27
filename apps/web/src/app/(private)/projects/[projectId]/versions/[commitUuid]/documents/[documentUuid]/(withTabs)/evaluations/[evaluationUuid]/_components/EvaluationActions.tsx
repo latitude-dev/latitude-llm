@@ -1,5 +1,13 @@
+import {
+  useCurrentCommit,
+  type ICommitContextType,
+} from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
+import {
+  useCurrentProject,
+  type IProjectContextType,
+} from '$/app/providers/ProjectProvider'
 import {
   EVALUATION_SPECIFICATIONS,
   getEvaluationMetricSpecification,
@@ -13,21 +21,6 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
-import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import {
-  useCurrentCommit,
-  type ICommitContextType,
-} from '$/app/providers/CommitProvider'
-import {
-  useCurrentProject,
-  type IProjectContextType,
-} from '$/app/providers/ProjectProvider'
-import { useCallback, useState } from 'react'
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-import { Project } from '@latitude-data/core/schema/models/types/Project'
 import {
   EvaluationMetric,
   EvaluationOptions,
@@ -37,6 +30,13 @@ import {
   LlmEvaluationCustomSpecification,
   LlmEvaluationMetric,
 } from '@latitude-data/core/constants'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { useCallback, useState } from 'react'
 
 export function EvaluationActions<
   T extends EvaluationType = EvaluationType,
@@ -213,6 +213,9 @@ function EditEvaluation<
   const [options, setOptions] = useState<EvaluationOptions>(evaluation)
   const [errors, setErrors] = useState<EvaluationV2FormErrors>()
 
+  const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
+  const metricSpecification = typeSpecification.metrics[evaluation.metric]
+
   const onUpdate = useCallback(async () => {
     if (isUpdatingEvaluation) return
     const [_, errors] = await updateEvaluation({
@@ -247,6 +250,7 @@ function EditEvaluation<
       <ConfirmModal
         size='medium'
         open={openUpdateModal}
+        icon={metricSpecification.icon}
         title={`Update ${evaluation.name}`}
         description={
           commit.mergedAt
@@ -257,7 +261,7 @@ function EditEvaluation<
         onConfirm={onUpdate}
         onCancel={() => setOpenUpdateModal(false)}
         confirm={{
-          label: isUpdatingEvaluation ? 'Updating...' : 'Update',
+          label: isUpdatingEvaluation ? 'Updating...' : 'Update evaluation',
           disabled: isUpdatingEvaluation,
           isConfirming: isUpdatingEvaluation,
         }}
@@ -271,6 +275,7 @@ function EditEvaluation<
         )}
         <EvaluationV2Form
           mode='update'
+          uuid={evaluation.uuid}
           settings={settings}
           setSettings={setSettings}
           options={options}

@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { formatCount } from '$/lib/formatCount'
 import {
   EvaluationType,
@@ -11,67 +10,17 @@ import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { StepperNumberInput } from '@latitude-data/web-ui/atoms/StepperNumberInput'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useMemo } from 'react'
+import { CriteriaDescription as CriteriaWrapper } from '../Annotation/CriteriaDescription'
+import { AnnotationFormWrapper as AForm } from '../Annotation/FormWrapper'
 import {
   AnnotationFormProps,
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
-import { AnnotationFormWrapper as AForm } from '../Annotation/FormWrapper'
 import { useAnnotationFormState } from './useAnnotationForm'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { CriteriaDescription as CriteriaWrapper } from '../Annotation/CriteriaDescription'
-
-function getCriteria(
-  evaluation: EvaluationV2<EvaluationType.Human, HumanEvaluationMetric.Rating>,
-) {
-  const config = evaluation.configuration
-  const criteria = config.criteria
-  const minRatingDescription = config.minRatingDescription
-  const maxRatingDescription = config.maxRatingDescription
-  const reverseScale = config.reverseScale
-  const isEmpty =
-    !minRatingDescription && !maxRatingDescription && !criteria && !reverseScale
-
-  if (isEmpty) return null
-
-  return {
-    criteria,
-    minRatingDescription,
-    maxRatingDescription,
-    reverseScale,
-  }
-}
-
-type ICriteria = ReturnType<typeof getCriteria>
-
-function CriteriaDescription({
-  minRatingDescription,
-  maxRatingDescription,
-  reverseScale,
-  criteria,
-}: NonNullable<ICriteria>) {
-  return (
-    <CriteriaWrapper reverseScale={reverseScale} criteria={criteria}>
-      {minRatingDescription ? (
-        <div>
-          <Text.H5M color='background' display='block'>
-            Low score criteria
-          </Text.H5M>
-          <Text.H6 color='primaryForeground'>{minRatingDescription}</Text.H6>
-        </div>
-      ) : null}
-      {maxRatingDescription ? (
-        <div>
-          <Text.H5M color='background' display='block'>
-            High score criteria
-          </Text.H5M>
-          <Text.H6 color='primaryForeground'>{maxRatingDescription}</Text.H6>
-        </div>
-      ) : null}
-    </CriteriaWrapper>
-  )
-}
 
 const specification = HumanEvaluationRatingSpecification
 export default {
@@ -219,6 +168,57 @@ function ResultBadge({
   return <>{formatCount(result.score!)}</>
 }
 
+function getCriteria(
+  evaluation: EvaluationV2<EvaluationType.Human, HumanEvaluationMetric.Rating>,
+) {
+  const config = evaluation.configuration
+  const criteria = config.criteria
+  const minRatingDescription = config.minRatingDescription
+  const maxRatingDescription = config.maxRatingDescription
+  const reverseScale = config.reverseScale
+  const isEmpty =
+    !minRatingDescription && !maxRatingDescription && !criteria && !reverseScale
+
+  if (isEmpty) return null
+
+  return {
+    criteria,
+    minRatingDescription,
+    maxRatingDescription,
+    reverseScale,
+  }
+}
+
+type ICriteria = ReturnType<typeof getCriteria>
+
+function CriteriaDescription({
+  minRatingDescription,
+  maxRatingDescription,
+  reverseScale,
+  criteria,
+}: NonNullable<ICriteria>) {
+  return (
+    <CriteriaWrapper reverseScale={reverseScale} criteria={criteria}>
+      {minRatingDescription ? (
+        <div>
+          <Text.H5M color='background' display='block'>
+            Low score criteria
+          </Text.H5M>
+          <Text.H6 color='primaryForeground'>{minRatingDescription}</Text.H6>
+        </div>
+      ) : null}
+      {maxRatingDescription ? (
+        <div>
+          <Text.H5M color='background' display='block'>
+            High score criteria
+          </Text.H5M>
+          <Text.H6 color='primaryForeground'>{maxRatingDescription}</Text.H6>
+        </div>
+      ) : null}
+    </CriteriaWrapper>
+  )
+}
+
 function AnnotationForm({
   evaluation,
   result,
@@ -227,6 +227,7 @@ function AnnotationForm({
   const { onScoreChange, onSubmit } = useAnnotationFormState({
     initialScore: result?.score ?? undefined,
   })
+
   return (
     <AForm onSubmit={onSubmit}>
       <AForm.Body>

@@ -63,7 +63,7 @@ export function MetadataItem({
           <Skeleton height='h4' className='w-12' />
         ) : collapsible ? (
           <MaxHeightWindow>
-            <>
+            <div className={contentClassName}>
               {value && (
                 <Text.H5
                   align='right'
@@ -75,7 +75,7 @@ export function MetadataItem({
                 </Text.H5>
               )}
               {children}
-            </>
+            </div>
           </MaxHeightWindow>
         ) : (
           <>

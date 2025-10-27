@@ -856,4 +856,51 @@ value1,value2,value3
       },
     })
   })
+
+  it('succeeds when running an evaluation in dry mode', async () => {
+    vi.spyOn(RuleEvaluationExactMatchSpecification, 'run').mockResolvedValue({
+      score: 0,
+      normalizedScore: 0,
+      metadata: {
+        configuration: evaluation.configuration,
+        actualOutput: 'actualOutput',
+        expectedOutput: 'expectedOutput',
+        datasetLabel: datasetLabel,
+      },
+      hasPassed: false,
+    })
+    mocks.publisher.mockClear()
+
+    const { result } = await runEvaluationV2({
+      evaluation: evaluation,
+      providerLog: providerLog,
+      experiment: experiment,
+      dataset: dataset,
+      datasetLabel: datasetLabel,
+      datasetRow: datasetRow,
+      commit: commit,
+      workspace: workspace,
+      dry: true,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedLogId: providerLog.id,
+        score: 0,
+        normalizedScore: 0,
+        metadata: {
+          configuration: evaluation.configuration,
+          actualOutput: 'actualOutput',
+          expectedOutput: 'expectedOutput',
+          datasetLabel: datasetLabel,
+        },
+        hasPassed: false,
+        // error: null, // Note: error not set because it didn't persist
+      }),
+    )
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
 })

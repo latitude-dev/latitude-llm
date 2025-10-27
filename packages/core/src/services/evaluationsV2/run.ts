@@ -44,6 +44,7 @@ export async function runEvaluationV2<
     datasetRow,
     commit,
     workspace,
+    dry = false,
   }: {
     evaluation: EvaluationV2<T, M>
     providerLog: ProviderLogDto
@@ -53,6 +54,7 @@ export async function runEvaluationV2<
     datasetRow?: DatasetRow
     commit: Commit
     workspace: Workspace
+    dry?: boolean
   },
   transaction = new Transaction(),
 ) {
@@ -178,11 +180,13 @@ export async function runEvaluationV2<
       providerLog: providerLog,
       documentLog: documentLog,
       document: document,
+      experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,
       datasetRow: datasetRow,
       commit: commit,
       workspace: workspace,
+      dry: dry,
     })) as EvaluationResultValue // Note: Typescript cannot resolve conditional types including unbound type arguments: https://github.com/microsoft/TypeScript/issues/53455
 
     if (
@@ -213,6 +217,7 @@ export async function runEvaluationV2<
           datasetRow: datasetRow,
           value: value as EvaluationResultValue<T, M>,
           workspace: workspace,
+          dry: dry,
         },
         transaction,
       ).then((r) => r.unwrap())
@@ -220,6 +225,8 @@ export async function runEvaluationV2<
       return Result.ok({ result })
     },
     async ({ result }) => {
+      if (dry) return
+
       await publisher.publishLater({
         type: 'evaluationV2Ran',
         data: {

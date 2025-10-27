@@ -178,37 +178,40 @@ function ResultPanelMetadata<
         />
       ) : (
         <>
-          <MetadataItem
-            label='Actual output'
-            tooltip='Generated output from the model conversation'
-            stacked
-          >
-            <div className='flex flex-col gap-2'>
-              {ACCESSIBLE_OUTPUT_FORMATS.includes(
-                result.metadata!.configuration.actualOutput?.parsingFormat ||
-                  'string',
-              ) ? (
-                <Text.H6 color='foregroundMuted' noWrap ellipsis>
-                  Parsed from{' '}
-                  {result
-                    .metadata!.configuration.actualOutput.parsingFormat.toUpperCase()
-                    .split('_')
-                    .join(' ')}
-                  {!!result.metadata!.configuration.actualOutput
-                    .fieldAccessor &&
-                    ` using field '${result.metadata!.configuration.actualOutput.fieldAccessor}'`}
-                </Text.H6>
-              ) : (
-                <div />
-              )}
-              <TextArea
-                value={result.metadata!.actualOutput}
-                minRows={1}
-                maxRows={6}
-                disabled={true}
-              />
-            </div>
-          </MetadataItem>
+          {result.metadata!.actualOutput && (
+            <MetadataItem
+              label='Actual output'
+              tooltip='Generated output from the model conversation'
+              stacked
+              collapsible
+            >
+              <div className='flex flex-col gap-2'>
+                {ACCESSIBLE_OUTPUT_FORMATS.includes(
+                  result.metadata!.configuration.actualOutput?.parsingFormat ||
+                    'string',
+                ) ? (
+                  <Text.H6 color='foregroundMuted' noWrap ellipsis>
+                    Parsed from{' '}
+                    {result
+                      .metadata!.configuration.actualOutput.parsingFormat.toUpperCase()
+                      .split('_')
+                      .join(' ')}
+                    {!!result.metadata!.configuration.actualOutput
+                      .fieldAccessor &&
+                      ` using field '${result.metadata!.configuration.actualOutput.fieldAccessor}'`}
+                  </Text.H6>
+                ) : (
+                  <div />
+                )}
+                <TextArea
+                  value={result.metadata!.actualOutput}
+                  minRows={1}
+                  maxRows={6}
+                  disabled={true}
+                />
+              </div>
+            </MetadataItem>
+          )}
           {result.metadata!.expectedOutput && (
             <MetadataItem
               label='Expected output'
@@ -231,6 +234,7 @@ function ResultPanelMetadata<
                 ) : undefined
               }
               stacked
+              collapsible
             >
               <div className='pt-2'>
                 <TextArea

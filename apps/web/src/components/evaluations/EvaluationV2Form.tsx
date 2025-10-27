@@ -1,6 +1,7 @@
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import {
+  CompositeEvaluationMetric,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -25,15 +26,6 @@ import {
   ConfigurationSimpleForm,
 } from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
-
-const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType).map((type) => {
-  const specification = EVALUATION_SPECIFICATIONS[type]
-  return {
-    label: specification.name,
-    value: type,
-    icon: specification.icon,
-  }
-})
 
 /**
  * This can be improved by passing specific schemas per type/metric
@@ -60,6 +52,17 @@ export function parseActionErrors(errors?: EvaluationV2FormErrors) {
   return errors.fieldErrors
 }
 
+const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType)
+  .filter((type) => type !== EvaluationType.Composite) // Note: composite evaluations cannot be created from the add modal
+  .map((type: EvaluationType) => {
+    const specification = EVALUATION_SPECIFICATIONS[type]
+    return {
+      label: specification.name,
+      value: type,
+      icon: specification.icon,
+    }
+  })
+
 const EVALUATION_METRIC_OPTIONS = <
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
@@ -81,6 +84,9 @@ const EVALUATION_METRIC_OPTIONS = <
     case EvaluationType.Human:
       metrics = Object.values(HumanEvaluationMetric) as M[]
       break
+    case EvaluationType.Composite:
+      metrics = Object.values(CompositeEvaluationMetric) as M[]
+      break
   }
 
   return metrics.map((metric) => {
@@ -100,6 +106,7 @@ export default function EvaluationV2Form<
   M extends EvaluationMetric<T>,
 >({
   mode,
+  uuid,
   settings,
   setSettings,
   options,
@@ -109,6 +116,7 @@ export default function EvaluationV2Form<
   disabled,
 }: {
   mode: 'create' | 'update'
+  uuid?: string
   settings: EvaluationSettings<T, M>
   setSettings: (settings: EvaluationSettings<T, M>) => void
   options: Partial<EvaluationOptions>
@@ -143,6 +151,7 @@ export default function EvaluationV2Form<
     setOptions({
       ...options,
       evaluateLiveLogs: !!metricSpecification.supportsLiveEvaluation,
+      enableSuggestions: settings.type !== EvaluationType.Composite,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metricSpecification?.supportsLiveEvaluation])
@@ -152,7 +161,7 @@ export default function EvaluationV2Form<
   return (
     <form className='min-w-0' id='evaluationV2Form'>
       <FormWrapper>
-        {mode === 'create' && (
+        {mode === 'create' && settings.type !== EvaluationType.Composite && (
           <TabSelect
             value={settings.type}
             name='type'
@@ -214,6 +223,7 @@ export default function EvaluationV2Form<
         )}
         <ConfigurationSimpleForm
           mode={mode}
+          uuid={uuid}
           type={settings.type}
           metric={settings.metric}
           configuration={settings.configuration}
@@ -239,58 +249,63 @@ export default function EvaluationV2Form<
             description='You will be able to manually evaluate responses in the runs/logs dashboard or via the API/SDK'
           />
         )}
-        <CollapsibleBox
-          title='Advanced configuration'
-          icon='settings'
-          isExpanded={expanded}
-          onToggle={setExpanded}
-          scrollable={false}
-          expandedContent={
-            <FormWrapper>
-              <ConfigurationAdvancedForm
-                mode={mode}
-                type={settings.type}
-                metric={settings.metric}
-                configuration={settings.configuration}
-                setConfiguration={(value) =>
-                  setSettings({ ...settings, configuration: value })
-                }
-                settings={settings}
-                setSettings={setSettings}
-                errors={errors}
-                disabled={disabled || commitMerged}
-              />
-              <FormFieldGroup label='Options' layout='vertical'>
-                {metricSpecification?.supportsLiveEvaluation && (
+        {settings.type !== EvaluationType.Composite && (
+          <CollapsibleBox
+            title='Advanced configuration'
+            icon='settings'
+            isExpanded={expanded}
+            onToggle={setExpanded}
+            scrollable={false}
+            expandedContent={
+              <FormWrapper>
+                <ConfigurationAdvancedForm
+                  mode={mode}
+                  uuid={uuid}
+                  type={settings.type}
+                  metric={settings.metric}
+                  configuration={settings.configuration}
+                  setConfiguration={(value) =>
+                    setSettings({ ...settings, configuration: value })
+                  }
+                  settings={settings}
+                  setSettings={setSettings}
+                  errors={errors}
+                  disabled={disabled || commitMerged}
+                />
+                <FormFieldGroup label='Options' layout='vertical'>
+                  {metricSpecification?.supportsLiveEvaluation && (
+                    <SwitchInput
+                      checked={!!options.evaluateLiveLogs}
+                      name='evaluateLiveLogs'
+                      label='Evaluate live logs'
+                      description='Evaluate production and playground logs automatically'
+                      onCheckedChange={(value) =>
+                        setOptions({ ...options, evaluateLiveLogs: value })
+                      }
+                      errors={errors?.evaluateLiveLogs}
+                      disabled={
+                        disabled || !metricSpecification?.supportsLiveEvaluation
+                      }
+                    />
+                  )}
                   <SwitchInput
-                    checked={!!options.evaluateLiveLogs}
-                    name='evaluateLiveLogs'
-                    label='Evaluate live logs'
-                    description='Evaluate production and playground logs automatically'
+                    checked={!!options.enableSuggestions}
+                    name='enableSuggestions'
+                    label='Prompt suggestions'
+                    description='Generate suggestions to improve your prompt based on the latest evaluations results'
                     onCheckedChange={(value) =>
-                      setOptions({ ...options, evaluateLiveLogs: value })
+                      setOptions({ ...options, enableSuggestions: value })
                     }
-                    errors={errors?.evaluateLiveLogs}
+                    errors={errors?.enableSuggestions}
                     disabled={
-                      disabled || !metricSpecification?.supportsLiveEvaluation
+                      disabled || settings.type === EvaluationType.Composite
                     }
                   />
-                )}
-                <SwitchInput
-                  checked={!!options.enableSuggestions}
-                  name='enableSuggestions'
-                  label='Prompt suggestions'
-                  description='Generate suggestions to improve your prompt based on the latest evaluations results'
-                  onCheckedChange={(value) =>
-                    setOptions({ ...options, enableSuggestions: value })
-                  }
-                  errors={errors?.enableSuggestions}
-                  disabled={disabled}
-                />
-              </FormFieldGroup>
-            </FormWrapper>
-          }
-        />
+                </FormFieldGroup>
+              </FormWrapper>
+            }
+          />
+        )}
       </FormWrapper>
     </form>
   )

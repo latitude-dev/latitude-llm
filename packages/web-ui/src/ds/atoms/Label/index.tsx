@@ -1,13 +1,13 @@
 'use client'
 
-import { CustomComponentPropsWithRef, ComponentRef, forwardRef } from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
 import * as LabelPrimitive from '@radix-ui/react-label'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { ComponentRef, CustomComponentPropsWithRef, forwardRef } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { font } from '../../tokens'
 import { Badge } from '../Badge'
-import { Icon } from '../Icons'
+import { Icon, IconName } from '../Icons'
 import { Tooltip } from '../Tooltip'
 
 const labelVariants = cva(
@@ -31,15 +31,24 @@ const labelVariants = cva(
 export type LabelProps = CustomComponentPropsWithRef<
   typeof LabelPrimitive.Root
 > &
-  VariantProps<typeof labelVariants>
+  VariantProps<typeof labelVariants> & {
+    icon?: IconName
+  }
 const Label = forwardRef<ComponentRef<typeof LabelPrimitive.Root>, LabelProps>(
-  function Label({ className, variant, ...props }, ref) {
+  function Label({ children, icon, className, variant, ...props }, ref) {
     return (
       <LabelPrimitive.Root
         ref={ref}
-        className={cn(labelVariants({ variant }), className)}
+        className={cn(
+          labelVariants({ variant }),
+          { 'flex flex-row gap-1.5 items-center': !!icon },
+          className,
+        )}
         {...props}
-      />
+      >
+        {icon && <Icon name={icon} className='flex-shrink-0' />}
+        {children}
+      </LabelPrimitive.Root>
     )
   },
 )
@@ -101,4 +110,4 @@ export function TooltipLabel({
   )
 }
 
-export { Label, BatchLabel }
+export { BatchLabel, Label }

@@ -1,7 +1,7 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
-import { MetadataItem } from '$/components/MetadataItem'
 import DebugToggle from '$/components/DebugToggle'
+import { MetadataItem } from '$/components/MetadataItem'
 import useModelOptions from '$/hooks/useModelOptions'
 import { formatCount } from '$/lib/formatCount'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
@@ -155,14 +155,16 @@ function ConfigurationSimpleForm<M extends LlmEvaluationMetric>({
           />
         )}
       </FormFieldGroup>
-      <metricSpecification.ConfigurationSimpleForm
-        mode={mode}
-        configuration={configuration}
-        setConfiguration={setConfiguration}
-        errors={errors}
-        disabled={disabled || isLoading}
-        {...rest}
-      />
+      {!!metricSpecification.ConfigurationSimpleForm && (
+        <metricSpecification.ConfigurationSimpleForm
+          mode={mode}
+          configuration={configuration}
+          setConfiguration={setConfiguration}
+          errors={errors}
+          disabled={disabled || isLoading}
+          {...rest}
+        />
+      )}
     </>
   )
 }

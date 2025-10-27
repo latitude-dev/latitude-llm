@@ -8,24 +8,26 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/constants'
+import { DocumentLog } from '@latitude-data/core/constants'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
+import { ProviderLogDto } from '@latitude-data/core/schema/types'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import React from 'react'
+import CompositeEvaluationSpecification from './composite'
 import HumanEvaluationSpecification from './human'
 import LlmEvaluationSpecification from './llm'
 import RuleEvaluationSpecification from './rule'
-import { ProviderLogDto } from '@latitude-data/core/schema/types'
-import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
-import { DocumentLog } from '@latitude-data/core/constants'
 
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
 export type ConfigurationFormProps<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   mode: 'create' | 'update'
+  uuid?: string
   configuration: EvaluationConfiguration<T, M> // Note: remove and just use settings
   setConfiguration: (configuration: EvaluationConfiguration<T, M>) => void // Note: remove and just use setSettings
   settings: EvaluationSettings<T, M>
@@ -106,7 +108,7 @@ export type EvaluationMetricFrontendSpecification<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = EvaluationMetricSpecification<T, M> & {
   icon: IconName
-  ConfigurationSimpleForm: (
+  ConfigurationSimpleForm?: (
     props: ConfigurationFormProps<T, M>,
   ) => React.ReactNode
   ConfigurationAdvancedForm?: (
@@ -128,7 +130,7 @@ export type EvaluationFrontendSpecification<
   T extends EvaluationType = EvaluationType,
 > = Omit<EvaluationSpecification<T>, 'metrics'> & {
   icon: IconName
-  ConfigurationSimpleForm: <
+  ConfigurationSimpleForm?: <
     M extends EvaluationMetric<T> = EvaluationMetric<T>,
   >(
     props: ConfigurationFormProps<T, M> & { metric: M },
@@ -159,7 +161,7 @@ export type EvaluationFrontendSpecification<
     props: ResultPanelProps<T, M> & { metric: M },
   ) => React.ReactNode
   AnnotationForm?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
-    props: AnnotationFormProps<T, M>,
+    props: AnnotationFormProps<T, M> & { metric: M },
   ) => React.ReactNode
   chartConfiguration: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     args: ChartConfigurationArgs<T, M> & { metric: M },
@@ -175,6 +177,7 @@ export const EVALUATION_SPECIFICATIONS: {
   [EvaluationType.Rule]: RuleEvaluationSpecification,
   [EvaluationType.Llm]: LlmEvaluationSpecification,
   [EvaluationType.Human]: HumanEvaluationSpecification,
+  [EvaluationType.Composite]: CompositeEvaluationSpecification,
 }
 
 export function getEvaluationTypeSpecification<

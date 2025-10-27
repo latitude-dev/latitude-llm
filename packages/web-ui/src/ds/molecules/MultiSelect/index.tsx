@@ -104,7 +104,7 @@ const DefaultMultiSelectTrigger = forwardRef<
                 const option = options.find((o) => o.value === value)
                 return (
                   <Badge
-                    variant='muted'
+                    variant={option ? 'muted' : 'destructiveMuted'}
                     key={value}
                     iconProps={
                       option?.icon
@@ -117,7 +117,7 @@ const DefaultMultiSelectTrigger = forwardRef<
                     }}
                   >
                     <div className='flex flex-row items-center gap-x-1'>
-                      <Text.H6>{option?.label}</Text.H6>
+                      <Text.H6>{option?.label ?? 'Unknown'}</Text.H6>
                       <div className='cursor-pointer'>
                         <Icon name='close' size='small' />
                       </div>
