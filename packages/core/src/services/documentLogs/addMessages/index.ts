@@ -1,11 +1,10 @@
-import { type Message } from '@latitude-data/constants/legacyCompiler'
-
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { buildConversation } from '../../../helpers'
+import { type Message } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '../../../constants'
-import { type Workspace } from '../../../schema/models/types/Workspace'
 import { unsafelyFindProviderApiKey } from '../../../data-access/providerApiKeys'
+import { publisher } from '../../../events/publisher'
+import { buildConversation } from '../../../helpers'
 import { Result } from '../../../lib/Result'
 import { ToolHandler } from '../../../lib/streamManager/clientTools/handlers'
 import { DefaultStreamManager } from '../../../lib/streamManager/defaultStreamManager'
@@ -15,9 +14,11 @@ import {
   DocumentVersionsRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { BACKGROUND, telemetry, TelemetryContext } from '../../../telemetry'
 import { getInputSchema, getOutputType } from '../../chains/ChainValidator'
 import { scanDocumentContent } from '../../documents'
+import { isErrorRetryable } from '../../evaluationsV2/run'
 import serializeProviderLog from '../../providerLogs/serialize'
 
 type AddMessagesArgs = {
@@ -48,7 +49,8 @@ export async function addMessages({
     documentLogUuid,
   })
   if (dataResult.error) return dataResult
-  const { document, commit, providerLog, globalConfig } = dataResult.unwrap()
+  const { document, commit, documentLog, providerLog, globalConfig } =
+    dataResult.unwrap()
 
   const $prompt = telemetry.prompt(context, {
     documentLogUuid,
@@ -105,9 +107,24 @@ export async function addMessages({
 
   start()
 
-  streamResult.error.then((error) =>
-    error ? $prompt.fail(error) : $prompt.end(),
-  )
+  streamResult.response.then(async (response) => {
+    const error = await streamResult.error
+    if (error) {
+      $prompt.fail(error)
+
+      if (isErrorRetryable(error)) return response
+    } else {
+      $prompt.end()
+    }
+
+    await publisher.publishLater({
+      type: 'documentLogInteracted',
+      data: {
+        id: documentLog.id,
+        workspaceId: workspace.id,
+      },
+    })
+  })
 
   return Result.ok(streamResult)
 }
@@ -150,5 +167,5 @@ async function retrieveData({
   if (metadataResult.error) return metadataResult
   const globalConfig = metadataResult.value.config as LatitudePromptConfig
 
-  return Result.ok({ commit, document, providerLog, globalConfig })
+  return Result.ok({ commit, document, documentLog, providerLog, globalConfig })
 }

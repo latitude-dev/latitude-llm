@@ -32,6 +32,7 @@ export type Events =
   | 'workspaceCreated'
   | 'projectCreated'
   | 'documentLogCreated'
+  | 'documentLogInteracted'
   | 'documentSuggestionCreated'
   | 'documentSuggestionApplied'
   | 'documentSuggestionDiscarded'
@@ -168,6 +169,11 @@ export type CommitCreatedEvent = LatitudeEventGeneric<
 
 export type DocumentLogCreatedEvent = LatitudeEventGeneric<
   'documentLogCreated',
+  Pick<DocumentLog, 'id'> & { workspaceId: number }
+>
+
+export type DocumentLogInteractedEvent = LatitudeEventGeneric<
+  'documentLogInteracted',
   Pick<DocumentLog, 'id'> & { workspaceId: number }
 >
 
@@ -734,6 +740,7 @@ export type LatitudeEvent =
   | WorkspaceCreatedEvent
   | ProjectCreatedEvent
   | DocumentLogCreatedEvent
+  | DocumentLogInteractedEvent
   | DocumentSuggestionCreatedEvent
   | DocumentSuggestionAppliedEvent
   | DocumentSuggestionDiscardedEvent
@@ -802,6 +809,7 @@ export interface IEventsHandlers {
   workspaceCreated: EventHandler<WorkspaceCreatedEvent>[]
   projectCreated: EventHandler<ProjectCreatedEvent>[]
   documentLogCreated: EventHandler<DocumentLogCreatedEvent>[]
+  documentLogInteracted: EventHandler<DocumentLogInteractedEvent>[]
   documentSuggestionCreated: EventHandler<DocumentSuggestionCreatedEvent>[]
   documentSuggestionApplied: EventHandler<DocumentSuggestionAppliedEvent>[]
   documentSuggestionDiscarded: EventHandler<DocumentSuggestionDiscardedEvent>[]
