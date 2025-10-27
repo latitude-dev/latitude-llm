@@ -30,7 +30,7 @@ A "Golden Dataset" is a carefully curated collection of inputs and expected outp
 
 ## Using the Golden Dataset in Workflows
 
-- **During Development**: When iterating on a prompt in a draft version, run batch evaluations using relevant [Programmatic Rules](/guides/evaluations/programmatic_rules) (like Exact Match, Semantic Similarity, JSON Validation) against the golden dataset to check for regressions before considering the draft ready.
+- **During Development**: When iterating on a prompt in a draft version, run batch evaluations using relevant [Programmatic Rules](/guides/evaluations/programmatic-rules) (like Exact Match, Semantic Similarity, JSON Validation) against the golden dataset to check for regressions before considering the draft ready.
 - **CI/CD Pipeline**: Integrate automated batch evaluations against the golden dataset into your pre-deployment checks. Fail the build if key metrics on the golden dataset drop below a threshold.
 - **Version Comparison**: When comparing two prompt versions (e.g., A/B testing), run both against the golden dataset using the same evaluations to get a standardized performance comparison.
 
@@ -45,5 +45,5 @@ By establishing and maintaining golden datasets, you create a robust safety net 
 ## Next Steps
 
 - Learn more about [Creating and Using Datasets](/guides/datasets/overview)
-- Set up [Programmatic Rule Evaluations](/guides/evaluations/programmatic_rules) to use with your dataset.
+- Set up [Programmatic Rule Evaluations](/guides/evaluations/programmatic-rules) to use with your dataset.
 - Integrate checks into your [Team Workflows](/guides/evaluations/integrating-evaluations-workflow).

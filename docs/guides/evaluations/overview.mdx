@@ -13,7 +13,7 @@ Evaluations are crucial for understanding and improving the quality of your AI p
 - **Drive Improvement**: Gather data to refine prompts using [Prompt Suggestions](/guides/evaluations/prompt-suggestions).
 - **Ensure Reliability**: Build confidence in production-deployed prompts.
 
-## Evaluation Types in Latitude
+## Evaluation Types
 
 Latitude supports three main approaches to evaluation, each suited for different needs:
 
@@ -22,15 +22,20 @@ Latitude supports three main approaches to evaluation, each suited for different
     - **Best for**: Subjective criteria, complex assessments, evaluating nuanced qualities like creativity or tone.
     - **Requires**: Defining evaluation criteria (often via templates or custom instructions for the judge LLM).
 
-2.  [**Programmatic Rules**](/guides/evaluations/programmatic_rules):
+2.  [**Programmatic Rule**](/guides/evaluations/programmatic-rules):
     - **How it works**: Applies code-based rules and metrics to check outputs against objective criteria.
     - **Best for**: Objective checks, ground truth comparisons (using datasets), format validation (JSON, regex), safety checks (keyword detection), length constraints.
     - **Requires**: Defining specific rules (e.g., exact match, contains keyword, JSON schema validation) and potentially providing a [Dataset](/guides/datasets/overview) with expected outputs.
 
-3.  [**Human-in-the-Loop (Manual Evaluations)**](/guides/evaluations/humans-in-the-loop):
+3.  [**Human-in-the-Loop**](/guides/evaluations/humans-in-the-loop):
     - **How it works**: Team members manually review prompt outputs (logs) and assign scores or labels based on their judgment.
     - **Best for**: Capturing nuanced human preferences, evaluating criteria difficult for LLMs to judge, initial quality assessment, creating golden datasets for other evaluation types.
     - **Requires**: Setting up manual review workflows and criteria for reviewers.
+
+## Combining Evaluations
+
+Sometimes you want to summarize the results of multiple evaluations into a single score, defining, for example, an overall performance report of your prompt.
+To do this, you can use [Composite Evaluations](/guides/evaluations/composite-scores), also named _Composite Scores_.
 
 ## How Evaluations Connect to Prompts
 
@@ -80,6 +85,7 @@ Sometimes, you want to measure undesirable traits (e.g., toxicity, hallucination
 
 Dive deeper into each evaluation type:
 
-- [LLM-as-Judge Evaluations](/guides/evaluations/llm-as-judges)
-- [Programmatic Rule Evaluations](/guides/evaluations/programmatic_rules)
-- [HITL (Humans in the Loop) Evaluations](/guides/evaluations/humans-in-the-loop)
+- [LLM-as-Judges](/guides/evaluations/llm-as-judges)
+- [Programmatic Rules](/guides/evaluations/programmatic-rules)
+- [HITL (Humans in the Loop)](/guides/evaluations/humans-in-the-loop)
+- [Composite Scores](/guides/evaluations/composite-scores)

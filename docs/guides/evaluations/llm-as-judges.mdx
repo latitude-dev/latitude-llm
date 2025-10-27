@@ -9,44 +9,50 @@ description: Use language models to evaluate the quality, style, and correctness
 ## Setup
 
 <Steps>
-  <Step title="Go to evaluations tab">
+  <Step title='Go to evaluations tab'>
     Go to evaluations tab on a prompt in one of your projects.
   </Step>
-  <Step title="Add evaluation">
+  <Step title='Add evaluation'>
     On the top right corner, click on the "Add evaluation" button.
   </Step>
-  <Step title="Choose LLM-as-a-judge">
-    Choose "LLM-as-a-judge" tab in the evaluation modal.
-    ![Choose LLM-as-a-judge](/assets/new-llm-evaluation-modal.png)
+  <Step title='Choose LLM-as-a-judge'>
+    Choose "LLM-as-a-judge" tab in the evaluation modal. ![Choose
+    LLM-as-a-judge](/assets/new-llm-evaluation-modal.png)
   </Step>
-  <Step title="Choose a metric">
+  <Step title='Choose a metric'>
     ![Choose LLM-as-a-judge metric](/assets/llm-evaluation-metric-dropdown.png)
   </Step>
 </Steps>
 
 ## Metrics
 
-<ParamField path="Binary">
-  Judges whether the response meets the criteria. The resulting score is "passed" or "failed"
+<ParamField path='Binary'>
+  Judges whether the response meets the criteria. The resulting score is
+  "passed" or "failed"
 </ParamField>
 
-<ParamField path="Rating">
-  Judges the response by rating it under a criteria. The resulting score is the rating
+<ParamField path='Rating'>
+  Judges the response by rating it under a criteria. The resulting score is the
+  rating
 </ParamField>
 
-<ParamField path="Comparison">
-  Judges the response by comparing the criteria to the expected output. The resulting score is the percentage of compared criteria that is met
+<ParamField path='Comparison'>
+  Judges the response by comparing the criteria to the expected output. The
+  resulting score is the percentage of compared criteria that is met
 </ParamField>
 
-<ParamField path="Custom">
-  Judges the response under a criteria using a custom prompt. The resulting score is the value of criteria that is met
+<ParamField path='Custom'>
+  Judges the response under a criteria using a custom prompt. The resulting
+  score is the value of criteria that is met
 </ParamField>
 
 ## Expected output
 
 The expected output, also known as label, refers to the correct or ideal response that the language model should generate for a given prompt. You can create datasets with expected output columns to evaluate prompts with ground truth.
 
-<Note>**Comparison** and **Custom (labeled)** metrics require expected output.</Note>
+<Note>
+  **Comparison** and **Custom (labeled)** metrics require an expected output.
+</Note>
 
 ## Templates
 
