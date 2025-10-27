@@ -66,53 +66,53 @@ const fetchAppsBuilder =
     cursor?: string
     pipedreamClientBuilder: () => TypedResult<PipedreamClient, Error>
   }) =>
-    async () => {
-      // Initialize the Pipedream client only on cache miss
-      const pipedreamResult = pipedreamClientBuilder()
-      if (!Result.isOk(pipedreamResult)) {
-        throw pipedreamResult.error
-      }
-      const pipedream = pipedreamResult.unwrap()
-
-      const appsParams: AppsListRequest = {
-        q: query,
-        limit: LIST_APPS_LIMIT,
-        after: cursor,
-        sortKey: AppsListRequestSortKey.FeaturedWeight,
-        sortDirection: AppsListRequestSortDirection.Desc,
-      }
-
-      const page = await pipedream.apps.list(appsParams)
-      const apps = page.data as ExtendedPipedreamApp[]
-      const filteredApps = apps
-        .filter((app) => {
-          // Filter out apps that do not require authentication, as they are not supported yet
-          if (app.authType === undefined) return false
-
-          // Filter out disallowed apps
-          if (DISALLOW_LIST.includes(app.nameSlug)) return false
-
-          return true
-        })
-        .map((app) => {
-          // Exclude customFieldsJson and connect from the response to reduce payload size
-          // These fields exist at runtime but may not be in the SDK type definition
-          const {
-            customFieldsJson: _cf,
-            connect: _cn,
-            ...appWithoutCustomFields
-          } = app as typeof app & { customFieldsJson?: string; connect?: unknown }
-          return appWithoutCustomFields
-        })
-
-      const pageInfo = getPageInfo(page)
-
-      return {
-        apps: filteredApps,
-        totalCount: pageInfo.totalCount ?? apps.length,
-        cursor: pageInfo.endCursor ?? '',
-      }
+  async () => {
+    // Initialize the Pipedream client only on cache miss
+    const pipedreamResult = pipedreamClientBuilder()
+    if (!Result.isOk(pipedreamResult)) {
+      throw pipedreamResult.error
     }
+    const pipedream = pipedreamResult.unwrap()
+
+    const appsParams: AppsListRequest = {
+      q: query,
+      limit: LIST_APPS_LIMIT,
+      after: cursor,
+      sortKey: AppsListRequestSortKey.FeaturedWeight,
+      sortDirection: AppsListRequestSortDirection.Desc,
+    }
+
+    const page = await pipedream.apps.list(appsParams)
+    const apps = page.data as ExtendedPipedreamApp[]
+    const filteredApps = apps
+      .filter((app) => {
+        // Filter out apps that do not require authentication, as they are not supported yet
+        if (app.authType === undefined) return false
+
+        // Filter out disallowed apps
+        if (DISALLOW_LIST.includes(app.nameSlug)) return false
+
+        return true
+      })
+      .map((app) => {
+        // Exclude customFieldsJson and connect from the response to reduce payload size
+        // These fields exist at runtime but may not be in the SDK type definition
+        const {
+          customFieldsJson: _cf,
+          connect: _cn,
+          ...appWithoutCustomFields
+        } = app as typeof app & { customFieldsJson?: string; connect?: unknown }
+        return appWithoutCustomFields
+      })
+
+    const pageInfo = getPageInfo(page)
+
+    return {
+      apps: filteredApps,
+      totalCount: pageInfo.totalCount ?? apps.length,
+      cursor: pageInfo.endCursor ?? '',
+    }
+  }
 
 export async function listApps({
   query,
@@ -188,13 +188,13 @@ export async function getApp<C extends boolean>({
     const processedComponents = withConfig
       ? components
       : ({
-        tools: components.tools.map(
-          ({ configurableProps: _, ...tool }) => tool,
-        ),
-        triggers: components.triggers.map(
-          ({ configurableProps: _, ...trigger }) => trigger,
-        ),
-      } as typeof components)
+          tools: components.tools.map(
+            ({ configurableProps: _, ...tool }) => tool,
+          ),
+          triggers: components.triggers.map(
+            ({ configurableProps: _, ...trigger }) => trigger,
+          ),
+        } as typeof components)
 
     return {
       ...appWithoutCustomFields,

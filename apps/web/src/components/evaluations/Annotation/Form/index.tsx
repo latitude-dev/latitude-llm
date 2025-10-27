@@ -1,7 +1,7 @@
 import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
-import { FormProps } from '../types'
 import { EVALUATION_SPECIFICATIONS } from '../..'
 import { AnnotationProvider } from '../FormWrapper'
+import { FormProps } from '../types'
 import { useAnnotationForm } from '../useAnnotationForm'
 
 export function AnnotationForm<
@@ -32,7 +32,11 @@ export function AnnotationForm<
 
   return (
     <AnnotationProvider onSubmit={onSubmit} isSubmitting={isSubmitting}>
-      <spec.AnnotationForm evaluation={evaluation} result={result} />
+      <spec.AnnotationForm
+        metric={evaluation.metric}
+        evaluation={evaluation}
+        result={result}
+      />
     </AnnotationProvider>
   )
 }

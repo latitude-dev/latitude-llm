@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   AtSign,
   BarChart4,
+  BaselineIcon,
   Blend,
   Blocks,
   BookMarked,
@@ -105,6 +106,7 @@ import {
   Paperclip,
   Pause,
   Pencil,
+  PercentIcon,
   Pin,
   PinOff,
   Play,
@@ -121,6 +123,7 @@ import {
   SearchIcon,
   SendToBack,
   SettingsIcon,
+  SigmaIcon,
   Slack,
   Space,
   Sparkles,
@@ -147,7 +150,6 @@ import {
   XIcon,
   Youtube,
   Zap,
-  BaselineIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -406,6 +408,8 @@ const Icons = {
   mousePointerClick: MousePointerClick,
   filledBadgeCheck: FilledBadgeCheckIcon,
   baseline: BaselineIcon,
+  percent: PercentIcon,
+  sigma: SigmaIcon,
 }
 
 export type IconName = keyof typeof Icons

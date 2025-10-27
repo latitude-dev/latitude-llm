@@ -107,10 +107,11 @@ export async function validateEvaluationV2<
   const typeMetricValidation = await typeSpecification.validate(
     {
       mode: mode,
+      uuid: evaluation?.uuid,
       metric: settings.metric,
       configuration: settings.configuration,
-      evaluations: evaluations,
       document: document,
+      evaluations: evaluations,
       commit: commit,
       workspace: workspace,
     },

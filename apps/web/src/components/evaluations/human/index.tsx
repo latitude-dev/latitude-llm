@@ -38,10 +38,6 @@ export default {
 
 function ConfigurationSimpleForm<M extends HumanEvaluationMetric>({
   metric,
-  configuration,
-  setConfiguration,
-  errors,
-  disabled,
   ...rest
 }: ConfigurationFormProps<EvaluationType.Human, M> & {
   metric: M
@@ -51,13 +47,9 @@ function ConfigurationSimpleForm<M extends HumanEvaluationMetric>({
 
   return (
     <>
-      <metricSpecification.ConfigurationSimpleForm
-        configuration={configuration}
-        setConfiguration={setConfiguration}
-        errors={errors}
-        disabled={disabled}
-        {...rest}
-      />
+      {!!metricSpecification.ConfigurationSimpleForm && (
+        <metricSpecification.ConfigurationSimpleForm {...rest} />
+      )}
     </>
   )
 }
@@ -135,15 +127,21 @@ function ResultBadge<M extends HumanEvaluationMetric>({
 }
 
 function AnnotationForm<M extends HumanEvaluationMetric>({
-  evaluation,
-  result,
-}: AnnotationFormProps<EvaluationType.Human, M>) {
-  const metric = evaluation.metric
-  const Form = METRICS[metric]?.AnnotationForm
+  metric,
+  ...rest
+}: AnnotationFormProps<EvaluationType.Human, M> & {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) return null
 
-  if (!Form) return null
-
-  return <Form evaluation={evaluation} result={result} />
+  return (
+    <>
+      {!!metricSpecification.AnnotationForm && (
+        <metricSpecification.AnnotationForm {...rest} />
+      )}
+    </>
+  )
 }
 
 function chartConfiguration<M extends HumanEvaluationMetric>({

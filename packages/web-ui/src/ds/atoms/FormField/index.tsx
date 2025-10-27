@@ -67,7 +67,7 @@ export const FormControl = forwardRef<
   )
 })
 
-function DescriptionAndError({
+export function DescriptionAndError({
   description,
   error,
   errorStyle,

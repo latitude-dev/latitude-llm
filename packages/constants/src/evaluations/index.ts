@@ -1,5 +1,12 @@
 import { z } from 'zod'
 import {
+  CompositeEvaluationConfiguration,
+  CompositeEvaluationMetric,
+  CompositeEvaluationResultError,
+  CompositeEvaluationResultMetadata,
+  CompositeEvaluationSpecification,
+} from './composite'
+import {
   HumanEvaluationConfiguration,
   HumanEvaluationMetric,
   HumanEvaluationResultError,
@@ -21,6 +28,7 @@ import {
   RuleEvaluationSpecification,
 } from './rule'
 
+export * from './composite'
 export * from './human'
 export * from './llm'
 export * from './rule'
@@ -30,6 +38,7 @@ export enum EvaluationType {
   Rule = 'rule',
   Llm = 'llm',
   Human = 'human',
+  Composite = 'composite',
 }
 
 export const EvaluationTypeSchema = z.enum(EvaluationType)
@@ -39,12 +48,14 @@ export type EvaluationMetric<T extends EvaluationType = EvaluationType> =
   T extends EvaluationType.Rule ? RuleEvaluationMetric :
   T extends EvaluationType.Llm ? LlmEvaluationMetric :
   T extends EvaluationType.Human ? HumanEvaluationMetric :
+  T extends EvaluationType.Composite ? CompositeEvaluationMetric :
   never;
 
 export const EvaluationMetricSchema = z.union([
   z.enum(RuleEvaluationMetric),
   z.enum(LlmEvaluationMetric),
   z.enum(HumanEvaluationMetric),
+  z.enum(CompositeEvaluationMetric),
 ])
 
 // prettier-ignore
@@ -55,6 +66,7 @@ export type EvaluationConfiguration<
   T extends EvaluationType.Rule ? RuleEvaluationConfiguration<M extends RuleEvaluationMetric ? M : never> :
   T extends EvaluationType.Llm ? LlmEvaluationConfiguration<M extends LlmEvaluationMetric ? M : never> :
   T extends EvaluationType.Human ? HumanEvaluationConfiguration<M extends HumanEvaluationMetric ? M : never> :
+  T extends EvaluationType.Composite ? CompositeEvaluationConfiguration<M extends CompositeEvaluationMetric ? M : never> :
   never;
 
 export const EvaluationConfigurationSchema = z.custom<EvaluationConfiguration>()
@@ -67,6 +79,7 @@ export type EvaluationResultMetadata<
   T extends EvaluationType.Rule ? RuleEvaluationResultMetadata<M extends RuleEvaluationMetric ? M : never> :
   T extends EvaluationType.Llm ? LlmEvaluationResultMetadata<M extends LlmEvaluationMetric ? M : never> :
   T extends EvaluationType.Human ? HumanEvaluationResultMetadata<M extends HumanEvaluationMetric ? M : never> :
+  T extends EvaluationType.Composite ? CompositeEvaluationResultMetadata<M extends CompositeEvaluationMetric ? M : never> :
   never;
 
 // prettier-ignore
@@ -80,6 +93,7 @@ export type EvaluationResultError<
   T extends EvaluationType.Rule ? RuleEvaluationResultError<M extends RuleEvaluationMetric ? M : never> :
   T extends EvaluationType.Llm ? LlmEvaluationResultError<M extends LlmEvaluationMetric ? M : never> :
   T extends EvaluationType.Human ? HumanEvaluationResultError<M extends HumanEvaluationMetric ? M : never> :
+  T extends EvaluationType.Composite ? CompositeEvaluationResultError<M extends CompositeEvaluationMetric ? M : never> :
   never;
 
 // prettier-ignore
@@ -117,6 +131,7 @@ export const EVALUATION_SPECIFICATIONS = {
   [EvaluationType.Rule]: RuleEvaluationSpecification,
   [EvaluationType.Llm]: LlmEvaluationSpecification,
   [EvaluationType.Human]: HumanEvaluationSpecification,
+  [EvaluationType.Composite]: CompositeEvaluationSpecification,
 } as const satisfies {
   [T in EvaluationType]: EvaluationSpecification<T>
 }

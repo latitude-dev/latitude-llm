@@ -113,10 +113,17 @@ describe('createEvaluationResultV2', () => {
       ),
     )
 
+    expect(
+      await database
+        .select()
+        .from(evaluationResultsV2)
+        .where(eq(evaluationResultsV2.evaluationUuid, evaluation.uuid))
+        .orderBy(desc(evaluationResultsV2.createdAt)),
+    ).toEqual([])
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
-  it('succeeds when creating a result', async () => {
+  it('succeeds when creating a result in non-dry mode', async () => {
     mocks.publisher.mockClear()
 
     const { result } = await createEvaluationResultV2({
@@ -159,5 +166,35 @@ describe('createEvaluationResultV2', () => {
         workspaceId: workspace.id,
       },
     })
+  })
+
+  it('succeeds when creating a result in dry mode', async () => {
+    mocks.publisher.mockClear()
+
+    const { result } = await createEvaluationResultV2({
+      evaluation: evaluation,
+      providerLog: providerLog,
+      commit: commit,
+      value: value,
+      workspace: workspace,
+      dry: true,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedLogId: providerLog.id,
+      }),
+    )
+    expect(
+      await database
+        .select()
+        .from(evaluationResultsV2)
+        .where(eq(evaluationResultsV2.evaluationUuid, evaluation.uuid))
+        .orderBy(desc(evaluationResultsV2.createdAt)),
+    ).toEqual([])
+    expect(mocks.publisher).not.toHaveBeenCalled()
   })
 })

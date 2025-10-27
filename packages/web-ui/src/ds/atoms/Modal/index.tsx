@@ -6,6 +6,7 @@ import { cn } from '../../../lib/utils'
 import { zIndex as globalZIndex, ZIndex } from '../../tokens/zIndex'
 import { Alert } from '../Alert'
 import { Button } from '../Button'
+import { Icon, IconName } from '../Icons'
 import { Text } from '../Text'
 import {
   Dialog,
@@ -41,6 +42,7 @@ function StepSelector({ total, current }: { total: number; current: number }) {
 
 export type ModalProps = {
   title?: string
+  icon?: IconName
   defaultOpen?: boolean
   onOpenChange?: (open: boolean) => void
   open?: boolean
@@ -66,6 +68,7 @@ export function Modal({
   onOpenChange,
   children,
   footer,
+  icon,
   title,
   description,
   warningDescription,
@@ -103,7 +106,20 @@ export function Modal({
               {(title || description) && (
                 <div className={cn('px-6', { 'pt-6': !steps })}>
                   <DialogHeader>
-                    {title && <DialogTitle>{title}</DialogTitle>}
+                    {title && (
+                      <DialogTitle>
+                        <span className='flex items-center justify-start gap-2'>
+                          {icon && (
+                            <Icon
+                              name={icon}
+                              color='foreground'
+                              className='flex-shrink-0'
+                            />
+                          )}
+                          {title}
+                        </span>
+                      </DialogTitle>
+                    )}
                     {description && (
                       <DialogDescription>{description}</DialogDescription>
                     )}

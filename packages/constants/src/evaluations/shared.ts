@@ -2,7 +2,9 @@ import { z } from 'zod'
 
 const actualOutputConfiguration = z.object({
   messageSelection: z.enum(['last', 'all']), // Which assistant messages to select
-  contentFilter: z.enum(['text', 'image', 'file', 'tool_call']).optional(),
+  contentFilter: z
+    .enum(['text', 'reasoning', 'image', 'file', 'tool_call'])
+    .optional(),
   parsingFormat: z.enum(['string', 'json']),
   fieldAccessor: z.string().optional(), // Field accessor to get the output from if it's a key-value format
 })

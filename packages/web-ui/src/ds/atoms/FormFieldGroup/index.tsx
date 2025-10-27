@@ -1,7 +1,6 @@
 import { ReactNode, useId } from 'react'
-
 import { cn } from '../../../lib/utils'
-import { FormDescription } from '../FormField'
+import { DescriptionAndError } from '../FormField'
 import { Icon } from '../Icons'
 import { Label } from '../Label'
 import { Tooltip } from '../Tooltip'
@@ -14,15 +13,21 @@ export function FormFieldGroup({
   descriptionPosition = 'bottom',
   tooltip,
   group = false,
+  errors,
+  centered = false,
 }: {
   children: ReactNode
+  name?: string
   label?: string | ReactNode
   description?: string
   descriptionPosition?: 'top' | 'bottom'
   tooltip?: string | ReactNode
   layout?: 'horizontal' | 'vertical'
   group?: boolean
+  errors?: string[] | null | undefined
+  centered?: boolean
 }) {
+  const error = errors?.[0]
   const id = useId()
   return (
     <div className='space-y-2 w-full'>
@@ -53,7 +58,12 @@ export function FormFieldGroup({
         </span>
       ) : null}
       {!!description && descriptionPosition === 'top' && (
-        <FormDescription>{description}</FormDescription>
+        <DescriptionAndError
+          description={description}
+          error={error}
+          errorStyle='inline'
+          formMessageId={`${id}-form-item-message`}
+        />
       )}
       <div
         role='group'
@@ -61,6 +71,7 @@ export function FormFieldGroup({
           'gap-x-2 items-start': layout === 'horizontal',
           'flex-col gap-y-2': layout === 'vertical',
           '[&_label]:font-light [&_label]:text-secondary-foreground': group,
+          'items-center': centered,
         })}
         id={`form-field-group-${id}`}
         aria-labelledby={id}
@@ -69,7 +80,12 @@ export function FormFieldGroup({
         {children}
       </div>
       {!!description && descriptionPosition === 'bottom' && (
-        <FormDescription>{description}</FormDescription>
+        <DescriptionAndError
+          description={description}
+          error={error}
+          errorStyle='inline'
+          formMessageId={`${id}-form-item-message`}
+        />
       )}
     </div>
   )

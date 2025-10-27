@@ -1,10 +1,9 @@
-import { forwardRef, InputHTMLAttributes } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
-
+import { forwardRef, InputHTMLAttributes } from 'react'
 import { cn } from '../../../lib/utils'
 import { font } from '../../tokens'
-import { FormField } from '../FormField'
-import { type FormFieldProps } from '../FormField'
+import { FormField, type FormFieldProps } from '../FormField'
+import { Skeleton } from '../Skeleton'
 
 export const INPUT_BASE_CLASSES = [
   'flex w-full border border-input bg-background ring-offset-background',
@@ -34,6 +33,7 @@ export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> &
   VariantProps<typeof inputVariants> &
   Omit<FormFieldProps, 'children'> & {
     hideNativeAppearance?: boolean
+    loading?: boolean
   }
 const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   {
@@ -46,6 +46,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     type,
     size,
     hideNativeAppearance = false,
+    loading = false,
     ...props
   },
   ref,
@@ -58,16 +59,20 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       errors={errors}
       errorStyle={errorStyle}
     >
-      <input
-        ref={ref}
-        type={type}
-        className={cn(inputVariants({ size }), className, {
-          'border-red-500 focus-visible:ring-red-500': errors,
-          hidden: !!props.hidden,
-          'appearance-none': hideNativeAppearance,
-        })}
-        {...props}
-      />
+      {loading ? (
+        <Skeleton className='w-full h-8 rounded-md' />
+      ) : (
+        <input
+          ref={ref}
+          type={type}
+          className={cn(inputVariants({ size }), className, {
+            'border-red-500 focus-visible:ring-red-500': errors,
+            hidden: !!props.hidden,
+            'appearance-none': hideNativeAppearance,
+          })}
+          {...props}
+        />
+      )}
     </FormField>
   )
 })

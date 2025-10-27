@@ -17,6 +17,7 @@ const CONTENT_FILTER_TYPE: Record<
   string
 > = {
   text: 'text',
+  reasoning: 'reasoning',
   image: 'image',
   file: 'file',
   tool_call: 'tool-call',
@@ -87,6 +88,48 @@ function parseOutput(output: string | string[], format: string) {
   }
 }
 
+function filterConversation(conversation: Message[], filter: string) {
+  const filteredConversation = []
+
+  for (const message of conversation) {
+    if (typeof message.content === 'string') {
+      if (filter === 'text') {
+        filteredConversation.push(message)
+      }
+    } else {
+      const filteredContent = message.content.filter(
+        (content) => content.type === filter,
+      )
+      if (filteredContent.length > 0) {
+        filteredConversation.push({
+          ...message,
+          content: filteredContent,
+        } as Message)
+      }
+    }
+  }
+
+  return filteredConversation
+}
+
+function flattenConversation(conversation: Message[]) {
+  const flattenedConversation = []
+
+  for (const message of conversation) {
+    if (typeof message.content === 'string') {
+      flattenedConversation.push(message)
+    } else {
+      flattenedConversation.push(
+        ...message.content.map(
+          (content) => ({ ...message, content: [content] }) as Message,
+        ),
+      )
+    }
+  }
+
+  return flattenedConversation
+}
+
 export async function extractActualOutput({
   providerLog,
   configuration,
@@ -104,26 +147,10 @@ export async function extractActualOutput({
       return Result.error(new BadRequestError('Invalid message content filter'))
     }
 
-    const filteredConversation = []
-    for (const message of conversation) {
-      if (typeof message.content === 'string') {
-        if (contentFilter === 'text') {
-          filteredConversation.push(message)
-        }
-      } else {
-        const filteredContent = message.content.filter(
-          (content) => content.type === contentFilter,
-        )
-        if (filteredContent.length > 0) {
-          filteredConversation.push({
-            ...message,
-            content: filteredContent,
-          } as Message)
-        }
-      }
-    }
-    conversation = filteredConversation
+    conversation = filterConversation(conversation, contentFilter)
   }
+
+  conversation = flattenConversation(conversation)
 
   if (conversation.length < 1) {
     let error = 'Conversation does not contain any assistant messages'

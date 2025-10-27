@@ -53,7 +53,9 @@ function ConfigurationSimpleForm<M extends RuleEvaluationMetric>({
 
   return (
     <>
-      <metricSpecification.ConfigurationSimpleForm {...rest} />
+      {!!metricSpecification.ConfigurationSimpleForm && (
+        <metricSpecification.ConfigurationSimpleForm {...rest} />
+      )}
     </>
   )
 }
