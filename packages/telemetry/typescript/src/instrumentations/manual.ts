@@ -88,6 +88,9 @@ export type StartCompletionSpanOptions = StartSpanOptions & {
   model: string
   configuration: Record<string, unknown>
   input: Record<string, unknown>[]
+  versionUuid?: string
+  promptUuid?: string
+  experimentUuid?: string
 }
 
 export type EndCompletionSpanOptions = EndSpanOptions & {
@@ -537,7 +540,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
       jsonInput = '[]'
     }
     const attrInput = this.attribifyMessages('input', start.input)
-
     const span = this.span(
       ctx,
       start.name || `${start.provider} / ${start.model}`,
@@ -550,6 +552,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
           [ATTR_GEN_AI_REQUEST_MESSAGES]: jsonInput,
           ...attrInput,
           ...(start.attributes || {}),
+          ['latitude.commitUuid']: start.versionUuid,
+          ['latitude.documentUuid']: start.promptUuid,
+          ['latitude.experimentUuid']: start.experimentUuid,
         },
       },
     )
