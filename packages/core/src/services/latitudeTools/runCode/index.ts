@@ -93,6 +93,7 @@ export default {
           'An optional list of all the required dependencies to run the script. Adding dependencies will severely increase the execution time, so do not include them unless required.',
         ),
     }),
+    outputSchema: z.string(),
     execute: async (args: CodeToolArgs, toolCall) =>
       withTelemetryWrapper(runCode, {
         toolName: LatitudeTool.RunCode,

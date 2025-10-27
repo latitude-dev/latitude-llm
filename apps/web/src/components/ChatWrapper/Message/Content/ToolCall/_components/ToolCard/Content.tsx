@@ -11,13 +11,16 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { stringifyUnknown } from '@latitude-data/web-ui/textUtils'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ReactNode } from 'react'
+import { SimulationTag } from './SimulationTag'
 
 export function ToolCardContentWrapper({
   badge,
+  simulated,
   className,
   children,
 }: {
   badge?: string
+  simulated?: boolean
   className?: string
   children: ReactNode
 }) {
@@ -28,9 +31,10 @@ export function ToolCardContentWrapper({
         className,
       )}
     >
-      {badge && (
-        <div className='flex flex-row'>
-          <Badge variant='outline'>{badge}</Badge>
+      {(badge || simulated) && (
+        <div className='flex flex-row gap-2'>
+          {badge && <Badge variant='outline'>{badge}</Badge>}
+          {simulated && <SimulationTag />}
         </div>
       )}
       <MaxHeightWindow>{children}</MaxHeightWindow>
@@ -54,11 +58,13 @@ export function ToolCardInput({
 
 export function ToolCardOutput({
   toolResponse,
+  simulated,
 }: {
   toolResponse: ToolContent | undefined
+  simulated?: boolean
 }) {
   return (
-    <ToolCardContentWrapper badge='Output'>
+    <ToolCardContentWrapper badge='Output' simulated={simulated}>
       {toolResponse ? (
         toolResponse.isError ? (
           <div className='w-full pt-3 items-center'>

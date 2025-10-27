@@ -16,8 +16,10 @@ import {
   ToolCardWrapper,
 } from '../_components/ToolCard'
 import { ToolCardHeader } from '../_components/ToolCard/Header'
-import { ToolCardContentWrapper } from '../_components/ToolCard/Content'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import {
+  ToolCardContentWrapper,
+  ToolCardOutput,
+} from '../_components/ToolCard/Content'
 
 function topicText({
   topic,
@@ -93,6 +95,87 @@ function WebSearchResult({
   )
 }
 
+const isExpectedOutput = (toolResponse: ToolContent | undefined) => {
+  // Returns false if the tool response does not contain the expected output
+  if (!toolResponse) return false
+  if (toolResponse.isError) return false
+
+  if (typeof toolResponse.result !== 'object' || toolResponse.result === null) {
+    return false
+  }
+
+  if (!('results' in toolResponse.result)) return false
+  const results = toolResponse.result.results
+
+  if (!Array.isArray(results)) return false
+  if (results.length === 0) return true
+
+  if (
+    results.some(
+      (result) =>
+        typeof result !== 'object' ||
+        result === null ||
+        !('title' in result) ||
+        typeof result.title !== 'string' ||
+        !('url' in result) ||
+        typeof result.url !== 'string' ||
+        !('content' in result) ||
+        typeof result.content !== 'string',
+    )
+  ) {
+    return false
+  }
+
+  return true
+}
+
+function WebSearchOutput({
+  toolResponse,
+  simulated,
+}: {
+  toolResponse: ToolContent | undefined
+  simulated?: boolean
+}) {
+  const isExpectedResponse = useMemo(
+    () => isExpectedOutput(toolResponse),
+    [toolResponse],
+  )
+
+  const searchResults = useMemo(() => {
+    if (!isExpectedResponse) return []
+    return (toolResponse!.result as SearchToolResult).results
+  }, [toolResponse, isExpectedResponse])
+
+  if (!toolResponse) {
+    return (
+      <ToolCardContentWrapper>
+        <div className='flex flex-row gap-2 items-center justify-center pb-3'>
+          <Icon name='loader' color='foregroundMuted' spin />
+          <Text.H5 color='foregroundMuted'>Searching...</Text.H5>
+        </div>
+      </ToolCardContentWrapper>
+    )
+  }
+
+  if (!isExpectedResponse) {
+    return <ToolCardOutput toolResponse={toolResponse} simulated={simulated} />
+  }
+
+  return (
+    <ToolCardContentWrapper>
+      <div className='flex flex-col gap-4'>
+        {searchResults.length ? (
+          searchResults.map((result, index) => (
+            <WebSearchResult key={index} result={result} />
+          ))
+        ) : (
+          <Text.H5 color='foregroundMuted'>No results found</Text.H5>
+        )}
+      </div>
+    </ToolCardContentWrapper>
+  )
+}
+
 export function WebSearchLatitudeToolCard({
   toolRequest,
   toolResponse,
@@ -103,12 +186,6 @@ export function WebSearchLatitudeToolCard({
   status: 'pending' | 'success' | 'error'
 }) {
   const [isOpen, setIsOpen] = useState(false)
-
-  const searchResults = useMemo(() => {
-    if (!toolResponse || toolResponse.isError) return []
-    return (toolResponse.result as SearchToolResult).results
-  }, [toolResponse])
-
   const args = toolRequest.args as SearchToolArgs
 
   return (
@@ -124,36 +201,13 @@ export function WebSearchLatitudeToolCard({
         status={status}
         isOpen={isOpen}
         onToggle={() => setIsOpen(!isOpen)}
+        simulated={toolRequest._sourceData?.simulated}
       />
       {isOpen && (
-        <ToolCardContentWrapper>
-          {toolResponse ? (
-            toolResponse.isError ? (
-              <div className='w-full pt-3 items-center'>
-                <Alert
-                  variant='destructive'
-                  title='Error'
-                  description={JSON.stringify(toolResponse.result, null, 2)}
-                />
-              </div>
-            ) : (
-              <div className='flex flex-col gap-4'>
-                {searchResults.length ? (
-                  searchResults.map((result, index) => (
-                    <WebSearchResult key={index} result={result} />
-                  ))
-                ) : (
-                  <Text.H5 color='foregroundMuted'>No results found</Text.H5>
-                )}
-              </div>
-            )
-          ) : (
-            <div className='flex flex-row gap-2 items-center justify-center pb-3'>
-              <Icon name='loader' color='foregroundMuted' spin />
-              <Text.H5 color='foregroundMuted'>Searching...</Text.H5>
-            </div>
-          )}
-        </ToolCardContentWrapper>
+        <WebSearchOutput
+          toolResponse={toolResponse}
+          simulated={toolRequest._sourceData?.simulated}
+        />
       )}
     </ToolCardWrapper>
   )

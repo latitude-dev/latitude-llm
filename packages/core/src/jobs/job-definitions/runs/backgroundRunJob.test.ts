@@ -11,11 +11,11 @@ import * as factories from '../../../tests/factories'
 import { mockToolRequestsCopilot } from '../../../tests/helpers'
 import { RedisStream } from '../../../lib/redisStream'
 import { publisher } from '../../../events/publisher'
-import { getDataForInitialRequest } from '../documents/runDocumentAtCommitWithAutoToolResponses/getDataForInitialRequest'
-import { startRun } from '../../../services/runs/start'
-import { endRun } from '../../../services/runs/end'
-import { updateRun } from '../../../services/runs/update'
-import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtCommit'
+import * as helpersModule from '../helpers'
+import * as startRunModule from '../../../services/runs/start'
+import * as endRunModule from '../../../services/runs/end'
+import * as updateRunModule from '../../../services/runs/update'
+import * as runDocumentAtCommitModule from '../../../services/commits/runDocumentAtCommit'
 import type {
   BackgroundRunJobData,
   BackgroundRunJobResult,
@@ -23,13 +23,6 @@ import type {
 
 vi.mock('../../../lib/redisStream')
 vi.mock('../../../events/publisher')
-vi.mock(
-  '../documents/runDocumentAtCommitWithAutoToolResponses/getDataForInitialRequest',
-)
-vi.mock('../../../services/runs/start')
-vi.mock('../../../services/runs/end')
-vi.mock('../../../services/runs/update')
-vi.mock('../../../services/commits/runDocumentAtCommit')
 
 describe('backgroundRunJob', () => {
   let mockJob: Job<BackgroundRunJobData, BackgroundRunJobResult>
@@ -46,6 +39,13 @@ describe('backgroundRunJob', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+
+    // Create spies for the functions
+    vi.spyOn(helpersModule, 'getJobDocumentData')
+    vi.spyOn(startRunModule, 'startRun')
+    vi.spyOn(endRunModule, 'endRun')
+    vi.spyOn(updateRunModule, 'updateRun')
+    vi.spyOn(runDocumentAtCommitModule, 'runDocumentAtCommit')
 
     // Create mock streams
     mockWriteStream = {
@@ -97,9 +97,11 @@ describe('backgroundRunJob', () => {
   })
 
   describe('error handling', () => {
-    it('should handle getDataForInitialRequest failure by writing error to stream', async () => {
+    it('should handle getJobDocumentData failure by writing error to stream', async () => {
       const error = new LatitudeError('Failed to get initial data')
-      vi.mocked(getDataForInitialRequest).mockResolvedValue(Result.error(error))
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        Result.error(error),
+      )
 
       const mod = await import('./backgroundRunJob')
       const backgroundRunJob = mod.backgroundRunJob
@@ -111,15 +113,15 @@ describe('backgroundRunJob', () => {
         data: error,
       })
       expect(mockWriteStream.cleanup).toHaveBeenCalled()
-      expect(endRun).toHaveBeenCalled()
+      expect(endRunModule.endRun).toHaveBeenCalled()
     })
 
     it('should handle startRun failure by writing error to stream', async () => {
       const error = new LatitudeError('Failed to start run')
-      vi.mocked(getDataForInitialRequest).mockResolvedValue(
-        Result.ok({ workspace, document, commit, project }),
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        Result.ok({ workspace, document, commit }),
       )
-      vi.mocked(startRun).mockResolvedValue(Result.error(error))
+      vi.mocked(startRunModule.startRun).mockResolvedValue(Result.error(error))
 
       const mod = await import('./backgroundRunJob')
       const backgroundRunJob = mod.backgroundRunJob
@@ -131,16 +133,18 @@ describe('backgroundRunJob', () => {
         data: error,
       })
       expect(mockWriteStream.cleanup).toHaveBeenCalled()
-      expect(endRun).toHaveBeenCalled()
+      expect(endRunModule.endRun).toHaveBeenCalled()
     })
 
     it('should handle runDocumentAtCommit failure by writing error to stream', async () => {
       const error = new LatitudeError('Document execution failed')
-      vi.mocked(getDataForInitialRequest).mockResolvedValue(
-        Result.ok({ workspace, document, commit, project }),
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        Result.ok({ workspace, document, commit }),
       )
-      vi.mocked(startRun).mockResolvedValue(Result.ok({} as any))
-      vi.mocked(runDocumentAtCommit).mockResolvedValue(Result.error(error))
+      vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(
+        runDocumentAtCommitModule.runDocumentAtCommit,
+      ).mockResolvedValue(Result.error(error))
 
       const mod = await import('./backgroundRunJob')
       const backgroundRunJob = mod.backgroundRunJob
@@ -152,14 +156,16 @@ describe('backgroundRunJob', () => {
         data: error,
       })
       expect(mockWriteStream.cleanup).toHaveBeenCalled()
-      expect(endRun).toHaveBeenCalled()
+      expect(endRunModule.endRun).toHaveBeenCalled()
     })
   })
 
   describe('cleanup and resource management', () => {
     it('should always cleanup stream and unsubscribe from events', async () => {
       const error = new Error('Test error')
-      vi.mocked(getDataForInitialRequest).mockResolvedValue(Result.error(error))
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        Result.error(error),
+      )
 
       const mod = await import('./backgroundRunJob')
       const backgroundRunJob = mod.backgroundRunJob
@@ -176,7 +182,9 @@ describe('backgroundRunJob', () => {
 
     it('should always attempt to end the run even if other operations fail', async () => {
       const error = new Error('Test error')
-      vi.mocked(getDataForInitialRequest).mockResolvedValue(Result.error(error))
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        Result.error(error),
+      )
 
       const mod = await import('./backgroundRunJob')
       const backgroundRunJob = mod.backgroundRunJob
@@ -184,7 +192,7 @@ describe('backgroundRunJob', () => {
       await backgroundRunJob(mockJob)
 
       // Should always try to end the run
-      expect(endRun).toHaveBeenCalledWith(
+      expect(endRunModule.endRun).toHaveBeenCalledWith(
         expect.objectContaining({
           workspaceId: workspace.id,
           projectId: project.id,
@@ -196,11 +204,13 @@ describe('backgroundRunJob', () => {
 
   describe('stream processing', () => {
     it('should handle stream processing errors gracefully', async () => {
-      vi.mocked(getDataForInitialRequest).mockResolvedValue(
-        Result.ok({ workspace, document, commit, project }),
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        Result.ok({ workspace, document, commit }),
       )
-      vi.mocked(startRun).mockResolvedValue(Result.ok({} as any))
-      vi.mocked(runDocumentAtCommit).mockResolvedValue(
+      vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(
+        runDocumentAtCommitModule.runDocumentAtCommit,
+      ).mockResolvedValue(
         Result.ok({
           stream: mockReadStream,
           errorableUuid: 'run-123',
@@ -234,7 +244,7 @@ describe('backgroundRunJob', () => {
           }),
         }),
       )
-      vi.mocked(endRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
 
       // Mock stream reader to throw error
       const reader = mockReadStream.getReader()
@@ -247,15 +257,17 @@ describe('backgroundRunJob', () => {
 
       expect(reader.releaseLock).toHaveBeenCalled()
       expect(mockWriteStream.cleanup).toHaveBeenCalled()
-      expect(endRun).toHaveBeenCalled()
+      expect(endRunModule.endRun).toHaveBeenCalled()
     })
 
     it('should handle updateRun failure gracefully without throwing', async () => {
-      vi.mocked(getDataForInitialRequest).mockResolvedValue(
-        Result.ok({ workspace, document, commit, project }),
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        Result.ok({ workspace, document, commit }),
       )
-      vi.mocked(startRun).mockResolvedValue(Result.ok({} as any))
-      vi.mocked(runDocumentAtCommit).mockResolvedValue(
+      vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(
+        runDocumentAtCommitModule.runDocumentAtCommit,
+      ).mockResolvedValue(
         Result.ok({
           stream: mockReadStream,
           errorableUuid: 'run-123',
@@ -289,8 +301,8 @@ describe('backgroundRunJob', () => {
           }),
         }),
       )
-      vi.mocked(endRun).mockResolvedValue(Result.ok({} as any))
-      vi.mocked(updateRun).mockResolvedValue(
+      vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(updateRunModule.updateRun).mockResolvedValue(
         Result.error(new Error('Update failed')),
       )
 
@@ -312,17 +324,19 @@ describe('backgroundRunJob', () => {
       // Should not throw even if updateRun fails
       await expect(backgroundRunJob(mockJob)).resolves.not.toThrow()
 
-      expect(updateRun).toHaveBeenCalled()
+      expect(updateRunModule.updateRun).toHaveBeenCalled()
       expect(mockWriteStream.cleanup).toHaveBeenCalled()
-      expect(endRun).toHaveBeenCalled()
+      expect(endRunModule.endRun).toHaveBeenCalled()
     })
 
     it('should handle endRun failure gracefully without throwing', async () => {
-      vi.mocked(getDataForInitialRequest).mockResolvedValue(
-        Result.ok({ workspace, document, commit, project }),
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        Result.ok({ workspace, document, commit }),
       )
-      vi.mocked(startRun).mockResolvedValue(Result.ok({} as any))
-      vi.mocked(runDocumentAtCommit).mockResolvedValue(
+      vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(
+        runDocumentAtCommitModule.runDocumentAtCommit,
+      ).mockResolvedValue(
         Result.ok({
           stream: mockReadStream,
           errorableUuid: 'run-123',
@@ -356,7 +370,7 @@ describe('backgroundRunJob', () => {
           }),
         }),
       )
-      vi.mocked(endRun).mockResolvedValue(
+      vi.mocked(endRunModule.endRun).mockResolvedValue(
         Result.error(new Error('End run failed')),
       )
 
@@ -369,16 +383,18 @@ describe('backgroundRunJob', () => {
       // Should not throw even if endRun fails
       await expect(backgroundRunJob(mockJob)).resolves.not.toThrow()
 
-      expect(endRun).toHaveBeenCalled()
+      expect(endRunModule.endRun).toHaveBeenCalled()
       expect(mockWriteStream.cleanup).toHaveBeenCalled()
     })
 
     it('should handle job cancellation correctly', async () => {
-      vi.mocked(getDataForInitialRequest).mockResolvedValue(
-        Result.ok({ workspace, document, commit, project }),
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        Result.ok({ workspace, document, commit }),
       )
-      vi.mocked(startRun).mockResolvedValue(Result.ok({} as any))
-      vi.mocked(runDocumentAtCommit).mockResolvedValue(
+      vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(
+        runDocumentAtCommitModule.runDocumentAtCommit,
+      ).mockResolvedValue(
         Result.ok({
           stream: mockReadStream,
           errorableUuid: 'run-123',
@@ -412,7 +428,7 @@ describe('backgroundRunJob', () => {
           }),
         }),
       )
-      vi.mocked(endRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
 
       let cancelCallback: Function
       vi.mocked(publisher.subscribe).mockImplementation((event, callback) => {
@@ -455,11 +471,13 @@ describe('backgroundRunJob', () => {
     })
 
     it('should handle timeout in stream processing', async () => {
-      vi.mocked(getDataForInitialRequest).mockResolvedValue(
-        Result.ok({ workspace, document, commit, project }),
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        Result.ok({ workspace, document, commit }),
       )
-      vi.mocked(startRun).mockResolvedValue(Result.ok({} as any))
-      vi.mocked(runDocumentAtCommit).mockResolvedValue(
+      vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(
+        runDocumentAtCommitModule.runDocumentAtCommit,
+      ).mockResolvedValue(
         Result.ok({
           stream: mockReadStream,
           errorableUuid: 'run-123',
@@ -493,7 +511,7 @@ describe('backgroundRunJob', () => {
           }),
         }),
       )
-      vi.mocked(endRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
 
       // Mock stream reader to never complete (timeout scenario)
       const reader = mockReadStream.getReader()
@@ -510,12 +528,12 @@ describe('backgroundRunJob', () => {
 
       expect(reader.releaseLock).toHaveBeenCalled()
       expect(mockWriteStream.cleanup).toHaveBeenCalled()
-      expect(endRun).toHaveBeenCalled()
+      expect(endRunModule.endRun).toHaveBeenCalled()
     })
 
     it('should handle errors that are not Result.error instances', async () => {
       const error = new Error('Generic error')
-      vi.mocked(getDataForInitialRequest).mockRejectedValue(error)
+      vi.mocked(helpersModule.getJobDocumentData).mockRejectedValue(error)
 
       const mod = await import('./backgroundRunJob')
       const backgroundRunJob = mod.backgroundRunJob
@@ -527,7 +545,7 @@ describe('backgroundRunJob', () => {
         data: error,
       })
       expect(mockWriteStream.cleanup).toHaveBeenCalled()
-      expect(endRun).toHaveBeenCalled()
+      expect(endRunModule.endRun).toHaveBeenCalled()
     })
   })
 })

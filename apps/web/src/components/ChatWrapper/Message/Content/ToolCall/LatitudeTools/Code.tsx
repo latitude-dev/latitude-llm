@@ -11,10 +11,55 @@ import {
   ToolCardWrapper,
 } from '../_components/ToolCard'
 import { ToolCardHeader } from '../_components/ToolCard/Header'
-import { ToolCardContentWrapper } from '../_components/ToolCard/Content'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import {
+  ToolCardContentWrapper,
+  ToolCardOutput,
+} from '../_components/ToolCard/Content'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+
+const isExpectedOutput = (toolResponse: ToolContent | undefined) => {
+  // Returns false if the tool response does not contain the expected output
+  if (!toolResponse) return false
+  if (toolResponse.isError) return false
+
+  if (typeof toolResponse.result !== 'string') return false
+  return true
+}
+
+function RunCodeOutput({
+  toolResponse,
+  simulated,
+}: {
+  toolResponse: ToolContent | undefined
+  simulated?: boolean
+}) {
+  const isExpectedResponse = useMemo(
+    () => isExpectedOutput(toolResponse),
+    [toolResponse],
+  )
+
+  if (!toolResponse) {
+    return (
+      <ToolCardContentWrapper>
+        <div className='flex flex-row gap-2 items-center justify-center pb-3'>
+          <Icon name='loader' color='foregroundMuted' spin />
+          <Text.H5 color='foregroundMuted'>Running code...</Text.H5>
+        </div>
+      </ToolCardContentWrapper>
+    )
+  }
+
+  if (!isExpectedResponse) {
+    return <ToolCardOutput toolResponse={toolResponse} simulated={simulated} />
+  }
+
+  return (
+    <ToolCardContentWrapper>
+      <CodeBlock language='shell'>{toolResponse.result as string}</CodeBlock>
+    </ToolCardContentWrapper>
+  )
+}
 
 function runCodeContent(args: CodeToolArgs): string {
   if (!args.dependencies) return args.code
@@ -49,34 +94,17 @@ export function RunCodeLatitudeToolCard({
         status={status}
         isOpen={isOpen}
         onToggle={() => setIsOpen(!isOpen)}
+        simulated={toolRequest._sourceData?.simulated}
       />
       {isOpen && (
         <>
           <ToolCardContentWrapper>
             <CodeBlock language={args.language}>{value}</CodeBlock>
           </ToolCardContentWrapper>
-          <ToolCardContentWrapper badge='Output'>
-            {toolResponse ? (
-              toolResponse.isError ? (
-                <div className='w-full pt-3 items-center'>
-                  <Alert
-                    variant='destructive'
-                    title='Error'
-                    description={JSON.stringify(toolResponse.result, null, 2)}
-                  />
-                </div>
-              ) : (
-                <CodeBlock language='shell'>
-                  {toolResponse.result as string}
-                </CodeBlock>
-              )
-            ) : (
-              <div className='flex flex-row gap-2 items-center justify-center pb-3'>
-                <Icon name='loader' color='foregroundMuted' spin />
-                <Text.H5 color='foregroundMuted'>Running code...</Text.H5>
-              </div>
-            )}
-          </ToolCardContentWrapper>
+          <RunCodeOutput
+            toolResponse={toolResponse}
+            simulated={toolRequest._sourceData?.simulated}
+          />
         </>
       )}
     </ToolCardWrapper>

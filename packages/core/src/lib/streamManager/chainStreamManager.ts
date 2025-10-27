@@ -9,6 +9,7 @@ import { StreamManager, StreamManagerProps } from '.'
 import { resolveToolsFromConfig } from './resolveTools'
 import { CachedApiKeys } from '../../services/chains/run'
 import { isAbortError } from '../isAbortError'
+import type { SimulationSettings } from '@latitude-data/constants/simulation'
 
 /**
  * ChainStreamManager extends StreamManager to handle streaming for multi-step AI chains.
@@ -22,25 +23,22 @@ import { isAbortError } from '../isAbortError'
  */
 export class ChainStreamManager extends StreamManager implements StreamManager {
   public providersMap: CachedApiKeys
-  public mockClientToolResults: boolean
 
   private chain: Chain
 
   constructor({
     chain,
     providersMap,
-    mockClientToolResults = false,
     ...rest
   }: StreamManagerProps & {
     chain: Chain
     providersMap: CachedApiKeys
-    mockClientToolResults?: boolean
+    simulationSettings?: SimulationSettings
   }) {
     super(rest)
 
     this.chain = chain
     this.providersMap = providersMap
-    this.mockClientToolResults = mockClientToolResults
   }
 
   async step(messages?: LegacyMessage[]): Promise<void> {

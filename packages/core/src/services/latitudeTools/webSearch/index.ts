@@ -66,6 +66,15 @@ export default {
         .default(5)
         .describe('The maximum number of results to return. Defaults to 5.'),
     }),
+    outputSchema: z.object({
+      results: z.array(
+        z.object({
+          title: z.string(),
+          url: z.string(),
+          content: z.string().describe('The metadata of the search result.'),
+        }),
+      ),
+    }),
     execute: async (args: SearchToolArgs, toolCall) =>
       withTelemetryWrapper(webSearch, {
         toolName: LatitudeTool.WebSearch,

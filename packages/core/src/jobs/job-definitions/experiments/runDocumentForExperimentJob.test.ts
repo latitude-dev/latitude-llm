@@ -6,7 +6,7 @@ import { Providers } from '@latitude-data/constants'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { runDocumentForExperimentJob } from './runDocumentForExperimentJob'
-import * as runDocumentAtCommitWithAutoToolResponsesModule from '../documents/runDocumentAtCommitWithAutoToolResponses'
+import * as runDocumentAtCommitModule from '../../../services/commits'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import * as shared from './shared'
 import { completeExperiment } from '../../../services/experiments/complete'
@@ -23,7 +23,7 @@ describe('runDocumentForExperimentJob', () => {
   const datasetRowId = 42
 
   const mocks = vi.hoisted(() => ({
-    runDocumentAtCommitWithAutoToolResponses: vi.fn(),
+    runDocumentAtCommit: vi.fn(),
     updateExperimentStatus: vi.fn(),
   }))
 
@@ -31,9 +31,9 @@ describe('runDocumentForExperimentJob', () => {
     vi.clearAllMocks()
 
     vi.spyOn(
-      runDocumentAtCommitWithAutoToolResponsesModule,
-      'runDocumentAtCommitWithAutoToolResponses',
-    ).mockImplementation(mocks.runDocumentAtCommitWithAutoToolResponses)
+      runDocumentAtCommitModule,
+      'runDocumentAtCommit',
+    ).mockImplementation(mocks.runDocumentAtCommit)
     vi.spyOn(shared, 'updateExperimentStatus').mockImplementation(
       mocks.updateExperimentStatus,
     )
@@ -81,7 +81,7 @@ describe('runDocumentForExperimentJob', () => {
   })
 
   it('should not update status if error is retryable', async () => {
-    mocks.runDocumentAtCommitWithAutoToolResponses.mockRejectedValue(
+    mocks.runDocumentAtCommit.mockRejectedValue(
       new ChainError({
         message: 'rate limited!',
         code: RunErrorCodes.RateLimit,
@@ -101,8 +101,6 @@ describe('runDocumentForExperimentJob', () => {
 
     await runDocumentForExperimentJob(mockJob)
 
-    expect(
-      mocks.runDocumentAtCommitWithAutoToolResponses,
-    ).not.toHaveBeenCalled()
+    expect(mocks.runDocumentAtCommit).not.toHaveBeenCalled()
   })
 })

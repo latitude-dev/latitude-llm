@@ -10,6 +10,7 @@ export enum ToolSource {
 }
 
 type BaseToolSourceData<T extends ToolSource> = {
+  simulated?: boolean
   source: T
 }
 

@@ -81,6 +81,12 @@ export default {
     inputSchema: z.object({
       url: z.url().describe('The URL of the page to extract.'),
     }),
+    outputSchema: z.object({
+      url: z.string(),
+      content: z
+        .string()
+        .describe('The full contents of the page in Markdown format.'),
+    }),
     execute: async (args: ExtractToolArgs, toolCall) =>
       withTelemetryWrapper(webExtract, {
         toolName: LatitudeTool.WebExtract,

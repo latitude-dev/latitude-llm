@@ -1,18 +1,74 @@
 import { LatitudeTool } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { StreamManager } from '..'
-import {
-  getLatitudeToolDefinition,
-  getLatitudeToolInternalName,
-} from '../../../services/latitudeTools/helpers'
-import { TelemetryContext } from '../../../telemetry'
+import { getLatitudeToolInternalName } from '../../../services/latitudeTools/helpers'
 import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
 import { Result, TypedResult } from '../../Result'
 import { ResolvedTools } from './types'
 import { publisher } from '../../../events/publisher'
-import { Tool } from 'ai'
+import { JSONSchema7, Tool } from 'ai'
 import { ToolSource } from '@latitude-data/constants/toolSources'
 import { findFirstUserInWorkspace } from '../../../data-access/users'
+import { simulatedToolDefinition } from '../../../services/simulation/simulateToolResponse'
+import { LATITUDE_TOOLS } from '../../../services/latitudeTools/tools'
+import z from 'zod'
+
+const SIMULATED_LATITUDE_TOOLS: LatitudeTool[] = [
+  LatitudeTool.RunCode,
+  LatitudeTool.WebSearch,
+  LatitudeTool.WebExtract,
+] as const
+
+const resolveAllLatitudeTools = (streamManager: StreamManager) =>
+  Object.fromEntries(
+    Object.values(LatitudeTool).map((latitudeToolName) => {
+      const context = streamManager.$completion!.context
+      const internalName = getLatitudeToolInternalName(latitudeToolName)
+      const tool = LATITUDE_TOOLS.find((t) => t.name === latitudeToolName)!
+
+      const isSimulated =
+        streamManager.simulationSettings?.simulateToolResponses &&
+        SIMULATED_LATITUDE_TOOLS.includes(latitudeToolName)
+
+      const definition = instrumentLatitudeTool(tool.definition(context)!, {
+        streamManager,
+        name: latitudeToolName,
+      })
+
+      if (isSimulated) {
+        // Redefine "execute" to use the simulated tool definition
+        const toolDefinition = tool.definition(context)!
+        const inputSchema = z.toJSONSchema(
+          toolDefinition.inputSchema as z.ZodType,
+        ) as JSONSchema7
+        const outputSchema = toolDefinition.outputSchema
+          ? (z.toJSONSchema(
+              toolDefinition.outputSchema as z.ZodType,
+            ) as JSONSchema7)
+          : undefined
+
+        definition.execute = simulatedToolDefinition({
+          streamManager,
+          toolName: internalName,
+          toolDescription: tool.definition(context)!.description ?? '',
+          inputSchema,
+          outputSchema,
+        })
+      }
+
+      return [
+        internalName,
+        {
+          definition,
+          sourceData: {
+            source: ToolSource.Latitude,
+            latitudeTool: latitudeToolName,
+            simulated: isSimulated,
+          },
+        },
+      ]
+    }),
+  ) satisfies ResolvedTools<ToolSource.Latitude>
 
 export function resolveLatitudeTools({
   config,
@@ -21,36 +77,6 @@ export function resolveLatitudeTools({
   config: LatitudePromptConfig
   streamManager: StreamManager
 }): TypedResult<ResolvedTools, LatitudeError> {
-  const newSchemaResult = resolveLatitudeToolsFromNewSchema({
-    config,
-    streamManager,
-  })
-  if (newSchemaResult.error) return newSchemaResult
-
-  return Result.ok(newSchemaResult.unwrap())
-}
-
-const ALL_LATITUDE_RESOLVED_TOOLS = (context: TelemetryContext) =>
-  Object.fromEntries(
-    Object.values(LatitudeTool).map((latitudeToolName) => [
-      getLatitudeToolInternalName(latitudeToolName),
-      {
-        definition: getLatitudeToolDefinition(latitudeToolName, context)!,
-        sourceData: {
-          source: ToolSource.Latitude,
-          latitudeTool: latitudeToolName,
-        },
-      },
-    ]),
-  )
-
-function resolveLatitudeToolsFromNewSchema({
-  config,
-  streamManager,
-}: {
-  config: LatitudePromptConfig
-  streamManager: StreamManager
-}) {
   const tools = config.tools
   if (!tools) {
     return Result.ok({})
@@ -69,7 +95,9 @@ function resolveLatitudeToolsFromNewSchema({
     .filter(([toolSource]) => toolSource === 'latitude')
     .map(([, ...rest]) => rest.join('/'))
 
-  const resolvedTools: ResolvedTools = {}
+  const ALL_RESOLVED_LATITUDE_TOOLS = resolveAllLatitudeTools(streamManager)
+
+  const resolvedTools: ResolvedTools<ToolSource.Latitude> = {}
   for (const latitudeToolName of latitudeToolNames) {
     if (latitudeToolName === '') {
       // 'latitude' was used as the whole toolId, without any '/' separator
@@ -79,10 +107,7 @@ function resolveLatitudeToolsFromNewSchema({
     }
 
     if (latitudeToolName === '*') {
-      Object.assign(
-        resolvedTools,
-        ALL_LATITUDE_RESOLVED_TOOLS(streamManager.$completion!.context),
-      )
+      Object.assign(resolvedTools, ALL_RESOLVED_LATITUDE_TOOLS)
       continue
     }
 
@@ -96,24 +121,10 @@ function resolveLatitudeToolsFromNewSchema({
       )
     }
 
-    resolvedTools[
-      getLatitudeToolInternalName(latitudeToolName as LatitudeTool)
-    ] = {
-      definition: instrumentLatitudeTool(
-        getLatitudeToolDefinition(
-          latitudeToolName as LatitudeTool,
-          streamManager.$completion!.context,
-        )!,
-        {
-          streamManager,
-          name: latitudeToolName,
-        },
-      ),
-      sourceData: {
-        source: ToolSource.Latitude,
-        latitudeTool: latitudeToolName as LatitudeTool,
-      },
-    }
+    const internalName = getLatitudeToolInternalName(
+      latitudeToolName as LatitudeTool,
+    )
+    resolvedTools[internalName] = ALL_RESOLVED_LATITUDE_TOOLS[internalName]!
   }
 
   return Result.ok(resolvedTools)

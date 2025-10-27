@@ -2,6 +2,7 @@ import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ReactNode } from 'react'
+import { SimulationTag } from './SimulationTag'
 
 const statusIconColor = (
   status: 'pending' | 'success' | 'error',
@@ -35,12 +36,14 @@ export function ToolCardHeader({
   status,
   isOpen,
   onToggle,
+  simulated,
 }: {
   icon: ReactNode
   label: ReactNode
   status?: 'pending' | 'success' | 'error' | undefined
   isOpen: boolean
   onToggle?: () => void
+  simulated?: boolean
 }) {
   return (
     <div
@@ -71,6 +74,7 @@ export function ToolCardHeader({
         )}
       </div>
       <div className='flex flex-col min-w-0 flex-1'>{label}</div>
+      {simulated && <SimulationTag />}
       {onToggle && (
         <Icon
           name={isOpen ? 'chevronUp' : 'chevronDown'}

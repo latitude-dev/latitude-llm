@@ -1,12 +1,5 @@
-import {
-  ChainStepObjectResponse,
-  LogSources,
-  ToolDefinition,
-  ToolExecutionOptions,
-} from '@latitude-data/constants'
+import { ToolDefinition, ToolExecutionOptions } from '@latitude-data/constants'
 import { publisher } from '../../../events/publisher'
-import { getCopilotDataForGenerateToolResponses } from '../../../jobs/job-definitions/documents/runDocumentAtCommitWithAutoToolResponses/getCopilotData'
-import { runDocumentAtCommit } from '../../../services/commits'
 import { TelemetryContext } from '../../../telemetry'
 import { ChainError, RunErrorCodes } from '../../errors'
 
@@ -20,49 +13,6 @@ export type ToolHandlerProps = {
 }
 
 export type ToolHandler = (props: ToolHandlerProps) => Promise<any>
-
-export async function mockClientToolResult({
-  toolDefinition,
-  context,
-  args,
-}: ToolHandlerProps) {
-  try {
-    const copilot = await getCopilotDataForGenerateToolResponses().then((r) =>
-      r.unwrap(),
-    )
-
-    const { response } = await runDocumentAtCommit({
-      context,
-      commit: copilot.commit,
-      document: copilot.document,
-      workspace: copilot.workspace,
-      source: LogSources.Copilot,
-      parameters: {
-        parameters: args,
-        toolDefinition,
-      },
-    }).then((r) => r.unwrap())
-
-    const res = (await response) as ChainStepObjectResponse
-    const { isError, result } = res.object
-    if (isError) {
-      throw new ChainError({
-        message: result,
-        code: RunErrorCodes.ErrorGeneratingMockToolResult,
-      })
-    }
-
-    return {
-      isError: false,
-      result: result,
-    }
-  } catch (e) {
-    return {
-      isError: true,
-      result: e as Error,
-    }
-  }
-}
 
 export function awaitClientToolResult({ toolCall }: ToolHandlerProps) {
   return new Promise((resolve, reject) => {

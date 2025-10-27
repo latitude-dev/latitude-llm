@@ -150,6 +150,8 @@ import {
   XIcon,
   Youtube,
   Zap,
+  SquareDashed,
+  Brush,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -237,6 +239,7 @@ const Icons = {
   brain: Brain,
   brave: Brave,
   browserbase: Browserbase,
+  brush: Brush,
   calendar: CalendarIcon,
   chat: MessageCircleIcon,
   check: CheckCircle2,
@@ -354,6 +357,7 @@ const Icons = {
   sparkles: Sparkles,
   square: Square,
   squareArrowRight: SquareArrowRight,
+  squareDashed: SquareDashed,
   star: Star,
   stripe: Stripe,
   sun: Sun,

@@ -20,7 +20,7 @@ import { startRun } from '../../../services/runs/start'
 import { endRun } from '../../../services/runs/end'
 import { updateRun } from '../../../services/runs/update'
 import { BACKGROUND } from '../../../telemetry'
-import { getDataForInitialRequest } from '../documents/runDocumentAtCommitWithAutoToolResponses/getDataForInitialRequest'
+import { getJobDocumentData } from '../helpers'
 
 export type BackgroundRunJobData = {
   workspaceId: number
@@ -67,7 +67,7 @@ export const backgroundRunJob = async (
   }
 
   try {
-    const { workspace, document, commit } = await getDataForInitialRequest({
+    const { workspace, document, commit } = await getJobDocumentData({
       workspaceId,
       projectId,
       documentUuid,
