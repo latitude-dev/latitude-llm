@@ -8,6 +8,7 @@ import {
 } from 'drizzle-orm/pg-core'
 
 import { LogSources } from '@latitude-data/constants'
+import { SimulationSettings } from '@latitude-data/constants/simulation'
 import { sql } from 'drizzle-orm'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -38,6 +39,9 @@ export const documentLogs = latitudeSchema.table(
     customIdentifier: text('custom_identifier'),
     duration: bigint('duration', { mode: 'number' }),
     source: logSourcesEnum('source').$type<LogSources>(),
+    simulationSettings: jsonb(
+      'simulation_settings',
+    ).$type<SimulationSettings>(),
     experimentId: bigint('experiment_id', { mode: 'number' }).references(
       () => experiments.id,
       {
