@@ -1569,6 +1569,13 @@
       "when": 1761297121716,
       "tag": "0224_new_subscription_types",
       "breakpoints": true
+    },
+    {
+      "idx": 225,
+      "version": "7",
+      "when": 1761560100557,
+      "tag": "0225_simulation_settings",
+      "breakpoints": true
     }
   ]
 }
