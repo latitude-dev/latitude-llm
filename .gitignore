@@ -100,3 +100,10 @@ charts/latitude/values.secrets.yaml
 **/*.secrets.yml
 
 trace
+
+# Ignore everything in disposables
+packages/core/scripts/disposables/*
+
+# But not the README
+!packages/core/scripts/disposables/
+!packages/core/scripts/disposables/README.md
