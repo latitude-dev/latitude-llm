@@ -34,6 +34,7 @@ export const EventHandlers: IEventsHandlers = {
   datasetUploaded: [createDatasetRowsJob],
   documentCreated: [],
   documentLogCreated: [evaluateLiveLogJob, notifyToClientDocumentLogCreatedJob],
+  documentLogInteracted: [evaluateLiveLogJob],
   experimentVariantsCreated: [],
   documentSuggestionCreated: [
     notifyClientOfDocumentSuggestionCreated,

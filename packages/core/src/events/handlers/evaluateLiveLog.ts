@@ -1,6 +1,6 @@
 import { LogSources } from '../../constants'
-import { findWorkspaceFromDocumentLog } from '../../data-access/workspaces'
 import { findLastProviderLogFromDocumentLogUuid } from '../../data-access/providerLogs'
+import { findWorkspaceFromDocumentLog } from '../../data-access/workspaces'
 import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
 import { queues } from '../../jobs/queues'
 import { NotFoundError } from '../../lib/errors'
@@ -10,7 +10,7 @@ import {
   EvaluationsV2Repository,
 } from '../../repositories'
 import { getEvaluationMetricSpecification } from '../../services/evaluationsV2/specifications'
-import { DocumentLogCreatedEvent } from '../events'
+import { DocumentLogCreatedEvent, DocumentLogInteractedEvent } from '../events'
 
 const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
   (source) => source !== 'evaluation' && source !== 'experiment',
@@ -19,7 +19,7 @@ const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
 export const evaluateLiveLogJob = async ({
   data: event,
 }: {
-  data: DocumentLogCreatedEvent
+  data: DocumentLogCreatedEvent | DocumentLogInteractedEvent
 }) => {
   const { id, workspaceId } = event.data
   const repo = new DocumentLogsRepository(workspaceId)
