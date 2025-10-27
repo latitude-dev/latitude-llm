@@ -12,6 +12,25 @@ import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import Link from 'next/link'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { USER_ROLES, UserRole } from '@latitude-data/constants/users'
+
+export const humanizeUserRole = (role: UserRole): string => {
+  switch (role) {
+    case UserRole.Engineer:
+      return 'Engineer'
+    case UserRole.DataAIAndML:
+      return 'Data/AI/ML'
+    case UserRole.ProductManager:
+      return 'Product Manager'
+    case UserRole.Designer:
+      return 'Designer'
+    case UserRole.Founder:
+      return 'Founder'
+    case UserRole.Other:
+      return 'Other'
+  }
+}
 
 export default function SetupForm({
   email,
@@ -73,6 +92,17 @@ export default function SetupForm({
           placeholder='Acme Inc.'
           errors={errors?.companyName}
           defaultValue={data?.companyName || companyName}
+        />
+        <Select
+          required
+          name='role'
+          label='Your role'
+          errors={errors?.role}
+          placeholder='Select'
+          options={USER_ROLES.map((role: UserRole) => ({
+            label: humanizeUserRole(role),
+            value: role,
+          }))}
         />
         <div className='flex flex-col gap-6'>
           <Button fullWidth isLoading={isPending} fancy>
