@@ -437,7 +437,8 @@ export type EvaluationV2RanEvent = LatitudeEventGeneric<
     evaluation: EvaluationV2
     result: EvaluationResultV2
     commit: Commit
-    providerLog: ProviderLogDto
+    spanId: string
+    traceId: string
   }
 >
 
@@ -448,7 +449,8 @@ export type EvaluationV2AnnotatedEvent = LatitudeEventGeneric<
     evaluation: EvaluationV2
     result: EvaluationResultV2
     commit: Commit
-    providerLog: ProviderLogDto
+    spanId: string
+    traceId: string
   }
 >
 
@@ -458,8 +460,9 @@ export type EvaluationResultV2CreatedEvent = LatitudeEventGeneric<
     workspaceId: number
     result: EvaluationResultV2
     evaluation: EvaluationV2
+    spanId: string
+    traceId: string
     commit: Commit
-    providerLog: ProviderLogDto
     experiment?: Experiment
     dataset?: DatasetV2
     datasetRow?: DatasetRow

@@ -220,6 +220,8 @@ export type EvaluationResultV2<
   datasetId?: number | null
   evaluatedRowId?: number | null
   evaluatedLogId: number
+  evaluatedSpanId?: string | null
+  evaluatedTraceId?: string | null
   issueId?: number | null
   usedForSuggestion?: boolean | null
   createdAt: Date

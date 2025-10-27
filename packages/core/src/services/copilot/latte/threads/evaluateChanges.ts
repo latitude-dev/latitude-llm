@@ -79,8 +79,11 @@ export async function evaluateLatteThreadChanges(
     ]
   }
 
+  // TODO(tracing): make latte work with spans
+
   return annotateEvaluationV2(
     {
+      // @ts-expect-error - tracing
       providerLog: providerLog as unknown as ProviderLogDto,
       evaluation,
       resultScore: Number(accepted),

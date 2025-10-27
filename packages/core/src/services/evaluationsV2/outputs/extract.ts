@@ -4,12 +4,11 @@ import {
   ActualOutputConfiguration,
   ExpectedOutputConfiguration,
 } from '../../../constants'
-import { buildConversation, formatMessage } from '../../../helpers'
+import { formatMessage } from '../../../helpers'
 import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
-import { ProviderLogDto } from '../../../schema/types'
 import { getColumnData } from '../../datasets/utils'
 
 const CONTENT_FILTER_TYPE: Record<
@@ -131,14 +130,13 @@ function flattenConversation(conversation: Message[]) {
 }
 
 export async function extractActualOutput({
-  providerLog,
+  conversation,
   configuration,
 }: {
-  providerLog: ProviderLogDto
+  conversation: Message[]
   configuration: ActualOutputConfiguration
 }) {
   let actualOutput: OutputType = ''
-  let conversation = buildConversation(providerLog)
 
   conversation = conversation.filter((message) => message.role === 'assistant')
   if (configuration.contentFilter) {

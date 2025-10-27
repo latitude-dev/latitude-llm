@@ -193,7 +193,7 @@ async function run<M extends CompositeEvaluationMetric>(
   {
     metric,
     evaluation,
-    providerLog,
+    span,
     document,
     experiment,
     dataset,
@@ -238,7 +238,7 @@ async function run<M extends CompositeEvaluationMetric>(
     evaluations.map(async (evaluation) => {
       const { result } = await runEvaluationV2({
         evaluation: evaluation,
-        providerLog: providerLog,
+        span,
         experiment: experiment,
         dataset: dataset,
         datasetLabel: datasetLabel,
@@ -279,7 +279,7 @@ async function run<M extends CompositeEvaluationMetric>(
   const value = await metricSpecification.run(
     {
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       document: document,
       experiment: experiment,
       dataset: dataset,

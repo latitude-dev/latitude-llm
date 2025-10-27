@@ -6,13 +6,13 @@ import {
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationBinaryResultMetadata,
   LlmEvaluationMetric,
+  SpanType,
   LlmEvaluationBinarySpecification as specification,
 } from '../../../constants'
 import { formatConversation } from '../../../helpers'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
-import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 import {
   EvaluationMetricCloneArgs,
   EvaluationMetricRunArgs,
@@ -20,6 +20,8 @@ import {
   normalizeScore,
 } from '../shared'
 import { promptTask, runPrompt } from './shared'
+import { assembleTrace } from '../../tracing/traces/assemble'
+import { findFirstSpanOfType } from '../../tracing/spans/findFirstSpanOfType'
 
 export const LlmEvaluationBinarySpecification = {
   ...specification,
@@ -129,7 +131,7 @@ async function run(
     evaluation,
     actualOutput,
     conversation,
-    documentLog,
+    span,
     providers,
     commit,
     workspace,
@@ -156,17 +158,28 @@ async function run(
     throw new BadRequestError('Provider is required')
   }
 
-  const evaluatedLog = await serializeDocumentLog(
-    { documentLog, workspace },
+  let completionSpan
+  const assembledtrace = await assembleTrace(
+    { traceId: span.traceId, workspace },
     db,
-  ).then((r) => r.unwrap())
+  ).then((r) => r.value)
+  if (assembledtrace) {
+    completionSpan = findFirstSpanOfType(
+      assembledtrace.trace.children,
+      SpanType.Completion,
+    )
+  }
 
   let result
   try {
     result = await runPrompt({
       prompt: buildPrompt({ ...metadata.configuration, provider }),
       parameters: {
-        ...evaluatedLog,
+        parameters: span.metadata?.parameters,
+        prompt: span.metadata?.template,
+        cost: completionSpan?.metadata?.cost,
+        tokens: completionSpan?.metadata?.tokens,
+        duration: completionSpan?.duration,
         actualOutput: metadata.actualOutput,
         conversation: formatConversation(conversation),
       },

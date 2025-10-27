@@ -88,6 +88,28 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
   }
 
+  async findByEvaluatedSpanAndEvaluation({
+    evaluatedSpanId,
+    evaluatedTraceId,
+    evaluationUuid,
+  }: {
+    evaluatedSpanId: string
+    evaluatedTraceId: string
+    evaluationUuid: string
+  }) {
+    return (await this.scope
+      .where(
+        and(
+          this.scopeFilter,
+          eq(evaluationResultsV2.evaluatedSpanId, evaluatedSpanId),
+          eq(evaluationResultsV2.evaluatedTraceId, evaluatedTraceId),
+          eq(evaluationResultsV2.evaluationUuid, evaluationUuid),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0])) as EvaluationResultV2 | undefined
+  }
+
   async findByEvaluatedLogAndEvaluation({
     evaluatedLogId,
     evaluationUuid,
