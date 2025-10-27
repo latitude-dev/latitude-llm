@@ -5,7 +5,7 @@ description: Combine the results of multiple evaluations into a single score.
 
 Composite Score evaluations combine multiple existing evaluations into a unified score. This is ideal for measuring overall quality by aggregating various aspects of your prompt's performance, such as combining accuracy, safety, and relevance metrics into one comprehensive assessment.
 
-- **How it works**: Takes the results from multiple existing evaluations and combines them using different mathematical approaches (average, weighted, or custom formula).
+- **How it works**: Runs multiple existing evaluations and combines their results using different mathematical approaches (average, weighted, or custom formula). Note that sub-evaluations do not create their own results!
 - **Best for**: Holistic quality assessment, combining multiple evaluation criteria, creating overall performance metrics, balancing trade-offs between different aspects (e.g., accuracy vs. safety).
 - **Requires**: At least two existing evaluations configured on the same prompt. These evaluations can be of any type, even other Composite Scores!
 
