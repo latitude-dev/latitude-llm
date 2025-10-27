@@ -1,6 +1,7 @@
 import { getDocumentByUuidCached } from '$/app/(private)/_data-access'
 import { ReactNode } from 'react'
 import DocumentTabs from '../_components/DocumentTabs'
+import { TraceSpanSelectionProvider } from './traces/_components/TraceSpanSelectionContext'
 
 export default async function WithTabsLayout({
   children,
@@ -22,8 +23,10 @@ export default async function WithTabsLayout({
   })
 
   return (
-    <DocumentTabs document={document} params={paramsAwaited}>
-      {children}
-    </DocumentTabs>
+    <TraceSpanSelectionProvider>
+      <DocumentTabs document={document} params={paramsAwaited}>
+        {children}
+      </DocumentTabs>
+    </TraceSpanSelectionProvider>
   )
 }

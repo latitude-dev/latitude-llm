@@ -16,6 +16,7 @@ describe('convertFile', () => {
   })
 
   it('not converts empty file', async () => {
+    // @ts-ignore
     const file = new File([Buffer.from('')], 'file')
 
     await expect(
@@ -26,6 +27,7 @@ describe('convertFile', () => {
   it('not converts large file', async () => {
     vi.spyOn(constants, 'MAX_UPLOAD_SIZE_IN_MB', 'get').mockReturnValue(1)
 
+    // @ts-ignore
     const file = new File([Buffer.from('Too large!')], 'file')
 
     await expect(
@@ -36,6 +38,7 @@ describe('convertFile', () => {
   it('not converts unsupported file', async () => {
     const name = 'file.bin'
     const content = await readFile(join(DOCUMENTS_PATH, name))
+    // @ts-ignore
     const file = new File([content], name)
 
     await expect(
@@ -46,6 +49,7 @@ describe('convertFile', () => {
   it('not converts when file conversion fails', async () => {
     const name = 'file.docx'
     const content = await readFile(join(DOCUMENTS_PATH, name))
+    // @ts-ignore
     const file = new File([content.slice(0, -(content.length / 2))], name)
 
     await expect(
@@ -61,6 +65,7 @@ describe('convertFile', () => {
       if (['file.bin'].includes(name)) continue
 
       const content = await readFile(join(DOCUMENTS_PATH, name))
+      // @ts-ignore
       const file = new File([content], name)
 
       await expect(convertFile(file).then((r) => r.unwrap())).resolves.toEqual(

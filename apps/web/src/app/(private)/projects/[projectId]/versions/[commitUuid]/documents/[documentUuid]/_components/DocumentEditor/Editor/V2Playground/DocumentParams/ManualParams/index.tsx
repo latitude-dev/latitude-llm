@@ -52,7 +52,6 @@ export function ManualParams({ document, commit, prompt, setPrompt }: Props) {
       {({ metadataParameters }) =>
         metadataParameters.map((param, idx) => {
           const input = inputs?.[param]
-
           if (!input) return null
 
           const includedInPrompt = input.metadata.includeInPrompt ?? true

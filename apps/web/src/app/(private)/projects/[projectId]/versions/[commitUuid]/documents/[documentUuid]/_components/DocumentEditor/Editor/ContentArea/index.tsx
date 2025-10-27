@@ -47,12 +47,7 @@ export function DocumentEditorContentArea({
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
   const { updateDocumentContent } = useDocumentValue()
-  const {
-    parameters,
-    source,
-    setSource,
-    history: { setHistoryLog },
-  } = useDocumentParameters({
+  const { parameters, source, setSource } = useDocumentParameters({
     commitVersionUuid: commit.uuid,
     document,
   })
@@ -77,7 +72,6 @@ export function DocumentEditorContentArea({
       parameters,
       userMessage,
       togglePlaygroundOpen,
-      setHistoryLog,
       setSelectedTab,
     })
   const { runPromptButtonHandler } = useEditorCallbacks({

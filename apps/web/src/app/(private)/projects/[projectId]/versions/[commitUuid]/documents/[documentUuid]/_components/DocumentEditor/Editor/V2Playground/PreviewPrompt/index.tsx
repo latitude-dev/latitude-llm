@@ -61,6 +61,7 @@ export default function PreviewPrompt({
     promptlVersion: document.promptlVersion,
     documentUuid: document.documentUuid,
   })
+
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
       {preview.warningRule ? <Warnings warnings={preview.warningRule} /> : null}

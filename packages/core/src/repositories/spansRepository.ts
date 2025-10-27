@@ -1,7 +1,8 @@
 import { parseJSON } from 'date-fns'
-import { and, asc, desc, eq, getTableColumns, sql, gt, or } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, sql, SQL } from 'drizzle-orm'
 import { cache as redis } from '../cache'
 import {
+  DEFAULT_PAGINATION_SIZE,
   Span,
   SPAN_METADATA_CACHE_TTL,
   SPAN_METADATA_STORAGE_KEY,
@@ -66,57 +67,91 @@ export class SpansRepository extends Repository<Span> {
     return result as string[]
   }
 
-  async findByDocumentAndCommit({
+  async approximateCount({
     documentUuid,
     commitUuid,
-    type = SpanType.Prompt,
-    cursor,
-    limit = 50,
+  }: {
+    documentUuid: string
+    commitUuid: string
+  }) {
+    // Use PostgreSQL's EXPLAIN to get an approximate row count
+    // This is much faster than COUNT(*) on large tables
+    const explainResult = await this.db.execute(sql`
+      EXPLAIN SELECT COUNT(*)
+      FROM ${spans}
+      WHERE ${this.scopeFilter}
+        AND ${eq(spans.documentUuid, documentUuid)}
+        AND ${eq(spans.commitUuid, commitUuid)}
+    `)
+
+    interface ExplainPlanRow {
+      'QUERY PLAN': Array<{
+        Plan: {
+          'Plan Rows': number
+        }
+      }>
+    }
+
+    const explainPlan = explainResult.rows[0] as unknown as ExplainPlanRow
+    const plan = explainPlan['QUERY PLAN'][0].Plan
+    if (!plan) return Result.ok(null)
+
+    // Extract the estimated row count from the plan
+    const estimatedRows = plan['Plan Rows'] ?? null
+
+    return Result.ok(estimatedRows)
+  }
+
+  async findByDocumentAndCommitLimited({
+    documentUuid,
+    commitUuid,
+    type,
+    from,
+    limit = DEFAULT_PAGINATION_SIZE,
   }: {
     documentUuid: string
     commitUuid: string
     type?: SpanType
-    cursor?: { startedAt: Date; id: string }
+    from?: { startedAt: string; id: string }
     limit?: number
   }) {
-    let whereClause = and(
+    const conditions = [
       this.scopeFilter,
       eq(spans.documentUuid, documentUuid),
       eq(spans.commitUuid, commitUuid),
-      type ? eq(spans.type, type) : sql`1 = 1`,
-    )
+      type ? eq(spans.type, type) : undefined,
+    ].filter(Boolean) as SQL<unknown>[]
 
-    if (cursor) {
-      whereClause = and(
-        whereClause,
-        or(
-          gt(spans.startedAt, cursor.startedAt),
-          and(eq(spans.startedAt, cursor.startedAt), gt(spans.id, cursor.id)),
-        ),
-      )
-    }
+    // Filter by cursor if provided (same pattern as document logs)
+    const cursorConditions = [
+      ...conditions,
+      from
+        ? sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
+        : undefined,
+    ].filter(Boolean) as SQL<unknown>[]
 
     const result = await this.db
       .select(tt)
       .from(spans)
-      .where(whereClause)
+      .where(and(...cursorConditions))
       .orderBy(desc(spans.startedAt), desc(spans.id))
-      .limit(limit + 1) // Get one extra to check if there's a next page
+      .limit(limit + 1)
 
     const hasMore = result.length > limit
-    const spansResult = hasMore ? result.slice(0, limit) : result
-    const nextCursor = hasMore
-      ? { startedAt: result[limit - 1].startedAt, id: result[limit - 1].id }
+    const items = hasMore ? result.slice(0, limit) : result
+    const next = hasMore
+      ? {
+          startedAt: result[limit - 1].startedAt.toISOString(),
+          id: result[limit - 1].id,
+        }
       : null
 
     return Result.ok<{
-      spans: Span[]
-      hasMore: boolean
-      nextCursor: { startedAt: Date; id: string } | null
+      items: Span[]
+      next: { startedAt: string; id: string } | null
     }>({
-      spans: spansResult as Span[],
-      hasMore,
-      nextCursor,
+      items: items as Span[],
+      next,
     })
   }
 }

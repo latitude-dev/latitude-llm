@@ -6,8 +6,7 @@ import {
   SpanType,
 } from '@latitude-data/constants'
 import { MetadataInfoTabs } from '../../../_components/MetadataInfoTabs'
-import { useSelectedSpan } from './SelectedSpansContext'
-import { useSelectedTraceId } from './SelectedTraceIdContext'
+import { useTraceSpanSelection } from './TraceSpanSelectionContext'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 import { MessageList } from '$/components/ChatWrapper'
 import { adaptPromptlMessageToLegacy } from '@latitude-data/core/utils/promptlAdapter'
@@ -37,12 +36,11 @@ export function TraceInfo() {
 }
 
 function TraceMetadata() {
-  const { selectedTraceId } = useSelectedTraceId()
-  const { selectedSpanId } = useSelectedSpan()
+  const { selection } = useTraceSpanSelection()
   const { data: trace, isLoading } = useTrace({
-    traceId: selectedTraceId,
+    traceId: selection.traceId,
   })
-  const span = findSpanById(trace?.children ?? [], selectedSpanId)
+  const span = findSpanById(trace?.children ?? [], selection.spanId)
   if (isLoading) return <LoadingText alignX='center' />
   if (!span) return null
 
@@ -50,8 +48,8 @@ function TraceMetadata() {
 }
 
 function TraceMessages() {
-  const { selectedTraceId } = useSelectedTraceId()
-  const { data: trace } = useTrace({ traceId: selectedTraceId! })
+  const { selection } = useTraceSpanSelection()
+  const { data: trace } = useTrace({ traceId: selection.traceId! })
   const completionSpan = findFirstSpanOfType(
     trace?.children ?? [],
     SpanType.Completion,

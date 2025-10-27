@@ -175,6 +175,9 @@ export const API_ROUTES = {
                       },
                     },
                   },
+                  spans: {
+                    limited: `${documentRoot}/spans/limited`,
+                  },
                 }
               },
             },
