@@ -874,4 +874,13 @@ export function fromAstToBlocks({
   } satisfies BlockRootNode
 }
 
+export const emptyRootBlock: BlockRootNode = {
+  type: BLOCK_EDITOR_TYPE.ROOT,
+  children: [createEmptyParagraph({ content: '' })],
+  version: 1,
+  direction: 'ltr',
+  indent: 0,
+  format: '',
+}
+
 export type { BlockRootNode }

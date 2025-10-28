@@ -10,27 +10,49 @@ import {
   BlocksEditorPlaceholder,
 } from '$/components/BlocksEditor'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
-import { createEmptyParagraph } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
-import { BlockRootNode } from '$/components/BlocksEditor/Editor/state/promptlToLexical/types'
 import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
 import { useIncludabledPrompts } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/BlocksEditor/useIncludabledPrompts'
 import { useMetadata } from '$/hooks/useMetadata'
-import useDatasets from '$/stores/datasets'
+import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
+import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
 
-// From ast to blocks got this idea from
-const INITIAL_VALUE = {
-  type: 'root',
-  children: [createEmptyParagraph({ content: '' })],
-  version: 1,
-  direction: 'ltr',
-  indent: 0,
-  format: '',
-} satisfies BlockRootNode
+const SAMPLE_PROMPT = `
+---
+provider: OpenAI
+model: gpt-4.1-mini
+---
+
+This is a response from an NPS survey:
+
+Score: {{score}} 
+Message: {{message}} 
+
+Analyze the sentiment based on both the score and message. Prioritize identifying the primary concern in the feedback, 
+focusing on the core issue mentioned by the user. Categorize the sentiment into one of the following categories:
+
+- Product Features and Functionality
+- User Interface (UI) and User Experience (UX)
+- Performance and Reliability
+- Customer Support and Service
+- Onboarding and Learning Curve
+- Pricing and Value Perception
+- Integrations and Compatibility
+- Scalability and Customization
+- Feature Requests and Product Roadmap
+- Competitor Comparison
+- General Feedback (Neutral/Non-specific)
+
+Return only one of the categories.
+`
 
 export function PasteYourPromptBody({
   document,
+  setCurrentOnboardingStep,
+  runGenerateAction,
 }: {
   document: DocumentVersion
+  setCurrentOnboardingStep: (step: DatasetOnboardingStepKey) => void
+  runGenerateAction: (input: any) => Promise<any>
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -52,38 +74,55 @@ export function PasteYourPromptBody({
   })
 
   const { metadata } = useMetadata()
-  const { runGenerateAction } = useDatasets()
 
-  const generateDataset = useCallback(async () => {
-    const parameters = Object.keys(metadata?.parameters ?? {}).join(', ') ?? ''
-    const result = await runGenerateAction({
-      parameters,
-      prompt: value ?? '',
-      rowCount: 10,
-      name: 'Onboarding Dataset',
-      fromCloud: false,
-    })
-    console.log(result)
-    // TODO(onboarding): when finished, move to the next onboarding step
-  }, [metadata, value, runGenerateAction])
+  const generateDataset = useCallback(
+    async (value: string) => {
+      updateDocumentContent(value)
+      const parameters = Array.from(metadata?.parameters ?? []).join(', ') ?? ''
+      setCurrentOnboardingStep(DatasetOnboardingStepKey.GenerateDataset)
+      runGenerateAction({
+        parameters,
+        prompt: value,
+        rowCount: 10,
+        name: 'Onboarding Dataset',
+        fromCloud: false,
+      })
+    },
+    [
+      metadata,
+      runGenerateAction,
+      setCurrentOnboardingStep,
+      updateDocumentContent,
+    ],
+  )
 
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
-      <div className='flex flex-col items-end gap-10 w-full h-full'>
-        <div className='flex-1 w-full max-h-[350px] max-w-[600px]'>
+      <div className='flex flex-col items-end w-full h-full'>
+        <div className='relative flex-1 w-full max-h-[350px] max-w-[600px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
             <BlocksEditor
               project={project}
               commit={commit}
               document={document}
               currentDocument={document}
-              initialValue={INITIAL_VALUE}
+              initialValue={emptyRootBlock}
               placeholder='Type your instructions here, use {{ input }} for variables and / for commands'
               onError={onError}
               prompts={prompts}
               onChange={updateDocumentContent}
               greyTheme={true}
             />
+            <div className='absolute bottom-[-1.5rem] left-1/2 -translate-x-1/2 border border-border rounded-lg bg-background p-2'>
+              <Button
+                fancy
+                className='w-full'
+                variant='outline'
+                onClick={() => generateDataset(SAMPLE_PROMPT)}
+              >
+                Use sample prompt
+              </Button>
+            </div>
           </Suspense>
         </div>
       </div>
@@ -125,7 +164,7 @@ export function PasteYourPromptBody({
           fancy
           className='w-full'
           iconProps={{ placement: 'right', name: 'arrowRight' }}
-          onClick={generateDataset}
+          onClick={() => generateDataset(value)}
         >
           Next
         </Button>
