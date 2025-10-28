@@ -9,6 +9,7 @@ import useSWR, { SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useCallback, useState } from 'react'
 import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+import { generateDatasetAction } from '$/actions/datasets/generateDataset'
 
 const EMPTY_ARRAY: Dataset[] = []
 
@@ -137,6 +138,20 @@ export default function useDatasets(
       },
     })
 
+  const {
+    execute: runGenerateAction,
+    isPending: generateIsLoading,
+    error: generateError,
+  } = useLatitudeAction(generateDatasetAction, {
+    onError: (error) => {
+      toast({
+        title: 'Failed to generate dataset',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+
   return {
     data,
     mutate,
@@ -147,6 +162,9 @@ export default function useDatasets(
     isDestroying,
     updateColumn,
     isUpdatingColumn,
+    runGenerateAction,
+    generateIsLoading,
+    generateError,
     ...rest,
   }
 }

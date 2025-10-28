@@ -3,82 +3,50 @@
 import { z } from 'zod'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
-import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { authProcedure } from '$/actions/procedures'
-import { createDatasetFromJson } from '@latitude-data/core/services/datasets/createFromJson'
-import {
-  ChainStepResponse,
-  CLOUD_MESSAGES,
-  LogSources,
-} from '@latitude-data/core/constants'
+import { CLOUD_MESSAGES } from '@latitude-data/core/constants'
+import { generateDatasetWithCopilot } from '@latitude-data/core/services/datasets/generateWithCopilot'
+import { redirect } from 'next/navigation'
+import { ROUTES } from '$/services/routes'
+import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
+import { markWorkspaceOnboardingComplete } from '@latitude-data/core/services/workspaceOnboarding/update'
 
 export const generateDatasetAction = authProcedure
   .inputSchema(
     z.object({
       parameters: z.string(),
-      description: z.string(),
+      description: z.string().optional(),
+      prompt: z.string().optional(),
       rowCount: z.number(),
       name: z.string(),
+      fromCloud: z.boolean(),
     }),
   )
-  .action(async ({ parsedInput }) => {
-    if (!env.LATITUDE_CLOUD) {
+  .action(async ({ parsedInput, ctx }) => {
+    const { parameters, description, prompt, rowCount, name, fromCloud } =
+      parsedInput
+
+    if (fromCloud && !env.LATITUDE_CLOUD) {
       throw new BadRequestError(CLOUD_MESSAGES.generateDatasets)
-    }
-    if (!env.COPILOT_PROJECT_ID) {
-      throw new BadRequestError('COPILOT_PROJECT_ID is not set')
-    }
-    if (!env.COPILOT_PROMPT_DATASET_GENERATOR_PATH) {
-      throw new BadRequestError(
-        'COPILOT_PROMPT_DATASET_GENERATOR_PATH is not set',
-      )
-    }
-    if (!env.COPILOT_WORKSPACE_API_KEY) {
-      throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
+    } else if (!fromCloud && !env.LATITUDE_CLOUD) {
+      // If user is self-hosted and they're in the new dataset onboarding, we complete the onboarding and redirect to the dashboard as they cannot generate the dataset with copilot
+      const onboarding = await getWorkspaceOnboarding({
+        workspace: ctx.workspace,
+      }).then((r) => r.unwrap())
+
+      await markWorkspaceOnboardingComplete({
+        onboarding,
+      }).then((r) => r.unwrap())
+      return redirect(ROUTES.dashboard.root)
     }
 
-    const { user, workspace } = await getCurrentUserOrRedirect()
-    const sdk = await createSdk({
-      workspace,
-      apiKey: env.COPILOT_WORKSPACE_API_KEY,
-      projectId: env.COPILOT_PROJECT_ID,
-      __internal: { source: LogSources.Playground },
+    return await generateDatasetWithCopilot({
+      workspace: ctx.workspace,
+      user: ctx.user,
+      parameters,
+      description,
+      prompt,
+      rowCount,
+      name,
     }).then((r) => r.unwrap())
-
-    const sdkResponse = await sdk.prompts.run<{}>(
-      env.COPILOT_PROMPT_DATASET_GENERATOR_PATH,
-      {
-        stream: false,
-        parameters: {
-          row_count: parsedInput.rowCount,
-          parameters: parsedInput.parameters,
-          user_message: parsedInput.description,
-        },
-      },
-    )
-    const sdkResult = sdkResponse
-
-    if (!sdkResult) {
-      throw new BadRequestError(
-        'Something went wrong generating the Dataset preview',
-      )
-    }
-
-    const response = sdkResult.response as ChainStepResponse<'object'>
-    const name = parsedInput.name
-    const result = await createDatasetFromJson({
-      author: user,
-      workspace,
-      data: {
-        name,
-        rows: response.object.rows,
-      },
-    })
-
-    if (result.error) {
-      throw result.error
-    }
-
-    return result.value
   })

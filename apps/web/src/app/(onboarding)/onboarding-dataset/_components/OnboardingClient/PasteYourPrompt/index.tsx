@@ -14,6 +14,8 @@ import { createEmptyParagraph } from '$/components/BlocksEditor/Editor/state/pro
 import { BlockRootNode } from '$/components/BlocksEditor/Editor/state/promptlToLexical/types'
 import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
 import { useIncludabledPrompts } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/BlocksEditor/useIncludabledPrompts'
+import { useMetadata } from '$/hooks/useMetadata'
+import useDatasets from '$/stores/datasets'
 
 // From ast to blocks got this idea from
 const INITIAL_VALUE = {
@@ -32,7 +34,7 @@ export function PasteYourPromptBody({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { updateDocumentContent } = useDocumentValue()
+  const { value, updateDocumentContent } = useDocumentValue()
 
   const onError = useCallback((error: Error) => {
     toast({
@@ -49,10 +51,26 @@ export function PasteYourPromptBody({
     documents: [document],
   })
 
+  const { metadata } = useMetadata()
+  const { runGenerateAction } = useDatasets()
+
+  const generateDataset = useCallback(async () => {
+    const parameters = Object.keys(metadata?.parameters ?? {}).join(', ') ?? ''
+    const result = await runGenerateAction({
+      parameters,
+      prompt: value ?? '',
+      rowCount: 10,
+      name: 'Onboarding Dataset',
+      fromCloud: false,
+    })
+    console.log(result)
+    // TODO(onboarding): when finished, move to the next onboarding step
+  }, [metadata, value, runGenerateAction])
+
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
       <div className='flex flex-col items-end gap-10 w-full h-full'>
-        <div className='flex-1 w-full max-h-[350px] max-w-[600px] overflow-y-auto custom-scrollbar scrollable-indicator'>
+        <div className='flex-1 w-full max-h-[350px] max-w-[600px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
             <BlocksEditor
               project={project}
@@ -60,7 +78,7 @@ export function PasteYourPromptBody({
               document={document}
               currentDocument={document}
               initialValue={INITIAL_VALUE}
-              placeholder='Type your instructions here, use {{ input }} for variables'
+              placeholder='Type your instructions here, use {{ input }} for variables and / for commands'
               onError={onError}
               prompts={prompts}
               onChange={updateDocumentContent}
@@ -107,6 +125,7 @@ export function PasteYourPromptBody({
           fancy
           className='w-full'
           iconProps={{ placement: 'right', name: 'arrowRight' }}
+          onClick={generateDataset}
         >
           Next
         </Button>

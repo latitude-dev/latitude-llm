@@ -1,13 +1,11 @@
 import { FormEvent } from 'react'
 
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { generateDatasetAction } from '$/actions/datasets/generateDataset'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
 import { GenerateDatasetModalComponent } from './GenerateDatasetModalComponent'
 import { useDatasetPreviewModal } from './useDatasetPreviewModal'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export function GenerateDatasetModal({
   open,
@@ -24,20 +22,14 @@ export function GenerateDatasetModal({
 }) {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { data: datasets, mutate } = useDatasets()
   const {
-    execute: runGenerateAction,
-    isPending: generateIsLoading,
-    error: generateError,
-  } = useLatitudeAction(generateDatasetAction, {
-    onError: (error) => {
-      toast({
-        title: 'Failed to generate dataset',
-        description: error.message,
-        variant: 'destructive',
-      })
-    },
-  })
+    data: datasets,
+    mutate,
+    runGenerateAction,
+    generateIsLoading,
+    generateError,
+  } = useDatasets()
+
   const modalData = useDatasetPreviewModal({
     defaultParameters,
     generateErrorMessage: generateError?.message,
@@ -55,6 +47,7 @@ export function GenerateDatasetModal({
         description: formData.get('description') as string,
         rowCount: parseInt(formData.get('rows') as string, 10),
         name: formData.get('name') as string,
+        fromCloud: true,
       })
 
       if (!dataset) return
