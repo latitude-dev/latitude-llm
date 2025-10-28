@@ -12,6 +12,7 @@ import { ResolvedTools } from './types'
 import { publisher } from '../../../events/publisher'
 import { Tool } from 'ai'
 import { ToolSource } from '@latitude-data/constants/toolSources'
+import { findFirstUserInWorkspace } from '../../../data-access/users'
 
 export function resolveLatitudeTools({
   config,
@@ -124,12 +125,15 @@ function instrumentLatitudeTool(
 ) {
   const originalExecute = definition.execute!
   definition.execute = async (...args) => {
+    const user = await findFirstUserInWorkspace(streamManager.workspace)
+
     publisher.publishLater({
       type: 'toolExecuted',
       data: {
         workspaceId: streamManager.workspace.id,
         type: 'latitude',
         toolName: name,
+        userEmail: user?.email,
       },
     })
 
