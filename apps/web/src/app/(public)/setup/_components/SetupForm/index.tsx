@@ -13,21 +13,21 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import Link from 'next/link'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
-import { USER_ROLES, UserRole } from '@latitude-data/constants/users'
+import { USER_TITLES, UserTitle } from '@latitude-data/constants/users'
 
-export const humanizeUserRole = (role: UserRole): string => {
-  switch (role) {
-    case UserRole.Engineer:
+export const humanizeUserTitle = (title: UserTitle): string => {
+  switch (title) {
+    case UserTitle.Engineer:
       return 'Engineer'
-    case UserRole.DataAIAndML:
+    case UserTitle.DataAIAndML:
       return 'Data/AI/ML'
-    case UserRole.ProductManager:
+    case UserTitle.ProductManager:
       return 'Product Manager'
-    case UserRole.Designer:
+    case UserTitle.Designer:
       return 'Designer'
-    case UserRole.Founder:
+    case UserTitle.Founder:
       return 'Founder'
-    case UserRole.Other:
+    case UserTitle.Other:
       return 'Other'
   }
 }
@@ -95,13 +95,13 @@ export default function SetupForm({
         />
         <Select
           required
-          name='role'
+          name='title'
           label='Your role'
-          errors={errors?.role}
+          errors={errors?.title}
           placeholder='Select'
-          options={USER_ROLES.map((role: UserRole) => ({
-            label: humanizeUserRole(role),
-            value: role,
+          options={USER_TITLES.map((title: UserTitle) => ({
+            label: humanizeUserTitle(title),
+            value: title,
           }))}
         />
         <div className='flex flex-col gap-6'>
