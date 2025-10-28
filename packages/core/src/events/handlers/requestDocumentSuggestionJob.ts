@@ -31,6 +31,7 @@ export const requestDocumentSuggestionJobV2 = async ({
   if (!evaluation.enableSuggestions) return
   if (
     // TODO(tracing): add source to prompt metadata
+    // @ts-expect-error - tracing
     !LIVE_SUGGESTION_SOURCES.includes((metadata as PromptSpanMetadata).source)
   ) {
     return

@@ -75,6 +75,8 @@ export const runDocumentForExperimentJob = async (
         workspaceId,
         commitId: experiment.commitId,
         evaluationUuid,
+        // TODO(tracing): migrate to traces
+        // @ts-expect-error - tracing
         providerLogUuid: providerLog.uuid,
         datasetId: experiment.datasetId ?? undefined,
         datasetLabel: experiment.metadata.datasetLabels[evaluationUuid],

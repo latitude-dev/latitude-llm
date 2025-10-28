@@ -1,5 +1,6 @@
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
+import { SpansRepository } from '../../repositories'
 import { WebsocketClient } from '../../websockets/workers'
 import { EvaluationResultV2CreatedEvent } from '../events'
 
@@ -13,13 +14,18 @@ export const notifyClientOfEvaluationResultV2Created = async ({
     result,
     evaluation,
     commit,
-    providerLog,
+    spanId,
+    traceId,
     dataset,
     datasetRow,
   } = event.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
+
+  const spansRepo = new SpansRepository(workspace.id)
+  const span = await spansRepo.get({ traceId, spanId }).then((r) => r.value)
+  if (!span) return
 
   await WebsocketClient.sendEvent('evaluationResultV2Created', {
     workspaceId: workspace.id,
@@ -28,7 +34,7 @@ export const notifyClientOfEvaluationResultV2Created = async ({
       result: result,
       evaluation: evaluation,
       commit: commit,
-      providerLog: providerLog,
+      span,
       dataset: dataset,
       datasetRow: datasetRow,
     },

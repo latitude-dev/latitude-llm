@@ -16,6 +16,7 @@ const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
   (source) => source !== 'evaluation' && source !== 'experiment',
 ) as LogSources[]
 
+// TODO(tracing): migrate to spans
 export const evaluateLiveLogJob = async ({
   data: event,
 }: {
@@ -75,6 +76,8 @@ export const evaluateLiveLogJob = async ({
 
     const { evaluationsQueue } = await queues()
     evaluationsQueue.add('runEvaluationV2Job', payload, {
+      // TODO(tracing): migrate to spans
+      // @ts-expect-error - tracing
       deduplication: { id: runEvaluationV2JobKey(payload) },
     })
   }

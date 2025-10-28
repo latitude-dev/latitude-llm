@@ -88,6 +88,8 @@ export async function createEvaluationResultV2<
           dataset: dataset,
           datasetRow: datasetRow,
           workspaceId: workspace.id,
+          spanId: span.id,
+          traceId: span.traceId,
         },
       })
     },

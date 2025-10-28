@@ -12,14 +12,11 @@ import { Result } from '../../../../lib/Result'
 import {
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
-  ProviderLogsRepository,
   SpanMetadatasRepository,
   SpansRepository,
 } from '../../../../repositories'
-import { ProviderLogDto } from '../../../../schema/types'
 import { annotateEvaluationV2 } from '../../../evaluationsV2/annotate'
 import { getCopilotDocument } from '../helpers'
-import { TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-node'
 
 export async function addFeedbackToEvaluationResult(
   {

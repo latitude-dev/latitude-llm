@@ -66,6 +66,8 @@ async function createResultV2({
 }) {
   return await factories.createEvaluationResultV2({
     evaluation: evaluation,
+    // TODO(tracing): migrate
+    // @ts-expect-error - tracing
     providerLog: providerLog,
     commit: commit,
     workspace: workspace,
