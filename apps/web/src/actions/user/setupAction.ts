@@ -9,6 +9,7 @@ import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access/users'
 
 import { errorHandlingProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
+import { UserTitle } from '@latitude-data/constants/users'
 
 export const setupAction = errorHandlingProcedure
   .inputSchema(
@@ -35,6 +36,7 @@ export const setupAction = errorHandlingProcedure
       companyName: z
         .string()
         .min(1, { error: 'Workspace name is a required field' }),
+      title: z.enum(UserTitle).optional(),
     }),
   )
   .action(async ({ parsedInput }) => {

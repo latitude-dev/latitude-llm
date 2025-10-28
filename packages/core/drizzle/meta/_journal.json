@@ -1583,6 +1583,13 @@
       "when": 1761579803508,
       "tag": "0226_get_versioning_from_histograms",
       "breakpoints": true
+    },
+    {
+      "idx": 227,
+      "version": "7",
+      "when": 1761642439266,
+      "tag": "0227_new_user_roles",
+      "breakpoints": true
     }
   ]
 }

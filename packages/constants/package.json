@@ -28,7 +28,8 @@
     "./promptl": "./src/promptl.ts",
     "./trigger": "./src/trigger.ts",
     "./documentTriggers": "./src/documentTriggers/schema.ts",
-    "./toolSources": "./src/toolSources.ts"
+    "./toolSources": "./src/toolSources.ts",
+    "./users": "./src/users.ts"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
