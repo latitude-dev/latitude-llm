@@ -559,6 +559,7 @@ export type ToolExecutedEvent = LatitudeEventGeneric<
   'toolExecuted',
   {
     workspaceId: number
+    userEmail?: string
     type: 'integration' | 'latitude' | 'client'
     integration?: {
       id: number
