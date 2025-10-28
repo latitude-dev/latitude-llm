@@ -10,7 +10,7 @@ import { createMembership } from '../memberships/create'
 import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
-import { UserRole } from '@latitude-data/constants/users'
+import { UserTitle } from '@latitude-data/constants/users'
 
 const DEFAULT_MODEL = 'gpt-4o-mini'
 
@@ -23,7 +23,7 @@ export default async function setupService(
     defaultProviderApiKey,
     captureException,
     source,
-    role,
+    title,
   }: {
     email: string
     name: string
@@ -32,13 +32,13 @@ export default async function setupService(
     defaultProviderApiKey: string
     source?: string
     captureException?: (error: Error) => void
-    role?: UserRole
+    title?: UserTitle
   },
   transaction = new Transaction(),
 ): PromisedResult<{ user: User; workspace: Workspace }> {
   return transaction.call(async () => {
     const user = await createUser(
-      { email, name, confirmedAt: new Date(), role },
+      { email, name, confirmedAt: new Date(), title },
       transaction,
     ).then((r) => r.unwrap())
     const workspace = await createWorkspace(

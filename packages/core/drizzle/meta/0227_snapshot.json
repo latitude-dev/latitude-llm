@@ -1,5 +1,5 @@
 {
-  "id": "aaa84202-6e3e-4760-b4e5-aa3956049633",
+  "id": "35017397-3a13-4323-91cb-a01ff7097bda",
   "prevId": "69d3678c-4381-490a-a7ea-9000c2d1f170",
   "version": "7",
   "dialect": "postgresql",
@@ -6653,8 +6653,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "role": {
-          "name": "role",
+        "title": {
+          "name": "title",
           "type": "varchar(128)",
           "primaryKey": false,
           "notNull": false
@@ -6675,11 +6675,11 @@
         }
       },
       "indexes": {
-        "users_role_idx": {
-          "name": "users_role_idx",
+        "users_title_idx": {
+          "name": "users_title_idx",
           "columns": [
             {
-              "expression": "role",
+              "expression": "title",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

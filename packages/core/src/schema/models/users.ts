@@ -1,7 +1,7 @@
 import { boolean, text, timestamp, varchar, index } from 'drizzle-orm/pg-core'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { UserRole } from '@latitude-data/constants/users'
+import { UserTitle } from '@latitude-data/constants/users'
 
 export const users = latitudeSchema.table(
   'users',
@@ -16,8 +16,8 @@ export const users = latitudeSchema.table(
     admin: boolean('admin').notNull().default(false),
     lastSuggestionNotifiedAt: timestamp('last_suggestion_notified_at'),
     devMode: boolean('dev_mode'),
-    role: varchar('role', { length: 128 }).$type<UserRole>(), // can be null as signup with google bypasses the role selection
+    title: varchar('title', { length: 128 }).$type<UserTitle>(), // can be null as signup with google bypasses the title selection
     ...timestamps(),
   },
-  (table) => [index('users_role_idx').on(table.role)],
+  (table) => [index('users_title_idx').on(table.title)],
 )
