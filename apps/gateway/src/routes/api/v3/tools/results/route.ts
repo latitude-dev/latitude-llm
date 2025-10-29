@@ -6,7 +6,11 @@ import { z } from '@hono/zod-openapi'
 
 export const clientToolResultBodySchema = z.object({
   toolCallId: z.string(),
-  result: z.any(),
+  result: z.any().openapi({
+    description: 'Tool execution result (any JSON-serializable value)',
+    type: 'object',
+    additionalProperties: true,
+  }),
   isError: z.boolean().default(false),
 })
 

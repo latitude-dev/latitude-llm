@@ -24,7 +24,15 @@ export const runRoute = createRoute({
             path: z.string(),
             stream: z.boolean().default(false),
             customIdentifier: z.string().optional(),
-            parameters: z.record(z.string(), z.any()).optional().default({}),
+            parameters: z
+              .record(z.string(), z.any())
+              .optional()
+              .default({})
+              .openapi({
+                type: 'object',
+                additionalProperties: true,
+                description: 'Document parameters as key-value pairs',
+              }),
             tools: z.array(z.string()).optional().default([]),
             userMessage: z.string().optional(),
             background: z.boolean().optional(),

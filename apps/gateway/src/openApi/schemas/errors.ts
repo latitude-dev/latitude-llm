@@ -12,15 +12,22 @@ const BaseErrorSchema = z.object({
   name: z.string().openapi({ description: 'The name of the error' }),
   errorCode: z.string().openapi({ description: 'The error code identifier' }),
   message: z.string().openapi({ description: 'Detailed error message' }),
-  details: z
-    .object({})
-    .passthrough()
-    .optional()
-    .openapi({ description: 'Additional error details' }),
+  details: z.object({}).passthrough().optional().openapi({
+    type: 'object',
+    additionalProperties: true,
+    description: 'Additional error details',
+  }),
 })
 
 const HTTPExceptionErrorSchema = BaseErrorSchema.extend({
-  details: z.object({ cause: z.any().optional() }).optional(),
+  details: z
+    .object({
+      cause: z
+        .any()
+        .optional()
+        .openapi({ type: 'object', additionalProperties: true }),
+    })
+    .optional(),
 }).openapi({
   description: 'Error response for HTTP exceptions',
   example: {
@@ -32,7 +39,10 @@ const HTTPExceptionErrorSchema = BaseErrorSchema.extend({
 })
 
 const UnprocessableEntityErrorSchema = BaseErrorSchema.extend({
-  details: z.any().optional(),
+  details: z
+    .any()
+    .optional()
+    .openapi({ type: 'object', additionalProperties: true }),
 })
   .and(z.object({ dbErrorRef: ChainErrorDetailSchema }).optional())
   .openapi({
@@ -50,7 +60,10 @@ const UnprocessableEntityErrorSchema = BaseErrorSchema.extend({
   })
 
 const BadRequestErrorSchema = BaseErrorSchema.extend({
-  details: z.any().optional(),
+  details: z
+    .any()
+    .optional()
+    .openapi({ type: 'object', additionalProperties: true }),
 }).openapi({
   description: 'Error response for Latitude-specific errors',
   example: {
@@ -64,7 +77,10 @@ const BadRequestErrorSchema = BaseErrorSchema.extend({
 const InternalServerErrorSchema = BaseErrorSchema.extend({
   details: z
     .object({
-      cause: z.any().optional(), // Adjust `z.any()` to a more specific schema if possible
+      cause: z
+        .any()
+        .optional()
+        .openapi({ type: 'object', additionalProperties: true }),
     })
     .optional(),
 }).openapi({
