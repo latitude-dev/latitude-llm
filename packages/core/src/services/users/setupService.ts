@@ -12,6 +12,7 @@ import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
 import { UserTitle } from '@latitude-data/constants/users'
 import { createDatasetOnboarding } from '../onboardingResources/createDatasetOnboarding'
+import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'
 
 const DEFAULT_MODEL = 'gpt-4o-mini'
 
@@ -76,22 +77,23 @@ export default async function setupService(
       r.unwrap(),
     )
 
-    // TODO(onboarding): remove this once we merge this PR
-    //   const isDatasetOnboardingEnabledResult = await isFeatureEnabledByName(
-    //     workspace.id,
-    //     'dataset-onboarding',
-    //   )
-
-    //   if (!Result.isOk(isDatasetOnboardingEnabledResult)) {
-    //     return redirect(ROUTES.dashboard.root)
-    //   }
-    //   const isDatasetOnboardingEnabled = isDatasetOnboardingEnabledResult.unwrap()
-
-    //   if (isDatasetOnboardingEnabled) {
-    await createDatasetOnboarding({ workspace, user }, transaction).then((r) =>
-      r.unwrap(),
+    const isDatasetOnboardingEnabledResult = await isFeatureEnabledByName(
+      workspace.id,
+      'datasetOnboarding',
     )
-    //   }
+
+    if (!Result.isOk(isDatasetOnboardingEnabledResult)) {
+      return Result.error(
+        new Error('Failed checking dataset onboarding feature'),
+      )
+    }
+    const isDatasetOnboardingEnabled = isDatasetOnboardingEnabledResult.unwrap()
+
+    if (isDatasetOnboardingEnabled) {
+      await createDatasetOnboarding({ workspace, user }, transaction).then(
+        (r) => r.unwrap(),
+      )
+    }
 
     publisher.publishLater({
       type: 'userCreated',
