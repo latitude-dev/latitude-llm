@@ -4,6 +4,7 @@ import {
   CompletionSpanMetadata,
   PromptSpanMetadata,
   SpanType,
+  SpanWithDetails,
 } from '@latitude-data/constants'
 import { MetadataInfoTabs } from '../../../_components/MetadataInfoTabs'
 import { useTraceSpanSelection } from './TraceSpanSelectionContext'
@@ -12,11 +13,11 @@ import { MessageList } from '$/components/ChatWrapper'
 import { adaptPromptlMessageToLegacy } from '@latitude-data/core/utils/promptlAdapter'
 import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
 import { findSpanById } from '@latitude-data/core/services/tracing/spans/findSpanById'
+import { AnnotationForms } from '../../logs/_components/DocumentLogs/DocumentLogInfo'
 
 export const DEFAULT_TABS = [
   { label: 'Metadata', value: 'metadata' },
   { label: 'Messages', value: 'messages' },
-  { label: 'Evaluations', value: 'evaluations' },
 ]
 
 export function TraceInfo() {
@@ -27,7 +28,6 @@ export function TraceInfo() {
           <>
             {selectedTab === 'metadata' && <TraceMetadata />}
             {selectedTab === 'messages' && <TraceMessages />}
-            {selectedTab === 'evaluations' && <TraceEvaluations />}
           </>
         )}
       </MetadataInfoTabs>
@@ -44,7 +44,12 @@ function TraceMetadata() {
   if (isLoading) return <LoadingText alignX='center' />
   if (!span) return null
 
-  return <DetailsPanel span={span} />
+  return (
+    <div className='flex flex-col gap-4'>
+      <DetailsPanel span={span} />
+      <AnnotationForms span={span as SpanWithDetails<SpanType.Prompt>} />
+    </div>
+  )
 }
 
 function TraceMessages() {
@@ -75,8 +80,4 @@ function TraceMessages() {
       }
     />
   )
-}
-
-function TraceEvaluations() {
-  return null
 }

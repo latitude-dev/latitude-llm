@@ -5,7 +5,6 @@ import { MetadataItem } from '$/components/MetadataItem'
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import { useProviderLog } from '$/stores/providerLogs'
 import {
-  DocumentLog,
   DocumentLogWithMetadataAndError,
   EvaluationType,
   SpanType,
@@ -35,11 +34,8 @@ import { DocumentLogMetadata } from './Metadata'
 import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { useConversation } from '$/stores/conversations'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useTrace } from '$/stores/traces'
-import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
 import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
 
 function DocumentLogMetadataLoading() {
@@ -147,7 +143,7 @@ export function DocumentLogInfo({
                     documentLog={documentLog}
                   />
                 )}
-                <AnnotationForms documentLog={documentLog} />
+                {span && <AnnotationForms span={span} />}
               </>
             ) : (
               <Alert
@@ -163,14 +159,11 @@ export function DocumentLogInfo({
   )
 }
 
-function AnnotationForms({ documentLog }: { documentLog: DocumentLog }) {
+export function AnnotationForms({ span }: { span: SpanWithDetails }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { data: evaluations } = useEvaluationsV2({ project, commit, document })
-  const { data: traces } = useConversation({ conversationId: documentLog.uuid })
-  const { data: trace } = useTrace({ traceId: traces[0] })
-  const span = findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt)
   const { data: evaluationResultsBySpan } = useEvaluationResultsV2BySpans({
     project,
     commit,
@@ -179,6 +172,7 @@ function AnnotationForms({ documentLog }: { documentLog: DocumentLog }) {
     traceId: span?.traceId,
   })
   const humanEvals = evaluations.filter((e) => e.type === EvaluationType.Human)
+  if (span.type !== SpanType.Prompt) return null
 
   return (
     humanEvals.length > 0 &&
@@ -188,7 +182,7 @@ function AnnotationForms({ documentLog }: { documentLog: DocumentLog }) {
           <AnnotationForm
             key={evaluation.uuid}
             evaluation={evaluation}
-            span={span}
+            span={span as SpanWithDetails<SpanType.Prompt>}
             result={
               evaluationResultsBySpan.find(
                 (result) => result.evaluation.uuid === evaluation.uuid,
