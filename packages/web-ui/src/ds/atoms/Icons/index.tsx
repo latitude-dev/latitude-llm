@@ -152,6 +152,7 @@ import {
   Zap,
   SquareDashed,
   Brush,
+  FlaskConical,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -275,6 +276,7 @@ const Icons = {
   ellipsisVertical: EllipsisVertical,
   equal: EqualIcon,
   equalApproximately: EqualApproximatelyIcon,
+  experiment: FlaskConical,
   externalLink: ExternalLink,
   eye: Eye,
   figma: Figma,

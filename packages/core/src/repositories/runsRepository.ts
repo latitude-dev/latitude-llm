@@ -12,17 +12,21 @@ import {
   RUN_CAPTION_SIZE,
   RunAnnotation,
 } from '../constants'
+import { database } from '../client'
 import { findLastProviderLogFromDocumentLogUuid } from '../data-access/providerLogs'
 import { buildConversation, formatMessage } from '../helpers'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import {
   computeDocumentLogsWithMetadata,
-  computeDocumentLogsWithMetadataCount,
+  computeDocumentLogsWithMetadataCountBySource,
 } from '../services/documentLogs/computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithMetadata } from '../services/documentLogs/fetchDocumentLogWithMetadata'
 import { getEvaluationMetricSpecification } from '../services/evaluationsV2/specifications'
 import serializeProviderLog from '../services/providerLogs/serialize'
+import { and, count, eq, inArray, isNull } from 'drizzle-orm'
+import { commits } from '../schema/models/commits'
+import { documentLogs } from '../schema/models/documentLogs'
 import { CommitsRepository } from './commitsRepository'
 import { EvaluationResultsV2Repository } from './evaluationResultsV2Repository'
 
@@ -131,15 +135,26 @@ export class RunsRepository {
   async listActive({
     page = 1,
     pageSize = DEFAULT_PAGINATION_SIZE,
+    sources,
   }: {
     page?: number
     pageSize?: number
+    sources?: LogSources[]
   }) {
     const listing = await this.listCached()
     if (listing.error) return Result.error(listing.error)
     const active = listing.value
 
     let runs = Object.values(active)
+
+    // Filter by sources if provided
+    if (sources && sources.length > 0) {
+      runs = runs.filter((run) => {
+        const runSource = run.source ?? LogSources.API
+        return sources.includes(runSource)
+      })
+    }
+
     runs = runs.sort(
       (a, b) =>
         (b.startedAt?.getTime() ?? 0) - (a.startedAt?.getTime() ?? 0) ||
@@ -155,29 +170,59 @@ export class RunsRepository {
     if (listing.error) return Result.error(listing.error)
     const active = listing.value
 
-    const count = Object.keys(active).length
+    const counts: Record<LogSources, number> = {} as Record<LogSources, number>
+    for (const source of LOG_SOURCES) {
+      counts[source] = 0
+    }
 
-    return Result.ok<number>(count)
+    for (const run of Object.values(active)) {
+      const source = run.source ?? LogSources.API
+      counts[source] = (counts[source] ?? 0) + 1
+    }
+
+    return Result.ok<Record<LogSources, number>>(counts)
+  }
+
+  async countActiveBySource() {
+    const listing = await this.listCached()
+    if (listing.error) return Result.error(listing.error)
+    const active = listing.value
+
+    const countBySource: Record<LogSources, number> = LOG_SOURCES.reduce(
+      (acc, source) => ({ ...acc, [source]: 0 }),
+      {} as Record<LogSources, number>,
+    )
+
+    Object.values(active).forEach((run) => {
+      const source = run.source ?? LogSources.API
+      countBySource[source] = (countBySource[source] ?? 0) + 1
+    })
+
+    return Result.ok<Record<LogSources, number>>(countBySource)
   }
 
   async listCompleted({
     page = 1,
     pageSize = DEFAULT_PAGINATION_SIZE,
+    sources,
   }: {
     page?: number
     pageSize?: number
+    sources?: LogSources[]
   }) {
     const repository = new CommitsRepository(this.workspaceId)
     const filtering = await repository.filterByProject(this.projectId)
     if (filtering.error) return Result.error<Error>(filtering.error)
     const commitIds = filtering.value.map((r) => r.id)
 
+    const logSources = sources && sources.length > 0 ? sources : LOG_SOURCES
+
     const listing = await listLogsCatched({
       projectId: this.projectId,
       workspaceId: this.workspaceId,
       page: page.toString(),
       pageSize: pageSize.toString(),
-      filterOptions: { commitIds, logSources: LOG_SOURCES },
+      filterOptions: { commitIds, logSources },
     })
     if (listing.error) return Result.error(listing.error)
     const logs = listing.value
@@ -193,15 +238,64 @@ export class RunsRepository {
     if (filtering.error) return Result.error<Error>(filtering.error)
     const commitIds = filtering.value.map((r) => r.id)
 
-    const counting = await countLogsCatched({
+    const counts: Record<LogSources, number> = {} as Record<LogSources, number>
+    for (const source of LOG_SOURCES) {
+      counts[source] = 0
+    }
+
+    const countsBySource = await database
+      .select({
+        source: documentLogs.source,
+        count: count(),
+      })
+      .from(documentLogs)
+      .innerJoin(
+        commits,
+        and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
+      )
+      .where(
+        and(
+          eq(commits.projectId, this.projectId),
+          eq(documentLogs.workspaceId, this.workspaceId),
+          inArray(documentLogs.commitId, commitIds),
+        ),
+      )
+      .groupBy(documentLogs.source)
+
+    for (const row of countsBySource) {
+      const source = (row.source ?? LogSources.API) as LogSources
+      counts[source] = Number(row.count)
+    }
+
+    return Result.ok<Record<LogSources, number>>(counts)
+  }
+
+  async countCompletedBySource() {
+    const repository = new CommitsRepository(this.workspaceId)
+    const filtering = await repository.filterByProject(this.projectId)
+    if (filtering.error) return Result.error<Error>(filtering.error)
+    const commitIds = filtering.value.map((r) => r.id)
+
+    const counting = await countLogsBySourceCatched({
       projectId: this.projectId,
       workspaceId: this.workspaceId,
       filterOptions: { commitIds, logSources: LOG_SOURCES },
     })
     if (counting.error) return Result.error(counting.error)
-    const count = counting.value
+    const counts = counting.value
 
-    return Result.ok<number>(count)
+    const countBySource: Record<LogSources, number> = LOG_SOURCES.reduce(
+      (acc, source) => ({ ...acc, [source]: 0 }),
+      {} as Record<LogSources, number>,
+    )
+
+    counts.forEach(({ source, count }) => {
+      if (source) {
+        countBySource[source as LogSources] = count
+      }
+    })
+
+    return Result.ok<Record<LogSources, number>>(countBySource)
   }
 
   async create({
@@ -312,12 +406,15 @@ async function listLogsCatched(
   }
 }
 
-async function countLogsCatched(
-  parameters: Parameters<typeof computeDocumentLogsWithMetadataCount>[0],
+async function countLogsBySourceCatched(
+  parameters: Parameters<
+    typeof computeDocumentLogsWithMetadataCountBySource
+  >[0],
 ) {
   try {
     // Note: this function raises an error even though it uses the result pattern
-    const result = await computeDocumentLogsWithMetadataCount(parameters)
+    const result =
+      await computeDocumentLogsWithMetadataCountBySource(parameters)
     return Result.ok(result)
   } catch (error) {
     return Result.error(error as Error)

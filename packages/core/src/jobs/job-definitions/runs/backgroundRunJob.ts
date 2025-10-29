@@ -190,6 +190,17 @@ export const backgroundRunJob = async (
 
     // TODO: capture exception if we fail to end the run (but do not throw)
     await endRun({ workspaceId, projectId, runUuid })
+
+    if (experiment) {
+      await updateExperimentStatus(
+        {
+          workspaceId,
+          experiment,
+        },
+        (progressTracker) =>
+          progressTracker.incrementErrors(experiment!.evaluationUuids.length),
+      )
+    }
   }
 }
 

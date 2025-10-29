@@ -7,7 +7,11 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { CompletedRun } from '@latitude-data/constants'
+import {
+  CompletedRun,
+  LogSources,
+  RunSourceGroup,
+} from '@latitude-data/constants'
 
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
@@ -21,6 +25,7 @@ export function useCompletedRuns(
   }: {
     project: Pick<Project, 'id'>
     search?: {
+      sourceGroup?: RunSourceGroup
       page?: number
       pageSize?: number
     }
@@ -33,6 +38,9 @@ export function useCompletedRuns(
     const params = new URLSearchParams()
     if (search?.page) params.set('page', search.page.toString())
     if (search?.pageSize) params.set('pageSize', search.pageSize.toString())
+    if (search?.sourceGroup) {
+      params.append('sourceGroup', search.sourceGroup)
+    }
     return params.toString()
   }, [search])
   const fetcher = useFetcher<CompletedRun[]>(`${route}?${query}`)
@@ -96,16 +104,19 @@ export function useCompletedRunsCount(
   opts?: SWRConfiguration,
 ) {
   const route = ROUTES.api.projects.detail(project.id).runs.completed.count
-  const fetcher = useFetcher<number>(disable ? undefined : route, {
-    serializer: (data) => (data as any)?.count,
-    fallback: null,
-  })
+  const fetcher = useFetcher<Record<LogSources, number>>(
+    disable ? undefined : route,
+    {
+      serializer: (data) => (data as any)?.countBySource,
+      fallback: null,
+    },
+  )
 
   const {
     data = undefined,
     mutate,
     ...rest
-  } = useSWR<number>(compact([route]), fetcher, opts)
+  } = useSWR<Record<LogSources, number>>(compact([route]), fetcher, opts)
 
   const onMessage = useCallback(
     (args: EventArgs<'runStatus'>) => {
@@ -114,8 +125,19 @@ export function useCompletedRunsCount(
 
       if (args.projectId !== project.id) return
 
+      const source = args.run.source ?? LogSources.API
+
       if (args.event === 'runEnded') {
-        mutate((prev) => Math.max(0, (prev ?? 0) + 1), { revalidate: false })
+        mutate(
+          (prev) => {
+            if (!prev) return { [source]: 1 } as Record<LogSources, number>
+            return {
+              ...prev,
+              [source]: Math.max(0, (prev[source] ?? 0) + 1),
+            }
+          },
+          { revalidate: false },
+        )
       }
     },
     [project, mutate, realtime, disable],

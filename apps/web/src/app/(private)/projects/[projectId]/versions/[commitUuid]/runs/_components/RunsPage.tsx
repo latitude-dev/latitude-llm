@@ -6,7 +6,14 @@ import {
   useCompletedRuns,
   useCompletedRunsCount,
 } from '$/stores/runs/completedRuns'
-import { ActiveRun, CompletedRun, Run } from '@latitude-data/constants'
+import {
+  ActiveRun,
+  CompletedRun,
+  LogSources,
+  Run,
+  RUN_SOURCES,
+  RunSourceGroup,
+} from '@latitude-data/constants'
 import { Pagination } from '@latitude-data/core/helpers'
 import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
@@ -16,14 +23,25 @@ import { useDebounce } from 'use-debounce'
 import { RunPanel } from './RunPanel'
 import { RunsList } from './RunsList'
 
+function sumCounts(
+  counts: Record<LogSources, number> | undefined,
+  sourceGroup: RunSourceGroup,
+): number {
+  if (!counts) return 0
+  const sources = RUN_SOURCES[sourceGroup]
+  return sources.reduce((sum, source) => sum + (counts[source] ?? 0), 0)
+}
+
 export function RunsPage({
   active: serverActive,
   completed: serverCompleted,
   limitedView,
+  defaultSourceGroup,
 }: {
   active: { runs: ActiveRun[]; search: Pagination }
   completed: { runs: CompletedRun[]; search: Pagination }
   limitedView?: Pick<ProjectLimitedView, 'totalRuns'>
+  defaultSourceGroup: RunSourceGroup
 }) {
   const { project } = useCurrentProject()
 
@@ -33,6 +51,10 @@ export function RunsPage({
   const [completedSearch, setCompletedSearch] = useState(serverCompleted.search)
   const [debouncedCompletedSearch] = useDebounce(completedSearch, 100)
 
+  const [sourceGroup, setSourceGroup] =
+    useState<RunSourceGroup>(defaultSourceGroup)
+  const [debouncedSourceGroup] = useDebounce(sourceGroup, 100)
+
   useEffect(() => {
     const currentUrl = window.location.origin + window.location.pathname
 
@@ -41,13 +63,14 @@ export function RunsPage({
     if (debouncedActiveSearch.pageSize) params.set('activePageSize', String(debouncedActiveSearch.pageSize)) // prettier-ignore
     if (debouncedCompletedSearch.page) params.set('completedPage', String(debouncedCompletedSearch.page)) // prettier-ignore
     if (debouncedCompletedSearch.pageSize) params.set('completedPageSize', String(debouncedCompletedSearch.pageSize)) // prettier-ignore
+    if (debouncedSourceGroup) params.set('sourceGroup', String(debouncedSourceGroup)) // prettier-ignore
     const queryParams = params.toString()
 
     const targetUrl = `${currentUrl}${queryParams ? `?${queryParams}` : ''}`
     if (targetUrl !== window.location.href) {
       window.history.replaceState(null, '', targetUrl)
     }
-  }, [debouncedActiveSearch, debouncedCompletedSearch])
+  }, [debouncedActiveSearch, debouncedCompletedSearch, debouncedSourceGroup])
 
   const [realtime, setRealtime] = useState(!limitedView)
 
@@ -67,17 +90,30 @@ export function RunsPage({
     search: {
       ...debouncedActiveSearch,
       page: (debouncedActiveSearch.page ?? 1) + 1,
+      sourceGroup: debouncedSourceGroup,
     },
     realtime: false,
   })
 
-  const { data: activeCount, isLoading: isActiveCountLoading } =
+  const { data: activeCountBySource, isLoading: isActiveCountLoading } =
     useActiveRunsCount({ project, realtime })
+
+  const activeTotalCount = useMemo(
+    () => sumCounts(activeCountBySource, debouncedSourceGroup),
+    [activeCountBySource, debouncedSourceGroup],
+  )
 
   const isActiveLoading = isActiveCountLoading
 
   const { data: completedRuns, mutate: mutateCompletedRuns } = useCompletedRuns(
-    { project, search: debouncedCompletedSearch, realtime },
+    {
+      project,
+      search: {
+        ...debouncedCompletedSearch,
+        sourceGroup: debouncedSourceGroup,
+      },
+      realtime,
+    },
     { fallbackData: serverCompleted.runs, keepPreviousData: true },
   )
   // Note: prefetch next results
@@ -86,12 +122,18 @@ export function RunsPage({
     search: {
       ...debouncedCompletedSearch,
       page: (debouncedCompletedSearch.page ?? 1) + 1,
+      sourceGroup: debouncedSourceGroup,
     },
     realtime: false,
   })
 
-  const { data: completedCount, isLoading: isCompletedCountLoading } =
+  const { data: completedCountBySource, isLoading: isCompletedCountLoading } =
     useCompletedRunsCount({ project, realtime, disable: !!limitedView })
+
+  const completedTotalCount = useMemo(
+    () => sumCounts(completedCountBySource, debouncedSourceGroup),
+    [completedCountBySource, debouncedSourceGroup],
+  )
 
   const isCompletedLoading = isCompletedCountLoading
 
@@ -115,7 +157,8 @@ export function RunsPage({
             active={{
               runs: activeRuns,
               next: nextActiveRuns?.length ?? 0,
-              count: activeCount ?? 0,
+              countBySource: activeCountBySource,
+              totalCount: activeTotalCount,
               search: activeSearch,
               setSearch: setActiveSearch,
               isLoading: isActiveLoading,
@@ -123,7 +166,8 @@ export function RunsPage({
             completed={{
               runs: completedRuns,
               next: nextCompletedRuns?.length ?? 0,
-              count: completedCount ?? limitedView?.totalRuns ?? 0,
+              countBySource: completedCountBySource,
+              totalCount: completedTotalCount ?? limitedView?.totalRuns,
               search: completedSearch,
               setSearch: setCompletedSearch,
               isLoading: isCompletedLoading,
@@ -134,6 +178,8 @@ export function RunsPage({
             isStoppingRun={isStoppingRun}
             realtime={realtime}
             setRealtime={setRealtime}
+            sourceGroup={sourceGroup}
+            setSourceGroup={setSourceGroup}
           />
         }
         secondPane={

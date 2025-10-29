@@ -171,6 +171,39 @@ export async function computeDocumentLogsWithMetadataCount(
   return countList?.[0]?.count ? Number(countList[0].count) : 0
 }
 
+export async function computeDocumentLogsWithMetadataCountBySource(
+  {
+    document,
+    projectId,
+    workspaceId,
+    filterOptions,
+  }: {
+    document?: DocumentVersion
+    projectId?: number
+    workspaceId?: number
+    filterOptions?: DocumentLogFilterOptions
+  },
+  db = database,
+) {
+  const conditions = [
+    document ? eq(documentLogs.documentUuid, document.documentUuid) : undefined,
+    projectId ? eq(commits.projectId, projectId) : undefined,
+    workspaceId ? eq(documentLogs.workspaceId, workspaceId) : undefined,
+    filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
+  ].filter(Boolean)
+  const countList = await db
+    .select({
+      source: documentLogs.source,
+      count: sql`count(*)`.mapWith(Number).as('count'),
+    })
+    .from(documentLogs)
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
+    .where(and(...conditions))
+    .groupBy(documentLogs.source)
+
+  return countList
+}
+
 export async function computeDocumentLogsLimited(
   {
     document,
