@@ -76,7 +76,7 @@ export function RunsPage({
 
   const isActiveLoading = isActiveCountLoading
 
-  const { data: completedRuns, mutate: mutateCompletedRuns } = useCompletedRuns(
+  const { data: completedRuns } = useCompletedRuns(
     { project, search: debouncedCompletedSearch, realtime },
     { fallbackData: serverCompleted.runs, keepPreviousData: true },
   )
@@ -138,6 +138,8 @@ export function RunsPage({
         }
         secondPane={
           selectedRun ? (
+            // TODO(tracing): we removed a call to mutate of useCompletedRuns
+            // store :point_up: after annotating
             <RunPanel
               key={selectedRun.uuid}
               run={selectedRun}
@@ -145,7 +147,6 @@ export function RunsPage({
               isAttachingRun={isAttachingRun}
               stopRun={stopRun}
               isStoppingRun={isStoppingRun}
-              mutateCompletedRuns={mutateCompletedRuns}
             />
           ) : (
             <div className='w-full h-full flex flex-col gap-6 p-6 overflow-hidden relative'>

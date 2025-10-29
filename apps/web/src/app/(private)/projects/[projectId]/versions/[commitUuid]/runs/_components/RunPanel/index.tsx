@@ -9,19 +9,15 @@ import DebugToggle from '$/components/DebugToggle'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useOnce } from '$/hooks/useMount'
 import { ROUTES } from '$/services/routes'
-import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import useProviderLogs, { useProviderLog } from '$/stores/providerLogs'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
-import { useCompletedRuns } from '$/stores/runs/completedRuns'
 import {
   ActiveRun,
   CompletedRun,
   EvaluationResultV2,
   Run,
-  RunAnnotation,
+  SpanType,
 } from '@latitude-data/constants'
-import { buildConversation } from '@latitude-data/core/helpers'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -33,6 +29,11 @@ import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap
 import Link from 'next/link'
 import { useCallback, useMemo } from 'react'
 import { RunPanelStats } from './Stats'
+import { useConversation } from '$/stores/conversations'
+import { useTrace } from '$/stores/traces'
+import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
+import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 
 export function RunPanel({
   run,
@@ -40,14 +41,12 @@ export function RunPanel({
   isAttachingRun,
   stopRun,
   isStoppingRun,
-  mutateCompletedRuns,
 }: {
   run: Run
   attachRun: ReturnType<typeof useActiveRuns>['attachRun']
   isAttachingRun: ReturnType<typeof useActiveRuns>['isAttachingRun']
   stopRun: ReturnType<typeof useActiveRuns>['stopRun']
   isStoppingRun: ReturnType<typeof useActiveRuns>['isStoppingRun']
-  mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
 }) {
   const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
     key: AppLocalStorage.chatDebugMode,
@@ -58,7 +57,6 @@ export function RunPanel({
     return (
       <CompletedRunPanel
         run={run as CompletedRun}
-        mutateCompletedRuns={mutateCompletedRuns}
         debugMode={debugMode}
         setDebugMode={setDebugMode}
       />
@@ -80,31 +78,25 @@ export function RunPanel({
 
 function CompletedRunPanel({
   run,
-  mutateCompletedRuns,
   debugMode,
   setDebugMode,
 }: {
   run: CompletedRun
-  mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
   debugMode: boolean
   setDebugMode: (debugMode: boolean) => void
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
 
-  const {
-    data: evaluations,
-    isLoading: isLoadingEvaluations,
-    annotateEvaluation,
-    isAnnotatingEvaluation,
-  } = useEvaluationsV2({
-    project: project,
-    commit: commit,
-    document: {
-      commitId: commit.id,
-      documentUuid: run.log.documentUuid,
-    },
-  })
+  const { data: evaluations, isLoading: isLoadingEvaluations } =
+    useEvaluationsV2({
+      project: project,
+      commit: commit,
+      document: {
+        commitId: commit.id,
+        documentUuid: run.log.documentUuid,
+      },
+    })
   const manualEvaluations = useMemo(
     () =>
       evaluations.filter(
@@ -113,65 +105,45 @@ function CompletedRunPanel({
     [evaluations],
   )
 
-  const {
-    data: results,
-    isLoading: isLoadingResults,
-    mutate: mutateResults,
-  } = useEvaluationResultsV2ByDocumentLogs({
-    project: project,
-    commit: commit,
-    document: {
-      commitId: commit.id,
-      documentUuid: run.log.documentUuid,
-    },
-    documentLogUuids: [run.log.uuid],
+  const { data: traces, isLoading: isLoadingTraces } = useConversation({
+    conversationId: run.log.uuid,
   })
-  const manualResults = useMemo(() => {
-    if (!results[run.log.uuid]) return {}
-    return results[run.log.uuid].reduce<Record<string, EvaluationResultV2>>(
-      (acc, r) => {
-        const e = manualEvaluations.find((e) => r.evaluation.uuid === e.uuid)
-        if (e) acc[r.evaluation.uuid] = r.result
-        return acc
+  const { data: trace, isLoading: isLoadingTrace } = useTrace({
+    traceId: traces[0],
+  })
+  const span = findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt)
+  const completionSpan = findFirstSpanOfType(
+    trace?.children ?? [],
+    SpanType.Completion,
+  )
+  const { data: results, isLoading: isLoadingResults } =
+    useEvaluationResultsV2BySpans({
+      project: project,
+      commit: commit,
+      document: {
+        commitId: commit.id,
+        documentUuid: run.log.documentUuid,
       },
-      {},
-    )
-  }, [results, run.log.uuid, manualEvaluations])
-
-  const syncAnnotations: typeof mutateResults = useCallback(
-    async (data, opts) => {
-      const mutated = (await mutateResults(data, opts)) as typeof results
-
-      const annotations = (mutated?.[run.log.uuid]?.filter(({ evaluation }) =>
-        manualEvaluations.find((e) => evaluation.uuid === e.uuid),
-      ) ?? []) as RunAnnotation[]
-
-      mutateCompletedRuns(
-        (prev) =>
-          prev?.map((r) => {
-            if (r.uuid !== run.uuid) return r
-            return { ...r, annotations }
-          }) ?? [],
-        { revalidate: false },
-      )
-
-      return mutated
-    },
-    [mutateResults, mutateCompletedRuns, run, manualEvaluations],
-  )
-
-  const { data: providerLogs, isLoading: isLoadingProviderLogs } =
-    useProviderLogs({ documentLogUuid: run.log.uuid })
-  // Note: this is needed to hydrate the provider log
-  const { data: responseLog, isLoading: isLoadingResponseLog } = useProviderLog(
-    providerLogs?.at(-1)?.id,
-  )
+      spanId: span?.id,
+      traceId: span?.traceId,
+    })
+  const manualResults = useMemo(() => {
+    return results.reduce<Record<string, EvaluationResultV2>>((acc, r) => {
+      const e = manualEvaluations.find((e) => r.evaluation.uuid === e.uuid)
+      if (e) acc[r.evaluation.uuid] = r.result
+      return acc
+    }, {})
+  }, [results, manualEvaluations])
 
   const conversation = useMemo(() => {
-    if (!responseLog) return []
-    return buildConversation(responseLog)
-  }, [responseLog])
-  const toolContentMap = useToolContentMap(conversation)
+    if (!completionSpan) return []
+
+    return [
+      ...(completionSpan?.metadata?.input ?? []),
+      ...(completionSpan?.metadata?.output ?? []),
+    ]
+  }, [completionSpan])
+  const toolContentMap = useToolContentMap(conversation as unknown as Message[])
   const sourceMapAvailable = useMemo(() => {
     return conversation.some((message) => {
       if (typeof message.content !== 'object') return false
@@ -182,8 +154,8 @@ function CompletedRunPanel({
   const isLoading =
     isLoadingEvaluations ||
     isLoadingResults ||
-    isLoadingProviderLogs ||
-    isLoadingResponseLog
+    isLoadingTraces ||
+    isLoadingTrace
 
   if (isLoading) {
     return (
@@ -244,7 +216,7 @@ function CompletedRunPanel({
               )}
             </div>
             <MessageList
-              messages={conversation}
+              messages={conversation as unknown as Message[]}
               parameters={Object.keys(run.log.parameters)}
               debugMode={debugMode}
               toolContentMap={toolContentMap}
@@ -260,18 +232,13 @@ function CompletedRunPanel({
             <RunErrorMessage error={run.log.error} />
           ) : (
             manualEvaluations.length > 0 &&
-            !!responseLog &&
+            !!span &&
             manualEvaluations.map((evaluation) => (
               <AnnotationForm
                 key={evaluation.uuid}
                 evaluation={evaluation}
                 result={manualResults[evaluation.uuid]}
-                mutateEvaluationResults={syncAnnotations}
-                providerLog={responseLog}
-                documentLog={run.log}
-                commit={run.log.commit}
-                annotateEvaluation={annotateEvaluation}
-                isAnnotatingEvaluation={isAnnotatingEvaluation}
+                span={span}
               />
             ))
           )}

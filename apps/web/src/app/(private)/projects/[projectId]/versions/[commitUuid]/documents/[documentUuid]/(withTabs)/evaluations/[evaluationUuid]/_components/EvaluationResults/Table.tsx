@@ -103,8 +103,8 @@ export function EvaluationResultsTable<
               commit={selectedResult.commit}
               dataset={selectedResult.dataset}
               evaluatedDatasetRow={selectedResult.evaluatedRow}
-              evaluatedTraceId={selectedResult.evaluatedTraceId}
-              evaluatedSpanId={selectedResult.evaluatedSpanId}
+              evaluatedTraceId={selectedResult.evaluatedTraceId!}
+              evaluatedSpanId={selectedResult.evaluatedSpanId!}
               panelRef={panelRef}
               tableRef={tabelRef}
             />
