@@ -15,7 +15,11 @@ export const integrationLegacyWebhookRoute = createRoute({
     body: {
       content: {
         [http.MediaTypes.JSON]: {
-          schema: z.any(),
+          schema: z.any().openapi({
+            description: 'Webhook payload (any JSON-serializable value)',
+            type: 'object',
+            additionalProperties: true,
+          }),
         },
       },
     },
@@ -38,7 +42,11 @@ export const integrationWebhookRoute = createRoute({
     body: {
       content: {
         [http.MediaTypes.JSON]: {
-          schema: z.any(),
+          schema: z.any().openapi({
+            description: 'Webhook payload (any JSON-serializable value)',
+            type: 'object',
+            additionalProperties: true,
+          }),
         },
       },
     },

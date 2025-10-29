@@ -1,8 +1,9 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
+import { messageSchema } from '$/openApi/schemas'
 import { ROUTES } from '$/routes'
 import { createRoute, z } from '@hono/zod-openapi'
-import { LogSources, messageSchema } from '@latitude-data/core/constants'
+import { LogSources } from '@latitude-data/core/constants'
 
 const documentLogSchema = z.object({
   id: z.number(),
@@ -10,7 +11,11 @@ const documentLogSchema = z.object({
   commitId: z.number(),
   resolvedContent: z.string(),
   contentHash: z.string(),
-  parameters: z.record(z.string(), z.any()),
+  parameters: z.record(z.string(), z.any()).openapi({
+    type: 'object',
+    additionalProperties: true,
+    description: 'Document parameters as key-value pairs',
+  }),
   customIdentifier: z.string().optional(),
   duration: z.number().optional(),
   source: z.enum(LogSources),

@@ -14,7 +14,11 @@ export const documentPresenterSchema = z.object({
   path: z.string(),
   content: z.string(),
   contentHash: z.string().optional(),
-  config: z.record(z.string(), z.any()),
+  config: z.record(z.string(), z.any()).openapi({
+    type: 'object',
+    additionalProperties: true,
+    description: 'Document configuration as key-value pairs',
+  }),
   parameters: z.record(z.string(), z.object({ type: z.enum(ParameterType) })),
   provider: z.enum(Providers).optional(),
 })
