@@ -28,6 +28,7 @@ export const API_ROUTES = {
       attach: '/api/v3/conversations/:conversationUuid/attach',
       annotate:
         '/api/v3/conversations/:conversationUuid/evaluations/:evaluationUuid/annotate',
+      get: '/api/v3/conversations/:conversationUuid',
     },
     traces: {
       ingest: '/api/v3/traces',

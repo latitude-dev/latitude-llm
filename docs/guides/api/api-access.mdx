@@ -34,15 +34,12 @@ The API enforces rate limits based on your API key to ensure fair usage and prev
 Rate limits are enforced based on your subscription plan. The following limits apply:
 
 - **Hobby Plan:**
-
   - 10 requests per second
 
 - **Team Plan:**
-
   - 166 requests per second (10000 requests per minute)
 
 - **Enterprise Plan:**
-
   - 500 requests per second (30000 requests per minute)
 
 Contact sales to request a custom rate limit in the enterprise plan.
@@ -276,7 +273,57 @@ The response is a stream of Server-Sent Events (SSE) or a single JSON response c
 
 Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
 
-#### 5. Stop a Conversation
+#### 5. Get a Conversation
+
+Retrieve a conversation by its UUID. This endpoint returns the complete conversation history including all messages.
+
+**Endpoint:** `GET /conversations/{conversationUuid}`
+
+**Path Parameters:**
+
+- `conversationUuid`: UUID of the conversation (required)
+
+**Response:**
+
+The response contains the conversation UUID and the complete conversation history as an array of messages.
+
+**Response Body:**
+
+```json
+{
+  "uuid": "conversation-uuid",
+  "conversation": [
+    {
+      "role": "user" | "system" | "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "message content"
+        }
+      ]
+    }
+  ]
+}
+```
+
+<Note>
+  Message follows the [PromptL format](/promptl/getting-started/introduction).
+</Note>
+
+**Error Handling**
+
+If the conversation is not found, the API returns a 404 status code with an error message:
+
+```json
+{
+  "name": "NotFoundError",
+  "message": "Conversation not found",
+  "errorCode": "NotFoundError",
+  "details": {}
+}
+```
+
+#### 6. Stop a Conversation
 
 Stop an active conversation that is currently running.
 
@@ -294,7 +341,7 @@ No request body is required for this endpoint.
 
 This endpoint returns a 200 status code when the conversation is successfully stopped.
 
-#### 6. Attach to a Conversation
+#### 7. Attach to a Conversation
 
 Attach to an active conversation to receive its ongoing output.
 
@@ -360,7 +407,7 @@ The API uses standard HTTP status codes. In case of an error, the response body 
 }
 ```
 
-#### 7. Annotate a Log
+#### 8. Annotate a Log
 
 Add an annotation (evaluation score) to a log.
 
@@ -399,7 +446,7 @@ Add an annotation (evaluation score) to a log.
 }
 ```
 
-#### 8. Create Log Entry
+#### 9. Create Log Entry
 
 Create a log entry for a document.
 
