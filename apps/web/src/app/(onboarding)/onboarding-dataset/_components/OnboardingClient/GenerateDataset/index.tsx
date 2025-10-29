@@ -27,6 +27,8 @@ export function GenerateDatasetBody({
   const { commit } = useCurrentCommit()
   const { value, updateDocumentContent } = useDocumentValue()
   const { document } = useCurrentDocument()
+  const { metadata } = useMetadata()
+  const parameters = Array.from(metadata?.parameters ?? [])
 
   const onError = useCallback((error: Error) => {
     toast({
@@ -42,9 +44,6 @@ export function GenerateDatasetBody({
     document,
     documents: [document],
   })
-
-  const { metadata } = useMetadata()
-  const parameters = Array.from(metadata?.parameters ?? [])
 
   const moveNextStep = useCallback(() => {
     setCurrentOnboardingStep(DatasetOnboardingStepKey.RunExperiment)
@@ -83,7 +82,7 @@ export function GenerateDatasetBody({
             </div>
             <div className='absolute bottom-[-4.5rem] w-full p-4 bg-background'>
               <TableSkeleton rows={6} cols={parameters} maxHeight={320} />
-              <div className='pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background via-background to-transparent' />
+              <div className='pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background/ via-background to-transparent' />
             </div>
           </Suspense>
         </div>

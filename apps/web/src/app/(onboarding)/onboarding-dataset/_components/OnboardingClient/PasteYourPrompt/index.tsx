@@ -15,6 +15,7 @@ import { useMetadata } from '$/hooks/useMetadata'
 import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import useDatasets from '$/stores/datasets'
 
 const SAMPLE_PROMPT = `
 ---
@@ -47,15 +48,14 @@ Return only one of the categories.
 
 export function PasteYourPromptBody({
   setCurrentOnboardingStep,
-  runGenerateAction,
 }: {
   setCurrentOnboardingStep: (step: DatasetOnboardingStepKey) => void
-  runGenerateAction: (input: any) => Promise<any>
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { value, updateDocumentContent } = useDocumentValue()
   const { document } = useCurrentDocument()
+  const { runGenerateAction } = useDatasets()
 
   const onError = useCallback((error: Error) => {
     toast({

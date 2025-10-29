@@ -150,6 +150,9 @@ export default function useDatasets(
         variant: 'destructive',
       })
     },
+    onSuccess: ({ data: dataset }) => {
+      mutate([...data, dataset])
+    },
   })
 
   return {
