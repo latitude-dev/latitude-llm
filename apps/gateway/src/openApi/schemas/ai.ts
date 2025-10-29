@@ -32,7 +32,13 @@ const imageContentSchema = z.object({
     .string()
     .or(z.instanceof(Uint8Array))
     .or(z.instanceof(ArrayBuffer))
-    .or(z.instanceof(URL)),
+    .or(z.instanceof(URL))
+    .openapi({
+      type: 'string',
+      description:
+        'Image data as string (URL, base64), Uint8Array, ArrayBuffer, or URL object',
+      format: 'binary',
+    }),
   mimeType: z.string().optional(),
 })
 
@@ -42,7 +48,13 @@ const fileContentSchema = z.object({
     .string()
     .or(z.instanceof(Uint8Array))
     .or(z.instanceof(ArrayBuffer))
-    .or(z.instanceof(URL)),
+    .or(z.instanceof(URL))
+    .openapi({
+      type: 'string',
+      description:
+        'File data as string (URL, base64), Uint8Array, ArrayBuffer, or URL object',
+      format: 'binary',
+    }),
   mimeType: z.string(),
 })
 
@@ -61,7 +73,11 @@ const toolResultContentSchema = z.object({
   type: z.literal('tool-result'),
   toolCallId: z.string(),
   toolName: z.string(),
-  result: z.unknown(),
+  result: z.unknown().openapi({
+    type: 'object',
+    additionalProperties: true,
+    description: 'Tool result as any JSON-serializable value',
+  }),
   isError: z.boolean().optional(),
 })
 
