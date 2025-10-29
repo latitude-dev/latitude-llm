@@ -1,7 +1,6 @@
 import { faker } from '@faker-js/faker'
 
 import { createUser as createUserFn } from '../../services/users/createUser'
-import { type User } from '../../schema/models/types/User'
 
 function makeRandomUserData() {
   return {
@@ -9,7 +8,14 @@ function makeRandomUserData() {
     email: faker.internet.email(),
   }
 }
-export async function createUser(userData: Partial<User> = {}) {
+
+export type ICreateUser = {
+  name?: string
+  email?: string
+  createdAt?: Date
+}
+
+export async function createUser(userData: Partial<ICreateUser> = {}) {
   const randomUserData = makeRandomUserData()
   const data = { ...randomUserData, ...userData }
   const result = await createUserFn(data)

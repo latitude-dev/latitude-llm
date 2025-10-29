@@ -13,9 +13,9 @@ export async function createUser(
     title,
   }: {
     email: string
-    name: string | null
-    confirmedAt?: Date | null
-    title?: UserTitle | null
+    name: string
+    confirmedAt?: Date
+    title?: UserTitle
   },
   transaction = new Transaction(),
 ) {
