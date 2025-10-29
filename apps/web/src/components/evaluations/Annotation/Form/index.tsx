@@ -7,25 +7,11 @@ import { useAnnotationForm } from '../useAnnotationForm'
 export function AnnotationForm<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
->({
-  isAnnotatingEvaluation,
-  annotateEvaluation,
-  mutateEvaluationResults,
-  evaluation,
-  providerLog,
-  documentLog,
-  commit,
-  result,
-}: FormProps<T, M>) {
+>({ evaluation, span, result }: FormProps<T, M>) {
   const spec = EVALUATION_SPECIFICATIONS[evaluation.type]
   const { onSubmit, isSubmitting } = useAnnotationForm<T, M>({
-    isAnnotatingEvaluation,
-    annotateEvaluation,
-    mutateEvaluationResults,
     evaluation,
-    providerLog,
-    documentLog,
-    commit,
+    span,
   })
 
   if (!spec.AnnotationForm) return null

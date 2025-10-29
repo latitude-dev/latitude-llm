@@ -527,6 +527,76 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     )
   }
 
+  async listBySpanTrace({
+    projectId,
+    documentUuid,
+    spanId,
+    traceId,
+  }: {
+    projectId?: number
+    documentUuid: string
+    spanId: string
+    traceId: string
+  }) {
+    const results = await this.db
+      .select({
+        ...tt,
+        commitUuid: commits.uuid,
+      })
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .where(
+        and(
+          this.scopeFilter,
+          isNull(commits.deletedAt),
+          eq(evaluationResultsV2.evaluatedSpanId, spanId),
+          eq(evaluationResultsV2.evaluatedTraceId, traceId),
+        ),
+      )
+      .orderBy(
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+      )
+
+    const evaluationsRepository = new EvaluationsV2Repository(
+      this.workspaceId,
+      this.db,
+    )
+    const commitUuids = [...new Set(results.map((r) => r.commitUuid))]
+    const evaluationsByCommit = Object.fromEntries(
+      await Promise.all(
+        commitUuids.map(
+          async (commitUuid) =>
+            [
+              commitUuid,
+              await evaluationsRepository
+                .listAtCommitByDocument({
+                  projectId: projectId,
+                  commitUuid: commitUuid,
+                  documentUuid: documentUuid,
+                })
+                .then((r) => r.unwrap()),
+            ] as const,
+        ),
+      ),
+    )
+
+    const resultsWithEvaluations: ResultWithEvaluationV2[] = []
+    for (const result of results) {
+      const evaluation = evaluationsByCommit[result.commitUuid]!.find(
+        (e) => e.uuid === result.evaluationUuid,
+      )
+      if (!evaluation) continue
+
+      resultsWithEvaluations.push({
+        result,
+        evaluation,
+      } as ResultWithEvaluationV2)
+    }
+
+    return Result.ok<ResultWithEvaluationV2[]>(resultsWithEvaluations)
+  }
+
   async countSinceDate(since: Date) {
     const result = await this.db
       .select({ count: count() })

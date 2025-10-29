@@ -1,7 +1,7 @@
 'use client'
 
 import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
-import { DocumentLogParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/logs/_components/DocumentLogs/DocumentLogInfo/Metadata'
+import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/logs/_components/DocumentLogs/DocumentLogInfo/Metadata'
 import { MetadataInfoTabs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataInfoTabs'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
@@ -15,13 +15,14 @@ import { ROUTES } from '$/services/routes'
 import useDatasetRows from '$/stores/datasetRows'
 import useDatasetRowCount from '$/stores/datasetRows/count'
 import useDatasetRowPosition from '$/stores/datasetRows/position'
-import useDocumentLog from '$/stores/documentLogWithMetadata'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
-  DocumentLog,
   EvaluationMetric,
   EvaluationResultSuccessValue,
   EvaluationType,
+  PromptSpanMetadata,
+  SpanType,
+  SpanWithDetails,
 } from '@latitude-data/core/constants'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
@@ -139,10 +140,15 @@ function ResultPanelMetadata<
   commit,
   dataset,
   evaluatedDatasetRow,
-  evaluatedDocumentLog,
+  evaluatedTraceId,
+  evaluatedSpanId,
   ...rest
 }: ResultPanelProps<T, M>) {
   const [openDatasetModal, setOpenDatasetModal] = useState(false)
+  const { data: span } = useSpan({
+    traceId: evaluatedTraceId,
+    spanId: evaluatedSpanId,
+  })
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
@@ -262,18 +268,20 @@ function ResultPanelMetadata<
           />
         </>
       )}
-      {!!typeSpecification.ResultPanelMetadata && (
+      {!!typeSpecification.ResultPanelMetadata && span && (
         <typeSpecification.ResultPanelMetadata
           metric={evaluation.metric}
           evaluation={evaluation}
           result={result}
           commit={commit}
-          evaluatedDocumentLog={evaluatedDocumentLog}
+          evaluatedSpanId={span.id}
+          evaluatedTraceId={span.traceId}
           {...rest}
         />
       )}
-      {Object.keys(evaluatedDocumentLog.parameters).length > 0 && (
-        <DocumentLogParameters documentLog={evaluatedDocumentLog} />
+      {Object.keys((span?.metadata as PromptSpanMetadata)?.parameters ?? {})
+        .length > 0 && (
+        <SpanParameters span={span as SpanWithDetails<SpanType.Prompt>} />
       )}
       {!!dataset && !!evaluatedDatasetRow && (
         <EvaluatedDatasetRowModal
@@ -291,21 +299,24 @@ function EvaluatedDocumentLogLink({
   project,
   commit,
   document,
-  documentLog,
+  spanId,
+  traceId,
 }: {
   project: IProjectContextType['project']
   commit: Commit
   document: DocumentVersion
-  documentLog: DocumentLog
+  spanId: string
+  traceId: string
 }) {
   const query = new URLSearchParams()
-  query.set('logUuid', documentLog.uuid)
+  query.set('spanId', spanId)
+  query.set('traceId', traceId)
 
   return (
     ROUTES.projects
       .detail({ id: project.id })
       .commits.detail({ uuid: commit.uuid })
-      .documents.detail({ uuid: document.documentUuid }).logs.root +
+      .documents.detail({ uuid: document.documentUuid }).spans.root +
     `?${query.toString()}`
   )
 }
@@ -388,8 +399,8 @@ export function ResultPanel<
                   evaluation={evaluation}
                   result={result}
                   commit={commit}
-                  evaluatedProviderLog={evaluatedProviderLog}
-                  evaluatedDocumentLog={evaluatedDocumentLog}
+                  evaluatedTraceId={evaluatedTraceId}
+                  evaluatedSpanId={evaluatedSpanId}
                   panelRef={panelRef}
                   tableRef={tableRef}
                   selectedTab={selectedTab}
@@ -402,8 +413,8 @@ export function ResultPanel<
                   evaluation={evaluation}
                   result={result}
                   commit={commit}
-                  evaluatedProviderLog={evaluatedProviderLog}
-                  evaluatedDocumentLog={evaluatedDocumentLog}
+                  evaluatedTraceId={evaluatedTraceId}
+                  evaluatedSpanId={evaluatedSpanId}
                   panelRef={panelRef}
                   tableRef={tableRef}
                   selectedTab={selectedTab}
@@ -416,7 +427,8 @@ export function ResultPanel<
                     project: project,
                     commit: commit,
                     document: document,
-                    documentLog: evaluatedDocumentLog,
+                    spanId: evaluatedSpanId,
+                    traceId: evaluatedTraceId,
                   })}
                   target='_blank'
                 >

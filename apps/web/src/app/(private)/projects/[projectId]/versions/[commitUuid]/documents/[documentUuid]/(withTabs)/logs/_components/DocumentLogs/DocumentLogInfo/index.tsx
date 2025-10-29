@@ -5,7 +5,10 @@ import { MetadataItem } from '$/components/MetadataItem'
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import { useProviderLog } from '$/stores/providerLogs'
 import {
+  DocumentLog,
   DocumentLogWithMetadataAndError,
+  EvaluationType,
+  SpanType,
   SpanWithDetails,
 } from '@latitude-data/core/constants'
 import { buildConversation } from '@latitude-data/core/helpers'
@@ -29,6 +32,15 @@ import {
 } from '../../../../../_components/MetadataInfoTabs'
 import { DocumentLogEvaluations } from './Evaluations'
 import { DocumentLogMetadata } from './Metadata'
+import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { useConversation } from '$/stores/conversations'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useTrace } from '$/stores/traces'
+import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
+import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
 
 function DocumentLogMetadataLoading() {
   return (
@@ -52,7 +64,6 @@ export function DocumentLogInfo({
   className,
   stickyRef,
   sidebarWrapperRef,
-  children,
   bottomActions,
   offset,
   span,
@@ -66,7 +77,6 @@ export function DocumentLogInfo({
   className?: string
   stickyRef?: RefObject<HTMLTableElement | null>
   sidebarWrapperRef?: RefObject<HTMLDivElement | null>
-  children?: ReactNode
   bottomActions?: ReactNode
   offset?: StickyOffset
   span?: SpanWithDetails
@@ -137,7 +147,7 @@ export function DocumentLogInfo({
                     documentLog={documentLog}
                   />
                 )}
-                {children}
+                <AnnotationForms documentLog={documentLog} />
               </>
             ) : (
               <Alert
@@ -150,5 +160,43 @@ export function DocumentLogInfo({
         )
       }
     </MetadataInfoTabs>
+  )
+}
+
+function AnnotationForms({ documentLog }: { documentLog: DocumentLog }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+  const { data: evaluations } = useEvaluationsV2({ project, commit, document })
+  const { data: traces } = useConversation({ conversationId: documentLog.uuid })
+  const { data: trace } = useTrace({ traceId: traces[0] })
+  const span = findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt)
+  const { data: evaluationResultsBySpan } = useEvaluationResultsV2BySpans({
+    project,
+    commit,
+    document,
+    spanId: span?.id,
+    traceId: span?.traceId,
+  })
+  const humanEvals = evaluations.filter((e) => e.type === EvaluationType.Human)
+
+  return (
+    humanEvals.length > 0 &&
+    !!span && (
+      <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
+        {humanEvals.map((evaluation) => (
+          <AnnotationForm
+            key={evaluation.uuid}
+            evaluation={evaluation}
+            span={span}
+            result={
+              evaluationResultsBySpan.find(
+                (result) => result.evaluation.uuid === evaluation.uuid,
+              )?.result
+            }
+          />
+        ))}
+      </div>
+    )
   )
 }

@@ -8,11 +8,9 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/constants'
-import { DocumentLog } from '@latitude-data/core/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
-import { ProviderLogDto } from '@latitude-data/core/schema/types'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
 import { TextColor } from '@latitude-data/web-ui/tokens'

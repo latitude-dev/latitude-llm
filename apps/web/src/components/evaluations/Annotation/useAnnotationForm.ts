@@ -1,29 +1,24 @@
 import { useCallback, useMemo, useTransition } from 'react'
-import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationType,
   EvaluationMetric,
   EvaluationResultMetadata,
-  DocumentLog,
   EvaluationV2,
+  SpanWithDetails,
+  SpanType,
 } from '@latitude-data/constants'
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { ProviderLogDto } from '@latitude-data/core/schema/types'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 
 type UseAnnontationFormProps<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
 > = {
   evaluation: EvaluationV2<T, M>
-  providerLog: ProviderLogDto
-  documentLog: DocumentLog
-  commit: Commit
-  isAnnotatingEvaluation: boolean
-  annotateEvaluation: ReturnType<typeof useEvaluationsV2>['annotateEvaluation']
-  mutateEvaluationResults: ReturnType<
-    typeof useEvaluationResultsV2ByDocumentLogs
-  >['mutate']
+  span: SpanWithDetails<SpanType.Prompt>
 }
 
 export type OnSubmitProps<
@@ -37,53 +32,41 @@ export type OnSubmitProps<
 export function useAnnotationForm<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
->({
-  isAnnotatingEvaluation,
-  annotateEvaluation,
-  evaluation,
-  providerLog,
-  documentLog,
-  mutateEvaluationResults,
-}: UseAnnontationFormProps<T, M>) {
+>({ evaluation, span }: UseAnnontationFormProps<T, M>) {
   const [isSubmitting, startTransition] = useTransition()
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+  const { annotateEvaluation, isAnnotatingEvaluation } = useEvaluationsV2({
+    project,
+    commit,
+    document,
+  })
+  const { mutate } = useEvaluationResultsV2BySpans({
+    project,
+    commit,
+    document,
+    spanId: span.id,
+    traceId: span.traceId,
+  })
   const onSubmit = useCallback(
     async ({ score, resultMetadata }: OnSubmitProps<T, M>) => {
       if (isAnnotatingEvaluation) return
 
       startTransition(async () => {
-        const [annotationResult, errors] = await annotateEvaluation({
+        const [_, errors] = await annotateEvaluation({
           evaluationUuid: evaluation.uuid,
-          providerLogUuid: providerLog.uuid,
+          spanId: span.id,
+          traceId: span.traceId,
           resultScore: score,
           resultMetadata,
         })
         if (errors) return
 
-        const { result } = annotationResult
-        mutateEvaluationResults((prev) => {
-          const prevResults = prev?.[documentLog.uuid] || []
-          const existingResult = prevResults.find(
-            (r) => r.result.uuid === result.uuid,
-          )
-          return {
-            ...(prev ?? {}),
-            [documentLog.uuid]: existingResult
-              ? prevResults.map((r) =>
-                  r.result.uuid === result.uuid ? { evaluation, result } : r,
-                )
-              : [{ evaluation, result }, ...prevResults],
-          }
-        })
+        mutate()
       })
     },
-    [
-      isAnnotatingEvaluation,
-      annotateEvaluation,
-      evaluation,
-      providerLog,
-      documentLog,
-      mutateEvaluationResults,
-    ],
+    [isAnnotatingEvaluation, annotateEvaluation, evaluation, span, mutate],
   )
 
   return useMemo(() => ({ isSubmitting, onSubmit }), [isSubmitting, onSubmit])
