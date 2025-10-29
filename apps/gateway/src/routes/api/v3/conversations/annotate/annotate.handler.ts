@@ -1,42 +1,56 @@
 import { AppRouteHandler } from '$/openApi/types'
 import {
   CommitsRepository,
-  DocumentLogsRepository,
+  DocumentVersionsRepository,
   EvaluationsV2Repository,
+  SpanMetadatasRepository,
+  SpansRepository,
 } from '@latitude-data/core/repositories'
 import { AnnotateRoute } from './annotate.route'
 import { annotateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/annotate'
-import serializeProviderLog from '@latitude-data/core/services/providerLogs/serialize'
-import { findDocumentFromLog } from '@latitude-data/core/data-access/documentLogs'
-import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access/providerLogs'
 import { findProjectFromDocument } from '@latitude-data/core/data-access/projects'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { serializeEvaluationResultV2 } from './serializeEvaluationResultV2'
-import { HEAD_COMMIT } from '@latitude-data/core/constants'
+import {
+  HEAD_COMMIT,
+  PromptSpanMetadata,
+  SpanType,
+  SpanWithDetails,
+} from '@latitude-data/core/constants'
 
 // @ts-expect-error: broken types
 export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
-  const { score, metadata, versionUuid = HEAD_COMMIT } = c.req.valid('json')
+  const {
+    score,
+    metadata: resultMetadata,
+    versionUuid = HEAD_COMMIT,
+  } = c.req.valid('json')
   const { conversationUuid, evaluationUuid } = c.req.valid('param')
   const workspace = c.get('workspace')
   const evaluationsRepo = new EvaluationsV2Repository(workspace.id)
-  const providerLogsRepo = new DocumentLogsRepository(workspace.id)
-  const documentLog = await providerLogsRepo
-    .findByUuid(conversationUuid)
-    .then((r) => r.unwrap())
-  if (!documentLog) {
-    throw new NotFoundError('Could not find log with uuid ${conversationUuid}')
+  const spansRepo = new SpansRepository(workspace.id)
+  const spanMetadataRepo = new SpanMetadatasRepository(workspace.id)
+  const span = await spansRepo.findByDocumentLogUuid(conversationUuid)
+  if (!span) {
+    throw new NotFoundError('Could not find span with uuid ${conversationUuid}')
   }
-  const providerLog = await findLastProviderLogFromDocumentLogUuid(
-    documentLog.uuid,
-  )
-  if (!providerLog) {
-    throw new NotFoundError(
-      `Could not find provider log for log ${documentLog.uuid}`,
-    )
+  const metadata = (await spanMetadataRepo
+    .get({
+      traceId: span.traceId,
+      spanId: span.id,
+    })
+    .then((r) => r.value)) as PromptSpanMetadata
+  if (!metadata) {
+    throw new NotFoundError('Could not find metadata for this span')
   }
 
-  const document = await findDocumentFromLog(documentLog)
+  const documentsRepo = new DocumentVersionsRepository(workspace.id)
+  const document = await documentsRepo
+    .getDocumentAtCommit({
+      commitUuid: metadata.versionUuid,
+      documentUuid: metadata.promptUuid,
+    })
+    .then((r) => r.value)
   if (!document) {
     throw new NotFoundError('Could not find prompt for this log')
   }
@@ -61,7 +75,7 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
 
   const evaluation = await evaluationsRepo
     .getAtCommitByDocument({
-      documentUuid: documentLog.documentUuid,
+      documentUuid: document.documentUuid,
       commitUuid: versionUuid,
       evaluationUuid,
       projectId: project.id,
@@ -72,10 +86,10 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
   }
 
   const { result: annotation } = await annotateEvaluationV2({
-    providerLog: serializeProviderLog(providerLog),
+    span: { ...span, metadata } as SpanWithDetails<SpanType.Prompt>,
     evaluation,
     resultScore: score,
-    resultMetadata: metadata,
+    resultMetadata: resultMetadata,
     commit,
     workspace: workspace,
   }).then((r) => r.unwrap())

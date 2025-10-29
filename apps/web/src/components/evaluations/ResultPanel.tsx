@@ -42,6 +42,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
+import { useSpan } from '$/stores/spans'
 
 const DataGrid = dynamic(
   () =>
@@ -331,7 +332,8 @@ export function ResultPanel<
   evaluation,
   result,
   commit,
-  evaluatedProviderLog,
+  evaluatedSpanId,
+  evaluatedTraceId,
   panelRef,
   tableRef,
   ...rest
@@ -358,7 +360,7 @@ export function ResultPanel<
   const {
     data: evaluatedDocumentLog,
     isLoading: isLoadingEvaluatedDocumentLog,
-  } = useDocumentLog({ documentLogUuid: evaluatedProviderLog.documentLogUuid })
+  } = useSpan({ traceId: evaluatedTraceId, spanId: evaluatedSpanId })
 
   const isLoading = isLoadingEvaluatedDocumentLog || !evaluatedDocumentLog
 

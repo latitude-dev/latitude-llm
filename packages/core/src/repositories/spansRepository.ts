@@ -102,6 +102,14 @@ export class SpansRepository extends Repository<Span> {
     return Result.ok(estimatedRows)
   }
 
+  async findByDocumentLogUuid(documentLogUuid: string) {
+    return this.db
+      .select()
+      .from(spans)
+      .where(eq(spans.documentLogUuid, documentLogUuid))
+      .then((r) => r[0])
+  }
+
   async findByDocumentAndCommitLimited({
     documentUuid,
     commitUuid,

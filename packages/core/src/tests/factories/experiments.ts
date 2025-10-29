@@ -121,6 +121,8 @@ export async function createExperimentResults({
       evaluation,
       experiment,
       commit,
+      // TODO(tracing): migrate to spans
+      // @ts-expect-error - tracing
       providerLog,
       score,
       normalizedScore: score,

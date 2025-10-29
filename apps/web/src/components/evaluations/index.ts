@@ -70,8 +70,8 @@ export type ResultPanelProps<
   commit: Commit
   dataset?: Dataset
   evaluatedDatasetRow?: DatasetRow
-  evaluatedProviderLog: ProviderLogDto
-  evaluatedDocumentLog: DocumentLog
+  evaluatedSpanId: string
+  evaluatedTraceId: string
   panelRef: React.RefObject<HTMLDivElement | null>
   tableRef: React.RefObject<HTMLTableElement | null>
   selectedTab: string

@@ -8,6 +8,7 @@
   "exclude": [
     "**/*.js",
     "**/*.spec.*",
+    "**/*.test.*",
     "dist",
     "node_modules",
     "src/schema/schema.ts"
