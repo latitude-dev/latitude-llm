@@ -6,11 +6,15 @@ import { NotFoundError } from '../../../lib/errors'
 import {
   CommitsRepository,
   DatasetsRepository,
+  DocumentVersionsRepository,
   EvaluationsV2Repository,
+  ProjectsRepository,
 } from '../../../repositories'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type Dataset } from '../../../schema/models/types/Dataset'
+import { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type Experiment } from '../../../schema/models/types/Experiment'
+import { Project } from '../../../schema/models/types/Project'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { getRowsFromRange } from '../../datasetRows/getRowsFromRange'
 import { assertEvaluationRequirements } from '../assertRequirements'
@@ -70,7 +74,9 @@ export async function getExperimentJobPayload(
   },
   db = database,
 ): PromisedResult<{
+  project: Project
   commit: Commit
+  document: DocumentVersion
   evaluations: EvaluationV2[]
   rows: (ExperimentRow | undefined)[]
 }> {
@@ -80,6 +86,21 @@ export async function getExperimentJobPayload(
   ).getCommitById(experiment.commitId)
   if (commitResult.error) return commitResult
   const commit = commitResult.unwrap()
+
+  const projectResult = await new ProjectsRepository(workspace.id, db).find(
+    commit.projectId,
+  )
+  if (projectResult.error) return projectResult
+  const project = projectResult.unwrap()
+
+  const documentScope = new DocumentVersionsRepository(workspace.id, db)
+  const documentResult = await documentScope.getDocumentAtCommit({
+    projectId: commit.projectId,
+    commitUuid: commit.uuid,
+    documentUuid: experiment.documentUuid,
+  })
+  if (documentResult.error) return documentResult
+  const document = documentResult.unwrap()
 
   const evaluationScope = new EvaluationsV2Repository(workspace.id, db)
   const documentEvaluationsResult =
@@ -125,7 +146,9 @@ export async function getExperimentJobPayload(
     }
 
     return Result.ok({
+      project,
       commit,
+      document,
       evaluations,
       rows: new Array(to - from + 1).fill(undefined),
     })
@@ -145,7 +168,9 @@ export async function getExperimentJobPayload(
   )
 
   return Result.ok({
+    project,
     commit,
+    document,
     evaluations,
     rows,
   })

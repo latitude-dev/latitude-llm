@@ -2,12 +2,12 @@ import { type Experiment } from '../../../schema/models/types/Experiment'
 import { LatitudeError } from '../../../lib/errors'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { experiments } from '../../../schema/models/experiments'
-import { queues } from '../../../jobs/queues'
 import { eq } from 'drizzle-orm'
 import { getExperimentJobPayload } from './getExperimentJobPayload'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'
-import { RunDocumentForExperimentJobData } from '../../../jobs/job-definitions'
+import { enqueueRun } from '../../runs/enqueue'
+import { LogSources } from '@latitude-data/constants'
 
 export async function startExperiment(
   {
@@ -54,18 +54,22 @@ export async function startExperiment(
     return Result.error(updateResult.error as LatitudeError)
   }
 
-  const { experiment, commit, rows } = updateResult.unwrap()
-  const { documentsQueue } = await queues()
+  const { project, commit, document, experiment, rows } = updateResult.unwrap()
 
   for await (const row of rows) {
-    await documentsQueue.add('runDocumentForExperimentJob', {
-      workspaceId: workspace.id,
-      projectId: commit.projectId,
-      experimentId: experiment.id,
-      commitUuid: commit.uuid,
+    await enqueueRun({
+      workspace,
+      project,
+      commit,
+      experiment,
+      document,
       parameters: row?.parameters ?? {},
       datasetRowId: row?.id,
-    } as RunDocumentForExperimentJobData)
+      source: LogSources.Experiment,
+      simulationSettings: {
+        simulateToolResponses: true,
+      },
+    })
   }
 
   return Result.ok(experiment)

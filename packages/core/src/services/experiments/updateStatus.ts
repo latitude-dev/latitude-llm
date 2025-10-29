@@ -1,10 +1,10 @@
-import { type Experiment } from '../../../schema/models/types/Experiment'
-import { LatitudeError } from '../../../lib/errors'
-import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
-import { completeExperiment } from '../../../services/experiments/complete'
-import { WebsocketClient } from '../../../websockets/workers'
-import { ProgressTracker } from '../../utils/progressTracker'
+import { type Experiment } from '../../schema/models/types/Experiment'
+import { LatitudeError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import { PromisedResult } from '../../lib/Transaction'
+import { completeExperiment } from './complete'
+import { WebsocketClient } from '../../websockets/workers'
+import { ProgressTracker } from '../../jobs/utils/progressTracker'
 
 type UpdateExperimentStatusData = {
   workspaceId: number
