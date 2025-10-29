@@ -46,7 +46,8 @@ const ContentText = memo(
       <TextComponent
         color={color}
         whiteSpace='preWrap'
-        wordBreak='breakAll'
+        wordBreak='breakWord'
+        ellipsis
         key={`${index}-group-${groupIndex}`}
       >
         {group.length > 0

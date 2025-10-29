@@ -23,6 +23,7 @@ import {
   EvaluationV2,
   PROJECT_STATS_CACHE_KEY,
   LAST_LATTE_THREAD_CACHE_KEY,
+  RunSourceGroup,
 } from '@latitude-data/core/constants'
 import { DocumentLogsLimitedView } from '@latitude-data/core/schema/models/types/DocumentLog'
 import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
@@ -374,15 +375,21 @@ export const listActiveRunsCached = cache(
     projectId,
     page,
     pageSize,
+    sourceGroup,
   }: {
     projectId: number
     page?: number
     pageSize?: number
+    sourceGroup?: RunSourceGroup
   }) => {
     const { workspace } = await getCurrentUserOrRedirect()
     const repository = new RunsRepository(workspace.id, projectId)
     const runs = await repository
-      .listActive({ page, pageSize })
+      .listActive({
+        page,
+        pageSize,
+        sourceGroup,
+      })
       .then((r) => r.unwrap())
 
     return runs
@@ -394,15 +401,17 @@ export const listCompletedRunsCached = cache(
     projectId,
     page,
     pageSize,
+    sourceGroup,
   }: {
     projectId: number
     page?: number
     pageSize?: number
+    sourceGroup?: RunSourceGroup
   }) => {
     const { workspace } = await getCurrentUserOrRedirect()
     const repository = new RunsRepository(workspace.id, projectId)
     const runs = await repository
-      .listCompleted({ page, pageSize })
+      .listCompleted({ page, pageSize, sourceGroup })
       .then((r) => r.unwrap())
 
     return runs

@@ -5,6 +5,7 @@ import { ROUTES } from '$/services/routes'
 import { useActiveRunsCount } from '$/stores/runs/activeRuns'
 import useFeature from '$/stores/useFeature'
 
+import { LogSources } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
@@ -15,6 +16,11 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useMemo } from 'react'
+
+function sumCounts(counts: Record<LogSources, number> | undefined): number {
+  if (!counts) return 0
+  return Object.values(counts).reduce((sum, count) => sum + count, 0)
+}
 
 type ProjectRoute = {
   label: string
@@ -86,10 +92,15 @@ export default function ProjectSection({
 }) {
   const disableRunsNotifications = !!limitedView
   const issuesFeature = useFeature('issues')
-  const { data: active } = useActiveRunsCount({
+  const { data: activeCountBySource } = useActiveRunsCount({
     project: project,
     realtime: !disableRunsNotifications,
   })
+
+  const activeCount = useMemo(
+    () => sumCounts(activeCountBySource),
+    [activeCountBySource],
+  )
 
   const PROJECT_ROUTES = useMemo(
     () =>
@@ -108,7 +119,7 @@ export default function ProjectSection({
             .commits.detail({ uuid: commit.uuid }).runs.root,
           iconName: 'logs',
           notifications: {
-            count: disableRunsNotifications ? 0 : active,
+            count: disableRunsNotifications ? 0 : activeCount,
             label: (count: number) =>
               count <= 1
                 ? 'There is a run in progress'
@@ -141,7 +152,7 @@ export default function ProjectSection({
       project,
       commit,
       issuesFeature.isEnabled,
-      active,
+      activeCount,
       disableRunsNotifications,
     ],
   )

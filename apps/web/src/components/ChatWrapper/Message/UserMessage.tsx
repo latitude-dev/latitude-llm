@@ -19,6 +19,7 @@ export function UserMessage({
         className={cn(
           'flex flex-col gap-1 items-start',
           'px-4 py-3 bg-primary-muted rounded-2xl',
+          'max-w-full overflow-hidden',
           {
             'animate-pulse': animatePulse,
           },

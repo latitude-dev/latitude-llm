@@ -47,7 +47,7 @@ export const RunsListItem = memo(
               else setSelectedRunUuid(run.uuid)
             }}
           >
-            <div className='min-w-0 min-h-7 flex items-center justify-start gap-2.5 truncate'>
+            <div className='min-w-0 min-h-8 flex items-center justify-start gap-2.5 truncate'>
               {run.endedAt ? (
                 <Icon
                   name={
