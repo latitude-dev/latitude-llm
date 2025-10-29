@@ -51,6 +51,7 @@ export function TodoLatitudeToolCard({
         }
         isOpen={isOpen}
         onToggle={() => setIsOpen(!isOpen)}
+        simulated={toolRequest._sourceData?.simulated}
       />
       {isOpen && (
         <ToolCardContentWrapper>

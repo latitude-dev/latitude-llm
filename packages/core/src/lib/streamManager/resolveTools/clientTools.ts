@@ -14,12 +14,9 @@ import {
 import { StreamManager } from '..'
 import { telemetry, TelemetryContext } from '../../../telemetry'
 import { Tool } from 'ai'
-import {
-  awaitClientToolResult,
-  mockClientToolResult,
-  ToolHandler,
-} from '../clientTools/handlers'
+import { awaitClientToolResult, ToolHandler } from '../clientTools/handlers'
 import { publisher } from '../../../events/publisher'
+import { simulatedToolDefinition } from '../../../services/simulation/simulateToolResponse'
 
 type ToolTuple = [string, ToolDefinition]
 
@@ -113,15 +110,16 @@ type AdaptedVercelToolDefinition = Omit<Tool, 'inputSchema'> & {
 function buildDefinition(streamManager: StreamManager) {
   return ([name, toolDefinition]: ToolTuple) => {
     const definition = toolDefinition as AdaptedVercelToolDefinition
-    if (streamManager.source === LogSources.Playground) {
-      definition.execute = instrumentToolHandler(awaitClientToolResult, {
-        workspaceId: streamManager.workspace.id,
-        context: streamManager.$completion!.context,
-        toolDefinition,
+
+    if (streamManager.simulationSettings?.simulateToolResponses) {
+      definition.execute = simulatedToolDefinition({
+        streamManager,
         toolName: name,
+        toolDescription: definition.description ?? '',
+        inputSchema: definition.parameters,
       })
-    } else if (streamManager.source === LogSources.Evaluation) {
-      definition.execute = instrumentToolHandler(mockClientToolResult, {
+    } else if (streamManager.source === LogSources.Playground) {
+      definition.execute = instrumentToolHandler(awaitClientToolResult, {
         workspaceId: streamManager.workspace.id,
         context: streamManager.$completion!.context,
         toolDefinition,
@@ -143,7 +141,10 @@ function buildDefinition(streamManager: StreamManager) {
       name,
       {
         definition,
-        sourceData: { source: ToolSource.Client },
+        sourceData: {
+          source: ToolSource.Client,
+          simulated: streamManager.simulationSettings?.simulateToolResponses,
+        },
       },
     ]
   }

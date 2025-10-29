@@ -29,7 +29,8 @@
     "./trigger": "./src/trigger.ts",
     "./documentTriggers": "./src/documentTriggers/schema.ts",
     "./toolSources": "./src/toolSources.ts",
-    "./users": "./src/users.ts"
+    "./users": "./src/users.ts",
+    "./simulation": "./src/simulation.ts"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",

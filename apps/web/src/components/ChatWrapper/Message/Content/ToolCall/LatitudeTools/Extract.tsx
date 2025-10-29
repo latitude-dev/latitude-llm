@@ -16,9 +16,72 @@ import {
   ToolCardWrapper,
 } from '../_components/ToolCard'
 import { ToolCardHeader } from '../_components/ToolCard/Header'
-import { ToolCardContentWrapper } from '../_components/ToolCard/Content'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import {
+  ToolCardContentWrapper,
+  ToolCardOutput,
+} from '../_components/ToolCard/Content'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+
+const isExpectedOutput = (toolResponse: ToolContent | undefined) => {
+  // Returns false if the tool response does not contain the expected output
+  if (!toolResponse) return false
+  if (toolResponse.isError) return false
+
+  if (typeof toolResponse.result !== 'object' || toolResponse.result === null) {
+    return false
+  }
+
+  if (!('content' in toolResponse.result)) return false
+  const { content } = toolResponse.result
+  if (typeof content !== 'string') return false
+
+  return true
+}
+
+function WebExtractOutput({
+  toolResponse,
+  simulated,
+}: {
+  toolResponse: ToolContent | undefined
+  simulated?: boolean
+}) {
+  const isExpectedResponse = useMemo(
+    () => isExpectedOutput(toolResponse),
+    [toolResponse],
+  )
+
+  const markdownContent = useMemo(() => {
+    if (!isExpectedResponse) return undefined
+    return (toolResponse!.result as ExtractToolResult).content
+  }, [toolResponse, isExpectedResponse])
+
+  if (!toolResponse) {
+    return (
+      <ToolCardContentWrapper>
+        <div className='flex flex-row gap-2 items-center justify-center pb-3'>
+          <Icon name='loader' color='foregroundMuted' spin />
+          <Text.H5 color='foregroundMuted'>Loading page...</Text.H5>
+        </div>
+      </ToolCardContentWrapper>
+    )
+  }
+
+  if (!isExpectedResponse) {
+    return <ToolCardOutput toolResponse={toolResponse} simulated={simulated} />
+  }
+
+  return (
+    <ToolCardContentWrapper>
+      {markdownContent ? (
+        <Markdown size='sm' color='foregroundMuted'>
+          {markdownContent}
+        </Markdown>
+      ) : (
+        <Text.H5 color='foregroundMuted'>No content</Text.H5>
+      )}
+    </ToolCardContentWrapper>
+  )
+}
 
 export function WebExtractLatitudeToolCard({
   toolRequest,
@@ -30,12 +93,6 @@ export function WebExtractLatitudeToolCard({
   status: 'pending' | 'success' | 'error'
 }) {
   const [isOpen, setIsOpen] = useState(false)
-
-  const markdownContent = useMemo(() => {
-    if (!toolResponse || toolResponse.isError) return undefined
-    return (toolResponse.result as ExtractToolResult).content
-  }, [toolResponse])
-
   const args = toolRequest.args as ExtractToolArgs
 
   return (
@@ -46,36 +103,13 @@ export function WebExtractLatitudeToolCard({
         status={status}
         isOpen={isOpen}
         onToggle={() => setIsOpen(!isOpen)}
+        simulated={toolRequest._sourceData?.simulated}
       />
       {isOpen && (
-        <ToolCardContentWrapper>
-          {toolResponse ? (
-            toolResponse.isError ? (
-              <div className='w-full pt-3 items-center'>
-                <Alert
-                  variant='destructive'
-                  title='Error'
-                  description={JSON.stringify(toolResponse.result, null, 2)}
-                />
-              </div>
-            ) : (
-              <div className='flex flex-col gap-4'>
-                {markdownContent ? (
-                  <Markdown size='sm' color='primary'>
-                    {markdownContent}
-                  </Markdown>
-                ) : (
-                  <Text.H5 color='foregroundMuted'>No content</Text.H5>
-                )}
-              </div>
-            )
-          ) : (
-            <div className='flex flex-row gap-2 items-center justify-center pb-3'>
-              <Icon name='loader' color='foregroundMuted' spin />
-              <Text.H5 color='foregroundMuted'>Loading page...</Text.H5>
-            </div>
-          )}
-        </ToolCardContentWrapper>
+        <WebExtractOutput
+          toolResponse={toolResponse}
+          simulated={toolRequest._sourceData?.simulated}
+        />
       )}
     </ToolCardWrapper>
   )

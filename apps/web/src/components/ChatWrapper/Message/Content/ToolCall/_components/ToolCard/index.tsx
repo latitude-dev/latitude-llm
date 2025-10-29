@@ -95,9 +95,15 @@ export function ToolCard({
         status={status}
         isOpen={isOpen}
         onToggle={() => setIsOpen(!isOpen)}
+        simulated={toolRequest._sourceData?.simulated}
       />
       {isOpen && <ToolCardInput toolRequest={toolRequest} />}
-      {isOpen && <ToolCardOutput toolResponse={toolResponse} />}
+      {isOpen && (
+        <ToolCardOutput
+          toolResponse={toolResponse}
+          simulated={toolRequest._sourceData?.simulated}
+        />
+      )}
     </ToolCardWrapper>
   )
 }

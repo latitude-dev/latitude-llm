@@ -16,6 +16,7 @@ import { ToolSource } from '@latitude-data/constants/toolSources'
 import { getIntegrationToolsFromConfig } from '../../../services/documents/fork/helpers'
 import { PipedreamIntegrationConfiguration } from '../../../services/integrations/helpers/schema'
 import { IntegrationDto } from '../../../schema/models/types/Integration'
+import { simulatedToolDefinition } from '../../../services/simulation/simulateToolResponse'
 
 type LoadedIntegration = {
   integration: IntegrationDto
@@ -35,59 +36,69 @@ const buildToolHandler = ({
   streamManager: StreamManager
   integration: IntegrationDto
   toolDefinition: McpTool
-}): Tool =>
-  ({
-    description: toolDefinition?.description?.slice(0, 1023) ?? '',
+}): Tool => {
+  const description = toolDefinition?.description?.slice(0, 1023) ?? ''
+
+  return {
+    description,
     inputSchema: jsonSchema(toolDefinition.inputSchema),
-    execute: async (args, toolCall) => {
-      const $tool = telemetry.tool(streamManager.$completion!.context, {
-        name: toolDefinition.name,
-        call: {
-          id: toolCall.toolCallId,
-          arguments: args,
-        },
-      })
-
-      publisher.publishLater({
-        type: 'toolExecuted',
-        data: {
-          workspaceId: streamManager.workspace.id,
-          type: 'integration',
-          toolName: toolDefinition.name,
-          integration: {
-            id: integration.id,
-            name: integration.name,
-            type: integration.type,
-          },
-        },
-      })
-
-      try {
-        const value = await callIntegrationTool({
-          integration,
-          toolName: toolDefinition.name,
-          args,
+    execute: streamManager.simulationSettings?.simulateToolResponses
+      ? simulatedToolDefinition({
           streamManager,
-        }).then((r) => r.unwrap())
+          toolName: toolDefinition.name,
+          toolDescription: description,
+          inputSchema: toolDefinition.inputSchema,
+        })
+      : async (args, toolCall) => {
+          const $tool = telemetry.tool(streamManager.$completion!.context, {
+            name: toolDefinition.name,
+            call: {
+              id: toolCall.toolCallId,
+              arguments: args,
+            },
+          })
 
-        $tool?.end({ result: { value, isError: false } })
+          publisher.publishLater({
+            type: 'toolExecuted',
+            data: {
+              workspaceId: streamManager.workspace.id,
+              type: 'integration',
+              toolName: toolDefinition.name,
+              integration: {
+                id: integration.id,
+                name: integration.name,
+                type: integration.type,
+              },
+            },
+          })
 
-        return {
-          value,
-          isError: false,
-        }
-      } catch (err) {
-        const result = {
-          value: (err as Error).message,
-          isError: true,
-        }
+          try {
+            const value = await callIntegrationTool({
+              integration,
+              toolName: toolDefinition.name,
+              args,
+              streamManager,
+            }).then((r) => r.unwrap())
 
-        $tool?.end({ result })
+            $tool?.end({ result: { value, isError: false } })
 
-        return result
-      }
-    },
-  }) satisfies Tool
+            return {
+              value,
+              isError: false,
+            }
+          } catch (err) {
+            const result = {
+              value: (err as Error).message,
+              isError: true,
+            }
+
+            $tool?.end({ result })
+
+            return result
+          }
+        },
+  } satisfies Tool
+}
 
 async function loadIntegrations({
   toolIds,
@@ -205,6 +216,7 @@ export async function resolveIntegrationTools({
             integrationId: integration.id,
             toolLabel: tool.definition.displayName,
             imageUrl,
+            simulated: streamManager.simulationSettings?.simulateToolResponses,
           },
         }
       })
@@ -226,6 +238,7 @@ export async function resolveIntegrationTools({
           integrationId: integration.id,
           toolLabel: tool.definition.displayName,
           imageUrl,
+          simulated: streamManager.simulationSettings?.simulateToolResponses,
         },
       }
     }

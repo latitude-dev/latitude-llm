@@ -7,7 +7,8 @@ import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 import { BACKGROUND } from '../../../telemetry'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
-import { runDocumentAtCommitWithAutoToolResponses } from './runDocumentAtCommitWithAutoToolResponses'
+import { runDocumentAtCommit } from '../../../services/commits'
+import { getJobDocumentData } from '../helpers'
 
 export type RunDocumentJobData = {
   workspaceId: number
@@ -54,15 +55,24 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
 
   const progressTracker = new ProgressTracker(batchId)
 
+  const { workspace, document, commit } = await getJobDocumentData({
+    workspaceId,
+    projectId,
+    commitUuid,
+    documentUuid,
+  }).then((r) => r.unwrap())
+
   try {
-    await runDocumentAtCommitWithAutoToolResponses({
+    await runDocumentAtCommit({
       context: BACKGROUND({ workspaceId }),
-      workspaceId,
-      projectId,
-      documentUuid,
-      commitUuid,
+      workspace,
+      commit,
+      document,
       parameters,
       source,
+      simulationSettings: {
+        simulateToolResponses: true,
+      },
     }).then((r) => r.unwrap())
 
     await progressTracker.incrementCompleted()

@@ -33,6 +33,7 @@ export function ThinkLatitudeToolCard({
         }
         isOpen={isOpen}
         onToggle={() => setIsOpen(!isOpen)}
+        simulated={toolRequest._sourceData?.simulated}
       />
       {isOpen && (
         <ToolCardContentWrapper>

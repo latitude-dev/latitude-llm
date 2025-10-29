@@ -108,6 +108,7 @@ export async function getToolDefinitionFromDocument({
           parameters: args,
           tools: streamManager.tools,
           abortSignal: streamManager.abortSignal,
+          simulationSettings: streamManager.simulationSettings,
           // TODO: Review this. We are forwarding the parent's source so that
           // tool calls are automatically handled in playground and evaluation
           // contexts. This is not ideal. Spoiler: a boolean prop to control

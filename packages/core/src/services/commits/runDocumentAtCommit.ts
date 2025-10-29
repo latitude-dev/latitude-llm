@@ -14,6 +14,7 @@ import { getResolvedContent } from '../documents'
 import { isErrorRetryable } from '../evaluationsV2/run'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { RunDocumentChecker } from './RunDocumentChecker'
+import type { SimulationSettings } from '@latitude-data/constants/simulation'
 
 export type RunDocumentAtCommitArgs = {
   context: TelemetryContext
@@ -29,6 +30,7 @@ export type RunDocumentAtCommitArgs = {
   errorableUuid?: string
   userMessage?: string
   abortSignal?: AbortSignal
+  simulationSettings?: SimulationSettings
 }
 
 export async function runDocumentAtCommit({
@@ -45,6 +47,7 @@ export async function runDocumentAtCommit({
   userMessage,
   abortSignal,
   tools = {},
+  simulationSettings,
 }: RunDocumentAtCommitArgs) {
   errorableUuid = errorableUuid ?? generateUUIDIdentifier()
   const providersMap = await buildProvidersMap({
@@ -110,6 +113,7 @@ export async function runDocumentAtCommit({
       document,
       commit,
     },
+    simulationSettings,
   })
 
   return Result.ok({

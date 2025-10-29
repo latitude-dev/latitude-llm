@@ -7,7 +7,7 @@ import * as factories from '../../../tests/factories'
 import { mockToolRequestsCopilot } from '../../../tests/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
 import * as utils from '../../utils/progressTracker'
-import * as runDocumentAtCommitWithAutoToolResponses from './runDocumentAtCommitWithAutoToolResponses'
+import * as runDocumentAtCommitModule from '../../../services/commits'
 
 const incrementErrorsMock = vi.hoisted(() => vi.fn())
 
@@ -26,10 +26,7 @@ describe('runDocumentJob', () => {
       buildRedisConnection: vi.fn(),
     }
   })
-  vi.spyOn(
-    runDocumentAtCommitWithAutoToolResponses,
-    'runDocumentAtCommitWithAutoToolResponses',
-  )
+  vi.spyOn(runDocumentAtCommitModule, 'runDocumentAtCommit')
   // @ts-ignore
   vi.spyOn(utils, 'ProgressTracker').mockImplementation(() => ({
     incrementCompleted: vi.fn(),
@@ -80,25 +77,25 @@ describe('runDocumentJob', () => {
       messages: Promise.resolve([]),
       trace: factories.createTelemetryTrace({}),
     }
-    vi.mocked(
-      runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
-    ).mockResolvedValue(
+    vi.mocked(runDocumentAtCommitModule.runDocumentAtCommit).mockResolvedValue(
       // @ts-ignore
       Result.ok(mockResult),
     )
 
     await runDocumentJob(mockJob)
 
-    expect(
-      runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
-    ).toHaveBeenCalledWith({
+    expect(runDocumentAtCommitModule.runDocumentAtCommit).toHaveBeenCalledWith({
       context: expect.anything(),
-      workspaceId: workspace.id,
-      projectId: project.id,
-      documentUuid: document.documentUuid,
-      commitUuid: commit.uuid,
+      workspace: expect.objectContaining({ id: workspace.id }),
+      commit: expect.objectContaining({ uuid: commit.uuid }),
+      document: expect.objectContaining({
+        documentUuid: document.documentUuid,
+      }),
       parameters: { param1: 'value1' },
       source: LogSources.Playground,
+      simulationSettings: {
+        simulateToolResponses: true,
+      },
     })
 
     expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
@@ -121,9 +118,9 @@ describe('runDocumentJob', () => {
     const mod = await import('./runDocumentJob')
     const runDocumentJob = mod.runDocumentJob
 
-    vi.mocked(
-      runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
-    ).mockRejectedValue(new Error('Test error'))
+    vi.mocked(runDocumentAtCommitModule.runDocumentAtCommit).mockRejectedValue(
+      new Error('Test error'),
+    )
 
     await runDocumentJob(mockJob)
 
@@ -140,9 +137,7 @@ describe('runDocumentJob', () => {
       },
     )
 
-    expect(
-      runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
-    ).toHaveBeenCalled()
+    expect(runDocumentAtCommitModule.runDocumentAtCommit).toHaveBeenCalled()
     expect(incrementErrorsMock).toHaveBeenCalled()
   })
 
@@ -154,9 +149,9 @@ describe('runDocumentJob', () => {
       message: 'Rate limit error',
     })
 
-    vi.mocked(
-      runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
-    ).mockRejectedValue(rateLimitError)
+    vi.mocked(runDocumentAtCommitModule.runDocumentAtCommit).mockRejectedValue(
+      rateLimitError,
+    )
 
     await expect(runDocumentJob(mockJob)).rejects.toThrow('Rate limit error')
 

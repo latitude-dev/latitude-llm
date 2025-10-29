@@ -53,13 +53,12 @@ export async function mockToolRequestsCopilot() {
     document: documentVersion,
   }
   vi.doMock(
-    '../../src/jobs/job-definitions/documents/runDocumentAtCommitWithAutoToolResponses/getCopilotData',
+    '../../src/services/simulation/getCopilotData',
     async (originalMod) => {
       const mod = (await originalMod()) as typeof import('@latitude-data/env')
       return {
         ...mod,
-        getCopilotDataForGenerateToolResponses: async () =>
-          Result.ok(copilotData),
+        getToolSimulationPrompt: async () => Result.ok(copilotData),
       }
     },
   )
