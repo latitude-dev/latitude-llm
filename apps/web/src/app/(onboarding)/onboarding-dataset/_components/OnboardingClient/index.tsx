@@ -6,17 +6,10 @@ import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSte
 import { PasteYourPromptBody } from './PasteYourPrompt'
 import OnboardingHeader from '../OnboardingHeader'
 import { User } from '@latitude-data/core/schema/models/types/User'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { GenerateDatasetBody } from './GenerateDataset'
 import useDatasets from '$/stores/datasets'
 
-export function OnboardingClient({
-  user,
-  document,
-}: {
-  user: User
-  document: DocumentVersion
-}) {
+export function OnboardingClient({ user }: { user: User }) {
   const [currentOnboardingStep, setCurrentOnboardingStep] =
     useState<DatasetOnboardingStepKey>(DatasetOnboardingStepKey.PasteYourPrompt)
   const { runGenerateAction } = useDatasets()
@@ -27,7 +20,6 @@ export function OnboardingClient({
         <DatasetOnboardingStepRoot>
           <OnboardingHeader user={user} />
           <PasteYourPromptBody
-            document={document}
             setCurrentOnboardingStep={setCurrentOnboardingStep}
             runGenerateAction={runGenerateAction}
           />

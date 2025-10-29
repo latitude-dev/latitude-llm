@@ -1,29 +1,91 @@
 import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import { useMetadata } from '$/hooks/useMetadata'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { useCallback } from 'react'
+import { Suspense, useCallback } from 'react'
+import { useIncludabledPrompts } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/BlocksEditor/useIncludabledPrompts'
+import { useDocumentValue } from '$/hooks/useDocumentValueContext'
+import {
+  BlocksEditor,
+  BlocksEditorPlaceholder,
+} from '$/components/BlocksEditor'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { fromAstToBlocks } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
+import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
 
 export function GenerateDatasetBody({
   setCurrentOnboardingStep,
 }: {
   setCurrentOnboardingStep: (step: DatasetOnboardingStepKey) => void
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { value, updateDocumentContent } = useDocumentValue()
+  const { document } = useCurrentDocument()
+
+  const onError = useCallback((error: Error) => {
+    toast({
+      variant: 'destructive',
+      title: 'Error during edition',
+      description: error.message,
+    })
+  }, [])
+
+  const prompts = useIncludabledPrompts({
+    project,
+    commit,
+    document,
+    documents: [document],
+  })
+
   const { metadata } = useMetadata()
-  const parameters = Array.from(metadata?.parameters ?? []).join(', ') ?? ''
+  const parameters = Array.from(metadata?.parameters ?? [])
+
   const moveNextStep = useCallback(() => {
     setCurrentOnboardingStep(DatasetOnboardingStepKey.RunExperiment)
   }, [setCurrentOnboardingStep])
 
-  console.log('GenerateDatasetBody render with parameters:', parameters)
-
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
-      <div className='flex flex-col items-end gap-10 w-full h-full'>
-        <div className='flex-1 w-full max-h-[350px] max-w-[600px]'>
-          <LoadingText />
+      <div className='flex flex-col items-end w-full h-full'>
+        <div className='relative flex-1 w-full max-h-[350px] max-w-[600px]'>
+          <Suspense fallback={<BlocksEditorPlaceholder />}>
+            <div className='relative p-4'>
+              <BlocksEditor
+                project={project}
+                commit={commit}
+                document={document}
+                currentDocument={document}
+                initialValue={
+                  metadata?.ast
+                    ? fromAstToBlocks({
+                        ast: metadata.ast,
+                        prompt: value,
+                      })
+                    : emptyRootBlock
+                }
+                placeholder='Type your instructions here, use {{ input }} for variables and / for commands'
+                onError={onError}
+                prompts={prompts}
+                onChange={updateDocumentContent}
+                greyTheme={true}
+              />
+              <div
+                aria-hidden
+                className='pointer-events-none absolute inset-0 bg-background/60 backdrop-saturate-50'
+              />
+              <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background to-transparent' />
+            </div>
+            <div className='absolute bottom-[-4.5rem] w-full p-4 bg-background'>
+              <TableSkeleton rows={6} cols={parameters} maxHeight={320} />
+              <div className='pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background via-background to-transparent' />
+            </div>
+          </Suspense>
         </div>
       </div>
       <div className='flex flex-col items-start gap-8 w-full h-full'>

@@ -15,6 +15,7 @@ import { ONBOARDING_DOCUMENT_PATH } from '@latitude-data/core/constants'
 import { DocumentValueProvider } from '$/hooks/useDocumentValueContext'
 import { DevModeProvider } from '$/hooks/useDevMode'
 import { MetadataProvider } from '$/components/MetadataProvider'
+import { DocumentVersionProvider } from '$/app/providers/DocumentProvider'
 
 export async function generateMetadata() {
   // TODO(onboarding): change this to prompt engineering onboarding title once we activate the onboarding
@@ -60,7 +61,13 @@ export default async function OnboardingDatasetPage() {
           <CommitProvider project={project} commit={commit} isHead={false}>
             <DevModeProvider>
               <DocumentValueProvider document={document} documents={documents}>
-                <OnboardingClient user={user} document={document} />
+                <DocumentVersionProvider
+                  projectId={project.id}
+                  commitUuid={commit.uuid}
+                  document={document}
+                >
+                  <OnboardingClient user={user} />
+                </DocumentVersionProvider>
               </DocumentValueProvider>
             </DevModeProvider>
           </CommitProvider>

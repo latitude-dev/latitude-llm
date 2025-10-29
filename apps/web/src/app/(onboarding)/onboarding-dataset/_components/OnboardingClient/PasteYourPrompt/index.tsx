@@ -1,7 +1,6 @@
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { Suspense, useCallback } from 'react'
@@ -15,6 +14,7 @@ import { useIncludabledPrompts } from '$/app/(private)/projects/[projectId]/vers
 import { useMetadata } from '$/hooks/useMetadata'
 import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 
 const SAMPLE_PROMPT = `
 ---
@@ -46,17 +46,16 @@ Return only one of the categories.
 `
 
 export function PasteYourPromptBody({
-  document,
   setCurrentOnboardingStep,
   runGenerateAction,
 }: {
-  document: DocumentVersion
   setCurrentOnboardingStep: (step: DatasetOnboardingStepKey) => void
   runGenerateAction: (input: any) => Promise<any>
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { value, updateDocumentContent } = useDocumentValue()
+  const { document } = useCurrentDocument()
 
   const onError = useCallback((error: Error) => {
     toast({
