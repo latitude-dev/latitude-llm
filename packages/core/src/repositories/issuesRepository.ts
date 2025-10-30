@@ -50,6 +50,29 @@ export class IssuesRepository extends Repository<Issue> {
     return this.db.select(tt).from(issues).where(this.scopeFilter).$dynamic()
   }
 
+  async findByTitle({
+    title,
+    project,
+  }: {
+    project: Project
+    title: string | null
+  }) {
+    return this.db
+      .select({
+        id: issues.id,
+        title: issues.title,
+      })
+      .from(issues)
+      .where(
+        and(
+          this.scopeFilter,
+          eq(issues.projectId, project.id),
+          like(issues.title, `%${title ?? ''}%`),
+        ),
+      )
+      .limit(20)
+  }
+
   /**
    * Offset-based pagination for issues with filtering and sorting.
    */
