@@ -50,6 +50,30 @@ export class IssuesRepository extends Repository<Issue> {
     return this.db.select(tt).from(issues).where(this.scopeFilter).$dynamic()
   }
 
+  async findByTitle({
+    title,
+    project,
+  }: {
+    project: Project
+    title: string | null
+  }) {
+    return this.db
+      .select({
+        id: issues.id,
+        title: issues.title,
+      })
+      .from(issues)
+      .where(
+        and(
+          this.scopeFilter,
+          eq(issues.projectId, project.id),
+          like(issues.title, `%${title ?? ''}%`),
+        ),
+      )
+      .orderBy(desc(issues.createdAt))
+      .limit(20)
+  }
+
   /**
    * Offset-based pagination for issues with filtering and sorting.
    */
@@ -256,8 +280,6 @@ export class IssuesRepository extends Repository<Issue> {
     const status = filters.status || 'active'
 
     if (status === 'regressed') {
-      // Regressed: resolved issues with histogram data after the resolved date
-      // Check if the maximum histogram date is after the resolved date
       conditions.push(
         sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} > ${issues.resolvedAt}`,
       )

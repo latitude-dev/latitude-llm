@@ -44,6 +44,9 @@ export class IssueHistogramsRepository extends RepositoryLegacy<
         `,
           )
           .as('recentCount'),
+        firstSeenDate: sql<Date>`MIN(${issueHistograms.date})`.as(
+          'firstSeenDate',
+        ),
         lastSeenDate: sql<Date>`MAX(${issueHistograms.date})`.as(
           'lastSeenDate',
         ),
