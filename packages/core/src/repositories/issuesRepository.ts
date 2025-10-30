@@ -140,7 +140,7 @@ export class IssuesRepository extends Repository<Issue> {
       .from(issues)
       .innerJoin(subquery, eq(subquery.issueId, issues.id))
       .where(and(...where))
-      /* .groupBy(...this.buildGroupByClause(subquery)) */
+      .groupBy(...this.buildGroupByClause(subquery))
       .having(having.length > 0 ? and(...having) : undefined)
       .orderBy(...orderBy)
       .limit(limit)
@@ -168,7 +168,7 @@ export class IssuesRepository extends Repository<Issue> {
       .from(issues)
       .innerJoin(subquery, eq(subquery.issueId, issues.id))
       .where(and(...whereConditions))
-      /* .groupBy(...this.buildGroupByClause(subquery)) */
+      .groupBy(...this.buildGroupByClause(subquery))
       .having(
         havingConditions.length > 0 ? and(...havingConditions) : undefined,
       )
