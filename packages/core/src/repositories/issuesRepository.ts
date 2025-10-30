@@ -142,7 +142,6 @@ export class IssuesRepository extends Repository<Issue> {
         totalCount: sql<number>`COALESCE(${subquery.totalCount}::integer, 0)`,
         lastSeenDate: sql<Date>`COALESCE(${subquery.lastSeenDate}, '1970-01-01 00:00:00'::timestamp)`,
         escalatingCount: sql<number>`COALESCE(${subquery.escalatingCount}::integer, 0)`,
-        maxHistogramDate: sql<Date>`COALESCE(${subquery.maxHistogramDate}, '1970-01-01 00:00:00'::timestamp)`,
         isNew:
           sql<boolean>`(${issues.createdAt} >= NOW() - INTERVAL '7 days')`.as(
             'isNew',
@@ -276,10 +275,8 @@ export class IssuesRepository extends Repository<Issue> {
     const status = filters.status || 'active'
 
     if (status === 'regressed') {
-      // Regressed: resolved issues with histogram data after the resolved date
-      // Check if the maximum histogram date is after the resolved date
       conditions.push(
-        sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."maxHistogramDate"`)} > ${issues.resolvedAt}`,
+        sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} > ${issues.resolvedAt}`,
       )
     }
 
@@ -334,7 +331,6 @@ export class IssuesRepository extends Repository<Issue> {
       subquery.totalCount,
       subquery.lastSeenDate,
       subquery.escalatingCount,
-      subquery.maxHistogramDate,
     ]
   }
 

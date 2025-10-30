@@ -33,6 +33,7 @@ import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap
 import Link from 'next/link'
 import { useCallback, useMemo } from 'react'
 import { RunPanelStats } from './Stats'
+import { useUIAnnotations, UseUIAnnotationsProps } from '$/hooks/annotations/useUIAnnotations'
 
 export function RunPanel({
   run,
@@ -76,6 +77,51 @@ export function RunPanel({
       setDebugMode={setDebugMode}
     />
   )
+}
+
+function useEvaluationsForAnnotations ({
+  project,
+  commit,
+  documentLog,
+  mutateCompletedRuns,
+}: UseUIAnnotationsProps & {
+  mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
+}) {
+  const uiAnnotations = useUIAnnotations({
+    project,
+    commit,
+    documentLog,
+  })
+  const annotatedEvaluation = uiAnnotations.annotations.bottom.evaluation
+  const syncAnnotations: typeof uiAnnotations.mutateResults = useCallback(
+    async (data, opts) => {
+      const mutated = await uiAnnotations.mutateResults(data, opts)
+      if (!mutated) return mutated
+
+      const mutatedResultsByDocumentLog = mutated?.[documentLog.uuid] ?? []
+      const annotations = mutatedResultsByDocumentLog.filter(({ evaluation }) =>
+        evaluation.uuid === annotatedEvaluation?.uuid
+      ) ?? []) as RunAnnotation[]
+
+      mutateCompletedRuns(
+        (prev) =>
+          prev?.map((r) => {
+            if (r.uuid !== documentLog.uuid) return r
+
+            return { ...r, annotations }
+          }) ?? [],
+        { revalidate: false },
+      )
+
+      return mutated
+    },
+    [mutateCompletedRuns, documentLog.uuid, manualEvaluations, uiAnnotations, annotatedEvaluation],
+  )
+
+  return useMemo(() => ({
+    ...uiAnnotations,
+    syncAnnotations,
+  }), [uiAnnotations, syncAnnotations])
 }
 
 function CompletedRunPanel({
@@ -138,30 +184,9 @@ function CompletedRunPanel({
     )
   }, [results, run.log.uuid, manualEvaluations])
 
-  const syncAnnotations: typeof mutateResults = useCallback(
-    async (data, opts) => {
-      const mutated = (await mutateResults(data, opts)) as typeof results
-
-      const annotations = (mutated?.[run.log.uuid]?.filter(({ evaluation }) =>
-        manualEvaluations.find((e) => evaluation.uuid === e.uuid),
-      ) ?? []) as RunAnnotation[]
-
-      mutateCompletedRuns(
-        (prev) =>
-          prev?.map((r) => {
-            if (r.uuid !== run.uuid) return r
-            return { ...r, annotations }
-          }) ?? [],
-        { revalidate: false },
-      )
-
-      return mutated
-    },
-    [mutateResults, mutateCompletedRuns, run, manualEvaluations],
-  )
-
   const { data: providerLogs, isLoading: isLoadingProviderLogs } =
     useProviderLogs({ documentLogUuid: run.log.uuid })
+
   // Note: this is needed to hydrate the provider log
   const { data: responseLog, isLoading: isLoadingResponseLog } = useProviderLog(
     providerLogs?.at(-1)?.id,

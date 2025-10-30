@@ -138,6 +138,9 @@ export class CommitsRepository extends RepositoryLegacy<
   /**
    * Get all the commits that are merged before our commit
    * and also include our commit even it's not merged yet
+   *
+   * Draft commit has mergedAt = null and it is considered as the latest commit
+   * so it's the first in the history
    */
   async getCommitsHistory({ commit }: { commit: Commit }) {
     const condition = commit.mergedAt
@@ -152,7 +155,6 @@ export class CommitsRepository extends RepositoryLegacy<
         .select()
         .from(this.scope)
         .where(and(eq(this.scope.projectId, commit.projectId), condition))
-        // TODO:: Is draft on top or bottom?
         .orderBy(desc(this.scope.mergedAt))
     )
   }
