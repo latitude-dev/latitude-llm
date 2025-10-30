@@ -117,10 +117,10 @@ export class IssuesRepository extends Repository<Issue> {
         recentCount: sql<number>`COALESCE(${subquery.recentCount}::integer, 0)`,
         totalCount: sql<number>`COALESCE(${subquery.totalCount}::integer, 0)`,
         lastSeenDate: sql<Date>`COALESCE(${subquery.lastSeenDate}, '1970-01-01 00:00:00'::timestamp)`,
-        firstSeenDate: sql<Date>`(COALESCE(${subquery.lastSeenDate}, '1970-01-01 00:00:00'::timestamp)`,
+        firstSeenDate: sql<Date>`COALESCE(${subquery.firstSeenDate}, '1970-01-01 00:00:00'::timestamp)`,
         escalatingCount: sql<number>`COALESCE(${subquery.escalatingCount}::integer, 0)`,
         isNew:
-          sql<boolean>`(${issues.createdAt} >= NOW() - INTERVAL '${NEW_ISSUES_DAYS} days')`.as(
+          sql<boolean>`(${issues.createdAt} >= NOW() - INTERVAL '7 days')`.as(
             'isNew',
           ),
         isResolved: sql<boolean>`(${issues.resolvedAt} IS NOT NULL)`.as(
@@ -140,11 +140,14 @@ export class IssuesRepository extends Repository<Issue> {
       .from(issues)
       .innerJoin(subquery, eq(subquery.issueId, issues.id))
       .where(and(...where))
-      .groupBy(...this.buildGroupByClause(subquery))
-      .having(having.length > 0 ? and(...having) : undefined)
+      /* .groupBy(...this.buildGroupByClause(subquery)) */
+      /* .having(having.length > 0 ? and(...having) : undefined) */
       .orderBy(...orderBy)
       .limit(limit)
       .offset(offset)
+
+    const sqlStr = query.toSQL().sql
+    console.log("SQL: ", sqlStr)
 
     return await query
   }
@@ -168,10 +171,10 @@ export class IssuesRepository extends Repository<Issue> {
       .from(issues)
       .innerJoin(subquery, eq(subquery.issueId, issues.id))
       .where(and(...whereConditions))
-      .groupBy(...this.buildGroupByClause(subquery))
-      .having(
-        havingConditions.length > 0 ? and(...havingConditions) : undefined,
-      )
+      /* .groupBy(...this.buildGroupByClause(subquery)) */
+      /* .having( */
+      /*   havingConditions.length > 0 ? and(...havingConditions) : undefined, */
+      /* ) */
       .as('filteredIssues')
 
     const query = this.db
@@ -236,6 +239,11 @@ export class IssuesRepository extends Repository<Issue> {
         // This will be handled in HAVING clause since it requires histogram data
         conditions.push(sql`${issues.resolvedAt} IS NOT NULL`)
         conditions.push(isNull(issues.ignoredAt))
+        // Regressed: resolved issues with histogram data after the resolved date
+        // Check if the maximum histogram date is after the resolved date
+        conditions.push(
+          sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} > ${issues.resolvedAt}`,
+        )
         break
     }
 
@@ -257,13 +265,13 @@ export class IssuesRepository extends Repository<Issue> {
 
     if (filters.firstSeen) {
       const fromStartOfDay = startOfDay(filters.firstSeen)
-      const condition = sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."firstSeenDate"`)} >= ${fromStartOfDay}`
+      const condition = sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} >= ${fromStartOfDay}`
       if (condition) conditions.push(condition)
     }
 
     if (filters.lastSeen) {
       const toEndOfDay = endOfDay(filters.lastSeen)
-      const condition = sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} <= ${toEndOfDay}`
+      const condition = sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."firstSeenDate"`)} <= ${toEndOfDay}`
       if (condition) conditions.push(condition)
     }
 
@@ -310,6 +318,7 @@ export class IssuesRepository extends Repository<Issue> {
       subquery.issueId,
       subquery.recentCount,
       subquery.totalCount,
+      subquery.firstSeenDate,
       subquery.lastSeenDate,
       subquery.escalatingCount,
     ]
