@@ -3,17 +3,16 @@ import {
   bigint,
   bigserial,
   index,
-  timestamp,
-  varchar,
   text,
+  timestamp,
   uuid,
+  varchar,
 } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { workspaces } from './workspaces'
 import { projects } from './projects'
-import { evaluationResultsV2 } from './evaluationResultsV2'
+import { workspaces } from './workspaces'
 
 export const issues = latitudeSchema.table(
   'issues',
@@ -28,12 +27,6 @@ export const issues = latitudeSchema.table(
     documentUuid: uuid('document_uuid').notNull(),
     title: varchar('title', { length: 256 }).notNull(),
     description: text('description').notNull(),
-    firstSeenResultId: bigint('first_seen_result_id', {
-      mode: 'number',
-    }).references(() => evaluationResultsV2.id, { onDelete: 'set null' }),
-    lastSeenResultId: bigint('last_seen_result_id', {
-      mode: 'number',
-    }).references(() => evaluationResultsV2.id, { onDelete: 'set null' }),
     resolvedAt: timestamp('resolved_at'),
     ignoredAt: timestamp('ignored_at'),
     ...timestamps(),
@@ -46,8 +39,6 @@ export const issues = latitudeSchema.table(
       'gin',
       sql`${table.title} gin_trgm_ops`,
     ),
-    index('issues_first_seen_result_id_idx').on(table.firstSeenResultId),
-    index('issues_last_seen_result_id_idx').on(table.lastSeenResultId),
     index('issues_resolved_at_idx').on(table.resolvedAt),
     index('issues_ignored_at_idx').on(table.ignoredAt),
   ],
