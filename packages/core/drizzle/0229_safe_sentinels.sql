@@ -1,0 +1,2 @@
+ALTER TABLE "latitude"."issue_histograms" DROP CONSTRAINT "issue_histograms_unique_workspace_issue_date";--> statement-breakpoint
+ALTER TABLE "latitude"."issue_histograms" ADD CONSTRAINT "issue_histograms_unique_issue_commit_date" UNIQUE("issue_id","commit_id","date");
