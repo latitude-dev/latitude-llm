@@ -121,12 +121,7 @@ function useEvaluationsForAnnotations({
 
       return mutated
     },
-    [
-      mutateCompletedRuns,
-      documentLog.uuid,
-      mutateResults,
-      annotatedEvaluation,
-    ],
+    [mutateCompletedRuns, documentLog.uuid, mutateResults, annotatedEvaluation],
   )
 
   return useMemo(

@@ -1,5 +1,6 @@
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { ProviderLogDto } from '@latitude-data/core/schema/types'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { useMemo } from 'react'
@@ -15,7 +16,7 @@ export type UseUIAnnotationsProps = {
   project: Project
   commit: Commit
   documentLog: { uuid: string; documentUuid: string }
-  providerLog: ProviderLogDto;
+  providerLog: ProviderLogDto
 }
 
 /**
@@ -88,11 +89,13 @@ export function useUIAnnotations({
   return useMemo(
     () => ({
       annotations: {
-        bottom: providerLog ? {
-          evaluation: manualEvaluation,
-          result: manualResult[manualEvaluation?.uuid],
-          providerLog,
-        } : undefined,
+        bottom: providerLog
+          ? {
+              evaluation: manualEvaluation,
+              result: manualResult[manualEvaluation?.uuid],
+              providerLog,
+            }
+          : undefined,
       },
       evaluationResults: results,
       mutateResults,

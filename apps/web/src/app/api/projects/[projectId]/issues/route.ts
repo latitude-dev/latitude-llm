@@ -34,11 +34,10 @@ export const GET = errorHandler(
       const projectsRepo = new ProjectsRepository(workspace.id)
       const project = await projectsRepo.find(projectId).then((r) => r.unwrap())
       const issuesRepo = new IssuesRepository(workspace.id)
-      const result = await issuesRepo
-        .findByTitle({
-          project,
-          title,
-        })
+      const result = await issuesRepo.findByTitle({
+        project,
+        title,
+      })
 
       return NextResponse.json(result, { status: 200 })
     },

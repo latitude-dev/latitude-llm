@@ -150,13 +150,11 @@ export class CommitsRepository extends RepositoryLegacy<
         )
       : or(isNotNull(this.scope.mergedAt), eq(this.scope.id, commit.id))
 
-    return (
-      this.db
-        .select()
-        .from(this.scope)
-        .where(and(eq(this.scope.projectId, commit.projectId), condition))
-        .orderBy(desc(this.scope.mergedAt))
-    )
+    return this.db
+      .select()
+      .from(this.scope)
+      .where(and(eq(this.scope.projectId, commit.projectId), condition))
+      .orderBy(desc(this.scope.mergedAt))
   }
 
   getCommitsWithDocumentChanges({
