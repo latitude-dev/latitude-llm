@@ -4,46 +4,20 @@ import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Suspense, useCallback } from 'react'
-import { useIncludabledPrompts } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/BlocksEditor/useIncludabledPrompts'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
-import {
-  BlocksEditor,
-  BlocksEditorPlaceholder,
-} from '$/components/BlocksEditor'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
-import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { BlocksEditorPlaceholder } from '$/components/BlocksEditor'
 import { fromAstToBlocks } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
 import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
+import { OnboardingEditor } from '../_components/OnboardingEditor'
+import SimpleDatasetTable from '../_components/SimpleDatasetTable'
 
 export function GenerateDatasetBody({
   setCurrentOnboardingStep,
 }: {
   setCurrentOnboardingStep: (step: DatasetOnboardingStepKey) => void
 }) {
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-  const { value, updateDocumentContent } = useDocumentValue()
-  const { document } = useCurrentDocument()
+  const { value } = useDocumentValue()
   const { metadata } = useMetadata()
-  const parameters = Array.from(metadata?.parameters ?? [])
-
-  const onError = useCallback((error: Error) => {
-    toast({
-      variant: 'destructive',
-      title: 'Error during edition',
-      description: error.message,
-    })
-  }, [])
-
-  const prompts = useIncludabledPrompts({
-    project,
-    commit,
-    document,
-    documents: [document],
-  })
 
   const moveNextStep = useCallback(() => {
     setCurrentOnboardingStep(DatasetOnboardingStepKey.RunExperiment)
@@ -55,11 +29,7 @@ export function GenerateDatasetBody({
         <div className='relative flex-1 w-full max-h-[350px] max-w-[600px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
             <div className='relative p-4'>
-              <BlocksEditor
-                project={project}
-                commit={commit}
-                document={document}
-                currentDocument={document}
+              <OnboardingEditor
                 initialValue={
                   metadata?.ast
                     ? fromAstToBlocks({
@@ -68,11 +38,7 @@ export function GenerateDatasetBody({
                       })
                     : emptyRootBlock
                 }
-                placeholder='Type your instructions here, use {{ input }} for variables and / for commands'
-                onError={onError}
-                prompts={prompts}
-                onChange={updateDocumentContent}
-                greyTheme={true}
+                readOnly={true}
               />
               <div
                 aria-hidden
@@ -80,10 +46,7 @@ export function GenerateDatasetBody({
               />
               <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background to-transparent' />
             </div>
-            <div className='absolute bottom-[-4.5rem] w-full p-4 bg-background'>
-              <TableSkeleton rows={6} cols={parameters} maxHeight={320} />
-              <div className='pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background/ via-background to-transparent' />
-            </div>
+            <SimpleDatasetTable numberOfRows={4} onlyShowSkeleton={true} />
           </Suspense>
         </div>
       </div>

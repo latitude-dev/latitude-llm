@@ -10,7 +10,7 @@ import { runCopilot } from '../copilot/run'
 import { z } from 'zod'
 
 const generatedDatasetResponseSchema = z.object({
-  rows: z.string(),
+  rows: z.array(z.record(z.string(), z.unknown())),
   explanation: z.string(),
 })
 
@@ -76,13 +76,12 @@ export async function generateDatasetWithCopilot(
   }
 
   const generatedDataset = generatedDatasetResult.unwrap()
-
   return await createDatasetFromJson({
     author: user,
     workspace,
     data: {
       name,
-      rows: generatedDataset.rows,
+      rows: JSON.stringify(generatedDataset.rows),
     },
   })
 }

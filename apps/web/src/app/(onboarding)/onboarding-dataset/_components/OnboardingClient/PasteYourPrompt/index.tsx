@@ -1,21 +1,14 @@
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { Suspense, useCallback } from 'react'
-import {
-  BlocksEditor,
-  BlocksEditorPlaceholder,
-} from '$/components/BlocksEditor'
+import { BlocksEditorPlaceholder } from '$/components/BlocksEditor'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
-import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
-import { useIncludabledPrompts } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/BlocksEditor/useIncludabledPrompts'
 import { useMetadata } from '$/hooks/useMetadata'
 import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useDatasets from '$/stores/datasets'
+import { OnboardingEditor } from '../_components/OnboardingEditor'
 
 const SAMPLE_PROMPT = `
 ---
@@ -51,27 +44,8 @@ export function PasteYourPromptBody({
 }: {
   setCurrentOnboardingStep: (step: DatasetOnboardingStepKey) => void
 }) {
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
   const { value, updateDocumentContent } = useDocumentValue()
-  const { document } = useCurrentDocument()
   const { runGenerateAction } = useDatasets()
-
-  const onError = useCallback((error: Error) => {
-    toast({
-      variant: 'destructive',
-      title: 'Error during edition',
-      description: error.message,
-    })
-  }, [])
-
-  const prompts = useIncludabledPrompts({
-    project,
-    commit,
-    document,
-    documents: [document],
-  })
-
   const { metadata } = useMetadata()
 
   const generateDataset = useCallback(
@@ -100,18 +74,7 @@ export function PasteYourPromptBody({
       <div className='flex flex-col items-end w-full h-full'>
         <div className='relative flex-1 w-full max-h-[350px] max-w-[600px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
-            <BlocksEditor
-              project={project}
-              commit={commit}
-              document={document}
-              currentDocument={document}
-              initialValue={emptyRootBlock}
-              placeholder='Type your instructions here, use {{ input }} for variables and / for commands'
-              onError={onError}
-              prompts={prompts}
-              onChange={updateDocumentContent}
-              greyTheme={true}
-            />
+            <OnboardingEditor initialValue={emptyRootBlock} readOnly={false} />
             <div className='absolute bottom-[-1.5rem] left-1/2 -translate-x-1/2 border border-border rounded-lg bg-background p-2'>
               <Button
                 fancy
