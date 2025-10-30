@@ -4,23 +4,14 @@ import Chat from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/doc
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MessageList } from '$/components/ChatWrapper'
-import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import DebugToggle from '$/components/DebugToggle'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useOnce } from '$/hooks/useMount'
 import { ROUTES } from '$/services/routes'
-import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs, { useProviderLog } from '$/stores/providerLogs'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
 import { useCompletedRuns } from '$/stores/runs/completedRuns'
-import {
-  ActiveRun,
-  CompletedRun,
-  EvaluationResultV2,
-  Run,
-  RunAnnotation,
-} from '@latitude-data/constants'
+import { ActiveRun, CompletedRun, Run } from '@latitude-data/constants'
 import { buildConversation } from '@latitude-data/core/helpers'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -33,7 +24,10 @@ import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap
 import Link from 'next/link'
 import { useCallback, useMemo } from 'react'
 import { RunPanelStats } from './Stats'
-import { useUIAnnotations, UseUIAnnotationsProps } from '$/hooks/annotations/useUIAnnotations'
+import {
+  useUIAnnotations,
+  UseUIAnnotationsProps,
+} from '$/hooks/annotations/useUIAnnotations'
 
 export function RunPanel({
   run,
@@ -79,10 +73,11 @@ export function RunPanel({
   )
 }
 
-function useEvaluationsForAnnotations ({
+function useEvaluationsForAnnotations({
   project,
   commit,
   documentLog,
+  providerLog,
   mutateCompletedRuns,
 }: UseUIAnnotationsProps & {
   mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
@@ -91,17 +86,19 @@ function useEvaluationsForAnnotations ({
     project,
     commit,
     documentLog,
+    providerLog,
   })
-  const annotatedEvaluation = uiAnnotations.annotations.bottom.evaluation
+  const annotatedEvaluation = uiAnnotations.annotations.bottom?.evaluation
+  const mutateResults = uiAnnotations.mutateResults
   const syncAnnotations: typeof uiAnnotations.mutateResults = useCallback(
     async (data, opts) => {
-      const mutated = await uiAnnotations.mutateResults(data, opts)
+      const mutated = await mutateResults(data, opts)
       if (!mutated) return mutated
 
       const mutatedResultsByDocumentLog = mutated?.[documentLog.uuid] ?? []
-      const annotations = mutatedResultsByDocumentLog.filter(({ evaluation }) =>
-        evaluation.uuid === annotatedEvaluation?.uuid
-      ) ?? []) as RunAnnotation[]
+      const annotations = mutatedResultsByDocumentLog.filter(
+        ({ evaluation }) => evaluation.uuid === annotatedEvaluation?.uuid,
+      )
 
       mutateCompletedRuns(
         (prev) =>
@@ -115,13 +112,25 @@ function useEvaluationsForAnnotations ({
 
       return mutated
     },
-    [mutateCompletedRuns, documentLog.uuid, manualEvaluations, uiAnnotations, annotatedEvaluation],
+    [mutateCompletedRuns, documentLog.uuid, mutateResults, annotatedEvaluation],
   )
 
-  return useMemo(() => ({
-    ...uiAnnotations,
-    syncAnnotations,
-  }), [uiAnnotations, syncAnnotations])
+  return useMemo(
+    () => ({
+      bottonmAnnotation: uiAnnotations.annotations.bottom,
+      isLoading: uiAnnotations.isLoading,
+      isAnnotatingEvaluation: uiAnnotations.isAnnotatingEvaluation,
+      syncAnnotations,
+      annotateEvaluation: uiAnnotations.annotateEvaluation,
+    }),
+    [
+      uiAnnotations.annotations.bottom,
+      syncAnnotations,
+      uiAnnotations.isLoading,
+      uiAnnotations.isAnnotatingEvaluation,
+      uiAnnotations.annotateEvaluation,
+    ],
+  )
 }
 
 function CompletedRunPanel({
@@ -137,60 +146,19 @@ function CompletedRunPanel({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-
-  const {
-    data: evaluations,
-    isLoading: isLoadingEvaluations,
-    annotateEvaluation,
-    isAnnotatingEvaluation,
-  } = useEvaluationsV2({
-    project: project,
-    commit: commit,
-    document: {
-      commitId: commit.id,
-      documentUuid: run.log.documentUuid,
-    },
-  })
-  const manualEvaluations = useMemo(
-    () =>
-      evaluations.filter(
-        (e) => getEvaluationMetricSpecification(e).supportsManualEvaluation,
-      ),
-    [evaluations],
-  )
-
-  const {
-    data: results,
-    isLoading: isLoadingResults,
-    mutate: mutateResults,
-  } = useEvaluationResultsV2ByDocumentLogs({
-    project: project,
-    commit: commit,
-    document: {
-      commitId: commit.id,
-      documentUuid: run.log.documentUuid,
-    },
-    documentLogUuids: [run.log.uuid],
-  })
-  const manualResults = useMemo(() => {
-    if (!results[run.log.uuid]) return {}
-    return results[run.log.uuid].reduce<Record<string, EvaluationResultV2>>(
-      (acc, r) => {
-        const e = manualEvaluations.find((e) => r.evaluation.uuid === e.uuid)
-        if (e) acc[r.evaluation.uuid] = r.result
-        return acc
-      },
-      {},
-    )
-  }, [results, run.log.uuid, manualEvaluations])
-
   const { data: providerLogs, isLoading: isLoadingProviderLogs } =
     useProviderLogs({ documentLogUuid: run.log.uuid })
-
   // Note: this is needed to hydrate the provider log
   const { data: responseLog, isLoading: isLoadingResponseLog } = useProviderLog(
     providerLogs?.at(-1)?.id,
   )
+  const annotationData = useEvaluationsForAnnotations({
+    project,
+    commit,
+    documentLog: run.log,
+    providerLog: responseLog,
+    mutateCompletedRuns,
+  })
 
   const conversation = useMemo(() => {
     if (!responseLog) return []
@@ -205,10 +173,7 @@ function CompletedRunPanel({
   }, [conversation])
 
   const isLoading =
-    isLoadingEvaluations ||
-    isLoadingResults ||
-    isLoadingProviderLogs ||
-    isLoadingResponseLog
+    isLoadingProviderLogs || isLoadingResponseLog || annotationData.isLoading
 
   if (isLoading) {
     return (
@@ -283,23 +248,18 @@ function CompletedRunPanel({
         <div className='w-full flex flex-col gap-y-4 pt-4'>
           {run.log.error.code ? (
             <RunErrorMessage error={run.log.error} />
-          ) : (
-            manualEvaluations.length > 0 &&
-            !!responseLog &&
-            manualEvaluations.map((evaluation) => (
-              <AnnotationForm
-                key={evaluation.uuid}
-                evaluation={evaluation}
-                result={manualResults[evaluation.uuid]}
-                mutateEvaluationResults={syncAnnotations}
-                providerLog={responseLog}
-                documentLog={run.log}
-                commit={run.log.commit}
-                annotateEvaluation={annotateEvaluation}
-                isAnnotatingEvaluation={isAnnotatingEvaluation}
-              />
-            ))
-          )}
+          ) : annotationData.bottonmAnnotation ? (
+            <AnnotationForm
+              evaluation={annotationData.bottonmAnnotation.evaluation}
+              result={annotationData.bottonmAnnotation.result}
+              mutateEvaluationResults={annotationData.syncAnnotations}
+              providerLog={annotationData.bottonmAnnotation.providerLog}
+              documentLog={run.log}
+              commit={run.log.commit}
+              annotateEvaluation={annotationData.annotateEvaluation}
+              isAnnotatingEvaluation={annotationData.isAnnotatingEvaluation}
+            />
+          ) : null}
         </div>
       </div>
     </div>
