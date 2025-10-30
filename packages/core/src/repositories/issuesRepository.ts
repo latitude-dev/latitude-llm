@@ -70,6 +70,7 @@ export class IssuesRepository extends Repository<Issue> {
           like(issues.title, `%${title ?? ''}%`),
         ),
       )
+      .orderBy(desc(issues.createdAt))
       .limit(20)
   }
 
