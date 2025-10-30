@@ -126,7 +126,7 @@ function useEvaluationsForAnnotations({
 
   return useMemo(
     () => ({
-      bottonmAnnotation: uiAnnotations.annotations.bottom,
+      bottomAnnotation: uiAnnotations.annotations.bottom,
       isLoading: uiAnnotations.isLoading,
       isAnnotatingEvaluation: uiAnnotations.isAnnotatingEvaluation,
       syncAnnotations,
@@ -257,12 +257,12 @@ function CompletedRunPanel({
         <div className='w-full flex flex-col gap-y-4 pt-4'>
           {run.log.error.code ? (
             <RunErrorMessage error={run.log.error} />
-          ) : annotationData.bottonmAnnotation ? (
+          ) : annotationData.bottomAnnotation ? (
             <AnnotationForm
-              evaluation={annotationData.bottonmAnnotation.evaluation}
-              result={annotationData.bottonmAnnotation.result}
+              evaluation={annotationData.bottomAnnotation.evaluation}
+              result={annotationData.bottomAnnotation.result}
               mutateEvaluationResults={annotationData.syncAnnotations}
-              providerLog={annotationData.bottonmAnnotation.providerLog}
+              providerLog={annotationData.bottomAnnotation.providerLog}
               documentLog={run.log}
               commit={run.log.commit}
               annotateEvaluation={annotationData.annotateEvaluation}
