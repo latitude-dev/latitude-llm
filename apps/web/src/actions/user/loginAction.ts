@@ -46,12 +46,9 @@ export const loginAction = errorHandlingProcedure
 
       return frontendRedirect(parsedInput.returnTo)
     } else {
-      const magicToken = await createMagicLinkToken({ user, returnTo: parsedInput.returnTo }).then(
+      await createMagicLinkToken({ user, returnTo: parsedInput.returnTo }).then(
         (r) => r.unwrap(),
       )
-
-      console.log('Magic link token created:', magicToken)
-
       return frontendRedirect(ROUTES.auth.magicLinkSent(user.email))
     }
   })
