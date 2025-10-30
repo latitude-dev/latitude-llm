@@ -10,9 +10,9 @@ import {
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { workspaces } from './workspaces'
-import { issues } from './issues'
 import { commits } from './commits'
+import { issues } from './issues'
+import { workspaces } from './workspaces'
 
 export const issueHistograms = latitudeSchema.table(
   'issue_histograms',
@@ -36,12 +36,13 @@ export const issueHistograms = latitudeSchema.table(
     index('issue_histograms_issue_id_idx').on(table.issueId),
     index('issue_histograms_commit_id_idx').on(table.commitId),
     index('issue_histograms_date_idx').on(table.date),
-    unique('issue_histograms_unique_workspace_issue_date').on(
-      table.issueId,
-      table.date,
-    ),
     index('issue_histograms_date_brin_idx')
       .using('brin', sql`${table.date}`)
       .with({ pages_per_range: 32, autosummarize: true }),
+    unique('issue_histograms_unique_issue_commit_date').on(
+      table.issueId,
+      table.commitId,
+      table.date,
+    ),
   ],
 )
