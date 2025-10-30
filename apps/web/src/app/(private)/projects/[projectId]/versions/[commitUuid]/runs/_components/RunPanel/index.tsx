@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react'
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
 import Chat from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
@@ -11,7 +12,12 @@ import { ROUTES } from '$/services/routes'
 import useProviderLogs, { useProviderLog } from '$/stores/providerLogs'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
 import { useCompletedRuns } from '$/stores/runs/completedRuns'
-import { ActiveRun, CompletedRun, Run } from '@latitude-data/constants'
+import {
+  ActiveRun,
+  CompletedRun,
+  Run,
+  RunAnnotation,
+} from '@latitude-data/constants'
 import { buildConversation } from '@latitude-data/core/helpers'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -22,7 +28,6 @@ import {
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import Link from 'next/link'
-import { useCallback, useMemo } from 'react'
 import { RunPanelStats } from './Stats'
 import {
   useUIAnnotations,
@@ -90,15 +95,19 @@ function useEvaluationsForAnnotations({
   })
   const annotatedEvaluation = uiAnnotations.annotations.bottom?.evaluation
   const mutateResults = uiAnnotations.mutateResults
+  const evaluationResults = uiAnnotations.evaluationResults
   const syncAnnotations: typeof uiAnnotations.mutateResults = useCallback(
     async (data, opts) => {
-      const mutated = await mutateResults(data, opts)
+      const mutated = (await mutateResults(
+        data,
+        opts,
+      )) as typeof evaluationResults
       if (!mutated) return mutated
 
       const mutatedResultsByDocumentLog = mutated?.[documentLog.uuid] ?? []
       const annotations = mutatedResultsByDocumentLog.filter(
         ({ evaluation }) => evaluation.uuid === annotatedEvaluation?.uuid,
-      )
+      ) as RunAnnotation[]
 
       mutateCompletedRuns(
         (prev) =>
@@ -112,7 +121,12 @@ function useEvaluationsForAnnotations({
 
       return mutated
     },
-    [mutateCompletedRuns, documentLog.uuid, mutateResults, annotatedEvaluation],
+    [
+      mutateCompletedRuns,
+      documentLog.uuid,
+      mutateResults,
+      annotatedEvaluation,
+    ],
   )
 
   return useMemo(
