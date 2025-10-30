@@ -1,7 +1,6 @@
 import { faker } from '@faker-js/faker'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { type Project } from '../../schema/models/types/Project'
-import { EvaluationResultV2 } from '../../constants'
 import { createIssue as createIssueService } from '../../services/issues/create'
 import {
   createIssueHistogramsBulk,
@@ -18,8 +17,6 @@ export type ICreateIssue = {
   documentUuid?: string
   title?: string
   description?: string
-  firstSeenResult?: EvaluationResultV2
-  lastSeenResult?: EvaluationResultV2
   histograms?: IssueHistogramData[]
 }
 

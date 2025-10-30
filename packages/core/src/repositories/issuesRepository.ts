@@ -4,14 +4,13 @@ import {
   desc,
   eq,
   getTableColumns,
-  gte,
   isNull,
   like,
   or,
   sql,
   SQL,
 } from 'drizzle-orm'
-import { endOfDay } from 'date-fns'
+import { endOfDay, startOfDay } from 'date-fns'
 import { type Issue } from '../schema/models/types/Issue'
 import { type Project } from '../schema/models/types/Project'
 import { type Commit } from '../schema/models/types/Commit'
@@ -25,6 +24,7 @@ import {
   IssueSort,
   ESCALATING_COUNT_THRESHOLD,
   HISTOGRAM_SUBQUERY_ALIAS,
+  NEW_ISSUES_DAYS,
 } from '@latitude-data/constants/issues'
 
 const tt = getTableColumns(issues)
@@ -117,10 +117,10 @@ export class IssuesRepository extends Repository<Issue> {
         recentCount: sql<number>`COALESCE(${subquery.recentCount}::integer, 0)`,
         totalCount: sql<number>`COALESCE(${subquery.totalCount}::integer, 0)`,
         lastSeenDate: sql<Date>`COALESCE(${subquery.lastSeenDate}, '1970-01-01 00:00:00'::timestamp)`,
+        firstSeenDate: sql<Date>`(COALESCE(${subquery.lastSeenDate}, '1970-01-01 00:00:00'::timestamp)`,
         escalatingCount: sql<number>`COALESCE(${subquery.escalatingCount}::integer, 0)`,
-        maxHistogramDate: sql<Date>`COALESCE(${subquery.maxHistogramDate}, '1970-01-01 00:00:00'::timestamp)`,
         isNew:
-          sql<boolean>`(${issues.createdAt} >= NOW() - INTERVAL '7 days')`.as(
+          sql<boolean>`(${issues.createdAt} >= NOW() - INTERVAL '${NEW_ISSUES_DAYS} days')`.as(
             'isNew',
           ),
         isResolved: sql<boolean>`(${issues.resolvedAt} IS NOT NULL)`.as(
@@ -138,9 +138,9 @@ export class IssuesRepository extends Repository<Issue> {
         ),
       })
       .from(issues)
-      .leftJoin(subquery, eq(subquery.issueId, issues.id))
+      .innerJoin(subquery, eq(subquery.issueId, issues.id))
       .where(and(...where))
-      .groupBy(...this.buildGroupByClause(subquery))
+      /* .groupBy(...this.buildGroupByClause(subquery)) */
       .having(having.length > 0 ? and(...having) : undefined)
       .orderBy(...orderBy)
       .limit(limit)
@@ -166,9 +166,9 @@ export class IssuesRepository extends Repository<Issue> {
     const innerQuery = this.db
       .select({ issueId: issues.id })
       .from(issues)
-      .leftJoin(subquery, eq(subquery.issueId, issues.id))
+      .innerJoin(subquery, eq(subquery.issueId, issues.id))
       .where(and(...whereConditions))
-      .groupBy(...this.buildGroupByClause(subquery))
+      /* .groupBy(...this.buildGroupByClause(subquery)) */
       .having(
         havingConditions.length > 0 ? and(...havingConditions) : undefined,
       )
@@ -213,10 +213,6 @@ export class IssuesRepository extends Repository<Issue> {
       conditions.push(like(issues.title, `%${filters.query}%`))
     }
 
-    if (filters.firstSeen) {
-      conditions.push(gte(issues.createdAt, filters.firstSeen))
-    }
-
     // Handle status filtering based on new tab system
     const status = filters.status || 'active' // Default to active
 
@@ -255,8 +251,14 @@ export class IssuesRepository extends Repository<Issue> {
       // Regressed: resolved issues with histogram data after the resolved date
       // Check if the maximum histogram date is after the resolved date
       conditions.push(
-        sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."maxHistogramDate"`)} > ${issues.resolvedAt}`,
+        sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} > ${issues.resolvedAt}`,
       )
+    }
+
+    if (filters.firstSeen) {
+      const fromStartOfDay = startOfDay(filters.firstSeen)
+      const condition = sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."firstSeenDate"`)} >= ${fromStartOfDay}`
+      if (condition) conditions.push(condition)
     }
 
     if (filters.lastSeen) {
@@ -310,7 +312,6 @@ export class IssuesRepository extends Repository<Issue> {
       subquery.totalCount,
       subquery.lastSeenDate,
       subquery.escalatingCount,
-      subquery.maxHistogramDate,
     ]
   }
 

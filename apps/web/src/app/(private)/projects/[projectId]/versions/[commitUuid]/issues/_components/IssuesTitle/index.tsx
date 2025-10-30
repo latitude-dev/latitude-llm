@@ -2,7 +2,10 @@ import { SerializedIssue } from '$/stores/issues'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { RECENT_ISSUES_DAYS } from '@latitude-data/constants/issues'
+import {
+  NEW_ISSUES_DAYS,
+  RECENT_ISSUES_DAYS,
+} from '@latitude-data/constants/issues'
 
 function StatusBadge({ issue }: { issue: SerializedIssue }) {
   const isNew = issue.isNew
@@ -12,14 +15,14 @@ function StatusBadge({ issue }: { issue: SerializedIssue }) {
   if (isNew) {
     return (
       <Tooltip trigger={<Badge variant='accent'>New</Badge>}>
-        Appeared during last 7 days
+        {`Has appeared in the last ${NEW_ISSUES_DAYS} days`}
       </Tooltip>
     )
   }
 
   return (
     <Tooltip trigger={<Badge variant='yellow'>Escalating</Badge>}>
-      {`${issue.escalatingCount} occurrences in the last ${RECENT_ISSUES_DAYS} days.`}
+      {`${issue.escalatingCount} events in the last ${RECENT_ISSUES_DAYS} days.`}
     </Tooltip>
   )
 }

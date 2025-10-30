@@ -128,7 +128,7 @@ export function IssuesTable({
                 <IssuesTitle issue={issue} />
               </TableCell>
               <TableCell>
-                <LastSeenCell issue={issue} />{' '}
+                <LastSeenCell issue={issue} />
               </TableCell>
               <TableCell>{issue.totalCount}</TableCell>
               {showStatus ? (

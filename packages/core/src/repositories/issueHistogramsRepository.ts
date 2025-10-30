@@ -47,6 +47,9 @@ export class IssueHistogramsRepository extends RepositoryLegacy<
         lastSeenDate: sql<Date>`MAX(${issueHistograms.date})`.as(
           'lastSeenDate',
         ),
+        firstSeenDate: sql<Date>`MIN(${issueHistograms.date})`.as(
+          'firstSeenDate',
+        ),
         escalatingCount: sql
           .raw(
             `
@@ -64,11 +67,6 @@ export class IssueHistogramsRepository extends RepositoryLegacy<
           .as('escalatingCount'),
         totalCount: sql<number>`COALESCE(SUM(${issueHistograms.count}), 0)`.as(
           'totalCount',
-        ),
-        // Add a field to detect if there are histogram entries after resolved date
-        // This will be used to identify regressed issues
-        maxHistogramDate: sql<Date>`MAX(${issueHistograms.date})`.as(
-          'maxHistogramDate',
         ),
       })
       .from(issueHistograms)

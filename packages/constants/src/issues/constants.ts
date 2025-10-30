@@ -26,6 +26,7 @@ export type SafeIssuesParams = {
 
 export const ESCALATING_COUNT_THRESHOLD = 10
 export const ESCALATING_DAYS = 2
+export const NEW_ISSUES_DAYS = 7
 export const RECENT_ISSUES_DAYS = 7
 export const HISTOGRAM_SUBQUERY_ALIAS = 'histogramStats'
 export type QueryParams = { [key: string]: string | string[] | undefined }

@@ -31,8 +31,8 @@ export async function createIssueHistogramsBulk(
       count,
     }))
 
-    const issues = await tx.insert(issueHistograms).values(values).returning()
+    const results = await tx.insert(issueHistograms).values(values).returning()
 
-    return Result.ok(issues)
+    return Result.ok(results)
   })
 }
