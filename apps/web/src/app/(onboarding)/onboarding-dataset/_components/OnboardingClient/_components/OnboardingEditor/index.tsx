@@ -5,16 +5,16 @@ import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { memo, useCallback } from 'react'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { useIncludabledPrompts } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/BlocksEditor/useIncludabledPrompts'
-import { BlocksEditor } from '$/components/BlocksEditor'
-import { BlockRootNode } from '$/components/BlocksEditor/Editor/state/promptlToLexical/types'
+import { BlockRootNode, BlocksEditor } from '$/components/BlocksEditor'
+import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
 
 export const OnboardingEditor = memo(
   ({
-    initialValue,
     readOnly,
+    initialValue,
   }: {
-    initialValue: BlockRootNode
     readOnly: boolean
+    initialValue: BlockRootNode
   }) => {
     const { project } = useCurrentProject()
     const { commit } = useCurrentCommit()
@@ -42,7 +42,7 @@ export const OnboardingEditor = memo(
           commit={commit}
           document={document}
           currentDocument={document}
-          initialValue={initialValue}
+          initialValue={initialValue ?? emptyRootBlock}
           placeholder='Type your instructions here, use {{ input }} for variables and / for commands'
           onError={onError}
           prompts={prompts}

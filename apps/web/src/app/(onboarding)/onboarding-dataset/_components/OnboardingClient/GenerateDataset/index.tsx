@@ -1,24 +1,22 @@
 import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
-import { useMetadata } from '$/hooks/useMetadata'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Suspense, useCallback } from 'react'
-import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { BlocksEditorPlaceholder } from '$/components/BlocksEditor'
-import { fromAstToBlocks } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
-import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
 import { OnboardingEditor } from '../_components/OnboardingEditor'
-import SimpleDatasetTable from '../_components/SimpleDatasetTable'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { BlockRootNode } from '$/components/BlocksEditor'
 
 export function GenerateDatasetBody({
   setCurrentOnboardingStep,
+  initialValue,
+  documentParameters,
 }: {
+  initialValue: BlockRootNode
   setCurrentOnboardingStep: (step: DatasetOnboardingStepKey) => void
+  documentParameters: string[]
 }) {
-  const { value } = useDocumentValue()
-  const { metadata } = useMetadata()
-
   const moveNextStep = useCallback(() => {
     setCurrentOnboardingStep(DatasetOnboardingStepKey.RunExperiment)
   }, [setCurrentOnboardingStep])
@@ -29,25 +27,14 @@ export function GenerateDatasetBody({
         <div className='relative flex-1 w-full max-h-[350px] max-w-[600px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
             <div className='relative p-4'>
-              <OnboardingEditor
-                initialValue={
-                  metadata?.ast
-                    ? fromAstToBlocks({
-                        ast: metadata.ast,
-                        prompt: value,
-                      })
-                    : emptyRootBlock
-                }
-                readOnly={true}
-              />
-              <div
-                aria-hidden
-                className='pointer-events-none absolute inset-0 bg-background/60 backdrop-saturate-50'
-              />
+              <OnboardingEditor readOnly={true} initialValue={initialValue} />
               <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background to-transparent' />
             </div>
-            <SimpleDatasetTable numberOfRows={4} onlyShowSkeleton={true} />
           </Suspense>
+          <div className='absolute inset-x-0 bottom-[-10rem] h-full w-full p-4 bg-background'>
+            <TableSkeleton rows={6} cols={documentParameters} maxHeight={320} />
+            <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background to-transparent' />
+          </div>
         </div>
       </div>
       <div className='flex flex-col items-start gap-8 w-full h-full'>

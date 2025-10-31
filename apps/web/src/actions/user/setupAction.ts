@@ -10,6 +10,8 @@ import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access/users'
 import { errorHandlingProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
 import { UserTitle } from '@latitude-data/constants/users'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
+import { Result } from '@latitude-data/core/lib/Result'
 
 export const setupAction = errorHandlingProcedure
   .inputSchema(
@@ -55,6 +57,20 @@ export const setupAction = errorHandlingProcedure
 
     // If there is no returnTo or its NOT a clone action url, redirect to the setup form
     if (!parsedInput.returnTo || !isCloneActionUrl(parsedInput.returnTo)) {
+      const isDatasetOnboardingEnabledResult = await isFeatureEnabledByName(
+        workspace.id,
+        'datasetOnboarding',
+      )
+
+      if (!Result.isOk(isDatasetOnboardingEnabledResult)) {
+        return frontendRedirect(ROUTES.dashboard.root)
+      }
+      const isDatasetOnboardingEnabled =
+        isDatasetOnboardingEnabledResult.unwrap()
+
+      if (isDatasetOnboardingEnabled) {
+        return frontendRedirect(ROUTES.onboarding.dataset)
+      }
       return frontendRedirect(ROUTES.auth.setup.form)
     }
 

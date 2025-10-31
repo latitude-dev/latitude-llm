@@ -10,25 +10,21 @@ import {
 import useDatasetRows from '$/stores/datasetRows'
 import { useMemo } from 'react'
 import useDatasets from '$/stores/datasets'
-import { useMetadata } from '$/hooks/useMetadata'
 
 export default function SimpleDatasetTable({
   numberOfRows,
   onlyShowSkeleton = false,
+  documentParameters,
 }: {
   numberOfRows: number
   onlyShowSkeleton?: boolean
+  documentParameters: string[]
 }) {
-  const { metadata } = useMetadata()
   const { data: datasets, generateIsLoading } = useDatasets()
   const { data: rows } = useDatasetRows({
     dataset: datasets?.[0],
     pageSize: numberOfRows.toString(),
   })
-  const parameters = useMemo(
-    () => Array.from(metadata?.parameters ?? []),
-    [metadata],
-  )
   const onboardingDatasetColumns = useMemo(() => {
     return datasets?.[0]?.columns
   }, [datasets])
@@ -36,7 +32,7 @@ export default function SimpleDatasetTable({
   if (generateIsLoading || onlyShowSkeleton) {
     return (
       <div className='absolute inset-x-0 bottom-[-10rem] h-full w-full p-4 bg-background'>
-        <TableSkeleton rows={6} cols={parameters} maxHeight={320} />{' '}
+        <TableSkeleton rows={6} cols={documentParameters} maxHeight={320} />{' '}
         <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background to-transparent' />
       </div>
     )
@@ -47,7 +43,7 @@ export default function SimpleDatasetTable({
       <Table>
         <TableHeader>
           <TableRow>
-            {parameters.map((parameter) => (
+            {documentParameters.map((parameter) => (
               <TableHead key={parameter}>{parameter}</TableHead>
             ))}
           </TableRow>

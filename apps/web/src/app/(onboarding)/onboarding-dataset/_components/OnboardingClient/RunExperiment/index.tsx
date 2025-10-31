@@ -1,21 +1,34 @@
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useCallback } from 'react'
-import { useMetadata } from '$/hooks/useMetadata'
+import { useCallback, useMemo } from 'react'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Suspense } from 'react'
-import { useDocumentValue } from '$/hooks/useDocumentValueContext'
-import { BlocksEditorPlaceholder } from '$/components/BlocksEditor'
-import { fromAstToBlocks } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
-import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
+import {
+  BlockRootNode,
+  BlocksEditorPlaceholder,
+} from '$/components/BlocksEditor'
 import { OnboardingEditor } from '../_components/OnboardingEditor'
 import SimpleDatasetTable from '../_components/SimpleDatasetTable'
+import { useExperiments } from '$/stores/experiments'
+import useDatasets from '$/stores/datasets'
+import { envClient } from '$/envClient'
+
+const EXPERIMENT_VARIANT = [
+  {
+    name: 'Onboarding Experiment',
+    provider: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
+    model: 'gpt-4o-mini',
+    temperature: 1,
+  },
+]
 
 export default function RunExperimentBody({
   executeCompleteOnboarding,
+  documentParameters,
+  initialValue,
 }: {
   executeCompleteOnboarding: ({
     projectId,
@@ -26,24 +39,63 @@ export default function RunExperimentBody({
     commitUuid: string
     documentUuid: string
   }) => void
+  documentParameters: string[]
+  initialValue: BlockRootNode
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { value } = useDocumentValue()
   const { document } = useCurrentDocument()
-  const { metadata } = useMetadata()
+  const { data: datasets } = useDatasets()
+
+  const latestDataset = datasets?.[datasets.length - 1]
+  const parametersMap = useMemo(() => {
+    return latestDataset && documentParameters.length
+      ? Object.fromEntries(
+          latestDataset.columns
+            .map((col, index) =>
+              documentParameters.includes(col.name) ? [col.name, index] : null,
+            )
+            .filter(Boolean) as [string, number][],
+        )
+      : {}
+  }, [latestDataset, documentParameters])
+
+  const { create, isCreating } = useExperiments(
+    {
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+    },
+    {
+      onCreate: async () => {
+        executeCompleteOnboarding({
+          projectId: project.id,
+          commitUuid: commit.uuid,
+          documentUuid: document.documentUuid,
+        })
+      },
+    },
+  )
 
   const onCompleteOnboarding = useCallback(() => {
-    executeCompleteOnboarding({
+    const latestDataset = datasets?.[datasets.length - 1]
+    create({
       projectId: project.id,
       commitUuid: commit.uuid,
       documentUuid: document.documentUuid,
+      variants: EXPERIMENT_VARIANT,
+      datasetId: latestDataset?.id,
+      parametersMap,
+      datasetLabels: {},
+      fromRow: 1,
+      evaluationUuids: [],
     })
   }, [
-    executeCompleteOnboarding,
+    create,
+    datasets,
     project.id,
     commit.uuid,
     document.documentUuid,
+    parametersMap,
   ])
 
   return (
@@ -52,25 +104,14 @@ export default function RunExperimentBody({
         <div className='relative flex-1 w-full h-full max-w-[600px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
             <div className='relative p-4'>
-              <OnboardingEditor
-                initialValue={
-                  metadata?.ast
-                    ? fromAstToBlocks({
-                        ast: metadata.ast,
-                        prompt: value,
-                      })
-                    : emptyRootBlock
-                }
-                readOnly={true}
-              />
-              <div
-                aria-hidden
-                className='pointer-events-none absolute inset-0 bg-background/60 backdrop-saturate-50'
-              />
+              <OnboardingEditor readOnly={true} initialValue={initialValue} />
               <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background to-transparent' />
             </div>
           </Suspense>
-          <SimpleDatasetTable numberOfRows={4} />
+          <SimpleDatasetTable
+            numberOfRows={4}
+            documentParameters={documentParameters}
+          />
         </div>
       </div>
       <div className='flex flex-col items-start gap-8 w-full h-full'>
@@ -110,6 +151,7 @@ export default function RunExperimentBody({
           className='w-full'
           iconProps={{ placement: 'right', name: 'arrowRight' }}
           onClick={onCompleteOnboarding}
+          disabled={isCreating}
         >
           Run Experiment
         </Button>

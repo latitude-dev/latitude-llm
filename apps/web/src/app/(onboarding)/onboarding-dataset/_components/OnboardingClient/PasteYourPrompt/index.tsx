@@ -4,11 +4,16 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Suspense, useCallback } from 'react'
 import { BlocksEditorPlaceholder } from '$/components/BlocksEditor'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
-import { useMetadata } from '$/hooks/useMetadata'
 import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
-import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
 import useDatasets from '$/stores/datasets'
 import { OnboardingEditor } from '../_components/OnboardingEditor'
+import { scan } from 'promptl-ai'
+import {
+  BlockRootNode,
+  emptyRootBlock,
+  fromAstToBlocks,
+} from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
+import { useMetadata } from '$/hooks/useMetadata'
 
 const SAMPLE_PROMPT = `
 ---
@@ -41,46 +46,86 @@ Return only one of the categories.
 
 export function PasteYourPromptBody({
   setCurrentOnboardingStep,
+  setInitialValue,
+  initialValue,
+  setDocumentParameters,
 }: {
   setCurrentOnboardingStep: (step: DatasetOnboardingStepKey) => void
+  setInitialValue: (value: BlockRootNode) => void
+  initialValue: BlockRootNode
+  setDocumentParameters: (parameters: string[]) => void
 }) {
+  const { metadata } = useMetadata()
   const { value, updateDocumentContent } = useDocumentValue()
   const { runGenerateAction } = useDatasets()
-  const { metadata } = useMetadata()
 
-  const generateDataset = useCallback(
-    async (value: string) => {
-      updateDocumentContent(value)
-      const parameters = Array.from(metadata?.parameters ?? []).join(', ') ?? ''
-      setCurrentOnboardingStep(DatasetOnboardingStepKey.GenerateDataset)
-      runGenerateAction({
-        parameters,
-        prompt: value,
-        rowCount: 10,
-        name: 'Onboarding Dataset',
-        fromCloud: false,
-      })
-    },
-    [
-      metadata,
-      runGenerateAction,
-      setCurrentOnboardingStep,
-      updateDocumentContent,
-    ],
-  )
+  const onNext = useCallback(async () => {
+    const initialValue = metadata?.ast
+      ? fromAstToBlocks({
+          ast: metadata.ast,
+          prompt: value,
+        })
+      : emptyRootBlock
+    setInitialValue(initialValue)
+    const parameters = Array.from(metadata?.parameters ?? []).join(', ') ?? ''
+    setDocumentParameters(Array.from(metadata?.parameters ?? []))
+    runGenerateAction({
+      parameters,
+      prompt: value,
+      rowCount: 10,
+      name: 'Onboarding Dataset',
+      fromCloud: false,
+    })
+    setCurrentOnboardingStep(DatasetOnboardingStepKey.GenerateDataset)
+  }, [
+    runGenerateAction,
+    setCurrentOnboardingStep,
+    setDocumentParameters,
+    setInitialValue,
+    metadata,
+    value,
+  ])
+
+  const onUseSamplePrompt = useCallback(async () => {
+    const metadata = await scan({ prompt: SAMPLE_PROMPT })
+    setInitialValue(
+      fromAstToBlocks({
+        ast: metadata.ast,
+        prompt: SAMPLE_PROMPT,
+      }),
+    )
+    updateDocumentContent(SAMPLE_PROMPT)
+    const parameters = Array.from(metadata.parameters ?? []).join(', ') ?? ''
+    setDocumentParameters(Array.from(metadata.parameters ?? []))
+
+    runGenerateAction({
+      parameters,
+      prompt: SAMPLE_PROMPT,
+      rowCount: 10,
+      name: 'Onboarding Dataset',
+      fromCloud: false,
+    })
+    setCurrentOnboardingStep(DatasetOnboardingStepKey.GenerateDataset)
+  }, [
+    setInitialValue,
+    setCurrentOnboardingStep,
+    runGenerateAction,
+    updateDocumentContent,
+    setDocumentParameters,
+  ])
 
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
       <div className='flex flex-col items-end w-full h-full'>
         <div className='relative flex-1 w-full max-h-[350px] max-w-[600px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
-            <OnboardingEditor initialValue={emptyRootBlock} readOnly={false} />
+            <OnboardingEditor readOnly={false} initialValue={initialValue} />
             <div className='absolute bottom-[-1.5rem] left-1/2 -translate-x-1/2 border border-border rounded-lg bg-background p-2'>
               <Button
                 fancy
                 className='w-full'
                 variant='outline'
-                onClick={() => generateDataset(SAMPLE_PROMPT)}
+                onClick={onUseSamplePrompt}
               >
                 Use sample prompt
               </Button>
@@ -126,7 +171,7 @@ export function PasteYourPromptBody({
           fancy
           className='w-full'
           iconProps={{ placement: 'right', name: 'arrowRight' }}
-          onClick={() => generateDataset(value)}
+          onClick={onNext}
         >
           Next
         </Button>
