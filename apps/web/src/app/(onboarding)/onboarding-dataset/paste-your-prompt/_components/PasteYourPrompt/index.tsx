@@ -9,11 +9,7 @@ import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import useDatasets from '$/stores/datasets'
 import { OnboardingEditor } from '../../../_components/OnboardingEditor'
 import { scan } from 'promptl-ai'
-import {
-  emptyRootBlock,
-  fromAstToBlocks,
-} from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
-import { useMetadata } from '$/hooks/useMetadata'
+import { fromAstToBlocks } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
 import { useDatasetOnboarding } from '$/stores/datasetOnboarding'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -48,7 +44,6 @@ Return only one of the categories.
 `
 
 export function PasteYourPromptBody() {
-  const { metadata } = useMetadata()
   const { value, updateDocumentContent } = useDocumentValue()
   const { data: datasets, runGenerateAction } = useDatasets()
   const [editorKey, setEditorKey] = useState(0)
@@ -57,16 +52,17 @@ export function PasteYourPromptBody() {
   const router = useNavigate()
 
   const onNext = useCallback(async () => {
-    const newInitialValue = metadata?.ast
-      ? fromAstToBlocks({
-          ast: metadata.ast,
-          prompt: value,
-        })
-      : emptyRootBlock
-    setInitialValue(newInitialValue)
+    // We need max speed here, so we don't want to use the useMetadata hook to get the metadata.ast or parameters
+    const metadata = await scan({ prompt: value })
+    setInitialValue(fromAstToBlocks({ ast: metadata.ast, prompt: value }))
+    // If the user doesnt add any parameters, we default to 'message'
+    const documentParameters =
+      Array.from(metadata.parameters).length > 0
+        ? Array.from(metadata.parameters)
+        : ['message']
+    setDocumentParameters(documentParameters)
+    const parameters = documentParameters.join(', ') ?? 'message'
 
-    const parameters = Array.from(metadata?.parameters ?? []).join(', ') ?? ''
-    setDocumentParameters(Array.from(metadata?.parameters ?? []))
     const datasetName = datasets?.length
       ? `Dataset Onboarding ${datasets.length}`
       : 'Dataset Onboarding'
@@ -83,13 +79,13 @@ export function PasteYourPromptBody() {
     runGenerateAction,
     setDocumentParameters,
     setInitialValue,
-    metadata,
     value,
     router,
     datasets.length,
   ])
 
   const onUseSamplePrompt = useCallback(async () => {
+    // We need max speed here, so we don't want to use the useMetadata hook to get the metadata.ast or parameters
     const metadata = await scan({ prompt: SAMPLE_PROMPT })
     const newInitialValue = fromAstToBlocks({
       ast: metadata.ast,
@@ -105,14 +101,14 @@ export function PasteYourPromptBody() {
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
       <div className='flex flex-col items-end w-full h-full'>
-        <div className='relative flex-1 w-full max-h-[350px] max-w-[600px]'>
+        <div className='relative flex-1 w-full min-h-0 max-h-[350px] max-w-[560px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
             <OnboardingEditor
               key={editorKey}
               readOnly={false}
               initialValue={initialValue}
             />
-            <div className='absolute bottom-[-3rem] left-1/2 -translate-x-1/2 border border-border rounded-lg bg-background p-2'>
+            <div className='absolute bottom-[-1.5rem] left-1/2 -translate-x-1/2 border border-border rounded-lg bg-background p-2'>
               <Button
                 fancy
                 className='w-full'

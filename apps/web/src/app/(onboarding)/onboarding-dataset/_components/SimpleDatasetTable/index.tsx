@@ -20,29 +20,38 @@ export default function SimpleDatasetTable({
   onlyShowSkeleton?: boolean
   documentParameters: string[]
 }) {
-  const { data: datasets, generateIsLoading } = useDatasets()
-  const { data: rows } = useDatasetRows({
-    dataset: datasets?.[0],
+  const {
+    data: datasets,
+    generateIsLoading,
+    isLoading: isLoadingDatasets,
+  } = useDatasets()
+  const latestDataset = datasets?.[datasets.length - 1]
+  const { data: rows, isLoading: isLoadingRows } = useDatasetRows({
+    dataset: latestDataset,
     pageSize: numberOfRows.toString(),
   })
   const onboardingDatasetColumns = useMemo(() => {
-    return datasets?.[0]?.columns
-  }, [datasets])
+    return latestDataset?.columns ?? []
+  }, [latestDataset])
 
-  if (generateIsLoading || onlyShowSkeleton) {
+  const isLoadingDataset = useMemo(() => {
+    return generateIsLoading || isLoadingRows || isLoadingDatasets
+  }, [generateIsLoading, isLoadingRows, isLoadingDatasets])
+
+  if (isLoadingDataset || onlyShowSkeleton) {
     return (
-      <div className='absolute inset-x-0 bottom-[-10rem] h-full w-full p-4 bg-background'>
-        <TableSkeleton rows={6} cols={documentParameters} maxHeight={320} />{' '}
-        <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background to-transparent' />
+      <div className='absolute inset-x-0 bottom-[-7.5rem] h-full w-full bg-background'>
+        <TableSkeleton rows={6} cols={documentParameters} maxHeight={320} />
+        <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background/80 to-transparent' />
       </div>
     )
   }
 
   return (
-    <div className='absolute inset-x-0 bottom-[-9.5rem] h-full w-full p-4 bg-background'>
+    <div className='absolute inset-x-0 bottom-[-7.5rem] h-full w-full bg-background'>
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow hoverable={false}>
             {documentParameters.map((parameter) => (
               <TableHead key={parameter}>{parameter}</TableHead>
             ))}
@@ -50,9 +59,9 @@ export default function SimpleDatasetTable({
         </TableHeader>
         <TableBody>
           {rows?.map((row) => (
-            <TableRow key={row.id}>
+            <TableRow key={row.id} hoverable={false}>
               {onboardingDatasetColumns?.map((column) => (
-                <TableCell key={column.identifier}>
+                <TableCell key={column.identifier} className='py-2'>
                   {row.processedRowData[column.identifier] ?? ''}
                 </TableCell>
               ))}
@@ -60,7 +69,7 @@ export default function SimpleDatasetTable({
           ))}
         </TableBody>
       </Table>
-      <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background to-transparent' />
+      <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background/80 to-transparent' />
     </div>
   )
 }

@@ -36,7 +36,7 @@ export const OnboardingEditor = memo(
       documents: [document],
     })
     return (
-      <div className='relative flex-1 w-full h-full max-w-[600px]'>
+      <div className='relative flex-1 w-full max-h-full h-full pb-7 bg-backgroundCode border border-border rounded-xl'>
         <BlocksEditor
           project={project}
           commit={commit}
@@ -47,8 +47,8 @@ export const OnboardingEditor = memo(
           onError={onError}
           prompts={prompts}
           onChange={updateDocumentContent}
-          greyTheme={true}
           readOnlyMessage={readOnly ? ' ' : undefined}
+          greyTheme={true}
         />
       </div>
     )

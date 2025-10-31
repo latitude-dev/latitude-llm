@@ -136,9 +136,9 @@ export function BlocksEditor({
     >
       <LexicalComposer initialConfig={initialConfig}>
         <div
-          className={cn('relative h-full', {
-            'border border-border bg-backgroundCode rounded-xl p-3 overflow-y-auto':
-              readOnly || greyTheme,
+          className={cn('relative', {
+            'border border-border bg-backgroundCode rounded-xl p-3': readOnly,
+            'bg-backgroundCode h-full overflow-y-auto p-3': greyTheme,
           })}
           ref={onRef}
         >
