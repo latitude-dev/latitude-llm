@@ -24,6 +24,7 @@ const SubscriptionPlansMock = {
 describe('revokeGrant', () => {
   let now: Date
   let workspace: Workspace
+  let billableFrom: Date
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -41,6 +42,13 @@ describe('revokeGrant', () => {
       createdAt: subMonths(now, 1),
     })
     workspace = w
+
+    // Calculate billableFrom to match getLatestRenewalDate behavior
+    // This handles edge cases like Oct 31 -> workspace created Sep 30
+    const workspaceCreatedAt = subMonths(now, 1)
+    billableFrom = new Date(workspaceCreatedAt)
+    billableFrom.setFullYear(now.getFullYear())
+    billableFrom.setMonth(now.getMonth())
 
     await database.delete(grants).where(eq(grants.workspaceId, workspace.id))
 
@@ -96,7 +104,7 @@ describe('revokeGrant', () => {
         type: QuotaType.Credits,
         amount: 10,
         balance: 0,
-        expiresAt: endOfDay(subDays(now, 1)),
+        expiresAt: endOfDay(subDays(billableFrom, 1)),
       }),
     )
     expect(
@@ -150,7 +158,7 @@ describe('revokeGrant', () => {
           type: QuotaType.Credits,
           amount: 10,
           balance: 0,
-          expiresAt: endOfDay(subDays(now, 1)),
+          expiresAt: endOfDay(subDays(billableFrom, 1)),
         }),
         expect.objectContaining({
           workspaceId: workspace.id,
@@ -159,7 +167,7 @@ describe('revokeGrant', () => {
           type: QuotaType.Credits,
           amount: 20,
           balance: 0,
-          expiresAt: endOfDay(subDays(now, 1)),
+          expiresAt: endOfDay(subDays(billableFrom, 1)),
         }),
       ]),
     )
@@ -198,7 +206,7 @@ describe('revokeGrant', () => {
           type: QuotaType.Credits,
           amount: 10,
           balance: 0,
-          expiresAt: endOfDay(subDays(now, 1)),
+          expiresAt: endOfDay(subDays(billableFrom, 1)),
         }),
         expect.objectContaining({
           workspaceId: workspace.id,
@@ -207,7 +215,7 @@ describe('revokeGrant', () => {
           type: QuotaType.Credits,
           amount: 20,
           balance: 0,
-          expiresAt: endOfDay(subDays(now, 1)),
+          expiresAt: endOfDay(subDays(billableFrom, 1)),
         }),
       ]),
     )
@@ -246,7 +254,7 @@ describe('revokeGrant', () => {
           type: QuotaType.Credits,
           amount: 10,
           balance: 0,
-          expiresAt: endOfDay(subDays(now, 1)),
+          expiresAt: endOfDay(subDays(billableFrom, 1)),
         }),
       ]),
     )
@@ -284,7 +292,7 @@ describe('revokeGrant', () => {
           type: QuotaType.Seats,
           amount: 5,
           balance: 0,
-          expiresAt: endOfDay(subDays(now, 1)),
+          expiresAt: endOfDay(subDays(billableFrom, 1)),
         }),
         expect.objectContaining({
           workspaceId: workspace.id,
@@ -293,7 +301,7 @@ describe('revokeGrant', () => {
           type: QuotaType.Runs,
           amount: 'unlimited',
           balance: 0,
-          expiresAt: endOfDay(subDays(now, 1)),
+          expiresAt: endOfDay(subDays(billableFrom, 1)),
         }),
         expect.objectContaining({
           workspaceId: workspace.id,
@@ -302,7 +310,7 @@ describe('revokeGrant', () => {
           type: QuotaType.Credits,
           amount: 10,
           balance: 0,
-          expiresAt: endOfDay(subDays(now, 1)),
+          expiresAt: endOfDay(subDays(billableFrom, 1)),
         }),
         expect.objectContaining({
           workspaceId: workspace.id,
@@ -311,7 +319,7 @@ describe('revokeGrant', () => {
           type: QuotaType.Credits,
           amount: 20,
           balance: 0,
-          expiresAt: endOfDay(subDays(now, 1)),
+          expiresAt: endOfDay(subDays(billableFrom, 1)),
         }),
       ]),
     )

@@ -149,6 +149,13 @@ describe('issueGrant', () => {
   })
 
   it('succeeds when expirable grant on periods', async () => {
+    // Calculate billableFrom to match getLatestRenewalDate behavior
+    // This handles edge cases like Oct 31 -> workspace created Sep 30
+    const workspaceCreatedAt = subMonths(now, 1)
+    const billableFrom = new Date(workspaceCreatedAt)
+    billableFrom.setFullYear(now.getFullYear())
+    billableFrom.setMonth(now.getMonth())
+
     const result = await issueGrant({
       type: QuotaType.Credits,
       amount: 10,
@@ -168,7 +175,7 @@ describe('issueGrant', () => {
         type: QuotaType.Credits,
         amount: 10,
         balance: 10,
-        expiresAt: startOfDay(addMonths(now, 3)),
+        expiresAt: startOfDay(addMonths(billableFrom, 3)),
       }),
     )
     expect(
