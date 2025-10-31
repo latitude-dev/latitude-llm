@@ -17,6 +17,8 @@ import { redirect } from 'next/navigation'
 
 import { CSPostHogProvider, IdentifyUser } from '../providers'
 import { PaywallModalProvider } from './providers/PaywallModalProvider'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
+import { Result } from '@latitude-data/core/lib/Result'
 
 export const metadata = buildMetatags({
   title: 'Home',
@@ -31,7 +33,20 @@ export default async function PrivateLayout({
   const { workspace, user, subscriptionPlan } = await getCurrentUserOrRedirect()
 
   const completed = await isOnboardingCompleted()
+
+  const datasetOnboardingEnabledResult = await isFeatureEnabledByName(
+    workspace.id,
+    'datasetOnboarding',
+  )
+  if (!Result.isOk(datasetOnboardingEnabledResult)) {
+    redirect(ROUTES.dashboard.root)
+  }
+  const isDatasetOnboardingEnabled = datasetOnboardingEnabledResult.unwrap()
+
   if (!completed) {
+    if (isDatasetOnboardingEnabled) {
+      redirect(ROUTES.onboarding.dataset.pasteYourPrompt)
+    }
     redirect(ROUTES.onboarding.agents.selectAgent)
   }
 

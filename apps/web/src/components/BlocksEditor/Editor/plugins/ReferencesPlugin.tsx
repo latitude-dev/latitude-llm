@@ -49,19 +49,19 @@ export function EventListeners({
   onToggleDevEditor: BlocksEditorProps['onToggleDevEditor']
 }) {
   useEffect(() => {
+    if (!onToggleDevEditor) return
+
     const abortController = new AbortController()
-    document.addEventListener(
-      CUSTOM_EVENTS.GO_TO_DEV_EDITOR,
-      onToggleDevEditor,
-      { signal: abortController.signal },
-    )
+    const handleEvent = () => {
+      onToggleDevEditor()
+    }
+    document.addEventListener(CUSTOM_EVENTS.GO_TO_DEV_EDITOR, handleEvent, {
+      signal: abortController.signal,
+    })
 
     return () => {
       abortController.abort()
-      document.removeEventListener(
-        CUSTOM_EVENTS.GO_TO_DEV_EDITOR,
-        onToggleDevEditor,
-      )
+      document.removeEventListener(CUSTOM_EVENTS.GO_TO_DEV_EDITOR, handleEvent)
     }
   }, [onToggleDevEditor])
 
@@ -144,6 +144,8 @@ export function ReferencesPlugin({
       closeMenu: () => void,
       _matchingString: string,
     ) => {
+      if (!onRequestPromptMetadata) return
+
       let referenceNode: ReferenceNode
 
       editor.update(() => {

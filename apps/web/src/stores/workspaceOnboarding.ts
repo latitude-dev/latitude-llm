@@ -25,13 +25,27 @@ export default function useWorkspaceOnboarding() {
 
   const { execute: executeCompleteOnboarding } = useLatitudeAction(
     completeOnboardingAction,
+    {
+      onSuccess: () => {
+        // No-op
+      },
+    },
   )
 
   const { execute: executeCreatePromptEngineeringResources } =
-    useLatitudeAction(createPromptEngineeringResourcesAction)
+    useLatitudeAction(createPromptEngineeringResourcesAction, {
+      onSuccess: () => {
+        // No-op
+      },
+    })
 
   const { execute: createDefaultAgentOnboardingProject } = useLatitudeAction(
     createDefaultAgentOnboardingProjectAction,
+    {
+      onSuccess: () => {
+        // No-op
+      },
+    },
   )
 
   const {

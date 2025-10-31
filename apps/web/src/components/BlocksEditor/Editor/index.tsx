@@ -98,6 +98,7 @@ export function BlocksEditor({
   onToggleDevEditor,
   readOnlyMessage,
   autoFocus = false,
+  greyTheme = false,
 }: BlocksEditorProps) {
   const readOnly = Boolean(readOnlyMessage)
   const [floatingAnchorElem, setFloatingAnchorElem] =
@@ -137,6 +138,7 @@ export function BlocksEditor({
         <div
           className={cn('relative', {
             'border border-border bg-backgroundCode rounded-xl p-3': readOnly,
+            'bg-backgroundCode h-full overflow-y-auto p-3': greyTheme,
           })}
           ref={onRef}
         >
@@ -192,14 +194,18 @@ export function BlocksEditor({
           <MessageEditPlugin />
           <TypeaheadMenuPlugin />
           <VariableMenuPlugin />
-          <ReferencesPlugin
-            prompts={prompts}
-            onRequestPromptMetadata={onRequestPromptMetadata}
-            onToggleDevEditor={onToggleDevEditor}
-          />
-          <ReferenceEditPlugin
-            onRequestPromptMetadata={onRequestPromptMetadata}
-          />
+          {onRequestPromptMetadata && onToggleDevEditor && prompts && (
+            <ReferencesPlugin
+              prompts={prompts}
+              onRequestPromptMetadata={onRequestPromptMetadata}
+              onToggleDevEditor={onToggleDevEditor}
+            />
+          )}
+          {onRequestPromptMetadata && (
+            <ReferenceEditPlugin
+              onRequestPromptMetadata={onRequestPromptMetadata}
+            />
+          )}
           <HierarchyValidationPlugin />
           <VariableEditPlugin />
           <VariableTransformPlugin />

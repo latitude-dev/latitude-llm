@@ -9,6 +9,8 @@ import useSWR, { SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useCallback, useState } from 'react'
 import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+import { generateDatasetAction } from '$/actions/datasets/generateDataset'
+import { generateOnboardingDatasetAction } from '$/actions/datasets/generateOnboardingDataset'
 
 const EMPTY_ARRAY: Dataset[] = []
 
@@ -137,6 +139,40 @@ export default function useDatasets(
       },
     })
 
+  const {
+    execute: runGenerateAction,
+    isPending: generateIsLoading,
+    error: generateError,
+  } = useLatitudeAction(generateDatasetAction, {
+    onError: (error) => {
+      toast({
+        title: 'Failed to generate dataset',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+    onSuccess: ({ data: dataset }) => {
+      mutate([...data, dataset])
+    },
+  })
+
+  const {
+    execute: runGenerateOnboardingAction,
+    isPending: generateOnboardingIsLoading,
+    error: generateOnboardingError,
+  } = useLatitudeAction(generateOnboardingDatasetAction, {
+    onError: (error) => {
+      toast({
+        title: 'Failed to generate onboarding dataset',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+    onSuccess: ({ data: dataset }) => {
+      mutate([...data, dataset])
+    },
+  })
+
   return {
     data,
     mutate,
@@ -147,6 +183,12 @@ export default function useDatasets(
     isDestroying,
     updateColumn,
     isUpdatingColumn,
+    runGenerateAction,
+    generateIsLoading,
+    generateError,
+    runGenerateOnboardingAction,
+    generateOnboardingIsLoading,
+    generateOnboardingError,
     ...rest,
   }
 }

@@ -10,7 +10,7 @@ import {
 import { ConfiguredIntegrations } from '$/components/Integrations/ConfiguredIntegrations'
 import { IsLoadingOnboardingItem } from '../../../lib/IsLoadingOnboardingItem'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
-import { OnboardingStep } from '../../../lib/OnboardingStep'
+import { OnboardingStep } from '../../../../../_lib/OnboardingStep'
 
 export function SetupIntegrationsHeader() {
   const { data: integrations } = useIntegrations()

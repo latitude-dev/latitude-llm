@@ -6,6 +6,8 @@ import { authProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
 import { ROUTES } from '$/services/routes'
 import { z } from 'zod'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
+import { Result } from '@latitude-data/core/lib/Result'
 
 /**
  * Mark onboarding as complete
@@ -37,6 +39,24 @@ export const completeOnboardingAction = authProcedure
           .commits.detail({ uuid: commitUuid })
           .documents.detail({ uuid: documentUuid })
           .experiments.withSelected(experimentUuids),
+      )
+    }
+
+    const isDatasetOnboardingEnabledResult = await isFeatureEnabledByName(
+      ctx.workspace.id,
+      'datasetOnboarding',
+    )
+
+    if (!Result.isOk(isDatasetOnboardingEnabledResult)) {
+      return frontendRedirect(ROUTES.dashboard.root)
+    }
+    const isDatasetOnboardingEnabled = isDatasetOnboardingEnabledResult.unwrap()
+
+    if (isDatasetOnboardingEnabled) {
+      return frontendRedirect(
+        ROUTES.projects
+          .detail({ id: projectId })
+          .commits.detail({ uuid: commitUuid }).runs.root,
       )
     }
 

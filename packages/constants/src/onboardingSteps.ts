@@ -19,3 +19,21 @@ export const ONBOARDING_STEPS = {
     order: 4,
   },
 } as const
+
+export enum DatasetOnboardingStepKey {
+  PasteYourPrompt = 'pasteYourPrompt',
+  GenerateDataset = 'generateDataset',
+  RunExperiment = 'runExperiment',
+}
+
+export const DATASET_ONBOARDING_STEPS = {
+  [DatasetOnboardingStepKey.PasteYourPrompt]: {
+    order: 1,
+  },
+  [DatasetOnboardingStepKey.GenerateDataset]: {
+    order: 2,
+  },
+  [DatasetOnboardingStepKey.RunExperiment]: {
+    order: 3,
+  },
+} as const
