@@ -9,6 +9,7 @@ import {
   inArray,
   not,
   or,
+  lte,
 } from 'drizzle-orm'
 
 import { type Commit } from '../../schema/models/types/Commit'
@@ -132,6 +133,28 @@ export class CommitsRepository extends RepositoryLegacy<
     }
 
     return Result.ok(result[0]!)
+  }
+
+  /**
+   * Get all the commits that are merged before our commit
+   * and also include our commit even it's not merged yet
+   */
+  async getCommitsHistory({ commit }: { commit: Commit }) {
+    const condition = commit.mergedAt
+      ? and(
+          isNotNull(this.scope.mergedAt),
+          lte(this.scope.mergedAt, commit.mergedAt),
+        )
+      : or(isNotNull(this.scope.mergedAt), eq(this.scope.id, commit.id))
+
+    return (
+      this.db
+        .select()
+        .from(this.scope)
+        .where(and(eq(this.scope.projectId, commit.projectId), condition))
+        // TODO:: Is draft on top or bottom?
+        .orderBy(desc(this.scope.mergedAt))
+    )
   }
 
   getCommitsWithDocumentChanges({

@@ -9,6 +9,7 @@ import { Skeleton } from '../Skeleton'
 import { Text } from '../Text'
 import {
   SelectContent,
+  type SelectContentProps,
   SelectGroup,
   SelectItem,
   SelectRoot,
@@ -38,29 +39,30 @@ export function Options({ options }: { options: SelectOption[] }) {
 export type SelectProps<V extends unknown = unknown> = Omit<
   FormFieldProps,
   'children'
-> & {
-  name: string
-  options: SelectOption<V>[]
-  defaultValue?: V
-  value?: V
-  trigger?: ReactNode
-  placeholder?: string
-  loading?: boolean
-  disabled?: boolean
-  required?: boolean
-  onChange?: (value: V) => void
-  width?: 'auto' | 'full'
-  size?: 'small' | 'default'
-  removable?: boolean
-  searchable?: boolean
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-  footerAction?: {
-    label: string
-    icon?: IconName
-    onClick: () => void
+> &
+  Pick<SelectContentProps, 'align'> & {
+    name: string
+    options: SelectOption<V>[]
+    defaultValue?: V
+    value?: V
+    trigger?: ReactNode
+    placeholder?: string
+    loading?: boolean
+    disabled?: boolean
+    required?: boolean
+    onChange?: (value: V) => void
+    width?: 'auto' | 'full'
+    size?: 'small' | 'default'
+    removable?: boolean
+    searchable?: boolean
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    footerAction?: {
+      label: string
+      icon?: IconName
+      onClick: () => void
+    }
   }
-}
 export function Select<V extends unknown = unknown>({
   name,
   label,
@@ -77,6 +79,7 @@ export function Select<V extends unknown = unknown>({
   onChange,
   width = 'full',
   size = 'default',
+  align = 'start',
   loading = false,
   disabled = false,
   required = false,
@@ -147,7 +150,7 @@ export function Select<V extends unknown = unknown>({
                 />
               </SelectTrigger>
             )}
-            <SelectContent className={cn(zIndex.dropdown, 'p-0')}>
+            <SelectContent align={align} className={cn(zIndex.dropdown, 'p-0')}>
               {searchable ? (
                 <SearchableSelectList<V>
                   options={options}
