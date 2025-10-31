@@ -15,7 +15,7 @@ import { workspaceUsageInfoCTE } from './workspaceUsageInfoQuery'
 /**
  * Nice and big query. DON'T GET INTIMIDATED BY IT!
  *
- * This query do the following:
+ * This query does the following:
  * 1. Get the workspaceId, name, subscriptionPlan, numOfMembers, emails, lastMonthRuns, lastTwoMonthsRuns, and latestRunAt
  * 2. Get the last month and last two months logs and evaluation results count
  * 3. Filter out logs and evaluation results with errors
