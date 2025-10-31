@@ -1,5 +1,5 @@
 'use server'
-import { ProviderLogsRepository } from '@latitude-data/core/repositories'
+import { IssuesRepository, ProviderLogsRepository } from '@latitude-data/core/repositories'
 import { annotateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/annotate'
 import serializeProviderLog from '@latitude-data/core/services/providerLogs/serialize'
 import { z } from 'zod'
@@ -21,6 +21,10 @@ export const annotateEvaluationV2Action = withEvaluation
       .findByUuid(parsedInput.providerLogUuid)
       .then((r) => r.unwrap())
       .then((r) => serializeProviderLog(r))
+    const issueRepo = new IssuesRepository(ctx.workspace.id)
+    const issue = parsedInput.issueId
+      ? await issueRepo.find(parsedInput.issueId).then((r) => r.unwrap())
+      : null
 
     const result = await annotateEvaluationV2({
       resultScore: parsedInput.resultScore,
@@ -29,7 +33,7 @@ export const annotateEvaluationV2Action = withEvaluation
       providerLog: providerLog,
       commit: ctx.commit,
       workspace: ctx.workspace,
-      issueId: parsedInput.issueId,
+      issue: issue,
     }).then((r) => r.unwrap())
 
     return result
