@@ -1,37 +1,34 @@
-import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
+'use client'
+
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Suspense, useCallback } from 'react'
 import { BlocksEditorPlaceholder } from '$/components/BlocksEditor'
-import { OnboardingEditor } from '../_components/OnboardingEditor'
+import { OnboardingEditor } from '../../../_components/OnboardingEditor'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import { BlockRootNode } from '$/components/BlocksEditor'
+import { useDatasetOnboarding } from '$/stores/datasetOnboarding'
+import { ROUTES } from '$/services/routes'
+import { useNavigate } from '$/hooks/useNavigate'
 
-export function GenerateDatasetBody({
-  setCurrentOnboardingStep,
-  initialValue,
-  documentParameters,
-}: {
-  initialValue: BlockRootNode
-  setCurrentOnboardingStep: (step: DatasetOnboardingStepKey) => void
-  documentParameters: string[]
-}) {
+export function GenerateDatasetBody() {
+  const { initialValue, documentParameters } = useDatasetOnboarding()
+  const router = useNavigate()
   const moveNextStep = useCallback(() => {
-    setCurrentOnboardingStep(DatasetOnboardingStepKey.RunExperiment)
-  }, [setCurrentOnboardingStep])
+    router.push(ROUTES.onboarding.dataset.runExperiment)
+  }, [router])
 
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
       <div className='flex flex-col items-end w-full h-full'>
         <div className='relative flex-1 w-full max-h-[350px] max-w-[600px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
-            <div className='relative p-4'>
+            <div className='relative p-4 h-full'>
               <OnboardingEditor readOnly={true} initialValue={initialValue} />
-              <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background to-transparent' />
+              <div className='pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-background via-background to-transparent' />
             </div>
           </Suspense>
-          <div className='absolute inset-x-0 bottom-[-10rem] h-full w-full p-4 bg-background'>
+          <div className='absolute inset-x-0 bottom-[-9.5rem] h-full w-full p-4 bg-background'>
             <TableSkeleton rows={6} cols={documentParameters} maxHeight={320} />
             <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background to-transparent' />
           </div>

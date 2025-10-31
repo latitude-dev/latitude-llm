@@ -2,7 +2,6 @@
 
 import { PageTrackingWrapper } from '$/components/PageTrackingWrapper'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { OnboardingClient } from './_components/OnboardingClient'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { Result } from '@latitude-data/core/lib/Result'
 import buildMetatags from '$/app/_lib/buildMetatags'
@@ -16,6 +15,7 @@ import { DocumentValueProvider } from '$/hooks/useDocumentValueContext'
 import { DevModeProvider } from '$/hooks/useDevMode'
 import { MetadataProvider } from '$/components/MetadataProvider'
 import { DocumentVersionProvider } from '$/app/providers/DocumentProvider'
+import { ReactNode } from 'react'
 
 export async function generateMetadata() {
   // TODO(onboarding): change this to prompt engineering onboarding title once we activate the onboarding
@@ -24,7 +24,11 @@ export async function generateMetadata() {
   })
 }
 
-export default async function OnboardingDatasetPage() {
+export default async function OnboardingDatasetLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
   const { user, workspace } = await getCurrentUserOrRedirect()
   const { project, commit, documents } = await getOnboardingResources()
   if (project === null || commit === null) {
@@ -66,7 +70,7 @@ export default async function OnboardingDatasetPage() {
                   commitUuid={commit.uuid}
                   document={document}
                 >
-                  <OnboardingClient user={user} />
+                  {children}
                 </DocumentVersionProvider>
               </DocumentValueProvider>
             </DevModeProvider>

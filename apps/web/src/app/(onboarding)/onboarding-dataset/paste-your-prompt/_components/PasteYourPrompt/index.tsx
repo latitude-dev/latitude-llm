@@ -1,19 +1,22 @@
+'use client'
+
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Suspense, useCallback, useState } from 'react'
 import { BlocksEditorPlaceholder } from '$/components/BlocksEditor'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
-import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import useDatasets from '$/stores/datasets'
-import { OnboardingEditor } from '../_components/OnboardingEditor'
+import { OnboardingEditor } from '../../../_components/OnboardingEditor'
 import { scan } from 'promptl-ai'
 import {
-  BlockRootNode,
   emptyRootBlock,
   fromAstToBlocks,
 } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
 import { useMetadata } from '$/hooks/useMetadata'
+import { useDatasetOnboarding } from '$/stores/datasetOnboarding'
+import { ROUTES } from '$/services/routes'
+import { useNavigate } from '$/hooks/useNavigate'
 
 const SAMPLE_PROMPT = `
 ---
@@ -44,47 +47,46 @@ focusing on the core issue mentioned by the user. Categorize the sentiment into 
 Return only one of the categories.
 `
 
-export function PasteYourPromptBody({
-  setCurrentOnboardingStep,
-  setInitialValue,
-  setDocumentParameters,
-  initialValue,
-}: {
-  setCurrentOnboardingStep: (step: DatasetOnboardingStepKey) => void
-  setInitialValue: (value: BlockRootNode) => void
-  setDocumentParameters: (parameters: string[]) => void
-  initialValue: BlockRootNode
-}) {
+export function PasteYourPromptBody() {
   const { metadata } = useMetadata()
   const { value, updateDocumentContent } = useDocumentValue()
-  const { runGenerateAction } = useDatasets()
+  const { data: datasets, runGenerateAction } = useDatasets()
   const [editorKey, setEditorKey] = useState(0)
+  const { initialValue, setInitialValue, setDocumentParameters } =
+    useDatasetOnboarding()
+  const router = useNavigate()
 
   const onNext = useCallback(async () => {
-    const initialValue = metadata?.ast
+    const newInitialValue = metadata?.ast
       ? fromAstToBlocks({
           ast: metadata.ast,
           prompt: value,
         })
       : emptyRootBlock
-    setInitialValue(initialValue)
+    setInitialValue(newInitialValue)
+
     const parameters = Array.from(metadata?.parameters ?? []).join(', ') ?? ''
     setDocumentParameters(Array.from(metadata?.parameters ?? []))
+    const datasetName = datasets?.length
+      ? `Dataset Onboarding ${datasets.length}`
+      : 'Dataset Onboarding'
+
     runGenerateAction({
       parameters,
       prompt: value,
       rowCount: 10,
-      name: 'Onboarding Dataset',
+      name: datasetName,
       fromCloud: false,
     })
-    setCurrentOnboardingStep(DatasetOnboardingStepKey.GenerateDataset)
+    router.push(ROUTES.onboarding.dataset.generateDataset)
   }, [
     runGenerateAction,
-    setCurrentOnboardingStep,
     setDocumentParameters,
     setInitialValue,
     metadata,
     value,
+    router,
+    datasets.length,
   ])
 
   const onUseSamplePrompt = useCallback(async () => {

@@ -69,7 +69,7 @@ export const setupAction = errorHandlingProcedure
         isDatasetOnboardingEnabledResult.unwrap()
 
       if (isDatasetOnboardingEnabled) {
-        return frontendRedirect(ROUTES.onboarding.dataset)
+        return frontendRedirect(ROUTES.onboarding.dataset.pasteYourPrompt)
       }
       return frontendRedirect(ROUTES.auth.setup.form)
     }

@@ -39,7 +39,7 @@ export default function SimpleDatasetTable({
   }
 
   return (
-    <div className='absolute inset-x-0 bottom-[-10rem] h-full w-full p-4 bg-background'>
+    <div className='absolute inset-x-0 bottom-[-9.5rem] h-full w-full p-4 bg-background'>
       <Table>
         <TableHeader>
           <TableRow>

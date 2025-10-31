@@ -1,3 +1,5 @@
+'use client'
+
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
@@ -6,15 +8,14 @@ import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Suspense } from 'react'
-import {
-  BlockRootNode,
-  BlocksEditorPlaceholder,
-} from '$/components/BlocksEditor'
-import { OnboardingEditor } from '../_components/OnboardingEditor'
-import SimpleDatasetTable from '../_components/SimpleDatasetTable'
+import { BlocksEditorPlaceholder } from '$/components/BlocksEditor'
+import { OnboardingEditor } from '../../../_components/OnboardingEditor'
+import SimpleDatasetTable from '../../../_components/SimpleDatasetTable'
 import { useExperiments } from '$/stores/experiments'
 import useDatasets from '$/stores/datasets'
 import { envClient } from '$/envClient'
+import { useDatasetOnboarding } from '$/stores/datasetOnboarding'
+import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 
 const EXPERIMENT_VARIANT = [
   {
@@ -25,28 +26,15 @@ const EXPERIMENT_VARIANT = [
   },
 ]
 
-export default function RunExperimentBody({
-  executeCompleteOnboarding,
-  documentParameters,
-  initialValue,
-}: {
-  executeCompleteOnboarding: ({
-    projectId,
-    commitUuid,
-    documentUuid,
-  }: {
-    projectId: number
-    commitUuid: string
-    documentUuid: string
-  }) => void
-  documentParameters: string[]
-  initialValue: BlockRootNode
-}) {
+export default function RunExperimentBody() {
+  const { executeCompleteOnboarding } = useWorkspaceOnboarding()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { data: datasets } = useDatasets()
+  const { initialValue, documentParameters } = useDatasetOnboarding()
 
+  // Get the latest dataset, as the user might have gone back and forth between steps, creating multiple datasets
   const latestDataset = datasets?.[datasets.length - 1]
   const parametersMap = useMemo(() => {
     return latestDataset && documentParameters.length
@@ -77,7 +65,6 @@ export default function RunExperimentBody({
   )
 
   const onCompleteOnboarding = useCallback(() => {
-    const latestDataset = datasets?.[datasets.length - 1]
     create({
       projectId: project.id,
       commitUuid: commit.uuid,
@@ -91,7 +78,7 @@ export default function RunExperimentBody({
     })
   }, [
     create,
-    datasets,
+    latestDataset?.id,
     project.id,
     commit.uuid,
     document.documentUuid,
@@ -101,11 +88,11 @@ export default function RunExperimentBody({
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
       <div className='flex flex-col items-end w-full h-full'>
-        <div className='relative flex-1 w-full h-full max-w-[600px]'>
+        <div className='relative flex-1 w-full max-h-[350px] max-w-[600px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
-            <div className='relative p-4'>
+            <div className='relative p-4 h-full'>
               <OnboardingEditor readOnly={true} initialValue={initialValue} />
-              <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background to-transparent' />
+              <div className='pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-background via-background to-transparent' />
             </div>
           </Suspense>
           <SimpleDatasetTable
