@@ -17,7 +17,7 @@ import { SAMPLE_PROMPT } from '../../constants'
 
 export function PasteYourPromptBody() {
   const { value, updateDocumentContent } = useDocumentValue()
-  const { data: datasets, runGenerateAction } = useDatasets()
+  const { data: datasets, runGenerateOnboardingAction } = useDatasets()
   const [editorKey, setEditorKey] = useState(0)
   const {
     initialValue,
@@ -44,7 +44,7 @@ export function PasteYourPromptBody() {
       : 'Dataset Onboarding'
     setLatestDatasetName(latestDatasetName)
 
-    runGenerateAction({
+    runGenerateOnboardingAction({
       parameters,
       prompt: value,
       rowCount: 10,
@@ -53,7 +53,7 @@ export function PasteYourPromptBody() {
     })
     router.push(ROUTES.onboarding.dataset.generateDataset)
   }, [
-    runGenerateAction,
+    runGenerateOnboardingAction,
     setDocumentParameters,
     setInitialValue,
     value,

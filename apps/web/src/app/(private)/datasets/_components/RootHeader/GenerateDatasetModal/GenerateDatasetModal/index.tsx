@@ -47,7 +47,6 @@ export function GenerateDatasetModal({
         description: formData.get('description') as string,
         rowCount: parseInt(formData.get('rows') as string, 10),
         name: formData.get('name') as string,
-        fromCloud: true,
       })
 
       if (!dataset) return
