@@ -1,7 +1,7 @@
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Suspense, useCallback } from 'react'
+import { Suspense, useCallback, useState } from 'react'
 import { BlocksEditorPlaceholder } from '$/components/BlocksEditor'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
@@ -47,17 +47,18 @@ Return only one of the categories.
 export function PasteYourPromptBody({
   setCurrentOnboardingStep,
   setInitialValue,
-  initialValue,
   setDocumentParameters,
+  initialValue,
 }: {
   setCurrentOnboardingStep: (step: DatasetOnboardingStepKey) => void
   setInitialValue: (value: BlockRootNode) => void
-  initialValue: BlockRootNode
   setDocumentParameters: (parameters: string[]) => void
+  initialValue: BlockRootNode
 }) {
   const { metadata } = useMetadata()
   const { value, updateDocumentContent } = useDocumentValue()
   const { runGenerateAction } = useDatasets()
+  const [editorKey, setEditorKey] = useState(0)
 
   const onNext = useCallback(async () => {
     const initialValue = metadata?.ast
@@ -88,39 +89,28 @@ export function PasteYourPromptBody({
 
   const onUseSamplePrompt = useCallback(async () => {
     const metadata = await scan({ prompt: SAMPLE_PROMPT })
-    setInitialValue(
-      fromAstToBlocks({
-        ast: metadata.ast,
-        prompt: SAMPLE_PROMPT,
-      }),
-    )
-    updateDocumentContent(SAMPLE_PROMPT)
-    const parameters = Array.from(metadata.parameters ?? []).join(', ') ?? ''
-    setDocumentParameters(Array.from(metadata.parameters ?? []))
-
-    runGenerateAction({
-      parameters,
+    const newInitialValue = fromAstToBlocks({
+      ast: metadata.ast,
       prompt: SAMPLE_PROMPT,
-      rowCount: 10,
-      name: 'Onboarding Dataset',
-      fromCloud: false,
     })
-    setCurrentOnboardingStep(DatasetOnboardingStepKey.GenerateDataset)
-  }, [
-    setInitialValue,
-    setCurrentOnboardingStep,
-    runGenerateAction,
-    updateDocumentContent,
-    setDocumentParameters,
-  ])
+    setInitialValue(newInitialValue)
+    updateDocumentContent(SAMPLE_PROMPT)
+    setDocumentParameters(Array.from(metadata.parameters ?? []))
+    // Force re-render of OnboardingEditor by changing key
+    setEditorKey((prev) => prev + 1)
+  }, [setInitialValue, setDocumentParameters, updateDocumentContent])
 
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
       <div className='flex flex-col items-end w-full h-full'>
         <div className='relative flex-1 w-full max-h-[350px] max-w-[600px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
-            <OnboardingEditor readOnly={false} initialValue={initialValue} />
-            <div className='absolute bottom-[-1.5rem] left-1/2 -translate-x-1/2 border border-border rounded-lg bg-background p-2'>
+            <OnboardingEditor
+              key={editorKey}
+              readOnly={false}
+              initialValue={initialValue}
+            />
+            <div className='absolute bottom-[-3rem] left-1/2 -translate-x-1/2 border border-border rounded-lg bg-background p-2'>
               <Button
                 fancy
                 className='w-full'

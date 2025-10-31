@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { DatasetOnboardingStepRoot } from '$/app/(onboarding)/_lib/OnboardingStep'
 import { DatasetOnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import { PasteYourPromptBody } from './PasteYourPrompt'
@@ -11,12 +10,24 @@ import RunExperimentBody from './RunExperiment'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 import { BlockRootNode } from '$/components/BlocksEditor'
 import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
+import {
+  useLocalStorage,
+  AppLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { useState } from 'react'
 
 export function OnboardingClient({ user }: { user: User }) {
   const { executeCompleteOnboarding } = useWorkspaceOnboarding()
-  const [initialValue, setInitialValue] =
-    useState<BlockRootNode>(emptyRootBlock)
-  const [documentParameters, setDocumentParameters] = useState<string[]>([])
+  const { value: initialValue, setValue: setInitialValue } =
+    useLocalStorage<BlockRootNode>({
+      key: AppLocalStorage.datasetOnboardingInitialValue,
+      defaultValue: emptyRootBlock,
+    })
+  const { value: documentParameters, setValue: setDocumentParameters } =
+    useLocalStorage<string[]>({
+      key: AppLocalStorage.datasetOnboardingParameters,
+      defaultValue: [],
+    })
   const [currentOnboardingStep, setCurrentOnboardingStep] =
     useState<DatasetOnboardingStepKey>(DatasetOnboardingStepKey.PasteYourPrompt)
 
@@ -28,8 +39,8 @@ export function OnboardingClient({ user }: { user: User }) {
           <PasteYourPromptBody
             setCurrentOnboardingStep={setCurrentOnboardingStep}
             setInitialValue={setInitialValue}
-            initialValue={initialValue}
             setDocumentParameters={setDocumentParameters}
+            initialValue={initialValue}
           />
         </DatasetOnboardingStepRoot>
       )}
