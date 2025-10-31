@@ -6,7 +6,7 @@ import { memo, useCallback } from 'react'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { useIncludabledPrompts } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/BlocksEditor/useIncludabledPrompts'
 import { BlockRootNode, BlocksEditor } from '$/components/BlocksEditor'
-import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
+import { EMPTY_ROOT_BLOCK } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
 
 export const OnboardingEditor = memo(
   ({
@@ -42,7 +42,7 @@ export const OnboardingEditor = memo(
           commit={commit}
           document={document}
           currentDocument={document}
-          initialValue={initialValue ?? emptyRootBlock}
+          initialValue={initialValue ?? EMPTY_ROOT_BLOCK}
           placeholder='Type your instructions here, use {{ input }} for variables and / for commands'
           onError={onError}
           prompts={prompts}

@@ -1,7 +1,7 @@
 'use client'
 
 import { BlockRootNode } from '$/components/BlocksEditor'
-import { emptyRootBlock } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
+import { EMPTY_ROOT_BLOCK } from '$/components/BlocksEditor/Editor/state/promptlToLexical'
 import {
   useLocalStorage,
   AppLocalStorage,
@@ -15,7 +15,7 @@ export function useDatasetOnboarding() {
   const { value: initialValue, setValue: setInitialValue } =
     useLocalStorage<BlockRootNode>({
       key: AppLocalStorage.datasetOnboardingInitialValue,
-      defaultValue: emptyRootBlock,
+      defaultValue: EMPTY_ROOT_BLOCK,
     })
   const { value: documentParameters, setValue: setDocumentParameters } =
     useLocalStorage<string[]>({

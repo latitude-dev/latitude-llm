@@ -9,7 +9,7 @@ export type SamplePromptParameters = Record<
   string | number
 >
 
-export const SAMPLE_PROMPT = `
+const SAMPLE_PROMPT = `
 ---
 provider: OpenAI
 model: gpt-4.1-mini
@@ -95,4 +95,4 @@ const SAMPLE_PROMPT_DATASET: SamplePromptParameters[] = [
   },
 ]
 
-export { SAMPLE_PROMPT_DATASET_COLUMNS, SAMPLE_PROMPT_DATASET }
+export { SAMPLE_PROMPT_DATASET_COLUMNS, SAMPLE_PROMPT_DATASET, SAMPLE_PROMPT }
