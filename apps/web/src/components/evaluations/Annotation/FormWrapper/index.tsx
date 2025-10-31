@@ -73,6 +73,7 @@ export const AnnotationFormWrapper = ({
     <form
       onSubmit={onSubmit}
       className={cn(
+        'bg-background dark:bg-backgroundCode',
         'w-full flex flex-col border border-border rounded-xl',
         'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
       )}
@@ -172,6 +173,7 @@ AnnotationFormWrapper.TextArea = function TextArea({
       size='none'
       onChange={onChange}
       className={cn(
+        'bg-background dark:bg-backgroundCode',
         'w-full focus:ring-0 focus-visible:ring-0 focus-visible:outline-none',
         'appearance-none text-foreground placeholder:text-muted-foreground/50',
         font.size.h5,

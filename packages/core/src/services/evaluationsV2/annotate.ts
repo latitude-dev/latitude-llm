@@ -19,8 +19,10 @@ import {
   EvaluationResultsV2Repository,
 } from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
+import { Issue } from '../../schema/models/types/Issue'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { ProviderLogDto } from '../../schema/types'
+import { addIssueEvent } from '../issues/addIssueEvent'
 import { extractActualOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { updateEvaluationResultV2 } from './results/update'
@@ -31,19 +33,21 @@ export async function annotateEvaluationV2<
   M extends EvaluationMetric<T>,
 >(
   {
+    workspace,
+    commit,
+    providerLog,
+    evaluation,
     resultScore,
     resultMetadata,
-    evaluation,
-    providerLog,
-    commit,
-    workspace,
+    issue: inputIssue,
   }: {
+    workspace: Workspace
+    commit: Commit
+    providerLog: ProviderLogDto
+    evaluation: EvaluationV2<T, M>
     resultScore: number
     resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
-    evaluation: EvaluationV2<T, M>
-    providerLog: ProviderLogDto
-    commit: Commit
-    workspace: Workspace
+    issue?: Issue | null
   },
   db = database,
 ) {
@@ -168,6 +172,22 @@ export async function annotateEvaluationV2<
   return await transaction.call(
     async () => {
       let result
+      let issue: Issue | undefined = undefined
+
+      if (inputIssue) {
+        const addIssueResult = await addIssueEvent(
+          {
+            commit,
+            document,
+            issue: inputIssue,
+          },
+          transaction,
+        )
+        if (addIssueResult.error) return addIssueResult
+
+        issue = addIssueResult.value.issue
+      }
+
       if (existingResult.ok) {
         const { result: updatedResult } = await updateEvaluationResultV2(
           {
@@ -175,6 +195,7 @@ export async function annotateEvaluationV2<
             commit: commit,
             value: value as EvaluationResultValue<T, M>,
             workspace: workspace,
+            issue: issue,
           },
           transaction,
         ).then((r) => r.unwrap())
@@ -188,6 +209,7 @@ export async function annotateEvaluationV2<
             commit: commit,
             value: value as EvaluationResultValue<T, M>,
             workspace: workspace,
+            issue: issue,
           },
           transaction,
         ).then((r) => r.unwrap())

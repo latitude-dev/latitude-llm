@@ -12,6 +12,7 @@ export const annotateEvaluationV2Action = withEvaluation
       resultScore: z.number(),
       resultMetadata: z.custom<Partial<EvaluationResultMetadata>>().optional(),
       providerLogUuid: z.string(),
+      issueId: z.number().optional(),
     }),
   )
   .action(async ({ ctx, parsedInput }) => {
@@ -28,6 +29,7 @@ export const annotateEvaluationV2Action = withEvaluation
       providerLog: providerLog,
       commit: ctx.commit,
       workspace: ctx.workspace,
+      issueId: parsedInput.issueId,
     }).then((r) => r.unwrap())
 
     return result

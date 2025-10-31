@@ -13,6 +13,7 @@ import { type Commit } from '../../../schema/models/types/Commit'
 import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
 import { type Experiment } from '../../../schema/models/types/Experiment'
+import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { ProviderLogDto } from '../../../schema/types'
 
@@ -32,6 +33,7 @@ export async function createEvaluationResultV2<
     usedForSuggestion,
     workspace,
     dry = false,
+    issue,
   }: {
     uuid?: string
     evaluation: EvaluationV2<T, M>
@@ -44,6 +46,7 @@ export async function createEvaluationResultV2<
     usedForSuggestion?: boolean
     workspace: Workspace
     dry?: boolean
+    issue?: Issue
   },
   transaction = new Transaction(),
 ) {
@@ -56,6 +59,7 @@ export async function createEvaluationResultV2<
     datasetId: dataset?.id,
     evaluatedRowId: datasetRow?.id,
     evaluatedLogId: providerLog.id,
+    issueId: issue?.id,
     ...value,
     usedForSuggestion: usedForSuggestion,
   }

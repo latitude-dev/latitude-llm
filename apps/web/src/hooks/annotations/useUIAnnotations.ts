@@ -16,7 +16,7 @@ export type UseUIAnnotationsProps = {
   project: Project
   commit: Commit
   documentLog: { uuid: string; documentUuid: string }
-  providerLog: ProviderLogDto
+  providerLog: ProviderLogDto | undefined
 }
 
 /**

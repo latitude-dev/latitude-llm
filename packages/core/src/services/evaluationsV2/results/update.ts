@@ -11,6 +11,7 @@ import Transaction from '../../../lib/Transaction'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type Workspace } from '../../../schema/models/types/Workspace'
+import { Issue } from '../../../schema/models/types/Issue'
 
 export async function updateEvaluationResultV2<
   T extends EvaluationType,
@@ -21,11 +22,13 @@ export async function updateEvaluationResultV2<
     commit,
     value,
     workspace,
+    issue,
   }: {
     result: EvaluationResultV2<T, M>
     commit: Commit
     value: Partial<EvaluationResultValue<T, M>>
     workspace: Workspace
+    issue?: Issue
   },
   transaction = new Transaction(),
 ) {
@@ -36,6 +39,7 @@ export async function updateEvaluationResultV2<
         .set({
           commitId: commit.id,
           ...value,
+          ...(issue ? { issueId: issue.id } : {}),
           updatedAt: new Date(),
         })
         .where(
