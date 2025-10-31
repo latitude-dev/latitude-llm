@@ -23,6 +23,8 @@ import {
   EvaluationV2,
   PROJECT_STATS_CACHE_KEY,
   LAST_LATTE_THREAD_CACHE_KEY,
+  RunSourceGroup,
+  RUN_SOURCES,
 } from '@latitude-data/core/constants'
 import { DocumentLogsLimitedView } from '@latitude-data/core/schema/models/types/DocumentLog'
 import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
@@ -374,15 +376,21 @@ export const listActiveRunsCached = cache(
     projectId,
     page,
     pageSize,
+    sourceGroup,
   }: {
     projectId: number
     page?: number
     pageSize?: number
+    sourceGroup?: RunSourceGroup
   }) => {
     const { workspace } = await getCurrentUserOrRedirect()
     const repository = new RunsRepository(workspace.id, projectId)
     const runs = await repository
-      .listActive({ page, pageSize })
+      .listActive({
+        page,
+        pageSize,
+        sources: sourceGroup ? RUN_SOURCES[sourceGroup] : undefined,
+      })
       .then((r) => r.unwrap())
 
     return runs

@@ -40,3 +40,23 @@ export const ACTIVE_RUN_CACHE_TTL = 1 * 3 * 60 * 60 * 1000 // 3 hours
 export const ACTIVE_RUN_STREAM_KEY = (runUuid: string) =>
   `run:active:${runUuid}:stream`
 export const ACTIVE_RUN_STREAM_CAP = 100_000
+
+export enum RunSourceGroup {
+  Production = 'production',
+  Playground = 'playground',
+  Experiment = 'experiment',
+}
+
+export const RUN_SOURCES: Record<RunSourceGroup, LogSources[]> = {
+  [RunSourceGroup.Production]: [
+    LogSources.API,
+    LogSources.Copilot,
+    LogSources.EmailTrigger,
+    LogSources.IntegrationTrigger,
+    LogSources.ScheduledTrigger,
+    LogSources.SharedPrompt,
+    LogSources.User,
+  ],
+  [RunSourceGroup.Playground]: [LogSources.Playground],
+  [RunSourceGroup.Experiment]: [LogSources.Experiment],
+} as const

@@ -21,6 +21,7 @@ export type TabSelectOption<V extends unknown = unknown> = {
   label: string
   value: V
   icon?: ReactNode | IconName
+  suffix?: ReactNode
 }
 
 export function TabSelect<V extends unknown = unknown>({
@@ -182,6 +183,7 @@ export function TabSelect<V extends unknown = unknown>({
                         {option.label}
                       </span>
                     </Text.H5M>
+                    {option.suffix}
                   </span>
                 </Button>
               </div>

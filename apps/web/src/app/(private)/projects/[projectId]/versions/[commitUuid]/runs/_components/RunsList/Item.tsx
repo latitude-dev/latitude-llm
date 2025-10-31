@@ -3,7 +3,7 @@
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { relativeTime } from '$/lib/relativeTime'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
-import { Run } from '@latitude-data/constants'
+import { LogSources, Run } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -47,7 +47,7 @@ export const RunsListItem = memo(
               else setSelectedRunUuid(run.uuid)
             }}
           >
-            <div className='min-w-0 min-h-7 flex items-center justify-start gap-2.5 truncate'>
+            <div className='min-w-0 min-h-8 flex items-center justify-start gap-2.5 truncate'>
               {run.endedAt ? (
                 <Icon
                   name={
@@ -75,6 +75,23 @@ export const RunsListItem = memo(
                   color='foregroundMuted'
                   className='flex-shrink-0 stroke-[2.25]'
                 />
+              )}
+              {run.source === LogSources.Experiment && (
+                <Tooltip
+                  asChild
+                  trigger={
+                    <div className='flex items-center justify-start p-2 bg-accent rounded-md'>
+                      <Icon
+                        name='experiment'
+                        size='normal'
+                        color='accentForeground'
+                        className='flex-shrink-0'
+                      />
+                    </div>
+                  }
+                >
+                  This Run was triggered from an experiment
+                </Tooltip>
               )}
               <Text.H5
                 color={run.log?.error.code ? 'destructive' : 'foreground'}
