@@ -13,6 +13,8 @@ export function ReferenceEditPlugin({
   const [editor] = useLexicalComposerContext()
 
   useEffect(() => {
+    if (!onRequestPromptMetadata) return
+
     const abortController = new AbortController()
 
     const handleReferencePathUpdate = async (event: Event) => {
