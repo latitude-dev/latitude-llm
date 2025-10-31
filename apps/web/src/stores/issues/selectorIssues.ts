@@ -17,10 +17,13 @@ export function createSearchIssuesKey({
   query?: string
 }) {
   const base = ['searchIssues', projectId, commitUuid, documentUuid]
+
   if (!query) return base
 
   return [...base, query]
 }
+
+const EMPTY_LIST: Issue[] = []
 
 export function useSearchIssues(
   {
@@ -34,17 +37,18 @@ export function useSearchIssues(
     documentUuid: string
     query?: string
   },
-  swrConfig?: SWRConfiguration<Issue, any>,
+  swrConfig?: SWRConfiguration<SearchIssueResponse, any>,
 ) {
   const base = ROUTES.api.projects.detail(projectId).commits.detail(commitUuid)
   const route = base.issues.search
   const fetcher = useFetcher<SearchIssueResponse>(route, {
-    searchParams: { documentUuid },
+    searchParams: { documentUuid, query },
   })
-  const { data, isLoading } = useSWR<Issue>(
+  const { data = EMPTY_LIST, isLoading } = useSWR<SearchIssueResponse>(
     createSearchIssuesKey({ projectId, commitUuid, documentUuid, query }),
     fetcher,
     swrConfig,
   )
+
   return useMemo(() => ({ data, isLoading }), [data, isLoading])
 }

@@ -33,6 +33,7 @@ export function AnnotationForm<
   return (
     <AnnotationProvider
       commit={commit}
+      documentUuid={documentLog.documentUuid}
       result={result}
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}

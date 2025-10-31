@@ -5,8 +5,8 @@ import {
   eq,
   getTableColumns,
   gte,
+  ilike,
   isNull,
-  like,
   or,
   sql,
   SQL,
@@ -79,6 +79,7 @@ export class IssuesRepository extends Repository<Issue> {
       .select({
         id: issues.id,
         title: issues.title,
+        documentUuid: issues.documentUuid,
       })
       .from(issues)
       .where(
@@ -86,7 +87,7 @@ export class IssuesRepository extends Repository<Issue> {
           this.scopeFilter,
           eq(issues.projectId, project.id),
           eq(issues.documentUuid, document.documentUuid),
-          like(issues.title, `%${title ?? ''}%`),
+          ilike(issues.title, `%${title ?? ''}%`),
         ),
       )
       .orderBy(desc(issues.createdAt))
@@ -252,7 +253,7 @@ export class IssuesRepository extends Repository<Issue> {
     }
 
     if (filters.query && filters.query.trim().length > 0) {
-      conditions.push(like(issues.title, `%${filters.query}%`))
+      conditions.push(ilike(issues.title, `%${filters.query}%`))
     }
 
     if (filters.firstSeen) {
