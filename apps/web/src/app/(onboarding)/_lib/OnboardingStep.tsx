@@ -32,7 +32,7 @@ export const DatasetOnboardingStepRoot = ({
   children: ReactNode
 }) => {
   return (
-    <div className='flex flex-col h-full w-full items-center gap-18 p-20'>
+    <div className='flex flex-col h-full max-w-[912px] mx-auto items-center gap-18 pt-20'>
       {children}
     </div>
   )

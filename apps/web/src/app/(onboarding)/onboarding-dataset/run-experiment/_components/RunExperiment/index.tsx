@@ -90,7 +90,7 @@ export default function RunExperimentBody() {
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
       <div className='flex flex-col items-end w-full h-full'>
-        <div className='relative flex-1 w-full max-h-[350px] max-w-[560px]'>
+        <div className='relative flex-1 w-full max-h-[350px] min-w-[560px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
             <div className='relative h-full'>
               <OnboardingEditor readOnly={true} initialValue={initialValue} />
