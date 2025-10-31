@@ -22,6 +22,7 @@ export enum AppLocalStorage {
   latteSidebarWidth = 'latteSidebarWidth',
   datasetOnboardingInitialValue = 'datasetOnboardingInitialValue',
   datasetOnboardingParameters = 'datasetOnboardingParameters',
+  datasetOnboardingLatestDatasetName = 'datasetOnboardingLatestDatasetName',
   datasetOnboardingStep = 'datasetOnboardingStep',
 }
 

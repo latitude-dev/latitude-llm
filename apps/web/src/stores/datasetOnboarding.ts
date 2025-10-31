@@ -22,12 +22,18 @@ export function useDatasetOnboarding() {
       key: AppLocalStorage.datasetOnboardingParameters,
       defaultValue: [],
     })
+  const { value: latestDatasetName, setValue: setLatestDatasetName } =
+    useLocalStorage<string>({
+      key: AppLocalStorage.datasetOnboardingLatestDatasetName,
+      defaultValue: 'Dataset Onboarding',
+    })
 
   return {
-    // Persisted values
     initialValue,
     setInitialValue,
     documentParameters,
     setDocumentParameters,
+    latestDatasetName,
+    setLatestDatasetName,
   }
 }

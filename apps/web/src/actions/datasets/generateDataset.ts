@@ -10,6 +10,11 @@ import { redirect } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
 import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
 import { markWorkspaceOnboardingComplete } from '@latitude-data/core/services/workspaceOnboarding/update'
+import {
+  SAMPLE_PROMPT,
+  SAMPLE_PROMPT_DATASET,
+} from '$/app/(onboarding)/onboarding-dataset/paste-your-prompt/constants'
+import { createDatasetFromJson } from '@latitude-data/core/services/datasets/createFromJson'
 
 export const generateDatasetAction = authProcedure
   .inputSchema(
@@ -38,6 +43,17 @@ export const generateDatasetAction = authProcedure
         onboarding,
       }).then((r) => r.unwrap())
       return redirect(ROUTES.dashboard.root)
+    }
+
+    if (prompt === SAMPLE_PROMPT) {
+      return await createDatasetFromJson({
+        author: ctx.user,
+        workspace: ctx.workspace,
+        data: {
+          name,
+          rows: JSON.stringify(SAMPLE_PROMPT_DATASET),
+        },
+      }).then((r) => r.unwrap())
     }
 
     return await generateDatasetWithCopilot({

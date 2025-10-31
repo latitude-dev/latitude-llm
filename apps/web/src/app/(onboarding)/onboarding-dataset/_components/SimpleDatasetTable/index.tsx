@@ -10,26 +10,26 @@ import {
 import useDatasetRows from '$/stores/datasetRows'
 import { useMemo } from 'react'
 import useDatasets from '$/stores/datasets'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 export default function SimpleDatasetTable({
   numberOfRows,
   onlyShowSkeleton = false,
   documentParameters,
+  latestDataset,
 }: {
   numberOfRows: number
   onlyShowSkeleton?: boolean
   documentParameters: string[]
+  latestDataset?: Dataset
 }) {
-  const {
-    data: datasets,
-    generateIsLoading,
-    isLoading: isLoadingDatasets,
-  } = useDatasets()
-  const latestDataset = datasets?.[datasets.length - 1]
+  const { generateIsLoading, isLoading: isLoadingDatasets } = useDatasets()
+
   const { data: rows, isLoading: isLoadingRows } = useDatasetRows({
     dataset: latestDataset,
     pageSize: numberOfRows.toString(),
   })
+
   const onboardingDatasetColumns = useMemo(() => {
     return latestDataset?.columns ?? []
   }, [latestDataset])

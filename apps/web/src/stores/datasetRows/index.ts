@@ -149,7 +149,7 @@ export default function useDatasetRows(
         if (!createdRow || !dataset) return
 
         const row = serializeRow({ row: createdRow })
-        mutate([row, ...data])
+        mutate([...data, row])
       },
     },
   )

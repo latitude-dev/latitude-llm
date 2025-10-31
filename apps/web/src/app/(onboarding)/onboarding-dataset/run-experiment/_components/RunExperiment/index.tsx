@@ -32,10 +32,12 @@ export default function RunExperimentBody() {
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { data: datasets } = useDatasets()
-  const { initialValue, documentParameters } = useDatasetOnboarding()
+  const { initialValue, documentParameters, latestDatasetName } =
+    useDatasetOnboarding()
 
   // Get the latest dataset, as the user might have gone back and forth between steps, creating multiple datasets
-  const latestDataset = datasets?.[datasets.length - 1]
+  const latestDataset = datasets.find((ds) => ds.name === latestDatasetName)
+
   const parametersMap = useMemo(() => {
     return latestDataset && documentParameters.length
       ? Object.fromEntries(
@@ -98,6 +100,7 @@ export default function RunExperimentBody() {
           <SimpleDatasetTable
             numberOfRows={4}
             documentParameters={documentParameters}
+            latestDataset={latestDataset}
           />
         </div>
       </div>

@@ -13,42 +13,18 @@ import { fromAstToBlocks } from '$/components/BlocksEditor/Editor/state/promptlT
 import { useDatasetOnboarding } from '$/stores/datasetOnboarding'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
-
-const SAMPLE_PROMPT = `
----
-provider: OpenAI
-model: gpt-4.1-mini
----
-
-This is a response from an NPS survey:
-
-Score: {{score}} 
-Message: {{message}} 
-
-Analyze the sentiment based on both the score and message. Prioritize identifying the primary concern in the feedback, 
-focusing on the core issue mentioned by the user. Categorize the sentiment into one of the following categories:
-
-- Product Features and Functionality
-- User Interface (UI) and User Experience (UX)
-- Performance and Reliability
-- Customer Support and Service
-- Onboarding and Learning Curve
-- Pricing and Value Perception
-- Integrations and Compatibility
-- Scalability and Customization
-- Feature Requests and Product Roadmap
-- Competitor Comparison
-- General Feedback (Neutral/Non-specific)
-
-Return only one of the categories.
-`
+import { SAMPLE_PROMPT } from '../../constants'
 
 export function PasteYourPromptBody() {
   const { value, updateDocumentContent } = useDocumentValue()
   const { data: datasets, runGenerateAction } = useDatasets()
   const [editorKey, setEditorKey] = useState(0)
-  const { initialValue, setInitialValue, setDocumentParameters } =
-    useDatasetOnboarding()
+  const {
+    initialValue,
+    setInitialValue,
+    setDocumentParameters,
+    setLatestDatasetName,
+  } = useDatasetOnboarding()
   const router = useNavigate()
 
   const onNext = useCallback(async () => {
@@ -63,15 +39,16 @@ export function PasteYourPromptBody() {
     setDocumentParameters(documentParameters)
     const parameters = documentParameters.join(', ') ?? 'message'
 
-    const datasetName = datasets?.length
+    const latestDatasetName = datasets?.[datasets.length - 1]
       ? `Dataset Onboarding ${datasets.length}`
       : 'Dataset Onboarding'
+    setLatestDatasetName(latestDatasetName)
 
     runGenerateAction({
       parameters,
       prompt: value,
       rowCount: 10,
-      name: datasetName,
+      name: latestDatasetName,
       fromCloud: false,
     })
     router.push(ROUTES.onboarding.dataset.generateDataset)
@@ -81,7 +58,8 @@ export function PasteYourPromptBody() {
     setInitialValue,
     value,
     router,
-    datasets.length,
+    datasets,
+    setLatestDatasetName,
   ])
 
   const onUseSamplePrompt = useCallback(async () => {
