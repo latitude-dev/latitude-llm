@@ -18,6 +18,7 @@ export function createSearchIssuesKey({
 }) {
   const base = ['searchIssues', projectId, commitUuid, documentUuid]
   if (!query) return base
+
   return [...base, query]
 }
 
@@ -31,7 +32,7 @@ export function useSearchIssues(
     projectId: number
     commitUuid: string
     documentUuid: string
-    query: string
+    query?: string
   },
   swrConfig?: SWRConfiguration<Issue, any>,
 ) {
