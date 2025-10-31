@@ -44,6 +44,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
 import { useSpan } from '$/stores/spans'
+import { useTraceSpanSelection } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/TraceSpanSelectionContext'
 
 const DataGrid = dynamic(
   () =>
@@ -299,26 +300,26 @@ function EvaluatedDocumentLogLink({
   project,
   commit,
   document,
-  spanId,
   traceId,
+  spanId,
 }: {
   project: IProjectContextType['project']
   commit: Commit
   document: DocumentVersion
-  spanId: string
   traceId: string
+  spanId: string
 }) {
-  const query = new URLSearchParams()
-  query.set('spanId', spanId)
-  query.set('traceId', traceId)
+  const query = new URLSearchParams({
+    traceId: traceId,
+    spanId: spanId,
+  })
 
-  return (
+  return `${
     ROUTES.projects
       .detail({ id: project.id })
       .commits.detail({ uuid: commit.uuid })
-      .documents.detail({ uuid: document.documentUuid }).spans.root +
-    `?${query.toString()}`
-  )
+      .documents.detail({ uuid: document.documentUuid }).traces.root
+  }?${query.toString()}`
 }
 
 function ResultPanelLoading() {
@@ -427,8 +428,8 @@ export function ResultPanel<
                     project: project,
                     commit: commit,
                     document: document,
-                    spanId: evaluatedSpanId,
-                    traceId: evaluatedTraceId,
+                    traceId: result.evaluatedTraceId!,
+                    spanId: result.evaluatedSpanId!,
                   })}
                   target='_blank'
                 >

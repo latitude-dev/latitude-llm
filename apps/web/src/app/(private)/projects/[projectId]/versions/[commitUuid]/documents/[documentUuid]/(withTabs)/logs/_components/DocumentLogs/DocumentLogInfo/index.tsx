@@ -163,15 +163,24 @@ export function AnnotationForms({ span }: { span: SpanWithDetails }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-  const { data: evaluations } = useEvaluationsV2({ project, commit, document })
-  const { data: evaluationResultsBySpan } = useEvaluationResultsV2BySpans({
+  const { data: evaluations, isLoading: isLoadingEvals } = useEvaluationsV2({
     project,
     commit,
     document,
-    spanId: span?.id,
-    traceId: span?.traceId,
   })
-  const humanEvals = evaluations.filter((e) => e.type === EvaluationType.Human)
+  const { data: evaluationResultsBySpan, isLoading: isLoadingResults } =
+    useEvaluationResultsV2BySpans({
+      project,
+      commit,
+      document,
+      spanId: span?.id,
+      traceId: span?.traceId,
+    })
+  const humanEvals = useMemo(
+    () => evaluations.filter((e) => e.type === EvaluationType.Human),
+    [evaluations],
+  )
+  if (isLoadingEvals || isLoadingResults) return null
   if (span.type !== SpanType.Prompt) return null
 
   return (

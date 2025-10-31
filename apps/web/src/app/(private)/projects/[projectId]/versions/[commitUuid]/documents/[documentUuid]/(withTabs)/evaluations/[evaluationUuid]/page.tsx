@@ -90,10 +90,10 @@ export default async function EvaluationPage({
 
   return (
     <ClientEvaluationPage
-      results={results}
-      selectedResult={selectedResult}
-      search={search}
       refinementEnabled={env.LATITUDE_CLOUD}
+      results={results}
+      search={search}
+      selectedResult={selectedResult}
     />
   )
 }

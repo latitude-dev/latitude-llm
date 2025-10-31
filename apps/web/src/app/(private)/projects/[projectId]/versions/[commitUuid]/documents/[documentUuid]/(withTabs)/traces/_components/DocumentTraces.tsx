@@ -63,7 +63,7 @@ export function DocumentTraces({ initialSpans }: { initialSpans: Span[] }) {
               <SpanRow
                 key={span.id}
                 span={span as Span<SpanType.Prompt>}
-                isSelected={selection.spanId === span.id}
+                isSelected={selection.traceId === span.traceId}
               />
             ))}
           </TableBody>

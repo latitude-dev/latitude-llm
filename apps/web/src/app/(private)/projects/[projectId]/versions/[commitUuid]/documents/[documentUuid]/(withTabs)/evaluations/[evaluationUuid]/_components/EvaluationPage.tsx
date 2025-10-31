@@ -26,11 +26,9 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/core/constants'
-import {
-  EvaluationResultsV2Search,
-  evaluationResultsV2SearchToQueryParams,
-} from '@latitude-data/core/helpers'
+import { EvaluationResultsV2Search } from '@latitude-data/core/helpers'
 import { EvaluationResultV2WithDetails } from '@latitude-data/core/schema/types'
+import { useTraceSpanSelection } from '../../../traces/_components/TraceSpanSelectionContext'
 
 const useEvaluationResultsV2Socket = <
   T extends EvaluationType = EvaluationType,
@@ -134,17 +132,18 @@ export function EvaluationPage<
   const { evaluation } = useCurrentEvaluationV2<T, M>()
 
   const [search, setSearch] = useState(serverSearch)
-  useEffect(() => setSearch(serverSearch), [serverSearch])
   const [debouncedSearch] = useDebounce(search, 250)
+  useEffect(() => setSearch(serverSearch), [serverSearch])
 
-  useEffect(() => {
-    const currentUrl = window.location.origin + window.location.pathname
-    const queryParams = evaluationResultsV2SearchToQueryParams(debouncedSearch)
-    const targetUrl = `${currentUrl}?${queryParams}`
-    if (targetUrl !== window.location.href) {
-      window.history.replaceState(null, '', targetUrl)
-    }
-  }, [debouncedSearch])
+  // TODO(tracing): reenable search parameters in url
+  // useEffect(() => {
+  //   const currentUrl = window.location.origin + window.location.pathname
+  //   const queryParams = evaluationResultsV2SearchToQueryParams(debouncedSearch)
+  //   const targetUrl = `${currentUrl}?${queryParams}`
+  //   if (targetUrl !== window.location.href) {
+  //     window.history.replaceState(null, '', targetUrl)
+  //   }
+  // }, [debouncedSearch])
 
   const { data: results, mutate } = useEvaluationResultsV2<T, M>(
     { project, commit, document, evaluation, search: debouncedSearch },
@@ -182,6 +181,7 @@ export function EvaluationPage<
   const refetchStats = useDebouncedCallback(mutateStats, 1000)
 
   const [realtimeEnabled, setRealtimeEnabled] = useState(true)
+
   useEvaluationResultsV2Socket({
     evaluation: evaluation,
     search: search,

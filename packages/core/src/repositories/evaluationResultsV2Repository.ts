@@ -40,7 +40,6 @@ import {
   EvaluationV2Stats,
   ResultWithEvaluationV2,
 } from '../schema/types'
-import serializeProviderLog from '../services/providerLogs/serialize'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
 
@@ -197,7 +196,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         commit: commits,
         dataset: datasets,
         evaluatedRow: datasetRows,
-        evaluatedLog: providerLogs,
       })
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
@@ -205,10 +203,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .leftJoin(
         datasetRows,
         eq(datasetRows.id, evaluationResultsV2.evaluatedRowId),
-      )
-      .innerJoin(
-        providerLogs,
-        eq(providerLogs.id, evaluationResultsV2.evaluatedLogId),
       )
       .where(filter)
       .$dynamic()
@@ -233,15 +227,8 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         calculateOffset(params.pagination.page, params.pagination.pageSize),
       )
 
-    const results = await query.then((results) =>
-      results.map((result) => ({
-        ...result,
-        evaluatedLog: serializeProviderLog(result.evaluatedLog),
-      })),
-    )
-
     return Result.ok<EvaluationResultV2WithDetails[]>(
-      results as EvaluationResultV2WithDetails[],
+      (await query) as EvaluationResultV2WithDetails[],
     )
   }
 
