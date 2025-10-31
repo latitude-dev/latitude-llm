@@ -31,6 +31,7 @@ type IAnnotationForm<
   onSubmit: (_props: OnSubmitProps<T, M>) => void
   isSubmitting: boolean
   disabled: boolean
+  documentUuid: string
   commit: Commit
   result: EvaluationResultV2<T, M> | undefined
   setDisabled: ReactStateDispatch<boolean>
@@ -56,18 +57,28 @@ export const AnnotationProvider = <
   isSubmitting,
   onSubmit,
   commit,
+  documentUuid,
   result,
 }: {
   children: ReactNode
   isSubmitting: boolean
   onSubmit: IAnnotationForm<T, M>['onSubmit']
   commit: Commit
+  documentUuid: string
   result: EvaluationResultV2<T, M> | undefined
 }) => {
   const [disabled, setDisabled] = useState(true)
   return (
     <AnnotationContext.Provider
-      value={{ commit, result, onSubmit, disabled, setDisabled, isSubmitting }}
+      value={{
+        commit,
+        documentUuid,
+        result,
+        onSubmit,
+        disabled,
+        setDisabled,
+        isSubmitting,
+      }}
     >
       {children}
     </AnnotationContext.Provider>

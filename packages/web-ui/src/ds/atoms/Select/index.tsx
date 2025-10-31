@@ -55,6 +55,7 @@ export type SelectProps<V extends unknown = unknown> = Omit<
     size?: 'small' | 'default'
     removable?: boolean
     searchable?: boolean
+    onSearchChange?: (search: string) => void
     open?: boolean
     onOpenChange?: (open: boolean) => void
     footerAction?: {
@@ -85,6 +86,7 @@ export function Select<V extends unknown = unknown>({
   required = false,
   removable = false,
   searchable = false,
+  onSearchChange,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   footerAction,
@@ -155,6 +157,7 @@ export function Select<V extends unknown = unknown>({
                 <SearchableSelectList<V>
                   options={options}
                   onChange={_onChange}
+                  onSearchChange={onSearchChange}
                 />
               ) : (
                 <SelectGroup>

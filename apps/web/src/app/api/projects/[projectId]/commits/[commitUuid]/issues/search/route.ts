@@ -9,6 +9,11 @@ import {
 } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
+import { OkType } from '@latitude-data/core/lib/Result'
+
+export type SearchIssueResponse = Awaited<
+  OkType<IssuesRepository['findByTitle']>
+>
 
 const paramsSchema = z.object({
   projectId: z.coerce.number(),
@@ -27,18 +32,17 @@ export const GET = errorHandler(
         params: {
           projectId: string
           commitUuid: string
-          documentUuid: string
         }
         workspace: Workspace
       },
     ) => {
+      const query = request.nextUrl.searchParams
       const { projectId, commitUuid, documentUuid } = paramsSchema.parse({
         projectId: params.projectId,
         commitUuid: params.commitUuid,
-        documentUuid: params.documentUuid,
+        documentUuid: query.get('documentUuid'),
       })
-      const query = request.nextUrl.searchParams
-      const title = query.get('title')
+      const title = query.get('query')
       const projectsRepo = new ProjectsRepository(workspace.id)
       const project = await projectsRepo.find(projectId).then((r) => r.unwrap())
       const commitsRepo = new CommitsRepository(workspace.id)

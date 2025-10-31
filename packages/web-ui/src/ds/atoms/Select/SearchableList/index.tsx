@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   Command,
   CommandEmpty,
@@ -14,11 +14,20 @@ import { Icon, IconName } from '../../Icons'
 export function SearchableSelectList<V extends unknown = unknown>({
   options,
   onChange,
+  onSearchChange,
 }: {
   options: SelectOption<V>[]
+  onSearchChange?: (query: string) => void
   onChange?: (value: string) => void
 }) {
   const [searchQuery, setSearchQuery] = useState('')
+  const onValueChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value)
+      onSearchChange?.(value)
+    },
+    [onSearchChange],
+  )
   return (
     <>
       <Command>
@@ -26,7 +35,7 @@ export function SearchableSelectList<V extends unknown = unknown>({
           autoFocus
           placeholder='Search...'
           value={searchQuery}
-          onValueChange={setSearchQuery}
+          onValueChange={onValueChange}
         />
         <CommandList>
           <CommandEmpty>
