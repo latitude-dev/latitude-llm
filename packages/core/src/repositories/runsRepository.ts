@@ -7,6 +7,7 @@ import {
   DEFAULT_PAGINATION_SIZE,
   DocumentLogWithMetadataAndError,
   LOG_SOURCES,
+  LogSources,
   Run,
   RUN_CAPTION_SIZE,
   RunAnnotation,
@@ -64,7 +65,16 @@ export class RunsRepository {
         getEvaluationMetricSpecification(evaluation).supportsManualEvaluation,
     ) as RunAnnotation[]
 
-    return { uuid: log.uuid, queuedAt: startedAt, startedAt, endedAt, caption, log, annotations } // prettier-ignore
+    return {
+      uuid: log.uuid,
+      queuedAt: startedAt,
+      startedAt,
+      endedAt,
+      caption,
+      log,
+      annotations,
+      source: log.source ?? LogSources.API,
+    }
   }
 
   private async listCached(cache?: Cache) {
@@ -194,7 +204,15 @@ export class RunsRepository {
     return Result.ok<number>(count)
   }
 
-  async create({ runUuid, queuedAt }: { runUuid: string; queuedAt: Date }) {
+  async create({
+    runUuid,
+    queuedAt,
+    source,
+  }: {
+    runUuid: string
+    queuedAt: Date
+    source: LogSources
+  }) {
     const lockKey = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
 
     return withCacheLock({
@@ -204,7 +222,7 @@ export class RunsRepository {
         if (listing.error) return Result.error(listing.error)
         const active = listing.value
 
-        active[runUuid] = { uuid: runUuid, queuedAt, startedAt: undefined }
+        active[runUuid] = { uuid: runUuid, queuedAt, source }
 
         await cache.set(lockKey, JSON.stringify(active))
 

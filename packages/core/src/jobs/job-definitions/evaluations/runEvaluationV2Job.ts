@@ -16,7 +16,7 @@ import {
 } from '../../../services/evaluationsV2/run'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import { captureException } from '../../../utils/datadogCapture'
-import { updateExperimentStatus } from '../experiments/shared'
+import { updateExperimentStatus } from '../../../services/experiments/updateStatus'
 
 export type RunEvaluationV2JobData = {
   workspaceId: number

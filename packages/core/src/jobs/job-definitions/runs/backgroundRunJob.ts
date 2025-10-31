@@ -14,18 +14,29 @@ import { publisher } from '../../../events/publisher'
 import { RedisStream } from '../../../lib/redisStream'
 import { OkType } from '../../../lib/Result'
 import { buildClientToolHandlersMap } from '../../../lib/streamManager/clientTools/handlers'
-import { RunsRepository } from '../../../repositories'
+import { ExperimentsRepository, RunsRepository } from '../../../repositories'
 import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtCommit'
 import { startRun } from '../../../services/runs/start'
 import { endRun } from '../../../services/runs/end'
 import { updateRun } from '../../../services/runs/update'
 import { BACKGROUND } from '../../../telemetry'
 import { getJobDocumentData } from '../helpers'
+import { updateExperimentStatus } from '../../../services/experiments/updateStatus'
+import { queues } from '../../queues'
+import {
+  RunEvaluationV2JobData,
+  runEvaluationV2JobKey,
+} from '../evaluations/runEvaluationV2Job'
+import { NotFoundError } from '@latitude-data/constants/errors'
+import { Experiment } from '../../../schema/models/types/Experiment'
+import { SimulationSettings } from '@latitude-data/constants/simulation'
 
 export type BackgroundRunJobData = {
   workspaceId: number
   projectId: number
   commitUuid: string
+  experimentId?: number
+  datasetRowId?: number
   documentUuid: string
   runUuid: string
   parameters?: Record<string, unknown>
@@ -33,11 +44,26 @@ export type BackgroundRunJobData = {
   tools?: string[]
   userMessage?: string
   source?: LogSources
+  simulationSettings?: SimulationSettings
 }
 
 export type BackgroundRunJobResult = {
   lastResponse: Awaited<OkType<typeof runDocumentAtCommit>['lastResponse']>
   toolCalls: Awaited<OkType<typeof runDocumentAtCommit>['toolCalls']>
+}
+
+async function fetchExperiment({
+  workspaceId,
+  experimentId,
+}: {
+  workspaceId: number
+  experimentId?: number
+}) {
+  if (!experimentId) return undefined
+
+  const experimentsRepository = new ExperimentsRepository(workspaceId)
+  const experiment = await experimentsRepository.find(experimentId)
+  return experiment.unwrap()
 }
 
 export const backgroundRunJob = async (
@@ -48,12 +74,15 @@ export const backgroundRunJob = async (
     projectId,
     commitUuid,
     documentUuid,
+    experimentId,
+    datasetRowId,
     runUuid,
     parameters = {},
     customIdentifier,
     tools = [],
     userMessage,
     source = LogSources.API,
+    simulationSettings,
   } = job.data
   const repository = new RunsRepository(workspaceId, projectId)
   const writeStream = new RedisStream({
@@ -66,6 +95,8 @@ export const backgroundRunJob = async (
     abortController.abort()
   }
 
+  let experiment: Experiment | undefined = undefined
+
   try {
     const { workspace, document, commit } = await getJobDocumentData({
       workspaceId,
@@ -73,6 +104,8 @@ export const backgroundRunJob = async (
       documentUuid,
       commitUuid,
     }).then((r) => r.unwrap())
+
+    experiment = await fetchExperiment({ workspaceId, experimentId })
 
     await startRun({ workspaceId, projectId, runUuid }).then((r) => r.unwrap())
 
@@ -85,11 +118,13 @@ export const backgroundRunJob = async (
       errorableUuid: runUuid,
       parameters,
       customIdentifier,
+      experiment,
       source,
       abortSignal: abortController.signal,
       context: BACKGROUND({ workspaceId }),
       tools: buildClientToolHandlersMap(tools),
       userMessage,
+      simulationSettings,
     }).then((r) => r.unwrap())
 
     await forwardStreamEvents({
@@ -100,8 +135,55 @@ export const backgroundRunJob = async (
       readStream: result.stream,
       repository,
     })
+
+    if (experiment) {
+      // Enqueue evaluations for current experiment
+      await updateExperimentStatus(
+        {
+          workspaceId,
+          experiment,
+        },
+        (progressTracker) =>
+          progressTracker.incrementEnqueued(experiment!.evaluationUuids.length),
+      ).then((r) => r.unwrap())
+
+      const providerLog = (await result.lastResponse)?.providerLog
+      if (!providerLog) {
+        throw new NotFoundError('Provider log not found after running document')
+      }
+
+      const { evaluationsQueue } = await queues()
+      experiment.evaluationUuids.forEach((evaluationUuid) => {
+        const payload: RunEvaluationV2JobData = {
+          workspaceId,
+          commitId: experiment!.commitId,
+          evaluationUuid,
+          providerLogUuid: providerLog.uuid,
+          datasetId: experiment!.datasetId ?? undefined,
+          datasetLabel: experiment!.metadata.datasetLabels[evaluationUuid],
+          datasetRowId,
+          experimentUuid: experiment!.uuid,
+        }
+
+        evaluationsQueue.add('runEvaluationV2Job', payload, {
+          deduplication: { id: runEvaluationV2JobKey(payload) },
+        })
+      })
+    }
   } catch (error) {
     writeStream.write({ type: ChainEventTypes.ChainError, data: error })
+
+    if (experiment) {
+      // Mark evaluations as failed since they will not be run
+      await updateExperimentStatus(
+        {
+          workspaceId,
+          experiment,
+        },
+        (progressTracker) =>
+          progressTracker.incrementErrors(experiment!.evaluationUuids.length),
+      )
+    }
   } finally {
     await writeStream.cleanup()
     await publisher.unsubscribe('cancelJob', cancelJob)

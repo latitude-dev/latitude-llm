@@ -56,32 +56,28 @@ export function simulatedToolDefinition({
         },
       }).then((r) => r.unwrap())
 
-      const res = await response
+      const responseResult = await response
 
-      if (!res) {
-        $tool?.end({
-          result: { isError: true, value: 'No response from simulation' },
-        })
-
-        return {
+      if (!responseResult) {
+        const result = {
           isError: true,
-          value: 'No response from simulation',
+          value: 'Error running simulation',
         }
+
+        $tool?.end({ result })
+
+        return result
       }
 
-      const { isError, value } = (
-        res as ChainStepObjectResponse<{
+      const result = (
+        responseResult as ChainStepObjectResponse<{
           isError: boolean
           value: object | string
         }>
       ).object
 
-      $tool?.end({ result: { isError, value } })
-
-      return {
-        isError,
-        value,
-      }
+      $tool?.end({ result })
+      return result
     } catch (_) {
       $tool?.fail(new Error('Unexpected simulation error'))
 

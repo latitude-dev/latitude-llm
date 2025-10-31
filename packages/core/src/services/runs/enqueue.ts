@@ -10,36 +10,48 @@ import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Project } from '../../schema/models/types/Project'
 import { type Workspace } from '../../schema/models/types/Workspace'
+import { Experiment } from '../../schema/models/types/Experiment'
+import { SimulationSettings } from '../../../../constants/src/simulation'
 
 export async function enqueueRun({
   runUuid,
-  document,
-  commit,
-  project,
   workspace,
+  project,
+  commit,
+  experiment,
+  datasetRowId,
+  document,
   parameters,
   customIdentifier,
   tools = [],
   userMessage,
   source = LogSources.API,
+  simulationSettings,
 }: {
   runUuid?: string
-  document: DocumentVersion
-  commit: Commit
-  project: Project
   workspace: Workspace
+  project: Project
+  commit: Commit
+  experiment?: Experiment
+  datasetRowId?: number
+  document: DocumentVersion
   parameters?: Record<string, unknown>
   customIdentifier?: string
   tools?: string[]
   userMessage?: string
   source?: LogSources
+  simulationSettings?: SimulationSettings
 }) {
   runUuid = runUuid ?? generateUUIDIdentifier()
 
   // IMPORTANT: Create the run in cache BEFORE adding to queue
   // to prevent race condition where job starts before cache entry exists
   const repository = new RunsRepository(workspace.id, project.id)
-  const creating = await repository.create({ runUuid, queuedAt: new Date() })
+  const creating = await repository.create({
+    runUuid,
+    queuedAt: new Date(),
+    source,
+  })
   if (creating.error) return Result.error(creating.error)
   const run = creating.value
 
@@ -50,6 +62,8 @@ export async function enqueueRun({
       workspaceId: workspace.id,
       projectId: project.id,
       commitUuid: commit.uuid,
+      datasetRowId,
+      experimentId: experiment?.id,
       documentUuid: document.documentUuid,
       runUuid: runUuid,
       parameters: parameters,
@@ -57,6 +71,7 @@ export async function enqueueRun({
       tools: tools,
       userMessage: userMessage,
       source: source,
+      simulationSettings,
     } satisfies BackgroundRunJobData,
     {
       jobId: runUuid,

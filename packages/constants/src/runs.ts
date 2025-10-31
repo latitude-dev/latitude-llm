@@ -4,7 +4,7 @@ import {
   EvaluationV2,
   ManualEvaluationMetric,
 } from './evaluations'
-import { DocumentLogWithMetadataAndError } from './models'
+import { DocumentLogWithMetadataAndError, LogSources } from './models'
 
 export type RunAnnotation<
   T extends EvaluationType = EvaluationType,
@@ -22,9 +22,13 @@ export type Run = {
   caption?: string
   log?: DocumentLogWithMetadataAndError
   annotations?: RunAnnotation[]
+  source?: LogSources
 }
 
-export type ActiveRun = Pick<Run, 'uuid' | 'queuedAt' | 'startedAt' | 'caption'>
+export type ActiveRun = Pick<
+  Run,
+  'uuid' | 'queuedAt' | 'startedAt' | 'caption' | 'source'
+>
 export type CompletedRun = Required<Run>
 
 export const RUN_CAPTION_SIZE = 150

@@ -5,7 +5,6 @@ import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
   runDocumentJob: jobs.runDocumentJob,
-  runDocumentForExperimentJob: jobs.runDocumentForExperimentJob,
   runDocumentTriggerEventJob: jobs.runDocumentTriggerEventJob,
 }
 
