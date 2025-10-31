@@ -26,6 +26,7 @@ import {
   ESCALATING_COUNT_THRESHOLD,
   HISTOGRAM_SUBQUERY_ALIAS,
 } from '@latitude-data/constants/issues'
+import { DocumentVersion } from '../schema/models/types/DocumentVersion'
 
 const tt = getTableColumns(issues)
 
@@ -50,11 +51,28 @@ export class IssuesRepository extends Repository<Issue> {
     return this.db.select(tt).from(issues).where(this.scopeFilter).$dynamic()
   }
 
+  async findById({ project, issueId }: { project: Project; issueId: number }) {
+    const result = await this.db
+      .select()
+      .from(issues)
+      .where(
+        and(
+          this.scopeFilter,
+          eq(issues.projectId, project.id),
+          eq(issues.id, issueId),
+        ),
+      )
+      .limit(1)
+    return result[0] || null
+  }
+
   async findByTitle({
-    title,
     project,
+    document,
+    title,
   }: {
     project: Project
+    document: DocumentVersion
     title: string | null
   }) {
     return this.db
@@ -67,6 +85,7 @@ export class IssuesRepository extends Repository<Issue> {
         and(
           this.scopeFilter,
           eq(issues.projectId, project.id),
+          eq(issues.documentUuid, document.documentUuid),
           like(issues.title, `%${title ?? ''}%`),
         ),
       )

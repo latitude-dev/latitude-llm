@@ -5,6 +5,10 @@ import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Issue } from '../../schema/models/types/Issue'
 import { upsertHistogram } from '../issueHistograms/upsert'
 
+// TODO: Validate the result is not passed and not errored before assigning issue
+// TODO: Check issue belongs to document
+// TODO: upsert histogram add or remove a count
+
 /**
  * This service takes care of validating the issue.documentUuid is the same as
  * the document version provided in the argument.

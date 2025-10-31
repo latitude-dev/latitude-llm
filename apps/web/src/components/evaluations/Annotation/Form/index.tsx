@@ -31,7 +31,12 @@ export function AnnotationForm<
   if (!spec.AnnotationForm) return null
 
   return (
-    <AnnotationProvider onSubmit={onSubmit} isSubmitting={isSubmitting}>
+    <AnnotationProvider
+      commit={commit}
+      result={result}
+      onSubmit={onSubmit}
+      isSubmitting={isSubmitting}
+    >
       <spec.AnnotationForm
         metric={evaluation.metric}
         evaluation={evaluation}

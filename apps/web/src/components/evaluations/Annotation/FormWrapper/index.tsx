@@ -12,11 +12,17 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { TextArea as TextAreaAtom } from '@latitude-data/web-ui/atoms/TextArea'
 import { font } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
-import { EvaluationType, EvaluationMetric } from '@latitude-data/constants'
+import {
+  EvaluationType,
+  EvaluationMetric,
+  EvaluationResultV2,
+} from '@latitude-data/constants'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { OnSubmitProps } from '../useAnnotationForm'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { IssuesSelector } from '../Form/IssuesSelector'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 type IAnnotationForm<
   T extends EvaluationType,
@@ -25,6 +31,8 @@ type IAnnotationForm<
   onSubmit: (_props: OnSubmitProps<T, M>) => void
   isSubmitting: boolean
   disabled: boolean
+  commit: Commit
+  result: EvaluationResultV2<T, M> | undefined
   setDisabled: ReactStateDispatch<boolean>
 }
 
@@ -40,22 +48,26 @@ export const AnnotationContext = createAnnotationContext<
   EvaluationMetric<EvaluationType>
 >()
 
-export const AnnotationProvider = ({
+export const AnnotationProvider = <
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>({
   children,
   isSubmitting,
   onSubmit,
+  commit,
+  result,
 }: {
   children: ReactNode
   isSubmitting: boolean
-  onSubmit: IAnnotationForm<
-    EvaluationType,
-    EvaluationMetric<EvaluationType>
-  >['onSubmit']
+  onSubmit: IAnnotationForm<T, M>['onSubmit']
+  commit: Commit
+  result: EvaluationResultV2<T, M> | undefined
 }) => {
   const [disabled, setDisabled] = useState(true)
   return (
     <AnnotationContext.Provider
-      value={{ onSubmit, disabled, setDisabled, isSubmitting }}
+      value={{ commit, result, onSubmit, disabled, setDisabled, isSubmitting }}
     >
       {children}
     </AnnotationContext.Provider>
@@ -78,6 +90,7 @@ export const AnnotationFormWrapper = ({
         'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
       )}
     >
+      <IssuesSelector />
       {children}
     </form>
   )
@@ -86,7 +99,7 @@ export const AnnotationFormWrapper = ({
 AnnotationFormWrapper.displayName = 'AnnotationFormWrapper'
 
 AnnotationFormWrapper.Body = ({ children }: { children: ReactNode }) => {
-  return <div className='px-3 pt-3 text-sm text-secondary'>{children}</div>
+  return <div className='px-3 pt-3 flex'>{children}</div>
 }
 
 AnnotationFormWrapper.Footer = ({ children }: { children: ReactNode }) => {

@@ -22,7 +22,9 @@ export const annotateEvaluationV2Action = withEvaluation
       .then((r) => r.unwrap())
       .then((r) => serializeProviderLog(r))
     const issueRepo = new IssuesRepository(ctx.workspace.id)
-    const issue = parsedInput.issueId
+
+    // TODO: Review I think we don't need to touch this service at all for issue assignation
+    const _issue = parsedInput.issueId
       ? await issueRepo.find(parsedInput.issueId).then((r) => r.unwrap())
       : null
 
@@ -33,7 +35,6 @@ export const annotateEvaluationV2Action = withEvaluation
       providerLog: providerLog,
       commit: ctx.commit,
       workspace: ctx.workspace,
-      issue: issue,
     }).then((r) => r.unwrap())
 
     return result

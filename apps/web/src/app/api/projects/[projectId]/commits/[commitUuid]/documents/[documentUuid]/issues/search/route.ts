@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const paramsSchema = z.object({
   projectId: z.coerce.number(),
   commitUuid: z.string(),
-  documentUuid: z.string()
+  documentUuid: z.string(),
 })
 
 export const GET = errorHandler(
