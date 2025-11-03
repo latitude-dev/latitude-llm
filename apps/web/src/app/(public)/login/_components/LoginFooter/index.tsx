@@ -18,7 +18,7 @@ export default function LoginFooter({
         Don't have an account yet?{' '}
         <Link
           href={
-            ROUTES.auth.setup.root +
+            ROUTES.auth.setup +
             (returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '')
           }
           onClick={onClickSignup}
