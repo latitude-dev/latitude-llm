@@ -13,7 +13,7 @@ async function execute({
   router,
 }: ActionExecuteArgs<ActionType.CloneAgent>) {
   if (!hasCompletedOnboarding) {
-    return router.push(ROUTES.onboarding.dataset.pasteYourPrompt)
+    return router.push(ROUTES.onboarding.promptEngineering.pasteYourPrompt)
   }
 
   return router.push(

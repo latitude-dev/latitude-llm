@@ -14,8 +14,12 @@ import SimpleDatasetTable from '../../../_components/SimpleDatasetTable'
 import { useExperiments } from '$/stores/experiments'
 import useDatasets from '$/stores/datasets'
 import { envClient } from '$/envClient'
-import { useDatasetOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
+import { usePromptEngineeringOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { publishEventAction } from '$/actions/events/publishEventAction'
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
 const EXPERIMENT_VARIANT = [
   {
@@ -26,14 +30,21 @@ const EXPERIMENT_VARIANT = [
   },
 ]
 
-export default function RunExperimentBody() {
+export default function RunExperimentBody({
+  user,
+  workspace,
+}: {
+  user: User
+  workspace: Workspace
+}) {
   const { executeCompleteOnboarding } = useWorkspaceOnboarding()
+  const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { data: datasets } = useDatasets()
   const { initialValue, documentParameters, latestDatasetName } =
-    useDatasetOnboarding()
+    usePromptEngineeringOnboarding()
 
   // Get the latest dataset, as the user might have gone back and forth between steps, creating multiple datasets
   const latestDataset = datasets.find((ds) => ds.name === latestDatasetName)
@@ -60,6 +71,13 @@ export default function RunExperimentBody() {
         executeCompleteOnboarding({
           projectId: project.id,
           commitUuid: commit.uuid,
+        })
+        publishEvent({
+          eventType: 'pasteYourPromptOnboardingCompleted',
+          payload: {
+            workspaceId: workspace.id,
+            userEmail: user.email,
+          },
         })
       },
     },

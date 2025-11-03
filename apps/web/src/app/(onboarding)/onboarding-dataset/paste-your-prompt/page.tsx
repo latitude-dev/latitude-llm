@@ -6,9 +6,8 @@ import buildMetatags from '$/app/_lib/buildMetatags'
 import { PageTrackingWrapper } from '$/components/PageTrackingWrapper'
 
 export async function generateMetadata() {
-  // TODO(onboarding): change this to prompt engineering onboarding title once we activate the onboarding
   return buildMetatags({
-    title: 'Dataset Onboarding - Paste Your Prompt',
+    title: 'Prompt Engineering Onboarding - Paste Your Prompt',
   })
 }
 

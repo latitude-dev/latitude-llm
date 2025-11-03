@@ -33,7 +33,7 @@ export default async function PrivateLayout({
   const completed = await isOnboardingCompleted()
 
   if (!completed) {
-    redirect(ROUTES.onboarding.dataset.pasteYourPrompt)
+    redirect(ROUTES.onboarding.promptEngineering.pasteYourPrompt)
   }
 
   const supportIdentity = createSupportUserIdentity(user)
