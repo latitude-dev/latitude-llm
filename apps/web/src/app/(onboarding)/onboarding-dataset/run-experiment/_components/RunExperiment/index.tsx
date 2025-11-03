@@ -14,7 +14,7 @@ import SimpleDatasetTable from '../../../_components/SimpleDatasetTable'
 import { useExperiments } from '$/stores/experiments'
 import useDatasets from '$/stores/datasets'
 import { envClient } from '$/envClient'
-import { useDatasetOnboarding } from '$/stores/datasetOnboarding'
+import { useDatasetOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 
 const EXPERIMENT_VARIANT = [
