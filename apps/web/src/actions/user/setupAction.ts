@@ -10,8 +10,6 @@ import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access/users'
 import { errorHandlingProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
 import { UserTitle } from '@latitude-data/constants/users'
-import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
-import { Result } from '@latitude-data/core/lib/Result'
 import { env } from '@latitude-data/env'
 import { markWorkspaceOnboardingComplete } from '@latitude-data/core/services/workspaceOnboarding/update'
 import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
@@ -60,35 +58,20 @@ export const setupAction = errorHandlingProcedure
 
     // If there is no returnTo or its NOT a clone action url, redirect to the setup form
     if (!parsedInput.returnTo || !isCloneActionUrl(parsedInput.returnTo)) {
-      const isDatasetOnboardingEnabledResult = await isFeatureEnabledByName(
-        workspace.id,
-        'datasetOnboarding',
-      )
-
-      if (!Result.isOk(isDatasetOnboardingEnabledResult)) {
-        return frontendRedirect(ROUTES.dashboard.root)
-      }
-      const isDatasetOnboardingEnabled =
-        isDatasetOnboardingEnabledResult.unwrap()
-
       const isCloud = !!env.LATITUDE_CLOUD
-
-      if (isDatasetOnboardingEnabled) {
-        if (isCloud) {
-          return frontendRedirect(ROUTES.onboarding.dataset.pasteYourPrompt)
-        }
-        // If user is self-hosted and they're in the new dataset onboarding, we complete the onboarding and redirect to the dashboard as they cannot generate the dataset with copilot
-        const onboarding = await getWorkspaceOnboarding({
-          workspace,
-        }).then((r) => r.unwrap())
-
-        await markWorkspaceOnboardingComplete({
-          onboarding,
-        }).then((r) => r.unwrap())
-
-        return frontendRedirect(ROUTES.dashboard.root)
+      if (isCloud) {
+        return frontendRedirect(ROUTES.onboarding.dataset.pasteYourPrompt)
       }
-      return frontendRedirect(ROUTES.auth.setup.form)
+      // If user is self-hosted and they're in the new dataset onboarding, we complete the onboarding and redirect to the dashboard as they cannot generate the dataset with copilot
+      const onboarding = await getWorkspaceOnboarding({
+        workspace,
+      }).then((r) => r.unwrap())
+
+      await markWorkspaceOnboardingComplete({
+        onboarding,
+      }).then((r) => r.unwrap())
+
+      return frontendRedirect(ROUTES.dashboard.root)
     }
 
     return frontendRedirect(parsedInput.returnTo)

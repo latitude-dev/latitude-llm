@@ -97,7 +97,6 @@ export const EventHandlers: IEventsHandlers = {
   agentOnboardingCompleted: [],
   agentOnboardingSkipped: [],
   agentOnboardingSkippedFromSelectAgentPage: [],
-  setupFormPageVisited: [],
   selectAgentPageVisited: [],
   agentOnboardingPageVisited: [],
   promptEngineeringOnboardingPageVisited: [],
