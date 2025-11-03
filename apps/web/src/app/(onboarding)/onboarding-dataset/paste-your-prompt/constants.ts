@@ -1,6 +1,7 @@
 import { nanoidHashAlgorithm } from '@latitude-data/core/services/datasets/utils'
 import { Column } from '@latitude-data/core/schema/models/datasets'
 import { DATASET_COLUMN_ROLES } from '@latitude-data/core/constants'
+import { envClient } from '$/envClient'
 
 export type SamplePromptDocumentParameterKeys = 'score' | 'message'
 
@@ -9,12 +10,14 @@ export type SamplePromptParameters = Record<
   string | number
 >
 
-const SAMPLE_PROMPT = `
+const DEFAULT_PROMPT_CONFIGURATION = `
 ---
-provider: OpenAI
-model: gpt-4.1-mini
+provider: ${envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME}
+model: gpt-4o-mini
 ---
 
+`
+const SAMPLE_PROMPT = `
 This is a response from an NPS survey:
 
 Score: {{score}} 
@@ -95,4 +98,9 @@ const SAMPLE_PROMPT_DATASET: SamplePromptParameters[] = [
   },
 ]
 
-export { SAMPLE_PROMPT_DATASET_COLUMNS, SAMPLE_PROMPT_DATASET, SAMPLE_PROMPT }
+export {
+  SAMPLE_PROMPT_DATASET_COLUMNS,
+  SAMPLE_PROMPT_DATASET,
+  SAMPLE_PROMPT,
+  DEFAULT_PROMPT_CONFIGURATION,
+}

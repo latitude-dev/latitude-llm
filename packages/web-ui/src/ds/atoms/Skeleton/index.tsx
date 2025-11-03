@@ -6,15 +6,18 @@ import { skeleton, SkeletonHeight } from '../../tokens'
 function Skeleton({
   className,
   height,
+  animate = true,
   ...props
 }: HTMLAttributes<HTMLDivElement> & {
   height?: SkeletonHeight
+  animate?: boolean
 }) {
   return (
     <div
       className={cn(
-        'animate-pulse rounded-xl bg-muted-foreground/10',
+        'rounded-xl bg-muted-foreground/10',
         height && skeleton.height[height],
+        animate && 'animate-pulse',
         className,
       )}
       {...props}
