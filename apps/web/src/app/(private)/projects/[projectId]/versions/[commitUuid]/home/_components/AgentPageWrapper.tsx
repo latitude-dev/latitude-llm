@@ -21,10 +21,9 @@ export function AgentPageWrapper({
   const [parameters, setParameters] = useState<Record<string, unknown>>({})
   const [activeTrigger, setActiveTrigger] = useState<DocumentTrigger>()
 
-  const { runDocument, addMessages, abortCurrentStream, hasActiveStream } =
-    useRunDocument({
-      commit,
-    })
+  const { runDocument, addMessages, hasActiveStream } = useRunDocument({
+    commit,
+  })
 
   const playground = usePlaygroundChat({
     runPromptFn: runDocument,
@@ -82,7 +81,6 @@ export function AgentPageWrapper({
             playground={playground}
             parameters={parameters}
             onClose={() => playground.reset()}
-            abortCurrentStream={abortCurrentStream}
             hasActiveStream={hasActiveStream}
           />
         </div>

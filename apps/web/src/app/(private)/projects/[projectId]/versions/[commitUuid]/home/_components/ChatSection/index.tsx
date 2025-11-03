@@ -16,14 +16,12 @@ export function AgentChatSection({
   playground,
   parameters,
   hasActiveStream,
-  abortCurrentStream,
   onClose,
 }: {
   activeTrigger?: DocumentTrigger
   playground: PlaygroundChat
   parameters: Record<string, unknown>
   hasActiveStream: () => boolean
-  abortCurrentStream: () => void
   onClose: () => void
 }) {
   const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
@@ -61,11 +59,9 @@ export function AgentChatSection({
             resetChat={playground.reset}
             hasActiveStream={hasActiveStream}
             playground={playground}
-            abortCurrentStream={abortCurrentStream}
             placeholder='Ask anything'
             onBack={playground.reset}
             onBackLabel='Back to triggers'
-            isRunStream={false}
           />
         </div>
       </div>
