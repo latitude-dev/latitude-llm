@@ -3,7 +3,6 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { findOnboardingDocument } from '@latitude-data/core/services/documents/findOnboardingDocument'
 import { notFound } from 'next/navigation'
 import { Result } from '@latitude-data/core/lib/Result'
-import { calculateAllSteps } from '@latitude-data/core/services/workspaceOnboarding/steps/calculateAllSteps'
 import { findOnboardingDataset } from '@latitude-data/core/services/datasets/findOnboardingDataset'
 /**
  * Get the current workspace onboarding status
@@ -75,21 +74,4 @@ export async function getOnboardingDataset() {
     return notFound()
   }
   return datasetResult.unwrap()
-}
-
-/**
- * Get the necessary onboarding steps to complete the onboarding
- */
-export async function getNecessaryOnboardingSteps() {
-  const { workspace } = await getCurrentUserOrRedirect()
-  if (!workspace?.id) {
-    return notFound()
-  }
-  const stepsResult = await calculateAllSteps({
-    workspace,
-  })
-  if (!Result.isOk(stepsResult)) {
-    return notFound()
-  }
-  return stepsResult.unwrap()
 }

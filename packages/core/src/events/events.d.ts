@@ -667,63 +667,6 @@ export type CommitUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
-export type PromptEngineeringOnboardingCompletedEvent = LatitudeEventGeneric<
-  'promptEngineeringOnboardingCompleted',
-  {
-    workspaceId: number
-    userEmail: string
-  }
->
-
-export type AgentOnboardingCompletedEvent = LatitudeEventGeneric<
-  'agentOnboardingCompleted',
-  {
-    workspaceId: number
-    userEmail: string
-  }
->
-
-export type AgentOnboardingSkippedEvent = LatitudeEventGeneric<
-  'agentOnboardingSkipped',
-  {
-    workspaceId: number
-    userEmail: string
-  }
->
-
-export type AgentOnboardingSkippedFromSelectAgentPageEvent =
-  LatitudeEventGeneric<
-    'agentOnboardingSkippedFromSelectAgentPage',
-    {
-      workspaceId: number
-      userEmail: string
-    }
-  >
-
-export type SelectAgentVisitedEvent = LatitudeEventGeneric<
-  'selectAgentPageVisited',
-  {
-    workspaceId: number
-    userEmail: string
-  }
->
-
-export type AgentOnboardingVisitedEvent = LatitudeEventGeneric<
-  'agentOnboardingPageVisited',
-  {
-    workspaceId: number
-    userEmail: string
-  }
->
-
-export type PromptEngineeringOnboardingVisitedEvent = LatitudeEventGeneric<
-  'promptEngineeringOnboardingPageVisited',
-  {
-    workspaceId: number
-    userEmail: string
-  }
->
-
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -785,13 +728,6 @@ export type LatitudeEvent =
   | RunProgressEvent
   | RunEndedEvent
   | CommitUpdatedEvent
-  | PromptEngineeringOnboardingCompletedEvent
-  | AgentOnboardingCompletedEvent
-  | AgentOnboardingSkippedEvent
-  | AgentOnboardingSkippedFromSelectAgentPageEvent
-  | SelectAgentVisitedEvent
-  | AgentOnboardingVisitedEvent
-  | PromptEngineeringOnboardingVisitedEvent
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
   membershipCreated: EventHandler<MembershipCreatedEvent>[]
@@ -853,11 +789,4 @@ export interface IEventsHandlers {
   runProgress: EventHandler<RunProgressEvent>[]
   runEnded: EventHandler<RunEndedEvent>[]
   commitUpdated: EventHandler<CommitUpdatedEvent>[]
-  promptEngineeringOnboardingCompleted: EventHandler<PromptEngineeringOnboardingCompletedEvent>[]
-  agentOnboardingCompleted: EventHandler<AgentOnboardingCompletedEvent>[]
-  agentOnboardingSkipped: EventHandler<AgentOnboardingSkippedEvent>[]
-  agentOnboardingSkippedFromSelectAgentPage: EventHandler<AgentOnboardingSkippedFromSelectAgentPageEvent>[]
-  selectAgentPageVisited: EventHandler<SelectAgentVisitedEvent>[]
-  agentOnboardingPageVisited: EventHandler<AgentOnboardingVisitedEvent>[]
-  promptEngineeringOnboardingPageVisited: EventHandler<PromptEngineeringOnboardingVisitedEvent>[]
 }
