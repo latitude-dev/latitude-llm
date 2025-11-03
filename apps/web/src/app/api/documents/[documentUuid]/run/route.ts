@@ -14,7 +14,6 @@ import {
 } from '@latitude-data/core/repositories'
 
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
-import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { env } from '@latitude-data/env'
@@ -57,10 +56,6 @@ export const POST = errorHandler(
           aiParameters,
         } = inputSchema.parse(body)
         const projectId = Number(body.projectId)
-        const runsEnabled = await isFeatureEnabledByName(
-          workspace.id,
-          'runs',
-        ).then((r) => r.unwrap())
         const commitsScope = new CommitsRepository(workspace.id)
         const headCommit = await commitsScope.getHeadCommit(projectId)
 
@@ -111,35 +106,21 @@ export const POST = errorHandler(
         }
 
         try {
-          if (runsEnabled) {
-            const result = await sdk.prompts.run(path, {
-              background: true,
-              versionUuid: commitUuid,
-              parameters,
-              userMessage,
-            })
-            if (!result?.uuid) throw new Error('Failed to create run')
+          const result = await sdk.prompts.run(path, {
+            background: true,
+            versionUuid: commitUuid,
+            parameters,
+            userMessage,
+          })
+          if (!result?.uuid) throw new Error('Failed to create run')
 
-            sdk.runs.attach(result.uuid, {
-              stream: true,
-              onEvent,
-              onError,
-              onFinished,
-              signal: req.signal,
-            })
-          } else {
-            sdk.prompts.run(path, {
-              stream: true,
-              background: false,
-              versionUuid: commitUuid,
-              parameters,
-              userMessage,
-              onEvent,
-              onError,
-              onFinished,
-              signal: req.signal,
-            })
-          }
+          sdk.runs.attach(result.uuid, {
+            stream: true,
+            onEvent,
+            onError,
+            onFinished,
+            signal: req.signal,
+          })
         } catch (error) {
           captureException(error as Error)
           await writeError(new Error('Failed to execute prompt'))

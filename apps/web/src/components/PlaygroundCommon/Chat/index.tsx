@@ -1,4 +1,3 @@
-import useFeature from '$/stores/useFeature'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import React, { useEffect, useMemo, useRef } from 'react'
@@ -51,8 +50,7 @@ export default function Chat({
     onPromptRan,
   })
 
-  const { isEnabled: isRunsEnabled } = useFeature('runs')
-  const isRunStream = isRunsEnabled && isRunStreamProp
+  const isRunStream = isRunStreamProp
 
   const toolContentMap = useToolContentMap(playground.messages)
   const parameterKeys = useMemo(

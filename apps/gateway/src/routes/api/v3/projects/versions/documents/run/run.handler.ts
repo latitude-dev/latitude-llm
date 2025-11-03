@@ -6,7 +6,7 @@ import { captureException } from '$/common/tracer'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
 import { LogSources } from '@latitude-data/core/constants'
-import { BadRequestError, LatitudeError } from '@latitude-data/core/lib/errors'
+import { LatitudeError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
 import { buildClientToolHandlersMap } from '@latitude-data/core/lib/streamManager/clientTools/handlers'
@@ -42,9 +42,6 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     commitUuid: versionUuid!,
     documentPath: path!,
   }).then((r) => r.unwrap())
-  const runsEnabled = await isFeatureEnabledByName(workspace.id, 'runs').then(
-    (r) => r.unwrap(),
-  )
 
   if (source === LogSources.API) {
     await publishDocumentRunRequestedEvent({
@@ -79,7 +76,6 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       tools,
       userMessage,
       source,
-      runsEnabled,
     })
   }
 
@@ -108,7 +104,6 @@ async function handleBackgroundRun({
   tools,
   userMessage,
   source,
-  runsEnabled,
 }: {
   c: Context
   workspace: any
@@ -120,14 +115,7 @@ async function handleBackgroundRun({
   tools: any
   userMessage: any
   source: any
-  runsEnabled: boolean
 }) {
-  if (!runsEnabled) {
-    throw new BadRequestError(
-      'Background runs are not enabled for this workspace',
-    )
-  }
-
   const { run } = await enqueueRun({
     document: document,
     commit: commit,

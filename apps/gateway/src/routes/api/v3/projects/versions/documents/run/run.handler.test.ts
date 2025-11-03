@@ -149,9 +149,6 @@ describe('POST /run', () => {
 
       // Set default mocks for feature flags
       mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
-        if (featureName === 'runs') {
-          return Promise.resolve(Result.ok(true))
-        }
         if (featureName === 'api-background-runs') {
           return Promise.resolve(Result.ok(false))
         }
@@ -432,9 +429,6 @@ describe('POST /run', () => {
 
       // Set default mocks for feature flags
       mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
-        if (featureName === 'runs') {
-          return Promise.resolve(Result.ok(true))
-        }
         if (featureName === 'api-background-runs') {
           return Promise.resolve(Result.ok(false))
         }
@@ -750,9 +744,6 @@ describe('POST /run', () => {
 
       // Set default mocks for feature flags
       mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
-        if (featureName === 'runs') {
-          return Promise.resolve(Result.ok(true))
-        }
         if (featureName === 'api-background-runs') {
           return Promise.resolve(Result.ok(false))
         }
@@ -889,11 +880,8 @@ describe('POST /run', () => {
     })
 
     it('runs in background when background=true is explicitly set', async () => {
-      // Mock feature flags to return false for both
+      // Mock feature flag for api-background-runs
       mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
-        if (featureName === 'runs') {
-          return Promise.resolve(Result.ok(true))
-        }
         if (featureName === 'api-background-runs') {
           return Promise.resolve(Result.ok(false))
         }
@@ -925,11 +913,8 @@ describe('POST /run', () => {
     })
 
     it('runs in foreground when background=false is explicitly set, even with feature flag enabled', async () => {
-      // Mock feature flags: api-background-runs enabled but background explicitly false
+      // Mock feature flag: api-background-runs enabled but background explicitly false
       mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
-        if (featureName === 'runs') {
-          return Promise.resolve(Result.ok(true))
-        }
         if (featureName === 'api-background-runs') {
           return Promise.resolve(Result.ok(true))
         }
@@ -985,11 +970,8 @@ describe('POST /run', () => {
       mocks.runDocumentAtCommit.mockClear()
       mocks.enqueueRun.mockClear()
 
-      // Mock feature flags: api-background-runs enabled, background not specified
+      // Mock feature flag: api-background-runs enabled, background not specified
       mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
-        if (featureName === 'runs') {
-          return Promise.resolve(Result.ok(true))
-        }
         if (featureName === 'api-background-runs') {
           return Promise.resolve(Result.ok(true))
         }
@@ -1021,11 +1003,8 @@ describe('POST /run', () => {
     })
 
     it('runs in foreground when feature flag is disabled and background param is undefined', async () => {
-      // Mock feature flags: both disabled, background not specified
+      // Mock feature flag: api-background-runs disabled, background not specified
       mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
-        if (featureName === 'runs') {
-          return Promise.resolve(Result.ok(true))
-        }
         if (featureName === 'api-background-runs') {
           return Promise.resolve(Result.ok(false))
         }

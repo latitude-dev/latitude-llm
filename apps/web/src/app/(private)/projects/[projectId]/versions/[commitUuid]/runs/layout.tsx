@@ -1,10 +1,7 @@
 'use server'
 
-import { isFeatureEnabledCached } from '$/app/(private)/_data-access'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { MetadataProvider } from '$/components/MetadataProvider'
-import { ROUTES } from '$/services/routes'
-import { redirect } from 'next/navigation'
 import { ReactNode } from 'react'
 import ProjectLayout from '../_components/ProjectLayout'
 
@@ -23,15 +20,6 @@ export default async function RunsLayout({
   params: Promise<{ projectId: string; commitUuid: string }>
 }) {
   const { projectId, commitUuid } = await params
-
-  const runsEnabled = await isFeatureEnabledCached('runs')
-  if (!runsEnabled) {
-    return redirect(
-      ROUTES.projects
-        .detail({ id: Number(projectId) })
-        .commits.detail({ uuid: commitUuid }).home.root,
-    )
-  }
 
   return (
     <ProjectLayout projectId={Number(projectId)} commitUuid={commitUuid}>
