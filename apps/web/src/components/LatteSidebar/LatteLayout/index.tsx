@@ -32,12 +32,21 @@ const MIN_WIDTH = 400
 function LatteLayoutContent({
   initialThreadUuid,
   initialProviderLog,
+  containerRef,
 }: {
   initialThreadUuid?: string
   initialProviderLog?: ProviderLogDto
+  containerRef?: RefObject<HTMLDivElement | null>
 }) {
-  const { isOpen, setIsOpen, localWidth, setWidth, inputRef } =
-    useLatteSidebar()
+  const {
+    isOpen,
+    setIsOpen,
+    localWidth,
+    width,
+    setWidth,
+    setLocalWidth,
+    inputRef,
+  } = useLatteSidebar()
 
   const openBadgeRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -70,6 +79,27 @@ function LatteLayoutContent({
       openBadge.removeEventListener('mouseleave', onMouseLeave)
     }
   }, [])
+
+  useEffect(() => {
+    if (!containerRef?.current) return
+    const container = containerRef.current
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const containerWidth = entry.contentRect.width
+        if (width > containerWidth) {
+          setWidth(containerWidth)
+          setLocalWidth(containerWidth)
+        }
+      }
+    })
+
+    resizeObserver.observe(container)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [width, setLocalWidth, setWidth, containerRef])
 
   return (
     <>
@@ -181,13 +211,19 @@ export function LatteLayout({
   initialThreadUuid?: string
   initialProviderLog?: ProviderLogDto
 }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
   return (
     <LatteLayoutProvider>
-      <div className='w-full h-full relative overflow-hidden pr-6'>
+      <div
+        className='w-full h-full relative overflow-hidden pr-6'
+        ref={containerRef}
+      >
         {children}
         <LatteLayoutContent
           initialThreadUuid={initialThreadUuid}
           initialProviderLog={initialProviderLog}
+          containerRef={containerRef}
         />
       </div>
     </LatteLayoutProvider>
