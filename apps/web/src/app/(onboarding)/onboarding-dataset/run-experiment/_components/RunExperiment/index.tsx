@@ -31,7 +31,7 @@ export default function RunExperimentBody() {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-  const { data: datasets } = useDatasets()
+  const { data: datasets, generateOnboardingIsLoading } = useDatasets()
   const { initialValue, documentParameters, latestDatasetName } =
     useDatasetOnboarding()
 
@@ -141,7 +141,7 @@ export default function RunExperimentBody() {
           className='w-full'
           iconProps={{ placement: 'right', name: 'arrowRight' }}
           onClick={onCompleteOnboarding}
-          disabled={isCreating}
+          disabled={isCreating || generateOnboardingIsLoading}
         >
           Run Experiment
         </Button>

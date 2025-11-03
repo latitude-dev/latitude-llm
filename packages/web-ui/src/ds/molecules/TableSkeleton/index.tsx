@@ -15,11 +15,13 @@ export function TableSkeleton({
   cols,
   maxHeight,
   verticalPadding = false,
+  animate = true,
 }: {
   rows: number
   cols: string[] | number
   maxHeight?: number
   verticalPadding?: boolean
+  animate?: boolean
 }) {
   const { data, headers } = useMemo(() => {
     const rowList = Array.from(Array(rows).keys())
@@ -52,7 +54,7 @@ export function TableSkeleton({
           >
             {row.map((cell) => (
               <TableCell key={cell} className='py-2'>
-                <Skeleton className='w-full h-4' />
+                <Skeleton className='w-full h-4' animate={animate} />
               </TableCell>
             ))}
           </TableRow>

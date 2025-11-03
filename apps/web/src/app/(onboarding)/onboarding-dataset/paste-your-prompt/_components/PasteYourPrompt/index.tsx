@@ -13,7 +13,12 @@ import { fromAstToBlocks } from '$/components/BlocksEditor/Editor/state/promptlT
 import { useDatasetOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
-import { SAMPLE_PROMPT } from '../../constants'
+import { SAMPLE_PROMPT, DEFAULT_PROMPT_CONFIGURATION } from '../../constants'
+import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
+
+const addDefaultPromptConfiguration = (prompt: string) => {
+  return DEFAULT_PROMPT_CONFIGURATION + prompt
+}
 
 export function PasteYourPromptBody() {
   const { value, updateDocumentContent } = useDocumentValue()
@@ -28,16 +33,39 @@ export function PasteYourPromptBody() {
   const router = useNavigate()
 
   const onNext = useCallback(async () => {
+    if (value.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'Please add a prompt before continuing',
+        variant: 'destructive',
+      })
+      return
+    }
+
     // We need max speed here, so we don't want to use the useMetadata hook to get the metadata.ast or parameters
     const metadata = await scan({ prompt: value })
-    setInitialValue(fromAstToBlocks({ ast: metadata.ast, prompt: value }))
+    if (Object.keys(metadata.config).length === 0) {
+      const promptWithConfiguration = addDefaultPromptConfiguration(value)
+      const metadataWithConfiguration = await scan({
+        prompt: promptWithConfiguration,
+      })
+      setInitialValue(
+        fromAstToBlocks({
+          ast: metadataWithConfiguration.ast,
+          prompt: promptWithConfiguration,
+        }),
+      )
+      updateDocumentContent(promptWithConfiguration)
+    } else {
+      setInitialValue(fromAstToBlocks({ ast: metadata.ast, prompt: value }))
+    }
+
     // If the user doesnt add any parameters, we default to 'message'
     const documentParameters =
       Array.from(metadata.parameters).length > 0
         ? Array.from(metadata.parameters)
         : ['message']
     setDocumentParameters(documentParameters)
-    const parameters = documentParameters.join(', ') ?? 'message'
 
     const latestDatasetName = datasets?.[datasets.length - 1]
       ? `Dataset Onboarding ${datasets.length}`
@@ -45,7 +73,7 @@ export function PasteYourPromptBody() {
     setLatestDatasetName(latestDatasetName)
 
     runGenerateOnboardingAction({
-      parameters,
+      parameters: documentParameters.join(', '),
       prompt: value,
       rowCount: 10,
       name: latestDatasetName,
@@ -59,6 +87,7 @@ export function PasteYourPromptBody() {
     router,
     datasets,
     setLatestDatasetName,
+    updateDocumentContent,
   ])
 
   const onUseSamplePrompt = useCallback(async () => {
