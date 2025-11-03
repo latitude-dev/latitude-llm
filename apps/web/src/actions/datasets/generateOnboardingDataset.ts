@@ -6,7 +6,7 @@ import { generateDatasetWithCopilot } from '@latitude-data/core/services/dataset
 import {
   SAMPLE_PROMPT,
   SAMPLE_PROMPT_DATASET,
-} from '$/app/(onboarding)/onboarding-dataset/paste-your-prompt/constants'
+} from '$/app/(onboarding)/onboarding-prompt-engineering/paste-your-prompt/constants'
 import { createDatasetFromJson } from '@latitude-data/core/services/datasets/createFromJson'
 
 export const generateOnboardingDatasetAction = authProcedure

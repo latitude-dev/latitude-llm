@@ -10,7 +10,7 @@ import useDatasets from '$/stores/datasets'
 import { OnboardingEditor } from '../../../_components/OnboardingEditor'
 import { scan } from 'promptl-ai'
 import { fromAstToBlocks } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
-import { usePromptEngineeringOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
+import { usePromptEngineeringOnboarding } from '$/app/(onboarding)/onboarding-prompt-engineering/datasetOnboarding'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
 import {
