@@ -62,6 +62,9 @@ export async function getOnboardingResources() {
   return { workspace, documents, project, commit }
 }
 
+/**
+ * Get the onboarding dataset (if it exists)
+ */
 export async function getOnboardingDataset() {
   const { workspace } = await getCurrentUserOrRedirect()
   if (!workspace?.id) {
@@ -74,6 +77,9 @@ export async function getOnboardingDataset() {
   return datasetResult.unwrap()
 }
 
+/**
+ * Get the necessary onboarding steps to complete the onboarding
+ */
 export async function getNecessaryOnboardingSteps() {
   const { workspace } = await getCurrentUserOrRedirect()
   if (!workspace?.id) {

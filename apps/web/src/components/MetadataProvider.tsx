@@ -23,7 +23,7 @@ type MetadataProviderProps = {
 }
 
 export function MetadataProvider({ children }: MetadataProviderProps) {
-  const { setMetadata, setWorker } = useMetadataStore()
+  const { setMetadata, setWorker, reset } = useMetadataStore()
 
   useEffect(() => {
     if (typeof window === 'undefined') return // Only on client code
@@ -56,8 +56,9 @@ export function MetadataProvider({ children }: MetadataProviderProps) {
         currentWorker.terminate()
         setWorker(null)
       }
+      reset()
     }
-  }, [setMetadata, setWorker])
+  }, [setMetadata, setWorker, reset])
 
   return <>{children}</>
 }
