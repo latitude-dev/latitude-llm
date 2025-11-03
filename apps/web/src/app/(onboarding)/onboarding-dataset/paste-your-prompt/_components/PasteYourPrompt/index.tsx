@@ -16,10 +16,6 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { SAMPLE_PROMPT, DEFAULT_PROMPT_CONFIGURATION } from '../../constants'
 import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
 
-const addDefaultPromptConfiguration = (prompt: string) => {
-  return DEFAULT_PROMPT_CONFIGURATION + prompt
-}
-
 export function PasteYourPromptBody() {
   const { value, updateDocumentContent } = useDocumentValue()
   const { data: datasets, runGenerateOnboardingAction } = useDatasets()
@@ -45,7 +41,7 @@ export function PasteYourPromptBody() {
     // We need max speed here, so we don't want to use the useMetadata hook to get the metadata.ast or parameters
     const metadata = await scan({ prompt: value })
     if (Object.keys(metadata.config).length === 0) {
-      const promptWithConfiguration = addDefaultPromptConfiguration(value)
+      const promptWithConfiguration = DEFAULT_PROMPT_CONFIGURATION + value
       const metadataWithConfiguration = await scan({
         prompt: promptWithConfiguration,
       })
