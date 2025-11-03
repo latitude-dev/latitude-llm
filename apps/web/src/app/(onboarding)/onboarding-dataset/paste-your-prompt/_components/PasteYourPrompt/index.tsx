@@ -10,7 +10,7 @@ import useDatasets from '$/stores/datasets'
 import { OnboardingEditor } from '../../../_components/OnboardingEditor'
 import { scan } from 'promptl-ai'
 import { fromAstToBlocks } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
-import { useDatasetOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
+import { usePromptEngineeringOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
 import {
@@ -30,7 +30,7 @@ export function PasteYourPromptBody() {
     setInitialValue,
     setDocumentParameters,
     setLatestDatasetName,
-  } = useDatasetOnboarding()
+  } = usePromptEngineeringOnboarding()
   const router = useNavigate()
 
   const onNext = useCallback(async () => {
@@ -79,7 +79,7 @@ export function PasteYourPromptBody() {
       rowCount: 10,
       name: latestDatasetName,
     })
-    router.push(ROUTES.onboarding.dataset.generateDataset)
+    router.push(ROUTES.onboarding.promptEngineering.generateDataset)
   }, [
     runGenerateOnboardingAction,
     setDocumentParameters,

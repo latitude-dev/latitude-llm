@@ -6,9 +6,8 @@ import buildMetatags from '$/app/_lib/buildMetatags'
 import { PageTrackingWrapper } from '$/components/PageTrackingWrapper'
 
 export async function generateMetadata() {
-  // TODO(onboarding): change this to prompt engineering onboarding title once we activate the onboarding
   return buildMetatags({
-    title: 'Dataset Onboarding - Run Experiment',
+    title: 'Prompt Engineering Onboarding - Run Experiment',
   })
 }
 
@@ -23,7 +22,7 @@ export default async function RunExperimentPage() {
       <div className='flex flex-col flex-1 h-full w-full'>
         <DatasetOnboardingStepRoot>
           <OnboardingHeader user={user} />
-          <RunExperimentBody />
+          <RunExperimentBody user={user} workspace={workspace} />
         </DatasetOnboardingStepRoot>
       </div>
     </PageTrackingWrapper>

@@ -41,7 +41,7 @@ export const ROUTES = {
     },
   },
   onboarding: {
-    dataset: {
+    promptEngineering: {
       pasteYourPrompt: '/onboarding-dataset/paste-your-prompt',
       generateDataset: '/onboarding-dataset/generate-dataset',
       runExperiment: '/onboarding-dataset/run-experiment',

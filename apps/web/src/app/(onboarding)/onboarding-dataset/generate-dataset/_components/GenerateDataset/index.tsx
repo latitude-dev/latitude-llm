@@ -7,15 +7,15 @@ import { Suspense, useCallback } from 'react'
 import { BlocksEditorPlaceholder } from '$/components/BlocksEditor'
 import { OnboardingEditor } from '../../../_components/OnboardingEditor'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import { useDatasetOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
+import { usePromptEngineeringOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
 
 export function GenerateDatasetBody() {
-  const { initialValue, documentParameters } = useDatasetOnboarding()
+  const { initialValue, documentParameters } = usePromptEngineeringOnboarding()
   const router = useNavigate()
   const moveNextStep = useCallback(() => {
-    router.push(ROUTES.onboarding.dataset.runExperiment)
+    router.push(ROUTES.onboarding.promptEngineering.runExperiment)
   }, [router])
 
   return (
