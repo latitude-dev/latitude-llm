@@ -7,9 +7,7 @@ export const ChatInputBox = memo(function ChatInputBox({
   onBack,
   onBackLabel,
   resetChat,
-  abortCurrentStream,
   hasActiveStream,
-  isRunStream,
   playground,
   placeholder = 'Ask anything',
 }: {
@@ -17,9 +15,7 @@ export const ChatInputBox = memo(function ChatInputBox({
   onBackLabel?: string
   placeholder?: string
   resetChat: () => void
-  abortCurrentStream: () => void
   hasActiveStream: () => boolean
-  isRunStream: boolean
   playground: ReturnType<typeof usePlaygroundChat>
 }) {
   return (
@@ -27,7 +23,7 @@ export const ChatInputBox = memo(function ChatInputBox({
       <StatusIndicator
         playground={playground}
         resetChat={resetChat}
-        stopStreaming={isRunStream ? playground.stop : abortCurrentStream}
+        stopStreaming={playground.stop}
         canStopStreaming={hasActiveStream() && playground.canStop}
         streamAborted={!hasActiveStream() && !playground.isLoading}
       />

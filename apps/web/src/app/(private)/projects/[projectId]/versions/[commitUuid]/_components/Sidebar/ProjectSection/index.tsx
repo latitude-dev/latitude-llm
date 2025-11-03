@@ -3,7 +3,6 @@
 import { formatCount } from '$/lib/formatCount'
 import { ROUTES } from '$/services/routes'
 import { useActiveRunsCount } from '$/stores/runs/activeRuns'
-import useFeature from '$/stores/useFeature'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
@@ -84,9 +83,7 @@ export default function ProjectSection({
   commit: Commit
   limitedView?: boolean
 }) {
-  const runs = useFeature('runs')
-
-  const disableRunsNotifications = limitedView || !runs.isEnabled
+  const disableRunsNotifications = !!limitedView
   const { data: active } = useActiveRunsCount({
     project: project,
     realtime: !disableRunsNotifications,
@@ -102,7 +99,7 @@ export default function ProjectSection({
             .commits.detail({ uuid: commit.uuid }).home.root,
           iconName: 'bot',
         },
-        runs.isEnabled && {
+        {
           label: 'Runs',
           route: ROUTES.projects
             .detail({ id: project.id })
@@ -131,7 +128,7 @@ export default function ProjectSection({
           iconName: 'history',
         },
       ].filter(Boolean) as ProjectRoute[],
-    [project, commit, runs, active, disableRunsNotifications],
+    [project, commit, active, disableRunsNotifications],
   )
 
   return (

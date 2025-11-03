@@ -7,7 +7,6 @@ import { useDevMode } from '$/hooks/useDevMode'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { useMetadata } from '$/hooks/useMetadata'
-import useFeature from '$/stores/useFeature'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -40,7 +39,6 @@ export function DocumentEditorContentArea({
   togglePlaygroundOpen: () => void
   isPlaygroundTransitioning: boolean
 }) {
-  const { isEnabled: isRunStream } = useFeature('runs')
   const containerRef = useRef<HTMLDivElement | null>(null)
   const { metadata } = useMetadata()
   const { commit } = useCurrentCommit()
@@ -64,8 +62,8 @@ export function DocumentEditorContentArea({
   }, [_userMessage, hasParameters])
 
   const { devMode } = useDevMode()
-  const { playground, hasActiveStream, resetChat, onBack, stopStreaming } =
-    usePlaygroundLogic({
+  const { playground, hasActiveStream, resetChat, onBack } = usePlaygroundLogic(
+    {
       commit,
       project,
       document,
@@ -73,7 +71,8 @@ export function DocumentEditorContentArea({
       userMessage,
       togglePlaygroundOpen,
       setSelectedTab,
-    })
+    },
+  )
   const { runPromptButtonHandler } = useEditorCallbacks({
     isPlaygroundOpen,
     togglePlaygroundOpen,
@@ -219,8 +218,6 @@ export function DocumentEditorContentArea({
                   onBack={onBack}
                   resetChat={resetChat}
                   hasActiveStream={hasActiveStream}
-                  abortCurrentStream={stopStreaming}
-                  isRunStream={isRunStream}
                   playground={playground}
                 />
               )}
