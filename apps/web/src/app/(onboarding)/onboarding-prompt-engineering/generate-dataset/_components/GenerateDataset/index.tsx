@@ -7,7 +7,7 @@ import { Suspense, useCallback } from 'react'
 import { BlocksEditorPlaceholder } from '$/components/BlocksEditor'
 import { OnboardingEditor } from '../../../_components/OnboardingEditor'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import { usePromptEngineeringOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
+import { usePromptEngineeringOnboarding } from '$/app/(onboarding)/onboarding-prompt-engineering/datasetOnboarding'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
 
