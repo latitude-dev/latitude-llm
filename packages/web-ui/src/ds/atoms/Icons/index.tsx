@@ -153,6 +153,7 @@ import {
   SquareDashed,
   Brush,
   ShieldAlertIcon,
+  FlaskConical,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -306,6 +307,7 @@ const Icons = {
   intercom: Intercom,
   intercomChat: IntercomChat,
   jira: Jira,
+  lab: FlaskConical,
   letterText: LetterText,
   lightBulb: Lightbulb,
   linear: Linear,

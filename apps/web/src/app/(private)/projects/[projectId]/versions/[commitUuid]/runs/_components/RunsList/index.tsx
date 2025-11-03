@@ -3,20 +3,28 @@
 import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { LogicTablePaginationFooter } from '$/components/TablePaginationFooter/LogicTablePaginationFooter'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
-import { ActiveRun, CompletedRun, Run } from '@latitude-data/constants'
+import {
+  ActiveRun,
+  CompletedRun,
+  LogSources,
+  Run,
+  RunSourceGroup,
+} from '@latitude-data/constants'
 import { Pagination } from '@latitude-data/core/helpers'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RunsListItem } from './Item'
+import { RunSourceSelector } from './SourceSelector'
 
 type RunsProps<R extends Run> = {
   runs: R[]
   search: Pagination
   setSearch: (search: Pagination) => void
   next: number
-  count: number
   isLoading?: boolean
+  countBySource?: Record<LogSources, number>
+  totalCount?: number
 }
 
 export function RunsList({
@@ -28,6 +36,8 @@ export function RunsList({
   isStoppingRun,
   realtime,
   setRealtime,
+  sourceGroup,
+  setSourceGroup,
 }: {
   active: RunsProps<ActiveRun>
   completed: RunsProps<CompletedRun>
@@ -37,6 +47,8 @@ export function RunsList({
   isStoppingRun: boolean
   realtime: boolean
   setRealtime: (realtime: boolean) => void
+  sourceGroup: RunSourceGroup
+  setSourceGroup: (sourceGroup: RunSourceGroup) => void
 }) {
   const timerRef = useRef<number | null>(null)
   const [timerNow, setTimerNow] = useState<number>(0)
@@ -72,7 +84,14 @@ export function RunsList({
             <Text.H4M>In progress</Text.H4M>
             <Text.H6 color='foregroundMuted'>Runs currently processing</Text.H6>
           </div>
-          <RealtimeToggle enabled={realtime} setEnabled={setRealtime} />
+          <div className='flex flex-row items-center gap-4'>
+            <RunSourceSelector
+              value={sourceGroup}
+              setValue={setSourceGroup}
+              countBySource={active.countBySource}
+            />
+            <RealtimeToggle enabled={realtime} setEnabled={setRealtime} />
+          </div>
         </div>
         {active.isLoading ? (
           <div className='w-full h-full flex items-center justify-center gap-2 py-9 px-4 border border-border border-dashed rounded-xl'>
@@ -103,7 +122,7 @@ export function RunsList({
                 <LogicTablePaginationFooter
                   page={active.search.page ?? 1}
                   pageSize={active.search.pageSize ?? 25}
-                  count={active.count ?? 0}
+                  count={active.totalCount ?? 0}
                   countLabel={(count) => `${count} runs`}
                   onPageChange={(page) =>
                     active.setSearch({ ...active.search, page })
@@ -152,7 +171,7 @@ export function RunsList({
                 <LogicTablePaginationFooter
                   page={completed.search.page ?? 1}
                   pageSize={completed.search.pageSize ?? 25}
-                  count={completed.count ?? 0}
+                  count={completed.totalCount ?? 0}
                   countLabel={(count) => `${count} runs`}
                   onPageChange={(page) =>
                     completed.setSearch({ ...completed.search, page })

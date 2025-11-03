@@ -22,9 +22,11 @@ export const GET = errorHandler(
       const { projectId } = params
 
       const repository = new RunsRepository(workspace.id, projectId)
-      const count = await repository.countActive().then((r) => r.unwrap())
+      const countBySource = await repository
+        .countActiveBySource()
+        .then((r) => r.unwrap())
 
-      return NextResponse.json({ count }, { status: 200 })
+      return NextResponse.json({ countBySource }, { status: 200 })
     },
   ),
 )
