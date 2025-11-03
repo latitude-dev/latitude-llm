@@ -1,13 +1,11 @@
 import { env } from '@latitude-data/env'
-import { User } from '../../schema/models/types/User'
-import { Workspace } from '../../schema/models/types/Workspace'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../lib/Result'
-import { createDatasetFromJson } from './createFromJson'
 import { database } from '../../client'
 import { getCopilot } from '../copilot/get'
 import { runCopilot } from '../copilot/run'
 import { z } from 'zod'
+import { CLOUD_MESSAGES } from '../../constants'
 
 const generatedDatasetResponseSchema = z.object({
   rows: z.array(z.record(z.string(), z.unknown())),
@@ -16,24 +14,22 @@ const generatedDatasetResponseSchema = z.object({
 
 export async function generateDatasetWithCopilot(
   {
-    workspace,
-    user,
     parameters,
     description,
     prompt,
     rowCount,
-    name,
   }: {
-    workspace: Workspace
-    user: User
     parameters: string
     description?: string
     prompt?: string
     rowCount: number
-    name: string
   },
   db = database,
 ) {
+  if (!env.LATITUDE_CLOUD) {
+    return Result.error(new BadRequestError(CLOUD_MESSAGES.generateDatasets))
+  }
+
   if (!env.COPILOT_PROJECT_ID) {
     return Result.error(new BadRequestError('COPILOT_PROJECT_ID is not set'))
   }
@@ -56,11 +52,11 @@ export async function generateDatasetWithCopilot(
   )
 
   if (!Result.isOk(copilotResult)) {
-    throw copilotResult
+    return copilotResult
   }
 
   const copilot = copilotResult.unwrap()
-  const generatedDatasetResult = await runCopilot({
+  return await runCopilot({
     copilot: copilot,
     parameters: {
       row_count: rowCount,
@@ -69,19 +65,5 @@ export async function generateDatasetWithCopilot(
       prompt: prompt,
     },
     schema: generatedDatasetResponseSchema,
-  })
-
-  if (!Result.isOk(generatedDatasetResult)) {
-    throw generatedDatasetResult
-  }
-
-  const generatedDataset = generatedDatasetResult.unwrap()
-  return await createDatasetFromJson({
-    author: user,
-    workspace,
-    data: {
-      name,
-      rows: JSON.stringify(generatedDataset.rows),
-    },
   })
 }
