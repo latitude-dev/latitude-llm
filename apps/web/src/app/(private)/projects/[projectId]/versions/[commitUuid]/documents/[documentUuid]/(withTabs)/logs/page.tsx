@@ -103,7 +103,7 @@ export default async function DocumentPage({
     await getDocumentLogsApproximatedCountCached(documentUuid)
   if (approximatedCount > LIMITED_VIEW_THRESHOLD) {
     return DocumentLogsLimitedPage({
-      workspace: workspace,
+      workspace,
       projectId: projectId,
       commit: commit,
       document: document,

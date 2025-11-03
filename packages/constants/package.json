@@ -27,6 +27,7 @@
     "./latte": "./src/latte/index.ts",
     "./promptl": "./src/promptl.ts",
     "./trigger": "./src/trigger.ts",
+    "./issues": "./src/issues/index.ts",
     "./documentTriggers": "./src/documentTriggers/schema.ts",
     "./toolSources": "./src/toolSources.ts",
     "./users": "./src/users.ts",
@@ -39,6 +40,7 @@
   },
   "dependencies": {
     "ai": "catalog:",
+    "date-fns": "^4.1.0",
     "json-schema": "^0.4.0",
     "promptl-ai": "catalog:",
     "zod": "catalog:"

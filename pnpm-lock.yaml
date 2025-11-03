@@ -692,6 +692,9 @@ importers:
       ai:
         specifier: 'catalog:'
         version: 5.0.44(zod@4.1.8)
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       json-schema:
         specifier: ^0.4.0
         version: 0.4.0
