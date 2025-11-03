@@ -27,6 +27,7 @@ export const completeOnboardingAction = authProcedure
       onboarding,
     }).then((r) => r.unwrap())
 
+    // Default redirect to the project's runs page
     return frontendRedirect(
       ROUTES.projects
         .detail({ id: projectId })

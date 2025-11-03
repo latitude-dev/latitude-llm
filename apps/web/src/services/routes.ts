@@ -41,11 +41,6 @@ export const ROUTES = {
     },
   },
   onboarding: {
-    agents: {
-      selectAgent: '/onboarding-agents/select-agent',
-      start: '/onboarding-agents/start',
-    },
-    promptEngineering: '/onboarding-prompt-engineering',
     dataset: {
       pasteYourPrompt: '/onboarding-dataset/paste-your-prompt',
       generateDataset: '/onboarding-dataset/generate-dataset',
