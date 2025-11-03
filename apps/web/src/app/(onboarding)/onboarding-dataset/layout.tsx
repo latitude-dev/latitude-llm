@@ -2,10 +2,11 @@
 
 import { PageTrackingWrapper } from '$/components/PageTrackingWrapper'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
-import { Result } from '@latitude-data/core/lib/Result'
 import buildMetatags from '$/app/_lib/buildMetatags'
-import { getOnboardingResources } from '$/data-access/workspaceOnboarding'
+import {
+  getOnboardingResources,
+  isOnboardingCompleted,
+} from '$/data-access/workspaceOnboarding'
 import { redirect } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
 import { ProjectProvider } from '$/app/providers/ProjectProvider'
@@ -39,19 +40,9 @@ export default async function OnboardingDatasetLayout({
     return redirect(ROUTES.auth.login)
   }
 
-  // TODO(onboarding): remove this once we activate the onboarding
-  const isDatasetOnboardingEnabledResult = await isFeatureEnabledByName(
-    workspace.id,
-    'datasetOnboarding',
-  )
-
-  if (!Result.isOk(isDatasetOnboardingEnabledResult)) {
-    return redirect(ROUTES.dashboard.root)
-  }
-  const isDatasetOnboardingEnabled = isDatasetOnboardingEnabledResult.unwrap()
-
-  if (!isDatasetOnboardingEnabled) {
-    return redirect(ROUTES.dashboard.root)
+  const completed = await isOnboardingCompleted()
+  if (completed) {
+    redirect(ROUTES.dashboard.root)
   }
 
   // TODO(onboarding): change dataset onboarding to prompt engineering onboarding once we activate the onboarding
