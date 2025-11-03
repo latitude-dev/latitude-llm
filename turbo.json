@@ -61,10 +61,7 @@
     "PAGER",
     "TEST_LATITUDE_API_KEY",
     "ECS_AGENT_URI",
-    "RELEASE_VERSION",
-    "COLD_EMAIL_OUTREACH_SELECT_AGENT_UUID",
-    "CONTENT_CREATOR_SELECT_AGENT_UUID",
-    "NEWS_CURATOR_SELECT_AGENT_UUID"
+    "RELEASE_VERSION"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": [
