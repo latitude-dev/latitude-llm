@@ -33,12 +33,18 @@ export const generateOnboardingDatasetAction = authProcedure
       }).then((r) => r.unwrap())
     }
 
-    return await generateDatasetWithCopilot({
-      workspace: ctx.workspace,
-      user: ctx.user,
+    const generatedDatasetContent = await generateDatasetWithCopilot({
       parameters,
       prompt,
       rowCount,
-      name,
+    }).then((r) => r.unwrap())
+
+    return await createDatasetFromJson({
+      author: ctx.user,
+      workspace: ctx.workspace,
+      data: {
+        name,
+        rows: JSON.stringify(generatedDatasetContent.rows),
+      },
     }).then((r) => r.unwrap())
   })

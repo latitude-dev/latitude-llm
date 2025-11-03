@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
 import { generateDatasetWithCopilot } from '@latitude-data/core/services/datasets/generateWithCopilot'
+import { createDatasetFromJson } from '@latitude-data/core/services/datasets/createFromJson'
 
 export const generateDatasetAction = authProcedure
   .inputSchema(
@@ -16,12 +17,18 @@ export const generateDatasetAction = authProcedure
   .action(async ({ parsedInput, ctx }) => {
     const { parameters, description, rowCount, name } = parsedInput
 
-    return await generateDatasetWithCopilot({
-      workspace: ctx.workspace,
-      user: ctx.user,
+    const generatedDatasetContent = await generateDatasetWithCopilot({
       parameters,
       description,
       rowCount,
-      name,
+    }).then((r) => r.unwrap())
+
+    return await createDatasetFromJson({
+      author: ctx.user,
+      workspace: ctx.workspace,
+      data: {
+        name,
+        rows: JSON.stringify(generatedDatasetContent.rows),
+      },
     }).then((r) => r.unwrap())
   })
