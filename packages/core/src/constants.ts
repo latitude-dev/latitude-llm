@@ -59,7 +59,7 @@ export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
 export const LATITUDE_EMAIL = 'hello@latitude.so'
 export const LATITUDE_SLACK_URL =
   'https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw'
-export const DEFAULT_PROVIDER_MAX_FREE_RUNS = 400
+export const DEFAULT_PROVIDER_MAX_FREE_RUNS = 100
 
 export enum CommitStatus {
   All = 'all',

@@ -49,7 +49,6 @@ export function PasteYourPromptBody() {
       prompt: value,
       rowCount: 10,
       name: latestDatasetName,
-      fromCloud: false,
     })
     router.push(ROUTES.onboarding.dataset.generateDataset)
   }, [

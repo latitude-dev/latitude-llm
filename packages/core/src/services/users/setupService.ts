@@ -38,7 +38,7 @@ export default async function setupService(
   },
   transaction = new Transaction(),
 ): PromisedResult<{ user: User; workspace: Workspace }> {
-  return transaction.call(async () => {
+  return transaction.call(async (trx) => {
     const user = await createUser(
       { email, name, confirmedAt: new Date(), title },
       transaction,
@@ -80,6 +80,7 @@ export default async function setupService(
     const isDatasetOnboardingEnabledResult = await isFeatureEnabledByName(
       workspace.id,
       'datasetOnboarding',
+      trx,
     )
 
     if (!Result.isOk(isDatasetOnboardingEnabledResult)) {
