@@ -1,39 +1,54 @@
-import { useCallback, FormEvent, use, useMemo } from 'react'
+import { useCallback, use, useMemo, useState } from 'react'
 import { AnnotationContext } from '../Annotation/FormWrapper'
+import { useDebouncedCallback } from 'use-debounce'
+import {
+  EvaluationResultMetadata,
+  EvaluationType,
+  HumanEvaluationMetric,
+} from '@latitude-data/constants'
 
-export function useAnnotationFormState({
-  initialScore,
-}: {
-  initialScore?: number
-  initialReason?: string
-}) {
-  const { setDisabled, onSubmit: onSubmitSave } = use(AnnotationContext)
-  const onScoreChange = useCallback(
-    (score?: number | undefined) => {
-      // If score is null, consider it as no value and disable the button
+export function useAnnotationFormState({ score }: { score?: number }) {
+  const { result, onSubmit } = use(AnnotationContext)
+  const [reason, setReason] = useState(() => {
+    if (!result) return ''
+    if (!result.metadata) return ''
+    if (!('reason' in result.metadata)) return ''
+    return result.metadata.reason || ''
+  })
+  const onReasonChangeDebounced = useDebouncedCallback(
+    ({
+      score,
+      resultMetadata,
+    }: {
+      score: number
+      reason: string
+      resultMetadata: Partial<
+        EvaluationResultMetadata<EvaluationType.Human, HumanEvaluationMetric>
+      >
+    }) => {
+      onSubmit({ score, resultMetadata: { ...resultMetadata, reason } })
+    },
+    500,
+  )
+
+  const onChangeReason = useCallback(
+    (value: string) => {
+      setReason(value)
+
+      // Score should always be defined at this point since textarea is only visible after user provides feedback
       if (score === undefined) {
-        setDisabled(true)
+        console.error('Score is undefined when trying to update reason')
         return
       }
 
-      const hasChanged = score !== initialScore
-      setDisabled(!hasChanged)
-    },
-    [initialScore, setDisabled],
-  )
-  const onSubmit = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-      const formData = new FormData(event.currentTarget)
-      const score = formData.get('score')
-      const reason = formData.get('reason')
-      onSubmitSave({
-        score: Number(score),
-        resultMetadata: { reason: String(reason) },
+      onReasonChangeDebounced({
+        score,
+        reason: value,
+        resultMetadata: result?.metadata ?? {},
       })
     },
-    [onSubmitSave],
+    [score, result, onReasonChangeDebounced],
   )
 
-  return useMemo(() => ({ onScoreChange, onSubmit }), [onScoreChange, onSubmit])
+  return useMemo(() => ({ onChangeReason, reason }), [onChangeReason, reason])
 }

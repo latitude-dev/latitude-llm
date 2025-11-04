@@ -1,10 +1,8 @@
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { OnSelectedSpanFn } from '$/components/tracing/traces/Timeline'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
-import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs from '$/stores/providerLogs'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
@@ -17,7 +15,12 @@ import {
   DocumentLogsLimitedView,
   DocumentLogsAggregations,
 } from '@latitude-data/core/schema/models/types/DocumentLog'
-import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
+import {
+  ProviderLogDto,
+  ResultWithEvaluationV2,
+} from '@latitude-data/core/schema/types'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -38,6 +41,45 @@ import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
 import { useSelectedLogFromUrl } from './useSelectedLogFromUrl'
 import { findSpanById } from '@latitude-data/core/services/tracing/spans/findSpanById'
 import { useTrace } from '$/stores/traces'
+import { useUIAnnotations } from '$/hooks/annotations/useUIAnnotations'
+
+function AnnoatationLogForm({
+  project,
+  commit,
+  documentLog,
+  providerLog,
+}: {
+  project: Project
+  commit: Commit
+  documentLog: DocumentLogWithMetadataAndError
+  providerLog: ProviderLogDto
+}) {
+  const uiAnnotations = useUIAnnotations({
+    project,
+    commit,
+    documentLog,
+    providerLog,
+  })
+
+  const manualAnnotation = uiAnnotations.annotations.bottom
+
+  if (!manualAnnotation || uiAnnotations.isLoading) return null
+
+  return (
+    <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
+      <AnnotationForm
+        commit={commit}
+        documentLog={documentLog}
+        providerLog={providerLog}
+        evaluation={manualAnnotation.evaluation}
+        result={manualAnnotation.result}
+        mutateEvaluationResults={uiAnnotations.mutateResults}
+        annotateEvaluation={uiAnnotations.annotateEvaluation}
+        isAnnotatingEvaluation={uiAnnotations.isAnnotatingEvaluation}
+      />
+    </div>
+  )
+}
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -46,11 +88,8 @@ export function DocumentLogs({
   aggregations,
   isAggregationsLoading,
   evaluationResults,
-  mutateEvaluationResults,
   isEvaluationsLoading,
   evaluations,
-  annotateEvaluation,
-  isAnnotatingEvaluation,
   limitedView,
   limitedCursor,
   setLimitedCursor,
@@ -61,9 +100,6 @@ export function DocumentLogs({
   aggregations?: DocumentLogsAggregations
   isAggregationsLoading: boolean
   evaluationResults: Record<string, ResultWithEvaluationV2[]>
-  mutateEvaluationResults: ReturnType<
-    typeof useEvaluationResultsV2ByDocumentLogs
-  >['mutate']
   isEvaluationsLoading: boolean
   evaluations: EvaluationV2[]
   annotateEvaluation: ReturnType<typeof useEvaluationsV2>['annotateEvaluation']
@@ -132,14 +168,6 @@ export function DocumentLogs({
     selectableState,
     filterOptions: documentLogFilterOptions,
   })
-
-  const manualEvaluations = useMemo(
-    () =>
-      evaluations.filter(
-        (e) => getEvaluationMetricSpecification(e).supportsManualEvaluation,
-      ),
-    [evaluations],
-  )
 
   const responseLog = useMemo(() => {
     if (!selectedLog) return undefined
@@ -258,27 +286,14 @@ export function DocumentLogs({
                 span={span}
                 isSpanLoading={isTraceLoading}
               >
-                {manualEvaluations.length > 0 && !!responseLog && (
-                  <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
-                    {manualEvaluations.map((evaluation) => (
-                      <AnnotationForm
-                        key={evaluation.uuid}
-                        evaluation={evaluation}
-                        result={
-                          evaluationResults[selectedLog.uuid]?.find(
-                            (r) => r.evaluation.uuid === evaluation.uuid,
-                          )?.result
-                        }
-                        mutateEvaluationResults={mutateEvaluationResults}
-                        providerLog={responseLog}
-                        documentLog={selectedLog}
-                        commit={selectedLog.commit}
-                        annotateEvaluation={annotateEvaluation}
-                        isAnnotatingEvaluation={isAnnotatingEvaluation}
-                      />
-                    ))}
-                  </div>
-                )}
+                {responseLog ? (
+                  <AnnoatationLogForm
+                    project={project}
+                    commit={commit}
+                    documentLog={selectedLog}
+                    providerLog={responseLog}
+                  />
+                ) : null}
               </DocumentLogInfo>
             ) : null
           }

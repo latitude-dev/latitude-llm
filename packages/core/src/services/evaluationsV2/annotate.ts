@@ -31,19 +31,19 @@ export async function annotateEvaluationV2<
   M extends EvaluationMetric<T>,
 >(
   {
+    workspace,
+    commit,
+    providerLog,
+    evaluation,
     resultScore,
     resultMetadata,
-    evaluation,
-    providerLog,
-    commit,
-    workspace,
   }: {
+    workspace: Workspace
+    commit: Commit
+    providerLog: ProviderLogDto
+    evaluation: EvaluationV2<T, M>
     resultScore: number
     resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
-    evaluation: EvaluationV2<T, M>
-    providerLog: ProviderLogDto
-    commit: Commit
-    workspace: Workspace
   },
   db = database,
 ) {
@@ -159,22 +159,19 @@ export async function annotateEvaluationV2<
     value = { error: { message: (error as Error).message } }
   }
 
-  // TODO: Validate the result is not passed and not errored before assigning issue
-  // TODO: Check issue belongs to document
-  // TODO: upsert histogram add or remove a count
-
   // TODO: We are stepping out of the db instance. This service should accept an instance of Transaction instead.
   const transaction = new Transaction()
   return await transaction.call(
     async () => {
       let result
+
       if (existingResult.ok) {
         const { result: updatedResult } = await updateEvaluationResultV2(
           {
+            workspace,
+            commit,
             result: existingResult.unwrap(),
-            commit: commit,
             value: value as EvaluationResultValue<T, M>,
-            workspace: workspace,
           },
           transaction,
         ).then((r) => r.unwrap())

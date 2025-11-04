@@ -99,7 +99,7 @@ function ConfigurationSimpleForm({
                 {evaluationOptions[uuid].label}
               </Label>
               <NumberInput
-                value={configuration.weights?.[uuid] ?? undefined}
+                defaultValue={configuration.weights?.[uuid] ?? undefined}
                 name={`weights[${uuid}]`}
                 placeholder='25%'
                 min={0}

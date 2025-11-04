@@ -12,7 +12,8 @@ type Props = NumberInputProps &
 
 const NumberInput = forwardRef<HTMLInputElement, Props>(function NumberInput(
   {
-    value: defaultValue,
+    value,
+    defaultValue,
     onChange,
     min = -Infinity,
     max = Infinity,
@@ -30,7 +31,8 @@ const NumberInput = forwardRef<HTMLInputElement, Props>(function NumberInput(
 ) {
   const ni = useNumberInput({
     ref,
-    value: defaultValue,
+    value,
+    defaultValue,
     onChange,
     min,
     max,

@@ -126,7 +126,7 @@ ${
         description='The minimum and maximum score of the response'
       >
         <NumberInput
-          value={configuration.minScore ?? undefined}
+          defaultValue={configuration.minScore ?? undefined}
           name='minScore'
           label='Minimum score'
           placeholder='0'
@@ -140,7 +140,7 @@ ${
           required
         />
         <NumberInput
-          value={configuration.maxScore ?? undefined}
+          defaultValue={configuration.maxScore ?? undefined}
           name='maxScore'
           label='Maximum score'
           placeholder='5'
@@ -171,7 +171,7 @@ function ConfigurationAdvancedForm({
         description='The minimum and maximum score threshold of the response'
       >
         <NumberInput
-          value={configuration.minThreshold ?? undefined}
+          defaultValue={configuration.minThreshold ?? undefined}
           name='minThreshold'
           label='Minimum threshold'
           placeholder='No minimum'
@@ -186,7 +186,7 @@ function ConfigurationAdvancedForm({
           required
         />
         <NumberInput
-          value={configuration.maxThreshold ?? undefined}
+          defaultValue={configuration.maxThreshold ?? undefined}
           name='maxThreshold'
           label='Maximum threshold'
           placeholder='No maximum'

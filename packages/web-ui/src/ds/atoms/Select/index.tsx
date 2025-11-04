@@ -47,6 +47,7 @@ export type SelectProps<V extends unknown = unknown> = Omit<
     value?: V
     trigger?: ReactNode
     placeholder?: string
+    placeholderIcon?: IconName
     loading?: boolean
     disabled?: boolean
     required?: boolean
@@ -55,6 +56,9 @@ export type SelectProps<V extends unknown = unknown> = Omit<
     size?: 'small' | 'default'
     removable?: boolean
     searchable?: boolean
+    searchPlaceholder?: string
+    searchableEmptyMessage?: string
+    onSearch?: (search: string) => void
     open?: boolean
     onOpenChange?: (open: boolean) => void
     footerAction?: {
@@ -72,6 +76,7 @@ export function Select<V extends unknown = unknown>({
   autoFocus,
   trigger,
   placeholder,
+  placeholderIcon,
   options,
   defaultValue,
   value,
@@ -85,6 +90,9 @@ export function Select<V extends unknown = unknown>({
   required = false,
   removable = false,
   searchable = false,
+  searchableEmptyMessage,
+  onSearch,
+  searchPlaceholder,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   footerAction,
@@ -119,7 +127,12 @@ export function Select<V extends unknown = unknown>({
     >
       <div className={width === 'full' ? 'w-full' : 'w-auto'}>
         {loading ? (
-          <Skeleton className='w-full h-8 rounded-md' />
+          <Skeleton
+            className={cn('h-8 rounded-md', {
+              'min-w-28': width === 'auto',
+              'w-full': width === 'full',
+            })}
+          />
         ) : (
           <SelectRoot
             open={isOpen}
@@ -147,6 +160,7 @@ export function Select<V extends unknown = unknown>({
                   selected={selectedValue}
                   options={options}
                   placeholder={placeholder ?? 'Select an option'}
+                  placeholderIcon={placeholderIcon}
                 />
               </SelectTrigger>
             )}
@@ -155,6 +169,10 @@ export function Select<V extends unknown = unknown>({
                 <SearchableSelectList<V>
                   options={options}
                   onChange={_onChange}
+                  onSearchChange={onSearch}
+                  searchPlaceholder={searchPlaceholder}
+                  searchableEmptyMessage={searchableEmptyMessage}
+                  selectedValue={selectedValue}
                 />
               ) : (
                 <SelectGroup>
@@ -167,7 +185,7 @@ export function Select<V extends unknown = unknown>({
                     onClick={footerAction.onClick}
                     className={cn(
                       'cursor-pointer flex items-center justify-center',
-                      'gap-2 py-1.5 px-2 w-full rounded-sm hover:bg-muted',
+                      'gap-2 py-1.5 px-2 w-full rounded-b-lg bg-muted hover:bg-accent',
                     )}
                   >
                     {footerAction.icon ? (

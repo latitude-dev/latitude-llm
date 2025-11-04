@@ -59,7 +59,7 @@ function ConfigurationSimpleForm({
         description='The minimum and maximum length of the response'
       >
         <NumberInput
-          value={configuration.minLength ?? undefined}
+          defaultValue={configuration.minLength ?? undefined}
           name='minLength'
           label='Minimum length'
           placeholder='No minimum'
@@ -73,7 +73,7 @@ function ConfigurationSimpleForm({
           required
         />
         <NumberInput
-          value={configuration.maxLength ?? undefined}
+          defaultValue={configuration.maxLength ?? undefined}
           name='maxLength'
           label='Maximum length'
           placeholder='No maximum'

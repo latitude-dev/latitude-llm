@@ -14,30 +14,42 @@ const BUTTON_BASE_CLASSES = cn(
 type Props = Omit<HtmlHTMLAttributes<HTMLInputElement>, 'onChange'> &
   NumberInputProps & {
     ref?: Ref<HTMLInputElement>
+    variant?: 'default' | 'success' | 'destructive'
   }
 export function StepperNumberInput({
   ref,
   name,
-  value: defaultValue,
+  value,
   onChange,
   min = -Infinity,
   max = Infinity,
   disabled,
+  variant = 'default',
 }: Props) {
   const badge = useNumberInput({
     ref,
-    value: defaultValue,
+    value,
     onChange,
     min,
     max,
   })
+
+  const containerClassName = cn(
+    'inline-flex items-center rounded-xl',
+    'focus-within:ring-1 focus-within:ring-ring focus-within:ring-offset-0',
+    'bg-muted border border-muted',
+    {
+      // TODO: Discuss with design about these variants
+      'bg-muted border-muted': variant === 'default',
+      // 'bg-success-muted dark:bg-transparent dark:shadow-[inset_0_0_0_1px_hsl(var(--success))]':
+      //   variant === 'success',
+      // 'bg-destructive-muted dark:bg-transparent dark:shadow-[inset_0_0_0_1px_hsl(var(--destructive))]':
+      //   variant === 'destructive',
+    },
+  )
+
   return (
-    <div
-      className={cn(
-        'inline-flex items-center rounded-xl bg-muted',
-        'focus-within:ring-1 focus-within:ring-ring focus-within:ring-offset-0',
-      )}
-    >
+    <div className={containerClassName}>
       {/* Decrement Button */}
       <button
         tabIndex={-1}

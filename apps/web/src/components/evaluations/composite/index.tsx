@@ -120,7 +120,7 @@ function ConfigurationSimpleForm<M extends CompositeEvaluationMetric>({
         description='The minimum and maximum score threshold of the response'
       >
         <NumberInput
-          value={configuration.minThreshold ?? undefined}
+          defaultValue={configuration.minThreshold ?? undefined}
           name='minThreshold'
           label='Minimum threshold'
           placeholder='No minimum'
@@ -135,7 +135,7 @@ function ConfigurationSimpleForm<M extends CompositeEvaluationMetric>({
           required
         />
         <NumberInput
-          value={configuration.maxThreshold ?? undefined}
+          defaultValue={configuration.maxThreshold ?? undefined}
           name='maxThreshold'
           label='Maximum threshold'
           placeholder='No maximum'

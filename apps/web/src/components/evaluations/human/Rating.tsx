@@ -1,26 +1,32 @@
+import { use, useCallback, useMemo, useState } from 'react'
 import { formatCount } from '$/lib/formatCount'
 import {
+  EvaluationResultMetadata,
   EvaluationType,
   EvaluationV2,
   HumanEvaluationMetric,
   HumanEvaluationRatingSpecification,
 } from '@latitude-data/constants'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { StepperNumberInput } from '@latitude-data/web-ui/atoms/StepperNumberInput'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useMemo } from 'react'
 import { CriteriaDescription as CriteriaWrapper } from '../Annotation/CriteriaDescription'
-import { AnnotationFormWrapper as AForm } from '../Annotation/FormWrapper'
+import {
+  AnnotationFormWrapper as AForm,
+  AnnotationContext,
+} from '../Annotation/FormWrapper'
 import {
   AnnotationFormProps,
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useAnnotationFormState } from './useAnnotationForm'
+import { useDebouncedCallback } from 'use-debounce'
 
 const specification = HumanEvaluationRatingSpecification
 export default {
@@ -47,7 +53,7 @@ function ConfigurationSimpleForm({
         description='Additional guidelines describing when the response should be rated low'
       >
         <NumberInput
-          value={configuration.minRating ?? undefined}
+          defaultValue={configuration.minRating ?? undefined}
           name='minRating'
           placeholder='0'
           onChange={(value) => {
@@ -82,7 +88,7 @@ function ConfigurationSimpleForm({
         description='Additional guidelines describing when the response should be rated high'
       >
         <NumberInput
-          value={configuration.maxRating ?? undefined}
+          defaultValue={configuration.maxRating ?? undefined}
           name='maxRating'
           placeholder='5'
           onChange={(value) => {
@@ -128,7 +134,7 @@ function ConfigurationAdvancedForm({
         description='The minimum and maximum rating threshold of the response'
       >
         <NumberInput
-          value={configuration.minThreshold ?? undefined}
+          defaultValue={configuration.minThreshold ?? undefined}
           name='minThreshold'
           label='Minimum threshold'
           placeholder='No minimum'
@@ -143,7 +149,7 @@ function ConfigurationAdvancedForm({
           required
         />
         <NumberInput
-          value={configuration.maxThreshold ?? undefined}
+          defaultValue={configuration.maxThreshold ?? undefined}
           name='maxThreshold'
           label='Maximum threshold'
           placeholder='No maximum'
@@ -219,42 +225,177 @@ function CriteriaDescription({
   )
 }
 
+function ThresholdTooltip({
+  minThreshold,
+  maxThreshold,
+  reverseScale,
+}: {
+  minThreshold?: number
+  maxThreshold?: number
+  reverseScale?: boolean
+}) {
+  const hasThresholds = minThreshold !== undefined || maxThreshold !== undefined
+
+  if (!hasThresholds) {
+    return (
+      <div className='flex flex-col gap-2 p-2'>
+        <Text.H6 color='background'>No pass/fail thresholds configured</Text.H6>
+      </div>
+    )
+  }
+
+  const passRange = reverseScale
+    ? maxThreshold !== undefined
+      ? `≥ ${maxThreshold}`
+      : minThreshold !== undefined
+        ? `< ${minThreshold}`
+        : 'Any score'
+    : minThreshold !== undefined
+      ? `≥ ${minThreshold}`
+      : maxThreshold !== undefined
+        ? `< ${maxThreshold}`
+        : 'Any score'
+
+  const failRange = reverseScale
+    ? minThreshold !== undefined
+      ? `< ${minThreshold}`
+      : maxThreshold !== undefined
+        ? `≥ ${maxThreshold}`
+        : 'Any score'
+    : maxThreshold !== undefined
+      ? `≥ ${maxThreshold}`
+      : minThreshold !== undefined
+        ? `< ${minThreshold}`
+        : 'Any score'
+
+  return (
+    <div className='flex flex-col gap-2 p-2 min-w-48'>
+      <div>
+        <Text.H5M color='background' display='block'>
+          Pass/Fail thresholds
+        </Text.H5M>
+      </div>
+      <div className='flex flex-col gap-1'>
+        <div className='flex items-center gap-2'>
+          <div className='w-3 h-3 rounded-full bg-success-muted dark:bg-success' />
+          <Text.H6 color='background'>Pass: {passRange}</Text.H6>
+        </div>
+        <div className='flex items-center gap-2'>
+          <div className='w-3 h-3 rounded-full bg-destructive-muted dark:background-destructive' />
+          <Text.H6 color='background'>Fail: {failRange}</Text.H6>
+        </div>
+      </div>
+      {reverseScale && (
+        <Text.H6 color='background'>Lower scores are better</Text.H6>
+      )}
+    </div>
+  )
+}
+
 function AnnotationForm({
   evaluation,
   result,
 }: AnnotationFormProps<EvaluationType.Human, HumanEvaluationMetric.Rating>) {
   const criteria = useMemo(() => getCriteria(evaluation), [evaluation])
-  const { onScoreChange, onSubmit } = useAnnotationFormState({
-    initialScore: result?.score ?? undefined,
-  })
+  const [score, setScore] = useState<number | undefined>(
+    result?.score ?? undefined,
+  )
+  const { reason, onChangeReason } = useAnnotationFormState({ score })
+  const { onSubmit, isExpanded, setIsExpanded } = use(AnnotationContext)
+  const variant = result?.hasPassed
+    ? result.hasPassed === true
+      ? 'success'
+      : 'destructive'
+    : 'default'
+  const onSubmitDebounced = useDebouncedCallback(
+    ({
+      value,
+      resultMetadata,
+    }: {
+      value: number
+      resultMetadata: Partial<
+        EvaluationResultMetadata<EvaluationType.Human, HumanEvaluationMetric>
+      >
+    }) => {
+      onSubmit({ score: value, resultMetadata })
+    },
+    500,
+  )
+  const handleScoreChange = useCallback(
+    (value: number | undefined) => {
+      if (value === undefined) return
+
+      setScore(value)
+
+      // Expand the form when user interacts
+      if (!isExpanded) {
+        setIsExpanded(true)
+      }
+
+      onSubmitDebounced({
+        value,
+        resultMetadata: result?.metadata ?? {},
+      })
+    },
+    [onSubmitDebounced, result?.metadata, isExpanded, setIsExpanded],
+  )
 
   return (
-    <AForm onSubmit={onSubmit}>
-      <AForm.Body>
-        <AForm.TextArea
-          name='reason'
-          defaultValue={result?.metadata?.reason ?? ''}
-        />
-      </AForm.Body>
+    <>
+      {isExpanded && (
+        <div className='animate-in fade-in slide-in-from-top-2 duration-300'>
+          <AForm.Body>
+            <AForm.TextArea
+              name='reason'
+              value={reason}
+              onChange={onChangeReason}
+            />
+          </AForm.Body>
+        </div>
+      )}
       <AForm.Footer>
         <div className='flex items-center gap-x-2'>
           <StepperNumberInput
             name='score'
-            value={result?.score ?? undefined}
+            value={score}
             min={evaluation.configuration.minRating}
             max={evaluation.configuration.maxRating}
-            onChange={onScoreChange}
+            onChange={handleScoreChange}
+            variant={variant}
           />
-          <Text.H6M color='foregroundMuted'>
-            of {evaluation.configuration.maxRating}
-          </Text.H6M>
+          {isExpanded && (
+            <div className='animate-in fade-in duration-300'>
+              <Tooltip
+                trigger={
+                  <div className='flex gap-x-1 items-center'>
+                    <Text.H6M color='foregroundMuted'>
+                      of {evaluation.configuration.maxRating}
+                    </Text.H6M>
+                    <Icon name='info' color='foregroundMuted' />
+                  </div>
+                }
+              >
+                <ThresholdTooltip
+                  minThreshold={evaluation.configuration.minThreshold}
+                  maxThreshold={evaluation.configuration.maxThreshold}
+                  reverseScale={evaluation.configuration.reverseScale}
+                />
+              </Tooltip>
+            </div>
+          )}
         </div>
 
-        <AForm.SubmitButtonWithTooltip
-          tooltip={criteria ? <CriteriaDescription {...criteria} /> : undefined}
-        />
+        {isExpanded && (
+          <div className='animate-in fade-in duration-300'>
+            <AForm.AnnotationTooltipInfo
+              tooltip={
+                criteria ? <CriteriaDescription {...criteria} /> : undefined
+              }
+            />
+          </div>
+        )}
       </AForm.Footer>
-    </AForm>
+    </>
   )
 }
 

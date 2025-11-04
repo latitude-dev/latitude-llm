@@ -58,7 +58,7 @@ function ConfigurationSimpleForm({
         description='The minimum and maximum percentage of overlap of the response'
       >
         <NumberInput
-          value={configuration.minOverlap ?? undefined}
+          defaultValue={configuration.minOverlap ?? undefined}
           name='minOverlap'
           label='Minimum overlap'
           placeholder='No minimum'
@@ -73,7 +73,7 @@ function ConfigurationSimpleForm({
           required
         />
         <NumberInput
-          value={configuration.maxOverlap ?? undefined}
+          defaultValue={configuration.maxOverlap ?? undefined}
           name='maxOverlap'
           label='Maximum overlap'
           placeholder='No maximum'

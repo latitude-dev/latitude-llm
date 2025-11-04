@@ -1,23 +1,20 @@
+import { useCallback, useMemo } from 'react'
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
 import Chat from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MessageList } from '$/components/ChatWrapper'
-import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import DebugToggle from '$/components/DebugToggle'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useOnce } from '$/hooks/useMount'
 import { ROUTES } from '$/services/routes'
-import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs, { useProviderLog } from '$/stores/providerLogs'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
 import { useCompletedRuns } from '$/stores/runs/completedRuns'
 import {
   ActiveRun,
   CompletedRun,
-  EvaluationResultV2,
   Run,
   RunAnnotation,
 } from '@latitude-data/constants'
@@ -31,8 +28,11 @@ import {
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import Link from 'next/link'
-import { useCallback, useMemo } from 'react'
 import { RunPanelStats } from './Stats'
+import {
+  useUIAnnotations,
+  UseUIAnnotationsProps,
+} from '$/hooks/annotations/useUIAnnotations'
 
 export function RunPanel({
   run,
@@ -78,6 +78,70 @@ export function RunPanel({
   )
 }
 
+function useEvaluationsForAnnotations({
+  project,
+  commit,
+  documentLog,
+  providerLog,
+  mutateCompletedRuns,
+}: UseUIAnnotationsProps & {
+  mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
+}) {
+  const uiAnnotations = useUIAnnotations({
+    project,
+    commit,
+    documentLog,
+    providerLog,
+  })
+  const annotatedEvaluation = uiAnnotations.annotations.bottom?.evaluation
+  const mutateResults = uiAnnotations.mutateResults
+  const evaluationResults = uiAnnotations.evaluationResults
+  const syncAnnotations: typeof uiAnnotations.mutateResults = useCallback(
+    async (data, opts) => {
+      const mutated = (await mutateResults(
+        data,
+        opts,
+      )) as typeof evaluationResults
+      if (!mutated) return mutated
+
+      const mutatedResultsByDocumentLog = mutated?.[documentLog.uuid] ?? []
+      const annotations = mutatedResultsByDocumentLog.filter(
+        ({ evaluation }) => evaluation.uuid === annotatedEvaluation?.uuid,
+      ) as RunAnnotation[]
+
+      mutateCompletedRuns(
+        (prev) =>
+          prev?.map((r) => {
+            if (r.uuid !== documentLog.uuid) return r
+
+            return { ...r, annotations }
+          }) ?? [],
+        { revalidate: false },
+      )
+
+      return mutated
+    },
+    [mutateCompletedRuns, documentLog.uuid, mutateResults, annotatedEvaluation],
+  )
+
+  return useMemo(
+    () => ({
+      bottomAnnotation: uiAnnotations.annotations.bottom,
+      isLoading: uiAnnotations.isLoading,
+      isAnnotatingEvaluation: uiAnnotations.isAnnotatingEvaluation,
+      syncAnnotations,
+      annotateEvaluation: uiAnnotations.annotateEvaluation,
+    }),
+    [
+      uiAnnotations.annotations.bottom,
+      syncAnnotations,
+      uiAnnotations.isLoading,
+      uiAnnotations.isAnnotatingEvaluation,
+      uiAnnotations.annotateEvaluation,
+    ],
+  )
+}
+
 function CompletedRunPanel({
   run,
   mutateCompletedRuns,
@@ -91,81 +155,19 @@ function CompletedRunPanel({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-
-  const {
-    data: evaluations,
-    isLoading: isLoadingEvaluations,
-    annotateEvaluation,
-    isAnnotatingEvaluation,
-  } = useEvaluationsV2({
-    project: project,
-    commit: commit,
-    document: {
-      commitId: commit.id,
-      documentUuid: run.log.documentUuid,
-    },
-  })
-  const manualEvaluations = useMemo(
-    () =>
-      evaluations.filter(
-        (e) => getEvaluationMetricSpecification(e).supportsManualEvaluation,
-      ),
-    [evaluations],
-  )
-
-  const {
-    data: results,
-    isLoading: isLoadingResults,
-    mutate: mutateResults,
-  } = useEvaluationResultsV2ByDocumentLogs({
-    project: project,
-    commit: commit,
-    document: {
-      commitId: commit.id,
-      documentUuid: run.log.documentUuid,
-    },
-    documentLogUuids: [run.log.uuid],
-  })
-  const manualResults = useMemo(() => {
-    if (!results[run.log.uuid]) return {}
-    return results[run.log.uuid].reduce<Record<string, EvaluationResultV2>>(
-      (acc, r) => {
-        const e = manualEvaluations.find((e) => r.evaluation.uuid === e.uuid)
-        if (e) acc[r.evaluation.uuid] = r.result
-        return acc
-      },
-      {},
-    )
-  }, [results, run.log.uuid, manualEvaluations])
-
-  const syncAnnotations: typeof mutateResults = useCallback(
-    async (data, opts) => {
-      const mutated = (await mutateResults(data, opts)) as typeof results
-
-      const annotations = (mutated?.[run.log.uuid]?.filter(({ evaluation }) =>
-        manualEvaluations.find((e) => evaluation.uuid === e.uuid),
-      ) ?? []) as RunAnnotation[]
-
-      mutateCompletedRuns(
-        (prev) =>
-          prev?.map((r) => {
-            if (r.uuid !== run.uuid) return r
-            return { ...r, annotations }
-          }) ?? [],
-        { revalidate: false },
-      )
-
-      return mutated
-    },
-    [mutateResults, mutateCompletedRuns, run, manualEvaluations],
-  )
-
   const { data: providerLogs, isLoading: isLoadingProviderLogs } =
     useProviderLogs({ documentLogUuid: run.log.uuid })
   // Note: this is needed to hydrate the provider log
   const { data: responseLog, isLoading: isLoadingResponseLog } = useProviderLog(
     providerLogs?.at(-1)?.id,
   )
+  const annotationData = useEvaluationsForAnnotations({
+    project,
+    commit,
+    documentLog: run.log,
+    providerLog: responseLog,
+    mutateCompletedRuns,
+  })
 
   const conversation = useMemo(() => {
     if (!responseLog) return []
@@ -180,10 +182,7 @@ function CompletedRunPanel({
   }, [conversation])
 
   const isLoading =
-    isLoadingEvaluations ||
-    isLoadingResults ||
-    isLoadingProviderLogs ||
-    isLoadingResponseLog
+    isLoadingProviderLogs || isLoadingResponseLog || annotationData.isLoading
 
   if (isLoading) {
     return (
@@ -255,27 +254,22 @@ function CompletedRunPanel({
             No messages generated for this run
           </Text.H5>
         )}
-        <div className='w-full flex flex-col gap-y-4 pt-4'>
-          {run.log.error.code ? (
+        {run.log.error.code ? (
+          <div className='w-full flex flex-col gap-y-4 pt-4'>
             <RunErrorMessage error={run.log.error} />
-          ) : (
-            manualEvaluations.length > 0 &&
-            !!responseLog &&
-            manualEvaluations.map((evaluation) => (
-              <AnnotationForm
-                key={evaluation.uuid}
-                evaluation={evaluation}
-                result={manualResults[evaluation.uuid]}
-                mutateEvaluationResults={syncAnnotations}
-                providerLog={responseLog}
-                documentLog={run.log}
-                commit={run.log.commit}
-                annotateEvaluation={annotateEvaluation}
-                isAnnotatingEvaluation={isAnnotatingEvaluation}
-              />
-            ))
-          )}
-        </div>
+          </div>
+        ) : annotationData.bottomAnnotation ? (
+          <AnnotationForm
+            evaluation={annotationData.bottomAnnotation.evaluation}
+            result={annotationData.bottomAnnotation.result}
+            mutateEvaluationResults={annotationData.syncAnnotations}
+            providerLog={annotationData.bottomAnnotation.providerLog}
+            documentLog={run.log}
+            commit={run.log.commit}
+            annotateEvaluation={annotationData.annotateEvaluation}
+            isAnnotatingEvaluation={annotationData.isAnnotatingEvaluation}
+          />
+        ) : null}
       </div>
     </div>
   )
