@@ -25,11 +25,15 @@ export default async function Actions({
 }) {
   const { actionType: type } = await params
   const parameters = await searchParams
-  const { workspace, user } = await getCurrentUserOrRedirect()
+  const { workspace, user, subscriptionPlan } = await getCurrentUserOrRedirect()
 
   return (
     <CSPostHogProvider>
-      <IdentifyUser user={user} workspace={workspace}>
+      <IdentifyUser
+        user={user}
+        workspace={workspace}
+        subscription={subscriptionPlan}
+      >
         <div className='w-full h-full flex flex-col items-center justify-center gap-4 max-w-80 m-auto'>
           <div className='flex flex-col items-center justify-center gap-y-8 text-muted-foreground'>
             <Icon name='logo' size='xxxlarge' />

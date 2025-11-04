@@ -7,6 +7,7 @@ import { PostHogProvider, usePostHog } from 'posthog-js/react'
 
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { SubscriptionPlanContent } from '@latitude-data/core/plans'
 if (
   typeof window !== 'undefined' &&
   envClient.NEXT_PUBLIC_POSTHOG_KEY &&
@@ -25,15 +26,20 @@ export function CSPostHogProvider({ children }: { children: ReactNode }) {
 export function IdentifyUser({
   user,
   workspace,
+  subscription,
   children,
 }: {
   user: User
   workspace: Workspace
+  subscription: SubscriptionPlanContent
   children: ReactNode
 }) {
   const posthog = usePostHog()
 
   const email = user?.email
+  const title = user?.title
+  const plan = subscription?.plan
+
   useEffect(() => {
     if (!posthog || !email) return
 
@@ -42,13 +48,17 @@ export function IdentifyUser({
 
       if (isStaff) return
 
-      posthog.identify(email, { email })
+      posthog.identify(email, {
+        email: email,
+        title: title,
+        subscriptionPlan: plan,
+      })
       posthog.group('workspace', String(workspace.id))
       posthog.startSessionRecording()
     } catch (_) {
       // do nothing, just to avoid crashing the app
     }
-  }, [posthog, email, workspace.id])
+  }, [posthog, email, workspace.id, title, plan])
 
   return children
 }
