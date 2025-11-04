@@ -24,6 +24,9 @@ import {
   EVALUATION_RESULT_RECENCY_DAYS,
   EvaluationResultV2,
   EvaluationType,
+  ISSUE_GENERATION_MAX_RESULTS,
+  ISSUE_GENERATION_RECENCY_DAYS,
+  ISSUE_GENERATION_RECENCY_RATIO,
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
 } from '../constants'
 import { EvaluationResultsV2Search } from '../helpers'
@@ -35,6 +38,8 @@ import { datasetRows } from '../schema/models/datasetRows'
 import { datasets } from '../schema/models/datasets'
 import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
 import { providerLogs } from '../schema/models/providerLogs'
+import { Commit } from '../schema/models/types/Commit'
+import { Issue } from '../schema/models/types/Issue'
 import {
   EvaluationResultV2WithDetails,
   EvaluationV2Stats,
@@ -42,11 +47,9 @@ import {
   ResultWithEvaluationV2,
 } from '../schema/types'
 import serializeProviderLog from '../services/providerLogs/serialize'
+import { CommitsRepository } from './commitsRepository'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
-import { Commit } from '../schema/models/types/Commit'
-import { Issue } from '../schema/models/types/Issue'
-import { CommitsRepository } from './commitsRepository'
 
 const tt = getTableColumns(evaluationResultsV2)
 
@@ -611,6 +614,61 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         desc(evaluationResultsV2.id),
       )
       .limit(MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION)
+
+    return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
+  }
+
+  // TODO(AO): Filter out evaluation results from draft versions
+  // to not modify issues that appeared in production. If the
+  // issue only appeared in draft versions its okay
+  async selectForIssueGeneration({ issueId }: { issueId: number }) {
+    const conditions = [
+      this.scopeFilter,
+      eq(evaluationResultsV2.issueId, issueId),
+      isNull(evaluationResultsV2.error),
+      sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
+    ]
+
+    const newerLimit = Math.ceil(
+      ISSUE_GENERATION_MAX_RESULTS * ISSUE_GENERATION_RECENCY_RATIO,
+    )
+    const newer = await this.db
+      .select(tt)
+      .from(evaluationResultsV2)
+      .where(
+        and(
+          ...conditions,
+          gte(
+            evaluationResultsV2.createdAt,
+            subDays(new Date(), ISSUE_GENERATION_RECENCY_DAYS),
+          ),
+        ),
+      )
+      .orderBy(
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+        asc(evaluationResultsV2.normalizedScore),
+      )
+      .limit(newerLimit)
+
+    const olderLimit = ISSUE_GENERATION_MAX_RESULTS - newerLimit
+    const older = await this.db
+      .select(tt)
+      .from(evaluationResultsV2)
+      .where(and(...conditions))
+      .orderBy(
+        asc(evaluationResultsV2.createdAt),
+        asc(evaluationResultsV2.id),
+        asc(evaluationResultsV2.normalizedScore),
+      )
+      .limit(olderLimit)
+
+    let results = [...newer]
+    for (const result of older) {
+      if (newer.find((r) => r.id === result.id)) continue
+      results.push(result)
+    }
+    results = results.slice(0, ISSUE_GENERATION_MAX_RESULTS)
 
     return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
   }

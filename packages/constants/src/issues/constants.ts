@@ -1,7 +1,10 @@
+import { EvaluationType } from '../evaluations'
+
+// TODO(AO): Put merged issues into archived status in all parts of the code
 export const ISSUE_STATUS = {
-  active: 'active', // not resolved, not ignored
+  active: 'active', // not resolved, not ignored, not merged
   regressed: 'regressed', // resolved with histogram dates after the resolved date
-  archived: 'archived', // resolved or ignored
+  archived: 'archived', // resolved or ignored or merged
 } as const
 
 export type IssueStatus = (typeof ISSUE_STATUS)[keyof typeof ISSUE_STATUS]
@@ -42,3 +45,56 @@ export const DEFAULTS_ISSUE_PARAMS = {
     sortDirection: 'desc' as const,
   },
 }
+
+export type IssueCentroid = {
+  base: number[] // The running vector sum `S` of member contributions (already normalized + weighted + decayed). `S = Σ_i (w_source_i * decay_i * normalize(embedding_i))`
+  weight: number // The running scalar `W = Σ_i (w_source_i * decay_i)`. Note, this is not the "number of evaluation results"
+}
+
+/* NOTE! DO NOT CHANGE these values before storing them on each result,
+   otherwise centroids won't be able to be recomputed on removal!  */
+
+// Weight marks the importance of the evaluation type on the issue centroid
+export const ISSUE_EVALUATION_WEIGHTS: Record<EvaluationType, number> = {
+  [EvaluationType.Human]: 1,
+  [EvaluationType.Rule]: 0.8,
+  [EvaluationType.Llm]: 0.6,
+  [EvaluationType.Composite]: 0, // Note: composite evaluations cannot be used for issue discovery
+}
+
+// Half-life marks the importance of newer evaluation results on the issue centroid
+export const ISSUE_HALF_LIFE = 14 * 24 * 60 * 60 * 1000 // 14 days
+
+export const ISSUE_EMBEDDING_MODEL = 'voyage-3-large'
+export const ISSUE_EMBEDDING_CACHE_KEY = (hash: string) =>
+  `issues:embeddings:${hash}`
+
+/* ---------------------------------------------------------- */
+
+export type IssueCandidate = {
+  uuid: string
+  title: string
+  description: string
+  score: number
+}
+
+export const ISSUE_DISCOVERY_RERANK_MODEL = 'rerank-2.5'
+export const ISSUE_DISCOVERY_RERANK_CACHE_KEY = (hash: string) =>
+  `issues:reranks:${hash}`
+
+export const ISSUE_DISCOVERY_SEARCH_RATIO = 0.75 // 75% vector search, 25% keyword search
+export const ISSUE_DISCOVERY_MIN_SIMILARITY = 0.8 // 80% similarity (broader score)
+export const ISSUE_DISCOVERY_MIN_KEYWORDS = 1 // At least 1 keyword match
+export const ISSUE_DISCOVERY_MIN_RELEVANCE = 0.3 // 30% relevance (narrower score)
+export const ISSUE_DISCOVERY_MAX_CANDIDATES = 20
+
+export const ISSUE_GENERATION_RECENCY_RATIO = 0.8 // 80% more recent, 20% long-tail
+export const ISSUE_GENERATION_RECENCY_DAYS = 7
+export const ISSUE_GENERATION_MAX_RESULTS = 50
+export const ISSUE_GENERATION_CACHE_KEY = (hash: string) =>
+  `issues:generations:${hash}`
+
+export const ISSUE_JOBS_MAX_ATTEMPTS = 3
+export const ISSUE_JOBS_GENERATE_DETAILS_DEBOUNCE = 6 * 60 * 60 * 1000 // 6 hours
+export const ISSUE_JOBS_MERGE_COMMON_DEBOUNCE = 24 * 60 * 60 * 1000 // 1 day
+export const ISSUE_JOBS_DISCOVER_RESULT_DELAY = 15 * 60 * 1000 // 15 minutes

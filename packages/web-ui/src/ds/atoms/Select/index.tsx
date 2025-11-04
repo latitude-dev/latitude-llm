@@ -7,6 +7,7 @@ import { FormField, type FormFieldProps } from '../FormField'
 import { Icon, IconName } from '../Icons'
 import { Skeleton } from '../Skeleton'
 import { Text } from '../Text'
+import { Tooltip } from '../Tooltip'
 import {
   SelectContent,
   type SelectContentProps,
@@ -40,7 +41,7 @@ export type SelectProps<V extends unknown = unknown> = Omit<
   FormFieldProps,
   'children'
 > &
-  Pick<SelectContentProps, 'align'> & {
+  Pick<SelectContentProps, 'side' | 'sideOffset' | 'align' | 'alignOffset'> & {
     name: string
     options: SelectOption<V>[]
     defaultValue?: V
@@ -66,6 +67,7 @@ export type SelectProps<V extends unknown = unknown> = Omit<
       icon?: IconName
       onClick: () => void
     }
+    tooltip?: string
   }
 export function Select<V extends unknown = unknown>({
   name,
@@ -85,6 +87,9 @@ export function Select<V extends unknown = unknown>({
   width = 'full',
   size = 'default',
   align = 'start',
+  alignOffset,
+  side = 'top',
+  sideOffset,
   loading = false,
   disabled = false,
   required = false,
@@ -96,6 +101,7 @@ export function Select<V extends unknown = unknown>({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   footerAction,
+  tooltip,
 }: SelectProps<V>) {
   const [selectedValue, setSelected] = useState<V | undefined>(
     value ?? defaultValue,
@@ -128,8 +134,8 @@ export function Select<V extends unknown = unknown>({
       <div className={width === 'full' ? 'w-full' : 'w-auto'}>
         {loading ? (
           <Skeleton
-            className={cn('h-8 rounded-md', {
-              'min-w-28': width === 'auto',
+            className={cn('h-8 rounded-lg', {
+              'min-w-56': width === 'auto',
               'w-full': width === 'full',
             })}
           />
@@ -144,27 +150,44 @@ export function Select<V extends unknown = unknown>({
             onValueChange={searchable ? undefined : _onChange}
             onOpenChange={setIsOpen}
           >
-            {trigger ? (
-              trigger
-            ) : (
-              <SelectTrigger
-                autoFocus={autoFocus}
-                size={size}
-                className={cn({
-                  'border-red-500 focus:ring-red-500': errors,
-                })}
-                removable={removable && !!selectedValue}
-                onRemove={() => _onChange(undefined)}
-              >
-                <SelectValue
-                  selected={selectedValue}
-                  options={options}
-                  placeholder={placeholder ?? 'Select an option'}
-                  placeholderIcon={placeholderIcon}
-                />
-              </SelectTrigger>
-            )}
-            <SelectContent align={align} className={cn(zIndex.dropdown, 'p-0')}>
+            <Tooltip
+              asChild
+              hideWhenEmpty
+              align='center'
+              side='left'
+              delayDuration={750}
+              trigger={
+                trigger ? (
+                  trigger
+                ) : (
+                  <SelectTrigger
+                    autoFocus={autoFocus}
+                    size={size}
+                    className={cn({
+                      'border-red-500 focus:ring-red-500': errors,
+                    })}
+                    removable={removable && !!selectedValue}
+                    onRemove={() => _onChange(undefined)}
+                  >
+                    <SelectValue
+                      selected={selectedValue}
+                      options={options}
+                      placeholder={placeholder ?? 'Select an option'}
+                      placeholderIcon={placeholderIcon}
+                    />
+                  </SelectTrigger>
+                )
+              }
+            >
+              {!!tooltip && tooltip}
+            </Tooltip>
+            <SelectContent
+              align={align}
+              side={side}
+              sideOffset={sideOffset}
+              alignOffset={alignOffset}
+              className={cn(zIndex.dropdown, 'p-0')}
+            >
               {searchable ? (
                 <SearchableSelectList<V>
                   options={options}
@@ -185,14 +208,15 @@ export function Select<V extends unknown = unknown>({
                     onClick={footerAction.onClick}
                     className={cn(
                       'cursor-pointer flex items-center justify-center',
-                      'gap-2 py-1.5 px-2 w-full rounded-b-lg bg-muted hover:bg-accent',
+                      'gap-1 py-1.5 px-2 w-full rounded-b-lg bg-muted hover:bg-accent',
                     )}
                   >
                     {footerAction.icon ? (
                       <Icon
                         name={footerAction.icon}
-                        size='small'
-                        color='foregroundMuted'
+                        size='xnormal'
+                        color='foreground'
+                        className='flex-shrink-0'
                       />
                     ) : null}
                     <Text.H6>{footerAction.label}</Text.H6>

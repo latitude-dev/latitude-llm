@@ -5,5 +5,5 @@ windows:
       layout: main-horizontal
       panes:
         - pnpm catchup && pnpm dev --filter='./apps/*'
-  - docker: docker compose up db redis redisinsight mailpit --menu=false
+  - docker: docker compose up db redis weaviate mailpit --menu=false
   - studio: cd packages/core && pnpm db:studio

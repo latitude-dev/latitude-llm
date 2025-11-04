@@ -11,4 +11,5 @@ export enum Queues {
   tracingQueue = 'tracing',
   latteQueue = 'latteQueue',
   runsQueue = 'runsQueue',
+  issuesQueue = 'issuesQueue',
 }

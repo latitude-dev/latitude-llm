@@ -42,6 +42,7 @@ const eventHandlersJobMappings = {
     jobs.notifyClientOfDocumentTriggerEventCreated,
   clearProviderApiKeysCache: jobs.clearProviderApiKeysCache,
   notifyClientOfRunStatus: jobs.notifyClientOfRunStatus,
+  assignIssueToEvaluationResultV2Job: jobs.assignIssueToEvaluationResultV2Job,
 }
 
 export function startEventsWorker() {
