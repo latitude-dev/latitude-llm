@@ -24,6 +24,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebounce } from 'use-debounce'
 import { RunPanel } from './RunPanel'
 import { RunsList } from './RunsList'
+import {
+  AppLocalStorage,
+  useLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
 
 function sumCounts(
   counts: Record<LogSources, number> | undefined,
@@ -92,6 +96,15 @@ export function RunsPage({
     useState<RunSourceGroup>(defaultSourceGroup)
   const [debouncedSourceGroup] = useDebounce(sourceGroup, 100)
 
+  const { setValue: setLastRunTab } = useLocalStorage<RunSourceGroup>({
+    key: AppLocalStorage.lastRunTab,
+    defaultValue: RunSourceGroup.Playground,
+  })
+
+  useEffect(() => {
+    setLastRunTab(debouncedSourceGroup)
+  }, [debouncedSourceGroup, setLastRunTab])
+
   const {
     search: completedSearch,
     setSearch: setCompletedSearch,
@@ -144,7 +157,14 @@ export function RunsPage({
     isStoppingRun,
     isLoading: isActiveRunsLoading,
   } = useActiveRuns(
-    { project, search: debouncedActiveSearch, realtime },
+    {
+      project,
+      search: {
+        ...debouncedActiveSearch,
+        sourceGroup: debouncedSourceGroup,
+      },
+      realtime,
+    },
     { fallbackData: serverActive.runs, keepPreviousData: true },
   )
   // Note: prefetch next results

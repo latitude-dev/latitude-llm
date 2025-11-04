@@ -9,7 +9,12 @@ import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { ActiveRun, LogSources, RunSourceGroup } from '@latitude-data/constants'
+import {
+  ActiveRun,
+  LogSources,
+  RUN_SOURCES,
+  RunSourceGroup,
+} from '@latitude-data/constants'
 import type { Project } from '@latitude-data/core/schema/models/types/Project'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
@@ -89,6 +94,11 @@ export function useActiveRuns(
       if (!args) return
 
       if (args.projectId !== project.id) return
+      if (search?.sourceGroup) {
+        if (!args.run.source) return
+        const sources = RUN_SOURCES[search.sourceGroup]
+        if (!sources.includes(args.run.source)) return
+      }
       if (args.run.endedAt) {
         mutate(
           (prev) =>
@@ -109,7 +119,7 @@ export function useActiveRuns(
         )
       }
     },
-    [project, mutate, realtime],
+    [project, mutate, realtime, search?.sourceGroup],
   )
   useSockets({ event: 'runStatus', onMessage })
 

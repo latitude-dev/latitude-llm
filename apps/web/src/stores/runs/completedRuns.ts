@@ -10,6 +10,7 @@ import { ROUTES } from '$/services/routes'
 import {
   CompletedRun,
   LogSources,
+  RUN_SOURCES,
   RunSourceGroup,
 } from '@latitude-data/constants'
 
@@ -57,6 +58,11 @@ export function useCompletedRuns(
       if (!args) return
 
       if (args.projectId !== project.id) return
+      if (search?.sourceGroup) {
+        if (!args.run.source) return
+        const sources = RUN_SOURCES[search.sourceGroup]
+        if (!sources.includes(args.run.source)) return
+      }
       if (args.run.endedAt) {
         mutate(
           (prev) => {
@@ -77,7 +83,7 @@ export function useCompletedRuns(
         )
       }
     },
-    [project, mutate, realtime],
+    [project, mutate, realtime, search?.sourceGroup],
   )
   useSockets({ event: 'runStatus', onMessage })
 
