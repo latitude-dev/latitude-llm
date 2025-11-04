@@ -34,6 +34,7 @@ export function IdentifyUser({
   const posthog = usePostHog()
 
   const email = user?.email
+  const title = user?.title
   useEffect(() => {
     if (!posthog || !email) return
 
@@ -42,13 +43,13 @@ export function IdentifyUser({
 
       if (isStaff) return
 
-      posthog.identify(email, { email })
+      posthog.identify(email, { email: email, title: title ?? undefined })
       posthog.group('workspace', String(workspace.id))
       posthog.startSessionRecording()
     } catch (_) {
       // do nothing, just to avoid crashing the app
     }
-  }, [posthog, email, workspace.id])
+  }, [posthog, email, workspace.id, title])
 
   return children
 }
