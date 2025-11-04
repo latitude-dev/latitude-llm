@@ -38,7 +38,8 @@ export function IdentifyUser({
 
   const email = user?.email
   const title = user?.title
-  const plan = subscription.plan
+  const plan = subscription?.plan
+
   useEffect(() => {
     if (!posthog || !email) return
 
@@ -49,7 +50,7 @@ export function IdentifyUser({
 
       posthog.identify(email, {
         email: email,
-        title: title ?? undefined,
+        title: title,
         subscriptionPlan: plan,
       })
       posthog.group('workspace', String(workspace.id))
