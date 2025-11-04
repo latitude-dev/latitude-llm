@@ -33,6 +33,7 @@ export async function createLoopsContact({
     source: 'latitudeLlmAppSignup',
     userGroup: 'LLMs',
     subscribed: true,
+    ...(data.title && { jobTitle: data.title }),
   })
 
   if (!response.success) {
