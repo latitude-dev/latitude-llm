@@ -120,6 +120,7 @@ export const backgroundRunJob = async (
       customIdentifier,
       experiment,
       source,
+      customPrompt: experiment?.metadata?.prompt,
       abortSignal: abortController.signal,
       context: BACKGROUND({ workspaceId }),
       tools: buildClientToolHandlersMap(tools),
