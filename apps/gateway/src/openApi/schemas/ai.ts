@@ -147,7 +147,6 @@ export const chainStepResponseSchema = z.discriminatedUnion('streamType', [
     toolCalls: z.array(toolCallSchema),
     documentLogUuid: z.string().optional(),
     providerLog: providerLogSchema.optional(),
-    cost: z.number(),
   }),
   z.object({
     streamType: z.literal('object'),
@@ -160,7 +159,6 @@ export const chainStepResponseSchema = z.discriminatedUnion('streamType', [
     usage: languageModelUsageSchema,
     documentLogUuid: z.string().optional(),
     providerLog: providerLogSchema.optional(),
-    cost: z.number(),
   }),
 ])
 

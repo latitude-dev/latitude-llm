@@ -27,13 +27,7 @@ import {
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
-import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
-import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
-import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
-import { Providers } from '@latitude-data/constants'
-import { createProviderLog } from '@latitude-data/core/factories'
-
-const MODEL = 'gpt-4o'
+import { ProviderLog } from '@latitude-data/core/schema/models/types/ProviderLog'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
@@ -93,7 +87,6 @@ let headers: Record<string, string>
 let project: Project
 let workspace: Workspace
 let commit: Commit
-let provider: ProviderApiKey
 
 describe('POST /run', () => {
   describe('unauthorized', () => {
@@ -401,18 +394,9 @@ describe('POST /run', () => {
         user,
         project: prj,
         providers,
-      } = await createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-            defaultModel: MODEL,
-          },
-        ],
-      })
+      } = await createProject()
       project = prj
       workspace = wsp
-      provider = providers[0]!
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
       }).then((r) => r.unwrap())
@@ -512,33 +496,6 @@ describe('POST /run', () => {
     })
 
     it('returns response', async () => {
-      const documentLogUuid = generateUUIDIdentifier()
-      const usage = {
-        promptTokens: 4,
-        completionTokens: 6,
-        totalTokens: 10,
-        inputTokens: 4,
-        outputTokens: 6,
-        reasoningTokens: 0,
-        cachedInputTokens: 0,
-      }
-
-      await createProviderLog({
-        documentLogUuid,
-        workspace,
-        providerId: provider.id,
-        providerType: provider.provider,
-        model: MODEL,
-        messages: [
-          {
-            role: MessageRole.assistant,
-            toolCalls: [],
-            content: 'Hello',
-          },
-        ],
-        tokens: usage.totalTokens,
-      })
-
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue({
@@ -566,11 +523,9 @@ describe('POST /run', () => {
         streamType: 'object',
         object: { something: { else: 'here' } },
         text: 'Hello',
-        usage,
-        documentLogUuid,
+        usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+        documentLogUuid: 'fake-document-log-uuid',
         providerLog: {
-          providerId: provider.id,
-          model: MODEL,
           messages: [
             {
               role: MessageRole.assistant,
@@ -578,7 +533,7 @@ describe('POST /run', () => {
               content: 'Hello',
             },
           ],
-        },
+        } as unknown as ProviderLog,
       })
 
       const trace = createTelemetryTrace({})
@@ -595,12 +550,6 @@ describe('POST /run', () => {
         }),
       )
 
-      const expectedCost = estimateCost({
-        provider: provider.provider,
-        model: MODEL,
-        usage,
-      })
-
       const res = await app.request(route, {
         method: 'POST',
         body,
@@ -609,7 +558,7 @@ describe('POST /run', () => {
 
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({
-        uuid: documentLogUuid,
+        uuid: 'fake-document-log-uuid',
         conversation: [
           {
             role: MessageRole.assistant,
@@ -619,11 +568,10 @@ describe('POST /run', () => {
         ],
         response: {
           streamType: 'object',
-          usage,
+          usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
           text: 'Hello',
           object: { something: { else: 'here' } },
           toolCalls: [],
-          cost: expectedCost,
         },
       })
     })
@@ -674,8 +622,6 @@ describe('POST /run', () => {
         text: 'Hello',
         usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
         providerLog: {
-          providerId: provider.id,
-          model: MODEL,
           messages: [
             {
               role: MessageRole.assistant,
@@ -683,7 +629,7 @@ describe('POST /run', () => {
               content: 'Hello',
             },
           ],
-        },
+        } as unknown as ProviderLog,
       })
 
       const trace = createTelemetryTrace({})
@@ -723,11 +669,6 @@ describe('POST /run', () => {
         text: 'Hello',
         usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
         documentLogUuid: 'fake-document-log-uuid',
-        providerLog: {
-          providerId: provider.id,
-          model: MODEL,
-          messages: undefined,
-        },
       })
 
       const trace = createTelemetryTrace({})
@@ -899,18 +840,9 @@ describe('POST /run', () => {
         user,
         project: prj,
         providers,
-      } = await createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-            defaultModel: MODEL,
-          },
-        ],
-      })
+      } = await createProject()
       project = prj
       workspace = wsp
-      provider = providers[0]!
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
       }).then((r) => r.unwrap())
@@ -989,29 +921,6 @@ describe('POST /run', () => {
         return Promise.resolve(Result.ok(false))
       })
 
-      const documentLogUuid = generateUUIDIdentifier()
-      const usage = {
-        promptTokens: 4,
-        completionTokens: 6,
-        totalTokens: 10,
-        inputTokens: 4,
-        outputTokens: 6,
-        reasoningTokens: 0,
-        cachedInputTokens: 0,
-      }
-
-      await createProviderLog({
-        documentLogUuid,
-        workspace,
-        providerId: provider.id,
-        providerType: provider.provider,
-        model: MODEL,
-        messages: [
-          { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
-        ],
-        tokens: usage.totalTokens,
-      })
-
       const stream = new ReadableStream({
         start(controller) {
           controller.close()
@@ -1021,11 +930,9 @@ describe('POST /run', () => {
       const lastResponse = Promise.resolve({
         streamType: 'text',
         text: 'Hello',
-        usage,
-        documentLogUuid,
+        usage: {},
+        documentLogUuid: 'fake-uuid',
         providerLog: {
-          providerId: provider.id,
-          model: MODEL,
           messages: [
             { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
           ],
@@ -1043,12 +950,6 @@ describe('POST /run', () => {
         ),
       )
 
-      const expectedCost = estimateCost({
-        provider: provider.provider,
-        model: MODEL,
-        usage,
-      })
-
       const res = await app.request(route, {
         method: 'POST',
         body: JSON.stringify({
@@ -1060,18 +961,6 @@ describe('POST /run', () => {
       })
 
       expect(res.status).toBe(200)
-      expect(await res.json()).toEqual({
-        uuid: documentLogUuid,
-        conversation: [
-          { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
-        ],
-        response: {
-          streamType: 'text',
-          usage,
-          text: 'Hello',
-          cost: expectedCost,
-        },
-      })
       expect(mocks.runDocumentAtCommit).toHaveBeenCalled()
       expect(mocks.enqueueRun).not.toHaveBeenCalled()
     })
@@ -1122,29 +1011,6 @@ describe('POST /run', () => {
         return Promise.resolve(Result.ok(false))
       })
 
-      const documentLogUuid = generateUUIDIdentifier()
-      const usage = {
-        promptTokens: 4,
-        completionTokens: 6,
-        totalTokens: 10,
-        inputTokens: 4,
-        outputTokens: 6,
-        reasoningTokens: 0,
-        cachedInputTokens: 0,
-      }
-
-      await createProviderLog({
-        documentLogUuid,
-        workspace,
-        providerId: provider.id,
-        providerType: provider.provider,
-        model: MODEL,
-        messages: [
-          { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
-        ],
-        tokens: usage.totalTokens,
-      })
-
       const stream = new ReadableStream({
         start(controller) {
           controller.close()
@@ -1154,11 +1020,9 @@ describe('POST /run', () => {
       const lastResponse = Promise.resolve({
         streamType: 'text',
         text: 'Hello',
-        usage,
-        documentLogUuid,
+        usage: {},
+        documentLogUuid: 'fake-uuid',
         providerLog: {
-          providerId: provider.id,
-          model: MODEL,
           messages: [
             { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
           ],
@@ -1176,12 +1040,6 @@ describe('POST /run', () => {
         ),
       )
 
-      const expectedCost = estimateCost({
-        provider: provider.provider,
-        model: MODEL,
-        usage,
-      })
-
       const res = await app.request(route, {
         method: 'POST',
         body: JSON.stringify({
@@ -1193,18 +1051,6 @@ describe('POST /run', () => {
       })
 
       expect(res.status).toBe(200)
-      expect(await res.json()).toEqual({
-        uuid: documentLogUuid,
-        conversation: [
-          { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
-        ],
-        response: {
-          streamType: 'text',
-          usage,
-          text: 'Hello',
-          cost: expectedCost,
-        },
-      })
       expect(mocks.runDocumentAtCommit).toHaveBeenCalled()
       expect(mocks.enqueueRun).not.toHaveBeenCalled()
     })

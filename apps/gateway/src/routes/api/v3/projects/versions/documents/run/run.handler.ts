@@ -18,7 +18,6 @@ import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import type { Context } from 'hono'
 import { RunRoute } from './run.route'
-import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
@@ -227,15 +226,7 @@ async function handleForegroundRun({
   if (!response)
     throw new LatitudeError('Stream ended with no error and no content')
 
-  const providerScope = new ProviderApiKeysRepository(workspace.id)
-  const providerUsed = await providerScope
-    .find(response.providerLog?.providerId)
-    .then((r) => r.unwrap())
-
-  const body = runPresenter({
-    response,
-    provider: providerUsed,
-  }).unwrap()
+  const body = runPresenter({ response }).unwrap()
 
   return c.json(body)
 }
