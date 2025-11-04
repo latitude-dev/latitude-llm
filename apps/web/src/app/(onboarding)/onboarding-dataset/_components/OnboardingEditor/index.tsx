@@ -1,3 +1,5 @@
+'use client'
+
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
@@ -7,6 +9,7 @@ import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { useIncludabledPrompts } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/BlocksEditor/useIncludabledPrompts'
 import { BlockRootNode, BlocksEditor } from '$/components/BlocksEditor'
 import { EMPTY_ROOT_BLOCK } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
+import { cn } from '@latitude-data/web-ui/utils'
 
 export const OnboardingEditor = memo(
   ({
@@ -36,7 +39,14 @@ export const OnboardingEditor = memo(
       documents: [document],
     })
     return (
-      <div className='relative flex-1 w-full max-h-full h-full pb-7 bg-backgroundCode border border-border rounded-xl'>
+      <div
+        className={cn(
+          'relative flex-1 w-full max-h-full h-full  bg-backgroundCode ',
+          {
+            'pb-7 border border-border rounded-xl': !readOnly,
+          },
+        )}
+      >
         <BlocksEditor
           project={project}
           commit={commit}

@@ -90,11 +90,11 @@ export default function RunExperimentBody() {
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
       <div className='flex flex-col items-end w-full h-full'>
-        <div className='relative flex-1 w-full max-h-[350px] min-w-[560px]'>
+        <div className='relative flex-1 w-full max-h-[132px] min-w-[560px]'>
           <Suspense fallback={<BlocksEditorPlaceholder />}>
             <div className='relative h-full'>
               <OnboardingEditor readOnly={true} initialValue={initialValue} />
-              <div className='pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-background via-background to-transparent' />
+              <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background to-background/40' />
             </div>
           </Suspense>
           <SimpleDatasetTable

@@ -69,7 +69,7 @@ export default function SimpleDatasetTable({
           ))}
         </TableBody>
       </Table>
-      <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background/80 to-transparent' />
+      <div className='pointer-events-none absolute inset-x-0 bottom-[-7.5rem] h-44 bg-gradient-to-t from-background via-background/80 to-transparent' />
     </div>
   )
 }
