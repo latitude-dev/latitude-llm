@@ -7,13 +7,14 @@ import {
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import {
   createProject,
+  createProviderLog,
   createTelemetryTrace,
 } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import app from '$/routes/app'
-import { ChainEventTypes } from '@latitude-data/constants'
+import { ChainEventTypes, Providers } from '@latitude-data/constants'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import {
   ChainStepResponse,
@@ -23,6 +24,11 @@ import {
 } from '@latitude-data/core/constants'
 import { ProviderLog } from '@latitude-data/core/schema/models/types/ProviderLog'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
+import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
+
+const MODEL = 'gpt-4o'
 
 const mocks = vi.hoisted(() => ({
   addMessages: vi.fn(),
@@ -64,6 +70,8 @@ let route: string
 let body: Record<string, any>
 let headers: Record<string, string>
 let workspace: Workspace
+let provider: ProviderApiKey
+
 const step: ChainStepResponse<'text'> = {
   streamType: 'text',
   text: 'fake-response-text',
@@ -78,8 +86,9 @@ const step: ChainStepResponse<'text'> = {
     cachedInputTokens: 0,
   },
   toolCalls: [],
-  documentLogUuid: 'fake-document-log-uuid',
+  documentLogUuid: generateUUIDIdentifier(),
   providerLog: {
+    model: MODEL,
     messages: [
       {
         role: MessageRole.assistant,
@@ -428,13 +437,35 @@ describe('POST /chat', () => {
       mocks.captureException.mockClear()
       mocks.addMessages.mockClear()
 
-      const project = await createProject()
+      const project = await createProject({
+        providers: [
+          {
+            type: Providers.OpenAI,
+            name: 'openai',
+            defaultModel: MODEL,
+          },
+        ],
+      })
       workspace = project.workspace
+      provider = project.providers[0]!
+
       const apikey = (
         await unsafelyGetFirstApiKeyByWorkspaceId({
           workspaceId: workspace.id,
         })
       ).unwrap()
+
+      await createProviderLog({
+        documentLogUuid: step.documentLogUuid!,
+        workspace,
+        providerId: provider.id,
+        providerType: provider.provider,
+        model: MODEL,
+        messages: step.providerLog?.messages ?? [],
+        tokens: step.usage?.totalTokens,
+      })
+
+      step.providerLog!.providerId = provider.id
 
       token = apikey.token
       route = `/api/v3/conversations/${step.documentLogUuid}/chat`
@@ -474,6 +505,12 @@ describe('POST /chat', () => {
         }),
       )
 
+      const expectedCost = estimateCost({
+        provider: provider.provider,
+        model: MODEL,
+        usage: step.usage,
+      })
+
       const res = await app.request(route, {
         method: 'POST',
         body: JSON.stringify(body),
@@ -490,6 +527,7 @@ describe('POST /chat', () => {
           text: step.text,
           usage: step.usage,
           toolCalls: step.toolCalls,
+          cost: expectedCost,
         },
       })
     })
@@ -639,43 +677,6 @@ describe('POST /chat', () => {
       })
       expect(mocks.captureException).toHaveBeenCalledWith(
         new LatitudeError('Document Log uuid not found in response'),
-      )
-    })
-
-    it('returns error when no providerLog in documentRunPresenter', async () => {
-      const trace = createTelemetryTrace({})
-
-      mocks.addMessages.mockReturnValue(
-        new Promise((resolve) => {
-          resolve(
-            Result.ok({
-              stream: new ReadableStream({}),
-              response: Promise.resolve({
-                ...step,
-                providerLog: undefined,
-              }),
-              trace,
-            }),
-          )
-        }),
-      )
-
-      const res = await app.request(route, {
-        method: 'POST',
-        body: JSON.stringify(body),
-        headers,
-      })
-
-      expect(mocks.queues)
-      expect(res.status).toBe(500)
-      expect(await res.json()).toEqual({
-        name: 'LatitudeError',
-        errorCode: 'LatitudeError',
-        message: 'Conversation messages not found in response',
-        details: {},
-      })
-      expect(mocks.captureException).toHaveBeenCalledWith(
-        new LatitudeError('Conversation messages not found in response'),
       )
     })
   })
