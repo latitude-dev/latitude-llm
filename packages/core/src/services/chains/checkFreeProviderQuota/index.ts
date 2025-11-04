@@ -35,7 +35,7 @@ export async function checkFreeProviderQuota({
   return Result.error(
     new ChainError({
       code: RunErrorCodes.DefaultProviderExceededQuota,
-      message: 'You have exceeded your maximum number of free runs for today',
+      message: 'You have reached the limit of free runs. Add your own provider (OpenAI, Anthropic, etc) in Settings → Providers.',
     }),
   )
 }
