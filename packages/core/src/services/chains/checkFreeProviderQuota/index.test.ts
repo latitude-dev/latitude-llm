@@ -72,7 +72,7 @@ describe('checkFreeProviderQuota', () => {
           new ChainError({
             code: RunErrorCodes.DefaultProviderExceededQuota,
             message:
-              'You have exceeded your maximum number of free runs for today',
+              'You have reached the limit of free runs. Add your own provider (OpenAI, Anthropic, etc) in Settings → Providers.',
           }),
         ),
       )
