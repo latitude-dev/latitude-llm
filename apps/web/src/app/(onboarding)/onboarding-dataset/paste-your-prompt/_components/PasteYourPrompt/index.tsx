@@ -13,7 +13,12 @@ import { fromAstToBlocks } from '$/components/BlocksEditor/Editor/state/promptlT
 import { useDatasetOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
-import { SAMPLE_PROMPT, DEFAULT_PROMPT_CONFIGURATION } from '../../constants'
+import {
+  SAMPLE_PROMPT,
+  DEFAULT_PROMPT_CONFIGURATION,
+  DEFAULT_PARAMETER_NAME,
+  DEFAULT_DATASET_NAME,
+} from '../../constants'
 import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
 
 export function PasteYourPromptBody() {
@@ -40,7 +45,8 @@ export function PasteYourPromptBody() {
 
     // We need max speed here, so we don't want to use the useMetadata hook to get the metadata.ast or parameters
     const metadata = await scan({ prompt: value })
-    if (Object.keys(metadata.config).length === 0) {
+    const noConfiguration = Object.keys(metadata.config).length === 0
+    if (noConfiguration) {
       const promptWithConfiguration = DEFAULT_PROMPT_CONFIGURATION + value
       const metadataWithConfiguration = await scan({
         prompt: promptWithConfiguration,
@@ -56,16 +62,15 @@ export function PasteYourPromptBody() {
       setInitialValue(fromAstToBlocks({ ast: metadata.ast, prompt: value }))
     }
 
-    // If the user doesnt add any parameters, we default to 'message'
     const documentParameters =
       Array.from(metadata.parameters).length > 0
         ? Array.from(metadata.parameters)
-        : ['message']
+        : [DEFAULT_PARAMETER_NAME]
     setDocumentParameters(documentParameters)
 
     const latestDatasetName = datasets?.[datasets.length - 1]
-      ? `Dataset Onboarding ${datasets.length}`
-      : 'Dataset Onboarding'
+      ? `${DEFAULT_DATASET_NAME} ${datasets.length}`
+      : DEFAULT_DATASET_NAME
     setLatestDatasetName(latestDatasetName)
 
     runGenerateOnboardingAction({

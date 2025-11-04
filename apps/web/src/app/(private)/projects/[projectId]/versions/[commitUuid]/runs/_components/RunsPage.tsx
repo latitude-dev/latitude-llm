@@ -1,6 +1,8 @@
 'use client'
 
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { ROUTES } from '$/services/routes'
 import { useActiveRuns, useActiveRunsCount } from '$/stores/runs/activeRuns'
 import {
   useCompletedRuns,
@@ -84,6 +86,7 @@ export function RunsPage({
   defaultSourceGroup: RunSourceGroup
 }) {
   const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
 
   const [sourceGroup, setSourceGroup] =
     useState<RunSourceGroup>(defaultSourceGroup)
@@ -108,21 +111,28 @@ export function RunsPage({
   })
 
   useEffect(() => {
-    const currentUrl = window.location.origin + window.location.pathname
+    const runsRoute = ROUTES.projects
+      .detail({ id: project.id })
+      .commits.detail({ uuid: commit.uuid })
+      .runs.root({
+        activePage: debouncedActiveSearch.page,
+        activePageSize: debouncedActiveSearch.pageSize,
+        completedPage: debouncedCompletedSearch.page,
+        completedPageSize: debouncedCompletedSearch.pageSize,
+        sourceGroup: debouncedSourceGroup,
+      })
 
-    const params = new URLSearchParams()
-    if (debouncedActiveSearch.page) params.set('activePage', String(debouncedActiveSearch.page)) // prettier-ignore
-    if (debouncedActiveSearch.pageSize) params.set('activePageSize', String(debouncedActiveSearch.pageSize)) // prettier-ignore
-    if (debouncedCompletedSearch.page) params.set('completedPage', String(debouncedCompletedSearch.page)) // prettier-ignore
-    if (debouncedCompletedSearch.pageSize) params.set('completedPageSize', String(debouncedCompletedSearch.pageSize)) // prettier-ignore
-    if (debouncedSourceGroup) params.set('sourceGroup', String(debouncedSourceGroup)) // prettier-ignore
-    const queryParams = params.toString()
-
-    const targetUrl = `${currentUrl}${queryParams ? `?${queryParams}` : ''}`
+    const targetUrl = `${window.location.origin}${runsRoute}`
     if (targetUrl !== window.location.href) {
-      window.history.replaceState(null, '', targetUrl)
+      window.history.replaceState(null, '', runsRoute)
     }
-  }, [debouncedActiveSearch, debouncedCompletedSearch, debouncedSourceGroup])
+  }, [
+    project.id,
+    commit.uuid,
+    debouncedActiveSearch,
+    debouncedCompletedSearch,
+    debouncedSourceGroup,
+  ])
 
   const [realtime, setRealtime] = useState(!limitedView)
 

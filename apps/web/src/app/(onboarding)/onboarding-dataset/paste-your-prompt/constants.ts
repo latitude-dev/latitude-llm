@@ -10,6 +10,10 @@ export type SamplePromptParameters = Record<
   string | number
 >
 
+const DEFAULT_PARAMETER_NAME = 'message'
+
+const DEFAULT_DATASET_NAME = 'Dataset Onboarding'
+
 const DEFAULT_PROMPT_CONFIGURATION = `
 ---
 provider: ${envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME}
@@ -103,4 +107,6 @@ export {
   SAMPLE_PROMPT_DATASET,
   SAMPLE_PROMPT,
   DEFAULT_PROMPT_CONFIGURATION,
+  DEFAULT_DATASET_NAME,
+  DEFAULT_PARAMETER_NAME,
 }

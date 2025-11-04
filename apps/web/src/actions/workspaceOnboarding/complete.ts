@@ -8,6 +8,7 @@ import { ROUTES } from '$/services/routes'
 import { z } from 'zod'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { Result } from '@latitude-data/core/lib/Result'
+import { RunSourceGroup } from '@latitude-data/core/constants'
 
 /**
  * Mark onboarding as complete
@@ -56,7 +57,10 @@ export const completeOnboardingAction = authProcedure
       return frontendRedirect(
         ROUTES.projects
           .detail({ id: projectId })
-          .commits.detail({ uuid: commitUuid }).runs.root,
+          .commits.detail({ uuid: commitUuid })
+          .runs.root({
+            sourceGroup: RunSourceGroup.Playground,
+          }),
       )
     }
 
