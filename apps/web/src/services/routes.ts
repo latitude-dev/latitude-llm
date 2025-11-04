@@ -41,11 +41,6 @@ export const ROUTES = {
     },
   },
   onboarding: {
-    agents: {
-      selectAgent: '/onboarding-agents/select-agent',
-      start: '/onboarding-agents/start',
-    },
-    promptEngineering: '/onboarding-prompt-engineering',
     dataset: {
       pasteYourPrompt: '/onboarding-dataset/paste-your-prompt',
       generateDataset: '/onboarding-dataset/generate-dataset',
@@ -287,10 +282,7 @@ export const ROUTES = {
     },
   },
   auth: {
-    setup: {
-      root: PUBLIC_ROOT_PATHS.setup,
-      form: `${PUBLIC_ROOT_PATHS.setup}/form`,
-    },
+    setup: PUBLIC_ROOT_PATHS.setup,
     login: PUBLIC_ROOT_PATHS.login,
     magicLinkSent: (email: string) =>
       `${PUBLIC_ROOT_PATHS.magicLinks}/sent?email=${email}`,

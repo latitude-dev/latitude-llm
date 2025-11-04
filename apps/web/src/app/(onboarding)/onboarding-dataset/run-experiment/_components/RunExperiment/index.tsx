@@ -60,7 +60,6 @@ export default function RunExperimentBody() {
         executeCompleteOnboarding({
           projectId: project.id,
           commitUuid: commit.uuid,
-          documentUuid: document.documentUuid,
         })
       },
     },

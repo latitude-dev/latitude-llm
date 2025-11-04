@@ -1604,6 +1604,13 @@
       "when": 1761821952847,
       "tag": "0229_safe_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 230,
+      "version": "7",
+      "when": 1762175471277,
+      "tag": "0230_remove_current_step_workspace_onboarding",
+      "breakpoints": true
     }
   ]
 }
