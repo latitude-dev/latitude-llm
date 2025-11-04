@@ -115,6 +115,7 @@ export class IssuesRepository extends Repository<Issue> {
       sortDirection,
     })
     const results = await this.fetchIssues({
+      project,
       commit,
       filters,
       where: whereConditions,
@@ -138,6 +139,7 @@ export class IssuesRepository extends Repository<Issue> {
   }
 
   private async fetchIssues({
+    project,
     commit,
     where,
     filters,
@@ -145,6 +147,7 @@ export class IssuesRepository extends Repository<Issue> {
     limit,
     offset,
   }: {
+    project: Project
     commit: Commit
     filters: IssueFilters
     where: SQL[]
@@ -153,7 +156,11 @@ export class IssuesRepository extends Repository<Issue> {
     offset: number
   }) {
     const commitIds = await this.getCommitIds({ commit })
-    const subquery = this.buildHistogramSubquery({ commitIds, filters })
+    const subquery = this.buildHistogramSubquery({
+      project,
+      commitIds,
+      filters,
+    })
     // Make listing lighter by excluding description field
     const { description: _, ...issueColumns } = tt
 
@@ -204,7 +211,11 @@ export class IssuesRepository extends Repository<Issue> {
   }: Omit<FilteringArguments, 'page' | 'limit' | 'sorting'>) {
     const whereConditions = this.buildWhereConditions({ project, filters })
     const commitIds = await this.getCommitIds({ commit })
-    const subquery = this.buildHistogramSubquery({ commitIds, filters })
+    const subquery = this.buildHistogramSubquery({
+      project,
+      commitIds,
+      filters,
+    })
 
     const innerQuery = this.db
       .select({ issueId: issues.id })
@@ -222,9 +233,11 @@ export class IssuesRepository extends Repository<Issue> {
   }
 
   private buildHistogramSubquery({
+    project,
     commitIds,
     filters,
   }: {
+    project: Project
     commitIds: number[]
     filters: IssueFilters
   }) {
@@ -233,6 +246,7 @@ export class IssuesRepository extends Repository<Issue> {
       this.db,
     )
     return histogramRepo.getHistogramStatsSubquery({
+      project,
       commitIds,
       filters,
     })

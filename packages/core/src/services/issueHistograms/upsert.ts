@@ -4,16 +4,21 @@ import { Commit } from '../../schema/models/types/Commit'
 import { IssueHistogramsRepository } from '../../repositories/issueHistogramsRepository'
 import { updateHistogram } from './update'
 import { createHistogram } from './create'
+import { Project } from '../../schema/models/types/Project'
 
 export async function upsertHistogram(
   {
+    project,
     commit,
     issue,
     date,
+    documentUuid,
   }: {
+    project: Project
     commit: Commit
     issue: Issue
     date: Date
+    documentUuid: string
   },
   transaction = new Transaction(),
 ) {
@@ -31,5 +36,8 @@ export async function upsertHistogram(
     )
   }
 
-  return createHistogram({ commit, issue, date }, transaction)
+  return createHistogram(
+    { project, commit, issue, date, documentUuid },
+    transaction,
+  )
 }

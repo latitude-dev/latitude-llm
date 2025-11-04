@@ -11,6 +11,7 @@ import {
 } from '@latitude-data/constants/issues'
 import { Commit } from '../schema/models/types/Commit'
 import { IssueHistogram } from '../schema/models/types/IssueHistogram'
+import { Project } from '../schema/models/types/Project'
 
 const tt = getTableColumns(issueHistograms)
 type IssueFilters = SafeIssuesParams['filters']
@@ -57,13 +58,27 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
    * NOTE: Developer is responsible of passing the right commit IDs
    */
   getHistogramStatsSubquery({
+    project,
     commitIds,
     filters,
   }: {
+    project: Project
     commitIds: number[]
     filters: IssueFilters
   }) {
     const havingConditions = this.buildHavingConditions({ filters })
+    const whereConditions: SQL[] = [
+      this.scopeFilter,
+      eq(issueHistograms.projectId, project.id),
+      inArray(issueHistograms.commitId, commitIds),
+    ]
+
+    if (filters.documentUuid) {
+      whereConditions.push(
+        eq(issueHistograms.documentUuid, filters.documentUuid),
+      )
+    }
+
     const baseQuery = this.db
       .select({
         issueId: issueHistograms.issueId,
@@ -108,12 +123,7 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
         ),
       })
       .from(issueHistograms)
-      .where(
-        and(
-          eq(issueHistograms.workspaceId, this.workspaceId),
-          inArray(issueHistograms.commitId, commitIds),
-        ),
-      )
+      .where(and(...whereConditions))
       .groupBy(issueHistograms.issueId)
 
     if (havingConditions.length === 0) {
