@@ -8,27 +8,29 @@ import {
   AppLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 
-type DatasetOnboardingState = {
+type PromptEngineeringOnboardingState = {
   initialValue: BlockRootNode
   documentParameters: string[]
   latestDatasetName: string
 }
 
-const defaultDatasetOnboardingState: DatasetOnboardingState = {
-  initialValue: EMPTY_ROOT_BLOCK,
-  documentParameters: [],
-  latestDatasetName: 'Dataset Onboarding',
-}
+const defaultPromptEngineeringOnboardingState: PromptEngineeringOnboardingState =
+  {
+    initialValue: EMPTY_ROOT_BLOCK,
+    documentParameters: [],
+    // The default dataset name for the onboarding
+    latestDatasetName: 'Dataset Onboarding',
+  }
 
 /**
- * Store for managing dataset onboarding state.
+ * Store for managing prompt engineering onboarding state.
  * Provides access to onboarding step navigation and persisted values (initialValue, documentParameters).
  */
-export function useDatasetOnboarding() {
+export function usePromptEngineeringOnboarding() {
   const { value: state, setValue: setState } =
-    useLocalStorage<DatasetOnboardingState>({
-      key: AppLocalStorage.datasetOnboardingState,
-      defaultValue: defaultDatasetOnboardingState,
+    useLocalStorage<PromptEngineeringOnboardingState>({
+      key: AppLocalStorage.promptEngineeringOnboardingState,
+      defaultValue: defaultPromptEngineeringOnboardingState,
     })
 
   const setInitialValue = useCallback(

@@ -10,7 +10,7 @@ import useDatasets from '$/stores/datasets'
 import { OnboardingEditor } from '../../../_components/OnboardingEditor'
 import { scan } from 'promptl-ai'
 import { fromAstToBlocks } from '$/components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
-import { useDatasetOnboarding } from '$/app/(onboarding)/onboarding-dataset/datasetOnboarding'
+import { usePromptEngineeringOnboarding } from '$/app/(onboarding)/onboarding-prompt-engineering/usePromptEngineeringOnboarding'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
 import {
@@ -22,7 +22,11 @@ import {
 import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
 
 export function PasteYourPromptBody() {
-  const { value, updateDocumentContent } = useDocumentValue()
+  const {
+    value,
+    updateDocumentContent,
+    UPDATE_DOCUMENT_CONTENT_DEBOUNCE_TIME,
+  } = useDocumentValue()
   const { data: datasets, runGenerateOnboardingAction } = useDatasets()
   const [editorKey, setEditorKey] = useState(0)
   const {
@@ -30,7 +34,7 @@ export function PasteYourPromptBody() {
     setInitialValue,
     setDocumentParameters,
     setLatestDatasetName,
-  } = useDatasetOnboarding()
+  } = usePromptEngineeringOnboarding()
   const router = useNavigate()
 
   const onNext = useCallback(async () => {
@@ -48,6 +52,7 @@ export function PasteYourPromptBody() {
     const noConfiguration = Object.keys(metadata.config).length === 0
     if (noConfiguration) {
       const promptWithConfiguration = DEFAULT_PROMPT_CONFIGURATION + value
+      updateDocumentContent(promptWithConfiguration)
       const metadataWithConfiguration = await scan({
         prompt: promptWithConfiguration,
       })
@@ -57,7 +62,6 @@ export function PasteYourPromptBody() {
           prompt: promptWithConfiguration,
         }),
       )
-      updateDocumentContent(promptWithConfiguration)
     } else {
       setInitialValue(fromAstToBlocks({ ast: metadata.ast, prompt: value }))
     }
@@ -79,7 +83,10 @@ export function PasteYourPromptBody() {
       rowCount: 10,
       name: latestDatasetName,
     })
-    router.push(ROUTES.onboarding.dataset.generateDataset)
+    // Waiting for the update document to finish before navigating to the next step
+    setTimeout(() => {
+      router.push(ROUTES.onboarding.promptEngineering.generateDataset)
+    }, UPDATE_DOCUMENT_CONTENT_DEBOUNCE_TIME)
   }, [
     runGenerateOnboardingAction,
     setDocumentParameters,
@@ -89,6 +96,7 @@ export function PasteYourPromptBody() {
     datasets,
     setLatestDatasetName,
     updateDocumentContent,
+    UPDATE_DOCUMENT_CONTENT_DEBOUNCE_TIME,
   ])
 
   const onUseSamplePrompt = useCallback(async () => {
@@ -105,6 +113,7 @@ export function PasteYourPromptBody() {
     setEditorKey((prev) => prev + 1)
   }, [setInitialValue, setDocumentParameters, updateDocumentContent])
 
+  console.log('value', value)
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
       <div className='flex flex-col items-end w-full h-full'>

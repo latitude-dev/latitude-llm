@@ -41,10 +41,10 @@ export const ROUTES = {
     },
   },
   onboarding: {
-    dataset: {
-      pasteYourPrompt: '/onboarding-dataset/paste-your-prompt',
-      generateDataset: '/onboarding-dataset/generate-dataset',
-      runExperiment: '/onboarding-dataset/run-experiment',
+    promptEngineering: {
+      pasteYourPrompt: '/onboarding-prompt-engineering/paste-your-prompt',
+      generateDataset: '/onboarding-prompt-engineering/generate-dataset',
+      runExperiment: '/onboarding-prompt-engineering/run-experiment',
     },
   },
   backoffice: {

@@ -42,7 +42,7 @@ export default function SimpleDatasetTable({
     return (
       <div className='absolute inset-x-0 bottom-[-7.5rem] h-full w-full bg-background'>
         <TableSkeleton rows={6} cols={documentParameters} maxHeight={320} />
-        <div className='pointer-events-none absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-background via-background/80 to-transparent' />
+        <div className='pointer-events-none absolute inset-x-0 bottom-[-7.5rem] h-44 bg-gradient-to-t from-background via-background/80 to-transparent' />
       </div>
     )
   }

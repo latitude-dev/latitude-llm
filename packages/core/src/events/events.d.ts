@@ -667,6 +667,38 @@ export type CommitUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type PasteYourPromptOnboardingPageVisited = LatitudeEventGeneric<
+  'pasteYourPromptOnboardingPageVisited',
+  {
+    workspaceId: number
+    userEmail: string
+  }
+>
+
+export type GenerateDatasetOnboardingPageVisited = LatitudeEventGeneric<
+  'generateDatasetOnboardingPageVisited',
+  {
+    workspaceId: number
+    userEmail: string
+  }
+>
+
+export type RunExperimentOnboardingPageVisited = LatitudeEventGeneric<
+  'runExperimentOnboardingPageVisited',
+  {
+    workspaceId: number
+    userEmail: string
+  }
+>
+
+export type PasteYourPromptOnboardingCompleted = LatitudeEventGeneric<
+  'pasteYourPromptOnboardingCompleted',
+  {
+    workspaceId: number
+    userEmail: string
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -728,6 +760,11 @@ export type LatitudeEvent =
   | RunProgressEvent
   | RunEndedEvent
   | CommitUpdatedEvent
+  | PasteYourPromptOnboardingPageVisited
+  | GenerateDatasetOnboardingPageVisited
+  | RunExperimentOnboardingPageVisited
+  | PasteYourPromptOnboardingCompleted
+
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
   membershipCreated: EventHandler<MembershipCreatedEvent>[]
@@ -789,4 +826,8 @@ export interface IEventsHandlers {
   runProgress: EventHandler<RunProgressEvent>[]
   runEnded: EventHandler<RunEndedEvent>[]
   commitUpdated: EventHandler<CommitUpdatedEvent>[]
+  pasteYourPromptOnboardingPageVisited: EventHandler<PasteYourPromptOnboardingPageVisited>[]
+  generateDatasetOnboardingPageVisited: EventHandler<GenerateDatasetOnboardingPageVisited>[]
+  runExperimentOnboardingPageVisited: EventHandler<RunExperimentOnboardingPageVisited>[]
+  pasteYourPromptOnboardingCompleted: EventHandler<PasteYourPromptOnboardingCompleted>[]
 }

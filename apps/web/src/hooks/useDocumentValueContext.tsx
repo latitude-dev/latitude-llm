@@ -27,6 +27,8 @@ import { useEvents } from '$/lib/events'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 
+const UPDATE_DOCUMENT_CONTENT_DEBOUNCE_TIME = 500
+
 export type updateContentFn = (
   content: string,
   opts?: { origin?: ReadMetadataWorkerProps['origin'] },
@@ -39,6 +41,7 @@ type DocumentValueContextType = {
   updateDocumentContent: updateContentFn
   diffOptions: DiffOptions | undefined
   setDiffOptions: ReactStateDispatch<DiffOptions | undefined>
+  UPDATE_DOCUMENT_CONTENT_DEBOUNCE_TIME: number
 }
 
 const DocumentValueContext = createContext<
@@ -117,7 +120,7 @@ export function DocumentValueProvider({
   )
   const updateDocumentContent = useDebouncedCallback(
     _updateDocumentContent,
-    500,
+    UPDATE_DOCUMENT_CONTENT_DEBOUNCE_TIME,
     { leading: false, trailing: true },
   )
 
@@ -163,6 +166,7 @@ export function DocumentValueProvider({
       value={{
         value,
         updateDocumentContent,
+        UPDATE_DOCUMENT_CONTENT_DEBOUNCE_TIME,
         isUpdatingContent,
         isSaved: !isUpdatingContent,
         diffOptions,

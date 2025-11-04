@@ -93,4 +93,8 @@ export const EventHandlers: IEventsHandlers = {
   runProgress: [notifyClientOfRunStatus],
   runEnded: [notifyClientOfRunStatus],
   commitUpdated: [notifyClientOfCommitUpdated],
+  pasteYourPromptOnboardingPageVisited: [],
+  generateDatasetOnboardingPageVisited: [],
+  runExperimentOnboardingPageVisited: [],
+  pasteYourPromptOnboardingCompleted: [],
 }
