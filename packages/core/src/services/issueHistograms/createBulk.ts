@@ -25,6 +25,8 @@ export async function createIssueHistogramsBulk(
   return transaction.call(async (tx) => {
     const values = histograms.map(({ issue, commitId, date, count }) => ({
       workspaceId: workspace.id,
+      projectId: issue.projectId,
+      documentUuid: issue.documentUuid,
       issueId: issue.id,
       commitId,
       date: format(date, 'yyyy-MM-dd'),

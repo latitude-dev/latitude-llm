@@ -113,7 +113,8 @@ describe('run chain error handling', () => {
     expect(error).toEqual(
       new ChainError({
         code: RunErrorCodes.DefaultProviderExceededQuota,
-        message: 'You have reached the limit of free runs. Add your own provider (OpenAI, Anthropic, etc) in Settings → Providers.',
+        message:
+          'You have reached the limit of free runs. Add your own provider (OpenAI, Anthropic, etc) in Settings → Providers.',
       }),
     )
     expect(error?.dbError).toEqual({

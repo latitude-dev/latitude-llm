@@ -1611,6 +1611,13 @@
       "when": 1762175471277,
       "tag": "0230_remove_current_step_workspace_onboarding",
       "breakpoints": true
+    },
+    {
+      "idx": 231,
+      "version": "7",
+      "when": 1762266124193,
+      "tag": "0231_scope_issue_histograms_by_document_uuid_project",
+      "breakpoints": true
     }
   ]
 }

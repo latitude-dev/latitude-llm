@@ -71,9 +71,10 @@ export async function assignIssue(
       ).then((r) => r.unwrap())
     }
 
-    await upsertHistogram({ commit, issue, date }, transaction).then((r) =>
-      r.unwrap(),
-    )
+    await upsertHistogram(
+      { project, commit, issue, date, documentUuid },
+      transaction,
+    ).then((r) => r.unwrap())
 
     return Result.ok({ issue, evaluationResult: result })
   })
