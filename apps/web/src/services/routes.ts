@@ -253,7 +253,26 @@ export const ROUTES = {
                 },
               },
               runs: {
-                root: `${root}/runs`,
+                root: (params?: {
+                  activePage?: number
+                  activePageSize?: number
+                  sourceGroup?: string
+                  completedPage?: number
+                  completedPageSize?: number
+                }) => {
+                  const base = `${root}/runs`
+                  if (!params) return base
+
+                  const searchParams = new URLSearchParams()
+                  if (params.activePage !== undefined) searchParams.set('activePage', String(params.activePage)) // prettier-ignore
+                  if (params.activePageSize !== undefined) searchParams.set('activePageSize', String(params.activePageSize)) // prettier-ignore
+                  if (params.sourceGroup !== undefined) searchParams.set('sourceGroup', params.sourceGroup) // prettier-ignore
+                  if (params.completedPage !== undefined) searchParams.set('completedPage', String(params.completedPage)) // prettier-ignore
+                  if (params.completedPageSize !== undefined) searchParams.set('completedPageSize', String(params.completedPageSize)) // prettier-ignore
+
+                  const query = searchParams.toString()
+                  return query ? `${base}?${query}` : base
+                },
                 detail: ({ uuid }: { uuid: string }) => ({
                   root: `${root}/runs/${uuid}`,
                 }),

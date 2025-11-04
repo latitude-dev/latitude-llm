@@ -116,7 +116,8 @@ export default function ProjectSection({
           label: 'Runs',
           route: ROUTES.projects
             .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid }).runs.root,
+            .commits.detail({ uuid: commit.uuid })
+            .runs.root(),
           iconName: 'logs',
           notifications: {
             count: disableRunsNotifications ? 0 : activeCount,
