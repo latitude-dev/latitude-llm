@@ -6,8 +6,9 @@ import {
 import { cn } from '@latitude-data/web-ui/utils'
 
 const MIN_RIGHT_PANE_WIDTH = 200
+const RESIZE_HANDLES = ['w' as const]
 
-export function ResizableLayout({
+export function TableResizableLayout({
   leftPane,
   rightPane,
   rightPaneRef,
@@ -20,6 +21,7 @@ export function ResizableLayout({
   showRightPane: boolean
   floatingPanel?: ReactNode
 }) {
+  const [isDragging, setIsDragging] = useState(false)
   const [rightPaneWidth, setRightPaneWidth] = useState<number | null>(null) // Start with null
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
@@ -65,9 +67,20 @@ export function ResizableLayout({
 
   const maxRightWidth = Math.max(containerWidth - 300, MIN_RIGHT_PANE_WIDTH)
   const shouldShowRightPane = showRightPane && rightPaneWidth !== null
+  useEffect(() => {
+    const width = showRightPane
+      ? Math.max(containerWidth * 0.3, MIN_RIGHT_PANE_WIDTH)
+      : 0
+    setRightPaneWidth(width)
+  }, [showRightPane, containerWidth])
 
   return (
-    <div ref={containerRef} className='flex flex-row h-full w-full gap-4'>
+    <div
+      ref={containerRef}
+      className={cn('flex flex-row h-full w-full', {
+        'gap-4': shouldShowRightPane,
+      })}
+    >
       <div
         className={cn('pb-6', {
           'flex-1 min-w-0 h-full relative': shouldShowRightPane,
@@ -78,32 +91,38 @@ export function ResizableLayout({
         {floatingPanel}
       </div>
 
-      {shouldShowRightPane && (
-        <ResizableBox
-          width={rightPaneWidth}
-          height={Infinity}
-          axis='x'
-          minConstraints={[MIN_RIGHT_PANE_WIDTH, Infinity]}
-          maxConstraints={[maxRightWidth, Infinity]}
-          onResize={(_e, data) => {
-            setRightPaneWidth(data.size.width)
-          }}
-          onResizeStop={(_e, data) => {
-            setRightPaneWidth(data.size.width)
-          }}
-          resizeHandles={['w']}
-          handle={SplitHandle({ visibleHandle: true })}
-          className='flex relative flex-shrink-0 flex-grow-0'
+      <ResizableBox
+        width={rightPaneWidth ?? 0}
+        height={Infinity}
+        axis='x'
+        minConstraints={[MIN_RIGHT_PANE_WIDTH, Infinity]}
+        maxConstraints={[maxRightWidth, Infinity]}
+        onResizeStart={() => setIsDragging(true)}
+        onResize={(_e, data) => {
+          setRightPaneWidth(data.size.width)
+        }}
+        onResizeStop={(_e, data) => {
+          setIsDragging(false)
+          setRightPaneWidth(data.size.width)
+        }}
+        resizeHandles={RESIZE_HANDLES}
+        handle={SplitHandle({ visibleHandle: showRightPane })}
+        className={cn('flex relative flex-shrink-0 flex-grow-0', {
+          'pointer-events-none': isDragging,
+          'transition-all duration-300 ease-in-out': !isDragging,
+        })}
+      >
+        <div
+          ref={rightPaneRef}
+          className={cn('h-full w-full overflow-visible', {
+            'pl-4': shouldShowRightPane,
+            'opacity-0 pointer-events-none': !shouldShowRightPane,
+          })}
+          style={{ width: rightPaneWidth ?? 0 }}
         >
-          <div
-            ref={rightPaneRef}
-            className='h-full w-full overflow-visible pl-4'
-            style={{ width: rightPaneWidth }}
-          >
-            {rightPane}
-          </div>
-        </ResizableBox>
-      )}
+          {shouldShowRightPane ? rightPane : null}
+        </div>
+      </ResizableBox>
     </div>
   )
 }

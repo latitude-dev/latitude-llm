@@ -29,6 +29,7 @@ export const ESCALATING_DAYS = 2
 export const NEW_ISSUES_DAYS = 7
 export const RECENT_ISSUES_DAYS = 7
 export const HISTOGRAM_SUBQUERY_ALIAS = 'histogramStats'
+export const MINI_HISTOGRAM_STATS_DAYS = 14
 export type QueryParams = { [key: string]: string | string[] | undefined }
 
 export const DEFAULTS_ISSUE_PARAMS = {

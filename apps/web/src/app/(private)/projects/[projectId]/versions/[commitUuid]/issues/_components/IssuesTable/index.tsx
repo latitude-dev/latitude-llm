@@ -1,3 +1,4 @@
+import { useCallback, useMemo, useRef } from 'react'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import {
@@ -9,19 +10,25 @@ import {
   TableCell,
 } from '@latitude-data/web-ui/atoms/Table'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { cn } from '@latitude-data/web-ui/utils'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { useIssuesParameters } from '$/stores/issues/useIssuesParameters'
 import { SerializedIssue } from '$/stores/issues'
-import { IssuesTitle } from '../IssuesTitle'
-import { LastSeenCell } from '../LastSeenCell'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { SafeIssuesParams } from '@latitude-data/constants/issues'
-import { useMemo } from 'react'
+import { IssuesTitle } from '../IssuesTitle'
+import { LastSeenCell } from '../LastSeenCell'
+import { HistogramCell } from '../HistogramCell'
+import { TableResizableLayout } from '$/components/TableResizableLayout'
+import { IssuesDetailPanel } from '../IssueDetailPanel'
+import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 
 const FAKE_ROWS = Array.from({ length: 20 })
+const DETAILS_OFFSET = { top: 12, bottom: 12 }
+
 function IssuesTableLoader({ showStatus }: { showStatus: boolean }) {
   const headerCells = useMemo(
-    () => Array.from({ length: showStatus ? 4 : 3 }),
+    () => Array.from({ length: showStatus ? 5 : 4 }),
     [showStatus],
   )
   return (
@@ -56,11 +63,17 @@ export function IssuesTable({
   isLoading,
   issues,
   currentRoute,
+  loadingMiniStats,
+  selectedIssue,
+  onSelectChange,
 }: {
   serverParams: SafeIssuesParams
   isLoading: boolean
   issues: SerializedIssue[]
   currentRoute: string
+  loadingMiniStats: boolean
+  onSelectChange: (issue: Issue | undefined) => void
+  selectedIssue?: Issue
 }) {
   const {
     page,
@@ -83,63 +96,109 @@ export function IssuesTable({
     limit: state.limit,
     filters: state.filters,
   }))
+  const stickyRef = useRef<HTMLTableElement>(null)
+  const sidebarWrapperRef = useRef<HTMLDivElement>(null)
   const noData = !isLoading && !issues.length
   const status = filters.status ?? serverParams.filters.status
+  const onClickRow = useCallback(
+    (issue: SerializedIssue) => () => {
+      onSelectChange(
+        selectedIssue === undefined
+          ? issue
+          : selectedIssue.id === issue.id
+            ? undefined
+            : issue,
+      )
+    },
+    [onSelectChange, selectedIssue],
+  )
   const showStatus = status !== 'active'
 
   if (noData) return <TableBlankSlate description='No issues in this project' />
 
   return (
-    <Table
-      externalFooter={
-        <LinkableTablePaginationFooter
-          countLabel={(count) => `${count} issues`}
-          onPrev={prevPage}
-          prevPageDisabled={!hasPrevPage}
-          nextPageDisabled={!hasNextPage}
-          onNext={nextPage}
-          pagination={buildPagination({
-            count: totalCount,
-            baseUrl: currentRoute,
-            page: Number(page),
-            pageSize: limit,
-          })}
-        />
-      }
-    >
-      <TableHeader>
-        <TableRow>
-          <TableHead></TableHead>
-          <TableHead>Seen at</TableHead>
-          <TableHead>Events</TableHead>
-          {showStatus ? <TableHead>Status</TableHead> : null}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {isLoading ? (
-          <IssuesTableLoader showStatus={showStatus} />
-        ) : (
-          issues.map((issue) => (
-            <TableRow
-              key={issue.id}
-              className='border-b-[0.5px] h-12 max-h-12 border-border'
-            >
-              <TableCell>
-                <IssuesTitle issue={issue} />
-              </TableCell>
-              <TableCell>
-                <LastSeenCell issue={issue} />
-              </TableCell>
-              <TableCell>{issue.totalCount}</TableCell>
-              {showStatus ? (
-                <TableCell>
-                  <StatusCell issue={issue} />
-                </TableCell>
-              ) : null}
+    <TableResizableLayout
+      rightPaneRef={sidebarWrapperRef}
+      showRightPane={!!selectedIssue}
+      leftPane={
+        <Table
+          ref={stickyRef}
+          externalFooter={
+            <LinkableTablePaginationFooter
+              countLabel={(count) => `${count} issues`}
+              onPrev={prevPage}
+              prevPageDisabled={!hasPrevPage}
+              nextPageDisabled={!hasNextPage}
+              onNext={nextPage}
+              pagination={buildPagination({
+                count: totalCount,
+                baseUrl: currentRoute,
+                page: Number(page),
+                pageSize: limit,
+              })}
+            />
+          }
+        >
+          <TableHeader>
+            <TableRow>
+              <TableHead></TableHead>
+              <TableHead>Seen at</TableHead>
+              <TableHead>14d</TableHead>
+              <TableHead>Events</TableHead>
+              {showStatus ? <TableHead>Status</TableHead> : null}
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <IssuesTableLoader showStatus={showStatus} />
+            ) : (
+              issues.map((issue) => (
+                <TableRow
+                  key={issue.id}
+                  onClick={onClickRow(issue)}
+                  className={cn(
+                    'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
+                    {
+                      'bg-secondary': selectedIssue?.id === issue.id,
+                    },
+                  )}
+                >
+                  <TableCell>
+                    <IssuesTitle issue={issue} />
+                  </TableCell>
+                  <TableCell>
+                    <LastSeenCell issue={issue} />
+                  </TableCell>
+                  <TableCell>
+                    <HistogramCell
+                      issueId={issue.id}
+                      loadingBatch={loadingMiniStats}
+                    />
+                  </TableCell>
+                  <TableCell>{issue.totalCount}</TableCell>
+                  {showStatus ? (
+                    <TableCell>
+                      <StatusCell issue={issue} />
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      }
+      rightPane={
+        selectedIssue ? (
+          <div ref={sidebarWrapperRef} className='h-full'>
+            <IssuesDetailPanel
+              stickyRef={stickyRef}
+              issue={selectedIssue}
+              containerRef={sidebarWrapperRef}
+              offset={DETAILS_OFFSET}
+            />
+          </div>
+        ) : null
+      }
+    />
   )
 }

@@ -136,9 +136,14 @@ export const API_ROUTES = {
             issues: {
               root: `${projectRoot}/commits/${commitUuid}/issues`,
               search: `${projectRoot}/commits/${commitUuid}/issues/search`,
+              histograms: `${projectRoot}/commits/${commitUuid}/issues/histograms`,
               detail: (issueId: number) => {
                 return {
                   root: `${projectRoot}/commits/${commitUuid}/issues/${issueId}`,
+                  histograms: `${projectRoot}/commits/${commitUuid}/issues/${issueId}/histograms`,
+                  results: {
+                    root: `${projectRoot}/commits/${commitUuid}/issues/${issueId}/results`,
+                  },
                 }
               },
             },

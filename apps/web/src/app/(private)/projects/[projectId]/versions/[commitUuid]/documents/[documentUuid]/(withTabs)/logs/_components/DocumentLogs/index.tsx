@@ -35,13 +35,13 @@ import { DocumentLogInfo } from './DocumentLogInfo'
 import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
 import { DocumentLogsTable } from './DocumentLogsTable'
 import { DownloadLogsButton } from './DownloadLogsButton'
-import { ResizableLayout } from './ResizableLayout'
+import { TableResizableLayout } from '$/components/TableResizableLayout'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
 import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
-import { useSelectedLogFromUrl } from './useSelectedLogFromUrl'
 import { findSpanById } from '@latitude-data/core/services/tracing/spans/findSpanById'
 import { useTrace } from '$/stores/traces'
 import { useUIAnnotations } from '$/hooks/annotations/useUIAnnotations'
+import { useSelectedFromUrl } from '$/hooks/useSelectedFromUrl'
 
 function AnnoatationLogForm({
   project,
@@ -114,8 +114,10 @@ export function DocumentLogs({
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const searchParams = useSearchParams()
-  const { selectedLog, setSelectedLog } = useSelectedLogFromUrl({
-    serverSelectedLog,
+  const { selectedElement: selectedLog, onSelectChange } = useSelectedFromUrl({
+    serverSelected: serverSelectedLog,
+    keyField: 'uuid',
+    paramsUrlName: 'logUuid',
   })
 
   const { data: providerLogs, isLoading: isProviderLogsLoading } =
@@ -217,7 +219,7 @@ export function DocumentLogs({
       </div>
 
       <div className='flex flex-col flex-grow min-h-0 relative'>
-        <ResizableLayout
+        <TableResizableLayout
           rightPaneRef={sidebarWrapperRef}
           showRightPane={!!selectedLog}
           leftPane={
@@ -228,7 +230,7 @@ export function DocumentLogs({
               evaluationResults={evaluationResults}
               evaluations={evaluations}
               selectedLog={selectedLog}
-              setSelectedLog={setSelectedLog}
+              setSelectedLog={onSelectChange}
               isLoading={isEvaluationsLoading}
               selectableState={selectableState}
               limitedView={limitedView}

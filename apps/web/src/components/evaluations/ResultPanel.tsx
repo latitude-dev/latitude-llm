@@ -129,7 +129,7 @@ function EvaluatedDatasetRowModal({
   )
 }
 
-function ResultPanelMetadata<
+export function ResultPanelMetadata<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
 >({
@@ -309,7 +309,7 @@ function EvaluatedDocumentLogLink({
   )
 }
 
-function ResultPanelLoading() {
+export function ResultPanelLoading() {
   return (
     <div className='flex flex-col gap-4'>
       <MetadataItem label='Result uuid' loading />

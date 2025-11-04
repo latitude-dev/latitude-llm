@@ -38,13 +38,24 @@ import { providerLogs } from '../schema/models/providerLogs'
 import {
   EvaluationResultV2WithDetails,
   EvaluationV2Stats,
+  ProviderLogDto,
   ResultWithEvaluationV2,
 } from '../schema/types'
 import serializeProviderLog from '../services/providerLogs/serialize'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
+import { Commit } from '../schema/models/types/Commit'
+import { Issue } from '../schema/models/types/Issue'
+import { CommitsRepository } from './commitsRepository'
 
 const tt = getTableColumns(evaluationResultsV2)
+
+type IssueEvaluationResult = ResultWithEvaluationV2['result'] & {
+  evaluation: ResultWithEvaluationV2['evaluation']
+  commitUuid: string
+  commit: Commit
+  evaluatedLog: ProviderLogDto
+}
 
 export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2> {
   get scopeFilter() {
@@ -117,7 +128,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok<EvaluationResultV2>(result as EvaluationResultV2)
   }
 
-  listByEvaluationFilter({
+  private listByEvaluationFilter({
     evaluationUuid,
     params: { filters },
   }: {
@@ -464,28 +475,11 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         desc(evaluationResultsV2.id),
       )
 
-    const evaluationsRepository = new EvaluationsV2Repository(
-      this.workspaceId,
-      this.db,
-    )
-    const commitUuids = [...new Set(results.map((r) => r.commitUuid))]
-    const evaluationsByCommit = Object.fromEntries(
-      await Promise.all(
-        commitUuids.map(
-          async (commitUuid) =>
-            [
-              commitUuid,
-              await evaluationsRepository
-                .listAtCommitByDocument({
-                  projectId: projectId,
-                  commitUuid: commitUuid,
-                  documentUuid: documentUuid,
-                })
-                .then((r) => r.unwrap()),
-            ] as const,
-        ),
-      ),
-    )
+    const evaluationsByCommit = await this.getEvaluationsByCommit({
+      projectId: projectId!,
+      documentUuid,
+      results,
+    })
 
     const resultsByDocumentLog: Record<string, ResultWithEvaluationV2[]> = {}
     for (const result of results) {
@@ -503,6 +497,72 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok<Record<string, ResultWithEvaluationV2[]>>(
       resultsByDocumentLog,
     )
+  }
+
+  async listByIssueWithDetails({
+    issue,
+    commit,
+    limit,
+    offset,
+  }: {
+    issue: Issue
+    commit: Commit
+    limit: number
+    offset: number
+  }) {
+    const documentUuid = issue.documentUuid
+    const commitIds = await this.getCommitIdsHistory({ commit })
+    const results = await this.db
+      .select({
+        ...tt,
+        commit: commits,
+        commitUuid: commits.uuid,
+        evaluatedLog: providerLogs,
+      })
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .innerJoin(
+        providerLogs,
+        eq(providerLogs.id, evaluationResultsV2.evaluatedLogId),
+      )
+      .where(
+        and(
+          this.scopeFilter,
+          isNull(commits.deletedAt),
+          isNotNull(providerLogs.documentLogUuid),
+          eq(evaluationResultsV2.issueId, issue.id),
+          inArray(evaluationResultsV2.commitId, commitIds),
+        ),
+      )
+      .orderBy(
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+      )
+      .limit(limit)
+      .offset(offset)
+
+    const evaluationsByCommit = await this.getEvaluationsByCommit({
+      projectId: commit.projectId,
+      documentUuid,
+      results,
+    })
+
+    return results.flatMap((result) => {
+      const evaluationByCommit = evaluationsByCommit[result.commitUuid]
+      const evaluation = evaluationByCommit.find(
+        (e) => e.uuid === result.evaluationUuid,
+      )
+
+      if (!evaluation) return []
+
+      return [
+        {
+          ...result,
+          evaluatedLog: serializeProviderLog(result.evaluatedLog),
+          evaluation,
+        } as IssueEvaluationResult,
+      ]
+    })
   }
 
   async countSinceDate(since: Date) {
@@ -553,5 +613,47 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .limit(MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION)
 
     return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
+  }
+
+  private async getEvaluationsByCommit({
+    projectId,
+    documentUuid,
+    results,
+  }: {
+    documentUuid: string
+    results: (Omit<EvaluationResultV2, 'score'> & {
+      commitUuid: string
+    })[]
+    projectId?: number
+  }) {
+    const evaluationsRepository = new EvaluationsV2Repository(
+      this.workspaceId,
+      this.db,
+    )
+    const commitUuids = [...new Set(results.map((r) => r.commitUuid))]
+    return Object.fromEntries(
+      await Promise.all(
+        commitUuids.map(
+          async (commitUuid) =>
+            [
+              commitUuid,
+              await evaluationsRepository
+                .listAtCommitByDocument({
+                  projectId,
+                  commitUuid,
+                  documentUuid,
+                })
+                .then((r) => r.unwrap()),
+            ] as const,
+        ),
+      ),
+    )
+  }
+
+  private async getCommitIdsHistory({ commit }: { commit: Commit }) {
+    const commitsRepo = new CommitsRepository(this.workspaceId, this.db)
+    const commits = await commitsRepo.getCommitsHistory({ commit })
+    const commitIds = commits.map((c: { id: number }) => c.id)
+    return commitIds
   }
 }
