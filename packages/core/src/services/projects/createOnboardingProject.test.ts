@@ -44,6 +44,8 @@ describe('createOnboardingProject', () => {
     // creates a document with path "onboarding"
     expect(documents).toHaveLength(1)
     expect(documents[0]!.path).toBe('onboarding')
+    // no default content is included
+    expect(documents[0]!.content).toBe('')
 
     // creates a commit associated with the project
     expect(commit.projectId).toBe(project.id)

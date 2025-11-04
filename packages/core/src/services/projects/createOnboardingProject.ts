@@ -36,6 +36,7 @@ export async function createOnboardingProject(
       commit,
       path: 'onboarding',
       createDemoEvaluation: true,
+      includeDefaultContent: false,
     },
     transaction,
   )
