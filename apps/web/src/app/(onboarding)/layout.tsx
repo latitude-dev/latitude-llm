@@ -13,7 +13,7 @@ export default async function OnboardingLayout({
 }: {
   children: ReactNode
 }) {
-  const { workspace, user } = await getCurrentUserOrRedirect()
+  const { workspace, user, subscriptionPlan } = await getCurrentUserOrRedirect()
   const isCompleted = await isOnboardingCompleted()
   if (isCompleted) {
     redirect(ROUTES.dashboard.root)
@@ -21,7 +21,11 @@ export default async function OnboardingLayout({
 
   return (
     <CSPostHogProvider>
-      <IdentifyUser user={user} workspace={workspace}>
+      <IdentifyUser
+        user={user}
+        workspace={workspace}
+        subscription={subscriptionPlan}
+      >
         <WorkspaceProvider workspace={workspace}>{children}</WorkspaceProvider>
       </IdentifyUser>
     </CSPostHogProvider>

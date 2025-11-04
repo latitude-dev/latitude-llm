@@ -58,7 +58,11 @@ export default async function PrivateLayout({
 
   return (
     <CSPostHogProvider>
-      <IdentifyUser user={user} workspace={workspace}>
+      <IdentifyUser
+        user={user}
+        workspace={workspace}
+        subscription={subscriptionPlan}
+      >
         <IntercomProvider identity={supportIdentity}>
           <SocketIOProvider>
             <SessionProvider
