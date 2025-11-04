@@ -94,6 +94,9 @@ export default function RunExperimentBody({
       datasetLabels: {},
       fromRow: 1,
       evaluationUuids: [],
+      simulationSettings: {
+        simulateToolResponses: false,
+      },
     })
   }, [
     create,

@@ -10,6 +10,7 @@ import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { NoDatasetRangeInput } from './_components/NoDatasetRangeInput'
 import { useMemo } from 'react'
+import { ExperimentSimulationSettings } from './_components/SimulationSettings'
 
 function hasToSelectDataset({
   parametersCount,
@@ -64,6 +65,8 @@ export default function ExperimentModalForm(payload: ExperimentFormPayload) {
           <NoDatasetRangeInput {...payload} />
         )}
       </NumeredList.Item>
+
+      <ExperimentSimulationSettings {...payload} />
     </NumeredList>
   )
 }

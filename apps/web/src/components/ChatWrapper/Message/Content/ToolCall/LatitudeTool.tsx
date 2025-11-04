@@ -8,20 +8,12 @@ import {
 } from '@latitude-data/constants/toolSources'
 import { ToolCard, ToolCardIcon, ToolCardText } from './_components/ToolCard'
 import { LatitudeTool } from '@latitude-data/constants'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { WebSearchLatitudeToolCard } from './LatitudeTools/Search'
 import { WebExtractLatitudeToolCard } from './LatitudeTools/Extract'
 import { ThinkLatitudeToolCard } from './LatitudeTools/Think'
 import { TodoLatitudeToolCard } from './LatitudeTools/Todo'
 import { RunCodeLatitudeToolCard } from './LatitudeTools/Code'
-
-const ICON_BY_LATITUDE_TOOL: Record<LatitudeTool, IconName> = {
-  [LatitudeTool.RunCode]: 'code',
-  [LatitudeTool.WebSearch]: 'search',
-  [LatitudeTool.WebExtract]: 'globe',
-  [LatitudeTool.Think]: 'brain',
-  [LatitudeTool.TODO]: 'listTodo',
-}
+import { ICON_BY_LATITUDE_TOOL } from '$/lib/toolIcons'
 
 export function LatitudeToolCard({
   toolRequest,

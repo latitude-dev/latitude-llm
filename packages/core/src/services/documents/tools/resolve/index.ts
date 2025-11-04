@@ -7,7 +7,10 @@ import {
   ToolManifest,
   ToolManifestDict,
 } from '@latitude-data/constants/tools'
-import { ToolSource } from '@latitude-data/constants/toolSources'
+import {
+  ToolSource,
+  ToolSourceData,
+} from '@latitude-data/constants/toolSources'
 import { StreamManager } from '../../../../lib/streamManager'
 import { Tool } from 'ai'
 import { simulatedToolDefinition } from '../../../simulation/simulateToolResponse'
@@ -16,8 +19,57 @@ import { resolveLatitudeToolDefinition } from './latitudeTools'
 import { resolveAgentAsToolDefinition } from './agentsAsTools'
 import { resolveIntegrationToolDefinition } from './integrationTools'
 import { resolveProviderToolDefinition } from './providerTools'
+import { SimulationSettings } from '@latitude-data/constants/simulation'
+import {
+  LogSources,
+  NOT_SIMULATABLE_LATITUDE_TOOLS,
+} from '@latitude-data/constants'
 
-export async function resolveToolDefinition({
+function isToolSimulated({
+  toolName,
+  toolManifest,
+  simulationSettings,
+  logSource,
+}: {
+  toolName: string
+  toolManifest: ToolManifest
+  simulationSettings?: SimulationSettings
+  logSource: LogSources
+}): boolean {
+  const toolSource = toolManifest.sourceData.source
+  if (toolSource === ToolSource.Agent) {
+    // Subagents are never simulated
+    return false
+  }
+
+  if (toolSource === ToolSource.Client && logSource === LogSources.Experiment) {
+    // Client tools are always simulated in experiments
+    return true
+  }
+
+  if (toolSource === ToolSource.Latitude) {
+    const latitudeTool = (
+      toolManifest.sourceData as ToolSourceData<ToolSource.Latitude>
+    ).latitudeTool
+
+    if (NOT_SIMULATABLE_LATITUDE_TOOLS.includes(latitudeTool)) {
+      // Some latitude tools cannot be simulated
+      return false
+    }
+  }
+
+  if (!simulationSettings) return false
+  if (!simulationSettings.simulateToolResponses) return false
+
+  if (!simulationSettings.simulatedTools?.length) {
+    // If no explicit list of tools is defined, simulate all tools
+    return true
+  }
+
+  return simulationSettings.simulatedTools.includes(toolName)
+}
+
+async function resolveToolDefinition({
   toolName,
   toolManifest,
   streamManager,
@@ -28,27 +80,26 @@ export async function resolveToolDefinition({
   streamManager: StreamManager
   isSimulated: boolean
 }): PromisedResult<Tool, LatitudeError> {
-  if (toolManifest.sourceData.source === ToolSource.Agent) {
-    // Subagents is the only tool that will never be simulated
-    return resolveAgentAsToolDefinition({
-      toolName,
-      toolManifest,
-      streamManager,
-    })
-  }
-
   // If simulated, return a simulated tool definition
   if (isSimulated) {
     return Result.ok(
       simulatedToolDefinition({
-        streamManager,
+        context: streamManager.$completion!.context,
         toolName,
         toolManifest,
+        simulationInstructions:
+          streamManager.simulationSettings?.toolSimulationInstructions,
       }),
     )
   }
 
   switch (toolManifest.sourceData.source) {
+    case ToolSource.Agent:
+      return resolveAgentAsToolDefinition({
+        toolName,
+        toolManifest,
+        streamManager,
+      })
     case ToolSource.Client:
       return resolveClientToolDefinition({
         toolName,
@@ -91,8 +142,12 @@ export async function resolveTools({
 }): PromisedResult<ResolvedToolsDict, LatitudeError> {
   const resolvedToolsDict: ResolvedToolsDict = {}
   for (const [toolName, toolManifest] of Object.entries(toolManifestDict)) {
-    const isSimulated =
-      streamManager.simulationSettings?.simulateToolResponses ?? false
+    const isSimulated = isToolSimulated({
+      toolName,
+      toolManifest,
+      simulationSettings: streamManager.simulationSettings,
+      logSource: streamManager.source,
+    })
 
     const resolvedToolDefinitionResult = await resolveToolDefinition({
       toolName,

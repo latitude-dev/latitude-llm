@@ -165,9 +165,9 @@ export function DatasetRowsInput({
 
   if (isLoadingRowCount) {
     return (
-      <div className='flex flex-col gap-y-2 w-1/2'>
-        <Skeleton height='h2' className='w-1/2' />
-        <Skeleton height='h2' className='w-1/2' />
+      <div className='flex flex-col gap-y-2 w-2/3'>
+        <Skeleton height='h2' className='w-2/3' />
+        <Skeleton height='h2' className='w-2/3' />
       </div>
     )
   }

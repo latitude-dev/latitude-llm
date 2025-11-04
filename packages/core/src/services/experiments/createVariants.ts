@@ -13,6 +13,7 @@ import { type Experiment } from '../../schema/models/types/Experiment'
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { createExperiment } from './create'
+import { SimulationSettings } from '@latitude-data/constants/simulation'
 
 export async function createExperimentVariants(
   {
@@ -27,6 +28,7 @@ export async function createExperimentVariants(
     datasetLabels,
     fromRow = 0,
     toRow,
+    simulationSettings,
   }: {
     user: User
     workspace: Workspace
@@ -39,6 +41,7 @@ export async function createExperimentVariants(
     datasetLabels: Record<string, string>
     fromRow?: number
     toRow?: number
+    simulationSettings: SimulationSettings
   },
   transaction = new Transaction(),
 ) {
@@ -86,6 +89,7 @@ export async function createExperimentVariants(
             fromRow,
             toRow,
             workspace,
+            simulationSettings,
           },
           transaction,
         ).then((r) => r.unwrap())

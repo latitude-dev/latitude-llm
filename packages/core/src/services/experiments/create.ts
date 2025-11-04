@@ -1,3 +1,4 @@
+import { SimulationSettings } from '@latitude-data/constants/simulation'
 import { database } from '../../client'
 import { EvaluationV2 } from '../../constants'
 import { Result } from '../../lib/Result'
@@ -80,6 +81,7 @@ export async function createExperiment(
     datasetLabels,
     fromRow = 0,
     toRow,
+    simulationSettings,
     workspace,
   }: {
     name: string
@@ -92,6 +94,7 @@ export async function createExperiment(
     datasetLabels: Record<string, string>
     fromRow?: number
     toRow?: number
+    simulationSettings: SimulationSettings
     workspace: Workspace
   },
   transaction = new Transaction(),
@@ -152,6 +155,7 @@ export async function createExperiment(
             lastIndex: toRow,
             totalCount: rowCount,
           }),
+          simulationSettings,
         },
       })
       .returning()

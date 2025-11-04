@@ -1,3 +1,5 @@
+import { SimulationSettings } from './simulation'
+
 // TODO(tracing): deprecated
 export const HEAD_COMMIT = 'live'
 
@@ -50,6 +52,7 @@ export type ExperimentMetadata = {
   fromRow?: number
   toRow?: number
   count: number // Total number of to generate logs in the experiment
+  simulationSettings?: SimulationSettings
 }
 
 export type ExperimentEvaluationScore = {

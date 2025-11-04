@@ -103,6 +103,9 @@ describe('ExperimentsRepository', () => {
         parametersMap,
         datasetLabels,
         evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
       }).then((r) => r.unwrap())
 
       const experiment2 = await createExperiment({
@@ -114,6 +117,9 @@ describe('ExperimentsRepository', () => {
         parametersMap,
         datasetLabels,
         evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
       }).then((r) => r.unwrap())
 
       // Create experiment results (documentLogs + evaluationResults)
@@ -213,6 +219,9 @@ describe('ExperimentsRepository', () => {
         parametersMap,
         datasetLabels,
         evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
       }).then((r) => r.unwrap())
 
       await factories.createExperimentResults({
@@ -290,6 +299,9 @@ describe('ExperimentsRepository', () => {
         parametersMap,
         datasetLabels,
         evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
       }).then((r) => r.unwrap())
 
       await factories.createExperimentResults({
@@ -355,6 +367,9 @@ describe('ExperimentsRepository', () => {
         parametersMap,
         datasetLabels,
         evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
       }).then((r) => r.unwrap())
 
       await factories.createExperimentResults({

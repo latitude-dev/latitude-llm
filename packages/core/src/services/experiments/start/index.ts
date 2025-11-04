@@ -66,7 +66,7 @@ export async function startExperiment(
       parameters: row?.parameters ?? {},
       datasetRowId: row?.id,
       source: LogSources.Experiment,
-      simulationSettings: {
+      simulationSettings: experiment.metadata.simulationSettings ?? {
         simulateToolResponses: true,
       },
     })

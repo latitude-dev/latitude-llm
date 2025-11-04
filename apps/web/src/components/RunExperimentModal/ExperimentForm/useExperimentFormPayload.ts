@@ -7,6 +7,7 @@ import { EvaluationV2 } from '@latitude-data/core/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { SimulationSettings } from '@latitude-data/constants/simulation'
 export type ExperimentFormPayload = {
   project: Project
   commit: Commit
@@ -39,6 +40,8 @@ export type ExperimentFormPayload = {
   setSelectedEvaluations: ReactStateDispatch<EvaluationV2[]>
   datasetLabels: Record<string, string>
   setDatasetLabels: ReactStateDispatch<Record<string, string>>
+  simulationSettings: SimulationSettings
+  setSimulationSettings: ReactStateDispatch<SimulationSettings>
   parameters: string[]
 }
 
@@ -75,6 +78,12 @@ export function useExperimentFormPayload({
     EvaluationV2[]
   >(initialEvaluation ? [initialEvaluation] : [])
   const [datasetLabels, setDatasetLabels] = useState<Record<string, string>>({})
+  const [simulationSettings, setSimulationSettings] =
+    useState<SimulationSettings>({
+      simulateToolResponses: true,
+      simulatedTools: [],
+      toolSimulationInstructions: '',
+    })
 
   const [variants, setVariants] = useState<
     {
@@ -127,6 +136,8 @@ export function useExperimentFormPayload({
     setSelectedEvaluations,
     datasetLabels,
     setDatasetLabels,
+    simulationSettings,
+    setSimulationSettings,
     parameters,
   }
 }

@@ -122,6 +122,9 @@ describe('createExperimentVariants', () => {
       datasetLabels,
       fromRow: 0,
       toRow: 1,
+      simulationSettings: {
+        simulateToolResponses: true,
+      },
     })
 
     expect(result.ok).toBe(true)
@@ -202,6 +205,9 @@ describe('createExperimentVariants', () => {
       datasetLabels,
       fromRow: 0,
       toRow: 1,
+      simulationSettings: {
+        simulateToolResponses: true,
+      },
     })
 
     expect(result.ok).toBe(false)

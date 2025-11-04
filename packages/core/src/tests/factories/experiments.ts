@@ -12,6 +12,7 @@ import { createDataset, ICreateDatasetV2 } from './datasets'
 import { createDocumentLog } from './documentLogs'
 import { createEvaluationResultV2 } from './evaluationResultsV2'
 import { createProviderLog } from './providerLogs'
+import { SimulationSettings } from '@latitude-data/constants/simulation'
 
 export type ICreateExperiment = {
   name?: string
@@ -24,6 +25,7 @@ export type ICreateExperiment = {
   datasetLabels?: Record<string, string>
   fromRow?: number
   toRow?: number
+  simulationSettings?: SimulationSettings
   user: User
   workspace: Workspace
 }
@@ -68,6 +70,9 @@ foo,bar,baz
     fromRow: args.fromRow,
     toRow: args.toRow,
     workspace: args.workspace,
+    simulationSettings: args.simulationSettings ?? {
+      simulateToolResponses: true,
+    },
   }).then((r) => r.unwrap())
 
   return {
