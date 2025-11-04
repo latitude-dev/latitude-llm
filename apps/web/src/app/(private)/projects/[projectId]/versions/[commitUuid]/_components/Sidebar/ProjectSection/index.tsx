@@ -5,13 +5,17 @@ import { ROUTES } from '$/services/routes'
 import { useActiveRunsCount } from '$/stores/runs/activeRuns'
 import useFeature from '$/stores/useFeature'
 
-import { LogSources } from '@latitude-data/constants'
+import { LogSources, RunSourceGroup } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import {
+  AppLocalStorage,
+  useLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -102,6 +106,11 @@ export default function ProjectSection({
     [activeCountBySource],
   )
 
+  const { value: lastRunTab } = useLocalStorage<RunSourceGroup>({
+    key: AppLocalStorage.lastRunTab,
+    defaultValue: RunSourceGroup.Playground,
+  })
+
   const PROJECT_ROUTES = useMemo(
     () =>
       [
@@ -117,7 +126,7 @@ export default function ProjectSection({
           route: ROUTES.projects
             .detail({ id: project.id })
             .commits.detail({ uuid: commit.uuid })
-            .runs.root(),
+            .runs.root({ sourceGroup: lastRunTab }),
           iconName: 'logs',
           notifications: {
             count: disableRunsNotifications ? 0 : activeCount,
@@ -155,6 +164,7 @@ export default function ProjectSection({
       issuesFeature.isEnabled,
       activeCount,
       disableRunsNotifications,
+      lastRunTab,
     ],
   )
 

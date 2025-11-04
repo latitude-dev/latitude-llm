@@ -21,6 +21,7 @@ export enum AppLocalStorage {
   latteThread = 'latteThread',
   latteSidebarWidth = 'latteSidebarWidth',
   datasetOnboardingState = 'datasetOnboardingState',
+  lastRunTab = 'lastRunTab',
 }
 
 export const isLocalStorageAvailable = (() => {
