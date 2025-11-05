@@ -23,7 +23,3 @@ export async function getRateLimiterForRateLimit(
   rateLimiters.set(rateLimit, rateLimiter)
   return rateLimiter
 }
-
-export function getRateLimiterCacheSize(): number {
-  return rateLimiters.size
-}

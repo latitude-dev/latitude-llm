@@ -1,6 +1,4 @@
 import { Context, MiddlewareHandler, Next } from 'hono'
-import { getTokenCacheSize } from './rateLimit/tokenCache'
-import { getRateLimiterCacheSize } from './rateLimit/rateLimiterCache'
 
 /**
  * Memory tracking middleware with buffering to avoid excessive logging
@@ -25,10 +23,6 @@ export const memoryUsageMiddleware = (
           heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)} MB`, // Total heap size
           heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)} MB`, // Heap actually used
           external: `${Math.round(memoryUsage.external / 1024 / 1024)} MB`, // External memory
-        },
-        cacheSizes: {
-          tokenCache: getTokenCacheSize(),
-          rateLimiterCache: getRateLimiterCacheSize(),
         },
         timestamp: new Date().toISOString(),
       })
