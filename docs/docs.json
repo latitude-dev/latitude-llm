@@ -126,6 +126,7 @@
           {
             "group": "Deployment",
             "pages": [
+              "guides/integration/overview",
               "guides/integration/publishing-deployment",
               {
                 "group": "Latitude SDK",
