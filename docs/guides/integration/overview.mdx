@@ -22,7 +22,7 @@ You can also interact with Latitude directly using the [HTTP API](/guides/api/ap
 
 Latitude supports two main integration patterns:
 
-### Use Latitude as an AI Gateway
+### Use Latitude as an AI Gateway (SDK and API support)
 
 With this pattern, Latitude acts as a proxy between your application and the underlying AI models. When you call Latitude's SDK or API:
 
@@ -34,13 +34,18 @@ This is the simplest integration path and provides automatic logging and trace c
 
 Most applications use this pattern to leverage Latitude's prompt management and monitoring features. To get started, check out the [Publishing Prompts](/guides/integration/publishing-deployment) guide.
 
-### Fetch Prompts and Upload Logs
+### Fetch Prompts and Upload Logs (SDK support)
 
 With this pattern, you manage prompt execution yourself:
 
-1. Your application fetches prompts from Latitude using the API or SDK's [`prompts.get()`](/guides/sdk/typescript#get-a-prompt) method
-2. Your application executes the prompts using your own infrastructure (e.g., directly calling OpenAI, Anthropic, etc.)
-3. Your application uploads logs back to Latitude using the [`logs.push()`](/guides/sdk/typescript#pushing-a-log-to-latitude) method or the [Upload Logs](/guides/logs/upload-logs) guide
+1. Your application fetches prompts from Latitude using the [`prompts.get()`](/guides/sdk/typescript#get-a-prompt) method
+2. Your application renders the prompt using the [`prompts.renderChain()`](/guides/sdk/typescript#chain-rendering) method.
+
+This method supports multi-step prompts, handles tools automatically, provides telemetry tracking, and works with both simple and complex prompts.
+
+The `onStep` callback allows you to execute each step with your own infrastructure (e.g., directly calling OpenAI, Anthropic, etc.).
+
+3. Your application uploads logs back to Latitude using the [`logs.push()`](/guides/sdk/typescript#pushing-a-log-to-latitude) method
 
 This pattern gives you full control over prompt execution and lets you use your existing infrastructure and provider integrations. You still get all the benefits of Latitude's evaluation and monitoring tools.
 
