@@ -10,6 +10,7 @@ export enum DocsRoute {
   Agents = '/guides/prompt-manager/agents',
   Evaluations = '/guides/evaluations/overview',
   Publish = '/guides/integration/publishing-deployment',
+  IntegrationOverview = '/guides/integration/overview',
   Logs = '/guides/getting-started/core-concepts#logs',
 
   // Settings

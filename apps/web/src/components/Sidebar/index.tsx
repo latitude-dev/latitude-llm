@@ -3,13 +3,16 @@ import { ReactNode } from 'react'
 export default function DocumentSidebar({
   header,
   tree,
+  banner,
 }: {
   header: ReactNode
   tree: ReactNode
+  banner?: ReactNode
 }) {
   return (
-    <aside className='flex flex-col gap-y-2 w-full max-h-full overflow-y-hidden'>
-      <div className='p-4 py-6 gap-y-2'>{header}</div>
+    <aside className='flex flex-col gap-y-4 w-full max-h-full overflow-y-hidden p-4'>
+      {banner}
+      {header}
       <div className='flex-1 custom-scrollbar'>{tree}</div>
     </aside>
   )
