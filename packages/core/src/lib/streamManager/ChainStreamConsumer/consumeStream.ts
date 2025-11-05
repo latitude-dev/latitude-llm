@@ -34,10 +34,11 @@ export async function consumeStream({
   resolvedTools,
 }: ConsumeStreamParams): Promise<ConsumeStreamResult> {
   let error: ChainError<PosibleErrorCode, NoRunError> | undefined
-
-  const reader = result.fullStream.getReader()
+  let reader: ReadableStreamDefaultReader | null = null
 
   try {
+    reader = result.fullStream.getReader()
+
     while (true) {
       if (error) break
 
@@ -96,7 +97,9 @@ export async function consumeStream({
       })
     }
   } finally {
-    reader.releaseLock()
+    if (reader) {
+      reader.releaseLock()
+    }
   }
 
   return { error }

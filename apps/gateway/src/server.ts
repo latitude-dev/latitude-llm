@@ -88,15 +88,16 @@ if (cluster.isPrimary) {
 }
 
 function gracefulShutdown(server: ServerType) {
-  server.close(() => {
-    console.log(`Worker ${process.pid} shutting down gracefully...`)
-    process.exit(0)
-  })
-
-  setTimeout(() => {
+  const timeoutId = setTimeout(() => {
     console.error(
       `Worker ${process.pid} forcing shutdown due to pending connections.`,
     )
     process.exit(1)
   }, SHUTDOWN_TIMEOUT)
+
+  server.close(() => {
+    clearTimeout(timeoutId)
+    console.log(`Worker ${process.pid} shutting down gracefully...`)
+    process.exit(0)
+  })
 }
