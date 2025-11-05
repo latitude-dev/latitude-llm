@@ -22,7 +22,7 @@ import { checkValidStream } from '../checkValidStream'
 import { isAbortError } from '../../isAbortError'
 import { createFakeProviderLog } from '../utils/createFakeProviderLog'
 import { handleAIError } from './handleAIError'
-import { ResolvedTools } from '../resolveTools/types'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 
 export type ExecuteStepArgs = {
   controller: ReadableStreamDefaultController
@@ -64,7 +64,7 @@ export async function streamAIResponse({
   schema?: JSONSchema7
   output?: Output
   abortSignal?: AbortSignal
-  resolvedTools?: ResolvedTools
+  resolvedTools?: ResolvedToolsDict
 }): Promise<{
   response: ChainStepResponse<StreamType>
   messages: LegacyMessage[]

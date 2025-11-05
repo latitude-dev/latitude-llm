@@ -1,5 +1,6 @@
 import { Providers } from '.'
 import { LatitudeTool } from './config'
+import { OpenAITool } from './latitudePromptSchema/providers/openai'
 
 export enum ToolSource {
   Client = 'client',
@@ -34,6 +35,7 @@ type IntegrationToolSourceData = BaseToolSourceData<ToolSource.Integration> & {
 
 type ProviderToolSourceData = BaseToolSourceData<ToolSource.ProviderTool> & {
   provider: Providers
+  tool: OpenAITool
 }
 
 // prettier-ignore

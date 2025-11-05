@@ -1,9 +1,9 @@
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export function getIntegrationToolsFromConfig(
-  config: LatitudePromptConfig,
+  config: Pick<LatitudePromptConfig, 'tools'>,
 ): string[] {
-  const tools = config.tools
+  const { tools } = config
   if (!tools) return []
 
   if (typeof tools === 'string') {
@@ -29,10 +29,12 @@ export function getIntegrationNamesFromTools(toolsIds: string[]): string[] {
     .filter((name, index, array) => array.indexOf(name) === index) // Remove duplicates
 }
 
-export function getCustomToolsFromConfig(config: LatitudePromptConfig): {
+export function getCustomToolsFromConfig(
+  config: Pick<LatitudePromptConfig, 'tools'>,
+): {
   [name: string]: object
 } {
-  const tools = config.tools
+  const { tools } = config
   if (!tools) return {}
 
   if (typeof tools === 'string') return {}

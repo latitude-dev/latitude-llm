@@ -6,9 +6,38 @@ import {
   ToolContent,
   MessageRole,
   ToolMessage,
-} from '@latitude-data/constants/legacyCompiler'
+} from './legacyCompiler'
 import { ToolCallContent as ToolRequest } from 'promptl-ai'
-import { StreamType, ToolCallResponse } from './index'
+import { StreamType, ToolCallResponse, VercelProviderTool } from './index'
+import { ToolSource, ToolSourceData } from './toolSources'
+import type { Tool } from 'ai'
+
+// Tool definition WITHOUT any execution logic
+export type ToolManifest<T extends ToolSource = ToolSource> = {
+  definition: Pick<Tool, 'description' | 'inputSchema' | 'outputSchema'>
+  sourceData: Omit<ToolSourceData<T>, 'simulated'>
+}
+
+// Tool definition WITH execution logic
+export type ResolvedTool<T extends ToolSource = ToolSource> = {
+  definition: Tool
+  sourceData: ToolSourceData<T>
+}
+
+export type ResolvedProviderTool = {
+  definition: VercelProviderTool
+  sourceData: ToolSourceData<ToolSource.ProviderTool>
+}
+
+export type ToolManifestDict<T extends ToolSource = ToolSource> = Record<
+  string,
+  ToolManifest<T>
+>
+
+export type ResolvedToolsDict<T extends ToolSource = ToolSource> = Record<
+  string,
+  T extends ToolSource.ProviderTool ? ResolvedProviderTool : ResolvedTool<T>
+>
 
 type BuildMessageParams<T extends StreamType> = T extends 'object'
   ? {

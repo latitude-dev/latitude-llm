@@ -1,7 +1,6 @@
 import { StreamManager, StreamManagerProps } from '.'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { Output, streamAIResponse } from './step/streamAIResponse'
-import { resolveToolsFromConfig } from './resolveTools'
 import {
   applyAgentRule,
   ValidatedChainStep,
@@ -9,6 +8,14 @@ import {
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { JSONSchema7 } from 'json-schema'
 import { isAbortError } from '@ai-sdk/provider-utils'
+import { lookupTools } from '../../services/documents/tools/lookup'
+import { resolveTools } from '../../services/documents/tools/resolve'
+import { DocumentVersionsRepository } from '../../repositories'
+import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { Result } from '../Result'
+import { PromisedResult } from '../Transaction'
+import { ResolvedToolsDict } from '@latitude-data/constants'
+import { LatitudeError } from '../errors'
 
 /**
  * DefaultStreamManager implements a simple single-step streaming strategy.
@@ -107,9 +114,36 @@ export class DefaultStreamManager
     }
   }
 
-  private getToolsBySource() {
-    return resolveToolsFromConfig({
+  private async getToolsBySource(): PromisedResult<
+    ResolvedToolsDict,
+    LatitudeError
+  > {
+    let documents: DocumentVersion[] = []
+    let documentUuid: string = ''
+
+    if ('commit' in this.promptSource) {
+      const documentScope = new DocumentVersionsRepository(this.workspace.id)
+      const documentsResult = await documentScope.getDocumentsAtCommit(
+        this.promptSource.commit,
+      )
+      if (!Result.isOk(documentsResult)) return documentsResult
+
+      documents = documentsResult.unwrap()
+      documentUuid = this.promptSource.document.documentUuid
+    }
+
+    const toolsManifestResult = await lookupTools({
       config: this.config,
+      documentUuid,
+      documents,
+      workspace: this.workspace,
+    })
+
+    if (toolsManifestResult.error) return toolsManifestResult
+    const toolManifestDict = toolsManifestResult.unwrap()
+
+    return resolveTools({
+      toolManifestDict,
       streamManager: this,
     })
   }

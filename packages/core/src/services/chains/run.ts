@@ -17,7 +17,7 @@ import {
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { TypedResult } from '../../lib/Result'
 import { ChainStreamManager } from '../../lib/streamManager/chainStreamManager'
-import { ToolHandler } from '../../lib/streamManager/clientTools/handlers'
+import { ToolHandler } from '../documents/tools/clientTools/handlers'
 import { TelemetryContext } from '../../telemetry'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>

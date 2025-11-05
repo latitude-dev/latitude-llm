@@ -8,7 +8,7 @@ import { AIReturn } from '../../../services/ai'
 import { consumeStream } from './consumeStream'
 import { StreamEventTypes, VercelChunk } from '@latitude-data/constants'
 import { ToolSource } from '@latitude-data/constants/toolSources'
-import { ResolvedTools } from '../resolveTools/types'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 
 export class AsyncStreamIterable<T> extends ReadableStream<T> {
   [Symbol.asyncIterator] = function () {
@@ -231,7 +231,7 @@ describe('consumeStream', () => {
       enqueue: mockEnqueue,
     } as unknown as ReadableStreamDefaultController
 
-    const resolvedTools: ResolvedTools = {
+    const resolvedTools: ResolvedToolsDict = {
       myTool: {
         definition: {
           type: 'function',
@@ -319,7 +319,7 @@ describe('consumeStream', () => {
       enqueue: mockEnqueue,
     } as unknown as ReadableStreamDefaultController
 
-    const resolvedTools: ResolvedTools = {
+    const resolvedTools: ResolvedToolsDict = {
       myTool: {
         definition: {
           type: 'function',
@@ -370,7 +370,7 @@ describe('consumeStream', () => {
       enqueue: mockEnqueue,
     } as unknown as ReadableStreamDefaultController
 
-    const resolvedTools: ResolvedTools = {
+    const resolvedTools: ResolvedToolsDict = {
       agentTool: {
         definition: {
           type: 'function',
@@ -430,7 +430,7 @@ describe('consumeStream', () => {
       enqueue: mockEnqueue,
     } as unknown as ReadableStreamDefaultController
 
-    const resolvedTools: ResolvedTools = {
+    const resolvedTools: ResolvedToolsDict = {
       integrationTool: {
         definition: {
           type: 'function',

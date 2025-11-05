@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { LatitudeTool } from '../config'
-import { openAIToolsList } from './providers/openai/index'
+import { openAIToolsListSchema } from './providers/openai/index'
 import { zodJsonSchema } from './zodJsonSchema'
 
 const toolDefinitionObject = z.record(
@@ -68,7 +68,7 @@ export const AI_PROVIDERS_WITH_BUILTIN_TOOLS = Object.keys(PROVIDERS_WITH_TOOLS)
 
 export const providersSchema = z.record(
   z.literal(PROVIDERS_WITH_TOOLS.openai),
-  openAIToolsList,
+  openAIToolsListSchema,
 )
 export type ProvidersSchema = z.infer<typeof providersSchema>
 

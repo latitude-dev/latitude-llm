@@ -10,7 +10,7 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
 import { convertResponseMessages } from '../../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
-import { ResolvedTools } from '../../../lib/streamManager/resolveTools/types'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 
 function parseObject(text: string) {
   const parsed = text
@@ -31,7 +31,7 @@ export async function processResponse({
 }: {
   aiResult: Awaited<AIReturn<StreamType>>
   documentLogUuid?: string
-  resolvedTools?: ResolvedTools
+  resolvedTools?: ResolvedToolsDict
 }): Promise<ChainStepResponse<StreamType>> {
   const isObject = aiResult.type === 'object'
   let text, response, reasoning, output, usage, toolCalls
