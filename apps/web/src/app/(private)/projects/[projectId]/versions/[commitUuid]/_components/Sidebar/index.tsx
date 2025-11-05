@@ -20,6 +20,7 @@ import { Project } from '@latitude-data/core/schema/models/types/Project'
 import ClientFilesTree from './ClientFilesTree'
 import CommitSelector from './CommitSelector'
 import ProjectSection from './ProjectSection'
+import ProductionBanner from './ProductionBanner'
 
 export default async function Sidebar({
   project,
@@ -59,6 +60,7 @@ export default async function Sidebar({
 
   return (
     <DocumentSidebar
+      banner={<ProductionBanner project={project} />}
       header={
         <CommitSelector
           headCommit={headCommit}
