@@ -10,6 +10,7 @@ import { addMessages } from '@latitude-data/core/services/documentLogs/addMessag
 import { BACKGROUND, telemetry } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import { LogSources } from '@latitude-data/core/constants'
+import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
@@ -73,8 +74,17 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const error = await result.error
   if (error) throw error
 
+  const response = (await result.response)!
+
+  const providerScope = new ProviderApiKeysRepository(workspace.id)
+  const providerId = response.providerLog?.providerId
+  const providerUsed = await providerScope
+    .find(providerId)
+    .then((r) => r.unwrap())
+
   const body = runPresenter({
-    response: (await result.response)!,
+    response,
+    provider: providerUsed,
   }).unwrap()
 
   return c.json(body, 200)
