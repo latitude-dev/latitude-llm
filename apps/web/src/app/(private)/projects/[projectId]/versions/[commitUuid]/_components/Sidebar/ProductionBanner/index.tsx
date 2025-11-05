@@ -25,7 +25,7 @@ export default function ProductionBanner({ project }: { project: Project }) {
   if (hasProductionRuns) return null
 
   return (
-    <div className='flex flex-col gap-y-1 bg-accent border border-accent-foreground/10 rounded-lg p-2'>
+    <div className='flex flex-col gap-y-1 bg-accent border border-accent-foreground/10 rounded-xl p-4'>
       <Text.H5M color='accentForeground'>Integrate in production →</Text.H5M>
       <Text.H5 color='accentForeground'>
         This project has no production traces yet, integrate our SDK in 1 minute
