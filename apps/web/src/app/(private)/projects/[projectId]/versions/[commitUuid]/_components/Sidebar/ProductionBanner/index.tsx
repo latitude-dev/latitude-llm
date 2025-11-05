@@ -11,21 +11,23 @@ import { envClient } from '$/envClient'
 import { DocsRoute } from '$/components/Documentation/routes'
 
 export default function ProductionBanner({ project }: { project: Project }) {
-  const { data: activeRuns } = useActiveRuns({
+  const { data: activeRuns, isLoading: isLoadingActiveRuns } = useActiveRuns({
     project,
     search: { sourceGroup: RunSourceGroup.Production },
   })
-  const { data: completedRuns } = useCompletedRuns({
-    project,
-    search: { sourceGroup: RunSourceGroup.Production },
-  })
+  const { data: completedRuns, isLoading: isLoadingCompletedRuns } =
+    useCompletedRuns({
+      project,
+      search: { sourceGroup: RunSourceGroup.Production },
+    })
 
+  const isLoadingRuns = isLoadingActiveRuns || isLoadingCompletedRuns
   const hasProductionRuns = useMemo(
     () => activeRuns.length > 0 || completedRuns.length > 0,
     [activeRuns, completedRuns],
   )
 
-  if (hasProductionRuns) return null
+  if (isLoadingRuns || hasProductionRuns) return null
 
   const docsUrl = `${envClient.NEXT_PUBLIC_DOCS_URL}${DocsRoute.IntegrationOverview}`
 
