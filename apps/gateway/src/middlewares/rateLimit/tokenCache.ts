@@ -35,3 +35,7 @@ export function setToTokenCache(
     timestamp: Date.now(),
   })
 }
+
+export function getTokenCacheSize(): number {
+  return tokenCache.size
+}
