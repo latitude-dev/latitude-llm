@@ -10,9 +10,11 @@ export default function DocumentSidebar({
   banner?: ReactNode
 }) {
   return (
-    <aside className='flex flex-col gap-y-4 w-full max-h-full overflow-y-hidden p-4'>
-      {banner}
-      {header}
+    <aside className='flex flex-col gap-y-4 w-full max-h-full overflow-y-hidden'>
+      <div className='flex flex-col p-4'>
+        {banner}
+        {header}
+      </div>
       <div className='flex-1 custom-scrollbar'>{tree}</div>
     </aside>
   )
