@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useIssues } from '$/stores/issues'
 import {
@@ -12,6 +12,9 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useIssuesParameters } from '$/stores/issues/useIssuesParameters'
 import { useOnce } from '$/hooks/useMount'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import { useFetchMiniHistgramsInBatch } from '$/stores/issues/histograms/miniStats'
+import { useSelectedFromUrl } from '$/hooks/useSelectedFromUrl'
 import { ROUTES } from '$/services/routes'
 import { IssuesServerResponse } from '../../page'
 import { IssuesTable } from '../IssuesTable'
@@ -21,10 +24,19 @@ import { SearchIssuesInput } from '../SearchIssuesInput'
 export function IssuesDashboard({
   serverResponse,
   params,
+  selectedIssue: serverSelectedIssue,
 }: {
   serverResponse: IssuesServerResponse
   params: SafeIssuesParams
+  selectedIssue?: Issue
 }) {
+  const { selectedElement, onSelectChange } = useSelectedFromUrl({
+    serverSelected: serverSelectedIssue,
+    keyField: 'id',
+    paramsUrlName: 'issueId',
+  })
+  const { loadingMiniStats, fetchMiniStatsInBatch } =
+    useFetchMiniHistgramsInBatch()
   const { init, urlParameters, onSuccessIssuesFetch } = useIssuesParameters(
     (state) => ({
       init: state.init,
@@ -42,6 +54,7 @@ export function IssuesDashboard({
     .commits.detail({ uuid: commit.uuid }).issues.root
   const searchParams = useMemo(() => {
     if (!urlParameters) return convertIssuesParamsToQueryParams(params)
+
     return urlParameters
   }, [urlParameters, params])
   const { data: issues, isLoading } = useIssues(
@@ -56,6 +69,14 @@ export function IssuesDashboard({
       fallbackData: serverResponse,
     },
   )
+  const issueIds = useMemo(
+    () => issues?.map((issue) => issue.id) ?? [],
+    [issues],
+  )
+
+  useEffect(() => {
+    fetchMiniStatsInBatch({ issueIds })
+  }, [issueIds, fetchMiniStatsInBatch])
 
   useOnce(() => {
     init({
@@ -64,7 +85,7 @@ export function IssuesDashboard({
         totalCount: serverResponse.totalCount,
       },
       onStateChange: (queryParams) => {
-        // NOTE: Next.js do RSC navigation, so we need to use the History API to avoid a full page reload
+        onSelectChange(undefined)
         window.history.replaceState(
           null,
           '',
@@ -85,6 +106,9 @@ export function IssuesDashboard({
             isLoading={isLoading}
             currentRoute={currentRoute}
             serverParams={params}
+            loadingMiniStats={loadingMiniStats}
+            selectedIssue={selectedElement}
+            onSelectChange={onSelectChange}
           />
         }
       />

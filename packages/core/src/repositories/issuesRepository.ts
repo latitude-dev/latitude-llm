@@ -69,7 +69,7 @@ export class IssuesRepository extends Repository<Issue> {
         ),
       )
       .limit(1)
-    return result[0] || null
+    return result[0]
   }
 
   async findByTitle({
@@ -161,12 +161,10 @@ export class IssuesRepository extends Repository<Issue> {
       commitIds,
       filters,
     })
-    // Make listing lighter by excluding description field
-    const { description: _, ...issueColumns } = tt
 
     const query = this.db
       .select({
-        ...issueColumns,
+        ...tt,
         recentCount: subquery.recentCount,
         totalCount: subquery.totalCount,
         firstSeenDate: subquery.firstSeenDate,

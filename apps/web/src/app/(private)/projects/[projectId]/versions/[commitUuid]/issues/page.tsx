@@ -13,6 +13,7 @@ import {
   QueryParams,
 } from '@latitude-data/constants/issues'
 import { SWRProvider } from '$/components/Providers/SWRProvider'
+import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 
 export type IssuesServerResponse = Awaited<
   OkType<IssuesRepository['fetchIssuesFiltered']>
@@ -25,6 +26,7 @@ export default async function IssuesPageRoute({
   params: Promise<{ projectId: string; commitUuid: string }>
   searchParams: Promise<QueryParams>
 }) {
+  let selectedIssue: Issue | null = null
   const queryParams = await searchParams
   const { projectId, commitUuid } = await params
   const session = await getCurrentUserOrRedirect()
@@ -36,11 +38,17 @@ export default async function IssuesPageRoute({
     uuid: commitUuid,
     projectId: Number(projectId),
   })
+  const issuesRepo = new IssuesRepository(session.workspace.id)
+  const issueId = Number(String(queryParams.issueId))
+  if (issueId) {
+    selectedIssue = await issuesRepo.findById({ project, issueId })
+  }
+
+  // Filtering
   const parsedParams = parseIssuesQueryParams({
     params: queryParams,
     defaultFilters: { documentUuid: commit.mainDocumentUuid ?? undefined },
   })
-  const issuesRepo = new IssuesRepository(session.workspace.id)
   const args = {
     project,
     commit,
@@ -62,7 +70,11 @@ export default async function IssuesPageRoute({
   })
   return (
     <SWRProvider config={{ [key]: serverResponse }}>
-      <IssuesDashboard serverResponse={serverResponse} params={parsedParams} />
+      <IssuesDashboard
+        serverResponse={serverResponse}
+        params={parsedParams}
+        selectedIssue={selectedIssue ?? undefined}
+      />
     </SWRProvider>
   )
 }

@@ -1,5 +1,5 @@
-import { and, eq, getTableColumns, inArray, SQL, sql } from 'drizzle-orm'
-import { endOfDay, format, startOfDay } from 'date-fns'
+import { and, eq, getTableColumns, gte, inArray, SQL, sql } from 'drizzle-orm'
+import { endOfDay, format, startOfDay, subDays } from 'date-fns'
 import { type Issue } from '../schema/models/types/Issue'
 import Repository from './repositoryV2'
 import { issueHistograms } from '../schema/models/issueHistograms'
@@ -8,10 +8,12 @@ import {
   RECENT_ISSUES_DAYS,
   HISTOGRAM_SUBQUERY_ALIAS,
   SafeIssuesParams,
+  MINI_HISTOGRAM_STATS_DAYS,
 } from '@latitude-data/constants/issues'
 import { Commit } from '../schema/models/types/Commit'
 import { IssueHistogram } from '../schema/models/types/IssueHistogram'
 import { Project } from '../schema/models/types/Project'
+import { CommitsRepository } from './commitsRepository'
 
 const tt = getTableColumns(issueHistograms)
 type IssueFilters = SafeIssuesParams['filters']
@@ -151,5 +153,188 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
     }
 
     return conditions
+  }
+
+  /**
+   * Find histogram data for a single issue for the last N days
+   */
+  async findHistogramForIssue({
+    issueId,
+    commitUuid,
+    projectId,
+    days,
+  }: {
+    issueId: number
+    commitUuid: string
+    projectId: number
+    days?: number
+  }) {
+    const commitIds = await this.getCommitIds({ commitUuid, projectId })
+
+    const results = await this.fetchHistogramData({
+      issueIds: [issueId],
+      commitIds,
+      projectId,
+      days,
+    })
+
+    // Extract data for single issue (no issueId grouping needed)
+    const dateCounts = results.map((r) => ({
+      date: r.date,
+      count: r.count,
+    }))
+
+    return this.fillMissingDays({ data: dateCounts, days })
+  }
+
+  /**
+   * Find histogram data for multiple issues for the last N days
+   */
+
+  async findHistogramsForIssues({
+    issueIds,
+    commitUuid,
+    projectId,
+    days,
+  }: {
+    issueIds: number[]
+    commitUuid: string
+    projectId: number
+    days?: number
+  }) {
+    if (issueIds.length === 0) return { statsTotalCount: 0, issues: [] }
+
+    const commitIds = await this.getCommitIds({ commitUuid, projectId })
+    const results = await this.fetchHistogramData({
+      issueIds,
+      commitIds,
+      projectId,
+      days,
+    })
+
+    // Group by issueId
+    const issueDateMap = new Map<number, Map<string, number>>()
+    results.forEach((r) => {
+      if (!issueDateMap.has(r.issueId)) {
+        issueDateMap.set(r.issueId, new Map())
+      }
+      issueDateMap.get(r.issueId)!.set(r.date, r.count)
+    })
+
+    // Fill missing days with 0 count for each issue
+    const issues = issueIds.map((issueId) => {
+      const dateMap = issueDateMap.get(issueId) ?? new Map()
+      const dateCounts = Array.from(dateMap.entries()).map(([date, count]) => ({
+        date,
+        count,
+      }))
+      const { data, totalCount } = this.fillMissingDays({
+        data: dateCounts,
+        days,
+      })
+      return { issueId, data, totalCount }
+    })
+
+    const statsTotalCount = issues.reduce((acc, i) => acc + i.totalCount, 0)
+
+    return { statsTotalCount, issues }
+  }
+
+  /**
+   * Fill missing days with 0 count for a single issue and calculate totalCount
+   */
+  private fillMissingDays({
+    data,
+    days = MINI_HISTOGRAM_STATS_DAYS,
+  }: {
+    data: Array<{ date: string; count: number }>
+    days?: number
+  }): { data: Array<{ date: string; count: number }>; totalCount: number } {
+    const dateMap = new Map<string, number>()
+    let totalCount = 0
+    data.forEach((r) => {
+      dateMap.set(r.date, r.count)
+      totalCount += r.count
+    })
+
+    const filledResults: Array<{ date: string; count: number }> = []
+    const today = new Date()
+    for (let i = 0; i < days; i++) {
+      const date = subDays(today, days - 1 - i)
+      const dateStr = format(date, 'yyyy-MM-dd')
+      const count = dateMap.get(dateStr) ?? 0
+      filledResults.push({
+        date: dateStr,
+        count,
+      })
+    }
+
+    return { data: filledResults, totalCount }
+  }
+
+  /**
+   * Shared query logic for fetching histogram data
+   */
+  private async fetchHistogramData({
+    issueIds,
+    commitIds,
+    projectId,
+    days = MINI_HISTOGRAM_STATS_DAYS,
+  }: {
+    issueIds: number[]
+    commitIds: number[]
+    projectId: number
+    days?: number
+  }) {
+    if (issueIds.length === 0) return []
+
+    const startDate = subDays(new Date(), days)
+    const formattedStartDate = format(startDate, 'yyyy-MM-dd')
+
+    const whereConditions: SQL[] = [
+      this.scopeFilter,
+      eq(issueHistograms.projectId, projectId),
+      inArray(issueHistograms.issueId, issueIds),
+      inArray(issueHistograms.commitId, commitIds),
+      gte(issueHistograms.date, sql`${formattedStartDate}::date`),
+    ]
+
+    const results = await this.db
+      .select({
+        issueId: issueHistograms.issueId,
+        date: issueHistograms.date,
+        count: sql<number>`COALESCE(SUM(${issueHistograms.count}), 0)`.as(
+          'count',
+        ),
+      })
+      .from(issueHistograms)
+      .where(and(...whereConditions))
+      .groupBy(issueHistograms.issueId, issueHistograms.date)
+      .orderBy(issueHistograms.issueId, issueHistograms.date)
+
+    return results
+  }
+
+  /**
+   * Get commit IDs from commit history (same pattern as IssuesRepository)
+   */
+  private async getCommitIds({
+    commitUuid,
+    projectId,
+  }: {
+    commitUuid: string
+    projectId: number
+  }) {
+    const commitsRepo = new CommitsRepository(this.workspaceId, this.db)
+    const commit = await commitsRepo
+      .getCommitByUuid({
+        projectId,
+        uuid: commitUuid,
+      })
+      .then((r) => r.unwrap())
+
+    const commits = await commitsRepo.getCommitsHistory({ commit })
+    const commitIds = commits.map((c: { id: number }) => c.id)
+    return commitIds
   }
 }
