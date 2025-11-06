@@ -175,9 +175,13 @@ async function handleForegroundRun({
         let id = 0
 
         // FIXME: This does not seem to work
-        c.req.raw.signal.addEventListener('abort', () => {
-          stream.close()
-        })
+        c.req.raw.signal.addEventListener(
+          'abort',
+          () => {
+            stream.close()
+          },
+          { once: true },
+        )
 
         try {
           for await (const event of streamToGenerator(

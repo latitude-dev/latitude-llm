@@ -246,17 +246,23 @@ describe('runChain', () => {
   })
 
   it('handles tool calls response', async () => {
-    vi.mocked(mockChain.step!).mockResolvedValue({
-      completed: false,
-      messages: [
-        {
-          role: MessageRole.user,
-          // @ts-expect-error - TODO(compiler): fix types
-          content: [{ type: 'text', text: 'user message' }],
-        },
-      ],
-      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-    })
+    vi.mocked(mockChain.step!)
+      .mockResolvedValueOnce({
+        completed: false,
+        messages: [
+          {
+            role: MessageRole.user,
+            // @ts-expect-error - TODO(compiler): fix types
+            content: [{ type: 'text', text: 'user message' }],
+          },
+        ],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      })
+      .mockResolvedValueOnce({
+        completed: true,
+        messages: [],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      })
     vi.spyOn(aiModule, 'ai').mockResolvedValue(
       Result.ok({
         type: 'text',
