@@ -249,6 +249,8 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
       type: 'evaluationV2Annotated',
       data: {
+        isNew: true,
+        userEmail: null,
         workspaceId: workspace.id,
         evaluation: evaluation,
         result: result,
@@ -304,6 +306,8 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
       type: 'evaluationV2Annotated',
       data: {
+        isNew: true,
+        userEmail: null,
         workspaceId: workspace.id,
         evaluation: evaluation,
         result: result,
@@ -361,6 +365,8 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
       type: 'evaluationV2Annotated',
       data: {
+        isNew: true,
+        userEmail: null,
         workspaceId: workspace.id,
         evaluation: evaluation,
         result: result,
@@ -416,6 +422,8 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
       type: 'evaluationV2Annotated',
       data: {
+        isNew: true,
+        userEmail: null,
         workspaceId: workspace.id,
         evaluation: evaluation,
         result: result,
@@ -478,6 +486,8 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
       type: 'evaluationV2Annotated',
       data: {
+        isNew: true,
+        userEmail: null,
         workspaceId: workspace.id,
         evaluation: evaluation,
         result: result,
@@ -532,6 +542,8 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
       type: 'evaluationV2Annotated',
       data: {
+        isNew: true,
+        userEmail: null,
         workspaceId: workspace.id,
         evaluation: evaluation,
         result: result,
@@ -586,6 +598,8 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
       type: 'evaluationV2Annotated',
       data: {
+        isNew: true,
+        userEmail: null,
         workspaceId: workspace.id,
         evaluation: evaluation,
         result: result,
@@ -637,6 +651,8 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
       type: 'evaluationV2Annotated',
       data: {
+        isNew: true,
+        userEmail: null,
         workspaceId: workspace.id,
         evaluation: evaluation,
         result: result,
@@ -693,6 +709,133 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
       type: 'evaluationV2Annotated',
       data: {
+        isNew: false,
+        userEmail: null,
+        workspaceId: workspace.id,
+        evaluation: evaluation,
+        result: result,
+        commit: commit,
+        providerLog: providerLog,
+      },
+    })
+  })
+
+  it('sends analytics event with userEmail null when updating existing annotation with same score but different reason', async () => {
+    const { result: originalResult } = await annotateEvaluationV2({
+      resultScore: 4,
+      resultMetadata: {
+        reason: 'original reason',
+      },
+      evaluation: evaluation,
+      providerLog: providerLog,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+    mocks.publisher.mockClear()
+
+    const { result } = await annotateEvaluationV2({
+      resultScore: 4, // Same score
+      resultMetadata: {
+        reason: 'updated reason', // Different reason
+      },
+      evaluation: evaluation,
+      providerLog: providerLog,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        ...originalResult,
+        score: 4, // Score unchanged
+        normalizedScore: 75,
+        metadata: {
+          reason: 'updated reason',
+          actualOutput: providerLog.response,
+          configuration: evaluation.configuration,
+        },
+        hasPassed: true,
+        error: null,
+        updatedAt: expect.any(Date),
+      }),
+    )
+    // Should send both update and annotated events, but annotated event has userEmail: null
+    // Analytics platform checks userEmail to decide whether to process the event
+    expect(mocks.publisher).toHaveBeenCalledTimes(2)
+    expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
+      type: 'evaluationResultV2Updated',
+      data: {
+        result: result,
+        workspaceId: workspace.id,
+      },
+    })
+    expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
+      type: 'evaluationV2Annotated',
+      data: {
+        isNew: false,
+        userEmail: null, // null because score didn't change, so analytics won't process it
+        workspaceId: workspace.id,
+        evaluation: evaluation,
+        result: result,
+        commit: commit,
+        providerLog: providerLog,
+      },
+    })
+  })
+
+  it('sends analytics event when updating existing annotation with different score', async () => {
+    const { result: originalResult } = await annotateEvaluationV2({
+      resultScore: 4,
+      resultMetadata: {
+        reason: 'original reason',
+      },
+      evaluation: evaluation,
+      providerLog: providerLog,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+    mocks.publisher.mockClear()
+
+    const { result } = await annotateEvaluationV2({
+      resultScore: 5, // Different score
+      resultMetadata: {
+        reason: 'updated reason',
+      },
+      evaluation: evaluation,
+      providerLog: providerLog,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        ...originalResult,
+        score: 5,
+        normalizedScore: 100,
+        metadata: {
+          reason: 'updated reason',
+          actualOutput: providerLog.response,
+          configuration: evaluation.configuration,
+        },
+        hasPassed: true,
+        error: null,
+        updatedAt: expect.any(Date),
+      }),
+    )
+    // Should send both update and annotated events (since score changed)
+    expect(mocks.publisher).toHaveBeenCalledTimes(2)
+    expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
+      type: 'evaluationResultV2Updated',
+      data: {
+        result: result,
+        workspaceId: workspace.id,
+      },
+    })
+    expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
+      type: 'evaluationV2Annotated',
+      data: {
+        isNew: false,
+        userEmail: null,
         workspaceId: workspace.id,
         evaluation: evaluation,
         result: result,

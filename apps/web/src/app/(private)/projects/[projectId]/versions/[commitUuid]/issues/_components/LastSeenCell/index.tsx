@@ -9,6 +9,7 @@ import {
   differenceInMonths,
   differenceInYears,
   format,
+  isSameDay,
 } from 'date-fns'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
@@ -34,8 +35,19 @@ function getRelativeTimeText(createdAt: Date, lastSeenDate: Date | null) {
   const now = new Date()
 
   const ageText = formatTimeDistance(createdAt, now)
-  const lastSeenText = formatTimeDistance(dateToUse, now)
 
+  // If last seen is today, show "today" instead of hours
+  let lastSeenText: string
+  if (dateToUse && isSameDay(dateToUse, now)) {
+    lastSeenText = 'today'
+  } else {
+    lastSeenText = formatTimeDistance(dateToUse, now)
+  }
+
+  // Format: "today / X old" or "X ago / Y old"
+  if (lastSeenText === 'today') {
+    return `today / ${ageText} old`
+  }
   return `${lastSeenText} ago / ${ageText} old`
 }
 
