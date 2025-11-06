@@ -315,7 +315,7 @@ describe('runEvaluationV2Job', () => {
           ...evaluation,
           updatedAt: expect.any(Date),
         },
-        span,
+        span: { ...span, metadata: undefined },
         experiment: undefined,
         dataset: {
           ...dataset,

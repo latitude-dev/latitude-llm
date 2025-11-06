@@ -27,13 +27,13 @@ function useAnnotationData({
 }: {
   documentLogUuid: string | undefined
 }) {
-  // Traces are created asynchronously, so we poll the backend until we get the trace
-  const { data: trace } = useConversation(
+  const { data, isLoading } = useConversation(
     { conversationId: documentLogUuid },
     { refreshInterval: documentLogUuid ? 5_000 : undefined },
   )
+  const trace = data?.trace
   const span = findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt)
-  const isReady = !!span
+  const isReady = !isLoading && !!span
 
   return useMemo(() => {
     if (!isReady) {

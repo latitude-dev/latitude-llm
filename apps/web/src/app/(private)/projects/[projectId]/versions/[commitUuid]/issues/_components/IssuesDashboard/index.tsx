@@ -122,6 +122,7 @@ export function IssuesDashboard({
   return (
     <div className='flex flex-grow flex-col w-full p-6 gap-2 min-w-0'>
       <TableWithHeader
+        takeVertialSpace
         title={<SearchIssuesInput serverParams={params} />}
         actions={<IssuesFilters serverParams={params} />}
         table={

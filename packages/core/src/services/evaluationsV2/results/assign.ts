@@ -7,12 +7,11 @@ import {
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
-import { IssuesRepository } from '../../../repositories'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { createIssue } from '../../issues/create'
-import { addResultToIssue } from '../../issues/results/add'
-import { removeResultFromIssue } from '../../issues/results/remove'
+import { validateResultForIssue } from '../../issues/results/validate'
+import { reassignResultFromIssue } from './reassignFromIssue'
 
 export async function assignEvaluationResultV2ToIssue<
   T extends EvaluationType,
@@ -33,7 +32,17 @@ export async function assignEvaluationResultV2ToIssue<
   },
   transaction = new Transaction(),
 ) {
-  return await transaction.call(async (tx) => {
+  return await transaction.call(async (db) => {
+    const validating = await validateResultForIssue(
+      {
+        result: { result, evaluation },
+        issue,
+        skipBelongsCheck: true, // We'll check this later in reassignResultFromIssue
+      },
+      db,
+    )
+    if (!Result.isOk(validating)) return validating
+
     if (!issue) {
       if (!create) {
         return Result.error(new BadRequestError('No issue was provided'))
@@ -47,43 +56,14 @@ export async function assignEvaluationResultV2ToIssue<
       issue = creating.value.issue
     }
 
-    if (result.issueId) {
-      // Fetch the old issue that the result is currently assigned to
-      const issuesRepository = new IssuesRepository(workspace.id, tx)
-      const fetchingOldIssue = await issuesRepository.find(result.issueId)
-      if (fetchingOldIssue.error) {
-        return Result.error(fetchingOldIssue.error)
-      }
-      const oldIssue = fetchingOldIssue.value
-
-      const removing = await removeResultFromIssue(
-        {
-          result: { result, evaluation, embedding: result.embedding },
-          issue: oldIssue,
-          workspace: workspace,
-        },
-        transaction,
-      )
-      if (removing.error) {
-        return Result.error(removing.error)
-      }
-      result = removing.value.result
-    }
-
-    const adding = await addResultToIssue(
+    return await reassignResultFromIssue(
       {
-        result: { result, evaluation, embedding: result.embedding },
-        issue: issue,
-        workspace: workspace,
+        workspace,
+        result,
+        evaluation,
+        targetIssue: issue,
       },
       transaction,
     )
-    if (adding.error) {
-      return Result.error(adding.error)
-    }
-    issue = adding.value.issue
-    result = adding.value.result
-
-    return Result.ok({ result, issue })
   })
 }

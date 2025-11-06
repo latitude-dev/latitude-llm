@@ -1,11 +1,10 @@
 'use client'
 
-import useFetcher from '$/hooks/useFetcher'
-import { ROUTES } from '$/services/routes'
-import { AssembledTrace } from '@latitude-data/constants'
-import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
+import { AssembledTraceResponse } from '$/app/api/conversations/[conversationId]/route'
 
 export function useConversation(
   {
@@ -18,12 +17,14 @@ export function useConversation(
   const route = conversationId
     ? ROUTES.api.conversations.detail(conversationId).root
     : undefined
-  const fetcher = useFetcher<AssembledTrace>(route, { fallback: undefined })
+  const fetcher = useFetcher<AssembledTraceResponse>(route, {
+    fallback: undefined,
+  })
   const {
     data = undefined,
     mutate,
     isLoading,
-  } = useSWR<AssembledTrace>(compact(route), fetcher, opts)
+  } = useSWR<AssembledTraceResponse>(route, fetcher, opts)
 
   return useMemo(() => ({ data, mutate, isLoading }), [data, mutate, isLoading])
 }

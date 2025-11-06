@@ -1,9 +1,12 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
+import { OkType } from '@latitude-data/core/lib/Result'
 import { SpansRepository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { assembleTrace } from '@latitude-data/core/services/tracing/traces/assemble'
 import { NextRequest, NextResponse } from 'next/server'
+
+export type AssembledTraceResponse = OkType<typeof assembleTrace>
 
 export const GET = errorHandler(
   authHandler(

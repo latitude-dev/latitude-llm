@@ -30,9 +30,9 @@ export async function unassignEvaluationResultV2FromIssue<
   return await transaction.call(async () => {
     const removing = await removeResultFromIssue(
       {
+        workspace,
+        issue,
         result: { result, evaluation, embedding: result.embedding },
-        issue: issue,
-        workspace: workspace,
       },
       transaction,
     )

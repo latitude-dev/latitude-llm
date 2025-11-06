@@ -1,7 +1,9 @@
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { TableResizableLayout } from '$/components/TableResizableLayout'
 import { SerializedIssue } from '$/stores/issues'
 import { useIssuesParameters } from '$/stores/issues/useIssuesParameters'
+import { Span } from '@latitude-data/constants'
 import {
   MINI_HISTOGRAM_STATS_DAYS,
   SafeIssuesParams,
@@ -19,7 +21,6 @@ import {
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useCallback, useMemo, useRef } from 'react'
 import { HistogramCell } from '../HistogramCell'
 import { IssuesDetailPanel } from '../IssueDetailPanel'
 import { IssuesTitle } from '../IssuesTitle'
@@ -91,8 +92,10 @@ export function IssuesTable({
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
   const noData = !isLoading && !issues.length
+  const [selectedSpan, setSelectedSpan] = useState<Span | null>(null)
   const onClickRow = useCallback(
     (issue: SerializedIssue) => () => {
+      setSelectedSpan(null)
       onSelectChange(
         selectedIssue === undefined
           ? issue
@@ -106,14 +109,6 @@ export function IssuesTable({
   const onCloseDetails = useCallback(() => {
     onSelectChange(undefined)
   }, [onSelectChange])
-
-  // TODO(evaluation-generation): remove and use when we have the design for evaluations in the issues table
-  // const { data: evaluations, isLoading: isLoadingEvaluations } =
-  // useIssueEvaluations({
-  //   projectId: project.id,
-  //   commitUuid: commit.uuid,
-  //   documentUuids: issues?.map((issue) => issue.documentUuid) ?? [],
-  // })
 
   if (noData) {
     return (
@@ -189,7 +184,7 @@ export function IssuesTable({
                     />
                   </TableCell>
                   <TableCell>
-                    <IssueItemActions issue={issue} />
+                    <IssueItemActions placement='item' issue={issue} />
                   </TableCell>
                 </TableRow>
               ))
@@ -204,6 +199,8 @@ export function IssuesTable({
               stickyRef={stickyRef}
               onCloseDetails={onCloseDetails}
               issue={selectedIssue}
+              selectedSpan={selectedSpan}
+              setSelectedSpan={setSelectedSpan}
               containerRef={sidebarWrapperRef}
               offset={DETAILS_OFFSET}
             />

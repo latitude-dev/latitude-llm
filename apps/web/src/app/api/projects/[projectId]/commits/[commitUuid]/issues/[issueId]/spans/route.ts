@@ -4,20 +4,14 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import {
   ProjectsRepository,
   IssuesRepository,
-  EvaluationResultsV2Repository,
-  SpansRepository,
 } from '@latitude-data/core/repositories'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
-import { calculateOffset } from '@latitude-data/core/lib/pagination/index'
 import { OkType } from '@latitude-data/core/lib/Result'
+import { getSpansByIssue } from '@latitude-data/core/data-access/issues/getSpansByIssue'
 
-type SpanResponse = OkType<SpansRepository['findBySpanAndTraceIds']>
-export type IssueSpansResponse = {
-  spans: SpanResponse
-  hasNextPage: boolean
-}
+export type IssueSpansResponse = OkType<typeof getSpansByIssue>
 
 const paramsSchema = z.object({
   projectId: z.coerce.number(),
@@ -56,10 +50,8 @@ export const GET = errorHandler(
         page: request.nextUrl.searchParams.get('page') ?? '1',
         pageSize: request.nextUrl.searchParams.get('pageSize') ?? '25',
       })
-
       const projectsRepo = new ProjectsRepository(workspace.id)
       const project = await projectsRepo.find(projectId).then((r) => r.unwrap())
-
       const commitsRepo = new CommitsRepository(workspace.id)
       const commit = await commitsRepo
         .getCommitByUuid({
@@ -80,42 +72,15 @@ export const GET = errorHandler(
           { status: 404 },
         )
       }
-
-      const evaluationResultsRepo = new EvaluationResultsV2Repository(
-        workspace.id,
-      )
-
-      // Fetch one extra result to determine if there's a next page
-      const limit = query.pageSize + 1
-      const offset = calculateOffset(query.page, query.pageSize)
-
-      const results = await evaluationResultsRepo.listByIssueWithDetails({
-        issue,
+      const data = await getSpansByIssue({
+        workspace,
         commit,
-        limit,
-        offset,
-      })
+        issue,
+        page: query.page,
+        pageSize: query.pageSize,
+      }).then((r) => r.unwrap())
 
-      const hasNextPage = results.length > query.pageSize
-      const returnResults = hasNextPage
-        ? results.slice(0, query.pageSize)
-        : results
-
-      const spansRepo = new SpansRepository(workspace.id)
-      const spans = await spansRepo.findBySpanAndTraceIds(
-        returnResults.map((r) => ({
-          spanId: r.evaluatedSpanId!,
-          traceId: r.evaluatedTraceId!,
-        })),
-      )
-
-      return NextResponse.json(
-        {
-          spans: spans.unwrap(),
-          hasNextPage,
-        },
-        { status: 200 },
-      )
+      return NextResponse.json(data, { status: 200 })
     },
   ),
 )

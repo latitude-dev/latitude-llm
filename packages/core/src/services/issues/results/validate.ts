@@ -6,6 +6,7 @@ import {
 } from '../../../constants'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
+import { IssueEvaluationResultsRepository } from '../../../repositories'
 import { type Issue } from '../../../schema/models/types/Issue'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
@@ -25,7 +26,7 @@ export async function validateResultForIssue<
     skipBelongsCheck?: boolean
     skipReasonCheck?: boolean
   },
-  _ = database,
+  db = database,
 ) {
   // Note: VERY important checks, think twice before changing them!
 
@@ -41,12 +42,23 @@ export async function validateResultForIssue<
     )
   }
 
-  if (result.issueId && !skipBelongsCheck) {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot use a result that already belongs to an issue',
-      ),
+  if (!skipBelongsCheck) {
+    // Check if result already belongs to an issue via intermediate table
+    const repository = new IssueEvaluationResultsRepository(
+      result.workspaceId,
+      db,
     )
+    const activeAssignedIssue = await repository.findLastActiveAssignedIssue({
+      result,
+    })
+
+    if (activeAssignedIssue) {
+      return Result.error(
+        new UnprocessableEntityError(
+          'Cannot use a result that already belongs to an issue',
+        ),
+      )
+    }
   }
 
   if (result.experimentId) {

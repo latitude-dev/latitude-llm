@@ -38,28 +38,18 @@ import { commits } from '../schema/models/commits'
 import { datasetRows } from '../schema/models/datasetRows'
 import { datasets } from '../schema/models/datasets'
 import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
+import { issueEvaluationResults } from '../schema/models/issueEvaluationResults'
 import { providerLogs } from '../schema/models/providerLogs'
-import { Commit } from '../schema/models/types/Commit'
-import { Issue } from '../schema/models/types/Issue'
-import { spans } from '../schema/models/spans'
 import {
   EvaluationResultV2WithDetails,
   EvaluationV2Stats,
   ResultWithEvaluationV2,
 } from '../schema/types'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
+import { IssueEvaluationResultsRepository } from './issueEvaluationResultsRepository'
 import Repository from './repositoryV2'
-import { CommitsRepository } from './commitsRepository'
 
 const tt = getTableColumns(evaluationResultsV2)
-
-type IssueEvaluationResult = ResultWithEvaluationV2['result'] & {
-  evaluation: ResultWithEvaluationV2['evaluation']
-  commitUuid: string
-  commit: Commit
-  evaluatedSpanId?: string | null
-  evaluatedTraceId?: string | null
-}
 
 export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2> {
   get scopeFilter() {
@@ -573,77 +563,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     )
   }
 
-  async listByIssueWithDetails({
-    issue,
-    commit,
-    limit,
-    offset,
-  }: {
-    issue: Issue
-    commit: Commit
-    limit: number
-    offset: number
-  }) {
-    const documentUuid = issue.documentUuid
-    const commitIds = await this.getCommitIdsHistory({ commit })
-    const results = await this.db
-      .select({
-        ...tt,
-        commit: commits,
-        commitUuid: commits.uuid,
-      })
-      .from(evaluationResultsV2)
-      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
-      .innerJoin(
-        spans,
-        and(
-          eq(spans.id, evaluationResultsV2.evaluatedSpanId),
-          eq(spans.traceId, evaluationResultsV2.evaluatedTraceId),
-        ),
-      )
-      .where(
-        and(
-          this.scopeFilter,
-          isNull(commits.deletedAt),
-          isNotNull(evaluationResultsV2.evaluatedSpanId),
-          isNotNull(evaluationResultsV2.evaluatedTraceId),
-          eq(evaluationResultsV2.issueId, issue.id),
-          eq(spans.documentUuid, documentUuid),
-          inArray(evaluationResultsV2.commitId, commitIds),
-        ),
-      )
-      .orderBy(
-        desc(evaluationResultsV2.createdAt),
-        desc(evaluationResultsV2.id),
-      )
-      .limit(limit)
-      .offset(offset)
-
-    const evaluationsByCommit = await this.getEvaluationsByCommit({
-      projectId: commit.projectId,
-      documentUuid,
-      results: results as (Omit<EvaluationResultV2, 'score'> & {
-        commitUuid: string
-      })[],
-    })
-
-    return results.flatMap((result) => {
-      const evaluationByCommit = evaluationsByCommit[result.commitUuid]
-      const evaluation = evaluationByCommit.find(
-        (e) => e.uuid === result.evaluationUuid,
-      )
-
-      if (!evaluation) return []
-
-      return [
-        {
-          ...result,
-          evaluation,
-        } as IssueEvaluationResult,
-      ]
-    })
-  }
-
   async listBySpanTrace({
     projectId,
     documentUuid,
@@ -683,6 +602,12 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       })[],
     })
 
+    // Fetch active issues for all results and add issueId to result
+    const issueEvalResultsRepo = new IssueEvaluationResultsRepository(
+      this.workspaceId,
+      this.db,
+    )
+
     const resultsWithEvaluations: ResultWithEvaluationV2[] = []
     for (const result of results) {
       const evaluation = evaluationsByCommit[result.commitUuid]!.find(
@@ -690,8 +615,20 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       )
       if (!evaluation) continue
 
+      // Find the active issue for this result
+      const activeAssignment =
+        await issueEvalResultsRepo.findLastActiveAssignedIssue({
+          result: result as EvaluationResultV2,
+        })
+
+      // Add issueId to result for backward compatibility
+      const resultWithIssue = {
+        ...result,
+        issueId: activeAssignment?.issueId ?? null,
+      } as EvaluationResultV2
+
       resultsWithEvaluations.push({
-        result,
+        result: resultWithIssue,
         evaluation,
       } as ResultWithEvaluationV2)
     }
@@ -752,7 +689,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   async selectForIssueGeneration({ issueId }: { issueId: number }) {
     const conditions = [
       this.scopeFilter,
-      eq(evaluationResultsV2.issueId, issueId),
+      eq(issueEvaluationResults.issueId, issueId),
       isNull(evaluationResultsV2.error),
       sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
       isNotNull(commits.mergedAt),
@@ -765,6 +702,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .select(tt)
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .innerJoin(
+        issueEvaluationResults,
+        eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+      )
       .where(
         and(
           ...conditions,
@@ -785,6 +726,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const older = await this.db
       .select(tt)
       .from(evaluationResultsV2)
+      .innerJoin(
+        issueEvaluationResults,
+        eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+      )
       .where(and(...conditions))
       .orderBy(
         asc(evaluationResultsV2.createdAt),
@@ -838,12 +783,5 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         ),
       ),
     )
-  }
-
-  private async getCommitIdsHistory({ commit }: { commit: Commit }) {
-    const commitsRepo = new CommitsRepository(this.workspaceId, this.db)
-    const commits = await commitsRepo.getCommitsHistory({ commit })
-    const commitIds = commits.map((c: { id: number }) => c.id)
-    return commitIds
   }
 }

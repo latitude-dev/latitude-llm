@@ -1,3 +1,4 @@
+import { and, eq, ne } from 'drizzle-orm'
 import { isEqual } from 'date-fns'
 import {
   EvaluationMetric,
@@ -16,17 +17,23 @@ import { CommitsRepository, IssuesRepository } from '../../../repositories'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
-import { updateEvaluationResultV2 } from '../../evaluationsV2/results/update'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import { incrementIssueHistogram } from '../histograms/increment'
 import { embedReason, updateCentroid } from '../shared'
 import { updateIssue } from '../update'
 import { validateResultForIssue } from './validate'
 import { database } from '../../../client'
-import { and, eq, ne } from 'drizzle-orm'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
+import { issueEvaluationResults } from '../../../schema/models/issueEvaluationResults'
+import { addIssueEvaluationResult } from '../../issueEvaluationResults/add'
 
 // TODO(AO): Add tests
+
+/**
+ * No need to check for existing associations,
+ * You need to make sure the result is not already assigned
+ * to an issue before calling this service.
+ */
 export async function addResultToIssue<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
@@ -47,12 +54,6 @@ export async function addResultToIssue<
   const timestamp = new Date()
 
   let issueWasNew = false
-
-  const validating = await validateResultForIssue({
-    result: { result, evaluation },
-    issue: issue,
-  })
-  if (!Result.isOk(validating)) return validating
 
   const commitsRepository = new CommitsRepository(workspace.id)
   const getting = await commitsRepository.getCommitById(result.commitId)
@@ -113,13 +114,16 @@ export async function addResultToIssue<
         )
       }
 
-      const updatingre = await updateEvaluationResultV2(
-        { issue, result, commit, workspace },
+      // Create the issue-evaluation result association
+      const adding = await addIssueEvaluationResult(
+        {
+          issue,
+          evaluationResult: result,
+          workspaceId: workspace.id,
+        },
         transaction,
       )
-      if (!Result.isOk(updatingre)) return updatingre
-
-      result = updatingre.value.result
+      if (!Result.isOk(adding)) return adding
 
       const incrementing = await incrementIssueHistogram(
         { result, issue, commit, workspace },
@@ -182,11 +186,15 @@ export async function containsResultsFromOtherCommits(
 ) {
   const commitIds = await db
     .selectDistinct({ commitId: evaluationResultsV2.commitId })
-    .from(evaluationResultsV2)
+    .from(issueEvaluationResults)
+    .innerJoin(
+      evaluationResultsV2,
+      eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+    )
     .where(
       and(
-        eq(evaluationResultsV2.workspaceId, issue.workspaceId),
-        eq(evaluationResultsV2.issueId, issue.id),
+        eq(issueEvaluationResults.workspaceId, issue.workspaceId),
+        eq(issueEvaluationResults.issueId, issue.id),
         ne(evaluationResultsV2.commitId, commitId),
       ),
     )
