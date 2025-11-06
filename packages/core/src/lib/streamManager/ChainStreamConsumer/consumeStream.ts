@@ -98,7 +98,11 @@ export async function consumeStream({
     }
   } finally {
     if (reader) {
-      reader.releaseLock()
+      try {
+        reader.releaseLock()
+      } catch (e) {
+        // Ignore errors during cleanup - lock may already be released
+      }
     }
   }
 
