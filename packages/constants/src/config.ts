@@ -23,6 +23,11 @@ export enum LatitudeToolInternalName {
   TODO = 'todo_write',
 }
 
+export const NOT_SIMULATABLE_LATITUDE_TOOLS = [
+  LatitudeTool.Think,
+  LatitudeTool.TODO,
+] as LatitudeTool[]
+
 export const MAX_STEPS_CONFIG_NAME = 'maxSteps'
 export const DEFAULT_MAX_STEPS = 20
 export const ABSOLUTE_MAX_STEPS = 150

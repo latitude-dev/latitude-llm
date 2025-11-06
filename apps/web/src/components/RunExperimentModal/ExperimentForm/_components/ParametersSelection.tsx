@@ -120,7 +120,7 @@ export function ParametersSelection({
 
   if (!parameters) {
     return (
-      <div className='flex flex-col gap-y-3 w-1/2'>
+      <div className='flex flex-col gap-y-3 w-2/3'>
         <Skeleton className='h-6 w-full' />
         <Skeleton className='h-6 w-full' />
         <Skeleton className='h-6 w-full' />
@@ -129,7 +129,7 @@ export function ParametersSelection({
   }
 
   return (
-    <div className='flex flex-col gap-y-3 w-1/2'>
+    <div className='flex flex-col gap-y-3 w-2/3'>
       {parameters.map((param) => (
         <Select
           key={param}

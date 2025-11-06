@@ -87,6 +87,7 @@ export function RunExperimentModal({
       fromRow: formPayload.fromLine ?? 1,
       toRow: formPayload.toLine,
       evaluationUuids: formPayload.selectedEvaluations.map((ev) => ev.uuid),
+      simulationSettings: formPayload.simulationSettings,
     })
   }, [formPayload, project.id, commit.uuid, document.documentUuid, create])
 

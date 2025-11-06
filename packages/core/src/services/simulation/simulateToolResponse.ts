@@ -5,19 +5,21 @@ import {
   ToolExecutionOptions,
   ToolManifest,
 } from '@latitude-data/constants'
-import { StreamManager } from '../../lib/streamManager'
 import { getToolSimulationPrompt } from './getCopilotData'
 import { runDocumentAtCommit } from '../commits'
 import { BACKGROUND, telemetry } from '../../telemetry'
+import { Context } from '@opentelemetry/api'
 
 export function simulatedToolDefinition({
-  streamManager,
+  context,
   toolName,
   toolManifest,
+  simulationInstructions,
 }: {
-  streamManager: StreamManager
+  context: Context
   toolName: string
   toolManifest: ToolManifest
+  simulationInstructions?: string
 }): Tool {
   return {
     ...toolManifest.definition,
@@ -25,7 +27,7 @@ export function simulatedToolDefinition({
       args: Record<string, unknown>,
       toolCall: ToolExecutionOptions,
     ) => {
-      const $tool = telemetry.tool(streamManager.$completion!.context, {
+      const $tool = telemetry.tool(context, {
         name: toolName,
         call: {
           id: toolCall.toolCallId,
@@ -50,8 +52,7 @@ export function simulatedToolDefinition({
             toolInputSchema: toolManifest.definition.inputSchema,
             toolArgs: args,
             messages: toolCall.messages,
-            prompt:
-              streamManager.simulationSettings?.toolSimulationInstructions,
+            prompt: simulationInstructions,
             toolOutputSchema: toolManifest.definition.outputSchema,
           },
         }).then((r) => r.unwrap())

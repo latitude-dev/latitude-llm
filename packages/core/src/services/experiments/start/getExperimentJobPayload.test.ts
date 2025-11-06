@@ -92,6 +92,9 @@ describe('getExperimentJobPayload', () => {
       evaluations,
       fromRow: 25,
       toRow: 40,
+      simulationSettings: {
+        simulateToolResponses: true,
+      },
     }).then((r) => r.unwrap())
 
     const { rows } = await getExperimentJobPayload({
@@ -121,6 +124,9 @@ describe('getExperimentJobPayload', () => {
       datasetLabels,
       evaluations,
       toRow: 39,
+      simulationSettings: {
+        simulateToolResponses: true,
+      },
     }).then((r) => r.unwrap())
 
     const { rows } = await getExperimentJobPayload({
@@ -142,6 +148,9 @@ describe('getExperimentJobPayload', () => {
       parametersMap,
       datasetLabels,
       evaluations,
+      simulationSettings: {
+        simulateToolResponses: true,
+      },
     }).then((r) => r.unwrap())
 
     const result = await getExperimentJobPayload({

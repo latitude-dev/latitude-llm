@@ -74,7 +74,7 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
               {
                 'border-red-500 focus-visible:ring-red-500': errors,
                 // Account for inner textarea padding
-                '!min-h-[calc(100%-theme(spacing.6))]': autoGrow,
+                '!min-h-[calc(100%-theme(spacing.6))] resize-none': autoGrow,
               },
               className,
             )}

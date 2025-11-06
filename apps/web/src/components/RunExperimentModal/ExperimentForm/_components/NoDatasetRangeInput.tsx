@@ -25,7 +25,7 @@ export function NoDatasetRangeInput({
         if (!isNaN(n)) setToLine(n - 1)
       }}
       min={1}
-      className='w-1/2'
+      className='w-2/3'
     />
   )
 }

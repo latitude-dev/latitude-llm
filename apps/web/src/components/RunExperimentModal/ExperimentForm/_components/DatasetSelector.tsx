@@ -39,11 +39,11 @@ export function DatasetSelector({
   )
 
   if (isLoadingDatasets) {
-    return <Skeleton height='h2' className='w-1/2' />
+    return <Skeleton height='h2' className='w-2/3' />
   }
 
   return (
-    <div className='flex flex-row items-center gap-4 w-1/2'>
+    <div className='flex flex-row items-center gap-4 w-2/3'>
       {datasets.length > 0 && (
         <div className='flex-grow'>
           <Select
@@ -70,7 +70,7 @@ export function DatasetSelector({
           </>
         )}
         {parameters === undefined ? (
-          <Skeleton height='h2' className='w-1/2' />
+          <Skeleton height='h2' className='w-2/3' />
         ) : (
           <Link
             className='flex flex-row items-center gap-1 hover:underline'

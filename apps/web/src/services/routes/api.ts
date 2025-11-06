@@ -205,6 +205,9 @@ export const API_ROUTES = {
                         : `${documentRoot}/traces/daily-count`
                     },
                   },
+                  tools: {
+                    root: `${documentRoot}/tools`,
+                  },
                 }
               },
             },

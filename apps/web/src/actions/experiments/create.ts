@@ -20,6 +20,11 @@ export const createExperimentAction = withDocument
       datasetLabels: z.record(z.string(), z.string()),
       fromRow: z.number(),
       toRow: z.number().optional(),
+      simulationSettings: z.object({
+        simulateToolResponses: z.boolean().optional(),
+        simulatedTools: z.array(z.string()).optional(),
+        toolSimulationInstructions: z.string().optional(),
+      }),
     }),
   )
   .action(async ({ ctx, parsedInput }) => {
@@ -31,6 +36,7 @@ export const createExperimentAction = withDocument
       datasetLabels,
       fromRow,
       toRow,
+      simulationSettings,
     } = parsedInput
     const datasetsScope = new DatasetsRepository(ctx.workspace.id)
     const dataset = datasetId
@@ -70,6 +76,7 @@ export const createExperimentAction = withDocument
       datasetLabels,
       fromRow,
       toRow,
+      simulationSettings,
     }).then((r) => r.unwrap())
 
     await Promise.all(
