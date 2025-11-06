@@ -28,8 +28,8 @@ import {
 import { telemetry, TelemetryContext } from '../../telemetry'
 import { ChainError, RunErrorCodes } from '../errors'
 import { generateUUIDIdentifier } from '../generateUUID'
-import { ToolHandler } from './clientTools/handlers'
-import { ResolvedTools } from './resolveTools/types'
+import { ToolHandler } from '../../services/documents/tools/clientTools/handlers'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { createPromiseWithResolver } from './utils/createPromiseResolver'
 
 const addTokens = ({
@@ -341,7 +341,7 @@ export abstract class StreamManager {
 
   protected transformPromptlToVercelToolDeclarations(
     config: ValidatedChainStep['config'],
-    toolsBySource: ResolvedTools,
+    toolsBySource: ResolvedToolsDict,
   ) {
     const tools = Object.fromEntries(
       Object.entries(toolsBySource).map(([name, { definition }]) => [

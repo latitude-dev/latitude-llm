@@ -6,10 +6,17 @@ import {
   ValidatedChainStep,
 } from '../../services/chains/ChainValidator'
 import { StreamManager, StreamManagerProps } from '.'
-import { resolveToolsFromConfig } from './resolveTools'
 import { CachedApiKeys } from '../../services/chains/run'
 import { isAbortError } from '../isAbortError'
 import type { SimulationSettings } from '@latitude-data/constants/simulation'
+import { lookupTools } from '../../services/documents/tools/lookup'
+import { DocumentVersionsRepository } from '../../repositories'
+import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { resolveTools } from '../../services/documents/tools/resolve'
+import { PromisedResult } from '../Transaction'
+import { ResolvedToolsDict } from '@latitude-data/constants'
+import { LatitudeError } from '../errors'
+import { Result } from '../Result'
 
 /**
  * ChainStreamManager extends StreamManager to handle streaming for multi-step AI chains.
@@ -111,9 +118,35 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
     }
   }
 
-  protected getToolsBySource(step: ValidatedChainStep) {
-    return resolveToolsFromConfig({
+  protected async getToolsBySource(
+    step: ValidatedChainStep,
+  ): PromisedResult<ResolvedToolsDict, LatitudeError> {
+    let documents: DocumentVersion[] = []
+    let documentUuid: string = ''
+
+    if ('commit' in this.promptSource) {
+      const documentScope = new DocumentVersionsRepository(this.workspace.id)
+      const documentsResult = await documentScope.getDocumentsAtCommit(
+        this.promptSource.commit,
+      )
+      if (!Result.isOk(documentsResult)) return documentsResult
+
+      documents = documentsResult.unwrap()
+      documentUuid = this.promptSource.document.documentUuid
+    }
+
+    const toolsManifestResult = await lookupTools({
       config: step.config,
+      documentUuid,
+      documents,
+      workspace: this.workspace,
+    })
+
+    if (toolsManifestResult.error) return toolsManifestResult
+    const toolManifestDict = toolsManifestResult.unwrap()
+
+    return resolveTools({
+      toolManifestDict,
       streamManager: this,
     })
   }

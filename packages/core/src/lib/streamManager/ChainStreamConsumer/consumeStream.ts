@@ -11,13 +11,13 @@ import {
 } from '../../../constants'
 import { Providers } from '@latitude-data/constants'
 import { AIReturn } from '../../../services/ai'
-import { ResolvedTools } from '../resolveTools/types'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 
 type ConsumeStreamParams = {
   result: AIReturn<StreamType>
   controller: ReadableStreamDefaultController
   accumulatedText: { text: string }
-  resolvedTools?: ResolvedTools
+  resolvedTools?: ResolvedToolsDict
 }
 
 type NoRunError = object

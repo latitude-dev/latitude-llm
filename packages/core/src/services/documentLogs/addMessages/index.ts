@@ -6,7 +6,7 @@ import { unsafelyFindProviderApiKey } from '../../../data-access/providerApiKeys
 import { publisher } from '../../../events/publisher'
 import { buildConversation } from '../../../helpers'
 import { Result } from '../../../lib/Result'
-import { ToolHandler } from '../../../lib/streamManager/clientTools/handlers'
+import { ToolHandler } from '../../documents/tools/clientTools/handlers'
 import { DefaultStreamManager } from '../../../lib/streamManager/defaultStreamManager'
 import {
   CommitsRepository,

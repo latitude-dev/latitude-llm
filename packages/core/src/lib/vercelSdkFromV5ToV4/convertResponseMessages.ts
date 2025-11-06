@@ -18,7 +18,7 @@ import {
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { AIReturn } from '../../services/ai'
 import { StreamType } from '../../constants'
-import { ResolvedTools } from '../streamManager/resolveTools/types'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 
 type NormalizedToolResult = string | Record<string, unknown> | MessageContent[]
 
@@ -62,7 +62,7 @@ function convertToolMessage(msg: ToolModelMessage): ToolMessage {
 
 function convertAssistantMessage(
   msg: AssistantModelMessage,
-  resolvedTools?: ResolvedTools,
+  resolvedTools?: ResolvedToolsDict,
 ) {
   const parts = Array.isArray(msg.content)
     ? msg.content
@@ -139,7 +139,7 @@ export function convertResponseMessages({
   resolvedTools,
 }: {
   messages: AIMessages | undefined
-  resolvedTools?: ResolvedTools
+  resolvedTools?: ResolvedToolsDict
 }): LegacyMessage[] {
   if (!messages || messages.length === 0) return []
 

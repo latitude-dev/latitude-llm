@@ -118,7 +118,8 @@ export type { AzureConfig } from './providers/azure'
 export {
   ComputerCallSchema,
   FileSearchToolSchema,
-  openAIToolsList,
+  openAIToolsListSchema,
+  openAIToolSchema,
   WebSearchToolSchema,
   type OpenAIFilesSearchTool,
   type OpenAIWebSearchTool,

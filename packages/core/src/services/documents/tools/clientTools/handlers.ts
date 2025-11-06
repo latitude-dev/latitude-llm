@@ -1,12 +1,13 @@
-import { ToolDefinition, ToolExecutionOptions } from '@latitude-data/constants'
-import { publisher } from '../../../events/publisher'
-import { TelemetryContext } from '../../../telemetry'
-import { ChainError, RunErrorCodes } from '../../errors'
+import { ToolExecutionOptions, ToolManifest } from '@latitude-data/constants'
+import { publisher } from '../../../../events/publisher'
+import { TelemetryContext } from '../../../../telemetry'
+import { ChainError, RunErrorCodes } from '../../../../lib/errors'
+import { ToolSource } from '@latitude-data/constants/toolSources'
 
 const TIMEOUT_CLIENT_TOOL_CALL = 5 * 60 * 1000 // 5 minutes
 
-export type ToolHandlerProps = {
-  toolDefinition: ToolDefinition
+type ToolHandlerProps = {
+  toolManifest: ToolManifest<ToolSource.Client>
   toolCall: ToolExecutionOptions
   context: TelemetryContext
   args: Record<string, unknown>
