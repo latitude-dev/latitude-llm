@@ -253,10 +253,12 @@ The previously described `POST /projects/{projectId}/versions/{versionUuid}/docu
   "messages": [
     {
       "role": "user" | "system" | "assistant",
+      "content": [
         {
           "type": "text",
-          "content": string
+          "text": "message content"
         }
+      ],
     }
   ],
   "stream": true
