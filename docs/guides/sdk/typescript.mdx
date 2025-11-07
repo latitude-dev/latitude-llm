@@ -115,19 +115,14 @@ const result = await latitude.prompts.run('prompt-path', {
     productName: 'CloudSync Pro',
     audience: 'Small Business Owners',
   },
+  // Disable streaming (enabled by default)
+  stream: false,
   // Optional: Provide a custom identifier for this run
   customIdentifier: 'email-campaign-2023',
-  // Optional: Provide callbacks for events
-  onFinished: (result) => {
-    console.log('Run completed:', result.uuid)
-  },
-  onError: (error) => {
-    console.error('Run error:', error.message)
-  },
 })
 
 console.log('Conversation UUID:', result.uuid)
-console.log('Conversation messages:', result.conversation)
+console.log('Response:', result.response.text)
 ```
 
 ### Handling Streaming Responses
@@ -143,7 +138,16 @@ await latitude.prompts.run('prompt-path', {
   // Enable streaming
   stream: true,
   // Provide callbacks for events
+  onFinished: (result) => {
+    // Execution succeeded
+    console.log("Stream completed:", result.response.text);
+  },
+  onError: (error) => {
+    // Execution failed
+    console.log("Error:", error);
+  },
   onEvent: ({ event, data }) => {
+    // All events can be individually handled here
     if (event === StreamEventTypes.Provider && data.type === 'text-delta') {
       console.log(data.textDelta)
     } else if (
@@ -153,12 +157,6 @@ await latitude.prompts.run('prompt-path', {
       console.log('Conversation UUID:', data.uuid)
       console.log('Conversation messages:', data.messages)
     }
-  },
-  onFinished: (result) => {
-    console.log('Stream completed:', result.uuid)
-  },
-  onError: (error) => {
-    console.error('Stream error:', error.message)
   },
 })
 ```
