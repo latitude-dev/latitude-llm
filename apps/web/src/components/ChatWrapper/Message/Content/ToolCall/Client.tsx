@@ -27,8 +27,16 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Label } from '@latitude-data/web-ui/atoms/Label'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { stringifyUnknown } from '@latitude-data/web-ui/textUtils'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
-function UnansweredClientToolContent({ toolCallId }: { toolCallId: string }) {
+function UnansweredClientToolContent({
+  toolCallId,
+  simulated,
+}: {
+  toolCallId: string
+  simulated?: boolean
+}) {
   const [value, setValue] = useState<string>('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { execute, isPending } = useLatitudeAction(submitToolResultAction, {
@@ -56,34 +64,43 @@ function UnansweredClientToolContent({ toolCallId }: { toolCallId: string }) {
   }, [])
 
   return (
-    <ToolCardContentWrapper badge='Output'>
-      <form action={action} className='p-4 flex flex-col gap-2'>
-        <Input name='toolCallId' value={toolCallId} type='hidden' />
-        <Label>Your tool response</Label>
-        <TextArea
-          ref={textareaRef}
-          name='result'
-          value={value}
-          onKeyDown={onKeyDown}
-          onChange={(ev) => setValue(ev.target.value)}
-        />
-        <div className='flex items-center justify-end'>
-          <Button fancy disabled={isPending} type='submit'>
-            Submit
-          </Button>
+    <ToolCardContentWrapper badge='Output' simulated={simulated}>
+      {simulated ? (
+        <div className='flex flex-row gap-2 items-center justify-center pb-3'>
+          <Icon name='loader' color='foregroundMuted' spin />
+          <Text.H6 color='foregroundMuted'>Simulating tool...</Text.H6>
         </div>
-      </form>
+      ) : (
+        <form action={action} className='p-4 flex flex-col gap-2'>
+          <Input name='toolCallId' value={toolCallId} type='hidden' />
+          <Label>Your tool response</Label>
+          <TextArea
+            ref={textareaRef}
+            name='result'
+            value={value}
+            onKeyDown={onKeyDown}
+            onChange={(ev) => setValue(ev.target.value)}
+          />
+          <div className='flex items-center justify-end'>
+            <Button fancy disabled={isPending} type='submit'>
+              Submit
+            </Button>
+          </div>
+        </form>
+      )}
     </ToolCardContentWrapper>
   )
 }
 
 function AnsweredClientToolContent({
   toolResponse,
+  simulated,
 }: {
   toolResponse: ToolContent
+  simulated?: boolean
 }) {
   return (
-    <ToolCardContentWrapper badge='Output'>
+    <ToolCardContentWrapper badge='Output' simulated={simulated}>
       {toolResponse.isError ? (
         <div className='w-full pt-3 items-center'>
           <Alert
@@ -123,6 +140,7 @@ export function ClientToolCard({
         label={<ToolCardText>{toolRequest.toolName}</ToolCardText>}
         status={status}
         isOpen={isOpen}
+        simulated={toolRequest._sourceData?.simulated}
         onToggle={status === 'pending' ? undefined : () => setIsOpen(!isOpen)}
       />
 
@@ -135,9 +153,15 @@ export function ClientToolCard({
       )}
       {isOpen &&
         (status === 'pending' || !toolResponse ? (
-          <UnansweredClientToolContent toolCallId={toolRequest.toolCallId} />
+          <UnansweredClientToolContent
+            toolCallId={toolRequest.toolCallId}
+            simulated={toolRequest._sourceData?.simulated}
+          />
         ) : (
-          <AnsweredClientToolContent toolResponse={toolResponse} />
+          <AnsweredClientToolContent
+            toolResponse={toolResponse}
+            simulated={toolRequest._sourceData?.simulated}
+          />
         ))}
     </ToolCardWrapper>
   )
