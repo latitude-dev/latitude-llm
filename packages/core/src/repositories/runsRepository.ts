@@ -1,6 +1,7 @@
-import { Cache, cache as redis, withCacheLock } from '../cache'
+import { Cache, cache as redis } from '../cache'
 import {
   ACTIVE_RUN_CACHE_TTL,
+  ACTIVE_RUN_CACHE_TTL_SECONDS,
   ACTIVE_RUNS_CACHE_KEY,
   ActiveRun,
   CompletedRun,
@@ -84,28 +85,35 @@ export class RunsRepository {
     cache = cache ?? (await redis())
 
     try {
-      const payload = (await cache.get(key)) || '{}'
-      let active = JSON.parse(payload) as Record<string, ActiveRun>
-      active = Object.fromEntries(
-        Object.entries(active)
-          .map(
-            ([uuid, run]) =>
-              [
-                uuid,
-                {
-                  ...run,
-                  queuedAt: new Date(run.queuedAt),
-                  startedAt: run.startedAt
-                    ? new Date(run.startedAt)
-                    : undefined,
-                },
-              ] as const,
-          )
-          .filter(
-            ([_, run]) =>
-              run.queuedAt.getTime() > Date.now() - ACTIVE_RUN_CACHE_TTL,
-          ),
-      )
+      // Use HGETALL to get all runs from hash at once
+      const hashData = await cache.hgetall(key)
+
+      if (!hashData || Object.keys(hashData).length === 0) {
+        return Result.ok<Record<string, ActiveRun>>({})
+      }
+
+      // Parse each hash value (JSON string) to ActiveRun
+      const active: Record<string, ActiveRun> = {}
+      const now = Date.now()
+
+      for (const [runUuid, jsonValue] of Object.entries(hashData)) {
+        try {
+          const run = JSON.parse(jsonValue) as ActiveRun
+          const queuedAt = new Date(run.queuedAt)
+
+          // Filter expired runs
+          if (queuedAt.getTime() > now - ACTIVE_RUN_CACHE_TTL) {
+            active[runUuid] = {
+              ...run,
+              queuedAt,
+              startedAt: run.startedAt ? new Date(run.startedAt) : undefined,
+            }
+          }
+        } catch (parseError) {
+          // Skip invalid entries
+          continue
+        }
+      }
 
       return Result.ok<Record<string, ActiveRun>>(active)
     } catch (error) {
@@ -122,12 +130,33 @@ export class RunsRepository {
       return Result.ok<Run>(await this.logToRun(getting.value))
     }
 
-    const listing = await this.listCached()
-    if (!listing.error && runUuid in listing.value) {
-      return Result.ok<Run>(listing.value[runUuid])
-    }
+    // Try to get from hash using HGET
+    const key = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
+    const cache = await redis()
 
-    return Result.error(new NotFoundError(`Run not found with uuid ${runUuid}`))
+    try {
+      const jsonValue = await cache.hget(key, runUuid)
+      if (!jsonValue) {
+        return Result.error(
+          new NotFoundError(`Run not found with uuid ${runUuid}`),
+        )
+      }
+      const run = JSON.parse(jsonValue) as ActiveRun
+      return Result.ok<Run>({
+        ...run,
+        queuedAt: new Date(run.queuedAt),
+        startedAt: run.startedAt ? new Date(run.startedAt) : undefined,
+      })
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        // Malformed JSON in cache - log and return not found
+        return Result.error(
+          new NotFoundError(`Run not found with uuid ${runUuid}`),
+        )
+      }
+      // Redis connection error - rethrow or handle appropriately
+      return Result.error(error as Error)
+    }
   }
 
   async listActive({
@@ -251,22 +280,26 @@ export class RunsRepository {
     queuedAt: Date
     source: LogSources
   }) {
-    const lockKey = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
+    const key = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
+    const cache = await redis()
 
-    return withCacheLock({
-      lockKey,
-      callbackFn: async (cache) => {
-        const listing = await this.listCached(cache)
-        if (listing.error) return Result.error(listing.error)
-        const active = listing.value
+    try {
+      const activeRun: ActiveRun = { uuid: runUuid, queuedAt, source }
+      const jsonValue = JSON.stringify(activeRun)
 
-        active[runUuid] = { uuid: runUuid, queuedAt, source }
+      // Use HSET to atomically add the run to the hash, refreshing the TTL of the key to 3 hours
+      await cache.hset(
+        key,
+        runUuid,
+        jsonValue,
+        'EX',
+        ACTIVE_RUN_CACHE_TTL_SECONDS,
+      )
 
-        await cache.set(lockKey, JSON.stringify(active))
-
-        return Result.ok<ActiveRun>(active[runUuid])
-      },
-    })
+      return Result.ok<ActiveRun>(activeRun)
+    } catch (error) {
+      return Result.error(error as Error)
+    }
   }
 
   async update({
@@ -278,51 +311,64 @@ export class RunsRepository {
     startedAt?: Date
     caption?: string
   }) {
-    const lockKey = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
+    const key = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
+    const cache = await redis()
 
-    return withCacheLock({
-      lockKey,
-      callbackFn: async (cache) => {
-        const listing = await this.listCached(cache)
-        if (listing.error) return Result.error(listing.error)
-        const active = listing.value
+    try {
+      // Get the value of the hash field (O(1) operation)
+      const jsonValue = await cache.hget(key, runUuid)
+      if (!jsonValue) {
+        return Result.error(
+          new NotFoundError(`Run not found with uuid ${runUuid}`),
+        )
+      }
 
-        if (!(runUuid in active)) {
-          return Result.error(
-            new NotFoundError(`Run not found with uuid ${runUuid}`),
-          )
-        }
+      const existingRun = JSON.parse(jsonValue) as ActiveRun
+      const updatedRun: ActiveRun = {
+        ...existingRun,
+        startedAt: startedAt ?? existingRun.startedAt,
+        caption: caption ?? existingRun.caption,
+      }
 
-        active[runUuid] = {
-          ...active[runUuid],
-          startedAt: startedAt ?? active[runUuid].startedAt,
-          caption: caption ?? active[runUuid].caption,
-        }
+      // Use HSET to atomically update the run in the hash, refreshing the TTL of the workspace/projectkey to 3 hours
+      await cache.hset(
+        key,
+        runUuid,
+        JSON.stringify(updatedRun),
+        'EX',
+        ACTIVE_RUN_CACHE_TTL_SECONDS,
+      )
 
-        await cache.set(lockKey, JSON.stringify(active))
-
-        return Result.ok<ActiveRun>(active[runUuid])
-      },
-    })
+      return Result.ok<ActiveRun>(updatedRun)
+    } catch (error) {
+      return Result.error(error as Error)
+    }
   }
 
   async delete({ runUuid }: { runUuid: string }) {
-    const lockKey = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
+    const key = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
+    const cache = await redis()
 
-    return withCacheLock({
-      lockKey,
-      callbackFn: async (cache) => {
-        const listing = await this.listCached(cache)
-        if (listing.error) return Result.error(listing.error)
-        const active = listing.value
+    try {
+      // Get the value of the hash field (O(1) operation)
+      const jsonValue = await cache.hget(key, runUuid)
+      const deletedRun = jsonValue
+        ? (JSON.parse(jsonValue) as ActiveRun)
+        : undefined
 
-        if (runUuid in active) delete active[runUuid]
+      // Use HDEL to atomically remove the run from the hash (O(1) operation)
+      await cache.hdel(key, runUuid)
 
-        await cache.set(lockKey, JSON.stringify(active))
+      if (deletedRun) {
+        return Result.ok<ActiveRun>(deletedRun)
+      }
 
-        return Result.ok<ActiveRun>(active[runUuid])
-      },
-    })
+      return Result.error(
+        new NotFoundError(`Run not found with uuid ${runUuid}`),
+      )
+    } catch (error) {
+      return Result.error(error as Error)
+    }
   }
 }
 
