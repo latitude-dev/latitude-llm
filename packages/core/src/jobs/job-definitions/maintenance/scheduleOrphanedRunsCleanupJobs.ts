@@ -1,4 +1,5 @@
 import { cache } from '../../../cache'
+import { Result } from '../../../lib/Result'
 import { queues } from '../../queues'
 import { Job } from 'bullmq'
 
@@ -65,5 +66,8 @@ export const scheduleOrphanedRunsCleanupJobs = async (
     }
   } while (cursor !== '0')
 
-  console.log(`Enqueued ${enqueuedJobs} orphaned runs cleanup jobs`)
+  return Result.ok({
+    success: true,
+    logs: `Enqueued ${enqueuedJobs} orphaned runs cleanup jobs`,
+  })
 }

@@ -3,6 +3,8 @@ import { cache } from '../../../cache'
 import { queues } from '../../queues'
 import { Job } from 'bullmq'
 import { endRun } from '../../../services/runs/end'
+import { Result } from '../../../lib/Result'
+import { captureException } from '../../../utils/datadogCapture'
 
 export type CleanupOrphanedRunsJobData = {
   workspaceId: number
@@ -72,17 +74,24 @@ export const cleanupOrphanedRunsJob = async (
       })
       orphanedRuns++
     } catch (error) {
-      // Log error but continue processing other runs
-      console.error(
-        `Failed to cleanup orphaned run ${runUuid} in workspace ${workspaceId}, project ${projectId}:`,
-        error,
+      // Capture error but continue processing other runs
+      captureException(
+        new Error(
+          `Failed to cleanup orphaned run ${runUuid} in workspace ${workspaceId}, project ${projectId}:`,
+        ),
       )
     }
   }
 
   if (orphanedRuns > 0) {
-    console.log(
-      `Cleaned up ${orphanedRuns} orphaned runs in workspace ${workspaceId}, project ${projectId}`,
-    )
+    return Result.ok({
+      success: true,
+      logs: `Cleaned up ${orphanedRuns} orphaned runs in workspace ${workspaceId}, project ${projectId}`,
+    })
   }
+
+  return Result.ok({
+    success: true,
+    logs: `No orphaned runs found in workspace ${workspaceId}, project ${projectId}`,
+  })
 }
