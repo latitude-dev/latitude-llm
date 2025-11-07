@@ -7,7 +7,6 @@ import {
   vectors,
   WeaviateClient,
 } from 'weaviate-client'
-import { Workspace } from '../schema/models/types/Workspace'
 
 let connection: WeaviateClient
 
@@ -108,17 +107,27 @@ async function migrateCollections() {
 }
 
 // TODO(AO): BONUS: Deactivate/offload tenants that have not had any activity in the last days
-export async function getIssuesCollection(workspace: Workspace) {
+export async function getIssuesCollection({
+  workspaceId,
+  projectId,
+  documentUuid,
+}: {
+  workspaceId: number
+  projectId: number
+  documentUuid: string
+}) {
   // Note: even though the collection is configured with auto-tenant-creation, it seems
   // that for read and search operations it still fails when the tenant is not created yet
+
+  const tenantId = `${workspaceId}_${projectId}_${documentUuid}`
 
   const client = await weaviate()
   const collection = client.collections.use<Collection.Issues, IssuesCollection>(Collection.Issues) // prettier-ignore
 
-  const exists = await collection.tenants.getByName(String(workspace.id))
+  const exists = await collection.tenants.getByName(tenantId)
   if (!exists) {
-    await collection.tenants.create([{ name: String(workspace.id) }])
+    await collection.tenants.create([{ name: tenantId }])
   }
 
-  return collection.withTenant(String(workspace.id))
+  return collection.withTenant(tenantId)
 }

@@ -85,6 +85,7 @@ async function deleteVector({
   workspace: Workspace
 }) {
   try {
+    // TODO(AO): THE TENANCY WAS WRONG, IT HAS TO BE SCOPED BY WORKSPACE, PROJECT AND DOCUMENT, FIX!
     const issues = await getIssuesCollection(workspace)
 
     const exists = await issues.data.exists(uuid)

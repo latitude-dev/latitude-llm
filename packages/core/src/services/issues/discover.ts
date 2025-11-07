@@ -26,6 +26,8 @@ import { getIssuesCollection } from '../../weaviate'
 import { getEvaluationMetricSpecification } from '../evaluationsV2/specifications'
 import { validateResultForIssue } from './results/validate'
 import { embedReason, normalizeEmbedding } from './shared'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Project } from '../../schema/models/types/Project'
 
 export async function discoverIssue<
   T extends EvaluationType,
@@ -33,9 +35,13 @@ export async function discoverIssue<
 >(
   {
     result: { result, evaluation },
+    document,
+    project,
     workspace,
   }: {
     result: ResultWithEvaluationV2<T, M>
+    document: DocumentVersion
+    project: Project
     workspace: Workspace
   },
   db = database,
@@ -105,6 +111,7 @@ async function findCandidates({
   workspace: Workspace
 }) {
   try {
+    // TODO(AO): THE TENANCY WAS WRONG, IT HAS TO BE SCOPED BY WORKSPACE, PROJECT AND DOCUMENT, FIX!
     const issues = await getIssuesCollection(workspace)
 
     const { objects } = await issues.query.hybrid(reason, {
