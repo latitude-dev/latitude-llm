@@ -252,8 +252,8 @@ describe('enqueueRun', () => {
         }),
         expect.objectContaining({
           attempts: 1,
-          removeOnComplete: true,
-          removeOnFail: true,
+          removeOnComplete: { age: 10 },
+          removeOnFail: { age: 10 },
           keepLogs: 0,
         }),
       )
