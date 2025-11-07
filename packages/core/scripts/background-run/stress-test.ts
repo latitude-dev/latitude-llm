@@ -13,11 +13,19 @@
  */
 
 // Local testing credentials. Use your own.
+
+import '@latitude-data/env'
+
 const CONFIG = {
   API_URL:
-    'http://localhost:8787/api/v3/projects/50/versions/ecfda479-b6c4-460e-8340-e1dfba5a0fc9/documents/run',
-  API_KEY: process.env.TEST_LATITUDE_API_KEY,
-  DOCUMENT_PATH: 'is_happy',
+    'http://localhost:8787/api/v3/projects/74/versions/live/documents/run',
+  API_KEY:
+    process.env.LATITUDE_API_KEY ||
+    (() => {
+      console.error('❌ LATITUDE_API_KEY is not set!')
+      process.exit(1)
+    })(),
+  DOCUMENT_PATH: 'stress-test',
   PARAMETERS: {
     phrase: 'They had a wonderful experience!',
   },

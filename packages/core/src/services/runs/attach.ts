@@ -43,6 +43,7 @@ export async function attachRun({
 
   const { runsQueue } = await queues()
   const job = await runsQueue.getJob(run.uuid)
+  // We only check for the job existence because the stream exists for a grace period after the job is completed (10 seconds)
   if (!job?.id) {
     return Result.error(
       new NotFoundError(`Active run job with uuid ${run.uuid} not found`),
