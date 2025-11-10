@@ -43,7 +43,7 @@ function runsDescription({ ratio, max }: { ratio: number; max: Quota }) {
     return "You're running low on runs in your current plan. Your app will continue working, the Latitude limit reached means you'll no longer be able to run tests, view new logs or evaluation results."
   }
 
-  return `Your plan has included ${max} runs. You can upgrade your plan to get more runs.`
+  return `Your plan includes ${max} runs. You can upgrade your plan to get more runs.`
 }
 
 function membersDescription({
@@ -61,7 +61,7 @@ function membersDescription({
     return `You have reached the maximum number of members for your current plan. (${maxMembers} members allowed)`
   }
 
-  return `Your plan has included ${maxMembers} members. You can upgrade your plan to get more members.`
+  return `Your plan includes ${maxMembers} members. You can upgrade your plan to get more members.`
 }
 
 function UsageIndicatorCircle({
