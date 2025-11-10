@@ -30,26 +30,24 @@ export async function listActiveRuns({
 }): PromisedResult<ActiveRun[], Error> {
   const listing = await listCachedRuns(workspaceId, projectId, cache)
   if (listing.error) return Result.error(listing.error)
-  const active = listing.value
-
-  let runs = Object.values(active)
+  let active = listing.value
 
   // Filter by sources if provided
   if (sourceGroup) {
     const sources = RUN_SOURCES[sourceGroup]
 
-    runs = runs.filter((run) => {
+    active = active.filter((run) => {
       const runSource = run.source ?? LogSources.API
       return sources.includes(runSource)
     })
   }
 
-  runs = runs.sort(
+  active = [...active].sort(
     (a, b) =>
       (b.startedAt?.getTime() ?? 0) - (a.startedAt?.getTime() ?? 0) ||
       b.queuedAt.getTime() - a.queuedAt.getTime(),
   )
-  runs = runs.slice((page - 1) * pageSize, page * pageSize)
+  active = active.slice((page - 1) * pageSize, page * pageSize)
 
-  return Result.ok(runs)
+  return Result.ok(active)
 }

@@ -22,7 +22,7 @@ export async function countActiveRunsBySource({
     {} as Record<LogSources, number>,
   )
 
-  Object.values(active).forEach((run) => {
+  active.forEach((run) => {
     const source = run.source ?? LogSources.API
     countBySource[source] = (countBySource[source] ?? 0) + 1
   })
