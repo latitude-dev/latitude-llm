@@ -5,13 +5,12 @@ import {
 } from '@latitude-data/constants'
 import { cache as redis, Cache } from '../../../cache'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
 
 export async function listCachedRuns(
   workspaceId: number,
   projectId: number,
   cache?: Cache,
-): PromisedResult<ActiveRun[], Error> {
+) {
   const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
   const redisCache = cache ?? (await redis())
 
@@ -20,7 +19,7 @@ export async function listCachedRuns(
     const hashData = await redisCache.hgetall(key)
 
     if (!hashData || Object.keys(hashData).length === 0) {
-      return Result.ok<ActiveRun[]>([])
+      return Result.ok([])
     }
 
     // Parse each hash value (JSON string) to an ActiveRun object
@@ -46,7 +45,7 @@ export async function listCachedRuns(
       }
     }
 
-    return Result.ok<ActiveRun[]>(activeRuns)
+    return Result.ok(activeRuns)
   } catch (error) {
     return Result.error(error as Error)
   }

@@ -31,12 +31,6 @@ afterEach(async () => {
   }
 })
 
-afterAll(async () => {
-  if (redis) {
-    await redis.quit()
-  }
-})
-
 describe('listApps', () => {
   const mockApps = [
     {
