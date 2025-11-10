@@ -1,4 +1,10 @@
-import { AnyPgColumn, bigint, bigserial, index } from 'drizzle-orm/pg-core'
+import {
+  AnyPgColumn,
+  bigint,
+  bigserial,
+  index,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { evaluationResultsV2 } from './evaluationResultsV2'
@@ -26,8 +32,8 @@ export const issueEvaluationResults = latitudeSchema.table(
     index('issue_evaluation_results_evaluation_result_id_idx').on(
       table.evaluationResultId,
     ),
-    // Composite index for efficient lookups in both directions
-    index('issue_evaluation_results_issue_eval_idx').on(
+    // Unique constraint: an evaluation result can only be associated with an issue once
+    uniqueIndex('issue_evaluation_results_unique_issue_eval_idx').on(
       table.issueId,
       table.evaluationResultId,
     ),

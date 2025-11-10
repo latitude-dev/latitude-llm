@@ -21,7 +21,6 @@ import { issueEvaluationResults } from '../../../schema/models/issueEvaluationRe
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
-import { updateEvaluationResultV2 } from '../../evaluationsV2/results/update'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import { deleteIssue } from '../delete'
 import { decrementIssueHistogram } from '../histograms/decrement'
@@ -115,15 +114,6 @@ export async function removeResultFromIssue<
         'remove',
         timestamp,
       )
-
-      const updatingre = await updateEvaluationResultV2(
-        { result, commit, workspace },
-        transaction,
-      )
-      if (updatingre.error) {
-        return Result.error(updatingre.error)
-      }
-      result = updatingre.value.result
 
       // Remove the issue-evaluation result association
       await tx

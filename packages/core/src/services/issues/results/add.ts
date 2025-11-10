@@ -17,7 +17,6 @@ import { issueEvaluationResults } from '../../../schema/models/issueEvaluationRe
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
-import { updateEvaluationResultV2 } from '../../evaluationsV2/results/update'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import { incrementIssueHistogram } from '../histograms/increment'
 import { embedReason, updateCentroid } from '../shared'
@@ -109,15 +108,6 @@ export async function addResultToIssue<
         'add',
         timestamp,
       )
-
-      const updatingre = await updateEvaluationResultV2(
-        { result, commit, workspace },
-        transaction,
-      )
-      if (updatingre.error) {
-        return Result.error(updatingre.error)
-      }
-      result = updatingre.value.result
 
       // Create the issue-evaluation result association
       await tx.insert(issueEvaluationResults).values({

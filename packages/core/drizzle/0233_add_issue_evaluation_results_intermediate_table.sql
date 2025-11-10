@@ -16,5 +16,5 @@ ALTER TABLE "latitude"."issue_evaluation_results" ADD CONSTRAINT "issue_evaluati
 CREATE INDEX "issue_evaluation_results_workspace_id_idx" ON "latitude"."issue_evaluation_results" USING btree ("workspace_id");--> statement-breakpoint
 CREATE INDEX "issue_evaluation_results_issue_id_idx" ON "latitude"."issue_evaluation_results" USING btree ("issue_id");--> statement-breakpoint
 CREATE INDEX "issue_evaluation_results_evaluation_result_id_idx" ON "latitude"."issue_evaluation_results" USING btree ("evaluation_result_id");--> statement-breakpoint
-CREATE INDEX "issue_evaluation_results_issue_eval_idx" ON "latitude"."issue_evaluation_results" USING btree ("issue_id","evaluation_result_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "issue_evaluation_results_unique_issue_eval_idx" ON "latitude"."issue_evaluation_results" USING btree ("issue_id","evaluation_result_id");--> statement-breakpoint
 ALTER TABLE "latitude"."evaluation_results_v2" DROP COLUMN "issue_id";

@@ -1,5 +1,5 @@
 {
-  "id": "4a784c6c-4124-44a4-bf2a-d45f5f8f71fe",
+  "id": "d17f636a-4f26-4bc7-90a0-d2e922160cf1",
   "prevId": "c1b0ae8f-8e91-4ca4-8260-3b4b6836f8de",
   "version": "7",
   "dialect": "postgresql",
@@ -3718,8 +3718,8 @@
           "method": "btree",
           "with": {}
         },
-        "issue_evaluation_results_issue_eval_idx": {
-          "name": "issue_evaluation_results_issue_eval_idx",
+        "issue_evaluation_results_unique_issue_eval_idx": {
+          "name": "issue_evaluation_results_unique_issue_eval_idx",
           "columns": [
             {
               "expression": "issue_id",
@@ -3734,7 +3734,7 @@
               "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
