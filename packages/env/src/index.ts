@@ -9,10 +9,7 @@ const environment = process.env.NODE_ENV || 'development'
 const UPLOADS_PATH = 'uploads'
 
 if (environment === 'development' || environment === 'test') {
-  const pathToEnv = [
-    resolve(cwd(), `../../.env`),
-    resolve(cwd(), `../../.env.${environment}`),
-  ]
+  const pathToEnv = resolve(cwd(), `../../.env.${environment}`)
 
   const isTest = environment === 'test'
   const FILES_STORAGE_PATH = isTest
