@@ -243,83 +243,83 @@ export function ExperimentSimulationSettings(payload: ExperimentFormPayload) {
 
   if (!isLoading && Object.keys(toolManifestDict ?? {}).length === 0) {
     // Don't show this step if there are no tools to simulate
-    return null
+    return (
+      <Text.H6 color='foregroundMuted'>
+        There are no tools to simulate in this prompt.
+      </Text.H6>
+    )
   }
 
   return (
-    <NumeredList.Item title='Configure the simulation'>
-      <div className='flex flex-col gap-4 w-2/3'>
-        <div className='flex flex-row items-center justify-between gap-2'>
-          <div className='flex flex-row items-center gap-2'>
-            <div className='flex w-10 h-10 items-center justify-center bg-warning-muted rounded-md'>
-              <Icon name='brush' color='warningMutedForeground' size='medium' />
-            </div>
-            <div className='flex flex-col'>
-              <Text.H4>Simulate tools</Text.H4>
-              <Text.H6 color='foregroundMuted'>
-                Instead of executing the real tool, a response will be generated
-                based on context.
-              </Text.H6>
-            </div>
+    <div className='flex flex-col gap-4 w-2/3'>
+      <div className='flex flex-row items-center justify-between gap-2'>
+        <div className='flex flex-row items-center gap-2'>
+          <div className='flex w-10 h-10 items-center justify-center bg-warning-muted rounded-md'>
+            <Icon name='brush' color='warningMutedForeground' size='medium' />
           </div>
-          <SwitchToggle
-            checked={simulationSettings.simulateToolResponses}
-            onCheckedChange={handleSimulateToolChange}
-          />
+          <div className='flex flex-col'>
+            <Text.H4>Simulate tools</Text.H4>
+            <Text.H6 color='foregroundMuted'>
+              Instead of executing the real tool, a response will be generated
+              based on context.
+            </Text.H6>
+          </div>
         </div>
-
-        <CollapsibleBox
-          title='Advanced simulation settings'
-          icon='brush'
-          expandedContent={
-            <div className='flex flex-col gap-4'>
-              <TextArea
-                label='Simulation instructions'
-                description='Instructions to guide the simulation of the tools'
-                placeholder='Tell the simulation how to behave. Leave empty to let the AI decide.'
-                minRows={2}
-                maxRows={4}
-                autoGrow
-                value={simulationSettings.toolSimulationInstructions ?? ''}
-                onChange={(e) =>
-                  handleSimulationInstructionsChange(e.target.value)
-                }
-              />
-              <div className='flex flex-col gap-2 w-full max-w-full'>
-                <Text.H5M>Simulated tools</Text.H5M>
-                {isLoading && (
-                  <>
-                    <AdvancedItemSkeleton />
-                    <AdvancedItemSkeleton />
-                    <AdvancedItemSkeleton />
-                  </>
-                )}
-
-                {!!toolManifestDict &&
-                  Object.entries(toolManifestDict).map(
-                    ([toolName, toolManifest]) => (
-                      <ToolManifestItem
-                        key={toolName}
-                        toolName={toolName}
-                        toolManifest={toolManifest}
-                        checked={
-                          simulationSettings.simulateToolResponses &&
-                          (!simulationSettings.simulatedTools?.length ||
-                            simulationSettings.simulatedTools?.includes(
-                              toolName,
-                            ))
-                        }
-                        onCheckedChange={(checked) =>
-                          handleSimulatedToolItemChange(toolName, checked)
-                        }
-                      />
-                    ),
-                  )}
-              </div>
-            </div>
-          }
+        <SwitchToggle
+          checked={simulationSettings.simulateToolResponses}
+          onCheckedChange={handleSimulateToolChange}
         />
       </div>
-    </NumeredList.Item>
+
+      <CollapsibleBox
+        title='Advanced simulation settings'
+        icon='brush'
+        expandedContent={
+          <div className='flex flex-col gap-4'>
+            <TextArea
+              label='Simulation instructions'
+              description='Instructions to guide the simulation of the tools'
+              placeholder='Tell the simulation how to behave. Leave empty to let the AI decide.'
+              minRows={2}
+              maxRows={4}
+              autoGrow
+              value={simulationSettings.toolSimulationInstructions ?? ''}
+              onChange={(e) =>
+                handleSimulationInstructionsChange(e.target.value)
+              }
+            />
+            <div className='flex flex-col gap-2 w-full max-w-full'>
+              <Text.H5M>Simulated tools</Text.H5M>
+              {isLoading && (
+                <>
+                  <AdvancedItemSkeleton />
+                  <AdvancedItemSkeleton />
+                  <AdvancedItemSkeleton />
+                </>
+              )}
+
+              {!!toolManifestDict &&
+                Object.entries(toolManifestDict).map(
+                  ([toolName, toolManifest]) => (
+                    <ToolManifestItem
+                      key={toolName}
+                      toolName={toolName}
+                      toolManifest={toolManifest}
+                      checked={
+                        simulationSettings.simulateToolResponses &&
+                        (!simulationSettings.simulatedTools?.length ||
+                          simulationSettings.simulatedTools?.includes(toolName))
+                      }
+                      onCheckedChange={(checked) =>
+                        handleSimulatedToolItemChange(toolName, checked)
+                      }
+                    />
+                  ),
+                )}
+            </div>
+          </div>
+        }
+      />
+    </div>
   )
 }

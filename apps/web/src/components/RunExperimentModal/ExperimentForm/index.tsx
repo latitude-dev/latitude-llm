@@ -66,7 +66,9 @@ export default function ExperimentModalForm(payload: ExperimentFormPayload) {
         )}
       </NumeredList.Item>
 
-      <ExperimentSimulationSettings {...payload} />
+      <NumeredList.Item title='Configure the simulation'>
+        <ExperimentSimulationSettings {...payload} />
+      </NumeredList.Item>
     </NumeredList>
   )
 }
