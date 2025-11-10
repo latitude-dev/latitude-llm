@@ -78,7 +78,7 @@ export const generateIssueDetailsJob = async (
     selected.push({ result, evaluation })
   }
 
-  const generating = await generateIssue({ results: selected, workspace })
+  const generating = await generateIssue({ results: selected })
   if (generating.error) {
     if (generating.error instanceof UnprocessableEntityError) {
       return captureException(generating.error)
@@ -92,6 +92,5 @@ export const generateIssueDetailsJob = async (
     title: details.title,
     description: details.description,
     issue: issue,
-    workspace: workspace,
   }).then((r) => r.unwrap())
 }

@@ -12,7 +12,6 @@ import {
 import { UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result } from '../../lib/Result'
-import { type Workspace } from '../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../schema/types'
 import { getCopilot, runCopilot } from '../copilot'
 import { getEvaluationMetricSpecification } from '../evaluationsV2/specifications'
@@ -28,11 +27,9 @@ export async function generateIssue(
   {
     context,
     results,
-    workspace,
   }: {
     context?: string
     results: ResultWithEvaluationV2[]
-    workspace: Workspace
   },
   db = database,
 ) {
@@ -58,7 +55,7 @@ export async function generateIssue(
   const filtered = []
   for (const result of results) {
     const validation = await validateResultForIssue(
-      { result, workspace, skipBelongsCheck: true },
+      { result, skipBelongsCheck: true },
       db,
     )
     if (validation.error) continue

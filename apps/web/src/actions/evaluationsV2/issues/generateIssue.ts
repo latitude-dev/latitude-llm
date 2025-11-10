@@ -18,7 +18,6 @@ export const generateIssueAction = withEvaluation
 
     const response = await generateIssue({
       results: [{ result, evaluation: ctx.evaluation }],
-      workspace: ctx.workspace,
     }).then((r) => r.unwrap())
 
     return response

@@ -6,7 +6,6 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
-import { type Workspace } from '../../schema/models/types/Workspace'
 import { getIssuesCollection } from '../../weaviate'
 import { embedCentroid } from './shared'
 
@@ -15,14 +14,12 @@ export async function updateIssue(
     title,
     description,
     centroid,
-    issue: { id, uuid },
-    workspace,
+    issue,
   }: {
     title?: string
     description?: string
     centroid?: IssueCentroid
     issue: Issue
-    workspace: Workspace
   },
   transaction = new Transaction(),
 ) {
@@ -30,11 +27,13 @@ export async function updateIssue(
 
   // Note: optimistically upserting in vector db
   const updating = await upsertVector({
-    uuid: uuid,
+    uuid: issue.uuid,
+    workspaceId: issue.workspaceId,
+    projectId: issue.projectId,
+    documentUuid: issue.documentUuid,
     title: title,
     description: description,
     centroid: centroid,
-    workspace: workspace,
   })
   if (updating.error) {
     return Result.error(updating.error)
@@ -42,7 +41,7 @@ export async function updateIssue(
 
   return await transaction.call(
     async (tx) => {
-      const issue = (await tx
+      const updatedIssue = (await tx
         .update(issues)
         .set({
           title: title,
@@ -50,17 +49,22 @@ export async function updateIssue(
           centroid: centroid,
           updatedAt: updatedAt,
         })
-        .where(and(eq(issues.workspaceId, workspace.id), eq(issues.id, id)))
+        .where(
+          and(
+            eq(issues.workspaceId, issue.workspaceId),
+            eq(issues.uuid, issue.uuid),
+          ),
+        )
         .returning()
         .then((r) => r[0]!)) as Issue
 
-      return Result.ok({ issue })
+      return Result.ok({ issue: updatedIssue })
     },
     async ({ issue }) => {
       await publisher.publishLater({
         type: 'issueUpdated',
         data: {
-          workspaceId: workspace.id,
+          workspaceId: issue.workspaceId,
           issueId: issue.id,
         },
       })
@@ -70,22 +74,29 @@ export async function updateIssue(
 
 async function upsertVector({
   uuid,
+  workspaceId,
+  projectId,
+  documentUuid,
   title,
   description,
   centroid,
-  workspace,
 }: {
+  workspaceId: number
+  projectId: number
+  documentUuid: string
   uuid: string
   title?: string
   description?: string
   centroid?: IssueCentroid
-  workspace: Workspace
 }) {
   const embedding = centroid ? embedCentroid(centroid) : undefined
 
   try {
-    // TODO(AO): THE TENANCY WAS WRONG, IT HAS TO BE SCOPED BY WORKSPACE, PROJECT AND DOCUMENT, FIX!
-    const issues = await getIssuesCollection(workspace)
+    const issues = await getIssuesCollection({
+      workspaceId,
+      projectId,
+      documentUuid,
+    })
 
     const exists = await issues.data.exists(uuid)
     if (!exists) {

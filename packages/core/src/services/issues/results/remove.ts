@@ -54,7 +54,6 @@ export async function removeResultFromIssue<
   const validating = await validateResultForIssue({
     result: { result, evaluation },
     issue: issue,
-    workspace: workspace,
     skipBelongsCheck: true,
   })
   if (validating.error) {
@@ -100,7 +99,6 @@ export async function removeResultFromIssue<
         {
           result: { result, evaluation },
           issue: issue,
-          workspace: workspace,
           skipBelongsCheck: true,
         },
         tx,
@@ -147,16 +145,13 @@ export async function removeResultFromIssue<
       issueWasLast = !searching.value
 
       if (issueWasLast) {
-        const deleting = await deleteIssue({ issue, workspace }, transaction)
+        const deleting = await deleteIssue({ issue }, transaction)
         if (deleting.error) {
           return Result.error(deleting.error)
         }
         issue = deleting.value.issue
       } else {
-        const updating = await updateIssue(
-          { centroid, issue, workspace },
-          transaction,
-        )
+        const updating = await updateIssue({ centroid, issue }, transaction)
         if (updating.error) {
           return Result.error(updating.error)
         }

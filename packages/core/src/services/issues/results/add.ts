@@ -50,7 +50,6 @@ export async function addResultToIssue<
   const validating = await validateResultForIssue({
     result: { result, evaluation },
     issue: issue,
-    workspace: workspace,
   })
   if (validating.error) {
     return Result.error(validating.error)
@@ -96,7 +95,6 @@ export async function addResultToIssue<
         {
           result: { result, evaluation },
           issue: issue,
-          workspace: workspace,
         },
         tx,
       )
@@ -137,7 +135,6 @@ export async function addResultToIssue<
           }),
           centroid: centroid,
           issue: issue,
-          workspace: workspace,
         },
         transaction,
       )

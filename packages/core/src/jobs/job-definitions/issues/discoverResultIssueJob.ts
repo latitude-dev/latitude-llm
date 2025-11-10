@@ -88,7 +88,8 @@ export const discoverResultIssueJob = async (
 
   const discovering = await discoverIssue({
     result: { result, evaluation },
-    workspace: workspace,
+    document,
+    project,
   })
   if (discovering.error) {
     if (discovering.error instanceof UnprocessableEntityError) {
@@ -104,7 +105,6 @@ export const discoverResultIssueJob = async (
   if (!selected) {
     const generating = await generateIssue({
       results: [{ result, evaluation }],
-      workspace: workspace,
     })
     if (generating.error) {
       if (generating.error instanceof UnprocessableEntityError) {

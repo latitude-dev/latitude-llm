@@ -19,7 +19,6 @@ import {
 import { UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result, TypedResult } from '../../lib/Result'
-import { type Workspace } from '../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../schema/types'
 import { voyage as getVoyageClient } from '../../voyage'
 import { getIssuesCollection } from '../../weaviate'
@@ -37,12 +36,10 @@ export async function discoverIssue<
     result: { result, evaluation },
     document,
     project,
-    workspace,
   }: {
     result: ResultWithEvaluationV2<T, M>
     document: DocumentVersion
     project: Project
-    workspace: Workspace
   },
   db = database,
 ): Promise<TypedResult<{ embedding: number[]; issue?: IssueCandidate }>> {
@@ -51,7 +48,7 @@ export async function discoverIssue<
   }
 
   const validating = await validateResultForIssue(
-    { result: { result, evaluation }, workspace },
+    { result: { result, evaluation } },
     db,
   )
   if (validating.error) {
@@ -74,7 +71,7 @@ export async function discoverIssue<
   let embedding = embedying.value
   embedding = normalizeEmbedding(embedding)
 
-  const finding = await findCandidates({ reason, embedding, workspace })
+  const finding = await findCandidates({ reason, embedding, document, project })
   if (finding.error) {
     return Result.error(finding.error)
   }
@@ -104,15 +101,20 @@ export async function discoverIssue<
 async function findCandidates({
   reason,
   embedding,
-  workspace,
+  document,
+  project,
 }: {
   reason: string
   embedding: number[]
-  workspace: Workspace
+  document: DocumentVersion
+  project: Project
 }) {
   try {
-    // TODO(AO): THE TENANCY WAS WRONG, IT HAS TO BE SCOPED BY WORKSPACE, PROJECT AND DOCUMENT, FIX!
-    const issues = await getIssuesCollection(workspace)
+    const issues = await getIssuesCollection({
+      workspaceId: project.workspaceId,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+    })
 
     const { objects } = await issues.query.hybrid(reason, {
       vector: embedding,

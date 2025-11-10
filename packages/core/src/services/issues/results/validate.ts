@@ -7,7 +7,6 @@ import {
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { type Issue } from '../../../schema/models/types/Issue'
-import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 
@@ -23,7 +22,6 @@ export async function validateResultForIssue<
   }: {
     result: ResultWithEvaluationV2<T, M>
     issue?: Issue
-    workspace: Workspace
     skipBelongsCheck?: boolean
     skipReasonCheck?: boolean
   },

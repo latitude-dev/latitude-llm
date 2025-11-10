@@ -7,21 +7,23 @@ import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { issueHistograms } from '../../schema/models/issueHistograms'
 import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
-import { type Workspace } from '../../schema/models/types/Workspace'
 import { getIssuesCollection } from '../../weaviate'
 
 export async function deleteIssue(
   {
-    issue: { id, uuid },
-    workspace,
+    issue,
   }: {
     issue: Issue
-    workspace: Workspace
   },
   transaction = new Transaction(),
 ) {
   // Note: optimistically deleting from vector db
-  const deleting = await deleteVector({ uuid, workspace })
+  const deleting = await deleteVector({
+    uuid: issue.uuid,
+    workspaceId: issue.workspaceId,
+    projectId: issue.projectId,
+    documentUuid: issue.documentUuid,
+  })
   if (deleting.error) {
     return Result.error(deleting.error)
   }
@@ -33,8 +35,8 @@ export async function deleteIssue(
         .set({ issueId: null })
         .where(
           and(
-            eq(evaluationVersions.workspaceId, workspace.id),
-            eq(evaluationVersions.issueId, id),
+            eq(evaluationVersions.workspaceId, issue.workspaceId),
+            eq(evaluationVersions.issueId, issue.id),
           ),
         )
 
@@ -43,8 +45,8 @@ export async function deleteIssue(
         .set({ issueId: null })
         .where(
           and(
-            eq(evaluationResultsV2.workspaceId, workspace.id),
-            eq(evaluationResultsV2.issueId, id),
+            eq(evaluationResultsV2.workspaceId, issue.workspaceId),
+            eq(evaluationResultsV2.issueId, issue.id),
           ),
         )
 
@@ -52,25 +54,29 @@ export async function deleteIssue(
         .delete(issueHistograms)
         .where(
           and(
-            eq(issueHistograms.workspaceId, workspace.id),
-            eq(issueHistograms.issueId, id),
+            eq(issueHistograms.workspaceId, issue.workspaceId),
+            eq(issueHistograms.issueId, issue.id),
           ),
         )
 
-      const issue = (await tx
+      const deletedIssue = (await tx
         .delete(issues)
-        .where(and(eq(issues.workspaceId, workspace.id), eq(issues.id, id)))
+        .where(
+          and(
+            eq(issues.workspaceId, issue.workspaceId),
+            eq(issues.uuid, issue.uuid),
+          ),
+        )
         .returning()
         .then((r) => r[0]!)) as Issue
-
-      return Result.ok({ issue })
+      return Result.ok({ issue: deletedIssue })
     },
-    async ({ issue }) => {
+    async ({ issue: deletedIssue }) => {
       await publisher.publishLater({
         type: 'issueDeleted',
         data: {
-          workspaceId: workspace.id,
-          issueId: issue.id,
+          workspaceId: deletedIssue.workspaceId,
+          issueId: deletedIssue.id,
         },
       })
     },
@@ -79,14 +85,21 @@ export async function deleteIssue(
 
 async function deleteVector({
   uuid,
-  workspace,
+  workspaceId,
+  projectId,
+  documentUuid,
 }: {
+  workspaceId: number
+  projectId: number
+  documentUuid: string
   uuid: string
-  workspace: Workspace
 }) {
   try {
-    // TODO(AO): THE TENANCY WAS WRONG, IT HAS TO BE SCOPED BY WORKSPACE, PROJECT AND DOCUMENT, FIX!
-    const issues = await getIssuesCollection(workspace)
+    const issues = await getIssuesCollection({
+      workspaceId,
+      projectId,
+      documentUuid,
+    })
 
     const exists = await issues.data.exists(uuid)
     if (!exists) {
@@ -100,7 +113,7 @@ async function deleteVector({
 
     const count = await issues.length()
     if (count === 0) {
-      await issues.tenants.remove(String(workspace.id))
+      await issues.tenants.remove(String(workspaceId))
     }
 
     return Result.nil()

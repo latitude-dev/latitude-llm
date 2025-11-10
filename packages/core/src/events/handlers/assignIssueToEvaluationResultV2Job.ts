@@ -34,7 +34,6 @@ export const assignIssueToEvaluationResultV2Job = async ({
   const validation = await validateResultForIssue({
     result: { result, evaluation },
     issue: issue,
-    workspace: workspace,
     // Note: we leave a delay for human evaluations to
     // allow the user time to update the annotation
     skipReasonCheck: evaluation.type === EvaluationType.Human && !issue,
