@@ -1,7 +1,7 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 
-import { RunsRepository } from '@latitude-data/core/repositories'
+import { getRun } from '@latitude-data/core/services/runs/get'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -22,8 +22,11 @@ export const GET = errorHandler(
     ) => {
       const { projectId, runUuid } = params
 
-      const repository = new RunsRepository(workspace.id, projectId)
-      const run = await repository.get({ runUuid }).then((r) => r.unwrap())
+      const run = await getRun({
+        workspaceId: workspace.id,
+        projectId,
+        runUuid,
+      }).then((r) => r.unwrap())
 
       return NextResponse.json(run, { status: 200 })
     },
