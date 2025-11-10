@@ -3,7 +3,7 @@ import { publisher } from '../../events/publisher'
 import { queues } from '../../jobs/queues'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import { RunsRepository } from '../../repositories'
+import { deleteActiveRun } from './active/delete'
 import { type Project } from '../../schema/models/types/Project'
 import { type Workspace } from '../../schema/models/types/Workspace'
 
@@ -11,7 +11,7 @@ import { stopRun } from './stop'
 
 vi.mock('../../jobs/queues')
 vi.mock('../../events/publisher')
-vi.mock('../../repositories')
+vi.mock('./active/delete')
 
 describe('stopRun', () => {
   const mockWorkspace = { id: 1 } as Workspace
@@ -60,11 +60,9 @@ describe('stopRun', () => {
     it('handles stale run cleanup when run exists in repository', async () => {
       mockQueue.getJob.mockResolvedValueOnce(null)
 
-      const mockRepo = {
-        get: vi.fn().mockResolvedValueOnce(Result.ok(mockRun)),
-        delete: vi.fn().mockResolvedValueOnce(Result.ok(undefined)),
-      }
-      vi.mocked(RunsRepository).mockImplementationOnce(() => mockRepo as any)
+      vi.mocked(deleteActiveRun).mockResolvedValueOnce(
+        Result.ok(undefined as any),
+      )
 
       const result = await stopRun({
         run: mockRun,
@@ -73,19 +71,19 @@ describe('stopRun', () => {
       })
 
       expect(result.ok).toBe(true)
-      expect(mockRepo.delete).toHaveBeenCalledWith({ runUuid: mockRun.uuid })
+      expect(deleteActiveRun).toHaveBeenCalledWith({
+        workspaceId: mockWorkspace.id,
+        projectId: mockProject.id,
+        runUuid: mockRun.uuid,
+      })
     })
 
     it('handles repository delete failure gracefully', async () => {
       mockQueue.getJob.mockResolvedValueOnce(null)
 
-      const mockRepo = {
-        get: vi.fn().mockResolvedValueOnce(Result.ok(mockRun)),
-        delete: vi
-          .fn()
-          .mockResolvedValueOnce(Result.error(new Error('Delete failed'))),
-      }
-      vi.mocked(RunsRepository).mockImplementationOnce(() => mockRepo as any)
+      vi.mocked(deleteActiveRun).mockResolvedValueOnce(
+        Result.error(new Error('Delete failed')),
+      )
 
       const result = await stopRun({
         run: mockRun,
