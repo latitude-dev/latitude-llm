@@ -3,7 +3,7 @@
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useActiveRunsCount } from '$/stores/runs/activeRuns'
 import { LogSources } from '@latitude-data/constants'
-import { createContext, ReactNode, useContext, useMemo } from 'react'
+import { createContext, ReactNode, useMemo } from 'react'
 
 type IActiveRunsCountContextType = {
   data: Record<LogSources, number> | undefined
@@ -11,9 +11,8 @@ type IActiveRunsCountContextType = {
   limitedView: boolean
 }
 
-const ActiveRunsCountContext = createContext<IActiveRunsCountContextType>(
-  {} as IActiveRunsCountContextType,
-)
+export const ActiveRunsCountContext =
+  createContext<IActiveRunsCountContextType>({} as IActiveRunsCountContextType)
 
 export function ActiveRunsCountProvider({
   children,
@@ -42,16 +41,4 @@ export function ActiveRunsCountProvider({
       {children}
     </ActiveRunsCountContext.Provider>
   )
-}
-
-export function useActiveRunsCountContext() {
-  const context = useContext(ActiveRunsCountContext)
-
-  if (!context) {
-    throw new Error(
-      'useActiveRunsCountContext must be used within an ActiveRunsCountProvider',
-    )
-  }
-
-  return context
 }
