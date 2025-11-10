@@ -2,15 +2,18 @@ import { LOG_SOURCES, LogSources } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import { listCachedRuns } from './listCached'
 import { PromisedResult } from '../../../lib/Transaction'
+import type { Cache } from '../../../cache'
 
 export async function countActiveRunsBySource({
   workspaceId,
   projectId,
+  cache,
 }: {
   workspaceId: number
   projectId: number
+  cache?: Cache
 }): PromisedResult<Record<LogSources, number>, Error> {
-  const listing = await listCachedRuns(workspaceId, projectId)
+  const listing = await listCachedRuns(workspaceId, projectId, cache)
   if (listing.error) return Result.error(listing.error)
   const active = listing.value
 

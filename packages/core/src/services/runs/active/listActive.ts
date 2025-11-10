@@ -8,6 +8,7 @@ import {
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { listCachedRuns } from './listCached'
+import type { Cache } from '../../../cache'
 
 /**
  * Lists active runs with pagination and optional source filtering.
@@ -18,14 +19,16 @@ export async function listActiveRuns({
   page = 1,
   pageSize = DEFAULT_PAGINATION_SIZE,
   sourceGroup,
+  cache,
 }: {
   workspaceId: number
   projectId: number
   page?: number
   pageSize?: number
   sourceGroup?: RunSourceGroup
+  cache?: Cache
 }): PromisedResult<ActiveRun[], Error> {
-  const listing = await listCachedRuns(workspaceId, projectId)
+  const listing = await listCachedRuns(workspaceId, projectId, cache)
   if (listing.error) return Result.error(listing.error)
   const active = listing.value
 

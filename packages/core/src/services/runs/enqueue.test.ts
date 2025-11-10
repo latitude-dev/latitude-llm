@@ -1,6 +1,6 @@
-import { LogSources } from '@latitude-data/constants'
+import { ACTIVE_RUNS_CACHE_KEY, LogSources } from '@latitude-data/constants'
 import {
-  afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -26,10 +26,12 @@ vi.mock('../../events/publisher')
 
 describe('enqueueRun', () => {
   let redis: Cache
-  const mockWorkspace = { id: 1 } as Workspace
-  const mockProject = { id: 50 } as Project
+  let mockWorkspace: Workspace
+  let mockProject: Project
   const mockCommit = { uuid: 'commit-uuid' } as Commit
   const mockDocument = { documentUuid: 'doc-uuid' } as DocumentVersion
+  const testKeys = new Set<string>()
+  let testCounter = Date.now()
 
   const mockQueue = {
     add: vi.fn(),
@@ -46,10 +48,18 @@ describe('enqueueRun', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    // Generate unique IDs for each test to avoid collisions in parallel execution
+    mockWorkspace = {
+      id: testCounter++,
+    } as Workspace
+    mockProject = {
+      id: testCounter++,
+    } as Project
+    testKeys.clear()
 
-    // Flush the entire Redis database to ensure clean state between tests
-    // This is safe in test environment as we're using a test-specific Redis instance
-    await redis.flushdb()
+    // Track the key for this workspace/project combination
+    const key = ACTIVE_RUNS_CACHE_KEY(mockWorkspace.id, mockProject.id)
+    testKeys.add(key)
 
     vi.mocked(queues).mockResolvedValue({
       runsQueue: mockQueue as any,
@@ -59,9 +69,13 @@ describe('enqueueRun', () => {
     vi.mocked(publisher.publishLater).mockResolvedValue(undefined as any)
   })
 
-  afterAll(async () => {
-    // Final cleanup - flush the database
-    await redis.flushdb()
+  afterEach(async () => {
+    // Clean up only keys created by this specific test
+    // Track keys as we create them to avoid interfering with parallel tests
+    for (const key of testKeys) {
+      await redis.del(key)
+    }
+    testKeys.clear()
   })
 
   describe('critical: cache entry created before job queued', () => {
@@ -92,6 +106,7 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
+        cache: redis,
       })
 
       // CRITICAL: Cache entry must be created BEFORE job is added
@@ -109,6 +124,7 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
+        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -121,6 +137,7 @@ describe('enqueueRun', () => {
         workspaceId: mockWorkspace.id,
         projectId: mockProject.id,
         runUuid: run.uuid,
+        cache: redis,
       })
 
       expect(cached.ok).toBe(true)
@@ -134,6 +151,7 @@ describe('enqueueRun', () => {
         workspaceId: mockWorkspace.id,
         projectId: mockProject.id,
         runUuid: run.uuid,
+        cache: redis,
       })
     })
   })
@@ -147,6 +165,7 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
+        cache: redis,
       })
 
       expect(result.ok).toBe(false)
@@ -158,6 +177,7 @@ describe('enqueueRun', () => {
         projectId: mockProject.id,
         page: 1,
         pageSize: 100,
+        cache: redis,
       })
 
       expect(active.ok).toBe(true)
@@ -179,6 +199,7 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
+        cache: redis,
       })
 
       expect(result.ok).toBe(false)
@@ -198,6 +219,7 @@ describe('enqueueRun', () => {
           project: mockProject,
           commit: mockCommit,
           document: mockDocument,
+          cache: redis,
         }),
       )
 
@@ -219,6 +241,7 @@ describe('enqueueRun', () => {
         projectId: mockProject.id,
         page: 1,
         pageSize: 100,
+        cache: redis,
       })
 
       expect(active.ok).toBe(true)
@@ -232,6 +255,7 @@ describe('enqueueRun', () => {
             workspaceId: mockWorkspace.id,
             projectId: mockProject.id,
             runUuid: result.value.run.uuid,
+            cache: redis,
           })
         }
       }
@@ -255,6 +279,7 @@ describe('enqueueRun', () => {
         tools,
         userMessage,
         source: LogSources.Playground,
+        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -286,6 +311,7 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
+        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -305,6 +331,7 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
+        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -319,6 +346,7 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
+        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -371,6 +399,7 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
+        cache: redis,
       })
 
       expect(jobProcessingStarted).toBe(true)

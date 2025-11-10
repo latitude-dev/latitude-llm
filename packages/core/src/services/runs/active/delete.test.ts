@@ -1,28 +1,18 @@
 import { ACTIVE_RUNS_CACHE_KEY, LogSources } from '@latitude-data/constants'
 import { NotFoundError } from '../../../lib/errors'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { Cache } from '../../../cache'
 import { cache } from '../../../cache'
 import { createActiveRun } from './create'
 import { deleteActiveRun } from './delete'
 import { updateActiveRun } from './update'
 
-// Test IDs use workspace/project IDs >= 1,000,000 to identify test keys
-const TEST_ID_MIN = 1_000_000
-
 describe('deleteActiveRun', () => {
   let redis: Cache
   let workspaceId: number
   let projectId: number
   const testKeys = new Set<string>()
+  let testCounter = Date.now()
 
   beforeAll(async () => {
     redis = await cache()
@@ -30,9 +20,9 @@ describe('deleteActiveRun', () => {
   })
 
   beforeEach(async () => {
-    // Use test ID range to ensure we can clean them up by pattern
-    workspaceId = TEST_ID_MIN + Math.floor(Math.random() * 1000000)
-    projectId = TEST_ID_MIN + Math.floor(Math.random() * 1000000)
+    // Generate unique IDs for each test to avoid collisions in parallel execution
+    workspaceId = testCounter++
+    projectId = testCounter++
     testKeys.clear()
   })
 
@@ -43,10 +33,6 @@ describe('deleteActiveRun', () => {
       await redis.del(key)
     }
     testKeys.clear()
-  })
-
-  afterAll(async () => {
-    await redis.flushdb()
   })
 
   it('deletes an active run from cache', async () => {
@@ -63,6 +49,7 @@ describe('deleteActiveRun', () => {
       runUuid,
       queuedAt,
       source,
+      cache: redis,
     })
 
     // Delete run
@@ -70,6 +57,7 @@ describe('deleteActiveRun', () => {
       workspaceId,
       projectId,
       runUuid,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -92,12 +80,15 @@ describe('deleteActiveRun', () => {
     const source = LogSources.Playground
 
     // Create run
+    const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
+    testKeys.add(key)
     await createActiveRun({
       workspaceId,
       projectId,
       runUuid,
       queuedAt,
       source,
+      cache: redis,
     })
 
     // Update with startedAt
@@ -106,6 +97,7 @@ describe('deleteActiveRun', () => {
       projectId,
       runUuid,
       startedAt,
+      cache: redis,
     })
 
     // Delete and verify returned data
@@ -113,6 +105,7 @@ describe('deleteActiveRun', () => {
       workspaceId,
       projectId,
       runUuid,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -130,6 +123,7 @@ describe('deleteActiveRun', () => {
       workspaceId,
       projectId,
       runUuid: 'non-existent-uuid',
+      cache: redis,
     })
 
     expect(result.ok).toBe(false)
@@ -158,6 +152,7 @@ describe('deleteActiveRun', () => {
         runUuid: run.uuid,
         queuedAt: new Date(),
         source: run.source,
+        cache: redis,
       })
       expect(createResult.ok).toBe(true)
     }
@@ -167,6 +162,7 @@ describe('deleteActiveRun', () => {
       workspaceId,
       projectId,
       runUuid: `run-2-${testId}`,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -198,6 +194,7 @@ describe('deleteActiveRun', () => {
         runUuid: uuid,
         queuedAt: new Date(),
         source: LogSources.API,
+        cache: redis,
       })
       expect(createResult.ok).toBe(true)
     }
@@ -208,6 +205,7 @@ describe('deleteActiveRun', () => {
         workspaceId,
         projectId,
         runUuid: uuid,
+        cache: redis,
       })
       expect(result.ok).toBe(true)
       if (!result.ok) {

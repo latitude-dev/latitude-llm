@@ -1,5 +1,5 @@
 import { ACTIVE_RUNS_CACHE_KEY, ActiveRun, Run } from '@latitude-data/constants'
-import { cache as redis } from '../../cache'
+import { cache as redis, Cache } from '../../cache'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { fetchDocumentLogWithMetadata } from '../documentLogs/fetchDocumentLogWithMetadata'
@@ -13,10 +13,12 @@ export async function getRun({
   workspaceId,
   projectId,
   runUuid,
+  cache,
 }: {
   workspaceId: number
   projectId: number
   runUuid: string
+  cache?: Cache
 }): PromisedResult<Run, Error> {
   // Try database first
   try {
@@ -40,10 +42,10 @@ export async function getRun({
 
   // Try to get from hash using HGET (O(1) operation)
   const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
-  const cache = await redis()
+  const redisCache = cache ?? (await redis())
 
   try {
-    const jsonValue = await cache.hget(key, runUuid)
+    const jsonValue = await redisCache.hget(key, runUuid)
     if (!jsonValue) {
       return Result.error(
         new NotFoundError(`Run not found with uuid ${runUuid}`),

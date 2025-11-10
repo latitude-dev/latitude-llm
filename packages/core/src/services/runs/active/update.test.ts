@@ -1,27 +1,17 @@
 import { ACTIVE_RUNS_CACHE_KEY, LogSources } from '@latitude-data/constants'
 import { NotFoundError } from '../../../lib/errors'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { Cache } from '../../../cache'
 import { cache } from '../../../cache'
 import { createActiveRun } from './create'
 import { updateActiveRun } from './update'
-
-// Test IDs use workspace/project IDs >= 1,000,000 to identify test keys
-const TEST_ID_MIN = 1_000_000
 
 describe('updateActiveRun', () => {
   let redis: Cache
   let workspaceId: number
   let projectId: number
   const testKeys = new Set<string>()
+  let testCounter = Date.now()
 
   beforeAll(async () => {
     redis = await cache()
@@ -29,9 +19,9 @@ describe('updateActiveRun', () => {
   })
 
   beforeEach(async () => {
-    // Use test ID range to ensure we can clean them up by pattern
-    workspaceId = TEST_ID_MIN + Math.floor(Math.random() * 1000000)
-    projectId = TEST_ID_MIN + Math.floor(Math.random() * 1000000)
+    // Generate unique IDs for each test to avoid collisions in parallel execution
+    workspaceId = testCounter++
+    projectId = testCounter++
     testKeys.clear()
   })
 
@@ -42,10 +32,6 @@ describe('updateActiveRun', () => {
       await redis.del(key)
     }
     testKeys.clear()
-  })
-
-  afterAll(async () => {
-    await redis.flushdb()
   })
 
   it('updates startedAt field', async () => {
@@ -62,6 +48,7 @@ describe('updateActiveRun', () => {
       runUuid,
       queuedAt,
       source: LogSources.API,
+      cache: redis,
     })
 
     // Update with startedAt
@@ -70,6 +57,7 @@ describe('updateActiveRun', () => {
       projectId,
       runUuid,
       startedAt,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -95,6 +83,7 @@ describe('updateActiveRun', () => {
       runUuid,
       queuedAt,
       source: LogSources.API,
+      cache: redis,
     })
 
     // Update with caption
@@ -103,6 +92,7 @@ describe('updateActiveRun', () => {
       projectId,
       runUuid,
       caption,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -128,6 +118,7 @@ describe('updateActiveRun', () => {
       runUuid,
       queuedAt,
       source: LogSources.Playground,
+      cache: redis,
     })
 
     // Update both fields
@@ -137,6 +128,7 @@ describe('updateActiveRun', () => {
       runUuid,
       startedAt,
       caption,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -165,6 +157,7 @@ describe('updateActiveRun', () => {
       runUuid,
       queuedAt,
       source,
+      cache: redis,
     })
 
     // Update with startedAt and caption
@@ -174,6 +167,7 @@ describe('updateActiveRun', () => {
       runUuid,
       startedAt: originalStartedAt,
       caption: originalCaption,
+      cache: redis,
     })
 
     // Update only caption
@@ -182,6 +176,7 @@ describe('updateActiveRun', () => {
       projectId,
       runUuid,
       caption: 'New caption',
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -198,6 +193,7 @@ describe('updateActiveRun', () => {
       projectId,
       runUuid: 'non-existent-uuid',
       startedAt: new Date(),
+      cache: redis,
     })
 
     expect(result.ok).toBe(false)
@@ -221,6 +217,7 @@ describe('updateActiveRun', () => {
       runUuid,
       queuedAt,
       source: LogSources.API,
+      cache: redis,
     })
     expect(createResult.ok).toBe(true)
     if (!createResult.ok) return
@@ -235,6 +232,7 @@ describe('updateActiveRun', () => {
       projectId,
       runUuid,
       caption: 'Updated caption',
+      cache: redis,
     })
 
     expect(updateResult.ok).toBe(true)

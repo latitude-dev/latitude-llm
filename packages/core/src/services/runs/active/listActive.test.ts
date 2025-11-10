@@ -5,29 +5,19 @@ import {
   RUN_SOURCES,
 } from '@latitude-data/constants'
 import { DEFAULT_PAGINATION_SIZE } from '../../../constants'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { Cache } from '../../../cache'
 import { cache } from '../../../cache'
 import { createActiveRun } from './create'
 import { listActiveRuns } from './listActive'
 import { updateActiveRun } from './update'
 
-// Test IDs use workspace/project IDs >= 1,000,000 to identify test keys
-const TEST_ID_MIN = 1_000_000
-
 describe('listActiveRuns', () => {
   let redis: Cache
   let workspaceId: number
   let projectId: number
   const testKeys = new Set<string>()
+  let testCounter = Date.now()
 
   beforeAll(async () => {
     redis = await cache()
@@ -35,9 +25,9 @@ describe('listActiveRuns', () => {
   })
 
   beforeEach(async () => {
-    // Use test ID range to ensure we can clean them up by pattern
-    workspaceId = TEST_ID_MIN + Math.floor(Math.random() * 1000000)
-    projectId = TEST_ID_MIN + Math.floor(Math.random() * 1000000)
+    // Generate unique IDs for each test to avoid collisions in parallel execution
+    workspaceId = testCounter++
+    projectId = testCounter++
     testKeys.clear()
   })
 
@@ -50,14 +40,11 @@ describe('listActiveRuns', () => {
     testKeys.clear()
   })
 
-  afterAll(async () => {
-    await redis.flushdb()
-  })
-
   it('returns empty array when no runs exist', async () => {
     const result = await listActiveRuns({
       workspaceId,
       projectId,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -85,6 +72,7 @@ describe('listActiveRuns', () => {
         runUuid: run.uuid,
         queuedAt: new Date(),
         source: run.source,
+        cache: redis,
       })
       expect(createResult.ok).toBe(true)
     }
@@ -92,6 +80,7 @@ describe('listActiveRuns', () => {
     const result = await listActiveRuns({
       workspaceId,
       projectId,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -137,6 +126,7 @@ describe('listActiveRuns', () => {
         runUuid: run.uuid,
         queuedAt: run.queuedAt,
         source: LogSources.API,
+        cache: redis,
       })
 
       if (run.startedAt) {
@@ -145,6 +135,7 @@ describe('listActiveRuns', () => {
           projectId,
           runUuid: run.uuid,
           startedAt: run.startedAt,
+          cache: redis,
         })
       }
       // Small delay to ensure different creation times
@@ -154,6 +145,7 @@ describe('listActiveRuns', () => {
     const result = await listActiveRuns({
       workspaceId,
       projectId,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -194,6 +186,7 @@ describe('listActiveRuns', () => {
         runUuid: run.uuid,
         queuedAt: new Date(),
         source: run.source,
+        cache: redis,
       })
     }
 
@@ -201,6 +194,7 @@ describe('listActiveRuns', () => {
       workspaceId,
       projectId,
       sourceGroup: RunSourceGroup.Playground,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -227,6 +221,7 @@ describe('listActiveRuns', () => {
         runUuid: run.uuid,
         queuedAt: new Date(),
         source: run.source,
+        cache: redis,
       })
     }
 
@@ -234,6 +229,7 @@ describe('listActiveRuns', () => {
       workspaceId,
       projectId,
       sourceGroup: RunSourceGroup.Production,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -255,6 +251,7 @@ describe('listActiveRuns', () => {
         runUuid: `run-${i}`,
         queuedAt: new Date(Date.now() - i * 1000), // Different timestamps for sorting
         source: LogSources.API,
+        cache: redis,
       })
     }
 
@@ -264,6 +261,7 @@ describe('listActiveRuns', () => {
       projectId,
       page: 1,
       pageSize: 5,
+      cache: redis,
     })
 
     expect(page1.ok).toBe(true)
@@ -276,6 +274,7 @@ describe('listActiveRuns', () => {
       projectId,
       page: 2,
       pageSize: 5,
+      cache: redis,
     })
 
     expect(page2.ok).toBe(true)
@@ -305,12 +304,14 @@ describe('listActiveRuns', () => {
         runUuid: `run-pag-${testId}-${i}`,
         queuedAt: new Date(Date.now() - i * 1000),
         source: LogSources.API,
+        cache: redis,
       })
     }
 
     const result = await listActiveRuns({
       workspaceId,
       projectId,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -330,6 +331,7 @@ describe('listActiveRuns', () => {
       projectId,
       page: 10,
       pageSize: 10,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)

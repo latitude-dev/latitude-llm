@@ -1,25 +1,15 @@
 import { ACTIVE_RUNS_CACHE_KEY, LogSources } from '@latitude-data/constants'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { Cache } from '../../../cache'
 import { cache } from '../../../cache'
 import { createActiveRun } from './create'
-
-// Test IDs use workspace/project IDs >= 1,000,000 to identify test keys
-const TEST_ID_MIN = 1_000_000
 
 describe('createActiveRun', () => {
   let redis: Cache
   let workspaceId: number
   let projectId: number
   const testKeys = new Set<string>()
+  let testCounter = Date.now()
 
   beforeAll(async () => {
     redis = await cache()
@@ -27,9 +17,9 @@ describe('createActiveRun', () => {
   })
 
   beforeEach(async () => {
-    // Use test ID range to ensure we can clean them up by pattern
-    workspaceId = TEST_ID_MIN + Math.floor(Math.random() * 1000000)
-    projectId = TEST_ID_MIN + Math.floor(Math.random() * 1000000)
+    // Generate unique IDs for each test to avoid collisions in parallel execution
+    workspaceId = testCounter++
+    projectId = testCounter++
     testKeys.clear()
   })
 
@@ -42,23 +32,20 @@ describe('createActiveRun', () => {
     testKeys.clear()
   })
 
-  afterAll(async () => {
-    if (redis) {
-      await redis.quit()
-    }
-  })
-
   it('creates an active run in cache', async () => {
     const runUuid = 'test-uuid-1'
     const queuedAt = new Date()
     const source = LogSources.API
 
+    const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
+    testKeys.add(key)
     const result = await createActiveRun({
       workspaceId,
       projectId,
       runUuid,
       queuedAt,
       source,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -74,20 +61,21 @@ describe('createActiveRun', () => {
     const queuedAt = new Date()
     const source = LogSources.Playground
 
+    const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
+    testKeys.add(key)
     const result = await createActiveRun({
       workspaceId,
       projectId,
       runUuid,
       queuedAt,
       source,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
     // Verify it's stored in Redis
-    const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
-    testKeys.add(key)
     const hashData = await redis.hgetall(key)
     expect(hashData).toHaveProperty(runUuid)
 
@@ -101,20 +89,21 @@ describe('createActiveRun', () => {
     const queuedAt = new Date()
     const source = LogSources.API
 
+    const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
+    testKeys.add(key)
     const result = await createActiveRun({
       workspaceId,
       projectId,
       runUuid,
       queuedAt,
       source,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
     // Verify TTL is set (should be around 3 hours = 10800 seconds)
-    const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
-    testKeys.add(key)
     const ttl = await redis.ttl(key)
     expect(ttl).toBeGreaterThan(10700) // Allow some margin for execution time
     expect(ttl).toBeLessThanOrEqual(10800)
@@ -127,6 +116,8 @@ describe('createActiveRun', () => {
       LogSources.Experiment,
     ]
 
+    const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
+    testKeys.add(key)
     for (const source of sources) {
       const runUuid = `test-uuid-${source}`
       const queuedAt = new Date()
@@ -137,6 +128,7 @@ describe('createActiveRun', () => {
         runUuid,
         queuedAt,
         source,
+        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -154,6 +146,8 @@ describe('createActiveRun', () => {
       { uuid: 'run-3', source: LogSources.Experiment },
     ]
 
+    const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
+    testKeys.add(key)
     for (const run of runs) {
       const result = await createActiveRun({
         workspaceId,
@@ -161,6 +155,7 @@ describe('createActiveRun', () => {
         runUuid: run.uuid,
         queuedAt: new Date(),
         source: run.source,
+        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -168,15 +163,13 @@ describe('createActiveRun', () => {
     }
 
     // Verify all runs are stored
-    const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
-    testKeys.add(key)
     const hashData = await redis.hgetall(key)
     expect(Object.keys(hashData)).toHaveLength(3)
   })
 
   it('handles different workspaces and projects', async () => {
-    // Use unique IDs in test range to avoid conflicts with other tests
-    const baseWsId = TEST_ID_MIN + Math.floor(Math.random() * 1000000)
+    // Use unique IDs to avoid conflicts with other tests
+    const baseWsId = testCounter++
     const workspaces = [
       { workspaceId: baseWsId, projectId: baseWsId + 10 },
       { workspaceId: baseWsId, projectId: baseWsId + 20 },
@@ -196,6 +189,7 @@ describe('createActiveRun', () => {
         runUuid: `run-${wsId}-${projId}`,
         queuedAt: new Date(),
         source: LogSources.API,
+        cache: redis,
       })
 
       expect(result.ok).toBe(true)

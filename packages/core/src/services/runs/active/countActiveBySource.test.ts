@@ -3,28 +3,18 @@ import {
   LOG_SOURCES,
   LogSources,
 } from '../../../constants'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { Cache } from '../../../cache'
 import { cache } from '../../../cache'
 import { createActiveRun } from './create'
 import { countActiveRunsBySource } from './countActiveBySource'
-
-// Test IDs use workspace/project IDs >= 1,000,000 to identify test keys
-const TEST_ID_MIN = 1_000_000
 
 describe('countActiveRunsBySource', () => {
   let redis: Cache
   let workspaceId: number
   let projectId: number
   const testKeys = new Set<string>()
+  let testCounter = Date.now()
 
   beforeAll(async () => {
     redis = await cache()
@@ -32,9 +22,9 @@ describe('countActiveRunsBySource', () => {
   })
 
   beforeEach(async () => {
-    // Use test ID range to ensure we can clean them up by pattern
-    workspaceId = TEST_ID_MIN + Math.floor(Math.random() * 1000000)
-    projectId = TEST_ID_MIN + Math.floor(Math.random() * 1000000)
+    // Generate unique IDs for each test to avoid collisions in parallel execution
+    workspaceId = testCounter++
+    projectId = testCounter++
     testKeys.clear()
   })
 
@@ -47,14 +37,11 @@ describe('countActiveRunsBySource', () => {
     testKeys.clear()
   })
 
-  afterAll(async () => {
-    await redis.flushdb()
-  })
-
   it('returns zero counts for all sources when no runs exist', async () => {
     const result = await countActiveRunsBySource({
       workspaceId,
       projectId,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -87,6 +74,7 @@ describe('countActiveRunsBySource', () => {
         runUuid: run.uuid,
         queuedAt: new Date(), // Use current time to ensure not filtered by TTL
         source: run.source,
+        cache: redis,
       })
       expect(createResult.ok).toBe(true)
     }
@@ -94,6 +82,7 @@ describe('countActiveRunsBySource', () => {
     const result = await countActiveRunsBySource({
       workspaceId,
       projectId,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -126,11 +115,13 @@ describe('countActiveRunsBySource', () => {
       runUuid: 'run-1',
       queuedAt: new Date(),
       source: LogSources.API, // Explicitly set to API
+      cache: redis,
     })
 
     const result = await countActiveRunsBySource({
       workspaceId,
       projectId,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -144,6 +135,7 @@ describe('countActiveRunsBySource', () => {
     const result = await countActiveRunsBySource({
       workspaceId,
       projectId,
+      cache: redis,
     })
 
     expect(result.ok).toBe(true)
@@ -169,6 +161,7 @@ describe('countActiveRunsBySource', () => {
       runUuid: `run-1-${testId}`,
       queuedAt: new Date(),
       source: LogSources.API,
+      cache: redis,
     })
 
     await createActiveRun({
@@ -177,12 +170,14 @@ describe('countActiveRunsBySource', () => {
       runUuid: `run-2-${testId}`,
       queuedAt: new Date(),
       source: LogSources.API,
+      cache: redis,
     })
 
     // Updated count
     const updated = await countActiveRunsBySource({
       workspaceId,
       projectId,
+      cache: redis,
     })
     expect(updated.ok).toBe(true)
     if (!updated.ok) return
@@ -192,7 +187,7 @@ describe('countActiveRunsBySource', () => {
 
   it('handles multiple workspaces and projects independently', async () => {
     // Use unique IDs to avoid conflicts with other tests
-    const baseWsId = Math.floor(Math.random() * 1000000)
+    const baseWsId = testCounter++
     const ws1 = baseWsId
     const ws2 = baseWsId + 1
     const proj1 = baseWsId + 10
@@ -213,6 +208,7 @@ describe('countActiveRunsBySource', () => {
       runUuid: `run-${ws1}-${proj1}`,
       queuedAt: new Date(),
       source: LogSources.API,
+      cache: redis,
     })
 
     await createActiveRun({
@@ -221,6 +217,7 @@ describe('countActiveRunsBySource', () => {
       runUuid: `run-${ws1}-${proj2}`,
       queuedAt: new Date(),
       source: LogSources.Playground,
+      cache: redis,
     })
 
     await createActiveRun({
@@ -229,12 +226,14 @@ describe('countActiveRunsBySource', () => {
       runUuid: `run-${ws2}-${proj1}`,
       queuedAt: new Date(),
       source: LogSources.Experiment,
+      cache: redis,
     })
 
     // Count for workspace 1, project 1
     const result1 = await countActiveRunsBySource({
       workspaceId: ws1,
       projectId: proj1,
+      cache: redis,
     })
     expect(result1.ok).toBe(true)
     if (!result1.ok) return
@@ -246,6 +245,7 @@ describe('countActiveRunsBySource', () => {
     const result2 = await countActiveRunsBySource({
       workspaceId: ws1,
       projectId: proj2,
+      cache: redis,
     })
     expect(result2.ok).toBe(true)
     if (!result2.ok) return
