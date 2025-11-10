@@ -85,14 +85,14 @@ export class RunsRepository {
     cache = cache ?? (await redis())
 
     try {
-      // Use HGETALL to get all runs from hash at once
+      // Use HGETALL to get all runs from a workspace/project hash at once (O(N) but entire hash expires in 3 hours, so N won't be too large)
       const hashData = await cache.hgetall(key)
 
       if (!hashData || Object.keys(hashData).length === 0) {
         return Result.ok<Record<string, ActiveRun>>({})
       }
 
-      // Parse each hash value (JSON string) to ActiveRun
+      // Parse each hash value (JSON string) to an ActiveRun object
       const active: Record<string, ActiveRun> = {}
       const now = Date.now()
 
@@ -101,7 +101,7 @@ export class RunsRepository {
           const run = JSON.parse(jsonValue) as ActiveRun
           const queuedAt = new Date(run.queuedAt)
 
-          // Filter expired runs
+          // Filter expired runs (the entire hash expires in 3 hours, but it updates back to its initial TTL on every update to the hash, so we need to check each run individually of the hash to check if they're still valid)
           if (queuedAt.getTime() > now - ACTIVE_RUN_CACHE_TTL) {
             active[runUuid] = {
               ...run,
@@ -130,7 +130,7 @@ export class RunsRepository {
       return Result.ok<Run>(await this.logToRun(getting.value))
     }
 
-    // Try to get from hash using HGET
+    // Try to get from hash using HGET (O(1) operation)
     const key = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
     const cache = await redis()
 
@@ -149,9 +149,11 @@ export class RunsRepository {
       })
     } catch (error) {
       if (error instanceof SyntaxError) {
-        // Malformed JSON in cache - log and return not found
+        // Malformed JSON in cache, return not found error
         return Result.error(
-          new NotFoundError(`Run not found with uuid ${runUuid}`),
+          new NotFoundError(
+            `Syntax error while getting run from cache with uuid ${runUuid}`,
+          ),
         )
       }
       // Redis connection error - rethrow or handle appropriately
@@ -330,7 +332,7 @@ export class RunsRepository {
         caption: caption ?? existingRun.caption,
       }
 
-      // Use HSET to atomically update the run in the hash, refreshing the TTL of the workspace/projectkey to 3 hours
+      // Use HSET to atomically update the run in the existinghash, refreshing the TTL of the workspace/projectkey to 3 hours
       await cache.hset(
         key,
         runUuid,
