@@ -30,6 +30,8 @@ import {
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Experiment } from '../../../schema/models/types/Experiment'
 import { SimulationSettings } from '@latitude-data/constants/simulation'
+import { isFeatureEnabledByName } from '../../../services/workspaceFeatures/isFeatureEnabledByName'
+import { Result } from '../../../lib/Result'
 
 export type BackgroundRunJobData = {
   workspaceId: number
@@ -138,6 +140,20 @@ export const backgroundRunJob = async (
     })
 
     if (experiment) {
+      // TODO(): This is temporary while we think of a more long lasting solution to ban/rate limit users
+      const evaluationsNotEnabledResult = await isFeatureEnabledByName(
+        workspace.id,
+        'evaluations-enabled',
+      )
+      if (!Result.isOk(evaluationsNotEnabledResult))
+        return evaluationsNotEnabledResult
+
+      const evaluationsNotEnabled = evaluationsNotEnabledResult.unwrap()
+      if (evaluationsNotEnabled) {
+        // Evaluations are disabled for this workspace, skip enqueueing
+        return
+      }
+
       // Enqueue evaluations for current experiment
       await updateExperimentStatus(
         {
