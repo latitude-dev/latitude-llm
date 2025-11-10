@@ -12,7 +12,9 @@ import type { Cache } from '../../cache'
 import { cache } from '../../cache'
 import { publisher } from '../../events/publisher'
 import { queues } from '../../jobs/queues'
-import { RunsRepository } from '../../repositories'
+import { deleteActiveRun } from './active/delete'
+import { getRun } from './get'
+import { listActiveRuns } from './active/listActive'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Project } from '../../schema/models/types/Project'
@@ -70,9 +72,9 @@ describe('enqueueRun', () => {
         queuedAt: new Date(),
       }
 
-      // Mock RunsRepository.create to track when cache entry is created
+      // Mock createActiveRun to track when cache entry is created
       const createSpy = vi
-        .spyOn(RunsRepository.prototype, 'create')
+        .spyOn(await import('./active/create'), 'createActiveRun')
         .mockImplementation(async () => {
           callOrder.push('cache-create')
           return { ok: true, value: mockRun } as any
@@ -115,8 +117,11 @@ describe('enqueueRun', () => {
       const run = result.value.run
 
       // Verify cache entry was created by checking it exists
-      const repository = new RunsRepository(mockWorkspace.id, mockProject.id)
-      const cached = await repository.get({ runUuid: run.uuid })
+      const cached = await getRun({
+        workspaceId: mockWorkspace.id,
+        projectId: mockProject.id,
+        runUuid: run.uuid,
+      })
 
       expect(cached.ok).toBe(true)
       if (!cached.ok || !cached.value) return
@@ -125,7 +130,11 @@ describe('enqueueRun', () => {
       expect(cached.value.queuedAt).toBeInstanceOf(Date)
 
       // Clean up the cache entry we created
-      await repository.delete({ runUuid: run.uuid })
+      await deleteActiveRun({
+        workspaceId: mockWorkspace.id,
+        projectId: mockProject.id,
+        runUuid: run.uuid,
+      })
     })
   })
 
@@ -144,8 +153,12 @@ describe('enqueueRun', () => {
       expect(result.error?.message).toContain('Failed to enqueue')
 
       // Verify cache entry was cleaned up
-      const repository = new RunsRepository(mockWorkspace.id, mockProject.id)
-      const active = await repository.listActive({ page: 1, pageSize: 100 })
+      const active = await listActiveRuns({
+        workspaceId: mockWorkspace.id,
+        projectId: mockProject.id,
+        page: 1,
+        pageSize: 100,
+      })
 
       expect(active.ok).toBe(true)
       if (!active.ok || !active.value) return
@@ -155,7 +168,7 @@ describe('enqueueRun', () => {
     it('does not create job if cache creation fails', async () => {
       // Force cache creation to fail
       const createSpy = vi
-        .spyOn(RunsRepository.prototype, 'create')
+        .spyOn(await import('./active/create'), 'createActiveRun')
         .mockResolvedValueOnce({
           ok: false,
           error: new Error('Cache error'),
@@ -201,8 +214,12 @@ describe('enqueueRun', () => {
       expect(new Set(uuids).size).toBe(concurrentCount)
 
       // All should have cache entries
-      const repository = new RunsRepository(mockWorkspace.id, mockProject.id)
-      const active = await repository.listActive({ page: 1, pageSize: 100 })
+      const active = await listActiveRuns({
+        workspaceId: mockWorkspace.id,
+        projectId: mockProject.id,
+        page: 1,
+        pageSize: 100,
+      })
 
       expect(active.ok).toBe(true)
       if (!active.ok || !active.value) return
@@ -211,7 +228,11 @@ describe('enqueueRun', () => {
       // Clean up all cache entries
       for (const result of succeeded) {
         if (result.ok && result.value) {
-          await repository.delete({ runUuid: result.value.run.uuid })
+          await deleteActiveRun({
+            workspaceId: mockWorkspace.id,
+            projectId: mockProject.id,
+            runUuid: result.value.run.uuid,
+          })
         }
       }
     }, 10000)
@@ -326,7 +347,7 @@ describe('enqueueRun', () => {
       }
 
       const createSpy = vi
-        .spyOn(RunsRepository.prototype, 'create')
+        .spyOn(await import('./active/create'), 'createActiveRun')
         .mockImplementation(async () => {
           // Simulate slow cache creation
           await new Promise((resolve) => setTimeout(resolve, 50))

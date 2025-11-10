@@ -2,7 +2,7 @@ import { BackgroundRunJobData } from '../jobs/job-definitions/runs/backgroundRun
 import { queues } from '../jobs/queues'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import { RunsRepository } from '../repositories'
+import { getRun } from '../services/runs/get'
 
 export async function unsafelyFindActiveRun(runUuid: string) {
   const { runsQueue } = await queues()
@@ -14,9 +14,12 @@ export async function unsafelyFindActiveRun(runUuid: string) {
   }
 
   const { workspaceId, projectId } = job.data as BackgroundRunJobData
-  const repository = new RunsRepository(workspaceId, projectId)
 
-  const getting = await repository.get({ runUuid })
+  const getting = await getRun({
+    workspaceId,
+    projectId,
+    runUuid,
+  })
   if (getting.error) return Result.error(getting.error)
   const run = getting.value
 

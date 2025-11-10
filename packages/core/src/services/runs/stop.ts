@@ -3,7 +3,7 @@ import { publisher } from '../../events/publisher'
 import { queues } from '../../jobs/queues'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import { RunsRepository } from '../../repositories'
+import { deleteActiveRun } from './active/delete'
 import { type Project } from '../../schema/models/types/Project'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { JOB_FINISHED_STATES, subscribeQueue } from './shared'
@@ -24,8 +24,11 @@ export async function stopRun({
   const { runsQueue } = await queues()
   const job = await runsQueue.getJob(run.uuid)
   if (!job?.id) {
-    const runsRepo = new RunsRepository(workspace.id, project.id)
-    const result = await runsRepo.delete({ runUuid: run.uuid })
+    const result = await deleteActiveRun({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      runUuid: run.uuid,
+    })
     if (!Result.isOk(result)) return result
 
     return Result.nil()
