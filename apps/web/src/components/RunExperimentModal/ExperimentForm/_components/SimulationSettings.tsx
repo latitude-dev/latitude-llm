@@ -29,7 +29,6 @@ import { ICON_BY_LLM_PROVIDER } from '$/lib/providerIcons'
 import { ICON_BY_LATITUDE_TOOL } from '$/lib/toolIcons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { capitalize } from 'lodash-es'
-import { NumeredList } from '@latitude-data/web-ui/molecules/NumeredList'
 
 const getToolIcon = (
   toolName: string,
