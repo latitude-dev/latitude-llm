@@ -11,6 +11,8 @@ import {
 } from '../../repositories'
 import { getEvaluationMetricSpecification } from '../../services/evaluationsV2/specifications'
 import { DocumentLogCreatedEvent, DocumentLogInteractedEvent } from '../events'
+import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatureEnabledByName'
+import { Result } from '../../lib/Result'
 
 const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
   (source) => source !== 'evaluation' && source !== 'experiment',
@@ -64,6 +66,20 @@ export const evaluateLiveLogJob = async ({
       evaluation.evaluateLiveLogs &&
       getEvaluationMetricSpecification(evaluation).supportsLiveEvaluation,
   )
+
+  // TODO(): This is temporary while we think of a more long lasting solution to ban/rate limit users
+  const evaluationsNotEnabledResult = await isFeatureEnabledByName(
+    workspace.id,
+    'evaluations-enabled',
+  )
+  if (!Result.isOk(evaluationsNotEnabledResult))
+    return evaluationsNotEnabledResult
+
+  const evaluationsNotEnabled = evaluationsNotEnabledResult.unwrap()
+  if (evaluationsNotEnabled) {
+    // Evaluations are disabled for this workspace, skip enqueueing
+    return
+  }
 
   for (const evaluation of evaluations) {
     const payload = {
