@@ -12,9 +12,8 @@ import {
   ProjectsRepository,
   ProviderApiKeysRepository,
   ProviderLogsRepository,
+  RunsRepository,
 } from '@latitude-data/core/repositories/index'
-import { listActiveRuns } from '@latitude-data/core/services/runs/active/listActive'
-import { listCompletedRuns } from '@latitude-data/core/services/runs/completed/listCompleted'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
 import {
@@ -384,13 +383,14 @@ export const listActiveRunsCached = cache(
     sourceGroup?: RunSourceGroup
   }) => {
     const { workspace } = await getCurrentUserOrRedirect()
-    const runs = await listActiveRuns({
-      workspaceId: workspace.id,
-      projectId,
-      page,
-      pageSize,
-      sourceGroup,
-    }).then((r) => r.unwrap())
+    const repository = new RunsRepository(workspace.id, projectId)
+    const runs = await repository
+      .listActive({
+        page,
+        pageSize,
+        sourceGroup,
+      })
+      .then((r) => r.unwrap())
 
     return runs
   },
@@ -409,13 +409,10 @@ export const listCompletedRunsCached = cache(
     sourceGroup?: RunSourceGroup
   }) => {
     const { workspace } = await getCurrentUserOrRedirect()
-    const runs = await listCompletedRuns({
-      workspaceId: workspace.id,
-      projectId,
-      page,
-      pageSize,
-      sourceGroup,
-    }).then((r) => r.unwrap())
+    const repository = new RunsRepository(workspace.id, projectId)
+    const runs = await repository
+      .listCompleted({ page, pageSize, sourceGroup })
+      .then((r) => r.unwrap())
 
     return runs
   },

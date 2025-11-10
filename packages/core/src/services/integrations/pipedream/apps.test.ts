@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest'
 import { Result } from '../../../lib/Result'
 import { listApps, getApp, PipedreamNotConfiguredError } from './apps'
 import { cache } from '../../../cache'
@@ -28,6 +28,12 @@ afterEach(async () => {
       key.replace(REDIS_KEY_PREFIX, ''),
     )
     await redis.del(...keysWithoutPrefix)
+  }
+})
+
+afterAll(async () => {
+  if (redis) {
+    await redis.quit()
   }
 })
 

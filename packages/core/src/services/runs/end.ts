@@ -1,6 +1,6 @@
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
-import { deleteActiveRun } from './active/delete'
+import { RunsRepository } from '../../repositories'
 
 export async function endRun({
   workspaceId,
@@ -11,7 +11,9 @@ export async function endRun({
   projectId: number
   runUuid: string
 }) {
-  const done = await deleteActiveRun({ workspaceId, projectId, runUuid })
+  const repository = new RunsRepository(workspaceId, projectId)
+
+  const done = await repository.delete({ runUuid })
   if (!Result.isOk(done)) return done
 
   await publisher.publishLater({

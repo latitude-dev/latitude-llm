@@ -1,6 +1,6 @@
-import { ACTIVE_RUNS_CACHE_KEY, LogSources } from '@latitude-data/constants'
+import { LogSources } from '@latitude-data/constants'
 import {
-  afterEach,
+  afterAll,
   beforeAll,
   beforeEach,
   describe,
@@ -12,9 +12,7 @@ import type { Cache } from '../../cache'
 import { cache } from '../../cache'
 import { publisher } from '../../events/publisher'
 import { queues } from '../../jobs/queues'
-import { deleteActiveRun } from './active/delete'
-import { getRun } from './get'
-import { listActiveRuns } from './active/listActive'
+import { RunsRepository } from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Project } from '../../schema/models/types/Project'
@@ -26,12 +24,10 @@ vi.mock('../../events/publisher')
 
 describe('enqueueRun', () => {
   let redis: Cache
-  let mockWorkspace: Workspace
-  let mockProject: Project
+  const mockWorkspace = { id: 1 } as Workspace
+  const mockProject = { id: 50 } as Project
   const mockCommit = { uuid: 'commit-uuid' } as Commit
   const mockDocument = { documentUuid: 'doc-uuid' } as DocumentVersion
-  const testKeys = new Set<string>()
-  let testCounter = Date.now()
 
   const mockQueue = {
     add: vi.fn(),
@@ -48,18 +44,10 @@ describe('enqueueRun', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    // Generate unique IDs for each test to avoid collisions in parallel execution
-    mockWorkspace = {
-      id: testCounter++,
-    } as Workspace
-    mockProject = {
-      id: testCounter++,
-    } as Project
-    testKeys.clear()
 
-    // Track the key for this workspace/project combination
-    const key = ACTIVE_RUNS_CACHE_KEY(mockWorkspace.id, mockProject.id)
-    testKeys.add(key)
+    // Flush the entire Redis database to ensure clean state between tests
+    // This is safe in test environment as we're using a test-specific Redis instance
+    await redis.flushdb()
 
     vi.mocked(queues).mockResolvedValue({
       runsQueue: mockQueue as any,
@@ -69,13 +57,9 @@ describe('enqueueRun', () => {
     vi.mocked(publisher.publishLater).mockResolvedValue(undefined as any)
   })
 
-  afterEach(async () => {
-    // Clean up only keys created by this specific test
-    // Track keys as we create them to avoid interfering with parallel tests
-    for (const key of testKeys) {
-      await redis.del(key)
-    }
-    testKeys.clear()
+  afterAll(async () => {
+    // Final cleanup - flush the database
+    await redis.flushdb()
   })
 
   describe('critical: cache entry created before job queued', () => {
@@ -86,9 +70,9 @@ describe('enqueueRun', () => {
         queuedAt: new Date(),
       }
 
-      // Mock createActiveRun to track when cache entry is created
+      // Mock RunsRepository.create to track when cache entry is created
       const createSpy = vi
-        .spyOn(await import('./active/create'), 'createActiveRun')
+        .spyOn(RunsRepository.prototype, 'create')
         .mockImplementation(async () => {
           callOrder.push('cache-create')
           return { ok: true, value: mockRun } as any
@@ -106,7 +90,6 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
-        cache: redis,
       })
 
       // CRITICAL: Cache entry must be created BEFORE job is added
@@ -124,7 +107,6 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
-        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -133,12 +115,8 @@ describe('enqueueRun', () => {
       const run = result.value.run
 
       // Verify cache entry was created by checking it exists
-      const cached = await getRun({
-        workspaceId: mockWorkspace.id,
-        projectId: mockProject.id,
-        runUuid: run.uuid,
-        cache: redis,
-      })
+      const repository = new RunsRepository(mockWorkspace.id, mockProject.id)
+      const cached = await repository.get({ runUuid: run.uuid })
 
       expect(cached.ok).toBe(true)
       if (!cached.ok || !cached.value) return
@@ -147,12 +125,7 @@ describe('enqueueRun', () => {
       expect(cached.value.queuedAt).toBeInstanceOf(Date)
 
       // Clean up the cache entry we created
-      await deleteActiveRun({
-        workspaceId: mockWorkspace.id,
-        projectId: mockProject.id,
-        runUuid: run.uuid,
-        cache: redis,
-      })
+      await repository.delete({ runUuid: run.uuid })
     })
   })
 
@@ -165,20 +138,14 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
-        cache: redis,
       })
 
       expect(result.ok).toBe(false)
       expect(result.error?.message).toContain('Failed to enqueue')
 
       // Verify cache entry was cleaned up
-      const active = await listActiveRuns({
-        workspaceId: mockWorkspace.id,
-        projectId: mockProject.id,
-        page: 1,
-        pageSize: 100,
-        cache: redis,
-      })
+      const repository = new RunsRepository(mockWorkspace.id, mockProject.id)
+      const active = await repository.listActive({ page: 1, pageSize: 100 })
 
       expect(active.ok).toBe(true)
       if (!active.ok || !active.value) return
@@ -188,7 +155,7 @@ describe('enqueueRun', () => {
     it('does not create job if cache creation fails', async () => {
       // Force cache creation to fail
       const createSpy = vi
-        .spyOn(await import('./active/create'), 'createActiveRun')
+        .spyOn(RunsRepository.prototype, 'create')
         .mockResolvedValueOnce({
           ok: false,
           error: new Error('Cache error'),
@@ -199,7 +166,6 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
-        cache: redis,
       })
 
       expect(result.ok).toBe(false)
@@ -219,7 +185,6 @@ describe('enqueueRun', () => {
           project: mockProject,
           commit: mockCommit,
           document: mockDocument,
-          cache: redis,
         }),
       )
 
@@ -236,13 +201,8 @@ describe('enqueueRun', () => {
       expect(new Set(uuids).size).toBe(concurrentCount)
 
       // All should have cache entries
-      const active = await listActiveRuns({
-        workspaceId: mockWorkspace.id,
-        projectId: mockProject.id,
-        page: 1,
-        pageSize: 100,
-        cache: redis,
-      })
+      const repository = new RunsRepository(mockWorkspace.id, mockProject.id)
+      const active = await repository.listActive({ page: 1, pageSize: 100 })
 
       expect(active.ok).toBe(true)
       if (!active.ok || !active.value) return
@@ -251,12 +211,7 @@ describe('enqueueRun', () => {
       // Clean up all cache entries
       for (const result of succeeded) {
         if (result.ok && result.value) {
-          await deleteActiveRun({
-            workspaceId: mockWorkspace.id,
-            projectId: mockProject.id,
-            runUuid: result.value.run.uuid,
-            cache: redis,
-          })
+          await repository.delete({ runUuid: result.value.run.uuid })
         }
       }
     }, 10000)
@@ -279,7 +234,6 @@ describe('enqueueRun', () => {
         tools,
         userMessage,
         source: LogSources.Playground,
-        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -311,7 +265,6 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
-        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -331,7 +284,6 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
-        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -346,7 +298,6 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
-        cache: redis,
       })
 
       expect(result.ok).toBe(true)
@@ -375,7 +326,7 @@ describe('enqueueRun', () => {
       }
 
       const createSpy = vi
-        .spyOn(await import('./active/create'), 'createActiveRun')
+        .spyOn(RunsRepository.prototype, 'create')
         .mockImplementation(async () => {
           // Simulate slow cache creation
           await new Promise((resolve) => setTimeout(resolve, 50))
@@ -399,7 +350,6 @@ describe('enqueueRun', () => {
         project: mockProject,
         commit: mockCommit,
         document: mockDocument,
-        cache: redis,
       })
 
       expect(jobProcessingStarted).toBe(true)
