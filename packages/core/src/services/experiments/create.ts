@@ -13,6 +13,11 @@ import { type Experiment } from '../../schema/models/types/Experiment'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { scanDocumentContent } from '../documents'
 import { assertEvaluationRequirements } from './assertRequirements'
+import type {
+  ExperimentDatasetSource,
+  ExperimentLogsSource,
+  ExperimentManualSource,
+} from '@latitude-data/constants/experiments'
 
 function calculateSelectedRangeCount({
   firstIndex,
@@ -69,6 +74,12 @@ async function getPromptMetadata(
   })
 }
 
+// Input type for the service - includes Dataset object (resolved from datasetId by caller)
+type CreateExperimentInput =
+  | (Omit<ExperimentDatasetSource, 'datasetId'> & { dataset: Dataset })
+  | ExperimentLogsSource
+  | ExperimentManualSource
+
 export async function createExperiment(
   {
     name,
@@ -76,11 +87,7 @@ export async function createExperiment(
     commit,
     evaluations,
     customPrompt,
-    dataset,
-    parametersMap,
-    datasetLabels,
-    fromRow = 0,
-    toRow,
+    parametersPopulation,
     simulationSettings,
     workspace,
   }: {
@@ -89,17 +96,19 @@ export async function createExperiment(
     evaluations: EvaluationV2[]
     document: DocumentVersion
     customPrompt?: string // Prompt can be different than the current one (for drafts, or tweaked experiments)
-    dataset?: Dataset
-    parametersMap: Record<string, number>
-    datasetLabels: Record<string, string>
-    fromRow?: number
-    toRow?: number
+    parametersPopulation: CreateExperimentInput
     simulationSettings: SimulationSettings
     workspace: Workspace
   },
   transaction = new Transaction(),
 ) {
   return transaction.call(async (tx) => {
+    // Extract datasetLabels based on source type
+    const datasetLabels =
+      parametersPopulation.source === 'dataset'
+        ? parametersPopulation.datasetLabels
+        : {}
+
     const requirementsResult = assertEvaluationRequirements({
       evaluations,
       datasetLabels,
@@ -120,19 +129,56 @@ export async function createExperiment(
     }
     const promptMetadata = promptMetadataResult.unwrap()
 
-    if (!!promptMetadata.parameters.length && !dataset) {
+    // Validation for parameters
+    if (
+      !!promptMetadata.parameters.length &&
+      parametersPopulation.source !== 'dataset' &&
+      parametersPopulation.source !== 'logs'
+    ) {
       return Result.error(
         new BadRequestError(
-          'A dataset is required when the prompt contains parameters',
+          'A dataset or logs count is required when the prompt contains parameters',
         ),
       )
     }
 
-    const datasetRowsScope = new DatasetRowsRepository(workspace.id, tx)
-    const countResult = dataset
-      ? await datasetRowsScope.getCountByDataset(dataset.id)
-      : undefined
-    const rowCount = countResult?.[0]?.count
+    // Build the final parametersSource based on input type
+    let parametersSource
+    let count
+    let datasetId: number | undefined = undefined
+
+    if (parametersPopulation.source === 'logs') {
+      // Logs source
+      parametersSource = parametersPopulation
+      count = parametersPopulation.count
+    } else if (parametersPopulation.source === 'dataset') {
+      // Dataset source - need to resolve datasetId from dataset and handle row count
+      const { dataset, fromRow, toRow, datasetLabels, parametersMap } =
+        parametersPopulation
+      const datasetRowsScope = new DatasetRowsRepository(workspace.id, tx)
+      const countResult = await datasetRowsScope.getCountByDataset(dataset.id)
+      const rowCount = countResult?.[0]?.count
+
+      datasetId = dataset.id
+
+      parametersSource = {
+        source: 'dataset' as const,
+        datasetId: dataset.id,
+        fromRow,
+        toRow: toRow ?? rowCount ?? 0,
+        datasetLabels,
+        parametersMap,
+      }
+      count = calculateSelectedRangeCount({
+        firstIndex: fromRow,
+        lastIndex: toRow,
+        totalCount: rowCount,
+      })
+    } else {
+      // Manual source
+      parametersSource = parametersPopulation
+      count = parametersPopulation.count
+    }
 
     const result = await tx
       .insert(experiments)
@@ -142,19 +188,12 @@ export async function createExperiment(
         commitId: commit.id,
         documentUuid: document.documentUuid,
         evaluationUuids: evaluations.map((e) => e.uuid),
-        datasetId: dataset?.id,
+        datasetId,
         metadata: {
           prompt: promptMetadata.resolvedPrompt,
           promptHash: promptMetadata.promptHash,
-          parametersMap,
-          datasetLabels,
-          fromRow: fromRow,
-          toRow: toRow ?? rowCount,
-          count: calculateSelectedRangeCount({
-            firstIndex: fromRow,
-            lastIndex: toRow,
-            totalCount: rowCount,
-          }),
+          count,
+          parametersSource,
           simulationSettings,
         },
       })

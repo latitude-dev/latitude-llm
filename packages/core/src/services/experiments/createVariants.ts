@@ -14,6 +14,17 @@ import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { createExperiment } from './create'
 import { SimulationSettings } from '@latitude-data/constants/simulation'
+import type {
+  ExperimentDatasetSource,
+  ExperimentLogsSource,
+  ExperimentManualSource,
+} from '@latitude-data/constants/experiments'
+
+// Input type for createVariants - includes Dataset object (resolved from datasetId by caller)
+type CreateExperimentVariantsInput =
+  | (Omit<ExperimentDatasetSource, 'datasetId'> & { dataset: Dataset })
+  | ExperimentLogsSource
+  | ExperimentManualSource
 
 export async function createExperimentVariants(
   {
@@ -23,11 +34,7 @@ export async function createExperimentVariants(
     document,
     variants: inputVariants,
     evaluations,
-    dataset,
-    parametersMap,
-    datasetLabels,
-    fromRow = 0,
-    toRow,
+    parametersPopulation,
     simulationSettings,
   }: {
     user: User
@@ -36,11 +43,7 @@ export async function createExperimentVariants(
     variants: ExperimentVariant[]
     evaluations: EvaluationV2[]
     document: DocumentVersion
-    dataset?: Dataset
-    parametersMap: Record<string, number>
-    datasetLabels: Record<string, string>
-    fromRow?: number
-    toRow?: number
+    parametersPopulation: CreateExperimentVariantsInput
     simulationSettings: SimulationSettings
   },
   transaction = new Transaction(),
@@ -83,11 +86,7 @@ export async function createExperimentVariants(
             document,
             commit,
             evaluations,
-            dataset,
-            parametersMap,
-            datasetLabels,
-            fromRow,
-            toRow,
+            parametersPopulation,
             workspace,
             simulationSettings,
           },

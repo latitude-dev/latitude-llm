@@ -7,7 +7,10 @@ import {
   DatasetsRepository,
   EvaluationsV2Repository,
 } from '@latitude-data/core/repositories'
-import { experimentVariantSchema } from '@latitude-data/constants/experiments'
+import {
+  experimentVariantSchema,
+  experimentParametersSourceSchema,
+} from '@latitude-data/constants/experiments'
 import { z } from 'zod'
 
 export const createExperimentAction = withDocument
@@ -15,11 +18,7 @@ export const createExperimentAction = withDocument
     withDocumentSchema.extend({
       variants: z.array(experimentVariantSchema),
       evaluationUuids: z.array(z.string()),
-      datasetId: z.number().optional(),
-      parametersMap: z.record(z.string(), z.number()),
-      datasetLabels: z.record(z.string(), z.string()),
-      fromRow: z.number(),
-      toRow: z.number().optional(),
+      parametersPopulation: experimentParametersSourceSchema,
       simulationSettings: z.object({
         simulateToolResponses: z.boolean().optional(),
         simulatedTools: z.array(z.string()).optional(),
@@ -31,17 +30,9 @@ export const createExperimentAction = withDocument
     const {
       variants,
       evaluationUuids,
-      datasetId,
-      parametersMap,
-      datasetLabels,
-      fromRow,
-      toRow,
+      parametersPopulation,
       simulationSettings,
     } = parsedInput
-    const datasetsScope = new DatasetsRepository(ctx.workspace.id)
-    const dataset = datasetId
-      ? await datasetsScope.find(datasetId).then((r) => r.unwrap())
-      : undefined
 
     const evaluationsScope = new EvaluationsV2Repository(ctx.workspace.id)
     const docEvaluations = await evaluationsScope
@@ -64,6 +55,27 @@ export const createExperimentAction = withDocument
       )
     }
 
+    // Resolve dataset if needed and build proper input for service
+    let serviceInput
+    if (parametersPopulation.source === 'dataset') {
+      const datasetsScope = new DatasetsRepository(ctx.workspace.id)
+      const dataset = await datasetsScope
+        .find(parametersPopulation.datasetId)
+        .then((r) => r.unwrap())
+
+      serviceInput = {
+        source: 'dataset' as const,
+        dataset,
+        fromRow: parametersPopulation.fromRow,
+        toRow: parametersPopulation.toRow,
+        datasetLabels: parametersPopulation.datasetLabels,
+        parametersMap: parametersPopulation.parametersMap,
+      }
+    } else {
+      // logs or manual - pass through as-is
+      serviceInput = parametersPopulation
+    }
+
     const experiments = await createExperimentVariants({
       user: ctx.user,
       workspace: ctx.workspace,
@@ -71,11 +83,7 @@ export const createExperimentAction = withDocument
       document: ctx.document,
       variants,
       evaluations,
-      dataset,
-      parametersMap,
-      datasetLabels,
-      fromRow,
-      toRow,
+      parametersPopulation: serviceInput,
       simulationSettings,
     }).then((r) => r.unwrap())
 

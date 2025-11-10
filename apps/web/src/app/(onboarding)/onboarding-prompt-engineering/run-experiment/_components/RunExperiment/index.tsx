@@ -89,10 +89,20 @@ export default function RunExperimentBody({
       commitUuid: commit.uuid,
       documentUuid: document.documentUuid,
       variants: EXPERIMENT_VARIANT,
-      datasetId: latestDataset?.id,
-      parametersMap,
-      datasetLabels: {},
-      fromRow: 1,
+      parametersPopulation: latestDataset
+        ? {
+            source: 'dataset' as const,
+            datasetId: latestDataset.id,
+            parametersMap,
+            datasetLabels: {},
+            fromRow: 1,
+            toRow: 4,
+          }
+        : {
+            source: 'manual' as const,
+            count: 4,
+            parametersMap,
+          },
       evaluationUuids: [],
       simulationSettings: {
         simulateToolResponses: false,
@@ -100,7 +110,7 @@ export default function RunExperimentBody({
     })
   }, [
     create,
-    latestDataset?.id,
+    latestDataset,
     project.id,
     commit.uuid,
     document.documentUuid,

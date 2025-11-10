@@ -1,5 +1,3 @@
-import { SimulationSettings } from './simulation'
-
 // TODO(tracing): deprecated
 export const HEAD_COMMIT = 'live'
 
@@ -44,32 +42,12 @@ export enum DocumentTriggerParameters {
   Attachments = 'attachments',
 }
 
-export type ExperimentMetadata = {
-  prompt: string
-  promptHash: string
-  parametersMap: Record<string, number>
-  datasetLabels: Record<string, string> // name for the expected output column in golden datasets, based on evaluation uuid
-  fromRow?: number
-  toRow?: number
-  count: number // Total number of to generate logs in the experiment
-  simulationSettings?: SimulationSettings
-}
-
-export type ExperimentEvaluationScore = {
-  count: number
-  totalScore: number
-  totalNormalizedScore: number
-}
-
-export type ExperimentScores = {
-  [evaluationUuid: string]: ExperimentEvaluationScore
-}
-
 // TODO: Remove these
 export * from './ai'
 export * from './config'
 export * from './evaluations'
 export * from './events'
+export * from './experiments'
 export * from './grants'
 export * from './helpers'
 export * from './history'

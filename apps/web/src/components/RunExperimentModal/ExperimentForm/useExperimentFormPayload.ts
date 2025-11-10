@@ -43,6 +43,8 @@ export type ExperimentFormPayload = {
   simulationSettings: SimulationSettings
   setSimulationSettings: ReactStateDispatch<SimulationSettings>
   parameters: string[]
+  selectedParametersSource: 'dataset' | 'logs' | 'manual'
+  setSelectedParametersSource: ReactStateDispatch<'dataset' | 'logs' | 'manual'>
 }
 
 export function useExperimentFormPayload({
@@ -84,6 +86,9 @@ export function useExperimentFormPayload({
       simulatedTools: [],
       toolSimulationInstructions: '',
     })
+  const [selectedParametersSource, setSelectedParametersSource] = useState<
+    'dataset' | 'logs' | 'manual'
+  >('dataset')
 
   const [variants, setVariants] = useState<
     {
@@ -139,5 +144,7 @@ export function useExperimentFormPayload({
     simulationSettings,
     setSimulationSettings,
     parameters,
+    selectedParametersSource,
+    setSelectedParametersSource,
   }
 }

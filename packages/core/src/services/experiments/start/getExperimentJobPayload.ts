@@ -1,5 +1,5 @@
 import { database } from '../../../client'
-import { EvaluationV2 } from '../../../constants'
+import { EvaluationV2, LogSources } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { NotFoundError } from '../../../lib/errors'
@@ -18,10 +18,21 @@ import { Project } from '../../../schema/models/types/Project'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { getRowsFromRange } from '../../datasetRows/getRowsFromRange'
 import { assertEvaluationRequirements } from '../assertRequirements'
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  isNull,
+  lt,
+  notInArray,
+} from 'drizzle-orm'
+import { documentLogs } from '../../../schema/models/documentLogs'
+import { commits } from '../../../schema/models/commits'
 
 export type ExperimentRow = {
   id: number
-  parameters: Record<string, string>
+  parameters: Record<string, unknown>
 }
 
 async function getExperimentRows(
@@ -62,6 +73,42 @@ async function getExperimentRows(
       ),
     }
   })
+}
+
+async function getExperimentLogsRows(
+  {
+    experiment,
+    document,
+    count,
+  }: {
+    experiment: Experiment
+    document: DocumentVersion
+    count: number
+  },
+  db = database,
+): Promise<ExperimentRow[]> {
+  // Fetch logs created before this experiment, excluding experiment logs
+  const logs = await db
+    .select(getTableColumns(documentLogs))
+    .from(documentLogs)
+    .innerJoin(
+      commits,
+      and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
+    )
+    .where(
+      and(
+        eq(documentLogs.documentUuid, document.documentUuid),
+        lt(documentLogs.createdAt, experiment.createdAt),
+        notInArray(documentLogs.source, [LogSources.Experiment]),
+      ),
+    )
+    .orderBy(desc(documentLogs.createdAt))
+    .limit(count)
+
+  return logs.map((log) => ({
+    id: log.id,
+    parameters: log.parameters,
+  }))
 }
 
 export async function getExperimentJobPayload(
@@ -128,30 +175,64 @@ export async function getExperimentJobPayload(
     )
   }
 
-  const requirementsResult = assertEvaluationRequirements({
-    evaluations,
-    datasetLabels: experiment.metadata.datasetLabels,
-  })
+  const parametersSource = experiment.metadata.parametersSource
 
-  if (requirementsResult.error) return requirementsResult
+  // Handle different parameter sources
+  if (parametersSource.source === 'logs') {
+    const requirementsResult = assertEvaluationRequirements({
+      evaluations,
+      datasetLabels: {},
+    })
 
-  if (!experiment.datasetId) {
-    const from = experiment.metadata.fromRow
-    const to = experiment.metadata.toRow
+    if (requirementsResult.error) return requirementsResult
 
-    if (from === undefined || to === undefined) {
-      return Result.error(
-        new Error('Experiments without a dataset must have a range defined'),
-      )
-    }
+    const rows = await getExperimentLogsRows(
+      {
+        experiment,
+        document,
+        count: parametersSource.count,
+      },
+      db,
+    )
 
     return Result.ok({
       project,
       commit,
       document,
       evaluations,
-      rows: new Array(to - from + 1).fill(undefined),
+      rows,
     })
+  }
+
+  if (parametersSource.source === 'manual') {
+    const requirementsResult = assertEvaluationRequirements({
+      evaluations,
+      datasetLabels: {},
+    })
+
+    if (requirementsResult.error) return requirementsResult
+
+    return Result.ok({
+      project,
+      commit,
+      document,
+      evaluations,
+      rows: new Array(parametersSource.count).fill(undefined),
+    })
+  }
+
+  // Handle dataset source
+  const requirementsResult = assertEvaluationRequirements({
+    evaluations,
+    datasetLabels: parametersSource.datasetLabels,
+  })
+
+  if (requirementsResult.error) return requirementsResult
+
+  if (!experiment.datasetId) {
+    return Result.error(
+      new Error('Dataset source requires a dataset to be specified'),
+    )
   }
 
   const datasetScope = new DatasetsRepository(workspace.id, db)
@@ -162,7 +243,9 @@ export async function getExperimentJobPayload(
   const rows = await getExperimentRows(
     {
       dataset,
-      ...experiment.metadata,
+      parametersMap: parametersSource.parametersMap,
+      fromRow: parametersSource.fromRow,
+      toRow: parametersSource.toRow,
     },
     db,
   )

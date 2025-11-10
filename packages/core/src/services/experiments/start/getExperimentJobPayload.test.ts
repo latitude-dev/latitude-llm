@@ -86,12 +86,15 @@ describe('getExperimentJobPayload', () => {
       workspace,
       document,
       commit,
-      dataset,
-      parametersMap,
-      datasetLabels,
+      parametersPopulation: {
+        source: 'dataset',
+        dataset,
+        parametersMap,
+        datasetLabels,
+        fromRow: 25,
+        toRow: 40,
+      },
       evaluations,
-      fromRow: 25,
-      toRow: 40,
       simulationSettings: {
         simulateToolResponses: true,
       },
@@ -119,11 +122,12 @@ describe('getExperimentJobPayload', () => {
       workspace,
       document,
       commit,
-      dataset: undefined,
-      parametersMap,
-      datasetLabels,
-      evaluations,
-      toRow: 39,
+      parametersPopulation: {
+        source: 'manual',
+        count: 40,
+        parametersMap,
+      },
+      evaluations: [],
       simulationSettings: {
         simulateToolResponses: true,
       },
@@ -138,27 +142,32 @@ describe('getExperimentJobPayload', () => {
     expect(rows.some((row) => row !== undefined)).toBe(false)
   })
 
-  it('Fails if there is no dataset and no range', async () => {
+  it('Creates a manual experiment with default count of 1 when no range specified', async () => {
     const experiment = await createExperiment({
       name: 'experiment1',
       workspace,
       document,
       commit,
-      dataset: undefined,
-      parametersMap,
-      datasetLabels,
-      evaluations,
+      parametersPopulation: {
+        source: 'manual',
+        count: 1,
+        parametersMap,
+      },
+      evaluations: [],
       simulationSettings: {
         simulateToolResponses: true,
       },
     }).then((r) => r.unwrap())
 
-    const result = await getExperimentJobPayload({
+    const { rows } = await getExperimentJobPayload({
       experiment,
       workspace,
-    })
+    }).then((r) => r.unwrap())
 
-    expect(result.ok).toBe(false)
-    expect(result.error).toBeDefined()
+    expect(rows).toHaveLength(1)
+    expect(experiment.metadata.parametersSource.source).toBe('manual')
+    if (experiment.metadata.parametersSource.source === 'manual') {
+      expect(experiment.metadata.parametersSource.count).toBe(1)
+    }
   })
 })

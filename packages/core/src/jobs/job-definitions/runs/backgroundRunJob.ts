@@ -170,6 +170,12 @@ export const backgroundRunJob = async (
       }
 
       const { evaluationsQueue } = await queues()
+      const parametersSource = experiment.metadata.parametersSource
+      const datasetLabels =
+        parametersSource.source === 'dataset'
+          ? parametersSource.datasetLabels
+          : {}
+
       experiment.evaluationUuids.forEach((evaluationUuid) => {
         const payload: RunEvaluationV2JobData = {
           workspaceId,
@@ -177,7 +183,7 @@ export const backgroundRunJob = async (
           evaluationUuid,
           providerLogUuid: providerLog.uuid,
           datasetId: experiment!.datasetId ?? undefined,
-          datasetLabel: experiment!.metadata.datasetLabels[evaluationUuid],
+          datasetLabel: datasetLabels[evaluationUuid],
           datasetRowId,
           experimentUuid: experiment!.uuid,
         }
