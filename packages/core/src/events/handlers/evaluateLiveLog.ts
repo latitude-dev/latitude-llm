@@ -68,15 +68,14 @@ export const evaluateLiveLogJob = async ({
   )
 
   // TODO(): This is temporary while we think of a more long lasting solution to ban/rate limit users
-  const evaluationsNotEnabledResult = await isFeatureEnabledByName(
+  const evaluationsDisabledResult = await isFeatureEnabledByName(
     workspace.id,
-    'evaluations-enabled',
+    'evaluationsDisabled',
   )
-  if (!Result.isOk(evaluationsNotEnabledResult))
-    return evaluationsNotEnabledResult
+  if (!Result.isOk(evaluationsDisabledResult)) return evaluationsDisabledResult
 
-  const evaluationsNotEnabled = evaluationsNotEnabledResult.unwrap()
-  if (evaluationsNotEnabled) {
+  const evaluationsDisabled = evaluationsDisabledResult.unwrap()
+  if (evaluationsDisabled) {
     // Evaluations are disabled for this workspace, skip enqueueing
     return
   }
