@@ -7,6 +7,7 @@ import {
 import { cache as redis, Cache } from '../../../cache'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
+import { migrateActiveRunsCache } from './migrateCache'
 
 export async function createActiveRun({
   workspaceId,
@@ -27,6 +28,9 @@ export async function createActiveRun({
   const redisCache = cache ?? (await redis())
 
   try {
+    // Migrate from old format if needed
+    await migrateActiveRunsCache(workspaceId, projectId, redisCache)
+
     const activeRun: ActiveRun = { uuid: runUuid, queuedAt, source }
     const jsonValue = JSON.stringify(activeRun)
 
@@ -39,6 +43,25 @@ export async function createActiveRun({
 
     return Result.ok(activeRun)
   } catch (error) {
+    // Handle WRONGTYPE errors
+    if (error instanceof Error && error.message.includes('WRONGTYPE')) {
+      // Try to migrate and retry
+      try {
+        await migrateActiveRunsCache(workspaceId, projectId, redisCache)
+        const activeRun: ActiveRun = { uuid: runUuid, queuedAt, source }
+        const jsonValue = JSON.stringify(activeRun)
+
+        await redisCache
+          .multi()
+          .hset(key, runUuid, jsonValue)
+          .expire(key, ACTIVE_RUN_CACHE_TTL_SECONDS)
+          .exec()
+
+        return Result.ok(activeRun)
+      } catch (retryError) {
+        return Result.error(error as Error)
+      }
+    }
     return Result.error(error as Error)
   }
 }

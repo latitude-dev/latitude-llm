@@ -5,6 +5,7 @@ import { Result } from '../../lib/Result'
 import { fetchDocumentLogWithMetadata } from '../documentLogs/fetchDocumentLogWithMetadata'
 import { logToRun } from './logToRun'
 import { PromisedResult } from '../../lib/Transaction'
+import { migrateActiveRunsCache } from './active/migrateCache'
 
 /**
  * Gets a run by UUID, checking the database first, then the cache.
@@ -45,6 +46,9 @@ export async function getRun({
   const redisCache = cache ?? (await redis())
 
   try {
+    // Migrate from old format if needed
+    await migrateActiveRunsCache(workspaceId, projectId, redisCache)
+
     const jsonValue = await redisCache.hget(key, runUuid)
     if (!jsonValue) {
       return Result.error(
@@ -58,6 +62,29 @@ export async function getRun({
       startedAt: run.startedAt ? new Date(run.startedAt) : undefined,
     } as Run)
   } catch (error) {
+    // Handle WRONGTYPE errors
+    if (error instanceof Error && error.message.includes('WRONGTYPE')) {
+      // Try to migrate and retry
+      try {
+        await migrateActiveRunsCache(workspaceId, projectId, redisCache)
+        const jsonValue = await redisCache.hget(key, runUuid)
+        if (!jsonValue) {
+          return Result.error(
+            new NotFoundError(`Run not found with uuid ${runUuid}`),
+          )
+        }
+        const run = JSON.parse(jsonValue) as ActiveRun
+        return Result.ok({
+          ...run,
+          queuedAt: new Date(run.queuedAt),
+          startedAt: run.startedAt ? new Date(run.startedAt) : undefined,
+        } as Run)
+      } catch (retryError) {
+        return Result.error(
+          new NotFoundError(`Run not found with uuid ${runUuid}`),
+        )
+      }
+    }
     if (error instanceof SyntaxError) {
       // Malformed JSON in cache, return not found error
       return Result.error(
