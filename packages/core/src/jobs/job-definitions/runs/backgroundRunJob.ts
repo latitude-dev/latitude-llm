@@ -14,7 +14,7 @@ import { publisher } from '../../../events/publisher'
 import { RedisStream } from '../../../lib/redisStream'
 import { OkType } from '../../../lib/Result'
 import { buildClientToolHandlersMap } from '../../../services/documents/tools/clientTools/handlers'
-import { ExperimentsRepository, RunsRepository } from '../../../repositories'
+import { ExperimentsRepository } from '../../../repositories'
 import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtCommit'
 import { startRun } from '../../../services/runs/start'
 import { endRun } from '../../../services/runs/end'
@@ -86,7 +86,6 @@ export const backgroundRunJob = async (
     source = LogSources.API,
     simulationSettings,
   } = job.data
-  const repository = new RunsRepository(workspaceId, projectId)
   const writeStream = new RedisStream({
     key: ACTIVE_RUN_STREAM_KEY(runUuid),
     cap: ACTIVE_RUN_STREAM_CAP,
@@ -136,7 +135,6 @@ export const backgroundRunJob = async (
       runUuid,
       writeStream,
       readStream: result.stream,
-      repository,
     })
 
     if (experiment) {
@@ -221,7 +219,6 @@ async function forwardStreamEvents({
   runUuid: string
   readStream: ReadableStream<ChainEvent>
   writeStream: RedisStream
-  repository: RunsRepository
 }) {
   const reader = readStream.getReader()
   const GRACE_PERIOD_MS = env.KEEP_ALIVE_TIMEOUT // 10 minutes

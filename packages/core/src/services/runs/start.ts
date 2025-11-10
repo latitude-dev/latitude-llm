@@ -1,6 +1,6 @@
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
-import { RunsRepository } from '../../repositories'
+import { updateActiveRun } from './active/update'
 
 export async function startRun({
   workspaceId,
@@ -11,9 +11,12 @@ export async function startRun({
   projectId: number
   runUuid: string
 }) {
-  const repository = new RunsRepository(workspaceId, projectId)
-
-  const updating = await repository.update({ runUuid, startedAt: new Date() })
+  const updating = await updateActiveRun({
+    workspaceId,
+    projectId,
+    runUuid,
+    startedAt: new Date(),
+  })
   if (!Result.isOk(updating)) return updating
 
   await publisher.publishLater({

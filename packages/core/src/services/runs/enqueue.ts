@@ -5,13 +5,15 @@ import { queues } from '../../jobs/queues'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
-import { RunsRepository } from '../../repositories'
+import { createActiveRun } from './active/create'
+import { deleteActiveRun } from './active/delete'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Project } from '../../schema/models/types/Project'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { Experiment } from '../../schema/models/types/Experiment'
 import { SimulationSettings } from '../../../../constants/src/simulation'
+import { cache as redis, Cache } from '../../cache'
 
 export async function enqueueRun({
   runUuid,
@@ -27,6 +29,7 @@ export async function enqueueRun({
   userMessage,
   source = LogSources.API,
   simulationSettings,
+  cache,
 }: {
   runUuid?: string
   workspace: Workspace
@@ -41,16 +44,20 @@ export async function enqueueRun({
   userMessage?: string
   source?: LogSources
   simulationSettings?: SimulationSettings
+  cache?: Cache
 }) {
   runUuid = runUuid ?? generateUUIDIdentifier()
+  const redisCache = cache ?? (await redis())
 
   // IMPORTANT: Create the run in cache BEFORE adding to queue
   // to prevent race condition where job starts before cache entry exists
-  const repository = new RunsRepository(workspace.id, project.id)
-  const creating = await repository.create({
+  const creating = await createActiveRun({
+    workspaceId: workspace.id,
+    projectId: project.id,
     runUuid,
     queuedAt: new Date(),
     source,
+    cache: redisCache,
   })
   if (creating.error) return Result.error(creating.error)
   const run = creating.value
@@ -84,7 +91,12 @@ export async function enqueueRun({
   )
   if (!job?.id) {
     // Job creation failed - clean up the cache entry we just created
-    await repository.delete({ runUuid })
+    await deleteActiveRun({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      runUuid,
+      cache: redisCache,
+    })
     return Result.error(
       new UnprocessableEntityError('Failed to enqueue background run job'),
     )

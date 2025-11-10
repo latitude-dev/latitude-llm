@@ -1,6 +1,8 @@
-import { publisher } from '../../events/publisher'
+import { ActiveRun } from '@latitude-data/constants'
 import { Result } from '../../lib/Result'
-import { RunsRepository } from '../../repositories'
+import { PromisedResult } from '../../lib/Transaction'
+import { publisher } from '../../events/publisher'
+import { updateActiveRun } from './active/update'
 
 export async function updateRun({
   workspaceId,
@@ -12,9 +14,13 @@ export async function updateRun({
   projectId: number
   runUuid: string
   caption: string
-}) {
-  const repository = new RunsRepository(workspaceId, projectId)
-  const updating = await repository.update({ runUuid, caption })
+}): PromisedResult<ActiveRun, Error> {
+  const updating = await updateActiveRun({
+    workspaceId,
+    projectId,
+    runUuid,
+    caption,
+  })
   if (!Result.isOk(updating)) return updating
 
   await publisher.publishLater({
