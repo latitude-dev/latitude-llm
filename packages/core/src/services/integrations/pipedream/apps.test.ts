@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterEach } from 'vitest'
 import { Result } from '../../../lib/Result'
 import { listApps, getApp, PipedreamNotConfiguredError } from './apps'
 import { cache } from '../../../cache'
