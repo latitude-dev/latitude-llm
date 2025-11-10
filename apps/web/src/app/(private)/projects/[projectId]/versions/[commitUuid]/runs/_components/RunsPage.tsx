@@ -3,7 +3,8 @@
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ROUTES } from '$/services/routes'
-import { useActiveRuns, useActiveRunsCount } from '$/stores/runs/activeRuns'
+import { useActiveRuns } from '$/stores/runs/activeRuns'
+import { useActiveRunsCountContext } from '../../_components/ActiveRunsCountProvider'
 import {
   useCompletedRuns,
   useCompletedRunsCount,
@@ -179,7 +180,7 @@ export function RunsPage({
   })
 
   const { data: activeCountBySource, isLoading: isActiveCountLoading } =
-    useActiveRunsCount({ project, realtime })
+    useActiveRunsCountContext()
 
   const activeTotalCount = useMemo(
     () => sumCounts(activeCountBySource, debouncedSourceGroup),

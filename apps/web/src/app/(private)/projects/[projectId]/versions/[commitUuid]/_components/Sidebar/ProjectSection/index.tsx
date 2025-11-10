@@ -2,8 +2,8 @@
 
 import { formatCount } from '$/lib/formatCount'
 import { ROUTES } from '$/services/routes'
-import { useActiveRunsCount } from '$/stores/runs/activeRuns'
 import useFeature from '$/stores/useFeature'
+import { useActiveRunsCountContext } from '../../ActiveRunsCountProvider'
 
 import { LogSources, RunSourceGroup } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
@@ -96,10 +96,7 @@ export default function ProjectSection({
 }) {
   const disableRunsNotifications = !!limitedView
   const issuesFeature = useFeature('issues')
-  const { data: activeCountBySource } = useActiveRunsCount({
-    project: project,
-    realtime: !disableRunsNotifications,
-  })
+  const { data: activeCountBySource } = useActiveRunsCountContext()
 
   const activeCount = useMemo(
     () => sumCounts(activeCountBySource),

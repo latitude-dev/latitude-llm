@@ -10,11 +10,14 @@ import {
 import {
   findCommitCached,
   findProjectCached,
+  getDocumentLogsApproximatedCountByProjectCached,
 } from '$/app/(private)/_data-access'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
+import { LIMITED_VIEW_THRESHOLD } from '@latitude-data/core/constants'
 import { redirect } from 'next/navigation'
 
+import { ActiveRunsCountProvider } from '../ActiveRunsCountProvider'
 import { LastSeenCommitCookie } from '../LastSeenCommitCookie'
 import Sidebar from '../Sidebar'
 
@@ -55,21 +58,27 @@ export default async function ProjectLayout({
     (await getResizablePanelGroupData({ group: resizableId })) ??
     MIN_SIDEBAR_WIDTH_PX
 
+  const approximatedCount =
+    await getDocumentLogsApproximatedCountByProjectCached(project.id)
+  const limitedView = approximatedCount > LIMITED_VIEW_THRESHOLD
+
   return (
-    <ProjectSidebarLayout
-      resizableId={resizableId}
-      sidebarWidth={sidebarWidth}
-      minSidebarWidth={MIN_SIDEBAR_WIDTH_PX}
-      sidebar={
-        <Sidebar project={project} commit={commit} currentDocument={document} />
-      }
-    >
-      <LastSeenCommitCookie
-        projectId={project.id}
-        commitUuid={commitUuid}
-        documentUuid={document?.documentUuid}
-      />
-      {children}
-    </ProjectSidebarLayout>
+    <ActiveRunsCountProvider limitedView={limitedView}>
+      <ProjectSidebarLayout
+        resizableId={resizableId}
+        sidebarWidth={sidebarWidth}
+        minSidebarWidth={MIN_SIDEBAR_WIDTH_PX}
+        sidebar={
+          <Sidebar project={project} commit={commit} currentDocument={document} />
+        }
+      >
+        <LastSeenCommitCookie
+          projectId={project.id}
+          commitUuid={commitUuid}
+          documentUuid={document?.documentUuid}
+        />
+        {children}
+      </ProjectSidebarLayout>
+    </ActiveRunsCountProvider>
   )
 }
