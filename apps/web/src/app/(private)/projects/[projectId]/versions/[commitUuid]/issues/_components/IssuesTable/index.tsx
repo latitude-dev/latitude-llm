@@ -1,27 +1,27 @@
-import { useCallback, useMemo, useRef } from 'react'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { TableResizableLayout } from '$/components/TableResizableLayout'
+import { SerializedIssue } from '$/stores/issues'
+import { useIssuesParameters } from '$/stores/issues/useIssuesParameters'
+import { SafeIssuesParams } from '@latitude-data/constants/issues'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
   Table,
-  TableHeader,
-  TableRow,
-  TableHead,
   TableBody,
   TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { cn } from '@latitude-data/web-ui/utils'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { useIssuesParameters } from '$/stores/issues/useIssuesParameters'
-import { SerializedIssue } from '$/stores/issues'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { SafeIssuesParams } from '@latitude-data/constants/issues'
+import { useCallback, useMemo, useRef } from 'react'
+import { HistogramCell } from '../HistogramCell'
+import { IssuesDetailPanel } from '../IssueDetailPanel'
 import { IssuesTitle } from '../IssuesTitle'
 import { LastSeenCell } from '../LastSeenCell'
-import { HistogramCell } from '../HistogramCell'
-import { TableResizableLayout } from '$/components/TableResizableLayout'
-import { IssuesDetailPanel } from '../IssueDetailPanel'
-import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 
 const FAKE_ROWS = Array.from({ length: 20 })
 const DETAILS_OFFSET = { top: 12, bottom: 12 }
@@ -114,7 +114,11 @@ export function IssuesTable({
   )
   const showStatus = status !== 'active'
 
-  if (noData) return <TableBlankSlate description='No issues in this project' />
+  if (noData) {
+    return (
+      <TableBlankSlate description='No issues discovered in this project yet' />
+    )
+  }
 
   return (
     <TableResizableLayout

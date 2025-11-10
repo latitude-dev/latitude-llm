@@ -8,12 +8,11 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
-
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { projects } from './projects'
 import { commits } from './commits'
 import { issues } from './issues'
+import { projects } from './projects'
 import { workspaces } from './workspaces'
 
 export const issueHistograms = latitudeSchema.table(

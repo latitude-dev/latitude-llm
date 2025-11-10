@@ -4,7 +4,7 @@ import {
   EvaluationResultsV2Repository,
   IssuesRepository,
 } from '@latitude-data/core/repositories'
-import { assignIssue } from '@latitude-data/core/services/issues/assignIssue'
+import { assignEvaluationResultV2ToIssue } from '@latitude-data/core/services/evaluationsV2/results/assign'
 import { z } from 'zod'
 import { withEvaluation, withEvaluationSchema } from '../../procedures'
 
@@ -16,23 +16,22 @@ export const assignIssueAction = withEvaluation
     }),
   )
   .action(async ({ ctx, parsedInput }) => {
-    const issue = await new IssuesRepository(ctx.workspace.id)
+    let issue = await new IssuesRepository(ctx.workspace.id)
       .find(parsedInput.issueId)
       .then((r) => r.unwrap())
-    const evaluationResult = await new EvaluationResultsV2Repository(
-      ctx.workspace.id,
-    )
+
+    let result = await new EvaluationResultsV2Repository(ctx.workspace.id)
       .findByUuid(parsedInput.evaluationResultUuid)
       .then((r) => r.unwrap())
 
-    const result = await assignIssue({
-      workspace: ctx.workspace,
-      project: ctx.project,
-      commit: ctx.commit,
+    const response = await assignEvaluationResultV2ToIssue({
+      result: result,
       evaluation: ctx.evaluation,
-      evaluationResult,
-      issue,
+      issue: issue,
+      workspace: ctx.workspace,
     }).then((r) => r.unwrap())
+    issue = response.issue
+    result = response.result
 
-    return result
+    return { issue, evaluationResult: result }
   })

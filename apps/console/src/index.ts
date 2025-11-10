@@ -2,10 +2,12 @@ import { cache } from '@latitude-data/core/cache'
 import { database, utils } from '@latitude-data/core/client'
 import * as migrations from '@latitude-data/core/data-migrations'
 import * as repositories from '@latitude-data/core/repositories'
-import * as models from '@latitude-data/core/schema'
+import { voyage } from '@latitude-data/core/voyage'
+import { weaviate } from '@latitude-data/core/weaviate'
 import { randomUUID as uuid } from 'node:crypto'
 import repl from 'node:repl'
 import { inspect as utilInspect } from 'node:util'
+import * as models from './models'
 import { setupReplHistory } from './replHistory'
 import * as loadModules from './replReload'
 
@@ -35,6 +37,8 @@ Object.assign(r.context, {
   cache,
   ...migrations,
   ...repositories,
+  weaviate,
+  voyage,
   uuid,
   inspect,
   ...loadModules,

@@ -1,19 +1,20 @@
-import { and, eq, getTableColumns, gte, inArray, SQL, sql } from 'drizzle-orm'
-import { endOfDay, format, startOfDay, subDays } from 'date-fns'
-import { type Issue } from '../schema/models/types/Issue'
-import Repository from './repositoryV2'
-import { issueHistograms } from '../schema/models/issueHistograms'
 import {
   ESCALATING_DAYS,
-  RECENT_ISSUES_DAYS,
   HISTOGRAM_SUBQUERY_ALIAS,
-  SafeIssuesParams,
   MINI_HISTOGRAM_STATS_DAYS,
+  RECENT_ISSUES_DAYS,
+  SafeIssuesParams,
 } from '@latitude-data/constants/issues'
+import { endOfDay, format, startOfDay, subDays } from 'date-fns'
+import { and, eq, getTableColumns, gte, inArray, SQL, sql } from 'drizzle-orm'
+import { Result } from '../lib/Result'
+import { issueHistograms } from '../schema/models/issueHistograms'
 import { Commit } from '../schema/models/types/Commit'
+import { type Issue } from '../schema/models/types/Issue'
 import { IssueHistogram } from '../schema/models/types/IssueHistogram'
 import { Project } from '../schema/models/types/Project'
 import { CommitsRepository } from './commitsRepository'
+import Repository from './repositoryV2'
 
 const tt = getTableColumns(issueHistograms)
 type IssueFilters = SafeIssuesParams['filters']
@@ -54,6 +55,17 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
       .limit(1)
 
     return histogram[0] || null
+  }
+
+  async hasOccurrences({ issueId }: { issueId: number }) {
+    const result = await this.db
+      .select({ exists: sql<boolean>`TRUE` })
+      .from(issueHistograms)
+      .where(and(this.scopeFilter, eq(issueHistograms.issueId, issueId)))
+      .limit(1)
+      .then((r) => r[0])
+
+    return Result.ok<boolean>(!!result?.exists)
   }
 
   /**

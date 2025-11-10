@@ -1,8 +1,11 @@
 'use server'
 
+import {
+  EvaluationResultsV2Repository,
+  IssuesRepository,
+} from '@latitude-data/core/repositories'
+import { unassignEvaluationResultV2FromIssue } from '@latitude-data/core/services/evaluationsV2/results/unassign'
 import { z } from 'zod'
-import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
-import { unAssignIssue } from '@latitude-data/core/services/issues/unAssignIssue'
 import { withEvaluation, withEvaluationSchema } from '../../procedures'
 
 export const unAssignIssueAction = withEvaluation
@@ -12,18 +15,22 @@ export const unAssignIssueAction = withEvaluation
     }),
   )
   .action(async ({ ctx, parsedInput }) => {
-    const evaluationResult = await new EvaluationResultsV2Repository(
-      ctx.workspace.id,
-    )
+    let result = await new EvaluationResultsV2Repository(ctx.workspace.id)
       .findByUuid(parsedInput.evaluationResultUuid)
       .then((r) => r.unwrap())
 
-    const result = await unAssignIssue({
+    let issue = await new IssuesRepository(ctx.workspace.id)
+      .find(result.issueId)
+      .then((r) => r.unwrap())
+
+    const response = await unassignEvaluationResultV2FromIssue({
+      result: result,
+      evaluation: ctx.evaluation,
+      issue: issue,
       workspace: ctx.workspace,
-      project: ctx.project,
-      commit: ctx.commit,
-      evaluationResult,
     }).then((r) => r.unwrap())
+    issue = response.issue
+    result = response.result
 
     return result
   })

@@ -16,6 +16,7 @@ let _queues:
       webhooksQueue: Queue
       latteQueue: Queue
       runsQueue: Queue
+      issuesQueue: Queue
     }
   | undefined
 
@@ -52,6 +53,7 @@ export async function queues() {
     webhooksQueue: new Queue(Queues.webhooksQueue, options),
     latteQueue: new Queue(Queues.latteQueue, options),
     runsQueue: new Queue(Queues.runsQueue, options),
+    issuesQueue: new Queue(Queues.issuesQueue, options),
   }
 
   return _queues

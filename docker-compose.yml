@@ -28,6 +28,18 @@ services:
     depends_on:
       - redis
 
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:1.33.4
+    command: ['--host', '0.0.0.0', '--port', '8099', '--scheme', 'http']
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - 8099:8099
+      - 50051:50051
+    volumes:
+      - weaviate-data:/var/lib/weaviate
+
   mailpit:
     image: axllent/mailpit:latest
     restart: always
@@ -48,6 +60,7 @@ services:
     depends_on:
       - db
       - redis
+      - weaviate
 
   gateway:
     image: ghcr.io/latitude-dev/gateway:latest
@@ -62,6 +75,7 @@ services:
     depends_on:
       - db
       - redis
+      - weaviate
 
   workers:
     image: ghcr.io/latitude-dev/workers:latest
@@ -74,6 +88,7 @@ services:
     depends_on:
       - db
       - redis
+      - weaviate
 
   websockets:
     image: ghcr.io/latitude-dev/websockets:latest
@@ -102,4 +117,5 @@ services:
 volumes:
   db-data:
   shared-storage:
+  weaviate-data:
   redisinsight-data:

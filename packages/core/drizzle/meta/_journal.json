@@ -1618,6 +1618,13 @@
       "when": 1762266124193,
       "tag": "0231_scope_issue_histograms_by_document_uuid_project",
       "breakpoints": true
+    },
+    {
+      "idx": 232,
+      "version": "7",
+      "when": 1762426754588,
+      "tag": "0232_naive_spyke",
+      "breakpoints": true
     }
   ]
 }

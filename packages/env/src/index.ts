@@ -9,7 +9,10 @@ const environment = process.env.NODE_ENV || 'development'
 const UPLOADS_PATH = 'uploads'
 
 if (environment === 'development' || environment === 'test') {
-  const pathToEnv = resolve(cwd(), `../../.env.${environment}`)
+  const pathToEnv = [
+    resolve(cwd(), `../../.env`),
+    resolve(cwd(), `../../.env.${environment}`),
+  ]
 
   const isTest = environment === 'test'
   const FILES_STORAGE_PATH = isTest
@@ -24,9 +27,11 @@ if (environment === 'development' || environment === 'test') {
     process.env as DotenvPopulateInput,
     {
       CACHE_HOST: '0.0.0.0',
-      COPILOT_PROMPT_EVALUATION_GENERATOR_PATH: 'evaluation-generator',
-      COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH: 'evaluation-v2-generator',
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
+      WEAVIATE_API_KEY: 'secret',
+      WEAVIATE_HOST: '0.0.0.0',
+      WEAVIATE_HTTP_PORT: '8099',
+      WEAVIATE_GRPC_PORT: '50051',
       DRIVE_DISK: 'local',
       FILES_STORAGE_PATH,
       PUBLIC_FILES_STORAGE_PATH,
@@ -43,7 +48,6 @@ if (environment === 'development' || environment === 'test') {
       NEXT_PUBLIC_POSTHOG_KEY: '',
       NODE_ENV: environment,
       QUEUE_HOST: '0.0.0.0',
-      COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH: 'generator',
       WEBSOCKETS_SERVER: 'http://localhost:4002',
       WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: 'refresh-refresh-token-key',
       WEBSOCKET_SECRET_TOKEN_KEY: 'secret-token-key',
@@ -60,6 +64,8 @@ if (environment === 'development' || environment === 'test') {
       ENABLE_ALL_FLAGS: 'false',
       STRIPE_SECRET_KEY: '',
       STRIPE_WEBHOOK_SECRET: '',
+      COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH: 'evaluation-v2-generator',
+      COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH: 'generator',
     },
     { path: pathToEnv },
   )
@@ -82,6 +88,13 @@ export const env = createEnv({
     DATABASE_URL: z.url(),
     READ_DATABASE_URL: z.url().optional(),
     READ_2_DATABASE_URL: z.url().optional(),
+
+    // Weaviate
+    WEAVIATE_URL: z.string().optional(),
+    WEAVIATE_API_KEY: z.string().optional(),
+    WEAVIATE_HOST: z.string().optional(),
+    WEAVIATE_HTTP_PORT: z.coerce.number().optional().default(8099),
+    WEAVIATE_GRPC_PORT: z.coerce.number().optional().default(50051),
 
     // Default settings when creating a new workspace
     DEFAULT_PROJECT_ID: z.coerce.number().optional(),
@@ -171,6 +184,7 @@ export const env = createEnv({
     COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH: z.string().optional(),
     COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH: z.string().optional(),
     COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH: z.string(),
+    COPILOT_PROMPT_ISSUE_DETAILS_GENERATOR_PATH: z.string().optional(),
     COPILOT_GENERATE_TOOL_RESPONSES_COMMIT_UUID: z.string().optional(),
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
     COPILOT_PROMPT_REFINE_PATH: z.string().optional(),
@@ -186,6 +200,7 @@ export const env = createEnv({
     TAVILY_API_KEY: z.string().optional(),
     HANDINGER_API_KEY: z.string().optional(),
     OPENAI_API_KEY: z.string().optional(),
+    VOYAGE_API_KEY: z.string().optional(),
 
     // Mail settings
     FROM_MAILER_EMAIL: z.string(),

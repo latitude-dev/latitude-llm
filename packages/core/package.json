@@ -7,6 +7,9 @@
     "./client": {
       "import": "./src/client/index.ts"
     },
+    "./client/models": {
+      "import": "./src/client/models.ts"
+    },
     "./constants": {
       "import": "./src/constants.ts"
     },
@@ -18,6 +21,12 @@
     },
     "./cache": {
       "import": "./src/cache/index.ts"
+    },
+    "./weaviate": {
+      "import": "./src/weaviate/index.ts"
+    },
+    "./voyage": {
+      "import": "./src/voyage/index.ts"
     },
     "./data-access": {
       "import": "./src/data-access/index.ts"
@@ -186,7 +195,9 @@
     "socket.io-client": "4.7.5",
     "stripe": "18.1.0",
     "uuid": "11.1.0",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "voyageai": "0.0.8",
+    "weaviate-client": "3.9.0"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",

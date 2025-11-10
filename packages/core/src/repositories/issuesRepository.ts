@@ -1,4 +1,10 @@
 import {
+  ESCALATING_COUNT_THRESHOLD,
+  HISTOGRAM_SUBQUERY_ALIAS,
+  IssueSort,
+  SafeIssuesParams,
+} from '@latitude-data/constants/issues'
+import {
   and,
   asc,
   desc,
@@ -10,21 +16,20 @@ import {
   sql,
   SQL,
 } from 'drizzle-orm'
+import {
+  databaseErrorCodes,
+  NotFoundError,
+  UnprocessableEntityError,
+} from '../lib/errors'
+import { Result } from '../lib/Result'
+import { issues } from '../schema/models/issues'
+import { type Commit } from '../schema/models/types/Commit'
+import { DocumentVersion } from '../schema/models/types/DocumentVersion'
 import { type Issue } from '../schema/models/types/Issue'
 import { type Project } from '../schema/models/types/Project'
-import { type Commit } from '../schema/models/types/Commit'
-import { issues } from '../schema/models/issues'
-import { Result } from '../lib/Result'
-import Repository from './repositoryV2'
-import { IssueHistogramsRepository } from './issueHistogramsRepository'
 import { CommitsRepository } from './commitsRepository'
-import {
-  SafeIssuesParams,
-  IssueSort,
-  ESCALATING_COUNT_THRESHOLD,
-  HISTOGRAM_SUBQUERY_ALIAS,
-} from '@latitude-data/constants/issues'
-import { DocumentVersion } from '../schema/models/types/DocumentVersion'
+import { IssueHistogramsRepository } from './issueHistogramsRepository'
+import Repository from './repositoryV2'
 
 const tt = getTableColumns(issues)
 
@@ -49,6 +54,31 @@ export class IssuesRepository extends Repository<Issue> {
     return this.db.select(tt).from(issues).where(this.scopeFilter).$dynamic()
   }
 
+  async lock({ id, wait }: { id: number; wait?: boolean }) {
+    // .for('no key update', { noWait: true }) is bugged in drizzle!
+    // https://github.com/drizzle-team/drizzle-orm/issues/3554
+
+    try {
+      await this.db.execute(sql<boolean>`
+        SELECT TRUE
+        FROM ${issues}
+        WHERE (
+          ${issues.workspaceId} = ${this.workspaceId} AND
+          ${issues.id} = ${id}
+        ) LIMIT 1 FOR NO KEY UPDATE ${sql.raw(wait ? '' : 'NOWAIT')};
+          `)
+    } catch (error: any) {
+      if (error?.code === databaseErrorCodes.lockNotAvailable) {
+        return Result.error(
+          new UnprocessableEntityError('Cannot obtain lock on issue'),
+        )
+      }
+      return Result.error(error as Error)
+    }
+
+    return Result.nil()
+  }
+
   async findById({
     project,
     issueId,
@@ -70,6 +100,23 @@ export class IssuesRepository extends Repository<Issue> {
       )
       .limit(1)
     return result[0]
+  }
+
+  async findByUuid(uuid: string) {
+    const result = await this.scope
+      .where(and(this.scopeFilter, eq(issues.uuid, uuid)))
+      .limit(1)
+      .then((r) => r[0])
+
+    if (!result) {
+      return Result.error(
+        new NotFoundError(
+          `Record with uuid ${uuid} not found in ${this.scope._.tableName}`,
+        ),
+      )
+    }
+
+    return Result.ok(result)
   }
 
   async findByTitle({

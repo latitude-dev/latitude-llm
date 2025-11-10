@@ -1,15 +1,15 @@
-import { use, useCallback, useMemo, useState } from 'react'
-import { useDebouncedCallback } from 'use-debounce'
-import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useToggleModal } from '$/hooks/useToogleModal'
+import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useIssue } from '$/stores/issues/issue'
 import { useSearchIssues } from '$/stores/issues/selectorIssues'
-import { AnnotationContext, AnnotationFormWrapper } from '../../FormWrapper'
-import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useFeature from '$/stores/useFeature'
-import { useToggleModal } from '$/hooks/useToogleModal'
-import { updateEvaluationResultInstance } from './updateEvaluationResultInstance'
+import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { use, useCallback, useMemo, useState } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
+import { AnnotationContext, AnnotationFormWrapper } from '../../FormWrapper'
 import { NewIssueModal } from './NewIssueModal'
+import { updateEvaluationResultInstance } from './updateEvaluationResultInstance'
 
 export function IssuesSelector() {
   const issuesFeature = useFeature('issues')
@@ -111,6 +111,8 @@ export function IssuesSelector() {
     (issueId: number | undefined) => {
       if (!result) return
 
+      // TODO(AO): Remember to unassign the issue if the user
+      // updates the annotation from failed to passed!
       if (issueId === undefined) {
         unAssignIssue({
           projectId,
@@ -160,19 +162,24 @@ export function IssuesSelector() {
           searchable
           removable
           width='auto'
+          align='center'
+          side='top'
+          sideOffset={8}
           open={open}
           onOpenChange={onOpenChange}
           options={options}
           name='annotation-issue'
-          disabled={isLoading}
+          loading={isLoading && !isSearchingIssues}
+          disabled={isLoading && !isSearchingIssues}
           placeholder='Auto-discover issue'
           searchPlaceholder='Search existing issues...'
           placeholderIcon='sparkles'
+          tooltip='Discovery could take a few minutes...'
           onChange={onChange}
           onSearch={onSearch}
           value={resultIssue?.id}
           footerAction={{
-            label: 'Create New Issue',
+            label: 'Create new issue',
             icon: 'plus',
             onClick: onClickCreate,
           }}

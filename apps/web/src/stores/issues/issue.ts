@@ -1,13 +1,14 @@
+import { assignIssueAction } from '$/actions/evaluationsV2/issues/assignIssue'
+import { createIssueAction } from '$/actions/evaluationsV2/issues/createIssue'
+import { generateIssueAction } from '$/actions/evaluationsV2/issues/generateIssue'
+import { unAssignIssueAction } from '$/actions/evaluationsV2/issues/unAssignIssue'
+import useFetcher from '$/hooks/useFetcher'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
+import { EvaluationResultV2 } from '@latitude-data/constants'
+import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import { ROUTES } from '$/services/routes'
-import useFetcher from '$/hooks/useFetcher'
-import { Issue } from '@latitude-data/core/schema/models/types/Issue'
-import { EvaluationResultV2 } from '@latitude-data/constants'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { assignIssueAction } from '$/actions/evaluationsV2/issues/assignIssue'
-import { unAssignIssueAction } from '$/actions/evaluationsV2/issues/unAssignIssue'
-import { createIssueAction } from '$/actions/evaluationsV2/issues/createIssue'
 
 export function useIssue(
   {
@@ -16,6 +17,7 @@ export function useIssue(
     issueId,
     onIssueAssigned,
     onIssueUnAssigned,
+    onIssueGenerated,
   }: {
     projectId: number
     commitUuid: string
@@ -27,6 +29,12 @@ export function useIssue(
       }
     }) => void
     onIssueUnAssigned?: (_args: { data: EvaluationResultV2 }) => void
+    onIssueGenerated?: (_args: {
+      data: {
+        title: string
+        description: string
+      }
+    }) => void
   },
   swrConfig?: SWRConfiguration<Issue, any>,
 ) {
@@ -47,10 +55,12 @@ export function useIssue(
   const { execute: unAssignIssue, isPending: isUnAssigningIssue } =
     useLatitudeAction(unAssignIssueAction, { onSuccess: onIssueUnAssigned })
 
-  const { execute: createIssue, isPending: isCreating } = useLatitudeAction(
-    createIssueAction,
-    { onSuccess: onIssueAssigned },
-  )
+  const { execute: createIssue, isPending: isCreatingIssue } =
+    useLatitudeAction(createIssueAction, { onSuccess: onIssueAssigned })
+
+  const { execute: generateIssue, isPending: isGeneratingIssue } =
+    useLatitudeAction(generateIssueAction, { onSuccess: onIssueGenerated })
+
   return useMemo(
     () => ({
       data,
@@ -60,7 +70,9 @@ export function useIssue(
       unAssignIssue,
       isUnAssigningIssue,
       createIssue,
-      isCreating,
+      isCreatingIssue,
+      generateIssue,
+      isGeneratingIssue,
     }),
     [
       data,
@@ -70,7 +82,9 @@ export function useIssue(
       unAssignIssue,
       isUnAssigningIssue,
       createIssue,
-      isCreating,
+      isCreatingIssue,
+      generateIssue,
+      isGeneratingIssue,
     ],
   )
 }

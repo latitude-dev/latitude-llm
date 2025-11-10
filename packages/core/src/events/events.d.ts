@@ -3,8 +3,6 @@ import { type Commit } from '../schema/models/types/Commit'
 import { type Dataset } from '../schema/models/types/Dataset'
 import { type DatasetRow } from '../schema/models/types/DatasetRow'
 import { type DocumentSuggestion } from '../schema/models/types/DocumentSuggestion'
-import { type DocumentTrigger } from '../schema/types'
-import { type DocumentTriggerEvent } from '../schema/types'
 import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
 import { type Experiment } from '../schema/models/types/Experiment'
 import { type MagicLinkToken } from '../schema/models/types/MagicLinkTokens'
@@ -21,6 +19,8 @@ import {
   EvaluationV2,
   Message,
   ProviderLogDto,
+  type DocumentTrigger,
+  type DocumentTriggerEvent,
 } from '../schema/types'
 
 export type Events =
@@ -83,6 +83,13 @@ export type Events =
   | 'runStarted'
   | 'runProgress'
   | 'runEnded'
+  | 'issueCreated'
+  | 'issueUpdated'
+  | 'issueDeleted'
+  | 'issueIncremented'
+  | 'issueDecremented'
+  | 'issueDiscovered'
+  | 'issueMerged'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -699,6 +706,65 @@ export type PasteYourPromptOnboardingCompleted = LatitudeEventGeneric<
   }
 >
 
+export type IssueCreatedEvent = LatitudeEventGeneric<
+  'issueCreated',
+  {
+    workspaceId: number
+    issueId: number
+  }
+>
+
+export type IssueUpdatedEvent = LatitudeEventGeneric<
+  'issueUpdated',
+  {
+    workspaceId: number
+    issueId: number
+  }
+>
+
+export type IssueDeletedEvent = LatitudeEventGeneric<
+  'issueDeleted',
+  {
+    workspaceId: number
+    issueId: number
+  }
+>
+
+export type IssueIncrementedEvent = LatitudeEventGeneric<
+  'issueIncremented',
+  {
+    workspaceId: number
+    issueId: number
+    histogramId: number
+  }
+>
+
+export type IssueDecrementedEvent = LatitudeEventGeneric<
+  'issueDecremented',
+  {
+    workspaceId: number
+    issueId: number
+    histogramId: number
+  }
+>
+
+export type IssueDiscoveredEvent = LatitudeEventGeneric<
+  'issueDiscovered',
+  {
+    workspaceId: number
+    issueId: number
+  }
+>
+
+export type IssueMergedEvent = LatitudeEventGeneric<
+  'issueMerged',
+  {
+    workspaceId: number
+    anchorId: number
+    mergedIds: number[]
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -764,6 +830,13 @@ export type LatitudeEvent =
   | GenerateDatasetOnboardingPageVisited
   | RunExperimentOnboardingPageVisited
   | PasteYourPromptOnboardingCompleted
+  | IssueCreatedEvent
+  | IssueUpdatedEvent
+  | IssueDeletedEvent
+  | IssueIncrementedEvent
+  | IssueDecrementedEvent
+  | IssueDiscoveredEvent
+  | IssueMergedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -830,4 +903,11 @@ export interface IEventsHandlers {
   generateDatasetOnboardingPageVisited: EventHandler<GenerateDatasetOnboardingPageVisited>[]
   runExperimentOnboardingPageVisited: EventHandler<RunExperimentOnboardingPageVisited>[]
   pasteYourPromptOnboardingCompleted: EventHandler<PasteYourPromptOnboardingCompleted>[]
+  issueCreated: EventHandler<IssueCreatedEvent>[]
+  issueUpdated: EventHandler<IssueUpdatedEvent>[]
+  issueDeleted: EventHandler<IssueDeletedEvent>[]
+  issueIncremented: EventHandler<IssueIncrementedEvent>[]
+  issueDecremented: EventHandler<IssueDecrementedEvent>[]
+  issueDiscovered: EventHandler<IssueDiscoveredEvent>[]
+  issueMerged: EventHandler<IssueMergedEvent>[]
 }

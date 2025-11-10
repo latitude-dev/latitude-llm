@@ -1,4 +1,5 @@
 import { IEventsHandlers } from '../events'
+import { assignIssueToEvaluationResultV2Job } from './assignIssueToEvaluationResultV2Job'
 import { clearProviderApiKeysCache } from './clearProviderApiKeysCache'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
@@ -71,6 +72,7 @@ export const EventHandlers: IEventsHandlers = {
   evaluationResultV2Created: [
     requestDocumentSuggestionJobV2,
     notifyClientOfEvaluationResultV2Created,
+    assignIssueToEvaluationResultV2Job,
   ],
   evaluationResultV2Updated: [],
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],
@@ -97,4 +99,11 @@ export const EventHandlers: IEventsHandlers = {
   generateDatasetOnboardingPageVisited: [],
   runExperimentOnboardingPageVisited: [],
   pasteYourPromptOnboardingCompleted: [],
+  issueCreated: [],
+  issueUpdated: [],
+  issueDeleted: [],
+  issueIncremented: [],
+  issueDecremented: [],
+  issueDiscovered: [],
+  issueMerged: [],
 }
