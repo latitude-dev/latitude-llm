@@ -3,7 +3,8 @@
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ROUTES } from '$/services/routes'
-import { useActiveRuns, useActiveRunsCount } from '$/stores/runs/activeRuns'
+import { useActiveRuns } from '$/stores/runs/activeRuns'
+import { ActiveRunsCountContext } from '../../_components/ActiveRunsCountProvider'
 import {
   useCompletedRuns,
   useCompletedRunsCount,
@@ -20,7 +21,7 @@ import { Pagination } from '@latitude-data/core/helpers'
 import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, use } from 'react'
 import { useDebounce } from 'use-debounce'
 import { RunPanel } from './RunPanel'
 import { RunsList } from './RunsList'
@@ -178,8 +179,9 @@ export function RunsPage({
     realtime: false,
   })
 
-  const { data: activeCountBySource, isLoading: isActiveCountLoading } =
-    useActiveRunsCount({ project, realtime })
+  const { data: activeCountBySource, isLoading: isActiveCountLoading } = use(
+    ActiveRunsCountContext,
+  )
 
   const activeTotalCount = useMemo(
     () => sumCounts(activeCountBySource, debouncedSourceGroup),
