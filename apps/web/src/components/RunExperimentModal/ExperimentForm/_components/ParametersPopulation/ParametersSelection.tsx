@@ -6,8 +6,8 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCallback, useEffect, useMemo } from 'react'
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
-import { useLabels } from './useLabels'
+import { ExperimentFormPayload } from '../../useExperimentFormPayload'
+import { useLabels } from '../useLabels'
 
 function DatasetLabelSelector({
   evaluation,

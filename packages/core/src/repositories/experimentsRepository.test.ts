@@ -56,7 +56,7 @@ describe('ExperimentsRepository', () => {
       author: user,
       fileContent: factories.generateCsvContent({
         headers: ['a', 'b', 'c'],
-        rows: Array.from({ length: 50 }).map((_, i) => [
+        rows: Array.from({ length: 1 }).map((_, i) => [
           `a${i}`,
           `b${i}`,
           `c${i}`,
@@ -99,9 +99,14 @@ describe('ExperimentsRepository', () => {
         workspace,
         document,
         commit,
-        dataset,
-        parametersMap,
-        datasetLabels,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
         evaluations,
         simulationSettings: {
           simulateToolResponses: true,
@@ -113,9 +118,14 @@ describe('ExperimentsRepository', () => {
         workspace,
         document,
         commit,
-        dataset,
-        parametersMap,
-        datasetLabels,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
         evaluations,
         simulationSettings: {
           simulateToolResponses: true,
@@ -215,9 +225,14 @@ describe('ExperimentsRepository', () => {
         workspace,
         document,
         commit,
-        dataset,
-        parametersMap,
-        datasetLabels,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
         evaluations,
         simulationSettings: {
           simulateToolResponses: true,
@@ -295,9 +310,14 @@ describe('ExperimentsRepository', () => {
         workspace,
         document,
         commit,
-        dataset,
-        parametersMap,
-        datasetLabels,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
         evaluations,
         simulationSettings: {
           simulateToolResponses: true,
@@ -363,9 +383,14 @@ describe('ExperimentsRepository', () => {
         workspace,
         document,
         commit,
-        dataset,
-        parametersMap,
-        datasetLabels,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
         evaluations,
         simulationSettings: {
           simulateToolResponses: true,

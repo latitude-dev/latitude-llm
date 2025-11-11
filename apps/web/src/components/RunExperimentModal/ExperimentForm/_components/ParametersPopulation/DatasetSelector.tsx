@@ -1,4 +1,4 @@
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
+import { ExperimentFormPayload } from '../../useExperimentFormPayload'
 import useDatasets from '$/stores/datasets'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import Link from 'next/link'

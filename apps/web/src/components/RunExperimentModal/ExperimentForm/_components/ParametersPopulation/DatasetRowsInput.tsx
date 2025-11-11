@@ -1,4 +1,4 @@
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
+import { ExperimentFormPayload } from '../../useExperimentFormPayload'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Input } from '@latitude-data/web-ui/atoms/Input'

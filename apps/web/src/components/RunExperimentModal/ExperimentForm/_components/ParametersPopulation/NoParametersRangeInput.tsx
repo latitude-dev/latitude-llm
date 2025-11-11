@@ -1,8 +1,8 @@
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
+import { ExperimentFormPayload } from '../../useExperimentFormPayload'
 import { useEffect } from 'react'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 
-export function NoDatasetRangeInput({
+export function NoParametersRangeInput({
   setFromLine,
   setToLine,
   toLine,
@@ -16,8 +16,8 @@ export function NoDatasetRangeInput({
     <Input
       type='number'
       name='count'
-      label='How many logs to create'
-      description='How many times the prompt will be executed in each experiment'
+      label='How many times to run the prompt'
+      description='Your prompt does not have any parameters. Instead, select how many times the prompt will be executed for each variant.'
       value={(toLine ?? 0) + 1}
       placeholder='Number of runs'
       onChange={(e) => {
