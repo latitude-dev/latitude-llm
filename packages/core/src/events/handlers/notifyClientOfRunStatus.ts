@@ -1,6 +1,7 @@
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
-import { ProjectsRepository, RunsRepository } from '../../repositories'
+import { ProjectsRepository } from '../../repositories'
+import { getRun } from '../../services/runs/get'
 import { WebsocketClient } from '../../websockets/workers'
 import { RunStatusEvent } from '../events'
 
@@ -19,8 +20,11 @@ export const notifyClientOfRunStatus = async ({
     .getProjectById(projectId)
     .then((r) => r.unwrap())
 
-  const runsRepository = new RunsRepository(workspace.id, project.id)
-  const run = await runsRepository.get({ runUuid }).then((r) => r.unwrap())
+  const run = await getRun({
+    workspaceId: workspace.id,
+    projectId: project.id,
+    runUuid,
+  }).then((r) => r.unwrap())
 
   await WebsocketClient.sendEvent('runStatus', {
     workspaceId: workspace.id,

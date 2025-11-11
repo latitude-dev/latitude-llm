@@ -2,7 +2,7 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 
 import { RunSourceGroup } from '@latitude-data/constants'
-import { RunsRepository } from '@latitude-data/core/repositories'
+import { listCompletedRuns } from '@latitude-data/core/services/runs/completed/listCompleted'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -28,14 +28,13 @@ export const GET = errorHandler(
         | RunSourceGroup
         | undefined
 
-      const repository = new RunsRepository(workspace.id, projectId)
-      const runs = await repository
-        .listCompleted({
-          page: page ? Number(page) : undefined,
-          pageSize: pageSize ? Number(pageSize) : undefined,
-          sourceGroup,
-        })
-        .then((r) => r.unwrap())
+      const runs = await listCompletedRuns({
+        workspaceId: workspace.id,
+        projectId,
+        page: page ? Number(page) : undefined,
+        pageSize: pageSize ? Number(pageSize) : undefined,
+        sourceGroup,
+      }).then((r) => r.unwrap())
 
       return NextResponse.json(runs, { status: 200 })
     },

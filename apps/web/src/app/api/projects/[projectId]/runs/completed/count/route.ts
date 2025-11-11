@@ -1,7 +1,7 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 
-import { RunsRepository } from '@latitude-data/core/repositories'
+import { countCompletedRunsBySource } from '@latitude-data/core/services/runs/completed/countCompletedBySource'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -21,10 +21,10 @@ export const GET = errorHandler(
     ) => {
       const { projectId } = params
 
-      const repository = new RunsRepository(workspace.id, projectId)
-      const countBySource = await repository
-        .countCompletedBySource()
-        .then((r) => r.unwrap())
+      const countBySource = await countCompletedRunsBySource({
+        workspaceId: workspace.id,
+        projectId,
+      }).then((r) => r.unwrap())
 
       return NextResponse.json({ countBySource }, { status: 200 })
     },
