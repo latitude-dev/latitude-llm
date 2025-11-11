@@ -62,7 +62,7 @@ export async function setupSchedules() {
   // Every day at 11 AM - Migrates active runs cache from old STRING format to new HASH format
   await maintenanceQueue.upsertJobScheduler(
     'migrateActiveRunsCacheJob',
-    { pattern: '0 0 11 * * *' },
+    { pattern: '0 30 11 * * *' },
     { opts: { attempts: 1 } },
   )
 }

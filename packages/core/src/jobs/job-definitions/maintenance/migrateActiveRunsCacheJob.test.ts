@@ -419,4 +419,42 @@ describe('migrateActiveRunsCacheJob', () => {
       expect(await redis.type(key)).toBe('hash')
     }
   })
+
+  it('correctly terminates when cursor returns to 0', async () => {
+    // This test verifies that the SCAN loop correctly terminates when cursor becomes '0'
+    // Redis SCAN returns cursor '0' when there are no more keys to scan
+    const workspaceId = testCounter++
+    const projectId = testCounter++
+    const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
+    testKeys.add(key)
+
+    // Create old format
+    await redis.set(
+      key,
+      JSON.stringify([
+        { uuid: 'run-1', queuedAt: new Date(), source: LogSources.API },
+      ]),
+    )
+
+    // Run the job - it should complete (cursor terminates at '0')
+    const mockJob = { data: {} } as Job
+    const result = await migrateActiveRunsCacheJob(mockJob)
+
+    // Should complete successfully (cursor loop terminated)
+    expect(result.migrated).toBe(1)
+    expect(result.errors).toBe(0)
+    expect(await redis.type(key)).toBe('hash')
+  })
+
+  it('handles cursor loop correctly with no matching keys', async () => {
+    // Test that cursor loop terminates even when no keys match the pattern
+    // This ensures the do-while loop doesn't run indefinitely
+    const mockJob = { data: {} } as Job
+    const result = await migrateActiveRunsCacheJob(mockJob)
+
+    // Should complete with no matches (cursor terminates immediately)
+    expect(result.migrated).toBe(0)
+    expect(result.skipped).toBe(0)
+    expect(result.errors).toBe(0)
+  })
 })
