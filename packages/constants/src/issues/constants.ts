@@ -97,4 +97,4 @@ export const ISSUE_GENERATION_CACHE_KEY = (hash: string) =>
 export const ISSUE_JOBS_MAX_ATTEMPTS = 3
 export const ISSUE_JOBS_GENERATE_DETAILS_DEBOUNCE = 6 * 60 * 60 * 1000 // 6 hours
 export const ISSUE_JOBS_MERGE_COMMON_DEBOUNCE = 24 * 60 * 60 * 1000 // 1 day
-export const ISSUE_JOBS_DISCOVER_RESULT_DELAY = 15 * 60 * 1000 // 15 minutes
+export const ISSUE_JOBS_DISCOVER_RESULT_DELAY = 60 * 1000 // 1 minute
