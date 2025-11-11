@@ -28,9 +28,7 @@ export async function createActiveRun({
   const redisCache = cache ?? (await redis())
 
   try {
-    // Migrate from old format if needed
-    await migrateActiveRunsCache(workspaceId, projectId, redisCache)
-
+    // Don't migrate proactively - only migrate if we get WRONGTYPE error
     const activeRun: ActiveRun = { uuid: runUuid, queuedAt, source }
     const jsonValue = JSON.stringify(activeRun)
 

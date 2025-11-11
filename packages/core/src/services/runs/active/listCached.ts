@@ -16,9 +16,7 @@ export async function listCachedRuns(
   const redisCache = cache ?? (await redis())
 
   try {
-    // Migrate from old format if needed
-    await migrateActiveRunsCache(workspaceId, projectId, redisCache)
-
+    // Don't migrate proactively - only migrate if we get WRONGTYPE error
     // Use HGETALL to get all runs from a workspace/project hash at once (O(N) but entire hash expires in 3 hours, so N won't be too large)
     const hashData = await redisCache.hgetall(key)
 
