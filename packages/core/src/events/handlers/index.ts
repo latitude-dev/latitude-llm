@@ -106,4 +106,8 @@ export const EventHandlers: IEventsHandlers = {
   issueDecremented: [],
   issueDiscovered: [],
   issueMerged: [],
+  issueResolved: [],
+  issueUnresolved: [],
+  issueIgnored: [],
+  issueUnignored: [],
 }

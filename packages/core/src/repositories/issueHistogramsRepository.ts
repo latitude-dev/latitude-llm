@@ -265,8 +265,9 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
     const dateMap = new Map<string, number>()
     let totalCount = 0
     data.forEach((r) => {
-      dateMap.set(r.date, r.count)
-      totalCount += r.count
+      const count = Number(r.count)
+      dateMap.set(r.date, count)
+      totalCount += count
     })
 
     const filledResults: Array<{ date: string; count: number }> = []
@@ -281,7 +282,41 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
       })
     }
 
-    return { data: filledResults, totalCount }
+    const groupedResults = this.groupDaysForDisplay(filledResults, days)
+
+    return { data: groupedResults, totalCount }
+  }
+
+  /**
+   * Group days into buckets to maintain consistent bar count (~30 bars)
+   * For 90 days, groups into ~3-day buckets
+   */
+  private groupDaysForDisplay(
+    data: Array<{ date: string; count: number }>,
+    totalDays: number,
+  ): Array<{ date: string; count: number }> {
+    const targetBars = 30
+    const daysPerBar = Math.max(1, Math.ceil(totalDays / targetBars))
+
+    if (daysPerBar === 1) {
+      return data
+    }
+
+    const grouped: Array<{ date: string; count: number }> = []
+    for (let i = 0; i < data.length; i += daysPerBar) {
+      const chunk = data.slice(i, i + daysPerBar)
+      // Ensure we're adding numbers, not concatenating strings
+      const totalCount = chunk.reduce(
+        (sum, item) => sum + Number(item.count),
+        0,
+      )
+      grouped.push({
+        date: chunk[0].date,
+        count: totalCount,
+      })
+    }
+
+    return grouped
   }
 
   /**

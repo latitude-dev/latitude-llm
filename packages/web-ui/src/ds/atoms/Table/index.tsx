@@ -155,7 +155,7 @@ const TableHead = forwardRef<HTMLTableCellElement, THeadProps>(
       {...props}
     >
       <div
-        className={cn('flex items-center', {
+        className={cn('flex items-center w-full', {
           'justify-start': props.align === 'left',
           'justify-center': props.align === 'center',
           'justify-end': props.align === 'right',
@@ -172,8 +172,10 @@ const TableHead = forwardRef<HTMLTableCellElement, THeadProps>(
           >
             {tooltipMessage}
           </Tooltip>
-        ) : (
+        ) : typeof props.children === 'string' ? (
           <Text.H5M noWrap>{props.children}</Text.H5M>
+        ) : (
+          props.children
         )}
       </div>
     </th>
@@ -233,6 +235,7 @@ ServerSideTableCell.displayName = 'ServerSideTableCell'
 
 type CellProps = CommonCellProps & {
   preventDefault?: boolean
+  fullWidth?: boolean
 }
 const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
   (
@@ -243,6 +246,7 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
       xSpace = 'normal',
       preventDefault = false,
       verticalBorder = false,
+      fullWidth = false,
       onClick,
       innerClassName,
       ...props
@@ -253,8 +257,10 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
       ref={ref}
       className={cn(
         'align-middle [&:has([role=checkbox])]:pr-0',
-        'max-w-60',
         {
+          'max-w-60': !fullWidth,
+          'w-full': fullWidth,
+          'px-2': xSpace === 'small',
           'px-4': xSpace === 'normal',
           'px-0': xSpace === 'none',
           'border-r last:border-r-0': verticalBorder,

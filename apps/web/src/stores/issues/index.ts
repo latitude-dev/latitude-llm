@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import useSWR, { SWRConfiguration, useSWRConfig } from 'swr'
 import { ROUTES } from '$/services/routes'
 import { IssuesServerResponse } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/issues/page'
 import {
+  convertIssuesParamsToQueryParams,
   DEFAULTS_ISSUE_PARAMS,
   IssuesFiltersQueryParamsInput,
+  SafeIssuesParams,
 } from '@latitude-data/constants/issues'
 import useFetcher from '$/hooks/useFetcher'
 import { buildIssuesCacheKey } from '@latitude-data/constants/issues'
@@ -56,6 +58,7 @@ export function useIssues(
   swrConfig?: SWRConfiguration<IssuesServerResponse, any>,
 ) {
   const isSSR = useRef(!!swrConfig?.fallbackData)
+  const { mutate: globalMutate } = useSWRConfig()
   const route = ROUTES.api.projects.detail(projectId).commits.detail(commitUuid)
     .issues.root
 
@@ -108,11 +111,37 @@ export function useIssues(
     isSSR.current = false
   }, [])
 
+  // When server render page we init cache with server data to avoid refetching
+  const initServerData = useCallback(
+    ({
+      projectId,
+      commitUuid,
+      serverParams,
+      serverResponse,
+    }: {
+      projectId: number
+      commitUuid: string
+      serverParams: SafeIssuesParams
+      serverResponse: IssuesServerResponse
+    }) => {
+      const issuesCacheKey = buildIssuesCacheKey({
+        projectId,
+        commitUuid,
+        searchParams: convertIssuesParamsToQueryParams(serverParams),
+      })
+      return globalMutate(issuesCacheKey, serializer(serverResponse), {
+        revalidate: false,
+      })
+    },
+    [globalMutate],
+  )
+
   return useMemo(
     () => ({
       data: data.issues ?? [],
+      initServerData,
       isLoading,
     }),
-    [data, isLoading],
+    [data, isLoading, initServerData],
   )
 }

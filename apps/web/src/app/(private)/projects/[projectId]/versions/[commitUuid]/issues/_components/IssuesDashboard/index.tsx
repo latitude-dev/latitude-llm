@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useIssues } from '$/stores/issues'
 import {
@@ -57,28 +57,55 @@ export function IssuesDashboard({
 
     return urlParameters
   }, [urlParameters, params])
-  const { data: issues, isLoading } = useIssues(
+  const onSuccess = useCallback(
+    async (data: IssuesServerResponse | void) => {
+      if (!data) return
+
+      const issueIds = data.issues.map((issue) => issue.id)
+      await fetchMiniStatsInBatch({ issueIds })
+      onSuccessIssuesFetch(data)
+    },
+    [onSuccessIssuesFetch, fetchMiniStatsInBatch],
+  )
+  const {
+    data: issues,
+    isLoading,
+    initServerData,
+  } = useIssues(
     {
       projectId: project.id,
       commitUuid: commit.uuid,
       searchParams,
       initialPage: initialPage.current,
-      onSuccess: onSuccessIssuesFetch,
+      onSuccess,
     },
     {
       fallbackData: serverResponse,
     },
   )
-  const issueIds = useMemo(
-    () => issues?.map((issue) => issue.id) ?? [],
-    [issues],
-  )
-
-  useEffect(() => {
-    fetchMiniStatsInBatch({ issueIds })
-  }, [issueIds, fetchMiniStatsInBatch])
+  // const issueIds = useMemo(
+  //   () => issues?.map((issue) => issue.id) ?? [],
+  //   [issues],
+  // )
+  //
+  // useEffect(() => {
+  //   fetchMiniStatsInBatch({ issueIds })
+  // }, [issueIds, fetchMiniStatsInBatch])
 
   useOnce(() => {
+    // Initialize server data for SWR
+    initServerData({
+      projectId: project.id,
+      commitUuid: commit.uuid,
+      serverParams: params,
+      serverResponse,
+    })
+
+    // Fetch histogram mini stats
+    const issueIds = serverResponse.issues.map((issue) => issue.id)
+    fetchMiniStatsInBatch({ issueIds })
+
+    // Init Zustand params
     init({
       params: {
         ...params,

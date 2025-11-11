@@ -2,7 +2,10 @@ import { LinkableTablePaginationFooter } from '$/components/TablePaginationFoote
 import { TableResizableLayout } from '$/components/TableResizableLayout'
 import { SerializedIssue } from '$/stores/issues'
 import { useIssuesParameters } from '$/stores/issues/useIssuesParameters'
-import { SafeIssuesParams } from '@latitude-data/constants/issues'
+import {
+  MINI_HISTOGRAM_STATS_DAYS,
+  SafeIssuesParams,
+} from '@latitude-data/constants/issues'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -21,16 +24,14 @@ import { useCallback, useMemo, useRef } from 'react'
 import { HistogramCell } from '../HistogramCell'
 import { IssuesDetailPanel } from '../IssueDetailPanel'
 import { IssuesTitle } from '../IssuesTitle'
+import { IssueItemActions } from '../IssueItemActions'
 import { LastSeenCell } from '../LastSeenCell'
 
 const FAKE_ROWS = Array.from({ length: 20 })
 const DETAILS_OFFSET = { top: 12, bottom: 12 }
 
-function IssuesTableLoader({ showStatus }: { showStatus: boolean }) {
-  const headerCells = useMemo(
-    () => Array.from({ length: showStatus ? 5 : 4 }),
-    [showStatus],
-  )
+function IssuesTableLoader() {
+  const headerCells = useMemo(() => Array.from({ length: 5 }), [])
   return (
     <>
       {FAKE_ROWS.map((_, index) => (
@@ -39,7 +40,10 @@ function IssuesTableLoader({ showStatus }: { showStatus: boolean }) {
           className='border-b-[0.5px] h-12 max-h-12 border-border'
         >
           {headerCells.map((_, cellIndex) => (
-            <TableCell key={`skeleton-cell-${cellIndex}`}>
+            <TableCell
+              fullWidth={index === 0}
+              key={`skeleton-cell-${cellIndex}`}
+            >
               <Skeleton height='h5' className='w-12' />
             </TableCell>
           ))}
@@ -49,23 +53,13 @@ function IssuesTableLoader({ showStatus }: { showStatus: boolean }) {
   )
 }
 
-function StatusCell({ issue }: { issue: SerializedIssue }) {
-  const status = issue.isResolved
-    ? 'Resolved'
-    : issue.isIgnored
-      ? 'Ignored'
-      : 'Active'
-  return <Text.H5 color='foregroundMuted'>{status}</Text.H5>
-}
-
 export function IssuesTable({
-  serverParams,
   isLoading,
   issues,
   currentRoute,
-  loadingMiniStats,
   selectedIssue,
   onSelectChange,
+  loadingMiniStats,
 }: {
   serverParams: SafeIssuesParams
   isLoading: boolean
@@ -83,7 +77,6 @@ export function IssuesTable({
     nextPage,
     totalCount,
     limit,
-    filters,
   } = useIssuesParameters((state) => ({
     init: state.init,
     page: state.page,
@@ -99,7 +92,6 @@ export function IssuesTable({
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
   const noData = !isLoading && !issues.length
-  const status = filters.status ?? serverParams.filters.status
   const onClickRow = useCallback(
     (issue: SerializedIssue) => () => {
       onSelectChange(
@@ -112,8 +104,6 @@ export function IssuesTable({
     },
     [onSelectChange, selectedIssue],
   )
-  const showStatus = status !== 'active'
-
   if (noData) {
     return (
       <TableBlankSlate description='No issues discovered in this project yet' />
@@ -145,16 +135,21 @@ export function IssuesTable({
         >
           <TableHeader>
             <TableRow>
+              <TableHead>Issues</TableHead>
+              <TableHead align='right'>Last occurrence</TableHead>
+              <TableHead align='right'>Events</TableHead>
+              <TableHead>
+                <div className='w-full flex flex-row items-center justify-between gap-x-1'>
+                  <span>Trend</span>
+                  <Text.H6M>Latest {MINI_HISTOGRAM_STATS_DAYS} Days </Text.H6M>
+                </div>
+              </TableHead>
               <TableHead></TableHead>
-              <TableHead>Seen at</TableHead>
-              <TableHead>14d</TableHead>
-              <TableHead>Events</TableHead>
-              {showStatus ? <TableHead>Status</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <IssuesTableLoader showStatus={showStatus} />
+              <IssuesTableLoader />
             ) : (
               issues.map((issue) => (
                 <TableRow
@@ -167,24 +162,24 @@ export function IssuesTable({
                     },
                   )}
                 >
-                  <TableCell>
+                  <TableCell fullWidth>
                     <IssuesTitle issue={issue} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell align='right'>
                     <LastSeenCell issue={issue} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell align='right'>
+                    <Text.H5>{issue.totalCount}</Text.H5>
+                  </TableCell>
+                  <TableCell className='min-w-72'>
                     <HistogramCell
-                      issueId={issue.id}
-                      loadingBatch={loadingMiniStats}
+                      issue={issue}
+                      loadingMiniStats={isLoading || loadingMiniStats}
                     />
                   </TableCell>
-                  <TableCell>{issue.totalCount}</TableCell>
-                  {showStatus ? (
-                    <TableCell>
-                      <StatusCell issue={issue} />
-                    </TableCell>
-                  ) : null}
+                  <TableCell>
+                    <IssueItemActions issue={issue} />
+                  </TableCell>
                 </TableRow>
               ))
             )}

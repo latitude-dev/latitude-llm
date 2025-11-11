@@ -90,6 +90,10 @@ export type Events =
   | 'issueDecremented'
   | 'issueDiscovered'
   | 'issueMerged'
+  | 'issueResolved'
+  | 'issueUnresolved'
+  | 'issueIgnored'
+  | 'issueUnignored'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -765,6 +769,42 @@ export type IssueMergedEvent = LatitudeEventGeneric<
   }
 >
 
+export type IssueResolvedEvent = LatitudeEventGeneric<
+  'issueResolved',
+  {
+    workspaceId: number
+    issueId: number
+    userEmail: string
+  }
+>
+
+export type IssueUnresolvedEvent = LatitudeEventGeneric<
+  'issueUnresolved',
+  {
+    workspaceId: number
+    issueId: number
+    userEmail: string
+  }
+>
+
+export type IssueIgnoredEvent = LatitudeEventGeneric<
+  'issueIgnored',
+  {
+    workspaceId: number
+    issueId: number
+    userEmail: string
+  }
+>
+
+export type IssueUnignoredEvent = LatitudeEventGeneric<
+  'issueUnignored',
+  {
+    workspaceId: number
+    issueId: number
+    userEmail: string
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -837,6 +877,10 @@ export type LatitudeEvent =
   | IssueDecrementedEvent
   | IssueDiscoveredEvent
   | IssueMergedEvent
+  | IssueResolvedEvent
+  | IssueUnresolvedEvent
+  | IssueIgnoredEvent
+  | IssueUnignoredEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -910,4 +954,8 @@ export interface IEventsHandlers {
   issueDecremented: EventHandler<IssueDecrementedEvent>[]
   issueDiscovered: EventHandler<IssueDiscoveredEvent>[]
   issueMerged: EventHandler<IssueMergedEvent>[]
+  issueResolved: EventHandler<IssueResolvedEvent>[]
+  issueUnresolved: EventHandler<IssueUnresolvedEvent>[]
+  issueIgnored: EventHandler<IssueIgnoredEvent>[]
+  issueUnignored: EventHandler<IssueUnignoredEvent>[]
 }

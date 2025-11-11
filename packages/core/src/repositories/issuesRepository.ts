@@ -11,7 +11,6 @@ import {
   eq,
   getTableColumns,
   ilike,
-  isNull,
   or,
   sql,
   SQL,
@@ -224,6 +223,11 @@ export class IssuesRepository extends Repository<Issue> {
         isResolved: sql<boolean>`(${issues.resolvedAt} IS NOT NULL)`.as(
           'isResolved',
         ),
+        isRegressed: sql<boolean>`(
+          ${issues.resolvedAt} IS NOT NULL 
+          AND ${issues.ignoredAt} IS NULL 
+          AND ${subquery.lastSeenDate} > ${issues.resolvedAt}
+        )`.as('isRegressed'),
         isEscalating: sql<boolean>`(
           CASE
             WHEN ${subquery.escalatingCount} > ${ESCALATING_COUNT_THRESHOLD}
@@ -323,28 +327,25 @@ export class IssuesRepository extends Repository<Issue> {
 
     switch (status) {
       case 'active':
-        // Active: not resolved and not ignored
-        conditions.push(isNull(issues.resolvedAt))
-        conditions.push(isNull(issues.ignoredAt))
-        break
-      case 'archived':
-        // Archived: resolved or ignored
+        // Active: not resolved and not ignored, OR regressed (resolved but reappeared)
         conditions.push(
           or(
-            sql`${issues.resolvedAt} IS NOT NULL`,
-            sql`${issues.ignoredAt} IS NOT NULL`,
+            // Not resolved and not ignored
+            sql`(${issues.resolvedAt} IS NULL AND ${issues.ignoredAt} IS NULL)`,
+            // Regressed: resolved but with histogram data after resolved date
+            sql`(${issues.resolvedAt} IS NOT NULL AND ${issues.ignoredAt} IS NULL AND ${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} > ${issues.resolvedAt})`,
           )!,
         )
         break
-      case 'regressed':
-        // Regressed: resolved but with histogram data after resolved date
-        // This will be handled in HAVING clause since it requires histogram data
+      case 'inactive':
+        // Inactive: ignored, OR resolved without regression
         conditions.push(
-          ...[
-            sql`${issues.resolvedAt} IS NOT NULL`,
-            isNull(issues.ignoredAt),
-            sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} > ${issues.resolvedAt}`,
-          ],
+          or(
+            // Ignored issues
+            sql`${issues.ignoredAt} IS NOT NULL`,
+            // Resolved without regression (histogram data before or at resolved date)
+            sql`(${issues.resolvedAt} IS NOT NULL AND ${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} <= ${issues.resolvedAt})`,
+          )!,
         )
         break
     }

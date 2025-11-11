@@ -15,16 +15,18 @@ export async function createIssue(
     document,
     project,
     workspace,
+    createdAt,
   }: {
     title: string
     description: string
     document: DocumentVersion
     project: Project
     workspace: Workspace
+    createdAt?: Date
   },
   transaction = new Transaction(),
 ) {
-  const createdAt = new Date()
+  const issueCreatedAt = createdAt ?? new Date()
 
   const centroid = createCentroid()
 
@@ -43,8 +45,8 @@ export async function createIssue(
           title: title,
           description: description,
           centroid: centroid,
-          createdAt: createdAt,
-          updatedAt: createdAt,
+          createdAt: issueCreatedAt,
+          updatedAt: issueCreatedAt,
         })
         .returning()
         .then((r) => r[0]!)) as Issue

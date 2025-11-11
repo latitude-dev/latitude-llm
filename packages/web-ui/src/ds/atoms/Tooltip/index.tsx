@@ -65,7 +65,7 @@ const TooltipContent = forwardRef<
 )
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
-function useTooltipTextContentColor(variant: TooltipVariant): TextColor {
+export function useTooltipTextContentColor(variant: TooltipVariant): TextColor {
   switch (variant) {
     case 'default':
       return 'foreground'
