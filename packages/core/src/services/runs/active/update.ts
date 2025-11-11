@@ -33,7 +33,9 @@ export async function updateActiveRun({
     const jsonValue = await redisCache.hget(key, runUuid)
     if (!jsonValue) {
       return Result.error(
-        new NotFoundError(`Run not found with uuid ${runUuid}`),
+        new NotFoundError(
+          `Run not found with uuid ${runUuid} while updating the run`,
+        ),
       )
     }
 
@@ -64,7 +66,9 @@ export async function updateActiveRun({
         const jsonValue = await redisCache.hget(key, runUuid)
         if (!jsonValue) {
           return Result.error(
-            new NotFoundError(`Run not found with uuid ${runUuid}`),
+            new NotFoundError(
+              `Run not found with uuid ${runUuid} while updating the run`,
+            ),
           )
         }
 

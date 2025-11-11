@@ -43,7 +43,11 @@ export async function deleteActiveRun({
       return Result.ok(deletedRun)
     }
 
-    return Result.error(new NotFoundError(`Run not found with uuid ${runUuid}`))
+    return Result.error(
+      new NotFoundError(
+        `Run not found with uuid ${runUuid} while deleting the run`,
+      ),
+    )
   } catch (error) {
     // Handle WRONGTYPE errors
     if (error instanceof Error && error.message.includes('WRONGTYPE')) {
@@ -71,11 +75,15 @@ export async function deleteActiveRun({
         }
 
         return Result.error(
-          new NotFoundError(`Run not found with uuid ${runUuid}`),
+          new NotFoundError(
+            `Run not found with uuid ${runUuid} while deleting the run`,
+          ),
         )
       } catch (retryError) {
         return Result.error(
-          new NotFoundError(`Run not found with uuid ${runUuid}`),
+          new NotFoundError(
+            `Run not found with uuid ${runUuid} while deleting the run`,
+          ),
         )
       }
     }

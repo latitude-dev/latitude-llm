@@ -84,8 +84,8 @@ export async function enqueueRun({
       jobId: runUuid,
       attempts: 1,
       deduplication: { id: runUuid },
-      removeOnComplete: { age: 10 }, // Keep for 10 seconds (matches Redis stream grace period)
-      removeOnFail: { age: 10 }, // Keep for 10 seconds (matches Redis stream grace period)
+      removeOnComplete: true,
+      removeOnFail: true,
       keepLogs: 0,
     },
   )
