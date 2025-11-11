@@ -9,6 +9,7 @@ const jobMappings = {
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   cleanDocumentSuggestionsJob: jobs.cleanDocumentSuggestionsJob,
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
+  migrateActiveRunsCacheJob: jobs.migrateActiveRunsCacheJob,
   refreshDocumentStatsCacheJob: jobs.refreshDocumentStatsCacheJob,
   refreshDocumentsStatsCacheJob: jobs.refreshDocumentsStatsCacheJob,
   refreshProjectStatsCacheJob: jobs.refreshProjectStatsCacheJob,
