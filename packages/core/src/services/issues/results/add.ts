@@ -13,10 +13,10 @@ import { queues } from '../../../jobs/queues'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import { CommitsRepository, IssuesRepository } from '../../../repositories'
+import { issueEvaluationResults } from '../../../schema/models/issueEvaluationResults'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
-import { updateEvaluationResultV2 } from '../../evaluationsV2/results/update'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import { incrementIssueHistogram } from '../histograms/increment'
 import { embedReason, updateCentroid } from '../shared'
@@ -109,14 +109,12 @@ export async function addResultToIssue<
         timestamp,
       )
 
-      const updatingre = await updateEvaluationResultV2(
-        { issue, result, commit, workspace },
-        transaction,
-      )
-      if (updatingre.error) {
-        return Result.error(updatingre.error)
-      }
-      result = updatingre.value.result
+      // Create the issue-evaluation result association
+      await tx.insert(issueEvaluationResults).values({
+        workspaceId: workspace.id,
+        issueId: issue.id,
+        evaluationResultId: result.id,
+      })
 
       const incrementing = await incrementIssueHistogram(
         { result, issue, commit, workspace },

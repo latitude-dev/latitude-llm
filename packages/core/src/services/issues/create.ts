@@ -15,17 +15,18 @@ export async function createIssue(
     document,
     project,
     workspace,
+    createdAt: createdAtArg,
   }: {
     title: string
     description: string
     document: DocumentVersion
     project: Project
     workspace: Workspace
+    createdAt?: Date
   },
   transaction = new Transaction(),
 ) {
-  const createdAt = new Date()
-
+  const createdAt = createdAtArg ?? new Date()
   const centroid = createCentroid()
 
   // Note: not creating the vector in the vector db yet to avoid storing empty vectors,

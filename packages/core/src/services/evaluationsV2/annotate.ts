@@ -20,6 +20,7 @@ import {
 } from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
+import { type User } from '../../schema/models/types/User'
 import { ProviderLogDto } from '../../schema/types'
 import { extractActualOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
@@ -37,9 +38,11 @@ export async function annotateEvaluationV2<
     evaluation,
     resultScore,
     resultMetadata,
+    currentUser,
   }: {
     workspace: Workspace
     commit: Commit
+    currentUser?: User
     providerLog: ProviderLogDto
     evaluation: EvaluationV2<T, M>
     resultScore: number
@@ -161,22 +164,33 @@ export async function annotateEvaluationV2<
 
   // TODO: We are stepping out of the db instance. This service should accept an instance of Transaction instead.
   const transaction = new Transaction()
+  let alreadyExisted = false
+  let sendToAnalytics = false
+
   return await transaction.call(
     async () => {
       let result
 
-      if (existingResult.ok) {
+      alreadyExisted = !!existingResult.ok
+
+      if (alreadyExisted) {
+        const existing = existingResult.unwrap()
+        // Check if score actually changed (ignore reason-only updates)
+        sendToAnalytics = existing.score !== resultScore
+
         const { result: updatedResult } = await updateEvaluationResultV2(
           {
             workspace,
             commit,
-            result: existingResult.unwrap(),
+            result: existing,
             value: value as EvaluationResultValue<T, M>,
           },
           transaction,
         ).then((r) => r.unwrap())
         result = updatedResult
       } else {
+        // New annotation - always send analytics
+        sendToAnalytics = true
         const { result: createdResult } = await createEvaluationResultV2(
           {
             uuid: resultUuid,
@@ -193,16 +207,22 @@ export async function annotateEvaluationV2<
 
       return Result.ok({ result })
     },
-    ({ result }) =>
+    ({ result }) => {
+      // Always publish event, but only include userEmail when score changed
+      // Analytics platform checks userEmail to decide whether to process the event
+      // This prevents sending partial reason text from debounced updates
       publisher.publishLater({
         type: 'evaluationV2Annotated',
         data: {
+          isNew: !alreadyExisted,
+          userEmail: sendToAnalytics ? currentUser?.email || null : null,
           workspaceId: workspace.id,
           evaluation: evaluation,
           result: result,
           commit: commit,
           providerLog: providerLog,
         },
-      }),
+      })
+    },
   )
 }

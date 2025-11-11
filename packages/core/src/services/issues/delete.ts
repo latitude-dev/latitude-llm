@@ -2,7 +2,6 @@ import { and, eq } from 'drizzle-orm'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { issueHistograms } from '../../schema/models/issueHistograms'
 import { issues } from '../../schema/models/issues'
@@ -41,16 +40,6 @@ export async function deleteIssue(
         )
 
       await tx
-        .update(evaluationResultsV2)
-        .set({ issueId: null })
-        .where(
-          and(
-            eq(evaluationResultsV2.workspaceId, issue.workspaceId),
-            eq(evaluationResultsV2.issueId, issue.id),
-          ),
-        )
-
-      await tx
         .delete(issueHistograms)
         .where(
           and(
@@ -59,6 +48,8 @@ export async function deleteIssue(
           ),
         )
 
+      // Note: issueEvaluationResults will be cascade deleted automatically
+      // when the issue is deleted due to the onDelete: 'cascade' constraint
       const deletedIssue = (await tx
         .delete(issues)
         .where(

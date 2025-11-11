@@ -28,6 +28,7 @@ export const annotateEvaluationV2Action = withEvaluation
       providerLog: providerLog,
       commit: ctx.commit,
       workspace: ctx.workspace,
+      currentUser: ctx.user,
     }).then((r) => r.unwrap())
 
     return result

@@ -1,3 +1,4 @@
+import { and, eq } from 'drizzle-orm'
 import {
   EvaluationMetric,
   EvaluationResultSuccessValue,
@@ -16,10 +17,10 @@ import {
   IssueHistogramsRepository,
   IssuesRepository,
 } from '../../../repositories'
+import { issueEvaluationResults } from '../../../schema/models/issueEvaluationResults'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
-import { updateEvaluationResultV2 } from '../../evaluationsV2/results/update'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import { deleteIssue } from '../delete'
 import { decrementIssueHistogram } from '../histograms/decrement'
@@ -114,14 +115,16 @@ export async function removeResultFromIssue<
         timestamp,
       )
 
-      const updatingre = await updateEvaluationResultV2(
-        { issue: null, result, commit, workspace },
-        transaction,
-      )
-      if (updatingre.error) {
-        return Result.error(updatingre.error)
-      }
-      result = updatingre.value.result
+      // Remove the issue-evaluation result association
+      await tx
+        .delete(issueEvaluationResults)
+        .where(
+          and(
+            eq(issueEvaluationResults.workspaceId, workspace.id),
+            eq(issueEvaluationResults.issueId, issue.id),
+            eq(issueEvaluationResults.evaluationResultId, result.id),
+          ),
+        )
 
       const decrementing = await decrementIssueHistogram(
         { result, issue, commit, workspace },

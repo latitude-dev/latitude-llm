@@ -7,6 +7,10 @@ import {
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
+import {
+  IssueEvaluationResultsRepository,
+  IssuesRepository,
+} from '../../../repositories'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { createIssue } from '../../issues/create'
@@ -32,7 +36,7 @@ export async function assignEvaluationResultV2ToIssue<
   },
   transaction = new Transaction(),
 ) {
-  return await transaction.call(async () => {
+  return await transaction.call(async (tx) => {
     if (!issue) {
       if (!create) {
         return Result.error(new BadRequestError('No issue was provided'))
@@ -46,11 +50,29 @@ export async function assignEvaluationResultV2ToIssue<
       issue = creating.value.issue
     }
 
-    if (result.issueId) {
+    // Check if result already belongs to an issue via intermediate table
+    const issueEvalResultsRepo = new IssueEvaluationResultsRepository(
+      workspace.id,
+      tx,
+    )
+    const existingAssociation =
+      await issueEvalResultsRepo.findByEvaluationResultId(result.id)
+
+    if (existingAssociation) {
+      // Result is already assigned to an issue, need to remove it first
+      const issuesRepository = new IssuesRepository(workspace.id, tx)
+      const currentIssueResult = await issuesRepository.find(
+        existingAssociation.issueId,
+      )
+      if (currentIssueResult.error) {
+        return Result.error(currentIssueResult.error)
+      }
+      const currentIssue = currentIssueResult.value
+
       const removing = await removeResultFromIssue(
         {
           result: { result, evaluation, embedding: result.embedding },
-          issue: issue,
+          issue: currentIssue,
           workspace: workspace,
         },
         transaction,
@@ -58,7 +80,6 @@ export async function assignEvaluationResultV2ToIssue<
       if (removing.error) {
         return Result.error(removing.error)
       }
-      issue = removing.value.issue
       result = removing.value.result
     }
 

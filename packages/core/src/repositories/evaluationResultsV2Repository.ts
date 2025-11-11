@@ -37,6 +37,7 @@ import { commits } from '../schema/models/commits'
 import { datasetRows } from '../schema/models/datasetRows'
 import { datasets } from '../schema/models/datasets'
 import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
+import { issueEvaluationResults } from '../schema/models/issueEvaluationResults'
 import { providerLogs } from '../schema/models/providerLogs'
 import { Commit } from '../schema/models/types/Commit'
 import { Issue } from '../schema/models/types/Issue'
@@ -523,6 +524,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         evaluatedLog: providerLogs,
       })
       .from(evaluationResultsV2)
+      .innerJoin(
+        issueEvaluationResults,
+        eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+      )
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .innerJoin(
         providerLogs,
@@ -533,7 +538,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           this.scopeFilter,
           isNull(commits.deletedAt),
           isNotNull(providerLogs.documentLogUuid),
-          eq(evaluationResultsV2.issueId, issue.id),
+          eq(issueEvaluationResults.issueId, issue.id),
           inArray(evaluationResultsV2.commitId, commitIds),
         ),
       )
@@ -624,7 +629,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   async selectForIssueGeneration({ issueId }: { issueId: number }) {
     const conditions = [
       this.scopeFilter,
-      eq(evaluationResultsV2.issueId, issueId),
+      eq(issueEvaluationResults.issueId, issueId),
       isNull(evaluationResultsV2.error),
       sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
     ]
@@ -635,6 +640,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const newer = await this.db
       .select(tt)
       .from(evaluationResultsV2)
+      .innerJoin(
+        issueEvaluationResults,
+        eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+      )
       .where(
         and(
           ...conditions,
@@ -655,6 +664,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const older = await this.db
       .select(tt)
       .from(evaluationResultsV2)
+      .innerJoin(
+        issueEvaluationResults,
+        eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+      )
       .where(and(...conditions))
       .orderBy(
         asc(evaluationResultsV2.createdAt),
