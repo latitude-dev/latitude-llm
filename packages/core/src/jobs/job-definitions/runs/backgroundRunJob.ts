@@ -32,6 +32,7 @@ import { Experiment } from '../../../schema/models/types/Experiment'
 import { SimulationSettings } from '@latitude-data/constants/simulation'
 import { isFeatureEnabledByName } from '../../../services/workspaceFeatures/isFeatureEnabledByName'
 import { Result } from '../../../lib/Result'
+import { captureException } from '../../../utils/datadogCapture'
 
 export type BackgroundRunJobData = {
   workspaceId: number
@@ -202,9 +203,14 @@ export const backgroundRunJob = async (
   } finally {
     await writeStream.cleanup()
     await publisher.unsubscribe('cancelJob', cancelJob)
-
-    // TODO: capture exception if we fail to end the run (but do not throw)
-    await endRun({ workspaceId, projectId, runUuid })
+    try {
+      const endResult = await endRun({ workspaceId, projectId, runUuid })
+      if (!Result.isOk(endResult)) {
+        captureException(new Error(`[BackgroundRunJob] Failed to end run`))
+      }
+    } catch (error) {
+      captureException(new Error(`[BackgroundRunJob] Failed to end run`))
+    }
   }
 }
 

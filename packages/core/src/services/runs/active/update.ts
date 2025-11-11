@@ -28,9 +28,7 @@ export async function updateActiveRun({
   const redisCache = cache ?? (await redis())
 
   try {
-    // Migrate from old format if needed
-    await migrateActiveRunsCache(workspaceId, projectId, redisCache)
-
+    // Don't migrate proactively - only migrate if we get WRONGTYPE error
     // Get the value of the hash field (O(1) operation)
     const jsonValue = await redisCache.hget(key, runUuid)
     if (!jsonValue) {
