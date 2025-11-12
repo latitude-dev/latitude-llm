@@ -1,7 +1,7 @@
 // TODO(AO): implement this
 
 /*
-- This job is debounced (leading), only runs (with mutual exclusion) max 1 every day (THIS IS ALREADY DONE WHEN ENQUEUING THE JOB in add/remove result from issue services)
+- This job is throttled (leading), only runs (with mutual exclusion) max 1 every day (THIS IS ALREADY DONE WHEN ENQUEUING THE JOB in add/remove result from issue services)
 - Find the existing issue by id in the database. This job executing means that this issue is ongoing currently and could be deviating towards another existing issue/s.
 - Call mergeIssues service
 
