@@ -8,7 +8,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { SpanKind, SpanStatus, SpanType } from '../../constants'
+import { LogSources, SpanKind, SpanStatus, SpanType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { apiKeys } from './apiKeys'
@@ -35,14 +35,19 @@ export const spans = latitudeSchema.table(
     duration: bigint('duration', { mode: 'number' }).notNull(),
     startedAt: timestamp('started_at').notNull(),
     endedAt: timestamp('ended_at').notNull(),
+
     documentUuid: uuid('document_uuid'),
     commitUuid: uuid('commit_uuid'),
     experimentUuid: uuid('experiment_uuid'),
+
+    source: varchar('source', { length: 32 }).$type<LogSources>(),
 
     tokensPrompt: integer('tokens_prompt'),
     tokensCached: integer('tokens_cached'),
     tokensReasoning: integer('tokens_reasoning'),
     tokensCompletion: integer('tokens_completion'),
+
+    model: varchar('model', { length: 32 }),
     cost: integer('cost'),
 
     ...timestamps(),

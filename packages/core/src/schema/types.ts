@@ -49,7 +49,7 @@ export type EvaluationResultV2WithDetails<
   commit: Commit
   dataset?: Dataset
   evaluatedRow?: DatasetRow
-  evaluatedLog: ProviderLogDto
+  evaluatedLog?: ProviderLogDto
 }
 
 type EvaluationV2BaseStats = {

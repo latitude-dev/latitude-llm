@@ -47,36 +47,30 @@ export const documentLogs = latitudeSchema.table(
     ),
     ...timestamps(),
   },
-  (table) => ({
-    documentLogUuidIdx: index('document_log_uuid_idx').on(table.uuid),
-    documentLogDocumentUuidIdx: index('document_log_document_uuid_idx').on(
-      table.documentUuid,
-    ),
-    workspaceIdx: index('document_logs_workspace_idx').on(table.workspaceId),
-    commitIdIdx: index('document_logs_commit_id_idx').on(table.commitId),
-    contentHashIdx: index('document_logs_content_hash_idx').on(
-      table.contentHash,
-    ),
-    createdAtIdx: index('document_logs_created_at_idx').on(table.createdAt),
-    customIdentifierTrgmIdx: index('document_logs_custom_identifier_trgm_idx')
+  (table) => [
+    index('document_log_uuid_idx').on(table.uuid),
+    index('document_log_document_uuid_idx').on(table.documentUuid),
+    index('document_logs_workspace_idx').on(table.workspaceId),
+    index('document_logs_commit_id_idx').on(table.commitId),
+    index('document_logs_content_hash_idx').on(table.contentHash),
+    index('document_logs_created_at_idx').on(table.createdAt),
+    index('document_logs_custom_identifier_trgm_idx')
       .using('gin', sql`${table.customIdentifier} gin_trgm_ops`)
       .concurrently(),
-    commitCreatedAtIdx: index('document_logs_commit_created_at_idx').on(
+    index('document_logs_commit_created_at_idx').on(
       table.commitId,
       table.createdAt,
     ),
-    sourceCreatedAtIdx: index('document_logs_source_created_at_idx')
+    index('document_logs_source_created_at_idx')
       .on(table.source, table.createdAt)
       .concurrently(),
-    experimentIdIdx: index('document_logs_experiment_id_idx').on(
-      table.experimentId,
-    ),
-    createdAtBrinIdx: index('document_logs_created_at_brin_idx')
+    index('document_logs_experiment_id_idx').on(table.experimentId),
+    index('document_logs_created_at_brin_idx')
       .using('brin', sql`${table.createdAt}`)
       .with({
         pages_per_range: 32,
         autosummarize: true,
       })
       .concurrently(),
-  }),
+  ],
 )
