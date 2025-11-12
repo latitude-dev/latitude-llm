@@ -16,6 +16,8 @@ export const API_ROUTES = {
         get: '/api/v3/projects/:projectId/versions/:versionUuid/documents/:documentPath{.+}',
         getAll: '/api/v3/projects/:projectId/versions/:versionUuid/documents',
         create: '/api/v3/projects/:projectId/versions/:versionUuid/documents',
+        createOrUpdate:
+          '/api/v3/projects/:projectId/versions/:versionUuid/documents/create-or-update',
         getOrCreate:
           '/api/v3/projects/:projectId/versions/:versionUuid/documents/get-or-create',
         logs: '/api/v3/projects/:projectId/versions/:versionUuid/documents/logs',

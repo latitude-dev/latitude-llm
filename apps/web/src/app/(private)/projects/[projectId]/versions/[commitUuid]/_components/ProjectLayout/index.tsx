@@ -69,7 +69,11 @@ export default async function ProjectLayout({
         sidebarWidth={sidebarWidth}
         minSidebarWidth={MIN_SIDEBAR_WIDTH_PX}
         sidebar={
-          <Sidebar project={project} commit={commit} currentDocument={document} />
+          <Sidebar
+            project={project}
+            commit={commit}
+            currentDocument={document}
+          />
         }
       >
         <LastSeenCommitCookie
