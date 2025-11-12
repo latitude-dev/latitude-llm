@@ -16,6 +16,10 @@ const jobMappings = {
   refreshProjectsStatsCacheJob: jobs.refreshProjectsStatsCacheJob,
   requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
   scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
+  scheduleUpdateEvaluationResultsSpanReferencesJobs:
+    jobs.scheduleUpdateEvaluationResultsSpanReferencesJobs,
+  updateEvaluationResultsSpanReferencesJob:
+    jobs.updateEvaluationResultsSpanReferencesJob,
   updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
 }
 
