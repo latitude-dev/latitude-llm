@@ -113,7 +113,6 @@ export function PasteYourPromptBody() {
     setEditorKey((prev) => prev + 1)
   }, [setInitialValue, setDocumentParameters, updateDocumentContent])
 
-  console.log('value', value)
   return (
     <div className='flex flex-row items-center gap-10 h-full w-full'>
       <div className='flex flex-col items-end w-full h-full'>

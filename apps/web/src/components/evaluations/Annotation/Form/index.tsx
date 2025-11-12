@@ -6,29 +6,18 @@ import { FormProps } from '../types'
 import { useAnnotationForm } from '../useAnnotationForm'
 import { IssuesSelector } from './IssuesSelector'
 import { cn } from '@latitude-data/web-ui/utils'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 
 export function AnnotationForm<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
->({
-  isAnnotatingEvaluation,
-  annotateEvaluation,
-  mutateEvaluationResults,
-  evaluation,
-  providerLog,
-  documentLog,
-  commit,
-  result,
-}: FormProps<T, M>) {
+>({ evaluation, span, result, onAnnotate }: FormProps<T, M>) {
   const spec = EVALUATION_SPECIFICATIONS[evaluation.type]
+  const { commit } = useCurrentCommit()
   const { onSubmit, isSubmitting } = useAnnotationForm<T, M>({
-    isAnnotatingEvaluation,
-    annotateEvaluation,
-    mutateEvaluationResults,
     evaluation,
-    providerLog,
-    documentLog,
-    commit,
+    span,
+    onAnnotate,
   })
 
   // Start expanded if there's already a result
@@ -39,9 +28,9 @@ export function AnnotationForm<
   return (
     <AnnotationProvider
       commit={commit}
-      documentLog={documentLog}
+      span={span}
       evaluation={evaluation}
-      documentUuid={documentLog.documentUuid}
+      documentUuid={span.documentUuid ?? ''}
       result={result}
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}

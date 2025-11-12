@@ -10,12 +10,14 @@ export function useConversation(
   {
     conversationId,
   }: {
-    conversationId: string
+    conversationId?: string
   },
   opts?: SWRConfiguration,
 ) {
-  const route = ROUTES.api.conversations.detail(conversationId).root
-  const fetcher = useFetcher<string[]>(conversationId ? route : undefined)
+  const route = conversationId
+    ? ROUTES.api.conversations.detail(conversationId).root
+    : undefined
+  const fetcher = useFetcher<string[]>(route)
 
   const {
     data = [],

@@ -10,6 +10,7 @@ import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
 import {
   DocumentLogWithMetadataAndError,
+  EvaluationResultV2,
   EvaluationV2,
   LOG_FILTERS_ENCODED_PARAMS,
 } from '@latitude-data/core/constants'
@@ -18,7 +19,6 @@ import {
   buildPagination,
   IPagination,
 } from '@latitude-data/core/lib/pagination/buildPagination'
-import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
 import { DocumentLogsLimitedView } from '@latitude-data/core/schema/models/types/DocumentLog'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
@@ -37,6 +37,11 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { capitalize } from 'lodash-es'
 import { forwardRef, Fragment, useMemo } from 'react'
 import { DocumentLogTraces } from './DocumentLogInfo/Traces'
+import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 
 type DocumentLogRow = DocumentLogWithMetadataAndError & {
   realtimeAdded?: boolean
@@ -50,13 +55,13 @@ function EvaluationsColumn({
   isLoading,
 }: {
   documentLog: DocumentLogRow
-  evaluationResults?: ResultWithEvaluationV2[]
+  evaluationResults?: EvaluationResultV2[]
   evaluations: EvaluationV2[]
   color: TextColor
   isLoading: boolean
 }) {
   const passedResults = useMemo(
-    () => evaluationResults.filter(({ result }) => !!result.hasPassed).length,
+    () => evaluationResults.filter((result) => !!result.hasPassed).length,
     [evaluationResults],
   )
 
@@ -65,7 +70,7 @@ function EvaluationsColumn({
       evaluations.filter(
         (e) =>
           getEvaluationMetricSpecification(e).supportsManualEvaluation &&
-          !evaluationResults.find((r) => r.evaluation.uuid === e.uuid),
+          !evaluationResults.find((r) => r.evaluationUuid === e.uuid),
       ).length,
     [evaluationResults, evaluations],
   )
@@ -111,11 +116,8 @@ const countLabel = (selected: number) => (count: number) => {
 type Props = {
   documentLogs: DocumentLogRow[]
   pagination?: IPagination
-  evaluationResults: Record<string, ResultWithEvaluationV2[]>
-  evaluations: EvaluationV2[]
   selectedLog: DocumentLogWithMetadataAndError | undefined
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
-  isLoading: boolean
   selectableState: SelectableRowsHook
   limitedView?: DocumentLogsLimitedView
   limitedCursor?: string | null
@@ -127,11 +129,8 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
     {
       documentLogs,
       pagination,
-      evaluationResults,
-      evaluations,
       selectedLog,
       setSelectedLog,
-      isLoading,
       selectableState: {
         headerState,
         selectedCount,
@@ -146,9 +145,22 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
     },
     ref,
   ) {
-    const queryParams =
-      typeof window !== 'undefined' ? window.location.search : undefined
-
+    const { project } = useCurrentProject()
+    const { commit } = useCurrentCommit()
+    const { document } = useCurrentDocument()
+    const { data: evaluationResults, isLoading } =
+      useEvaluationResultsV2ByDocumentLogs({
+        project,
+        commit,
+        document,
+        documentLogUuids: documentLogs.map((d) => d.uuid),
+      })
+    const { data: evaluations } = useEvaluationsV2({
+      project,
+      commit,
+      document,
+    })
+    const queryParams = typeof window !== 'undefined' ? window.location.search : undefined // prettier-ignore
     const queryParamsObject = useMemo<QueryParams | undefined>(() => {
       if (queryParams === undefined) return undefined
 
@@ -279,9 +291,9 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                     <EvaluationsColumn
                       color={cellColor}
                       documentLog={documentLog}
-                      evaluationResults={evaluationResults[documentLog.uuid]}
                       evaluations={evaluations}
                       isLoading={isLoading}
+                      evaluationResults={evaluationResults[documentLog.uuid]}
                     />
                   </TableCell>
                   <TableCell>

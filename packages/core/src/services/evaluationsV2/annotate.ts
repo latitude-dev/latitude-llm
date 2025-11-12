@@ -1,4 +1,3 @@
-import { database } from '../../client'
 import {
   EVALUATION_SCORE_SCALE,
   EvaluationMetric,
@@ -6,21 +5,23 @@ import {
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
+  SpanType,
+  SpanWithDetails,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { buildConversation } from '../../helpers'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
+import { LegacyMessage } from '../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
 import {
-  DocumentLogsRepository,
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
 } from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { ProviderLogDto } from '../../schema/types'
+import { findFirstSpanOfType } from '../tracing/spans/findFirstSpanOfType'
+import { assembleTrace } from '../tracing/traces/assemble'
 import { extractActualOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { updateEvaluationResultV2 } from './results/update'
@@ -31,59 +32,32 @@ export async function annotateEvaluationV2<
   M extends EvaluationMetric<T>,
 >(
   {
-    workspace,
-    commit,
-    providerLog,
-    evaluation,
     resultScore,
     resultMetadata,
+    evaluation,
+    span,
+    commit,
+    workspace,
   }: {
-    workspace: Workspace
-    commit: Commit
-    providerLog: ProviderLogDto
-    evaluation: EvaluationV2<T, M>
     resultScore: number
     resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
+    evaluation: EvaluationV2<T, M>
+    span: SpanWithDetails<SpanType.Prompt>
+    commit: Commit
+    workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  const resultsRepository = new EvaluationResultsV2Repository(workspace.id, db)
+  const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
   const existingResult =
-    await resultsRepository.findByEvaluatedLogAndEvaluation({
-      evaluatedLogId: providerLog.id,
+    await resultsRepository.findByEvaluatedSpanAndEvaluation({
+      evaluatedSpanId: span.id,
+      evaluatedTraceId: span.traceId,
       evaluationUuid: evaluation.uuid,
     })
-
-  const resultUuid = existingResult.ok
-    ? existingResult.unwrap().uuid
+  const resultUuid = existingResult
+    ? existingResult.uuid
     : generateUUIDIdentifier()
-
-  const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
-  const document = await documentsRepository
-    .getDocumentAtCommit({
-      commitUuid: commit.uuid,
-      documentUuid: evaluation.documentUuid,
-    })
-    .then((r) => r.unwrap())
-
-  if (!providerLog.documentLogUuid) {
-    return Result.error(
-      new BadRequestError('Provider log is not attached to a document log'),
-    )
-  }
-
-  const documentLogsRepository = new DocumentLogsRepository(workspace.id, db)
-  const documentLog = await documentLogsRepository
-    .findByUuid(providerLog.documentLogUuid)
-    .then((r) => r.unwrap())
-
-  if (documentLog.documentUuid !== document.documentUuid) {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that is from a different document',
-      ),
-    )
-  }
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) {
@@ -101,20 +75,34 @@ export async function annotateEvaluationV2<
     return Result.error(new BadRequestError('Invalid evaluation metric'))
   }
 
-  const conversation = buildConversation(providerLog)
-  if (conversation.at(-1)?.role != 'assistant') {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that does not end with an assistant message',
-      ),
+  let conversation
+  const assembledtrace = await assembleTrace({
+    traceId: span.traceId,
+    workspace,
+  }).then((r) => r.value)
+  if (assembledtrace) {
+    const completionSpan = findFirstSpanOfType(
+      assembledtrace.trace.children,
+      SpanType.Completion,
     )
+    if (!completionSpan) {
+      return Result.error(new BadRequestError('Could not find completion span'))
+    }
+
+    conversation = [
+      ...(completionSpan.metadata?.input ?? []),
+      ...(completionSpan.metadata?.output ?? []),
+    ] as unknown as LegacyMessage[]
+  }
+  if (!conversation) {
+    return Result.error(new BadRequestError('Could not find conversation'))
   }
 
   let value
   try {
     // Note: some actual output errors are learnable and thus are treated as failures
     const actualOutput = await extractActualOutput({
-      providerLog: providerLog,
+      conversation,
       configuration: evaluation.configuration.actualOutput,
     })
     if (
@@ -128,23 +116,27 @@ export async function annotateEvaluationV2<
       typeSpecification.resultMetadata.partial().parse(resultMetadata)
     }
 
-    value = (await typeSpecification.annotate(
-      {
-        metric: evaluation.metric,
-        resultUuid: resultUuid,
-        resultScore: resultScore,
-        resultMetadata: resultMetadata,
-        evaluation: evaluation,
-        actualOutput: actualOutput,
-        conversation: conversation,
-        providerLog: providerLog,
-        documentLog: documentLog,
-        document: document,
-        commit: commit,
-        workspace: workspace,
-      },
-      db,
-    )) as EvaluationResultValue // Note: Typescript cannot resolve conditional types including unbound type arguments: https://github.com/microsoft/TypeScript/issues/53455
+    const documentsRepository = new DocumentVersionsRepository(workspace.id)
+    const document = await documentsRepository
+      .getDocumentAtCommit({
+        commitUuid: commit.uuid,
+        documentUuid: evaluation.documentUuid,
+      })
+      .then((r) => r.unwrap())
+
+    value = (await typeSpecification.annotate({
+      metric: evaluation.metric,
+      resultUuid: resultUuid,
+      resultScore: resultScore,
+      resultMetadata: resultMetadata,
+      evaluation: evaluation,
+      actualOutput: actualOutput,
+      conversation: conversation,
+      span,
+      document,
+      commit: commit,
+      workspace: workspace,
+    })) as EvaluationResultValue // Note: Typescript cannot resolve conditional types including unbound type arguments: https://github.com/microsoft/TypeScript/issues/53455
 
     if (
       !value.error &&
@@ -159,18 +151,15 @@ export async function annotateEvaluationV2<
     value = { error: { message: (error as Error).message } }
   }
 
-  // TODO: We are stepping out of the db instance. This service should accept an instance of Transaction instead.
-  const transaction = new Transaction()
   return await transaction.call(
     async () => {
       let result
-
-      if (existingResult.ok) {
+      if (existingResult) {
         const { result: updatedResult } = await updateEvaluationResultV2(
           {
             workspace,
-            commit,
-            result: existingResult.unwrap(),
+            result: existingResult,
+            commit: commit,
             value: value as EvaluationResultValue<T, M>,
           },
           transaction,
@@ -181,7 +170,7 @@ export async function annotateEvaluationV2<
           {
             uuid: resultUuid,
             evaluation: evaluation,
-            providerLog: providerLog,
+            span,
             commit: commit,
             value: value as EvaluationResultValue<T, M>,
             workspace: workspace,
@@ -201,7 +190,8 @@ export async function annotateEvaluationV2<
           evaluation: evaluation,
           result: result,
           commit: commit,
-          providerLog: providerLog,
+          spanId: span.id,
+          traceId: span.traceId,
         },
       }),
   )

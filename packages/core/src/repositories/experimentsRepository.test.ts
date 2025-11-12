@@ -8,7 +8,6 @@ import { NotFoundError } from '../lib/errors'
 import { type Commit } from '../schema/models/types/Commit'
 import { type Dataset } from '../schema/models/types/Dataset'
 import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
-import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
 import { type Workspace } from '../schema/models/types/Workspace'
 import { createExperiment } from '../services/experiments'
 import * as factories from '../tests/factories'
@@ -17,7 +16,6 @@ import { ExperimentsRepository } from './experimentsRepository'
 describe('ExperimentsRepository', () => {
   let workspace: Workspace
   let document: DocumentVersion
-  let provider: ProviderApiKey
   let commit: Commit
   let dataset: Dataset
   const parametersMap = {
@@ -36,7 +34,6 @@ describe('ExperimentsRepository', () => {
       workspace: createdWorkspace,
       commit: createdCommit,
       documents,
-      providers,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
@@ -47,7 +44,6 @@ describe('ExperimentsRepository', () => {
       },
     })
     workspace = createdWorkspace
-    provider = providers[0]!
     document = documents[0]!
     commit = createdCommit
 
@@ -137,7 +133,6 @@ describe('ExperimentsRepository', () => {
         workspace,
         commit,
         document,
-        provider,
         experiment: experiment1,
         costInMillicents: 100,
         duration: 100,
@@ -151,7 +146,6 @@ describe('ExperimentsRepository', () => {
         workspace,
         commit,
         document,
-        provider,
         experiment: experiment1,
         costInMillicents: 200,
         duration: 200,
@@ -165,7 +159,6 @@ describe('ExperimentsRepository', () => {
         workspace,
         commit,
         document,
-        provider,
         experiment: experiment2,
         costInMillicents: 400,
         duration: 400,
@@ -243,7 +236,6 @@ describe('ExperimentsRepository', () => {
         workspace,
         commit,
         document,
-        provider,
         experiment,
         costInMillicents: 100,
         duration: 100,
@@ -257,7 +249,6 @@ describe('ExperimentsRepository', () => {
         workspace,
         commit,
         document,
-        provider,
         experiment,
         costInMillicents: 200,
         duration: 200,
@@ -270,7 +261,6 @@ describe('ExperimentsRepository', () => {
         workspace,
         commit,
         document,
-        provider,
         experiment,
         costInMillicents: 400,
         duration: 400,
@@ -328,7 +318,6 @@ describe('ExperimentsRepository', () => {
         workspace,
         commit,
         document,
-        provider,
         experiment,
         costInMillicents: 100,
         duration: 100,
@@ -342,7 +331,6 @@ describe('ExperimentsRepository', () => {
         workspace,
         commit,
         document,
-        provider,
         experiment,
         costInMillicents: 200,
         duration: 200,
@@ -373,79 +361,6 @@ describe('ExperimentsRepository', () => {
 
       expect(result.ok).toBe(false)
       expect(() => result.unwrap()).toThrowError(NotFoundError)
-    })
-  })
-
-  describe('getLogsMetadata', () => {
-    it('returns the logs metadata for the experiment', async () => {
-      const experiment = await createExperiment({
-        name: 'experiment1',
-        workspace,
-        document,
-        commit,
-        parametersPopulation: {
-          source: 'dataset',
-          dataset,
-          parametersMap,
-          datasetLabels,
-          fromRow: 0,
-          toRow: 1,
-        },
-        evaluations,
-        simulationSettings: {
-          simulateToolResponses: true,
-        },
-      }).then((r) => r.unwrap())
-
-      await factories.createExperimentResults({
-        workspace,
-        commit,
-        document,
-        provider,
-        experiment,
-        costInMillicents: 100,
-        duration: 100,
-        scores: evaluations.map((evaluation) => ({
-          evaluation,
-          score: 10,
-        })),
-      })
-      await factories.createExperimentResults({
-        workspace,
-        commit,
-        document,
-        provider,
-        experiment,
-        costInMillicents: 200,
-        duration: 200,
-        scores: evaluations.map((evaluation) => ({
-          evaluation,
-          score: 20,
-        })),
-      })
-      await factories.createExperimentResults({
-        workspace,
-        commit,
-        document,
-        provider,
-        experiment,
-        costInMillicents: 400,
-        duration: 400,
-        scores: evaluations.map((evaluation) => ({
-          evaluation,
-          score: 40,
-        })),
-      })
-
-      const result = await repo.getLogsMetadata(experiment.uuid)
-
-      expect(result).toBeDefined()
-      expect(result.ok).toBe(true)
-      const logsMetadata = result.unwrap()
-      expect(logsMetadata).toBeDefined()
-      expect(logsMetadata.count).toBe(3)
-      expect(logsMetadata.totalCost).toBe(100 + 200 + 400)
-      expect(logsMetadata.totalDuration).toBe(100 + 200 + 400)
     })
   })
 })

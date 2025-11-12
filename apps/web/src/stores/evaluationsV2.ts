@@ -286,12 +286,14 @@ export function useEvaluationsV2(
       evaluationUuid,
       resultScore,
       resultMetadata,
-      providerLogUuid,
+      spanId,
+      traceId,
     }: {
       evaluationUuid: string
       resultScore: number
+      spanId: string
+      traceId: string
       resultMetadata?: Partial<EvaluationResultMetadata>
-      providerLogUuid: string
     }) => {
       return await executeAnnotateEvaluationV2({
         projectId: project.id,
@@ -300,7 +302,8 @@ export function useEvaluationsV2(
         evaluationUuid: evaluationUuid,
         resultScore: resultScore,
         resultMetadata: resultMetadata,
-        providerLogUuid: providerLogUuid,
+        spanId,
+        traceId,
       })
     },
     [project, commit, document, executeAnnotateEvaluationV2],

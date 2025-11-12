@@ -1,17 +1,16 @@
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useOnce } from '$/hooks/useMount'
-import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
-import { useIssue } from '$/stores/issues/issue'
+import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
+import { AnnotationContext } from '../../../FormWrapper'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
+import { FormEvent, use, useCallback, useState } from 'react'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
-import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
-import { FormEvent, use, useCallback, useState } from 'react'
-import { AnnotationContext } from '../../../FormWrapper'
 import { updateEvaluationResultInstance } from '../updateEvaluationResultInstance'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useIssue } from '$/stores/issues/issue'
 
 export function NewIssueModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState<string | undefined>(undefined)
@@ -23,49 +22,37 @@ export function NewIssueModal({ onClose }: { onClose: () => void }) {
     description: undefined,
   })
   const { project } = useCurrentProject()
-  const { documentLog, evaluation, result, commit } = use(AnnotationContext)
-  const { mutate: mutateResults } = useEvaluationResultsV2ByDocumentLogs({
+  const { span, evaluation, result, commit } = use(AnnotationContext)
+  const { mutate: mutateResults } = useEvaluationResultsV2BySpans({
     project,
     commit,
     document: {
       commitId: commit.id,
-      documentUuid: documentLog.documentUuid,
+      documentUuid: span.documentUuid ?? '',
     },
-    documentLogUuids: [documentLog.uuid],
+    spanId: span.id,
+    traceId: span.traceId,
   })
-  const { createIssue, isCreatingIssue, generateIssue, isGeneratingIssue } =
-    useIssue({
-      projectId: project.id,
-      commitUuid: commit.uuid,
-      issueId: result?.issueId,
-      onIssueGenerated: ({ data: { title, description } }) => {
-        setTitle(title)
-        setDescription(description)
-      },
-      onIssueAssigned: ({ data: { evaluationResult } }) => {
-        mutateResults((results) => {
-          return updateEvaluationResultInstance({
-            prev: results,
-            documentLogUuid: documentLog.uuid,
-            updatedResultWithEvaluation: {
-              evaluation,
-              result: evaluationResult,
-            },
-          })
-        })
-        onClose()
-      },
-    })
-
-  useOnce(() => {
-    if (!result) return
-    generateIssue({
-      projectId: project.id,
-      commitUuid: commit.uuid,
-      documentUuid: evaluation.documentUuid,
-      evaluationUuid: evaluation.uuid,
-      evaluationResultUuid: result.uuid,
-    })
+  const { createIssue, isCreatingIssue, isGeneratingIssue } = useIssue({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    issueId: result?.issueId,
+    onIssueGenerated: ({ data: { title, description } }) => {
+      setTitle(title)
+      setDescription(description)
+    },
+    onIssueAssigned: ({ data: { evaluationResult } }) => {
+      mutateResults((results) =>
+        updateEvaluationResultInstance({
+          prev: results,
+          updatedResultWithEvaluation: {
+            evaluation,
+            result: evaluationResult,
+          },
+        }),
+      )
+      onClose()
+    },
   })
 
   const onSubmit = useCallback(

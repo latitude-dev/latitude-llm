@@ -8,6 +8,7 @@ import { issueHistograms } from '../../schema/models/issueHistograms'
 import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
 import { getIssuesCollection } from '../../weaviate'
+import { env } from '@latitude-data/env'
 
 export async function deleteIssue(
   {
@@ -94,6 +95,8 @@ async function deleteVector({
   documentUuid: string
   uuid: string
 }) {
+  if (!env.WEAVIATE_API_KEY) return Result.nil()
+
   try {
     const issues = await getIssuesCollection({
       workspaceId,

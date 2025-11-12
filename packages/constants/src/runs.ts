@@ -4,7 +4,8 @@ import {
   EvaluationV2,
   ManualEvaluationMetric,
 } from './evaluations'
-import { DocumentLogWithMetadataAndError, LogSources } from './models'
+import { LogSources } from './models'
+import { SpanType, SpanWithDetails } from './tracing'
 
 export type RunAnnotation<
   T extends EvaluationType = EvaluationType,
@@ -20,9 +21,9 @@ export type Run = {
   startedAt?: Date
   endedAt?: Date
   caption?: string
-  log?: DocumentLogWithMetadataAndError
   annotations?: RunAnnotation[]
   source?: LogSources
+  span?: SpanWithDetails<SpanType.Prompt>
 }
 
 export type ActiveRun = Pick<

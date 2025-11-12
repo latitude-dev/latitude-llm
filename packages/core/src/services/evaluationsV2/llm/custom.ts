@@ -6,18 +6,19 @@ import {
   EvaluationType,
   LlmEvaluationCustomResultMetadata,
   LlmEvaluationMetric,
+  SpanType,
   LlmEvaluationCustomSpecification as specification,
 } from '../../../constants'
-import { formatConversation } from '../../../helpers'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { runPrompt } from './shared'
+import { buildEvaluationParameters, runPrompt } from './shared'
+import { assembleTrace } from '../../tracing/traces/assemble'
+import { findFirstSpanOfType } from '../../tracing/spans/findFirstSpanOfType'
 
 export const LlmEvaluationCustomSpecification = {
   ...specification,
@@ -158,7 +159,7 @@ async function run(
     expectedOutput,
     datasetLabel,
     conversation,
-    documentLog,
+    span,
     providers,
     commit,
     workspace,
@@ -194,11 +195,6 @@ async function run(
     throw new BadRequestError('Provider is required')
   }
 
-  const evaluatedLog = await serializeDocumentLog(
-    { documentLog, workspace },
-    db,
-  ).then((r) => r.unwrap())
-
   const promptSchema = z.preprocess(
     aliasVerdict,
     z.object({
@@ -210,16 +206,29 @@ async function run(
     }),
   )
 
+  let completionSpan
+  const assembledtrace = await assembleTrace(
+    { traceId: span.traceId, workspace },
+    db,
+  ).then((r) => r.value)
+  if (assembledtrace) {
+    completionSpan = findFirstSpanOfType(
+      assembledtrace.trace.children,
+      SpanType.Completion,
+    )
+  }
+
   let result
   try {
     result = await runPrompt({
       prompt: metadata.configuration.prompt,
-      parameters: {
-        ...evaluatedLog,
+      parameters: buildEvaluationParameters({
+        span,
+        completionSpan,
         actualOutput: metadata.actualOutput,
+        conversation,
         expectedOutput: metadata.expectedOutput,
-        conversation: formatConversation(conversation),
-      },
+      }),
       schema: promptSchema,
       resultUuid: resultUuid,
       evaluation: evaluation,

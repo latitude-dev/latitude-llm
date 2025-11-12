@@ -1,5 +1,4 @@
 import { LogSources, RunSourceGroup } from '@latitude-data/constants'
-import { DEFAULT_PAGINATION_SIZE } from '../../../constants'
 import { beforeAll, describe, expect, it } from 'vitest'
 import * as factories from '../../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../../tests/factories'
@@ -34,20 +33,47 @@ describe('listCompletedRuns', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    expect(result.value).toEqual([])
+    expect(result.value!.items).toEqual([])
   })
 
   it('lists completed runs', async () => {
-    // Create document logs (which become completed runs)
-    const { documentLog: log1 } = await factories.createDocumentLog({
-      document: setup.documents[0]!,
-      commit: setup.commit,
-      source: LogSources.API,
+    const span1 = await factories.createSpan({
+      apiKeyId: setup.apiKeys[0]!.id,
+      workspaceId: setup.workspace.id,
+      documentUuid: setup.documents[0]!.documentUuid,
+      source: LogSources.Playground,
+      commitUuid: setup.commit.uuid,
     })
 
-    const { documentLog: log2 } = await factories.createDocumentLog({
-      document: setup.documents[0]!,
-      commit: setup.commit,
+    const span2 = await factories.createSpan({
+      workspaceId: setup.workspace.id,
+      documentUuid: setup.documents[0]!.documentUuid,
+      commitUuid: setup.commit.uuid,
+      source: LogSources.Playground,
+      apiKeyId: setup.apiKeys[0]!.id,
+    })
+
+    const result = await listCompletedRuns({
+      workspaceId: setup.workspace.id,
+      projectId: setup.project.id,
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const value = result.unwrap()
+
+    expect(value.items.length).toBeGreaterThanOrEqual(2)
+    const ids = value.items.map((r) => r.span.id)
+    expect(ids).toContain(span1.id)
+    expect(ids).toContain(span2.id)
+  })
+
+  it('includes all required fields for completed runs', async () => {
+    const span = await factories.createSpan({
+      apiKeyId: setup.apiKeys[0]!.id,
+      workspaceId: setup.workspace.id,
+      documentUuid: setup.documents[0]!.documentUuid,
+      commitUuid: setup.commit.uuid,
       source: LogSources.Playground,
     })
 
@@ -59,39 +85,16 @@ describe('listCompletedRuns', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     const value = result.unwrap()
-
-    expect(value.length).toBeGreaterThanOrEqual(2)
-    const uuids = value.map((r) => r.uuid)
-    expect(uuids).toContain(log1.uuid)
-    expect(uuids).toContain(log2.uuid)
-  })
-
-  it('includes all required fields for completed runs', async () => {
-    const { documentLog } = await factories.createDocumentLog({
-      document: setup.documents[0]!,
-      commit: setup.commit,
-      source: LogSources.API,
-    })
-
-    const result = await listCompletedRuns({
-      workspaceId: setup.workspace.id,
-      projectId: setup.project.id,
-    })
-
-    expect(result.ok).toBe(true)
-    if (!result.ok) return
-    const value = result.unwrap()
-    const run = value.find((r) => r.uuid === documentLog.uuid)
+    const run = value.items.find((r) => r.span.id === span.id)
     expect(run).toBeDefined()
     if (!run) return
 
     // Verify all required fields are present
-    expect(run.uuid).toBe(documentLog.uuid)
     expect(run.queuedAt).toBeInstanceOf(Date)
     expect(run.startedAt).toBeInstanceOf(Date)
     expect(run.endedAt).toBeInstanceOf(Date)
     expect(typeof run.caption).toBe('string')
-    expect(run.log).toBeDefined()
+    expect(run.span).toBeDefined()
     expect(Array.isArray(run.annotations)).toBe(true)
     expect(run.source).toBeDefined()
   })
@@ -126,7 +129,9 @@ describe('listCompletedRuns', () => {
     if (!result.ok) return
     const value = result.unwrap()
     // All runs should be from Playground source
-    expect(value.every((r) => r.source === LogSources.Playground)).toBe(true)
+    expect(value.items.every((r) => r.source === LogSources.Playground)).toBe(
+      true,
+    )
   })
 
   it('filters by sourceGroup - Production', async () => {
@@ -160,86 +165,10 @@ describe('listCompletedRuns', () => {
     const value = result.unwrap()
     // All runs should be from production sources (API or Experiment)
     expect(
-      value.every(
+      value.items.every(
         (r) =>
           r.source === LogSources.API || r.source === LogSources.Experiment,
       ),
     ).toBe(true)
-  })
-
-  it('paginates results correctly', async () => {
-    // Create multiple document logs
-    const count = 15
-    for (let i = 0; i < count; i++) {
-      await factories.createDocumentLog({
-        document: setup.documents[0]!,
-        commit: setup.commit,
-        source: LogSources.API,
-      })
-    }
-
-    // Get first page
-    const page1 = await listCompletedRuns({
-      workspaceId: setup.workspace.id,
-      projectId: setup.project.id,
-      page: 1,
-      pageSize: 5,
-    })
-
-    expect(page1.ok).toBe(true)
-    if (!page1.ok) return
-    const value1 = page1.unwrap()
-    expect(value1.length).toBeLessThanOrEqual(5)
-
-    // Get second page
-    const page2 = await listCompletedRuns({
-      workspaceId: setup.workspace.id,
-      projectId: setup.project.id,
-      page: 2,
-      pageSize: 5,
-    })
-
-    expect(page2.ok).toBe(true)
-    if (!page2.ok) return
-    const value2 = page2.unwrap()
-    expect(value2.length).toBeLessThanOrEqual(5)
-  })
-
-  it('uses default pagination when not specified', async () => {
-    // Create more than default page size runs
-    const defaultPageSize = DEFAULT_PAGINATION_SIZE ?? 25
-    const count = defaultPageSize + 10 // Create more to ensure pagination is applied
-    for (let i = 0; i < count; i++) {
-      await factories.createDocumentLog({
-        document: setup.documents[0]!,
-        commit: setup.commit,
-        source: LogSources.API,
-      })
-    }
-
-    const result = await listCompletedRuns({
-      workspaceId: setup.workspace.id,
-      projectId: setup.project.id,
-    })
-
-    expect(result.ok).toBe(true)
-    if (!result.ok) return
-    const value = result.unwrap()
-    // Should return exactly the default page size (first page)
-    expect(value.length).toBe(defaultPageSize)
-  })
-
-  it('handles empty page gracefully', async () => {
-    const result = await listCompletedRuns({
-      workspaceId: setup.workspace.id,
-      projectId: setup.project.id,
-      page: 100,
-      pageSize: 10,
-    })
-
-    expect(result.ok).toBe(true)
-    if (!result.ok) return
-    const value = result.unwrap()
-    expect(value).toEqual([])
   })
 })

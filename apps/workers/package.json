@@ -20,7 +20,7 @@
     "@latitude-data/env": "workspace:^",
     "@latitude-data/telemetry": "workspace:*",
     "@t3-oss/env-core": "*",
-    "bullmq": "5.44.4",
+    "bullmq": "catalog:",
     "dd-trace": "catalog:",
     "express": "4.21.2"
   },

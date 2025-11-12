@@ -33,6 +33,7 @@ import {
   ATTR_LATITUDE_TYPE,
   GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
   HEAD_COMMIT,
+  LogSources,
   SPAN_SPECIFICATIONS,
   SpanType,
   TraceContext,
@@ -129,6 +130,7 @@ export type PromptSpanOptions = StartSpanOptions & {
   externalId?: string
   template: string
   parameters?: Record<string, unknown>
+  source?: LogSources
 }
 
 export class ManualInstrumentation implements BaseInstrumentation {
@@ -723,6 +725,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       template,
       parameters,
       name,
+      source,
       ...rest
     }: PromptSpanOptions,
   ) {
@@ -741,6 +744,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       ...(documentLogUuid && { ['latitude.documentLogUuid']: documentLogUuid }),
       ...(experimentUuid && { ['latitude.experimentUuid']: experimentUuid }),
       ...(externalId && { ['latitude.externalId']: externalId }),
+      ...(source && { ['latitude.source']: source }),
       ...(rest.attributes || {}),
     }
 

@@ -9,7 +9,7 @@ import tracer from './tracer'
 export function createJobHandler<T extends Record<string, Function>>(
   jobMappings: T,
 ) {
-  return async (job: Job) => {
+  return async (job: Job, token?: string) => {
     return await tracer.wrap(
       'bullmq.process',
       { resource: job.name },
@@ -29,7 +29,7 @@ export function createJobHandler<T extends Record<string, Function>>(
           throw new Error(`Job function not found: ${jobName}`)
         }
 
-        return await jobFunction(job)
+        return await jobFunction(job, token)
       },
     )()
   }

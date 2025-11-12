@@ -51,14 +51,16 @@ export const RunsListItem = memo(
               {run.endedAt ? (
                 <Icon
                   name={
-                    run.log?.error.code
+                    run.span?.status === 'error'
                       ? 'circleX'
                       : run.annotations?.length
                         ? 'filledBadgeCheck'
                         : 'circleCheck'
                   }
                   size='normal'
-                  color={run.log?.error.code ? 'destructive' : 'success'}
+                  color={
+                    run.span?.status === 'error' ? 'destructive' : 'success'
+                  }
                   className='flex-shrink-0'
                 />
               ) : run.startedAt ? (
@@ -77,15 +79,17 @@ export const RunsListItem = memo(
                 />
               )}
               <Text.H5
-                color={run.log?.error.code ? 'destructive' : 'foreground'}
+                color={
+                  run.span?.status === 'error' ? 'destructive' : 'foreground'
+                }
                 animate={!run.endedAt}
                 userSelect={false}
                 noWrap
                 ellipsis
               >
                 {run.endedAt
-                  ? run.log?.error.code
-                    ? run.log?.error.message ||
+                  ? run.span?.status === 'error'
+                    ? run.span?.message ||
                       'An unknown error occurred while running the prompt'
                     : run.caption ||
                       'Run finished successfully without any response'
@@ -98,7 +102,9 @@ export const RunsListItem = memo(
               {!!run.startedAt && (
                 <Text.H5
                   color={
-                    run.log?.error.code ? 'destructive' : 'foregroundMuted'
+                    run.span?.status === 'error'
+                      ? 'destructive'
+                      : 'foregroundMuted'
                   }
                   userSelect={false}
                   noWrap
@@ -144,7 +150,9 @@ export const RunsListItem = memo(
               <Icon
                 name='arrowRight'
                 size='normal'
-                color={run.log?.error.code ? 'destructive' : 'foreground'}
+                color={
+                  run.span?.status === 'error' ? 'destructive' : 'foreground'
+                }
                 className='flex-shrink-0'
               />
             </div>
@@ -152,7 +160,7 @@ export const RunsListItem = memo(
         }
       >
         {!!run.endedAt &&
-          !run.log?.error.code &&
+          run.span?.status !== 'error' &&
           (run.annotations?.length
             ? 'This run has been reviewed'
             : 'Review pending for this run')}

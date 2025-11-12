@@ -1,33 +1,34 @@
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useToggleModal } from '$/hooks/useToogleModal'
-import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useIssue } from '$/stores/issues/issue'
 import { useSearchIssues } from '$/stores/issues/selectorIssues'
-import useFeature from '$/stores/useFeature'
-import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
-import { use, useCallback, useMemo, useState } from 'react'
-import { useDebouncedCallback } from 'use-debounce'
 import { AnnotationContext, AnnotationFormWrapper } from '../../FormWrapper'
+import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import useFeature from '$/stores/useFeature'
+import { useToggleModal } from '$/hooks/useToogleModal'
 import { NewIssueModal } from './NewIssueModal'
 import { updateEvaluationResultInstance } from './updateEvaluationResultInstance'
+import { use, useCallback, useMemo, useState } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
+import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 
 export function IssuesSelector() {
   const issuesFeature = useFeature('issues')
   const newIssueModal = useToggleModal()
   const { project } = useCurrentProject()
-  const { documentLog, evaluation, result, commit, documentUuid } =
+  const { span, evaluation, result, commit, documentUuid } =
     use(AnnotationContext)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const projectId = project.id
-  const { mutate: mutateResults } = useEvaluationResultsV2ByDocumentLogs({
+  const { mutate: mutateResults } = useEvaluationResultsV2BySpans({
     project,
     commit,
     document: {
       commitId: commit.id,
-      documentUuid: documentLog.documentUuid,
+      documentUuid: span.documentUuid ?? '',
     },
-    documentLogUuids: [documentLog.uuid],
+    spanId: span.id,
+    traceId: span.traceId,
   })
   const {
     data: resultIssue,
@@ -41,28 +42,26 @@ export function IssuesSelector() {
     commitUuid: commit.uuid,
     issueId: result?.issueId,
     onIssueAssigned: ({ data: { evaluationResult } }) => {
-      mutateResults((results) => {
-        return updateEvaluationResultInstance({
+      mutateResults((results) =>
+        updateEvaluationResultInstance({
           prev: results,
-          documentLogUuid: documentLog.uuid,
           updatedResultWithEvaluation: {
             evaluation,
             result: evaluationResult,
           },
-        })
-      })
+        }),
+      )
     },
     onIssueUnAssigned: ({ data: evaluationResult }) => {
-      mutateResults((results) => {
-        return updateEvaluationResultInstance({
+      mutateResults((results) =>
+        updateEvaluationResultInstance({
           prev: results,
-          documentLogUuid: documentLog.uuid,
           updatedResultWithEvaluation: {
             evaluation,
             result: evaluationResult,
           },
-        })
-      })
+        }),
+      )
     },
   })
 
@@ -110,13 +109,14 @@ export function IssuesSelector() {
   const onChange = useCallback(
     (issueId: number | undefined) => {
       if (!result) return
+      if (!span.documentUuid) return
 
       // TODO(AO): Remember to unassign the issue if the user
       // updates the annotation from failed to passed!
       if (issueId === undefined) {
         unAssignIssue({
           projectId,
-          documentUuid: documentLog.documentUuid,
+          documentUuid: span.documentUuid,
           commitUuid: commit.uuid,
           evaluationUuid: evaluation.uuid,
           evaluationResultUuid: result.uuid,
@@ -124,7 +124,7 @@ export function IssuesSelector() {
       } else {
         assignIssue({
           projectId,
-          documentUuid: documentLog.documentUuid,
+          documentUuid: span.documentUuid,
           commitUuid: commit.uuid,
           evaluationUuid: evaluation.uuid,
           evaluationResultUuid: result.uuid,
@@ -137,7 +137,7 @@ export function IssuesSelector() {
       unAssignIssue,
       projectId,
       commit.uuid,
-      documentLog.documentUuid,
+      span.documentUuid,
       evaluation.uuid,
       result,
     ],

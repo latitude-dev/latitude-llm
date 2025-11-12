@@ -15,17 +15,17 @@ export async function countActiveRunsBySource({
 }): PromisedResult<Record<LogSources, number>, Error> {
   const listing = await listCachedRuns(workspaceId, projectId, cache)
   if (listing.error) return Result.error(listing.error)
-  const active = listing.value
 
+  const active = listing.value
   const countBySource: Record<LogSources, number> = LOG_SOURCES.reduce(
     (acc, source) => ({ ...acc, [source]: 0 }),
     {} as Record<LogSources, number>,
   )
 
-  active.forEach((run) => {
+  Object.values(active).forEach((run) => {
     const source = run.source ?? LogSources.API
     countBySource[source] = (countBySource[source] ?? 0) + 1
   })
 
-  return Result.ok(countBySource)
+  return Result.ok<Record<LogSources, number>>(countBySource)
 }

@@ -28,6 +28,7 @@ import {
   ISSUE_GENERATION_RECENCY_DAYS,
   ISSUE_GENERATION_RECENCY_RATIO,
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
+  Span,
 } from '../constants'
 import { EvaluationResultsV2Search } from '../helpers'
 import { NotFoundError } from '../lib/errors'
@@ -40,16 +41,15 @@ import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
 import { providerLogs } from '../schema/models/providerLogs'
 import { Commit } from '../schema/models/types/Commit'
 import { Issue } from '../schema/models/types/Issue'
+import { spans } from '../schema/models/spans'
 import {
   EvaluationResultV2WithDetails,
   EvaluationV2Stats,
-  ProviderLogDto,
   ResultWithEvaluationV2,
 } from '../schema/types'
-import serializeProviderLog from '../services/providerLogs/serialize'
-import { CommitsRepository } from './commitsRepository'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
+import { CommitsRepository } from './commitsRepository'
 
 const tt = getTableColumns(evaluationResultsV2)
 
@@ -57,7 +57,8 @@ type IssueEvaluationResult = ResultWithEvaluationV2['result'] & {
   evaluation: ResultWithEvaluationV2['evaluation']
   commitUuid: string
   commit: Commit
-  evaluatedLog: ProviderLogDto
+  evaluatedSpanId?: string | null
+  evaluatedTraceId?: string | null
 }
 
 export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2> {
@@ -100,6 +101,28 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .limit(uuids.length)
 
     return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
+  }
+
+  async findByEvaluatedSpanAndEvaluation({
+    evaluatedSpanId,
+    evaluatedTraceId,
+    evaluationUuid,
+  }: {
+    evaluatedSpanId: string
+    evaluatedTraceId: string
+    evaluationUuid: string
+  }) {
+    return (await this.scope
+      .where(
+        and(
+          this.scopeFilter,
+          eq(evaluationResultsV2.evaluatedSpanId, evaluatedSpanId),
+          eq(evaluationResultsV2.evaluatedTraceId, evaluatedTraceId),
+          eq(evaluationResultsV2.evaluationUuid, evaluationUuid),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0])) as EvaluationResultV2 | undefined
   }
 
   async findByEvaluatedLogAndEvaluation({
@@ -189,7 +212,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         commit: commits,
         dataset: datasets,
         evaluatedRow: datasetRows,
-        evaluatedLog: providerLogs,
       })
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
@@ -197,10 +219,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .leftJoin(
         datasetRows,
         eq(datasetRows.id, evaluationResultsV2.evaluatedRowId),
-      )
-      .innerJoin(
-        providerLogs,
-        eq(providerLogs.id, evaluationResultsV2.evaluatedLogId),
       )
       .where(filter)
       .$dynamic()
@@ -225,15 +243,8 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         calculateOffset(params.pagination.page, params.pagination.pageSize),
       )
 
-    const results = await query.then((results) =>
-      results.map((result) => ({
-        ...result,
-        evaluatedLog: serializeProviderLog(result.evaluatedLog),
-      })),
-    )
-
     return Result.ok<EvaluationResultV2WithDetails[]>(
-      results as EvaluationResultV2WithDetails[],
+      (await query) as EvaluationResultV2WithDetails[],
     )
   }
 
@@ -439,6 +450,36 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     })
   }
 
+  async listBySpans(spans: Span[]) {
+    const results = await this.db
+      .select({
+        ...tt,
+        commitUuid: commits.uuid,
+      })
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .where(
+        and(
+          this.scopeFilter,
+          isNull(commits.deletedAt),
+          inArray(
+            evaluationResultsV2.evaluatedSpanId,
+            spans.map((s) => s.id),
+          ),
+          inArray(
+            evaluationResultsV2.evaluatedTraceId,
+            spans.map((s) => s.traceId),
+          ),
+        ),
+      )
+      .orderBy(
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+      )
+
+    return Result.ok(results)
+  }
+
   async listByDocumentLogs({
     projectId,
     documentUuid,
@@ -481,7 +522,9 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const evaluationsByCommit = await this.getEvaluationsByCommit({
       projectId: projectId!,
       documentUuid,
-      results,
+      results: results as (Omit<EvaluationResultV2, 'score'> & {
+        commitUuid: string
+      })[],
     })
 
     const resultsByDocumentLog: Record<string, ResultWithEvaluationV2[]> = {}
@@ -520,20 +563,24 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         ...tt,
         commit: commits,
         commitUuid: commits.uuid,
-        evaluatedLog: providerLogs,
       })
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .innerJoin(
-        providerLogs,
-        eq(providerLogs.id, evaluationResultsV2.evaluatedLogId),
+        spans,
+        and(
+          eq(spans.id, evaluationResultsV2.evaluatedSpanId),
+          eq(spans.traceId, evaluationResultsV2.evaluatedTraceId),
+        ),
       )
       .where(
         and(
           this.scopeFilter,
           isNull(commits.deletedAt),
-          isNotNull(providerLogs.documentLogUuid),
+          isNotNull(evaluationResultsV2.evaluatedSpanId),
+          isNotNull(evaluationResultsV2.evaluatedTraceId),
           eq(evaluationResultsV2.issueId, issue.id),
+          eq(spans.documentUuid, documentUuid),
           inArray(evaluationResultsV2.commitId, commitIds),
         ),
       )
@@ -547,7 +594,9 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const evaluationsByCommit = await this.getEvaluationsByCommit({
       projectId: commit.projectId,
       documentUuid,
-      results,
+      results: results as (Omit<EvaluationResultV2, 'score'> & {
+        commitUuid: string
+      })[],
     })
 
     return results.flatMap((result) => {
@@ -561,11 +610,65 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       return [
         {
           ...result,
-          evaluatedLog: serializeProviderLog(result.evaluatedLog),
           evaluation,
         } as IssueEvaluationResult,
       ]
     })
+  }
+
+  async listBySpanTrace({
+    projectId,
+    documentUuid,
+    spanId,
+    traceId,
+  }: {
+    projectId?: number
+    documentUuid: string
+    spanId: string
+    traceId: string
+  }) {
+    const results = await this.db
+      .select({
+        ...tt,
+        commitUuid: commits.uuid,
+      })
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .where(
+        and(
+          this.scopeFilter,
+          isNull(commits.deletedAt),
+          eq(evaluationResultsV2.evaluatedSpanId, spanId),
+          eq(evaluationResultsV2.evaluatedTraceId, traceId),
+        ),
+      )
+      .orderBy(
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+      )
+
+    const evaluationsByCommit = await this.getEvaluationsByCommit({
+      projectId: projectId!,
+      documentUuid,
+      results: results as (Omit<EvaluationResultV2, 'score'> & {
+        commitUuid: string
+      })[],
+    })
+
+    const resultsWithEvaluations: ResultWithEvaluationV2[] = []
+    for (const result of results) {
+      const evaluation = evaluationsByCommit[result.commitUuid]!.find(
+        (e) => e.uuid === result.evaluationUuid,
+      )
+      if (!evaluation) continue
+
+      resultsWithEvaluations.push({
+        result,
+        evaluation,
+      } as ResultWithEvaluationV2)
+    }
+
+    return Result.ok<ResultWithEvaluationV2[]>(resultsWithEvaluations)
   }
 
   async countSinceDate(since: Date) {
@@ -678,9 +781,11 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     results,
   }: {
     documentUuid: string
-    results: (Omit<EvaluationResultV2, 'score'> & {
-      commitUuid: string
-    })[]
+    results: Array<
+      Omit<EvaluationResultV2, 'score'> & {
+        commitUuid: string
+      }
+    >
     projectId?: number
   }) {
     const evaluationsRepository = new EvaluationsV2Repository(

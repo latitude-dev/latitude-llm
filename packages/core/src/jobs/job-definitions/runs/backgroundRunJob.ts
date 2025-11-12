@@ -23,16 +23,12 @@ import { BACKGROUND } from '../../../telemetry'
 import { getJobDocumentData } from '../helpers'
 import { updateExperimentStatus } from '../../../services/experiments/updateStatus'
 import { queues } from '../../queues'
-import {
-  RunEvaluationV2JobData,
-  runEvaluationV2JobKey,
-} from '../evaluations/runEvaluationV2Job'
-import { NotFoundError } from '@latitude-data/constants/errors'
 import { Experiment } from '../../../schema/models/types/Experiment'
 import { SimulationSettings } from '@latitude-data/constants/simulation'
 import { isFeatureEnabledByName } from '../../../services/workspaceFeatures/isFeatureEnabledByName'
 import { Result } from '../../../lib/Result'
 import { captureException } from '../../../utils/datadogCapture'
+import { RunEvaluationForExperimentJobData } from '../evaluations/runEvaluationForExperimentJob'
 
 export type BackgroundRunJobData = {
   workspaceId: number
@@ -154,10 +150,15 @@ export const backgroundRunJob = async (
         return
       }
 
-      const providerLog = (await result.lastResponse)?.providerLog
-      if (!providerLog) {
-        throw new NotFoundError('Provider log not found after running document')
-      }
+      // Enqueue evaluations for current experiment
+      await updateExperimentStatus(
+        {
+          workspaceId,
+          experiment,
+        },
+        (progressTracker) =>
+          progressTracker.incrementEnqueued(experiment!.evaluationUuids.length),
+      ).then((r) => r.unwrap())
 
       const { evaluationsQueue } = await queues()
       const parametersSource = experiment.metadata.parametersSource
@@ -167,20 +168,18 @@ export const backgroundRunJob = async (
           : {}
 
       experiment.evaluationUuids.forEach((evaluationUuid) => {
-        const payload: RunEvaluationV2JobData = {
+        const payload: RunEvaluationForExperimentJobData = {
           workspaceId,
-          commitId: experiment!.commitId,
+          datasetRowId,
           evaluationUuid,
-          providerLogUuid: providerLog.uuid,
+          conversationUuid: result.uuid,
+          experimentUuid: experiment!.uuid,
+          commitId: experiment!.commitId,
           datasetId: experiment!.datasetId ?? undefined,
           datasetLabel: datasetLabels[evaluationUuid],
-          datasetRowId,
-          experimentUuid: experiment!.uuid,
         }
 
-        evaluationsQueue.add('runEvaluationV2Job', payload, {
-          deduplication: { id: runEvaluationV2JobKey(payload) },
-        })
+        evaluationsQueue.add('runEvaluationForExperimentJob', payload)
       })
     }
   } catch (error) {

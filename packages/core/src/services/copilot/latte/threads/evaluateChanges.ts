@@ -1,18 +1,22 @@
 import { env } from '@latitude-data/env'
-import { ProviderLogDto } from '../../../../schema/types'
 import { database } from '../../../../client'
 import { Result } from '../../../../lib/Result'
 import {
   EvaluationsV2Repository,
-  ProviderLogsRepository,
+  SpanMetadatasRepository,
+  SpansRepository,
 } from '../../../../repositories'
 import { annotateEvaluationV2 } from '../../../evaluationsV2/annotate'
 import { getCopilotDocument } from '../helpers'
-import { NotImplementedError } from '@latitude-data/constants/errors'
 import {
-  AssistantMessage,
-  MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+  NotFoundError,
+  NotImplementedError,
+} from '@latitude-data/constants/errors'
+import {
+  PromptSpanMetadata,
+  SpanType,
+  SpanWithDetails,
+} from '@latitude-data/constants'
 
 export async function evaluateLatteThreadChanges(
   {
@@ -43,13 +47,24 @@ export async function evaluateLatteThreadChanges(
     document: latteDocument,
   } = latteData.unwrap()
 
-  const providerLogScope = new ProviderLogsRepository(latteWorkspace.id, db)
-  const providerLogResult =
-    await providerLogScope.findLastByDocumentLogUuid(threadUuid)
-  if (!providerLogResult.ok) {
-    return Result.error(providerLogResult.error!)
+  const spansRepo = new SpansRepository(latteWorkspace.id, db)
+  const metadataRepo = new SpanMetadatasRepository(latteWorkspace.id)
+  const span = await spansRepo.findByDocumentLogUuid(threadUuid)
+  if (!span) {
+    return Result.error(
+      new NotFoundError(`Span not found with threadUuid ${threadUuid}`),
+    )
   }
-  const providerLog = providerLogResult.unwrap()
+  const promptSpanMetadata = (await metadataRepo
+    .get({ spanId: span.id, traceId: span.traceId })
+    .then((r) => r.value)) as PromptSpanMetadata | undefined
+  if (!promptSpanMetadata) {
+    return Result.error(
+      new NotFoundError(
+        `Span metadata not found with spanId ${span.id} and traceId ${span.traceId}`,
+      ),
+    )
+  }
 
   const evaluationScope = new EvaluationsV2Repository(latteWorkspace.id, db)
   const evaluationResult = await evaluationScope.getAtCommitByDocument({
@@ -63,30 +78,14 @@ export async function evaluateLatteThreadChanges(
   }
   const evaluation = evaluationResult.unwrap()
 
-  // If output message is empty, fill it with "[ABORTED]"
-  if (providerLog.responseText === '') {
-    providerLog.responseText = '[ABORTED]'
-    providerLog.output = [
-      {
-        role: MessageRole.assistant,
-        content: [
-          {
-            type: 'text',
-            text: '[ABORTED]',
-          },
-        ],
-      } as AssistantMessage,
-    ]
-  }
-
-  return annotateEvaluationV2(
-    {
-      providerLog: providerLog as unknown as ProviderLogDto,
-      evaluation,
-      resultScore: Number(accepted),
-      commit: latteCommit,
-      workspace: latteWorkspace,
-    },
-    db,
-  )
+  return annotateEvaluationV2({
+    span: {
+      ...span,
+      metadata: promptSpanMetadata,
+    } as SpanWithDetails<SpanType.Prompt>,
+    evaluation,
+    resultScore: Number(accepted),
+    commit: latteCommit,
+    workspace: latteWorkspace,
+  })
 }

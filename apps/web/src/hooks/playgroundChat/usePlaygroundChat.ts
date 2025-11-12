@@ -7,6 +7,7 @@ import {
   ChainEventTypes,
   EMPTY_USAGE,
   LegacyVercelSDKVersion4Usage as LanguageModelUsage,
+  SpanType,
 } from '@latitude-data/constants'
 import {
   Message,
@@ -18,52 +19,41 @@ import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'
-import useProviderLogs from '$/stores/providerLogs'
-import useDocumentLog from '$/stores/documentLogWithMetadata'
+import { useConversation } from '$/stores/conversations'
+import { useTrace } from '$/stores/traces'
+import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
 
 function useAnnotationData({
   documentLogUuid,
-  streamFinished,
 }: {
   documentLogUuid: string | undefined
-  streamFinished: boolean
 }) {
-  const { data: documentLog } = useDocumentLog({
-    documentLogUuid: streamFinished ? documentLogUuid : undefined,
-  })
-  const { data: providerLogs } = useProviderLogs({
-    documentLogUuid: documentLog?.uuid,
-  })
+  // Traces are created asynchronously, so we poll the backend until we get the trace
+  const { data: traces } = useConversation(
+    { conversationId: documentLogUuid },
+    { refreshInterval: documentLogUuid ? 5_000 : undefined },
+  )
+  const traceId = traces[0]
+  const { data: trace } = useTrace(
+    { traceId: traceId },
+    { refreshInterval: traceId ? 5_000 : undefined },
+  )
+  const span = findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt)
+  const isReady = !!span
 
-  const providerLog = useMemo(() => {
-    if (!documentLog) return undefined
-
-    const lastProviderLog = providerLogs.at(-1)
-
-    if (!lastProviderLog) return undefined
-    if (lastProviderLog.documentLogUuid != documentLog.uuid) return undefined
-
-    return lastProviderLog
-  }, [documentLog, providerLogs])
-
-  const isReady = !!documentLog && !!providerLog
-
-  console.log('StreamFinished', streamFinished)
   return useMemo(() => {
     if (!isReady) {
       return {
-        documentLog: undefined,
-        providerLog: undefined,
+        span: undefined,
         isReady: false as const,
       }
     }
 
     return {
-      documentLog,
-      providerLog,
+      span,
       isReady: true as const,
     }
-  }, [documentLog, providerLog, isReady])
+  }, [span, isReady])
 }
 
 type LanguageModelUsageDelta = Pick<
@@ -108,10 +98,8 @@ export function usePlaygroundChat({
   const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
   const [error, setError] = useState<Error | undefined>()
   const [isLoading, setIsLoading] = useState(false)
-  const [promptFinishedRunning, setPromptFinishedRuning] = useState(false)
   const annotationData = useAnnotationData({
     documentLogUuid,
-    streamFinished: promptFinishedRunning,
   })
   const [messages, setMessages] = useState<Message[]>([])
   const [unrespondedToolCalls, setUnrespondedToolCalls] = useState<ToolCall[]>(
@@ -371,11 +359,9 @@ export function usePlaygroundChat({
   const handleStream = useCallback(
     async ({
       stream,
-      isPromptRun = false,
       onPromptRan,
     }: {
       stream: ReadableStream<ParsedEvent>
-      isPromptRun?: boolean
       onPromptRan?: (documentLogUuid?: string, error?: Error) => void
     }) => {
       setIsLoading(true)
@@ -407,9 +393,6 @@ export function usePlaygroundChat({
       } finally {
         setIsLoading(false)
 
-        if (isPromptRun && runUuid && !runError) {
-          setPromptFinishedRuning(true)
-        }
         onPromptRan?.(runUuid, runError)
       }
     },
@@ -490,10 +473,9 @@ export function usePlaygroundChat({
     async (args: any = {}) => {
       try {
         setIsLoading(true)
-        setPromptFinishedRuning(false)
         setMode('chat')
         const stream = await runPromptFn(args)
-        handleStream({ stream, isPromptRun: true, onPromptRan })
+        handleStream({ stream, onPromptRan })
       } catch (error) {
         setIsLoading(false)
         setError(error as Error)

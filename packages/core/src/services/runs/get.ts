@@ -1,11 +1,17 @@
-import { ACTIVE_RUNS_CACHE_KEY, ActiveRun, Run } from '@latitude-data/constants'
+import {
+  ACTIVE_RUNS_CACHE_KEY,
+  ActiveRun,
+  Run,
+  Span,
+  SpanType,
+} from '@latitude-data/constants'
 import { cache as redis, Cache } from '../../cache'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import { fetchDocumentLogWithMetadata } from '../documentLogs/fetchDocumentLogWithMetadata'
-import { logToRun } from './logToRun'
 import { PromisedResult } from '../../lib/Transaction'
 import { migrateActiveRunsCache } from './active/migrateCache'
+import { spanToRun } from './spanToRun'
+import { SpansRepository } from '../../repositories'
 
 /**
  * Gets a run by UUID, checking the database first, then the cache.
@@ -21,24 +27,22 @@ export async function getRun({
   runUuid: string
   cache?: Cache
 }): PromisedResult<Run, Error> {
-  // Try database first
-  try {
-    const result = await fetchDocumentLogWithMetadata({
-      documentLogUuid: runUuid,
-      workspaceId,
-    })
-    if (!result.error) {
-      const runResult = await logToRun({
-        log: result.value,
-        workspaceId,
-        projectId,
-      })
-      if (!runResult.error) {
-        return Result.ok(runResult.value)
+  const spansRepo = new SpansRepository(workspaceId)
+  const traces = await spansRepo.listTracesByLog(runUuid)
+  const trace = traces[0]
+  if (trace) {
+    const spans = await spansRepo.list({ traceId: trace }).then((r) => r.value)
+    if (spans) {
+      const promptSpan = spans.find((s) => s.type === 'prompt')
+      if (promptSpan) {
+        const run = await spanToRun({
+          workspaceId,
+          span: promptSpan as Span<SpanType.Prompt>,
+        })
+
+        return Result.ok(run)
       }
     }
-  } catch {
-    // Continue to cache lookup
   }
 
   // Try to get from hash using HGET (O(1) operation)

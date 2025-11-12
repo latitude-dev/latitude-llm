@@ -5,7 +5,6 @@ let connection: VoyageAIClient
 
 export const voyage = async () => {
   if (connection) return connection
-
   if (!env.VOYAGE_API_KEY) {
     throw new Error('VOYAGE_API_KEY is not set')
   }

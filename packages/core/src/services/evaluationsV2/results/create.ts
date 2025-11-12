@@ -4,6 +4,7 @@ import {
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
+  Span,
 } from '../../../constants'
 import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib/Result'
@@ -14,7 +15,6 @@ import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
 import { type Experiment } from '../../../schema/models/types/Experiment'
 import { type Workspace } from '../../../schema/models/types/Workspace'
-import { ProviderLogDto } from '../../../schema/types'
 
 export async function createEvaluationResultV2<
   T extends EvaluationType,
@@ -23,7 +23,7 @@ export async function createEvaluationResultV2<
   {
     uuid,
     evaluation,
-    providerLog,
+    span,
     experiment,
     commit,
     dataset,
@@ -35,7 +35,7 @@ export async function createEvaluationResultV2<
   }: {
     uuid?: string
     evaluation: EvaluationV2<T, M>
-    providerLog: ProviderLogDto
+    span: Span
     commit: Commit
     experiment?: Experiment
     dataset?: Dataset
@@ -55,7 +55,8 @@ export async function createEvaluationResultV2<
     evaluationUuid: evaluation.uuid,
     datasetId: dataset?.id,
     evaluatedRowId: datasetRow?.id,
-    evaluatedLogId: providerLog.id,
+    evaluatedSpanId: span.id,
+    evaluatedTraceId: span.traceId,
     ...value,
     usedForSuggestion: usedForSuggestion,
   }
@@ -83,11 +84,12 @@ export async function createEvaluationResultV2<
           result: result,
           evaluation: evaluation,
           commit: commit,
-          providerLog: providerLog,
           experiment: experiment,
           dataset: dataset,
           datasetRow: datasetRow,
           workspaceId: workspace.id,
+          spanId: span.id,
+          traceId: span.traceId,
         },
       })
     },

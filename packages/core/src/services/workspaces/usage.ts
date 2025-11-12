@@ -15,10 +15,10 @@ import {
   MembershipsRepository,
 } from '../../repositories'
 import { commits } from '../../schema/models/commits'
-import { documentLogs } from '../../schema/models/documentLogs'
 import { projects } from '../../schema/models/projects'
 import { computeQuota } from '../grants/quota'
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
+import { spans } from '../../schema/models/spans'
 
 /**
  * Handle both old cache format (object) and new cache format (number)
@@ -62,20 +62,20 @@ async function computeUsageFromDatabase(
     db,
   )
 
-  const commitIds = await db
-    .select({ commitId: commits.id })
+  const commitUuids = await db
+    .selectDistinct({ commitUuid: commits.uuid })
     .from(commits)
     .innerJoin(projects, eq(projects.id, commits.projectId))
     .where(eq(projects.workspaceId, workspace.id))
-    .then((r) => r.map((r) => r.commitId))
+    .then((r) => r.map((r) => r.commitUuid))
 
-  const documentLogsCount = await db
+  const spansCount = await db
     .select({ count: count() })
-    .from(documentLogs)
+    .from(spans)
     .where(
       and(
-        inArray(documentLogs.commitId, commitIds),
-        gte(documentLogs.createdAt, latestRenewalDate),
+        inArray(spans.commitUuid, commitUuids),
+        gte(spans.createdAt, latestRenewalDate),
       ),
     )
     .then((r) => r[0]!.count)
@@ -84,7 +84,7 @@ async function computeUsageFromDatabase(
     .countSinceDate(latestRenewalDate)
     .then((r) => r.unwrap())
 
-  return evaluationResultsV2Count + documentLogsCount
+  return evaluationResultsV2Count + spansCount
 }
 
 export async function computeWorkspaceUsage(

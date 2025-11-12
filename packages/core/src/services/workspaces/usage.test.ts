@@ -1,4 +1,4 @@
-import { Providers } from '@latitude-data/constants'
+import { Providers, SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { describe, expect, it, vi } from 'vitest'
 import { type WorkspaceDto } from '../../schema/models/types/Workspace'
 import { deleteCommitDraft } from '../commits'
@@ -11,6 +11,7 @@ describe('computeWorkspaceUsage', () => {
       workspace: wsp,
       commit,
       documents,
+      apiKeys,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'test' }],
       documents: {
@@ -18,7 +19,7 @@ describe('computeWorkspaceUsage', () => {
       },
     })
 
-    const NUM_DOC_LOGS = 5
+    const NUM_SPANS = 5
     const NUM_EVAL_LOGS = 5
 
     const document = documents[0]!
@@ -30,13 +31,15 @@ describe('computeWorkspaceUsage', () => {
     })
 
     // Create document logs
-    const documentLogs = await Promise.all(
-      Array(NUM_DOC_LOGS)
+    const spans = await Promise.all(
+      Array(NUM_SPANS)
         .fill(null)
         .map(() =>
-          ctx.factories.createDocumentLog({
-            document,
-            commit,
+          ctx.factories.createSpan({
+            workspaceId: workspace.id,
+            documentUuid: document.documentUuid,
+            commitUuid: commit.uuid,
+            apiKeyId: apiKeys[0]!.id,
           }),
         ),
     )
@@ -47,8 +50,9 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV2,
-            providerLog:
-              documentLogs[idx % documentLogs.length]!.providerLogs[0]!,
+            span: spans[
+              idx % spans.length
+            ]! as SpanWithDetails<SpanType.Prompt>,
             commit: commit,
             workspace: workspace,
           }),
@@ -61,7 +65,7 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(documentLogs.length + evaluationResultsV2.length)
+    expect(result.usage).toBe(spans.length + evaluationResultsV2.length)
   })
 
   it('calculates usage correctly even if there are multiple workspaces with evaluation results and document logs', async (ctx) => {
@@ -81,6 +85,7 @@ describe('computeWorkspaceUsage', () => {
       workspace: workspace2,
       documents: documents2,
       commit: commit2,
+      apiKeys,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'bar' }],
       documents: {
@@ -88,7 +93,7 @@ describe('computeWorkspaceUsage', () => {
       },
     })
 
-    const NUM_DOC_LOGS = 5
+    const NUM_SPANS = 5
     const NUM_EVAL_LOGS = 5
 
     const document1 = documents1[0]!
@@ -105,13 +110,15 @@ describe('computeWorkspaceUsage', () => {
     })
 
     // Create document logs
-    const documentLogs1 = await Promise.all(
-      Array(NUM_DOC_LOGS)
+    const spans1 = await Promise.all(
+      Array(NUM_SPANS)
         .fill(null)
         .map(() =>
-          ctx.factories.createDocumentLog({
-            document: document1,
-            commit: commit1,
+          ctx.factories.createSpan({
+            workspaceId: workspace1.id,
+            documentUuid: document1.documentUuid,
+            commitUuid: commit1.uuid,
+            apiKeyId: apiKeys[0]!.id,
           }),
         ),
     )
@@ -122,21 +129,24 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV21,
-            providerLog:
-              documentLogs1[idx % documentLogs1.length]!.providerLogs[0]!,
+            span: spans1[
+              idx % spans1.length
+            ]! as SpanWithDetails<SpanType.Prompt>,
             commit: commit1,
             workspace: workspace1,
           }),
         ),
     )
 
-    const documentLogs2 = await Promise.all(
-      Array(NUM_DOC_LOGS)
+    const spans2 = await Promise.all(
+      Array(NUM_SPANS)
         .fill(null)
         .map(() =>
-          ctx.factories.createDocumentLog({
-            document: document2,
-            commit: commit2,
+          ctx.factories.createSpan({
+            workspaceId: workspace2.id,
+            documentUuid: document2.documentUuid,
+            commitUuid: commit2.uuid,
+            apiKeyId: apiKeys[0]!.id,
           }),
         ),
     )
@@ -147,8 +157,9 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV22,
-            providerLog:
-              documentLogs2[idx % documentLogs2.length]!.providerLogs[0]!,
+            span: spans2[
+              idx % spans2.length
+            ]! as SpanWithDetails<SpanType.Prompt>,
             commit: commit2,
             workspace: workspace2,
           }),
@@ -161,9 +172,7 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace1.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(
-      documentLogs1.length + evaluationResultsV21.length,
-    )
+    expect(result.usage).toBe(spans1.length + evaluationResultsV21.length)
   })
 
   it('calculates usage correctly when there are no evaluation results or document logs', async (ctx) => {
@@ -200,6 +209,7 @@ describe('computeWorkspaceUsage', () => {
       workspace: wsp,
       commit: commit1,
       documents: documents1,
+      apiKeys,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'test' }],
       documents: {
@@ -232,24 +242,28 @@ describe('computeWorkspaceUsage', () => {
       workspace: workspace,
     })
 
-    const document1Logs = await Promise.all(
+    const document1Spans = await Promise.all(
       Array(NUM_DOC_LOGS_PER_PROJECT)
         .fill(null)
         .map(() =>
-          ctx.factories.createDocumentLog({
-            document: document1,
-            commit: commit1,
+          ctx.factories.createSpan({
+            workspaceId: workspace.id,
+            documentUuid: document1.documentUuid,
+            commitUuid: commit1.uuid,
+            apiKeyId: apiKeys[0]!.id,
           }),
         ),
     )
 
-    const document2Logs = await Promise.all(
+    const document2Spans = await Promise.all(
       Array(NUM_DOC_LOGS_PER_PROJECT)
         .fill(null)
         .map(() =>
-          ctx.factories.createDocumentLog({
-            document: document2,
-            commit: commit2,
+          ctx.factories.createSpan({
+            workspaceId: workspace.id,
+            documentUuid: document2.documentUuid,
+            commitUuid: commit2.uuid,
+            apiKeyId: apiKeys[0]!.id,
           }),
         ),
     )
@@ -260,8 +274,9 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV21,
-            providerLog:
-              document1Logs[idx % document1Logs.length]!.providerLogs[0]!,
+            span: document1Spans[
+              idx % document1Spans.length
+            ]! as SpanWithDetails<SpanType.Prompt>,
             commit: commit1,
             workspace: workspace,
           }),
@@ -274,26 +289,28 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV22,
-            providerLog:
-              document2Logs[idx % document2Logs.length]!.providerLogs[0]!,
+            span: document2Spans[
+              idx % document2Spans.length
+            ]! as SpanWithDetails<SpanType.Prompt>,
             commit: commit2,
             workspace: workspace,
           }),
         ),
     )
 
-    const documentLogs = [...document1Logs, ...document2Logs]
+    const spans = [...document1Spans, ...document2Spans]
     const evaluationResultsV2 = [
       ...evaluationResultsV21,
       ...evaluationResultsV22,
     ]
+
     const result = await computeWorkspaceUsage({
       id: workspace.id,
       currentSubscriptionCreatedAt: workspace.currentSubscription.createdAt,
       plan: workspace.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(documentLogs.length + evaluationResultsV2.length)
+    expect(result.usage).toBe(spans.length + evaluationResultsV2.length)
   })
 
   it('takes logs from removed commits and evaluations into account', async (ctx) => {
@@ -302,6 +319,7 @@ describe('computeWorkspaceUsage', () => {
       workspace: wsp,
       project,
       documents,
+      apiKeys,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'test' }],
       documents: {
@@ -322,14 +340,16 @@ describe('computeWorkspaceUsage', () => {
       workspace: workspace,
     })
 
-    // Create document logs
-    const documentLogs = await Promise.all(
+    // Create spans
+    const spans = await Promise.all(
       Array(NUM_DOC_LOGS)
         .fill(null)
         .map(() =>
-          ctx.factories.createDocumentLog({
-            document,
-            commit: draft,
+          ctx.factories.createSpan({
+            workspaceId: workspace.id,
+            documentUuid: document.documentUuid,
+            commitUuid: draft.uuid,
+            apiKeyId: apiKeys[0]!.id,
           }),
         ),
     )
@@ -340,8 +360,9 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV2,
-            providerLog:
-              documentLogs[idx % documentLogs.length]!.providerLogs[0]!,
+            span: spans[
+              idx % spans.length
+            ]! as SpanWithDetails<SpanType.Prompt>,
             commit: draft,
             workspace: workspace,
           }),
@@ -367,7 +388,7 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(documentLogs.length + evaluationResultsV2.length)
+    expect(result.usage).toBe(spans.length + evaluationResultsV2.length)
   })
 
   it('only takes into account the runs since the last renewal', async (ctx) => {
@@ -380,6 +401,7 @@ describe('computeWorkspaceUsage', () => {
       workspace: wsp,
       commit,
       documents,
+      apiKeys,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'test' }],
       documents: {
@@ -392,15 +414,19 @@ describe('computeWorkspaceUsage', () => {
     const workspace = wsp as WorkspaceDto
     const document = documents[0]!
 
-    await ctx.factories.createDocumentLog({
-      document,
-      commit,
+    await ctx.factories.createSpan({
+      workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      apiKeyId: apiKeys[0]!.id,
       createdAt: dateBeforeRenewal,
     })
 
-    const currentPeriodLog = await ctx.factories.createDocumentLog({
-      document,
-      commit,
+    const currentPeriodSpan = await ctx.factories.createSpan({
+      workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      apiKeyId: apiKeys[0]!.id,
       createdAt: today,
     })
 
@@ -411,6 +437,6 @@ describe('computeWorkspaceUsage', () => {
     }).then((r) => r.unwrap())
 
     expect(result.usage).toBe(1)
-    expect(currentPeriodLog).toBeDefined()
+    expect(currentPeriodSpan).toBeDefined()
   })
 })

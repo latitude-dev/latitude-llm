@@ -24,6 +24,7 @@ import {
   DocumentLog,
   DocumentLogWithMetadataAndError,
   PromptSpanMetadata,
+  SpanType,
   SpanWithDetails,
 } from '@latitude-data/core/constants'
 import { ProviderLogDto } from '@latitude-data/core/schema/types'
@@ -297,7 +298,11 @@ export function DocumentLogParameters({
   )
 }
 
-export function SpanParameters({ span }: { span: SpanWithDetails }) {
+export function SpanParameters({
+  span,
+}: {
+  span: SpanWithDetails<SpanType.Prompt>
+}) {
   const parametersArray = useMemo(() => {
     return Object.entries((span.metadata as PromptSpanMetadata).parameters)
       .map(([parameter, value]) => {

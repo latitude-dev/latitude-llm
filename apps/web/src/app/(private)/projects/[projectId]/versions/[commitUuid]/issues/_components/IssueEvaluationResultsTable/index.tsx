@@ -15,11 +15,7 @@ import ResultBadge from '$/components/evaluations/ResultBadge'
 import { IssueEvaluationResult } from '$/stores/issues/evaluationResults'
 import { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
 import { cn } from '@latitude-data/web-ui/utils'
-import {
-  ResultPanelLoading,
-  ResultPanelMetadata,
-} from '$/components/evaluations/ResultPanel'
-import useDocumentLog from '$/stores/documentLogWithMetadata'
+import { ResultPanelMetadata } from '$/components/evaluations/ResultPanel'
 import { useRef } from 'react'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
@@ -42,32 +38,22 @@ export function ExpandedResultView({
 }: {
   result: IssueEvaluationResult
 }) {
-  const {
-    data: evaluatedDocumentLog,
-    isLoading: isLoadingEvaluatedDocumentLog,
-  } = useDocumentLog({
-    documentLogUuid: result.evaluatedLog.documentLogUuid ?? undefined,
-  })
-
   const panelRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLTableElement>(null)
 
-  if (isLoadingEvaluatedDocumentLog) return <ResultPanelLoading />
-
   return (
     <div className='flex flex-col gap-4'>
-      {evaluatedDocumentLog ? (
-        <ResultPanelMetadata
-          evaluation={result.evaluation}
-          result={result}
-          commit={result.commit}
-          evaluatedProviderLog={result.evaluatedLog}
-          evaluatedDocumentLog={evaluatedDocumentLog}
-          panelRef={panelRef}
-          tableRef={tableRef}
-          selectedTab='metadata'
-        />
-      ) : null}
+      (
+      <ResultPanelMetadata
+        evaluation={result.evaluation}
+        result={result}
+        commit={result.commit}
+        panelRef={panelRef}
+        tableRef={tableRef}
+        selectedTab='metadata'
+        evaluatedSpanId={result.evaluatedSpanId!}
+        evaluatedTraceId={result.evaluatedTraceId!}
+      />
     </div>
   )
 }

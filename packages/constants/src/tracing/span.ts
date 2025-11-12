@@ -1,5 +1,6 @@
 import { FinishReason } from 'ai'
 import { Message } from 'promptl-ai'
+import { LogSources } from '../models'
 
 export enum SpanKind {
   Internal = 'internal',
@@ -139,6 +140,7 @@ export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
   promptUuid: string
   template: string
   versionUuid: string
+  source: LogSources
 }
 
 export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
@@ -209,9 +211,11 @@ export type Span<T extends SpanType = SpanType> = {
   endedAt: Date
   createdAt: Date
   updatedAt: Date
+  documentLogUuid?: string
   documentUuid?: string
   commitUuid?: string
   experimentUuid?: string
+  source?: LogSources
 }
 
 export type SpanWithDetails<T extends SpanType = SpanType> = Span<T> & {

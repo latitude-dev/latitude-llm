@@ -1,4 +1,4 @@
-import { Providers } from '@latitude-data/constants'
+import { Providers, SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { desc, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { database } from '../../../client'
@@ -14,9 +14,7 @@ import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../../schema/models/types/Workspace'
-import { ProviderLogDto } from '../../../schema/types'
 import * as factories from '../../../tests/factories'
-import serializeProviderLog from '../../providerLogs/serialize'
 import { createEvaluationResultV2 } from './create'
 
 describe('createEvaluationResultV2', () => {
@@ -31,7 +29,7 @@ describe('createEvaluationResultV2', () => {
     EvaluationType.Rule,
     RuleEvaluationMetric.ExactMatch
   >
-  let providerLog: ProviderLogDto
+  let span: SpanWithDetails<SpanType.Prompt>
   let value: EvaluationResultValue<
     EvaluationType.Rule,
     RuleEvaluationMetric.ExactMatch
@@ -46,6 +44,7 @@ describe('createEvaluationResultV2', () => {
       workspace: w,
       documents,
       commit: c,
+      apiKeys,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
@@ -66,11 +65,11 @@ describe('createEvaluationResultV2', () => {
       workspace: workspace,
     })
 
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
-      document: document,
-      commit: commit,
-    })
-    providerLog = serializeProviderLog(providerLogs.at(-1)!)
+    span = (await factories.createSpan({
+      workspaceId: workspace.id,
+      commitUuid: commit.uuid,
+      apiKeyId: apiKeys[0]!.id,
+    })) as SpanWithDetails<SpanType.Prompt>
 
     value = {
       score: 1,
@@ -99,7 +98,7 @@ describe('createEvaluationResultV2', () => {
       createEvaluationResultV2({
         uuid: 'uuid',
         evaluation: evaluation,
-        providerLog: providerLog,
+        span,
         commit: commit,
         value: value,
         workspace: workspace,
@@ -128,7 +127,7 @@ describe('createEvaluationResultV2', () => {
 
     const { result } = await createEvaluationResultV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       commit: commit,
       value: value,
       workspace: workspace,
@@ -139,7 +138,7 @@ describe('createEvaluationResultV2', () => {
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
       }),
     )
     expect(
@@ -162,7 +161,8 @@ describe('createEvaluationResultV2', () => {
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         workspaceId: workspace.id,
       },
     })
@@ -173,7 +173,7 @@ describe('createEvaluationResultV2', () => {
 
     const { result } = await createEvaluationResultV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       commit: commit,
       value: value,
       workspace: workspace,
@@ -185,7 +185,8 @@ describe('createEvaluationResultV2', () => {
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
       }),
     )
     expect(

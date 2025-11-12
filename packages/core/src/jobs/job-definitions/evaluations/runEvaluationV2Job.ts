@@ -5,24 +5,25 @@ import {
   CommitsRepository,
   DatasetRowsRepository,
   DatasetsRepository,
-  DocumentLogsRepository,
   EvaluationsV2Repository,
   ExperimentsRepository,
-  ProviderLogsRepository,
+  SpanMetadatasRepository,
+  SpansRepository,
 } from '../../../repositories'
 import {
   isErrorRetryable,
   runEvaluationV2,
 } from '../../../services/evaluationsV2/run'
-import serializeProviderLog from '../../../services/providerLogs/serialize'
 import { captureException } from '../../../utils/datadogCapture'
+import { SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { updateExperimentStatus } from '../../../services/experiments/updateStatus'
 
 export type RunEvaluationV2JobData = {
   workspaceId: number
   commitId: number
   evaluationUuid: string
-  providerLogUuid: string
+  spanId: string
+  traceId: string
   experimentUuid?: string
   datasetId?: number
   datasetLabel?: string
@@ -33,13 +34,14 @@ export function runEvaluationV2JobKey({
   workspaceId,
   commitId,
   evaluationUuid,
-  providerLogUuid,
+  spanId,
+  traceId,
   experimentUuid,
   datasetId,
   datasetLabel,
   datasetRowId,
 }: RunEvaluationV2JobData) {
-  return `runEvaluationV2Job-${workspaceId}-${commitId}-${evaluationUuid}-${providerLogUuid}-${experimentUuid}-${datasetId}-${datasetLabel}-${datasetRowId}`
+  return `runEvaluationV2Job-${workspaceId}-${commitId}-${evaluationUuid}-${spanId}-${traceId}-${experimentUuid}-${datasetId}-${datasetLabel}-${datasetRowId}`
 }
 
 export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
@@ -47,7 +49,8 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     workspaceId,
     commitId,
     evaluationUuid,
-    providerLogUuid,
+    spanId,
+    traceId,
     experimentUuid,
     datasetId,
     datasetLabel,
@@ -73,22 +76,22 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       .getCommitById(commitId)
       .then((r) => r.unwrap())
 
-    const providerLogsRepository = new ProviderLogsRepository(workspace.id)
-    const providerLog = await providerLogsRepository
-      .findByUuid(providerLogUuid)
+    const spansRepo = new SpansRepository(workspace.id)
+    const spansMetadataRepo = new SpanMetadatasRepository(workspace.id)
+    const span = await spansRepo
+      .get({ traceId, spanId })
       .then((r) => r.unwrap())
-      .then((r) => serializeProviderLog(r))
-
-    const documentLogsRepository = new DocumentLogsRepository(workspace.id)
-    const documentLog = await documentLogsRepository
-      .findByUuid(providerLog.documentLogUuid!)
+    if (!span) throw new NotFoundError('Span not found')
+    if (!span.documentUuid) throw new NotFoundError('Span document not found')
+    const metadata = await spansMetadataRepo
+      .get({ spanId, traceId })
       .then((r) => r.unwrap())
 
     const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
     const evaluation = await evaluationsRepository
       .getAtCommitByDocument({
         commitUuid: commit.uuid,
-        documentUuid: documentLog.documentUuid,
+        documentUuid: span.documentUuid,
         evaluationUuid: evaluationUuid,
       })
       .then((r) => r.unwrap())
@@ -109,7 +112,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
 
     const { result } = await runEvaluationV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: { ...span, metadata } as SpanWithDetails<SpanType.Prompt>,
       experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,

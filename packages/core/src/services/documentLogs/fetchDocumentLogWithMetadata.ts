@@ -1,21 +1,9 @@
 import { database } from '../../client'
-import { DocumentLog, DocumentLogWithMetadataAndError } from '../../constants'
+import { DocumentLogWithMetadataAndError } from '../../constants'
 import { NotFoundError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
-import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
 import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
-
-function throwNotFound({
-  identifier,
-  type,
-}: {
-  identifier: string | number | undefined
-  type: 'id' | 'uuid'
-}) {
-  return Result.error(
-    new NotFoundError(`Document Log not found with ${type}: ${identifier}`),
-  )
-}
+import { findDocumentLog } from './data-access/findDocumentLog'
 
 export async function fetchDocumentLogWithMetadata(
   {
@@ -29,18 +17,14 @@ export async function fetchDocumentLogWithMetadata(
   },
   db = database,
 ): Promise<TypedResult<DocumentLogWithMetadataAndError, Error>> {
-  const identifier = documentLogUuid || documentLogId
-  const type = documentLogUuid ? 'uuid' : 'id'
-  if (identifier === undefined) return throwNotFound({ identifier, type })
-
-  const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspaceId, db)
-  let documentLog: DocumentLog | undefined = undefined
-  if (documentLogUuid) {
-    documentLog = await repo.findByUuid(documentLogUuid).then((r) => r.unwrap())
-  } else if (documentLogId) {
-    documentLog = await repo.find(documentLogId).then((r) => r.unwrap())
+  const documentLog = await findDocumentLog({
+    workspaceId,
+    documentLogUuid,
+    documentLogId,
+  })
+  if (!documentLog) {
+    return Result.error(new NotFoundError(`Document Log not found`))
   }
-  if (!documentLog) return throwNotFound({ identifier, type })
 
   // TODO: change this
   const documentLogWithMetadata = await computeDocumentLogWithMetadata(

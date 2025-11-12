@@ -20,7 +20,6 @@ export const GET = errorHandler(
       },
     ) => {
       const { projectId } = params
-
       const countBySource = await countActiveRunsBySource({
         workspaceId: workspace.id,
         projectId,

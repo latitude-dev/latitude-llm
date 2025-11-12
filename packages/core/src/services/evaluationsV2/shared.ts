@@ -1,7 +1,6 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { Database } from '../../client'
 import {
-  DocumentLog,
   EVALUATION_SCORE_SCALE,
   EvaluationConfiguration,
   EvaluationMetric,
@@ -12,6 +11,8 @@ import {
   EvaluationSpecification,
   EvaluationType,
   EvaluationV2,
+  SpanType,
+  SpanWithDetails,
 } from '../../constants'
 import { TypedResult } from '../../lib/Result'
 import { type Commit } from '../../schema/models/types/Commit'
@@ -21,7 +22,7 @@ import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Experiment } from '../../schema/models/types/Experiment'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { ProviderLogDto, ResultWithEvaluationV2 } from '../../schema/types'
+import { ResultWithEvaluationV2 } from '../../schema/types'
 
 export type EvaluationMetricValidateArgs<
   T extends EvaluationType = EvaluationType,
@@ -45,8 +46,7 @@ export type EvaluationMetricRunArgs<
   actualOutput: TypedResult<string>
   expectedOutput?: TypedResult<string>
   conversation: Message[]
-  providerLog: ProviderLogDto
-  documentLog: DocumentLog
+  span: SpanWithDetails<SpanType.Prompt>
   document: DocumentVersion
   experiment?: Experiment
   dataset?: Dataset
@@ -69,8 +69,7 @@ export type EvaluationMetricAnnotateArgs<
   evaluation: EvaluationV2<T, M>
   actualOutput: TypedResult<string>
   conversation: Message[]
-  providerLog: ProviderLogDto
-  documentLog: DocumentLog
+  span: SpanWithDetails<SpanType.Prompt>
   document: DocumentVersion
   commit: Commit
   workspace: Workspace

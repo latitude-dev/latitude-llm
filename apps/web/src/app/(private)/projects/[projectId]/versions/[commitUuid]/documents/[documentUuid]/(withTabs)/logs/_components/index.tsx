@@ -11,8 +11,6 @@ import { useCommits } from '$/stores/commitsStore'
 import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
 import useDocumentLogsLimited from '$/stores/documentLogsLimited'
-import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   DocumentLogFilterOptions,
   DocumentLogWithMetadataAndError,
@@ -177,24 +175,6 @@ export function DocumentLogsPage({
     return aggregationsNormal
   }, [limitedView, aggregationsNormal])
 
-  const { data: evaluationResults, isLoading: isEvaluationResultsV2Loading } =
-    useEvaluationResultsV2ByDocumentLogs({
-      project: project,
-      commit: commit,
-      document: document,
-      documentLogUuids: documentLogs.map((l) => l.uuid),
-    })
-
-  const {
-    data: evaluations,
-    isLoading: isEvaluationsV2Loading,
-    annotateEvaluation,
-    isAnnotatingEvaluation,
-  } = useEvaluationsV2({ project, commit, document })
-
-  const isEvaluationsLoading =
-    isEvaluationResultsV2Loading || isEvaluationsV2Loading
-
   const [realtimeEnabled, setRealtimeEnabled] = useState(!limitedView)
   useDocumentLogSocket(document.documentUuid, mutate, realtimeEnabled)
 
@@ -262,11 +242,6 @@ export function DocumentLogsPage({
             selectedLog={selectedLog}
             aggregations={aggregations}
             isAggregationsLoading={isAggregationsLoading}
-            evaluationResults={evaluationResults}
-            isEvaluationsLoading={isEvaluationsLoading}
-            evaluations={evaluations}
-            annotateEvaluation={annotateEvaluation}
-            isAnnotatingEvaluation={isAnnotatingEvaluation}
             limitedView={limitedView}
             limitedCursor={documentLogsLimited.next}
             setLimitedCursor={setLimitedCursor}

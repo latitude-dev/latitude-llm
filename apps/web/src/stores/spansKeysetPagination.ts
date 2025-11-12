@@ -1,18 +1,111 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import useFetcher from '$/hooks/useFetcher'
 import { Span, SpanType } from '@latitude-data/constants'
 import useSWR, { SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { API_ROUTES } from '$/services/routes/api'
 import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
+import { useSearchParams } from 'next/navigation'
+import { parseSpansFilters } from '$/lib/schemas/filters'
+import { create } from 'zustand'
 
 export interface SpansKeysetPaginationResult {
   items: Span[]
   count: number | null
   next: string | null
 }
+
+type SpansPaginationState = {
+  cursorHistory: (string | null)[]
+  currentCursor: string | null
+}
+
+const EMPTY_STATE: SpansPaginationState = {
+  cursorHistory: [],
+  currentCursor: null,
+}
+
+type SpansKeysetPaginationZustandState = {
+  states: Record<string, SpansPaginationState>
+
+  getState: (key: string) => SpansPaginationState
+  setCurrentCursor: (key: string, cursor: string | null) => void
+  pushCursorToHistory: (key: string, cursor: string | null) => void
+  popCursorFromHistory: (key: string) => string | null
+  reset: (key: string) => void
+}
+
+function getStateKey(
+  projectId: string,
+  commitUuid: string,
+  documentUuid: string,
+  type: SpanType,
+): string {
+  return `${projectId}:${commitUuid}:${documentUuid}:${type}`
+}
+
+const useSpansKeysetPaginationZustand =
+  create<SpansKeysetPaginationZustandState>((set, get) => ({
+    states: {},
+
+    getState: (key: string) => {
+      return get().states[key] ?? EMPTY_STATE
+    },
+
+    setCurrentCursor: (key: string, cursor: string | null) =>
+      set((state) => ({
+        states: {
+          ...state.states,
+          [key]: {
+            ...(state.states[key] ?? EMPTY_STATE),
+            currentCursor: cursor,
+          },
+        },
+      })),
+
+    pushCursorToHistory: (key: string, cursor: string | null) =>
+      set((state) => {
+        const currentState = state.states[key] ?? EMPTY_STATE
+        return {
+          states: {
+            ...state.states,
+            [key]: {
+              ...currentState,
+              cursorHistory: [...currentState.cursorHistory, cursor],
+            },
+          },
+        }
+      }),
+
+    popCursorFromHistory: (key: string) => {
+      const state = get()
+      const currentState = state.states[key] ?? EMPTY_STATE
+      if (currentState.cursorHistory.length === 0) return null
+
+      const previousCursor =
+        currentState.cursorHistory[currentState.cursorHistory.length - 1]
+      set({
+        states: {
+          ...state.states,
+          [key]: {
+            ...currentState,
+            cursorHistory: currentState.cursorHistory.slice(0, -1),
+          },
+        },
+      })
+      return previousCursor
+    },
+
+    reset: (key: string) =>
+      set((state) => ({
+        states: {
+          ...state.states,
+          [key]: EMPTY_STATE,
+        },
+      })),
+  }))
 
 export function useSpansKeysetPaginationStore(
   {
@@ -32,9 +125,20 @@ export function useSpansKeysetPaginationStore(
   },
   opts?: SWRConfiguration,
 ) {
-  // Store cursor history for navigation - current cursor and previous cursors
-  const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([])
-  const [currentCursor, setCurrentCursor] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const filtersParam = searchParams.get('filters')
+  const filters = parseSpansFilters(filtersParam, 'spansKeysetPagination')
+
+  const {
+    getState,
+    setCurrentCursor,
+    pushCursorToHistory,
+    popCursorFromHistory,
+    reset: resetZustand,
+  } = useSpansKeysetPaginationZustand()
+
+  const stateKey = getStateKey(projectId, commitUuid, documentUuid, type)
+  const { cursorHistory, currentCursor } = getState(stateKey)
 
   const apiUrl = API_ROUTES.projects
     .detail(parseInt(projectId))
@@ -53,6 +157,7 @@ export function useSpansKeysetPaginationStore(
       from: currentCursor ?? undefined,
       type,
       limit: limit.toString(),
+      filters: filters ? JSON.stringify(filters) : undefined,
     }) as Record<string, string>,
   })
 
@@ -65,6 +170,7 @@ export function useSpansKeysetPaginationStore(
       currentCursor,
       type,
       limit,
+      filters,
     ],
     fetcher,
     {
@@ -84,22 +190,35 @@ export function useSpansKeysetPaginationStore(
   const goToNextPage = useCallback(() => {
     if (!data?.next || isLoading) return
 
-    setCursorHistory((prev) => [...prev, currentCursor])
-    setCurrentCursor(data.next)
-  }, [data?.next, isLoading, currentCursor])
+    pushCursorToHistory(stateKey, currentCursor)
+    setCurrentCursor(stateKey, data.next)
+  }, [
+    data?.next,
+    isLoading,
+    currentCursor,
+    stateKey,
+    pushCursorToHistory,
+    setCurrentCursor,
+  ])
 
   const goToPrevPage = useCallback(() => {
     if (cursorHistory.length === 0 || isLoading) return
 
-    const previousCursor = cursorHistory[cursorHistory.length - 1]
-    setCursorHistory((prev) => prev.slice(0, -1))
-    setCurrentCursor(previousCursor)
-  }, [cursorHistory, isLoading])
+    const previousCursor = popCursorFromHistory(stateKey)
+    if (previousCursor !== null) {
+      setCurrentCursor(stateKey, previousCursor)
+    }
+  }, [
+    cursorHistory.length,
+    isLoading,
+    stateKey,
+    popCursorFromHistory,
+    setCurrentCursor,
+  ])
 
   const reset = useCallback(() => {
-    setCursorHistory([])
-    setCurrentCursor(null)
-  }, [])
+    resetZustand(stateKey)
+  }, [stateKey, resetZustand])
 
   return useMemo(
     () => ({
