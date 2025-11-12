@@ -198,7 +198,7 @@ class Prompts:
                     path=path,
                     parameters=options.parameters,
                     custom_identifier=options.custom_identifier,
-                    tools=list(options.tools.keys()) if options.tools and options.stream else None,
+                    tools=list(options.tools.keys()) if options.tools else None,
                     stream=options.stream,
                     background=options.background,
                 ),
@@ -247,7 +247,7 @@ class Prompts:
                 ),
                 body=ChatPromptRequestBody(
                     messages=messages,
-                    tools=list(options.tools.keys()) if options.tools and options.stream else None,
+                    tools=list(options.tools.keys()) if options.tools else None,
                     stream=options.stream,
                 ),
                 stream=options.stream,

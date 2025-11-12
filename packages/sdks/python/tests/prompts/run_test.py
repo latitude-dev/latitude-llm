@@ -170,6 +170,7 @@ class TestRunPromptSync(TestCase):
                 "path": path,
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
+                "tools": list((options.tools or {}).keys()),
                 "stream": options.stream,
                 "background": options.background,
             },

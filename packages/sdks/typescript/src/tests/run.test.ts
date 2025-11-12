@@ -173,6 +173,36 @@ describe('/run', () => {
     )
 
     it(
+      'sends tools names in request body when provided',
+      server.boundary(async () => {
+        const { mockBody } = mockRequest({
+          server,
+          apiVersion: 'v3',
+          version: 'SOME_UUID',
+          projectId: '123',
+        })
+        await sdk.prompts.run('path/to/document', {
+          projectId,
+          versionUuid: 'SOME_UUID',
+          parameters: { foo: 'bar' },
+          tools: {
+            get_weather: async () => 'sunny',
+            get_time: async () => '12:00',
+          },
+          stream: true,
+        })
+        expect(mockBody).toHaveBeenCalledWith({
+          path: 'path/to/document',
+          parameters: { foo: 'bar' },
+          tools: ['get_weather', 'get_time'],
+          stream: true,
+          background: false,
+          __internal: { source: LogSources.API },
+        })
+      }),
+    )
+
+    it(
       'send data onMessage callback',
       server.boundary(async () => {
         const onMessageMock = vi.fn()
@@ -398,6 +428,37 @@ data: ${JSON.stringify({
           stream: false,
           background: false,
           tools: [],
+          __internal: { source: LogSources.API },
+        })
+      }),
+    )
+
+    it(
+      'sends tools names in request body when provided (non-streaming)',
+      server.boundary(async () => {
+        const { mockBody } = mockRequest({
+          server,
+          apiVersion: 'v3',
+          version: 'SOME_UUID',
+          projectId: '123',
+          fakeResponse: RUN_TEXT_RESPONSE,
+        })
+        await sdk.prompts.run('path/to/document', {
+          projectId,
+          versionUuid: 'SOME_UUID',
+          parameters: { foo: 'bar' },
+          tools: {
+            get_weather: async () => 'sunny',
+            get_time: async () => '12:00',
+          },
+          stream: false,
+        })
+        expect(mockBody).toHaveBeenCalledWith({
+          path: 'path/to/document',
+          parameters: { foo: 'bar' },
+          tools: ['get_weather', 'get_time'],
+          stream: false,
+          background: false,
           __internal: { source: LogSources.API },
         })
       }),

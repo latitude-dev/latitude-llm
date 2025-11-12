@@ -1,5 +1,6 @@
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
+import { waitForTools } from '$sdk/utils/streamRun'
 import {
   GenerationResponse,
   HandlerType,
@@ -24,6 +25,7 @@ export async function syncRun<
     projectId,
     versionUuid,
     parameters,
+    tools,
     customIdentifier,
     userMessage,
     onFinished,
@@ -60,7 +62,7 @@ export async function syncRun<
       path,
       parameters,
       customIdentifier,
-      tools: [],
+      tools: waitForTools(tools),
       userMessage,
     },
   })

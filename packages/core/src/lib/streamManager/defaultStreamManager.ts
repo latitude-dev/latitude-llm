@@ -58,21 +58,23 @@ export class DefaultStreamManager
   }
 
   async step(): Promise<void> {
-    this.setMessages(this.messages)
-    this.startStep()
-    this.startProviderStep({
-      config: this.config,
-      messages: this.messages,
-      provider: this.provider,
-    })
-
-    const toolsBySource = await this.getToolsBySource().then((r) => r.unwrap())
-    const config = this.transformPromptlToVercelToolDeclarations(
-      applyAgentRule(this.config),
-      toolsBySource,
-    )
-
     try {
+      this.setMessages(this.messages)
+      this.startStep()
+      this.startProviderStep({
+        config: this.config,
+        messages: this.messages,
+        provider: this.provider,
+      })
+
+      const toolsBySource = await this.getToolsBySource().then((r) =>
+        r.unwrap(),
+      )
+      const config = this.transformPromptlToVercelToolDeclarations(
+        applyAgentRule(this.config),
+        toolsBySource,
+      )
+
       const { response, messages, tokenUsage, finishReason } =
         await streamAIResponse({
           config,
