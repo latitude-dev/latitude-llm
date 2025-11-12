@@ -7,6 +7,7 @@ import {
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
+import { IssuesRepository } from '../../../repositories'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { createIssue } from '../../issues/create'
@@ -32,7 +33,7 @@ export async function assignEvaluationResultV2ToIssue<
   },
   transaction = new Transaction(),
 ) {
-  return await transaction.call(async () => {
+  return await transaction.call(async (tx) => {
     if (!issue) {
       if (!create) {
         return Result.error(new BadRequestError('No issue was provided'))
@@ -47,10 +48,18 @@ export async function assignEvaluationResultV2ToIssue<
     }
 
     if (result.issueId) {
+      // Fetch the old issue that the result is currently assigned to
+      const issuesRepository = new IssuesRepository(workspace.id, tx)
+      const fetchingOldIssue = await issuesRepository.find(result.issueId)
+      if (fetchingOldIssue.error) {
+        return Result.error(fetchingOldIssue.error)
+      }
+      const oldIssue = fetchingOldIssue.value
+
       const removing = await removeResultFromIssue(
         {
           result: { result, evaluation, embedding: result.embedding },
-          issue: issue,
+          issue: oldIssue,
           workspace: workspace,
         },
         transaction,
@@ -58,7 +67,6 @@ export async function assignEvaluationResultV2ToIssue<
       if (removing.error) {
         return Result.error(removing.error)
       }
-      issue = removing.value.issue
       result = removing.value.result
     }
 
