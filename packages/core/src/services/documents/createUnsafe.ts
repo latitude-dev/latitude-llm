@@ -89,7 +89,7 @@ export async function defaultDocumentContent(
  * Creates a new document without checking if the commit is merged.
  * This should only be used in specific cases where you need to bypass
  * the commit state check (e.g., force updating live commits).
- * 
+ *
  * For normal use cases, use `createNewDocument` instead.
  */
 export async function createNewDocumentUnsafe(

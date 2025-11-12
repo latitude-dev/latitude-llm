@@ -151,7 +151,105 @@ The response contains the created (or existing) document details along with its 
 }
 ```
 
-#### 3. Run a Document
+#### 3. Create or Update a Document
+
+Create a new document or update an existing one in a single operation. This endpoint provides more control than `get-or-create`, including the ability to update live commits with the `force` flag.
+
+**Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/documents/create-or-update`
+
+**Path Parameters:**
+
+- `projectId`: Your project ID (required)
+- `versionUuid`: Version UUID (required, optional for SDK's defaults to 'live')
+
+**Request Body:**
+
+```json
+{
+  "path": "path/to/document",
+  "prompt": "Your prompt here",
+  "force": false
+}
+```
+
+- `path`: Path to the document (required)
+- `prompt`: Content of the document (required)
+- `force`: Allow modifications to live/merged commits (optional, defaults to `false`)
+
+**Behavior:**
+
+- If the document **does not exist** at the specified path, it will be created
+- If the document **already exists** at the path, it will be updated with the new content
+- By default, modifications are only allowed on draft commits (not live/merged)
+- When `force: true`, allows creating or updating documents in live commits (use with caution)
+
+<Warning>
+  Using `force: true` allows modifying production prompts directly. This should
+  only be used for emergency hotfixes or controlled production updates. For
+  normal development workflows, use draft commits.
+</Warning>
+
+**Response:**
+
+The response contains the created or updated document details along with its configuration.
+
+**Response Body:**
+
+```json
+{
+  "id": "document-id",
+  "documentUuid": "document-uuid",
+  "path": "path/to/document",
+  "content": "Document content",
+  "resolvedContent": "Document content without comments",
+  "contentHash": "content-hash",
+  "commitId": "commit-id",
+  "deletedAt": "deleted-at",
+  "createdAt": "created-at",
+  "updatedAt": "updated-at",
+  "mergedAt": "merged-at",
+  "projectId": "project-id",
+  "config": {
+    "provider": "Provider name",
+    "model": "Model name"
+  }
+}
+```
+
+**Error Handling:**
+
+If you try to modify a live commit without the `force` flag, the API returns a 400 status code:
+
+```json
+{
+  "name": "BadRequestError",
+  "message": "Cannot modify a merged commit. Use force=true to allow modifications to the live commit.",
+  "errorCode": "BadRequestError",
+  "details": {}
+}
+```
+
+**Use Cases:**
+
+- **Single API call for upsert operations**: No need to check if a document exists before creating/updating
+- **Programmatic prompt updates**: Update prompts from your CI/CD pipeline or automation scripts
+- **Emergency hotfixes**: Use `force: true` to quickly fix production prompts when needed
+- **Batch operations**: Efficiently create or update multiple documents in a loop
+
+**Example: Update with Force Flag**
+
+```bash
+curl -X POST "https://gateway.latitude.so/api/v3/projects/123/versions/live/documents/create-or-update" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "production/emergency-fix",
+    "prompt": "---\nprovider: openai\nmodel: gpt-4\n---\n\nFixed prompt content",
+    "force": true
+  }'
+```
+
+#### 4. Run a Document
 
 Run a specific document (prompt) with optional parameters.
 
@@ -234,7 +332,7 @@ type ToolCall = {
 
 </Note>
 
-#### 4. Chat
+#### 5. Chat
 
 The previously described `POST /projects/{projectId}/versions/{versionUuid}/documents/run` endpoint can also be used to continue a conversation. Notice all events contain a `uuid` field that represents that conversation with the AI. You can use this uuid to continue the conversation.
 
@@ -276,7 +374,7 @@ The response is a stream of Server-Sent Events (SSE) or a single JSON response c
 
 Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
 
-#### 5. Get a Conversation
+#### 6. Get a Conversation
 
 Retrieve a conversation by its UUID. This endpoint returns the complete conversation history including all messages.
 
@@ -326,7 +424,7 @@ If the conversation is not found, the API returns a 404 status code with an erro
 }
 ```
 
-#### 6. Stop a Conversation
+#### 7. Stop a Conversation
 
 Stop an active conversation that is currently running.
 
@@ -344,7 +442,7 @@ No request body is required for this endpoint.
 
 This endpoint returns a 200 status code when the conversation is successfully stopped.
 
-#### 7. Attach to a Conversation
+#### 8. Attach to a Conversation
 
 Attach to an active conversation to receive its ongoing output.
 
@@ -411,7 +509,7 @@ The API uses standard HTTP status codes. In case of an error, the response body 
 }
 ```
 
-#### 8. Annotate a Log
+#### 9. Annotate a Log
 
 Add an annotation (evaluation score) to a log.
 
@@ -450,7 +548,7 @@ Add an annotation (evaluation score) to a log.
 }
 ```
 
-#### 9. Create Log Entry
+#### 10. Create Log Entry
 
 Create a log entry for a document.
 

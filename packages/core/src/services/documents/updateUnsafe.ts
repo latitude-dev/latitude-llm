@@ -17,7 +17,7 @@ import { getDocumentType } from './update'
  * Updates a document without checking if the commit is merged.
  * This should only be used in specific cases where you need to bypass
  * the commit state check (e.g., force updating live commits).
- * 
+ *
  * For normal use cases, use `updateDocument` instead.
  */
 export async function updateDocumentUnsafe(
