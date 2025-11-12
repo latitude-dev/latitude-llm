@@ -1,21 +1,12 @@
-import { omit } from 'lodash-es'
-
-import { eq } from 'drizzle-orm'
-
 import { scan } from 'promptl-ai'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { DocumentType } from '../../constants'
-import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
-import { BadRequestError, NotFoundError } from '../../lib/errors'
+import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
-import { documentVersions } from '../../schema/models/documentVersions'
-import { pingProjectUpdate } from '../projects'
-import { inheritDocumentRelations } from './inheritRelations'
-import { updateListOfIntegrations } from './updateListOfIntegrations'
+import { updateDocumentUnsafe } from './updateUnsafe'
 
 export async function getDocumentType({
   content,
@@ -36,7 +27,6 @@ export async function getDocumentType({
   return DocumentType.Agent
 }
 
-// TODO: refactor, can be simplified
 export async function updateDocument(
   {
     commit,
@@ -55,99 +45,24 @@ export async function updateDocument(
   },
   transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion, Error>> {
-  return await transaction.call(async (tx) => {
-    const updatedDocData = Object.fromEntries(
-      Object.entries({ path, content, promptlVersion, deletedAt }).filter(
-        ([_, v]) => v !== undefined,
-      ),
-    )
+  // Check if commit is draft
+  const assertResult = assertCommitIsDraft(commit)
+  if (assertResult.error) return assertResult
 
-    const asertResult = assertCommitIsDraft(commit)
-    asertResult.unwrap()
+  if (commit.mergedAt !== null) {
+    return Result.error(new BadRequestError('Cannot modify a merged commit'))
+  }
 
-    if (commit.mergedAt !== null) {
-      return Result.error(new BadRequestError('Cannot modify a merged commit'))
-    }
-
-    const workspace = await findWorkspaceFromCommit(commit, tx)
-    const docsScope = new DocumentVersionsRepository(workspace!.id, tx, {
-      includeDeleted: true,
-    })
-    const documents = (await docsScope.getDocumentsAtCommit(commit)).unwrap()
-    const doc = documents.find((d) => d.documentUuid === document.documentUuid)
-
-    if (!doc) {
-      return Result.error(new NotFoundError('Document does not exist'))
-    }
-
-    if (path !== undefined) {
-      if (
-        documents.find(
-          (d) => d.path === path && d.documentUuid !== doc.documentUuid,
-        )
-      ) {
-        return Result.error(
-          new BadRequestError('A document with the same path already exists'),
-        )
-      }
-    }
-
-    const oldVersion = omit(document, ['id', 'commitId', 'updatedAt'])
-    const documentType = await getDocumentType({
-      content: content || oldVersion.content,
-    })
-
-    const newVersion = {
-      ...oldVersion,
-      ...updatedDocData,
-      commitId: commit.id,
-      documentType,
-    } as DocumentVersion
-
-    const updatedDocs = await tx
-      .insert(documentVersions)
-      .values(newVersion)
-      .onConflictDoUpdate({
-        target: [documentVersions.documentUuid, documentVersions.commitId],
-        set: newVersion,
-      })
-      .returning()
-
-    if (updatedDocs.length === 0) {
-      return Result.error(new NotFoundError('Document does not exist'))
-    }
-
-    await inheritDocumentRelations(
-      {
-        fromVersion: document,
-        toVersion: updatedDocs[0]!,
-        workspace: workspace!,
-      },
-      transaction,
-    ).then((r) => r.unwrap())
-
-    // Invalidate all resolvedContent for this commit
-    await tx
-      .update(documentVersions)
-      .set({ resolvedContent: null })
-      .where(eq(documentVersions.commitId, commit.id))
-
-    await updateListOfIntegrations(
-      {
-        workspace: workspace!,
-        projectId: commit.projectId,
-        documentVersion: newVersion,
-      },
-      transaction,
-    )
-
-    await pingProjectUpdate(
-      {
-        projectId: commit.projectId,
-      },
-      transaction,
-    ).then((r) => r.unwrap())
-
-    return Result.ok(updatedDocs[0]!)
-  })
+  // Delegate to unsafe version that does the actual work
+  return updateDocumentUnsafe(
+    {
+      commit,
+      document,
+      path,
+      content,
+      promptlVersion,
+      deletedAt,
+    },
+    transaction,
+  )
 }
