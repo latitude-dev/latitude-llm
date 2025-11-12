@@ -219,7 +219,7 @@ export type EvaluationResultV2<
   experimentId?: number | null
   datasetId?: number | null
   evaluatedRowId?: number | null
-  evaluatedLogId: number
+  evaluatedLogId?: number | null
   issueId?: number | null
   usedForSuggestion?: boolean | null
   createdAt: Date
