@@ -18,6 +18,53 @@ import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'
+import useProviderLogs from '$/stores/providerLogs'
+import useDocumentLog from '$/stores/documentLogWithMetadata'
+
+function useAnnotationData({
+  documentLogUuid,
+  streamFinished,
+}: {
+  documentLogUuid: string | undefined
+  streamFinished: boolean
+}) {
+  const { data: documentLog } = useDocumentLog({
+    documentLogUuid: streamFinished ? documentLogUuid : undefined,
+  })
+  const { data: providerLogs } = useProviderLogs({
+    documentLogUuid: documentLog?.uuid,
+  })
+
+  const providerLog = useMemo(() => {
+    if (!documentLog) return undefined
+
+    const lastProviderLog = providerLogs.at(-1)
+
+    if (!lastProviderLog) return undefined
+    if (lastProviderLog.documentLogUuid != documentLog.uuid) return undefined
+
+    return lastProviderLog
+  }, [documentLog, providerLogs])
+
+  const isReady = !!documentLog && !!providerLog
+
+  console.log('StreamFinished', streamFinished)
+  return useMemo(() => {
+    if (!isReady) {
+      return {
+        documentLog: undefined,
+        providerLog: undefined,
+        isReady: false as const,
+      }
+    }
+
+    return {
+      documentLog,
+      providerLog,
+      isReady: true as const,
+    }
+  }, [documentLog, providerLog, isReady])
+}
 
 type LanguageModelUsageDelta = Pick<
   LanguageModelUsage,
@@ -61,6 +108,11 @@ export function usePlaygroundChat({
   const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
   const [error, setError] = useState<Error | undefined>()
   const [isLoading, setIsLoading] = useState(false)
+  const [promptFinishedRunning, setPromptFinishedRuning] = useState(false)
+  const annotationData = useAnnotationData({
+    documentLogUuid,
+    streamFinished: promptFinishedRunning,
+  })
   const [messages, setMessages] = useState<Message[]>([])
   const [unrespondedToolCalls, setUnrespondedToolCalls] = useState<ToolCall[]>(
     [],
@@ -317,10 +369,15 @@ export function usePlaygroundChat({
   )
 
   const handleStream = useCallback(
-    async (
-      stream: ReadableStream<ParsedEvent>,
-      onPromptRan?: (documentLogUuid?: string, error?: Error) => void,
-    ) => {
+    async ({
+      stream,
+      isPromptRun = false,
+      onPromptRan,
+    }: {
+      stream: ReadableStream<ParsedEvent>
+      isPromptRun?: boolean
+      onPromptRan?: (documentLogUuid?: string, error?: Error) => void
+    }) => {
       setIsLoading(true)
       setError(undefined)
 
@@ -349,6 +406,10 @@ export function usePlaygroundChat({
         runError = error as Error
       } finally {
         setIsLoading(false)
+
+        if (isPromptRun && runUuid && !runError) {
+          setPromptFinishedRuning(true)
+        }
         onPromptRan?.(runUuid, runError)
       }
     },
@@ -410,7 +471,7 @@ export function usePlaygroundChat({
           toolCalls: respondedToolCalls,
         })
 
-        await handleStream(stream)
+        await handleStream({ stream })
       } catch (error) {
         setIsLoading(false)
         setError(error as Error)
@@ -429,9 +490,10 @@ export function usePlaygroundChat({
     async (args: any = {}) => {
       try {
         setIsLoading(true)
+        setPromptFinishedRuning(false)
         setMode('chat')
         const stream = await runPromptFn(args)
-        handleStream(stream, onPromptRan)
+        handleStream({ stream, isPromptRun: true, onPromptRan })
       } catch (error) {
         setIsLoading(false)
         setError(error as Error)
@@ -500,6 +562,7 @@ export function usePlaygroundChat({
       duration,
       cost,
       reset,
+      annotationData,
     }),
     [
       mode,
@@ -522,6 +585,7 @@ export function usePlaygroundChat({
       duration,
       cost,
       reset,
+      annotationData,
     ],
   )
 }
