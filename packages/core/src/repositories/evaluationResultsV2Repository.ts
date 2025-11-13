@@ -618,15 +618,13 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
   }
 
-  // TODO(AO): Filter out evaluation results from draft versions
-  // to not modify issues that appeared in production. If the
-  // issue only appeared in draft versions its okay
   async selectForIssueGeneration({ issueId }: { issueId: number }) {
     const conditions = [
       this.scopeFilter,
       eq(evaluationResultsV2.issueId, issueId),
       isNull(evaluationResultsV2.error),
       sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
+      isNotNull(commits.mergedAt),
     ]
 
     const newerLimit = Math.ceil(
@@ -635,6 +633,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const newer = await this.db
       .select(tt)
       .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .where(
         and(
           ...conditions,

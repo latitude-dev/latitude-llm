@@ -3,9 +3,9 @@ import {
   EvaluationMetric,
   EvaluationResultSuccessValue,
   EvaluationType,
-  ISSUE_JOBS_GENERATE_DETAILS_DEBOUNCE,
+  ISSUE_JOBS_GENERATE_DETAILS_THROTTLE,
   ISSUE_JOBS_MAX_ATTEMPTS,
-  ISSUE_JOBS_MERGE_COMMON_DEBOUNCE,
+  ISSUE_JOBS_MERGE_COMMON_THROTTLE,
 } from '../../../constants'
 import { generateIssueDetailsJobKey } from '../../../jobs/job-definitions/issues/generateIssueDetailsJob'
 import { mergeCommonIssuesJobKey } from '../../../jobs/job-definitions/issues/mergeCommonIssuesJob'
@@ -22,10 +22,11 @@ import { incrementIssueHistogram } from '../histograms/increment'
 import { embedReason, updateCentroid } from '../shared'
 import { updateIssue } from '../update'
 import { validateResultForIssue } from './validate'
+import { database } from '../../../client'
+import { and, eq, ne } from 'drizzle-orm'
+import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 
-// TODO(AO): IMPORTANT! Evaluation results from draft versions
-// should not modify issues that appeared in production. If the
-// issue only appeared in draft versions its okay
+// TODO(AO): Add tests
 export async function addResultToIssue<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
@@ -51,15 +52,11 @@ export async function addResultToIssue<
     result: { result, evaluation },
     issue: issue,
   })
-  if (validating.error) {
-    return Result.error(validating.error)
-  }
+  if (!Result.isOk(validating)) return validating
 
   const commitsRepository = new CommitsRepository(workspace.id)
   const getting = await commitsRepository.getCommitById(result.commitId)
-  if (getting.error) {
-    return Result.error(getting.error)
-  }
+  if (!Result.isOk(getting)) return getting
   const commit = getting.value
 
   if (!embedding) {
@@ -69,24 +66,30 @@ export async function addResultToIssue<
     )!
 
     const embedying = await embedReason(reason)
-    if (embedying.error) {
-      return Result.error(embedying.error)
-    }
-    embedding = embedying.value
+    if (!Result.isOk(embedying)) return embedying
+    embedding = embedying.unwrap()
   }
+
+  // Issue centroids' are only updated when the incoming annotation is from a
+  // live commit, it's a new issue, or the issue has only received annotations
+  // from the same commit. This ensures the centroid is only updated when it
+  // makes sense to do it.
+  const canUpdateCentroid =
+    commit.mergedAt || issueWasNew
+      ? true
+      : !(await containsResultsFromOtherCommits({
+          issue,
+          commitId: result.commitId,
+        }))
 
   return await transaction.call(
     async (tx) => {
       const issuesRepository = new IssuesRepository(workspace.id, tx)
       const locking = await issuesRepository.lock({ id: issue.id })
-      if (locking.error) {
-        return Result.error(locking.error)
-      }
+      if (!Result.isOk(locking)) return locking
 
       const refreshing = await issuesRepository.find(issue.id)
-      if (refreshing.error) {
-        return Result.error(refreshing.error)
-      }
+      if (!Result.isOk(refreshing)) return refreshing
       issue = refreshing.value
       issueWasNew = isEqual(issue.createdAt, issue.updatedAt)
 
@@ -98,35 +101,33 @@ export async function addResultToIssue<
         },
         tx,
       )
-      if (validating.error) {
-        return Result.error(validating.error)
-      }
+      if (!Result.isOk(validating)) return validating
 
-      const centroid = updateCentroid(
-        { ...issue.centroid, updatedAt: issue.updatedAt },
-        { embedding, type: evaluation.type, createdAt: result.createdAt },
-        'add',
-        timestamp,
-      )
+      let centroid
+      if (canUpdateCentroid) {
+        centroid = updateCentroid(
+          { ...issue.centroid, updatedAt: issue.updatedAt },
+          { embedding, type: evaluation.type, createdAt: result.createdAt },
+          'add',
+          timestamp,
+        )
+      }
 
       const updatingre = await updateEvaluationResultV2(
         { issue, result, commit, workspace },
         transaction,
       )
-      if (updatingre.error) {
-        return Result.error(updatingre.error)
-      }
+      if (!Result.isOk(updatingre)) return updatingre
+
       result = updatingre.value.result
 
       const incrementing = await incrementIssueHistogram(
         { result, issue, commit, workspace },
         transaction,
       )
-      if (incrementing.error) {
-        return Result.error(incrementing.error)
-      }
-      const histogram = incrementing.value.histogram
+      if (!Result.isOk(incrementing)) return incrementing
 
+      const histogram = incrementing.value.histogram
       const updatingis = await updateIssue(
         {
           ...(issueWasNew && {
@@ -138,9 +139,8 @@ export async function addResultToIssue<
         },
         transaction,
       )
-      if (updatingis.error) {
-        return Result.error(updatingis.error)
-      }
+      if (!Result.isOk(updatingis)) return updatingis
+
       issue = updatingis.value.issue
 
       return Result.ok({ issue, histogram, result })
@@ -154,7 +154,7 @@ export async function addResultToIssue<
           attempts: ISSUE_JOBS_MAX_ATTEMPTS,
           deduplication: {
             id: generateIssueDetailsJobKey(payload),
-            ttl: ISSUE_JOBS_GENERATE_DETAILS_DEBOUNCE,
+            ttl: ISSUE_JOBS_GENERATE_DETAILS_THROTTLE,
           },
         })
       }
@@ -163,9 +163,34 @@ export async function addResultToIssue<
         attempts: ISSUE_JOBS_MAX_ATTEMPTS,
         deduplication: {
           id: mergeCommonIssuesJobKey(payload),
-          ttl: ISSUE_JOBS_MERGE_COMMON_DEBOUNCE,
+          ttl: ISSUE_JOBS_MERGE_COMMON_THROTTLE,
         },
       })
     },
   )
+}
+
+export async function containsResultsFromOtherCommits(
+  {
+    issue,
+    commitId,
+  }: {
+    issue: Issue
+    commitId: number
+  },
+  db = database,
+) {
+  const commitIds = await db
+    .selectDistinct({ commitId: evaluationResultsV2.commitId })
+    .from(evaluationResultsV2)
+    .where(
+      and(
+        eq(evaluationResultsV2.workspaceId, issue.workspaceId),
+        eq(evaluationResultsV2.issueId, issue.id),
+        ne(evaluationResultsV2.commitId, commitId),
+      ),
+    )
+    .limit(1)
+
+  return commitIds.length > 0
 }
