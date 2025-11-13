@@ -47,7 +47,6 @@ export default async function IssuesPageRoute({
   // Filtering
   const parsedParams = parseIssuesQueryParams({
     params: queryParams,
-    defaultFilters: { documentUuid: commit.mainDocumentUuid ?? undefined },
   })
   const args = {
     project,

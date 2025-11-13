@@ -13,4 +13,6 @@
 - Mark the other losing issues as "merged". This will filter out the issues in the dashboard.
 - Enqueue generateIssueDetails job
 - Publish issueMerged event
+- Evaluations from the merged issues `evaluation.issueId` has to be `ignoredAt`. This data migration is not implemented yet. Also we should update the evaluations UI at some point to reflect this.
+- Add a pointer from `merged` issue to `winning` issue for traceability (make a new column issue.mergedToIssueId)
 */

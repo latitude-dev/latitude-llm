@@ -9,7 +9,11 @@ const STYLES = {
       success: 'bg-primary/60 dark:bg-foreground/90',
       error: 'bg-red-500',
       warning: 'bg-yellow-500',
+      destructive: 'bg-destructive',
       muted: 'bg-muted-foreground/50',
+      resolved: 'bg-green-500',
+      fucksia: 'bg-fuchsia-500', // Not dyslexia btw
+      new: 'bg-blue-500',
     },
     size: {
       default: 'w-2 h-2',

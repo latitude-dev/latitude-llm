@@ -33,10 +33,7 @@ function getRelativeTimeText(createdAt: Date, lastSeenDate: Date | null) {
   const dateToUse = lastSeenDate || createdAt
   const now = new Date()
 
-  const ageText = formatTimeDistance(createdAt, now)
-  const lastSeenText = formatTimeDistance(dateToUse, now)
-
-  return `${lastSeenText} ago / ${ageText} old`
+  return `${formatTimeDistance(dateToUse, now)} ago`
 }
 
 export function LastSeenCell({ issue }: { issue: SerializedIssue }) {

@@ -2,9 +2,8 @@ import { EvaluationType } from '../evaluations'
 
 // TODO(AO): Put merged issues into archived status in all parts of the code
 export const ISSUE_STATUS = {
-  active: 'active', // not resolved, not ignored, not merged
-  regressed: 'regressed', // resolved with histogram dates after the resolved date
-  archived: 'archived', // resolved or ignored or merged
+  active: 'active', // not resolved, not ignored, not merged or regressed
+  inactive: 'inactive', // resolved or ignored or merged
 } as const
 
 export type IssueStatus = (typeof ISSUE_STATUS)[keyof typeof ISSUE_STATUS]
@@ -32,7 +31,7 @@ export const ESCALATING_DAYS = 2
 export const NEW_ISSUES_DAYS = 7
 export const RECENT_ISSUES_DAYS = 7
 export const HISTOGRAM_SUBQUERY_ALIAS = 'histogramStats'
-export const MINI_HISTOGRAM_STATS_DAYS = 14
+export const MINI_HISTOGRAM_STATS_DAYS = 90
 export type QueryParams = { [key: string]: string | string[] | undefined }
 
 export const DEFAULTS_ISSUE_PARAMS = {

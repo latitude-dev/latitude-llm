@@ -154,6 +154,7 @@ import {
   Brush,
   ShieldAlertIcon,
   FlaskConical,
+  EyeOffIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -280,6 +281,7 @@ const Icons = {
   equalApproximately: EqualApproximatelyIcon,
   externalLink: ExternalLink,
   eye: Eye,
+  eyeOff: EyeOffIcon,
   figma: Figma,
   file: File,
   fileDown: FileDown,
