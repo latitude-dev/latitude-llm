@@ -79,6 +79,7 @@ class TestChatPromptSync(TestCase):
             endpoint=chat_endpoint,
             body={
                 "messages": [json.loads(message.model_dump_json()) for message in messages],
+                "tools": list((options.tools or {}).keys()),
                 "stream": options.stream,
             },
         )

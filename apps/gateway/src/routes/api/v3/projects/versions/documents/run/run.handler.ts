@@ -6,7 +6,7 @@ import { captureException } from '$/common/tracer'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
 import { LogSources } from '@latitude-data/core/constants'
-import { LatitudeError } from '@latitude-data/core/lib/errors'
+import { BadRequestError, LatitudeError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
 import { buildClientToolHandlersMap } from '@latitude-data/core/services/documents/tools/clientTools/handlers'
@@ -35,6 +35,19 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     userMessage,
     __internal,
   } = c.req.valid('json')
+
+  if (tools.length > 0) {
+    if (background) {
+      throw new BadRequestError(
+        'Custom tools are not supported in background runs',
+      )
+    }
+
+    if (!useSSE) {
+      throw new BadRequestError('You must enable Stream to use custom tools')
+    }
+  }
+
   const workspace = c.get('workspace')
   const source = __internal?.source ?? LogSources.API
   const { document, commit, project } = await getData({
@@ -164,7 +177,7 @@ async function handleForegroundRun({
     source,
     abortSignal: c.req.raw.signal, // FIXME: This does not seem to work
     context: BACKGROUND({ workspaceId: workspace.id }),
-    tools: useSSE ? buildClientToolHandlersMap(tools ?? []) : {},
+    tools: buildClientToolHandlersMap(tools ?? []),
     userMessage,
   }).then((r) => r.unwrap())
 

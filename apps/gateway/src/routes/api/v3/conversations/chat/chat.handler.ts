@@ -11,6 +11,7 @@ import { BACKGROUND, telemetry } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import { LogSources } from '@latitude-data/core/constants'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
+import { BadRequestError } from '@latitude-data/constants/errors'
 
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
@@ -23,6 +24,10 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
     __internal,
   } = c.req.valid('json')
   const workspace = c.get('workspace')
+
+  if (tools.length > 0 && !useSSE) {
+    throw new BadRequestError('You must enable Stream to use custom tools')
+  }
 
   const result = (
     await addMessages({
