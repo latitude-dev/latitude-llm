@@ -1,10 +1,8 @@
 import { CommitsRepository } from '@latitude-data/core/repositories'
-import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
+import { BadRequestError } from '@latitude-data/constants/errors'
 import { AppRouteHandler } from '$/openApi/types'
 import { PublishCommitRoute } from './publishCommit.route'
 import { updateAndMergeCommit } from '@latitude-data/core/services/commits/updateAndMerge'
-import { findFirstUserInWorkspace } from '@latitude-data/core/data-access/users'
-import { publisher } from '@latitude-data/core/events/publisher'
 
 // @ts-expect-error: broken types
 export const publishCommitHandler: AppRouteHandler<PublishCommitRoute> = async (
@@ -25,28 +23,15 @@ export const publishCommitHandler: AppRouteHandler<PublishCommitRoute> = async (
     })
     .then((r) => r.unwrap())
 
+  const data: { title?: string; description?: string } = {}
+  if (title !== undefined) data.title = title
+  if (description !== undefined) data.description = description
+
   const merged = await updateAndMergeCommit({
     commit,
     workspace,
-    data: {
-      title,
-      description,
-    },
+    data,
   }).then((r) => r.unwrap())
-
-  const user = await findFirstUserInWorkspace(workspace)
-  if (!user) {
-    throw new NotFoundError('User not found in this workspace')
-  }
-
-  publisher.publishLater({
-    type: 'commitPublished',
-    data: {
-      commit: merged,
-      userEmail: user.email,
-      workspaceId: workspace.id,
-    },
-  })
 
   return c.json(merged, 200)
 }

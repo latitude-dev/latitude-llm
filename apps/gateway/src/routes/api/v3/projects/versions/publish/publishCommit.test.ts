@@ -1,7 +1,11 @@
 import app from '$/routes/app'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
-import { createDraft, createProject } from '@latitude-data/core/factories'
+import {
+  createDraft,
+  createProject,
+  createDocumentVersion,
+} from '@latitude-data/core/factories'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -52,10 +56,19 @@ describe('POST /projects/:projectId/versions/:versionUuid/publish', () => {
     })
 
     it('succeeds when publishing a draft commit', async () => {
-      // Create a draft commit
+      // Create a draft commit with a document
       const { commit: draftCommit } = await createDraft({
         project,
         user,
+      })
+
+      // Add a document to the draft so it has changes
+      await createDocumentVersion({
+        workspace,
+        user,
+        commit: draftCommit,
+        path: 'test-document',
+        content: 'test content',
       })
 
       const response = await app.request(
@@ -84,10 +97,19 @@ describe('POST /projects/:projectId/versions/:versionUuid/publish', () => {
     })
 
     it('succeeds when publishing with optional title and description', async () => {
-      // Create a draft commit
+      // Create a draft commit with a document
       const { commit: draftCommit } = await createDraft({
         project,
         user,
+      })
+
+      // Add a document to the draft so it has changes
+      await createDocumentVersion({
+        workspace,
+        user,
+        commit: draftCommit,
+        path: 'test-document',
+        content: 'test content',
       })
 
       const newTitle = 'Updated Published Title'
@@ -166,7 +188,7 @@ describe('POST /projects/:projectId/versions/:versionUuid/publish', () => {
 
     it('fails when version UUID does not exist', async () => {
       const response = await app.request(
-        `/api/v3/projects/${projectId}/versions/non-existent-uuid/publish`,
+        `/api/v3/projects/${projectId}/versions/00000000-0000-0000-0000-000000000000/publish`,
         {
           method: 'POST',
           headers,
