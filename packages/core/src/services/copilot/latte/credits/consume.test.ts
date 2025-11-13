@@ -59,6 +59,8 @@ describe('consumeLatteCredits', () => {
     vi.spyOn(cache, 'cache').mockImplementation(async () => {
       return {
         del: delCacheMock,
+        get: vi.fn().mockResolvedValue(null),
+        set: vi.fn().mockResolvedValue(true),
       } as unknown as cache.Cache
     })
 

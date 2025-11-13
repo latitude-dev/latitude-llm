@@ -111,6 +111,7 @@ describe('usageLatteCredits', () => {
       return {
         get: getCacheMock,
         set: setCacheMock,
+        del: vi.fn().mockResolvedValue(true),
       } as unknown as cache.Cache
     })
 
