@@ -4,7 +4,6 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import {
   ProjectsRepository,
   IssuesRepository,
-  CommitsRepository,
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
@@ -36,7 +35,7 @@ export const GET = errorHandler(
       },
     ) => {
       const query = request.nextUrl.searchParams
-      const { projectId, commitUuid, documentUuid } = paramsSchema.parse({
+      const { projectId, documentUuid } = paramsSchema.parse({
         projectId: params.projectId,
         commitUuid: params.commitUuid,
         documentUuid: query.get('documentUuid'),
@@ -44,18 +43,11 @@ export const GET = errorHandler(
       const title = query.get('query')
       const projectsRepo = new ProjectsRepository(workspace.id)
       const project = await projectsRepo.find(projectId).then((r) => r.unwrap())
-      const commitsRepo = new CommitsRepository(workspace.id)
-      const commit = await commitsRepo
-        .getCommitByUuid({
-          projectId,
-          uuid: commitUuid,
-        })
-        .then((r) => r.unwrap())
       const docsScope = new DocumentVersionsRepository(workspace.id)
       const document = await docsScope
-        .getDocumentByUuid({
+        .getSomeDocumentByUuid({
           documentUuid,
-          commitUuid: commit?.uuid ?? undefined,
+          projectId,
         })
         .then((r) => r.unwrap())
       const issuesRepo = new IssuesRepository(workspace.id)

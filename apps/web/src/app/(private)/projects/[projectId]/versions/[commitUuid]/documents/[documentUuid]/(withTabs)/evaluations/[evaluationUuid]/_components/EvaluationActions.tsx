@@ -210,6 +210,9 @@ function EditEvaluation<
 }) {
   const [openUpdateModal, setOpenUpdateModal] = useState(false)
   const [settings, setSettings] = useState<EvaluationSettings<T, M>>(evaluation)
+  const [issueId, setIssueId] = useState<number | null>(
+    evaluation.issueId ?? null,
+  )
   const [options, setOptions] = useState<EvaluationOptions>(evaluation)
   const [errors, setErrors] = useState<EvaluationV2FormErrors>()
 
@@ -221,6 +224,7 @@ function EditEvaluation<
     const [_, errors] = await updateEvaluation({
       evaluationUuid: evaluation.uuid,
       settings: settings,
+      issueId: issueId,
       options: options,
     })
     if (errors) {
@@ -233,6 +237,7 @@ function EditEvaluation<
     isUpdatingEvaluation,
     evaluation,
     settings,
+    issueId,
     options,
     updateEvaluation,
     setErrors,
@@ -278,6 +283,8 @@ function EditEvaluation<
           uuid={evaluation.uuid}
           settings={settings}
           setSettings={setSettings}
+          issueId={issueId}
+          setIssueId={setIssueId}
           options={options}
           setOptions={setOptions}
           errors={errors}

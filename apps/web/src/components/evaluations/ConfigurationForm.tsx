@@ -23,8 +23,9 @@ import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwit
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { useDebounce } from 'use-debounce'
+import { useDebounce, useDebouncedCallback } from 'use-debounce'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
+import { useSearchIssues } from '$/stores/issues/selectorIssues'
 
 const MESSAGE_SELECTION_OPTIONS =
   baseEvaluationConfiguration.shape.actualOutput.shape.messageSelection.options.map(
@@ -79,10 +80,20 @@ export function ConfigurationAdvancedForm<
   metric,
   configuration,
   setConfiguration,
+  setIssueId,
+  issueId,
   errors,
   disabled,
   ...rest
 }: ConfigurationFormProps<T, M> & { type: T; metric: M }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+
+  const [query, setQuery] = useState('')
+  const onSearch = useDebouncedCallback((value: string) => {
+    setQuery(value)
+  }, 500)
   const formatIsAccessible = useMemo(
     () =>
       !!configuration.actualOutput?.parsingFormat &&
@@ -91,6 +102,14 @@ export function ConfigurationAdvancedForm<
       ),
     [configuration.actualOutput?.parsingFormat],
   )
+
+  const { data: issues, isLoading: isLoadingIssues } = useSearchIssues({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+    query,
+  })
+
   useEffect(() => {
     if (formatIsAccessible) return
     if (!configuration.actualOutput) return
@@ -112,6 +131,12 @@ export function ConfigurationAdvancedForm<
   const typeSpecification = EVALUATION_SPECIFICATIONS[type]
   if (!typeSpecification) return null
 
+  const metricSpecification = typeSpecification.metrics[metric]
+  if (!metricSpecification) return null
+
+  const doesntRequireExpectedOutput =
+    !metricSpecification.requiresExpectedOutput
+
   return (
     <>
       {!!typeSpecification.ConfigurationAdvancedForm && (
@@ -120,6 +145,8 @@ export function ConfigurationAdvancedForm<
           metric={metric}
           configuration={configuration}
           setConfiguration={setConfiguration}
+          issueId={issueId}
+          setIssueId={setIssueId}
           errors={errors}
           disabled={disabled}
           {...rest}
@@ -271,6 +298,30 @@ export function ConfigurationAdvancedForm<
         <div className='w-full flex flex-col gap-2 border-t-2 border-dashed border-border pt-4'>
           <ActualOutputTest configuration={testConfiguration} />
         </div>
+      )}
+      {doesntRequireExpectedOutput && setIssueId && (
+        <FormFieldGroup
+          label='Link issue'
+          description='Link the evaluation to an issue in your agent logs'
+          layout='horizontal'
+        >
+          <Select
+            searchable={true}
+            value={issueId ?? null}
+            name='issueId'
+            placeholder='Select an existing issue'
+            searchPlaceholder='Search existing issues...'
+            loading={isLoadingIssues}
+            disabled={disabled || isLoadingIssues}
+            options={issues.map((issue) => ({
+              label: issue.title,
+              value: issue.id,
+            }))}
+            onSearch={onSearch}
+            onChange={(value) => setIssueId(value)}
+            errors={errors?.['issueId']}
+          />
+        </FormFieldGroup>
       )}
     </>
   )

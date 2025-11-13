@@ -179,11 +179,16 @@ function AddEvaluation({
   const [options, setOptions] = useState<Partial<EvaluationOptions>>(
     DEFAULT_EVALUATION_OPTIONS,
   )
+  const [issueId, setIssueId] = useState<number | null>(null)
   const [errors, setErrors] = useState<EvaluationV2FormErrors>()
 
   const onCreate = useCallback(async () => {
     if (isCreatingEvaluation) return
-    const [result, errors] = await createEvaluation({ settings, options })
+    const [result, errors] = await createEvaluation({
+      settings,
+      options,
+      issueId,
+    })
 
     if (errors) {
       setErrors(errors)
@@ -207,6 +212,7 @@ function AddEvaluation({
     createEvaluation,
     settings,
     options,
+    issueId,
     setSettings,
     setOptions,
     setErrors,
@@ -244,6 +250,8 @@ function AddEvaluation({
           mode='create'
           settings={settings}
           setSettings={setSettings}
+          issueId={issueId}
+          setIssueId={setIssueId}
           options={options}
           setOptions={setOptions}
           errors={errors}
@@ -344,6 +352,7 @@ function CombineEvaluations({
       >
         <EvaluationV2Form
           mode='create'
+          // No issueId/setIssueId because composite evals have no issue linking
           settings={settings}
           setSettings={setSettings}
           options={options}

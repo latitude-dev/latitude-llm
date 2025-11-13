@@ -109,6 +109,8 @@ export default function EvaluationV2Form<
   uuid,
   settings,
   setSettings,
+  issueId,
+  setIssueId,
   options,
   setOptions,
   errors: actionErrors,
@@ -119,6 +121,8 @@ export default function EvaluationV2Form<
   uuid?: string
   settings: EvaluationSettings<T, M>
   setSettings: (settings: EvaluationSettings<T, M>) => void
+  issueId?: number | null
+  setIssueId?: (issueId: number | null) => void
   options: Partial<EvaluationOptions>
   setOptions: (options: Partial<EvaluationOptions>) => void
   errors?: EvaluationV2FormErrors
@@ -157,6 +161,12 @@ export default function EvaluationV2Form<
   }, [metricSpecification?.supportsLiveEvaluation])
 
   const commitMerged = mode === 'update' && !!commit.mergedAt
+
+  const handleSetIssueId = (value: number | null) => {
+    if (setIssueId) {
+      setIssueId(value)
+    }
+  }
 
   return (
     <form className='min-w-0' id='evaluationV2Form'>
@@ -230,6 +240,8 @@ export default function EvaluationV2Form<
           setConfiguration={(value) =>
             setSettings({ ...settings, configuration: value })
           }
+          issueId={issueId}
+          setIssueId={handleSetIssueId}
           settings={settings}
           setSettings={setSettings}
           errors={errors}
@@ -267,6 +279,8 @@ export default function EvaluationV2Form<
                   setConfiguration={(value) =>
                     setSettings({ ...settings, configuration: value })
                   }
+                  issueId={issueId}
+                  setIssueId={handleSetIssueId}
                   settings={settings}
                   setSettings={setSettings}
                   errors={errors}
