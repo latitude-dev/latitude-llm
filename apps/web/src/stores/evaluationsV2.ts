@@ -96,9 +96,11 @@ export function useEvaluationsV2(
     async ({
       settings,
       options,
+      issueId,
     }: {
       settings: EvaluationSettings
       options?: Partial<EvaluationOptions>
+      issueId?: number | null
     }) => {
       return await executeCreateEvaluationV2({
         projectId: project.id,
@@ -106,6 +108,7 @@ export function useEvaluationsV2(
         documentUuid: document.documentUuid,
         settings: settings,
         options: options,
+        issueId: issueId,
       })
     },
     [project, commit, document, executeCreateEvaluationV2],
@@ -145,10 +148,12 @@ export function useEvaluationsV2(
       evaluationUuid,
       settings,
       options,
+      issueId,
     }: {
       evaluationUuid: string
       settings?: Partial<Omit<EvaluationSettings, 'type' | 'metric'>>
       options?: Partial<EvaluationOptions>
+      issueId?: number | null
     }) => {
       return await executeUpdateEvaluationV2({
         projectId: project.id,
@@ -157,6 +162,7 @@ export function useEvaluationsV2(
         evaluationUuid: evaluationUuid,
         settings: settings,
         options: options,
+        issueId: issueId,
       })
     },
     [project, commit, document, executeUpdateEvaluationV2],

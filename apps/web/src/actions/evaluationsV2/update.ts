@@ -14,7 +14,9 @@ const evaluationSchema = withEvaluationSchema.extend({
     .partial()
     .optional(),
   options: EvaluationOptionsSchema.partial().optional(),
+  issueId: z.number().nullable().optional(),
 })
+
 export const updateEvaluationV2Action = withEvaluation
   .inputSchema(evaluationSchema)
   .action(async ({ ctx, parsedInput }) => {
@@ -23,6 +25,7 @@ export const updateEvaluationV2Action = withEvaluation
       commit: ctx.commit,
       settings: parsedInput.settings,
       options: parsedInput.options,
+      issueId: parsedInput.issueId,
       workspace: ctx.workspace,
     })
 

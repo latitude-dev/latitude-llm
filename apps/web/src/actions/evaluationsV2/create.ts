@@ -11,6 +11,7 @@ import { withDocument, withDocumentSchema } from '../procedures'
 const evaluationSchema = withDocumentSchema.extend({
   settings: EvaluationSettingsSchema,
   options: EvaluationOptionsSchema.partial().optional(),
+  issueId: z.number().nullable().optional(),
 })
 export const createEvaluationV2Action = withDocument
   .inputSchema(evaluationSchema)
@@ -20,6 +21,7 @@ export const createEvaluationV2Action = withDocument
       commit: ctx.commit,
       settings: parsedInput.settings,
       options: parsedInput.options,
+      issueId: parsedInput.issueId ?? null,
       workspace: ctx.workspace,
     })
 

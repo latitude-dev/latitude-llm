@@ -109,6 +109,8 @@ export default function EvaluationV2Form<
   uuid,
   settings,
   setSettings,
+  issueId,
+  setIssueId,
   options,
   setOptions,
   errors: actionErrors,
@@ -119,6 +121,8 @@ export default function EvaluationV2Form<
   uuid?: string
   settings: EvaluationSettings<T, M>
   setSettings: (settings: EvaluationSettings<T, M>) => void
+  issueId?: number | null
+  setIssueId?: (issueId: number | null) => void
   options: Partial<EvaluationOptions>
   setOptions: (options: Partial<EvaluationOptions>) => void
   errors?: EvaluationV2FormErrors
@@ -230,6 +234,8 @@ export default function EvaluationV2Form<
           setConfiguration={(value) =>
             setSettings({ ...settings, configuration: value })
           }
+          issueId={issueId}
+          setIssueId={setIssueId}
           settings={settings}
           setSettings={setSettings}
           errors={errors}
@@ -267,6 +273,8 @@ export default function EvaluationV2Form<
                   setConfiguration={(value) =>
                     setSettings({ ...settings, configuration: value })
                   }
+                  issueId={issueId}
+                  setIssueId={setIssueId}
                   settings={settings}
                   setSettings={setSettings}
                   errors={errors}

@@ -30,6 +30,8 @@ export type ConfigurationFormProps<
   uuid?: string
   configuration: EvaluationConfiguration<T, M> // Note: remove and just use settings
   setConfiguration: (configuration: EvaluationConfiguration<T, M>) => void // Note: remove and just use setSettings
+  issueId?: number | null
+  setIssueId?: (issueId: number | null) => void
   settings: EvaluationSettings<T, M>
   setSettings: (settings: EvaluationSettings<T, M>) => void
   errors?: Record<string, string[]>
