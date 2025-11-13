@@ -162,12 +162,6 @@ export default function EvaluationV2Form<
 
   const commitMerged = mode === 'update' && !!commit.mergedAt
 
-  const handleSetIssueId = (value: number | null) => {
-    if (setIssueId) {
-      setIssueId(value)
-    }
-  }
-
   return (
     <form className='min-w-0' id='evaluationV2Form'>
       <FormWrapper>
@@ -241,7 +235,7 @@ export default function EvaluationV2Form<
             setSettings({ ...settings, configuration: value })
           }
           issueId={issueId}
-          setIssueId={handleSetIssueId}
+          setIssueId={setIssueId}
           settings={settings}
           setSettings={setSettings}
           errors={errors}
@@ -280,7 +274,7 @@ export default function EvaluationV2Form<
                     setSettings({ ...settings, configuration: value })
                   }
                   issueId={issueId}
-                  setIssueId={handleSetIssueId}
+                  setIssueId={setIssueId}
                   settings={settings}
                   setSettings={setSettings}
                   errors={errors}

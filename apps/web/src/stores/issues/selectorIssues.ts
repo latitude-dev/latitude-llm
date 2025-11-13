@@ -28,6 +28,7 @@ const EMPTY_LIST: Issue[] = []
 export function useSearchIssues(
   {
     projectId,
+    // TODO(eval-generation): Remove commitUuid as we don't care about the commit here anymore
     commitUuid,
     documentUuid,
     query,
@@ -39,6 +40,7 @@ export function useSearchIssues(
   },
   swrConfig?: SWRConfiguration<SearchIssueResponse, any>,
 ) {
+  // TODO(eval-generation): We have to change the path as we don't care about the commit here anymore
   const base = ROUTES.api.projects.detail(projectId).commits.detail(commitUuid)
   const route = base.issues.search
   const fetcher = useFetcher<SearchIssueResponse>(route, {

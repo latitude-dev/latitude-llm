@@ -307,6 +307,7 @@ export function ConfigurationAdvancedForm<
         >
           <Select
             searchable={true}
+            // TODO(eval-generation): This will not get the issueId from page 2,3, etc. need to change with Andres feedback
             value={issueId ?? null}
             name='issueId'
             placeholder='Select an existing issue'
@@ -318,7 +319,7 @@ export function ConfigurationAdvancedForm<
               value: issue.id,
             }))}
             onSearch={onSearch}
-            onChange={(value) => setIssueId(value)}
+            onChange={setIssueId}
             errors={errors?.['issueId']}
           />
         </FormFieldGroup>

@@ -15,7 +15,6 @@ export type SearchIssueResponse = Awaited<
 
 const paramsSchema = z.object({
   projectId: z.coerce.number(),
-  commitUuid: z.string(),
   documentUuid: z.string(),
 })
 
@@ -37,7 +36,6 @@ export const GET = errorHandler(
       const query = request.nextUrl.searchParams
       const { projectId, documentUuid } = paramsSchema.parse({
         projectId: params.projectId,
-        commitUuid: params.commitUuid,
         documentUuid: query.get('documentUuid'),
       })
       const title = query.get('query')
