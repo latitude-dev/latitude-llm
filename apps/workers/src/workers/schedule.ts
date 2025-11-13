@@ -65,4 +65,11 @@ export async function setupSchedules() {
     { pattern: '0 30 11 * * *' },
     { opts: { attempts: 1 } },
   )
+
+  // Every day at 1 AM - Updates evaluation results with span references
+  await maintenanceQueue.upsertJobScheduler(
+    'updateEvaluationResultsSpanReferencesJob',
+    { pattern: '0 0 1 * * *' },
+    { opts: { attempts: 1 } },
+  )
 }
