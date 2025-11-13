@@ -8,6 +8,7 @@ import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'
 import { enqueueRun } from '../../runs/enqueue'
 import { LogSources } from '@latitude-data/constants'
+import { updateExperimentStatus } from '../updateStatus'
 
 export async function startExperiment(
   {
@@ -55,6 +56,17 @@ export async function startExperiment(
   }
 
   const { project, commit, document, experiment, rows } = updateResult.unwrap()
+
+  await updateExperimentStatus(
+    {
+      workspaceId: workspace.id,
+      experiment,
+    },
+    (progressTracker) =>
+      progressTracker.incrementEnqueued(
+        rows.length * experiment.evaluationUuids.length,
+      ),
+  )
 
   for await (const row of rows) {
     await enqueueRun({

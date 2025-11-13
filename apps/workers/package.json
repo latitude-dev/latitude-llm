@@ -6,8 +6,8 @@
   "private": true,
   "scripts": {
     "build": "tsup --config tsup.config.ts",
-    "dev": "NODE_DEBUG=latitude:debug tsx watch src/server",
-    "dev:debug": "tsx watch --inspect-brk src/server",
+    "dev": "tsx watch src/server",
+    "dev:debug": "NODE_DEBUG=latitude:debug tsx watch --inspect-brk src/server",
     "lint": "eslint src/",
     "start": "node -r module-alias/register ./dist --env=production",
     "tc": "tsc --noEmit",

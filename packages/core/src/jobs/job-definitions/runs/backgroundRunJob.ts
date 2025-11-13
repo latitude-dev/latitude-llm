@@ -144,24 +144,15 @@ export const backgroundRunJob = async (
         workspace.id,
         'evaluationsDisabled',
       )
-      if (!Result.isOk(evaluationsDisabledResult))
+      if (!Result.isOk(evaluationsDisabledResult)) {
         return evaluationsDisabledResult
+      }
 
       const evaluationsDisabled = evaluationsDisabledResult.unwrap()
       if (evaluationsDisabled) {
         // Evaluations are disabled for this workspace, skip enqueueing
         return
       }
-
-      // Enqueue evaluations for current experiment
-      await updateExperimentStatus(
-        {
-          workspaceId,
-          experiment,
-        },
-        (progressTracker) =>
-          progressTracker.incrementEnqueued(experiment!.evaluationUuids.length),
-      ).then((r) => r.unwrap())
 
       const providerLog = (await result.lastResponse)?.providerLog
       if (!providerLog) {

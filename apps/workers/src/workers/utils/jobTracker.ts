@@ -1,5 +1,6 @@
 import { Worker } from 'bullmq'
 import { scaleInProtectionManager } from './scaleInProtection'
+import debug from '@latitude-data/core/lib/debug'
 
 /**
  * Tracks active jobs across all BullMQ workers and manages scale-in protection
@@ -17,7 +18,7 @@ export class JobTracker {
     // Listen for job start events
     worker.on('active', (job) => {
       this.activeJobsCount++
-      console.log(
+      debug(
         `Job ${job?.id || 'unknown'} started processing. Active jobs: ${this.activeJobsCount}`,
       )
 
@@ -30,7 +31,7 @@ export class JobTracker {
     // Listen for job completion events
     worker.on('completed', (job) => {
       this.activeJobsCount = Math.max(0, this.activeJobsCount - 1)
-      console.log(
+      debug(
         `Job ${job?.id || 'unknown'} completed. Active jobs: ${this.activeJobsCount}`,
       )
 
@@ -43,7 +44,7 @@ export class JobTracker {
     // Listen for job failure events
     worker.on('failed', (job) => {
       this.activeJobsCount = Math.max(0, this.activeJobsCount - 1)
-      console.log(
+      debug(
         `Job ${job?.id || 'unknown'} failed. Active jobs: ${this.activeJobsCount}`,
       )
 
