@@ -184,7 +184,7 @@ export async function ai({
       text: result.text,
       toolCalls: result.toolCalls,
       type: resultType,
-      usage: result.usage,
+      usage: result.totalUsage,
     })
   } catch (e) {
     return handleAICallAPIError(e)
