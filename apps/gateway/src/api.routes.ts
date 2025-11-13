@@ -11,6 +11,7 @@ export const API_ROUTES = {
         get: '/api/v3/projects/:projectId/versions/:versionUuid',
         getAll: '/api/v3/projects/:projectId/versions',
         create: '/api/v3/projects/:projectId/versions',
+        publish: '/api/v3/projects/:projectId/versions/:versionUuid/publish',
       },
       documents: {
         get: '/api/v3/projects/:projectId/versions/:versionUuid/documents/:documentPath{.+}',

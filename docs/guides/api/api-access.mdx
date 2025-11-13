@@ -249,7 +249,148 @@ curl -X POST "https://gateway.latitude.so/api/v3/projects/123/versions/live/docu
   }'
 ```
 
-#### 4. Run a Document
+#### 4. Create a Version (Commit)
+
+Create a new draft version (commit) for a project. Versions allow you to manage changes to your prompts before publishing them to production.
+
+**Endpoint:** `POST /projects/{projectId}/versions`
+
+**Path Parameters:**
+
+- `projectId`: Your project ID (required)
+
+**Request Body:**
+
+```json
+{
+  "name": "Version name or title"
+}
+```
+
+- `name`: Name/title for the new version (required)
+
+**Response:**
+
+The response contains the created version (commit) details.
+
+**Response Body:**
+
+```json
+{
+  "id": 123,
+  "uuid": "version-uuid",
+  "projectId": 456,
+  "message": "Version name or title",
+  "authorName": "Author name",
+  "authorEmail": "author@example.com",
+  "authorId": 789,
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "status": "draft",
+  "parentCommitUuid": "parent-version-uuid"
+}
+```
+
+**Use Cases:**
+
+- **Create draft versions**: Start working on prompt changes in isolation
+- **Version control**: Track different iterations of your prompts
+- **CI/CD integration**: Programmatically create versions from your deployment pipeline
+
+**Example:**
+
+```bash
+curl -X POST "https://gateway.latitude.so/api/v3/projects/123/versions" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Feature: Add Spanish language support"
+  }'
+```
+
+#### 5. Publish a Version (Commit)
+
+Publish a draft version (commit) to make it the live/production version. This merges the draft changes and assigns it a version number.
+
+**Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/publish`
+
+**Path Parameters:**
+
+- `projectId`: Your project ID (required)
+- `versionUuid`: UUID of the draft version to publish (required)
+
+**Request Body:**
+
+```json
+{
+  "title": "Optional updated title",
+  "description": "Optional description or release notes"
+}
+```
+
+- `title`: Optional title for the published version (if not provided, uses existing title)
+- `description`: Optional description or release notes for the published version
+
+**Response:**
+
+The response contains the published version (commit) details with a version number and merged timestamp.
+
+**Response Body:**
+
+```json
+{
+  "id": 123,
+  "uuid": "version-uuid",
+  "projectId": 456,
+  "message": "Published version title",
+  "authorName": "Author name",
+  "authorEmail": "author@example.com",
+  "authorId": 789,
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "status": "merged",
+  "parentCommitUuid": "parent-version-uuid"
+}
+```
+
+<Warning>
+  Publishing a version makes it the live/production version. All documents in
+  the published version become the active versions accessible via the API. Make
+  sure to test your changes thoroughly before publishing.
+</Warning>
+
+**Use Cases:**
+
+- **Deploy to production**: Publish tested prompt changes to make them live
+- **Release management**: Track which version is currently in production
+- **Automated deployments**: Publish versions from CI/CD pipelines after successful tests
+
+**Example:**
+
+```bash
+curl -X POST "https://gateway.latitude.so/api/v3/projects/123/versions/abc-123-def-456/publish" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Feature: Add Spanish language support",
+    "description": "Added support for Spanish language queries with improved accuracy"
+  }'
+```
+
+**Error Handling:**
+
+If you try to publish a version that is already published or doesn't exist, the API returns an appropriate error:
+
+```json
+{
+  "name": "BadRequestError",
+  "message": "Cannot publish: version is not a draft",
+  "errorCode": "BadRequestError",
+  "details": {}
+}
+```
+
+#### 6. Run a Document
 
 Run a specific document (prompt) with optional parameters.
 
@@ -332,7 +473,7 @@ type ToolCall = {
 
 </Note>
 
-#### 5. Chat
+#### 7. Chat
 
 The previously described `POST /projects/{projectId}/versions/{versionUuid}/documents/run` endpoint can also be used to continue a conversation. Notice all events contain a `uuid` field that represents that conversation with the AI. You can use this uuid to continue the conversation.
 
@@ -374,7 +515,7 @@ The response is a stream of Server-Sent Events (SSE) or a single JSON response c
 
 Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
 
-#### 6. Get a Conversation
+#### 8. Get a Conversation
 
 Retrieve a conversation by its UUID. This endpoint returns the complete conversation history including all messages.
 
@@ -424,7 +565,7 @@ If the conversation is not found, the API returns a 404 status code with an erro
 }
 ```
 
-#### 7. Stop a Conversation
+#### 9. Stop a Conversation
 
 Stop an active conversation that is currently running.
 
@@ -442,7 +583,7 @@ No request body is required for this endpoint.
 
 This endpoint returns a 200 status code when the conversation is successfully stopped.
 
-#### 8. Attach to a Conversation
+#### 10. Attach to a Conversation
 
 Attach to an active conversation to receive its ongoing output.
 
@@ -509,7 +650,7 @@ The API uses standard HTTP status codes. In case of an error, the response body 
 }
 ```
 
-#### 9. Annotate a Log
+#### 11. Annotate a Log
 
 Add an annotation (evaluation score) to a log.
 
@@ -548,7 +689,7 @@ Add an annotation (evaluation score) to a log.
 }
 ```
 
-#### 10. Create Log Entry
+#### 12. Create Log Entry
 
 Create a log entry for a document.
 
