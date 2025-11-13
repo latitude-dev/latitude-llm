@@ -24,12 +24,14 @@ export async function createEvaluationV2<
     commit,
     settings,
     options,
+    issueId = null,
     workspace,
   }: {
     document: DocumentVersion
     commit: Commit
     settings: EvaluationSettings<T, M>
     options?: Partial<EvaluationOptions>
+    issueId?: number | null
     workspace: Workspace
   },
   transaction = new Transaction(),
@@ -48,12 +50,14 @@ export async function createEvaluationV2<
     settings = validation.value.settings
     options = validation.value.options
 
+    // TODO(eval-generation): Think validation logic for issues in evaluations
     const result = await tx
       .insert(evaluationVersions)
       .values({
         workspaceId: workspace.id,
         commitId: commit.id,
         documentUuid: document.documentUuid,
+        issueId,
         ...settings,
         ...options,
       })

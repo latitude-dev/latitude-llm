@@ -16,6 +16,8 @@ import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { createEvaluationV2 } from './create'
+import { createIssue } from '../issues/create'
+import { Project } from '../../schema/models/types/Project'
 
 describe('createEvaluationV2', () => {
   let mocks: {
@@ -24,12 +26,14 @@ describe('createEvaluationV2', () => {
 
   let workspace: Workspace
   let commit: Commit
+  let project: Project
   let document: DocumentVersion
   let settings: EvaluationSettings<
     EvaluationType.Rule,
     RuleEvaluationMetric.ExactMatch
   >
   let options: EvaluationOptions
+  let issueId: number | null
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -40,6 +44,7 @@ describe('createEvaluationV2', () => {
       workspace: w,
       documents,
       commit: c,
+      project: p,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
@@ -52,6 +57,7 @@ describe('createEvaluationV2', () => {
 
     workspace = w
     commit = c
+    project = p
     document = documents[0]!
 
     settings = {
@@ -76,6 +82,7 @@ describe('createEvaluationV2', () => {
       enableSuggestions: true,
       autoApplySuggestions: true,
     }
+    issueId = null
 
     mocks = {
       publisher: vi
@@ -96,6 +103,7 @@ describe('createEvaluationV2', () => {
           name: '',
         },
         options: options,
+        issueId,
         workspace: workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(new BadRequestError('Name is required'))
@@ -105,12 +113,21 @@ describe('createEvaluationV2', () => {
 
   it('succeeds when creating an evaluation', async () => {
     mocks.publisher.mockClear()
+    const creatingIssue = await createIssue({
+      title: 'title',
+      description: 'description',
+      document: document,
+      project,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+    issueId = creatingIssue.issue.id
 
     const { evaluation } = await createEvaluationV2({
       document: document,
       commit: commit,
       settings: settings,
       options: options,
+      issueId,
       workspace: workspace,
     }).then((r) => r.unwrap())
 
@@ -119,6 +136,7 @@ describe('createEvaluationV2', () => {
         workspaceId: workspace.id,
         commitId: commit.id,
         documentUuid: document.documentUuid,
+        issueId,
         ...settings,
         ...options,
       }),
@@ -133,10 +151,13 @@ describe('createEvaluationV2', () => {
       expect.objectContaining({
         id: evaluation.versionId,
         commitId: commit.id,
+        issueId,
         createdAt: expect.any(Date),
       }),
     ])
-    expect(mocks.publisher).toHaveBeenCalledExactlyOnceWith({
+    // 2 times as the issue and the evaluation are created (issue for testing cases)
+    expect(mocks.publisher).toHaveBeenCalledTimes(2)
+    expect(mocks.publisher).toHaveBeenCalledWith({
       type: 'evaluationV2Created',
       data: {
         evaluation: evaluation,

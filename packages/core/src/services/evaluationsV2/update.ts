@@ -26,12 +26,14 @@ export async function updateEvaluationV2<
     commit,
     settings,
     options,
+    issueId = null,
     workspace,
   }: {
     evaluation: EvaluationV2<T, M>
     commit: Commit
     settings?: Partial<Omit<EvaluationSettings<T, M>, 'type' | 'metric'>>
     options?: Partial<EvaluationOptions>
+    issueId?: number | null
     workspace: Workspace
   },
   transaction = new Transaction(),
@@ -61,6 +63,7 @@ export async function updateEvaluationV2<
     if (!options) options = {}
     options = compactObject(options)
 
+    // TODO(eval-generation): Think validation logic for issues in evaluations
     const validating = await validateEvaluationV2(
       {
         mode: 'update',
@@ -83,6 +86,7 @@ export async function updateEvaluationV2<
         ...evaluation,
         id: undefined,
         commitId: commit.id,
+        issueId,
         ...settings,
         ...options,
         updatedAt: new Date(),
