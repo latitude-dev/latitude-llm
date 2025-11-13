@@ -1,3 +1,4 @@
+import { env } from '@latitude-data/env'
 import { cache as getCache } from '../../cache'
 import {
   EvaluationType,
@@ -59,6 +60,8 @@ export function updateCentroid(
   operation: 'add' | 'remove',
   timestamp: Date,
 ): IssueCentroid {
+  if (!env.WEAVIATE_API_KEY) return centroid
+
   if (centroid.base.length === 0) {
     centroid = {
       ...centroid,
@@ -158,6 +161,8 @@ export function embedCentroid(centroid: IssueCentroid): number[] {
 }
 
 export async function embedReason(reason: string) {
+  if (!env.VOYAGE_API_KEY) return Result.ok<number[]>([])
+
   try {
     const cache = await getCache()
     const key = ISSUE_EMBEDDING_CACHE_KEY(hashContent(reason))

@@ -8,6 +8,7 @@ import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
 import { getIssuesCollection } from '../../weaviate'
 import { embedCentroid } from './shared'
+import { env } from '@latitude-data/env'
 
 export async function updateIssue(
   {
@@ -89,6 +90,8 @@ async function upsertVector({
   description?: string
   centroid?: IssueCentroid
 }) {
+  if (!env.WEAVIATE_API_KEY) return Result.nil()
+
   const embedding = centroid ? embedCentroid(centroid) : undefined
 
   try {

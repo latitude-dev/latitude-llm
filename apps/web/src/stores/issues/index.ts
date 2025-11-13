@@ -145,3 +145,7 @@ export function useIssues(
     [data, isLoading, initServerData],
   )
 }
+
+// Export the new stores
+export * from './evaluationResults'
+export * from './logs'
