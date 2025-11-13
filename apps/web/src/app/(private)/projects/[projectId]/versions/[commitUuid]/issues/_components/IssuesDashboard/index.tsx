@@ -83,14 +83,6 @@ export function IssuesDashboard({
       fallbackData: serverResponse,
     },
   )
-  // const issueIds = useMemo(
-  //   () => issues?.map((issue) => issue.id) ?? [],
-  //   [issues],
-  // )
-  //
-  // useEffect(() => {
-  //   fetchMiniStatsInBatch({ issueIds })
-  // }, [issueIds, fetchMiniStatsInBatch])
 
   useOnce(() => {
     // Initialize server data for SWR
