@@ -1,5 +1,7 @@
 // TODO(AO): implement this
 
+import { Issue } from '../../schema/models/types/Issue'
+
 /*
 - check LATITUDE_CLOUD
 - Search the candidate-related issues by cosine similarity on their centroid embedding. Filter by 80% similarity.
@@ -14,3 +16,7 @@
 - Enqueue generateIssueDetails job
 - Publish issueMerged event
 */
+
+export async function mergeIssue({ issue }: { issue: Issue }) {
+  // TODO(AO): implement this
+}
