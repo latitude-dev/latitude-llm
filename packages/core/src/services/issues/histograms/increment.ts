@@ -27,7 +27,6 @@ export async function incrementIssueHistogram(
   const updatedAt = new Date()
 
   const date = format(result.createdAt, 'yyyy-MM-dd')
-
   return await transaction.call(
     async (tx) => {
       const histogram = (await tx
@@ -40,6 +39,7 @@ export async function incrementIssueHistogram(
           commitId: commit.id,
           date: date,
           count: 1,
+          occurredAt: result.createdAt,
           createdAt: updatedAt,
           updatedAt: updatedAt,
         })
@@ -51,6 +51,7 @@ export async function incrementIssueHistogram(
           ],
           set: {
             count: sql<number>`${issueHistograms.count} + 1`,
+            occurredAt: sql<Date>`GREATEST(${issueHistograms.occurredAt}, ${result.createdAt})`,
             updatedAt: updatedAt,
           },
         })

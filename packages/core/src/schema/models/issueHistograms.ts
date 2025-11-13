@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  timestamp,
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
@@ -33,6 +34,9 @@ export const issueHistograms = latitudeSchema.table(
       .notNull()
       .references(() => commits.id, { onDelete: 'restrict' }),
     date: date('date').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     count: integer('count').notNull(),
     ...timestamps(),
   },
@@ -43,6 +47,9 @@ export const issueHistograms = latitudeSchema.table(
     index('issue_histograms_date_idx').on(table.date),
     index('issue_histograms_project_id_idx').on(table.projectId),
     index('issue_histograms_document_uuid_idx').on(table.documentUuid),
+    index('issue_histograms_occurred_at_brin_idx')
+      .using('brin', sql`${table.occurredAt}`)
+      .with({ pages_per_range: 32, autosummarize: true }),
     index('issue_histograms_date_brin_idx')
       .using('brin', sql`${table.date}`)
       .with({ pages_per_range: 32, autosummarize: true }),
