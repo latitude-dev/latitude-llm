@@ -14,6 +14,7 @@ import { BasicInfoList } from '$/app/(admin)/backoffice/search/_components/Basic
 import { DashboardHeader } from '$/app/(admin)/backoffice/search/_components/DashboardHeader'
 import { DataTable } from '$/app/(admin)/backoffice/search/_components/DataTable'
 import { ClearCacheButton } from '../ClearCacheButton'
+import { ChangePlanButton } from '../ChangePlanButton'
 
 type Props = {
   workspace: WorkspaceWithDetails
@@ -78,7 +79,11 @@ export function WorkspaceDashboard({ workspace }: Props) {
 
         <BasicInfoList items={basicInfo} title='Workspace Information' />
 
-        <div className='flex justify-end'>
+        <div className='flex justify-end gap-2'>
+          <ChangePlanButton
+            workspaceId={workspace.id}
+            currentPlan={workspace.subscription.plan}
+          />
           <ClearCacheButton workspaceId={workspace.id} />
         </div>
 
