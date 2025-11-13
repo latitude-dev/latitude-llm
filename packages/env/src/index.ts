@@ -25,7 +25,6 @@ if (environment === 'development' || environment === 'test') {
     {
       CACHE_HOST: '0.0.0.0',
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
-      WEAVIATE_API_KEY: 'secret',
       WEAVIATE_HOST: '0.0.0.0',
       WEAVIATE_HTTP_PORT: '8099',
       WEAVIATE_GRPC_PORT: '50051',
