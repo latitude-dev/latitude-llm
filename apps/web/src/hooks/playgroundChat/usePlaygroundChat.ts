@@ -47,8 +47,6 @@ function useAnnotationData({
   }, [documentLog, providerLogs])
 
   const isReady = !!documentLog && !!providerLog
-
-  console.log('StreamFinished', streamFinished)
   return useMemo(() => {
     if (!isReady) {
       return {
