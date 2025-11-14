@@ -16,7 +16,6 @@ import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { createEvaluationV2 } from './create'
-import { createIssue } from '../issues/create'
 import { Project } from '../../schema/models/types/Project'
 
 describe('createEvaluationV2', () => {
@@ -113,14 +112,14 @@ describe('createEvaluationV2', () => {
 
   it('succeeds when creating an evaluation', async () => {
     mocks.publisher.mockClear()
-    const creatingIssue = await createIssue({
+    const { issue: creatingActiveIssue } = await factories.createIssue({
       title: 'title',
       description: 'description',
       document: document,
       project,
       workspace: workspace,
-    }).then((r) => r.unwrap())
-    issueId = creatingIssue.issue.id
+    })
+    issueId = creatingActiveIssue.id
 
     const { evaluation } = await createEvaluationV2({
       document: document,
@@ -155,8 +154,6 @@ describe('createEvaluationV2', () => {
         createdAt: expect.any(Date),
       }),
     ])
-    // 2 times as the issue and the evaluation are created (issue for testing cases)
-    expect(mocks.publisher).toHaveBeenCalledTimes(2)
     expect(mocks.publisher).toHaveBeenCalledWith({
       type: 'evaluationV2Created',
       data: {

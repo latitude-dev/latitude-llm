@@ -361,6 +361,9 @@ export const API_ROUTES = {
                   }
                 },
               },
+              issues: {
+                search: `${documentRoot}/issues/search`,
+              },
             }
           },
         },
