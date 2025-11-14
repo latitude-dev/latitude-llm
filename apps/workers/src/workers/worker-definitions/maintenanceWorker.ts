@@ -26,8 +26,5 @@ const jobMappings = {
 export function startMaintenanceWorker() {
   setupLRO() // Setup LRO for the maintenance worker
 
-  return createWorker(Queues.maintenanceQueue, jobMappings, {
-    concurrency: 10,
-    connection: WORKER_CONNECTION_CONFIG,
-  })
+  return createWorker(Queues.maintenanceQueue, jobMappings)
 }
