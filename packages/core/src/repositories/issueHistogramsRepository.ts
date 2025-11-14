@@ -111,6 +111,12 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
         `,
           )
           .as('recentCount'),
+        firstOccurredAt: sql<Date>`MIN(${issueHistograms.occurredAt})`.as(
+          'firstOccurredAt',
+        ),
+        lastOccurredAt: sql<Date>`MAX(${issueHistograms.occurredAt})`.as(
+          'lastOccurredAt',
+        ),
         firstSeenDate: sql<Date>`MIN(${issueHistograms.date})`.as(
           'firstSeenDate',
         ),

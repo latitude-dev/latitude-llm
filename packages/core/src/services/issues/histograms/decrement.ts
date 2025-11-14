@@ -25,7 +25,6 @@ export async function decrementIssueHistogram(
   transaction = new Transaction(),
 ) {
   const updatedAt = new Date()
-
   const date = format(result.createdAt, 'yyyy-MM-dd')
 
   return await transaction.call(
@@ -40,6 +39,7 @@ export async function decrementIssueHistogram(
           commitId: commit.id,
           date: date,
           count: 0,
+          occurredAt: result.createdAt,
           createdAt: updatedAt,
           updatedAt: updatedAt,
         })
@@ -51,6 +51,7 @@ export async function decrementIssueHistogram(
           ],
           set: {
             count: sql<number>`GREATEST(${issueHistograms.count} - 1, 0)`,
+            occurredAt: sql<Date>`GREATEST(${issueHistograms.occurredAt}, ${result.createdAt})`,
             updatedAt: updatedAt,
           },
         })

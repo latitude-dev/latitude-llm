@@ -213,6 +213,8 @@ export class IssuesRepository extends Repository<Issue> {
         ...tt,
         recentCount: subquery.recentCount,
         totalCount: subquery.totalCount,
+        firstOccurredAt: subquery.firstOccurredAt,
+        lastOccurredAt: subquery.lastOccurredAt,
         firstSeenDate: subquery.firstSeenDate,
         lastSeenDate: subquery.lastSeenDate,
         escalatingCount: subquery.escalatingCount,
@@ -224,8 +226,8 @@ export class IssuesRepository extends Repository<Issue> {
           'isResolved',
         ),
         isRegressed: sql<boolean>`(
-          ${issues.resolvedAt} IS NOT NULL 
-          AND ${issues.ignoredAt} IS NULL 
+          ${issues.resolvedAt} IS NOT NULL
+          AND ${issues.ignoredAt} IS NULL
           AND ${subquery.lastSeenDate} > ${issues.resolvedAt}
         )`.as('isRegressed'),
         isEscalating: sql<boolean>`(
