@@ -330,8 +330,8 @@ export function ConfigurationAdvancedForm<
           layout='horizontal'
         >
           <Select
-            searchable={true}
-            removable={true}
+            searchable
+            removable
             value={selectedIssue?.id}
             name='issueId'
             placeholder='Select an existing issue'

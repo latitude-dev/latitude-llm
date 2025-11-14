@@ -11,11 +11,11 @@ import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { IssuesRepository } from '../../repositories/issuesRepository'
+import { ProjectsRepository } from '../../repositories/projectsRepository'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Issue } from '../../schema/models/types/Issue'
-import { Project } from '../../schema/models/types/Project'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { validateEvaluationV2 } from './validate'
 
@@ -30,7 +30,6 @@ export async function createEvaluationV2<
     options,
     issueId = null,
     workspace,
-    project,
   }: {
     document: DocumentVersion
     commit: Commit
@@ -38,18 +37,26 @@ export async function createEvaluationV2<
     options?: Partial<EvaluationOptions>
     issueId?: number | null
     workspace: Workspace
-    project?: Project
   },
   transaction = new Transaction(),
 ) {
   return await transaction.call(async (tx) => {
     if (!options) options = {}
     options = compactObject(options)
-
     let issue: Issue | null = null
-    if (issueId && project) {
+
+    if (issueId) {
       const issuesRepository = new IssuesRepository(workspace.id, tx)
-      issue = await issuesRepository.findById({ project, issueId })
+      const projectRepository = new ProjectsRepository(workspace.id, tx)
+      const projectResult = await projectRepository.find(commit.projectId)
+      if (!Result.isOk(projectResult)) {
+        return projectResult
+      }
+      const project = projectResult.unwrap()
+      issue = await issuesRepository.findById({
+        project,
+        issueId,
+      })
       if (!issue) {
         return Result.error(new BadRequestError('Issue not found'))
       }
