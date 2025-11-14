@@ -11,11 +11,17 @@ import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { compactObject } from '../../lib/compactObject'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { DocumentVersionsRepository } from '../../repositories'
+import {
+  DocumentVersionsRepository,
+  IssuesRepository,
+  ProjectsRepository,
+} from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { validateEvaluationV2 } from './validate'
+import { Issue } from '../../schema/models/types/Issue'
+import { BadRequestError } from '../../lib/errors'
 
 export async function updateEvaluationV2<
   T extends EvaluationType,
@@ -31,10 +37,10 @@ export async function updateEvaluationV2<
   }: {
     evaluation: EvaluationV2<T, M>
     commit: Commit
+    workspace: Workspace
     settings?: Partial<Omit<EvaluationSettings<T, M>, 'type' | 'metric'>>
     options?: Partial<EvaluationOptions>
     issueId?: number | null
-    workspace: Workspace
   },
   transaction = new Transaction(),
 ) {
@@ -63,7 +69,24 @@ export async function updateEvaluationV2<
     if (!options) options = {}
     options = compactObject(options)
 
-    // TODO(eval-generation): Think validation logic for issues in evaluations
+    let issue: Issue | null = null
+    if (issueId) {
+      const issuesRepository = new IssuesRepository(workspace.id, tx)
+      const projectRepository = new ProjectsRepository(workspace.id, tx)
+      const projectResult = await projectRepository.find(commit.projectId)
+      if (!Result.isOk(projectResult)) {
+        return projectResult
+      }
+      const project = projectResult.unwrap()
+      issue = await issuesRepository.findById({
+        project,
+        issueId,
+      })
+      if (!issue) {
+        return Result.error(new BadRequestError('Issue not found'))
+      }
+    }
+
     const validating = await validateEvaluationV2(
       {
         mode: 'update',
@@ -73,6 +96,7 @@ export async function updateEvaluationV2<
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: issue,
       },
       tx,
     )

@@ -67,7 +67,6 @@ export function IssuesSelector() {
 
   const { data: serachIssues, isLoading: isSearchingIssues } = useSearchIssues({
     projectId,
-    commitUuid: commit.uuid,
     documentUuid,
     query,
   })
