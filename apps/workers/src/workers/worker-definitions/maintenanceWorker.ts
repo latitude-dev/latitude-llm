@@ -17,6 +17,8 @@ const jobMappings = {
   scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
   scheduleUpdateEvaluationResultsSpanReferencesJobs:
     jobs.scheduleUpdateEvaluationResultsSpanReferencesJobs,
+  scheduleUpdateEvaluationResultsSpanReferencesForPaidJobs:
+    jobs.scheduleUpdateEvaluationResultsSpanReferencesForPaidJobs,
   updateEvaluationResultsSpanReferencesJob:
     jobs.updateEvaluationResultsSpanReferencesJob,
   updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
