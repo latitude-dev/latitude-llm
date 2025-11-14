@@ -367,13 +367,6 @@ export function ResultPanel<
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
 
-  const {
-    data: evaluatedDocumentLog,
-    isLoading: isLoadingEvaluatedDocumentLog,
-  } = useSpan({ traceId: evaluatedTraceId, spanId: evaluatedSpanId })
-
-  const isLoading = isLoadingEvaluatedDocumentLog || !evaluatedDocumentLog
-
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
 
@@ -388,65 +381,61 @@ export function ResultPanel<
         ]}
         className='w-full'
       >
-        {({ selectedTab }) =>
-          isLoading ? (
-            <ResultPanelLoading />
-          ) : (
-            <>
-              {selectedTab === 'metadata' && (
-                <ResultPanelMetadata
-                  evaluation={evaluation}
-                  result={result}
-                  commit={commit}
-                  evaluatedTraceId={evaluatedTraceId}
-                  evaluatedSpanId={evaluatedSpanId}
-                  panelRef={panelRef}
-                  tableRef={tableRef}
-                  selectedTab={selectedTab}
-                  {...rest}
-                />
-              )}
-              {!!typeSpecification.ResultPanelContent && (
-                <typeSpecification.ResultPanelContent
-                  metric={evaluation.metric}
-                  evaluation={evaluation}
-                  result={result}
-                  commit={commit}
-                  evaluatedTraceId={evaluatedTraceId}
-                  evaluatedSpanId={evaluatedSpanId}
-                  panelRef={panelRef}
-                  tableRef={tableRef}
-                  selectedTab={selectedTab}
-                  {...rest}
-                />
-              )}
-              <div className='w-full flex justify-center pt-4'>
-                <Link
-                  href={EvaluatedTraceLink({
-                    project: project,
-                    commit: commit,
-                    document: document,
-                    traceId: result.evaluatedTraceId!,
-                    spanId: result.evaluatedSpanId!,
-                  })}
-                  target='_blank'
+        {({ selectedTab }) => (
+          <>
+            {selectedTab === 'metadata' && (
+              <ResultPanelMetadata
+                evaluation={evaluation}
+                result={result}
+                commit={commit}
+                evaluatedTraceId={evaluatedTraceId}
+                evaluatedSpanId={evaluatedSpanId}
+                panelRef={panelRef}
+                tableRef={tableRef}
+                selectedTab={selectedTab}
+                {...rest}
+              />
+            )}
+            {!!typeSpecification.ResultPanelContent && (
+              <typeSpecification.ResultPanelContent
+                metric={evaluation.metric}
+                evaluation={evaluation}
+                result={result}
+                commit={commit}
+                evaluatedTraceId={evaluatedTraceId}
+                evaluatedSpanId={evaluatedSpanId}
+                panelRef={panelRef}
+                tableRef={tableRef}
+                selectedTab={selectedTab}
+                {...rest}
+              />
+            )}
+            <div className='w-full flex justify-center pt-4'>
+              <Link
+                href={EvaluatedTraceLink({
+                  project: project,
+                  commit: commit,
+                  document: document,
+                  traceId: result.evaluatedTraceId!,
+                  spanId: result.evaluatedSpanId!,
+                })}
+                target='_blank'
+              >
+                <Button
+                  variant='link'
+                  iconProps={{
+                    name: 'arrowRight',
+                    widthClass: 'w-4',
+                    heightClass: 'h-4',
+                    placement: 'right',
+                  }}
                 >
-                  <Button
-                    variant='link'
-                    iconProps={{
-                      name: 'arrowRight',
-                      widthClass: 'w-4',
-                      heightClass: 'h-4',
-                      placement: 'right',
-                    }}
-                  >
-                    Check evaluated log
-                  </Button>
-                </Link>
-              </div>
-            </>
-          )
-        }
+                  Check evaluated log
+                </Button>
+              </Link>
+            </div>
+          </>
+        )}
       </MetadataInfoTabs>
     </div>
   )

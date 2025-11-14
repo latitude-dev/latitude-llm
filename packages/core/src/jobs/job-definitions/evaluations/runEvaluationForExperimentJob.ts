@@ -42,7 +42,7 @@ export async function runEvaluationForExperimentJob(
   const payload: RunEvaluationV2JobData = {
     workspaceId,
     spanId: span.id,
-    traceId: trace,
+    traceId: span.traceId,
     ...rest,
   }
 
