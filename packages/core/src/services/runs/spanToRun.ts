@@ -22,7 +22,7 @@ export async function spanToRun({
   workspaceId: number
   span: Span<SpanType.Prompt>
 }): Promise<CompletedRun> {
-  let caption = 'Run finished successfully without any response'
+  const caption = 'Run finished successfully without any response'
   const evalsRepo = new EvaluationsV2Repository(workspaceId)
   const repository = new EvaluationResultsV2Repository(workspaceId)
   const results = await repository.listBySpans([span]).then((r) => r.value)
