@@ -71,7 +71,7 @@ export function ExperimentsTable({
       pageSize,
     },
     {
-      refreshInterval: 5000, // 5 seconds
+      refreshInterval: 30_000, // 30 seconds
     },
   )
 

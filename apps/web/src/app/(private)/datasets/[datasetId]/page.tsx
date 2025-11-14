@@ -69,8 +69,7 @@ async function getData({
   }
 
   const size = pageSize ?? ROWS_PAGE_SIZE
-  const resultCount = await rowsRepo.getCountByDataset(dataset.id)
-  const count = !resultCount[0] ? 0 : resultCount[0].count
+  const count = await rowsRepo.getCountByDataset(dataset.id)
   const rows = await rowsRepo.findByDatasetPaginated({
     datasetId: dataset.id,
     page,

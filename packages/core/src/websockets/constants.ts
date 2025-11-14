@@ -45,14 +45,6 @@ export type WebSocketData = {
 }
 export type WorkerPayload = {}
 
-type DocumentBatchRunStatusArgs = {
-  documentUuid: string
-  total: number
-  completed: number
-  errors: number
-  enqueued: number
-}
-
 type ExperimentStatusArgs = {
   experiment: ExperimentDto
 }
@@ -182,7 +174,6 @@ type RunStatusArgs = {
 }
 
 export type WebServerToClientEvents = {
-  documentBatchRunStatus: (args: DocumentBatchRunStatusArgs) => void
   experimentStatus: (args: ExperimentStatusArgs) => void
   datasetRowsCreated: (args: DatasetRowsCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
@@ -205,10 +196,6 @@ export type WebClientToServerEvents = {
 }
 
 export type WorkersClientToServerEvents = {
-  documentBatchRunStatus: (args: {
-    workspaceId: number
-    data: DocumentBatchRunStatusArgs
-  }) => void
   datasetRowsCreated: (args: {
     workspaceId: number
     data: DatasetRowsCreatedArgs

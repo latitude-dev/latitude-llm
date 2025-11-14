@@ -120,12 +120,14 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
     return { position, page }
   }
 
-  getCountByDataset(datasetId: number) {
-    return this.db
+  async getCountByDataset(datasetId: number) {
+    const [result] = await this.db
       .select({
         count: count(datasetRows.id),
       })
       .from(datasetRows)
       .where(and(this.scopeFilter, eq(datasetRows.datasetId, datasetId)))
+
+    return result?.count
   }
 }

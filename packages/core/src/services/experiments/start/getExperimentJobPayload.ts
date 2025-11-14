@@ -29,10 +29,12 @@ import {
 } from 'drizzle-orm'
 import { documentLogs } from '../../../schema/models/documentLogs'
 import { commits } from '../../../schema/models/commits'
+import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 
 export type ExperimentRow = {
-  id: number
+  uuid: string
   parameters: Record<string, unknown>
+  datasetRowId?: number
 }
 
 async function getExperimentRows(
@@ -51,7 +53,7 @@ async function getExperimentRows(
 ): Promise<ExperimentRow[]> {
   const from = fromRow ? Math.abs(fromRow) : 1
   const to = toRow ? Math.abs(toRow) : undefined
-  const { rows } = await getRowsFromRange(
+  const { rows: datasetRows } = await getRowsFromRange(
     {
       dataset,
       fromLine: from,
@@ -60,13 +62,14 @@ async function getExperimentRows(
     db,
   )
 
-  return rows.map((row) => {
+  return datasetRows.map((datasetRow) => {
     return {
-      id: row.id,
+      datasetRowId: datasetRow.id,
+      uuid: generateUUIDIdentifier(),
       parameters: Object.fromEntries(
         Object.entries(parametersMap!).map(([parameter, index]) => {
           const column = dataset.columns[index]!
-          const value = row.values[column.identifier] as string
+          const value = datasetRow.values[column.identifier] as string
 
           return [parameter, value]
         }),
@@ -106,8 +109,9 @@ async function getExperimentLogsRows(
     .limit(count)
 
   return logs.map((log) => ({
-    id: log.id,
+    uuid: log.uuid,
     parameters: log.parameters,
+    datasetRowId: undefined,
   }))
 }
 
@@ -125,7 +129,7 @@ export async function getExperimentJobPayload(
   commit: Commit
   document: DocumentVersion
   evaluations: EvaluationV2[]
-  rows: (ExperimentRow | undefined)[]
+  rows: ExperimentRow[]
 }> {
   const commitResult = await new CommitsRepository(
     workspace.id,

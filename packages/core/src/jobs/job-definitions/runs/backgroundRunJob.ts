@@ -135,6 +135,15 @@ export const backgroundRunJob = async (
     })
 
     if (experiment) {
+      // Mark document as finished (success)
+      await updateExperimentStatus(
+        {
+          workspaceId,
+          experiment,
+        },
+        (progressTracker) => progressTracker.documentRunFinished(runUuid, true),
+      )
+
       // TODO(): This is temporary while we think of a more long lasting solution to ban/rate limit users
       const evaluationsDisabledResult = await isFeatureEnabledByName(
         workspace.id,
@@ -149,16 +158,6 @@ export const backgroundRunJob = async (
         // Evaluations are disabled for this workspace, skip enqueueing
         return
       }
-
-      // Enqueue evaluations for current experiment
-      await updateExperimentStatus(
-        {
-          workspaceId,
-          experiment,
-        },
-        (progressTracker) =>
-          progressTracker.incrementEnqueued(experiment!.evaluationUuids.length),
-      ).then((r) => r.unwrap())
 
       const { evaluationsQueue } = await queues()
       const parametersSource = experiment.metadata.parametersSource
@@ -186,14 +185,14 @@ export const backgroundRunJob = async (
     writeStream.write({ type: ChainEventTypes.ChainError, data: error })
 
     if (experiment) {
-      // Mark evaluations as failed since they will not be run
+      // Mark document as finished (error)
       await updateExperimentStatus(
         {
           workspaceId,
           experiment,
         },
         (progressTracker) =>
-          progressTracker.incrementErrors(experiment!.evaluationUuids.length),
+          progressTracker.documentRunFinished(runUuid, false),
       )
     }
   } finally {

@@ -23,6 +23,7 @@ import {
   runEvaluationV2Job,
   type RunEvaluationV2JobData,
 } from './runEvaluationV2Job'
+import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 
 vi.mock(import('../../../redis'), async (importOriginal) => {
   const actual = await importOriginal()
@@ -35,17 +36,13 @@ vi.mock(import('../../../redis'), async (importOriginal) => {
 const runEvaluationV2Spy = vi.spyOn(evaluationsV2, 'runEvaluationV2')
 
 // Spy on ProgressTracker
-const incrementCompletedSpy = vi.fn()
-const incrementFailedSpy = vi.fn()
-const incrementErrorsSpy = vi.fn()
-const incrementTotalScoreSpy = vi.fn()
+const evaluationFinishedSpy = vi.fn()
+const evaluationErrorSpy = vi.fn()
 
 vi.spyOn(WebsocketClient, 'sendEvent').mockImplementation(vi.fn())
 vi.spyOn(progressTracker, 'ProgressTracker').mockImplementation(() => ({
-  incrementCompleted: incrementCompletedSpy,
-  incrementFailed: incrementFailedSpy,
-  incrementErrors: incrementErrorsSpy,
-  incrementTotalScore: incrementTotalScoreSpy,
+  evaluationFinished: evaluationFinishedSpy,
+  evaluationError: evaluationErrorSpy,
   // @ts-expect-error - mock
   getProgress: vi.fn(() => Promise.resolve({ completed: 1, total: 1 })),
   cleanup: vi.fn(),
@@ -119,6 +116,7 @@ describe('runEvaluationV2Job', () => {
       type: SpanType.Prompt,
       documentUuid: documentVersion.documentUuid,
       commitUuid: setup.commit.uuid,
+      documentLogUuid: generateUUIDIdentifier(),
     })
 
     commit = setup.commit
@@ -178,10 +176,11 @@ describe('runEvaluationV2Job', () => {
 
       await runEvaluationV2Job(jobData)
 
-      expect(incrementCompletedSpy).toHaveBeenCalledTimes(1)
-      expect(incrementTotalScoreSpy).toHaveBeenCalledWith(0.8)
-      expect(incrementFailedSpy).not.toHaveBeenCalled()
-      expect(incrementErrorsSpy).not.toHaveBeenCalled()
+      expect(evaluationFinishedSpy).toHaveBeenCalledWith(
+        span.documentLogUuid!,
+        { passed: true, score: 0.8 },
+      )
+      expect(evaluationErrorSpy).not.toHaveBeenCalled()
     })
 
     it('increments failed counter when evaluation fails', async () => {
@@ -198,10 +197,11 @@ describe('runEvaluationV2Job', () => {
 
       await runEvaluationV2Job(jobData)
 
-      expect(incrementFailedSpy).toHaveBeenCalledTimes(1)
-      expect(incrementCompletedSpy).toHaveBeenCalledTimes(0)
-      expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
-      expect(incrementErrorsSpy).not.toHaveBeenCalled()
+      expect(evaluationFinishedSpy).toHaveBeenCalledWith(
+        span.documentLogUuid!,
+        { passed: false, score: 0 },
+      )
+      expect(evaluationErrorSpy).not.toHaveBeenCalled()
     })
 
     it('increments error counter when evaluation errors', async () => {
@@ -218,10 +218,8 @@ describe('runEvaluationV2Job', () => {
 
       await runEvaluationV2Job(jobData)
 
-      expect(incrementErrorsSpy).toHaveBeenCalledTimes(1)
-      expect(incrementFailedSpy).not.toHaveBeenCalled()
-      expect(incrementCompletedSpy).not.toHaveBeenCalled()
-      expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
+      expect(evaluationErrorSpy).toHaveBeenCalledWith(span.documentLogUuid!)
+      expect(evaluationFinishedSpy).not.toHaveBeenCalled()
     })
 
     it('increments error counter when evaluation throws', async () => {
@@ -235,10 +233,8 @@ describe('runEvaluationV2Job', () => {
 
       await runEvaluationV2Job(jobData)
 
-      expect(incrementErrorsSpy).toHaveBeenCalledTimes(1)
-      expect(incrementFailedSpy).not.toHaveBeenCalled()
-      expect(incrementCompletedSpy).not.toHaveBeenCalled()
-      expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
+      expect(evaluationErrorSpy).toHaveBeenCalledWith(span.documentLogUuid!)
+      expect(evaluationFinishedSpy).not.toHaveBeenCalled()
     })
 
     it('retries on rate limit error', async () => {
@@ -258,10 +254,8 @@ describe('runEvaluationV2Job', () => {
         }),
       )
 
-      expect(incrementCompletedSpy).not.toHaveBeenCalled()
-      expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
-      expect(incrementFailedSpy).not.toHaveBeenCalled()
-      expect(incrementErrorsSpy).not.toHaveBeenCalled()
+      expect(evaluationFinishedSpy).not.toHaveBeenCalled()
+      expect(evaluationErrorSpy).not.toHaveBeenCalled()
     })
 
     it('does not run evaluation if experiment is finished', async () => {
@@ -278,10 +272,8 @@ describe('runEvaluationV2Job', () => {
       )
       await runEvaluationV2Job(jobData)
       expect(runEvaluationV2Spy).not.toHaveBeenCalled()
-      expect(incrementCompletedSpy).not.toHaveBeenCalled()
-      expect(incrementFailedSpy).not.toHaveBeenCalled()
-      expect(incrementErrorsSpy).not.toHaveBeenCalled()
-      expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
+      expect(evaluationFinishedSpy).not.toHaveBeenCalled()
+      expect(evaluationErrorSpy).not.toHaveBeenCalled()
     })
   })
 
@@ -340,10 +332,8 @@ describe('runEvaluationV2Job', () => {
         },
         workspace,
       })
-      expect(incrementCompletedSpy).not.toHaveBeenCalled()
-      expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
-      expect(incrementFailedSpy).not.toHaveBeenCalled()
-      expect(incrementErrorsSpy).not.toHaveBeenCalled()
+      expect(evaluationFinishedSpy).not.toHaveBeenCalled()
+      expect(evaluationErrorSpy).not.toHaveBeenCalled()
     })
   })
 

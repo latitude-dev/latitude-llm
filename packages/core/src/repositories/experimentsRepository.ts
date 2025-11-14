@@ -83,18 +83,21 @@ export class ExperimentsRepository extends Repository<Experiment> {
       this.db
         .select({
           experimentId: evaluationResultsV2.experimentId,
-          passedEvals: sql<number>`
-            COUNT(CASE WHEN ${evaluationResultsV2.hasPassed} = TRUE THEN 1 END)
-          `.as('passed_evals'),
-          failedEvals: sql<number>`
-            COUNT(CASE WHEN ${evaluationResultsV2.hasPassed} = FALSE THEN 1 END)
-          `.as('failed_evals'),
-          evalErrors: sql<number>`
-            COUNT(CASE WHEN ${evaluationResultsV2.error} IS NOT NULL THEN 1 END)
-          `.as('eval_errors'),
-          totalScore: sql<number>`
-            SUM(${evaluationResultsV2.normalizedScore})
-          `.as('total_score'),
+          passedEvals:
+            sql<number>`COUNT(CASE WHEN ${evaluationResultsV2.hasPassed} = TRUE THEN 1 END)`
+              .mapWith(Number)
+              .as('passed_evals'),
+          failedEvals:
+            sql<number>`COUNT(CASE WHEN ${evaluationResultsV2.hasPassed} = FALSE THEN 1 END)`
+              .mapWith(Number)
+              .as('failed_evals'),
+          evalErrors:
+            sql<number>`COUNT(CASE WHEN ${evaluationResultsV2.error} IS NOT NULL THEN 1 END)`
+              .mapWith(Number)
+              .as('eval_errors'),
+          totalScore: sql<number>`SUM(${evaluationResultsV2.normalizedScore})`
+            .mapWith(Number)
+            .as('total_score'),
         })
         .from(evaluationResultsV2)
         .innerJoin(
@@ -143,25 +146,21 @@ export class ExperimentsRepository extends Repository<Experiment> {
           .with(evaluationAggregation, logsAggregation)
           .select({
             id: experiments.id,
-            passedEvals:
-              sql<number>`MAX(${evaluationAggregation.passedEvals})`.as(
-                'passed_evals',
-              ),
-            failedEvals:
-              sql<number>`MAX(${evaluationAggregation.failedEvals})`.as(
-                'failed_evals',
-              ),
-            evalErrors:
-              sql<number>`MAX(${evaluationAggregation.evalErrors})`.as(
-                'eval_errors',
-              ),
-            totalScore:
-              sql<number>`MAX(${evaluationAggregation.totalScore})`.as(
-                'total_score',
-              ),
-            logErrors: sql<number>`MAX(${logsAggregation.logErrors})`.as(
-              'log_errors',
-            ),
+            passedEvals: sql<number>`MAX(${evaluationAggregation.passedEvals})`
+              .mapWith(Number)
+              .as('passed_evals'),
+            failedEvals: sql<number>`MAX(${evaluationAggregation.failedEvals})`
+              .mapWith(Number)
+              .as('failed_evals'),
+            evalErrors: sql<number>`MAX(${evaluationAggregation.evalErrors})`
+              .mapWith(Number)
+              .as('eval_errors'),
+            totalScore: sql<number>`MAX(${evaluationAggregation.totalScore})`
+              .mapWith(Number)
+              .as('total_score'),
+            logErrors: sql<number>`MAX(${logsAggregation.logErrors})`
+              .mapWith(Number)
+              .as('log_errors'),
           })
           .from(experiments)
           .leftJoin(
@@ -407,6 +406,27 @@ export class ExperimentsRepository extends Repository<Experiment> {
       totalScore: number
     },
   ): ExperimentDto => {
+    const passedEvals = row.passedEvals ?? 0
+    const failedEvals = row.failedEvals ?? 0
+    const evalErrors = row.evalErrors ?? 0
+    const logErrors = row.logErrors ?? 0
+    const totalScore = row.totalScore ?? 0
+
+    // A row is "completed" when:
+    // - The document log returned an error (counts as completed)
+    // - All evaluations for that row have finished (either passed, failed, or errored).
+
+    const completedEvals = passedEvals + failedEvals + evalErrors
+    const evalCount = row.evaluationUuids.length
+
+    // How many full evaluation cycles are complete.
+    // (If there are N expected evaluations, we only count a "completed" cycle
+    // when all N evaluations are done.)
+    const fullEvalCyclesEstimation =
+      evalCount > 0 ? Math.floor(completedEvals / evalCount) : 0
+
+    const completedEstimation = row.logErrors + fullEvalCyclesEstimation
+
     return {
       ...omit(row, [
         'passedEvals',
@@ -415,13 +435,16 @@ export class ExperimentsRepository extends Repository<Experiment> {
         'logErrors',
         'totalScore',
       ]),
+
       results: {
-        passed: Number(row.passedEvals),
-        failed: Number(row.failedEvals),
-        errors:
-          Number(row.evalErrors) +
-          row.evaluationUuids.length * Number(row.logErrors),
-        totalScore: Number(row.totalScore),
+        total: row.metadata.count,
+        completed: completedEstimation,
+
+        passed: passedEvals,
+        failed: failedEvals,
+        errors: evalErrors + row.evaluationUuids.length * logErrors,
+
+        totalScore,
       },
     }
   }

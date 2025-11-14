@@ -107,7 +107,8 @@ describe('getExperimentJobPayload', () => {
 
     expect(rows).toHaveLength(16)
     expect(rows[0]).toEqual({
-      id: expect.any(Number),
+      datasetRowId: expect.any(Number),
+      uuid: expect.any(String),
       parameters: {
         a: 'a25',
         b: 'b25',

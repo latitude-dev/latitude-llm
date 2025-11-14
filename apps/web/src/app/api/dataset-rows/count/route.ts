@@ -31,8 +31,7 @@ export const GET = errorHandler(
 
       const dataset = result.value
       const repo = new DatasetRowsRepository(workspace.id)
-      const resultCount = await repo.getCountByDataset(dataset.id)
-      const count = !resultCount[0] ? 0 : resultCount[0].count
+      const count = await repo.getCountByDataset(dataset.id)
 
       return NextResponse.json(count, { status: 200 })
     },
