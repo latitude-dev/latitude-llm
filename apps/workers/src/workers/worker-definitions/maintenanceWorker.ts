@@ -2,7 +2,6 @@ import { setupLRO } from '@latitude-data/core/client'
 import * as jobs from '@latitude-data/core/jobs/definitions'
 import { Queues } from '@latitude-data/core/queues/types'
 import { createWorker } from '../utils/createWorker'
-import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 const jobMappings = {
   autoScaleJob: jobs.autoScaleJob,
