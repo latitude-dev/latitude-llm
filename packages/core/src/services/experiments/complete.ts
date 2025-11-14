@@ -4,14 +4,12 @@ import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { experiments } from '../../schema/models/experiments'
 import { eq } from 'drizzle-orm'
-import { WebsocketClient } from '../../websockets/workers'
-import { ProgressTracker } from '../../jobs/utils/progressTracker'
 
 export async function completeExperiment(
   experiment: Experiment,
   transaction = new Transaction(),
-): PromisedResult<Experiment, LatitudeError> {
-  const updateResult = await transaction.call(async (tx) => {
+): PromisedResult<Experiment, Error> {
+  return transaction.call(async (tx) => {
     const result = await tx
       .update(experiments)
       .set({
@@ -26,28 +24,4 @@ export async function completeExperiment(
 
     return Result.ok(result[0]! as Experiment)
   })
-
-  if (updateResult.error) {
-    return Result.error(updateResult.error as LatitudeError)
-  }
-
-  const progressTracker = new ProgressTracker(experiment.uuid)
-  const progress = await progressTracker.getProgress()
-
-  WebsocketClient.sendEvent('experimentStatus', {
-    workspaceId: experiment.workspaceId,
-    data: {
-      experiment: {
-        ...experiment,
-        results: {
-          passed: progress.completed,
-          failed: progress.failed,
-          errors: progress.errors,
-          totalScore: progress.totalScore,
-        },
-      },
-    },
-  })
-
-  return updateResult
 }
