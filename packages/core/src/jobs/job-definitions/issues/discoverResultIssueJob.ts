@@ -5,13 +5,12 @@ import { publisher } from '../../../events/publisher'
 import { NotFoundError, UnprocessableEntityError } from '../../../lib/errors'
 import {
   CommitsRepository,
-  DocumentLogsRepository,
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
   IssuesRepository,
   ProjectsRepository,
-  ProviderLogsRepository,
+  SpansRepository,
 } from '../../../repositories'
 import { assignEvaluationResultV2ToIssue } from '../../../services/evaluationsV2/results/assign'
 import { discoverIssue } from '../../../services/issues/discover'
@@ -59,30 +58,31 @@ export const discoverResultIssueJob = async (
     .getProjectById(commit.projectId)
     .then((r) => r.unwrap())
 
-  const providerLogsRepository = new ProviderLogsRepository(workspace.id)
-  const providerLog = await providerLogsRepository
-    .find(result.evaluatedLogId)
+  const spansRepository = new SpansRepository(workspace.id)
+  const span = await spansRepository
+    .get({ spanId: result.evaluatedSpanId!, traceId: result.evaluatedTraceId! })
     .then((r) => r.unwrap())
-
-  const documentLogsRepository = new DocumentLogsRepository(workspace.id)
-  const documentLog = await documentLogsRepository
-    .findByUuid(providerLog.documentLogUuid!)
-    .then((r) => r.unwrap())
-
-  const documentsRepository = new DocumentVersionsRepository(workspace.id)
-  const document = await documentsRepository
-    .getDocumentAtCommit({
-      commitUuid: commit.uuid,
-      documentUuid: documentLog.documentUuid,
-    })
-    .then((r) => r.unwrap())
+  if (!span)
+    throw new NotFoundError(
+      `Span not found for spanId: ${result.evaluatedSpanId} and traceId: ${result.evaluatedTraceId}`,
+    )
 
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
   const evaluation = await evaluationsRepository
     .getAtCommitByDocument({
       commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
+      documentUuid: span.documentUuid!,
       evaluationUuid: result.evaluationUuid,
+    })
+    .then((r) => r.unwrap())
+
+  const documentVersionsRepository = new DocumentVersionsRepository(
+    workspace.id,
+  )
+  const document = await documentVersionsRepository
+    .getDocumentByUuid({
+      documentUuid: span.documentUuid!,
+      commitUuid: commit.uuid,
     })
     .then((r) => r.unwrap())
 
