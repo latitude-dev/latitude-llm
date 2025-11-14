@@ -268,7 +268,6 @@ export class SpansRepository extends Repository<Span> {
 
   async findByDocumentAndCommitLimited({
     documentUuid,
-    commitUuid,
     type,
     from,
     limit = DEFAULT_PAGINATION_SIZE,
@@ -277,7 +276,6 @@ export class SpansRepository extends Repository<Span> {
     createdAt,
   }: {
     documentUuid: string
-    commitUuid?: string
     type?: SpanType
     from?: { startedAt: string; id: string }
     limit?: number
@@ -288,7 +286,6 @@ export class SpansRepository extends Repository<Span> {
     const conditions = [
       this.scopeFilter,
       eq(spans.documentUuid, documentUuid),
-      commitUuid ? eq(spans.commitUuid, commitUuid) : undefined,
       type ? eq(spans.type, type) : undefined,
     ].filter(Boolean) as SQL<unknown>[]
 

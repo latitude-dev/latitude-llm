@@ -88,7 +88,9 @@ function TraceMetadata() {
   return (
     <div className='flex flex-col gap-4'>
       <DetailsPanel span={span} />
-      <AnnotationForms span={span as SpanWithDetails<SpanType.Prompt>} />
+      {span.type === SpanType.Prompt && (
+        <AnnotationForms span={span as SpanWithDetails<SpanType.Prompt>} />
+      )}
     </div>
   )
 }

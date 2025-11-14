@@ -66,7 +66,8 @@ export default async function TracesPage({
     : await spansRepository
         .findByDocumentAndCommitLimited({
           documentUuid,
-          commitUuid: headCommit?.uuid === commitUuid ? undefined : commitUuid,
+          commitUuids:
+            headCommit?.uuid === commitUuid ? undefined : [commitUuid],
           type: SpanType.Prompt,
         })
         .then((r) => r.unwrap().items)
