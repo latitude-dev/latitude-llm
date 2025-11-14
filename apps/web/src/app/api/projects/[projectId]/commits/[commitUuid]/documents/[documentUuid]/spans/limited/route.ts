@@ -79,14 +79,6 @@ export const GET = errorHandler(
       } else {
         // Otherwise, fetch spans directly from the repository
         const spansRepository = new SpansRepository(workspace.id)
-        const resultCount = await spansRepository.approximateCount({
-          documentUuid,
-          commitUuid: headCommit?.uuid === commitUuid ? undefined : commitUuid,
-          type: parsedParams.type as SpanType,
-          commitUuids: filters.commitUuids,
-          experimentUuids: filters.experimentUuids,
-          createdAt: filters.createdAt,
-        })
         const result = await spansRepository.findByDocumentAndCommitLimited({
           documentUuid,
           commitUuid: headCommit?.uuid === commitUuid ? undefined : commitUuid,
@@ -104,7 +96,7 @@ export const GET = errorHandler(
 
         spansResult = {
           items,
-          count: resultCount.value,
+          count: null,
           next: next ? { value: next.startedAt, id: next.id } : null,
         }
       }
