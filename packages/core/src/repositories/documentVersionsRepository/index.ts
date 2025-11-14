@@ -238,7 +238,12 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
         .then((docs) => docs[0])
     }
 
-    if (!document) return Result.error(new NotFoundError('Document not found'))
+    if (!document)
+      return Result.error(
+        new NotFoundError(
+          `Document not found for commit ${commitUuid} and uuid ${documentUuid}`,
+        ),
+      )
 
     return Result.ok(document)
   }
