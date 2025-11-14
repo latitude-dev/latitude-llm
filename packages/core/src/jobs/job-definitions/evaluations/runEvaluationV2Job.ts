@@ -22,6 +22,7 @@ export type RunEvaluationV2JobData = {
   workspaceId: number
   commitId: number
   evaluationUuid: string
+  documentLogUuid: string
   providerLogUuid: string
   experimentUuid?: string
   datasetId?: number
@@ -33,13 +34,14 @@ export function runEvaluationV2JobKey({
   workspaceId,
   commitId,
   evaluationUuid,
+  documentLogUuid,
   providerLogUuid,
   experimentUuid,
   datasetId,
   datasetLabel,
   datasetRowId,
 }: RunEvaluationV2JobData) {
-  return `runEvaluationV2Job-${workspaceId}-${commitId}-${evaluationUuid}-${providerLogUuid}-${experimentUuid}-${datasetId}-${datasetLabel}-${datasetRowId}`
+  return `runEvaluationV2Job-${workspaceId}-${commitId}-${evaluationUuid}-${documentLogUuid}-${providerLogUuid}-${experimentUuid}-${datasetId}-${datasetLabel}-${datasetRowId}`
 }
 
 export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
@@ -47,6 +49,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     workspaceId,
     commitId,
     evaluationUuid,
+    documentLogUuid,
     providerLogUuid,
     experimentUuid,
     datasetId,
@@ -122,11 +125,14 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       await updateExperimentStatus(
         { workspaceId, experiment },
         async (progressTracker) => {
-          if (result.error) return await progressTracker.incrementErrors()
-          if (result.hasPassed) {
-            await progressTracker.incrementCompleted()
-            await progressTracker.incrementTotalScore(result.normalizedScore)
-          } else await progressTracker.incrementFailed()
+          if (result.error) {
+            return progressTracker.evaluationError(documentLogUuid)
+          }
+
+          return progressTracker.evaluationFinished(documentLogUuid, {
+            passed: result.hasPassed,
+            score: result.normalizedScore,
+          })
         },
       ).then((r) => r.unwrap())
     }
@@ -138,7 +144,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     if (experiment) {
       await updateExperimentStatus(
         { workspaceId, experiment },
-        async (progressTracker) => await progressTracker.incrementErrors(),
+        (progressTracker) => progressTracker.evaluationError(documentLogUuid),
       )
     }
   }

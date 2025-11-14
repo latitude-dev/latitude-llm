@@ -139,6 +139,15 @@ export const backgroundRunJob = async (
     })
 
     if (experiment) {
+      // Mark document as finished (success)
+      await updateExperimentStatus(
+        {
+          workspaceId,
+          experiment,
+        },
+        (progressTracker) => progressTracker.documentRunFinished(runUuid, true),
+      )
+
       // TODO(): This is temporary while we think of a more long lasting solution to ban/rate limit users
       const evaluationsDisabledResult = await isFeatureEnabledByName(
         workspace.id,
@@ -171,6 +180,7 @@ export const backgroundRunJob = async (
           workspaceId,
           commitId: experiment!.commitId,
           evaluationUuid,
+          documentLogUuid: runUuid,
           providerLogUuid: providerLog.uuid,
           datasetId: experiment!.datasetId ?? undefined,
           datasetLabel: datasetLabels[evaluationUuid],
@@ -187,14 +197,14 @@ export const backgroundRunJob = async (
     writeStream.write({ type: ChainEventTypes.ChainError, data: error })
 
     if (experiment) {
-      // Mark evaluations as failed since they will not be run
+      // Mark document as finished (error)
       await updateExperimentStatus(
         {
           workspaceId,
           experiment,
         },
         (progressTracker) =>
-          progressTracker.incrementErrors(experiment!.evaluationUuids.length),
+          progressTracker.documentRunFinished(runUuid, false),
       )
     }
   } finally {

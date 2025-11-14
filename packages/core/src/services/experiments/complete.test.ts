@@ -1,9 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { completeExperiment } from './complete'
 import { database } from '../../client'
 import { experiments } from '../../schema/models/experiments'
-import { WebsocketClient } from '../../websockets/workers'
-import { ProgressTracker } from '../../jobs/utils/progressTracker'
 import { eq } from 'drizzle-orm'
 import { createExperiment, createProject, helpers } from '../../tests/factories'
 import { Providers } from '@latitude-data/constants'
@@ -12,25 +10,13 @@ import { type Workspace } from '../../schema/models/types/Workspace'
 import { type User } from '../../schema/models/types/User'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 
-// Mock external dependencies
-vi.mock('../../websockets/workers')
-vi.mock('../../jobs/utils/progressTracker')
-
 describe('completeExperiment', () => {
   let commit: Commit
   let document: DocumentVersion
   let user: User
   let workspace: Workspace
 
-  const mockProgressTracker = {
-    getProgress: vi.fn(),
-  }
-
   beforeEach(async () => {
-    vi.clearAllMocks()
-    vi.mocked(ProgressTracker).mockImplementation(
-      () => mockProgressTracker as any,
-    )
     const {
       documents: d,
       commit: c,
@@ -62,13 +48,6 @@ describe('completeExperiment', () => {
       user,
       workspace,
     })
-    const mockProgress = {
-      completed: 10,
-      failed: 2,
-      errors: 1,
-      totalScore: 85.5,
-    }
-    mockProgressTracker.getProgress.mockResolvedValue(mockProgress)
 
     const result = await completeExperiment(experiment)
 
@@ -83,60 +62,5 @@ describe('completeExperiment', () => {
       .limit(1)
 
     expect(updatedExperiment[0]?.finishedAt).toBeInstanceOf(Date)
-  })
-
-  it('emits websocket event with experiment status', async () => {
-    const { experiment } = await createExperiment({
-      document,
-      commit,
-      evaluations: [],
-      user,
-      workspace,
-    })
-    const mockProgress = {
-      completed: 15,
-      failed: 3,
-      errors: 2,
-      totalScore: 78.2,
-    }
-    mockProgressTracker.getProgress.mockResolvedValue(mockProgress)
-
-    await completeExperiment(experiment)
-
-    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith('experimentStatus', {
-      workspaceId: experiment.workspaceId,
-      data: {
-        experiment: {
-          ...experiment,
-          results: {
-            passed: mockProgress.completed,
-            failed: mockProgress.failed,
-            errors: mockProgress.errors,
-            totalScore: mockProgress.totalScore,
-          },
-        },
-      },
-    })
-  })
-
-  it('creates progress tracker with experiment uuid', async () => {
-    const { experiment } = await createExperiment({
-      document,
-      commit,
-      evaluations: [],
-      user,
-      workspace,
-    })
-    mockProgressTracker.getProgress.mockResolvedValue({
-      completed: 0,
-      failed: 0,
-      errors: 0,
-      totalScore: 0,
-    })
-
-    await completeExperiment(experiment)
-
-    expect(ProgressTracker).toHaveBeenCalledWith(experiment.uuid)
-    expect(mockProgressTracker.getProgress).toHaveBeenCalled()
   })
 })

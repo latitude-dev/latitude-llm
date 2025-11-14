@@ -1,40 +1,23 @@
 import { SimulationSettings } from '@latitude-data/constants/simulation'
-import { database } from '../../client'
-import { EvaluationV2 } from '../../constants'
-import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
-import { BadRequestError, LatitudeError } from '../../lib/errors'
-import { DatasetRowsRepository } from '../../repositories'
-import { experiments } from '../../schema/models/experiments'
-import { type Commit } from '../../schema/models/types/Commit'
-import { type Dataset } from '../../schema/models/types/Dataset'
-import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { type Experiment } from '../../schema/models/types/Experiment'
-import { type Workspace } from '../../schema/models/types/Workspace'
-import { scanDocumentContent } from '../documents'
-import { assertEvaluationRequirements } from './assertRequirements'
+import { database } from '../../../client'
+import { EvaluationV2 } from '../../../constants'
+import { Result } from '../../../lib/Result'
+import Transaction, { PromisedResult } from '../../../lib/Transaction'
+import { BadRequestError, LatitudeError } from '../../../lib/errors'
+import { experiments } from '../../../schema/models/experiments'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type Dataset } from '../../../schema/models/types/Dataset'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type Experiment } from '../../../schema/models/types/Experiment'
+import { type Workspace } from '../../../schema/models/types/Workspace'
+import { scanDocumentContent } from '../../documents'
+import { assertEvaluationRequirements } from '../assertRequirements'
 import type {
   ExperimentDatasetSource,
   ExperimentLogsSource,
   ExperimentManualSource,
 } from '@latitude-data/constants/experiments'
-
-function calculateSelectedRangeCount({
-  firstIndex,
-  lastIndex,
-  totalCount,
-}: {
-  firstIndex: number
-  lastIndex?: number
-  totalCount?: number
-}): number {
-  const firstRow = Math.max(0, firstIndex)
-  const lastRow = Math.min(
-    totalCount ?? Infinity, // upper limit
-    lastIndex ?? totalCount ?? firstIndex, // lower limit
-  )
-  return lastRow - firstRow + 1 // +1 because both first and last rows are inclusive
-}
+import { getParametersSource } from './parametersSource'
 
 async function getPromptMetadata(
   {
@@ -142,43 +125,15 @@ export async function createExperiment(
       )
     }
 
-    // Build the final parametersSource based on input type
-    let parametersSource
-    let count
-    let datasetId: number | undefined = undefined
-
-    if (parametersPopulation.source === 'logs') {
-      // Logs source
-      parametersSource = parametersPopulation
-      count = parametersPopulation.count
-    } else if (parametersPopulation.source === 'dataset') {
-      // Dataset source - need to resolve datasetId from dataset and handle row count
-      const { dataset, fromRow, toRow, datasetLabels, parametersMap } =
-        parametersPopulation
-      const datasetRowsScope = new DatasetRowsRepository(workspace.id, tx)
-      const countResult = await datasetRowsScope.getCountByDataset(dataset.id)
-      const rowCount = countResult?.[0]?.count
-
-      datasetId = dataset.id
-
-      parametersSource = {
-        source: 'dataset' as const,
-        datasetId: dataset.id,
-        fromRow,
-        toRow: toRow ?? rowCount ?? 0,
-        datasetLabels,
-        parametersMap,
-      }
-      count = calculateSelectedRangeCount({
-        firstIndex: fromRow,
-        lastIndex: toRow,
-        totalCount: rowCount,
-      })
-    } else {
-      // Manual source
-      parametersSource = parametersPopulation
-      count = parametersPopulation.count
-    }
+    const parametersSourceResult = await getParametersSource(
+      {
+        parametersPopulation,
+        workspace,
+      },
+      transaction,
+    )
+    if (!Result.isOk(parametersSourceResult)) return parametersSourceResult
+    const { count, parametersSource } = parametersSourceResult.unwrap()
 
     const result = await tx
       .insert(experiments)
@@ -188,7 +143,10 @@ export async function createExperiment(
         commitId: commit.id,
         documentUuid: document.documentUuid,
         evaluationUuids: evaluations.map((e) => e.uuid),
-        datasetId,
+        datasetId:
+          parametersSource.source === 'dataset'
+            ? parametersSource.datasetId
+            : undefined,
         metadata: {
           prompt: promptMetadata.resolvedPrompt,
           promptHash: promptMetadata.promptHash,

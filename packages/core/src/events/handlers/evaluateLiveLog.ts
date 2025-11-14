@@ -85,6 +85,7 @@ export const evaluateLiveLogJob = async ({
       workspaceId: workspace.id,
       commitId: commit.id,
       evaluationUuid: evaluation.uuid,
+      documentLogUuid: documentLog.uuid,
       providerLogUuid: providerLog.uuid,
     }
 

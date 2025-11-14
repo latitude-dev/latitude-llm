@@ -1,12 +1,8 @@
-import { randomUUID } from 'crypto'
-
 import { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 import { BACKGROUND } from '../../../telemetry'
-import { WebsocketClient } from '../../../websockets/workers'
-import { ProgressTracker } from '../../utils/progressTracker'
 import { runDocumentAtCommit } from '../../../services/commits'
 import { getJobDocumentData } from '../helpers'
 
@@ -18,21 +14,6 @@ export type RunDocumentJobData = {
   parameters?: Record<string, unknown>
   batchId?: string
   source?: LogSources
-}
-
-const emitDocumentBatchRunStatus = async (
-  workspaceId: number,
-  documentUuid: string,
-  progressTracker: ProgressTracker,
-) => {
-  const progress = await progressTracker.getProgress()
-  WebsocketClient.sendEvent('documentBatchRunStatus', {
-    workspaceId,
-    data: {
-      documentUuid,
-      ...progress,
-    },
-  })
 }
 
 /**
@@ -49,11 +30,8 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     commitUuid,
     projectId,
     parameters = {},
-    batchId = randomUUID(),
     source = LogSources.Playground,
   } = job.data
-
-  const progressTracker = new ProgressTracker(batchId)
 
   const { workspace, document, commit } = await getJobDocumentData({
     workspaceId,
@@ -74,16 +52,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
         simulateToolResponses: true,
       },
     }).then((r) => r.unwrap())
-
-    await progressTracker.incrementCompleted()
-
-    await emitDocumentBatchRunStatus(workspaceId, documentUuid, progressTracker)
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error
-
-    await progressTracker.incrementErrors()
-    await emitDocumentBatchRunStatus(workspaceId, documentUuid, progressTracker)
-  } finally {
-    await progressTracker.cleanup()
   }
 }
