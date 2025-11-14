@@ -1,42 +1,15 @@
 'use client'
 
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { ROUTES } from '$/services/routes'
-import { useRouter } from 'next/navigation'
-import useSWR from 'swr'
-import { IssuesOverviewResponse } from '$/app/api/projects/[projectId]/issues/overview/route'
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+import { useIssuesOverview } from './issuesOverviewStore'
 
 export function IssuesOverviewCard() {
   const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-  const router = useRouter()
-
-  const { data, isLoading } = useSWR<IssuesOverviewResponse>(
-    `/api/projects/${project.id}/issues/overview`,
-    fetcher,
-  )
-
-  if (isLoading || !data) return null
-  if (data.totalAnnotations === 0) return null
-
-  const progress = data.totalAnnotations > 0
-    ? (data.issuesWithAnnotations / data.totalAnnotations) * 100
-    : 0
-
-  const handleReviewIssues = () => {
-    router.push(
-      ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: commit.uuid })
-        .issues.root,
-    )
-  }
+  const { data, isLoading } = useIssuesOverview({ projectId: project.id })
+  // TODO: Implement
+  const progress = isLoading ? 0 : 0
 
   return (
     <div className='w-full p-6 border border-border rounded-xl bg-background'>
@@ -47,15 +20,6 @@ export function IssuesOverviewCard() {
             Keep annotating to discover more issues.
           </Text.H6>
         </div>
-        <Button
-          variant='outline'
-          size='small'
-          onClick={handleReviewIssues}
-          fancy
-        >
-          Review issues
-          <Icon name='chevronRight' />
-        </Button>
       </div>
 
       <div className='flex items-center gap-4'>

@@ -121,6 +121,11 @@ export const API_ROUTES = {
         stats: {
           root: `${projectRoot}/stats`,
         },
+        issues: {
+          overview: {
+            root: `${projectRoot}/issues/overview`,
+          },
+        },
         commits: {
           root: `${projectRoot}/commits`,
           detail: (commitUuid: string) => ({
