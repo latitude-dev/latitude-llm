@@ -1,8 +1,14 @@
 import { cn } from '@latitude-data/web-ui/utils'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
+import {
+  DocumentChange,
+  MODIFICATION_BACKGROUNDS,
+  MODIFICATION_BACKGROUNDS_HOVER,
+  MODIFICATION_COLORS,
+  MODIFICATION_ICONS,
+} from '@latitude-data/web-ui/molecules/DocumentChange'
 import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
 import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { useCurrentTheme } from '$/hooks/useCurrentTheme'
@@ -15,6 +21,10 @@ import {
   ModifiedDocumentType,
 } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { useMemo } from 'react'
+import { TextColor } from '@latitude-data/web-ui/tokens'
+import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 
 function ChangeWithErrors({
   change,
@@ -93,12 +103,129 @@ function Change({
 
 export type GroupedChanges = Record<'errors' | 'clean', ChangedDocument[]>
 
+function ChangeItem({
+  changeType,
+  hasErrors,
+  label,
+  icon,
+  isSelected,
+  onSelect,
+  className,
+}: {
+  changeType: ModifiedDocumentType | undefined
+  hasErrors: boolean
+  label: string
+  icon: IconName
+  isSelected: boolean
+  onSelect?: () => void
+  className?: string
+}) {
+  const color = useMemo<TextColor>(() => {
+    if (hasErrors) return 'destructive'
+    if (changeType) return MODIFICATION_COLORS[changeType]
+    return 'foregroundMuted'
+  }, [hasErrors, changeType])
+
+  return (
+    <div
+      className={cn(
+        'flex flex-row items-center justify-between gap-1 min-h-8 px-2 rounded-md',
+        {
+          'cursor-pointer': !!onSelect,
+
+          'bg-secondary': isSelected && !changeType,
+          [MODIFICATION_BACKGROUNDS[changeType!]]: !!changeType && isSelected,
+
+          'hover:bg-secondary': !isSelected && !changeType,
+          [MODIFICATION_BACKGROUNDS_HOVER[changeType!]]:
+            !!changeType && !isSelected,
+        },
+        className,
+      )}
+      onClick={onSelect}
+    >
+      <Icon name={icon} color={color} className='flex-shrink-0 w-4 h-4' />
+      <div className='flex-grow truncate'>
+        <Text.H5 underline={hasErrors} color={color}>
+          {label}
+        </Text.H5>
+      </div>
+      {changeType ? (
+        <Icon
+          name={MODIFICATION_ICONS[changeType]}
+          color={MODIFICATION_COLORS[changeType]}
+          className='flex-shrink-0 w-4 h-4'
+        />
+      ) : (
+        <div className='flex-shrink-0 w-4 h-4' />
+      )}
+    </div>
+  )
+}
+
+function DocumentChangeList({
+  document,
+  changes,
+  selected,
+  onSelect: onSelectDocument,
+}: {
+  document: DocumentVersion
+  changes: CommitChanges
+  selected?: ChangedDocument
+  onSelect: ReactStateDispatch<ChangedDocument | undefined>
+}) {
+  const change = useMemo(() => {
+    return changes.documents.all.find(
+      (cd) => cd.documentUuid === document.documentUuid,
+    )
+  }, [changes.documents.all, document.documentUuid])
+
+  const changedEvaluations = useMemo(
+    () =>
+      changes.evaluations.all.filter(
+        (ce) => ce.documentUuid === document.documentUuid,
+      ),
+    [changes.evaluations.all, document.documentUuid],
+  )
+
+  const onSelect = useMemo(() => {
+    if (!change) return undefined
+    return () => onSelectDocument(change)
+  }, [change, onSelectDocument])
+
+  return (
+    <li className='flex flex-col'>
+      <ChangeItem
+        changeType={change?.changeType}
+        hasErrors={Boolean(change?.errors)}
+        label={document.path}
+        icon='bot'
+        isSelected={selected?.documentUuid === document.documentUuid}
+        onSelect={onSelect}
+      />
+
+      {changedEvaluations.map((ce) => (
+        <ChangeItem
+          className='pl-6'
+          key={ce.evaluationUuid}
+          changeType={ce.changeType}
+          hasErrors={ce.hasIssues}
+          label={ce.name}
+          icon={EVALUATION_SPECIFICATIONS[ce.type].icon}
+          isSelected={false}
+        />
+      ))}
+    </li>
+  )
+}
+
 export function ChangesList({
   anyChanges,
   selected,
   onSelect,
   projectId,
   commit,
+  documents,
   changes,
   isLoading,
   onClose,
@@ -107,6 +234,7 @@ export function ChangesList({
   selected?: ChangedDocument
   onSelect: ReactStateDispatch<ChangedDocument | undefined>
   commit: Commit | undefined
+  documents: DocumentVersion[]
   changes: CommitChanges
   projectId: number
   isLoading: boolean
@@ -116,6 +244,42 @@ export function ChangesList({
   const allDocuments = changes?.documents?.all ?? []
   const erroredDocuments = changes?.documents?.errors ?? []
   const cleanDocuments = changes?.documents?.clean ?? []
+
+  const documentsList = useMemo(() => {
+    if (isLoading) return []
+    return documents.filter((d) => {
+      if (
+        changes.documents.all.some((cd) => cd.documentUuid === d.documentUuid)
+      ) {
+        return true
+      }
+      if (
+        changes.evaluations.all.some((ce) => ce.documentUuid === d.documentUuid)
+      ) {
+        return true
+      }
+      return false
+    })
+  }, [isLoading, changes.documents.all, changes.evaluations.all, documents])
+
+  if (isLoading) {
+    // TODO: Add skeleton
+    return <Text.H5M>Loading...</Text.H5M>
+  }
+
+  return (
+    <ul className='flex flex-col gap-1'>
+      {documentsList.map((d) => (
+        <DocumentChangeList
+          key={d.documentUuid}
+          document={d}
+          changes={changes}
+          selected={selected}
+          onSelect={onSelect}
+        />
+      ))}
+    </ul>
+  )
 
   return (
     <div

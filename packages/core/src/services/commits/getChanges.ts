@@ -16,6 +16,7 @@ import {
 } from '../../repositories'
 import { recomputeChanges } from '../documents'
 import { getCommitTriggerChanges } from '../documentTriggers/changes/getTriggerChanges'
+import { getCommitEvaluationChanges } from '../evaluationsV2/changes/getEvaluationChanges'
 
 type DocumentErrors = { [documentUuid: string]: CompileError[] }
 
@@ -149,6 +150,14 @@ export async function getCommitChanges(
     if (triggerChangesResult.error)
       return Result.error(triggerChangesResult.error)
 
+    // Get evaluation changes
+    const evaluationChangesResult = await getCommitEvaluationChanges(
+      { workspace, commit },
+      transaction,
+    )
+    if (evaluationChangesResult.error)
+      return Result.error(evaluationChangesResult.error)
+
     // Separate documents by error status
     const documentsWithErrors = documentChanges.filter((doc) => doc.errors > 0)
     const documentsWithoutErrors = documentChanges.filter(
@@ -163,17 +172,27 @@ export async function getCommitChanges(
       (trigger) => trigger.status === DocumentTriggerStatus.Pending,
     )
 
+    const allEvaluations = evaluationChangesResult.value
+    const cleanEvaluations = allEvaluations.filter(
+      (evaluation) => !evaluation.hasIssues,
+    )
+    const evaluationsWithIssues = allEvaluations.filter(
+      (evaluation) => evaluation.hasIssues,
+    )
+
     const hasErrors = documentsWithErrors.length > 0
     const hasPending = pendingTriggers.length > 0
+    const hasEvaluationIssues = evaluationsWithIssues.length > 0
 
     const anyChanges =
       allTriggers.length > 0 ||
       documentChanges.length > 0 ||
+      allEvaluations.length > 0 ||
       mainDocumentChanged
 
     return Result.ok({
       anyChanges,
-      hasIssues: hasErrors || hasPending,
+      hasIssues: hasErrors || hasPending || hasEvaluationIssues,
       mainDocumentUuid: mainDocumentChanged
         ? commit.mainDocumentUuid // new main document uuid (or null if it was removed)
         : undefined, // no change
@@ -188,6 +207,12 @@ export async function getCommitChanges(
         all: allTriggers,
         clean: cleanTriggers,
         pending: pendingTriggers,
+      },
+      evaluations: {
+        hasIssues: hasEvaluationIssues,
+        all: allEvaluations,
+        clean: cleanEvaluations,
+        withIssues: evaluationsWithIssues,
       },
     })
   })

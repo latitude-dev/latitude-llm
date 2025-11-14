@@ -20,6 +20,12 @@ const NO_CHANGES = {
     clean: [],
     pending: [],
   },
+  evaluations: {
+    hasIssues: false,
+    all: [],
+    clean: [],
+    withIssues: [],
+  },
 } satisfies CommitChanges
 
 export function useCommitsChanges(

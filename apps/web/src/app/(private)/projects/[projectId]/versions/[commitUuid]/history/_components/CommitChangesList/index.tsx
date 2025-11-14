@@ -14,6 +14,7 @@ import useDocumentVersions from '$/stores/documentVersions'
 import { ReactNode, useMemo } from 'react'
 import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
 import { CleanTriggers } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/Sidebar/PublishDraftCommitModal/TriggerChangesList'
+import { CleanEvaluations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/Sidebar/PublishDraftCommitModal/EvaluationChangesList'
 
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
@@ -274,6 +275,14 @@ export function CommitChangesList({
                   <ChangeList title='Trigger changes'>
                     <CleanTriggers
                       changes={changes.triggers.clean}
+                      theme={theme}
+                    />
+                  </ChangeList>
+                ) : null}
+                {changes.evaluations.clean.length > 0 ? (
+                  <ChangeList title='Evaluation changes'>
+                    <CleanEvaluations
+                      changes={changes.evaluations.clean}
                       theme={theme}
                     />
                   </ChangeList>
