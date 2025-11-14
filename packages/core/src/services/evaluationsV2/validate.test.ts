@@ -1,13 +1,16 @@
 import { Providers } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ZodError } from 'zod'
+import { eq } from 'drizzle-orm'
 import {
   EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   RuleEvaluationMetric,
 } from '../../constants'
+import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
+import { issues } from '../../schema/models/issues'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
@@ -81,6 +84,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new BadRequestError('Evaluation is required to update from'),
@@ -99,6 +103,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(new BadRequestError('Name is required'))
   })
@@ -115,6 +120,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(new BadRequestError('Invalid type'))
   })
@@ -131,6 +137,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(new BadRequestError('Invalid metric'))
   })
@@ -147,6 +154,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(expect.any(ZodError))
   })
@@ -169,6 +177,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new BadRequestError('Field accessor is not supported for this format'),
@@ -190,6 +199,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new BadRequestError(
@@ -217,6 +227,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(new BadRequestError('Field accessor is too complex'))
   })
@@ -235,6 +246,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(new Error('metric validation error'))
   })
@@ -255,6 +267,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toMatchObject({
       issues: [
@@ -280,6 +293,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new BadRequestError('This metric does not support live evaluation'),
@@ -295,6 +309,7 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap())
 
     expect(validatedSettings).toEqual(settings)
@@ -320,9 +335,106 @@ describe('validateEvaluationV2', () => {
         document: document,
         commit: commit,
         workspace: workspace,
+        issue: null,
       }).then((r) => r.unwrap())
 
     expect(validatedSettings).toEqual(settings)
     expect(validatedOptions).toEqual(options)
+  })
+
+  it('fails when issue is merged', async () => {
+    const { issue } = await factories.createIssue({
+      document: document,
+      workspace: workspace,
+    })
+
+    await database
+      .update(issues)
+      .set({ mergedAt: new Date() })
+      .where(eq(issues.id, issue.id))
+
+    const updatedIssue = await database
+      .select()
+      .from(issues)
+      .where(eq(issues.id, issue.id))
+      .then((r) => r[0]!)
+
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: settings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: updatedIssue,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Cannot use an issue that has been merged'),
+    )
+  })
+
+  it('fails when issue is resolved', async () => {
+    const { issue } = await factories.createIssue({
+      document: document,
+      workspace: workspace,
+    })
+
+    await database
+      .update(issues)
+      .set({ resolvedAt: new Date() })
+      .where(eq(issues.id, issue.id))
+
+    const updatedIssue = await database
+      .select()
+      .from(issues)
+      .where(eq(issues.id, issue.id))
+      .then((r) => r[0]!)
+
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: settings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: updatedIssue,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Cannot use an issue that has been resolved'),
+    )
+  })
+
+  it('fails when issue is ignored', async () => {
+    const { issue } = await factories.createIssue({
+      document: document,
+      workspace: workspace,
+    })
+
+    await database
+      .update(issues)
+      .set({ ignoredAt: new Date() })
+      .where(eq(issues.id, issue.id))
+
+    const updatedIssue = await database
+      .select()
+      .from(issues)
+      .where(eq(issues.id, issue.id))
+      .then((r) => r[0]!)
+
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: settings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: updatedIssue,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Cannot use an issue that has been ignored'),
+    )
   })
 })
