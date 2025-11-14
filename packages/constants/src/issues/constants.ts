@@ -97,3 +97,7 @@ export const ISSUE_JOBS_MAX_ATTEMPTS = 3
 export const ISSUE_JOBS_GENERATE_DETAILS_THROTTLE = 6 * 60 * 60 * 1000 // 6 hours
 export const ISSUE_JOBS_MERGE_COMMON_THROTTLE = 24 * 60 * 60 * 1000 // 1 day
 export const ISSUE_JOBS_DISCOVER_RESULT_DELAY = 60 * 1000 // 1 minute
+
+// This is the minimum number of manually annotated evaluation results required
+// for automatic issue creation to be enabled for a project.
+export const MINIMUM_ANNOTATED_THRESHOLD = 10

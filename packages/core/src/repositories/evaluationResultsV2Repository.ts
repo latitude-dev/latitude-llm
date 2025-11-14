@@ -50,6 +50,7 @@ import serializeProviderLog from '../services/providerLogs/serialize'
 import { CommitsRepository } from './commitsRepository'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
+import { Project } from '../schema/models/types/Project'
 
 const tt = getTableColumns(evaluationResultsV2)
 
@@ -345,14 +346,14 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       totalTokens:
         evaluation.type === EvaluationType.Llm
           ? sql`sum((${evaluationResultsV2.metadata}->>'tokens')::bigint)`
-              .mapWith(Number)
-              .as('total_tokens')
+            .mapWith(Number)
+            .as('total_tokens')
           : sql`0`.mapWith(Number),
       totalCost:
         evaluation.type === EvaluationType.Llm
           ? sql`sum((${evaluationResultsV2.metadata}->>'cost')::bigint)`
-              .mapWith(Number)
-              .as('total_cost')
+            .mapWith(Number)
+            .as('total_cost')
           : sql`0`.mapWith(Number),
     }
 
@@ -582,6 +583,23 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .then((r) => r[0]!)
 
     return Result.ok<number>(result.count)
+  }
+
+  async failedManuallyAnnotatedCountByProject({ project }: { project: Project }) {
+    const result = await this.db
+      .select({ count: count() })
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .where(
+        and(
+          this.scopeFilter,
+          eq(commits.projectId, project.id),
+          eq(evaluationResultsV2.hasPassed, false),
+          sql`${evaluationResultsV2.metadata}->>'reason' IS NOT NULL AND ${evaluationResultsV2.metadata}->>'reason' != ''`,
+        ),
+      )
+
+    return result[0]?.count ?? 0
   }
 
   async selectForDocumentSuggestion({

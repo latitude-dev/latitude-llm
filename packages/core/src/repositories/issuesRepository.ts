@@ -53,6 +53,17 @@ export class IssuesRepository extends Repository<Issue> {
     return this.db.select(tt).from(issues).where(this.scopeFilter).$dynamic()
   }
 
+  async countByProject({ project }: { project: Project }) {
+    const result = await this.db
+      .select({
+        count: sql<number>`COUNT(*)::integer`,
+      })
+      .from(issues)
+      .where(and(this.scopeFilter, eq(issues.projectId, project.id)))
+
+    return result[0]?.count ?? 0
+  }
+
   async lock({ id, wait }: { id: number; wait?: boolean }) {
     // .for('no key update', { noWait: true }) is bugged in drizzle!
     // https://github.com/drizzle-team/drizzle-orm/issues/3554
@@ -224,8 +235,8 @@ export class IssuesRepository extends Repository<Issue> {
           'isResolved',
         ),
         isRegressed: sql<boolean>`(
-          ${issues.resolvedAt} IS NOT NULL 
-          AND ${issues.ignoredAt} IS NULL 
+          ${issues.resolvedAt} IS NOT NULL
+          AND ${issues.ignoredAt} IS NULL
           AND ${subquery.lastSeenDate} > ${issues.resolvedAt}
         )`.as('isRegressed'),
         isEscalating: sql<boolean>`(

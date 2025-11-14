@@ -29,6 +29,7 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { IssuesOverviewCard } from './IssuesOverviewCard'
 
 function sumCounts(
   counts: Record<LogSources, number> | undefined,
@@ -284,6 +285,7 @@ export function RunsPage({
             />
           ) : (
             <div className='w-full h-full flex flex-col gap-6 p-6 overflow-hidden relative'>
+              <IssuesOverviewCard />
               <div className='w-full h-full flex items-center justify-center gap-2 py-9 px-6 border border-border border-dashed rounded-xl'>
                 <Text.H5 color='foregroundMuted'>No run selected</Text.H5>
               </div>
