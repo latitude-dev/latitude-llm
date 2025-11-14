@@ -369,11 +369,20 @@ export class SpansRepository extends Repository<Span> {
         : undefined,
     ].filter(Boolean) as SQL<unknown>[]
 
+    const commitUuids = await this.db
+      .select({ uuid: commits.uuid })
+      .from(commits)
+      .where(eq(commits.projectId, projectId))
+      .then((r) => r.map((c) => c.uuid))
+
+    if (commitUuids.length === 0) {
+      return Result.ok({ items: [], next: null })
+    }
+
     const result = await this.db
       .select(tt)
       .from(spans)
-      .innerJoin(commits, eq(spans.commitUuid, commits.uuid))
-      .where(and(...cursorConditions))
+      .where(and(...cursorConditions, inArray(spans.commitUuid, commitUuids)))
       .orderBy(desc(spans.startedAt), desc(spans.id))
       .limit(limit + 1)
 
