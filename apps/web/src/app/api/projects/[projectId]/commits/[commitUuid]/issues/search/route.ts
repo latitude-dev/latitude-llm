@@ -28,6 +28,7 @@ export const GET = errorHandler(
       }: {
         params: {
           projectId: string
+          commitUuid: string
         }
         workspace: Workspace
       },

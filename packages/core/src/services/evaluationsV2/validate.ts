@@ -15,7 +15,6 @@ import { Result } from '../../lib/Result'
 import { EvaluationsV2Repository } from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { Issue } from '../../schema/models/types/Issue'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { EvaluationMetricBackendSpecification } from './shared'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
@@ -32,7 +31,6 @@ export async function validateEvaluationV2<
     document,
     commit,
     workspace,
-    issue,
   }: {
     mode: 'create' | 'update'
     evaluation?: EvaluationV2<T, M>
@@ -41,7 +39,6 @@ export async function validateEvaluationV2<
     document: DocumentVersion
     commit: Commit
     workspace: Workspace
-    issue: Issue | null
   },
   db = database,
 ) {
@@ -146,32 +143,6 @@ export async function validateEvaluationV2<
   if (options.evaluateLiveLogs && !metricSpecification.supportsLiveEvaluation) {
     return Result.error(
       new BadRequestError('This metric does not support live evaluation'),
-    )
-  }
-
-  if (!metricSpecification.requiresExpectedOutput && issue) {
-    return Result.error(
-      new BadRequestError(
-        'Cannot link an evaluation to an issue with expected output',
-      ),
-    )
-  }
-
-  if (issue && issue.mergedAt) {
-    return Result.error(
-      new BadRequestError('Cannot use an issue that has been merged'),
-    )
-  }
-
-  if (issue && issue.resolvedAt) {
-    return Result.error(
-      new BadRequestError('Cannot use an issue that has been resolved'),
-    )
-  }
-
-  if (issue && issue.ignoredAt) {
-    return Result.error(
-      new BadRequestError('Cannot use an issue that has been ignored'),
     )
   }
 

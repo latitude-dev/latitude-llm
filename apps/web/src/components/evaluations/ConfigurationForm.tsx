@@ -26,7 +26,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useDebounce, useDebouncedCallback } from 'use-debounce'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
 import { useSearchIssues } from '$/stores/issues/selectorIssues'
-import { useIssue } from '$/stores/issues/issue'
 
 const MESSAGE_SELECTION_OPTIONS =
   baseEvaluationConfiguration.shape.actualOutput.shape.messageSelection.options.map(
@@ -104,35 +103,12 @@ export function ConfigurationAdvancedForm<
     [configuration.actualOutput?.parsingFormat],
   )
 
-  const { data: selectedIssue, isLoading: isLoadingSelectedIssue } = useIssue({
-    projectId: project.id,
-    commitUuid: commit.uuid,
-    issueId,
-  })
-
   const { data: issues, isLoading: isLoadingIssues } = useSearchIssues({
     projectId: project.id,
+    commitUuid: commit.uuid,
     documentUuid: document.documentUuid,
     query,
   })
-
-  const options = useMemo(() => {
-    const list = issues.map((issue) => ({
-      label: issue.title,
-      value: issue.id,
-    }))
-
-    if (selectedIssue) {
-      const exists = list.find((item) => item.value === selectedIssue.id)
-      if (!exists) {
-        list.unshift({
-          label: selectedIssue.title,
-          value: selectedIssue.id,
-        })
-      }
-    }
-    return list
-  }, [issues, selectedIssue])
 
   useEffect(() => {
     if (formatIsAccessible) return
@@ -323,7 +299,7 @@ export function ConfigurationAdvancedForm<
           <ActualOutputTest configuration={testConfiguration} />
         </div>
       )}
-      {doesntRequireExpectedOutput && (
+      {doesntRequireExpectedOutput && setIssueId && (
         <FormFieldGroup
           label='Link issue'
           description='Link the evaluation to an issue in your agent logs'
@@ -331,14 +307,17 @@ export function ConfigurationAdvancedForm<
         >
           <Select
             searchable={true}
-            removable={true}
-            value={selectedIssue?.id}
+            // TODO(eval-generation): This will not get the issueId from page 2,3, etc. need to change with Andres feedback
+            value={issueId ?? null}
             name='issueId'
             placeholder='Select an existing issue'
             searchPlaceholder='Search existing issues...'
-            loading={isLoadingIssues || isLoadingSelectedIssue}
-            disabled={disabled || isLoadingIssues || isLoadingSelectedIssue}
-            options={options}
+            loading={isLoadingIssues}
+            disabled={disabled || isLoadingIssues}
+            options={issues.map((issue) => ({
+              label: issue.title,
+              value: issue.id,
+            }))}
             onSearch={onSearch}
             onChange={setIssueId}
             errors={errors?.['issueId']}

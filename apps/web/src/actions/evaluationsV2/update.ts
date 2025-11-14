@@ -23,7 +23,6 @@ export const updateEvaluationV2Action = withEvaluation
     const result = await updateEvaluationV2({
       evaluation: ctx.evaluation,
       commit: ctx.commit,
-      project: ctx.project,
       settings: parsedInput.settings,
       options: parsedInput.options,
       issueId: parsedInput.issueId,
