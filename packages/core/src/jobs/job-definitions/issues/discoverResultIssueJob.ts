@@ -80,9 +80,9 @@ export const discoverResultIssueJob = async (
     workspace.id,
   )
   const document = await documentVersionsRepository
-    .getDocumentByUuid({
+    .getSomeDocumentByUuid({
+      projectId: project.id,
       documentUuid: span.documentUuid!,
-      commitUuid: commit.uuid,
     })
     .then((r) => r.unwrap())
 
