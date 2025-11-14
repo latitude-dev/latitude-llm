@@ -7,11 +7,15 @@ import {
 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { compactObject } from '../../lib/compactObject'
+import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
+import { IssuesRepository } from '../../repositories/issuesRepository'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { Issue } from '../../schema/models/types/Issue'
+import { Project } from '../../schema/models/types/Project'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { validateEvaluationV2 } from './validate'
 
@@ -26,6 +30,7 @@ export async function createEvaluationV2<
     options,
     issueId = null,
     workspace,
+    project,
   }: {
     document: DocumentVersion
     commit: Commit
@@ -33,6 +38,7 @@ export async function createEvaluationV2<
     options?: Partial<EvaluationOptions>
     issueId?: number | null
     workspace: Workspace
+    project?: Project
   },
   transaction = new Transaction(),
 ) {
@@ -40,8 +46,25 @@ export async function createEvaluationV2<
     if (!options) options = {}
     options = compactObject(options)
 
+    let issue: Issue | null = null
+    if (issueId && project) {
+      const issuesRepository = new IssuesRepository(workspace.id, tx)
+      issue = await issuesRepository.findById({ project, issueId })
+      if (!issue) {
+        return Result.error(new BadRequestError('Issue not found'))
+      }
+    }
+
     const validation = await validateEvaluationV2(
-      { mode: 'create', settings, options, document, commit, workspace },
+      {
+        mode: 'create',
+        settings,
+        options,
+        document,
+        commit,
+        workspace,
+        issue,
+      },
       tx,
     )
     if (validation.error) {
@@ -50,7 +73,6 @@ export async function createEvaluationV2<
     settings = validation.value.settings
     options = validation.value.options
 
-    // TODO(eval-generation): Think validation logic for issues in evaluations
     const result = await tx
       .insert(evaluationVersions)
       .values({
