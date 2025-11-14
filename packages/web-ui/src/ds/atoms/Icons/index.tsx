@@ -156,6 +156,7 @@ import {
   FlaskConical,
   EyeOffIcon,
   ChevronsRightIcon,
+  TriangleAlert,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -223,6 +224,7 @@ const Icons = {
   airtable: Airtable,
   alert: CircleAlert,
   alertCircle: AlertCircle,
+  alertTriangle: TriangleAlert,
   apify: Apify,
   appWindow: AppWindow,
   arrowDown: ArrowDownIcon,

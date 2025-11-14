@@ -1,4 +1,5 @@
 import { DocumentTriggerStatus, DocumentTriggerType } from '.'
+import { EvaluationType } from './evaluations'
 
 export enum ModifiedDocumentType {
   Created = 'created',
@@ -22,6 +23,15 @@ export type ChangedTrigger = {
   status: DocumentTriggerStatus
 }
 
+export type ChangedEvaluation = {
+  evaluationUuid: string
+  documentUuid: string
+  name: string
+  type: EvaluationType
+  changeType: ModifiedDocumentType
+  hasIssues: boolean
+}
+
 export type CommitChanges = {
   anyChanges: boolean
   hasIssues: boolean
@@ -37,5 +47,11 @@ export type CommitChanges = {
     all: ChangedTrigger[]
     clean: ChangedTrigger[]
     pending: ChangedTrigger[]
+  }
+  evaluations: {
+    hasIssues: boolean
+    all: ChangedEvaluation[]
+    clean: ChangedEvaluation[]
+    withIssues: ChangedEvaluation[]
   }
 }

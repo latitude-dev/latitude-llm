@@ -8,10 +8,11 @@ import {
   ToolSourceData,
 } from '@latitude-data/constants/toolSources'
 import { ToolCard, ToolCardIcon, ToolCardText } from './_components/ToolCard'
-import Image from 'next/image'
 import useIntegrations from '$/stores/integrations'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { IntegrationIcon } from '$/components/Integrations/IntegrationIcon'
+import Image from 'next/image'
 
 export function IntegrationToolCard({
   toolRequest,
@@ -38,10 +39,12 @@ export function IntegrationToolCard({
       toolRequest={toolRequest}
       toolResponse={toolResponse}
       headerIcon={
-        sourceData.imageUrl ? (
+        integration ? (
+          <IntegrationIcon integration={integration} size={16} />
+        ) : sourceData.imageUrl ? (
           <Image
             src={sourceData.imageUrl}
-            alt={toolRequest.toolName}
+            alt={sourceData.toolLabel ?? toolRequest.toolName}
             width={16}
             height={16}
             unoptimized

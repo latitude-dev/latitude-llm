@@ -9,13 +9,13 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
-import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import { PipedreamIntegration } from '@latitude-data/core/schema/models/types/Integration'
 import {
   LightPipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/constants'
+import { IntegrationIcon } from '$/components/Integrations/IntegrationIcon'
 
 import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 function DeleteTriggerButton<T extends PipedreamComponentType>({
@@ -88,13 +88,7 @@ function DeleteTriggerButton<T extends PipedreamComponentType>({
             </Text.H5B>
           </div>
           <div className='flex items-center gap-2'>
-            <Image
-              src={integration.configuration.metadata?.imageUrl || ''}
-              alt={`${integration.name} icon`}
-              width={16}
-              height={16}
-              unoptimized
-            />
+            <IntegrationIcon integration={integration} size={16} />
             <Text.H6 color='destructive'>{integration.name}</Text.H6>
           </div>
         </div>
@@ -159,13 +153,7 @@ function IntegrationTriggerItem({
         />
       </div>
       <div className='flex items-center gap-2'>
-        <Image
-          src={integration.configuration.metadata?.imageUrl || ''}
-          alt={`${integration.name} icon`}
-          width={16}
-          height={16}
-          unoptimized
-        />
+        <IntegrationIcon integration={integration} size={16} />
         <Text.H6 color='foregroundMuted'>{integration.name}</Text.H6>
       </div>
     </div>

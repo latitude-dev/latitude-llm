@@ -1,4 +1,7 @@
-import { INTEGRATION_TYPE_VALUES } from '$/lib/integrationTypeOptions'
+import {
+  INTEGRATION_TYPE_VALUES,
+  HOSTED_INTEGRATION_TYPE_OPTIONS,
+} from '$/lib/integrationTypeOptions'
 import { IntegrationType } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
@@ -22,17 +25,22 @@ export function getIntegrationData({
   }
 
   if (integration.type === IntegrationType.Pipedream) {
-    const imageUrl = integration.configuration.metadata?.imageUrl ?? 'unplug'
+    const imageUrl = integration.configuration.metadata?.imageUrl
     const label =
       integration.configuration.metadata?.displayName ??
       integration.configuration.appName
     return {
       ...commonData,
-      icon: {
-        type: 'image' as const,
-        src: imageUrl,
-        alt: label,
-      },
+      icon: imageUrl
+        ? {
+            type: 'image' as const,
+            src: imageUrl,
+            alt: label,
+          }
+        : {
+            type: 'icon' as const,
+            name: 'unplug' as IconName,
+          },
     }
   }
 
@@ -46,13 +54,24 @@ export function getIntegrationData({
     }
   }
 
+  if (
+    integration.type === IntegrationType.HostedMCP &&
+    Object.keys(HOSTED_INTEGRATION_TYPE_OPTIONS).includes(
+      integration.configuration.type,
+    )
+  ) {
+    const { icon } =
+      HOSTED_INTEGRATION_TYPE_OPTIONS[integration.configuration.type]
+    return {
+      ...commonData,
+      icon,
+    }
+  }
+
   const { icon } = INTEGRATION_TYPE_VALUES[integration.type]
   return {
     ...commonData,
-    icon: {
-      type: 'icon' as const,
-      name: icon as IconName,
-    },
+    icon,
   }
 }
 
@@ -67,34 +86,4 @@ export function normalizeIntegrations(
   return Object.entries(tools).map(([toolName, toolDefinition]) => ({
     [toolName]: toolDefinition,
   }))
-}
-
-export function integrationOptions(integration: IntegrationDto) {
-  if (integration.type === IntegrationType.Pipedream) {
-    const imageUrl = integration.configuration.metadata?.imageUrl ?? 'unplug'
-    const label =
-      integration.configuration.metadata?.displayName ??
-      integration.configuration.appName
-    return {
-      label,
-      icon: {
-        type: 'image' as const,
-        src: imageUrl,
-        alt: label,
-      },
-    }
-  }
-
-  if (integration.type === IntegrationType.Latitude) {
-    const { label } = INTEGRATION_TYPE_VALUES[IntegrationType.Latitude]
-    return {
-      label,
-      icon: {
-        type: 'icon' as const,
-        name: 'logo' as IconName,
-      },
-    }
-  }
-  const { label, icon } = INTEGRATION_TYPE_VALUES[integration.type]
-  return { label, icon: { type: 'icon' as const, name: icon as IconName } }
 }

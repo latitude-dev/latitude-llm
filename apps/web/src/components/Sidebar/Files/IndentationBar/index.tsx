@@ -4,9 +4,11 @@ import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
 export function IndentationLine({
   showCurve,
   invisible,
+  height = 'h-8',
 }: {
   showCurve: boolean
   invisible?: boolean
+  height?: string
 }) {
   return (
     <div className='relative w-4 h-full flex justify-center'>
@@ -16,7 +18,11 @@ export function IndentationLine({
           <div className='absolute top-2.5 border-l border-b h-2 w-2 rounded-bl-sm' />
         </div>
       ) : (
-        <div className={cn('w-px h-8 -mt-1', { 'bg-border': !invisible })} />
+        <div
+          className={cn('w-px -mt-1', height, {
+            'bg-border': !invisible,
+          })}
+        />
       )}
     </div>
   )

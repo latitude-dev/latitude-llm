@@ -1,8 +1,10 @@
-import useDocumentVersion from '$/stores/useDocumentVersion'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { DiffViewer } from '@latitude-data/web-ui/molecules/DiffViewer'
 import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
+import useDocumentVersions from '$/stores/documentVersions'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useMemo } from 'react'
 
 function DocumentDiff({
   oldContent,
@@ -26,44 +28,49 @@ function DocumentDiff({
   )
 }
 
-function CreatedDocumentDiff({ documentUuid }: { documentUuid: string }) {
-  const { commit } = useCurrentCommit()
-  const { data: newDocument } = useDocumentVersion(documentUuid, {
-    commitUuid: commit.uuid,
-  })
-
-  return <DocumentDiff oldContent='' newContent={newDocument?.content} />
-}
-
-function DeletedDocumentDiff({ documentUuid }: { documentUuid: string }) {
-  const { data: oldDocument } = useDocumentVersion(documentUuid)
-
-  return <DocumentDiff oldContent={oldDocument?.content} newContent='' />
-}
-
-function UpdatedDocumentDiff({ documentUuid }: { documentUuid: string }) {
-  const { commit } = useCurrentCommit()
-  const { data: newDocument } = useDocumentVersion(documentUuid, {
-    commitUuid: commit.uuid,
-  })
-  const { data: oldDocument } = useDocumentVersion(documentUuid)
-
+function LoadingDiff() {
   return (
-    <DocumentDiff
-      oldContent={oldDocument?.content}
-      newContent={newDocument?.content}
-    />
+    <div className='flex w-full h-96'>
+      <TextEditorPlaceholder />
+    </div>
   )
 }
 
 export function ChangeDiff({ change }: { change: ChangedDocument }) {
-  if (change.changeType === ModifiedDocumentType.Created) {
-    return <CreatedDocumentDiff documentUuid={change.documentUuid} />
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+
+  const { data: headDocuments, isLoading: isLoadingHeadDocuments } =
+    useDocumentVersions({
+      projectId: project.id,
+    })
+
+  const { data: currentDocuments, isLoading: isLoadingCurrentDocuments } =
+    useDocumentVersions({
+      projectId: project.id,
+      commitUuid: commit.uuid,
+    })
+
+  const headDocument = useMemo(
+    () => headDocuments?.find((d) => d.documentUuid === change.documentUuid),
+    [headDocuments, change.documentUuid],
+  )
+
+  const currentDocument = useMemo(
+    () => currentDocuments?.find((d) => d.documentUuid === change.documentUuid),
+    [currentDocuments, change.documentUuid],
+  )
+
+  const isLoading = isLoadingHeadDocuments || isLoadingCurrentDocuments
+
+  if (isLoading) {
+    return <LoadingDiff />
   }
 
-  if (change.changeType === ModifiedDocumentType.Deleted) {
-    return <DeletedDocumentDiff documentUuid={change.documentUuid} />
-  }
-
-  return <UpdatedDocumentDiff documentUuid={change.documentUuid} />
+  return (
+    <DocumentDiff
+      oldContent={change.changeType === ModifiedDocumentType.Created ? '' : headDocument?.content} // prettier-ignore
+      newContent={change.changeType === ModifiedDocumentType.Deleted ? '' : currentDocument?.content} // prettier-ignore
+    />
+  )
 }
