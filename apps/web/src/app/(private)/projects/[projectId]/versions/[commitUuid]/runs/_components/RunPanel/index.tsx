@@ -16,7 +16,6 @@ import {
   EvaluationType,
   EvaluationV2,
   HumanEvaluationMetric,
-  PromptSpanMetadata,
   Run,
   RunSourceGroup,
   SpanType,
@@ -103,7 +102,6 @@ function CompletedRunPanel({
     trace?.children ?? [],
     SpanType.Completion,
   )
-  const promptSpan = findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt)
   const { annotations, isLoading: isLoadingAnnotations } = useAnnotationBySpan({
     project,
     commit,
@@ -190,9 +188,7 @@ function CompletedRunPanel({
             </div>
             <MessageList
               messages={conversation as unknown as Message[]}
-              parameters={Object.keys(
-                (promptSpan?.metadata as PromptSpanMetadata)?.parameters ?? {},
-              )}
+              parameters={Object.keys(run.span.metadata?.parameters ?? {})}
               debugMode={debugMode}
               toolContentMap={toolContentMap}
             />
