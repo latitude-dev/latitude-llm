@@ -3,7 +3,6 @@ import { EvaluationResultV2, EvaluationV2 } from '../../constants'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { ProviderLogDto } from '../../schema/types'
 import * as factories from '../../tests/factories'
 import { AnalyticsClient } from './AnalyticsClient'
 
@@ -35,7 +34,8 @@ describe('AnalyticsClient', () => {
           evaluation: {} as EvaluationV2,
           commit: {} as Commit,
           result: {} as EvaluationResultV2,
-          providerLog: {} as ProviderLogDto,
+          spanId: 'span-id',
+          traceId: 'trace-id',
         },
       },
     })

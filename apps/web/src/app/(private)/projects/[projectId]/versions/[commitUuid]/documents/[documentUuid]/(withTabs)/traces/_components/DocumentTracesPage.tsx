@@ -14,16 +14,24 @@ import useDocumentTracesAggregations from '$/stores/documentTracesAggregations'
 import useDocumentTracesDailyCount from '$/stores/documentTracesDailyCount'
 import { TracesOverTime } from './TracesOverTime'
 import { AggregationPanels } from './AggregationPanels'
+import { SpanFilters } from './Filters'
+import { SpansFilters } from '$/lib/schemas/filters'
+import { useState } from 'react'
 
-export function DocumentTracesPage({ initialSpans }: { initialSpans: Span[] }) {
-  return <DocumenTracesPageContent initialSpans={initialSpans} />
-}
-
-function DocumenTracesPageContent({ initialSpans }: { initialSpans: Span[] }) {
+export function DocumentTracesPage({
+  initialSpans,
+  initialSpanFilterOptions,
+}: {
+  initialSpans: Span[]
+  initialSpanFilterOptions: SpansFilters
+}) {
   const { selection } = useTraceSpanSelection()
   const { document } = useCurrentDocument()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
+  const [spanFilterOptions, setSpanFilterOptions] = useState(
+    initialSpanFilterOptions,
+  )
 
   const { data: aggregations, isLoading: isAggregationsLoading } =
     useDocumentTracesAggregations({
@@ -44,29 +52,40 @@ function DocumenTracesPageContent({ initialSpans }: { initialSpans: Span[] }) {
 
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-4 min-w-0'>
-      <div className='grid xl:grid-cols-2 gap-4'>
-        <TracesOverTime
-          data={dailyCount}
-          isLoading={isDailyCountLoading}
-          error={dailyCountError}
-        />
-        <AggregationPanels
-          aggregations={aggregations}
-          isLoading={isAggregationsLoading}
-        />
-      </div>
-
       <TableWithHeader
         title='Traces'
+        actions={
+          <>
+            <SpanFilters
+              filterOptions={spanFilterOptions}
+              onFiltersChanged={setSpanFilterOptions}
+            />
+          </>
+        }
         table={
           initialSpans.length === 0 ? (
             <TableBlankSlate description='No traces found for this prompt.' />
           ) : (
-            <ResizableLayout
-              showRightPane={!!selection.traceId}
-              leftPane={<DocumentTraces initialSpans={initialSpans} />}
-              rightPane={selection.traceId && <TraceInfo />}
-            />
+            <div className='flex flex-col gap-4 w-full'>
+              <div className='grid xl:grid-cols-2 gap-4'>
+                <TracesOverTime
+                  data={dailyCount}
+                  isLoading={isDailyCountLoading}
+                  error={dailyCountError}
+                />
+                <AggregationPanels
+                  aggregations={aggregations}
+                  isLoading={isAggregationsLoading}
+                />
+              </div>
+              <ResizableLayout
+                showRightPane={!!selection.traceId && !!selection.spanId}
+                leftPane={<DocumentTraces initialSpans={initialSpans} />}
+                rightPane={
+                  selection.traceId && selection.spanId && <TraceInfo />
+                }
+              />
+            </div>
           )
         }
       />

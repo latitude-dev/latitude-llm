@@ -10,7 +10,6 @@ import { ROUTES } from '$/services/routes'
 import {
   CompletedRun,
   LogSources,
-  RUN_SOURCES,
   RunSourceGroup,
 } from '@latitude-data/constants'
 
@@ -57,33 +56,9 @@ export function useCompletedRuns(
       if (!realtime) return
       if (!args) return
 
-      if (args.projectId !== project.id) return
-      if (search?.sourceGroup) {
-        if (!args.run.source) return
-        const sources = RUN_SOURCES[search.sourceGroup]
-        if (!sources.includes(args.run.source)) return
-      }
-      if (args.run.endedAt) {
-        mutate(
-          (prev) => {
-            if (!prev) return [args.run] as CompletedRun[]
-            const index = prev.findIndex((r) => r.uuid === args.run.uuid)
-            if (index === -1) return [args.run, ...prev] as CompletedRun[]
-            else return [...prev.slice(0, index), args.run, ...prev.slice(index + 1)] as CompletedRun[] // prettier-ignore
-          },
-          { revalidate: false },
-        )
-      } else {
-        mutate(
-          (prev) =>
-            prev?.filter((r) => {
-              return r.uuid !== args.run.uuid
-            }) ?? [],
-          { revalidate: false },
-        )
-      }
+      mutate()
     },
-    [project, mutate, realtime, search?.sourceGroup],
+    [mutate, realtime],
   )
   useSockets({ event: 'runStatus', onMessage })
 
@@ -128,23 +103,9 @@ export function useCompletedRunsCount(
     (args: EventArgs<'runStatus'>) => {
       if (!realtime || disable) return
       if (!args) return
-
       if (args.projectId !== project.id) return
 
-      const source = args.run.source ?? LogSources.API
-
-      if (args.event === 'runEnded') {
-        mutate(
-          (prev) => {
-            if (!prev) return { [source]: 1 } as Record<LogSources, number>
-            return {
-              ...prev,
-              [source]: Math.max(0, (prev[source] ?? 0) + 1),
-            }
-          },
-          { revalidate: false },
-        )
-      }
+      mutate()
     },
     [project, mutate, realtime, disable],
   )

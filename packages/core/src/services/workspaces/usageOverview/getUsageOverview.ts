@@ -1,29 +1,33 @@
-import { and, desc, eq, gte, isNull, max, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, isNull, max, not, sql } from 'drizzle-orm'
 import { database } from '../../../client'
-import { ErrorableEntity } from '../../../constants'
+import { SpanStatus } from '../../../constants'
 import { SubscriptionPlan } from '../../../plans'
-import { commits } from '../../../schema/models/commits'
-import { documentLogs } from '../../../schema/models/documentLogs'
-import { evaluationResults } from '../../../schema/legacyModels/evaluationResults'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
-import { evaluations } from '../../../schema/legacyModels/evaluations'
-import { projects } from '../../../schema/models/projects'
-import { runErrors } from '../../../schema/models/runErrors'
 import { workspaces } from '../../../schema/models/workspaces'
 import { workspaceUsageInfoCTE } from './workspaceUsageInfoQuery'
+import { spans } from '../../../schema/models/spans'
 
 /**
- * Nice and big query. DON'T GET INTIMIDATED BY IT!
+ * Retrieves workspace usage overview data with pagination support.
  *
- * This query do the following:
- * 1. Get the workspaceId, name, subscriptionPlan, numOfMembers, emails, lastMonthRuns, lastTwoMonthsRuns, and latestRunAt
- * 2. Get the last month and last two months logs and evaluation results count
- * 3. Filter out logs and evaluation results with errors
- * 4. Group by workspaceId and latestRunAt
- * 5. Order by last_month_runs and num_of_members
- * 6. Limit and offset the result
+ * This complex query aggregates workspace usage metrics including:
+ * - Basic workspace info (ID, name, subscription plan, member count, emails)
+ * - Activity metrics (last month and last two months run counts)
+ * - Latest activity timestamp across spans and evaluation results
  *
- * It's done by using CTEs (Common Table Expressions) to make the query more readable, maintainable and performant.
+ * The query uses CTEs (Common Table Expressions) to:
+ * 1. Count successful spans from the last 2 months (excluding errors)
+ * 2. Count successful evaluation results from the last 2 months (excluding errors)
+ * 3. Combine with workspace usage info and aggregate totals
+ *
+ * Results are ordered by activity level (last month runs desc) and member count,
+ * then paginated based on provided page/size parameters.
+ *
+ * @param page - Page number for pagination (1-based)
+ * @param pageSize - Number of results per page
+ * @param targetDate - Optional date to calculate relative time periods (defaults to current date)
+ * @param db - Optional database client (defaults to main database)
+ * @returns Promise resolving to array of workspace usage overview rows
  */
 export async function getUsageOverview(
   {
@@ -42,121 +46,30 @@ export async function getUsageOverview(
   const dateCondition = targetDate
     ? sql<Date>`CAST(${targetDate} AS DATE)`
     : sql<Date>`CURRENT_DATE`
-
-  const errorsCTE = db.$with('run_errors_counts').as(
+  const spansCTE = db.$with('document_logs_counts').as(
     db
       .select({
-        id: runErrors.id,
-        errorableUuid: runErrors.errorableUuid,
-        errorableType: runErrors.errorableType,
-      })
-      .from(runErrors),
-  )
-  const projectsCTE = db.$with('projects_cte').as(
-    db
-      .select({
-        id: projects.id,
-        workspaceId: projects.workspaceId,
-      })
-      .from(projects),
-  )
-  const logsCTE = db.$with('document_logs_counts').as(
-    db
-      .with(projectsCTE, errorsCTE)
-      .select({
-        workspaceId: sql<number>`${workspaces.id}`.as(
-          'document_log_workspace_id',
-        ),
-        latestCreatedAt: max(documentLogs.createdAt).as(
-          'latest_log_created_at',
-        ),
+        workspaceId: sql<number>`${spans.workspaceId}`.as('span_workspace_id'),
+        latestCreatedAt: max(spans.createdAt).as('latest_span_created_at'),
         lastMonthCount: sql<number>`
           COUNT(
-            CASE WHEN ${documentLogs.createdAt} >= ${dateCondition} - INTERVAL '1 month'
+            CASE WHEN ${spans.createdAt} >= ${dateCondition} - INTERVAL '1 month'
               THEN 1 ELSE NULL
             END
           )
-        `.as('last_month_logs_count'),
+        `.as('last_month_spans_count'),
         lastTwoMonthsCount: sql<number>`
           COUNT(
-            CASE WHEN ${documentLogs.createdAt} BETWEEN ${dateCondition} - INTERVAL '2 months'
-              AND ${dateCondition} - INTERVAL '1 month'
+            CASE WHEN ${spans.createdAt} >= ${dateCondition} - INTERVAL '2 months'
+              AND ${spans.createdAt} < ${dateCondition} - INTERVAL '1 month'
               THEN 1 ELSE NULL
             END
           )
         `.as('last_two_months_logs_count'),
       })
-      .from(documentLogs)
-      .leftJoin(commits, eq(commits.id, documentLogs.commitId))
-      .leftJoin(projectsCTE, eq(projectsCTE.id, commits.projectId))
-      .leftJoin(workspaces, eq(workspaces.id, projectsCTE.workspaceId))
-      .leftJoin(
-        errorsCTE,
-        and(
-          eq(errorsCTE.errorableUuid, documentLogs.uuid),
-          eq(errorsCTE.errorableType, ErrorableEntity.DocumentLog),
-        ),
-      )
-      .where(
-        and(
-          isNull(errorsCTE.id),
-          gte(
-            documentLogs.createdAt,
-            sql<Date>`${dateCondition} - INTERVAL '2 months'`,
-          ),
-        ),
-      )
-      .groupBy(workspaces.id),
-  )
-
-  // NOTE(evalsv2): Do not delete this as it's crucial to compute historical
-  // data for the usage overview
-  const evaluationResultsCTE = db.$with('evaluation_results_counts').as(
-    db
-      .with(errorsCTE)
-      .select({
-        workspaceId: sql<number>`${workspaces.id}`.as(
-          'evaluation_result_workspace_id',
-        ),
-        latestCreatedAt: max(evaluationResults.createdAt).as(
-          'latest_evaluation_result_created_at',
-        ),
-        lastMonthCount: sql<number>`
-          COUNT(
-            CASE WHEN ${evaluationResults.createdAt} >= ${dateCondition} - INTERVAL '1 month'
-              THEN 1 ELSE NULL
-            END
-          )
-        `.as('last_month_evaluation_results_count'),
-        lastTwoMonthsCount: sql<number>`
-          COUNT(
-            CASE WHEN ${evaluationResults.createdAt} BETWEEN ${dateCondition} - INTERVAL '2 months'
-              AND ${dateCondition} - INTERVAL '1 month'
-              THEN 1 ELSE NULL
-            END
-          )
-        `.as('last_two_months_evaluation_results_count'),
-      })
-      .from(evaluationResults)
-      .leftJoin(evaluations, eq(evaluations.id, evaluationResults.evaluationId))
-      .leftJoin(workspaces, eq(workspaces.id, evaluations.workspaceId))
-      .leftJoin(
-        errorsCTE,
-        and(
-          eq(errorsCTE.errorableUuid, evaluationResults.uuid),
-          eq(errorsCTE.errorableType, ErrorableEntity.EvaluationResult),
-        ),
-      )
-      .where(
-        and(
-          isNull(errorsCTE.id),
-          gte(
-            evaluationResults.createdAt,
-            sql<Date>`${dateCondition} - INTERVAL '2 months'`,
-          ),
-        ),
-      )
-      .groupBy(workspaces.id),
+      .from(spans)
+      .where(not(eq(spans.status, SpanStatus.Error)))
+      .groupBy(spans.workspaceId),
   )
 
   const evaluationResultsV2CTE = db.$with('evaluation_results_v2_counts').as(
@@ -177,8 +90,8 @@ export async function getUsageOverview(
         `.as('last_month_evaluation_results_v2_count'),
         lastTwoMonthsCount: sql<number>`
           COUNT(
-            CASE WHEN ${evaluationResultsV2.createdAt} BETWEEN ${dateCondition} - INTERVAL '2 months'
-              AND ${dateCondition} - INTERVAL '1 month'
+            CASE WHEN ${evaluationResultsV2.createdAt} >= ${dateCondition} - INTERVAL '2 months'
+              AND ${evaluationResultsV2.createdAt} < ${dateCondition} - INTERVAL '1 month'
               THEN 1 ELSE NULL
             END
           )
@@ -198,12 +111,7 @@ export async function getUsageOverview(
   )
 
   const query = db
-    .with(
-      workspaceUsageInfoCTE,
-      logsCTE,
-      evaluationResultsCTE,
-      evaluationResultsV2CTE,
-    )
+    .with(spansCTE, workspaceUsageInfoCTE, evaluationResultsV2CTE)
     .select({
       workspaceId: max(workspaces.id),
       name: max(workspaces.name),
@@ -216,18 +124,15 @@ export async function getUsageOverview(
       ),
       emails: max(workspaceUsageInfoCTE.emails),
       lastMonthRuns: sql<number>`SUM(
-        COALESCE(${logsCTE.lastMonthCount}, 0) +
-        COALESCE(${evaluationResultsCTE.lastMonthCount}, 0) +
+        COALESCE(${spansCTE.lastMonthCount}, 0) +
         COALESCE(${evaluationResultsV2CTE.lastMonthCount}, 0)
       )`.as('last_month_runs'),
       lastTwoMonthsRuns: sql<number>`SUM(
-        COALESCE(${logsCTE.lastTwoMonthsCount}, 0) +
-        COALESCE(${evaluationResultsCTE.lastTwoMonthsCount}, 0) +
+        COALESCE(${spansCTE.lastTwoMonthsCount}, 0) +
         COALESCE(${evaluationResultsV2CTE.lastTwoMonthsCount}, 0)
       )`.as('last_two_months_runs'),
       latestRunAt: sql<Date | string>`GREATEST(
-        ${logsCTE.latestCreatedAt},
-        ${evaluationResultsCTE.latestCreatedAt},
+        ${spansCTE.latestCreatedAt},
         ${evaluationResultsV2CTE.latestCreatedAt}
       )`.as('latest_run_at'),
     })
@@ -236,11 +141,7 @@ export async function getUsageOverview(
       workspaceUsageInfoCTE,
       eq(workspaceUsageInfoCTE.id, workspaces.id),
     )
-    .leftJoin(logsCTE, eq(logsCTE.workspaceId, workspaces.id))
-    .leftJoin(
-      evaluationResultsCTE,
-      eq(evaluationResultsCTE.workspaceId, workspaces.id),
-    )
+    .leftJoin(spansCTE, eq(spansCTE.workspaceId, workspaces.id))
     .leftJoin(
       evaluationResultsV2CTE,
       eq(evaluationResultsV2CTE.workspaceId, workspaces.id),

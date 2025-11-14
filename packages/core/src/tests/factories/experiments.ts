@@ -1,18 +1,21 @@
 import { faker } from '@faker-js/faker'
-import { EvaluationV2, LogSources } from '../../constants'
+import {
+  EvaluationV2,
+  LogSources,
+  SpanType,
+  SpanWithDetails,
+} from '../../constants'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Dataset } from '../../schema/models/types/Dataset'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Experiment } from '../../schema/models/types/Experiment'
-import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { createExperiment as createExperimentFn } from '../../services/experiments/create'
 import { createDataset, ICreateDatasetV2 } from './datasets'
-import { createDocumentLog } from './documentLogs'
 import { createEvaluationResultV2 } from './evaluationResultsV2'
-import { createProviderLog } from './providerLogs'
 import { SimulationSettings } from '@latitude-data/constants/simulation'
+import { createSpan } from './spans'
 
 export type ICreateExperiment = {
   name?: string
@@ -89,7 +92,6 @@ export async function createExperimentResults({
   workspace,
   commit,
   document,
-  provider,
   experiment,
   costInMillicents,
   duration,
@@ -98,28 +100,19 @@ export async function createExperimentResults({
   workspace: Workspace
   commit: Commit
   document: DocumentVersion
-  provider: ProviderApiKey
   experiment: Experiment
   costInMillicents: number
   duration: number
   scores: { evaluation: EvaluationV2; score: number }[]
 }) {
-  const { documentLog } = await createDocumentLog({
-    document,
-    commit,
+  const span = await createSpan({
+    documentUuid: document.documentUuid,
+    commitUuid: commit.uuid,
+    workspaceId: workspace.id,
+    type: SpanType.Prompt,
+    cost: costInMillicents,
+    experimentUuid: experiment.uuid,
     source: LogSources.Experiment,
-    experimentId: experiment.id,
-    totalDuration: duration,
-    skipProviderLogs: true,
-  })
-
-  const providerLog = await createProviderLog({
-    workspace,
-    documentLogUuid: documentLog.uuid,
-    providerId: provider.id,
-    providerType: provider.provider,
-    source: LogSources.Experiment,
-    costInMillicents,
     duration,
   })
 
@@ -129,7 +122,7 @@ export async function createExperimentResults({
       evaluation,
       experiment,
       commit,
-      providerLog,
+      span: span as unknown as SpanWithDetails<SpanType.Prompt>,
       score,
       normalizedScore: score,
     })

@@ -104,7 +104,7 @@ export async function addResultToIssue<
       if (!Result.isOk(validating)) return validating
 
       let centroid
-      if (canUpdateCentroid) {
+      if (canUpdateCentroid && embedding) {
         centroid = updateCentroid(
           { ...issue.centroid, updatedAt: issue.updatedAt },
           { embedding, type: evaluation.type, createdAt: result.createdAt },

@@ -2,11 +2,9 @@ import { type Commit } from '../../schema/models/types/Commit'
 import { type Experiment } from '../../schema/models/types/Experiment'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { ErrorableEntity, LogSources } from '../../constants'
+import { LogSources } from '../../constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
-import { createChainRunError } from '../../lib/streamManager/ChainErrors'
-import { ToolHandler } from '../documents/tools/clientTools/handlers'
 import { telemetry, TelemetryContext } from '../../telemetry'
 import { runChain } from '../chains/run'
 import { createDocumentLog } from '../documentLogs/create'
@@ -15,6 +13,7 @@ import { isErrorRetryable } from '../evaluationsV2/run'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { RunDocumentChecker } from './RunDocumentChecker'
 import type { SimulationSettings } from '@latitude-data/constants/simulation'
+import { ToolHandler } from '../documents/tools/clientTools/handlers'
 
 export type RunDocumentAtCommitArgs = {
   context: TelemetryContext
@@ -69,6 +68,7 @@ export async function runDocumentAtCommit({
     promptUuid: document.documentUuid,
     template: result.value,
     versionUuid: commit.uuid,
+    source,
   })
 
   const checker = new RunDocumentChecker({
@@ -120,17 +120,6 @@ export async function runDocumentAtCommit({
     ...runResult,
     errorableUuid,
     resolvedContent: result.value,
-    error: runResult.error.then(async (error) => {
-      if (error) {
-        await createChainRunError({
-          error,
-          errorableUuid,
-          errorableType: ErrorableEntity.DocumentLog,
-        })
-      }
-
-      return error
-    }),
     lastResponse: runResult.response.then(async (response) => {
       const error = await runResult.error
       if (error) {

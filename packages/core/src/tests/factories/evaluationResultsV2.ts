@@ -8,24 +8,23 @@ import {
   EvaluationType,
   EvaluationV2,
   RuleEvaluationMetric,
+  SpanType,
+  SpanWithDetails,
 } from '../../constants'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Dataset } from '../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { type Experiment } from '../../schema/models/types/Experiment'
-import { type ProviderLog } from '../../schema/models/types/ProviderLog'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { ProviderLogDto } from '../../schema/types'
 import { createEvaluationResultV2 as createEvaluationResultSvc } from '../../services/evaluationsV2/results/create'
-import serializeProviderLog from '../../services/providerLogs/serialize'
 
 type CreateEvaluationResultV2Args<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   evaluation: EvaluationV2<T, M>
-  providerLog: ProviderLog | ProviderLogDto
+  span: SpanWithDetails<SpanType.Prompt>
   commit: Commit
   experiment?: Experiment
   dataset?: Dataset
@@ -55,10 +54,7 @@ export async function createEvaluationResultV2<
 >(args: CreateEvaluationResultV2Args<T, M>): Promise<EvaluationResultV2<T, M>> {
   const { result } = await createEvaluationResultSvc({
     evaluation: args.evaluation,
-    providerLog:
-      'response' in args.providerLog
-        ? args.providerLog
-        : serializeProviderLog(args.providerLog),
+    span: args.span,
     commit: args.commit,
     experiment: args.experiment,
     dataset: args.dataset,

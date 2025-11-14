@@ -84,13 +84,17 @@ export function ActionButtons({
         experiment={experiment}
       />
       <Link
-        href={ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid })
-          .documents.detail({ uuid: document.documentUuid })
-          [DocumentRoutes.logs].withFilters({
-            experimentId: experiment.id,
-          })}
+        href={
+          ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid })
+            .documents.detail({ uuid: document.documentUuid })[
+            DocumentRoutes.traces
+          ].root +
+          `?filters=${encodeURIComponent(
+            JSON.stringify({ experimentUuids: [experiment.uuid] }),
+          )}`
+        }
         className='w-full'
       >
         <Button

@@ -190,6 +190,9 @@ export const API_ROUTES = {
                       documentLogs: {
                         root: `${documentRoot}/evaluations/results/document-logs`,
                       },
+                      spans: {
+                        root: `${documentRoot}/evaluations/results/spans`,
+                      },
                     },
                   },
                   spans: {
@@ -247,8 +250,6 @@ export const API_ROUTES = {
                 comparison: (experimentUuids: string[]) =>
                   `${documentRoot}/experiments/comparison?uuids=${experimentUuids.join(',')}`,
               },
-              // These are logs serialized that includes the information included
-              // in the genered provider logs together with document log
               evaluatedLogs: {
                 root: ({
                   page,
@@ -260,7 +261,7 @@ export const API_ROUTES = {
                   configuration?: string
                 }) =>
                   generateDocumentLogsApiRouteWithParams({
-                    path: `${documentRoot}/evaluatedLogs`,
+                    path: `${documentRoot}/evaluatedSpans`,
                     params: {
                       page,
                       pageSize,
@@ -389,6 +390,9 @@ export const API_ROUTES = {
     previewLogs: {
       root: '/api/datasets/preview-logs',
     },
+    previewSpans: {
+      root: '/api/datasets/preview-spans',
+    },
   },
   datasetsRows: {
     root: '/api/dataset-rows',
@@ -416,6 +420,11 @@ export const API_ROUTES = {
     },
     downloadLogs: {
       root: `/api/documentLogs/download-logs`,
+    },
+  },
+  spans: {
+    downloadSpans: {
+      root: `/api/spans/download-spans`,
     },
   },
   workspaceFeatures: {

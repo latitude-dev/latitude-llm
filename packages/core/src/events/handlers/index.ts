@@ -34,8 +34,7 @@ export const EventHandlers: IEventsHandlers = {
   datasetCreated: [],
   datasetUploaded: [createDatasetRowsJob],
   documentCreated: [],
-  documentLogCreated: [evaluateLiveLogJob, notifyToClientDocumentLogCreatedJob],
-  documentLogInteracted: [evaluateLiveLogJob],
+  documentLogCreated: [notifyToClientDocumentLogCreatedJob],
   experimentVariantsCreated: [],
   documentSuggestionCreated: [
     notifyClientOfDocumentSuggestionCreated,
@@ -78,7 +77,7 @@ export const EventHandlers: IEventsHandlers = {
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],
   mcpServerConnected: [notifyClientOfMcpServerConnected],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],
-  spanCreated: [],
+  spanCreated: [evaluateLiveLogJob],
   segmentCreated: [],
   segmentUpdated: [],
   actionExecuted: [],

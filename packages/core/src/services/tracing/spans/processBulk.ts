@@ -283,6 +283,10 @@ export async function processSpansBulk(
         duration: processed.duration,
         startedAt: processed.startedAt,
         endedAt: processed.endedAt,
+        source:
+          'source' in processed.metadata
+            ? processed.metadata.source
+            : undefined,
 
         // Tokens
         tokensPrompt: metadata?.tokens?.prompt,
@@ -291,6 +295,7 @@ export async function processSpansBulk(
         tokensReasoning: metadata?.tokens?.reasoning,
 
         // Cost
+        model: metadata?.model,
         cost: metadata?.cost,
 
         // References
@@ -335,6 +340,7 @@ export async function processSpansBulk(
         type: 'spanCreated',
         data: {
           spanId: span.id,
+          traceId: span.traceId,
           apiKeyId: apiKey.id,
           workspaceId: workspace.id,
         },

@@ -1,4 +1,4 @@
-import { Providers } from '@latitude-data/constants'
+import { Providers, SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { desc, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { database } from '../../../client'
@@ -14,7 +14,6 @@ import { type Commit } from '../../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import * as factories from '../../../tests/factories'
-import serializeProviderLog from '../../providerLogs/serialize'
 import { updateEvaluationResultV2 } from './update'
 
 describe('updateEvaluationResultV2', () => {
@@ -33,6 +32,7 @@ describe('updateEvaluationResultV2', () => {
     EvaluationType.Rule,
     RuleEvaluationMetric.ExactMatch
   >
+  let span: SpanWithDetails<SpanType.Prompt>
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -43,6 +43,7 @@ describe('updateEvaluationResultV2', () => {
       workspace: w,
       documents,
       commit: c,
+      apiKeys,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
@@ -63,15 +64,15 @@ describe('updateEvaluationResultV2', () => {
       workspace: workspace,
     })
 
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
-      document: document,
-      commit: commit,
-    })
-    const providerLog = serializeProviderLog(providerLogs.at(-1)!)
+    span = (await factories.createSpan({
+      workspaceId: workspace.id,
+      commitUuid: commit.uuid,
+      apiKeyId: apiKeys[0]!.id,
+    })) as SpanWithDetails<SpanType.Prompt>
 
     result = await factories.createEvaluationResultV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: span,
       commit: commit,
       workspace: workspace,
     })

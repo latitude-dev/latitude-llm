@@ -46,7 +46,7 @@
     "ai": "catalog:",
     "arctic": "3.6.0",
     "argon2": "0.44.0",
-    "bullmq": "5.44.4",
+    "bullmq": "catalog:",
     "date-fns": "3.6.0",
     "dd-trace": "catalog:",
     "diff-match-patch": "1.0.5",
@@ -120,3 +120,4 @@
     "vitest": "^3.1.4"
   }
 }
+

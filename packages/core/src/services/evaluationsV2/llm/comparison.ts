@@ -6,20 +6,21 @@ import {
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationComparisonResultMetadata,
   LlmEvaluationMetric,
+  SpanType,
   LlmEvaluationComparisonSpecification as specification,
 } from '../../../constants'
-import { formatConversation } from '../../../helpers'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
-import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 import {
   EvaluationMetricCloneArgs,
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt } from './shared'
+import { buildEvaluationParameters, promptTask, runPrompt } from './shared'
+import { assembleTrace } from '../../tracing/traces/assemble'
+import { findFirstSpanOfType } from '../../tracing/spans/findFirstSpanOfType'
 
 export const LlmEvaluationComparisonSpecification = {
   ...specification,
@@ -174,7 +175,7 @@ async function run(
     expectedOutput,
     datasetLabel,
     conversation,
-    documentLog,
+    span,
     providers,
     commit,
     workspace,
@@ -212,21 +213,29 @@ async function run(
     throw new BadRequestError('Provider is required')
   }
 
-  const evaluatedLog = await serializeDocumentLog(
-    { documentLog, workspace },
+  let completionSpan
+  const assembledTrace = await assembleTrace(
+    { traceId: span.traceId, workspace },
     db,
-  ).then((r) => r.unwrap())
+  ).then((r) => r.value)
+  if (assembledTrace) {
+    completionSpan = findFirstSpanOfType(
+      assembledTrace.trace.children,
+      SpanType.Completion,
+    )
+  }
 
   let result
   try {
     result = await runPrompt({
       prompt: buildPrompt({ ...metadata.configuration, provider }),
-      parameters: {
-        ...evaluatedLog,
+      parameters: buildEvaluationParameters({
+        span,
+        completionSpan,
         actualOutput: metadata.actualOutput,
+        conversation,
         expectedOutput: metadata.expectedOutput,
-        conversation: formatConversation(conversation),
-      },
+      }),
       schema: promptSchema,
       resultUuid: resultUuid,
       evaluation: evaluation,

@@ -4,20 +4,21 @@ import {
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
 import {
+  CompletionSpanMetadata,
   EVALUATION_SCORE_SCALE,
   EvaluationMetric,
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
+  SpanType,
+  SpanWithDetails,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { buildConversation } from '../../helpers'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import {
-  DocumentLogsRepository,
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
 } from '../../repositories'
@@ -26,10 +27,12 @@ import { type Dataset } from '../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { type Experiment } from '../../schema/models/types/Experiment'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { ProviderLogDto } from '../../schema/types'
 import { extractActualOutput, extractExpectedOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
+import { findFirstSpanOfType } from '../tracing/spans/findFirstSpanOfType'
+import { assembleTrace } from '../tracing/traces/assemble'
+import { LegacyMessage } from '../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
 
 export async function runEvaluationV2<
   T extends EvaluationType,
@@ -37,7 +40,7 @@ export async function runEvaluationV2<
 >(
   {
     evaluation,
-    providerLog,
+    span,
     experiment,
     dataset,
     datasetLabel,
@@ -47,7 +50,7 @@ export async function runEvaluationV2<
     dry = false,
   }: {
     evaluation: EvaluationV2<T, M>
-    providerLog: ProviderLogDto
+    span: SpanWithDetails<SpanType.Prompt>
     experiment?: Experiment
     dataset?: Dataset
     datasetLabel?: string
@@ -59,11 +62,12 @@ export async function runEvaluationV2<
   transaction = new Transaction(),
 ) {
   const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
-  const findResult = await resultsRepository.findByEvaluatedLogAndEvaluation({
-    evaluatedLogId: providerLog.id,
+  const found = await resultsRepository.findByEvaluatedSpanAndEvaluation({
+    evaluatedSpanId: span.id,
+    evaluatedTraceId: span.traceId,
     evaluationUuid: evaluation.uuid,
   })
-  if (findResult.ok) {
+  if (found) {
     return Result.error(
       new UnprocessableEntityError(
         'Cannot evaluate a log that is already evaluated for this evaluation',
@@ -72,7 +76,6 @@ export async function runEvaluationV2<
   }
 
   const resultUuid = generateUUIDIdentifier()
-
   const documentsRepository = new DocumentVersionsRepository(workspace.id)
   const document = await documentsRepository
     .getDocumentAtCommit({
@@ -80,25 +83,6 @@ export async function runEvaluationV2<
       documentUuid: evaluation.documentUuid,
     })
     .then((r) => r.unwrap())
-
-  if (!providerLog.documentLogUuid) {
-    return Result.error(
-      new BadRequestError('Provider log is not attached to a document log'),
-    )
-  }
-
-  const documentLogsRepository = new DocumentLogsRepository(workspace.id)
-  const documentLog = await documentLogsRepository
-    .findByUuid(providerLog.documentLogUuid)
-    .then((r) => r.unwrap())
-
-  if (documentLog.documentUuid !== document.documentUuid) {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that is from a different document',
-      ),
-    )
-  }
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) {
@@ -137,11 +121,34 @@ export async function runEvaluationV2<
     )
   }
 
+  const assembledSpan = await assembleTrace({
+    traceId: span.traceId,
+    workspace,
+  }).then((r) => r.unwrap())
+  if (!assembledSpan) {
+    return Result.error(new UnprocessableEntityError('Cannot assemble trace'))
+  }
+  const completionSpan = findFirstSpanOfType(
+    assembledSpan.trace.children,
+    SpanType.Completion,
+  )
+  if (!completionSpan) {
+    return Result.error(
+      new UnprocessableEntityError('Cannot find completion span'),
+    )
+  }
+  const completionSpanMetadata =
+    completionSpan.metadata as CompletionSpanMetadata
+  const conversation = [
+    ...completionSpanMetadata.input,
+    ...(completionSpanMetadata.output ?? []),
+  ] as unknown as LegacyMessage[]
+
   let value
   try {
     // Note: some actual output errors are learnable and thus are treated as failures
     const actualOutput = await extractActualOutput({
-      providerLog: providerLog,
+      conversation,
       configuration: evaluation.configuration.actualOutput,
     })
     if (
@@ -176,9 +183,8 @@ export async function runEvaluationV2<
       evaluation: evaluation,
       actualOutput: actualOutput,
       expectedOutput: expectedOutput,
-      conversation: buildConversation(providerLog),
-      providerLog: providerLog,
-      documentLog: documentLog,
+      conversation,
+      span,
       document: document,
       experiment: experiment,
       dataset: dataset,
@@ -210,7 +216,7 @@ export async function runEvaluationV2<
         {
           uuid: resultUuid,
           evaluation: evaluation,
-          providerLog: providerLog,
+          span,
           commit: commit,
           experiment: experiment,
           dataset: dataset,
@@ -234,7 +240,8 @@ export async function runEvaluationV2<
           evaluation: evaluation,
           result: result,
           commit: commit,
-          providerLog: providerLog,
+          spanId: span.id,
+          traceId: span.traceId,
         },
       })
     },

@@ -20,12 +20,18 @@ setupSchedules()
 const app = express()
 const workers = await startWorkers()
 
+// Initialize job tracker with all queues
+const allQueues = await queues()
+Object.values(allQueues).forEach((queue) => {
+  jobTracker.registerQueue(queue)
+})
+
 // Set up Bull Board
 const serverAdapter = new ExpressAdapter()
 serverAdapter.setBasePath('/admin/queues')
 
 createBullBoard({
-  queues: Object.values(await queues()).map((q) => new BullMQAdapter(q)),
+  queues: Object.values(allQueues).map((q) => new BullMQAdapter(q)),
   serverAdapter,
 })
 
@@ -77,14 +83,15 @@ const gracefulShutdown = async (signal: string) => {
   // 1) Stop accepting new jobs
   await Promise.all(workers.map((w) => w.pause()))
 
-  // 2) Compute remaining active jobs while paused
-  const remaining = jobTracker.getActiveJobsCount()
+  // 2) Get current active jobs count (poll immediately for accuracy)
+  const remaining = await jobTracker.getActiveJobsCountNow()
   console.log(`Paused workers. Remaining active jobs: ${remaining}`)
 
   // 3) Wait for active jobs to complete
   await Promise.all(workers.map((w) => w.close()))
 
-  // 4) Disable scale-in protection after all jobs finished
+  // 4) Stop job tracker polling and disable scale-in protection
+  jobTracker.stopPolling()
   await jobTracker.forceDisableProtection()
 
   // 5) Close HTTP server and exit

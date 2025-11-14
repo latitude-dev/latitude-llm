@@ -27,7 +27,6 @@ export async function createIssue(
   transaction = new Transaction(),
 ) {
   const issueCreatedAt = createdAt ?? new Date()
-
   const centroid = createCentroid()
 
   // Note: not creating the vector in the vector db yet to avoid storing empty vectors,

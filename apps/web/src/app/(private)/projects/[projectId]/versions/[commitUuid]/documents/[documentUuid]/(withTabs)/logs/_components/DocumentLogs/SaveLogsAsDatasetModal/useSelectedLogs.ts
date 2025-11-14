@@ -28,10 +28,12 @@ export type OutputItem = {
   previewRows: string[][]
 }
 
-function serializeRowData(rowData: DatasetRowData): string[] {
-  const keys = Object.keys(rowData)
-  return keys.map((key) => {
-    const cell = rowData[key]
+function serializeRowData(
+  rowData: DatasetRowData,
+  columns: Dataset['columns'],
+): string[] {
+  return columns.map((column) => {
+    const cell = rowData[column.identifier]
     return parseRowCell({ cell })
   })
 }
@@ -40,8 +42,8 @@ function serializeRows(item: InputItem): OutputItem {
   const columns = item.columns
   return {
     columns,
-    datasetRows: item.existingRows.map(serializeRowData),
-    previewRows: item.newRows.map(serializeRowData),
+    datasetRows: item.existingRows.map((row) => serializeRowData(row, columns)),
+    previewRows: item.newRows.map((row) => serializeRowData(row, columns)),
   }
 }
 

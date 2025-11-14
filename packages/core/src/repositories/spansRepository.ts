@@ -1,8 +1,22 @@
 import { parseJSON } from 'date-fns'
-import { and, asc, desc, eq, getTableColumns, sql, SQL } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  between,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  inArray,
+  lte,
+  sql,
+  SQL,
+} from 'drizzle-orm'
 import { cache as redis } from '../cache'
 import {
   DEFAULT_PAGINATION_SIZE,
+  LogSources,
   Span,
   SPAN_METADATA_CACHE_TTL,
   SPAN_METADATA_STORAGE_KEY,
@@ -11,8 +25,10 @@ import {
 } from '../constants'
 import { diskFactory, DiskWrapper } from '../lib/disk'
 import { Result } from '../lib/Result'
+import { commits } from '../schema/models/commits'
 import { spans } from '../schema/models/spans'
 import Repository from './repositoryV2'
+import { CommitsRepository } from './commitsRepository'
 
 const tt = getTableColumns(spans)
 
@@ -70,36 +86,184 @@ export class SpansRepository extends Repository<Span> {
   async approximateCount({
     documentUuid,
     commitUuid,
+    type,
+    commitUuids,
+    experimentUuids,
+    createdAt,
   }: {
     documentUuid: string
-    commitUuid: string
+    commitUuid?: string
+    type?: SpanType
+    commitUuids?: string[]
+    experimentUuids?: string[]
+    createdAt?: { from?: Date; to?: Date }
   }) {
-    // Use PostgreSQL's EXPLAIN to get an approximate row count
-    // This is much faster than COUNT(*) on large tables
-    const explainResult = await this.db.execute(sql`
-      EXPLAIN SELECT COUNT(*)
-      FROM ${spans}
-      WHERE ${this.scopeFilter}
-        AND ${eq(spans.documentUuid, documentUuid)}
-        AND ${eq(spans.commitUuid, commitUuid)}
-    `)
+    // Use a sampling approach for large tables to get an approximate count
+    // This queries a percentage of the table using TABLESAMPLE
+    const conditions = [
+      this.scopeFilter,
+      eq(spans.documentUuid, documentUuid),
+      commitUuid ? eq(spans.commitUuid, commitUuid) : undefined,
+      type ? eq(spans.type, type) : undefined,
+    ].filter(Boolean) as SQL<unknown>[]
 
-    interface ExplainPlanRow {
-      'QUERY PLAN': Array<{
-        Plan: {
-          'Plan Rows': number
-        }
-      }>
+    // Add date range filter if provided
+    if (createdAt?.from && createdAt?.to) {
+      conditions.push(between(spans.startedAt, createdAt.from, createdAt.to))
+    } else if (createdAt?.from) {
+      conditions.push(gte(spans.startedAt, createdAt.from))
+    } else if (createdAt?.to) {
+      conditions.push(lte(spans.startedAt, createdAt.to))
     }
 
-    const explainPlan = explainResult.rows[0] as unknown as ExplainPlanRow
-    const plan = explainPlan['QUERY PLAN'][0].Plan
-    if (!plan) return Result.ok(null)
+    // Add commit filter if provided - filter by commit UUIDs directly
+    if (commitUuids && commitUuids.length > 0) {
+      conditions.push(inArray(spans.commitUuid, commitUuids))
+    }
 
-    // Extract the estimated row count from the plan
-    const estimatedRows = plan['Plan Rows'] ?? null
+    // Add experiment filter if provided - filter by experiment UUIDs directly
+    if (experimentUuids && experimentUuids.length > 0) {
+      conditions.push(inArray(spans.experimentUuid, experimentUuids))
+    }
 
-    return Result.ok(estimatedRows)
+    const whereClause = and(...conditions)!
+
+    try {
+      // First, get the total table size to determine if we should sample
+      const tableStatsResult = await this.db.execute(sql`
+        SELECT reltuples::bigint AS estimate
+        FROM pg_class
+        WHERE relname = 'spans'
+      `)
+
+      interface TableStatsRow {
+        estimate: string
+      }
+
+      const totalRows = parseInt(
+        (tableStatsResult.rows[0] as unknown as TableStatsRow).estimate,
+        10,
+      )
+
+      // For smaller tables (< 100k rows), do an actual count
+      // For larger tables, use sampling
+      if (totalRows < 100_000) {
+        const countResult = await this.db
+          .select({ count: count() })
+          .from(spans)
+          .where(whereClause)
+          .then((r) => r[0])
+
+        return Result.ok(countResult?.count ?? 0)
+      }
+
+      // For large tables, use a 10% sample and extrapolate
+      const sampleResult = await this.db.execute(sql`
+        SELECT COUNT(*) * 10 as estimated_count
+        FROM ${spans} TABLESAMPLE BERNOULLI (10)
+        WHERE ${whereClause}
+      `)
+
+      interface SampleRow {
+        estimated_count: string
+      }
+
+      const estimatedCount = parseInt(
+        (sampleResult.rows[0] as unknown as SampleRow).estimated_count,
+        10,
+      )
+
+      return Result.ok(estimatedCount)
+    } catch (_) {
+      return Result.ok(null)
+    }
+  }
+
+  async approximateCountByProject(projectId: number) {
+    // Use a sampling approach for large tables to get an approximate count
+    // This queries a percentage of the table using TABLESAMPLE
+    const commitsRepo = new CommitsRepository(this.workspaceId)
+    const commits = await commitsRepo
+      .filterByProject(projectId)
+      .then((r) => r.value)
+
+    if (!commits.length) {
+      return Result.ok(0)
+    }
+
+    const commitUuids = commits.map((c) => c.uuid)
+    const whereClause = and(
+      this.scopeFilter,
+      inArray(spans.commitUuid, commitUuids),
+    )
+
+    try {
+      // First, get the total table size to determine if we should sample
+      const tableStatsResult = await this.db.execute(sql`
+        SELECT reltuples::bigint AS estimate
+        FROM pg_class
+        WHERE relname = 'spans'
+      `)
+
+      interface TableStatsRow {
+        estimate: string
+      }
+
+      const totalRows = parseInt(
+        (tableStatsResult.rows[0] as unknown as TableStatsRow).estimate,
+        10,
+      )
+
+      // For smaller tables (< 100k rows), do an actual count
+      // For larger tables, use sampling
+      if (totalRows < 100_000) {
+        const countResult = await this.db
+          .select({ count: count() })
+          .from(spans)
+          .where(whereClause)
+          .then((r) => r[0])
+
+        return Result.ok(countResult?.count ?? 0)
+      }
+
+      // For large tables, use a 10% sample and extrapolate
+      const sampleResult = await this.db.execute(sql`
+        SELECT COUNT(*) * 10 as estimated_count
+        FROM ${spans} TABLESAMPLE BERNOULLI (10)
+        WHERE ${whereClause}
+      `)
+
+      interface SampleRow {
+        estimated_count: string
+      }
+
+      const estimatedCount = parseInt(
+        (sampleResult.rows[0] as unknown as SampleRow).estimated_count,
+        10,
+      )
+
+      return Result.ok(estimatedCount)
+    } catch (_) {
+      return Result.ok(null)
+    }
+  }
+
+  async findByDocumentLogUuids(documentLogUuids: string[]) {
+    return this.db
+      .select()
+      .from(spans)
+      .where(inArray(spans.documentLogUuid, documentLogUuids))
+      .then((r) => r as Span[])
+  }
+
+  async findByDocumentLogUuid(documentLogUuid: string) {
+    const result = await this.db
+      .select()
+      .from(spans)
+      .where(eq(spans.documentLogUuid, documentLogUuid))
+      .then((r) => r[0])
+
+    return result as Span | undefined
   }
 
   async findByDocumentAndCommitLimited({
@@ -108,19 +272,44 @@ export class SpansRepository extends Repository<Span> {
     type,
     from,
     limit = DEFAULT_PAGINATION_SIZE,
+    commitUuids,
+    experimentUuids,
+    createdAt,
   }: {
     documentUuid: string
-    commitUuid: string
+    commitUuid?: string
     type?: SpanType
     from?: { startedAt: string; id: string }
     limit?: number
+    commitUuids?: string[]
+    experimentUuids?: string[]
+    createdAt?: { from?: Date; to?: Date }
   }) {
     const conditions = [
       this.scopeFilter,
       eq(spans.documentUuid, documentUuid),
-      eq(spans.commitUuid, commitUuid),
+      commitUuid ? eq(spans.commitUuid, commitUuid) : undefined,
       type ? eq(spans.type, type) : undefined,
     ].filter(Boolean) as SQL<unknown>[]
+
+    // Add date range filter if provided
+    if (createdAt?.from && createdAt?.to) {
+      conditions.push(between(spans.startedAt, createdAt.from, createdAt.to))
+    } else if (createdAt?.from) {
+      conditions.push(gte(spans.startedAt, createdAt.from))
+    } else if (createdAt?.to) {
+      conditions.push(lte(spans.startedAt, createdAt.to))
+    }
+
+    // Add commit filter if provided - filter by commit UUIDs directly
+    if (commitUuids && commitUuids.length > 0) {
+      conditions.push(inArray(spans.commitUuid, commitUuids))
+    }
+
+    // Add experiment filter if provided - filter by experiment UUIDs directly
+    if (experimentUuids && experimentUuids.length > 0) {
+      conditions.push(inArray(spans.experimentUuid, experimentUuids))
+    }
 
     // Filter by cursor if provided (same pattern as document logs)
     const cursorConditions = [
@@ -153,6 +342,94 @@ export class SpansRepository extends Repository<Span> {
       items: items as Span[],
       next,
     })
+  }
+
+  async findByProjectLimited({
+    projectId,
+    type,
+    from,
+    source,
+    limit = DEFAULT_PAGINATION_SIZE,
+  }: {
+    projectId: number
+    type?: SpanType
+    from?: { startedAt: string; id: string }
+    source?: LogSources[]
+    limit?: number
+  }) {
+    const conditions = [
+      this.scopeFilter,
+      eq(commits.projectId, projectId),
+      type ? eq(spans.type, type) : undefined,
+      source ? inArray(spans.source, source) : undefined,
+    ].filter(Boolean) as SQL<unknown>[]
+
+    // Filter by cursor if provided (same pattern as document logs)
+    const cursorConditions = [
+      ...conditions,
+      from
+        ? sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
+        : undefined,
+    ].filter(Boolean) as SQL<unknown>[]
+
+    const result = await this.db
+      .select(tt)
+      .from(spans)
+      .innerJoin(commits, eq(spans.commitUuid, commits.uuid))
+      .where(and(...cursorConditions))
+      .orderBy(desc(spans.startedAt), desc(spans.id))
+      .limit(limit + 1)
+
+    const hasMore = result.length > limit
+    const items = hasMore ? result.slice(0, limit) : result
+    const next = hasMore
+      ? {
+          startedAt: items[items.length - 1].startedAt.toISOString(),
+          id: items[items.length - 1].id,
+        }
+      : null
+
+    return Result.ok<{
+      items: Span[]
+      next: { startedAt: string; id: string } | null
+    }>({
+      items: items as Span[],
+      next,
+    })
+  }
+
+  async findByParentAndType({
+    parentId,
+    type,
+  }: {
+    parentId: string
+    type: SpanType
+  }) {
+    return await this.db
+      .select()
+      .from(spans)
+      .where(and(eq(spans.parentId, parentId), eq(spans.type, type)))
+  }
+
+  async findBySpanAndTraceIds(
+    spanTraceIdPairs: Array<{ spanId: string; traceId: string }>,
+  ) {
+    if (spanTraceIdPairs.length === 0) {
+      return Result.ok<Span[]>([])
+    }
+
+    // Build OR conditions for each span/trace pair
+    const conditions = spanTraceIdPairs.map(({ spanId, traceId }) =>
+      and(eq(spans.id, spanId), eq(spans.traceId, traceId)),
+    )
+
+    const result = await this.db
+      .select(tt)
+      .from(spans)
+      .where(and(this.scopeFilter, sql`(${sql.join(conditions, sql` OR `)})`)!)
+      .orderBy(asc(spans.startedAt), asc(spans.id))
+
+    return Result.ok<Span[]>(result as Span[])
   }
 }
 

@@ -244,6 +244,9 @@ export const ROUTES = {
                         return `${experimentsRoot}?selected=${uuids.join(',')}`
                       },
                     },
+                    spans: {
+                      root: `${root}/spans`,
+                    },
                   }
                 },
               },

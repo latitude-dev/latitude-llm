@@ -7,12 +7,11 @@ import Actions, { ActionsState } from './Actions'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
-import { useUIAnnotations } from '$/hooks/annotations/useUIAnnotations'
-import { DocumentLogWithMetadata } from '@latitude-data/constants'
+import { SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { ProviderLogDto } from '@latitude-data/core/schema/types'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import useFeature from '$/stores/useFeature'
+import { useAnnotationBySpan } from '$/hooks/useAnnotationsBySpan'
 
 export default function Chat({
   debugMode,
@@ -87,34 +86,30 @@ const Messages = memo(function Messages({
       {error && <ErrorMessage error={error} />}
 
       {annotationData.isReady ? (
-        <AnnoatationLogForm
+        <AnnotationSpanForm
           project={project}
           commit={commit}
-          documentLog={annotationData.documentLog}
-          providerLog={annotationData.providerLog}
+          span={annotationData.span}
         />
       ) : null}
     </div>
   )
 })
 
-function AnnoatationLogForm({
+function AnnotationSpanForm({
   project,
   commit,
-  documentLog,
-  providerLog,
+  span,
 }: {
   project: Project
   commit: Commit
-  documentLog: DocumentLogWithMetadata
-  providerLog: ProviderLogDto
+  span: SpanWithDetails<SpanType.Prompt>
 }) {
   const issuesFeature = useFeature('issues')
-  const uiAnnotations = useUIAnnotations({
+  const uiAnnotations = useAnnotationBySpan({
     project,
     commit,
-    documentLog,
-    providerLog,
+    span,
   })
 
   if (!issuesFeature.isEnabled) return null
@@ -126,14 +121,9 @@ function AnnoatationLogForm({
   return (
     <div className='w-full border-t flex flex-col gap-y-4 mt-4 p-4'>
       <AnnotationForm
-        commit={commit}
-        documentLog={documentLog}
-        providerLog={providerLog}
+        span={span}
         evaluation={manualAnnotation.evaluation}
         result={manualAnnotation.result}
-        mutateEvaluationResults={uiAnnotations.mutateResults}
-        annotateEvaluation={uiAnnotations.annotateEvaluation}
-        isAnnotatingEvaluation={uiAnnotations.isAnnotatingEvaluation}
       />
     </div>
   )

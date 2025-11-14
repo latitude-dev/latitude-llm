@@ -22,8 +22,8 @@ export const GET = errorHandler(
     ) => {
       const { projectId } = params
       const searchParams = request.nextUrl.searchParams
-      const page = searchParams.get('page')
-      const pageSize = searchParams.get('pageSize')
+      const from = searchParams.get('from')
+      const limit = searchParams.get('limit')
       const sourceGroup = searchParams.get('sourceGroup') as
         | RunSourceGroup
         | undefined
@@ -31,8 +31,8 @@ export const GET = errorHandler(
       const runs = await listCompletedRuns({
         workspaceId: workspace.id,
         projectId,
-        page: page ? Number(page) : undefined,
-        pageSize: pageSize ? Number(pageSize) : undefined,
+        from: from ? JSON.parse(from) : undefined,
+        limit: limit ? Number(limit) : undefined,
         sourceGroup,
       }).then((r) => r.unwrap())
 

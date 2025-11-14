@@ -1,4 +1,4 @@
-import { Providers } from '@latitude-data/constants'
+import { Providers, SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
@@ -16,13 +16,10 @@ import { type Dataset } from '../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Experiment } from '../../schema/models/types/Experiment'
-import { type Project } from '../../schema/models/types/Project'
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { ProviderLogDto } from '../../schema/types'
 import * as factories from '../../tests/factories'
 import { getColumnData } from '../datasets/utils'
-import serializeProviderLog from '../providerLogs/serialize'
 import * as outputs from './outputs/extract'
 import { RuleEvaluationExactMatchSpecification } from './rule/exactMatch'
 import { RuleEvaluationRegularExpressionSpecification } from './rule/regularExpression'
@@ -33,8 +30,9 @@ describe('runEvaluationV2', () => {
     publisher: MockInstance
   }
 
+  let apiKeys: any[]
+  let span: SpanWithDetails<SpanType.Prompt>
   let workspace: Workspace
-  let project: Project
   let user: User
   let commit: Commit
   let document: DocumentVersion
@@ -42,7 +40,6 @@ describe('runEvaluationV2', () => {
     EvaluationType.Rule,
     RuleEvaluationMetric.ExactMatch
   >
-  let providerLog: ProviderLogDto
   let experiment: Experiment
   let dataset: Dataset
   let datasetLabel: string
@@ -55,10 +52,10 @@ describe('runEvaluationV2', () => {
 
     const {
       workspace: w,
-      project: p,
       user: u,
       documents,
       commit: c,
+      apiKeys: aks,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
@@ -70,10 +67,10 @@ describe('runEvaluationV2', () => {
     })
 
     workspace = w
-    project = p
     user = u
     commit = c
     document = documents[0]!
+    apiKeys = aks
 
     evaluation = await factories.createEvaluationV2({
       document: document,
@@ -81,11 +78,11 @@ describe('runEvaluationV2', () => {
       workspace: workspace,
     })
 
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
-      document: document,
-      commit: commit,
-    })
-    providerLog = serializeProviderLog(providerLogs.at(-1)!)
+    span = (await factories.createSpan({
+      workspaceId: workspace.id,
+      commitUuid: commit.uuid,
+      apiKeyId: apiKeys[0]!.id,
+    })) as SpanWithDetails<SpanType.Prompt>
 
     datasetLabel = DEFAULT_DATASET_LABEL
     const { dataset: d } = await factories.createDataset({
@@ -120,12 +117,53 @@ value1,value2,value3
         .spyOn(publisher, 'publishLater')
         .mockImplementation(async () => {}),
     }
+
+    // Mock findFirstSpanOfType to return a completion span by default
+    vi.spyOn(
+      await import('../tracing/spans/findFirstSpanOfType'),
+      'findFirstSpanOfType',
+    ).mockReturnValue({
+      id: 'completion-span-id',
+      traceId: span.traceId,
+      type: SpanType.Completion,
+      metadata: {
+        input: [{ role: 'user', content: 'test input' }],
+        output: [{ role: 'assistant', content: 'test output' }],
+      },
+    } as any)
+
+    // Also mock the assembleTrace function to return a Result with the trace
+    vi.spyOn(
+      await import('../tracing/traces/assemble'),
+      'assembleTrace',
+    ).mockResolvedValue({
+      unwrap: () => ({
+        trace: {
+          id: span.traceId,
+          children: [
+            {
+              id: 'completion-span-id',
+              traceId: span.traceId,
+              type: SpanType.Completion,
+              metadata: {
+                input: [{ role: 'user', content: 'test input' }],
+                output: [{ role: 'assistant', content: 'test output' }],
+              },
+            },
+          ],
+          spans: 1,
+          duration: 1000,
+          startedAt: new Date(),
+          endedAt: new Date(),
+        },
+      }),
+    } as any)
   })
 
   it('fails when evaluating a log that is already evaluated for this evaluation', async () => {
     await factories.createEvaluationResultV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: span,
       commit: commit,
       experiment: experiment,
       dataset: dataset,
@@ -138,7 +176,7 @@ value1,value2,value3
     await expect(
       runEvaluationV2({
         evaluation: evaluation,
-        providerLog: providerLog,
+        span: span,
         experiment: experiment,
         dataset: dataset,
         datasetLabel: datasetLabel,
@@ -149,43 +187,6 @@ value1,value2,value3
     ).rejects.toThrowError(
       new UnprocessableEntityError(
         'Cannot evaluate a log that is already evaluated for this evaluation',
-      ),
-    )
-
-    expect(mocks.publisher).not.toHaveBeenCalled()
-  })
-
-  it('fails when evaluating a log that is from a different document', async () => {
-    const { commit: draft } = await factories.createDraft({ project, user })
-    const { documentVersion: differentDocument } =
-      await factories.createDocumentVersion({
-        commit: draft,
-        path: 'other',
-        content: factories.helpers.createPrompt({ provider: 'openai' }),
-        user: user,
-        workspace: workspace,
-      })
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
-      document: differentDocument,
-      commit: draft,
-    })
-    const differentProviderLog = serializeProviderLog(providerLogs.at(-1)!)
-    mocks.publisher.mockClear()
-
-    await expect(
-      runEvaluationV2({
-        evaluation: evaluation,
-        providerLog: differentProviderLog,
-        experiment: experiment,
-        dataset: dataset,
-        datasetLabel: datasetLabel,
-        datasetRow: datasetRow,
-        commit: commit,
-        workspace: workspace,
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that is from a different document',
       ),
     )
 
@@ -222,7 +223,7 @@ value1,value2,value3
     await expect(
       runEvaluationV2({
         evaluation: otherEvaluation,
-        providerLog: providerLog,
+        span: span,
         experiment: experiment,
         dataset: dataset,
         datasetLabel: datasetLabel,
@@ -251,7 +252,7 @@ value1,value2,value3
     await expect(
       runEvaluationV2({
         evaluation: evaluation,
-        providerLog: providerLog,
+        span: span,
         experiment: experiment,
         dataset: anotherDataset,
         datasetLabel: datasetLabel,
@@ -274,7 +275,7 @@ value1,value2,value3
     await expect(
       runEvaluationV2({
         evaluation: evaluation,
-        providerLog: providerLog,
+        span: span,
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
@@ -294,7 +295,7 @@ value1,value2,value3
     await expect(
       runEvaluationV2({
         evaluation: evaluation,
-        providerLog: providerLog,
+        span: span,
         experiment: experiment,
         dataset: dataset,
         datasetLabel: datasetLabel,
@@ -312,6 +313,19 @@ value1,value2,value3
   })
 
   it('fails when type and metric run fails and error is retryable', async () => {
+    // Mock findFirstSpanOfType to return a completion span
+    vi.doMock('../tracing/spans/findFirstSpanOfType', () => ({
+      findFirstSpanOfType: vi.fn().mockReturnValue({
+        id: 'completion-span-id',
+        traceId: span.traceId,
+        type: SpanType.Completion,
+        metadata: {
+          input: [{ role: 'user', content: 'test input' }],
+          output: [{ role: 'assistant', content: 'test output' }],
+        },
+      }),
+    }))
+
     vi.spyOn(RuleEvaluationExactMatchSpecification, 'run').mockRejectedValue(
       new ChainError({
         code: RunErrorCodes.RateLimit,
@@ -323,7 +337,7 @@ value1,value2,value3
     await expect(
       runEvaluationV2({
         evaluation: evaluation,
-        providerLog: providerLog,
+        span: span,
         experiment: experiment,
         dataset: dataset,
         datasetLabel: datasetLabel,
@@ -353,7 +367,7 @@ value1,value2,value3
 
     const { result } = await runEvaluationV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: span,
       experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,
@@ -367,7 +381,8 @@ value1,value2,value3
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: 0,
         normalizedScore: 0,
         metadata: {
@@ -392,7 +407,8 @@ value1,value2,value3
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         experiment: experiment,
         dataset: dataset,
         datasetRow: datasetRow,
@@ -406,7 +422,8 @@ value1,value2,value3
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -419,7 +436,7 @@ value1,value2,value3
 
     const { result } = await runEvaluationV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: span,
       experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,
@@ -433,7 +450,8 @@ value1,value2,value3
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: null,
         normalizedScore: null,
         metadata: null,
@@ -450,7 +468,8 @@ value1,value2,value3
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         experiment: experiment,
         dataset: dataset,
         datasetRow: datasetRow,
@@ -464,7 +483,8 @@ value1,value2,value3
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -477,7 +497,7 @@ value1,value2,value3
 
     const { result } = await runEvaluationV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: span,
       experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,
@@ -491,7 +511,8 @@ value1,value2,value3
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: null,
         normalizedScore: null,
         metadata: null,
@@ -508,7 +529,8 @@ value1,value2,value3
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         experiment: experiment,
         dataset: dataset,
         datasetRow: datasetRow,
@@ -522,7 +544,8 @@ value1,value2,value3
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -535,7 +558,7 @@ value1,value2,value3
 
     const { result } = await runEvaluationV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: span,
       experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,
@@ -549,7 +572,8 @@ value1,value2,value3
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: null,
         normalizedScore: null,
         metadata: null,
@@ -566,7 +590,8 @@ value1,value2,value3
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         experiment: experiment,
         dataset: dataset,
         datasetRow: datasetRow,
@@ -580,7 +605,8 @@ value1,value2,value3
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -601,7 +627,7 @@ value1,value2,value3
 
     const { result } = await runEvaluationV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: span,
       experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,
@@ -615,7 +641,8 @@ value1,value2,value3
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: null,
         normalizedScore: null,
         metadata: null,
@@ -632,7 +659,8 @@ value1,value2,value3
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         experiment: experiment,
         dataset: dataset,
         datasetRow: datasetRow,
@@ -646,7 +674,8 @@ value1,value2,value3
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -657,7 +686,7 @@ value1,value2,value3
 
     const { result } = await runEvaluationV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: span,
       experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,
@@ -671,7 +700,8 @@ value1,value2,value3
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: null,
         normalizedScore: null,
         metadata: null,
@@ -689,7 +719,8 @@ value1,value2,value3
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         experiment: experiment,
         dataset: dataset,
         datasetRow: datasetRow,
@@ -703,7 +734,8 @@ value1,value2,value3
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -744,7 +776,7 @@ value1,value2,value3
 
     const { result } = await runEvaluationV2({
       evaluation: liveEvaluation,
-      providerLog: providerLog,
+      span: span,
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -754,7 +786,8 @@ value1,value2,value3
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: liveEvaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: 1,
         normalizedScore: 100,
         metadata: {
@@ -772,7 +805,8 @@ value1,value2,value3
         result: result,
         evaluation: liveEvaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         workspaceId: workspace.id,
       },
     })
@@ -783,7 +817,8 @@ value1,value2,value3
         evaluation: liveEvaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -804,7 +839,7 @@ value1,value2,value3
 
     const { result } = await runEvaluationV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: span,
       experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,
@@ -818,7 +853,8 @@ value1,value2,value3
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: 0,
         normalizedScore: 0,
         metadata: {
@@ -838,7 +874,8 @@ value1,value2,value3
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         experiment: experiment,
         dataset: dataset,
         datasetRow: datasetRow,
@@ -852,7 +889,8 @@ value1,value2,value3
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -873,7 +911,7 @@ value1,value2,value3
 
     const { result } = await runEvaluationV2({
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: span,
       experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,
@@ -888,7 +926,8 @@ value1,value2,value3
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: 0,
         normalizedScore: 0,
         metadata: {

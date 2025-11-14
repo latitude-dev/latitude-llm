@@ -1,40 +1,23 @@
-import { Providers } from '@latitude-data/constants'
-import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_DATASET_LABEL } from '../../../constants'
 import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
 import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
-import { ProviderLogDto } from '../../../schema/types'
 import * as factories from '../../../tests/factories'
-import serializeProviderLog from '../../providerLogs/serialize'
 import { extractActualOutput, extractExpectedOutput } from './extract'
+import {
+  Message,
+  MessageRole,
+  TextContent,
+} from '@latitude-data/constants/legacyCompiler'
 
 describe('extractActualOutput', () => {
-  let providerLog: ProviderLogDto
+  let conversation: Message[]
 
   beforeEach(async () => {
-    const {
-      documents: [document],
-      commit,
-    } = await factories.createProject({
-      providers: [{ type: Providers.OpenAI, name: 'openai' }],
-      documents: {
-        prompt: factories.helpers.createPrompt({
-          provider: 'openai',
-          model: 'gpt-4o',
-        }),
-      },
-    })
-
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
-      document: document!,
-      commit: commit,
-    })
-    providerLog = serializeProviderLog(providerLogs.at(-1)!)
-    providerLog.messages = [
+    conversation = [
       {
-        role: 'system',
+        role: MessageRole.system,
         content: [
           {
             type: 'text',
@@ -43,7 +26,7 @@ describe('extractActualOutput', () => {
         ],
       },
       {
-        role: 'user',
+        role: MessageRole.user,
         content: [
           {
             type: 'text',
@@ -56,7 +39,8 @@ describe('extractActualOutput', () => {
         ],
       },
       {
-        role: 'assistant',
+        role: MessageRole.assistant,
+        toolCalls: [],
         content: [
           {
             type: 'text',
@@ -87,17 +71,19 @@ describe('extractActualOutput', () => {
               answer: 'Some answer',
             },
           },
+          {
+            type: 'text',
+            text: 'Some assistant response 2',
+          },
         ],
       },
-    ] as Message[]
-    providerLog.response = 'Some assistant response 2'
-    providerLog.toolCalls = []
+    ]
   })
 
   it('fails when conversation does not contain any assistant messages', async () => {
     await expect(
       extractActualOutput({
-        providerLog: providerLog,
+        conversation: conversation,
         configuration: {
           messageSelection: 'all',
           contentFilter: 'file',
@@ -112,11 +98,12 @@ describe('extractActualOutput', () => {
   })
 
   it('fails when output cannot be parsed with the format', async () => {
-    providerLog.response = 'not a valid json'
+    ;(conversation[2].content[3] as unknown as TextContent).text =
+      'not a valid json'
 
     await expect(
       extractActualOutput({
-        providerLog: providerLog,
+        conversation,
         configuration: {
           messageSelection: 'last',
           parsingFormat: 'json',
@@ -130,11 +117,12 @@ describe('extractActualOutput', () => {
   })
 
   it('fails when field is not present in the output', async () => {
-    providerLog.response = '{"answer": 42}'
+    ;(conversation[2].content[3] as unknown as TextContent).text =
+      '{"answer": 42}'
 
     await expect(
       extractActualOutput({
-        providerLog: providerLog,
+        conversation,
         configuration: {
           messageSelection: 'last',
           parsingFormat: 'json',
@@ -148,26 +136,10 @@ describe('extractActualOutput', () => {
     )
   })
 
-  it('fails when there is no output', async () => {
-    providerLog.response = ''
-
-    await expect(
-      extractActualOutput({
-        providerLog: providerLog,
-        configuration: {
-          messageSelection: 'last',
-          parsingFormat: 'string',
-        },
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new UnprocessableEntityError('Actual output is required'),
-    )
-  })
-
   it('fails when configuration is not set', async () => {
     await expect(
       extractActualOutput({
-        providerLog: providerLog,
+        conversation,
         configuration: undefined as any,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
@@ -179,7 +151,7 @@ describe('extractActualOutput', () => {
 
   it('succeeds when selecting the messages', async () => {
     const result = await extractActualOutput({
-      providerLog: providerLog,
+      conversation,
       configuration: {
         messageSelection: 'all',
         parsingFormat: 'string',
@@ -201,7 +173,7 @@ Some assistant response 2
 
   it('succeeds when filtering by content type', async () => {
     const result = await extractActualOutput({
-      providerLog: providerLog,
+      conversation,
       configuration: {
         messageSelection: 'all',
         contentFilter: 'tool_call',
@@ -220,7 +192,7 @@ Some assistant response 2
 
   it('succeeds when parsing the output', async () => {
     const result = await extractActualOutput({
-      providerLog: providerLog,
+      conversation,
       configuration: {
         messageSelection: 'all',
         contentFilter: 'tool_call',
@@ -235,7 +207,7 @@ Some assistant response 2
 
   it('succeeds when accessing the output by field', async () => {
     const result = await extractActualOutput({
-      providerLog: providerLog,
+      conversation,
       configuration: {
         messageSelection: 'all',
         contentFilter: 'tool_call',

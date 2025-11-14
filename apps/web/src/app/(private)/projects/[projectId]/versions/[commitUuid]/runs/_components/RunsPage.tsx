@@ -3,12 +3,10 @@
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ROUTES } from '$/services/routes'
-import { useActiveRuns } from '$/stores/runs/activeRuns'
 import { ActiveRunsCountContext } from '../../_components/ActiveRunsCountProvider'
-import {
-  useCompletedRuns,
-  useCompletedRunsCount,
-} from '$/stores/runs/completedRuns'
+import { useActiveRuns } from '$/stores/runs/activeRuns'
+import { useCompletedRunsCount } from '$/stores/runs/completedRuns'
+import { useCompletedRunsKeysetPaginationStore } from '$/stores/completedRunsKeysetPagination'
 import {
   ActiveRun,
   CompletedRun,
@@ -86,7 +84,7 @@ export function RunsPage({
   defaultSourceGroup,
 }: {
   active: { runs: ActiveRun[]; search: Pagination }
-  completed: { runs: CompletedRun[]; search: Pagination }
+  completed: { runs: CompletedRun[] }
   limitedView?: Pick<ProjectLimitedView, 'totalRuns'>
   defaultSourceGroup: RunSourceGroup
 }) {
@@ -107,15 +105,6 @@ export function RunsPage({
   }, [debouncedSourceGroup, setLastRunTab])
 
   const {
-    search: completedSearch,
-    setSearch: setCompletedSearch,
-    debouncedSearch: debouncedCompletedSearch,
-  } = useSearchByGroup({
-    defaultSearch: serverCompleted.search,
-    sourceGroup,
-  })
-
-  const {
     search: activeSearch,
     setSearch: setActiveSearch,
     debouncedSearch: debouncedActiveSearch,
@@ -131,8 +120,6 @@ export function RunsPage({
       .runs.root({
         activePage: debouncedActiveSearch.page,
         activePageSize: debouncedActiveSearch.pageSize,
-        completedPage: debouncedCompletedSearch.page,
-        completedPageSize: debouncedCompletedSearch.pageSize,
         sourceGroup: debouncedSourceGroup,
       })
 
@@ -140,13 +127,7 @@ export function RunsPage({
     if (targetUrl !== window.location.href) {
       window.history.replaceState(null, '', runsRoute)
     }
-  }, [
-    project.id,
-    commit.uuid,
-    debouncedActiveSearch,
-    debouncedCompletedSearch,
-    debouncedSourceGroup,
-  ])
+  }, [project.id, commit.uuid, debouncedActiveSearch, debouncedSourceGroup])
 
   const [realtime, setRealtime] = useState(!limitedView)
 
@@ -187,34 +168,29 @@ export function RunsPage({
     () => sumCounts(activeCountBySource, debouncedSourceGroup),
     [activeCountBySource, debouncedSourceGroup],
   )
-
   const isActiveLoading = isActiveRunsLoading || isActiveCountLoading
 
   const {
-    data: completedRuns,
-    mutate: mutateCompletedRuns,
+    items: completedRuns,
+    goToNextPage,
+    goToPrevPage,
+    hasNext,
+    hasPrev,
     isLoading: isCompletedRunsLoading,
-  } = useCompletedRuns(
+    reset: resetCompletedPagination,
+  } = useCompletedRunsKeysetPaginationStore(
     {
-      project,
-      search: {
-        ...debouncedCompletedSearch,
-        sourceGroup: debouncedSourceGroup,
-      },
-      realtime,
-    },
-    { fallbackData: serverCompleted.runs, keepPreviousData: true },
-  )
-  // Note: prefetch next results
-  const { data: nextCompletedRuns } = useCompletedRuns({
-    project,
-    search: {
-      ...debouncedCompletedSearch,
-      page: (debouncedCompletedSearch.page ?? 1) + 1,
+      projectId: project.id,
+      initialItems: serverCompleted.runs,
       sourceGroup: debouncedSourceGroup,
     },
-    realtime: false,
-  })
+    { keepPreviousData: true },
+  )
+
+  // Reset pagination when sourceGroup changes
+  useEffect(() => {
+    resetCompletedPagination()
+  }, [debouncedSourceGroup, resetCompletedPagination])
 
   const { data: completedCountBySource, isLoading: isCompletedCountLoading } =
     useCompletedRunsCount({ project, realtime, disable: !!limitedView })
@@ -254,12 +230,14 @@ export function RunsPage({
             }}
             completed={{
               runs: completedRuns,
-              next: nextCompletedRuns?.length ?? 0,
+              goToNextPage,
+              goToPrevPage,
+              hasNext,
+              hasPrev,
               countBySource: completedCountBySource,
               totalCount: completedTotalCount ?? limitedView?.totalRuns,
-              search: completedSearch,
-              setSearch: setCompletedSearch,
               isLoading: isCompletedLoading,
+              limitedView,
             }}
             selectedRunUuid={selectedRunUuid}
             setSelectedRunUuid={setSelectedRunUuid}
@@ -280,7 +258,7 @@ export function RunsPage({
               isAttachingRun={isAttachingRun}
               stopRun={stopRun}
               isStoppingRun={isStoppingRun}
-              mutateCompletedRuns={mutateCompletedRuns}
+              sourceGroup={debouncedSourceGroup}
             />
           ) : (
             <div className='w-full h-full flex flex-col gap-6 p-6 overflow-hidden relative'>

@@ -1,3 +1,4 @@
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { ChainStepResponse, StreamType } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
@@ -10,7 +11,10 @@ import {
   LLM_EVALUATION_PROMPT_PARAMETERS,
   LlmEvaluationMetric,
   LogSources,
+  SpanType,
+  SpanWithDetails,
 } from '../../../constants'
+import { formatConversation } from '../../../helpers'
 import { Result } from '../../../lib/Result'
 import { updatePromptMetadata } from '../../../lib/updatePromptMetadata'
 import { ProviderLogsRepository } from '../../../repositories'
@@ -49,6 +53,31 @@ export function promptTask() {
   - Duration: {{ duration }} seconds.
 </user>
 `.trim()
+}
+
+export function buildEvaluationParameters({
+  span,
+  completionSpan,
+  actualOutput,
+  conversation,
+  expectedOutput,
+}: {
+  span: SpanWithDetails<SpanType.Prompt>
+  completionSpan?: SpanWithDetails<SpanType.Completion>
+  actualOutput: string
+  conversation: Message[]
+  expectedOutput?: string
+}) {
+  return {
+    parameters: span.metadata?.parameters,
+    prompt: span.metadata?.template,
+    cost: completionSpan?.metadata?.cost,
+    tokens: completionSpan?.metadata?.tokens,
+    duration: completionSpan?.duration,
+    actualOutput,
+    ...(expectedOutput !== undefined && { expectedOutput }),
+    conversation: formatConversation(conversation),
+  }
 }
 
 export async function buildLlmEvaluationRunFunction<

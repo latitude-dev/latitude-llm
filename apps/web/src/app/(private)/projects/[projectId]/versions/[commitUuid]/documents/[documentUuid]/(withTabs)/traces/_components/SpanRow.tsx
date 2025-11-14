@@ -11,13 +11,22 @@ import { Fragment } from 'react'
 import { Trace } from './Trace'
 import { useTraceSpanSelection } from './TraceSpanSelectionContext'
 import { useCommits } from '$/stores/commitsStore'
+import { useSelectableRows } from '$/hooks/useSelectableRows'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 
 type SpanRowProps = {
   span: Span<SpanType.Prompt>
-  isSelected: boolean
+  toggleRow: ReturnType<typeof useSelectableRows>['toggleRow']
+  isSelected: ReturnType<typeof useSelectableRows>['isSelected']
+  isExpanded: boolean
 }
 
-export function SpanRow({ span, isSelected }: SpanRowProps) {
+export function SpanRow({
+  span,
+  toggleRow,
+  isSelected,
+  isExpanded,
+}: SpanRowProps) {
   const { selectTraceSpan } = useTraceSpanSelection()
   const { data: commits } = useCommits()
   const commit = commits?.find((c) => c.uuid === span.commitUuid)
@@ -30,10 +39,19 @@ export function SpanRow({ span, isSelected }: SpanRowProps) {
         className={cn(
           'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
           {
-            'bg-secondary': isSelected,
+            'bg-secondary': isExpanded,
           },
         )}
       >
+        <TableCell
+          preventDefault
+          align='left'
+          onClick={() => {
+            toggleRow(span.id, !isSelected(span.id))
+          }}
+        >
+          <Checkbox fullWidth={false} checked={isSelected(span.id)} />
+        </TableCell>
         <TableCell>
           <Text.H5 noWrap>
             {relativeTime(
@@ -59,6 +77,9 @@ export function SpanRow({ span, isSelected }: SpanRowProps) {
           </div>
         </TableCell>
         <TableCell>
+          <Text.H5 noWrap>{span.source ?? '-'}</Text.H5>
+        </TableCell>
+        <TableCell>
           <Text.H5 noWrap>{formatDuration(span.duration)}</Text.H5>
         </TableCell>
         <TableCell>
@@ -75,7 +96,7 @@ export function SpanRow({ span, isSelected }: SpanRowProps) {
           </Badge>
         </TableCell>
       </TableRow>
-      {isSelected && (
+      {isExpanded && (
         <TableRow hoverable={false}>
           <TableCell
             colSpan={999}

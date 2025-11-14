@@ -5,6 +5,7 @@ import {
   ProjectsRepository,
   IssuesRepository,
   EvaluationResultsV2Repository,
+  SpansRepository,
 } from '@latitude-data/core/repositories'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
@@ -111,24 +112,17 @@ export const GET = errorHandler(
         ? results.slice(0, query.pageSize)
         : results
 
-      // Transform the results to extract the log information
-      const logs: IssueLog[] = returnResults
-        .filter((result) => !!result.evaluatedLog.documentLogUuid)
-        .map((result) => ({
-          uuid: result.evaluatedLog.documentLogUuid!,
-          createdAt: result.evaluatedLog.createdAt,
-          duration: result.evaluatedLog.duration,
-          commit: {
-            uuid: result.commit.uuid,
-            version: result.commit.version,
-            title: result.commit.title,
-          },
-          providerLog: result.evaluatedLog,
-        }))
+      const spansRepo = new SpansRepository(workspace.id)
+      const spans = await spansRepo.findBySpanAndTraceIds(
+        returnResults.map((r) => ({
+          spanId: r.evaluatedSpanId!,
+          traceId: r.evaluatedTraceId!,
+        })),
+      )
 
       return NextResponse.json(
         {
-          logs,
+          spans,
           hasNextPage,
         },
         { status: 200 },

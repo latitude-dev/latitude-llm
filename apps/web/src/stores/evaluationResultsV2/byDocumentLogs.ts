@@ -5,11 +5,12 @@ import { ROUTES } from '$/services/routes'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { EvaluationResultV2 } from '@latitude-data/constants'
+
 export default function useEvaluationResultsV2ByDocumentLogs(
   {
     project,
@@ -36,13 +37,11 @@ export default function useEvaluationResultsV2ByDocumentLogs(
     }
     return query.toString()
   }, [documentLogUuids])
-  const fetcher = useFetcher<Record<string, ResultWithEvaluationV2[]>>(
+  const fetcher = useFetcher<Record<string, EvaluationResultV2[]>>(
     `${route}?${query}`,
   )
 
-  const { data = {}, ...rest } = useSWR<
-    Record<string, ResultWithEvaluationV2[]>
-  >(
+  const { data = {}, ...rest } = useSWR<Record<string, EvaluationResultV2[]>>(
     compact([
       'evaluationResultsV2ByDocumentLogs',
       project.id,

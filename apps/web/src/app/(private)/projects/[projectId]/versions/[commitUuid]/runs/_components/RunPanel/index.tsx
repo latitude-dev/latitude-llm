@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from 'react'
-import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
 import Chat from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
@@ -9,16 +8,19 @@ import DebugToggle from '$/components/DebugToggle'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useOnce } from '$/hooks/useMount'
 import { ROUTES } from '$/services/routes'
-import useProviderLogs, { useProviderLog } from '$/stores/providerLogs'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
-import { useCompletedRuns } from '$/stores/runs/completedRuns'
 import {
   ActiveRun,
   CompletedRun,
+  EvaluationResultV2,
+  EvaluationType,
+  EvaluationV2,
+  HumanEvaluationMetric,
   Run,
-  RunAnnotation,
+  RunSourceGroup,
+  SpanType,
+  SpanWithDetails,
 } from '@latitude-data/constants'
-import { buildConversation } from '@latitude-data/core/helpers'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -29,10 +31,12 @@ import {
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import Link from 'next/link'
 import { RunPanelStats } from './Stats'
-import {
-  useUIAnnotations,
-  UseUIAnnotationsProps,
-} from '$/hooks/annotations/useUIAnnotations'
+import { useTrace } from '$/stores/traces'
+import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
+import { Message } from '@latitude-data/constants/legacyCompiler'
+import { sum } from 'lodash-es'
+import { useCompletedRunsKeysetPaginationStore } from '$/stores/completedRunsKeysetPagination'
+import { useAnnotationBySpan } from '$/hooks/useAnnotationsBySpan'
 
 export function RunPanel({
   run,
@@ -40,14 +44,14 @@ export function RunPanel({
   isAttachingRun,
   stopRun,
   isStoppingRun,
-  mutateCompletedRuns,
+  sourceGroup,
 }: {
   run: Run
   attachRun: ReturnType<typeof useActiveRuns>['attachRun']
   isAttachingRun: ReturnType<typeof useActiveRuns>['isAttachingRun']
   stopRun: ReturnType<typeof useActiveRuns>['stopRun']
   isStoppingRun: ReturnType<typeof useActiveRuns>['isStoppingRun']
-  mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
+  sourceGroup: RunSourceGroup
 }) {
   const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
     key: AppLocalStorage.chatDebugMode,
@@ -58,9 +62,9 @@ export function RunPanel({
     return (
       <CompletedRunPanel
         run={run as CompletedRun}
-        mutateCompletedRuns={mutateCompletedRuns}
         debugMode={debugMode}
         setDebugMode={setDebugMode}
+        sourceGroup={sourceGroup}
       />
     )
   }
@@ -78,102 +82,40 @@ export function RunPanel({
   )
 }
 
-function useEvaluationsForAnnotations({
-  project,
-  commit,
-  documentLog,
-  providerLog,
-  mutateCompletedRuns,
-}: UseUIAnnotationsProps & {
-  mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
-}) {
-  const uiAnnotations = useUIAnnotations({
-    project,
-    commit,
-    documentLog,
-    providerLog,
-  })
-  const annotatedEvaluation = uiAnnotations.annotations.bottom?.evaluation
-  const mutateResults = uiAnnotations.mutateResults
-  const evaluationResults = uiAnnotations.evaluationResults
-  const syncAnnotations: typeof uiAnnotations.mutateResults = useCallback(
-    async (data, opts) => {
-      const mutated = (await mutateResults(
-        data,
-        opts,
-      )) as typeof evaluationResults
-      if (!mutated) return mutated
-
-      const mutatedResultsByDocumentLog = mutated?.[documentLog.uuid] ?? []
-      const annotations = mutatedResultsByDocumentLog.filter(
-        ({ evaluation }) => evaluation.uuid === annotatedEvaluation?.uuid,
-      ) as RunAnnotation[]
-
-      mutateCompletedRuns(
-        (prev) =>
-          prev?.map((r) => {
-            if (r.uuid !== documentLog.uuid) return r
-
-            return { ...r, annotations }
-          }) ?? [],
-        { revalidate: false },
-      )
-
-      return mutated
-    },
-    [mutateCompletedRuns, documentLog.uuid, mutateResults, annotatedEvaluation],
-  )
-
-  return useMemo(
-    () => ({
-      bottomAnnotation: uiAnnotations.annotations.bottom,
-      isLoading: uiAnnotations.isLoading,
-      isAnnotatingEvaluation: uiAnnotations.isAnnotatingEvaluation,
-      syncAnnotations,
-      annotateEvaluation: uiAnnotations.annotateEvaluation,
-    }),
-    [
-      uiAnnotations.annotations.bottom,
-      syncAnnotations,
-      uiAnnotations.isLoading,
-      uiAnnotations.isAnnotatingEvaluation,
-      uiAnnotations.annotateEvaluation,
-    ],
-  )
-}
-
 function CompletedRunPanel({
   run,
-  mutateCompletedRuns,
   debugMode,
   setDebugMode,
+  sourceGroup,
 }: {
   run: CompletedRun
-  mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
   debugMode: boolean
   setDebugMode: (debugMode: boolean) => void
+  sourceGroup: RunSourceGroup
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { data: providerLogs, isLoading: isLoadingProviderLogs } =
-    useProviderLogs({ documentLogUuid: run.log.uuid })
-  // Note: this is needed to hydrate the provider log
-  const { data: responseLog, isLoading: isLoadingResponseLog } = useProviderLog(
-    providerLogs?.at(-1)?.id,
+  const { data: trace, isLoading: isLoadingTrace } = useTrace({
+    traceId: run.span.traceId,
+  })
+  const completionSpan = findFirstSpanOfType(
+    trace?.children ?? [],
+    SpanType.Completion,
   )
-  const annotationData = useEvaluationsForAnnotations({
+  const { annotations, isLoading: isLoadingAnnotations } = useAnnotationBySpan({
     project,
     commit,
-    documentLog: run.log,
-    providerLog: responseLog,
-    mutateCompletedRuns,
+    span: run.span,
   })
-
   const conversation = useMemo(() => {
-    if (!responseLog) return []
-    return buildConversation(responseLog)
-  }, [responseLog])
-  const toolContentMap = useToolContentMap(conversation)
+    if (!completionSpan) return []
+
+    return [
+      ...(completionSpan?.metadata?.input ?? []),
+      ...(completionSpan?.metadata?.output ?? []),
+    ]
+  }, [completionSpan])
+  const toolContentMap = useToolContentMap(conversation as unknown as Message[])
   const sourceMapAvailable = useMemo(() => {
     return conversation.some((message) => {
       if (typeof message.content !== 'object') return false
@@ -181,9 +123,7 @@ function CompletedRunPanel({
     })
   }, [conversation])
 
-  const isLoading =
-    isLoadingProviderLogs || isLoadingResponseLog || annotationData.isLoading
-
+  const isLoading = isLoadingTrace || isLoadingAnnotations
   if (isLoading) {
     return (
       <div className='w-full h-full flex flex-1 justify-center items-center gap-2'>
@@ -200,22 +140,26 @@ function CompletedRunPanel({
   return (
     <div className='w-full flex flex-col gap-6 p-6 overflow-hidden overflow-y-auto custom-scrollbar relative'>
       <div className='w-full min-h-0 flex flex-1 flex-col justify-start items-start gap-4'>
-        <RunPanelStats
-          tokens={run.log.tokens ?? 0}
-          cost={run.log.costInMillicents ?? 0}
-          duration={run.log.duration ?? 0}
-          error={run.log.error.message ?? undefined}
-          isWaiting={false}
-          isRunning={false}
-        />
+        {completionSpan && (
+          <RunPanelStats
+            tokens={
+              sum(Object.values(completionSpan.metadata?.tokens ?? {})) ?? 0
+            }
+            cost={completionSpan.metadata?.cost ?? 0}
+            duration={run.span.duration ?? 0}
+            error={run.span.status === 'error' ? run.span.message : undefined}
+            isWaiting={false}
+            isRunning={false}
+          />
+        )}
         <div className='w-full flex justify-center items-center'>
           <Link
             href={
               ROUTES.projects
                 .detail({ id: project.id })
                 .commits.detail({ uuid: commit.uuid })
-                .documents.detail({ uuid: run.log.documentUuid }).logs.root +
-              `?logUuid=${run.log.uuid}`
+                .documents.detail({ uuid: run.span.documentUuid! }).spans.root +
+              `?spanId=${run.span.id}&traceId=${run.span.traceId}`
             }
             target='_blank'
           >
@@ -243,8 +187,8 @@ function CompletedRunPanel({
               )}
             </div>
             <MessageList
-              messages={conversation}
-              parameters={Object.keys(run.log.parameters)}
+              messages={conversation as unknown as Message[]}
+              parameters={Object.keys(run.span.metadata?.parameters ?? {})}
               debugMode={debugMode}
               toolContentMap={toolContentMap}
             />
@@ -254,24 +198,55 @@ function CompletedRunPanel({
             No messages generated for this run
           </Text.H5>
         )}
-        {run.log.error.code ? (
-          <div className='w-full flex flex-col gap-y-4 pt-4'>
-            <RunErrorMessage error={run.log.error} />
-          </div>
-        ) : annotationData.bottomAnnotation ? (
-          <AnnotationForm
-            evaluation={annotationData.bottomAnnotation.evaluation}
-            result={annotationData.bottomAnnotation.result}
-            mutateEvaluationResults={annotationData.syncAnnotations}
-            providerLog={annotationData.bottomAnnotation.providerLog}
-            documentLog={run.log}
-            commit={run.log.commit}
-            annotateEvaluation={annotationData.annotateEvaluation}
-            isAnnotatingEvaluation={annotationData.isAnnotatingEvaluation}
-          />
-        ) : null}
+        <div className='w-full flex flex-col gap-y-4 pt-4'>
+          {run.span.status !== 'error' && annotations.bottom && (
+            <AnnotationFormWrapper
+              key={annotations.bottom.evaluation.uuid}
+              evaluation={
+                annotations.bottom.evaluation as EvaluationV2<
+                  EvaluationType.Human,
+                  HumanEvaluationMetric
+                >
+              }
+              result={annotations.bottom.result}
+              span={run.span as SpanWithDetails<SpanType.Prompt>}
+              sourceGroup={sourceGroup}
+            />
+          )}
+        </div>
       </div>
     </div>
+  )
+}
+
+function AnnotationFormWrapper({
+  evaluation,
+  span,
+  result,
+  sourceGroup,
+}: {
+  evaluation: EvaluationV2<EvaluationType.Human, HumanEvaluationMetric>
+  span: SpanWithDetails<SpanType.Prompt>
+  result?: EvaluationResultV2<EvaluationType.Human, HumanEvaluationMetric>
+  sourceGroup: RunSourceGroup
+}) {
+  const { project } = useCurrentProject()
+  const { mutate } = useCompletedRunsKeysetPaginationStore({
+    projectId: project.id,
+    sourceGroup,
+  })
+
+  const handleAnnotate = useCallback(() => {
+    mutate()
+  }, [mutate])
+
+  return (
+    <AnnotationForm
+      evaluation={evaluation}
+      result={result}
+      span={span}
+      onAnnotate={handleAnnotate}
+    />
   )
 }
 

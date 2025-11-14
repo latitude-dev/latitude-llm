@@ -54,7 +54,7 @@ export default async function RunsPage({
   return (
     <ClientRunsPage
       active={{ runs: activeRuns, search: activeSearch }}
-      completed={{ runs: completedRuns, search: completedSearch }}
+      completed={{ runs: completedRuns.items }}
       limitedView={limitedView}
       defaultSourceGroup={(sourceGroup as RunSourceGroup) ?? defaultSourceGroup}
     />

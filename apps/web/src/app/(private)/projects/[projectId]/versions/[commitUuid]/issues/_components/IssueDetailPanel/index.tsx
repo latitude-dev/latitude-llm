@@ -8,10 +8,10 @@ import { DetailsPanel } from '$/components/DetailsPannel'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useIssueLogs } from '$/stores/issues/logs'
+import { useIssueLogs as useIssueSpans } from '$/stores/issues/logs'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { LimitedTablePaginationFooter } from '$/components/TablePaginationFooter/LimitedTablePaginationFooter'
-import { IssueLogsTable } from '../IssueLogsTable'
+import { IssueSpansTable } from '../IssueLogsTable'
 
 const PAGE_SIZE = 25
 export function IssuesDetailPanel({
@@ -31,10 +31,10 @@ export function IssuesDetailPanel({
 
   const [page, setPage] = useState(1)
   const {
-    data: logs,
+    data: spans,
     hasNextPage,
     isLoading,
-  } = useIssueLogs({
+  } = useIssueSpans({
     projectId: project.id,
     commitUuid: commit.uuid,
     issueId: issue.id,
@@ -69,9 +69,9 @@ export function IssuesDetailPanel({
                 <Skeleton key={i} height='h5' className='w-full' />
               ))}
             </div>
-          ) : logs.length > 0 ? (
-            <IssueLogsTable
-              logs={logs}
+          ) : spans.length > 0 ? (
+            <IssueSpansTable
+              spans={spans}
               projectId={project.id}
               commitUuid={commit.uuid}
               documentUuid={issue.documentUuid}

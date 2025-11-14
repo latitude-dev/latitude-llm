@@ -5,7 +5,6 @@ import { captureException } from './captureException'
 import { Worker, WorkerOptions } from 'bullmq'
 import { WORKER_OPTIONS } from './connectionConfig'
 import { createJobHandler } from './createJobHandler'
-import { jobTracker } from './jobTracker'
 
 /**
  * Creates a fully configured BullMQ worker with job handling and error handling
@@ -26,9 +25,6 @@ export function createWorker<T extends Record<string, Function>>(
   worker.on('error', (error: Error) => {
     captureException(error)
   })
-
-  // Register worker with job tracker for scale-in protection
-  jobTracker.registerWorker(worker)
 
   return worker
 }

@@ -14,12 +14,13 @@ import {
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { cn } from '@latitude-data/web-ui/utils'
-import { IssueLog } from '$/stores/issues/logs'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { ReactNode } from 'react'
+import { useCommits } from '$/stores/commitsStore'
+import { Span, SpanType } from '@latitude-data/constants'
 
 type Props = {
-  logs: IssueLog[]
+  spans: Span<SpanType.Prompt>[]
   projectId: number
   commitUuid: string
   documentUuid: string
@@ -27,22 +28,29 @@ type Props = {
   PaginationFooter?: ReactNode
 }
 
-export function IssueLogsTable({
-  logs,
+export function IssueSpansTable({
+  spans,
   projectId,
   commitUuid,
   documentUuid,
   showPagination,
   PaginationFooter,
 }: Props) {
-  const handleRowClick = (log: IssueLog) => {
+  const { data: commits } = useCommits()
+  const handleRowClick = (span: Span<SpanType.Prompt>) => {
+    const IssueSpansTable = JSON.stringify({
+      traceId: span.traceId,
+      spanId: span.id,
+    })
     const route = ROUTES.projects
       .detail({ id: projectId })
-      .commits.detail({ uuid: commitUuid })
-      .documents.detail({ uuid: documentUuid }).logs.root
+      .commits.detail({ uuid: span.commitUuid ?? commitUuid })
+      .documents.detail({ uuid: documentUuid }).traces.root
 
-    // Open logs page in new tab with the logUuid as a search parameter
-    window.open(`${route}?logUuid=${log.uuid}`, '_blank')
+    window.open(
+      `${route}?filters=${encodeURIComponent(IssueSpansTable)}`,
+      '_blank',
+    )
   }
   return (
     <Table
@@ -60,10 +68,10 @@ export function IssueLogsTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {logs.map((log) => (
+        {spans.map((span) => (
           <TableRow
-            key={log.uuid}
-            onClick={() => handleRowClick(log)}
+            key={span.id}
+            onClick={() => handleRowClick(span)}
             className={cn(
               'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
             )}
@@ -71,30 +79,37 @@ export function IssueLogsTable({
             <TableCell>
               <Text.H5 noWrap color='foreground'>
                 {relativeTime(
-                  log.createdAt instanceof Date
-                    ? log.createdAt
-                    : new Date(log.createdAt),
+                  span.createdAt instanceof Date
+                    ? span.createdAt
+                    : new Date(span.createdAt),
                 )}
               </Text.H5>
             </TableCell>
             <TableCell>
-              <span className='flex flex-row gap-2 items-center truncate'>
-                <Badge
-                  variant={log.commit.version ? 'accent' : 'muted'}
-                  className='flex-shrink-0'
-                >
-                  <Text.H6 noWrap>
-                    {log.commit.version ? `v${log.commit.version}` : 'Draft'}
-                  </Text.H6>
-                </Badge>
-                <Text.H5 color='foreground' noWrap ellipsis>
-                  {log.commit.title}
-                </Text.H5>
-              </span>
+              {(() => {
+                const commit = commits.find((c) => c.uuid === span.commitUuid)
+                if (!commit) return null
+
+                return (
+                  <span className='flex flex-row gap-2 items-center truncate'>
+                    <Badge
+                      variant={commit.version ? 'accent' : 'muted'}
+                      className='flex-shrink-0'
+                    >
+                      <Text.H6 noWrap>
+                        {commit.version ? `v${commit.version}` : 'Draft'}
+                      </Text.H6>
+                    </Badge>
+                    <Text.H5 color='foreground' noWrap ellipsis>
+                      {commit.title}
+                    </Text.H5>
+                  </span>
+                )
+              })()}
             </TableCell>
             <TableCell>
               <Text.H5 noWrap color='foreground'>
-                {formatDuration(log.duration)}
+                {formatDuration(span.duration)}
               </Text.H5>
             </TableCell>
             <TableCell>

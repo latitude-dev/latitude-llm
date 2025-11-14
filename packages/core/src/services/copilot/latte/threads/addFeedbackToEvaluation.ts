@@ -5,14 +5,16 @@ import {
   EvaluationType,
   EvaluationV2,
   HumanEvaluationMetric,
+  SpanType,
+  SpanWithDetails,
 } from '../../../../constants'
 import { Result } from '../../../../lib/Result'
 import {
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
-  ProviderLogsRepository,
+  SpanMetadatasRepository,
+  SpansRepository,
 } from '../../../../repositories'
-import { ProviderLogDto } from '../../../../schema/types'
 import { annotateEvaluationV2 } from '../../../evaluationsV2/annotate'
 import { getCopilotDocument } from '../helpers'
 
@@ -70,21 +72,28 @@ export async function addFeedbackToEvaluationResult(
     return Result.error(evalResultResult.error!)
   }
   const evalResult = evalResultResult.unwrap()
+  if (!evalResult.evaluatedTraceId || !evalResult.evaluatedSpanId) return
 
-  const providerLogScope = new ProviderLogsRepository(latteWorkspace.id, db)
-  const providerLogResult = await providerLogScope.find(
-    evalResult.evaluatedLogId,
-  )
-  if (!providerLogResult.ok) {
-    return Result.error(providerLogResult.error!)
-  }
-  const providerLog = providerLogResult.unwrap() as unknown as ProviderLogDto
+  const spansRepo = new SpansRepository(latteWorkspace.id, db)
+  const spanMetadataRepo = new SpanMetadatasRepository(latteWorkspace.id)
+  const span = await spansRepo
+    .get({
+      traceId: evalResult.evaluatedTraceId,
+      spanId: evalResult.evaluatedSpanId,
+    })
+    .then((r) => r.unwrap())
+  const metadata = await spanMetadataRepo
+    .get({
+      traceId: evalResult.evaluatedTraceId,
+      spanId: evalResult.evaluatedSpanId,
+    })
+    .then((r) => r.unwrap())
 
   return annotateEvaluationV2({
     workspace: latteWorkspace,
     commit: latteCommit,
     evaluation,
-    providerLog,
+    span: { ...span, metadata } as SpanWithDetails<SpanType.Prompt>,
     resultScore: evalResult.score!,
     resultMetadata: {
       reason: content,

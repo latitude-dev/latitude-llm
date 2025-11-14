@@ -18,9 +18,6 @@ import {
   EvaluationResultV2,
   EvaluationV2,
   Message,
-  ProviderLogDto,
-  type DocumentTrigger,
-  type DocumentTriggerEvent,
 } from '../schema/types'
 
 export type Events =
@@ -32,7 +29,6 @@ export type Events =
   | 'workspaceCreated'
   | 'projectCreated'
   | 'documentLogCreated'
-  | 'documentLogInteracted'
   | 'documentSuggestionCreated'
   | 'documentSuggestionApplied'
   | 'documentSuggestionDiscarded'
@@ -180,11 +176,6 @@ export type CommitCreatedEvent = LatitudeEventGeneric<
 
 export type DocumentLogCreatedEvent = LatitudeEventGeneric<
   'documentLogCreated',
-  Pick<DocumentLog, 'id'> & { workspaceId: number }
->
-
-export type DocumentLogInteractedEvent = LatitudeEventGeneric<
-  'documentLogInteracted',
   Pick<DocumentLog, 'id'> & { workspaceId: number }
 >
 
@@ -454,7 +445,8 @@ export type EvaluationV2RanEvent = LatitudeEventGeneric<
     evaluation: EvaluationV2
     result: EvaluationResultV2
     commit: Commit
-    providerLog: ProviderLogDto
+    spanId: string
+    traceId: string
   }
 >
 
@@ -465,7 +457,8 @@ export type EvaluationV2AnnotatedEvent = LatitudeEventGeneric<
     evaluation: EvaluationV2
     result: EvaluationResultV2
     commit: Commit
-    providerLog: ProviderLogDto
+    spanId: string
+    traceId: string
   }
 >
 
@@ -475,8 +468,9 @@ export type EvaluationResultV2CreatedEvent = LatitudeEventGeneric<
     workspaceId: number
     result: EvaluationResultV2
     evaluation: EvaluationV2
+    spanId: string
+    traceId: string
     commit: Commit
-    providerLog: ProviderLogDto
     experiment?: Experiment
     dataset?: DatasetV2
     datasetRow?: DatasetRow
@@ -536,6 +530,7 @@ export type SpanCreatedEvent = LatitudeEventGeneric<
     workspaceId: number
     apiKeyId: number
     spanId: string
+    traceId: string
   }
 >
 
@@ -814,7 +809,6 @@ export type LatitudeEvent =
   | WorkspaceCreatedEvent
   | ProjectCreatedEvent
   | DocumentLogCreatedEvent
-  | DocumentLogInteractedEvent
   | DocumentSuggestionCreatedEvent
   | DocumentSuggestionAppliedEvent
   | DocumentSuggestionDiscardedEvent
@@ -891,7 +885,6 @@ export interface IEventsHandlers {
   workspaceCreated: EventHandler<WorkspaceCreatedEvent>[]
   projectCreated: EventHandler<ProjectCreatedEvent>[]
   documentLogCreated: EventHandler<DocumentLogCreatedEvent>[]
-  documentLogInteracted: EventHandler<DocumentLogInteractedEvent>[]
   documentSuggestionCreated: EventHandler<DocumentSuggestionCreatedEvent>[]
   documentSuggestionApplied: EventHandler<DocumentSuggestionAppliedEvent>[]
   documentSuggestionDiscarded: EventHandler<DocumentSuggestionDiscardedEvent>[]

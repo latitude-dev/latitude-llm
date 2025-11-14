@@ -1,78 +1,110 @@
-import { Worker } from 'bullmq'
+import { Queue } from 'bullmq'
 import { scaleInProtectionManager } from './scaleInProtection'
-import debug from '@latitude-data/core/lib/debug'
 
 /**
- * Tracks active jobs across all BullMQ workers and manages scale-in protection
+ * Tracks active jobs across all BullMQ queues by polling directly from Redis
+ * This is the source of truth for active job counts and manages scale-in protection
  */
 export class JobTracker {
-  private activeJobsCount = 0
-  private workers: Worker[] = []
+  private queues: Queue[] = []
+  private pollInterval: ReturnType<typeof setInterval> | null = null
+  private readonly CHECK_INTERVAL_MS = 5000 // Check every 5 seconds
+  private lastActiveCount = 0
 
   /**
-   * Register a worker to track its job activity
+   * Register a queue to track its active jobs
    */
-  registerWorker(worker: Worker): void {
-    this.workers.push(worker)
+  registerQueue(queue: Queue): void {
+    this.queues.push(queue)
 
-    // Listen for job start events
-    worker.on('active', (job) => {
-      this.activeJobsCount++
-      debug(
-        `Job ${job?.id || 'unknown'} started processing. Active jobs: ${this.activeJobsCount}`,
-      )
+    // Start polling if not already started
+    if (!this.pollInterval) {
+      this.startPolling()
+    }
+  }
 
-      // Enable protection when first job starts
-      if (this.activeJobsCount === 1) {
-        scaleInProtectionManager.enableProtection()
-      }
-    })
+  /**
+   * Start polling queues for active job counts
+   */
+  private startPolling(): void {
+    this.pollInterval = setInterval(async () => {
+      await this.checkActiveJobs()
+    }, this.CHECK_INTERVAL_MS)
 
-    // Listen for job completion events
-    worker.on('completed', (job) => {
-      this.activeJobsCount = Math.max(0, this.activeJobsCount - 1)
-      debug(
-        `Job ${job?.id || 'unknown'} completed. Active jobs: ${this.activeJobsCount}`,
-      )
-
-      // Disable protection when no jobs are active
-      if (this.activeJobsCount === 0) {
-        scaleInProtectionManager.disableProtection()
-      }
-    })
-
-    // Listen for job failure events
-    worker.on('failed', (job) => {
-      this.activeJobsCount = Math.max(0, this.activeJobsCount - 1)
-      debug(
-        `Job ${job?.id || 'unknown'} failed. Active jobs: ${this.activeJobsCount}`,
-      )
-
-      // Disable protection when no jobs are active
-      if (this.activeJobsCount === 0) {
-        scaleInProtectionManager.disableProtection()
-      }
-    })
-
-    // Handle worker closing
-    worker.on('closing', () => {
-      console.log('Worker is closing, removing from tracker')
-      this.workers = this.workers.filter((w) => w !== worker)
+    // Also check immediately on start
+    this.checkActiveJobs().catch((error) => {
+      console.error('Error during initial active jobs check:', error)
     })
   }
 
   /**
-   * Get the current count of active jobs
+   * Check active jobs across all queues and manage scale-in protection
+   */
+  private async checkActiveJobs(): Promise<void> {
+    try {
+      const activeJobCounts = await Promise.all(
+        this.queues.map(async (queue) => {
+          const jobs = await queue.getJobs(['active'])
+          return jobs.length
+        }),
+      )
+
+      const totalActive = activeJobCounts.reduce((sum, count) => sum + count, 0)
+
+      // Only log and manage protection if the count changed
+      if (totalActive !== this.lastActiveCount) {
+        console.log(
+          `Active jobs count changed: ${this.lastActiveCount} -> ${totalActive}`,
+        )
+
+        // Enable protection when jobs become active
+        if (totalActive > 0 && this.lastActiveCount === 0) {
+          await scaleInProtectionManager.enableProtection()
+        }
+
+        // Disable protection when no jobs are active
+        if (totalActive === 0 && this.lastActiveCount > 0) {
+          await scaleInProtectionManager.disableProtection()
+        }
+
+        this.lastActiveCount = totalActive
+      }
+    } catch (error) {
+      console.error('Error checking active jobs:', error)
+    }
+  }
+
+  /**
+   * Get the current count of active jobs (from last poll)
    */
   getActiveJobsCount(): number {
-    return this.activeJobsCount
+    return this.lastActiveCount
   }
 
   /**
-   * Get all registered workers
+   * Get an up-to-date count of active jobs by polling queues immediately
    */
-  getWorkers(): Worker[] {
-    return [...this.workers]
+  async getActiveJobsCountNow(): Promise<number> {
+    try {
+      const activeJobCounts = await Promise.all(
+        this.queues.map(async (queue) => {
+          const jobs = await queue.getJobs(['active'])
+          return jobs.length
+        }),
+      )
+
+      return activeJobCounts.reduce((sum, count) => sum + count, 0)
+    } catch (error) {
+      console.error('Error getting active jobs count:', error)
+      return this.lastActiveCount // Fallback to cached value
+    }
+  }
+
+  /**
+   * Get all registered queues
+   */
+  getQueues(): Queue[] {
+    return [...this.queues]
   }
 
   /**
@@ -80,6 +112,17 @@ export class JobTracker {
    */
   async forceDisableProtection(): Promise<void> {
     await scaleInProtectionManager.disableProtection()
+  }
+
+  /**
+   * Stop polling (useful for graceful shutdown)
+   */
+  stopPolling(): void {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval)
+      this.pollInterval = null
+      console.log('Job tracker polling stopped')
+    }
   }
 }
 

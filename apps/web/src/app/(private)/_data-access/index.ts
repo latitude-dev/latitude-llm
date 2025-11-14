@@ -399,24 +399,24 @@ export const listActiveRunsCached = cache(
 export const listCompletedRunsCached = cache(
   async ({
     projectId,
-    page,
-    pageSize,
+    from,
+    limit,
     sourceGroup,
   }: {
     projectId: number
-    page?: number
-    pageSize?: number
+    from?: { startedAt: string; id: string }
+    limit?: number
     sourceGroup?: RunSourceGroup
   }) => {
     const { workspace } = await getCurrentUserOrRedirect()
-    const runs = await listCompletedRuns({
+    const result = await listCompletedRuns({
       workspaceId: workspace.id,
       projectId,
-      page,
-      pageSize,
+      from,
+      limit,
       sourceGroup,
     }).then((r) => r.unwrap())
 
-    return runs
+    return result
   },
 )

@@ -5,14 +5,17 @@ import { type Commit } from '../../../schema/models/types/Commit'
 import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
 import { type Experiment } from '../../../schema/models/types/Experiment'
-import { type ProviderLog } from '../../../schema/models/types/ProviderLog'
 import { type Workspace } from '../../../schema/models/types/Workspace'
-import { EvaluationV2, Providers } from '@latitude-data/constants'
+import {
+  EvaluationV2,
+  Providers,
+  Span,
+  SpanType,
+} from '@latitude-data/constants'
 import { Result } from '../../../lib/Result'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import * as evaluationsV2 from '../../../services/evaluationsV2/run'
 import { completeExperiment } from '../../../services/experiments/complete'
-import serializeProviderLog from '../../../services/providerLogs/serialize'
 import * as factories from '../../../tests/factories'
 import { WebsocketClient } from '../../../websockets/workers'
 import * as progressTracker from '../../utils/progressTracker'
@@ -57,7 +60,8 @@ function buildJobData(
     workspaceId: data.workspaceId || 1,
     commitId: data.commitId || 1,
     evaluationUuid: data.evaluationUuid || 'eval-uuid',
-    providerLogUuid: data.providerLogUuid || 'log-uuid',
+    spanId: data.spanId || 'span-id',
+    traceId: data.traceId || 'trace-id',
     experimentUuid: data.experimentUuid,
     datasetId: data.datasetId,
     datasetLabel: data.datasetLabel,
@@ -66,7 +70,7 @@ function buildJobData(
 }
 
 let workspace: Workspace
-let providerLog: ProviderLog
+let span: Span
 let evaluation: EvaluationV2
 let experiment: Experiment
 let dataset: Dataset
@@ -87,16 +91,6 @@ describe('runEvaluationV2Job', () => {
     })
     workspace = setup.workspace
     const documentVersion = setup.documents[0]!
-    const { documentLog: docLog } = await factories.createDocumentLog({
-      document: documentVersion,
-      commit: setup.commit,
-    })
-    const pl = await factories.createProviderLog({
-      workspace: setup.workspace,
-      providerId: setup.providers[0]!.id,
-      providerType: setup.providers[0]!.provider,
-      documentLogUuid: docLog.uuid,
-    })
     const evalV2 = await factories.createEvaluationV2({
       document: documentVersion,
       commit: setup.commit,
@@ -119,13 +113,20 @@ describe('runEvaluationV2Job', () => {
         input2: 'value2',
       },
     })
+    const sp = await factories.createSpan({
+      workspaceId: setup.workspace.id,
+      apiKeyId: setup.apiKeys[0]!.id,
+      type: SpanType.Prompt,
+      documentUuid: documentVersion.documentUuid,
+      commitUuid: setup.commit.uuid,
+    })
 
     commit = setup.commit
     evaluation = evalV2
     experiment = exp
     dataset = ds
     datasetRow = dsRow
-    providerLog = pl
+    span = sp
   })
 
   describe('with valid data', () => {
@@ -136,7 +137,8 @@ describe('runEvaluationV2Job', () => {
           workspaceId: workspace.id,
           commitId: commit.id,
           evaluationUuid: evaluation.uuid,
-          providerLogUuid: providerLog.uuid,
+          spanId: span.id,
+          traceId: span.traceId,
           experimentUuid: experiment.uuid,
           datasetId: dataset.id,
           datasetLabel: 'test',
@@ -292,7 +294,8 @@ describe('runEvaluationV2Job', () => {
             workspaceId: workspace.id,
             commitId: commit.id,
             evaluationUuid: evaluation.uuid,
-            providerLogUuid: providerLog.uuid,
+            spanId: span.id,
+            traceId: span.traceId,
             datasetId: dataset.id,
             datasetLabel: 'test',
             datasetRowId: datasetRow.id,
@@ -320,10 +323,7 @@ describe('runEvaluationV2Job', () => {
           ...evaluation,
           updatedAt: expect.any(Date),
         },
-        providerLog: {
-          ...serializeProviderLog(providerLog),
-          updatedAt: expect.any(Date),
-        },
+        span,
         experiment: undefined,
         dataset: {
           ...dataset,
@@ -355,7 +355,8 @@ describe('runEvaluationV2Job', () => {
           workspaceId: 999999,
           commitId: commit.id,
           evaluationUuid: evaluation.uuid,
-          providerLogUuid: providerLog.uuid,
+          spanId: span.id,
+          traceId: span.traceId,
         }),
       } as Job<RunEvaluationV2JobData>
 

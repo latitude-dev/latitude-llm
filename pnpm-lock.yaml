@@ -45,6 +45,9 @@ catalogs:
     ai:
       specifier: 5.0.44
       version: 5.0.44
+    bullmq:
+      specifier: 5.63.0
+      version: 5.63.0
     dd-trace:
       specifier: 5.69.0
       version: 5.69.0
@@ -310,8 +313,8 @@ importers:
         specifier: 0.44.0
         version: 0.44.0
       bullmq:
-        specifier: 5.44.4
-        version: 5.44.4
+        specifier: 'catalog:'
+        version: 5.63.0
       date-fns:
         specifier: 3.6.0
         version: 3.6.0
@@ -588,8 +591,8 @@ importers:
         specifier: '*'
         version: 0.13.8(typescript@5.9.3)(zod@4.1.8)
       bullmq:
-        specifier: 5.44.4
-        version: 5.44.4
+        specifier: 'catalog:'
+        version: 5.63.0
       dd-trace:
         specifier: 'catalog:'
         version: 5.69.0
@@ -835,8 +838,8 @@ importers:
         specifier: 0.44.0
         version: 0.44.0
       bullmq:
-        specifier: 5.44.4
-        version: 5.44.4
+        specifier: 'catalog:'
+        version: 5.63.0
       compute-cosine-similarity:
         specifier: 1.1.0
         version: 1.1.0
@@ -1170,6 +1173,9 @@ importers:
       '@traceloop/instrumentation-vertexai':
         specifier: 0.13.0
         version: 0.13.0(@opentelemetry/api@1.9.0)
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
@@ -7195,8 +7201,8 @@ packages:
     resolution: {integrity: sha512-zhaCDicdLuWN5UbN5IMnFqNMhNfo919sH85y2/ea+5Yg9TsTkeZxpL+JLbp6cgYFS4sRLp3YV4S6yDuqVWHYOw==}
     engines: {node: '>=6'}
 
-  bullmq@5.44.4:
-    resolution: {integrity: sha512-0BjgABM/7U85Fxatj586ftsoWiGdjmg7fR7PwRYNOOGfvGpiUX9nQoUmx+9VZW/OtHO/4um/BVh2Y2S9BEhKFg==}
+  bullmq@5.63.0:
+    resolution: {integrity: sha512-HT1iM3Jt4bZeg3Ru/MxrOy2iIItxcl1Pz5Ync1Vrot70jBpVguMxFEiSaDU57BwYwR4iwnObDnzct2lirKkX5A==}
 
   bundle-name@4.1.0:
     resolution: {integrity: sha512-tjwM5exMg6BGRI+kNmTntNsvdZS1X8BFYS6tnJ2hdH0kVxM6/eVZ2xy+FqStSWvYmtfFMDLIxurorHwDKfDz5Q==}
@@ -21803,7 +21809,7 @@ snapshots:
 
   builtin-modules@3.3.0: {}
 
-  bullmq@5.44.4:
+  bullmq@5.63.0:
     dependencies:
       cron-parser: 4.9.0
       ioredis: 5.6.0
@@ -21811,7 +21817,7 @@ snapshots:
       node-abort-controller: 3.1.1
       semver: 7.7.2
       tslib: 2.8.1
-      uuid: 9.0.1
+      uuid: 11.1.0
     transitivePeerDependencies:
       - supports-color
 

@@ -1,5 +1,4 @@
-import { Providers } from '@latitude-data/constants'
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { Providers, SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { z } from 'zod'
 import {
@@ -9,17 +8,12 @@ import {
   HumanEvaluationMetric,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
-import * as helpers from '../../helpers'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { type Project } from '../../schema/models/types/Project'
-import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { ProviderLogDto } from '../../schema/types'
 import * as factories from '../../tests/factories'
-import serializeProviderLog from '../providerLogs/serialize'
 import { annotateEvaluationV2 } from './annotate'
 import { HumanEvaluationRatingSpecification } from './human/rating'
 import * as outputs from './outputs/extract'
@@ -30,15 +24,13 @@ describe('annotateEvaluationV2', () => {
   }
 
   let workspace: Workspace
-  let project: Project
-  let user: User
   let commit: Commit
   let document: DocumentVersion
   let evaluation: EvaluationV2<
     EvaluationType.Human,
     HumanEvaluationMetric.Rating
   >
-  let providerLog: ProviderLogDto
+  let span: SpanWithDetails<SpanType.Prompt>
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -47,10 +39,9 @@ describe('annotateEvaluationV2', () => {
 
     const {
       workspace: w,
-      project: p,
-      user: u,
       documents,
       commit: c,
+      apiKeys,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
@@ -62,8 +53,6 @@ describe('annotateEvaluationV2', () => {
     })
 
     workspace = w
-    project = p
-    user = u
     commit = c
     document = documents[0]!
 
@@ -91,57 +80,54 @@ describe('annotateEvaluationV2', () => {
       },
     })
 
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
-      document: document,
-      commit: commit,
-    })
-    providerLog = serializeProviderLog(providerLogs.at(-1)!)
+    span = (await factories.createSpan({
+      workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      apiKeyId: apiKeys[0]!.id,
+    })) as SpanWithDetails<SpanType.Prompt>
 
     mocks = {
       publisher: vi
         .spyOn(publisher, 'publishLater')
         .mockImplementation(async () => {}),
     }
-  })
 
-  it('fails when evaluating a log that is from a different document', async () => {
-    const { commit: draft } = await factories.createDraft({ project, user })
-    const { documentVersion: differentDocument } =
-      await factories.createDocumentVersion({
-        commit: draft,
-        path: 'other',
-        content: factories.helpers.createPrompt({
-          provider: 'openai',
-          model: 'gpt-4o',
-        }),
-        user: user,
-        workspace: workspace,
-      })
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
-      document: differentDocument,
-      commit: draft,
-    })
-    const differentProviderLog = serializeProviderLog(providerLogs.at(-1)!)
-    mocks.publisher.mockClear()
-
-    await expect(
-      annotateEvaluationV2({
-        resultScore: 4,
-        resultMetadata: {
-          reason: 'reason',
+    // Mock the same functions we mocked in run.test.ts
+    vi.spyOn(
+      await import('../tracing/traces/assemble'),
+      'assembleTrace',
+    ).mockResolvedValue(
+      Result.ok({
+        trace: {
+          id: 'trace-id',
+          spans: [],
+          duration: 1000,
+          startedAt: new Date(),
+          endedAt: new Date(),
         },
-        evaluation: evaluation,
-        providerLog: differentProviderLog,
-        commit: commit,
-        workspace: workspace,
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that is from a different document',
-      ),
+      } as any),
     )
 
-    expect(mocks.publisher).not.toHaveBeenCalled()
+    vi.spyOn(
+      await import('../tracing/spans/findFirstSpanOfType'),
+      'findFirstSpanOfType',
+    ).mockReturnValue({
+      id: 'completion-span-id',
+      traceId: 'trace-id',
+      spanType: SpanType.Completion,
+      metadata: {
+        input: [
+          { role: 'user', content: [{ type: 'text', text: 'test input' }] },
+        ],
+        output: [
+          {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'actual output' }],
+          },
+        ],
+      },
+    } as any)
   })
 
   it('fails when annotating is not supported for the evaluation', async () => {
@@ -157,7 +143,7 @@ describe('annotateEvaluationV2', () => {
       annotateEvaluationV2({
         resultScore: 1,
         evaluation: otherEvaluation,
-        providerLog: providerLog,
+        span,
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
@@ -169,32 +155,55 @@ describe('annotateEvaluationV2', () => {
   })
 
   it('fails when evaluating a log that does not end with an assistant message', async () => {
-    vi.spyOn(helpers, 'buildConversation').mockReturnValue([
-      {
-        role: MessageRole.user,
-        content: [{ type: 'text', text: 'hi' }],
+    // Mock the span to return a conversation that doesn't end with assistant message
+    vi.spyOn(
+      await import('../tracing/spans/findFirstSpanOfType'),
+      'findFirstSpanOfType',
+    ).mockReturnValue({
+      id: 'completion-span-id',
+      traceId: 'trace-id',
+      spanType: SpanType.Completion,
+      metadata: {
+        input: [
+          { role: 'user', content: [{ type: 'text', text: 'test input' }] },
+        ],
+        output: [
+          { role: 'user', content: [{ type: 'text', text: 'user message' }] },
+        ], // Not assistant message
       },
-    ])
+    } as any)
     mocks.publisher.mockClear()
 
-    await expect(
-      annotateEvaluationV2({
-        resultScore: 4,
-        resultMetadata: {
-          reason: 'reason',
-        },
-        evaluation: evaluation,
-        providerLog: providerLog,
-        commit: commit,
-        workspace: workspace,
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that does not end with an assistant message',
-      ),
-    )
+    const { result } = await annotateEvaluationV2({
+      resultScore: 4,
+      resultMetadata: {
+        reason: 'reason',
+      },
+      evaluation: evaluation,
+      span,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
 
-    expect(mocks.publisher).not.toHaveBeenCalled()
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
+        score: 0,
+        normalizedScore: 0,
+        metadata: {
+          reason: 'Conversation does not contain any assistant messages',
+          actualOutput: '',
+          configuration: evaluation.configuration,
+        },
+        hasPassed: false,
+        error: null,
+      }),
+    )
+    expect(mocks.publisher).toHaveBeenCalledTimes(2)
   })
 
   it('succeeds when extract actual output fails learnable', async () => {
@@ -213,7 +222,7 @@ describe('annotateEvaluationV2', () => {
         reason: 'reason',
       },
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -223,7 +232,8 @@ describe('annotateEvaluationV2', () => {
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: 0,
         normalizedScore: 0,
         metadata: {
@@ -242,7 +252,8 @@ describe('annotateEvaluationV2', () => {
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         workspaceId: workspace.id,
       },
     })
@@ -253,7 +264,8 @@ describe('annotateEvaluationV2', () => {
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -270,7 +282,7 @@ describe('annotateEvaluationV2', () => {
         reason: 'reason',
       },
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -280,7 +292,8 @@ describe('annotateEvaluationV2', () => {
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: null,
         normalizedScore: null,
         metadata: null,
@@ -297,7 +310,8 @@ describe('annotateEvaluationV2', () => {
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         workspaceId: workspace.id,
       },
     })
@@ -308,7 +322,8 @@ describe('annotateEvaluationV2', () => {
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -323,7 +338,7 @@ describe('annotateEvaluationV2', () => {
         reason: 1,
       },
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -333,7 +348,8 @@ describe('annotateEvaluationV2', () => {
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: null,
         normalizedScore: null,
         metadata: null,
@@ -354,7 +370,8 @@ describe('annotateEvaluationV2', () => {
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         workspaceId: workspace.id,
       },
     })
@@ -365,7 +382,8 @@ describe('annotateEvaluationV2', () => {
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -382,7 +400,7 @@ describe('annotateEvaluationV2', () => {
         reason: 'reason',
       },
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -392,7 +410,8 @@ describe('annotateEvaluationV2', () => {
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: null,
         normalizedScore: null,
         metadata: null,
@@ -409,7 +428,8 @@ describe('annotateEvaluationV2', () => {
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         workspaceId: workspace.id,
       },
     })
@@ -420,7 +440,8 @@ describe('annotateEvaluationV2', () => {
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -431,7 +452,7 @@ describe('annotateEvaluationV2', () => {
       normalizedScore: 999,
       metadata: {
         reason: 'reason',
-        actualOutput: providerLog.response,
+        actualOutput: 'actual output',
         configuration: evaluation.configuration,
       },
       hasPassed: true,
@@ -444,7 +465,7 @@ describe('annotateEvaluationV2', () => {
         reason: 'reason',
       },
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -454,7 +475,8 @@ describe('annotateEvaluationV2', () => {
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: null,
         normalizedScore: null,
         metadata: null,
@@ -471,7 +493,8 @@ describe('annotateEvaluationV2', () => {
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         workspaceId: workspace.id,
       },
     })
@@ -482,7 +505,8 @@ describe('annotateEvaluationV2', () => {
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -497,7 +521,7 @@ describe('annotateEvaluationV2', () => {
         reason: 'reason',
       },
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -507,7 +531,8 @@ describe('annotateEvaluationV2', () => {
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: null,
         normalizedScore: null,
         metadata: null,
@@ -525,7 +550,8 @@ describe('annotateEvaluationV2', () => {
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         workspaceId: workspace.id,
       },
     })
@@ -536,7 +562,8 @@ describe('annotateEvaluationV2', () => {
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -550,7 +577,7 @@ describe('annotateEvaluationV2', () => {
         reason: 'reason',
       },
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -560,12 +587,13 @@ describe('annotateEvaluationV2', () => {
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: 4,
         normalizedScore: 75,
         metadata: {
           reason: 'reason',
-          actualOutput: providerLog.response,
+          actualOutput: 'actual output',
           configuration: evaluation.configuration,
         },
         hasPassed: true,
@@ -579,7 +607,8 @@ describe('annotateEvaluationV2', () => {
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         workspaceId: workspace.id,
       },
     })
@@ -590,7 +619,8 @@ describe('annotateEvaluationV2', () => {
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -601,7 +631,7 @@ describe('annotateEvaluationV2', () => {
     const { result } = await annotateEvaluationV2({
       resultScore: -8,
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -611,12 +641,13 @@ describe('annotateEvaluationV2', () => {
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
-        evaluatedLogId: providerLog.id,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
         score: 1,
         normalizedScore: 0,
         metadata: {
           reason: undefined,
-          actualOutput: providerLog.response,
+          actualOutput: 'actual output',
           configuration: evaluation.configuration,
         },
         hasPassed: false,
@@ -630,7 +661,8 @@ describe('annotateEvaluationV2', () => {
         result: result,
         evaluation: evaluation,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
         workspaceId: workspace.id,
       },
     })
@@ -641,7 +673,8 @@ describe('annotateEvaluationV2', () => {
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })
@@ -653,7 +686,7 @@ describe('annotateEvaluationV2', () => {
         reason: 'reason',
       },
       evaluation: evaluation,
-      providerLog: providerLog,
+      span,
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -662,7 +695,7 @@ describe('annotateEvaluationV2', () => {
     const { result } = await annotateEvaluationV2({
       resultScore: 2,
       evaluation: evaluation,
-      providerLog: providerLog,
+      span: span,
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -674,7 +707,7 @@ describe('annotateEvaluationV2', () => {
         normalizedScore: 25,
         metadata: {
           reason: undefined,
-          actualOutput: providerLog.response,
+          actualOutput: 'actual output',
           configuration: evaluation.configuration,
         },
         hasPassed: false,
@@ -697,7 +730,8 @@ describe('annotateEvaluationV2', () => {
         evaluation: evaluation,
         result: result,
         commit: commit,
-        providerLog: providerLog,
+        spanId: span.id,
+        traceId: span.traceId,
       },
     })
   })

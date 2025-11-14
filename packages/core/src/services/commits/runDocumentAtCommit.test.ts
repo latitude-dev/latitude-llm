@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ChainEventTypes } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { APICallError } from 'ai'
 import { Providers } from '@latitude-data/constants'
 import { LogSources, StreamEventTypes } from '../../constants'
 import { publisher } from '../../events/publisher'
@@ -11,7 +10,6 @@ import { createProject, createTelemetryContext } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { Ok, Result } from './../../lib/Result'
 import { runDocumentAtCommit } from './index'
-import * as createChainRunErrorMod from '../../lib/streamManager/ChainErrors'
 
 const mocks = {
   publish: vi.fn(),
@@ -324,63 +322,6 @@ model: gpt-4o
 
       // Restore the spy
       streamAIResponseSpy.mockRestore()
-    })
-
-    it('creates a run_error instance when there is an error', async () => {
-      const fullStream = new ReadableStream({
-        start(controller) {
-          controller.enqueue({
-            type: 'error',
-            error: new APICallError({
-              message: '401: Unauthorized',
-              url: 'http://localhost:3000',
-              requestBodyValues: {},
-            }),
-          })
-          controller.close()
-        },
-      })
-      const createChainRunErrorSpy = vi.spyOn(
-        createChainRunErrorMod,
-        'createChainRunError',
-      )
-
-      mocks.runAi.mockResolvedValueOnce(
-        Result.ok({
-          type: 'text',
-          text: Promise.resolve(''),
-          providerLog: Promise.resolve({ uuid: 'fake-provider-log-uuid' }),
-          fullStream,
-          response: Promise.resolve({ messages: [] }),
-          usage: Promise.resolve({
-            promptTokens: 0,
-            completionTokens: 0,
-            totalTokens: 0,
-          }),
-          toolCalls: Promise.resolve([]),
-          providerMetadata: Promise.resolve({}),
-          finishReason: Promise.resolve('error'),
-        }),
-      )
-
-      const { context, workspace, document, commit } = await buildData({
-        doc1Content: dummyDoc1Content,
-      })
-      const parameters = { testParam: 'testValue' }
-      const { lastResponse } = await runDocumentAtCommit({
-        context,
-        workspace,
-        document,
-        commit,
-        parameters,
-        customIdentifier: 'custom-identifier',
-        source: LogSources.API,
-      }).then((r) => r.unwrap())
-
-      // Wait for the lastResponse promise to resolve
-      await lastResponse
-
-      expect(createChainRunErrorSpy).toHaveBeenCalled()
     })
   })
 

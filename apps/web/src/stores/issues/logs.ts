@@ -5,26 +5,14 @@ import { compact } from 'lodash-es'
 import useSWR, { SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { ProviderLogDto } from '@latitude-data/core/schema/types'
+import { Span as EMPTY_SPANS, SpanType } from '@latitude-data/constants'
 
-export type IssueLog = {
-  uuid: string
-  createdAt: Date
-  duration: number | null
-  commit: {
-    uuid: string
-    version: number | null
-    title: string
-  }
-  providerLog: ProviderLogDto
-}
-
-export type IssueLogsResponse = {
-  logs: IssueLog[]
+export type IssueSpansResponse = {
+  logs: EMPTY_SPANS<SpanType.Prompt>[]
   hasNextPage: boolean
 }
 
-const EMPTY_LOGS: IssueLog[] = []
+const EMPTY_LOGS: EMPTY_SPANS<SpanType.Prompt>[] = []
 
 export function useIssueLogs(
   {
@@ -47,12 +35,12 @@ export function useIssueLogs(
     .commits.detail(commitUuid)
     .issues.detail(issueId).logs!.root
 
-  const fetcher = useFetcher<IssueLogsResponse>(route, {
+  const fetcher = useFetcher<IssueSpansResponse>(route, {
     searchParams: { page: page.toString(), pageSize: pageSize.toString() },
   })
 
-  const { data, isLoading } = useSWR<IssueLogsResponse>(
-    compact(['issueLogs', projectId, commitUuid, issueId, page, pageSize]),
+  const { data, isLoading } = useSWR<IssueSpansResponse>(
+    compact(['issueSpans', projectId, commitUuid, issueId, page, pageSize]),
     fetcher,
     opts,
   )

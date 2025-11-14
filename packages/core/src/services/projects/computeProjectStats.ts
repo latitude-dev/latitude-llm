@@ -2,6 +2,7 @@ import { and, count, desc, eq, inArray, isNull, sql, sum } from 'drizzle-orm'
 import {
   EvaluationType,
   PROJECT_STATS_CACHE_KEY,
+  SpanType,
   STATS_CACHE_TTL,
   STATS_CACHING_THRESHOLD,
 } from '../../constants'
@@ -10,11 +11,9 @@ import { cache } from '../../cache'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { commits } from '../../schema/models/commits'
-import { documentLogs } from '../../schema/models/documentLogs'
-import { documentVersions } from '../../schema/models/documentVersions'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
-import { providerLogs } from '../../schema/models/providerLogs'
+import { spans } from '../../schema/models/spans'
 
 /**
  * Computes project statistics with caching support
@@ -50,11 +49,17 @@ export async function computeProjectStats(
     }
   }
 
-  const commitIds = await db
-    .select({ commitId: commits.id })
+  const commitUuids = await db
+    .select({ commitUuid: commits.uuid })
     .from(commits)
     .where(eq(commits.projectId, projectId))
-    .then((result) => result.map((r) => r.commitId))
+    .then((result) => result.map((r) => r.commitUuid))
+
+  const activeCommitUuids = await db
+    .select({ commitUuid: commits.uuid })
+    .from(commits)
+    .where(and(eq(commits.projectId, projectId), isNull(commits.deletedAt)))
+    .then((result) => result.map((r) => r.commitUuid))
 
   const activeCommitIds = await db
     .select({ commitId: commits.id })
@@ -62,7 +67,7 @@ export async function computeProjectStats(
     .where(and(eq(commits.projectId, projectId), isNull(commits.deletedAt)))
     .then((result) => result.map((r) => r.commitId))
 
-  if (!commitIds.length || !activeCommitIds.length) {
+  if (!commitUuids.length || !activeCommitUuids.length) {
     return Result.ok<ProjectStats>({
       totalTokens: 0,
       totalRuns: 0,
@@ -76,28 +81,49 @@ export async function computeProjectStats(
     })
   }
 
-  // Get total runs (document logs count)
   const totalRuns = await db
-    .select({ count: count() })
-    .from(documentLogs)
-    .where(inArray(documentLogs.commitId, commitIds))
-    .then((result) => result[0]?.count ?? 0)
+    .select({ count: sql`count(distinct ${spans.traceId})`.as('count') })
+    .from(spans)
+    .where(
+      and(
+        inArray(spans.commitUuid, commitUuids),
+        eq(spans.type, SpanType.Prompt),
+      ),
+    )
+    .then((result) => Number(result[0]?.count ?? 0))
+
+  const traceIds = await db
+    .selectDistinct({ traceId: spans.traceId })
+    .from(spans)
+    .where(
+      and(
+        inArray(spans.commitUuid, commitUuids),
+        eq(spans.type, SpanType.Prompt),
+      ),
+    )
+    .then((result) => result.map((r) => r.traceId))
 
   // Get total tokens and per-model stats from all provider logs
   const modelStats = await db
     .select({
-      model: providerLogs.model,
-      totalTokens: sum(providerLogs.tokens).mapWith(Number),
-      totalCost: sum(providerLogs.costInMillicents).mapWith(Number),
+      model: spans.model,
+      totalTokens: sql`sum(
+        coalesce(${spans.tokensPrompt}, 0) + 
+        coalesce(${spans.tokensCached}, 0) + 
+        coalesce(${spans.tokensReasoning}, 0) + 
+        coalesce(${spans.tokensCompletion}, 0)
+      )`.mapWith(Number),
+      totalCost: sum(spans.cost).mapWith(Number),
       runs: count(),
     })
-    .from(providerLogs)
-    .innerJoin(
-      documentLogs,
-      eq(documentLogs.uuid, providerLogs.documentLogUuid),
+    .from(spans)
+    .where(
+      and(
+        inArray(spans.traceId, traceIds),
+        eq(spans.type, SpanType.Completion),
+      ),
     )
-    .where(inArray(documentLogs.commitId, commitIds))
-    .groupBy(providerLogs.model)
+    .groupBy(spans.model)
 
   // Calculate total tokens
   const totalTokens = modelStats.reduce(
@@ -128,30 +154,29 @@ export async function computeProjectStats(
     .select({ count: count() })
     .from(
       db
-        .selectDistinct({ documentUuid: documentVersions.documentUuid })
-        .from(documentVersions)
-        .where(inArray(documentVersions.commitId, activeCommitIds))
+        .selectDistinct({ documentUuid: spans.documentUuid })
+        .from(spans)
+        .where(inArray(spans.commitUuid, commitUuids))
         .as('unique_docs'),
     )
     .then((result) => result[0]?.count ?? 0)
 
-  // Rolling count of document logs created per day in the last 30 days
-  const rollingDocumentLogs = await db
+  // Rolling count of distinct traceIds per day in the last 30 days
+  const rollingSpans = await db
     .select({
-      date: sql<string>`date_trunc('day', ${documentLogs.createdAt})::date`.as(
-        'date',
-      ),
-      count: count().as('count'),
+      date: sql<string>`date_trunc('day', ${spans.createdAt})::date`.as('date'),
+      count: sql`count(distinct ${spans.traceId})`.as('count'),
     })
-    .from(documentLogs)
+    .from(spans)
     .where(
       and(
-        inArray(documentLogs.commitId, activeCommitIds),
-        sql`${documentLogs.createdAt} >= NOW() - INTERVAL '30 days'`,
+        inArray(spans.commitUuid, activeCommitUuids),
+        eq(spans.type, SpanType.Prompt),
+        sql`${spans.createdAt} >= NOW() - INTERVAL '30 days'`,
       ),
     )
-    .groupBy(sql`date_trunc('day', ${documentLogs.createdAt})::date`)
-    .orderBy(sql`date_trunc('day', ${documentLogs.createdAt})::date`)
+    .groupBy(sql`date_trunc('day', ${spans.createdAt})::date`)
+    .orderBy(sql`date_trunc('day', ${spans.createdAt})::date`)
     .then((result) =>
       result.map((row) => ({
         date: row.date,
@@ -230,7 +255,7 @@ export async function computeProjectStats(
     totalDocuments,
     runsPerModel,
     costPerModel,
-    rollingDocumentLogs,
+    rollingDocumentLogs: rollingSpans,
     totalEvaluations,
     totalEvaluationResults,
     costPerEvaluation,

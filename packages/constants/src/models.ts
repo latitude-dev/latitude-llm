@@ -44,6 +44,7 @@ export type DocumentLog = {
   createdAt: Date
   updatedAt: Date
   experimentId: number | null
+  workspaceId: number | null
 }
 
 export type DocumentLogWithMetadata = DocumentLog & {

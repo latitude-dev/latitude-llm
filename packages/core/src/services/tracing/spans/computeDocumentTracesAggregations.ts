@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, SQL, sql } from 'drizzle-orm'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { spans } from '../../../schema/models/spans'
@@ -12,12 +12,20 @@ export async function computeDocumentTracesAggregations(
     commitUuid,
   }: {
     documentUuid: string
-    commitUuid: string
+    commitUuid?: string
   },
   db = database,
 ) {
   try {
-    // Count distinct traceIds for total count
+    const countConditions = [
+      eq(spans.documentUuid, documentUuid),
+      commitUuid ? eq(spans.commitUuid, commitUuid) : undefined,
+    ].filter(Boolean) as SQL<unknown>[]
+    const conditions = [
+      eq(spans.documentUuid, documentUuid),
+      eq(spans.type, SpanType.Completion),
+      commitUuid ? eq(spans.commitUuid, commitUuid) : undefined,
+    ].filter(Boolean) as SQL<unknown>[]
     const totalCountPromise = db
       .select({
         totalCount: sql<number>`count(DISTINCT ${spans.traceId})`.mapWith(
@@ -25,15 +33,8 @@ export async function computeDocumentTracesAggregations(
         ),
       })
       .from(spans)
-      .where(
-        and(
-          eq(spans.documentUuid, documentUuid),
-          eq(spans.commitUuid, commitUuid),
-        ),
-      )
+      .where(and(...countConditions))
       .then((r) => r[0] ?? { totalCount: 0 })
-
-    // Compute aggregations for all spans
     const spanAggregations = db
       .select({
         totalTokens: sql<number>`
@@ -72,13 +73,7 @@ export async function computeDocumentTracesAggregations(
         `.mapWith(Number),
       })
       .from(spans)
-      .where(
-        and(
-          eq(spans.documentUuid, documentUuid),
-          eq(spans.commitUuid, commitUuid),
-          eq(spans.type, SpanType.Completion),
-        ),
-      )
+      .where(and(...conditions))
       .then(
         (r) =>
           r[0] ?? {

@@ -2,12 +2,13 @@ import {
   EvaluationResultV2,
   EvaluationV2,
   Providers,
+  SpanType,
+  SpanWithDetails,
 } from '@latitude-data/constants'
 import { addDays, format } from 'date-fns'
 import { orderBy } from 'lodash-es'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
-import { type ProviderLog } from '../../../schema/models/types/ProviderLog'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import * as factories from '../../../tests/factories'
 import { createMembership } from '../../memberships/create'
@@ -53,20 +54,20 @@ async function createDocumentLog({
 
 async function createResultV2({
   evaluation,
-  providerLog,
+  span,
   commit,
   workspace,
   info,
 }: {
   evaluation: EvaluationV2
-  providerLog: ProviderLog
+  span: SpanWithDetails<SpanType.Prompt>
   commit: Commit
   workspace: Workspace
   info: WorkspaceInfo['resultsV2'][0]
 }) {
   return await factories.createEvaluationResultV2({
     evaluation: evaluation,
-    providerLog: providerLog,
+    span: span,
     commit: commit,
     workspace: workspace,
     createdAt: info.createdAt,
@@ -106,17 +107,29 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
   const document = documents[0]!
 
   const documentLogs = await Promise.all(
-    workspaceInfo.logs.map((info, index) =>
-      createDocumentLog({ commit, document, info, isFirst: index === 0 }),
-    ),
+    workspaceInfo.logs.map(async (info, index) => {
+      const { documentLog, providerLogs } = await createDocumentLog({
+        commit,
+        document,
+        info,
+        isFirst: index === 0,
+      })
+      const span = await factories.createSpan({
+        workspaceId: workspace.id,
+        documentLogUuid: documentLog.uuid,
+        type: SpanType.Prompt,
+        commitUuid: commit.uuid,
+        createdAt: documentLog.createdAt,
+      })
+
+      return { documentLog, span, providerLogs }
+    }),
   )
   let evaluationResultsV2: EvaluationResultV2[] = []
 
   const log = documentLogs[0]!
-
   if (log) {
-    const { providerLogs } = log
-    const evaluatedProviderLog = providerLogs[0]!
+    const { span } = log
 
     evaluationResultsV2 = await Promise.all(
       workspaceInfo.resultsV2.map(async (info) => {
@@ -128,7 +141,7 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
 
         return await createResultV2({
           evaluation: evaluation,
-          providerLog: evaluatedProviderLog,
+          span: span as unknown as SpanWithDetails<SpanType.Prompt>,
           commit: commit,
           workspace: workspace,
           info: info,

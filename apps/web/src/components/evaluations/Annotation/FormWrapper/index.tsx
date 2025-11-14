@@ -15,8 +15,9 @@ import {
   EvaluationType,
   EvaluationMetric,
   EvaluationResultV2,
-  DocumentLog,
   EvaluationV2,
+  SpanWithDetails,
+  SpanType,
 } from '@latitude-data/constants'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { OnSubmitProps } from '../useAnnotationForm'
@@ -35,7 +36,7 @@ type IAnnotationForm<
   commit: Commit
   result: EvaluationResultV2<T, M> | undefined
   evaluation: EvaluationV2<T, M>
-  documentLog: DocumentLog
+  span: SpanWithDetails<SpanType.Prompt>
   setDisabled: ReactStateDispatch<boolean>
   isExpanded: boolean
   setIsExpanded: ReactStateDispatch<boolean>
@@ -62,7 +63,7 @@ export const AnnotationProvider = <
   onSubmit,
   commit,
   documentUuid,
-  documentLog,
+  span,
   evaluation,
   result,
   isExpanded,
@@ -72,7 +73,7 @@ export const AnnotationProvider = <
   isSubmitting: boolean
   onSubmit: IAnnotationForm<T, M>['onSubmit']
   commit: Commit
-  documentLog: DocumentLog
+  span: SpanWithDetails<SpanType.Prompt>
   evaluation: EvaluationV2<T, M>
   result: EvaluationResultV2<T, M> | undefined
   documentUuid: string
@@ -88,7 +89,7 @@ export const AnnotationProvider = <
         evaluation,
         result,
         onSubmit,
-        documentLog,
+        span,
         disabled,
         setDisabled,
         isSubmitting,

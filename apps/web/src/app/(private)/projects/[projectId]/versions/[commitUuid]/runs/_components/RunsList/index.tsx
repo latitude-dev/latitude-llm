@@ -2,29 +2,42 @@
 
 import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { LogicTablePaginationFooter } from '$/components/TablePaginationFooter/LogicTablePaginationFooter'
+import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
 import {
   ActiveRun,
   CompletedRun,
   LogSources,
-  Run,
   RunSourceGroup,
 } from '@latitude-data/constants'
 import { Pagination } from '@latitude-data/core/helpers'
+import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RunsListItem } from './Item'
 import { RunSourceSelector } from './SourceSelector'
 
-type RunsProps<R extends Run> = {
-  runs: R[]
+type ActiveRunsProps = {
+  runs: ActiveRun[]
   search: Pagination
   setSearch: (search: Pagination) => void
   next: number
   isLoading?: boolean
   countBySource?: Record<LogSources, number>
   totalCount?: number
+}
+
+type CompletedRunsProps = {
+  runs: CompletedRun[]
+  goToNextPage: () => void
+  goToPrevPage: () => void
+  hasNext: boolean
+  hasPrev: boolean
+  isLoading?: boolean
+  countBySource?: Record<LogSources, number>
+  totalCount?: number
+  limitedView?: Pick<ProjectLimitedView, 'totalRuns'>
 }
 
 export function RunsList({
@@ -39,8 +52,8 @@ export function RunsList({
   sourceGroup,
   setSourceGroup,
 }: {
-  active: RunsProps<ActiveRun>
-  completed: RunsProps<CompletedRun>
+  active: ActiveRunsProps
+  completed: CompletedRunsProps
   selectedRunUuid?: string
   setSelectedRunUuid: (uuid?: string) => void
   stopRun: ReturnType<typeof useActiveRuns>['stopRun']
@@ -70,7 +83,6 @@ export function RunsList({
 
   // Note: cleaning up timer on unmount
   useEffect(() => resetTimer, [resetTimer])
-
   useEffect(() => {
     if (active.runs.length > 0) startTimer()
     else resetTimer()
@@ -166,17 +178,19 @@ export function RunsList({
                 />
               ))}
             </div>
-            {((completed.search.page ?? 0) > 1 || completed.next > 0) && (
+            {(completed.hasNext || completed.hasPrev) && (
               <div className='w-full h-12 flex flex-shrink-0 justify-end items-center bg-secondary border-t border-border rounded-b-xl pl-4 pr-1 py-1'>
-                <LogicTablePaginationFooter
-                  page={completed.search.page ?? 1}
-                  pageSize={completed.search.pageSize ?? 25}
-                  count={completed.totalCount ?? 0}
-                  countLabel={(count) => `${count} runs`}
-                  onPageChange={(page) =>
-                    completed.setSearch({ ...completed.search, page })
+                <SimpleKeysetTablePaginationFooter
+                  setNext={completed.goToNextPage}
+                  setPrev={completed.goToPrevPage}
+                  hasNext={completed.hasNext}
+                  hasPrev={completed.hasPrev}
+                  count={
+                    completed.totalCount ??
+                    completed.limitedView?.totalRuns ??
+                    null
                   }
-                  isLoading={completed.isLoading}
+                  countLabel={(count) => `${count} runs`}
                 />
               </div>
             )}

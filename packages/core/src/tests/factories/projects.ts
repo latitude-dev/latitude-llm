@@ -23,6 +23,7 @@ import {
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
 import { unsafelyGetUser } from '../../data-access/users'
 import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
+import { ApiKey } from '../../schema/models/types/ApiKey'
 
 export type IDocumentStructure = { [key: string]: string | IDocumentStructure }
 
@@ -72,6 +73,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
   const workspaceData = projectData.workspace ?? {}
   let user: User
   let workspace: Workspace
+  let apiKeys: ApiKey[] = []
 
   if ('id' in workspaceData) {
     user = (await unsafelyGetUser(workspaceData.creatorId!)) as User
@@ -81,7 +83,9 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     workspace = newWorkspace.workspace
     user = newWorkspace.userData
 
-    await createApiKey({ workspace })
+    const { apiKey } = await createApiKey({ workspace })
+
+    apiKeys = [apiKey]
   }
 
   if (projectData.integrations?.length) {
@@ -181,6 +185,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     providers,
     documents,
     commit,
+    apiKeys,
   }
 }
 

@@ -69,6 +69,8 @@ export async function discoverIssue<
     return Result.error(embedying.error)
   }
   let embedding = embedying.value
+  if (!embedding) return Result.ok({ embedding: [] })
+
   embedding = normalizeEmbedding(embedding)
 
   const finding = await findCandidates({ reason, embedding, document, project })

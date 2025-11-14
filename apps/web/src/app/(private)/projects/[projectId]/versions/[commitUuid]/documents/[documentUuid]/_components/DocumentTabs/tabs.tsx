@@ -6,8 +6,8 @@ import {
   TabSelector,
   TabSelectorOption,
 } from '@latitude-data/web-ui/molecules/TabSelector'
-import { useSelectedLayoutSegment } from 'next/navigation'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { useSelectedLayoutSegment, useSearchParams } from 'next/navigation'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import useFeature from '$/stores/useFeature'
 
 export type TabValue = DocumentRoutes | 'preview'
@@ -30,6 +30,7 @@ export const DocumentTabSelector = memo(
   }) => {
     const router = useNavigate()
     const selectedSegment = useSelectedLayoutSegment() as DocumentRoutes | null
+    const searchParams = useSearchParams()
     const { isEnabled: isTracesEnabled } = useFeature('traces')
 
     // --- Internal fallback state (uncontrolled mode) ---
@@ -40,6 +41,28 @@ export const DocumentTabSelector = memo(
     // --- Controlled-or-uncontrolled unified logic ---
     const selectedTab = controlledSelectedTab ?? internalTab
     const setSelectedTab = onSelectTab ?? setInternalTab
+
+    // --- Sync internal state with route segment (uncontrolled mode only) ---
+    useEffect(() => {
+      // Only sync when in uncontrolled mode
+      if (controlledSelectedTab !== undefined) return
+
+      const showPreview = searchParams.get('showPreview') === 'true'
+
+      // Handle preview state from URL
+      if (showPreview && selectedSegment === DocumentRoutes.editor) {
+        setInternalTab('preview')
+        return
+      }
+
+      // Sync with route segment
+      if (selectedSegment) {
+        setInternalTab(selectedSegment)
+      } else if (!showPreview) {
+        // Default to editor if no segment and not in preview
+        setInternalTab(DocumentRoutes.editor)
+      }
+    }, [selectedSegment, searchParams, controlledSelectedTab])
 
     // --- Tabs definition ---
     const data = useMemo(() => {
@@ -87,8 +110,9 @@ export const DocumentTabSelector = memo(
           [tabs[DocumentRoutes.editor], tabs.preview],
           tabs[DocumentRoutes.evaluations],
           tabs[DocumentRoutes.experiments],
-          tabs[DocumentRoutes.logs],
-          ...(isTracesEnabled ? [tabs[DocumentRoutes.traces]] : []),
+          ...(isTracesEnabled
+            ? [tabs[DocumentRoutes.traces]]
+            : [tabs[DocumentRoutes.logs]]),
         ],
       }
     }, [projectId, commitUuid, documentUuid, isTracesEnabled])

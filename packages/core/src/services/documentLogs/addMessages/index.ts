@@ -3,7 +3,6 @@ import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSch
 import { type Message } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '../../../constants'
 import { unsafelyFindProviderApiKey } from '../../../data-access/providerApiKeys'
-import { publisher } from '../../../events/publisher'
 import { buildConversation } from '../../../helpers'
 import { Result } from '../../../lib/Result'
 import { ToolHandler } from '../../documents/tools/clientTools/handlers'
@@ -49,8 +48,7 @@ export async function addMessages({
     documentLogUuid,
   })
   if (dataResult.error) return dataResult
-  const { document, commit, documentLog, providerLog, globalConfig } =
-    dataResult.unwrap()
+  const { document, commit, providerLog, globalConfig } = dataResult.unwrap()
 
   const $prompt = telemetry.prompt(context, {
     documentLogUuid,
@@ -116,14 +114,6 @@ export async function addMessages({
     } else {
       $prompt.end()
     }
-
-    await publisher.publishLater({
-      type: 'documentLogInteracted',
-      data: {
-        id: documentLog.id,
-        workspaceId: workspace.id,
-      },
-    })
   })
 
   return Result.ok(streamResult)

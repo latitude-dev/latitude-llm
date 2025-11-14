@@ -1,8 +1,9 @@
-import { LogSources } from '../../constants'
+import { LogSources, PromptSpanMetadata } from '../../constants'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { generateDocumentSuggestionJobKey } from '../../jobs/job-definitions'
 import { queues } from '../../jobs/queues'
 import { NotFoundError } from '../../lib/errors'
+import { SpanMetadatasRepository, SpansRepository } from '../../repositories'
 import { EvaluationResultV2CreatedEvent } from '../events'
 
 const LIVE_SUGGESTION_SOURCES = [LogSources.Playground, LogSources.Experiment]
@@ -13,14 +14,22 @@ export const requestDocumentSuggestionJobV2 = async ({
 }: {
   data: EvaluationResultV2CreatedEvent
 }) => {
-  const { workspaceId, result, evaluation, commit, providerLog } = event.data
-
+  const { workspaceId, result, evaluation, commit, spanId, traceId } =
+    event.data
   const workspace = await unsafelyFindWorkspace(workspaceId)
-  if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
+  const spansRepo = new SpansRepository(workspaceId)
+  const spansMetadataRepo = new SpanMetadatasRepository(workspaceId)
+  const span = await spansRepo.get({ traceId, spanId }).then((r) => r.value)
+  if (!span) return
+  const metadata = await spansMetadataRepo
+    .get({ spanId, traceId })
+    .then((r) => r.value)
+  if (!metadata) return
 
-  if (!LIVE_SUGGESTION_SOURCES.includes(providerLog.source)) return
+  if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
   if (result.hasPassed || result.error || result.usedForSuggestion) return
   if (!evaluation.enableSuggestions) return
+  if (!LIVE_SUGGESTION_SOURCES.includes((metadata as PromptSpanMetadata).source)) return // prettier-ignore
 
   const { documentSuggestionsQueue } = await queues()
   documentSuggestionsQueue.add(

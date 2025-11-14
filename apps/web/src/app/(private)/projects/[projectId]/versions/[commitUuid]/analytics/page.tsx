@@ -2,7 +2,6 @@
 
 import {
   findProjectCached,
-  getDocumentLogsApproximatedCountByProjectCached,
   getProjectStatsCached,
   hasDocumentLogsByProjectCached,
 } from '$/app/(private)/_data-access'
@@ -16,6 +15,7 @@ import { DocumentBlankSlateLayout } from '../documents/_components/DocumentBlank
 import Overview from '../overview/_components/Overview'
 import { AddFileButton } from '../overview/_components/Overview/AddFileButton'
 import { LIMITED_VIEW_THRESHOLD } from '@latitude-data/core/constants'
+import { SpansRepository } from '@latitude-data/core/repositories'
 
 export async function generateMetadata() {
   return buildMetatags({
@@ -55,14 +55,16 @@ export default async function AnalyticsPage({
   }
 
   let limitedView = undefined
-  const approximatedCount =
-    await getDocumentLogsApproximatedCountByProjectCached(projectId)
-  if (approximatedCount > LIMITED_VIEW_THRESHOLD) {
+  const spansRepo = new SpansRepository(session.workspace.id)
+  const approximateCount = await spansRepo
+    .approximateCountByProject(projectId)
+    .then((r) => r.value)
+  if (approximateCount && approximateCount > LIMITED_VIEW_THRESHOLD) {
     limitedView = await getProjectStatsCached(projectId)
     if (!limitedView) {
       limitedView = {
         totalDocuments: 0,
-        totalRuns: approximatedCount,
+        totalRuns: approximateCount,
         totalTokens: 0,
         runsPerModel: {},
         costPerModel: {},
