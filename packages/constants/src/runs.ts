@@ -5,7 +5,7 @@ import {
   ManualEvaluationMetric,
 } from './evaluations'
 import { LogSources } from './models'
-import { SpanType, SpanWithDetails } from './tracing'
+import { Span, SpanType } from './tracing'
 
 export type RunAnnotation<
   T extends EvaluationType = EvaluationType,
@@ -23,7 +23,7 @@ export type Run = {
   caption?: string
   annotations?: RunAnnotation[]
   source?: LogSources
-  span?: SpanWithDetails<SpanType.Prompt>
+  span?: Span<SpanType.Prompt>
 }
 
 export type ActiveRun = Pick<
