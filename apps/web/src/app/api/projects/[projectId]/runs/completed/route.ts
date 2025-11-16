@@ -36,7 +36,13 @@ export const GET = errorHandler(
         sourceGroup,
       }).then((r) => r.unwrap())
 
-      return NextResponse.json(runs, { status: 200 })
+      // Stringify the next cursor for URL parameter usage
+      const response = {
+        ...runs,
+        next: runs.next ? JSON.stringify(runs.next) : null,
+      }
+
+      return NextResponse.json(response, { status: 200 })
     },
   ),
 )
