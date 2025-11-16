@@ -2,8 +2,8 @@
 
 import { GoToPageInput } from '$/components/TablePaginationFooter/GoToPageInput'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { useMemo } from 'react'
 
 export function LogicTablePaginationFooter({
@@ -26,15 +26,6 @@ export function LogicTablePaginationFooter({
     [count, pageSize],
   )
 
-  if (isLoading) {
-    return (
-      <div className='w-full flex justify-between items-center'>
-        <Skeleton className='w-20 my-2' height='h4' />
-        <Skeleton className='w-12 my-2' height='h4' />
-      </div>
-    )
-  }
-
   return (
     <div className='w-full flex justify-between items-center'>
       <Text.H5M color='foregroundMuted'>
@@ -42,10 +33,13 @@ export function LogicTablePaginationFooter({
       </Text.H5M>
 
       <div className='flex items-center'>
+        {isLoading && (
+          <Icon name='loader' className='h-4 w-4 animate-spin mr-2' />
+        )}
         <Button
           size='default'
           variant='ghost'
-          disabled={page <= 1}
+          disabled={page <= 1 || isLoading}
           iconProps={{
             name: 'chevronLeft',
           }}
@@ -67,7 +61,7 @@ export function LogicTablePaginationFooter({
         <Button
           size='default'
           variant='ghost'
-          disabled={page >= totalPages}
+          disabled={page >= totalPages || isLoading}
           iconProps={{
             name: 'chevronRight',
           }}

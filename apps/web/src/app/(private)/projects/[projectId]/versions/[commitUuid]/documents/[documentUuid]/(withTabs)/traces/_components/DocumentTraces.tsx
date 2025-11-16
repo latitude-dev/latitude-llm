@@ -36,6 +36,7 @@ export function DocumentTraces({ initialSpans }: { initialSpans: Span[] }) {
     goToPrevPage,
     hasNext,
     hasPrev,
+    isLoading,
   } = useSpansKeysetPaginationStore({
     projectId: String(project.id),
     commitUuid: commit.uuid,
@@ -64,6 +65,7 @@ export function DocumentTraces({ initialSpans }: { initialSpans: Span[] }) {
               hasPrev={hasPrev}
               count={count}
               countLabel={(count) => `${count} traces`}
+              isLoading={isLoading}
             />
           }
         >

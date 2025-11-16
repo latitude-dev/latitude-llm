@@ -12,7 +12,6 @@ import {
 } from '@latitude-data/constants'
 import { Pagination } from '@latitude-data/core/helpers'
 import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RunsListItem } from './Item'
@@ -105,16 +104,7 @@ export function RunsList({
             <RealtimeToggle enabled={realtime} setEnabled={setRealtime} />
           </div>
         </div>
-        {active.isLoading ? (
-          <div className='w-full h-full flex items-center justify-center gap-2 py-9 px-4 border border-border border-dashed rounded-xl'>
-            <Icon
-              name='loader'
-              color='foregroundMuted'
-              className='animate-spin stroke-[2.25]'
-            />
-            <Text.H5 color='foregroundMuted'>Loading active runs...</Text.H5>
-          </div>
-        ) : active.runs.length > 0 ? (
+        {active.runs.length > 0 ? (
           <div className='w-full min-h-0 flex flex-col border border-border rounded-xl overflow-hidden'>
             <div className='w-full flex flex-col divide-border divide-y rounded-t-xl overflow-hidden overflow-y-auto custom-scrollbar relative'>
               {active.runs.map((run) => (
@@ -157,16 +147,7 @@ export function RunsList({
             <Text.H6 color='foregroundMuted'>Runs already finished</Text.H6>
           </div>
         </div>
-        {completed.isLoading ? (
-          <div className='w-full h-full flex items-center justify-center gap-2 py-9 px-4 border border-border border-dashed rounded-xl'>
-            <Icon
-              name='loader'
-              color='foregroundMuted'
-              className='animate-spin stroke-[2.25]'
-            />
-            <Text.H5 color='foregroundMuted'>Loading completed runs...</Text.H5>
-          </div>
-        ) : completed.runs.length > 0 ? (
+        {completed.runs.length > 0 ? (
           <div className='w-full min-h-0 flex flex-col border border-border rounded-xl overflow-hidden'>
             <div className='w-full flex flex-col divide-border divide-y rounded-t-xl overflow-hidden overflow-y-auto custom-scrollbar relative'>
               {completed.runs.map((run) => (
@@ -191,6 +172,7 @@ export function RunsList({
                     null
                   }
                   countLabel={(count) => `${count} runs`}
+                  isLoading={completed.isLoading}
                 />
               </div>
             )}
