@@ -58,25 +58,4 @@ export async function setupSchedules() {
     { pattern: '0 0 1 * * *' },
     { opts: { attempts: 1 } },
   )
-
-  // Every day at 11 AM - Migrates active runs cache from old STRING format to new HASH format
-  await maintenanceQueue.upsertJobScheduler(
-    'migrateActiveRunsCacheJob',
-    { pattern: '0 30 11 * * *' },
-    { opts: { attempts: 1 } },
-  )
-
-  // Every day at 10:30 AM - Updates evaluation results with span references
-  await maintenanceQueue.upsertJobScheduler(
-    'scheduleUpdateEvaluationResultsSpanReferencesJobs',
-    { pattern: '0 30 10 * * *' },
-    { opts: { attempts: 1 } },
-  )
-
-  // Every day at 11:00 AM - Updates evaluation results with span references for paid workspaces
-  await maintenanceQueue.upsertJobScheduler(
-    'scheduleUpdateEvaluationResultsSpanReferencesForPaidJobs',
-    { pattern: '0 0 11 * * *' },
-    { opts: { attempts: 1 } },
-  )
 }
