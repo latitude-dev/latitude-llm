@@ -31,7 +31,7 @@ export const DocumentTabSelector = memo(
     const router = useNavigate()
     const selectedSegment = useSelectedLayoutSegment() as DocumentRoutes | null
     const searchParams = useSearchParams()
-    const { isEnabled: isTracesEnabled } = useFeature('traces')
+    const { isEnabled: isTracesEnabled, isLoading } = useFeature('traces')
 
     // --- Internal fallback state (uncontrolled mode) ---
     const [internalTab, setInternalTab] = useState<TabValue>(
@@ -110,9 +110,11 @@ export const DocumentTabSelector = memo(
           [tabs[DocumentRoutes.editor], tabs.preview],
           tabs[DocumentRoutes.evaluations],
           tabs[DocumentRoutes.experiments],
-          ...(isTracesEnabled
-            ? [tabs[DocumentRoutes.traces]]
-            : [tabs[DocumentRoutes.logs]]),
+          ...(isLoading
+            ? []
+            : isTracesEnabled
+              ? [tabs[DocumentRoutes.traces]]
+              : [tabs[DocumentRoutes.logs]]),
         ],
       }
     }, [projectId, commitUuid, documentUuid, isTracesEnabled])
