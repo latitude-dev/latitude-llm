@@ -45,12 +45,12 @@ export function convertIssuesParamsToQueryParams(
     sorting = DEFAULTS_ISSUE_PARAMS.sorting,
   } = params
 
-  const { query, documentUuid, status, firstSeen, lastSeen } = filters
+  const { query, documentUuid, group, firstSeen, lastSeen } = filters
 
   const rawParams = {
     query,
     documentUuid,
-    status,
+    group,
     firstSeen: firstSeen ? formatDateLocal(firstSeen) : undefined,
     lastSeen: lastSeen ? formatDateLocal(lastSeen) : undefined,
     page: page > 1 ? page.toString() : undefined,
@@ -88,7 +88,7 @@ export function buildIssuesCacheKey({
     String(projectId),
     commitUuid,
     `query:${searchParams.query || '-'}`,
-    `status:${searchParams.status ?? '-'}`,
+    `group:${searchParams.group ?? '-'}`,
     `sort:${searchParams.sort || '-'}`,
     `sortDirection:${searchParams.sortDirection || '-'}`,
     `documentUuid:${searchParams.documentUuid || '-'}`,

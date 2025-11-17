@@ -1,7 +1,10 @@
 import {
   ESCALATING_COUNT_THRESHOLD,
   HISTOGRAM_SUBQUERY_ALIAS,
+  IssueGroup,
   IssueSort,
+  IssueStatuses,
+  NEW_ISSUES_DAYS,
   SafeIssuesParams,
 } from '@latitude-data/constants/issues'
 import {
@@ -11,6 +14,8 @@ import {
   eq,
   getTableColumns,
   ilike,
+  isNotNull,
+  isNull,
   or,
   sql,
   SQL,
@@ -118,15 +123,24 @@ export class IssuesRepository extends Repository<Issue> {
     return Result.ok(result)
   }
 
-  async findByTitle({
+  async findByTitleAndStatuses({
     project,
     document,
     title,
+    statuses,
+    group,
   }: {
     project: Project
     document: DocumentVersion
     title: string | null
+    statuses?: IssueStatuses[]
+    group?: IssueGroup
   }) {
+    const whereConditions = this.buildWhereConditions({
+      project,
+      filters: { group, status: statuses },
+    })
+
     return this.db
       .select({
         id: issues.id,
@@ -140,6 +154,7 @@ export class IssuesRepository extends Repository<Issue> {
           eq(issues.projectId, project.id),
           eq(issues.documentUuid, document.documentUuid),
           ilike(issues.title, `%${title ?? ''}%`),
+          ...whereConditions,
         ),
       )
       .orderBy(desc(issues.createdAt))
@@ -322,35 +337,95 @@ export class IssuesRepository extends Repository<Issue> {
       conditions.push(ilike(issues.title, `%${filters.query}%`))
     }
 
-    // Handle status filtering based on new tab system
-    const status = filters.status || 'active' // Default to active
-
-    switch (status) {
-      case 'active':
-        // Active: not resolved and not ignored, OR regressed (resolved but reappeared)
-        conditions.push(
-          or(
-            // Not resolved and not ignored
-            sql`(${issues.resolvedAt} IS NULL AND ${issues.ignoredAt} IS NULL)`,
-            // Regressed: resolved but with histogram data after resolved date
-            sql`(${issues.resolvedAt} IS NOT NULL AND ${issues.ignoredAt} IS NULL AND ${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} > ${issues.resolvedAt})`,
-          )!,
-        )
-        break
-      case 'inactive':
-        // Inactive: ignored, OR resolved without regression
-        conditions.push(
-          or(
-            // Ignored issues
-            sql`${issues.ignoredAt} IS NOT NULL`,
-            // Resolved without regression (histogram data before or at resolved date)
-            sql`(${issues.resolvedAt} IS NOT NULL AND ${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} <= ${issues.resolvedAt})`,
-          )!,
-        )
-        break
+    // We only apply group or status filtering, not both at the same time
+    if (filters.group) {
+      conditions.push(this.buildGroupConditions({ filters })!)
+    } else if (filters.status) {
+      conditions.push(this.buildStatusConditions({ filters })!)
     }
 
     return conditions
+  }
+
+  private buildStatusConditions({ filters }: { filters: IssueFilters }) {
+    const statusConditions: SQL[] = []
+    const specificStatuses = filters.status ?? []
+    for (const status of specificStatuses) {
+      switch (status) {
+        case IssueStatuses.merged:
+          statusConditions.push(this.withMergedIssues(true))
+          break
+        case IssueStatuses.regressed:
+          statusConditions.push(this.withRegressedIssues(true))
+          break
+        case IssueStatuses.resolved:
+          statusConditions.push(this.withResolvedIssues(true))
+          break
+        case IssueStatuses.ignored:
+          statusConditions.push(this.withIgnoredIssues(true))
+          break
+        case IssueStatuses.escalating:
+          statusConditions.push(this.withEscalatingIssues(true))
+          break
+        case IssueStatuses.new:
+          statusConditions.push(this.withNewIssues(true))
+          break
+      }
+    }
+    return statusConditions.length > 0 ? and(...statusConditions) : undefined
+  }
+
+  private buildGroupConditions({ filters }: { filters: IssueFilters }) {
+    const group = filters.group || 'active' // Default to active
+    // Can only apply one group condition at a time
+    let groupConditions: SQL | undefined
+    switch (group) {
+      case 'active':
+        groupConditions = or(
+          and(this.withResolvedIssues(false), this.withIgnoredIssues(false)),
+          this.withRegressedIssues(true),
+        )!
+        break
+      case 'inactive':
+        groupConditions = or(
+          this.withIgnoredIssues(true),
+          // Resolved without regression (histogram data before or at resolved date)
+          sql`(${issues.resolvedAt} IS NOT NULL AND ${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} <= ${issues.resolvedAt})`,
+        )!
+        break
+      case 'activeWithResolved':
+        groupConditions = and(
+          this.withResolvedIssues(true),
+          this.withIgnoredIssues(false),
+        )!
+        break
+    }
+    return groupConditions
+  }
+
+  private withMergedIssues(include: boolean): SQL {
+    return include ? isNotNull(issues.mergedAt) : isNull(issues.mergedAt)
+  }
+  private withRegressedIssues(include: boolean): SQL {
+    return include
+      ? sql`${issues.resolvedAt} IS NOT NULL AND ${issues.ignoredAt} IS NULL AND ${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} > ${issues.resolvedAt}`
+      : sql`${issues.resolvedAt} IS NULL OR ${issues.ignoredAt} IS NOT NULL OR ${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} <= ${issues.resolvedAt}`
+  }
+  private withResolvedIssues(include: boolean): SQL {
+    return include ? isNotNull(issues.resolvedAt) : isNull(issues.resolvedAt)
+  }
+  private withIgnoredIssues(include: boolean): SQL {
+    return include ? isNotNull(issues.ignoredAt) : isNull(issues.ignoredAt)
+  }
+  private withEscalatingIssues(include: boolean): SQL {
+    return include
+      ? sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."escalatingCount"`)} > ${ESCALATING_COUNT_THRESHOLD}`
+      : sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."escalatingCount"`)} <= ${ESCALATING_COUNT_THRESHOLD}`
+  }
+  private withNewIssues(include: boolean): SQL {
+    return include
+      ? sql`${issues.createdAt} >= NOW() - INTERVAL '${NEW_ISSUES_DAYS} days'`
+      : sql`${issues.createdAt} < NOW() - INTERVAL '${NEW_ISSUES_DAYS} days'`
   }
 
   private buildOrderByClause({

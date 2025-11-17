@@ -4,17 +4,29 @@ import useFetcher from '$/hooks/useFetcher'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { useMemo } from 'react'
 import { SearchIssueResponse } from '$/app/api/projects/[projectId]/documents/[documentUuid]/issues/search/route'
+import { IssueStatuses } from '@latitude-data/constants/issues'
+import { IssueGroup } from '@latitude-data/constants/issues'
 
 export function createSearchIssuesKey({
   projectId,
   documentUuid,
   query,
+  statuses,
+  group,
 }: {
   projectId: number
   documentUuid: string
   query?: string
+  statuses?: IssueStatuses[]
+  group?: IssueGroup
 }) {
   const base = ['searchIssues', projectId, documentUuid]
+  if (statuses) {
+    base.push(...statuses)
+  }
+  if (group) {
+    base.push(group)
+  }
 
   if (!query) return base
 
@@ -28,10 +40,14 @@ export function useSearchIssues(
     projectId,
     documentUuid,
     query,
+    statuses,
+    group,
   }: {
     projectId: number
     documentUuid: string
     query?: string
+    statuses?: IssueStatuses[]
+    group?: IssueGroup
   },
   swrConfig?: SWRConfiguration<SearchIssueResponse, any>,
 ) {
@@ -39,11 +55,17 @@ export function useSearchIssues(
     .detail(projectId)
     .documents.detail(documentUuid)
   const route = base.issues.search
+  const issueStatusesQueryParam = statuses?.join(',')
   const fetcher = useFetcher<SearchIssueResponse>(route, {
-    searchParams: { documentUuid, query: query ?? '' },
+    searchParams: {
+      documentUuid,
+      query: query ?? '',
+      statuses: issueStatusesQueryParam ?? '',
+      group: group ?? '',
+    },
   })
   const { data = EMPTY_LIST, isLoading } = useSWR<SearchIssueResponse>(
-    createSearchIssuesKey({ projectId, documentUuid, query }),
+    createSearchIssuesKey({ projectId, documentUuid, query, statuses, group }),
     fetcher,
     swrConfig,
   )

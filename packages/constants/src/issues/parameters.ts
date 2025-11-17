@@ -1,34 +1,35 @@
 import { z } from 'zod'
 import { parseISO, isValid } from 'date-fns'
 import {
-  ISSUE_STATUS,
+  ISSUE_GROUP,
   ISSUE_SORTS,
   SafeIssuesParams,
   DEFAULTS_ISSUE_PARAMS,
   IssueSort,
-  IssueStatus,
+  IssueGroup,
 } from './constants'
 
 const MAX_ISSUES_LIMIT = 100
 const LIMIT = DEFAULTS_ISSUE_PARAMS.limit
 
-const ISSUE_STATUS_VALUES = Object.values(ISSUE_STATUS) as [
-  IssueStatus,
-  ...IssueStatus[],
+const ISSUE_GROUP_VALUES = Object.values(ISSUE_GROUP) as [
+  IssueGroup,
+  ...IssueGroup[],
 ]
 const ISSUE_SORTS_VALUES = Object.values(ISSUE_SORTS) as [
   IssueSort,
   ...IssueSort[],
 ]
+// TODO(AO): Add filter by statuses here
 
 export const issuesFiltersQueryParamsParser = z
   .object({
     documentUuid: z.string().optional().nullable(),
     query: z.string().optional(),
-    status: z
-      .enum(ISSUE_STATUS_VALUES)
+    group: z
+      .enum(ISSUE_GROUP_VALUES)
       .optional()
-      .default(DEFAULTS_ISSUE_PARAMS.filters.status),
+      .default(DEFAULTS_ISSUE_PARAMS.filters.group),
     sort: z
       .enum(ISSUE_SORTS_VALUES)
       .optional()
@@ -81,7 +82,7 @@ export const issuesFiltersQueryParamsParser = z
       filters: {
         query: data.query,
         documentUuid: data.documentUuid,
-        status: data.status,
+        group: data.group,
         firstSeen: data.firstSeen,
         lastSeen: data.lastSeen,
       },

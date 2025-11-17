@@ -10,6 +10,7 @@ import { updateEvaluationResultInstance } from './updateEvaluationResultInstance
 import { use, useCallback, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { ISSUE_GROUP } from '@latitude-data/constants/issues'
 
 export function IssuesSelector() {
   const issuesFeature = useFeature('issues')
@@ -69,7 +70,9 @@ export function IssuesSelector() {
     projectId,
     documentUuid,
     query,
+    group: ISSUE_GROUP.activeWithResolved,
   })
+
   const isLoading =
     isLoadingIssue ||
     isSearchingIssues ||
