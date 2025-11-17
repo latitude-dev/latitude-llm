@@ -20,6 +20,7 @@ import {
 } from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
+import { type User } from '../../schema/models/types/User'
 import { findFirstSpanOfType } from '../tracing/spans/findFirstSpanOfType'
 import { assembleTrace } from '../tracing/traces/assemble'
 import { extractActualOutput } from './outputs/extract'
@@ -32,19 +33,21 @@ export async function annotateEvaluationV2<
   M extends EvaluationMetric<T>,
 >(
   {
-    resultScore,
-    resultMetadata,
+    workspace,
+    commit,
     evaluation,
     span,
-    commit,
-    workspace,
+    resultScore,
+    resultMetadata,
+    currentUser,
   }: {
-    resultScore: number
-    resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
+    workspace: Workspace
+    commit: Commit
     evaluation: EvaluationV2<T, M>
     span: SpanWithDetails<SpanType.Prompt>
-    commit: Commit
-    workspace: Workspace
+    resultScore: number
+    resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
+    currentUser?: User
   },
   transaction = new Transaction(),
 ) {
@@ -151,10 +154,17 @@ export async function annotateEvaluationV2<
     value = { error: { message: (error as Error).message } }
   }
 
+  let alreadyExisted = false
+  let sendToAnalytics = false
+
   return await transaction.call(
     async () => {
       let result
+      alreadyExisted = !!existingResult
+
       if (existingResult) {
+        alreadyExisted = true
+        sendToAnalytics = existingResult.score !== resultScore
         const { result: updatedResult } = await updateEvaluationResultV2(
           {
             workspace,
@@ -166,6 +176,7 @@ export async function annotateEvaluationV2<
         ).then((r) => r.unwrap())
         result = updatedResult
       } else {
+        sendToAnalytics = true
         const { result: createdResult } = await createEvaluationResultV2(
           {
             uuid: resultUuid,
@@ -183,9 +194,14 @@ export async function annotateEvaluationV2<
       return Result.ok({ result })
     },
     ({ result }) =>
+      // Always publish event, but only include userEmail when score changed
+      // Analytics platform checks userEmail to decide whether to process the event
+      // This prevents sending partial reason text from debounced updates
       publisher.publishLater({
         type: 'evaluationV2Annotated',
         data: {
+          isNew: !alreadyExisted,
+          userEmail: sendToAnalytics ? currentUser?.email || null : null,
           workspaceId: workspace.id,
           evaluation: evaluation,
           result: result,

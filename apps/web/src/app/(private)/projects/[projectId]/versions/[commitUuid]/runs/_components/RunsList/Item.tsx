@@ -1,15 +1,21 @@
 'use client'
 
+import { memo, useMemo } from 'react'
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { relativeTime } from '$/lib/relativeTime'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
-import { Run } from '@latitude-data/constants'
+import {
+  EvaluationConfiguration,
+  EvaluationType,
+  HumanEvaluationMetric,
+  Run,
+} from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, IconProps } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
-import { memo } from 'react'
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
 
 export const RunsListItem = memo(
   ({
@@ -27,6 +33,56 @@ export const RunsListItem = memo(
     stopRun?: ReturnType<typeof useActiveRuns>['stopRun']
     isStoppingRun?: boolean
   }) => {
+    const iconProps = useMemo<IconProps>(() => {
+      if (run.span?.status === 'error') {
+        return { name: 'circleX', color: 'destructive' }
+      }
+
+      const started = !!run.startedAt
+      const ended = !!run.endedAt
+
+      if (!started && !ended) {
+        return {
+          name: 'circleDashed',
+          color: 'foregroundMuted',
+          className: 'stroke-[2.25]',
+        }
+      }
+
+      if (started && !ended) {
+        return { name: 'loader', color: 'foregroundMuted', spin: true }
+      }
+
+      const annotations = run.annotations ?? []
+
+      if (annotations.length === 0) {
+        return { name: 'circleDashed', color: 'foregroundMuted' }
+      }
+
+      const uiAnnotations = annotations.filter((annotation) => {
+        const evaluation = annotation.evaluation
+        const supportManual =
+          getEvaluationMetricSpecification(evaluation).supportsManualEvaluation
+
+        if (!supportManual) return false
+
+        const config = evaluation.configuration as EvaluationConfiguration<
+          EvaluationType.Human,
+          HumanEvaluationMetric
+        >
+        return config.enableControls === true
+      })
+
+      const uiAnnotation = uiAnnotations[0]
+
+      if (!uiAnnotation) return { name: 'circleDashed', color: 'success' }
+
+      const result = uiAnnotation.result
+      return {
+        name: result.hasPassed ? 'thumbsUp' : 'thumbsDown',
+        color: result.hasPassed ? 'success' : 'destructive',
+      }
+    }, [run])
     return (
       <Tooltip
         asChild
@@ -48,36 +104,13 @@ export const RunsListItem = memo(
             }}
           >
             <div className='min-w-0 min-h-8 flex items-center justify-start gap-2.5 truncate'>
-              {run.endedAt ? (
-                <Icon
-                  name={
-                    run.span?.status === 'error'
-                      ? 'circleX'
-                      : run.annotations?.length
-                        ? 'filledBadgeCheck'
-                        : 'circleCheck'
-                  }
-                  size='normal'
-                  color={
-                    run.span?.status === 'error' ? 'destructive' : 'success'
-                  }
-                  className='flex-shrink-0'
-                />
-              ) : run.startedAt ? (
-                <Icon
-                  name='loader'
-                  size='normal'
-                  color='foregroundMuted'
-                  className='flex-shrink-0 animate-spin'
-                />
-              ) : (
-                <Icon
-                  name='circleDashed'
-                  size='normal'
-                  color='foregroundMuted'
-                  className='flex-shrink-0 stroke-[2.25]'
-                />
-              )}
+              <Icon
+                size='normal'
+                name={iconProps.name}
+                color={iconProps.color}
+                spin={iconProps.spin}
+                className={cn('flex-shrink-0', iconProps.className)}
+              />
               <Text.H5
                 color={
                   run.span?.status === 'error' ? 'destructive' : 'foreground'

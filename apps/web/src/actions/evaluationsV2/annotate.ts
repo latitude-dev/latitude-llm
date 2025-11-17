@@ -47,6 +47,7 @@ export const annotateEvaluationV2Action = withEvaluation
       span: { ...span, metadata } as SpanWithDetails<SpanType.Prompt>,
       commit: ctx.commit,
       workspace: ctx.workspace,
+      currentUser: ctx.user,
     }).then((r) => r.unwrap())
 
     return result
