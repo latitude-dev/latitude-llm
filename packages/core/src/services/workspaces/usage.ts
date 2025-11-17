@@ -1,4 +1,4 @@
-import { and, count, eq, gte, inArray } from 'drizzle-orm'
+import { and, count, eq, gte } from 'drizzle-orm'
 import Redis from 'ioredis'
 import { QuotaType, WorkspaceUsage } from '../../constants'
 import { type Subscription } from '../../schema/models/types/Subscription'
@@ -14,8 +14,6 @@ import {
   EvaluationResultsV2Repository,
   MembershipsRepository,
 } from '../../repositories'
-import { commits } from '../../schema/models/commits'
-import { projects } from '../../schema/models/projects'
 import { computeQuota } from '../grants/quota'
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 import { spans } from '../../schema/models/spans'
@@ -62,19 +60,12 @@ async function computeUsageFromDatabase(
     db,
   )
 
-  const commitUuids = await db
-    .selectDistinct({ commitUuid: commits.uuid })
-    .from(commits)
-    .innerJoin(projects, eq(projects.id, commits.projectId))
-    .where(eq(projects.workspaceId, workspace.id))
-    .then((r) => r.map((r) => r.commitUuid))
-
   const spansCount = await db
     .select({ count: count() })
     .from(spans)
     .where(
       and(
-        inArray(spans.commitUuid, commitUuids),
+        eq(spans.workspaceId, workspace.id),
         gte(spans.createdAt, latestRenewalDate),
       ),
     )
