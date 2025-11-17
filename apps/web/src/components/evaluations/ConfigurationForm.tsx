@@ -10,6 +10,7 @@ import {
   EvaluationMetric,
   EvaluationType,
   baseEvaluationConfiguration,
+  ISSUE_GROUP,
 } from '@latitude-data/core/constants'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -114,6 +115,7 @@ export function ConfigurationAdvancedForm<
     projectId: project.id,
     documentUuid: document.documentUuid,
     query,
+    group: ISSUE_GROUP.active,
   })
 
   const options = useMemo(() => {

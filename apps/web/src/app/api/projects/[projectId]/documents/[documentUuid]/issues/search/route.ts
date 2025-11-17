@@ -8,14 +8,17 @@ import {
 } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
+import { IssueGroup, IssueStatuses } from '@latitude-data/constants/issues'
 
 export type SearchIssueResponse = Awaited<
-  ReturnType<IssuesRepository['findByTitle']>
+  ReturnType<IssuesRepository['findByTitleAndStatuses']>
 >
 
 const paramsSchema = z.object({
   projectId: z.coerce.number(),
   documentUuid: z.string(),
+  statuses: z.string().optional(),
+  group: z.string().optional(),
 })
 
 export const GET = errorHandler(
@@ -28,14 +31,19 @@ export const GET = errorHandler(
       }: {
         params: {
           projectId: string
+          documentUuid: string
+          statuses: string | undefined
+          group: string | undefined
         }
         workspace: Workspace
       },
     ) => {
       const query = request.nextUrl.searchParams
-      const { projectId, documentUuid } = paramsSchema.parse({
+      const { projectId, documentUuid, statuses, group } = paramsSchema.parse({
         projectId: params.projectId,
-        documentUuid: query.get('documentUuid'),
+        documentUuid: params.documentUuid,
+        statuses: params.statuses,
+        group: params.group,
       })
       const title = query.get('query')
       const projectsRepo = new ProjectsRepository(workspace.id)
@@ -48,10 +56,12 @@ export const GET = errorHandler(
         })
         .then((r) => r.unwrap())
       const issuesRepo = new IssuesRepository(workspace.id)
-      const result = await issuesRepo.findByTitle({
+      const result = await issuesRepo.findByTitleAndStatuses({
         project,
         document,
         title,
+        statuses: statuses?.split(',') as IssueStatuses[],
+        group: group as IssueGroup,
       })
 
       return NextResponse.json(result, { status: 200 })
