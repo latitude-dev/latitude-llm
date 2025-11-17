@@ -964,6 +964,9 @@ importers:
       '@types/diff-match-patch':
         specifier: ^1.0.36
         version: 1.0.36
+      '@types/inquirer':
+        specifier: ^9.0.3
+        version: 9.0.9
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
@@ -1006,6 +1009,9 @@ importers:
       '@typescript/analyze-trace':
         specifier: ^0.10.1
         version: 0.10.1
+      chalk:
+        specifier: ^5.4.1
+        version: 5.6.2
       dd-trace:
         specifier: 'catalog:'
         version: 5.69.0
@@ -1018,6 +1024,9 @@ importers:
       eslint-plugin-drizzle:
         specifier: ^0.2.3
         version: 0.2.3(eslint@8.57.1)
+      inquirer:
+        specifier: ^9.2.7
+        version: 9.3.8(@types/node@22.18.8)
       pg-transactional-tests:
         specifier: ^1.0.9
         version: 1.2.0(pg@8.16.0)
@@ -21160,7 +21169,7 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)
       '@typescript-eslint/parser': 6.21.0(eslint@8.57.1)(typescript@5.9.3)
       eslint-config-prettier: 9.1.2(eslint@8.57.1)
-      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))
+      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0)
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@8.57.1)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.57.1)
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)
@@ -23038,7 +23047,7 @@ snapshots:
       eslint-plugin-turbo: 2.5.8(eslint@8.57.1)(turbo@2.5.8)
       turbo: 2.5.8
 
-  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)):
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0):
     dependencies:
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)
 
