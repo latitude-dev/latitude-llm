@@ -52,9 +52,17 @@ export async function listCompletedRuns({
     })
     .then((r) => r.value)
 
+  // Filter to get only unique spans by documentLogUuid
+  const uniqueSpans = items.reduce((acc, span) => {
+    if (span.documentLogUuid && !acc.has(span.documentLogUuid)) {
+      acc.set(span.documentLogUuid, span)
+    }
+    return acc
+  }, new Map<string, Span>())
+
   // TODO(tracing): N+1
   const runs = await Promise.all(
-    items.map((span) =>
+    Array.from(uniqueSpans.values()).map((span) =>
       spanToRun({ workspaceId, span: span as Span<SpanType.Prompt> }),
     ),
   )
