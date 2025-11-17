@@ -57,9 +57,21 @@ export function useCompletedRuns(
       if (!realtime) return
       if (!args) return
 
-      mutate()
+      mutate(
+        (prev) => {
+          // When on the first page, add the run to the beginning of the list only when the run ended
+          if (!prev) return prev
+          if (args.event !== 'runEnded') return prev
+          if (search?.page !== 1) return prev
+          const run = args.run as CompletedRun
+          return [run, ...prev]
+        },
+        {
+          revalidate: false,
+        },
+      )
     },
-    [mutate, realtime],
+    [mutate, realtime, search?.page],
   )
   useSockets({ event: 'runStatus', onMessage })
 
@@ -111,7 +123,27 @@ export function useCompletedRunsCount(
       if (!args) return
       if (args.projectId !== project.id) return
 
-      mutate()
+      mutate(
+        (prev) => {
+          // When the run ended, increment the count for the source
+          if (!prev) return prev
+          const source = args.run.source
+          if (!source) return prev
+          const currentCount = prev[source] ?? 0
+
+          if (args.event === 'runEnded') {
+            return {
+              ...prev,
+              [source]: currentCount + 1,
+            }
+          }
+
+          return prev
+        },
+        {
+          revalidate: false,
+        },
+      )
     },
     [project, mutate, realtime, disable],
   )

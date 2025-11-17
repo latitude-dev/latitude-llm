@@ -89,9 +89,32 @@ export function useActiveRuns(
       if (!realtime) return
       if (!args) return
 
-      mutate()
+      mutate(
+        (prev) => {
+          if (!prev) return prev
+
+          // When the run ended, remove it from the list
+          if (args.event === 'runEnded') {
+            return prev.filter((run) => run.uuid !== args.run.uuid)
+          }
+
+          // Update the run in the list
+          // If run is not in the list and page is 1, add it to the beginning of the list
+          return [
+            ...(search?.page === 1
+              ? prev.filter((run) => run.uuid !== args.run.uuid)
+              : []),
+            ...prev.map((run) =>
+              run.uuid === args.run.uuid ? { ...run, ...args.run } : run,
+            ),
+          ]
+        },
+        {
+          revalidate: false,
+        },
+      )
     },
-    [mutate, realtime],
+    [mutate, realtime, search?.page],
   )
   useSockets({ event: 'runStatus', onMessage })
 
@@ -143,7 +166,36 @@ export function useActiveRunsCount(
       if (!args) return
       if (args.projectId !== project.id) return
 
-      mutate()
+      mutate(
+        (prev) => {
+          if (!prev) return prev
+          const source = args.run.source
+          if (!source) return prev
+          const currentCount = prev[source] ?? 0
+
+          // If a new run started, increment the count for the source
+          if (args.event === 'runStarted') {
+            return {
+              ...prev,
+              [source]: currentCount + 1,
+            }
+          }
+
+          // If a run ended, decrement the count for the source
+          if (args.event === 'runEnded') {
+            return {
+              ...prev,
+              [source]: currentCount - 1,
+            }
+          }
+
+          // Ignore any other events
+          return prev
+        },
+        {
+          revalidate: false,
+        },
+      )
     },
     [project, mutate, realtime],
   )
