@@ -1,6 +1,6 @@
 import { and, count, eq, gte } from 'drizzle-orm'
 import Redis from 'ioredis'
-import { QuotaType, WorkspaceUsage } from '../../constants'
+import { QuotaType, SpanType, WorkspaceUsage } from '../../constants'
 import { type Subscription } from '../../schema/models/types/Subscription'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { SubscriptionPlan } from '../../plans'
@@ -65,8 +65,9 @@ async function computeUsageFromDatabase(
     .from(spans)
     .where(
       and(
+        eq(spans.type, SpanType.Prompt),
         eq(spans.workspaceId, workspace.id),
-        gte(spans.createdAt, latestRenewalDate),
+        gte(spans.startedAt, latestRenewalDate),
       ),
     )
     .then((r) => r[0]!.count)
