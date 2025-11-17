@@ -27,9 +27,7 @@ export function SimpleKeysetTablePaginationFooter({
         {count ? (countLabel ? countLabel(count) : `${count} items`) : ''}
       </Text.H5M>
       <div className='flex items-center'>
-        {isLoading && (
-          <Icon name='loader' className='h-4 w-4 animate-spin mr-2' />
-        )}
+        {isLoading && <Icon name='loader' spin size='small' className='mr-2' />}
         <Button
           size='default'
           variant='ghost'
