@@ -117,7 +117,7 @@ export const DocumentTabSelector = memo(
               : [tabs[DocumentRoutes.logs]]),
         ],
       }
-    }, [projectId, commitUuid, documentUuid, isTracesEnabled])
+    }, [projectId, commitUuid, documentUuid, isTracesEnabled, isLoading])
 
     // --- Click handler ---
     const onClickTab = useCallback(
