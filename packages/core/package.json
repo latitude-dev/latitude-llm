@@ -109,6 +109,7 @@
     "db:generate:custom": "pnpm run db:generate --custom",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
     "db:migrate:test": "NODE_ENV=test pnpm run db:migrate",
+    "db:compare": "tsx scripts/compareMigrations.ts",
     "db:drop": "drizzle-kit drop",
     "db:check": "drizzle-kit check",
     "db:studio": "drizzle-kit studio --port 3003",
