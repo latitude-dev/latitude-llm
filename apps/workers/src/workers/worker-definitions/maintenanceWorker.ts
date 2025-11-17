@@ -8,19 +8,12 @@ const jobMappings = {
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   cleanDocumentSuggestionsJob: jobs.cleanDocumentSuggestionsJob,
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
-  migrateActiveRunsCacheJob: jobs.migrateActiveRunsCacheJob,
   refreshDocumentStatsCacheJob: jobs.refreshDocumentStatsCacheJob,
   refreshDocumentsStatsCacheJob: jobs.refreshDocumentsStatsCacheJob,
   refreshProjectStatsCacheJob: jobs.refreshProjectStatsCacheJob,
   refreshProjectsStatsCacheJob: jobs.refreshProjectsStatsCacheJob,
   requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
   scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
-  scheduleUpdateEvaluationResultsSpanReferencesJobs:
-    jobs.scheduleUpdateEvaluationResultsSpanReferencesJobs,
-  scheduleUpdateEvaluationResultsSpanReferencesForPaidJobs:
-    jobs.scheduleUpdateEvaluationResultsSpanReferencesForPaidJobs,
-  updateEvaluationResultsSpanReferencesJob:
-    jobs.updateEvaluationResultsSpanReferencesJob,
   updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
 }
 
