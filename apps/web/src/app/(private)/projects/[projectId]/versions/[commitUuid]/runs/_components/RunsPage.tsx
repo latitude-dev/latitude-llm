@@ -202,7 +202,7 @@ export function RunsPage({
 
       mutate()
     },
-    [mutate, realtime],
+    [mutate, realtime, project.id],
   )
   useSockets({ event: 'runStatus', onMessage })
 
