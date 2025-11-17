@@ -70,19 +70,21 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     if (experiment.finishedAt) return
   }
 
+  const spansRepo = new SpansRepository(workspace.id)
+  const spansMetadataRepo = new SpanMetadatasRepository(workspace.id)
+  const span = await spansRepo.get({ traceId, spanId }).then((r) => r.unwrap())
+
   try {
     const commitsRepository = new CommitsRepository(workspace.id)
     const commit = await commitsRepository
       .getCommitById(commitId)
       .then((r) => r.unwrap())
 
-    const spansRepo = new SpansRepository(workspace.id)
-    const spansMetadataRepo = new SpanMetadatasRepository(workspace.id)
-    const span = await spansRepo
-      .get({ traceId, spanId })
-      .then((r) => r.unwrap())
     if (!span) throw new NotFoundError('Span not found')
     if (!span.documentUuid) throw new NotFoundError('Span document not found')
+    if (!span.documentLogUuid) {
+      throw new NotFoundError('Span document log not found')
+    }
     const metadata = await spansMetadataRepo
       .get({ spanId, traceId })
       .then((r) => r.unwrap())
@@ -121,15 +123,18 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       workspace: workspace,
     }).then((r) => r.unwrap())
 
-    if (experiment) {
+    if (experiment && span.documentLogUuid) {
       await updateExperimentStatus(
         { workspaceId, experiment },
         async (progressTracker) => {
-          if (result.error) return await progressTracker.incrementErrors()
-          if (result.hasPassed) {
-            await progressTracker.incrementCompleted()
-            await progressTracker.incrementTotalScore(result.normalizedScore)
-          } else await progressTracker.incrementFailed()
+          if (result.error) {
+            return progressTracker.evaluationError(span.documentLogUuid!)
+          }
+
+          return progressTracker.evaluationFinished(span.documentLogUuid!, {
+            passed: result.hasPassed,
+            score: result.normalizedScore,
+          })
         },
       ).then((r) => r.unwrap())
     }
@@ -138,10 +143,11 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
 
     captureException(error as Error)
 
-    if (experiment) {
+    if (experiment && span?.documentLogUuid) {
       await updateExperimentStatus(
         { workspaceId, experiment },
-        async (progressTracker) => await progressTracker.incrementErrors(),
+        (progressTracker) =>
+          progressTracker.evaluationError(span.documentLogUuid!),
       )
     }
   }

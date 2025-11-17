@@ -11,7 +11,6 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import { ActiveRun, LogSources, RunSourceGroup } from '@latitude-data/constants'
 import type { Project } from '@latitude-data/core/schema/models/types/Project'
-import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
@@ -47,7 +46,17 @@ export function useActiveRuns(
     data = [],
     mutate,
     ...rest
-  } = useSWR<ActiveRun[]>(compact([route, query]), fetcher, opts)
+  } = useSWR<ActiveRun[]>(
+    [
+      'activeRuns',
+      project.id,
+      search?.sourceGroup,
+      search?.page,
+      search?.pageSize,
+    ],
+    fetcher,
+    opts,
+  )
 
   const { createStreamHandler, hasActiveStream, createAbortController } =
     useStreamHandler()
@@ -128,7 +137,7 @@ export function useActiveRunsCount(
     data = undefined,
     mutate,
     ...rest
-  } = useSWR<Record<LogSources, number>>(compact([route]), fetcher, opts)
+  } = useSWR<Record<LogSources, number>>('activeRunsCount', fetcher, opts)
 
   const onMessage = useCallback(
     (args: EventArgs<'runStatus'>) => {

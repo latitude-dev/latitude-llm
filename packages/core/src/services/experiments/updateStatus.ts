@@ -1,6 +1,6 @@
 import { type Experiment } from '../../schema/models/types/Experiment'
 import { LatitudeError } from '../../lib/errors'
-import { Result } from '../../lib/Result'
+import { ErrorResult, Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
 import { completeExperiment } from './complete'
 import { WebsocketClient } from '../../websockets/workers'
@@ -19,20 +19,15 @@ export async function updateExperimentStatus(
 
   await updateProgressFn?.(progressTracker)
   const progress = await progressTracker.getProgress()
-  await progressTracker.cleanup()
 
-  const expectedTotal =
-    experiment.metadata.count * experiment.evaluationUuids.length
-
-  const current = progress.completed + progress.failed + progress.errors
-  if (current >= expectedTotal) {
-    // Experiment has been completed
+  if (progress.completed >= progress.total) {
     const completeResult = await completeExperiment(experiment)
-    if (completeResult.error) {
-      return Result.error(completeResult.error as LatitudeError)
+    if (!Result.isOk(completeResult)) {
+      return completeResult as ErrorResult<LatitudeError>
     }
 
     experiment = completeResult.unwrap()
+    await progressTracker.cleanup()
   }
 
   WebsocketClient.sendEvent('experimentStatus', {
@@ -40,12 +35,36 @@ export async function updateExperimentStatus(
     data: {
       experiment: {
         ...experiment,
-        results: {
-          passed: progress.completed,
-          failed: progress.failed,
-          errors: progress.errors,
-          totalScore: progress.totalScore,
-        },
+        results: progress,
+      },
+    },
+  })
+
+  return Result.nil()
+}
+
+export async function initializeExperimentStatus({
+  workspaceId,
+  experiment,
+  uuids,
+}: {
+  workspaceId: number
+  experiment: Experiment
+  uuids: string[]
+}): PromisedResult<undefined, LatitudeError> {
+  const progressTracker = new ProgressTracker(experiment.uuid)
+  await progressTracker.initializeProgress(
+    uuids,
+    experiment.evaluationUuids.length,
+  )
+  const progress = await progressTracker.getProgress()
+
+  WebsocketClient.sendEvent('experimentStatus', {
+    workspaceId,
+    data: {
+      experiment: {
+        ...experiment,
+        results: progress,
       },
     },
   })

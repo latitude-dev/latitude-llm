@@ -5,11 +5,7 @@ import { LogSources, Providers } from '@latitude-data/constants'
 import { Result } from '../../../lib/Result'
 import * as factories from '../../../tests/factories'
 import { mockToolRequestsCopilot } from '../../../tests/helpers'
-import { WebsocketClient } from '../../../websockets/workers'
-import * as utils from '../../utils/progressTracker'
 import * as runDocumentAtCommitModule from '../../../services/commits'
-
-const incrementErrorsMock = vi.hoisted(() => vi.fn())
 
 describe('runDocumentJob', () => {
   let mockJob: Job
@@ -18,7 +14,6 @@ describe('runDocumentJob', () => {
   let document: any
   let commit: any
 
-  vi.spyOn(WebsocketClient, 'sendEvent').mockImplementation(vi.fn())
   vi.mock(import('../../../redis'), async (importOriginal) => {
     const actual = await importOriginal()
     return {
@@ -27,13 +22,6 @@ describe('runDocumentJob', () => {
     }
   })
   vi.spyOn(runDocumentAtCommitModule, 'runDocumentAtCommit')
-  // @ts-ignore
-  vi.spyOn(utils, 'ProgressTracker').mockImplementation(() => ({
-    incrementCompleted: vi.fn(),
-    incrementErrors: incrementErrorsMock,
-    getProgress: vi.fn().mockReturnValue({ completed: 0, errors: 0, total: 1 }),
-    cleanup: vi.fn(),
-  }))
 
   beforeAll(async () => {
     await mockToolRequestsCopilot()
@@ -67,7 +55,7 @@ describe('runDocumentJob', () => {
     } as Job<any>
   })
 
-  it('should run document successfully and emit status', async () => {
+  it('should run document successfully', async () => {
     const mod = await import('./runDocumentJob')
     const runDocumentJob = mod.runDocumentJob
     const mockResult = {
@@ -97,24 +85,9 @@ describe('runDocumentJob', () => {
         simulateToolResponses: true,
       },
     })
-
-    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
-      'documentBatchRunStatus',
-      {
-        workspaceId: workspace.id,
-        data: expect.objectContaining({
-          documentUuid: document.documentUuid,
-          completed: 0,
-          errors: 0,
-          total: 1,
-        }),
-      },
-    )
-
-    expect(incrementErrorsMock).not.toHaveBeenCalled()
   })
 
-  it('should handle errors and update progress tracker', async () => {
+  it('should handle errors gracefully', async () => {
     const mod = await import('./runDocumentJob')
     const runDocumentJob = mod.runDocumentJob
 
@@ -124,21 +97,7 @@ describe('runDocumentJob', () => {
 
     await runDocumentJob(mockJob)
 
-    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
-      'documentBatchRunStatus',
-      {
-        workspaceId: workspace.id,
-        data: expect.objectContaining({
-          documentUuid: document.documentUuid,
-          completed: 0,
-          errors: 0,
-          total: 1,
-        }),
-      },
-    )
-
     expect(runDocumentAtCommitModule.runDocumentAtCommit).toHaveBeenCalled()
-    expect(incrementErrorsMock).toHaveBeenCalled()
   })
 
   it('should throw an error when document run fails with rate limit error', async () => {
@@ -154,7 +113,5 @@ describe('runDocumentJob', () => {
     )
 
     await expect(runDocumentJob(mockJob)).rejects.toThrow('Rate limit error')
-
-    expect(incrementErrorsMock).not.toHaveBeenCalled()
   })
 })

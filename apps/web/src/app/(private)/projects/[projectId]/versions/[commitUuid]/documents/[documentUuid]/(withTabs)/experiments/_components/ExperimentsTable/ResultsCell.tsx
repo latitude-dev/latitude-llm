@@ -34,7 +34,7 @@ export function ResultsCell({
       <Tooltip
         trigger={
           <Badge
-            variant='warningMuted'
+            variant='destructiveMuted'
             className={isLoading ? 'animate-pulse' : ''}
           >
             {experiment.results.failed}
@@ -48,15 +48,13 @@ export function ResultsCell({
       </Text.H5>
       <Tooltip
         trigger={
-          <Badge
-            variant='destructiveMuted'
-            className={isLoading ? 'animate-pulse' : ''}
-          >
+          <Badge variant='muted' className={isLoading ? 'animate-pulse' : ''}>
             {experiment.results.errors}
           </Badge>
         }
       >
-        Errors
+        Either the evaluation did not run due to an error running the prompt, or
+        the evaluation itself returned an error.
       </Tooltip>
     </div>
   )

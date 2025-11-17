@@ -2,6 +2,7 @@ import { type InferSelectModel } from 'drizzle-orm'
 
 import { experiments } from '../experiments'
 import { ExperimentScores } from '@latitude-data/constants'
+import { TrackedProgress } from '../../../jobs/utils/progressTracker'
 
 export type ExperimentAggregatedResults = {
   passed: number
@@ -12,7 +13,7 @@ export type ExperimentAggregatedResults = {
 
 export type Experiment = InferSelectModel<typeof experiments>
 export type ExperimentDto = Experiment & {
-  results: ExperimentAggregatedResults
+  results: TrackedProgress
 }
 
 export type ExperimentLogsMetadata = {
