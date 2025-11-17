@@ -200,9 +200,29 @@ export function RunsPage({
       if (args.projectId !== project.id) return
       if (args.event !== 'runEnded') return
 
-      mutate()
+      mutate(
+        (prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            items: [
+              // If page is 1, add all runs that are not currently in the list to the beginning
+              ...(debouncedActiveSearch.page === 1
+                ? prev.items.filter((run) => run.uuid !== args.run.uuid)
+                : []),
+              // Update all runs that are currently in the list
+              ...prev.items.map((run) =>
+                run.uuid === args.run.uuid ? { ...run, ...args.run } : run,
+              ),
+            ],
+          }
+        },
+        {
+          revalidate: false,
+        },
+      )
     },
-    [mutate, realtime, project.id],
+    [mutate, realtime, project.id, debouncedActiveSearch.page],
   )
   useSockets({ event: 'runStatus', onMessage })
 
