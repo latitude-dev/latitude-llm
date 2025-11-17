@@ -4,8 +4,7 @@ import useFetcher from '$/hooks/useFetcher'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { useMemo } from 'react'
 import { SearchIssueResponse } from '$/app/api/projects/[projectId]/documents/[documentUuid]/issues/search/route'
-import { IssueStatuses } from '@latitude-data/constants/issues'
-import { IssueGroup } from '@latitude-data/constants/issues'
+import { IssueGroup, IssueStatuses } from '@latitude-data/constants/issues'
 
 export function createSearchIssuesKey({
   projectId,

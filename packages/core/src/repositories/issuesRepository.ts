@@ -1,10 +1,11 @@
 import {
   ESCALATING_COUNT_THRESHOLD,
   HISTOGRAM_SUBQUERY_ALIAS,
+  ISSUE_GROUP,
+  ISSUE_STATUS,
   IssueGroup,
   IssueSort,
   IssueStatuses,
-  NEW_ISSUES_DAYS,
   SafeIssuesParams,
 } from '@latitude-data/constants/issues'
 import {
@@ -136,9 +137,9 @@ export class IssuesRepository extends Repository<Issue> {
     statuses?: IssueStatuses[]
     group?: IssueGroup
   }) {
-    const whereConditions = this.buildWhereConditions({
-      project,
-      filters: { group, status: statuses },
+    const whereConditions = this.buildGroupAndStatusConditions({
+      statuses,
+      group,
     })
 
     return this.db
@@ -337,20 +338,37 @@ export class IssuesRepository extends Repository<Issue> {
       conditions.push(ilike(issues.title, `%${filters.query}%`))
     }
 
-    // We only apply group or status filtering, not both at the same time
-    if (filters.group) {
-      conditions.push(this.buildGroupConditions({ filters })!)
-    } else if (filters.status) {
-      conditions.push(this.buildStatusConditions({ filters })!)
+    // In frontend, we only apply group filtering (status in frontend is different than backend)
+    const status = filters.status || ISSUE_STATUS.active // Default to active
+
+    switch (status) {
+      case ISSUE_STATUS.active:
+        conditions.push(this.buildGroupConditions(ISSUE_GROUP.active)!)
+        break
+      case ISSUE_STATUS.inactive:
+        conditions.push(this.buildGroupConditions(ISSUE_GROUP.inactive)!)
+        break
     }
 
     return conditions
   }
 
-  private buildStatusConditions({ filters }: { filters: IssueFilters }) {
+  private buildGroupAndStatusConditions({
+    statuses,
+    group,
+  }: { statuses?: IssueStatuses[]; group?: IssueGroup } = {}) {
+    const conditions: SQL[] = []
+    if (group) {
+      conditions.push(this.buildGroupConditions(group)!)
+    } else if (statuses && statuses.length > 0) {
+      conditions.push(this.buildStatusConditions(statuses)!)
+    }
+    return conditions
+  }
+
+  private buildStatusConditions(statuses: IssueStatuses[]) {
     const statusConditions: SQL[] = []
-    const specificStatuses = filters.status ?? []
-    for (const status of specificStatuses) {
+    for (const status of statuses) {
       switch (status) {
         case IssueStatuses.merged:
           statusConditions.push(this.withMergedIssues(true))
@@ -375,8 +393,8 @@ export class IssuesRepository extends Repository<Issue> {
     return statusConditions.length > 0 ? and(...statusConditions) : undefined
   }
 
-  private buildGroupConditions({ filters }: { filters: IssueFilters }) {
-    const group = filters.group || 'active' // Default to active
+  private buildGroupConditions(group: IssueGroup = ISSUE_GROUP.active) {
+    // Default to active
     // Can only apply one group condition at a time
     let groupConditions: SQL | undefined
     switch (group) {
@@ -406,26 +424,31 @@ export class IssuesRepository extends Repository<Issue> {
   private withMergedIssues(include: boolean): SQL {
     return include ? isNotNull(issues.mergedAt) : isNull(issues.mergedAt)
   }
+
   private withRegressedIssues(include: boolean): SQL {
     return include
       ? sql`${issues.resolvedAt} IS NOT NULL AND ${issues.ignoredAt} IS NULL AND ${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} > ${issues.resolvedAt}`
       : sql`${issues.resolvedAt} IS NULL OR ${issues.ignoredAt} IS NOT NULL OR ${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} <= ${issues.resolvedAt}`
   }
+
   private withResolvedIssues(include: boolean): SQL {
     return include ? isNotNull(issues.resolvedAt) : isNull(issues.resolvedAt)
   }
+
   private withIgnoredIssues(include: boolean): SQL {
     return include ? isNotNull(issues.ignoredAt) : isNull(issues.ignoredAt)
   }
+
   private withEscalatingIssues(include: boolean): SQL {
     return include
       ? sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."escalatingCount"`)} > ${ESCALATING_COUNT_THRESHOLD}`
       : sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."escalatingCount"`)} <= ${ESCALATING_COUNT_THRESHOLD}`
   }
+
   private withNewIssues(include: boolean): SQL {
     return include
-      ? sql`${issues.createdAt} >= NOW() - INTERVAL '${NEW_ISSUES_DAYS} days'`
-      : sql`${issues.createdAt} < NOW() - INTERVAL '${NEW_ISSUES_DAYS} days'`
+      ? sql`${issues.createdAt} >= NOW() - INTERVAL '7 days'`
+      : sql`${issues.createdAt} < NOW() - INTERVAL '7 days'`
   }
 
   private buildOrderByClause({

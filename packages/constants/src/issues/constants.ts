@@ -10,11 +10,18 @@ export enum IssueStatuses {
 }
 
 // TODO(AO): Put merged issues into archived status in all parts of the code
+export const ISSUE_STATUS = {
+  active: 'active', // not resolved, nor ignored, nor merged (but regressed yes)
+  inactive: 'inactive', // resolved or ignored or merged
+} as const
+
 export const ISSUE_GROUP = {
   active: 'active', // not resolved, nor ignored, nor merged (but regressed yes)
   inactive: 'inactive', // resolved or ignored or merged
   activeWithResolved: 'activeWithResolved', // resolved and not ignored
 }
+
+export type IssueStatus = (typeof ISSUE_STATUS)[keyof typeof ISSUE_STATUS]
 export type IssueGroup = (typeof ISSUE_GROUP)[keyof typeof ISSUE_GROUP]
 
 export const ISSUE_SORTS = { relevance: 'relevance' } as const
@@ -30,8 +37,7 @@ export type SafeIssuesParams = {
   filters: {
     query?: string
     documentUuid?: string | null
-    group?: IssueGroup
-    status?: IssueStatuses[]
+    status?: IssueStatus
     firstSeen?: Date
     lastSeen?: Date
   }
@@ -48,7 +54,7 @@ export type QueryParams = { [key: string]: string | string[] | undefined }
 export const DEFAULTS_ISSUE_PARAMS = {
   limit: 25,
   filters: {
-    group: ISSUE_GROUP.active,
+    group: ISSUE_STATUS.active,
   },
   sorting: {
     sort: 'relevance' as const,

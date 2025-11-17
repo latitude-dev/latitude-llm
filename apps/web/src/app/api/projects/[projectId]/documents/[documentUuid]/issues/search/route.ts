@@ -8,7 +8,7 @@ import {
 } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
-import { IssueStatuses } from '@latitude-data/constants/issues'
+import { IssueGroup, IssueStatuses } from '@latitude-data/constants/issues'
 
 export type SearchIssueResponse = Awaited<
   ReturnType<IssuesRepository['findByTitleAndStatuses']>

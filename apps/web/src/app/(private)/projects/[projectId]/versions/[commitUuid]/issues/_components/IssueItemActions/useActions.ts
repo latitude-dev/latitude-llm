@@ -8,7 +8,10 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { SerializedIssue } from '$/stores/issues'
-import { buildIssuesCacheKey } from '@latitude-data/constants/issues'
+import {
+  buildIssuesCacheKey,
+  ISSUE_STATUS,
+} from '@latitude-data/constants/issues'
 import { useIssuesParameters } from '$/stores/issues/useIssuesParameters'
 
 type IssueAction = 'resolve' | 'unresolve' | 'ignore' | 'unignore'
@@ -45,12 +48,12 @@ export function useIssueActions({ issue }: { issue: SerializedIssue }) {
 
   const onActivation = useCallback(() => {
     // When an issue becomes active (unresolve/unignore), invalidate the active tab cache
-    invalidateOppositeTab('active')
+    invalidateOppositeTab(ISSUE_STATUS.active)
   }, [invalidateOppositeTab])
 
   const onDeactivation = useCallback(() => {
     // When an issue becomes inactive (resolve/ignore), invalidate the inactive tab cache
-    invalidateOppositeTab('inactive')
+    invalidateOppositeTab(ISSUE_STATUS.inactive)
   }, [invalidateOppositeTab])
   const { execute: resolveIssue, isPending: isResolvingIssue } =
     useLatitudeAction(resolveIssueAction, { onSuccess: onDeactivation })

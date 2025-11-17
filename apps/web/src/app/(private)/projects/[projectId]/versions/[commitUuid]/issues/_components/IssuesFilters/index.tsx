@@ -4,14 +4,14 @@ import { DatePickerRange } from '@latitude-data/web-ui/atoms/DatePicker'
 import { RadioToggleInput } from '@latitude-data/web-ui/molecules/RadioToggleInput'
 import {
   SafeIssuesParams,
-  ISSUE_GROUP,
-  IssueGroup,
+  ISSUE_STATUS,
+  IssueStatus,
 } from '@latitude-data/constants/issues'
 import { useSeenAtDatePicker } from './useSeenAtDatePicker'
 
 const STATUS_OPTIONS = [
-  { label: 'Active', value: ISSUE_GROUP.active },
-  { label: 'Inactive', value: ISSUE_GROUP.inactive },
+  { label: 'Active', value: ISSUE_STATUS.active },
+  { label: 'Inactive', value: ISSUE_STATUS.inactive },
 ]
 export function IssuesFilters({
   serverParams,
@@ -26,8 +26,8 @@ export function IssuesFilters({
     serverParams,
   })
   const onStatusChange = useCallback(
-    (status: IssueGroup) => {
-      setFilters({ group: status })
+    (status: IssueStatus) => {
+      setFilters({ status })
     },
     [setFilters],
   )
@@ -38,7 +38,7 @@ export function IssuesFilters({
         name='issue-status'
         options={STATUS_OPTIONS}
         value={
-          filters.group ?? serverParams.filters.group ?? ISSUE_GROUP.active
+          filters.status ?? serverParams.filters.status ?? ISSUE_STATUS.active
         }
         onChange={onStatusChange}
       />
