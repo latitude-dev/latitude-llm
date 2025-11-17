@@ -13,7 +13,6 @@ import {
   RunSourceGroup,
 } from '@latitude-data/constants'
 
-import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
@@ -33,23 +32,25 @@ export function useCompletedRuns(
   },
   opts?: SWRConfiguration,
 ) {
-  const route = ROUTES.api.projects.detail(project.id).runs.completed.root
-  const query = useMemo(() => {
-    const params = new URLSearchParams()
-    if (search?.page) params.set('page', search.page.toString())
-    if (search?.pageSize) params.set('pageSize', search.pageSize.toString())
-    if (search?.sourceGroup) {
-      params.append('sourceGroup', search.sourceGroup)
-    }
-    return params.toString()
-  }, [search])
-  const fetcher = useFetcher<CompletedRun[]>(`${route}?${query}`)
+  const fetcher = useFetcher<CompletedRun[]>(
+    ROUTES.api.projects.detail(project.id).runs.completed.detail(search),
+  )
 
   const {
     data = [],
     mutate,
     ...rest
-  } = useSWR<CompletedRun[]>(compact([route, query]), fetcher, opts)
+  } = useSWR<CompletedRun[]>(
+    [
+      'completedRuns',
+      project.id,
+      search?.sourceGroup,
+      search?.page,
+      search?.pageSize,
+    ],
+    fetcher,
+    opts,
+  )
 
   const onMessage = useCallback(
     (args: EventArgs<'runStatus'>) => {
@@ -84,9 +85,10 @@ export function useCompletedRunsCount(
   },
   opts?: SWRConfiguration,
 ) {
-  const route = ROUTES.api.projects.detail(project.id).runs.completed.count
   const fetcher = useFetcher<Record<LogSources, number>>(
-    disable ? undefined : route,
+    disable
+      ? undefined
+      : ROUTES.api.projects.detail(project.id).runs.completed.count,
     {
       serializer: (data) => (data as any)?.countBySource,
       fallback: null,
@@ -97,7 +99,11 @@ export function useCompletedRunsCount(
     data = undefined,
     mutate,
     ...rest
-  } = useSWR<Record<LogSources, number>>(compact([route]), fetcher, opts)
+  } = useSWR<Record<LogSources, number>>(
+    ['completedRunsCount', project.id],
+    fetcher,
+    opts,
+  )
 
   const onMessage = useCallback(
     (args: EventArgs<'runStatus'>) => {

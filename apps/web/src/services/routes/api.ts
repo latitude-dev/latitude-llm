@@ -1,5 +1,8 @@
 import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
-import { type DocumentLogFilterOptions } from '@latitude-data/core/constants'
+import type {
+  RunSourceGroup,
+  DocumentLogFilterOptions,
+} from '@latitude-data/core/constants'
 
 type PaginationParameters = { page: number; pageSize: number }
 
@@ -373,10 +376,40 @@ export const API_ROUTES = {
           active: {
             root: `${projectRoot}/runs/active`,
             count: `${projectRoot}/runs/active/count`,
+            detail: ({
+              page,
+              pageSize,
+              sourceGroup,
+            }: {
+              page?: number
+              pageSize?: number
+              sourceGroup?: RunSourceGroup
+            } = {}) => {
+              const params = new URLSearchParams()
+              if (page) params.set('page', page.toString())
+              if (pageSize) params.set('pageSize', pageSize.toString())
+              if (sourceGroup) params.set('sourceGroup', sourceGroup)
+              return `${projectRoot}/runs/active?${params.toString()}`
+            },
           },
           completed: {
             root: `${projectRoot}/runs/completed`,
             count: `${projectRoot}/runs/completed/count`,
+            detail: ({
+              page,
+              pageSize,
+              sourceGroup,
+            }: {
+              page?: number
+              pageSize?: number
+              sourceGroup?: RunSourceGroup
+            } = {}) => {
+              const params = new URLSearchParams()
+              if (page) params.set('page', page.toString())
+              if (pageSize) params.set('pageSize', pageSize.toString())
+              if (sourceGroup) params.set('sourceGroup', sourceGroup)
+              return `${projectRoot}/runs/completed?${params.toString()}`
+            },
           },
           detail: (uuid: string) => ({
             root: `${projectRoot}/runs/${uuid}`,

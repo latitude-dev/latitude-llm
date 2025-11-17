@@ -30,17 +30,9 @@ export function useActiveRuns(
   },
   opts?: SWRConfiguration,
 ) {
-  const route = ROUTES.api.projects.detail(project.id).runs.active.root
-  const query = useMemo(() => {
-    const params = new URLSearchParams()
-    if (search?.page) params.set('page', search.page.toString())
-    if (search?.pageSize) params.set('pageSize', search.pageSize.toString())
-    if (search?.sourceGroup) {
-      params.append('sourceGroup', search.sourceGroup)
-    }
-    return params.toString()
-  }, [search])
-  const fetcher = useFetcher<ActiveRun[]>(`${route}?${query}`)
+  const fetcher = useFetcher<ActiveRun[]>(
+    ROUTES.api.projects.detail(project.id).runs.active.detail(search),
+  )
 
   const {
     data = [],
@@ -127,17 +119,23 @@ export function useActiveRunsCount(
   },
   opts?: SWRConfiguration,
 ) {
-  const route = ROUTES.api.projects.detail(project.id).runs.active.count
-  const fetcher = useFetcher<Record<LogSources, number>>(route, {
-    serializer: (data) => (data as any)?.countBySource,
-    fallback: null,
-  })
+  const fetcher = useFetcher<Record<LogSources, number>>(
+    ROUTES.api.projects.detail(project.id).runs.active.count,
+    {
+      serializer: (data) => (data as any)?.countBySource,
+      fallback: null,
+    },
+  )
 
   const {
     data = undefined,
     mutate,
     ...rest
-  } = useSWR<Record<LogSources, number>>('activeRunsCount', fetcher, opts)
+  } = useSWR<Record<LogSources, number>>(
+    ['activeRunsCount', project.id],
+    fetcher,
+    opts,
+  )
 
   const onMessage = useCallback(
     (args: EventArgs<'runStatus'>) => {
