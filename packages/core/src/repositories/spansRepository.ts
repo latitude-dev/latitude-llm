@@ -9,7 +9,9 @@ import {
   getTableColumns,
   gte,
   inArray,
+  isNull,
   lte,
+  or,
   sql,
   SQL,
 } from 'drizzle-orm'
@@ -357,7 +359,9 @@ export class SpansRepository extends Repository<Span> {
     const conditions = [
       this.scopeFilter,
       type ? eq(spans.type, type) : undefined,
-      source ? inArray(spans.source, source) : undefined,
+      source
+        ? or(inArray(spans.source, source), isNull(spans.source))
+        : undefined,
       from
         ? sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
         : undefined,
