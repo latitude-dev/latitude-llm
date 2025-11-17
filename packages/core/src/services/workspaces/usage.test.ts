@@ -419,7 +419,7 @@ describe('computeWorkspaceUsage', () => {
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
       apiKeyId: apiKeys[0]!.id,
-      createdAt: dateBeforeRenewal,
+      startedAt: dateBeforeRenewal,
     })
 
     const currentPeriodSpan = await ctx.factories.createSpan({
@@ -427,7 +427,7 @@ describe('computeWorkspaceUsage', () => {
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
       apiKeyId: apiKeys[0]!.id,
-      createdAt: today,
+      startedAt: today,
     })
 
     const result = await computeWorkspaceUsage({
