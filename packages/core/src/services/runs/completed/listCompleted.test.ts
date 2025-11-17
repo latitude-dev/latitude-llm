@@ -37,20 +37,32 @@ describe('listCompletedRuns', () => {
   })
 
   it('lists completed runs', async () => {
-    const span1 = await factories.createSpan({
-      apiKeyId: setup.apiKeys[0]!.id,
-      workspaceId: setup.workspace.id,
-      documentUuid: setup.documents[0]!.documentUuid,
+    const { documentLog: log1 } = await factories.createDocumentLog({
+      document: setup.documents[0]!,
+      commit: setup.commit,
       source: LogSources.Playground,
-      commitUuid: setup.commit.uuid,
     })
 
-    const span2 = await factories.createSpan({
+    await factories.createSpan({
       workspaceId: setup.workspace.id,
+      documentLogUuid: log1.uuid,
       documentUuid: setup.documents[0]!.documentUuid,
       commitUuid: setup.commit.uuid,
       source: LogSources.Playground,
-      apiKeyId: setup.apiKeys[0]!.id,
+    })
+
+    const { documentLog: log2 } = await factories.createDocumentLog({
+      document: setup.documents[0]!,
+      commit: setup.commit,
+      source: LogSources.Playground,
+    })
+
+    await factories.createSpan({
+      workspaceId: setup.workspace.id,
+      documentLogUuid: log2.uuid,
+      documentUuid: setup.documents[0]!.documentUuid,
+      commitUuid: setup.commit.uuid,
+      source: LogSources.Playground,
     })
 
     const result = await listCompletedRuns({
@@ -63,15 +75,21 @@ describe('listCompletedRuns', () => {
     const value = result.unwrap()
 
     expect(value.items.length).toBeGreaterThanOrEqual(2)
-    const ids = value.items.map((r) => r.span.id)
-    expect(ids).toContain(span1.id)
-    expect(ids).toContain(span2.id)
+    const uuids = value.items.map((r) => r.span.documentLogUuid)
+    expect(uuids).toContain(log1.uuid)
+    expect(uuids).toContain(log2.uuid)
   })
 
   it('includes all required fields for completed runs', async () => {
-    const span = await factories.createSpan({
-      apiKeyId: setup.apiKeys[0]!.id,
+    const { documentLog } = await factories.createDocumentLog({
+      document: setup.documents[0]!,
+      commit: setup.commit,
+      source: LogSources.Playground,
+    })
+
+    await factories.createSpan({
       workspaceId: setup.workspace.id,
+      documentLogUuid: documentLog.uuid,
       documentUuid: setup.documents[0]!.documentUuid,
       commitUuid: setup.commit.uuid,
       source: LogSources.Playground,
@@ -85,7 +103,9 @@ describe('listCompletedRuns', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     const value = result.unwrap()
-    const run = value.items.find((r) => r.span.id === span.id)
+    const run = value.items.find(
+      (r) => r.span.documentLogUuid === documentLog.uuid,
+    )
     expect(run).toBeDefined()
     if (!run) return
 
