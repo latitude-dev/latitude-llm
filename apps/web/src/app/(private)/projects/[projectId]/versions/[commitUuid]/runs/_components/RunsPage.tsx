@@ -27,6 +27,10 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
+import {
+  EventArgs,
+  useSockets,
+} from '$/components/Providers/WebsocketsProvider/useSockets'
 
 function sumCounts(
   counts: Record<LogSources, number> | undefined,
@@ -178,6 +182,7 @@ export function RunsPage({
     hasPrev,
     isLoading: isCompletedRunsLoading,
     reset: resetCompletedPagination,
+    mutate,
   } = useCompletedRunsKeysetPaginationStore(
     {
       projectId: project.id,
@@ -186,6 +191,20 @@ export function RunsPage({
     },
     { keepPreviousData: true },
   )
+
+  // Update completed runs store on run ended
+  const onMessage = useCallback(
+    (args: EventArgs<'runStatus'>) => {
+      if (!realtime) return
+      if (!args) return
+      if (args.projectId !== project.id) return
+      if (args.event !== 'runEnded') return
+
+      mutate()
+    },
+    [mutate, realtime],
+  )
+  useSockets({ event: 'runStatus', onMessage })
 
   // Reset pagination when sourceGroup changes
   useEffect(() => {
