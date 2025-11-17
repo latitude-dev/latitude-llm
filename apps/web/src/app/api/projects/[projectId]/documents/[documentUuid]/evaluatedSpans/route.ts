@@ -45,7 +45,7 @@ export const GET = errorHandler(
       const spanPagination = await repo
         .findByDocumentAndCommitLimited({
           documentUuid,
-          commitUuid: commit.uuid,
+          commitUuids: [commit.uuid],
           limit: 1,
         })
         .then((r) => r.value)

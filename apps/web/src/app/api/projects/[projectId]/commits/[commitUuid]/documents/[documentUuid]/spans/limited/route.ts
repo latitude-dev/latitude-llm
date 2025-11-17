@@ -81,13 +81,16 @@ export const GET = errorHandler(
         const spansRepository = new SpansRepository(workspace.id)
         const result = await spansRepository.findByDocumentAndCommitLimited({
           documentUuid,
-          commitUuid: headCommit?.uuid === commitUuid ? undefined : commitUuid,
           type: parsedParams.type as SpanType,
           from: fromCursor
             ? { startedAt: fromCursor.value, id: fromCursor.id }
             : undefined,
           limit: parsedParams.limit,
-          commitUuids: filters.commitUuids,
+          commitUuids: filters.commitUuids
+            ? filters.commitUuids
+            : headCommit?.uuid === commitUuid
+              ? undefined
+              : [commitUuid],
           experimentUuids: filters.experimentUuids,
           createdAt: filters.createdAt,
         })
