@@ -58,6 +58,12 @@ export const MultiSelectInput = forwardRef<
       }
     }, [value])
 
+    // Handle changes from MultiSelect
+    const handleChange = (newValues: string[]) => {
+      setSelectedValues(newValues)
+      onChange?.(newValues)
+    }
+
     useEffect(() => {
       const form = document.querySelector('form')
       if (form && name) {
@@ -103,7 +109,7 @@ export const MultiSelectInput = forwardRef<
             ref={ref}
             {...props}
             options={options}
-            onChange={onChange}
+            onChange={handleChange}
             value={value}
             defaultValue={defaultValue}
             placeholder={placeholder}
