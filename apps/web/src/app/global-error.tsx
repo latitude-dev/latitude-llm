@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 
-import { fontMono, fontSans } from '$/helpers/fonts'
+import { fontMono, fontSans, fontDisplay } from '$/helpers/fonts'
 import { captureClientError } from '$/instrumentation-client'
 import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -29,7 +29,7 @@ export default function GlobalError({
         <link rel='icon' href='/favicon.svg' />
       </head>
       <body
-        className={`w-full h-full ${fontSans.variable} ${fontMono.variable} font-sans`}
+        className={`w-full h-full ${fontSans.variable} ${fontDisplay.variable} ${fontMono.variable} font-sans`}
       >
         <ErrorComponent
           message={error.message}

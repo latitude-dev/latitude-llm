@@ -11,6 +11,7 @@ export const font = {
   },
   family: {
     sans: 'font-sans',
+    display: 'font-display',
     mono: 'font-mono',
   },
   weight: {

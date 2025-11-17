@@ -111,6 +111,7 @@ const TextAtom = memo(
     const wordBreakClass = wordBreakOptions[wordBreak]
     const whiteSpaceClass = whiteSpaceOptions[whiteSpace]
     const Comp = asChild ? Slot : 'span'
+    const isDisplay = ['h1', 'h2', 'h3', 'h4'].includes(size)
     return (
       <Comp
         ref={ref}
@@ -141,7 +142,8 @@ const TextAtom = memo(
             underline: underline,
             'line-through': lineThrough,
             [font.family.mono]: monospace,
-            [font.family.sans]: !monospace,
+            [font.family.sans]: !monospace && !isDisplay,
+            [font.family.display]: !monospace && isDisplay,
             'text-center': centered,
             'line-clamp-1': lineClamp === 1,
             'line-clamp-3': lineClamp === 3,

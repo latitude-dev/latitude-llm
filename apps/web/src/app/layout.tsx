@@ -1,7 +1,7 @@
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { DatadogProvider } from '$/components/Providers/DatadogProvider'
 import { SWRProvider } from '$/components/Providers/SWRProvider'
-import { fontMono, fontSans } from '$/helpers/fonts'
+import { fontMono, fontSans, fontDisplay } from '$/helpers/fonts'
 import { ToastProvider } from '@latitude-data/web-ui/atoms/Toast'
 import { TooltipProvider } from '@latitude-data/web-ui/atoms/Tooltip'
 import { THEMES } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
@@ -34,7 +34,7 @@ export default function RootLayout({
         <link rel='icon' href='/favicon.svg' />
       </head>
       <body
-        className={`w-full h-full ${fontSans.variable} ${fontMono.variable} font-sans`}
+        className={`w-full h-full ${fontSans.variable} ${fontMono.variable} ${fontDisplay.variable} font-sans`}
       >
         <NextTopLoader showSpinner={false} />
         <DatadogProvider>
