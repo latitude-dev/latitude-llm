@@ -3,15 +3,19 @@
 @tailwind utilities;
 
 @layer utilities {
+
   /* Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
 
   .no-scrollbar {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
-    overflow: -moz-scrollbars-none; /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+    overflow: -moz-scrollbars-none;
+    /* Firefox */
   }
 
   .scrollable-indicator {
@@ -19,12 +23,9 @@
       linear-gradient(hsl(var(--background)) 30%, hsl(var(--background) / 0)),
       linear-gradient(hsl(var(--background)), hsl(var(--background)) 0%) 0 100%,
       radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.1), transparent),
-      radial-gradient(
-          farthest-side at 50% 100%,
-          hsl(var(--background-shadow) / 0.1),
-          rgba(0, 0, 0, 0)
-        )
-        0 100%;
+      radial-gradient(farthest-side at 50% 100%,
+        hsl(var(--background-shadow) / 0.1),
+        rgba(0, 0, 0, 0)) 0 100%;
     background-repeat: no-repeat;
     background-color: hsl(var(--background));
     background-size:
@@ -41,6 +42,7 @@
     /** Make scrollbar to not take space **/
     overflow: overlay !important;
   }
+
   .custom-scrollbar::-webkit-scrollbar {
     @apply w-5 h-5;
   }
@@ -272,6 +274,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -307,6 +310,17 @@
       --rdg-checkbox-focus-color: hsl(var(--accent-button));
     }
   }
+
+  input[type=number].appearance-none::-webkit-inner-spin-button,
+  input[type=number].appearance-none::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type=number].appearance-none {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
 
 .latitude-data-grid .rdg-cell {
@@ -317,6 +331,7 @@
 .latitude-data-grid .rdg-header-row .rdg-cell:first-child {
   @apply rounded-tl-lg;
 }
+
 .latitude-data-grid .rdg-cell[aria-selected='true'] {
   outline-color: transparent;
 }
@@ -333,9 +348,11 @@
     var(--tw-ring-offset-shadow), var(--tw-ring-shadow),
     var(--tw-shadow, 0 0 #0000);
 }
+
 [role='grid-wrapper'] .monaco-editor .margin {
   --vscode-editorGutter-background: var(--rdg-background-color);
 }
+
 [role='grid-wrapper'] .monaco-editor .scroll-decoration {
   display: none;
 }

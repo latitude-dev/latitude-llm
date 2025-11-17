@@ -24,16 +24,11 @@ import {
   useRef,
   useState,
 } from 'react'
-import {
-  DEFAULT_TABS,
-  MetadataInfoTabs,
-} from '../../../../../_components/MetadataInfoTabs'
 import { DocumentLogEvaluations } from './Evaluations'
 import { DocumentLogMetadata } from './Metadata'
-import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useAnnotationBySpan } from '$/hooks/useAnnotationsBySpan'
+import { AnnotationForms } from '$/components/TracesPanel/AnnotationForms'
+import { MetadataInfoTabs } from '$/components/MetadataInfoTabs'
+import { DEFAULT_TABS } from '$/components/TracesPanel'
 
 function DocumentLogMetadataLoading() {
   return (
@@ -157,31 +152,5 @@ export function DocumentLogInfo({
         )
       }
     </MetadataInfoTabs>
-  )
-}
-
-export function AnnotationForms({
-  span,
-}: {
-  span: SpanWithDetails<SpanType.Prompt>
-}) {
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-  const { annotations } = useAnnotationBySpan({
-    project,
-    commit,
-    span,
-  })
-  if (!annotations.bottom) return null
-
-  return (
-    <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
-      <AnnotationForm
-        key={annotations.bottom.evaluation.uuid}
-        evaluation={annotations.bottom.evaluation}
-        span={span}
-        result={annotations.bottom.result}
-      />
-    </div>
   )
 }

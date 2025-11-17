@@ -5,6 +5,7 @@ import { useIssueHistogram } from '$/stores/issues/histograms/miniStats'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { cn } from '@latitude-data/web-ui/utils'
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import {
   Tooltip,
   useTooltipTextContentColor,
@@ -77,7 +78,7 @@ function MiniHistogramBar({
   }, [data, maxCount])
 
   return (
-    <div className='grid grid-cols-[1fr_auto] grid-rows-[auto_1fr] gap-x-2 gap-y-1 py-4'>
+    <div className='grid grid-cols-[max-content_auto] grid-rows-[auto_1fr] gap-x-2 gap-y-1'>
       {/* Top-left: Dotted line */}
       <div className='flex items-center'>
         <div
@@ -174,10 +175,12 @@ export function HistogramCell({
   const histogramData = isLoadingState ? placholderData.current : data
 
   return (
-    <MiniHistogramBar
-      data={histogramData}
-      issue={issue}
-      isPlaceholder={isLoadingState}
-    />
+    <ClientOnly>
+      <MiniHistogramBar
+        data={histogramData}
+        issue={issue}
+        isPlaceholder={isLoadingState}
+      />
+    </ClientOnly>
   )
 }

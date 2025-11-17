@@ -5,19 +5,18 @@ import { compact } from 'lodash-es'
 import useSWR, { SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { IssueEvaluationResultsResponse } from '$/app/api/projects/[projectId]/commits/[commitUuid]/issues/[issueId]/results/route'
+import { Span as EMPTY_SPANS, SpanType } from '@latitude-data/constants'
+import { IssueSpansResponse } from '$/app/api/projects/[projectId]/commits/[commitUuid]/issues/[issueId]/spans/route'
 
-export type IssueEvaluationResult =
-  IssueEvaluationResultsResponse['results'][number]
+const EMPTY: EMPTY_SPANS<SpanType.Prompt>[] = []
 
-const EMPTY_RESULTS: IssueEvaluationResult[] = []
-export function useIssueEvaluationResults(
+export function useIssueSpans(
   {
     projectId,
     commitUuid,
     issueId,
     page = 1,
-    pageSize = 10,
+    pageSize = 25,
   }: {
     projectId: number
     commitUuid: string
@@ -30,28 +29,21 @@ export function useIssueEvaluationResults(
   const route = ROUTES.api.projects
     .detail(projectId)
     .commits.detail(commitUuid)
-    .issues.detail(issueId).results.root
+    .issues.detail(issueId).spans.root
 
-  const fetcher = useFetcher<IssueEvaluationResultsResponse>(route, {
+  const fetcher = useFetcher<IssueSpansResponse>(route, {
     searchParams: { page: page.toString(), pageSize: pageSize.toString() },
   })
 
-  const { data, isLoading } = useSWR<IssueEvaluationResultsResponse>(
-    compact([
-      'issueEvaluationResults',
-      projectId,
-      commitUuid,
-      issueId,
-      page,
-      pageSize,
-    ]),
+  const { data, isLoading } = useSWR<IssueSpansResponse>(
+    compact(['issueSpans', projectId, commitUuid, issueId, page, pageSize]),
     fetcher,
     opts,
   )
 
   return useMemo(
     () => ({
-      data: data?.results ?? EMPTY_RESULTS,
+      data: data?.spans ?? EMPTY,
       hasNextPage: data?.hasNextPage ?? false,
       isLoading,
     }),

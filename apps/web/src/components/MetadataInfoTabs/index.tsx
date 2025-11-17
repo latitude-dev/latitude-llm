@@ -12,22 +12,37 @@ export const DEFAULT_TABS = [
 ]
 
 type RenderProps = { selectedTab: string }
+
 type Props = {
   children: (args: RenderProps) => ReactNode
+  insideOtherPanel?: boolean
   tabs?: TabSelectorOption<string>[]
   className?: string
   tabsActions?: ReactNode
   bottomActions?: ReactNode
 }
+
 export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
   function MetadataInfoTabs(
-    { className, tabs = DEFAULT_TABS, tabsActions, bottomActions, children },
+    {
+      className,
+      tabs = DEFAULT_TABS,
+      insideOtherPanel = false,
+      tabsActions,
+      bottomActions,
+      children,
+    },
     ref,
   ) {
     const [selectedTab, setSelectedTab] = useState<string>('metadata')
+    const panelSpacing = insideOtherPanel ? 'none' : 'normal'
     return (
-      <DetailsPanel ref={ref} className={className}>
-        <DetailsPanel.Header>
+      <DetailsPanel
+        bordered={!insideOtherPanel}
+        ref={ref}
+        className={className}
+      >
+        <DetailsPanel.Header space={panelSpacing}>
           <div className='flex gap-2 pb-2 justify-center'>
             <TabSelector
               options={tabs}
@@ -42,10 +57,14 @@ export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
           </div>
         </DetailsPanel.Header>
 
-        <DetailsPanel.Body>{children({ selectedTab })}</DetailsPanel.Body>
+        <DetailsPanel.Body space={panelSpacing}>
+          {children({ selectedTab })}
+        </DetailsPanel.Body>
 
         {bottomActions ? (
-          <DetailsPanel.Footer>{bottomActions}</DetailsPanel.Footer>
+          <DetailsPanel.Footer space={panelSpacing}>
+            {bottomActions}
+          </DetailsPanel.Footer>
         ) : null}
       </DetailsPanel>
     )
