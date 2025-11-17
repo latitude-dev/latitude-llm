@@ -20,7 +20,6 @@ const ISSUE_SORTS_VALUES = Object.values(ISSUE_SORTS) as [
   IssueSort,
   ...IssueSort[],
 ]
-// TODO(AO): Add filter by statuses here
 
 export const issuesFiltersQueryParamsParser = z
   .object({
@@ -29,7 +28,7 @@ export const issuesFiltersQueryParamsParser = z
     status: z
       .enum(ISSUE_STATUS_VALUES)
       .optional()
-      .default(DEFAULTS_ISSUE_PARAMS.filters.group),
+      .default(DEFAULTS_ISSUE_PARAMS.filters.status),
     sort: z
       .enum(ISSUE_SORTS_VALUES)
       .optional()

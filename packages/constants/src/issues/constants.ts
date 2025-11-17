@@ -54,7 +54,7 @@ export type QueryParams = { [key: string]: string | string[] | undefined }
 export const DEFAULTS_ISSUE_PARAMS = {
   limit: 25,
   filters: {
-    group: ISSUE_STATUS.active,
+    status: ISSUE_STATUS.active,
   },
   sorting: {
     sort: 'relevance' as const,
