@@ -2,15 +2,10 @@ import { Commit } from '../../schema/models/types/Commit'
 import { Workspace } from '../../schema/models/types/Workspace'
 import {
   DocumentVersionsRepository,
-  IssuesRepository,
   ProviderApiKeysRepository,
 } from '../../repositories'
 import { Result } from '../../lib/Result'
-import {
-  BadRequestError,
-  NotFoundError,
-  UnprocessableEntityError,
-} from '../../lib/errors'
+import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import {
   CLOUD_MESSAGES,
   EvaluationType,
@@ -28,6 +23,7 @@ import { PromisedResult } from '../../lib/Transaction'
 import { createEvaluationV2 } from './create'
 import { findFirstModelForProvider } from '../ai/providers/models'
 import { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { assertCopilotIsSupported } from '../copilot/assertItsSupported'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration.omit({
@@ -37,31 +33,29 @@ const llmEvaluationBinarySpecificationWithoutModel =
 
 export async function generateEvaluationFromIssueWithCopilot(
   {
-    issueId,
+    issue,
     workspace,
     commit,
   }: {
-    issueId: number
+    issue: Issue
     commit: Commit
     workspace: Workspace
   },
   db = database,
 ) {
-  if (!env.LATITUDE_CLOUD) {
-    return Result.error(
-      new BadRequestError(CLOUD_MESSAGES.generateEvaluationIssueUsingCopilot),
-    )
-  }
+  const assertResult = assertCopilotIsSupported(
+    CLOUD_MESSAGES.generateEvaluationIssueUsingCopilot,
+  )
+
   if (!env.COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH) {
     return Result.error(
-      new BadRequestError(
-        'COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH is not set',
-      ),
+      new Error('COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH is not set'),
     )
   }
 
-  const issuesRepository = new IssuesRepository(workspace.id)
-  const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
+  if (!Result.isOk(assertResult)) {
+    return assertResult
+  }
 
   const documentRepository = new DocumentVersionsRepository(workspace.id)
   const document = await documentRepository
