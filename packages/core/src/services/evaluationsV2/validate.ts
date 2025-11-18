@@ -149,6 +149,7 @@ export async function validateEvaluationV2<
     )
   }
 
+  // ISSUE VALIDATIONS
   if (metricSpecification.requiresExpectedOutput && issue) {
     return Result.error(
       new BadRequestError(

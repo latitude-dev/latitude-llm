@@ -19,9 +19,9 @@ export function useIssueEvaluations(
 ) {
   const route = ROUTES.api.projects.detail(projectId).commits.detail(commitUuid)
     .issues.evaluations
-  const fetcher = useFetcher<EvaluationV2[]>(
-    `${route}?documentUuids=${documentUuids.join(',')}`,
-  )
+  const fetcher = useFetcher<EvaluationV2[]>(route, {
+    searchParams: { documentUuids: documentUuids.join(',') },
+  })
   const { data, isLoading } = useSWR<EvaluationV2[]>(
     ['issueEvaluations', projectId, commitUuid, documentUuids],
     fetcher,

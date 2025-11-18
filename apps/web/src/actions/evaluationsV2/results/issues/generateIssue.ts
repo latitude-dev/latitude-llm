@@ -3,7 +3,7 @@
 import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
 import { generateIssue } from '@latitude-data/core/services/issues/generate'
 import { z } from 'zod'
-import { withEvaluation, withEvaluationSchema } from '../../procedures'
+import { withEvaluation, withEvaluationSchema } from '$/actions/procedures'
 
 export const generateIssueAction = withEvaluation
   .inputSchema(
