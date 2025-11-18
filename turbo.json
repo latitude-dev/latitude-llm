@@ -36,6 +36,7 @@
     "OPT_OUT_ANALYTICS",
     "NEXT_PUBLIC_POSTHOG_HOST",
     "COPILOT_PROMPT_DATASET_GENERATOR_PATH",
+    "COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH",
     "COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH",
     "CI",
     "SUPPORT_APP_ID",
@@ -63,12 +64,22 @@
     "RELEASE_VERSION"
   ],
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": [
+    "**/.env.*local"
+  ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**"
+      ],
       "env": [
         "SENTRY_DSN",
         "SENTRY_ORG",
@@ -82,14 +93,23 @@
       ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": [
+        "^lint"
+      ]
     },
     "tc": {
-      "dependsOn": ["^tc"]
+      "dependsOn": [
+        "^tc"
+      ]
     },
     "types:build": {
-      "dependsOn": ["^types:build"],
-      "outputs": ["dist/**", "types/**"]
+      "dependsOn": [
+        "^types:build"
+      ],
+      "outputs": [
+        "dist/**",
+        "types/**"
+      ]
     },
     "test": {},
     "dev": {

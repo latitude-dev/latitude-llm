@@ -29,18 +29,9 @@ export async function generateDatasetWithCopilot(
   if (!env.LATITUDE_CLOUD) {
     return Result.error(new BadRequestError(CLOUD_MESSAGES.generateDatasets))
   }
-
-  if (!env.COPILOT_PROJECT_ID) {
-    return Result.error(new BadRequestError('COPILOT_PROJECT_ID is not set'))
-  }
   if (!env.COPILOT_PROMPT_DATASET_GENERATOR_PATH) {
     return Result.error(
       new BadRequestError('COPILOT_PROMPT_DATASET_GENERATOR_PATH is not set'),
-    )
-  }
-  if (!env.COPILOT_WORKSPACE_API_KEY) {
-    return Result.error(
-      new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set'),
     )
   }
 

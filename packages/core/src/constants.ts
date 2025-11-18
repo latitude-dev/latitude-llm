@@ -408,6 +408,7 @@ const CLOUD_INFO_URL =
 const CLOUD_INFO = `More info: ${CLOUD_INFO_URL}`
 export const CLOUD_MESSAGES = {
   generateDatasets: `Dataset generator is only available on Latitude Cloud. ${CLOUD_INFO}`,
+  generateEvaluationIssueUsingCopilot: `Evaluation issue generator is only available on Latitude Cloud. ${CLOUD_INFO}`,
   generateEvaluations: `Evaluation generator is only available on Latitude Cloud. ${CLOUD_INFO}`,
   refinePrompt: `Prompt refiner is only available on Latitude Cloud. ${CLOUD_INFO}`,
   promptSuggestions: `Prompt suggestions are only available on Latitude Cloud. ${CLOUD_INFO}`,

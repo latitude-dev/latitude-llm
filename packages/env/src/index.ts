@@ -179,6 +179,7 @@ export const env = createEnv({
     // Copilot
     COPILOT_PROMPT_EDITOR_COPILOT_PATH: z.string().optional(),
     COPILOT_PROMPT_DATASET_GENERATOR_PATH: z.string().optional(),
+    COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH: z.string().optional(),
     COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH: z.string().optional(),
     COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH: z.string().optional(),
     COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH: z.string(),
