@@ -93,8 +93,9 @@ export function ExperimentsTable({
           )
           if (prevExperimentIdx !== -1) {
             // Substitute the previous experiment with the updated one, without moving it in the array
-            prev[prevExperimentIdx] = updatedExperiment
-            return prev
+            const newArray = [...prev]
+            newArray[prevExperimentIdx] = updatedExperiment
+            return newArray
           }
 
           return [updatedExperiment, ...prev]
