@@ -1,5 +1,3 @@
-'use client'
-
 import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { LogicTablePaginationFooter } from '$/components/TablePaginationFooter/LogicTablePaginationFooter'
 import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'

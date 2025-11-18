@@ -454,11 +454,13 @@ export type EvaluationV2AnnotatedEvent = LatitudeEventGeneric<
   'evaluationV2Annotated',
   {
     workspaceId: number
+    isNew: boolean
     evaluation: EvaluationV2
     result: EvaluationResultV2
     commit: Commit
     spanId: string
     traceId: string
+    userEmail?: string | null
   }
 >
 
