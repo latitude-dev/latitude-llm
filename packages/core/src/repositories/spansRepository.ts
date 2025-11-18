@@ -359,6 +359,15 @@ export class SpansRepository extends Repository<Span> {
     source?: LogSources[]
     limit?: number
   }) {
+    // Fetch commit UUIDs - this should be fast with proper commit indexes
+    const commitUuids = await this.db
+      .select({ uuid: commits.uuid })
+      .from(commits)
+      .where(eq(commits.projectId, projectId))
+      .then((r) => r.map((c) => c.uuid))
+
+    if (commitUuids.length === 0) return Result.ok({ items: [], next: null })
+
     const conditions = [
       this.scopeFilter,
       type ? eq(spans.type, type) : undefined,
@@ -369,16 +378,6 @@ export class SpansRepository extends Repository<Span> {
         ? sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
         : undefined,
     ].filter(Boolean) as SQL<unknown>[]
-
-    const commitUuids = await this.db
-      .select({ uuid: commits.uuid })
-      .from(commits)
-      .where(eq(commits.projectId, projectId))
-      .then((r) => r.map((c) => c.uuid))
-
-    if (commitUuids.length === 0) {
-      return Result.ok({ items: [], next: null })
-    }
 
     const result = await this.db
       .select(tt)
