@@ -147,8 +147,8 @@ export const API_ROUTES = {
                   results: {
                     root: `${projectRoot}/commits/${commitUuid}/issues/${issueId}/results`,
                   },
-                  logs: {
-                    root: `${projectRoot}/commits/${commitUuid}/issues/${issueId}/logs`,
+                  spans: {
+                    root: `${projectRoot}/commits/${commitUuid}/issues/${issueId}/spans`,
                   },
                 }
               },

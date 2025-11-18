@@ -13,11 +13,11 @@ import {
   QueryParams,
 } from '@latitude-data/constants/issues'
 import { SWRProvider } from '$/components/Providers/SWRProvider'
-import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 
 export type IssuesServerResponse = Awaited<
   OkType<IssuesRepository['fetchIssuesFiltered']>
 >
+type IssueWithStats = IssuesServerResponse['issues'][0]
 
 export default async function IssuesPageRoute({
   params,
@@ -26,7 +26,7 @@ export default async function IssuesPageRoute({
   params: Promise<{ projectId: string; commitUuid: string }>
   searchParams: Promise<QueryParams>
 }) {
-  let selectedIssue: Issue | null = null
+  let selectedIssue: IssueWithStats | null = null
   const queryParams = await searchParams
   const { projectId, commitUuid } = await params
   const session = await getCurrentUserOrRedirect()
@@ -41,7 +41,7 @@ export default async function IssuesPageRoute({
   const issuesRepo = new IssuesRepository(session.workspace.id)
   const issueId = Number(String(queryParams.issueId))
   if (issueId) {
-    selectedIssue = await issuesRepo.findById({ project, issueId })
+    selectedIssue = await issuesRepo.findWithStats({ project, issueId })
   }
 
   // Filtering

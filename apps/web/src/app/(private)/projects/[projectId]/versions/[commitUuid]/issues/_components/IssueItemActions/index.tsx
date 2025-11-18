@@ -37,7 +37,13 @@ const UNDO_MESSAGES = {
  * and a toast with an "Undo" action is shown. If the user clicks "Undo", the cache is reverted.
  * If the timeout elapses without an undo, the backend call is made to perform the action.
  */
-export function IssueItemActions({ issue }: { issue: SerializedIssue }) {
+export function IssueItemActions({
+  issue,
+  onOptimisticAction,
+}: {
+  issue: SerializedIssue
+  onOptimisticAction?: () => void
+}) {
   const { mutate } = useSWRConfig()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -83,10 +89,11 @@ export function IssueItemActions({ issue }: { issue: SerializedIssue }) {
           },
           { revalidate: false }, // Don't revalidate immediately
         )
+        onOptimisticAction?.()
 
         actions.onAction({ action })
       },
-      [issue, mutate, cacheKey, actions],
+      [issue, mutate, cacheKey, actions, onOptimisticAction],
     ),
     onUndo: useCallback(
       (action: IssueAction) => {

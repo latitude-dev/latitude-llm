@@ -18,7 +18,7 @@ const EMPTY_ISSUES_RESPONSE = {
   totalCount: 0,
 } satisfies IssuesServerResponse
 
-type Issue = IssuesServerResponse['issues'][number]
+export type Issue = IssuesServerResponse['issues'][number]
 export type SerializedIssue = Omit<Issue, 'lastSeenDate' | 'createdAt'> & {
   lastSeenDate: Date
   createdAt: Date
@@ -28,16 +28,22 @@ type IssuesResponseSerialized = Omit<IssuesServerResponse, 'issues'> & {
   issues: SerializedIssue[]
 }
 
-function serializer(response: IssuesServerResponse): IssuesResponseSerialized {
+export function serializer(
+  response: IssuesServerResponse,
+): IssuesResponseSerialized {
   if (!response) return EMPTY_ISSUES_RESPONSE
 
   return {
     ...response,
-    issues: response.issues.map((issue) => ({
-      ...issue,
-      lastSeenDate: new Date(issue.lastSeenDate),
-      createdAt: new Date(issue.createdAt),
-    })),
+    issues: response.issues.map(serializeIssue),
+  }
+}
+
+export function serializeIssue(issue: Issue): SerializedIssue {
+  return {
+    ...issue,
+    lastSeenDate: new Date(issue.lastSeenDate),
+    createdAt: new Date(issue.createdAt),
   }
 }
 
@@ -145,7 +151,3 @@ export function useIssues(
     [data, isLoading, initServerData],
   )
 }
-
-// Export the new stores
-export * from './evaluationResults'
-export * from './logs'

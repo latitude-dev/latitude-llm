@@ -6,7 +6,6 @@ import { DocumentTraces } from './DocumentTraces'
 import { Span } from '@latitude-data/constants'
 import { useTraceSpanSelection } from './TraceSpanSelectionContext'
 import { ResizableLayout } from './ResizableLayout'
-import { TraceInfo } from './TraceInfo'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
@@ -17,6 +16,7 @@ import { AggregationPanels } from './AggregationPanels'
 import { SpanFilters } from './Filters'
 import { SpansFilters } from '$/lib/schemas/filters'
 import { useState } from 'react'
+import { TraceInfoPanel } from '$/components/TracesPanel'
 
 export function DocumentTracesPage({
   initialSpans,
@@ -82,7 +82,14 @@ export function DocumentTracesPage({
                 showRightPane={!!selection.traceId && !!selection.spanId}
                 leftPane={<DocumentTraces initialSpans={initialSpans} />}
                 rightPane={
-                  selection.traceId && selection.spanId && <TraceInfo />
+                  selection.traceId &&
+                  selection.spanId && (
+                    <TraceInfoPanel
+                      traceId={selection.traceId}
+                      spanId={selection.spanId}
+                      documentUuid={document.documentUuid}
+                    />
+                  )
                 }
               />
             </div>

@@ -68,6 +68,27 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
     return Result.ok<boolean>(!!result?.exists)
   }
 
+  getHistogramStatsForIssue({
+    project,
+    issueId,
+  }: {
+    project: Project
+    issueId: number
+  }) {
+    return this.db
+      .select(this.histogramStatsSelect)
+      .from(issueHistograms)
+      .where(
+        and(
+          this.scopeFilter,
+          eq(issueHistograms.projectId, project.id),
+          eq(issueHistograms.issueId, issueId),
+        ),
+      )
+      .groupBy(issueHistograms.issueId)
+      .as(HISTOGRAM_SUBQUERY_ALIAS)
+  }
+
   /**
    * NOTE: Developer is responsible of passing the right commit IDs
    */
@@ -94,48 +115,7 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
     }
 
     const baseQuery = this.db
-      .select({
-        issueId: issueHistograms.issueId,
-        recentCount: sql
-          .raw(
-            `
-          COALESCE(SUM(
-            CASE
-              WHEN "date" >= CURRENT_DATE - INTERVAL '` +
-              RECENT_ISSUES_DAYS +
-              ` days'
-              THEN "count"
-              ELSE 0
-            END
-          ), 0)
-        `,
-          )
-          .as('recentCount'),
-        firstSeenDate: sql<Date>`MIN(${issueHistograms.date})`.as(
-          'firstSeenDate',
-        ),
-        lastSeenDate: sql<Date>`MAX(${issueHistograms.date})`.as(
-          'lastSeenDate',
-        ),
-        escalatingCount: sql
-          .raw(
-            `
-          COALESCE(SUM(
-            CASE
-              WHEN "date" >= CURRENT_DATE - INTERVAL '` +
-              ESCALATING_DAYS +
-              ` days'
-              THEN "count"
-              ELSE 0
-            END
-          ), 0)
-        `,
-          )
-          .as('escalatingCount'),
-        totalCount: sql<number>`COALESCE(SUM(${issueHistograms.count}), 0)`.as(
-          'totalCount',
-        ),
-      })
+      .select(this.histogramStatsSelect)
       .from(issueHistograms)
       .where(and(...whereConditions))
       .groupBy(issueHistograms.issueId)
@@ -383,5 +363,48 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
     const commits = await commitsRepo.getCommitsHistory({ commit })
     const commitIds = commits.map((c: { id: number }) => c.id)
     return commitIds
+  }
+
+  private get histogramStatsSelect() {
+    return {
+      issueId: issueHistograms.issueId,
+      recentCount: sql
+        .raw(
+          `
+          COALESCE(SUM(
+            CASE
+              WHEN "date" >= CURRENT_DATE - INTERVAL '` +
+            RECENT_ISSUES_DAYS +
+            ` days'
+              THEN "count"
+              ELSE 0
+            END
+          ), 0)
+        `,
+        )
+        .as('recentCount'),
+      firstSeenDate: sql<Date>`MIN(${issueHistograms.date})`.as(
+        'firstSeenDate',
+      ),
+      lastSeenDate: sql<Date>`MAX(${issueHistograms.date})`.as('lastSeenDate'),
+      escalatingCount: sql
+        .raw(
+          `
+          COALESCE(SUM(
+            CASE
+              WHEN "date" >= CURRENT_DATE - INTERVAL '` +
+            ESCALATING_DAYS +
+            ` days'
+              THEN "count"
+              ELSE 0
+            END
+          ), 0)
+        `,
+        )
+        .as('escalatingCount'),
+      totalCount: sql<number>`COALESCE(SUM(${issueHistograms.count}), 0)`.as(
+        'totalCount',
+      ),
+    }
   }
 }

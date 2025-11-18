@@ -11,22 +11,11 @@ import { CommitsRepository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 import { calculateOffset } from '@latitude-data/core/lib/pagination/index'
-import { ProviderLogDto } from '@latitude-data/core/schema/types'
+import { OkType } from '@latitude-data/core/lib/Result'
 
-type IssueLog = {
-  uuid: string
-  createdAt: Date
-  duration: number | null
-  commit: {
-    uuid: string
-    version: number | null
-    title: string
-  }
-  providerLog: ProviderLogDto
-}
-
-export type IssueLogsResponse = {
-  logs: IssueLog[]
+type SpanResponse = OkType<SpansRepository['findBySpanAndTraceIds']>
+export type IssueSpansResponse = {
+  spans: SpanResponse
   hasNextPage: boolean
 }
 
@@ -122,7 +111,7 @@ export const GET = errorHandler(
 
       return NextResponse.json(
         {
-          spans,
+          spans: spans.unwrap(),
           hasNextPage,
         },
         { status: 200 },

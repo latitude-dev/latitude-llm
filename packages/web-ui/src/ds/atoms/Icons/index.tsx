@@ -155,6 +155,7 @@ import {
   ShieldAlertIcon,
   FlaskConical,
   EyeOffIcon,
+  ChevronsRightIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -251,6 +252,7 @@ const Icons = {
   chevronDown: ChevronDown,
   chevronLeft: ChevronLeft,
   chevronRight: ChevronRight,
+  chevronsRight: ChevronsRightIcon,
   chevronUp: ChevronUp,
   chevronsDownUp: ChevronsDownUpIcon,
   chevronsUpDown: ChevronsUpDown,

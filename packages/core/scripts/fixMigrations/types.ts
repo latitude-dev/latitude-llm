@@ -34,4 +34,3 @@ export type MenuResult =
   | { type: 'exit'; code: number }
   | { type: 'continue' }
   | { type: 'back' }
-

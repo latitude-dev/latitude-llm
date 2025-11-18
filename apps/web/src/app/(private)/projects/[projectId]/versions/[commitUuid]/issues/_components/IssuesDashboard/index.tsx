@@ -2,7 +2,11 @@
 
 import { useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useIssues } from '$/stores/issues'
+import {
+  useIssues,
+  serializeIssue,
+  Issue as IssueWithStats,
+} from '$/stores/issues'
 import {
   SafeIssuesParams,
   convertIssuesParamsToQueryParams,
@@ -12,7 +16,6 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useIssuesParameters } from '$/stores/issues/useIssuesParameters'
 import { useOnce } from '$/hooks/useMount'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { useFetchMiniHistgramsInBatch } from '$/stores/issues/histograms/miniStats'
 import { useSelectedFromUrl } from '$/hooks/useSelectedFromUrl'
 import { ROUTES } from '$/services/routes'
@@ -28,10 +31,12 @@ export function IssuesDashboard({
 }: {
   serverResponse: IssuesServerResponse
   params: SafeIssuesParams
-  selectedIssue?: Issue
+  selectedIssue?: IssueWithStats
 }) {
   const { selectedElement, onSelectChange } = useSelectedFromUrl({
-    serverSelected: serverSelectedIssue,
+    serverSelected: serverSelectedIssue
+      ? serializeIssue(serverSelectedIssue)
+      : undefined,
     keyField: 'id',
     paramsUrlName: 'issueId',
   })

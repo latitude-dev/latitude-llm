@@ -84,6 +84,39 @@ export class IssuesRepository extends Repository<Issue> {
     return Result.nil()
   }
 
+  async findWithStats({
+    project,
+    issueId,
+  }: {
+    project: Project
+    issueId: number
+  }) {
+    const histogramRepo = new IssueHistogramsRepository(
+      this.workspaceId,
+      this.db,
+    )
+    const subquery = histogramRepo.getHistogramStatsForIssue({
+      project,
+      issueId,
+    })
+    const result = await this.db
+      .select({
+        ...tt,
+        ...this.issuesWithStatsSelect({ subquery }),
+      })
+      .from(issues)
+      .innerJoin(subquery, eq(subquery.issueId, issues.id))
+      .where(
+        and(
+          this.scopeFilter,
+          eq(issues.projectId, project.id),
+          eq(issues.id, issueId),
+        ),
+      )
+      .limit(1)
+    return result[0]
+  }
+
   async findById({
     project,
     issueId,
@@ -227,33 +260,7 @@ export class IssuesRepository extends Repository<Issue> {
     const query = this.db
       .select({
         ...tt,
-        recentCount: subquery.recentCount,
-        totalCount: subquery.totalCount,
-        firstSeenDate: subquery.firstSeenDate,
-        lastSeenDate: subquery.lastSeenDate,
-        escalatingCount: subquery.escalatingCount,
-        isNew:
-          sql<boolean>`(${issues.createdAt} >= NOW() - INTERVAL '7 days')`.as(
-            'isNew',
-          ),
-        isResolved: sql<boolean>`(${issues.resolvedAt} IS NOT NULL)`.as(
-          'isResolved',
-        ),
-        isRegressed: sql<boolean>`(
-          ${issues.resolvedAt} IS NOT NULL 
-          AND ${issues.ignoredAt} IS NULL 
-          AND ${subquery.lastSeenDate} > ${issues.resolvedAt}
-        )`.as('isRegressed'),
-        isEscalating: sql<boolean>`(
-          CASE
-            WHEN ${subquery.escalatingCount} > ${ESCALATING_COUNT_THRESHOLD}
-            THEN true
-            ELSE false
-          END
-        )`.as('isEscalating'),
-        isIgnored: sql<boolean>`(${issues.ignoredAt} IS NOT NULL)`.as(
-          'isIgnored',
-        ),
+        ...this.issuesWithStatsSelect({ subquery }),
       })
       .from(issues)
       .innerJoin(subquery, eq(subquery.issueId, issues.id))
@@ -463,6 +470,45 @@ export class IssuesRepository extends Repository<Issue> {
       dir(sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)),
       dir(issues.id),
     ]
+  }
+
+  private issuesWithStatsSelect({
+    subquery,
+  }: {
+    subquery: ReturnType<
+      | IssueHistogramsRepository['getHistogramStatsSubquery']
+      | IssueHistogramsRepository['getHistogramStatsForIssue']
+    >
+  }) {
+    return {
+      recentCount: subquery.recentCount,
+      totalCount: subquery.totalCount,
+      firstSeenDate: subquery.firstSeenDate,
+      lastSeenDate: subquery.lastSeenDate,
+      escalatingCount: subquery.escalatingCount,
+      isNew:
+        sql<boolean>`(${issues.createdAt} >= NOW() - INTERVAL '7 days')`.as(
+          'isNew',
+        ),
+      isResolved: sql<boolean>`(${issues.resolvedAt} IS NOT NULL)`.as(
+        'isResolved',
+      ),
+      isRegressed: sql<boolean>`(
+          ${issues.resolvedAt} IS NOT NULL
+          AND ${issues.ignoredAt} IS NULL
+          AND ${subquery.lastSeenDate} > ${issues.resolvedAt}
+        )`.as('isRegressed'),
+      isEscalating: sql<boolean>`(
+          CASE
+            WHEN ${subquery.escalatingCount} > ${ESCALATING_COUNT_THRESHOLD}
+            THEN true
+            ELSE false
+          END
+        )`.as('isEscalating'),
+      isIgnored: sql<boolean>`(${issues.ignoredAt} IS NOT NULL)`.as(
+        'isIgnored',
+      ),
+    }
   }
 
   private async getCommitIds({ commit }: { commit: Commit }) {

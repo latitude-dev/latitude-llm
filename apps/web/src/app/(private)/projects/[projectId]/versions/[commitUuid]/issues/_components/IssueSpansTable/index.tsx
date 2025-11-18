@@ -1,8 +1,5 @@
-'use client'
-
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { relativeTime } from '$/lib/relativeTime'
-import { ROUTES } from '$/services/routes'
 import {
   Table,
   TableBody,
@@ -17,41 +14,20 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { ReactNode } from 'react'
 import { useCommits } from '$/stores/commitsStore'
-import { Span, SpanType } from '@latitude-data/constants'
-
-type Props = {
-  spans: Span<SpanType.Prompt>[]
-  projectId: number
-  commitUuid: string
-  documentUuid: string
-  showPagination?: boolean
-  PaginationFooter?: ReactNode
-}
+import { Span } from '@latitude-data/constants'
 
 export function IssueSpansTable({
   spans,
-  projectId,
-  commitUuid,
-  documentUuid,
+  onView,
   showPagination,
   PaginationFooter,
-}: Props) {
+}: {
+  spans: Span[]
+  showPagination?: boolean
+  onView: (span: Span) => () => void
+  PaginationFooter?: ReactNode
+}) {
   const { data: commits } = useCommits()
-  const handleRowClick = (span: Span<SpanType.Prompt>) => {
-    const IssueSpansTable = JSON.stringify({
-      traceId: span.traceId,
-      spanId: span.id,
-    })
-    const route = ROUTES.projects
-      .detail({ id: projectId })
-      .commits.detail({ uuid: span.commitUuid ?? commitUuid })
-      .documents.detail({ uuid: documentUuid }).traces.root
-
-    window.open(
-      `${route}?filters=${encodeURIComponent(IssueSpansTable)}`,
-      '_blank',
-    )
-  }
   return (
     <Table
       className='table-auto'
@@ -71,7 +47,7 @@ export function IssueSpansTable({
         {spans.map((span) => (
           <TableRow
             key={span.id}
-            onClick={() => handleRowClick(span)}
+            onClick={onView(span)}
             className={cn(
               'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
             )}

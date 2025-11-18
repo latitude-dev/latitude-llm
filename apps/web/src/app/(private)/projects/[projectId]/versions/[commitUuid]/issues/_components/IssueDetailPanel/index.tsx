@@ -1,46 +1,29 @@
-'use client'
-
-import { RefObject, useRef, useState } from 'react'
+import { RefObject, useRef } from 'react'
 import { usePanelDomRef } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import { DetailsPanel } from '$/components/DetailsPannel'
-import { Issue } from '@latitude-data/core/schema/models/types/Issue'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useIssueLogs as useIssueSpans } from '$/stores/issues/logs'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { LimitedTablePaginationFooter } from '$/components/TablePaginationFooter/LimitedTablePaginationFooter'
-import { IssueSpansTable } from '../IssueLogsTable'
+import { SerializedIssue } from '$/stores/issues'
+import { TracesList } from './TracesList'
+import { IssueDetails } from './IssueDetails'
+import { IssueItemActions } from '../IssueItemActions'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
-const PAGE_SIZE = 25
 export function IssuesDetailPanel({
   stickyRef,
+  onCloseDetails,
   issue,
   containerRef,
   offset,
 }: {
-  issue: Issue
+  issue: SerializedIssue
+  onCloseDetails: () => void
   stickyRef?: RefObject<HTMLTableElement | null>
   containerRef?: RefObject<HTMLDivElement | null>
   offset: StickyOffset
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-
-  const [page, setPage] = useState(1)
-  const {
-    data: spans,
-    hasNextPage,
-    isLoading,
-  } = useIssueSpans({
-    projectId: project.id,
-    commitUuid: commit.uuid,
-    issueId: issue.id,
-    page,
-    pageSize: PAGE_SIZE,
-  })
 
   const scrollableArea = usePanelDomRef({ selfRef: ref.current })
   const beacon = stickyRef?.current
@@ -51,44 +34,34 @@ export function IssuesDetailPanel({
     targetContainer: containerRef?.current,
     offset: offset ?? { top: 0, bottom: 0 },
   })
-
   return (
-    <DetailsPanel ref={ref}>
+    <DetailsPanel bordered ref={ref}>
       <DetailsPanel.Header>
-        <div className='flex flex-col gap-y-1'>
-          <Text.H4>{issue.title}</Text.H4>
+        <div className='flex justify-between items-center mb-8'>
+          <Tooltip
+            asChild
+            trigger={
+              <Button
+                variant='ghost'
+                size='icon'
+                onClick={onCloseDetails}
+                iconProps={{ name: 'chevronsRight' }}
+              />
+            }
+          >
+            Close details
+          </Tooltip>
+          <IssueItemActions issue={issue} onOptimisticAction={onCloseDetails} />
+        </div>
+        <div className='flex flex-col gap-y-3 border-b border-dashed border-border pb-6'>
+          <Text.H3M>{issue.title}</Text.H3M>
           <Text.H5 color='foregroundMuted'>{issue.description}</Text.H5>
         </div>
       </DetailsPanel.Header>
       <DetailsPanel.Body>
-        <div className='flex flex-col gap-y-4'>
-          <Text.H5M>Issue logs</Text.H5M>
-          {isLoading ? (
-            <div className='flex flex-col gap-y-2'>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} height='h5' className='w-full' />
-              ))}
-            </div>
-          ) : spans.length > 0 ? (
-            <IssueSpansTable
-              spans={spans}
-              projectId={project.id}
-              commitUuid={commit.uuid}
-              documentUuid={issue.documentUuid}
-              showPagination
-              PaginationFooter={
-                <LimitedTablePaginationFooter
-                  page={page}
-                  nextPage={hasNextPage}
-                  onPageChange={setPage}
-                />
-              }
-            />
-          ) : (
-            <Text.H5 color='foregroundMuted'>
-              No logs found for this issue
-            </Text.H5>
-          )}
+        <div className='flex flex-col gap-y-6'>
+          <IssueDetails issue={issue} />
+          <TracesList issue={issue} />
         </div>
       </DetailsPanel.Body>
     </DetailsPanel>

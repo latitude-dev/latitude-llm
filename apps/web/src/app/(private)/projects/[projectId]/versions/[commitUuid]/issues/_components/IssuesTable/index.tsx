@@ -7,7 +7,6 @@ import {
   SafeIssuesParams,
 } from '@latitude-data/constants/issues'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
   Table,
@@ -66,8 +65,8 @@ export function IssuesTable({
   issues: SerializedIssue[]
   currentRoute: string
   loadingMiniStats: boolean
-  onSelectChange: (issue: Issue | undefined) => void
-  selectedIssue?: Issue
+  onSelectChange: (issue: SerializedIssue | undefined) => void
+  selectedIssue?: SerializedIssue
 }) {
   const {
     page,
@@ -104,6 +103,10 @@ export function IssuesTable({
     },
     [onSelectChange, selectedIssue],
   )
+  const onCloseDetails = useCallback(() => {
+    onSelectChange(undefined)
+  }, [onSelectChange])
+
   if (noData) {
     return (
       <TableBlankSlate description='No issues discovered in this project yet' />
@@ -191,6 +194,7 @@ export function IssuesTable({
           <div ref={sidebarWrapperRef} className='h-full'>
             <IssuesDetailPanel
               stickyRef={stickyRef}
+              onCloseDetails={onCloseDetails}
               issue={selectedIssue}
               containerRef={sidebarWrapperRef}
               offset={DETAILS_OFFSET}
