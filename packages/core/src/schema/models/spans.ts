@@ -70,5 +70,13 @@ export const spans = latitudeSchema.table(
     index('spans_document_uuid_idx').on(table.documentUuid),
     index('spans_commit_uuid_idx').on(table.commitUuid),
     index('spans_experiment_uuid_idx').on(table.experimentUuid),
+    // Composite index for efficient project-scoped queries with pagination
+    // Covers: workspace_id + commit_uuid + started_at DESC + id DESC
+    index('spans_workspace_commit_started_at_id_idx').on(
+      table.workspaceId,
+      table.commitUuid,
+      table.startedAt,
+      table.id,
+    ),
   ],
 )
