@@ -6,6 +6,7 @@ import {
   listCompletedRunsCached,
 } from '$/app/(private)/_data-access'
 import {
+  DEFAULT_PAGINATION_SIZE,
   LIMITED_VIEW_THRESHOLD,
   RunSourceGroup,
 } from '@latitude-data/core/constants'
@@ -20,13 +21,7 @@ export default async function RunsPage({
   searchParams: Promise<QueryParams>
 }) {
   const { projectId: _projectId } = await params
-  const {
-    activePage,
-    activePageSize,
-    sourceGroup,
-    completedPage,
-    completedPageSize,
-  } = await searchParams
+  const { activePage, activePageSize, sourceGroup } = await searchParams
 
   const defaultSourceGroup = RunSourceGroup.Production
 
@@ -37,13 +32,11 @@ export default async function RunsPage({
     sourceGroup: (sourceGroup as RunSourceGroup) ?? defaultSourceGroup,
   }
   const completedSearch = {
-    page: completedPage ? Number(completedPage) : undefined,
-    pageSize: completedPageSize ? Number(completedPageSize) : undefined,
     sourceGroup: (sourceGroup as RunSourceGroup) ?? defaultSourceGroup,
   }
 
   const activeRuns = await listActiveRunsCached({ projectId, ...activeSearch }) // prettier-ignore
-  const completedRuns = await listCompletedRunsCached({ projectId, ...completedSearch }) // prettier-ignore
+  const completedRuns = await listCompletedRunsCached({ projectId, limit: DEFAULT_PAGINATION_SIZE, ...completedSearch }) // prettier-ignore
 
   let limitedView = undefined
   const approximatedCount = await getDocumentLogsApproximatedCountByProjectCached(projectId) // prettier-ignore
