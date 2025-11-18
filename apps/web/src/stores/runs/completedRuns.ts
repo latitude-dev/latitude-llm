@@ -38,7 +38,7 @@ export function useCompletedRuns(
   const {
     data = [],
     mutate,
-    ...rest
+    isLoading,
   } = useSWR<CompletedRun[]>(
     ['completedRuns', project.id, search?.sourceGroup, search?.limit],
     fetcher,
@@ -72,9 +72,9 @@ export function useCompletedRuns(
     () => ({
       data,
       mutate,
-      ...rest,
+      isLoading,
     }),
-    [data, mutate, rest],
+    [data, mutate, isLoading],
   )
 }
 

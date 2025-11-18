@@ -500,6 +500,9 @@ export const API_ROUTES = {
       const conversationRoot = `/api/conversations/${conversationId}`
       return {
         root: conversationRoot,
+        traceIds: {
+          root: `${conversationRoot}/trace-ids`,
+        },
       }
     },
   },

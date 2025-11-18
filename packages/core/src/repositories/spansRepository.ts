@@ -79,6 +79,15 @@ export class SpansRepository extends Repository<Span> {
       .then((r) => r[0]?.traceId)
   }
 
+  async listTraceIdsByLogUuid(logUuid: string) {
+    return await this.db
+      .selectDistinctOn([spans.traceId], { traceId: spans.traceId })
+      .from(spans)
+      .where(and(this.scopeFilter, eq(spans.documentLogUuid, logUuid)))
+      .orderBy(spans.traceId, desc(spans.startedAt))
+      .then((r) => r.map((r) => r.traceId))
+  }
+
   async approximateCount({
     documentUuid,
     commitUuid,
