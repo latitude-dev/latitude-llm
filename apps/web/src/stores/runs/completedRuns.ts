@@ -25,8 +25,7 @@ export function useCompletedRuns(
     project: Pick<Project, 'id'>
     search?: {
       sourceGroup?: RunSourceGroup
-      page?: number
-      pageSize?: number
+      limit?: number
     }
     realtime?: boolean
   },
@@ -41,13 +40,7 @@ export function useCompletedRuns(
     mutate,
     ...rest
   } = useSWR<CompletedRun[]>(
-    [
-      'completedRuns',
-      project.id,
-      search?.sourceGroup,
-      search?.page,
-      search?.pageSize,
-    ],
+    ['completedRuns', project.id, search?.sourceGroup, search?.limit],
     fetcher,
     opts,
   )

@@ -18,7 +18,7 @@ export default function ProductionBanner({ project }: { project: Project }) {
   const { data: completedRuns, isLoading: isLoadingCompletedRuns } =
     useCompletedRuns({
       project,
-      search: { sourceGroup: RunSourceGroup.Production },
+      search: { limit: 1, sourceGroup: RunSourceGroup.Production },
     })
 
   const isLoadingRuns = isLoadingActiveRuns || isLoadingCompletedRuns

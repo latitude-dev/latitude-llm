@@ -1,4 +1,3 @@
-import { parseJSON } from 'date-fns'
 import {
   and,
   asc,
@@ -71,18 +70,19 @@ export class SpansRepository extends Repository<Span> {
   }
 
   async listTracesByLog(documentLogUuid: string) {
-    const result = await this.db
-      .select({
-        traceId: spans.traceId,
-        startedAt: sql`max(${spans.startedAt})`.mapWith(parseJSON),
-      })
-      .from(spans)
-      .where(and(this.scopeFilter, eq(spans.documentLogUuid, documentLogUuid)))
-      .groupBy(spans.traceId)
-      .orderBy(desc(sql`max(${spans.startedAt})`))
-      .then((r) => r.map((r) => r.traceId))
+    const result = await this.db.execute<{ trace_id: string }>(sql`
+      SELECT trace_id
+      FROM (
+        SELECT DISTINCT ON (trace_id) trace_id, started_at
+        FROM ${spans}
+        WHERE ${this.scopeFilter}
+          AND ${eq(spans.documentLogUuid, documentLogUuid)}
+        ORDER BY trace_id, started_at DESC
+      ) AS distinct_traces
+      ORDER BY started_at DESC
+    `)
 
-    return result as string[]
+    return result.rows.map((r) => r.trace_id)
   }
 
   async approximateCount({
