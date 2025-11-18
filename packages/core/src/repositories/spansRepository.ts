@@ -69,20 +69,14 @@ export class SpansRepository extends Repository<Span> {
     return Result.ok<Span[]>(result as Span[])
   }
 
-  async listTracesByLog(documentLogUuid: string) {
-    const result = await this.db.execute<{ trace_id: string }>(sql`
-      SELECT trace_id
-      FROM (
-        SELECT DISTINCT ON (trace_id) trace_id, started_at
-        FROM ${spans}
-        WHERE ${this.scopeFilter}
-          AND ${eq(spans.documentLogUuid, documentLogUuid)}
-        ORDER BY trace_id, started_at DESC
-      ) AS distinct_traces
-      ORDER BY started_at DESC
-    `)
-
-    return result.rows.map((r) => r.trace_id)
+  async getLastTraceByLogUuid(logUuid: string) {
+    return await this.db
+      .select({ traceId: spans.traceId })
+      .from(spans)
+      .where(and(this.scopeFilter, eq(spans.documentLogUuid, logUuid)))
+      .orderBy(desc(spans.startedAt))
+      .limit(1)
+      .then((r) => r[0]?.traceId)
   }
 
   async approximateCount({
