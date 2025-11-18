@@ -58,6 +58,7 @@ export async function resolveIntegrationToolDefinition({
           integration,
           toolName,
           args,
+          streamManager,
         }).then((r) => r.unwrap())
 
         $tool?.end({ result: { value, isError: false } })
