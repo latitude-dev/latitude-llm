@@ -1,3 +1,5 @@
+'use server'
+
 import { withDocument, withDocumentSchema } from '../procedures'
 import { ErrorResult, Result } from '@latitude-data/core/lib/Result'
 import { LatitudeError } from '@latitude-data/core/lib/errors'
@@ -39,4 +41,6 @@ export const generateEvaluationV2FromIssueAction = withDocument
           'Generate evaluation from issue failed due to missing job id',
         ),
       )
+
+    return Result.nil()
   })

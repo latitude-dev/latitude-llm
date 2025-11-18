@@ -31,6 +31,7 @@ import {
   EvaluationResultsV2Search,
   evaluationResultsV2SearchToQueryParams,
 } from '@latitude-data/core/helpers'
+import { generateEvaluationV2FromIssueAction } from '$/actions/evaluationsV2/generateFromIssue'
 
 export function useEvaluationsV2(
   {
@@ -221,6 +222,7 @@ export function useEvaluationsV2(
       }
     },
   })
+
   const generateEvaluation = useCallback(
     async ({ instructions }: { instructions?: string }) => {
       return await executeGenerateEvaluationV2({
@@ -252,6 +254,7 @@ export function useEvaluationsV2(
         }
       },
     })
+
   const cloneEvaluation = useCallback(
     async ({ evaluationUuid }: { evaluationUuid: string }) => {
       return await executeCloneEvaluationV2({
@@ -281,6 +284,7 @@ export function useEvaluationsV2(
       }
     },
   })
+
   const annotateEvaluation = useCallback(
     async ({
       evaluationUuid,
@@ -309,6 +313,39 @@ export function useEvaluationsV2(
     [project, commit, document, executeAnnotateEvaluationV2],
   )
 
+  const {
+    execute: executeGenerateEvaluationV2FromIssue,
+    isPending: isGeneratingEvaluationFromIssue,
+  } = useLatitudeAction(generateEvaluationV2FromIssueAction, {
+    onSuccess: async () => {
+      toast({
+        title: 'Evaluation generation started successfully',
+        description: `Evaluation generation started successfully`,
+      })
+    },
+    onError: async (error) => {
+      if (error.code === 'ERROR') {
+        toast({
+          title: 'Error generating evaluation from issue',
+          description: error?.message,
+          variant: 'destructive',
+        })
+      }
+    },
+  })
+
+  const generateEvaluationFromIssue = useCallback(
+    async ({ issueId }: { issueId: number }) => {
+      return await executeGenerateEvaluationV2FromIssue({
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+        issueId: issueId,
+      })
+    },
+    [project, commit, document, executeGenerateEvaluationV2FromIssue],
+  )
+
   return useMemo(
     () => ({
       data,
@@ -325,6 +362,8 @@ export function useEvaluationsV2(
       isCloningEvaluation,
       annotateEvaluation,
       isAnnotatingEvaluation,
+      generateEvaluationFromIssue,
+      isGeneratingEvaluationFromIssue,
       ...rest,
     }),
     [
@@ -342,6 +381,8 @@ export function useEvaluationsV2(
       isCloningEvaluation,
       annotateEvaluation,
       isAnnotatingEvaluation,
+      generateEvaluationFromIssue,
+      isGeneratingEvaluationFromIssue,
       rest,
     ],
   )
