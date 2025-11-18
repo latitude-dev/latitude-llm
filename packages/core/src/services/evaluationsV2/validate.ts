@@ -149,7 +149,7 @@ export async function validateEvaluationV2<
     )
   }
 
-  if (!metricSpecification.requiresExpectedOutput && issue) {
+  if (metricSpecification.requiresExpectedOutput && issue) {
     return Result.error(
       new BadRequestError(
         'Cannot link an evaluation to an issue with expected output',
