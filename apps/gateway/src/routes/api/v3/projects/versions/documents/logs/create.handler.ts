@@ -160,6 +160,7 @@ async function createSpansFromLogData({
     template: document.content,
     parameters: {},
     promptUuid: document.documentUuid,
+    projectId: commit.projectId,
     versionUuid: commit.uuid,
     source: LogSources.API,
     experimentUuid: '',

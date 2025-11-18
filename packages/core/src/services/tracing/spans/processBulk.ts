@@ -315,6 +315,10 @@ export async function processSpansBulk(
           'experimentUuid' in processed.metadata
             ? (processed.metadata.experimentUuid as string)
             : undefined,
+        projectId:
+          'projectId' in processed.metadata
+            ? (processed.metadata.projectId as number)
+            : undefined,
       }
     })
 

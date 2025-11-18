@@ -126,6 +126,7 @@ export type PromptSpanOptions = StartSpanOptions & {
   documentLogUuid?: string // TODO(tracing): temporal related log, remove when observability is ready
   versionUuid?: string // Alias for commitUuid
   promptUuid: string // Alias for documentUuid
+  projectId?: string
   experimentUuid?: string
   externalId?: string
   template: string
@@ -720,6 +721,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       documentLogUuid,
       versionUuid,
       promptUuid,
+      projectId,
       experimentUuid,
       externalId,
       template,
@@ -741,6 +743,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
       ['latitude.commitUuid']: versionUuid || HEAD_COMMIT,
       ['latitude.documentUuid']: promptUuid,
+      ['latitude.projectId']: projectId,
       ...(documentLogUuid && { ['latitude.documentLogUuid']: documentLogUuid }),
       ...(experimentUuid && { ['latitude.experimentUuid']: experimentUuid }),
       ...(externalId && { ['latitude.externalId']: externalId }),

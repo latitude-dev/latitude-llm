@@ -39,6 +39,7 @@ export const spans = latitudeSchema.table(
     documentUuid: uuid('document_uuid'),
     commitUuid: uuid('commit_uuid'),
     experimentUuid: uuid('experiment_uuid'),
+    projectId: bigint('project_id', { mode: 'number' }),
 
     source: varchar('source', { length: 32 }).$type<LogSources>(),
 
