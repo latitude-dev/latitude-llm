@@ -80,14 +80,21 @@ export function useExperiments(
             (prev) => {
               const newArray = prev ? [...prev] : []
               experimentDtos.forEach((experimentDto) => {
-                const prevExperiment = prev?.find(
-                  (exp) => exp.uuid === experimentDto.uuid,
+                const prevExperimentIdx = prev?.findIndex(
+                  (exp: ExperimentDto) => exp.uuid === experimentDto.uuid,
                 )
 
-                if (prevExperiment) {
+                if (
+                  prevExperimentIdx !== undefined &&
+                  prevExperimentIdx !== -1
+                ) {
                   // this might happen due to race conditions with the experimentStatus websocket
+                  // Update the existing experiment instead of adding a duplicate
+                  newArray[prevExperimentIdx] = experimentDto
+                } else {
+                  // Only add if it doesn't already exist
+                  newArray.unshift(experimentDto)
                 }
-                newArray.unshift(experimentDto)
               })
 
               return newArray
