@@ -12,13 +12,14 @@ import {
 } from 'date-fns'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
-function formatTimeDistance(date: Date, baseDate: Date = new Date()): string {
-  const minutes = differenceInMinutes(baseDate, date)
-  const hours = differenceInHours(baseDate, date)
-  const days = differenceInDays(baseDate, date)
-  const weeks = differenceInWeeks(baseDate, date)
-  const months = differenceInMonths(baseDate, date)
-  const years = differenceInYears(baseDate, date)
+function formatTimeDistance(date: Date): string {
+  const nowDate = new Date()
+  const minutes = differenceInMinutes(nowDate, date)
+  const hours = differenceInHours(nowDate, date)
+  const days = differenceInDays(nowDate, date)
+  const weeks = differenceInWeeks(nowDate, date)
+  const months = differenceInMonths(nowDate, date)
+  const years = differenceInYears(nowDate, date)
 
   if (minutes < 1) return 'less than a minute'
   if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'}`
@@ -29,23 +30,16 @@ function formatTimeDistance(date: Date, baseDate: Date = new Date()): string {
   return `${years} year${years === 1 ? '' : 's'}`
 }
 
-function getRelativeTimeText(createdAt: Date, lastSeenDate: Date | null) {
-  const dateToUse = lastSeenDate || createdAt
-  const now = new Date()
-
-  return `${formatTimeDistance(dateToUse, now)} ago`
-}
-
 export function LastSeenCell({ issue }: { issue: SerializedIssue }) {
   const text = useMemo(
-    () => getRelativeTimeText(issue.createdAt, issue.lastSeenDate),
-    [issue.createdAt, issue.lastSeenDate],
+    () => `${formatTimeDistance(issue.lastOccurredAt)} ago`,
+    [issue.lastOccurredAt],
   )
 
   const tooltipContent = useMemo(() => {
-    const firstSeenFormatted = format(issue.createdAt, 'PPpp')
-    const lastSeenFormatted = issue.lastSeenDate
-      ? format(issue.lastSeenDate, 'PPpp')
+    const firstSeenFormatted = format(issue.firstOccurredAt, 'PPpp')
+    const lastSeenFormatted = issue.lastOccurredAt
+      ? format(issue.lastOccurredAt, 'PPpp')
       : 'Never'
     return (
       <div className='text-sm'>
@@ -53,10 +47,17 @@ export function LastSeenCell({ issue }: { issue: SerializedIssue }) {
         <div>First seen: {firstSeenFormatted}</div>
       </div>
     )
-  }, [issue.createdAt, issue.lastSeenDate])
+  }, [issue.firstOccurredAt, issue.lastOccurredAt])
 
   return (
-    <Tooltip trigger={<Text.H5 color='foregroundMuted'>{text}</Text.H5>}>
+    <Tooltip
+      asChild
+      trigger={
+        <Text.H5 align='right' color='foregroundMuted'>
+          {text}
+        </Text.H5>
+      }
+    >
       {tooltipContent}
     </Tooltip>
   )

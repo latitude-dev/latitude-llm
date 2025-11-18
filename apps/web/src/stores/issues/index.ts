@@ -19,7 +19,17 @@ const EMPTY_ISSUES_RESPONSE = {
 } satisfies IssuesServerResponse
 
 export type Issue = IssuesServerResponse['issues'][number]
-export type SerializedIssue = Omit<Issue, 'lastSeenDate' | 'createdAt'> & {
+export type SerializedIssue = Omit<
+  Issue,
+  | 'createdAt'
+  | 'firstSeenDate'
+  | 'lastSeenDate'
+  | 'firstOccurredAt'
+  | 'lastOccurredAt'
+> & {
+  firstOccurredAt: Date
+  lastOccurredAt: Date
+  firstSeenDate: Date
   lastSeenDate: Date
   createdAt: Date
 }
@@ -42,7 +52,10 @@ export function serializer(
 export function serializeIssue(issue: Issue): SerializedIssue {
   return {
     ...issue,
+    firstSeenDate: new Date(issue.firstSeenDate),
+    firstOccurredAt: new Date(issue.firstOccurredAt),
     lastSeenDate: new Date(issue.lastSeenDate),
+    lastOccurredAt: new Date(issue.lastOccurredAt),
     createdAt: new Date(issue.createdAt),
   }
 }

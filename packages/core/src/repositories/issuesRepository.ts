@@ -484,7 +484,9 @@ export class IssuesRepository extends Repository<Issue> {
       recentCount: subquery.recentCount,
       totalCount: subquery.totalCount,
       firstSeenDate: subquery.firstSeenDate,
+      firstOccurredAt: subquery.firstOccurredAt,
       lastSeenDate: subquery.lastSeenDate,
+      lastOccurredAt: subquery.lastOccurredAt,
       escalatingCount: subquery.escalatingCount,
       isNew:
         sql<boolean>`(${issues.createdAt} >= NOW() - INTERVAL '7 days')`.as(
