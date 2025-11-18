@@ -4,7 +4,7 @@ import {
   Timeline,
 } from '$/components/tracing/traces/Timeline'
 import { relativeTime } from '$/lib/relativeTime'
-import { useConversation } from '$/stores/conversations'
+import { useTraceIds } from '$/stores/traceIds'
 import { useTrace } from '$/stores/traces'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/constants'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -94,7 +94,7 @@ export function DocumentLogTraces({
   documentLog: DocumentLogWithMetadataAndError
   onSelectedSpan?: OnSelectedSpanFn
 }) {
-  const { data: traceIds, isLoading } = useConversation({
+  const { data: traceIds, isLoading } = useTraceIds({
     conversationId: documentLog.uuid,
   })
 

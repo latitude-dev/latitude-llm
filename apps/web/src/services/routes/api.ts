@@ -396,17 +396,14 @@ export const API_ROUTES = {
             root: `${projectRoot}/runs/completed`,
             count: `${projectRoot}/runs/completed/count`,
             detail: ({
-              page,
-              pageSize,
+              limit,
               sourceGroup,
             }: {
-              page?: number
-              pageSize?: number
+              limit?: number
               sourceGroup?: RunSourceGroup
             } = {}) => {
               const params = new URLSearchParams()
-              if (page) params.set('page', page.toString())
-              if (pageSize) params.set('pageSize', pageSize.toString())
+              if (limit) params.set('limit', limit.toString())
               if (sourceGroup) params.set('sourceGroup', sourceGroup)
               return `${projectRoot}/runs/completed?${params.toString()}`
             },
@@ -503,6 +500,9 @@ export const API_ROUTES = {
       const conversationRoot = `/api/conversations/${conversationId}`
       return {
         root: conversationRoot,
+        traceIds: {
+          root: `${conversationRoot}/trace-ids`,
+        },
       }
     },
   },

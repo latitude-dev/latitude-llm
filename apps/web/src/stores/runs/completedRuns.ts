@@ -25,8 +25,7 @@ export function useCompletedRuns(
     project: Pick<Project, 'id'>
     search?: {
       sourceGroup?: RunSourceGroup
-      page?: number
-      pageSize?: number
+      limit?: number
     }
     realtime?: boolean
   },
@@ -39,15 +38,9 @@ export function useCompletedRuns(
   const {
     data = [],
     mutate,
-    ...rest
+    isLoading,
   } = useSWR<CompletedRun[]>(
-    [
-      'completedRuns',
-      project.id,
-      search?.sourceGroup,
-      search?.page,
-      search?.pageSize,
-    ],
+    ['completedRuns', project.id, search?.sourceGroup, search?.limit],
     fetcher,
     opts,
   )
@@ -59,10 +52,8 @@ export function useCompletedRuns(
 
       mutate(
         (prev) => {
-          // When on the first page, add the run to the beginning of the list only when the run ended
           if (!prev) return prev
           if (args.event !== 'runEnded') return prev
-          if (search?.page !== 1) return prev
           const run = args.run as CompletedRun
           return [run, ...prev]
         },
@@ -71,7 +62,7 @@ export function useCompletedRuns(
         },
       )
     },
-    [mutate, realtime, search?.page],
+    [mutate, realtime],
   )
   useSockets({ event: 'runStatus', onMessage })
 
@@ -79,9 +70,9 @@ export function useCompletedRuns(
     () => ({
       data,
       mutate,
-      ...rest,
+      isLoading,
     }),
-    [data, mutate, rest],
+    [data, mutate, isLoading],
   )
 }
 

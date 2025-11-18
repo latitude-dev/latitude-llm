@@ -1,4 +1,3 @@
-import { parseJSON } from 'date-fns'
 import {
   and,
   asc,
@@ -70,19 +69,23 @@ export class SpansRepository extends Repository<Span> {
     return Result.ok<Span[]>(result as Span[])
   }
 
-  async listTracesByLog(documentLogUuid: string) {
-    const result = await this.db
-      .select({
-        traceId: spans.traceId,
-        startedAt: sql`max(${spans.startedAt})`.mapWith(parseJSON),
-      })
+  async getLastTraceByLogUuid(logUuid: string) {
+    return await this.db
+      .select({ traceId: spans.traceId })
       .from(spans)
-      .where(and(this.scopeFilter, eq(spans.documentLogUuid, documentLogUuid)))
-      .groupBy(spans.traceId)
-      .orderBy(desc(sql`max(${spans.startedAt})`))
-      .then((r) => r.map((r) => r.traceId))
+      .where(and(this.scopeFilter, eq(spans.documentLogUuid, logUuid)))
+      .orderBy(desc(spans.startedAt))
+      .limit(1)
+      .then((r) => r[0]?.traceId)
+  }
 
-    return result as string[]
+  async listTraceIdsByLogUuid(logUuid: string) {
+    return await this.db
+      .selectDistinctOn([spans.traceId], { traceId: spans.traceId })
+      .from(spans)
+      .where(and(this.scopeFilter, eq(spans.documentLogUuid, logUuid)))
+      .orderBy(spans.traceId, desc(spans.startedAt))
+      .then((r) => r.map((r) => r.traceId))
   }
 
   async approximateCount({

@@ -20,7 +20,6 @@ import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'
 import { useConversation } from '$/stores/conversations'
-import { useTrace } from '$/stores/traces'
 import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
 
 function useAnnotationData({
@@ -29,14 +28,9 @@ function useAnnotationData({
   documentLogUuid: string | undefined
 }) {
   // Traces are created asynchronously, so we poll the backend until we get the trace
-  const { data: traces } = useConversation(
+  const { data: trace } = useConversation(
     { conversationId: documentLogUuid },
     { refreshInterval: documentLogUuid ? 5_000 : undefined },
-  )
-  const traceId = traces[0]
-  const { data: trace } = useTrace(
-    { traceId: traceId },
-    { refreshInterval: traceId ? 5_000 : undefined },
   )
   const span = findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt)
   const isReady = !!span

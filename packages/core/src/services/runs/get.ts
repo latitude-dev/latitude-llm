@@ -28,10 +28,9 @@ export async function getRun({
   cache?: Cache
 }): PromisedResult<Run, Error> {
   const spansRepo = new SpansRepository(workspaceId)
-  const traces = await spansRepo.listTracesByLog(runUuid)
-  const trace = traces[0]
-  if (trace) {
-    const spans = await spansRepo.list({ traceId: trace }).then((r) => r.value)
+  const traceId = await spansRepo.getLastTraceByLogUuid(runUuid)
+  if (traceId) {
+    const spans = await spansRepo.list({ traceId }).then((r) => r.value)
     if (spans) {
       const promptSpan = spans.find((s) => s.type === 'prompt')
       if (promptSpan) {

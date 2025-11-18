@@ -21,16 +21,14 @@ export async function runEvaluationForExperimentJob(
 ) {
   const { conversationUuid, workspaceId, ...rest } = job.data
   const spansRepo = new SpansRepository(workspaceId)
-  const trace = await spansRepo
-    .listTracesByLog(conversationUuid)
-    .then((traces) => traces.at(-1))
-  if (!trace) {
+  const traceId = await spansRepo.getLastTraceByLogUuid(conversationUuid)
+  if (!traceId) {
     job.moveToWait(token)
     throw new WaitingError('Waiting for trace')
   }
 
   const spans = await spansRepo
-    .list({ traceId: trace })
+    .list({ traceId })
     .then((r) => r.unwrap().filter((span) => span.type === SpanType.Prompt))
   const span = spans[0]
   if (!span) {
