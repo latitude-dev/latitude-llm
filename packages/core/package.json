@@ -117,6 +117,7 @@
     "tc": "tsc --noEmit",
     "test": "pnpm run db:migrate:test && vitest run --pool=forks",
     "test:watch": "vitest",
+    "scripts:setup": "tsx scripts/setup.ts",
     "backgroundRun:stressTest": "tsx scripts/background-run/stress-test.ts"
   },
   "dependencies": {
