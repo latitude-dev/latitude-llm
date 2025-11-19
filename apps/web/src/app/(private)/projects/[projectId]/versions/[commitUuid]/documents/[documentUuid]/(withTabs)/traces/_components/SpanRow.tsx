@@ -159,15 +159,15 @@ export function SpanRow({
           </Text.H5>
         </TableCell>
         <TableCell>
+          <Text.H5 noWrap color={textColor}>
+            {formatDuration(span.duration)}
+          </Text.H5>
+        </TableCell>
+        <TableCell>
           <EvaluationsColumn
             evaluationResults={evaluationResults}
             isLoading={isEvaluationResultsLoading}
           />
-        </TableCell>
-        <TableCell>
-          <Text.H5 noWrap color={textColor}>
-            {formatDuration(span.duration)}
-          </Text.H5>
         </TableCell>
       </TableRow>
       {isExpanded && (
