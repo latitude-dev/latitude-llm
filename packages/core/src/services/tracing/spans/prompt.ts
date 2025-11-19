@@ -38,6 +38,7 @@ async function process(
     promptUuid: attributes['latitude.documentUuid'] as string,
     versionUuid: attributes['latitude.commitUuid'] as string,
     documentLogUuid: attributes['latitude.documentLogUuid'] as string,
+    projectId: attributes['latitude.projectId'] as number,
     source: attributes['latitude.source'] as LogSources,
   })
 }

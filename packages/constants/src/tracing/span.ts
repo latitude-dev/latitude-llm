@@ -141,6 +141,7 @@ export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
   template: string
   versionUuid: string
   source: LogSources
+  projectId: number
 }
 
 export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
