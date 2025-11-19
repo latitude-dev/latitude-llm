@@ -2,23 +2,96 @@
 
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { relativeTime } from '$/lib/relativeTime'
-import { Span, SpanType } from '@latitude-data/constants'
+import { EvaluationResultV2, Span, SpanType } from '@latitude-data/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { Fragment } from 'react'
+import { Fragment, useMemo } from 'react'
 import { Trace } from './Trace'
 import { useTraceSpanSelection } from './TraceSpanSelectionContext'
 import { useCommits } from '$/stores/commitsStore'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
 
 type SpanRowProps = {
   span: Span<SpanType.Prompt>
   toggleRow: ReturnType<typeof useSelectableRows>['toggleRow']
   isSelected: ReturnType<typeof useSelectableRows>['isSelected']
   isExpanded: boolean
+  evaluationResults?: EvaluationResultV2[]
+  isEvaluationResultsLoading?: boolean
+}
+
+function EvaluationsColumn({
+  evaluationResults = [],
+  isLoading,
+}: {
+  evaluationResults?: EvaluationResultV2[]
+  isLoading: boolean
+}) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+  const { data: evaluations } = useEvaluationsV2({
+    project,
+    commit,
+    document,
+  })
+
+  const passedResults = useMemo(
+    () => evaluationResults.filter((result) => !!result.hasPassed).length,
+    [evaluationResults],
+  )
+
+  const pendingResults = useMemo(
+    () =>
+      evaluations.filter(
+        (e) =>
+          getEvaluationMetricSpecification(e).supportsManualEvaluation &&
+          !evaluationResults.find((r) => r.evaluationUuid === e.uuid),
+      ).length,
+    [evaluationResults, evaluations],
+  )
+
+  if (isLoading) {
+    return <Skeleton className='w-full h-4' />
+  }
+
+  if (!evaluationResults.length && !pendingResults) {
+    return <Text.H5>-</Text.H5>
+  }
+
+  return (
+    <div className='flex justify-center items-center gap-2 shrink-0'>
+      {evaluationResults.length > 0 && (
+        <Badge
+          variant={
+            passedResults >= evaluationResults.length * 0.25
+              ? passedResults >= evaluationResults.length * 0.75
+                ? 'successMuted'
+                : 'warningMuted'
+              : 'destructiveMuted'
+          }
+        >
+          <Text.H6>
+            {passedResults}/{evaluationResults.length}
+          </Text.H6>
+        </Badge>
+      )}
+      {pendingResults > 0 && (
+        <Badge variant='muted'>
+          <Text.H6>{pendingResults} pending</Text.H6>
+        </Badge>
+      )}
+    </div>
+  )
 }
 
 export function SpanRow({
@@ -26,6 +99,8 @@ export function SpanRow({
   toggleRow,
   isSelected,
   isExpanded,
+  evaluationResults = [],
+  isEvaluationResultsLoading = false,
 }: SpanRowProps) {
   const { selectTraceSpan } = useTraceSpanSelection()
   const { data: commits } = useCommits()
@@ -78,6 +153,12 @@ export function SpanRow({
         </TableCell>
         <TableCell>
           <Text.H5 noWrap>{span.source ?? '-'}</Text.H5>
+        </TableCell>
+        <TableCell>
+          <EvaluationsColumn
+            evaluationResults={evaluationResults}
+            isLoading={isEvaluationResultsLoading}
+          />
         </TableCell>
         <TableCell>
           <Text.H5 noWrap>{formatDuration(span.duration)}</Text.H5>

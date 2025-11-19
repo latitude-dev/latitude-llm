@@ -23,6 +23,7 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { DownloadSpansButton } from './DownloadSpansButton'
 import { SaveSpansAsDatasetModal } from './SaveSpansAsDatasetModal'
 import { useSelectedSpans } from './SaveSpansAsDatasetModal/useSelectedSpans'
+import { useEvaluationResultsV2ByTraces } from '$/stores/evaluationResultsV2'
 
 export function DocumentTraces({ initialSpans }: { initialSpans: Span[] }) {
   const { selection } = useTraceSpanSelection()
@@ -50,6 +51,16 @@ export function DocumentTraces({ initialSpans }: { initialSpans: Span[] }) {
   const previewSpansState = useSelectedSpans({
     selectableState,
     spans,
+  })
+
+  const {
+    dataByTraceId: evaluationResultsByTraceId,
+    isLoading: isEvaluationResultsLoading,
+  } = useEvaluationResultsV2ByTraces({
+    project,
+    commit,
+    document,
+    traceIds: spans.map((span) => span.traceId),
   })
 
   return (
@@ -80,6 +91,7 @@ export function DocumentTraces({ initialSpans }: { initialSpans: Span[] }) {
               <TableHead>Time</TableHead>
               <TableHead>Version</TableHead>
               <TableHead>Source</TableHead>
+              <TableHead>Evaluations</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
@@ -92,6 +104,10 @@ export function DocumentTraces({ initialSpans }: { initialSpans: Span[] }) {
                 toggleRow={selectableState.toggleRow}
                 isSelected={selectableState.isSelected}
                 isExpanded={selection.traceId === span.traceId}
+                evaluationResults={
+                  evaluationResultsByTraceId[span.traceId] || []
+                }
+                isEvaluationResultsLoading={isEvaluationResultsLoading}
               />
             ))}
           </TableBody>

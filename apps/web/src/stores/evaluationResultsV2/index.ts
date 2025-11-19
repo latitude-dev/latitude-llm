@@ -185,3 +185,7 @@ export function useEvaluationResultsV2Count<
     ...rest,
   }
 }
+
+export { default as useEvaluationResultsV2ByDocumentLogs } from './byDocumentLogs'
+export { default as useEvaluationResultsV2BySpans } from './bySpans'
+export { default as useEvaluationResultsV2ByTraces } from './byTraces'
