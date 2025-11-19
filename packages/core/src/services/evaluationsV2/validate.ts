@@ -158,6 +158,14 @@ export async function validateEvaluationV2<
     )
   }
 
+  if (!metricSpecification.supportsLiveEvaluation && issue) {
+    return Result.error(
+      new BadRequestError(
+        `Cannot link an evaluation to an issue that doesn't support live evaluation`,
+      ),
+    )
+  }
+
   if (issue && issue.mergedAt) {
     return Result.error(
       new BadRequestError('Cannot use an issue that has been merged'),

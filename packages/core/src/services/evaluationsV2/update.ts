@@ -120,7 +120,7 @@ export async function updateEvaluationV2<
           evaluationVersions.commitId,
           evaluationVersions.evaluationUuid,
         ],
-        set: { ...settings, ...options, updatedAt: new Date() },
+        set: { ...settings, ...options, updatedAt: new Date(), issueId },
       })
       .returning()
       .then((r) => r[0]!)

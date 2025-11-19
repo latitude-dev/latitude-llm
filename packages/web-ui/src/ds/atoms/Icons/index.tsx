@@ -157,6 +157,7 @@ import {
   EyeOffIcon,
   ChevronsRightIcon,
   TriangleAlert,
+  WandSparkles,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -424,6 +425,7 @@ const Icons = {
   baseline: BaselineIcon,
   percent: PercentIcon,
   sigma: SigmaIcon,
+  wandSparkles: WandSparkles,
 }
 
 export type IconName = keyof typeof Icons

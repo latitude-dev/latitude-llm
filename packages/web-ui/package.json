@@ -204,6 +204,7 @@
     },
     "./molecules/StatusFlag": "./src/ds/molecules/StatusFlag/index.tsx",
     "./molecules/ClickToCopy": "./src/ds/molecules/ClickToCopy/index.tsx",
+    "./molecules/DoubleButton": "./src/ds/molecules/DoubleButton/index.tsx",
     "./molecules/DynamicBot": "./src/ds/molecules/DynamicBot/index.tsx",
     "./molecules/PaginatedSelect": "./src/ds/molecules/PaginatedSelect/index.tsx",
     "./molecules/MultipleInput": "./src/ds/molecules/MultipleInput/index.tsx",

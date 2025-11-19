@@ -1,4 +1,8 @@
-import { LlmEvaluationMetric, Providers } from '@latitude-data/constants'
+import {
+  HumanEvaluationMetric,
+  LlmEvaluationMetric,
+  Providers,
+} from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ZodError } from 'zod'
 import { eq } from 'drizzle-orm'
@@ -387,6 +391,48 @@ describe('validateEvaluationV2', () => {
     ).rejects.toThrowError(
       new BadRequestError(
         'Cannot link an evaluation to an issue with expected output',
+      ),
+    )
+  })
+
+  it('fails when has issue and live evaluation is not supported', async () => {
+    const { issue } = await factories.createIssue({
+      document: document,
+      workspace: workspace,
+    })
+
+    // Human rating does not support live evaluation but has no expected output
+    const humanRatingSettings = {
+      name: 'name',
+      description: 'description',
+      type: EvaluationType.Human,
+      metric: HumanEvaluationMetric.Rating,
+      configuration: {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'all',
+          parsingFormat: 'string',
+        },
+        minRating: 0,
+        maxRating: 100,
+        minThreshold: 0,
+        maxThreshold: 100,
+      },
+    } as EvaluationSettings<EvaluationType.Human, HumanEvaluationMetric.Rating>
+
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: humanRatingSettings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: issue,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError(
+        `Cannot link an evaluation to an issue that doesn't support live evaluation`,
       ),
     )
   })

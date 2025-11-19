@@ -1,4 +1,4 @@
-import { RefObject, useRef } from 'react'
+import { RefObject, useMemo, useRef } from 'react'
 import { usePanelDomRef } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
@@ -9,6 +9,9 @@ import { IssueDetails } from './IssueDetails'
 import { IssueItemActions } from '../IssueItemActions'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import useFeature from '$/stores/useFeature'
+import { IssueEvaluation } from './Evaluation'
+import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 
 export function IssuesDetailPanel({
   stickyRef,
@@ -24,6 +27,13 @@ export function IssuesDetailPanel({
   offset: StickyOffset
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const { isEnabled: itIs, isLoading: isLoadingEvaluationGeneratorEnabled } =
+    useFeature('evaluationGenerator')
+
+  const isEvaluationGeneratorEnabled = useMemo(
+    () => itIs && !isLoadingEvaluationGeneratorEnabled,
+    [itIs, isLoadingEvaluationGeneratorEnabled],
+  )
 
   const scrollableArea = usePanelDomRef({ selfRef: ref.current })
   const beacon = stickyRef?.current
@@ -59,7 +69,9 @@ export function IssuesDetailPanel({
         </div>
       </DetailsPanel.Header>
       <DetailsPanel.Body>
-        <div className='flex flex-col gap-y-6'>
+        <div className='flex flex-col gap-y-6 pt-1'>
+          {isEvaluationGeneratorEnabled && <IssueEvaluation issue={issue} />}
+          {isEvaluationGeneratorEnabled && <Separator variant='dashed' />}
           <IssueDetails issue={issue} />
           <TracesList issue={issue} />
         </div>
