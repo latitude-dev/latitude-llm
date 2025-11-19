@@ -93,7 +93,6 @@ export function DocumentTraces({ initialSpans }: { initialSpans: Span[] }) {
               <TableHead>Source</TableHead>
               <TableHead>Evaluations</TableHead>
               <TableHead>Duration</TableHead>
-              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

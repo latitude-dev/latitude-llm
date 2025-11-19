@@ -105,6 +105,8 @@ export function SpanRow({
   const { selectTraceSpan } = useTraceSpanSelection()
   const { data: commits } = useCommits()
   const commit = commits?.find((c) => c.uuid === span.commitUuid)
+  const hasError = span.status === 'error'
+  const textColor = hasError ? 'destructive' : 'foreground'
   if (!commit) return null
 
   return (
@@ -128,7 +130,7 @@ export function SpanRow({
           <Checkbox fullWidth={false} checked={isSelected(span.id)} />
         </TableCell>
         <TableCell>
-          <Text.H5 noWrap>
+          <Text.H5 noWrap color={textColor}>
             {relativeTime(
               span.startedAt instanceof Date
                 ? span.startedAt
@@ -146,13 +148,15 @@ export function SpanRow({
                 {commit.version ? `v${commit.version}` : 'Draft'}
               </Text.H6>
             </Badge>
-            <Text.H5 noWrap ellipsis>
+            <Text.H5 noWrap ellipsis color={textColor}>
               {commit.title}
             </Text.H5>
           </div>
         </TableCell>
         <TableCell>
-          <Text.H5 noWrap>{span.source ?? '-'}</Text.H5>
+          <Text.H5 noWrap color={textColor}>
+            {span.source ?? '-'}
+          </Text.H5>
         </TableCell>
         <TableCell>
           <EvaluationsColumn
@@ -161,20 +165,9 @@ export function SpanRow({
           />
         </TableCell>
         <TableCell>
-          <Text.H5 noWrap>{formatDuration(span.duration)}</Text.H5>
-        </TableCell>
-        <TableCell>
-          <Badge
-            variant={
-              span.status === 'ok'
-                ? 'successMuted'
-                : span.status === 'error'
-                  ? 'destructiveMuted'
-                  : 'muted'
-            }
-          >
-            {span.status === 'ok' ? 'Succeeded' : 'Failed'}
-          </Badge>
+          <Text.H5 noWrap color={textColor}>
+            {formatDuration(span.duration)}
+          </Text.H5>
         </TableCell>
       </TableRow>
       {isExpanded && (
