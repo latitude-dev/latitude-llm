@@ -11,18 +11,19 @@ export async function startRun({
   projectId: number
   runUuid: string
 }) {
-  const updating = await updateActiveRun({
+  const updateResult = await updateActiveRun({
     workspaceId,
     projectId,
     runUuid,
     startedAt: new Date(),
   })
-  if (!Result.isOk(updating)) return updating
+  if (!Result.isOk(updateResult)) return updateResult
+  const run = updateResult.unwrap()
 
   await publisher.publishLater({
     type: 'runStarted',
-    data: { runUuid, projectId, workspaceId },
+    data: { projectId, workspaceId, run },
   })
 
-  return updating
+  return updateResult
 }

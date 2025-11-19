@@ -104,7 +104,7 @@ export async function enqueueRun({
 
   await publisher.publishLater({
     type: 'runQueued',
-    data: { runUuid, projectId: project.id, workspaceId: workspace.id },
+    data: { projectId: project.id, workspaceId: workspace.id, run },
   })
 
   return Result.ok({ run })

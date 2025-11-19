@@ -6,10 +6,10 @@ export const notifyClientOfRunStatus = async ({
 }: {
   data: RunStatusEvent
 }) => {
-  const { workspaceId, projectId, runUuid } = event.data
+  const { workspaceId, projectId, run } = event.data
 
   await WebsocketClient.sendEvent('runStatus', {
     workspaceId,
-    data: { event: event.type, workspaceId, projectId, runUuid },
+    data: { event: event.type, workspaceId, projectId, run },
   })
 }

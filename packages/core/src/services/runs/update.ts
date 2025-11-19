@@ -15,18 +15,19 @@ export async function updateRun({
   runUuid: string
   caption: string
 }): PromisedResult<ActiveRun, Error> {
-  const updating = await updateActiveRun({
+  const updateResult = await updateActiveRun({
     workspaceId,
     projectId,
     runUuid,
     caption,
   })
-  if (!Result.isOk(updating)) return updating
+  if (!Result.isOk(updateResult)) return updateResult
+  const run = updateResult.unwrap()
 
   await publisher.publishLater({
     type: 'runProgress',
-    data: { runUuid, projectId, workspaceId },
+    data: { projectId, workspaceId, run },
   })
 
-  return updating
+  return updateResult
 }

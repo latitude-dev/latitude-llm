@@ -11,13 +11,18 @@ export async function endRun({
   projectId: number
   runUuid: string
 }) {
-  const done = await deleteActiveRun({ workspaceId, projectId, runUuid })
-  if (!Result.isOk(done)) return done
+  const deleteResult = await deleteActiveRun({
+    workspaceId,
+    projectId,
+    runUuid,
+  })
+  if (!Result.isOk(deleteResult)) return deleteResult
+  const run = deleteResult.unwrap()
 
   await publisher.publishLater({
     type: 'runEnded',
-    data: { runUuid, projectId, workspaceId },
+    data: { projectId, workspaceId, run },
   })
 
-  return done
+  return deleteResult
 }
