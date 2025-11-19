@@ -27,6 +27,7 @@ import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
 import { useState, useMemo } from 'react'
+import Image from 'next/image'
 
 export default function Integrations() {
   const { data: integrations, isLoading: isLoading } = useIntegrations()
@@ -147,10 +148,17 @@ const IntegrationsTable = () => {
               </TableCell>
               <TableCell>
                 <div className='flex gap-2 items-center'>
-                  {typeof values.icon === 'string' ? (
-                    <Icon name={values.icon} color='foregroundMuted' />
+                  {values.icon.type === 'image' ? (
+                    <Image
+                      src={values.icon.src}
+                      alt={values.icon.alt}
+                      width={16}
+                      height={16}
+                      className='rounded'
+                      unoptimized
+                    />
                   ) : (
-                    values.icon
+                    <Icon name={values.icon.name} color='foregroundMuted' />
                   )}
                   <Text.H5 color='foregroundMuted'>{values.label}</Text.H5>
                 </div>

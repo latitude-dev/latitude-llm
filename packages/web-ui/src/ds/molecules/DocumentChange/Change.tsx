@@ -26,7 +26,7 @@ export function DocumentChange({
   hoverBgColor = 'bg-secondary',
 }: {
   path: string
-  changeType: ModifiedDocumentType
+  changeType: ModifiedDocumentType | undefined
   oldPath?: string
   isSelected: boolean
   onClick?: () => void
@@ -34,9 +34,11 @@ export function DocumentChange({
   isDimmed?: boolean
   hoverBgColor?: string
 }) {
-  const icon = MODIFICATION_ICONS[changeType]
-  const color = MODIFICATION_COLORS[changeType]
-  const selectedBackground = MODIFICATION_BACKGROUNDS[changeType]
+  const icon = changeType ? MODIFICATION_ICONS[changeType] : undefined
+  const color = changeType ? MODIFICATION_COLORS[changeType] : 'foregroundMuted'
+  const selectedBackground = changeType
+    ? MODIFICATION_BACKGROUNDS[changeType]
+    : undefined
   const dimmedClass = isDimmed ? 'opacity-60' : undefined
 
   const [ref, isHovered] = useHover()
@@ -50,7 +52,7 @@ export function DocumentChange({
       onClick={onClick}
       className={cn('min-h-10 rounded-md', {
         [hoverBgColor]: !isSelected && (isHovered || isMenuOpen),
-        [selectedBackground]: isSelected,
+        [selectedBackground!]: !!selectedBackground && isSelected,
       })}
     >
       <div className='flex-grow overflow-hidden flex flex-row items-center justify-start gap-x-1'>
@@ -101,14 +103,16 @@ export function DocumentChange({
             options={options}
           />
         )}
-        <Icon
-          name={icon}
-          className={cn(
-            'flex-shrink-0 w-4 h-4',
-            colors.textColors[color],
-            dimmedClass,
-          )}
-        />
+        {icon && (
+          <Icon
+            name={icon}
+            className={cn(
+              'flex-shrink-0 w-4 h-4',
+              colors.textColors[color],
+              dimmedClass,
+            )}
+          />
+        )}
       </div>
     </Button>
   )

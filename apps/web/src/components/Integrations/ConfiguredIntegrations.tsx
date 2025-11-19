@@ -9,8 +9,8 @@ import {
   StatusFlag,
   StatusFlagState,
 } from '@latitude-data/web-ui/molecules/StatusFlag'
-import Image from 'next/image'
 import { useMemo } from 'react'
+import { IntegrationIcon } from './IntegrationIcon'
 
 export function ConfiguredIntegration({
   integration,
@@ -20,13 +20,10 @@ export function ConfiguredIntegration({
   return (
     <div className='flex flex-row px-4 py-3 gap-3 bg-secondary rounded-xl items-center min-h-[60px]'>
       <div className='relative'>
-        <Image
-          src={integration.configuration.metadata?.imageUrl ?? ''}
-          alt={integration.name}
+        <IntegrationIcon
+          integration={integration}
+          size={24}
           className='max-w-6 max-h-6'
-          width={24}
-          height={24}
-          unoptimized
         />
         <div className='absolute -top-1 -right-1'>
           <StatusFlag

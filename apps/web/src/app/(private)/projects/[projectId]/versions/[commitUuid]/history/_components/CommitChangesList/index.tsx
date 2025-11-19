@@ -1,6 +1,4 @@
-import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/DocumentChange'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { useCommitsChanges } from '$/stores/commitChanges'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
@@ -8,16 +6,29 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useDocumentDiff } from '$/stores/documentDiff'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
-import { useCurrentTheme } from '$/hooks/useCurrentTheme'
 import { useDocumentActions } from './documentActions'
 import useDocumentVersions from '$/stores/documentVersions'
 import { ReactNode, useMemo } from 'react'
-import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
-import { CleanTriggers } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/Sidebar/PublishDraftCommitModal/TriggerChangesList'
+import {
+  ChangedDocument,
+  ChangedEvaluation,
+  ChangedTrigger,
+  CommitChanges,
+  DocumentType,
+  ModifiedDocumentType,
+} from '@latitude-data/constants'
 
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
+import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/DocumentChange'
+import { IndentationLine } from '$/components/Sidebar/Files/IndentationBar'
+import { TriggerChangeItem } from '../../../_components/Sidebar/PublishDraftCommitModal/ChangesList/TriggerItem'
+import { EvaluationChangeItem } from '../../../_components/Sidebar/PublishDraftCommitModal/ChangesList/EvaluationItem'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { ListItem } from '../../../_components/Sidebar/PublishDraftCommitModal/ChangesList/ListItem'
 function useCanRevert({
   commit,
   change,
@@ -204,19 +215,188 @@ function Change({
   )
 }
 
-function ChangeList({
-  title,
-  children,
+function SubItemsWrapper({
+  label,
+  items,
+  firstIndex,
+  totalCount,
 }: {
-  title: string
-  children: ReactNode
+  label: string
+  items: ReactNode[]
+  firstIndex: number
+  totalCount: number
 }) {
   return (
-    <div className='flex flex-col gap-y-2'>
-      <div className='px-2'>
-        <Text.H4M>{title}</Text.H4M>
+    <div className='flex flex-col pl-2 w-full'>
+      <div className='flex flex-row items-end gap-2'>
+        <IndentationLine showCurve={false} height='h-4' />
+        <Text.H6 color='foregroundMuted'>{label}</Text.H6>
       </div>
-      {children}
+      {items.map((item, index) => (
+        <div key={index} className='flex flex-row w-full'>
+          <IndentationLine showCurve={firstIndex + index === totalCount - 1} />
+          {item}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function EvaluationChangeList({
+  projectId,
+  commitUuid,
+  document,
+  evaluationChanges,
+  triggerChangesCount,
+}: {
+  projectId: number
+  commitUuid: string
+  document: DocumentVersion
+  evaluationChanges: ChangedEvaluation[]
+  triggerChangesCount: number
+}) {
+  const { data: evaluations } = useEvaluationsV2({
+    project: { id: projectId },
+    commit: { uuid: commitUuid },
+    document,
+  })
+
+  if (!evaluationChanges.length) return null
+
+  return (
+    <SubItemsWrapper
+      label='Evaluations'
+      items={evaluationChanges.map((evaluation) => (
+        <EvaluationChangeItem
+          key={evaluation.evaluationUuid}
+          projectId={projectId}
+          commitUuid={commitUuid}
+          change={evaluation}
+          evaluations={evaluations}
+        />
+      ))}
+      firstIndex={0}
+      totalCount={evaluationChanges.length + triggerChangesCount}
+    />
+  )
+}
+
+function TriggerChangeList({
+  projectId,
+  commitUuid,
+  document,
+  triggerChanges,
+  evaluationChangesCount,
+}: {
+  projectId: number
+  commitUuid: string
+  document: DocumentVersion
+  triggerChanges: ChangedTrigger[]
+  evaluationChangesCount: number
+}) {
+  if (!triggerChanges.length) return null
+
+  return (
+    <SubItemsWrapper
+      label='Triggers'
+      items={triggerChanges.map((triggerChange) => (
+        <TriggerChangeItem
+          key={triggerChange.triggerUuid}
+          triggerChange={triggerChange}
+          projectId={projectId}
+          commitUuid={commitUuid}
+          documentUuid={document.documentUuid}
+        />
+      ))}
+      firstIndex={evaluationChangesCount}
+      totalCount={evaluationChangesCount + triggerChanges.length}
+    />
+  )
+}
+
+function DocumentChangeList({
+  document,
+  changes,
+  commit,
+  selectedDocumentUuid,
+  selectDocumentUuid,
+  currentDocumentUuid,
+  isCurrentDraft,
+}: {
+  document: DocumentVersion
+  changes: CommitChanges
+  commit: Commit
+  selectedDocumentUuid?: string
+  selectDocumentUuid: (documentUuid: string) => void
+  currentDocumentUuid?: string
+  isCurrentDraft: boolean
+}) {
+  const change = useMemo<ChangedDocument | undefined>(
+    () =>
+      changes.documents.all.find(
+        (cd) => cd.documentUuid === document.documentUuid,
+      ),
+    [changes.documents.all, document.documentUuid],
+  )
+
+  const changedEvaluations = useMemo(
+    () =>
+      changes.evaluations.all.filter(
+        (ce) => ce.documentUuid === document.documentUuid,
+      ),
+    [changes.evaluations.all, document.documentUuid],
+  )
+
+  const changedTriggers = useMemo(
+    () =>
+      changes.triggers.all.filter(
+        (ct) => ct.documentUuid === document.documentUuid,
+      ),
+    [changes.triggers.all, document.documentUuid],
+  )
+
+  return (
+    <div className='flex flex-col gap-1'>
+      {change ? (
+        <Change
+          commit={commit}
+          change={change}
+          isSelected={selectedDocumentUuid === change.documentUuid}
+          onSelect={() => selectDocumentUuid(change.documentUuid)}
+          isDimmed={
+            currentDocumentUuid !== undefined &&
+            currentDocumentUuid !== change.documentUuid
+          }
+          isCurrentDraft={isCurrentDraft}
+        />
+      ) : (
+        <ListItem
+          icon={document.documentType === DocumentType.Agent ? 'bot' : 'file'}
+          label={document.path}
+          changeType={undefined}
+          href={
+            ROUTES.projects
+              .detail({ id: commit.projectId })
+              .commits.detail({ uuid: commit.uuid })
+              .documents.detail({ uuid: document.documentUuid }).root
+          }
+        />
+      )}
+
+      <EvaluationChangeList
+        projectId={commit.projectId}
+        commitUuid={commit.uuid}
+        document={document}
+        evaluationChanges={changedEvaluations}
+        triggerChangesCount={changedTriggers.length}
+      />
+      <TriggerChangeList
+        projectId={commit.projectId}
+        commitUuid={commit.uuid}
+        document={document}
+        triggerChanges={changedTriggers}
+        evaluationChangesCount={changedEvaluations.length}
+      />
     </div>
   )
 }
@@ -232,9 +412,37 @@ export function CommitChangesList({
   selectDocumentUuid: (documentUuid: string) => void
   currentDocumentUuid?: string
 }) {
-  const { data: changes, isLoading } = useCommitsChanges({ commit })
+  const { data: changes, isLoading: isLoadingChanges } = useCommitsChanges({
+    commit,
+  })
   const { commit: currentCommit } = useCurrentCommit()
-  const theme = useCurrentTheme()
+  const { project } = useCurrentProject()
+
+  const { data: documents, isLoading: isLoadingDocuments } =
+    useDocumentVersions({
+      projectId: project.id,
+      commitUuid: commit?.uuid,
+    })
+
+  const isLoading = isLoadingChanges || isLoadingDocuments
+
+  const documentsList = useMemo(() => {
+    if (isLoading) return []
+    return documents.filter((d) => {
+      if (
+        changes.documents.all.some((cd) => cd.documentUuid === d.documentUuid)
+      )
+        return true
+      if (
+        changes.evaluations.all.some((ce) => ce.documentUuid === d.documentUuid)
+      )
+        return true
+      if (changes.triggers.all.some((ct) => ct.documentUuid === d.documentUuid))
+        return true
+
+      return false
+    })
+  }, [isLoading, changes, documents])
 
   if (!commit) {
     return (
@@ -246,68 +454,37 @@ export function CommitChangesList({
 
   return (
     <div className='w-full h-full overflow-hidden'>
-      <ul className='flex flex-col custom-scrollbar gap-1 pt-4 px-2'>
+      <ul className='flex flex-col custom-scrollbar gap-2 pt-4 px-2'>
         {isLoading ? (
-          <li>
-            <DocumentChangeSkeleton
-              width={62}
-              changeType={ModifiedDocumentType.Deleted}
-            />
-            <DocumentChangeSkeleton
-              width={87}
-              changeType={ModifiedDocumentType.Updated}
-            />
-            <DocumentChangeSkeleton
-              width={23}
-              changeType={ModifiedDocumentType.Created}
-            />
-            <DocumentChangeSkeleton
-              width={67}
-              changeType={ModifiedDocumentType.Updated}
-            />
-          </li>
+          Array.from({ length: 5 }).map((_, i) => (
+            <li key={i}>
+              <DocumentChangeSkeleton
+                width={62}
+                changeType={ModifiedDocumentType.Updated}
+              />
+            </li>
+          ))
+        ) : changes.anyChanges ? (
+          documentsList.map((d) => (
+            <li key={d.documentUuid}>
+              <DocumentChangeList
+                document={d}
+                changes={changes}
+                commit={commit}
+                selectedDocumentUuid={selectedDocumentUuid}
+                selectDocumentUuid={selectDocumentUuid}
+                currentDocumentUuid={currentDocumentUuid}
+                isCurrentDraft={
+                  !commit.mergedAt && commit.id === currentCommit.id
+                }
+              />
+            </li>
+          ))
         ) : (
-          <div className='space-y-8'>
-            {changes.anyChanges ? (
-              <>
-                {changes.triggers.clean.length > 0 ? (
-                  <ChangeList title='Trigger changes'>
-                    <CleanTriggers
-                      changes={changes.triggers.clean}
-                      theme={theme}
-                    />
-                  </ChangeList>
-                ) : null}
-                {changes.documents.clean.length > 0 ? (
-                  <ChangeList title='Prompt changes'>
-                    {changes.documents.clean.map((change) => (
-                      <Change
-                        key={change.documentUuid}
-                        commit={commit}
-                        change={change}
-                        isSelected={
-                          selectedDocumentUuid === change.documentUuid
-                        }
-                        onSelect={() => selectDocumentUuid(change.documentUuid)}
-                        isDimmed={
-                          currentDocumentUuid !== undefined &&
-                          currentDocumentUuid !== change.documentUuid
-                        }
-                        isCurrentDraft={
-                          !commit.mergedAt && commit.id === currentCommit.id
-                        }
-                      />
-                    ))}
-                  </ChangeList>
-                ) : null}
-              </>
-            ) : (
-              <div className='w-full h-full flex flex-col items-center justify-center p-4'>
-                <Text.H5 color='foregroundMuted'>
-                  This draft has no changes yet
-                </Text.H5>
-              </div>
-            )}
+          <div className='w-full h-full flex flex-col items-center justify-center p-4'>
+            <Text.H5 color='foregroundMuted'>
+              This draft has no changes yet
+            </Text.H5>
           </div>
         )}
       </ul>

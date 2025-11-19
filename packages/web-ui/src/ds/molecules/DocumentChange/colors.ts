@@ -30,3 +30,10 @@ export const MODIFICATION_BACKGROUNDS_HOVER: Record<
   [ModifiedDocumentType.UpdatedPath]: 'hover:bg-accent-foreground/5',
   [ModifiedDocumentType.Deleted]: 'hover:bg-destructive/10',
 }
+
+export const MODIFICATION_LABELS: Record<ModifiedDocumentType, string> = {
+  [ModifiedDocumentType.Created]: 'Created',
+  [ModifiedDocumentType.Updated]: 'Updated',
+  [ModifiedDocumentType.UpdatedPath]: 'Updated path',
+  [ModifiedDocumentType.Deleted]: 'Deleted',
+}

@@ -1,7 +1,5 @@
 import { ReactNode, useMemo } from 'react'
-import Image from 'next/image'
-import { usePipedreamApp } from '$/stores/pipedreamApp'
-import { Icon, IconProps } from '@latitude-data/web-ui/atoms/Icons'
+import { IconProps } from '@latitude-data/web-ui/atoms/Icons'
 import {
   DocumentTriggerType,
   EMAIL_TRIGGER_DOMAIN,
@@ -12,7 +10,6 @@ import {
   IntegrationTriggerConfiguration,
   ScheduledTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
-import { ICONS_BY_TRIGGER } from '$/components/TriggersManagement/NewTrigger/IntegrationsList'
 import { CLIENT_TIMEZONE, DEFAULT_TIMEZONE } from '$/lib/constants'
 import {
   IntegrationDto,
@@ -21,6 +18,9 @@ import {
 
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
+import { useTriggerIcon } from './useTriggerIcon'
+import { useTriggerLabel } from './useTriggerLabel'
+
 type ImageSize = 'small' | 'normal'
 const IMAGE_SIZES: Record<ImageSize, number> = {
   small: 16,
@@ -30,6 +30,7 @@ const ICON_SIZES: Record<ImageSize, IconProps['size']> = {
   small: 'normal' as const,
   normal: 'large' as const,
 }
+
 export function useTriggerInfo({
   trigger,
   document,
@@ -37,12 +38,13 @@ export function useTriggerInfo({
   imageSize = 'normal',
 }: {
   trigger: DocumentTrigger
-  document: DocumentVersion
+  document?: DocumentVersion
   integrations: IntegrationDto[]
   imageSize?: 'small' | 'normal'
 }) {
   const imageDimension = IMAGE_SIZES[imageSize]
   const iconDimension = ICON_SIZES[imageSize]
+
   const integration = useMemo(() => {
     if (!integrations) return undefined
     if (trigger.triggerType !== DocumentTriggerType.Integration) {
@@ -55,8 +57,18 @@ export function useTriggerInfo({
       | undefined
   }, [integrations, trigger])
 
-  const { data: app } = usePipedreamApp(integration?.configuration.appName, {
-    withConfig: false,
+  // Use the new useTriggerIcon hook for consistent icon rendering
+  const image = useTriggerIcon({
+    trigger,
+    integrations,
+    size: imageDimension,
+    iconSize: iconDimension,
+  })
+
+  // Use the new useTriggerLabel hook for consistent label rendering
+  const title = useTriggerLabel({
+    trigger,
+    integrations,
   })
 
   return useMemo<{
@@ -65,11 +77,6 @@ export function useTriggerInfo({
     description?: string
     integration?: PipedreamIntegration
   }>(() => {
-    const iconName = ICONS_BY_TRIGGER[trigger.triggerType] || 'chat'
-    const image = (
-      <Icon name={iconName} size={iconDimension} color='foregroundMuted' />
-    )
-
     if (trigger.triggerType === DocumentTriggerType.Scheduled) {
       const config = trigger.configuration as ScheduledTriggerConfiguration
       const humanCron = humanizeCronValue(config.cronExpression)
@@ -79,7 +86,7 @@ export function useTriggerInfo({
         triggerTimezone === CLIENT_TIMEZONE ? '' : `(${triggerTimezone}) `
 
       return {
-        title: 'Schedule',
+        title,
         description: prefix + humanCron,
         image,
       }
@@ -87,40 +94,27 @@ export function useTriggerInfo({
 
     if (trigger.triggerType === DocumentTriggerType.Email) {
       const config = trigger.configuration as EmailTriggerConfiguration
-      const emailAddress = `${document?.documentUuid}@${EMAIL_TRIGGER_DOMAIN}`
+      const emailAddress = document
+        ? `${document.documentUuid}@${EMAIL_TRIGGER_DOMAIN}`
+        : ''
       return {
-        title: 'Email',
+        title,
         description: config.name ?? emailAddress,
         image,
       }
     }
 
     if (trigger.triggerType === DocumentTriggerType.Integration) {
-      const config = trigger.configuration as IntegrationTriggerConfiguration
-      const component = app?.triggers.find((c) => c.key === config.componentId)
-
-      const integrationImage = integration?.configuration.metadata?.imageUrl ? (
-        <Image
-          src={integration.configuration.metadata.imageUrl}
-          alt={integration.name}
-          width={imageDimension}
-          height={imageDimension}
-          unoptimized
-        />
-      ) : (
-        image
-      )
-
       return {
-        title: component?.name ?? config.componentId,
+        title,
         integration,
-        image: integrationImage,
+        image,
       }
     }
 
     return {
-      title: 'Unknown Trigger Type',
+      title,
       image,
     }
-  }, [trigger, document, app, integration, imageDimension, iconDimension])
+  }, [trigger, document, title, integration, image])
 }

@@ -14,15 +14,15 @@ import { useCommitsChanges } from '$/stores/commitChanges'
 import { ChangedDocument, type CommitChanges } from '@latitude-data/constants'
 import { ChangesList } from './ChangesList'
 import { ChangeDiff } from './ChangeDiff'
-import { TriggerChangesList } from './TriggerChangesList'
 import { CommitStatus } from '@latitude-data/core/constants'
 import { MainDocumentChange } from './MainDocumentChange'
+import useDocumentVersions from '$/stores/documentVersions'
 
 function BlankSlateSelection() {
   return (
     <div className='flex flex-grow bg-secondary w-full rounded-md items-center justify-center'>
       <Text.H6 color='foregroundMuted'>
-        Select a change to view the diff
+        Select a prompt to view the diff
       </Text.H6>
     </div>
   )
@@ -47,6 +47,10 @@ function confirmDescription({
 
   if (changes.triggers.hasPending) {
     return `There are triggers that needs to be configured before publishing.`
+  }
+
+  if (changes.evaluations.hasIssues) {
+    return 'Some evaluations have issues. Please review the evaluations with issues before publishing.'
   }
 
   return 'Publishing a new version is reversible and doesnt remove previous versions! You can always go back to use previous version if needed.'
@@ -81,8 +85,12 @@ export default function PublishDraftCommitModal({
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [selectedChange, setSelectedChange] = useState<ChangedDocument>()
-  const { data: changes, isLoading } = useCommitsChanges({ commit })
+  const [selectedDocumentChange, setSelectedDocumentChange] = useState<
+    ChangedDocument | undefined
+  >(undefined)
+  const { data: changes, isLoading: isLoadingChanges } = useCommitsChanges({
+    commit,
+  })
   useEffect(() => {
     if (commit) {
       setTitle(commit.title || '')
@@ -90,9 +98,16 @@ export default function PublishDraftCommitModal({
     }
   }, [commit])
 
+  const { data: documents, isLoading: isLoadingDocuments } =
+    useDocumentVersions({
+      projectId: project.id,
+      commitUuid: commit?.uuid,
+    })
+
+  const isLoading = isLoadingChanges || isLoadingDocuments
+
   const anyChanges = changes.anyChanges
-  const somethingSelected = !!selectedChange
-  const hasErrors = (!isLoading && changes.hasIssues) || !anyChanges
+  const hasErrors = (!isLoadingChanges && changes.hasIssues) || !anyChanges
 
   return (
     <ConfirmModal
@@ -148,20 +163,23 @@ export default function PublishDraftCommitModal({
           )}
           <ChangesList
             anyChanges={anyChanges}
-            selected={selectedChange}
-            onSelect={setSelectedChange}
-            commit={commit}
+            selected={selectedDocumentChange}
+            onSelect={setSelectedDocumentChange}
             projectId={project.id}
+            commit={commit}
+            documents={documents}
             isLoading={isLoading}
             changes={changes}
             onClose={onClose}
           />
-          <TriggerChangesList isLoading={isLoading} changes={changes} />
         </div>
 
         <div className='pl-4 flex flex-col w-full'>
-          {!somethingSelected ? <BlankSlateSelection /> : null}
-          {selectedChange ? <ChangeDiff change={selectedChange} /> : null}
+          {selectedDocumentChange ? (
+            <ChangeDiff change={selectedDocumentChange} />
+          ) : (
+            <BlankSlateSelection />
+          )}
         </div>
       </div>
     </ConfirmModal>

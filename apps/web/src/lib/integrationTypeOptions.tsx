@@ -3,13 +3,15 @@ import {
   IntegrationType,
 } from '@latitude-data/constants'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import Image from 'next/image'
-import React from 'react'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+
+export type IntegrationIcon =
+  | { type: 'icon'; name: IconName }
+  | { type: 'image'; src: string; alt: string }
 
 export type IntegrationTypeOption = {
   label: string
-  icon: IconName | React.JSX.Element
+  icon: IntegrationIcon
 }
 
 export const INTEGRATION_TYPE_VALUES: Record<
@@ -18,19 +20,19 @@ export const INTEGRATION_TYPE_VALUES: Record<
 > = {
   [IntegrationType.ExternalMCP]: {
     label: 'Custom MCP Server',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [IntegrationType.HostedMCP]: {
     label: 'MCP Server hosted by Latitude',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [IntegrationType.Latitude]: {
     label: 'Latitude Built-in tools',
-    icon: 'logoMonochrome',
+    icon: { type: 'icon', name: 'logoMonochrome' },
   },
   [IntegrationType.Pipedream]: {
     label: 'Pipedream',
-    icon: 'unplug',
+    icon: { type: 'icon', name: 'unplug' },
   },
 }
 
@@ -40,323 +42,323 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
 > = {
   [HostedIntegrationType.Slack]: {
     label: 'Slack',
-    icon: 'slack',
+    icon: { type: 'icon', name: 'slack' },
   },
   [HostedIntegrationType.Stripe]: {
     label: 'Stripe',
-    icon: 'stripe',
+    icon: { type: 'icon', name: 'stripe' },
   },
   [HostedIntegrationType.Github]: {
     label: 'GitHub',
-    icon: 'github',
+    icon: { type: 'icon', name: 'github' },
   },
   [HostedIntegrationType.Notion]: {
     label: 'Notion',
-    icon: 'notion',
+    icon: { type: 'icon', name: 'notion' },
   },
   [HostedIntegrationType.Twitter]: {
     label: 'X (Twitter)',
-    icon: 'twitterX',
+    icon: { type: 'icon', name: 'twitterX' },
   },
   [HostedIntegrationType.Airtable]: {
     label: 'Airtable',
-    icon: 'airtable',
+    icon: { type: 'icon', name: 'airtable' },
   },
   [HostedIntegrationType.Linear]: {
     label: 'Linear',
-    icon: 'linear',
+    icon: { type: 'icon', name: 'linear' },
   },
   [HostedIntegrationType.YoutubeCaptions]: {
     label: 'YouTube Captions',
-    icon: 'youtube',
+    icon: { type: 'icon', name: 'youtube' },
   },
   [HostedIntegrationType.Reddit]: {
     label: 'Reddit',
-    icon: 'reddit',
+    icon: { type: 'icon', name: 'reddit' },
   },
   [HostedIntegrationType.Telegram]: {
     label: 'Telegram',
-    icon: 'telegram',
+    icon: { type: 'icon', name: 'telegram' },
   },
   [HostedIntegrationType.Tinybird]: {
     label: 'Tinybird',
-    icon: 'tinybird',
+    icon: { type: 'icon', name: 'tinybird' },
   },
   [HostedIntegrationType.Perplexity]: {
     label: 'Perplexity',
-    icon: 'perplexity',
+    icon: { type: 'icon', name: 'perplexity' },
   },
   [HostedIntegrationType.AwsKbRetrieval]: {
     label: 'AWS Knowledge Base Retrieval',
-    icon: 'awsBedrock',
+    icon: { type: 'icon', name: 'awsBedrock' },
   },
   [HostedIntegrationType.BraveSearch]: {
     label: 'Brave Search',
-    icon: 'brave',
+    icon: { type: 'icon', name: 'brave' },
   },
   [HostedIntegrationType.EverArt]: {
     label: 'EverArt',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Fetch]: {
     label: 'Fetch',
-    icon: 'globe',
+    icon: { type: 'icon', name: 'globe' },
   },
   [HostedIntegrationType.GitLab]: {
     label: 'GitLab',
-    icon: 'gitlab',
+    icon: { type: 'icon', name: 'gitlab' },
   },
   [HostedIntegrationType.GoogleMaps]: {
     label: 'Google Maps',
-    icon: 'mapPin',
+    icon: { type: 'icon', name: 'mapPin' },
   },
   [HostedIntegrationType.Sentry]: {
     label: 'Sentry',
-    icon: 'sentry',
+    icon: { type: 'icon', name: 'sentry' },
   },
   [HostedIntegrationType.Puppeteer]: {
     label: 'Puppeteer',
-    icon: 'appWindow',
+    icon: { type: 'icon', name: 'appWindow' },
   },
   [HostedIntegrationType.Time]: {
     label: 'Time',
-    icon: 'clock',
+    icon: { type: 'icon', name: 'clock' },
   },
   [HostedIntegrationType.browserbase]: {
     label: 'browserbase',
-    icon: 'browserbase',
+    icon: { type: 'icon', name: 'browserbase' },
   },
   [HostedIntegrationType.Neon]: {
     label: 'Neon',
-    icon: 'neon',
+    icon: { type: 'icon', name: 'neon' },
   },
   [HostedIntegrationType.Postgres]: {
     label: 'PostgreSQL',
-    icon: 'postgres',
+    icon: { type: 'icon', name: 'postgres' },
   },
   [HostedIntegrationType.Redis]: {
     label: 'Redis',
-    icon: 'redis',
+    icon: { type: 'icon', name: 'redis' },
   },
   [HostedIntegrationType.Jira]: {
     label: 'Jira',
-    icon: 'jira',
+    icon: { type: 'icon', name: 'jira' },
   },
   [HostedIntegrationType.Attio]: {
     label: 'Attio',
-    icon: 'attio',
+    icon: { type: 'icon', name: 'attio' },
   },
   [HostedIntegrationType.Ghost]: {
     label: 'Ghost',
-    icon: 'ghost',
+    icon: { type: 'icon', name: 'ghost' },
   },
   [HostedIntegrationType.Supabase]: {
     label: 'Supabase',
-    icon: 'supabase',
+    icon: { type: 'icon', name: 'supabase' },
   },
   [HostedIntegrationType.Figma]: {
     label: 'Figma',
-    icon: 'figma',
+    icon: { type: 'icon', name: 'figma' },
   },
   [HostedIntegrationType.Hyperbrowser]: {
     label: 'Hyperbrowser',
-    icon: 'hyperbrowser',
+    icon: { type: 'icon', name: 'hyperbrowser' },
   },
   [HostedIntegrationType.Audiense]: {
     label: 'Audiense',
-    icon: 'audiense',
+    icon: { type: 'icon', name: 'audiense' },
   },
   [HostedIntegrationType.Apify]: {
     label: 'Apify',
-    icon: 'apify',
+    icon: { type: 'icon', name: 'apify' },
   },
   [HostedIntegrationType.Exa]: {
     label: 'Exa',
-    icon: 'exa',
+    icon: { type: 'icon', name: 'exa' },
   },
   [HostedIntegrationType.YepCode]: {
     label: 'YepCode',
-    icon: 'yepcode',
+    icon: { type: 'icon', name: 'yepcode' },
   },
   [HostedIntegrationType.Monday]: {
     label: 'Monday',
-    icon: 'monday',
+    icon: { type: 'icon', name: 'monday' },
   },
   [HostedIntegrationType.AgentQL]: {
     label: 'AgentQL',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.AgentRPC]: {
     label: 'AgentRPC',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.AstraDB]: {
     label: 'AstraDB',
-    icon: 'database',
+    icon: { type: 'icon', name: 'database' },
   },
   [HostedIntegrationType.Bankless]: {
     label: 'Bankless',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Bicscan]: {
     label: 'Bicscan',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Chargebee]: {
     label: 'Chargebee',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Chronulus]: {
     label: 'Chronulus',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.CircleCI]: {
     label: 'CircleCI',
-    icon: 'mcp', // Assuming generic icon
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Codacy]: {
     label: 'Codacy',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.CodeLogic]: {
     label: 'CodeLogic',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Convex]: {
     label: 'Convex',
-    icon: 'database',
+    icon: { type: 'icon', name: 'database' },
   },
   [HostedIntegrationType.Dart]: {
     label: 'Dart',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.DevHubCMS]: {
     label: 'DevHub CMS',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Elasticsearch]: {
     label: 'Elasticsearch',
-    icon: 'database',
+    icon: { type: 'icon', name: 'database' },
   },
   [HostedIntegrationType.ESignatures]: {
     label: 'ESignatures',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Fewsats]: {
     label: 'Fewsats',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Firecrawl]: {
     label: 'Firecrawl',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Graphlit]: {
     label: 'Graphlit',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Heroku]: {
     label: 'Heroku',
-    icon: 'mcp', // Assuming generic icon
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.IntegrationAppHubspot]: {
     label: 'HubSpot (via Integration.app)',
-    icon: 'mcp', // Assuming generic icon, specific 'hubspot' might exist
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.LaraTranslate]: {
     label: 'LaraTranslate',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Logfire]: {
     label: 'Logfire',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Langfuse]: {
     label: 'Langfuse',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.LingoSupabase]: {
     label: 'Lingo (Supabase)',
-    icon: 'supabase', // Reusing existing icon
+    icon: { type: 'icon', name: 'supabase' },
   },
   [HostedIntegrationType.Make]: {
     label: 'Make',
-    icon: 'mcp', // Assuming generic icon
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Meilisearch]: {
     label: 'Meilisearch',
-    icon: 'search',
+    icon: { type: 'icon', name: 'search' },
   },
   [HostedIntegrationType.Momento]: {
     label: 'Momento',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Neo4jAura]: {
     label: 'Neo4j Aura',
-    icon: 'database',
+    icon: { type: 'icon', name: 'database' },
   },
   [HostedIntegrationType.Octagon]: {
     label: 'Octagon',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Paddle]: {
     label: 'Paddle',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.PayPal]: {
     label: 'PayPal',
-    icon: 'mcp', // Assuming generic icon
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Qdrant]: {
     label: 'Qdrant',
-    icon: 'database',
+    icon: { type: 'icon', name: 'database' },
   },
   [HostedIntegrationType.Raygun]: {
     label: 'Raygun',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Rember]: {
     label: 'Rember',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Riza]: {
     label: 'Riza',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Search1API]: {
     label: 'Search1 API',
-    icon: 'search',
+    icon: { type: 'icon', name: 'search' },
   },
   [HostedIntegrationType.Semgrep]: {
     label: 'Semgrep',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Tavily]: {
     label: 'Tavily',
-    icon: 'search',
+    icon: { type: 'icon', name: 'search' },
   },
   [HostedIntegrationType.Unstructured]: {
     label: 'Unstructured',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Vectorize]: {
     label: 'Vectorize',
-    icon: 'database',
+    icon: { type: 'icon', name: 'database' },
   },
   [HostedIntegrationType.Xero]: {
     label: 'Xero',
-    icon: 'mcp',
+    icon: { type: 'icon', name: 'mcp' },
   },
   [HostedIntegrationType.Readwise]: {
     label: 'Readwise',
-    icon: 'readwise',
+    icon: { type: 'icon', name: 'readwise' },
   },
   [HostedIntegrationType.Airbnb]: {
     label: 'Airbnb',
-    icon: 'airbnb',
+    icon: { type: 'icon', name: 'airbnb' },
   },
   [HostedIntegrationType.Mintlify]: {
     label: 'Mintlify',
-    icon: 'mintlify',
+    icon: { type: 'icon', name: 'mintlify' },
   },
 }
 
@@ -373,22 +375,16 @@ export function integrationOptions(
   }
 
   if (integration.type === IntegrationType.Pipedream) {
+    const imageUrl = integration.configuration.metadata?.imageUrl
+    const label =
+      integration.configuration.metadata?.displayName ??
+      integration.configuration.appName
+
     return {
-      label:
-        integration.configuration.metadata?.displayName ??
-        integration.configuration.appName,
-      icon: integration.configuration.metadata?.imageUrl ? (
-        <Image
-          src={integration.configuration.metadata?.imageUrl}
-          alt={integration.name}
-          className='w-4 h-4'
-          width={16}
-          height={16}
-          unoptimized
-        />
-      ) : (
-        'unplug'
-      ),
+      label,
+      icon: imageUrl
+        ? { type: 'image' as const, src: imageUrl, alt: label }
+        : { type: 'icon' as const, name: 'unplug' },
     }
   }
 

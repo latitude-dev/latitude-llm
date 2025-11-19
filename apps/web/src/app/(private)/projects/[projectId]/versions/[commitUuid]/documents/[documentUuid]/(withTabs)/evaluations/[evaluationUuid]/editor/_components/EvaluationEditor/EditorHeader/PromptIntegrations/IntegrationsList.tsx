@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import {
   TwoColumnSelect,
   TwoColumnSelectOption,
@@ -38,12 +39,27 @@ export function IntegrationsList({
   const options = useMemo<TwoColumnSelectOption<number>[]>(
     () =>
       integrations
-        .map((integration) => ({
-          value: integration.id,
-          name: integration.name,
-          isActive: activeIntegrations[integration.name] !== undefined,
-          ...integrationOptions(integration),
-        }))
+        .map((integration) => {
+          const { label, icon } = integrationOptions(integration)
+          return {
+            value: integration.id,
+            name: integration.name,
+            label,
+            icon:
+              icon.type === 'image' ? (
+                <img
+                  src={icon.src}
+                  alt={icon.alt}
+                  width={16}
+                  height={16}
+                  className='rounded'
+                />
+              ) : (
+                <Icon name={icon.name} color='foregroundMuted' />
+              ),
+            isActive: activeIntegrations[integration.name] !== undefined,
+          }
+        })
         .sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0)),
     [integrations, activeIntegrations],
   )

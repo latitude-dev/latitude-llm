@@ -16,7 +16,6 @@ import {
 import useIntegrations from '$/stores/integrations'
 import { ConnectPipedreamModal } from './ConnectPipedreamModal'
 import {
-  integrationOptions,
   getIntegrationData,
   type IntegrationData,
 } from '../../toolsHelpers/utils'
@@ -24,6 +23,7 @@ import { useSidebarStore } from '../../hooks/useSidebarStore'
 import { ConnectToolContext } from './ConnectToolContext'
 import { ItemPresenter } from './ItemPresenter'
 import { App } from '@latitude-data/core/constants'
+import { integrationOptions } from '$/lib/integrationTypeOptions'
 
 export type ToolType =
   | IntegrationType
@@ -125,6 +125,7 @@ export function ConnectToolsModal({
           integration.type === IntegrationType.Latitude
             ? labelIcon.label
             : integration.name
+
         return {
           type: 'item' as const,
           value: String(integration.id),
