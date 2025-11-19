@@ -52,7 +52,7 @@ export async function setupSchedules() {
     { opts: { attempts: 1 } },
   )
 
-  // Every day at 2 AM - Removes logs older than 30 days from free plan accounts
+  // Every day at 1 AM - Migrates spans project_id from commits for the last week
   await maintenanceQueue.upsertJobScheduler(
     'scheduleMigrateSpansJobs',
     { pattern: '0 0 1 * * *' },
