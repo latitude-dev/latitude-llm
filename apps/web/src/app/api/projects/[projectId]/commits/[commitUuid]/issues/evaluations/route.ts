@@ -36,7 +36,6 @@ export const GET = errorHandler(
           .get('documentUuids')
           ?.split(',')
           .map((uuid) => uuid.trim()) || []
-      console.log(documentUuids)
 
       const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
       let evaluations: EvaluationV2[] = []
