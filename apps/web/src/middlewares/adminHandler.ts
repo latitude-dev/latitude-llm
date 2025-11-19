@@ -1,8 +1,9 @@
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { notFound } from 'next/navigation'
 import { NextRequest } from 'next/server'
+import { RouteHandler } from './types'
 
-export function adminHandler(handler: any) {
+export function adminHandler<T>(handler: RouteHandler<T>) {
   return async (
     req: NextRequest,
     { params, ...rest }: { params?: Promise<Record<string, string>> } = {},
