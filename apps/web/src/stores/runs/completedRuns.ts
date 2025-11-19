@@ -31,15 +31,15 @@ export function useCompletedRuns(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher<CompletedRun[]>(
+  const fetcher = useFetcher<{ items: CompletedRun[]; next: string | null }>(
     ROUTES.api.projects.detail(project.id).runs.completed.detail(search),
   )
 
   const {
-    data = [],
+    data = { items: [], next: null },
     mutate,
     isLoading,
-  } = useSWR<CompletedRun[]>(
+  } = useSWR<{ items: CompletedRun[]; next: string | null }>(
     ['completedRuns', project.id, search?.sourceGroup, search?.limit],
     fetcher,
     opts,
@@ -55,7 +55,8 @@ export function useCompletedRuns(
           if (!prev) return prev
           if (args.event !== 'runEnded') return prev
           const run = args.run as CompletedRun
-          return [run, ...prev]
+
+          return { ...prev, items: [run, ...prev.items] }
         },
         {
           revalidate: false,
@@ -79,10 +80,12 @@ export function useCompletedRuns(
 export function useCompletedRunsCount(
   {
     project,
+    sourceGroup,
     realtime = true,
     disable = false,
   }: {
     project: Pick<Project, 'id'>
+    sourceGroup: RunSourceGroup
     realtime?: boolean
     disable?: boolean
   },
@@ -95,6 +98,7 @@ export function useCompletedRunsCount(
     {
       serializer: (data) => (data as any)?.countBySource,
       fallback: null,
+      searchParams: { sourceGroup },
     },
   )
 
