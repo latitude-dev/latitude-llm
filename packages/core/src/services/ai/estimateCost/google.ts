@@ -7,6 +7,15 @@ import { createModelSpec } from './helpers'
 export const GOOGLE_MODELS = createModelSpec({
   defaultModel: 'gemini-2.5-flash',
   models: {
+    // --- Gemini 3 Models ---
+    'gemini-3-pro-preview': {
+      cost: [
+        { input: 2.0, output: 12.0 },
+        { input: 4.0, output: 18.0, tokensRangeStart: 200_000 },
+      ],
+    },
+
+    // --- Gemini 2.5 Models ---
     'gemini-2.5-pro': {
       // Note: Pricing includes thinking tokens
       cost: [
@@ -23,7 +32,7 @@ export const GOOGLE_MODELS = createModelSpec({
     },
 
     // --- Gemini 2.0 Models ---
-    'gemini-2.0-flash': { cost: { input: 0.1, output: 0.4 } },
+    'gemini-2.0-flash': { cost: { input: 0.15, output: 0.6 } },
     'gemini-2.0-flash-lite': { cost: { input: 0.075, output: 0.3 } },
 
     // --- Other Models ---
