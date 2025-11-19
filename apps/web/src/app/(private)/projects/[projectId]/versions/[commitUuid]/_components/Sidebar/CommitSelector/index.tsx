@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
+import { TabSelector } from '$/components/TabSelector'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   SelectContent,

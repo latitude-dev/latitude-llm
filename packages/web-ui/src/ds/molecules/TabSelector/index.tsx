@@ -26,6 +26,12 @@ export type TabSelectorOptionOrGroup<T extends string = string> =
   | TabSelectorOption<T>
   | TabOptionGroup<T>
 
+type LinkWrapper = (props: {
+  children: ReactNode
+  href: string
+  className?: string
+}) => ReactNode
+
 type CommonItemProps<T extends string> = {
   showSelectedOnSubroutes: boolean
   selectedOptionButtonRef: RefObject<HTMLElement | null>
@@ -33,6 +39,7 @@ type CommonItemProps<T extends string> = {
   handleSelect: (option: TabSelectorOption<T>) => () => void
   fullWidth?: boolean
   disabled?: boolean
+  linkWrapper: LinkWrapper | undefined
 }
 
 function LabelText({
@@ -70,12 +77,17 @@ function ItemOption<T extends string>({
   handleSelect,
   fullWidth,
   disabled,
+  linkWrapper,
 }: CommonItemProps<T> & {
   option: TabSelectorOption<T>
 }) {
   const isSelected = checkSelected(option, selected, showSelectedOnSubroutes)
+  const Wrapper = option.route && linkWrapper ? linkWrapper : 'div'
   return (
-    <div className={cn('flex', fullWidth && 'flex-1')}>
+    <Wrapper
+      className={cn('flex', fullWidth && 'flex-1')}
+      href={option.route as string} // option.route is always defined if linkWrapper is defined. Otherwise it will just be undefined, which is fine
+    >
       <Button
         ref={
           isSelected
@@ -95,7 +107,7 @@ function ItemOption<T extends string>({
       >
         <LabelText isSelected={isSelected}>{option.label}</LabelText>
       </Button>
-    </div>
+    </Wrapper>
   )
 }
 
@@ -106,6 +118,7 @@ function ItemOptionGroup<T extends string>({
   selectedOptionButtonRef,
   showSelectedOnSubroutes,
   fullWidth,
+  linkWrapper,
   disabled,
 }: CommonItemProps<T> & {
   group: TabOptionGroup<T>
@@ -121,6 +134,7 @@ function ItemOptionGroup<T extends string>({
         showSelectedOnSubroutes={showSelectedOnSubroutes}
         fullWidth={fullWidth}
         disabled={disabled}
+        linkWrapper={linkWrapper}
       />
     )
   }
@@ -169,6 +183,15 @@ function ItemOptionGroup<T extends string>({
   )
 }
 
+export type TabSelectorProps<T extends string> = {
+  options: TabSelectorOptionOrGroup<T>[]
+  selected?: T | null
+  onSelect?: (value: T) => void
+  showSelectedOnSubroutes?: boolean
+  fullWidth?: boolean
+  disabled?: boolean
+  linkWrapper: LinkWrapper | undefined
+}
 export function TabSelector<T extends string>({
   options,
   selected: originalSelected,
@@ -176,14 +199,8 @@ export function TabSelector<T extends string>({
   fullWidth = false,
   disabled,
   onSelect,
-}: {
-  options: TabSelectorOptionOrGroup<T>[]
-  selected?: T | null
-  onSelect?: (value: T) => void
-  showSelectedOnSubroutes?: boolean
-  fullWidth?: boolean
-  disabled?: boolean
-}) {
+  linkWrapper,
+}: TabSelectorProps<T>) {
   const selectedOptionButtonRef = useRef<HTMLElement>(null)
   const selectedOptionBackgroundRef = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useState(originalSelected)
@@ -266,6 +283,7 @@ export function TabSelector<T extends string>({
                   handleSelect={handleSelect}
                   fullWidth={fullWidth}
                   disabled={disabled}
+                  linkWrapper={linkWrapper}
                 />
               ) : (
                 <ItemOption
@@ -276,6 +294,7 @@ export function TabSelector<T extends string>({
                   handleSelect={handleSelect}
                   fullWidth={fullWidth}
                   disabled={disabled || option.disabled}
+                  linkWrapper={linkWrapper}
                 />
               )}
             </Fragment>

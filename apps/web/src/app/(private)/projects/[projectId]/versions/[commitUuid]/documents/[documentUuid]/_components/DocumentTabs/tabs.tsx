@@ -1,11 +1,8 @@
 'use client'
 
-import { useNavigate } from '$/hooks/useNavigate'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
-import {
-  TabSelector,
-  TabSelectorOption,
-} from '@latitude-data/web-ui/molecules/TabSelector'
+import { TabSelector } from '$/components/TabSelector'
+import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
 import { useSelectedLayoutSegment, useSearchParams } from 'next/navigation'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import useFeature from '$/stores/useFeature'
@@ -28,7 +25,6 @@ export const DocumentTabSelector = memo(
     commitUuid: string
     onPreviewToggle?: (showPreview: boolean) => void
   }) => {
-    const router = useNavigate()
     const selectedSegment = useSelectedLayoutSegment() as DocumentRoutes | null
     const searchParams = useSearchParams()
     const { isEnabled: isTracesEnabled, isLoading } = useFeature('traces')
@@ -64,13 +60,15 @@ export const DocumentTabSelector = memo(
       }
     }, [selectedSegment, searchParams, controlledSelectedTab])
 
-    // --- Tabs definition ---
-    const data = useMemo(() => {
-      const baseRoute = ROUTES.projects
+    const baseRoute = useMemo(() => {
+      return ROUTES.projects
         .detail({ id: Number(projectId) })
         .commits.detail({ uuid: commitUuid })
         .documents.detail({ uuid: documentUuid })
+    }, [projectId, commitUuid, documentUuid])
 
+    // --- Tabs definition ---
+    const data = useMemo(() => {
       const tabs = {
         [DocumentRoutes.editor]: {
           label: 'Editor',
@@ -117,41 +115,39 @@ export const DocumentTabSelector = memo(
               : [tabs[DocumentRoutes.logs]]),
         ],
       }
-    }, [projectId, commitUuid, documentUuid, isTracesEnabled, isLoading])
+    }, [baseRoute, isTracesEnabled, isLoading])
+
+    const setPreviewState = useCallback(
+      (showPreview: boolean) => {
+        onPreviewToggle?.(showPreview)
+
+        // If true, add "showPreview=true" to the URL
+        // If false, remove "showPreview" from the URL params
+        const url = new URL(window.location.href)
+
+        // If URL is not baseRoute.root (is not currently in editor), there is no need to update the URL
+        if (url.pathname !== baseRoute.root) return
+
+        if (showPreview) {
+          url.searchParams.set('showPreview', 'true')
+        } else {
+          url.searchParams.delete('showPreview')
+        }
+        const newUrl = `${url.pathname}?${url.searchParams.toString()}`
+        window.history.replaceState({}, '', newUrl)
+      },
+      [onPreviewToggle, baseRoute.root],
+    )
 
     // --- Click handler ---
     const onClickTab = useCallback(
       (value: TabValue) => {
-        if (value === selectedTab) return
-
-        const tab = data.tabs[value]
-        const route = tab.route
-        const goingBackToEditor = value === DocumentRoutes.editor
-
-        if (value === 'preview') {
-          // Switch to preview mode (either via navigation or toggle)
-          if (selectedTab !== DocumentRoutes.editor) {
-            const editorRoute = data.tabs[DocumentRoutes.editor].route
-            router.push(`${editorRoute}?showPreview=true`)
-          } else {
-            onPreviewToggle?.(true)
-          }
-          setSelectedTab(value)
-          return
-        }
-
-        if (goingBackToEditor && selectedTab === 'preview') {
-          // Going back from preview to editor
-          onPreviewToggle?.(false)
-          setSelectedTab(value)
-          return
-        }
-
-        // Other tabs (evaluations, experiments, logs)
         setSelectedTab(value)
-        if (route) router.push(route)
+
+        if (value === 'preview') setPreviewState(true)
+        if (value === DocumentRoutes.editor) setPreviewState(false)
       },
-      [data, router, onPreviewToggle, selectedTab, setSelectedTab],
+      [setPreviewState, setSelectedTab],
     )
 
     return (
