@@ -29,7 +29,6 @@ import { Result } from '../lib/Result'
 import { commits } from '../schema/models/commits'
 import { spans } from '../schema/models/spans'
 import Repository from './repositoryV2'
-import { CommitsRepository } from './commitsRepository'
 
 const tt = getTableColumns(spans)
 
@@ -86,171 +85,6 @@ export class SpansRepository extends Repository<Span> {
       .where(and(this.scopeFilter, eq(spans.documentLogUuid, logUuid)))
       .orderBy(spans.traceId, desc(spans.startedAt))
       .then((r) => r.map((r) => r.traceId))
-  }
-
-  async approximateCount({
-    documentUuid,
-    commitUuid,
-    type,
-    commitUuids,
-    experimentUuids,
-    createdAt,
-  }: {
-    documentUuid: string
-    commitUuid?: string
-    type?: SpanType
-    commitUuids?: string[]
-    experimentUuids?: string[]
-    createdAt?: { from?: Date; to?: Date }
-  }) {
-    // Use a sampling approach for large tables to get an approximate count
-    // This queries a percentage of the table using TABLESAMPLE
-    const conditions = [
-      this.scopeFilter,
-      eq(spans.documentUuid, documentUuid),
-      commitUuid ? eq(spans.commitUuid, commitUuid) : undefined,
-      type ? eq(spans.type, type) : undefined,
-    ].filter(Boolean) as SQL<unknown>[]
-
-    // Add date range filter if provided
-    if (createdAt?.from && createdAt?.to) {
-      conditions.push(between(spans.startedAt, createdAt.from, createdAt.to))
-    } else if (createdAt?.from) {
-      conditions.push(gte(spans.startedAt, createdAt.from))
-    } else if (createdAt?.to) {
-      conditions.push(lte(spans.startedAt, createdAt.to))
-    }
-
-    // Add commit filter if provided - filter by commit UUIDs directly
-    if (commitUuids && commitUuids.length > 0) {
-      conditions.push(inArray(spans.commitUuid, commitUuids))
-    }
-
-    // Add experiment filter if provided - filter by experiment UUIDs directly
-    if (experimentUuids && experimentUuids.length > 0) {
-      conditions.push(inArray(spans.experimentUuid, experimentUuids))
-    }
-
-    const whereClause = and(...conditions)!
-
-    try {
-      // First, get the total table size to determine if we should sample
-      const tableStatsResult = await this.db.execute(sql`
-        SELECT reltuples::bigint AS estimate
-        FROM pg_class
-        WHERE relname = 'spans'
-      `)
-
-      interface TableStatsRow {
-        estimate: string
-      }
-
-      const totalRows = parseInt(
-        (tableStatsResult.rows[0] as unknown as TableStatsRow).estimate,
-        10,
-      )
-
-      // For smaller tables (< 100k rows), do an actual count
-      // For larger tables, use sampling
-      if (totalRows < 100_000) {
-        const countResult = await this.db
-          .select({ count: count() })
-          .from(spans)
-          .where(whereClause)
-          .then((r) => r[0])
-
-        return Result.ok(countResult?.count ?? 0)
-      }
-
-      // For large tables, use a 10% sample and extrapolate
-      const sampleResult = await this.db.execute(sql`
-        SELECT COUNT(*) * 10 as estimated_count
-        FROM ${spans} TABLESAMPLE BERNOULLI (10)
-        WHERE ${whereClause}
-      `)
-
-      interface SampleRow {
-        estimated_count: string
-      }
-
-      const estimatedCount = parseInt(
-        (sampleResult.rows[0] as unknown as SampleRow).estimated_count,
-        10,
-      )
-
-      return Result.ok(estimatedCount)
-    } catch (_) {
-      return Result.ok(null)
-    }
-  }
-
-  async approximateCountByProject(projectId: number) {
-    // Use a sampling approach for large tables to get an approximate count
-    // This queries a percentage of the table using TABLESAMPLE
-    const commitsRepo = new CommitsRepository(this.workspaceId)
-    const commits = await commitsRepo
-      .filterByProject(projectId)
-      .then((r) => r.value)
-
-    if (!commits.length) {
-      return Result.ok(0)
-    }
-
-    const commitUuids = commits.map((c) => c.uuid)
-    const whereClause = and(
-      this.scopeFilter,
-      inArray(spans.commitUuid, commitUuids),
-    )
-
-    try {
-      // First, get the total table size to determine if we should sample
-      const tableStatsResult = await this.db.execute(sql`
-        SELECT reltuples::bigint AS estimate
-        FROM pg_class
-        WHERE relname = 'spans'
-      `)
-
-      interface TableStatsRow {
-        estimate: string
-      }
-
-      const totalRows = parseInt(
-        (tableStatsResult.rows[0] as unknown as TableStatsRow).estimate,
-        10,
-      )
-
-      // For smaller tables (< 100k rows), do an actual count
-      // For larger tables, use sampling
-      if (totalRows < 100_000) {
-        const countResult = await this.db
-          .select({ count: count() })
-          .from(spans)
-          .where(whereClause)
-          .then((r) => r[0])
-
-        return Result.ok(countResult?.count ?? 0)
-      }
-
-      // For large tables, use a 10% sample and extrapolate
-      const sampleResult = await this.db.execute(sql`
-        SELECT COUNT(*) * 10 as estimated_count
-        FROM ${spans} TABLESAMPLE BERNOULLI (10)
-        WHERE ${whereClause}
-      `)
-
-      interface SampleRow {
-        estimated_count: string
-      }
-
-      const estimatedCount = parseInt(
-        (sampleResult.rows[0] as unknown as SampleRow).estimated_count,
-        10,
-      )
-
-      return Result.ok(estimatedCount)
-    } catch (_) {
-      return Result.ok(null)
-    }
   }
 
   async findByDocumentLogUuids(documentLogUuids: string[]) {
@@ -436,6 +270,43 @@ export class SpansRepository extends Repository<Span> {
       .orderBy(asc(spans.startedAt), asc(spans.id))
 
     return Result.ok<Span[]>(result as Span[])
+  }
+
+  async countByProjectAndSource({
+    projectId,
+    source,
+  }: {
+    projectId: number
+    source?: LogSources[]
+  }) {
+    // Determine which sources to count
+    const sourcesToCount = source ?? Object.values(LogSources)
+    const countsBySource: Record<LogSources, number> = {} as Record<
+      LogSources,
+      number
+    >
+
+    for (const source of sourcesToCount) {
+      const whereClause = and(
+        this.scopeFilter,
+        eq(spans.projectId, projectId),
+        eq(spans.source, source),
+      )
+
+      try {
+        const result = await this.db
+          .select({ count: count() })
+          .from(spans)
+          .where(whereClause)
+          .then((r) => r[0])
+
+        countsBySource[source] = result?.count ?? 0
+      } catch (_) {
+        countsBySource[source] = 0
+      }
+    }
+
+    return Result.ok<Record<LogSources, number>>(countsBySource)
   }
 }
 

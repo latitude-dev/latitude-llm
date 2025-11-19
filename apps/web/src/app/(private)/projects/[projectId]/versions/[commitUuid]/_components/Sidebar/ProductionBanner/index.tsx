@@ -23,7 +23,7 @@ export default function ProductionBanner({ project }: { project: Project }) {
 
   const isLoadingRuns = isLoadingActiveRuns || isLoadingCompletedRuns
   const hasProductionRuns = useMemo(
-    () => activeRuns.length > 0 || completedRuns.length > 0,
+    () => activeRuns.length > 0 || completedRuns.items.length > 0,
     [activeRuns, completedRuns],
   )
 

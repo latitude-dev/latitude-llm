@@ -232,7 +232,12 @@ export function RunsPage({
   }, [debouncedSourceGroup, resetCompletedPagination])
 
   const { data: completedCountBySource, isLoading: isCompletedCountLoading } =
-    useCompletedRunsCount({ project, realtime, disable: !!limitedView })
+    useCompletedRunsCount({
+      project,
+      realtime,
+      sourceGroup: debouncedSourceGroup,
+      disable: !!limitedView,
+    })
 
   const completedTotalCount = useMemo(
     () => sumCounts(completedCountBySource, debouncedSourceGroup),

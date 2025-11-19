@@ -2,7 +2,6 @@
 
 import {
   findProjectCached,
-  getProjectStatsCached,
   hasDocumentLogsByProjectCached,
 } from '$/app/(private)/_data-access'
 import { AddPromptTextarea } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/overview/_components/Overview/AddPromptTextarea'
@@ -14,8 +13,6 @@ import ProjectLayout from '../_components/ProjectLayout'
 import { DocumentBlankSlateLayout } from '../documents/_components/DocumentBlankSlateLayout'
 import Overview from '../overview/_components/Overview'
 import { AddFileButton } from '../overview/_components/Overview/AddFileButton'
-import { LIMITED_VIEW_THRESHOLD } from '@latitude-data/core/constants'
-import { SpansRepository } from '@latitude-data/core/repositories'
 
 export async function generateMetadata() {
   return buildMetatags({
@@ -54,34 +51,12 @@ export default async function AnalyticsPage({
     )
   }
 
-  let limitedView = undefined
-  const spansRepo = new SpansRepository(session.workspace.id)
-  const approximateCount = await spansRepo
-    .approximateCountByProject(projectId)
-    .then((r) => r.value)
-  if (approximateCount && approximateCount > LIMITED_VIEW_THRESHOLD) {
-    limitedView = await getProjectStatsCached(projectId)
-    if (!limitedView) {
-      limitedView = {
-        totalDocuments: 0,
-        totalRuns: approximateCount,
-        totalTokens: 0,
-        runsPerModel: {},
-        costPerModel: {},
-        rollingDocumentLogs: [],
-        totalEvaluations: 0,
-        totalEvaluationResults: 0,
-        costPerEvaluation: {},
-      }
-    }
-  }
-
   return (
     <ProjectLayout projectId={projectId} commitUuid={commitUuid}>
       <div className='min-h-full w-full p-6'>
         <TableWithHeader
           title='Analytics'
-          table={<Overview project={project} limitedView={limitedView} />}
+          table={<Overview project={project} />}
         />
       </div>
     </ProjectLayout>
