@@ -221,7 +221,10 @@ export async function getExperimentJobPayload(
       commit,
       document,
       evaluations,
-      rows: new Array(parametersSource.count).fill(undefined),
+      rows: new Array(parametersSource.count).fill({
+        uuid: generateUUIDIdentifier(),
+        parameters: {},
+      } satisfies ExperimentRow),
     })
   }
 
