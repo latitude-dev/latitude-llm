@@ -1,4 +1,4 @@
-import { Providers } from '@latitude-data/constants'
+import { LlmEvaluationMetric, Providers } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ZodError } from 'zod'
 import { eq } from 'drizzle-orm'
@@ -27,6 +27,10 @@ describe('validateEvaluationV2', () => {
     RuleEvaluationMetric.ExactMatch
   >
   let options: EvaluationOptions
+  let settingsLLMasJudgeBinary: EvaluationSettings<
+    EvaluationType.Llm,
+    LlmEvaluationMetric.Binary
+  >
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -72,6 +76,28 @@ describe('validateEvaluationV2', () => {
       evaluateLiveLogs: false,
       enableSuggestions: true,
       autoApplySuggestions: true,
+    }
+
+    settingsLLMasJudgeBinary = {
+      name: 'name',
+      description: 'description',
+      type: EvaluationType.Llm,
+      metric: LlmEvaluationMetric.Binary,
+      configuration: {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
+        provider: 'openai',
+        model: 'gpt-4o',
+        criteria: 'criteria',
+        passDescription: 'pass',
+        failDescription: 'fail',
+      },
     }
   })
 
@@ -342,6 +368,29 @@ describe('validateEvaluationV2', () => {
     expect(validatedOptions).toEqual(options)
   })
 
+  it('fails when has issue and expected output is required', async () => {
+    const { issue } = await factories.createIssue({
+      document: document,
+      workspace: workspace,
+    })
+
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: settings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: issue,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError(
+        'Cannot link an evaluation to an issue with expected output',
+      ),
+    )
+  })
+
   it('fails when issue is merged', async () => {
     const { issue } = await factories.createIssue({
       document: document,
@@ -362,7 +411,7 @@ describe('validateEvaluationV2', () => {
     await expect(
       validateEvaluationV2({
         mode: 'create',
-        settings: settings,
+        settings: settingsLLMasJudgeBinary,
         options: options,
         document: document,
         commit: commit,
@@ -394,7 +443,7 @@ describe('validateEvaluationV2', () => {
     await expect(
       validateEvaluationV2({
         mode: 'create',
-        settings: settings,
+        settings: settingsLLMasJudgeBinary,
         options: options,
         document: document,
         commit: commit,
@@ -426,7 +475,7 @@ describe('validateEvaluationV2', () => {
     await expect(
       validateEvaluationV2({
         mode: 'create',
-        settings: settings,
+        settings: settingsLLMasJudgeBinary,
         options: options,
         document: document,
         commit: commit,

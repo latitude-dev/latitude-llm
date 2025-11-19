@@ -1,4 +1,4 @@
-import { Providers } from '@latitude-data/constants'
+import { LlmEvaluationMetric, Providers } from '@latitude-data/constants'
 import { desc, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { database } from '../../client'
@@ -33,6 +33,10 @@ describe('createEvaluationV2', () => {
   >
   let options: EvaluationOptions
   let issueId: number | null
+  let settingsLLMasJudgeBinary: EvaluationSettings<
+    EvaluationType.Llm,
+    LlmEvaluationMetric.Binary
+  >
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -83,6 +87,28 @@ describe('createEvaluationV2', () => {
     }
     issueId = null
 
+    settingsLLMasJudgeBinary = {
+      name: 'name',
+      description: 'description',
+      type: EvaluationType.Llm,
+      metric: LlmEvaluationMetric.Binary,
+      configuration: {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
+        provider: 'openai',
+        model: 'gpt-4o',
+        criteria: 'criteria',
+        passDescription: 'pass',
+        failDescription: 'fail',
+      },
+    }
+
     mocks = {
       publisher: vi
         .spyOn(publisher, 'publishLater')
@@ -124,7 +150,7 @@ describe('createEvaluationV2', () => {
     const { evaluation } = await createEvaluationV2({
       document: document,
       commit: commit,
-      settings: settings,
+      settings: settingsLLMasJudgeBinary,
       options: options,
       issueId,
       workspace: workspace,
@@ -136,7 +162,7 @@ describe('createEvaluationV2', () => {
         commitId: commit.id,
         documentUuid: document.documentUuid,
         issueId,
-        ...settings,
+        ...settingsLLMasJudgeBinary,
         ...options,
       }),
     )
@@ -151,6 +177,8 @@ describe('createEvaluationV2', () => {
         id: evaluation.versionId,
         commitId: commit.id,
         issueId,
+        ...settingsLLMasJudgeBinary,
+        ...options,
         createdAt: expect.any(Date),
       }),
     ])
