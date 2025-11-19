@@ -23,7 +23,6 @@ import { IssuesServerResponse } from '../../page'
 import { IssuesTable } from '../IssuesTable'
 import { IssuesFilters } from '../IssuesFilters'
 import { SearchIssuesInput } from '../SearchIssuesInput'
-import { useIssueEvaluations } from '$/stores/issues/evaluations'
 
 export function IssuesDashboard({
   serverResponse,
@@ -89,13 +88,6 @@ export function IssuesDashboard({
       fallbackData: serverResponse,
     },
   )
-
-  const { data: evaluations, isLoading: isLoadingEvaluations } =
-    useIssueEvaluations({
-      projectId: project.id,
-      commitUuid: commit.uuid,
-      documentUuids: issues?.map((issue) => issue.documentUuid) ?? [],
-    })
 
   useOnce(() => {
     // Initialize server data for SWR
