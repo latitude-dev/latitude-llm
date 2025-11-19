@@ -117,7 +117,7 @@ describe('getExperimentJobPayload', () => {
     })
   })
 
-  it('Returns an undefined array with the selected length when there is no dataset', async () => {
+  it('Returns a fully populated array with the selected length when there is no dataset', async () => {
     const experiment = await createExperiment({
       name: 'experiment1',
       workspace,
@@ -140,7 +140,7 @@ describe('getExperimentJobPayload', () => {
     }).then((r) => r.unwrap())
 
     expect(rows).toHaveLength(40)
-    expect(rows.some((row) => row !== undefined)).toBe(false)
+    expect(rows.some((row) => row === undefined)).toBe(false)
   })
 
   it('Creates a manual experiment with default count of 1 when no range specified', async () => {
