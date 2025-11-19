@@ -1,11 +1,11 @@
 'use server'
 
 import { IssuesRepository } from '@latitude-data/core/repositories'
-import { unresolveIssue } from '@latitude-data/core/services/issues/unresolve'
+import { ignoreIssue } from '@latitude-data/core/services/issues/ignore'
 import { z } from 'zod'
-import { withCommit, withCommitSchema } from '../../procedures'
+import { withCommit, withCommitSchema } from '$/actions/procedures'
 
-export const unresolveIssueAction = withCommit
+export const ignoreIssueAction = withCommit
   .inputSchema(
     withCommitSchema.extend({
       issueId: z.number(),
@@ -16,7 +16,7 @@ export const unresolveIssueAction = withCommit
       .find(parsedInput.issueId)
       .then((r) => r.unwrap())
 
-    const response = await unresolveIssue({
+    const response = await ignoreIssue({
       issue,
       user: ctx.user,
     }).then((r) => r.unwrap())

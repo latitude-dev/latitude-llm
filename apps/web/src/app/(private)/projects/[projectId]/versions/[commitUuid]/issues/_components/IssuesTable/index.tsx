@@ -107,6 +107,14 @@ export function IssuesTable({
     onSelectChange(undefined)
   }, [onSelectChange])
 
+  // TODO(evaluation-generation): remove and use when we have the design for evaluations in the issues table
+  // const { data: evaluations, isLoading: isLoadingEvaluations } =
+  // useIssueEvaluations({
+  //   projectId: project.id,
+  //   commitUuid: commit.uuid,
+  //   documentUuids: issues?.map((issue) => issue.documentUuid) ?? [],
+  // })
+
   if (noData) {
     return (
       <TableBlankSlate description='No issues discovered in this project yet' />

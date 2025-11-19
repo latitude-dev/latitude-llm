@@ -149,10 +149,19 @@ export async function validateEvaluationV2<
     )
   }
 
+  // ISSUE VALIDATIONS
   if (metricSpecification.requiresExpectedOutput && issue) {
     return Result.error(
       new BadRequestError(
         'Cannot link an evaluation to an issue with expected output',
+      ),
+    )
+  }
+
+  if (!metricSpecification.supportsLiveEvaluation && issue) {
+    return Result.error(
+      new BadRequestError(
+        `Cannot link an evaluation to an issue that doesn't support live evaluation`,
       ),
     )
   }
