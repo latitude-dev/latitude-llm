@@ -3,6 +3,7 @@ import { env } from '@latitude-data/env'
 import { captureException } from '$/helpers/captureException'
 import { NextRequest, NextResponse } from 'next/server'
 import debug from '@latitude-data/core/lib/debug'
+import { RouteHandler } from './types'
 
 interface AbortError extends DOMException {
   name: 'AbortError'
@@ -18,7 +19,7 @@ export function isAbortError(error: unknown): error is AbortError {
   )
 }
 
-export function errorHandler(handler: any) {
+export function errorHandler<T>(handler: RouteHandler<T>) {
   const isDev = env.NODE_ENV === 'development'
   return async (req: NextRequest, res: any) => {
     try {

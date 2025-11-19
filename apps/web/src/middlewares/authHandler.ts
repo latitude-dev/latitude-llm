@@ -1,7 +1,8 @@
 import { getDataFromSession } from '$/data-access'
 import { NextRequest, NextResponse } from 'next/server'
+import { RouteHandler } from './types'
 
-export function authHandler(handler: any) {
+export function authHandler<T>(handler: RouteHandler<T>) {
   return async (
     req: NextRequest,
     {

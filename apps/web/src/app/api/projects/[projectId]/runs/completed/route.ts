@@ -1,12 +1,16 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 
-import { RunSourceGroup, SpanType } from '@latitude-data/constants'
+import {
+  CompletedRun,
+  RunSourceGroup,
+  SpanType,
+} from '@latitude-data/constants'
 import { listCompletedRuns } from '@latitude-data/core/services/runs/completed/listCompleted'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const GET = errorHandler(
+export const GET = errorHandler<CompletedRun[]>(
   authHandler(
     async (
       request: NextRequest,
@@ -43,7 +47,7 @@ export const GET = errorHandler(
         next: runs.next ? JSON.stringify(runs.next) : null,
       }
 
-      return NextResponse.json(response, { status: 200 })
+      return NextResponse.json(response.items, { status: 200 })
     },
   ),
 )

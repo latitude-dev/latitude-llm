@@ -399,18 +399,6 @@ export const API_ROUTES = {
           completed: {
             root: `${projectRoot}/runs/completed`,
             count: `${projectRoot}/runs/completed/count`,
-            detail: ({
-              limit,
-              sourceGroup,
-            }: {
-              limit?: number
-              sourceGroup?: RunSourceGroup
-            } = {}) => {
-              const params = new URLSearchParams()
-              if (limit) params.set('limit', limit.toString())
-              if (sourceGroup) params.set('sourceGroup', sourceGroup)
-              return `${projectRoot}/runs/completed?${params.toString()}`
-            },
           },
           detail: (uuid: string) => ({
             root: `${projectRoot}/runs/${uuid}`,

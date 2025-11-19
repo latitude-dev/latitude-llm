@@ -15,6 +15,7 @@ import {
 
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { compactObject } from '@latitude-data/core/lib/compactObject'
 
 export function useCompletedRuns(
   {
@@ -32,7 +33,13 @@ export function useCompletedRuns(
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher<CompletedRun[]>(
-    ROUTES.api.projects.detail(project.id).runs.completed.detail(search),
+    ROUTES.api.projects.detail(project.id).runs.completed.root,
+    {
+      searchParams: compactObject({
+        limit: search?.limit ? search.limit.toString() : undefined,
+        sourceGroup: search?.sourceGroup,
+      }) as Record<string, string>,
+    },
   )
 
   const {
