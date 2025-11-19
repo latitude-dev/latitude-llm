@@ -3,10 +3,8 @@ import {
   useDocumentParameters,
 } from '$/hooks/useDocumentParameters'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  TabSelector,
-  TabSelectorOption,
-} from '@latitude-data/web-ui/molecules/TabSelector'
+import { TabSelector } from '$/components/TabSelector'
+import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 

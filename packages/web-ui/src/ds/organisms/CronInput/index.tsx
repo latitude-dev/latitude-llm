@@ -48,6 +48,7 @@ function CronInputContent({
         selected={selectedTab}
         onSelect={setSelectedTab}
         disabled={disabled}
+        linkWrapper={undefined}
       />
       <div className='flex flex-col gap-2 px-2'>
         {selectedTab === CronTab.Interval && (

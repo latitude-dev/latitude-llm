@@ -1,9 +1,7 @@
 import { forwardRef, ReactNode, useState } from 'react'
 
-import {
-  TabSelector,
-  TabSelectorOption,
-} from '@latitude-data/web-ui/molecules/TabSelector'
+import { TabSelector } from '$/components/TabSelector'
+import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
 import { DetailsPanel } from '$/components/DetailsPannel'
 
 export const DEFAULT_TABS = [
