@@ -480,6 +480,34 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok(results)
   }
 
+  async listByTraceIds(traceIds: string[]) {
+    traceIds = [...new Set(traceIds)].filter(Boolean)
+    if (!traceIds.length) {
+      return Result.ok([])
+    }
+
+    const results = await this.db
+      .select({
+        ...tt,
+        commitUuid: commits.uuid,
+      })
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .where(
+        and(
+          this.scopeFilter,
+          isNull(commits.deletedAt),
+          inArray(evaluationResultsV2.evaluatedTraceId, traceIds),
+        ),
+      )
+      .orderBy(
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+      )
+
+    return Result.ok(results)
+  }
+
   async listByDocumentLogs({
     projectId,
     documentUuid,
