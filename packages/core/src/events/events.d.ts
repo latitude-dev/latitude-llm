@@ -19,6 +19,7 @@ import {
   EvaluationV2,
   Message,
 } from '../schema/types'
+import { Run } from '@latitude-data/constants'
 
 export type Events =
   | 'magicLinkTokenCreated'
@@ -625,47 +626,22 @@ export type SubscriptionUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
-export type RunQueuedEvent = LatitudeEventGeneric<
-  'runQueued',
-  {
-    workspaceId: number
-    projectId: number
-    runUuid: string
-  }
->
+type RunStatusEventData = {
+  workspaceId: number
+  projectId: number
+  run: Run
+}
 
-export type RunStartedEvent = LatitudeEventGeneric<
-  'runStarted',
-  {
-    workspaceId: number
-    projectId: number
-    runUuid: string
-  }
->
-
-export type RunProgressEvent = LatitudeEventGeneric<
-  'runProgress',
-  {
-    workspaceId: number
-    projectId: number
-    runUuid: string
-  }
->
+export type RunQueuedEvent = LatitudeEventGeneric<'runQueued', RunStatusEventData> // prettier-ignore
+export type RunStartedEvent = LatitudeEventGeneric<'runStarted', RunStatusEventData> // prettier-ignore
+export type RunProgressEvent = LatitudeEventGeneric<'runProgress', RunStatusEventData> // prettier-ignore
+export type RunEndedEvent = LatitudeEventGeneric<'runEnded', RunStatusEventData>
 
 export type RunStatusEvent =
   | RunQueuedEvent
   | RunStartedEvent
   | RunProgressEvent
   | RunEndedEvent
-
-export type RunEndedEvent = LatitudeEventGeneric<
-  'runEnded',
-  {
-    workspaceId: number
-    projectId: number
-    runUuid: string
-  }
->
 
 export type CommitUpdatedEvent = LatitudeEventGeneric<
   'commitUpdated',

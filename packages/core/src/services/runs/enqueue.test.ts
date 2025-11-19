@@ -352,12 +352,10 @@ describe('enqueueRun', () => {
       expect(result.ok).toBe(true)
       if (!result.ok || !result.value) return
 
-      const runUuid = result.value.run.uuid
-
       expect(publisher.publishLater).toHaveBeenCalledWith({
         type: 'runQueued',
         data: {
-          runUuid,
+          run: result.value.run,
           projectId: mockProject.id,
           workspaceId: mockWorkspace.id,
         },
