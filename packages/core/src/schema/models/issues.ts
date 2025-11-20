@@ -33,6 +33,7 @@ export const issues = latitudeSchema.table(
     resolvedAt: timestamp('resolved_at'),
     ignoredAt: timestamp('ignored_at'),
     mergedAt: timestamp('merged_at'),
+    escalatingAt: timestamp('escalating_at'),
     ...timestamps(),
   },
   (table) => [
@@ -47,5 +48,6 @@ export const issues = latitudeSchema.table(
     index('issues_resolved_at_idx').on(table.resolvedAt),
     index('issues_ignored_at_idx').on(table.ignoredAt),
     index('issues_merged_at_idx').on(table.mergedAt),
+    index('issues_escalating_at_idx').on(table.escalatingAt),
   ],
 )

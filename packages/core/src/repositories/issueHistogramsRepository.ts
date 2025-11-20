@@ -1,5 +1,4 @@
 import {
-  ESCALATING_DAYS,
   HISTOGRAM_SUBQUERY_ALIAS,
   MINI_HISTOGRAM_STATS_DAYS,
   RECENT_ISSUES_DAYS,
@@ -262,41 +261,7 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
       })
     }
 
-    const groupedResults = this.groupDaysForDisplay(filledResults, days)
-
-    return { data: groupedResults, totalCount }
-  }
-
-  /**
-   * Group days into buckets to maintain consistent bar count (~30 bars)
-   * For 90 days, groups into ~3-day buckets
-   */
-  private groupDaysForDisplay(
-    data: Array<{ date: string; count: number }>,
-    totalDays: number,
-  ): Array<{ date: string; count: number }> {
-    const targetBars = 30
-    const daysPerBar = Math.max(1, Math.ceil(totalDays / targetBars))
-
-    if (daysPerBar === 1) {
-      return data
-    }
-
-    const grouped: Array<{ date: string; count: number }> = []
-    for (let i = 0; i < data.length; i += daysPerBar) {
-      const chunk = data.slice(i, i + daysPerBar)
-      // Ensure we're adding numbers, not concatenating strings
-      const totalCount = chunk.reduce(
-        (sum, item) => sum + Number(item.count),
-        0,
-      )
-      grouped.push({
-        date: chunk[0].date,
-        count: totalCount,
-      })
-    }
-
-    return grouped
+    return { data: filledResults, totalCount }
   }
 
   /**
@@ -393,21 +358,6 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
       lastOccurredAt: sql<Date>`MAX(${issueHistograms.occurredAt})`.as(
         'lastOccurredAt',
       ),
-      escalatingCount: sql
-        .raw(
-          `
-          COALESCE(SUM(
-            CASE
-              WHEN "date" >= CURRENT_DATE - INTERVAL '` +
-            ESCALATING_DAYS +
-            ` days'
-              THEN "count"
-              ELSE 0
-            END
-          ), 0)
-        `,
-        )
-        .as('escalatingCount'),
       totalCount: sql<number>`COALESCE(SUM(${issueHistograms.count}), 0)`.as(
         'totalCount',
       ),

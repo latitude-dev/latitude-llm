@@ -679,8 +679,10 @@ async function createIssuesAndHistograms(
     }
 
     // Generate histograms for each commit
-    // Note: Each commit can have histograms for the same date, so we collect all of them
-    const allHistograms: HistogramInput[] = []
+    // Note: We need to aggregate counts across commits for the same date
+    // The unique constraint is on (issue_id, commit_id, date), but since we're creating
+    // one issue across multiple commits, we need to pick ONE commit per date
+    const histogramsByDate = new Map<string, HistogramInput>()
 
     for (const commit of histogramCommits) {
       const commitWithId = commit as { id: number }
@@ -690,8 +692,22 @@ async function createIssuesAndHistograms(
         commitWithId,
         status,
       )
-      allHistograms.push(...commitHistograms)
+
+      // For each histogram, keep track by date and aggregate counts
+      for (const histogram of commitHistograms) {
+        const dateKey = histogram.date.toISOString().split('T')[0] // YYYY-MM-DD
+        const existing = histogramsByDate.get(dateKey)
+
+        if (existing) {
+          // Aggregate counts for the same date, keep the most recent commit
+          existing.count += histogram.count
+        } else {
+          histogramsByDate.set(dateKey, { ...histogram })
+        }
+      }
     }
+
+    const allHistograms = Array.from(histogramsByDate.values())
 
     // Ensure we have at least one histogram entry
     if (allHistograms.length === 0 && histogramCommits.length > 0) {
@@ -716,6 +732,14 @@ async function createIssuesAndHistograms(
       createdAt: issueCreatedAt, // Set the issue creation date (firstSeenAt)
       histograms: allHistograms as IssueHistogramData[], // Type assertion needed as factory adds 'issue' field later
     })
+
+    // Update escalating_at based on histogram data
+    const { updateEscalatingIssue } = await import(
+      '../../src/services/issues/updateEscalating.ts'
+    )
+    await updateEscalatingIssue({ issue: issueData.issue }).then((r) =>
+      r.unwrap(),
+    )
 
     // Add the new title to our set to avoid duplicates within this batch
     existingTitles.add(title)
@@ -785,12 +809,17 @@ type HistogramInput = {
 
 /**
  * Generates realistic histogram data for issues with varied patterns:
+ *
+ * NEW ESCALATION DEFINITION:
+ * - Events in the last 1 day (any count > 0)
+ * - 7-day event count > 2× the previous 7-day average
+ * - Total 7-day count ≥ 20 events (minimum threshold)
+ *
+ * Other patterns:
  * - Stable low counts (1-3): normal issues
- * - Increasing counts over time: escalating issues
  * - High recent activity (within 7 days): recent count issues
- * - Spikes (10-20): intermittent high activity
+ * - Spikes: intermittent high activity
  * - Declining activity: resolved issues
- * This creates data that showcases all filtering and sorting features in the UI.
  */
 function generateHistogramData(
   firstSeenAt: Date,
@@ -802,51 +831,107 @@ function generateHistogramData(
   const startDate = new Date(firstSeenAt)
   const endDate = new Date(lastSeenAt)
   const today = new Date()
-  const recentDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-  const escalatingDaysAgo = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000)
+  const oneDayAgo = new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000)
+  const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const fourteenDaysAgo = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000)
 
-  // Generate histogram data for each day between first seen and last seen
-  for (
-    let date = new Date(startDate);
-    date <= endDate;
-    date.setDate(date.getDate() + 1)
-  ) {
-    // Skip some days randomly to make it more realistic (but not too many to avoid empty histograms)
-    if (Math.random() < 0.2) continue
+  // Track dates we've already added to prevent duplicates
+  const addedDates = new Set<string>()
 
-    let count = 1
+  const addHistogram = (date: Date, count: number) => {
+    const dateKey = date.toISOString().split('T')[0] // YYYY-MM-DD
+    if (!addedDates.has(dateKey)) {
+      addedDates.add(dateKey)
+      histograms.push({
+        commitId: commit.id,
+        date: new Date(date),
+        count,
+      })
+    }
+  }
 
-    // Create varying patterns for different time ranges
-    const daysSinceFirstSeen = Math.floor(
-      (date.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000),
-    )
-    const totalDays = Math.floor(
-      (endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000),
-    )
+  // Create different histogram patterns based on issue type
+  if (issueType === 'escalating') {
+    // ESCALATING PATTERN: Must satisfy all conditions
+    // 1. Event in last 1 day: Add event for today
+    // 2. 7-day total ≥ 20: Distribute ~30 events over last 7 days
+    // 3. 7-day count > 2× previous average: Previous 7 days should have ~7 events (avg 1/day)
 
-    // Determine if this date is recent (within 7 days) or escalating (within 2 days)
-    const isRecent = date >= recentDaysAgo
-    const isEscalating = date >= escalatingDaysAgo
-
-    // Create different histogram patterns based on issue type
-    if (issueType === 'escalating') {
-      // Escalating issues: ensure high counts (>10) in last 2 days
-      if (isEscalating) {
-        count = faker.number.int({ min: 11, max: 20 }) // Guaranteed > ESCALATING_COUNT_THRESHOLD (10)
-      } else if (isRecent) {
-        count = faker.number.int({ min: 5, max: 12 }) // Good recent activity
-      } else {
-        count = faker.number.int({ min: 1, max: 5 }) // Lower activity in the past
+    // Previous 7-day window (days 8-14): Low baseline ~7 events total (1/day average)
+    for (let i = 14; i >= 8; i--) {
+      const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000)
+      if (date >= startDate && date <= endDate) {
+        addHistogram(date, faker.number.int({ min: 1, max: 2 }))
       }
-    } else if (issueType === 'new') {
-      // New issues: good recent activity since they're recently created
-      if (isRecent) {
-        count = faker.number.int({ min: 3, max: 8 }) // Good recent count for relevance sorting
-      } else {
-        count = faker.number.int({ min: 1, max: 4 })
+    }
+
+    // Current 7-day window: High activity ~35 events total
+    // This gives: 35 > (7 / 7) * 2 = 35 > 2, which is TRUE ✓
+    for (let i = 7; i >= 0; i--) {
+      const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000)
+      if (date >= startDate && date <= endDate) {
+        if (i === 0) {
+          // TODAY: Must have events (condition 1)
+          addHistogram(date, faker.number.int({ min: 8, max: 12 }))
+        } else {
+          // Last 6 days: Distribute remaining ~25 events
+          addHistogram(date, faker.number.int({ min: 3, max: 5 }))
+        }
       }
-    } else {
-      // Other issues: varied patterns
+    }
+
+    // Add some older data before the 14-day window if range allows
+    for (
+      let date = new Date(startDate);
+      date < fourteenDaysAgo;
+      date.setDate(date.getDate() + 1)
+    ) {
+      if (Math.random() < 0.3) {
+        // Sparse older data
+        addHistogram(new Date(date), faker.number.int({ min: 1, max: 2 }))
+      }
+    }
+  } else if (issueType === 'new') {
+    // New issues: good recent activity since they're recently created
+    for (
+      let date = new Date(startDate);
+      date <= endDate;
+      date.setDate(date.getDate() + 1)
+    ) {
+      if (Math.random() < 0.7) {
+        // Most days have events
+        const isVeryRecent = date >= oneDayAgo
+        const isRecent = date >= sevenDaysAgo
+
+        addHistogram(
+          new Date(date),
+          isVeryRecent
+            ? faker.number.int({ min: 5, max: 10 })
+            : isRecent
+              ? faker.number.int({ min: 3, max: 6 })
+              : faker.number.int({ min: 1, max: 3 }),
+        )
+      }
+    }
+  } else {
+    // Other issues: varied patterns
+    for (
+      let date = new Date(startDate);
+      date <= endDate;
+      date.setDate(date.getDate() + 1)
+    ) {
+      // Skip some days randomly to make it more realistic
+      if (Math.random() < 0.3) continue
+
+      const daysSinceFirstSeen = Math.floor(
+        (date.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000),
+      )
+      const totalDays = Math.floor(
+        (endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000),
+      )
+      const isRecent = date >= sevenDaysAgo
+
+      let count = 1
       const patternType = Math.random()
 
       if (patternType < 0.3) {
@@ -858,36 +943,29 @@ function generateHistogramData(
         count = Math.floor(progress * 8) + faker.number.int({ min: 1, max: 3 })
       } else if (patternType < 0.7) {
         // Pattern 3: High activity in recent days
-        if (isRecent) {
-          count = faker.number.int({ min: 3, max: 8 }) // Recent activity
-        } else {
-          count = faker.number.int({ min: 1, max: 3 })
-        }
+        count = isRecent
+          ? faker.number.int({ min: 3, max: 8 })
+          : faker.number.int({ min: 1, max: 3 })
       } else if (patternType < 0.85) {
         // Pattern 4: Sporadic activity with occasional spikes
-        if (Math.random() < 0.2) {
-          count = faker.number.int({ min: 8, max: 15 }) // Spike
-        } else {
-          count = faker.number.int({ min: 1, max: 4 })
-        }
+        count =
+          Math.random() < 0.2
+            ? faker.number.int({ min: 8, max: 15 })
+            : faker.number.int({ min: 1, max: 4 })
       } else {
         // Pattern 5: Declining activity (resolved issues)
         const progress = daysSinceFirstSeen / Math.max(totalDays, 1)
         count = Math.floor((1 - progress) * 6) + 1
         count = Math.max(count, 1)
       }
-    }
 
-    // Add some random variation
-    if (Math.random() < 0.15) {
-      count += faker.number.int({ min: 2, max: 5 })
-    }
+      // Add some random variation
+      if (Math.random() < 0.15) {
+        count += faker.number.int({ min: 1, max: 3 })
+      }
 
-    histograms.push({
-      commitId: commit.id,
-      date: new Date(date),
-      count,
-    })
+      addHistogram(new Date(date), count)
+    }
   }
 
   return histograms

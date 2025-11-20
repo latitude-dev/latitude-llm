@@ -2,11 +2,7 @@ import { useMemo } from 'react'
 import { format } from 'date-fns'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Badge, BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
-import {
-  ESCALATING_COUNT_THRESHOLD,
-  NEW_ISSUES_DAYS,
-  RECENT_ISSUES_DAYS,
-} from '@latitude-data/constants/issues'
+import { NEW_ISSUES_DAYS } from '@latitude-data/constants/issues'
 import { SerializedIssue } from '$/stores/issues'
 import {
   DotIndicator,
@@ -67,7 +63,7 @@ export function StatusBadges({ issue }: { issue: SerializedIssue }) {
     if (issue.isEscalating) {
       result.push({
         label: 'Escalating',
-        tooltip: `Increasing frequency with ${issue.escalatingCount} events in the last ${RECENT_ISSUES_DAYS} days. Limit for consideration is more than ${ESCALATING_COUNT_THRESHOLD} events.`,
+        tooltip: 'Increasing frequency of occurrences for this issue.',
         dotProps: { variant: 'destructive' },
         badgeVariant: 'noBorderDestructiveMuted',
       })

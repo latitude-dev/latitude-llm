@@ -15,7 +15,7 @@ import { SerializedIssue } from '$/stores/issues'
 import { MINI_HISTOGRAM_STATS_DAYS } from '@latitude-data/constants/issues'
 
 function generatePlaceholderBars() {
-  const length = MINI_HISTOGRAM_STATS_DAYS / 3
+  const length = MINI_HISTOGRAM_STATS_DAYS
   const bars = []
 
   // Randomly select a distribution type

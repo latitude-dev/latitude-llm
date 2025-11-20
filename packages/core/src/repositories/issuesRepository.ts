@@ -1,5 +1,5 @@
 import {
-  ESCALATING_COUNT_THRESHOLD,
+  ESCALATION_EXPIRATION_DAYS,
   HISTOGRAM_SUBQUERY_ALIAS,
   ISSUE_GROUP,
   ISSUE_STATUS,
@@ -447,9 +447,13 @@ export class IssuesRepository extends Repository<Issue> {
   }
 
   private withEscalatingIssues(include: boolean): SQL {
+    // Use persisted escalating_at field with expiration check
+    // An issue is escalating if:
+    // 1. escalating_at is set, AND
+    // 2. escalating_at is within the expiration window (ESCALATION_EXPIRATION_DAYS)
     return include
-      ? sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."escalatingCount"`)} > ${ESCALATING_COUNT_THRESHOLD}`
-      : sql`${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."escalatingCount"`)} <= ${ESCALATING_COUNT_THRESHOLD}`
+      ? sql`${issues.escalatingAt} IS NOT NULL AND ${issues.escalatingAt} > NOW() - INTERVAL '${sql.raw(String(ESCALATION_EXPIRATION_DAYS))} days'`
+      : sql`${issues.escalatingAt} IS NULL OR ${issues.escalatingAt} <= NOW() - INTERVAL '${sql.raw(String(ESCALATION_EXPIRATION_DAYS))} days'`
   }
 
   private withNewIssues(include: boolean): SQL {
@@ -487,7 +491,6 @@ export class IssuesRepository extends Repository<Issue> {
       firstOccurredAt: subquery.firstOccurredAt,
       lastSeenDate: subquery.lastSeenDate,
       lastOccurredAt: subquery.lastOccurredAt,
-      escalatingCount: subquery.escalatingCount,
       isNew:
         sql<boolean>`(${issues.createdAt} >= NOW() - INTERVAL '7 days')`.as(
           'isNew',
@@ -501,11 +504,8 @@ export class IssuesRepository extends Repository<Issue> {
           AND ${subquery.lastSeenDate} > ${issues.resolvedAt}
         )`.as('isRegressed'),
       isEscalating: sql<boolean>`(
-          CASE
-            WHEN ${subquery.escalatingCount} > ${ESCALATING_COUNT_THRESHOLD}
-            THEN true
-            ELSE false
-          END
+          ${issues.escalatingAt} IS NOT NULL
+          AND ${issues.escalatingAt} > NOW() - INTERVAL '${sql.raw(String(ESCALATION_EXPIRATION_DAYS))} days'
         )`.as('isEscalating'),
       isIgnored: sql<boolean>`(${issues.ignoredAt} IS NOT NULL)`.as(
         'isIgnored',

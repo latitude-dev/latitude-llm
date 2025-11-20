@@ -45,10 +45,11 @@ export type SafeIssuesParams = {
 
 export const ESCALATING_COUNT_THRESHOLD = 10
 export const ESCALATING_DAYS = 2
+export const ESCALATION_EXPIRATION_DAYS = 7 // Days before escalating_at is considered expired
 export const NEW_ISSUES_DAYS = 7
 export const RECENT_ISSUES_DAYS = 7
 export const HISTOGRAM_SUBQUERY_ALIAS = 'histogramStats'
-export const MINI_HISTOGRAM_STATS_DAYS = 90
+export const MINI_HISTOGRAM_STATS_DAYS = 30
 export type QueryParams = { [key: string]: string | string[] | undefined }
 
 export const DEFAULTS_ISSUE_PARAMS = {
