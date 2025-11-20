@@ -5,8 +5,11 @@ import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { IssueEscalatingMailer } from '../../mailers'
 import { IssuesRepository } from '../../repositories'
+import { captureException } from '../../utils/datadogCapture'
 import { IssueIncrementedEvent } from '../events'
 import { Workspace } from '../../schema/models/types/Workspace'
+
+const BATCH_SIZE = 100
 
 async function sendEmail({
   workspace,
@@ -16,26 +19,45 @@ async function sendEmail({
   issue: NonNullable<Awaited<ReturnType<IssuesRepository['find']>>['value']>
 }) {
   if (!workspace) return
+
   const users = await findAllUsersInWorkspace(workspace)
+
   if (users.length === 0) return
 
-  // Build the link to the issue in the dashboard
-  // TODO: Fix this URL
-  const issueLink = `${env.APP_URL}/projects/${issue.projectId}/versions/HEAD/issues?issueId=${issue.id}`
+  const mailer = new IssueEscalatingMailer(
+    {}, // No mailer options, we'll set recipients later
+    {
+      issueTitle: issue.title,
+      link: `${env.APP_URL}/projects/${issue.projectId}/versions/live/issues?issueId=${issue.id}`,
+    },
+  )
 
+  const addresses = users.map((u) => ({
+    address: u.email,
+    name: u.name || u.email,
+  }))
+
+  const batches: (typeof addresses)[] = []
+
+  for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
+    batches.push(addresses.slice(i, i + BATCH_SIZE))
+  }
+
+  // Send all batches in parallel and capture any errors
   await Promise.all(
-    users.map(async (user) => {
-      const mailer = new IssueEscalatingMailer(
-        {
-          to: user.email,
-        },
-        {
-          issueTitle: issue.title,
-          link: issueLink,
-        },
-      )
+    batches.map(async (batch, index) => {
+      const result = await mailer.send({ to: batch })
 
-      return mailer.send().then((r) => r.unwrap())
+      if (result.error) {
+        captureException(result.error, {
+          issueId: issue.id,
+          issueTitle: issue.title,
+          workspaceId: workspace.id,
+          batchIndex: index,
+          batchSize: batch.length,
+          context: 'issue_escalation_email',
+        })
+      }
     }),
   )
 }
@@ -60,13 +82,13 @@ export async function sendIssueEscalatingHandler({
 
   // Fetch workspace and issue (issue now has the updated escalating_at after updateEscalatingIssue)
   const workspace = await unsafelyFindWorkspace(workspaceId)
-  if (!workspace) throw new NotFoundError('Workspace not found')
+  if (!workspace)
+    throw new NotFoundError(
+      'Workspace not found sending issue escalation email',
+    )
 
   const issuesRepo = new IssuesRepository(workspaceId)
-  const issueResult = await issuesRepo.find(issueId)
-  if (issueResult.error) throw issueResult.error
-
-  const issue = issueResult.value
+  const issue = await issuesRepo.find(issueId).then((r) => r.unwrap())
 
   // If the issue is not currently escalating, don't send email
   if (!issue.escalatingAt) return
@@ -82,11 +104,7 @@ export async function sendIssueEscalatingHandler({
   const wasEscalatingButExpired =
     previousEscalatingAt && previousEscalatingAt <= expirationDate
 
-  // Only send email if this is a NEW escalation (no previous, or previous expired)
-  if (wasNotEscalating || wasEscalatingButExpired) {
-    await sendEmail({ workspace, issue })
-  }
+  if (!wasNotEscalating && !wasEscalatingButExpired) return
 
-// If previousEscalatingAt exists and is not expired, we're still in the same
-// escalation period - don't send another email
+  await sendEmail({ workspace, issue })
 }
