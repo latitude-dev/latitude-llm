@@ -4,11 +4,17 @@ import { buildRedisConnection, REDIS_KEY_PREFIX } from '../redis'
 
 export type Cache = Redis
 
-let connection: Redis
+let connection: Redis | null = null
+let connectionPromise: Promise<Redis> | null = null
 
-export const cache = async () => {
+export const cache = async (): Promise<Redis> => {
+  // Return existing connection if available
   if (connection) return connection
 
+  // If connection is being established, wait for it to prevent race conditions
+  if (connectionPromise) return connectionPromise
+
+  // Establish new connection
   const redisOptions: RedisOptions = {
     // Use 'any' or a more specific type for options
     host: env.CACHE_HOST,
@@ -19,9 +25,16 @@ export const cache = async () => {
     redisOptions.password = env.CACHE_PASSWORD
   }
 
-  connection = await buildRedisConnection(redisOptions)
+  // Store the promise to prevent multiple concurrent connection attempts
+  connectionPromise = buildRedisConnection(redisOptions)
 
-  return connection
+  try {
+    connection = await connectionPromise
+    return connection
+  } finally {
+    // Clear the promise once connection is established (success or failure)
+    connectionPromise = null
+  }
 }
 
 export const getOrSet = async <T>(

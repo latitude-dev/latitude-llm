@@ -196,6 +196,10 @@ export const backgroundRunJob = async (
       )
     }
   } finally {
+    // CRITICAL: Close Redis connection before cleanup to prevent connection leaks
+    await writeStream.close().catch(() => {
+      // Silently ignore close errors to not mask the original error
+    })
     await writeStream.cleanup()
     await publisher.unsubscribe('cancelJob', cancelJob)
     try {

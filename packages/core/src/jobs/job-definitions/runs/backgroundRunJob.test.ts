@@ -51,6 +51,7 @@ describe('backgroundRunJob', () => {
     mockWriteStream = {
       write: vi.fn(),
       cleanup: vi.fn(),
+      close: vi.fn().mockReturnValue(Promise.resolve()),
     }
     mockReadStream = {
       getReader: vi.fn().mockReturnValue({
