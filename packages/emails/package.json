@@ -1,0 +1,59 @@
+{
+  "name": "@latitude-data/emails",
+  "version": "0.0.1",
+  "description": "Email templates done in React",
+  "scripts": {
+    "dev": "email dev -d ./src/templates"
+  },
+  "type": "module",
+  "exports": {
+    "./types": {
+      "import": "./src/types.ts"
+    },
+    "./render": {
+      "import": "./src/react-email/render.ts"
+    },
+    "./DatasetUpdateMail": {
+      "import": "./src/templates/datasets/DatasetUpdateMail.tsx"
+    },
+    "./DocumentTriggerResponseMail": {
+      "import": "./src/templates/documentTrigger/DocumentTriggerResponseMail.tsx"
+    },
+    "./ExportReadyMail": {
+      "import": "./src/templates/exports/ExportReadyMail.tsx"
+    },
+    "./InvitationMail": {
+      "import": "./src/templates/invitations/InvitationMail.tsx"
+    },
+    "./ReferralMail": {
+      "import": "./src/templates/invitations/ReferralMail.tsx"
+    },
+    "./IssueEscalatingMail": {
+      "import": "./src/templates/issues/IssueEscalatingMail.tsx"
+    },
+    "./MagicLinkMail": {
+      "import": "./src/templates/magicLinks/magicLinkMail.tsx"
+    },
+    "./SuggestionMail": {
+      "import": "./src/templates/suggestions/SuggestionMail.tsx"
+    }
+  },
+  "dependencies": {
+    "@latitude-data/env": "workspace:*",
+    "@latitude-data/web-ui": "workspace:*",
+    "@react-email/components": "1.0.1",
+    "class-variance-authority": "^0.7.1",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-email": "5.0.5"
+  },
+  "devDependencies": {
+    "@latitude-data/constants": "workspace:*",
+    "@latitude-data/eslint-config": "workspace:*",
+    "@latitude-data/typescript-config": "workspace:*",
+    "@react-email/preview-server": "5.0.5",
+    "@types/node": "^22.5.0",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:"
+  }
+}

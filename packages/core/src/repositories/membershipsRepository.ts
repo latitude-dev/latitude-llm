@@ -1,5 +1,4 @@
 import { eq, getTableColumns } from 'drizzle-orm'
-
 import { type Membership } from '../schema/models/types/Membership'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'

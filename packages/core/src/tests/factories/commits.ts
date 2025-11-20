@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker'
 
+import { hasOwnProperty } from '@latitude-data/constants/commonTypes'
 import { type Project } from '../../schema/models/types/Project'
 import { type User } from '../../schema/models/types/User'
-import { hasOwnProperty } from '../../lib/commonTypes'
 import { createCommit as createCommitFn } from '../../services/commits/create'
 import { createProject } from './createProject'
 import { ICreateProject } from './projects'

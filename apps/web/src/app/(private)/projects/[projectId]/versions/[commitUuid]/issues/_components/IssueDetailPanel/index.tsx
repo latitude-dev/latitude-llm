@@ -60,7 +60,7 @@ export function IssuesDetailPanel({
 
   return (
     <DetailsPanel bordered ref={ref}>
-      <div className='relative w-full overflow-hidden'>
+      <div className='relative w-full overflow-hidden custom-scrollbar'>
         {/* === SLIDING PANEL WRAPPER === */}
         <div
           className={cn(

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
-import { MaybeSessionProvider } from '@latitude-data/web-ui/browser'
 import { getDataFromSession } from '$/data-access'
+import { MaybeSessionProvider } from '$/components/Providers/MaybeSessionProvider'
 
 /**
  * This layout is here only to add providers.

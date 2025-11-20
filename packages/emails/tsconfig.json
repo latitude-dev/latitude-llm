@@ -1,0 +1,15 @@
+{
+  "extends": "@latitude-data/typescript-config/base.json",
+  "compilerOptions": {
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "**/*.js",
+    "dist",
+    "node_modules"
+  ]
+}

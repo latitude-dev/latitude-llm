@@ -1,7 +1,7 @@
 'use client'
 import { useMemo } from 'react'
 
-import { useSession } from '@latitude-data/web-ui/providers'
+import { useSession } from '$/components/Providers/SessionProvider'
 import useWorkspaceUsage from '$/stores/workspaceUsage'
 import { UsageIndicatorPopover } from '$/components/UsageIndicatorPopover'
 import { calculateUsage } from '$/lib/usageUtils'

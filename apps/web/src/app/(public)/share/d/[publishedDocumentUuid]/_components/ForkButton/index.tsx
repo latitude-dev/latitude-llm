@@ -10,7 +10,7 @@ import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { ButtonProps } from '@latitude-data/web-ui/atoms/Button'
-import { useMaybeSession } from '@latitude-data/web-ui/providers'
+import { useMaybeSession } from '$/components/Providers/MaybeSessionProvider'
 import { MouseEvent, useCallback, useState } from 'react'
 import { PublishedDocument } from '@latitude-data/core/schema/models/types/PublishedDocument'
 

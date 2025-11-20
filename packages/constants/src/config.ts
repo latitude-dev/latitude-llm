@@ -34,6 +34,11 @@ export const ABSOLUTE_MAX_STEPS = 150
 
 const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
 
+export type DiffValue = {
+  newValue?: string
+  oldValue?: string
+}
+
 export const humanizeTool = (tool: string, suffix: boolean = true) => {
   if (tool.startsWith(AGENT_TOOL_PREFIX)) {
     const name = tool.replace(AGENT_TOOL_PREFIX, '').trim().split('_').join(' ')

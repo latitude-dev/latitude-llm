@@ -30,10 +30,12 @@ export const memberships = latitudeSchema.table(
       .unique()
       .default(sql`gen_random_uuid()`),
     confirmedAt: timestamp('confirmed_at'),
-    wantToReceiveWeeklyEmail: boolean('want_to_receive_weekly_email'),
+    wantToReceiveWeeklyEmail: boolean('want_to_receive_weekly_email').default(
+      true,
+    ),
     wantToReceiveEscalatingIssuesEmail: boolean(
       'want_to_receive_escalating_issues_email',
-    ),
+    ).default(true),
     ...timestamps(),
   },
   (membership) => [

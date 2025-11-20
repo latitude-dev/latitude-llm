@@ -3,8 +3,8 @@
 import { format } from 'date-fns'
 import { useCallback, useMemo, useState } from 'react'
 
-import type { RelativeDate } from '@latitude-data/core/constants'
 import { DateRange as ReactDatePickerRange } from 'react-day-picker'
+import { RelativeDate } from '@latitude-data/constants/relativeDates'
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../Button'
 import { Popover, PopoverContentProps } from '../../Popover'

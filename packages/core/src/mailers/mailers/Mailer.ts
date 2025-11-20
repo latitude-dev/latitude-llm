@@ -6,6 +6,25 @@ import SMTPTransport from 'nodemailer/lib/smtp-transport'
 import { Result, TypedResult } from '../../lib/Result'
 import { createAdapter } from './adapters'
 
+/**
+ * Batch sending options for Mailgun.
+ * https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages/batch-sending
+ */
+export type ExtendedMailOptions = Mail.Options & {
+  'recipient-variables'?: Record<string, Record<string, unknown>>
+}
+
+/**
+ * Safely stringify recipient variables for Mailgun.
+ * https://github.com/mailgun/mailgun.js/issues/7#issuecomment-193629734
+ */
+function safeRecipientVariables(options: ExtendedMailOptions): string {
+  const recipientVariables = options['recipient-variables']
+  if (!recipientVariables) return ''
+
+  return JSON.stringify(recipientVariables)
+}
+
 export default abstract class Mailer {
   protected options: Mail.Options
 
@@ -21,19 +40,24 @@ export default abstract class Mailer {
   }
 
   abstract send(
-    _options: Mail.Options,
+    _options: ExtendedMailOptions,
     _attrs: unknown,
   ): Promise<TypedResult<SMTPTransport.SentMessageInfo, Error>>
 
   protected async sendMail(
-    options: Mail.Options,
+    options: ExtendedMailOptions,
   ): Promise<TypedResult<SMTPTransport.SentMessageInfo, Error>> {
-    let result
     try {
-      result = await this.adapter.sendMail({
+      // Mailgun accepts extended options including 'recipient-variables' for batch sending.
+      // We cast to Mail.Options since nodemailer's Transporter type doesn't support
+      // transport-specific extensions, but the Mailgun transport handles this at runtime.
+      const mailOptions: Mail.Options = {
         ...options,
         from: options.from || Mailer.from,
-      })
+        'recipient-variables': safeRecipientVariables(options),
+      } as Mail.Options
+
+      const result = await this.adapter.sendMail(mailOptions)
       const info = this.ensureSendMessageInfo(result, options)
       const failed = info.rejected.concat(info.pending).filter(Boolean)
 

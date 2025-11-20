@@ -2,8 +2,8 @@
 
 import { useRef } from 'react'
 import { type editor } from 'monaco-editor'
-import type { DiffValue } from '@latitude-data/core/constants'
 import { MonacoDiffEditor } from '../../DocumentTextEditor/Editor/DiffEditor'
+import { DiffValue } from '@latitude-data/constants'
 
 export function DiffViewer({ newValue, oldValue }: DiffValue) {
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null)

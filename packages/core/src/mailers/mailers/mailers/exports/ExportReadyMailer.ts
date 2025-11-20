@@ -1,11 +1,11 @@
-import { render } from '@react-email/components'
+import { render } from '@latitude-data/emails/render'
 import Mail from 'nodemailer/lib/mailer'
 import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
 import { TypedResult } from '../../../../lib/Result'
 import Mailer from '../../Mailer'
 import { type User } from '../../../../schema/models/types/User'
-import ExportReadyMail from '../../../emails/exports/ExportReadyMail'
+import ExportReadyMail from '@latitude-data/emails/ExportReadyMail'
 
 export class ExportReadyMailer extends Mailer {
   token: string

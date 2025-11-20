@@ -16,6 +16,7 @@ export async function createIssue(
     project,
     workspace,
     createdAt: createdAtArg,
+    escalatingAt,
   }: {
     title: string
     description: string
@@ -23,6 +24,7 @@ export async function createIssue(
     project: Project
     workspace: Workspace
     createdAt?: Date
+    escalatingAt?: Date | null
   },
   transaction = new Transaction(),
 ) {
@@ -46,6 +48,7 @@ export async function createIssue(
           centroid: centroid,
           createdAt,
           updatedAt: createdAt,
+          escalatingAt: escalatingAt ?? null,
         })
         .returning()
         .then((r) => r[0]!)) as Issue

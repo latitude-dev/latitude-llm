@@ -7,11 +7,13 @@ import { setSession } from '$/services/auth/setSession'
 import { authProcedure } from '../procedures'
 import { cookies } from 'next/headers'
 import { removeSession, Session } from '$/services/auth/removeSession'
+import { redirect } from 'next/navigation'
 
 export const switchWorkspaceAction = authProcedure
   .inputSchema(
     z.object({
       workspaceId: z.number(),
+      redirectTo: z.string().optional(),
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
@@ -36,6 +38,10 @@ export const switchWorkspaceAction = authProcedure
       },
       await cookies(),
     )
+
+    if (parsedInput.redirectTo) {
+      return redirect(parsedInput.redirectTo)
+    }
 
     return workspace
   })

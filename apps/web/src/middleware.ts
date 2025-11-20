@@ -40,6 +40,6 @@ export const config = {
      * - placeholder.png (placeholder image)
      * - uploads (public uploads folder)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|favicon.svg|sitemap.xml|robots.txt|placeholder.png|logodark.png|uploads).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|favicon.svg|sitemap.xml|robots.txt|placeholder.png|latitude-logo.png|uploads).*)',
   ],
 }

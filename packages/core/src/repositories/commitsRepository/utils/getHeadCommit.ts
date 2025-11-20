@@ -1,7 +1,7 @@
 import { and, desc, eq, isNotNull } from 'drizzle-orm'
 
+import { InferedReturnType } from '@latitude-data/constants/commonTypes'
 import { database } from '../../../client'
-import { InferedReturnType } from '../../../lib/commonTypes'
 import { buildCommitsScope } from './buildCommitsScope'
 import { type Commit } from '../../../schema/models/types/Commit'
 

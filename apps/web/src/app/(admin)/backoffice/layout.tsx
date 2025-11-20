@@ -2,10 +2,10 @@ import { ReactNode } from 'react'
 
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { SessionProvider } from '@latitude-data/web-ui/providers'
 import { notFound } from 'next/navigation'
 
 import { BackofficeTabs } from './_components/BackofficeTabs'
+import { SessionProvider } from '$/components/Providers/SessionProvider'
 
 export const metadata = buildMetatags({
   title: 'Backoffice',

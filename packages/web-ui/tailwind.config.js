@@ -20,6 +20,9 @@ export default {
       mono: ['var(--font-mono)'],
     },
     extend: {
+      lineHeight: {
+        h1: '48px',
+      },
       spacing: {
         18: '72px',
       },

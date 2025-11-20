@@ -2,7 +2,7 @@ import { createCustomerPortalAction } from '$/actions/billing/createCustomerPort
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { Button, ButtonProps } from '@latitude-data/web-ui/atoms/Button'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useSession } from '@latitude-data/web-ui/providers'
+import { useSession } from '../Providers/SessionProvider'
 import { MouseEvent, ReactNode, useCallback, useMemo } from 'react'
 import { FREE_PLANS, SubscriptionPlan } from '@latitude-data/core/plans'
 
