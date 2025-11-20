@@ -41,5 +41,12 @@ export function useSpan(
 function serializeSpan(span?: SpanWithDetails) {
   if (!span) return undefined
 
-  return { ...span, startedAt: new Date(span.startedAt) } as SpanWithDetails
+  // Only create new date if it's not already a Date object
+  const startedAt =
+    span.startedAt instanceof Date ? span.startedAt : new Date(span.startedAt)
+
+  // Return the same object if nothing needs to be transformed
+  if (span.startedAt instanceof Date) return span
+
+  return { ...span, startedAt } as SpanWithDetails
 }

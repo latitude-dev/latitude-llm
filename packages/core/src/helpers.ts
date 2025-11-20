@@ -163,7 +163,7 @@ export function formatConversation(conversation: Message[]) {
 
 export type EvaluationResultsV2Search = {
   filters?: {
-    commitIds?: number[]
+    commitUuids?: string[]
     experimentIds?: number[]
     errored?: boolean
     createdAt?: DateRange
@@ -190,10 +190,13 @@ export function evaluationResultsV2SearchFromQueryParams(params: QueryParams) {
     },
   } as EvaluationResultsV2Search
 
-  if (params.commitIds !== undefined && typeof params.commitIds === 'string') {
-    search.filters!.commitIds = [...new Set(params.commitIds.split(','))]
-      .filter(Boolean)
-      .map(Number)
+  if (
+    params.commitUuids !== undefined &&
+    typeof params.commitUuids === 'string'
+  ) {
+    search.filters!.commitUuids = [
+      ...new Set(params.commitUuids.split(',')),
+    ].filter(Boolean)
   }
 
   if (
@@ -253,8 +256,8 @@ export function evaluationResultsV2SearchToQueryParams(
 ) {
   const params = new URLSearchParams()
 
-  if (search.filters?.commitIds !== undefined) {
-    const commitIds = [...new Set(search.filters.commitIds)].filter(Boolean)
+  if (search.filters?.commitUuids !== undefined) {
+    const commitIds = [...new Set(search.filters.commitUuids)].filter(Boolean)
     params.set('commitIds', commitIds.join(','))
   }
 

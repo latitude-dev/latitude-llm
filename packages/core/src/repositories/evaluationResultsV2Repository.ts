@@ -144,7 +144,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok<EvaluationResultV2>(result as EvaluationResultV2)
   }
 
-  private listByEvaluationFilter({
+  private async listByEvaluationFilter({
     evaluationUuid,
     params: { filters },
   }: {
@@ -157,9 +157,14 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       eq(evaluationResultsV2.evaluationUuid, evaluationUuid),
     ]
 
-    if (filters?.commitIds !== undefined) {
-      if (filters.commitIds.length > 0) {
-        filter.push(inArray(evaluationResultsV2.commitId, filters.commitIds))
+    if (filters?.commitUuids !== undefined) {
+      if (filters.commitUuids?.length > 0) {
+        const commitIds = await this.db
+          .select({ id: commits.id })
+          .from(commits)
+          .where(inArray(commits.uuid, filters.commitUuids))
+          .then((r) => r.map((c) => c.id))
+        filter.push(inArray(evaluationResultsV2.commitId, commitIds))
       } else filter.push(eq(sql`TRUE`, sql`FALSE`))
     }
 
@@ -194,7 +199,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     evaluationUuid: string
     params: EvaluationResultsV2Search
   }) {
-    const filter = this.listByEvaluationFilter({ evaluationUuid, params })
+    const filter = await this.listByEvaluationFilter({ evaluationUuid, params })
 
     let query = this.db
       .select({
@@ -245,7 +250,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     evaluationUuid: string
     params: EvaluationResultsV2Search
   }) {
-    const filter = this.listByEvaluationFilter({ evaluationUuid, params })
+    const filter = await this.listByEvaluationFilter({ evaluationUuid, params })
 
     const count = await this.db
       .select({
@@ -281,7 +286,9 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .then((r) => r[0])
     if (!result) return Result.ok(undefined)
 
-    const filter = [this.listByEvaluationFilter({ evaluationUuid, params })]
+    const filter = [
+      await this.listByEvaluationFilter({ evaluationUuid, params }),
+    ]
 
     if (params.orders?.recency === 'asc') {
       filter.push(
@@ -358,7 +365,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     }
 
     const filter = and(
-      this.listByEvaluationFilter({ evaluationUuid, params }),
+      await this.listByEvaluationFilter({ evaluationUuid, params }),
       isNull(evaluationResultsV2.error),
     )
 

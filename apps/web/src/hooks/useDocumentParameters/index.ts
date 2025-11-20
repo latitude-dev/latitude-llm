@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useRef } from 'react'
-
 import { useDatasetUtils } from '$/hooks/useDocumentParameters/datasetUtils'
 import {
   AppLocalStorage,
@@ -13,13 +12,11 @@ import {
   EMPTY_INPUTS,
   getDocState,
   getInputsBySource,
-  mapLogParametersToInputs,
   recalculateAllInputs,
   updateInputsState,
 } from './utils'
 import { type ResolvedMetadata } from '$/workers/readMetadata'
 import { useEvents } from '$/lib/events'
-import { DocumentLog, LogSources } from '@latitude-data/core/constants'
 
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import {
@@ -92,19 +89,6 @@ export function useDocumentParameters({
     [setValue, key],
   )
 
-  const setHistoryInputs = useCallback(
-    (newInputs: Inputs<'history'>) =>
-      setValue((old) =>
-        updateInputsState({
-          key,
-          source: 'history',
-          oldState: old,
-          newInputs,
-        }),
-      ),
-    [key, setValue],
-  )
-
   const setInput = useCallback(
     <S extends InputSource>(
       currentSource: S,
@@ -116,24 +100,13 @@ export function useDocumentParameters({
           setManualInputs({ ...inputsBySource, [param]: value })
           break
         }
-        case INPUT_SOURCE.history: {
-          setHistoryInputs({ ...inputsBySource, [param]: value })
-          break
-        }
       }
     },
-    [inputsBySource, setHistoryInputs, setManualInputs],
+    [inputsBySource, setManualInputs],
   )
 
   const setManualInput = useCallback(
     (param: string, value: PlaygroundInput<'manual'>) => {
-      setInput(source, value, param)
-    },
-    [setInput, source],
-  )
-
-  const setHistoryInput = useCallback(
-    (param: string, value: PlaygroundInput<'history'>) => {
       setInput(source, value, param)
     },
     [setInput, source],
@@ -160,50 +133,6 @@ export function useDocumentParameters({
     setManualInputs(dsInputs)
   }, [inputs.datasetV2, dsId, setManualInputs])
 
-  const setHistoryLog = useCallback(
-    ({ uuid, source }: { uuid: string; source?: LogSources | null }) => {
-      setValue((old) => {
-        const { state, doc } = getDocState(old, key)
-        return {
-          ...state,
-          [key]: {
-            ...doc,
-            history: {
-              ...doc.history,
-              logUuid: uuid,
-              force: source !== LogSources.Playground,
-            },
-          },
-        }
-      })
-    },
-    [key, setValue],
-  )
-
-  const mapDocParametersToInputs = useCallback(
-    ({ parameters }: { parameters: DocumentLog['parameters'] }) => {
-      setValue((old) => {
-        const { doc } = getDocState(old, key)
-        const sourceInputs = doc.history.inputs
-        const newInputs = mapLogParametersToInputs({
-          emptyInputs: emptyInputs.history,
-          inputs: sourceInputs,
-          parameters,
-        })
-
-        if (!newInputs) return old
-
-        return updateInputsState({
-          key,
-          source: 'history',
-          oldState: old,
-          newInputs,
-        })
-      })
-    },
-    [key, setValue, emptyInputs.history],
-  )
-
   const onMetadataChange = useCallback(
     (metadata: ResolvedMetadata) => {
       setValue((oldState) => {
@@ -215,9 +144,6 @@ export function useDocumentParameters({
           config: {
             manual: {
               fallbackInputs: prevInputs?.manual?.inputs,
-            },
-            history: {
-              fallbackInputs: prevInputs?.history?.inputs,
             },
             datasetV2: {
               datasetId: dsId,
@@ -292,15 +218,6 @@ export function useDocumentParameters({
         setDataset,
         copyToManual: copyDatasetToManual,
       },
-      history: {
-        logUuid: inputs['history'].logUuid,
-        inputs: inputs['history'].inputs,
-        force: inputs['history'].force,
-        setInput: setHistoryInput,
-        setInputs: setHistoryInputs,
-        setHistoryLog,
-        mapDocParametersToInputs,
-      },
     }),
     [
       metadataParameters,
@@ -316,10 +233,6 @@ export function useDocumentParameters({
       dsId,
       setDataset,
       copyDatasetToManual,
-      setHistoryInput,
-      setHistoryInputs,
-      setHistoryLog,
-      mapDocParametersToInputs,
     ],
   )
 }

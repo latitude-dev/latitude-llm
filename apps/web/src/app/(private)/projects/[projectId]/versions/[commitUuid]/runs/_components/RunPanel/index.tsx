@@ -159,7 +159,7 @@ function CompletedRunPanel({
                 .detail({ id: project.id })
                 .commits.detail({ uuid: commit.uuid })
                 .documents.detail({ uuid: run.span.documentUuid! }).spans.root +
-              `?spanId=${run.span.id}&traceId=${run.span.traceId}`
+              `?spanId=${run.span.id}&traceId=${run.span.traceId}&showPreview=true`
             }
             target='_blank'
           >

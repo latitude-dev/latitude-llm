@@ -22,11 +22,10 @@ import {
   INPUT_SOURCE,
   InputSource,
 } from '@latitude-data/core/lib/documentPersistedInputs'
-import { memo } from 'react'
-import {
-  useLogHistoryParams,
-  UseLogHistoryParams,
-} from './HistoryLogParams/useLogHistoryParams'
+import { memo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useSpan } from '$/stores/spans'
+import { SpanType, SpanWithDetails } from '@latitude-data/constants'
 
 export const TABS: TabSelectorOption<InputSource>[] = [
   { label: 'Manual', value: INPUT_SOURCE.manual },
@@ -44,7 +43,6 @@ type ContentProps = Props & {
   source: InputSource
   setSource: ReturnType<typeof useDocumentParameters>['setSource']
   datasetInfo: UseSelectDataset
-  historyInfo: UseLogHistoryParams
 }
 
 function ParamsTabs({
@@ -55,7 +53,6 @@ function ParamsTabs({
   setSource,
   source,
   datasetInfo,
-  historyInfo,
 }: ContentProps) {
   return (
     <div className='w-full flex flex-col gap-4'>
@@ -76,13 +73,6 @@ function ParamsTabs({
       {source === INPUT_SOURCE.dataset && (
         <DatasetParams data={datasetInfo} document={document} commit={commit} />
       )}
-      {source === INPUT_SOURCE.history && (
-        <HistoryLogParams
-          data={historyInfo}
-          document={document}
-          commit={commit}
-        />
-      )}
     </div>
   )
 }
@@ -91,20 +81,31 @@ type DocumentParamsProps = Props & {
   source: UseDocumentParameters['source']
   setSource: UseDocumentParameters['setSource']
 }
+
 export default memo(function DocumentParams({
   setSource,
   source,
   ...props
 }: DocumentParamsProps) {
   const commit = props.commit
+  const searchParams = useSearchParams()
+  const [urlSpanId, setUrlSpanId] = useState<string | undefined>(
+    searchParams.get('spanId') as string | undefined,
+  )
+  const [urlTraceId, setUrlTraceId] = useState<string | undefined>(
+    searchParams.get('traceId') as string | undefined,
+  )
+
+  // Fetch the URL span for initial render only
+  const { data: urlSpan, isLoading } = useSpan({
+    spanId: urlSpanId,
+    traceId: urlTraceId,
+  })
+
   const datasetInfo = useSelectDataset({
     document: props.document,
     commitVersionUuid: commit.uuid,
     source,
-  })
-  const historyInfo = useLogHistoryParams({
-    document: props.document,
-    commitVersionUuid: commit.uuid,
   })
 
   const contentProps = {
@@ -112,7 +113,6 @@ export default memo(function DocumentParams({
     source,
     setSource,
     datasetInfo,
-    historyInfo,
   }
 
   return (
@@ -132,7 +132,24 @@ export default memo(function DocumentParams({
         </div>
       </div>
       <div className='px-4 pb-3.5'>
-        <ParamsTabs {...contentProps} />
+        {source === INPUT_SOURCE.history && !isLoading ? (
+          <HistoryLogParams
+            key={urlSpan ? 'url-span' : 'normal-navigation'}
+            document={props.document}
+            commit={commit}
+            urlSpan={urlSpan as SpanWithDetails<SpanType.Prompt>}
+            onClearUrlSpan={() => {
+              const currentUrl = new URL(window.location.href)
+              currentUrl.searchParams.delete('spanId')
+              currentUrl.searchParams.delete('traceId')
+              window.history.replaceState({}, '', currentUrl.toString())
+              setUrlSpanId(undefined)
+              setUrlTraceId(undefined)
+            }}
+          />
+        ) : (
+          <ParamsTabs {...contentProps} />
+        )}
       </div>
     </div>
   )

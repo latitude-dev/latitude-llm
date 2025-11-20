@@ -1,8 +1,6 @@
-import {
-  UseDocumentParameters,
-  useDocumentParameters,
-} from '$/hooks/useDocumentParameters'
+import { useHistoryParameters } from '$/hooks/useDocumentParameters/useHistoryParameters'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -12,108 +10,183 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import Link from 'next/link'
 
-import { type UseLogHistoryParams } from './useLogHistoryParams'
 import {
   asPromptLFile,
   PromptLFileParameter,
 } from '$/components/PromptLFileParameter'
-import { ChangeEvent, useCallback, useEffect, useState } from 'react'
+import { ChangeEvent, useCallback, useEffect, useMemo } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { ParametersWrapper } from '../ParametersWrapper'
-import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
-import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
-import { useLimitedHistoryLogs } from '../../../V2Playground/hooks/useLimitedHistoryLogs'
-
-import { PlaygroundInput } from '@latitude-data/core/lib/documentPersistedInputs'
 
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
+import { ROUTES } from '$/services/routes'
+import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
+import { useSpan } from '$/stores/spans'
+import {
+  PromptSpanMetadata,
+  SpanType,
+  SpanWithDetails,
+} from '@latitude-data/core/constants'
+import { useOnce } from '$/hooks/useMount'
+
 function DebouncedTextArea({
-  input,
-  setInput,
+  value,
+  onChange,
   param,
   disabled,
 }: {
   param: string
-  input: PlaygroundInput<'history'>
-  setInput: UseDocumentParameters['history']['setInput']
+  value: string
+  onChange: (param: string, value: string) => void
   disabled: boolean
 }) {
-  const [localValue, setLocalValue] = useState(input.value ?? '')
   const setInputDebounced = useDebouncedCallback(
     async (value: string) => {
-      setInput(param, { ...input, value })
+      onChange(param, value)
     },
     100,
     { trailing: true },
   )
-  const onChange = useCallback(
+  const handleChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
       const value = e.target.value
-      setLocalValue(value)
       setInputDebounced(value)
     },
     [setInputDebounced],
   )
 
-  useEffect(() => {
-    setLocalValue(input.value ?? '')
-  }, [input.value])
-
   return (
     <TextArea
       name={param}
-      value={localValue}
+      defaultValue={value}
       minRows={1}
       maxRows={6}
-      onChange={onChange}
+      onChange={handleChange}
       disabled={disabled}
     />
   )
 }
 
 export function HistoryLogParams({
-  data,
   commit,
   document,
+  urlSpan,
+  onClearUrlSpan,
 }: {
   document: DocumentVersion
   commit: ICommitContextType['commit']
-  data: UseLogHistoryParams
+  urlSpan?: SpanWithDetails<SpanType.Prompt>
+  onClearUrlSpan: () => void
 }) {
   const {
-    history: { inputs, setInput },
-  } = useDocumentParameters({
+    items = [],
+    count,
+    hasNext,
+    hasPrev,
+    isLoading: isLoadingSpans,
+    goToNextPage,
+    goToPrevPage,
+  } = useSpansKeysetPaginationStore({
+    projectId: String(commit.projectId),
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+    limit: 1,
+  })
+
+  const spanId = items[0]?.id
+  const traceId = items[0]?.traceId
+  const { data: fetchedSpan, isLoading: isLoadingSpan } = useSpan({
+    spanId,
+    traceId,
+  })
+  const span = urlSpan || fetchedSpan
+  const isLoading = isLoadingSpans || isLoadingSpan
+
+  // Show clear button when URL span is active
+  const { inputs, setInput, metadataParameters } = useHistoryParameters({
     document,
     commitVersionUuid: commit.uuid,
   })
-  const urlData = usePaginatedDocumentLogUrl({
-    selectedLog: data.selectedLog,
-    page: data.page,
-    isLoading: data.isLoadingLog,
-  })
 
-  const hasLogs = data.count > 0
-  const { limitedCount, limitedPosition } = useLimitedHistoryLogs(data)
+  useOnce(() => {
+    if (urlSpan && !!urlSpan?.metadata?.parameters) {
+      metadataParameters?.forEach((key) => {
+        setInput(key, {
+          value: (urlSpan?.metadata?.parameters[key] as string) ?? '',
+          metadata: { includeInPrompt: true },
+        })
+      })
+    }
+  }, !!urlSpan && !!metadataParameters)
+
+  useEffect(() => {
+    if (!!urlSpan) return
+    if (!span) return
+    if (!span?.metadata) {
+      metadataParameters?.forEach((key) => {
+        setInput(key, {
+          value: '',
+          metadata: { includeInPrompt: true },
+        })
+      })
+
+      return
+    }
+
+    const promptSpanMetadata = span.metadata as PromptSpanMetadata
+    metadataParameters?.forEach((key) => {
+      setInput(key, {
+        value: (promptSpanMetadata.parameters[key] as string) ?? '',
+        metadata: { includeInPrompt: true },
+      })
+    })
+  }, [span, metadataParameters])
+
+  const urlData = useMemo(() => {
+    if (!span) return undefined
+
+    const route = ROUTES.projects
+      .detail({ id: commit.projectId })
+      .commits.detail({ uuid: commit.uuid })
+      .documents.detail({ uuid: document.documentUuid }).traces.root
+    const query = new URLSearchParams({
+      spanId: span.id,
+      traceId: span.traceId,
+    }).toString()
+
+    return { url: `${route}?${query}`, shortCode: span.id.slice(0, 7) }
+  }, [span, commit.projectId, commit.uuid, document.documentUuid])
+
+  const handleInputChange = useCallback(
+    (param: string, value: string) => {
+      setInput(param, {
+        value,
+        metadata: { includeInPrompt: true },
+      })
+    },
+    [setInput],
+  )
 
   return (
     <div className='flex flex-col gap-y-4'>
       <div className='flex flex-row gap-x-4 justify-between items-center border-border border-b pb-4'>
-        {data.isLoading || hasLogs ? (
+        {isLoading || items.length > 0 || urlSpan ? (
           <>
             <div className='flex flex-grow min-w-0'>
-              {data.isLoadingLog ? (
+              {isLoading ? (
                 <div className='flex flex-row gap-x-2 w-full'>
                   <Skeleton height='h3' className='w-2/3' />
                   <Skeleton height='h3' className='w-1/3' />
                 </div>
               ) : null}
-              {!data.isLoadingLog && urlData ? (
+              {!isLoading && span && urlData ? (
                 <Link
                   href={urlData.url}
                   className='flex-grow min-w-0 flex flex-row items-center gap-x-2'
                 >
                   <Text.H5 ellipsis noWrap>
-                    {urlData.createdAt}
+                    {span.startedAt.toISOString()}
                   </Text.H5>
                   <Badge variant='accent'>{urlData.shortCode}</Badge>
                   <Icon
@@ -124,14 +197,27 @@ export function HistoryLogParams({
                 </Link>
               ) : null}
             </div>
-            <ParametersPaginationNav
-              disabled={data.isLoadingLog}
-              label='history logs'
-              currentIndex={limitedPosition}
-              totalCount={limitedCount}
-              onPrevPage={data.onPrevPage}
-              onNextPage={data.onNextPage}
-            />
+            <div className='flex flex-row items-center gap-x-2'>
+              {!!urlSpan && (
+                <Button
+                  onClick={onClearUrlSpan}
+                  variant='outlineDestructive'
+                  size='small'
+                >
+                  Clear selection
+                </Button>
+              )}
+              {!urlSpan && (
+                <SimpleKeysetTablePaginationFooter
+                  count={count}
+                  isLoading={isLoading}
+                  hasNext={hasNext}
+                  hasPrev={hasPrev}
+                  setNext={goToNextPage}
+                  setPrev={goToPrevPage}
+                />
+              )}
+            </div>
           </>
         ) : (
           <div className='w-full flex justify-center'>
@@ -139,16 +225,14 @@ export function HistoryLogParams({
           </div>
         )}
       </div>
-      <div className={cn({ 'opacity-50': data.isLoading })}>
+      <div className={cn({ 'opacity-50': isLoading })}>
         <ParametersWrapper document={document} commit={commit}>
           {({ metadataParameters }) =>
             metadataParameters.map((param, idx) => {
               const input = inputs?.[param]
-
               if (!input) return null
 
               const includedInPrompt = input.metadata.includeInPrompt ?? true
-
               const file = asPromptLFile(input.value)
 
               return (
@@ -172,9 +256,9 @@ export function HistoryLogParams({
                     ) : (
                       <DebouncedTextArea
                         param={param}
-                        input={input}
-                        setInput={setInput}
-                        disabled={data.isLoading}
+                        value={input.value ?? ''}
+                        onChange={handleInputChange}
+                        disabled={isLoading}
                       />
                     )}
                   </div>

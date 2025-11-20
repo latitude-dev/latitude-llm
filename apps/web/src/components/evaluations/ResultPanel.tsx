@@ -1,7 +1,6 @@
 'use client'
 
 import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
-import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/logs/_components/DocumentLogs/DocumentLogInfo/Metadata'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   useCurrentProject,
@@ -44,6 +43,128 @@ import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
 import { useSpan } from '$/stores/spans'
 import { MetadataInfoTabs } from '$/components/MetadataInfoTabs'
+import { SpanParameters } from './SpanParameters'
+
+export function ResultPanelLoading() {
+  return (
+    <div className='flex flex-col gap-4'>
+      <MetadataItem label='Result uuid' loading />
+      <MetadataItem label='Timestamp' loading />
+      <MetadataItem label='Version' loading />
+      <MetadataItem label='Actual output' loading />
+      <MetadataItem label='Expected output' loading />
+      <MetadataItem label='Result' loading />
+      <MetadataItem label='Reasoning' loading />
+      <MetadataItem label='Parameters' loading />
+    </div>
+  )
+}
+
+export function ResultPanel<
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>({
+  evaluation,
+  result,
+  commit,
+  evaluatedSpanId,
+  evaluatedTraceId,
+  panelRef,
+  tableRef,
+  ...rest
+}: Omit<ResultPanelProps<T, M>, 'evaluatedDocumentLog' | 'selectedTab'>) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [targetRef, setTargetRef] = useState<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!ref.current) return
+    setTargetRef(ref.current)
+  }, [])
+
+  const scrollableArea = usePanelDomRef({ selfRef: targetRef })
+  useStickyNested({
+    scrollableArea: scrollableArea,
+    beacon: tableRef.current,
+    target: targetRef,
+    targetContainer: panelRef.current,
+    offset: { top: 12, bottom: 12 },
+  })
+
+  const { project } = useCurrentProject()
+  const { document } = useCurrentDocument()
+
+  const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
+  if (!typeSpecification) return null
+
+  return (
+    <div ref={ref} className='flex flex-col'>
+      <MetadataInfoTabs
+        tabs={[
+          { label: 'Metadata', value: 'metadata' },
+          ...(typeSpecification.resultPanelTabs?.({
+            metric: evaluation.metric,
+          }) ?? []),
+        ]}
+        className='w-full'
+      >
+        {({ selectedTab }) => (
+          <>
+            {selectedTab === 'metadata' && (
+              <ResultPanelMetadata
+                evaluation={evaluation}
+                result={result}
+                commit={commit}
+                evaluatedTraceId={evaluatedTraceId}
+                evaluatedSpanId={evaluatedSpanId}
+                panelRef={panelRef}
+                tableRef={tableRef}
+                selectedTab={selectedTab}
+                {...rest}
+              />
+            )}
+            {!!typeSpecification.ResultPanelContent && (
+              <typeSpecification.ResultPanelContent
+                metric={evaluation.metric}
+                evaluation={evaluation}
+                result={result}
+                commit={commit}
+                evaluatedTraceId={evaluatedTraceId}
+                evaluatedSpanId={evaluatedSpanId}
+                panelRef={panelRef}
+                tableRef={tableRef}
+                selectedTab={selectedTab}
+                {...rest}
+              />
+            )}
+            <div className='w-full flex justify-center pt-4'>
+              <Link
+                href={EvaluatedTraceLink({
+                  project: project,
+                  commit: commit,
+                  document: document,
+                  traceId: result.evaluatedTraceId!,
+                  spanId: result.evaluatedSpanId!,
+                })}
+                target='_blank'
+              >
+                <Button
+                  variant='link'
+                  iconProps={{
+                    name: 'arrowRight',
+                    widthClass: 'w-4',
+                    heightClass: 'h-4',
+                    placement: 'right',
+                  }}
+                >
+                  Check evaluated log
+                </Button>
+              </Link>
+            </div>
+          </>
+        )}
+      </MetadataInfoTabs>
+    </div>
+  )
+}
 
 const DataGrid = dynamic(
   () =>
@@ -131,7 +252,7 @@ function EvaluatedDatasetRowModal({
   )
 }
 
-export function ResultPanelMetadata<
+function ResultPanelMetadata<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
 >({
@@ -318,125 +439,4 @@ function EvaluatedTraceLink({
       .commits.detail({ uuid: commit.uuid })
       .documents.detail({ uuid: document.documentUuid }).traces.root
   }?${query.toString()}`
-}
-
-export function ResultPanelLoading() {
-  return (
-    <div className='flex flex-col gap-4'>
-      <MetadataItem label='Result uuid' loading />
-      <MetadataItem label='Timestamp' loading />
-      <MetadataItem label='Version' loading />
-      <MetadataItem label='Actual output' loading />
-      <MetadataItem label='Expected output' loading />
-      <MetadataItem label='Result' loading />
-      <MetadataItem label='Reasoning' loading />
-      <MetadataItem label='Parameters' loading />
-    </div>
-  )
-}
-
-export function ResultPanel<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({
-  evaluation,
-  result,
-  commit,
-  evaluatedSpanId,
-  evaluatedTraceId,
-  panelRef,
-  tableRef,
-  ...rest
-}: Omit<ResultPanelProps<T, M>, 'evaluatedDocumentLog' | 'selectedTab'>) {
-  const ref = useRef<HTMLDivElement | null>(null)
-  const [targetRef, setTargetRef] = useState<HTMLDivElement | null>(null)
-  useEffect(() => {
-    if (!ref.current) return
-    setTargetRef(ref.current)
-  }, [])
-
-  const scrollableArea = usePanelDomRef({ selfRef: targetRef })
-  useStickyNested({
-    scrollableArea: scrollableArea,
-    beacon: tableRef.current,
-    target: targetRef,
-    targetContainer: panelRef.current,
-    offset: { top: 12, bottom: 12 },
-  })
-
-  const { project } = useCurrentProject()
-  const { document } = useCurrentDocument()
-
-  const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
-  if (!typeSpecification) return null
-
-  return (
-    <div ref={ref} className='flex flex-col'>
-      <MetadataInfoTabs
-        tabs={[
-          { label: 'Metadata', value: 'metadata' },
-          ...(typeSpecification.resultPanelTabs?.({
-            metric: evaluation.metric,
-          }) ?? []),
-        ]}
-        className='w-full'
-      >
-        {({ selectedTab }) => (
-          <>
-            {selectedTab === 'metadata' && (
-              <ResultPanelMetadata
-                evaluation={evaluation}
-                result={result}
-                commit={commit}
-                evaluatedTraceId={evaluatedTraceId}
-                evaluatedSpanId={evaluatedSpanId}
-                panelRef={panelRef}
-                tableRef={tableRef}
-                selectedTab={selectedTab}
-                {...rest}
-              />
-            )}
-            {!!typeSpecification.ResultPanelContent && (
-              <typeSpecification.ResultPanelContent
-                metric={evaluation.metric}
-                evaluation={evaluation}
-                result={result}
-                commit={commit}
-                evaluatedTraceId={evaluatedTraceId}
-                evaluatedSpanId={evaluatedSpanId}
-                panelRef={panelRef}
-                tableRef={tableRef}
-                selectedTab={selectedTab}
-                {...rest}
-              />
-            )}
-            <div className='w-full flex justify-center pt-4'>
-              <Link
-                href={EvaluatedTraceLink({
-                  project: project,
-                  commit: commit,
-                  document: document,
-                  traceId: result.evaluatedTraceId!,
-                  spanId: result.evaluatedSpanId!,
-                })}
-                target='_blank'
-              >
-                <Button
-                  variant='link'
-                  iconProps={{
-                    name: 'arrowRight',
-                    widthClass: 'w-4',
-                    heightClass: 'h-4',
-                    placement: 'right',
-                  }}
-                >
-                  Check evaluated log
-                </Button>
-              </Link>
-            </div>
-          </>
-        )}
-      </MetadataInfoTabs>
-    </div>
-  )
 }

@@ -6,8 +6,8 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { endOfDay, startOfDay } from 'date-fns'
 import { isEqual } from 'lodash-es'
 import { ComponentProps, useMemo } from 'react'
-import { CommitFilter } from '../../../logs/_components/Filters/CommitFilter'
 import { EvaluationResultsV2Search } from '@latitude-data/core/helpers'
+import { CommitFilterByUuid } from '../../../traces/_components/Filters/CommitFilterByUuid'
 
 export function EvaluationFilters({
   search,
@@ -20,7 +20,7 @@ export function EvaluationFilters({
 }) {
   const { data: commits, isLoading: isLoadingCommits } = useCommits()
   const defaultSelectedCommits = useMemo(
-    () => commits.map((c) => c.id),
+    () => commits.map((c) => c.uuid),
     [commits],
   )
 
@@ -72,27 +72,29 @@ export function EvaluationFilters({
         }}
         disabled={isLoading}
       />
-      <CommitFilter
-        selectedCommitsIds={search.filters?.commitIds ?? defaultSelectedCommits}
+      <CommitFilterByUuid
+        selectedCommitUuids={
+          search.filters?.commitUuids ?? defaultSelectedCommits
+        }
         onSelectCommits={(value) =>
           setSearch({
             ...search,
             filters: {
               ...(search.filters ?? {}),
-              commitIds: value,
+              commitUuids: value,
             },
           })
         }
         isDefault={
-          !search.filters?.commitIds ||
-          isEqual(search.filters?.commitIds, defaultSelectedCommits)
+          !search.filters?.commitUuids ||
+          isEqual(search.filters?.commitUuids, defaultSelectedCommits)
         }
         reset={() =>
           setSearch({
             ...search,
             filters: {
               ...(search.filters ?? {}),
-              commitIds: defaultSelectedCommits,
+              commitUuids: defaultSelectedCommits,
             },
           })
         }
