@@ -1,0 +1,406 @@
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { subDays } from 'date-fns'
+import { eq } from 'drizzle-orm'
+import { ESCALATION_EXPIRATION_DAYS } from '@latitude-data/constants/issues'
+import { Result } from '../../lib/Result'
+import { createIssue, createProject } from '../../tests/factories'
+import { IssueIncrementedEvent } from '../events'
+import { sendIssueEscalatingHandler } from './sendIssueEscalatingHandler'
+import { IssueEscalatingMailer } from '../../mailers'
+import * as datadogCapture from '../../utils/datadogCapture'
+import { database } from '../../client'
+import { issues } from '../../schema/models/issues'
+import type { Workspace } from '../../schema/models/types/Workspace'
+import type { Project } from '../../schema/models/types/Project'
+import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import type { User } from '../../schema/models/types/User'
+
+// Mock the mailer
+vi.mock('../../mailers', () => ({
+  IssueEscalatingMailer: vi.fn().mockImplementation(() => ({
+    send: vi.fn().mockResolvedValue(Result.ok({ messageId: 'test-message-id' })),
+  })),
+}))
+
+// Mock datadog capture
+vi.mock('../../utils/datadogCapture', () => ({
+  captureException: vi.fn(),
+}))
+
+describe('sendIssueEscalatingHandler', () => {
+  let workspace: Workspace
+  let project: Project
+  let documents: DocumentVersion[]
+  let user: User
+
+  beforeAll(async () => {
+    const setup = await createProject({
+      documents: {
+        'test-doc': 'Hello world',
+      },
+    })
+    workspace = setup.workspace
+    project = setup.project
+    documents = setup.documents
+    user = setup.user
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('when issue is not escalating', () => {
+    it('should not send email if issue.escalatingAt is null', async () => {
+      const doc = documents[0]!
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      // Ensure issue is not escalating
+      expect(issue.escalatingAt).toBeNull()
+
+      const event: IssueIncrementedEvent = {
+        type: 'issueIncremented',
+        data: {
+          workspaceId: workspace.id,
+          issueId: issue.id,
+          histogramId: 1,
+          previousEscalatingAt: null,
+        },
+      }
+
+      await sendIssueEscalatingHandler({ data: event })
+
+      expect(IssueEscalatingMailer).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('when issue just started escalating', () => {
+    it('should send email when previousEscalatingAt is null and issue is now escalating', async () => {
+      const doc = documents[0]!
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      // Update issue in database to set escalatingAt
+      await database
+        .update(issues)
+        .set({ escalatingAt: new Date() })
+        .where(eq(issues.id, issue.id))
+
+      const event: IssueIncrementedEvent = {
+        type: 'issueIncremented',
+        data: {
+          workspaceId: workspace.id,
+          issueId: issue.id,
+          histogramId: 1,
+          previousEscalatingAt: null, // Was not escalating before
+        },
+      }
+
+      await sendIssueEscalatingHandler({ data: event })
+
+      // Verify mailer was instantiated
+      expect(IssueEscalatingMailer).toHaveBeenCalledWith(
+        {},
+        {
+          issueTitle: issue.title,
+          link: expect.stringContaining(`/projects/${issue.projectId}/versions/live/issues?issueId=${issue.id}`),
+        },
+      )
+
+      // Verify send was called
+      const mailerInstance = vi.mocked(IssueEscalatingMailer).mock.results[0]?.value
+      expect(mailerInstance.send).toHaveBeenCalled()
+    })
+
+    it('should send emails in batches when there are many users', async () => {
+      const doc = documents[0]!
+
+      // Create 2 additional users (total 3 users with the one from createProject)
+      const { createUser } = await import('../../tests/factories/users')
+      const { createMembership } = await import('../../services/memberships/create')
+      
+      const user2 = await createUser({ email: 'user2@example.com' })
+      const user3 = await createUser({ email: 'user3@example.com' })
+      
+      await createMembership({ workspace, user: user2 }).then((r) => r.unwrap())
+      await createMembership({ workspace, user: user3 }).then((r) => r.unwrap())
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      // Update issue in database to set escalatingAt
+      await database
+        .update(issues)
+        .set({ escalatingAt: new Date() })
+        .where(eq(issues.id, issue.id))
+
+      // Mock mailer to track batch calls
+      const mockSend = vi.fn().mockResolvedValue(Result.ok({ messageId: 'test' }))
+      vi.mocked(IssueEscalatingMailer).mockImplementation(
+        () =>
+          ({
+            send: mockSend,
+          }) as unknown as IssueEscalatingMailer,
+      )
+
+      const event: IssueIncrementedEvent = {
+        type: 'issueIncremented',
+        data: {
+          workspaceId: workspace.id,
+          issueId: issue.id,
+          histogramId: 1,
+          previousEscalatingAt: null,
+        },
+      }
+
+      // Pass batchSize: 2 to test batching (3 users = 2 batches: [2, 1])
+      await sendIssueEscalatingHandler({ data: event, batchSize: 2 })
+
+      // With 3 users and batch size of 2, should send 2 batches
+      expect(mockSend).toHaveBeenCalledTimes(2)
+      
+      // Verify first batch has 2 users
+      const firstBatch = mockSend.mock.calls[0][0]
+      expect(firstBatch.to).toHaveLength(2)
+      
+      // Verify second batch has 1 user
+      const secondBatch = mockSend.mock.calls[1][0]
+      expect(secondBatch.to).toHaveLength(1)
+
+      // Verify all 3 users were sent emails
+      const allRecipients = [
+        ...firstBatch.to,
+        ...secondBatch.to,
+      ]
+      expect(allRecipients).toHaveLength(3)
+      expect(
+        allRecipients.map((r: { address: string; name: string }) => r.address),
+      ).toEqual(expect.arrayContaining([user.email, user2.email, user3.email]))
+    })
+  })
+
+  describe('when issue was escalating but expired', () => {
+    it('should send email when previousEscalatingAt is expired and issue is still escalating', async () => {
+      const doc = documents[0]!
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      // Update issue in database to set escalatingAt with new timestamp
+      await database
+        .update(issues)
+        .set({ escalatingAt: new Date() })
+        .where(eq(issues.id, issue.id))
+
+      // Previous escalation was 8 days ago (expired)
+      const expiredDate = subDays(new Date(), ESCALATION_EXPIRATION_DAYS + 1)
+
+      const event: IssueIncrementedEvent = {
+        type: 'issueIncremented',
+        data: {
+          workspaceId: workspace.id,
+          issueId: issue.id,
+          histogramId: 1,
+          previousEscalatingAt: expiredDate,
+        },
+      }
+
+      await sendIssueEscalatingHandler({ data: event })
+
+      // Verify mailer was called (new escalation session)
+      expect(IssueEscalatingMailer).toHaveBeenCalled()
+    })
+  })
+
+  describe('when issue is still in active escalation period', () => {
+    it('should NOT send email when previousEscalatingAt is recent (not expired)', async () => {
+      const doc = documents[0]!
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      // Issue is still escalating
+      issue.escalatingAt = new Date()
+
+      // Previous escalation was 2 days ago (still valid, not expired)
+      const recentDate = subDays(new Date(), 2)
+
+      const event: IssueIncrementedEvent = {
+        type: 'issueIncremented',
+        data: {
+          workspaceId: workspace.id,
+          issueId: issue.id,
+          histogramId: 1,
+          previousEscalatingAt: recentDate,
+        },
+      }
+
+      await sendIssueEscalatingHandler({ data: event })
+
+      // Verify mailer was NOT called (still in same escalation period)
+      expect(IssueEscalatingMailer).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('error handling', () => {
+    it('should capture error when email sending fails', async () => {
+      const doc = documents[0]!
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      // Update issue in database to set escalatingAt
+      await database
+        .update(issues)
+        .set({ escalatingAt: new Date() })
+        .where(eq(issues.id, issue.id))
+
+      // Mock mailer to return error
+      const sendError = new Error('Email provider failed')
+      vi.mocked(IssueEscalatingMailer).mockImplementationOnce(
+        () =>
+          ({
+            send: vi.fn().mockResolvedValue(Result.error(sendError)),
+          }) as unknown as IssueEscalatingMailer,
+      )
+
+      const event: IssueIncrementedEvent = {
+        type: 'issueIncremented',
+        data: {
+          workspaceId: workspace.id,
+          issueId: issue.id,
+          histogramId: 1,
+          previousEscalatingAt: null,
+        },
+      }
+
+      await sendIssueEscalatingHandler({ data: event })
+
+      // Verify error was captured
+      expect(datadogCapture.captureException).toHaveBeenCalledWith(
+        sendError,
+        expect.objectContaining({
+          issueId: issue.id,
+          issueTitle: issue.title,
+          workspaceId: workspace.id,
+          context: 'issue_escalation_email',
+        }),
+      )
+    })
+
+    it('should capture batch index when specific batch fails', async () => {
+      const doc = documents[0]!
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      // Update issue in database to set escalatingAt
+      await database
+        .update(issues)
+        .set({ escalatingAt: new Date() })
+        .where(eq(issues.id, issue.id))
+
+      const sendError = new Error('Batch 0 failed')
+      vi.mocked(IssueEscalatingMailer).mockImplementationOnce(
+        () =>
+          ({
+            send: vi.fn().mockResolvedValue(Result.error(sendError)),
+          }) as unknown as IssueEscalatingMailer,
+      )
+
+      const event: IssueIncrementedEvent = {
+        type: 'issueIncremented',
+        data: {
+          workspaceId: workspace.id,
+          issueId: issue.id,
+          histogramId: 1,
+          previousEscalatingAt: null,
+        },
+      }
+
+      await sendIssueEscalatingHandler({ data: event })
+
+      // Verify batch index was captured
+      expect(datadogCapture.captureException).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          batchIndex: expect.any(Number),
+          batchSize: expect.any(Number),
+        }),
+      )
+    })
+  })
+
+  describe('email formatting', () => {
+    it('should format recipients as Address objects with name and email', async () => {
+      const doc = documents[0]!
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      // Update issue in database to set escalatingAt
+      await database
+        .update(issues)
+        .set({ escalatingAt: new Date() })
+        .where(eq(issues.id, issue.id))
+
+      const event: IssueIncrementedEvent = {
+        type: 'issueIncremented',
+        data: {
+          workspaceId: workspace.id,
+          issueId: issue.id,
+          histogramId: 1,
+          previousEscalatingAt: null,
+        },
+      }
+
+      await sendIssueEscalatingHandler({ data: event })
+
+      const mailerInstance = vi.mocked(IssueEscalatingMailer).mock.results[0]?.value
+      
+      // Verify send was called with Address objects
+      expect(mailerInstance.send).toHaveBeenCalledWith({
+        to: expect.arrayContaining([
+          expect.objectContaining({
+            address: expect.any(String),
+            name: expect.any(String),
+          }),
+        ]),
+      })
+    })
+  })
+})

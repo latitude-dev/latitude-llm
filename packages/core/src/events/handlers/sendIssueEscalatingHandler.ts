@@ -14,9 +14,11 @@ const BATCH_SIZE = 100
 async function sendEmail({
   workspace,
   issue,
+  batchSize = BATCH_SIZE,
 }: {
   workspace: Workspace
   issue: NonNullable<Awaited<ReturnType<IssuesRepository['find']>>['value']>
+  batchSize?: number
 }) {
   if (!workspace) return
 
@@ -39,8 +41,8 @@ async function sendEmail({
 
   const batches: (typeof addresses)[] = []
 
-  for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
-    batches.push(addresses.slice(i, i + BATCH_SIZE))
+  for (let i = 0; i < addresses.length; i += batchSize) {
+    batches.push(addresses.slice(i, i + batchSize))
   }
 
   // Send all batches in parallel and capture any errors
@@ -75,13 +77,16 @@ async function sendEmail({
  */
 export async function sendIssueEscalatingHandler({
   data: event,
+  batchSize,
 }: {
   data: IssueIncrementedEvent
+  batchSize?: number
 }) {
   const { workspaceId, issueId, previousEscalatingAt } = event.data
 
   // Fetch workspace and issue (issue now has the updated escalating_at after updateEscalatingIssue)
   const workspace = await unsafelyFindWorkspace(workspaceId)
+
   if (!workspace)
     throw new NotFoundError(
       'Workspace not found sending issue escalation email',
@@ -90,7 +95,6 @@ export async function sendIssueEscalatingHandler({
   const issuesRepo = new IssuesRepository(workspaceId)
   const issue = await issuesRepo.find(issueId).then((r) => r.unwrap())
 
-  // If the issue is not currently escalating, don't send email
   if (!issue.escalatingAt) return
 
   // Calculate expiration date
@@ -106,5 +110,5 @@ export async function sendIssueEscalatingHandler({
 
   if (!wasNotEscalating && !wasEscalatingButExpired) return
 
-  await sendEmail({ workspace, issue })
+  await sendEmail({ workspace, issue, batchSize })
 }
