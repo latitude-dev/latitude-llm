@@ -30,9 +30,9 @@ import { type Workspace } from '../../schema/models/types/Workspace'
 import { extractActualOutput, extractExpectedOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
-import { findFirstSpanOfType } from '../tracing/spans/findFirstSpanOfType'
 import { assembleTrace } from '../tracing/traces/assemble'
 import { LegacyMessage } from '../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
+import { findLastSpanOfType } from '../tracing/spans/findLastSpanOfType'
 
 export async function runEvaluationV2<
   T extends EvaluationType,
@@ -128,7 +128,7 @@ export async function runEvaluationV2<
   if (!assembledSpan) {
     return Result.error(new UnprocessableEntityError('Cannot assemble trace'))
   }
-  const completionSpan = findFirstSpanOfType(
+  const completionSpan = findLastSpanOfType(
     assembledSpan.trace.children,
     SpanType.Completion,
   )

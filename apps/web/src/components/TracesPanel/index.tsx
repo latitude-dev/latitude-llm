@@ -14,6 +14,7 @@ import { AnnotationForms } from './AnnotationForms'
 import { TraceEvaluations } from './TraceEvaluations'
 import { MetadataInfoTabs } from '../MetadataInfoTabs'
 import { useMemo } from 'react'
+import { findLastSpanOfType } from '@latitude-data/core/services/tracing/spans/findLastSpanOfType'
 
 export const DEFAULT_TABS = [
   { label: 'Metadata', value: 'metadata' },
@@ -99,7 +100,7 @@ function TraceMetadata({
 
 function TraceMessages({ traceId }: { traceId: string | null }) {
   const { data: trace } = useTrace({ traceId })
-  const completionSpan = findFirstSpanOfType(
+  const completionSpan = findLastSpanOfType(
     trace?.children ?? [],
     SpanType.Completion,
   )

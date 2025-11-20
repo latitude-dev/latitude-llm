@@ -12,6 +12,7 @@ import { integrationOptions } from '$/lib/integrationTypeOptions'
 import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
 import { useNavigate } from '$/hooks/useNavigate'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+import Image from 'next/image'
 
 export function IntegrationsList({
   disabled,
@@ -47,7 +48,7 @@ export function IntegrationsList({
             label,
             icon:
               icon.type === 'image' ? (
-                <img
+                <Image
                   src={icon.src}
                   alt={icon.alt}
                   width={16}

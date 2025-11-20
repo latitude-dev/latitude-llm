@@ -32,11 +32,11 @@ import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap
 import Link from 'next/link'
 import { RunPanelStats } from './Stats'
 import { useTrace } from '$/stores/traces'
-import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { sum } from 'lodash-es'
 import { useCompletedRunsKeysetPaginationStore } from '$/stores/completedRunsKeysetPagination'
 import { useAnnotationBySpan } from '$/hooks/useAnnotationsBySpan'
+import { findLastSpanOfType } from '@latitude-data/core/services/tracing/spans/findLastSpanOfType'
 
 export function RunPanel({
   run,
@@ -98,7 +98,7 @@ function CompletedRunPanel({
   const { data: trace, isLoading: isLoadingTrace } = useTrace({
     traceId: run.span.traceId,
   })
-  const completionSpan = findFirstSpanOfType(
+  const completionSpan = findLastSpanOfType(
     trace?.children ?? [],
     SpanType.Completion,
   )
