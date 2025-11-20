@@ -1,15 +1,10 @@
 import { Commit } from '../../schema/models/types/Commit'
 import { Workspace } from '../../schema/models/types/Workspace'
-import {
-  DocumentVersionsRepository,
-  ProviderApiKeysRepository,
-} from '../../repositories'
+import { DocumentVersionsRepository } from '../../repositories'
 import { Result } from '../../lib/Result'
-import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import {
   CLOUD_MESSAGES,
   EvaluationType,
-  LlmEvaluationBinaryConfiguration,
   LlmEvaluationBinarySpecification,
   LlmEvaluationMetric,
 } from '../../constants'
@@ -19,27 +14,34 @@ import { getCopilot } from '../copilot'
 import { Copilot, runCopilot } from '../copilot'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Issue } from '../../schema/models/types/Issue'
-import { PromisedResult } from '../../lib/Transaction'
 import { createEvaluationV2 } from './create'
-import { findFirstModelForProvider } from '../ai/providers/models'
-import { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { assertCopilotIsSupported } from '../copilot/assertItsSupported'
+import z from 'zod'
 
 const llmEvaluationBinarySpecificationWithoutModel =
-  LlmEvaluationBinarySpecification.configuration.omit({
-    model: true,
-    provider: true,
-  })
+  LlmEvaluationBinarySpecification.configuration
+    .omit({
+      model: true,
+      provider: true,
+      actualOutput: true,
+    })
+    .extend({
+      name: z.string(),
+    })
 
 export async function generateEvaluationFromIssueWithCopilot(
   {
     issue,
     workspace,
     commit,
+    providerName,
+    model,
   }: {
     issue: Issue
     commit: Commit
     workspace: Workspace
+    providerName: string
+    model: string
   },
   db = database,
 ) {
@@ -65,21 +67,6 @@ export async function generateEvaluationFromIssueWithCopilot(
     })
     .then((r) => r.unwrap())
 
-  // TODO(evaluation-generation): Figure out what to do with the provider/model, do we get it from frontend?
-  const providerRepository = new ProviderApiKeysRepository(workspace.id)
-  const provider = await providerRepository.findFirst().then((r) => r.unwrap())
-  if (!provider) {
-    return Result.error(new NotFoundError('Provider not found'))
-  }
-
-  const model = findFirstModelForProvider({
-    provider: provider,
-    defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
-  })
-  if (!model) {
-    return Result.error(new NotFoundError('Model not found'))
-  }
-
   const copilotResult = await getCopilot(
     {
       path: env.COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH,
@@ -96,7 +83,7 @@ export async function generateEvaluationFromIssueWithCopilot(
     copilot: copilot,
     issue: issue,
     document: document,
-    provider: provider,
+    providerName: providerName,
     model: model,
   })
 
@@ -107,11 +94,13 @@ export async function generateEvaluationFromIssueWithCopilot(
   const evaluationConfig = evaluationConfigResult.unwrap()
   const evaluationResult = await createEvaluationV2({
     settings: {
-      name: LlmEvaluationBinarySpecification.name,
+      // TODO(evaluation-generation): name has to be unique, so we need another LLM to create it
+      // TODO(evaluation-generation): zod error popped in workers, but didnt show up in frontend??
+      name: evaluationConfig.name,
       description: LlmEvaluationBinarySpecification.description,
       type: EvaluationType.Llm,
       metric: LlmEvaluationMetric.Binary,
-      configuration: evaluationConfig,
+      configuration: evaluationConfig.configuration,
     },
     issueId: issue.id,
     document: document,
@@ -132,15 +121,15 @@ async function generateEvaluationConfigForIssue({
   copilot,
   issue,
   document,
-  provider,
+  providerName,
   model,
 }: {
   copilot: Copilot
   issue: Issue
   document: DocumentVersion
-  provider: ProviderApiKey
+  providerName: string
   model: string
-}): PromisedResult<LlmEvaluationBinaryConfiguration, UnprocessableEntityError> {
+}) {
   //TODO(evaluation-generation): Add validation loop here
   const evaluationConfigResult = await runCopilot({
     copilot: copilot,
@@ -159,9 +148,16 @@ async function generateEvaluationConfigForIssue({
   const evaluationConfig = evaluationConfigResult.unwrap()
 
   return Result.ok({
-    ...evaluationConfig,
-    provider: provider.name,
-    model: model,
+    configuration: {
+      ...evaluationConfig,
+      provider: providerName,
+      model: model,
+      actualOutput: {
+        messageSelection: 'all' as const,
+        parsingFormat: 'json' as const,
+      },
+    },
+    name: evaluationConfig.name,
   })
 }
 

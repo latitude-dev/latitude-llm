@@ -1,7 +1,6 @@
 'use server'
 
 import { withDocument, withDocumentSchema } from '../procedures'
-import { ErrorResult, Result } from '@latitude-data/core/lib/Result'
 import { LatitudeError } from '@latitude-data/core/lib/errors'
 import { z } from 'zod'
 import { queues } from '@latitude-data/core/queues'
@@ -10,37 +9,42 @@ import { assertCopilotIsSupported } from '@latitude-data/core/services/copilot/a
 import { env } from '@latitude-data/env'
 
 export const generateEvaluationV2FromIssueAction = withDocument
-  .inputSchema(withDocumentSchema.extend({ issueId: z.number() }))
+  .inputSchema(
+    withDocumentSchema.extend({
+      issueId: z.number(),
+      providerName: z.string(),
+      model: z.string(),
+    }),
+  )
   .action(async ({ ctx, parsedInput }) => {
     const { workspace, commit } = ctx
-    const { issueId } = parsedInput
+    const { issueId, providerName, model } = parsedInput
 
-    const supportResult = assertCopilotIsSupported(
+    assertCopilotIsSupported(
       CLOUD_MESSAGES.generateEvaluationIssueUsingCopilot,
-    )
+    ).unwrap()
 
     if (!env.COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH) {
-      return Result.error(
-        new Error('COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH is not set'),
+      throw new Error(
+        'COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH is not set',
       )
     }
-
-    if (!Result.isOk(supportResult))
-      return supportResult as ErrorResult<LatitudeError>
+    console.log('providerName', providerName)
+    console.log('model', model)
 
     const { evaluationsQueue } = await queues()
     const job = await evaluationsQueue.add('generateEvaluationV2FromIssueJob', {
       workspaceId: workspace.id,
       commitId: commit.id,
       issueId: issueId,
+      providerName: providerName,
+      model: model,
     })
 
     if (!job.id)
-      return Result.error(
-        new LatitudeError(
-          'Generate evaluation from issue failed due to missing job id',
-        ),
+      throw new LatitudeError(
+        'Generate evaluation from issue failed due to missing job id',
       )
 
-    return Result.nil()
+    return job.id
   })

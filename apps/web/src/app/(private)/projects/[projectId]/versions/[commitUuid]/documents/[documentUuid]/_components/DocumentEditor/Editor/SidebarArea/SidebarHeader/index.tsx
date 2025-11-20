@@ -13,6 +13,7 @@ import { useDevMode } from '$/hooks/useDevMode'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { PromptConfiguration } from '$/components/PromptConfiguration'
 import { useUpdateDocumentContent } from '../hooks/usePromptConfigInSidebar'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 export function SidebarHeader({
   metadata,
@@ -99,6 +100,7 @@ export function SidebarHeader({
         onChangePrompt={updateDocumentContent}
         providers={providers}
         disabledMetadataSelectors={isMerged}
+        updatePromptMetadata={updatePromptMetadata}
       />
     </div>
   )

@@ -4,25 +4,26 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import { EvaluationModal } from './EvaluationModal'
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 
 export function IssueEvaluation({ issue }: { issue: Issue }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-
   const {
     data: evaluations,
     isLoading: isLoadingEvaluations,
     updateEvaluation,
     isUpdatingEvaluation,
-    //    isGeneratingEvaluationFromIssue,
-    //    generateEvaluationFromIssue,
+    isGeneratingEvaluationFromIssue,
+    generateEvaluationFromIssue,
   } = useEvaluationsV2({
     project: project,
     commit: commit,
@@ -31,6 +32,9 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       documentUuid: issue.documentUuid,
     },
   })
+  const [openGenerateModal, setOpenGenerateModal] = useState(false)
+  const [provider, setProvider] = useState<ProviderApiKey | undefined>()
+  const [model, setModel] = useState<string | undefined | null>()
 
   const evaluationsThatCanBeAttachedToIssues = useMemo(
     () =>
@@ -98,11 +102,6 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
             disabled={isUpdatingEvaluation}
             loading={isUpdatingEvaluation}
             onChange={setIssueForNewEvaluation}
-            // footerAction={{
-            //   label: 'Generate new evaluation',
-            //   icon: 'wandSparkles',
-            //   onClick: () => undefined,
-            // }} // TODO(evaluation-generator): Remove this once we have a way to generate evaluations from issues
           />
         </div>
       </div>
@@ -120,16 +119,27 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
             color: 'primary',
             placement: 'left',
           }}
-          disabled={true} // TODO(evaluation-generator): Remove this once we have a way to generate evaluations from issues
-          onClick={() => {
-            //   e.stopPropagation()
-            //   generateEvaluationFromIssue({ issueId: issue.id })
-          }} // TODO(evaluation-generator): Uncomment this once we have a way to generate evaluations from issues
-          // disabled: isGeneratingEvaluationFromIssue,
-          // isLoading: isGeneratingEvaluationFromIssue,
+          onClick={() => setOpenGenerateModal(true)}
+          disabled={isGeneratingEvaluationFromIssue}
+          isLoading={isGeneratingEvaluationFromIssue}
         >
           Generate
         </Button>
+        <EvaluationModal
+          open={openGenerateModal}
+          setOpen={setOpenGenerateModal}
+          generateEvaluationFromIssue={() =>
+            generateEvaluationFromIssue({
+              issueId: issue.id,
+              providerName: provider?.name!,
+              model: model!,
+            })
+          }
+          setProvider={setProvider}
+          setModel={setModel}
+          provider={provider}
+          model={model}
+        />
       </div>
     </div>
   )

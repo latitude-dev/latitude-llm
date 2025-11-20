@@ -9,12 +9,14 @@ export type GenerateEvaluationV2FromIssueJobData = {
   workspaceId: number
   commitId: number
   issueId: number
+  providerName: string
+  model: string
 }
 
 export const generateEvaluationV2FromIssueJob = async (
   job: Job<GenerateEvaluationV2FromIssueJobData>,
 ) => {
-  const { workspaceId, commitId, issueId } = job.data
+  const { workspaceId, commitId, issueId, providerName, model } = job.data
 
   try {
     const workspace = await unsafelyFindWorkspace(workspaceId)
@@ -33,6 +35,8 @@ export const generateEvaluationV2FromIssueJob = async (
       issue,
       commit,
       workspace,
+      providerName,
+      model,
     }).then((r) => r.unwrap())
   } catch (error) {
     captureException(error as Error)

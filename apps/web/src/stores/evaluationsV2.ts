@@ -335,12 +335,22 @@ export function useEvaluationsV2(
   })
 
   const generateEvaluationFromIssue = useCallback(
-    async ({ issueId }: { issueId: number }) => {
+    async ({
+      issueId,
+      providerName,
+      model,
+    }: {
+      issueId: number
+      providerName: string
+      model: string
+    }) => {
       return await executeGenerateEvaluationV2FromIssue({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
         issueId: issueId,
+        providerName: providerName,
+        model: model,
       })
     },
     [project, commit, document, executeGenerateEvaluationV2FromIssue],

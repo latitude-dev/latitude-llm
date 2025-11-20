@@ -81,6 +81,7 @@ export const EvaluationEditorHeader = memo(
             onChangePrompt={onChangePrompt}
             providers={providers}
             disabledMetadataSelectors={disabledMetadataSelectors}
+            updatePromptMetadata={updatePromptMetadata}
           />
           <div className='relative flex flex-row justify-end gap-2 min-w-0'>
             {/* Badge counter needs to be on top of other buttons. For that the z-index */}
