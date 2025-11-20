@@ -668,7 +668,9 @@ export type EvaluationEndedEvent = LatitudeEventGeneric<
 >
 export type EvaluationFailedEvent = LatitudeEventGeneric<
   'evaluationFailed',
-  EvaluationStatusEventData
+  EvaluationStatusEventData & {
+    error: Error
+  }
 >
 
 export type EvaluationStatusEvent =

@@ -3,7 +3,6 @@
 @tailwind utilities;
 
 @layer utilities {
-
   /* Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -23,9 +22,12 @@
       linear-gradient(hsl(var(--background)) 30%, hsl(var(--background) / 0)),
       linear-gradient(hsl(var(--background)), hsl(var(--background)) 0%) 0 100%,
       radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.1), transparent),
-      radial-gradient(farthest-side at 50% 100%,
-        hsl(var(--background-shadow) / 0.1),
-        rgba(0, 0, 0, 0)) 0 100%;
+      radial-gradient(
+          farthest-side at 50% 100%,
+          hsl(var(--background-shadow) / 0.1),
+          rgba(0, 0, 0, 0)
+        )
+        0 100%;
     background-repeat: no-repeat;
     background-color: hsl(var(--background));
     background-size:
@@ -152,7 +154,7 @@
     --primary: 211 94% 43%;
     --primary-foreground: 210 20% 98%;
     --primary-muted: 210 100% 96%;
-    --primary-muted-hover: 210 100% 96% / 0.8;
+    --primary-muted-hover: 210 100% 97%;
 
     --secondary: 210 20% 98%;
     --secondary-foreground: 221 39% 11%;
@@ -311,13 +313,13 @@
     }
   }
 
-  input[type=number].appearance-none::-webkit-inner-spin-button,
-  input[type=number].appearance-none::-webkit-outer-spin-button {
+  input[type='number'].appearance-none::-webkit-inner-spin-button,
+  input[type='number'].appearance-none::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
 
-  input[type=number].appearance-none {
+  input[type='number'].appearance-none {
     -moz-appearance: textfield;
     appearance: textfield;
   }

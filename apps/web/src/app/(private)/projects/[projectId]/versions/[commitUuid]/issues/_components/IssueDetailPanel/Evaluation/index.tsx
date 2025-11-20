@@ -25,7 +25,7 @@ const GENERATION_DESCRIPTIONS = [
   'Found it! Creating the evaluation...',
 ]
 
-const ENDED_EVALUATION_DESCRIPTION_DELAY = 4000
+const ENDED_EVALUATION_DESCRIPTION_DELAY = 3000
 
 export function IssueEvaluation({ issue }: { issue: Issue }) {
   const { project } = useCurrentProject()
@@ -46,9 +46,10 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     },
   })
 
-  const [endedEvaluationUuid, setEndedEvaluationUuid] = useState<string | null>(
-    null,
-  )
+  const [endedEvaluation, setEndedEvaluation] = useState<{
+    uuid: string
+    hasError: boolean
+  } | null>(null)
 
   const { data: activeEvaluations, isLoading: isLoadingActiveEvaluations } =
     useActiveEvaluations(
@@ -56,22 +57,32 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
         project: project,
       },
       {
-        onEvaluationEnded: (evaluation) => {
+        onEvaluationEnded: async (evaluation) => {
           if (evaluation.issueId !== issue.id) return
-          setEndedEvaluationUuid(evaluation.uuid)
-          mutateEvaluations().then(() => {
+          const hasError = !!evaluation.error
+          setEndedEvaluation({ uuid: evaluation.uuid, hasError })
+
+          if (hasError) {
+            toast({
+              title: 'Evaluation generation failed',
+              description: 'Please try again',
+              variant: 'destructive',
+            })
+            // For errors, just wait the delay then clear and show button
             setTimeout(() => {
-              setEndedEvaluationUuid(null)
+              setEndedEvaluation(null)
             }, ENDED_EVALUATION_DESCRIPTION_DELAY)
-          })
-        },
-        onEvaluationFailed: (evaluation) => {
-          if (evaluation.issueId !== issue.id) return
-          toast({
-            title: 'Evaluation generation failed',
-            description: 'Please try again',
-            variant: 'destructive',
-          })
+          } else {
+            toast({
+              title: 'Evaluation generated successfully',
+            })
+            // For success, mutate evaluations to get the new, generated one and wait for it to appear
+            mutateEvaluations().then(() => {
+              setTimeout(() => {
+                setEndedEvaluation(null)
+              }, ENDED_EVALUATION_DESCRIPTION_DELAY)
+            })
+          }
         },
       },
     )
@@ -83,6 +94,14 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
   const iconPropsByEvaluationStatus = useMemo<IconProps>(() => {
     const started = !!activeEvaluationForThisIssue?.startedAt
     const ended = !!activeEvaluationForThisIssue?.endedAt
+    const error = !!activeEvaluationForThisIssue?.error
+
+    if (error) {
+      return {
+        name: 'circleX',
+        color: 'destructive',
+      }
+    }
 
     if (started && !ended) {
       return {
@@ -185,7 +204,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
   if (
     activeEvaluationForThisIssue ||
     isLoadingActiveEvaluations ||
-    endedEvaluationUuid
+    (endedEvaluation && !endedEvaluation.hasError)
   ) {
     return (
       <div className='grid grid-cols-2 gap-x-4 items-center'>
@@ -194,19 +213,38 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
           <Icon {...iconPropsByEvaluationStatus} />
           <div className='flex flex-col'>
             <Text.H6M>
-              {activeEvaluationForThisIssue?.endedAt
-                ? 'Finished successfully'
-                : activeEvaluationForThisIssue?.startedAt
-                  ? 'Generating...'
-                  : endedEvaluationUuid
-                    ? 'Finalizing...'
-                    : 'Preparing...'}
+              {activeEvaluationForThisIssue?.error
+                ? 'Failed to generate'
+                : activeEvaluationForThisIssue?.endedAt
+                  ? 'Finished successfully'
+                  : activeEvaluationForThisIssue?.startedAt
+                    ? 'Generating...'
+                    : endedEvaluation
+                      ? 'Finalizing...'
+                      : 'Preparing...'}
             </Text.H6M>
             <Text.H6 color='foregroundMuted'>
-              {endedEvaluationUuid
-                ? 'Evaluation will appear shortly...'
-                : generationDescription}
+              {activeEvaluationForThisIssue?.error
+                ? 'Please try again'
+                : endedEvaluation
+                  ? 'Evaluation will appear shortly...'
+                  : generationDescription}
             </Text.H6>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (endedEvaluation?.hasError) {
+    return (
+      <div className='grid grid-cols-2 gap-x-4 items-center'>
+        <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
+        <div className='flex flex-row items-center gap-2'>
+          <Icon name='circleX' color='destructive' />
+          <div className='flex flex-col'>
+            <Text.H6M>Failed to generate</Text.H6M>
+            <Text.H6 color='foregroundMuted'>Please try again</Text.H6>
           </div>
         </div>
       </div>

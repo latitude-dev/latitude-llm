@@ -1,6 +1,9 @@
 import { Commit } from '../../schema/models/types/Commit'
 import { Workspace } from '../../schema/models/types/Workspace'
-import { DocumentVersionsRepository } from '../../repositories'
+import {
+  DocumentVersionsRepository,
+  EvaluationsV2Repository,
+} from '../../repositories'
 import { Result } from '../../lib/Result'
 import {
   CLOUD_MESSAGES,
@@ -17,7 +20,6 @@ import { Issue } from '../../schema/models/types/Issue'
 import { createEvaluationV2 } from './create'
 import { assertCopilotIsSupported } from '../copilot/assertItsSupported'
 import z from 'zod'
-import { faker } from '@faker-js/faker'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration
@@ -28,6 +30,7 @@ const llmEvaluationBinarySpecificationWithoutModel =
     })
     .extend({
       name: z.string(),
+      description: z.string(),
     })
 
 export async function generateEvaluationFromIssueWithCopilot(
@@ -81,6 +84,21 @@ export async function generateEvaluationFromIssueWithCopilot(
 
   const copilot = copilotResult.unwrap()
 
+  const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
+  const evaluationsFromSameCommitAndDocumentResult =
+    await evaluationsRepository.listAtCommitByDocument({
+      projectId: commit.projectId,
+      commitUuid: commit.uuid,
+      documentUuid: issue.documentUuid,
+    })
+  if (!Result.isOk(evaluationsFromSameCommitAndDocumentResult)) {
+    return evaluationsFromSameCommitAndDocumentResult
+  }
+  const existingEvaluations =
+    evaluationsFromSameCommitAndDocumentResult.unwrap()
+
+  const existingEvaluationNames = existingEvaluations.map((e) => e.name)
+
   //TODO (evaluation-generation): We can add a progress caption here as well if things are getting long and we want to know what is really happening.
 
   const evaluationConfigResult = await generateEvaluationConfigForIssue({
@@ -89,6 +107,7 @@ export async function generateEvaluationFromIssueWithCopilot(
     document: document,
     providerName: providerName,
     model: model,
+    existingEvaluationNames: existingEvaluationNames,
   })
 
   if (!Result.isOk(evaluationConfigResult)) {
@@ -98,10 +117,9 @@ export async function generateEvaluationFromIssueWithCopilot(
   const evaluationConfig = evaluationConfigResult.unwrap()
   const evaluationResult = await createEvaluationV2({
     settings: {
-      // TODO(evaluation-generation): name has to be unique, so we need another LLM to create it
       // TODO(evaluation-generation): zod error popped in workers, but didnt show up in frontend??
-      name: faker.lorem.sentence(),
-      description: LlmEvaluationBinarySpecification.description,
+      name: evaluationConfig.name,
+      description: evaluationConfig.description,
       type: EvaluationType.Llm,
       metric: LlmEvaluationMetric.Binary,
       configuration: evaluationConfig.configuration,
@@ -127,20 +145,23 @@ async function generateEvaluationConfigForIssue({
   document,
   providerName,
   model,
+  existingEvaluationNames,
 }: {
   copilot: Copilot
   issue: Issue
   document: DocumentVersion
   providerName: string
   model: string
+  existingEvaluationNames: string[]
 }) {
   //TODO(evaluation-generation): Add validation loop here
   const evaluationConfigResult = await runCopilot({
     copilot: copilot,
     parameters: {
-      issueId: issue.id,
+      issueName: issue.title,
       issueDescription: issue.description,
       prompt: document.content,
+      existingEvaluationNames: existingEvaluationNames,
     },
     schema: llmEvaluationBinarySpecificationWithoutModel,
   })
@@ -162,6 +183,7 @@ async function generateEvaluationConfigForIssue({
       },
     },
     name: evaluationConfig.name,
+    description: evaluationConfig.description,
   })
 }
 

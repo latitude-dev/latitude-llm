@@ -18,7 +18,6 @@ export function useActiveEvaluations(
   },
   opts?: SWRConfiguration & {
     onEvaluationEnded?: (evaluation: ActiveEvaluation) => void
-    onEvaluationFailed?: (evaluation: ActiveEvaluation) => void
   },
 ) {
   const fetcher = useFetcher<ActiveEvaluation[]>(
@@ -45,14 +44,6 @@ export function useActiveEvaluations(
           if (args.event === 'evaluationEnded') {
             if (opts?.onEvaluationEnded) {
               opts.onEvaluationEnded(args.evaluation)
-            }
-            return prev.filter(
-              (evaluation) => evaluation.uuid !== args.evaluation.uuid,
-            )
-          }
-          if (args.event === 'evaluationFailed') {
-            if (opts?.onEvaluationFailed) {
-              opts.onEvaluationFailed(args.evaluation)
             }
             return prev.filter(
               (evaluation) => evaluation.uuid !== args.evaluation.uuid,

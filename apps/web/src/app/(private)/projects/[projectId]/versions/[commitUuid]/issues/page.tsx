@@ -13,6 +13,7 @@ import {
   QueryParams,
 } from '@latitude-data/constants/issues'
 import { SWRProvider } from '$/components/Providers/SWRProvider'
+import { MetadataProvider } from '$/components/MetadataProvider'
 
 export type IssuesServerResponse = Awaited<
   OkType<IssuesRepository['fetchIssuesFiltered']>
@@ -68,12 +69,14 @@ export default async function IssuesPageRoute({
     searchParams: convertIssuesParamsToQueryParams(parsedParams),
   })
   return (
-    <SWRProvider config={{ [key]: serverResponse }}>
-      <IssuesDashboard
-        serverResponse={serverResponse}
-        params={parsedParams}
-        selectedIssue={selectedIssue ?? undefined}
-      />
-    </SWRProvider>
+    <MetadataProvider>
+      <SWRProvider config={{ [key]: serverResponse }}>
+        <IssuesDashboard
+          serverResponse={serverResponse}
+          params={parsedParams}
+          selectedIssue={selectedIssue ?? undefined}
+        />
+      </SWRProvider>
+    </MetadataProvider>
   )
 }

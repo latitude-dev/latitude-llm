@@ -11,7 +11,7 @@ export async function failActiveEvaluation({
   workspaceId: number
   projectId: number
   evaluationUuid: string
-  error?: Error
+  error: Error
 }) {
   const deleteResult = await updateActiveEvaluation({
     workspaceId,
@@ -23,7 +23,7 @@ export async function failActiveEvaluation({
   const evaluation = deleteResult.unwrap()
   await publisher.publishLater({
     type: 'evaluationFailed',
-    data: { workspaceId, projectId, evaluation },
+    data: { workspaceId, projectId, evaluation, error },
   })
   return deleteResult
 }

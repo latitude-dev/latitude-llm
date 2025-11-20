@@ -3,6 +3,8 @@ import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useMemo } from 'react'
+import { useMetadataStore } from '$/hooks/useMetadata'
 
 export function EvaluationModal({
   open,
@@ -21,7 +23,16 @@ export function EvaluationModal({
   provider: ProviderApiKey | undefined
   model: string | undefined | null
 }) {
+  // TODO: get metadata from here to get the provider used in the document
+  const { metadata } = useMetadataStore()
   const { data: providers } = useProviderApiKeys()
+  const providerUsedInDocument = useMemo(() => {
+    if (!metadata?.config?.['provider']) return undefined
+    if (!providers) return undefined
+
+    const providerName = metadata.config['provider']
+    return providers.find((p) => p.name === providerName)
+  }, [metadata, providers])
 
   return (
     <ConfirmModal
