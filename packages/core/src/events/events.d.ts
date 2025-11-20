@@ -713,6 +713,7 @@ export type IssueIncrementedEvent = LatitudeEventGeneric<
     workspaceId: number
     issueId: number
     histogramId: number
+    previousEscalatingAt: Date | null
   }
 >
 

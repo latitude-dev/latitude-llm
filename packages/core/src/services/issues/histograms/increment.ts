@@ -30,6 +30,9 @@ export async function incrementIssueHistogram(
   const date = format(result.createdAt, 'yyyy-MM-dd')
   return await transaction.call(
     async (tx) => {
+      // Capture the previous escalating_at value before updating
+      const previousEscalatingAt = issue.escalatingAt
+
       const histogram = (await tx
         .insert(issueHistograms)
         .values({
@@ -63,15 +66,16 @@ export async function incrementIssueHistogram(
         r.unwrap(),
       )
 
-      return Result.ok({ histogram })
+      return Result.ok({ histogram, previousEscalatingAt })
     },
-    async ({ histogram }) => {
+    async ({ histogram, previousEscalatingAt }) => {
       await publisher.publishLater({
         type: 'issueIncremented',
         data: {
           workspaceId: workspace.id,
           issueId: issue.id,
           histogramId: histogram.id,
+          previousEscalatingAt,
         },
       })
     },

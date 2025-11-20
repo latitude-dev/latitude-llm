@@ -19,6 +19,7 @@ import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLog
 import { pingProjectUpdateJob } from './pingProjectUpdateJob'
 import { requestDocumentSuggestionJobV2 } from './requestDocumentSuggestionJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
+import { sendIssueEscalatingHandler } from './sendIssueEscalatingHandler'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
@@ -101,7 +102,7 @@ export const EventHandlers: IEventsHandlers = {
   issueCreated: [],
   issueUpdated: [],
   issueDeleted: [],
-  issueIncremented: [],
+  issueIncremented: [sendIssueEscalatingHandler],
   issueDecremented: [],
   issueDiscovered: [],
   issueMerged: [],
