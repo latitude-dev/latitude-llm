@@ -6,13 +6,26 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import React, { useCallback, useMemo, useState } from 'react'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, IconProps } from '@latitude-data/web-ui/atoms/Icons'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { EvaluationModal } from './EvaluationModal'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import { useActiveEvaluations } from '$/stores/activeEvaluations'
+import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
+import { useTypeWriterValue } from '@latitude-data/web-ui/browser'
+
+const GENERATION_DESCRIPTIONS = [
+  'Thinking of a good configuration...',
+  'Validating its effectiveness...',
+  'Trying a different approach...',
+  'Validating the new approach...',
+  'Found it! Creating the evaluation...',
+]
+
+const ENDED_EVALUATION_DESCRIPTION_DELAY = 4000
 
 export function IssueEvaluation({ issue }: { issue: Issue }) {
   const { project } = useCurrentProject()
@@ -22,8 +35,8 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     isLoading: isLoadingEvaluations,
     updateEvaluation,
     isUpdatingEvaluation,
-    isGeneratingEvaluationFromIssue,
     generateEvaluationFromIssue,
+    mutate: mutateEvaluations,
   } = useEvaluationsV2({
     project: project,
     commit: commit,
@@ -32,9 +45,70 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       documentUuid: issue.documentUuid,
     },
   })
+
+  const [endedEvaluationUuid, setEndedEvaluationUuid] = useState<string | null>(
+    null,
+  )
+
+  const { data: activeEvaluations, isLoading: isLoadingActiveEvaluations } =
+    useActiveEvaluations(
+      {
+        project: project,
+      },
+      {
+        onEvaluationEnded: (evaluation) => {
+          if (evaluation.issueId !== issue.id) return
+          setEndedEvaluationUuid(evaluation.uuid)
+          mutateEvaluations().then(() => {
+            setTimeout(() => {
+              setEndedEvaluationUuid(null)
+            }, ENDED_EVALUATION_DESCRIPTION_DELAY)
+          })
+        },
+        onEvaluationFailed: (evaluation) => {
+          if (evaluation.issueId !== issue.id) return
+          toast({
+            title: 'Evaluation generation failed',
+            description: 'Please try again',
+            variant: 'destructive',
+          })
+        },
+      },
+    )
+
+  const activeEvaluationForThisIssue = useMemo(() => {
+    return activeEvaluations.find((e) => e.issueId === issue.id)
+  }, [activeEvaluations, issue.id])
+
+  const iconPropsByEvaluationStatus = useMemo<IconProps>(() => {
+    const started = !!activeEvaluationForThisIssue?.startedAt
+    const ended = !!activeEvaluationForThisIssue?.endedAt
+
+    if (started && !ended) {
+      return {
+        name: 'loader',
+        color: 'foregroundMuted',
+        spin: true,
+      }
+    }
+    if (ended) {
+      return {
+        name: 'checkClean',
+        color: 'success',
+      }
+    }
+    return {
+      name: 'loader',
+      color: 'primary',
+      spin: true,
+    }
+  }, [activeEvaluationForThisIssue])
+
   const [openGenerateModal, setOpenGenerateModal] = useState(false)
   const [provider, setProvider] = useState<ProviderApiKey | undefined>()
   const [model, setModel] = useState<string | undefined | null>()
+
+  const generationDescription = useTypeWriterValue(GENERATION_DESCRIPTIONS)
 
   const evaluationsThatCanBeAttachedToIssues = useMemo(
     () =>
@@ -108,6 +182,37 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     )
   }
 
+  if (
+    activeEvaluationForThisIssue ||
+    isLoadingActiveEvaluations ||
+    endedEvaluationUuid
+  ) {
+    return (
+      <div className='grid grid-cols-2 gap-x-4 items-center'>
+        <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
+        <div className='flex flex-row items-center gap-2'>
+          <Icon {...iconPropsByEvaluationStatus} />
+          <div className='flex flex-col'>
+            <Text.H6M>
+              {activeEvaluationForThisIssue?.endedAt
+                ? 'Finished successfully'
+                : activeEvaluationForThisIssue?.startedAt
+                  ? 'Generating...'
+                  : endedEvaluationUuid
+                    ? 'Finalizing...'
+                    : 'Preparing...'}
+            </Text.H6M>
+            <Text.H6 color='foregroundMuted'>
+              {endedEvaluationUuid
+                ? 'Evaluation will appear shortly...'
+                : generationDescription}
+            </Text.H6>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className='grid grid-cols-2 gap-x-4 items-center'>
       <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
@@ -120,8 +225,6 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
             placement: 'left',
           }}
           onClick={() => setOpenGenerateModal(true)}
-          disabled={isGeneratingEvaluationFromIssue}
-          isLoading={isGeneratingEvaluationFromIssue}
         >
           Generate
         </Button>

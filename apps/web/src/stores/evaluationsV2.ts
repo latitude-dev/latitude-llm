@@ -318,10 +318,7 @@ export function useEvaluationsV2(
     isPending: isGeneratingEvaluationFromIssue,
   } = useLatitudeAction(generateEvaluationV2FromIssueAction, {
     onSuccess: async () => {
-      toast({
-        title: 'Evaluation generation started successfully',
-        description: `Evaluation generation started successfully`,
-      })
+      // no-op
     },
     onError: async (error) => {
       if (error.code === 'ERROR') {

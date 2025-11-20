@@ -33,6 +33,7 @@ export * from './human'
 export * from './llm'
 export * from './rule'
 export * from './shared'
+export * from './active'
 
 export enum EvaluationType {
   Rule = 'rule',

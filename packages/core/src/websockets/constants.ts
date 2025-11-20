@@ -4,6 +4,7 @@
 // put in other place.
 
 import {
+  ActiveEvaluation,
   DocumentLogWithMetadataAndError,
   EvaluationResultV2,
   EvaluationV2,
@@ -11,7 +12,7 @@ import {
   LatteUsage,
   Run,
 } from '../constants'
-import { RunStatusEvent } from '../events/events'
+import { EvaluationStatusEvent, RunStatusEvent } from '../events/events'
 import type { ProviderLogDto } from '../schema/types'
 import type { DatasetRow } from '../schema/models/types/DatasetRow'
 import type { DocumentSuggestion } from '../schema/models/types/DocumentSuggestion'
@@ -44,6 +45,13 @@ export type WebSocketData = {
   workspaceId: number
 }
 export type WorkerPayload = {}
+
+type EvaluationStatusArgs = {
+  event: EvaluationStatusEvent['type']
+  workspaceId: number
+  projectId: number
+  evaluation: ActiveEvaluation
+}
 
 type ExperimentStatusArgs = {
   experiment: ExperimentDto
@@ -174,6 +182,7 @@ type RunStatusArgs = {
 }
 
 export type WebServerToClientEvents = {
+  evaluationStatus: (args: EvaluationStatusArgs) => void
   experimentStatus: (args: ExperimentStatusArgs) => void
   datasetRowsCreated: (args: DatasetRowsCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void

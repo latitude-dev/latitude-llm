@@ -17,6 +17,7 @@ import { Issue } from '../../schema/models/types/Issue'
 import { createEvaluationV2 } from './create'
 import { assertCopilotIsSupported } from '../copilot/assertItsSupported'
 import z from 'zod'
+import { faker } from '@faker-js/faker'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration
@@ -79,6 +80,9 @@ export async function generateEvaluationFromIssueWithCopilot(
   }
 
   const copilot = copilotResult.unwrap()
+
+  //TODO (evaluation-generation): We can add a progress caption here as well if things are getting long and we want to know what is really happening.
+
   const evaluationConfigResult = await generateEvaluationConfigForIssue({
     copilot: copilot,
     issue: issue,
@@ -96,7 +100,7 @@ export async function generateEvaluationFromIssueWithCopilot(
     settings: {
       // TODO(evaluation-generation): name has to be unique, so we need another LLM to create it
       // TODO(evaluation-generation): zod error popped in workers, but didnt show up in frontend??
-      name: evaluationConfig.name,
+      name: faker.lorem.sentence(),
       description: LlmEvaluationBinarySpecification.description,
       type: EvaluationType.Llm,
       metric: LlmEvaluationMetric.Binary,

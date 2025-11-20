@@ -2,6 +2,7 @@ import { ProviderModelSelector } from '$/components/ProviderModelSelector'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export function EvaluationModal({
   open,
@@ -40,6 +41,7 @@ export function EvaluationModal({
       }}
     >
       <div className='flex flex-col gap-2'>
+        <Text.H5M>Provider</Text.H5M>
         <ProviderModelSelector
           fancyButton
           alignPopover='end'

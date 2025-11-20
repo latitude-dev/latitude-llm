@@ -7,6 +7,11 @@ import { queues } from '@latitude-data/core/queues'
 import { CLOUD_MESSAGES } from '@latitude-data/core/constants'
 import { assertCopilotIsSupported } from '@latitude-data/core/services/copilot/assertItsSupported'
 import { env } from '@latitude-data/env'
+import { cache } from '@latitude-data/core/cache'
+import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
+import { createActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/create'
+import { deleteActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/delete'
+import { publisher } from '@latitude-data/core/events/publisher'
 
 export const generateEvaluationV2FromIssueAction = withDocument
   .inputSchema(
@@ -19,6 +24,7 @@ export const generateEvaluationV2FromIssueAction = withDocument
   .action(async ({ ctx, parsedInput }) => {
     const { workspace, commit } = ctx
     const { issueId, providerName, model } = parsedInput
+    const redisCache = await cache()
 
     assertCopilotIsSupported(
       CLOUD_MESSAGES.generateEvaluationIssueUsingCopilot,
@@ -29,8 +35,15 @@ export const generateEvaluationV2FromIssueAction = withDocument
         'COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH is not set',
       )
     }
-    console.log('providerName', providerName)
-    console.log('model', model)
+
+    const activeEvaluation = await createActiveEvaluation({
+      workspaceId: workspace.id,
+      projectId: commit.projectId,
+      evaluationUuid: generateUUIDIdentifier(),
+      issueId: issueId,
+      queuedAt: new Date(),
+      cache: redisCache,
+    }).then((r) => r.unwrap())
 
     const { evaluationsQueue } = await queues()
     const job = await evaluationsQueue.add('generateEvaluationV2FromIssueJob', {
@@ -39,12 +52,29 @@ export const generateEvaluationV2FromIssueAction = withDocument
       issueId: issueId,
       providerName: providerName,
       model: model,
+      evaluationUuid: activeEvaluation.uuid,
     })
 
-    if (!job.id)
+    if (!job.id) {
+      await deleteActiveEvaluation({
+        workspaceId: workspace.id,
+        projectId: commit.projectId,
+        evaluationUuid: activeEvaluation.uuid,
+        cache: redisCache,
+      }).then((r) => r.unwrap())
       throw new LatitudeError(
         'Generate evaluation from issue failed due to missing job id',
       )
+    }
 
-    return job.id
+    await publisher.publishLater({
+      type: 'evaluationQueued',
+      data: {
+        workspaceId: workspace.id,
+        projectId: commit.projectId,
+        evaluation: activeEvaluation,
+      },
+    })
+
+    return activeEvaluation
   })
