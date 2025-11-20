@@ -42,7 +42,11 @@ export function useCompletedRuns(
   } = useSWR<{ items: CompletedRun[]; next: string | null }>(
     ['completedRuns', project.id, search?.sourceGroup, search?.limit],
     fetcher,
-    opts,
+    {
+      ...opts,
+      dedupingInterval: opts?.dedupingInterval ?? 5000, // Prevent duplicate requests within 5s
+      revalidateOnFocus: false, // Prevent refetch on tab focus
+    },
   )
 
   const onMessage = useCallback(
@@ -109,7 +113,11 @@ export function useCompletedRunsCount(
   } = useSWR<Record<LogSources, number>>(
     ['completedRunsCount', project.id],
     fetcher,
-    opts,
+    {
+      ...opts,
+      dedupingInterval: opts?.dedupingInterval ?? 5000, // Prevent duplicate requests within 5s
+      revalidateOnFocus: false, // Prevent refetch on tab focus
+    },
   )
 
   const onMessage = useCallback(

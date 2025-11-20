@@ -10,7 +10,7 @@ import {
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { SpansRepository } from '../../../repositories'
-import { spanToRun } from '../spanToRun'
+import { spansToRunsBatch } from '../spanToRunBatch'
 
 export async function listCompletedRuns({
   type,
@@ -60,12 +60,11 @@ export async function listCompletedRuns({
     return acc
   }, new Map<string, Span>())
 
-  // TODO(tracing): N+1
-  const runs = await Promise.all(
-    Array.from(uniqueSpans.values()).map((span) =>
-      spanToRun({ workspaceId, span: span as Span<SpanType.Prompt> }),
-    ),
-  )
+  // Use batched version to avoid N+1 query problem and reduce memory usage
+  const runs = await spansToRunsBatch({
+    workspaceId,
+    spans: Array.from(uniqueSpans.values()) as Span<SpanType.Prompt>[],
+  })
 
   return Result.ok({ items: runs, next })
 }

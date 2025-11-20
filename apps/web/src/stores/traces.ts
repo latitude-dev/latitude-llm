@@ -23,7 +23,11 @@ export function useTrace(
     data = undefined,
     isLoading,
     mutate,
-  } = useSWR<AssembledTrace>(traceId, fetcher, opts)
+  } = useSWR<AssembledTrace>(traceId, fetcher, {
+    ...opts,
+    dedupingInterval: opts?.dedupingInterval ?? 5000, // Prevent duplicate requests within 5s
+    revalidateOnFocus: false, // Prevent refetch on tab focus
+  })
 
   return useMemo(() => ({ data, isLoading, mutate }), [data, isLoading, mutate])
 }

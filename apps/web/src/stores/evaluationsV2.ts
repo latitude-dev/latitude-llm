@@ -68,7 +68,11 @@ export function useEvaluationsV2(
       document.documentUuid,
     ]),
     fetcher,
-    opts,
+    {
+      ...opts,
+      dedupingInterval: opts?.dedupingInterval ?? 5000, // Prevent duplicate requests within 5s
+      revalidateOnFocus: false, // Prevent refetch on tab focus
+    },
   )
 
   const {
