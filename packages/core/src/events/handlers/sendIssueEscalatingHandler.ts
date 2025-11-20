@@ -5,6 +5,7 @@ import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { IssueEscalatingMailer } from '../../mailers'
 import { IssuesRepository } from '../../repositories'
+import { updateEscalatingIssue } from '../../services/issues/updateEscalating'
 import { captureException } from '../../utils/datadogCapture'
 import { IssueIncrementedEvent } from '../events'
 import { Workspace } from '../../schema/models/types/Workspace'
@@ -82,9 +83,9 @@ export async function sendIssueEscalatingHandler({
   data: IssueIncrementedEvent
   batchSize?: number
 }) {
-  const { workspaceId, issueId, previousEscalatingAt } = event.data
+  const { workspaceId, issueId } = event.data
 
-  // Fetch workspace and issue (issue now has the updated escalating_at after updateEscalatingIssue)
+  // Fetch workspace and issue
   const workspace = await unsafelyFindWorkspace(workspaceId)
 
   if (!workspace)
@@ -95,7 +96,13 @@ export async function sendIssueEscalatingHandler({
   const issuesRepo = new IssuesRepository(workspaceId)
   const issue = await issuesRepo.find(issueId).then((r) => r.unwrap())
 
-  if (!issue.escalatingAt) return
+  const previousEscalatingAt = issue.escalatingAt
+  const updateResult = await updateEscalatingIssue({ issue })
+  const updatedIssue = updateResult.unwrap()
+  const escalatingAt = updatedIssue.escalatingAt
+
+  // If issue is not escalating after the check, don't send email
+  if (!escalatingAt) return
 
   // Calculate expiration date
   const now = new Date()
@@ -103,12 +110,14 @@ export async function sendIssueEscalatingHandler({
     now.getTime() - ESCALATION_EXPIRATION_DAYS * 24 * 60 * 60 * 1000,
   )
 
-  // Check if previous escalating_at was null or expired
+  // Check if this is a NEW escalation (wasn't escalating or was expired)
   const wasNotEscalating = !previousEscalatingAt
   const wasEscalatingButExpired =
     previousEscalatingAt && previousEscalatingAt <= expirationDate
 
+  // Early return if still in same escalation period
   if (!wasNotEscalating && !wasEscalatingButExpired) return
 
-  await sendEmail({ workspace, issue, batchSize })
+  // Send email for new escalation
+  await sendEmail({ workspace, issue: updatedIssue, batchSize })
 }

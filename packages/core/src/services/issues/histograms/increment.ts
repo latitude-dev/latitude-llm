@@ -9,7 +9,6 @@ import { Commit } from '../../../schema/models/types/Commit'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type IssueHistogram } from '../../../schema/models/types/IssueHistogram'
 import { type Workspace } from '../../../schema/models/types/Workspace'
-import { updateEscalatingIssue } from '../updateEscalating'
 
 export async function incrementIssueHistogram(
   {
@@ -30,9 +29,6 @@ export async function incrementIssueHistogram(
   const date = format(result.createdAt, 'yyyy-MM-dd')
   return await transaction.call(
     async (tx) => {
-      // Capture the previous escalating_at value before updating
-      const previousEscalatingAt = issue.escalatingAt
-
       const histogram = (await tx
         .insert(issueHistograms)
         .values({
@@ -62,20 +58,15 @@ export async function incrementIssueHistogram(
         .returning()
         .then((r) => r[0]!)) as IssueHistogram
 
-      await updateEscalatingIssue({ issue }, transaction).then((r) =>
-        r.unwrap(),
-      )
-
-      return Result.ok({ histogram, previousEscalatingAt })
+      return Result.ok({ histogram })
     },
-    async ({ histogram, previousEscalatingAt }) => {
+    async ({ histogram }) => {
       await publisher.publishLater({
         type: 'issueIncremented',
         data: {
           workspaceId: workspace.id,
           issueId: issue.id,
           histogramId: histogram.id,
-          previousEscalatingAt,
         },
       })
     },
