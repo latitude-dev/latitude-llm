@@ -69,7 +69,7 @@ export function ResizableLayout({
   const shouldShowRightPane = showRightPane && rightPaneWidth !== null
 
   return (
-    <div ref={containerRef} className='flex flex-row h-full w-full gap-4'>
+    <div ref={containerRef} className='grow flex flex-row h-full w-full gap-4'>
       <div
         className={cn('pb-6', {
           'flex-1 min-w-0 h-full relative': shouldShowRightPane,

@@ -15,7 +15,7 @@ export async function createIssue(
     document,
     project,
     workspace,
-    createdAt,
+    createdAt: createdAtArg,
   }: {
     title: string
     description: string
@@ -26,7 +26,7 @@ export async function createIssue(
   },
   transaction = new Transaction(),
 ) {
-  const issueCreatedAt = createdAt ?? new Date()
+  const createdAt = createdAtArg ?? new Date()
   const centroid = createCentroid()
 
   // Note: not creating the vector in the vector db yet to avoid storing empty vectors,
@@ -44,8 +44,8 @@ export async function createIssue(
           title: title,
           description: description,
           centroid: centroid,
-          createdAt: issueCreatedAt,
-          updatedAt: issueCreatedAt,
+          createdAt,
+          updatedAt: createdAt,
         })
         .returning()
         .then((r) => r[0]!)) as Issue

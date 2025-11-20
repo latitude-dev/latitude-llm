@@ -46,10 +46,10 @@ export const assignIssueToEvaluationResultV2Job = async ({
 
   if (issue) {
     await assignEvaluationResultV2ToIssue({
-      result: result,
-      evaluation: evaluation,
-      issue: issue,
-      workspace: workspace,
+      workspace,
+      evaluation,
+      result,
+      issue,
     }).then((r) => r.unwrap())
   } else {
     const enabled = await isFeatureEnabledByName(workspace.id, 'issues').then((r) => r.unwrap()) // prettier-ignore

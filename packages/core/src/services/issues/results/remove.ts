@@ -20,7 +20,6 @@ import {
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
-import { updateEvaluationResultV2 } from '../../evaluationsV2/results/update'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import { deleteIssue } from '../delete'
 import { decrementIssueHistogram } from '../histograms/decrement'
@@ -28,6 +27,7 @@ import { embedReason, updateCentroid } from '../shared'
 import { updateIssue } from '../update'
 import { containsResultsFromOtherCommits } from './add'
 import { validateResultForIssue } from './validate'
+import { removeIssueEvaluationResult } from '../../issueEvaluationResults/remove'
 
 // TODO(AO): Add tests
 export async function removeResultFromIssue<
@@ -128,14 +128,17 @@ export async function removeResultFromIssue<
         )
       }
 
-      const updatingre = await updateEvaluationResultV2(
-        { issue: null, result, commit, workspace },
+      const removing = await removeIssueEvaluationResult(
+        {
+          issue,
+          evaluationResult: result,
+          workspaceId: workspace.id,
+        },
         transaction,
       )
-      if (updatingre.error) {
-        return Result.error(updatingre.error)
+      if (removing.error) {
+        return Result.error(removing.error)
       }
-      result = updatingre.value.result
 
       const decrementing = await decrementIssueHistogram(
         { result, issue, commit, workspace },

@@ -52,8 +52,8 @@ export function useAnnotationBySpan({
     })
   const { data: results, isLoading: isLoadingResults } =
     useEvaluationResultsV2BySpans({
-      project: project,
-      commit: commit,
+      project,
+      commit,
       document: {
         commitId: commit.id,
         documentUuid: span.documentUuid!,

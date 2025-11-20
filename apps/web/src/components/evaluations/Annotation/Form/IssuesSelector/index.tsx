@@ -66,7 +66,7 @@ export function IssuesSelector() {
     },
   })
 
-  const { data: serachIssues, isLoading: isSearchingIssues } = useSearchIssues({
+  const { data: searchIssues, isLoading: isSearchingIssues } = useSearchIssues({
     projectId,
     documentUuid,
     query,
@@ -82,7 +82,7 @@ export function IssuesSelector() {
     setQuery(value)
   }, 500)
   const options = useMemo<SelectOption<number>[]>(() => {
-    const list = serachIssues.map((issue) => ({
+    const list = searchIssues.map((issue) => ({
       label: issue.title,
       value: issue.id,
     }))
@@ -100,7 +100,7 @@ export function IssuesSelector() {
     }
 
     return list
-  }, [serachIssues, resultIssue])
+  }, [searchIssues, resultIssue])
   const onOpenChange = useCallback((open: boolean) => {
     setOpen(open)
     if (open) {

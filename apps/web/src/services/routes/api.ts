@@ -145,9 +145,6 @@ export const API_ROUTES = {
                 return {
                   root: `${projectRoot}/commits/${commitUuid}/issues/${issueId}`,
                   histograms: `${projectRoot}/commits/${commitUuid}/issues/${issueId}/histograms`,
-                  results: {
-                    root: `${projectRoot}/commits/${commitUuid}/issues/${issueId}/results`,
-                  },
                   spans: {
                     root: `${projectRoot}/commits/${commitUuid}/issues/${issueId}/spans`,
                   },

@@ -8,6 +8,7 @@ import {
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
+  IssueEvaluationResultsRepository,
   IssuesRepository,
   ProjectsRepository,
   SpansRepository,
@@ -30,6 +31,7 @@ export function discoverResultIssueJobKey({
   return `discoverResultIssueJob-${workspaceId}-${resultId}`
 }
 
+// TODO(AO): Tests for this beast!
 export const discoverResultIssueJob = async (
   job: Job<DiscoverResultIssueJobData>,
 ) => {
@@ -46,7 +48,15 @@ export const discoverResultIssueJob = async (
   const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
   const result = await resultsRepository.find(resultId).then((r) => r.unwrap())
 
-  if (result.issueId) return
+  // Check if result already belongs to an issue via intermediate table
+  const issueEvalResultsRepo = new IssueEvaluationResultsRepository(
+    workspace.id,
+  )
+  const exists = await issueEvalResultsRepo.findLastActiveAssignedIssue({
+    result,
+  })
+
+  if (exists) return
 
   const commitsRepository = new CommitsRepository(workspace.id)
   const commit = await commitsRepository

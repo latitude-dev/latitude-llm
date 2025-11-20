@@ -3,7 +3,7 @@ import { useSWRConfig } from 'swr'
 import { SerializedIssue } from '$/stores/issues'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Button, type ButtonProps } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { buildIssuesCacheKey } from '@latitude-data/constants/issues'
 import { useIssuesParameters } from '$/stores/issues/useIssuesParameters'
@@ -39,9 +39,11 @@ const UNDO_MESSAGES = {
  */
 export function IssueItemActions({
   issue,
+  placement,
   onOptimisticAction,
 }: {
   issue: SerializedIssue
+  placement: 'item' | 'details'
   onOptimisticAction?: () => void
 }) {
   const { mutate } = useSWRConfig()
@@ -146,6 +148,12 @@ export function IssueItemActions({
   const isResolved = issue.resolvedAt !== null
   const isIgnored = issue.ignoredAt !== null
   const isInactive = isResolved || isIgnored
+  const buttonProps = useMemo<Partial<ButtonProps>>(() => {
+    if (placement === 'details') {
+      return { variant: 'outline', size: 'default' }
+    }
+    return { variant: 'ghost', size: 'icon' }
+  }, [placement])
 
   if (isInactive) {
     return (
@@ -154,14 +162,19 @@ export function IssueItemActions({
           asChild
           trigger={
             <Button
-              variant='ghost'
-              size='icon'
+              {...buttonProps}
               onClick={handleOptimisticUpdate(
                 isResolved ? 'unresolve' : 'unignore',
               )}
               disabled={actions.isRunningAction}
               iconProps={{ name: 'undo', color: 'foregroundMuted' }}
-            />
+            >
+              {placement === 'details'
+                ? isResolved
+                  ? 'Unresolve'
+                  : 'Unignore'
+                : ''}
+            </Button>
           }
         >
           {isResolved
@@ -178,12 +191,13 @@ export function IssueItemActions({
         asChild
         trigger={
           <Button
-            variant='ghost'
-            size='icon'
+            {...buttonProps}
             onClick={handleOptimisticUpdate('resolve')}
             disabled={actions.isRunningAction}
             iconProps={{ name: 'checkClean', color: 'foregroundMuted' }}
-          />
+          >
+            {placement === 'details' ? 'Resolve' : ''}
+          </Button>
         }
       >
         Resolve
@@ -192,12 +206,13 @@ export function IssueItemActions({
         asChild
         trigger={
           <Button
-            variant='ghost'
-            size='icon'
+            {...buttonProps}
             onClick={handleOptimisticUpdate('ignore')}
             disabled={actions.isRunningAction}
             iconProps={{ name: 'eyeOff', color: 'foregroundMuted' }}
-          />
+          >
+            {placement === 'details' ? 'Ignore' : ''}
+          </Button>
         }
       >
         Ignore, evaluations associated with this issue will stop running

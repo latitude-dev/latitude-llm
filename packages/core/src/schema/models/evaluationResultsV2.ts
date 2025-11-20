@@ -54,6 +54,8 @@ export const evaluationResultsV2 = latitudeSchema.table(
     ),
     evaluatedSpanId: varchar('evaluated_span_id', { length: 16 }),
     evaluatedTraceId: varchar('evaluated_trace_id', { length: 32 }),
+    // TODO: Remove `issueId` after we've backfilled
+    // existing data into issueEvaluationResults
     issueId: bigint('issue_id', { mode: 'number' }).references(
       (): AnyPgColumn => issues.id,
       { onDelete: 'set null' },

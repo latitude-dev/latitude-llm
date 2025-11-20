@@ -77,7 +77,7 @@ export function TableResizableLayout({
   return (
     <div
       ref={containerRef}
-      className={cn('flex flex-row h-full w-full', {
+      className={cn('flex flex-grow flex-row h-full w-full', {
         'gap-4': shouldShowRightPane,
       })}
     >
