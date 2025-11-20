@@ -15,7 +15,9 @@
     "tc": "tsc --noEmit",
     "test": "TZ=UTC vitest --run",
     "test:watch": "TZ=UTC vitest",
-    "datadog:sourcemaps": "datadog-ci sourcemaps upload .next --service=latitude-llm-web --minified-path-prefix=/_next/ --release-version=${RELEASE_VERSION:-unknown} --disable-git"
+    "datadog:sourcemaps:client": "datadog-ci sourcemaps upload .next/static --service=latitude-llm-web --minified-path-prefix=/_next/static/ --release-version=${RELEASE_VERSION:-unknown} --disable-git --max-concurrency=20",
+    "datadog:sourcemaps:server": "datadog-ci sourcemaps upload .next/server --service=latitude-llm-web --minified-path-prefix=/app/apps/web/.next/server/ --release-version=${RELEASE_VERSION:-unknown} --disable-git --max-concurrency=20",
+    "datadog:sourcemaps": "pnpm datadog:sourcemaps:client && pnpm datadog:sourcemaps:server"
   },
   "dependencies": {
     "@ai-sdk/rsc": "^1.0.44",
@@ -120,4 +122,3 @@
     "vitest": "^3.1.4"
   }
 }
-
