@@ -16,6 +16,20 @@ services:
     ports:
       - '6379:6379'
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    restart: always
+    ports:
+      - '8123:8123'
+      - '9000:9000'
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+
+
   weaviate:
     image: cr.weaviate.io/semitechnologies/weaviate:1.33.4
     command: ['--host', '0.0.0.0', '--port', '8099', '--scheme', 'http']
@@ -141,3 +155,4 @@ volumes:
   db-data:
   shared-storage:
   weaviate-data:
+  clickhouse-data:

@@ -56,6 +56,8 @@ import { type ApiKey } from '../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { convertTimestamp } from './shared'
 import { SPAN_SPECIFICATIONS } from './specifications'
+import { env } from '@latitude-data/env'
+import { writeSpansToClickHouse } from './clickhouseWriter'
 
 export async function processSpansBulk(
   {
@@ -261,7 +263,7 @@ export async function processSpansBulk(
   if (processedSpans.length === 0) return Result.nil()
 
   // Bulk insert spans and save metadata
-  return await transaction.call(async (tx) => {
+  const result = await transaction.call(async (tx) => {
     // Prepare bulk insert data
     const insertData = processedSpans.map((processed) => {
       let metadata
@@ -354,6 +356,12 @@ export async function processSpansBulk(
 
     return Result.ok({ spans: insertedSpans })
   })
+
+  if (env.CLICKHOUSE_SPANS_WRITE && result.error === undefined) {
+    await writeSpansToClickHouse(processedSpans, workspace, apiKey)
+  }
+
+  return result
 }
 
 async function getExistingBatch(
@@ -370,7 +378,7 @@ async function getExistingBatch(
     return []
   }
 
-  const spansRepository = new SpansRepository(workspace.id, db)
+  const spansRepository = SpansRepository(workspace.id, db)
 
   // Use a more efficient batch query with IN clause
   const conditions = spanIds.map(({ spanId, traceId }) => ({

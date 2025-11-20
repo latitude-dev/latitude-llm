@@ -87,6 +87,14 @@ export const env = createEnv({
     READ_DATABASE_URL: z.url().optional(),
     READ_2_DATABASE_URL: z.url().optional(),
 
+    // ClickHouse
+    CLICKHOUSE_HOST: z.string().optional().default('http://localhost:8123'),
+    CLICKHOUSE_DATABASE: z.string().optional().default('latitude'),
+    CLICKHOUSE_USERNAME: z.string().optional().default('default'),
+    CLICKHOUSE_PASSWORD: z.string().optional().default(''),
+    CLICKHOUSE_SPANS_WRITE: z.coerce.boolean().optional().default(false),
+    CLICKHOUSE_SPANS_READ: z.coerce.boolean().optional().default(false),
+
     // Weaviate
     WEAVIATE_URL: z.string().optional(),
     WEAVIATE_API_KEY: z.string().optional(),

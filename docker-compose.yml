@@ -16,6 +16,20 @@ services:
     ports:
       - '6379:6379'
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    restart: always
+    ports:
+      - '8123:8123'
+      - '9000:9000'
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+
+
   redisinsight:
     image: redis/redisinsight:latest
     restart: always
@@ -119,3 +133,4 @@ volumes:
   shared-storage:
   weaviate-data:
   redisinsight-data:
+  clickhouse-data:

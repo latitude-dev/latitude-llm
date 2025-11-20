@@ -31,9 +31,11 @@ import { spans } from '../schema/models/spans'
 import Repository from './repositoryV2'
 import { CommitsRepository } from './commitsRepository'
 
+import { ISpansRepository } from './interfaces/ISpansRepository'
+
 const tt = getTableColumns(spans)
 
-export class SpansRepository extends Repository<Span> {
+export class PostgresSpansRepository extends Repository<Span> implements ISpansRepository {
   get scopeFilter() {
     return eq(spans.workspaceId, this.workspaceId)
   }
@@ -332,9 +334,9 @@ export class SpansRepository extends Repository<Span> {
     const items = hasMore ? result.slice(0, limit) : result
     const next = hasMore
       ? {
-          startedAt: result[limit - 1].startedAt.toISOString(),
-          id: result[limit - 1].id,
-        }
+        startedAt: result[limit - 1].startedAt.toISOString(),
+        id: result[limit - 1].id,
+      }
       : null
 
     return Result.ok<{
@@ -390,9 +392,9 @@ export class SpansRepository extends Repository<Span> {
     const items = hasMore ? result.slice(0, limit) : result
     const next = hasMore
       ? {
-          startedAt: items[items.length - 1].startedAt.toISOString(),
-          id: items[items.length - 1].id,
-        }
+        startedAt: items[items.length - 1].startedAt.toISOString(),
+        id: items[items.length - 1].id,
+      }
       : null
 
     return Result.ok<{
@@ -411,10 +413,12 @@ export class SpansRepository extends Repository<Span> {
     parentId: string
     type: SpanType
   }) {
-    return await this.db
+    const result = await this.db
       .select()
       .from(spans)
       .where(and(eq(spans.parentId, parentId), eq(spans.type, type)))
+
+    return result as Span[]
   }
 
   async findBySpanAndTraceIds(

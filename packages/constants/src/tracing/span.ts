@@ -217,6 +217,13 @@ export type Span<T extends SpanType = SpanType> = {
   commitUuid?: string
   experimentUuid?: string
   source?: LogSources
+  projectId?: number
+  tokensPrompt?: number
+  tokensCached?: number
+  tokensReasoning?: number
+  tokensCompletion?: number
+  model?: string
+  cost?: number
 }
 
 export type SpanWithDetails<T extends SpanType = SpanType> = Span<T> & {
