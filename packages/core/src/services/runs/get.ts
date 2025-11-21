@@ -9,7 +9,6 @@ import { cache as redis, Cache } from '../../cache'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
-import { migrateActiveRunsCache } from './active/migrateCache'
 import { spanToRun } from './spanToRun'
 import { SpansRepository } from '../../repositories'
 
@@ -44,12 +43,10 @@ export async function getRun({
     }
   }
 
-  // Try to get from hash using HGET (O(1) operation)
   const key = ACTIVE_RUNS_CACHE_KEY(workspaceId, projectId)
   const redisCache = cache ?? (await redis())
 
   try {
-    // Don't migrate proactively - only migrate if we get WRONGTYPE error
     const jsonValue = await redisCache.hget(key, runUuid)
     if (!jsonValue) {
       return Result.error(
@@ -63,29 +60,6 @@ export async function getRun({
       startedAt: run.startedAt ? new Date(run.startedAt) : undefined,
     } as Run)
   } catch (error) {
-    // Handle WRONGTYPE errors
-    if (error instanceof Error && error.message.includes('WRONGTYPE')) {
-      // Try to migrate and retry
-      try {
-        await migrateActiveRunsCache(workspaceId, projectId, redisCache)
-        const jsonValue = await redisCache.hget(key, runUuid)
-        if (!jsonValue) {
-          return Result.error(
-            new NotFoundError(`Run not found with uuid ${runUuid}`),
-          )
-        }
-        const run = JSON.parse(jsonValue) as ActiveRun
-        return Result.ok({
-          ...run,
-          queuedAt: new Date(run.queuedAt),
-          startedAt: run.startedAt ? new Date(run.startedAt) : undefined,
-        } as Run)
-      } catch (retryError) {
-        return Result.error(
-          new NotFoundError(`Run not found with uuid ${runUuid}`),
-        )
-      }
-    }
     if (error instanceof SyntaxError) {
       // Malformed JSON in cache, return not found error
       return Result.error(
