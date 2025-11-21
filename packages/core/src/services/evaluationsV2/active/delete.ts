@@ -22,7 +22,6 @@ export async function deleteActiveEvaluation({
   const redisCache = cache ?? (await redis())
 
   try {
-    // Get the value of the hash field (O(1) operation)
     const jsonValue = await redisCache.hget(key, evaluationUuid)
     const deletedEvaluation = jsonValue
       ? (() => {
@@ -38,7 +37,6 @@ export async function deleteActiveEvaluation({
         })()
       : undefined
 
-    // Use HDEL to atomically remove the evaluation from the hash (O(1) operation)
     await redisCache.hdel(key, evaluationUuid)
 
     if (deletedEvaluation) {

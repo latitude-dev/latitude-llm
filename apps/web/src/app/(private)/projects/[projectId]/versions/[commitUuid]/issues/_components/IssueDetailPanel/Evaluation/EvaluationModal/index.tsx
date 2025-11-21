@@ -3,10 +3,6 @@ import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useEffect } from 'react'
-import { scan } from 'promptl-ai'
-import useDocumentVersion from '$/stores/useDocumentVersion'
-import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 
 export function EvaluationModal({
   open,
@@ -16,7 +12,6 @@ export function EvaluationModal({
   setModel,
   provider,
   model,
-  issue,
 }: {
   open: boolean
   setOpen: (open: boolean) => void
@@ -25,32 +20,8 @@ export function EvaluationModal({
   setModel: (model: string | undefined | null) => void
   provider: ProviderApiKey | undefined
   model: string | undefined | null
-  issue: Issue
 }) {
-  const { data: document } = useDocumentVersion(issue.documentUuid)
   const { data: providers } = useProviderApiKeys()
-
-  useEffect(() => {
-    if (!document?.content || !providers) return
-
-    const parseMetadata = async () => {
-      try {
-        const metadata = await scan({
-          prompt: document.content,
-        })
-        const providerName = metadata.config?.['provider']
-        const model = metadata.config?.['model'] as string | undefined
-        const foundProvider = providers.find((p) => p.name === providerName)
-        setProvider(foundProvider)
-        setModel(model)
-      } catch (error) {
-        setProvider(undefined)
-        setModel(undefined)
-      }
-    }
-
-    parseMetadata()
-  }, [document?.content, open, providers, setProvider, setModel])
 
   return (
     <ConfirmModal

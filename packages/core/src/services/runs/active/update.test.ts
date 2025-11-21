@@ -65,8 +65,8 @@ describe('updateActiveRun', () => {
 
     const updatedRun = result.unwrap()
 
-    expect(updatedRun.startedAt).toEqual(startedAt)
-    expect(updatedRun.queuedAt).toEqual(queuedAt)
+    expect(updatedRun.startedAt).toBeSameTimeIgnoringNanos(startedAt)
+    expect(updatedRun.queuedAt).toBeSameTimeIgnoringNanos(queuedAt)
   })
 
   it('updates caption field', async () => {

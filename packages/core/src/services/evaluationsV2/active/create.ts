@@ -33,7 +33,6 @@ export async function createActiveEvaluation({
     }
     const jsonValue = JSON.stringify(activeEvaluation)
 
-    // Use HSET to atomically add the evaluation to the hash, refreshing the TTL of the key to 3 hours
     await redisCache
       .multi()
       .hset(key, evaluationUuid, jsonValue)

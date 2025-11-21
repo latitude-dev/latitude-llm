@@ -12,11 +12,7 @@ import * as copilotGet from '../copilot/get'
 import * as copilotRun from '../copilot/run'
 import * as createEvaluationV2Module from './create'
 import * as findFirstModelForProviderModule from '../ai/providers/models'
-import {
-  IssuesRepository,
-  DocumentVersionsRepository,
-  ProviderApiKeysRepository,
-} from '../../repositories'
+import { DocumentVersionsRepository } from '../../repositories'
 import {
   __test__,
   generateEvaluationFromIssueWithCopilot,
@@ -28,21 +24,23 @@ import type { Issue } from '../../schema/models/types/Issue'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import type { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 
-vi.mock('../../copilot/get', () => ({
+vi.mock('../copilot/get', () => ({
   getCopilot: vi.fn(),
 }))
 
-vi.mock('../../copilot/run', () => ({
+vi.mock('../copilot/run', () => ({
   runCopilot: vi.fn(),
 }))
 
-vi.mock('../../evaluationsV2/create', () => ({
+vi.mock('../evaluationsV2/create', () => ({
   createEvaluationV2: vi.fn(),
 }))
 
-vi.mock('../../ai/providers/models', () => ({
+vi.mock('../ai/providers/models', () => ({
   findFirstModelForProvider: vi.fn(),
 }))
+
+const MODEL = 'gpt-4o'
 
 describe('generateEvaluationFromIssueWithCopilot', () => {
   const mockGetCopilot = vi.mocked(copilotGet.getCopilot)
@@ -72,6 +70,7 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
           provider: 'openai',
           content: 'Test prompt content',
         }),
+        model: MODEL,
       },
     })
     workspace = projectData.workspace
@@ -91,6 +90,8 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
       LATITUDE_CLOUD: true,
       COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH:
         '/copilot/evaluations/generator',
+      COPILOT_WORKSPACE_API_KEY: 'test-workspace-api-key',
+      COPILOT_PROJECT_ID: 1,
       NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: 'openai',
     } as typeof env.env)
 
@@ -131,29 +132,22 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
       }) as any,
     )
 
-    mockFindFirstModelForProvider.mockReturnValue('gpt-4o')
+    mockFindFirstModelForProvider.mockReturnValue(MODEL)
 
     // Setup default mocks for repositories
-    vi.spyOn(IssuesRepository.prototype, 'find').mockResolvedValue(
-      Result.ok(issue),
-    )
-
     vi.spyOn(
       DocumentVersionsRepository.prototype,
       'getDocumentAtCommit',
     ).mockResolvedValue(Result.ok(document))
-
-    vi.spyOn(
-      ProviderApiKeysRepository.prototype,
-      'findFirst',
-    ).mockResolvedValue(Result.ok(provider))
   })
 
   it('successfully generates an evaluation from issue using copilot', async () => {
     const result = await generateEvaluationFromIssueWithCopilot({
-      issueId: issue.id,
+      issue: issue,
       workspace,
       commit,
+      providerName: provider.name,
+      model: MODEL,
     })
 
     expect(Result.isOk(result)).toBe(true)
@@ -163,23 +157,21 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
     expect(evaluation.versionId).toBe(1)
 
     // Verify repository calls
-    expect(IssuesRepository.prototype.find).toHaveBeenCalledWith(issue.id)
     expect(
       DocumentVersionsRepository.prototype.getDocumentAtCommit,
     ).toHaveBeenCalledWith({
       commitUuid: commit.uuid,
       documentUuid: issue.documentUuid,
     })
-    expect(ProviderApiKeysRepository.prototype.findFirst).toHaveBeenCalled()
-
     // Verify copilot calls
     expect(mockGetCopilot).toHaveBeenCalled()
     expect(mockRunCopilot).toHaveBeenCalledWith({
       copilot: expect.any(Object),
       parameters: {
-        issueId: issue.id,
+        issueName: issue.title,
         issueDescription: issue.description,
         prompt: document.content,
+        existingEvaluationNames: [],
       },
       schema: __test__.llmEvaluationBinarySpecificationWithoutModel,
     })
@@ -190,7 +182,7 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
         settings: expect.objectContaining({
           configuration: expect.objectContaining({
             provider: provider.name,
-            model: 'gpt-4o',
+            model: MODEL,
           }),
         }),
         issueId: issue.id,
@@ -210,9 +202,11 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
     } as typeof env.env)
 
     const result = await generateEvaluationFromIssueWithCopilot({
-      issueId: issue.id,
+      issue: issue,
       workspace,
       commit,
+      providerName: provider.name,
+      model: MODEL,
     })
 
     expect(Result.isOk(result)).toBe(false)
@@ -222,7 +216,6 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
     )
 
     // Verify no repository or copilot calls were made
-    expect(IssuesRepository.prototype.find).not.toHaveBeenCalled()
     expect(mockGetCopilot).not.toHaveBeenCalled()
   })
 
@@ -234,7 +227,9 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
     } as typeof env.env)
 
     const result = await generateEvaluationFromIssueWithCopilot({
-      issueId: issue.id,
+      issue: issue,
+      providerName: provider.name,
+      model: MODEL,
       workspace,
       commit,
     })
@@ -246,28 +241,6 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
     )
 
     // Verify no repository or copilot calls were made
-    expect(IssuesRepository.prototype.find).not.toHaveBeenCalled()
-    expect(mockGetCopilot).not.toHaveBeenCalled()
-  })
-
-  it('returns error when issue is not found', async () => {
-    vi.spyOn(IssuesRepository.prototype, 'find').mockResolvedValue(
-      Result.error(new NotFoundError('Issue not found')),
-    )
-
-    await expect(
-      generateEvaluationFromIssueWithCopilot({
-        issueId: 999,
-        workspace,
-        commit,
-      }),
-    ).rejects.toThrow('Issue not found')
-
-    // Verify issue repository was called but no further calls
-    expect(IssuesRepository.prototype.find).toHaveBeenCalledWith(999)
-    expect(
-      DocumentVersionsRepository.prototype.getDocumentAtCommit,
-    ).not.toHaveBeenCalled()
     expect(mockGetCopilot).not.toHaveBeenCalled()
   })
 
@@ -279,67 +252,18 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
 
     await expect(
       generateEvaluationFromIssueWithCopilot({
-        issueId: issue.id,
+        issue,
+        providerName: provider.name,
+        model: MODEL,
         workspace,
         commit,
       }),
     ).rejects.toThrow('Document not found')
 
     // Verify document repository was called but no further calls
-    expect(IssuesRepository.prototype.find).toHaveBeenCalled()
     expect(
       DocumentVersionsRepository.prototype.getDocumentAtCommit,
     ).toHaveBeenCalled()
-    expect(ProviderApiKeysRepository.prototype.findFirst).not.toHaveBeenCalled()
-    expect(mockGetCopilot).not.toHaveBeenCalled()
-  })
-
-  it('returns error when provider is not found', async () => {
-    vi.spyOn(
-      ProviderApiKeysRepository.prototype,
-      'findFirst',
-    ).mockResolvedValue(Result.ok(undefined))
-
-    const result = await generateEvaluationFromIssueWithCopilot({
-      issueId: issue.id,
-      workspace,
-      commit,
-    })
-
-    expect(Result.isOk(result)).toBe(false)
-    expect(result.error).toBeInstanceOf(NotFoundError)
-    expect(result.error?.message).toBe('Provider not found')
-
-    // Verify provider repository was called but no further calls
-    expect(IssuesRepository.prototype.find).toHaveBeenCalled()
-    expect(
-      DocumentVersionsRepository.prototype.getDocumentAtCommit,
-    ).toHaveBeenCalled()
-    expect(ProviderApiKeysRepository.prototype.findFirst).toHaveBeenCalled()
-    expect(mockFindFirstModelForProvider).not.toHaveBeenCalled()
-    expect(mockGetCopilot).not.toHaveBeenCalled()
-  })
-
-  it('returns error when model is not found', async () => {
-    mockFindFirstModelForProvider.mockReturnValue(undefined)
-
-    const result = await generateEvaluationFromIssueWithCopilot({
-      issueId: issue.id,
-      workspace,
-      commit,
-    })
-
-    expect(Result.isOk(result)).toBe(false)
-    expect(result.error).toBeInstanceOf(NotFoundError)
-    expect(result.error?.message).toBe('Model not found')
-
-    // Verify model lookup was called but no further calls
-    expect(IssuesRepository.prototype.find).toHaveBeenCalled()
-    expect(
-      DocumentVersionsRepository.prototype.getDocumentAtCommit,
-    ).toHaveBeenCalled()
-    expect(ProviderApiKeysRepository.prototype.findFirst).toHaveBeenCalled()
-    expect(mockFindFirstModelForProvider).toHaveBeenCalled()
     expect(mockGetCopilot).not.toHaveBeenCalled()
   })
 
@@ -349,7 +273,9 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
     )
 
     const result = await generateEvaluationFromIssueWithCopilot({
-      issueId: issue.id,
+      issue,
+      providerName: provider.name,
+      model: MODEL,
       workspace,
       commit,
     })
@@ -370,7 +296,9 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
     )
 
     const result = await generateEvaluationFromIssueWithCopilot({
-      issueId: issue.id,
+      issue,
+      providerName: provider.name,
+      model: MODEL,
       workspace,
       commit,
     })
@@ -391,7 +319,9 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
     )
 
     const result = await generateEvaluationFromIssueWithCopilot({
-      issueId: issue.id,
+      issue,
+      providerName: provider.name,
+      model: MODEL,
       workspace,
       commit,
     })
@@ -408,7 +338,9 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
 
   it('passes correct parameters to runCopilot', async () => {
     await generateEvaluationFromIssueWithCopilot({
-      issueId: issue.id,
+      issue,
+      providerName: provider.name,
+      model: MODEL,
       workspace,
       commit,
     })
@@ -416,40 +348,12 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
     expect(mockRunCopilot).toHaveBeenCalledWith({
       copilot: expect.anything(),
       parameters: {
-        issueId: issue.id,
+        issueName: issue.title,
         issueDescription: issue.description,
+        existingEvaluationNames: [],
         prompt: document.content,
       },
       schema: expect.anything(),
     })
-  })
-
-  it('includes provider and model in evaluation configuration', async () => {
-    const testProvider = {
-      ...provider,
-      name: 'test-provider',
-    }
-    vi.spyOn(
-      ProviderApiKeysRepository.prototype,
-      'findFirst',
-    ).mockResolvedValue(Result.ok(testProvider))
-    mockFindFirstModelForProvider.mockReturnValue('test-model')
-
-    await generateEvaluationFromIssueWithCopilot({
-      issueId: issue.id,
-      workspace,
-      commit,
-    })
-
-    expect(mockCreateEvaluationV2).toHaveBeenCalledWith(
-      expect.objectContaining({
-        settings: expect.objectContaining({
-          configuration: expect.objectContaining({
-            provider: 'test-provider',
-            model: 'test-model',
-          }),
-        }),
-      }),
-    )
   })
 })

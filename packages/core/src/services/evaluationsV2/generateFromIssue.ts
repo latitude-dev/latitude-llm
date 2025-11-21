@@ -20,6 +20,7 @@ import { Issue } from '../../schema/models/types/Issue'
 import { createEvaluationV2 } from './create'
 import { assertCopilotIsSupported } from '../copilot/assertItsSupported'
 import z from 'zod'
+import { BadRequestError } from '../../lib/errors'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration
@@ -55,7 +56,9 @@ export async function generateEvaluationFromIssueWithCopilot(
 
   if (!env.COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH) {
     return Result.error(
-      new Error('COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH is not set'),
+      new BadRequestError(
+        'COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH is not set',
+      ),
     )
   }
 

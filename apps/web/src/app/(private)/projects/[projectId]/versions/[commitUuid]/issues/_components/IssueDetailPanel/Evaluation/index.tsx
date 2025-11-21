@@ -16,6 +16,9 @@ import { ProviderApiKey } from '@latitude-data/core/schema/models/types/Provider
 import { useActiveEvaluations } from '$/stores/activeEvaluations'
 import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
 import { useTypeWriterValue } from '@latitude-data/web-ui/browser'
+import { scan } from 'promptl-ai'
+import useProviderApiKeys from '$/stores/providerApiKeys'
+import useDocumentVersion from '$/stores/useDocumentVersion'
 
 const GENERATION_DESCRIPTIONS = [
   'Thinking of a good configuration...',
@@ -75,6 +78,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
           } else {
             toast({
               title: 'Evaluation generated successfully',
+              description: 'Let the magic begin!',
             })
             // For success, mutate evaluations to get the new, generated one and wait for it to appear
             mutateEvaluations().then(() => {
@@ -147,13 +151,6 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
 
   const setIssueForNewEvaluation = useCallback(
     (newEvaluationUuid: string) => {
-      // If the issue already had an eval attached, remove it
-      if (evaluationWithIssue) {
-        updateEvaluation({
-          evaluationUuid: evaluationWithIssue.uuid,
-          issueId: null,
-        })
-      }
       // If a new evaluation is selected, attach it to the issue
       if (newEvaluationUuid) {
         updateEvaluation({
@@ -161,9 +158,42 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
           issueId: issue.id,
         })
       }
+      // If the issue already had an eval attached, remove it
+      if (evaluationWithIssue) {
+        updateEvaluation({
+          evaluationUuid: evaluationWithIssue.uuid,
+          issueId: null,
+        })
+      }
     },
     [evaluationWithIssue, issue.id, updateEvaluation],
   )
+
+  const { data: document } = useDocumentVersion(issue.documentUuid)
+  const { data: providers } = useProviderApiKeys()
+
+  const openModalAndGetProviderFromDocument = useCallback(async () => {
+    try {
+      const metadata = await scan({
+        prompt: document?.content ?? '',
+      })
+      const providerName = metadata.config?.['provider']
+      const model = metadata.config?.['model'] as string | undefined
+      const foundProvider = providers?.find((p) => p.name === providerName)
+      setProvider(foundProvider)
+      setModel(model)
+    } catch (error) {
+      setProvider(undefined)
+      setModel(undefined)
+    }
+    setOpenGenerateModal(true)
+  }, [
+    document?.content,
+    providers,
+    setProvider,
+    setModel,
+    setOpenGenerateModal,
+  ])
 
   if (isLoadingEvaluations) {
     return (
@@ -262,7 +292,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
             color: 'primary',
             placement: 'left',
           }}
-          onClick={() => setOpenGenerateModal(true)}
+          onClick={openModalAndGetProviderFromDocument}
         >
           Generate
         </Button>
@@ -280,7 +310,6 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
           setModel={setModel}
           provider={provider}
           model={model}
-          issue={issue}
         />
       </div>
     </div>

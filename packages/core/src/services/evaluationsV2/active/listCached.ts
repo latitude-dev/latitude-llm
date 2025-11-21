@@ -20,13 +20,12 @@ export async function listCachedEvaluations({
   const redisCache = cache ?? (await redis())
 
   try {
-    // Use HGETALL to get all evaluations from a workspace/project hash at once (O(N) but entire hash expires in 3 hours, so N won't be too large)
+    // Use HGETALL is an O(N) operation, but the entire hash expires in 3 hours, so N won't be too large
     const hashData = await redisCache.hgetall(key)
     if (!hashData || Object.keys(hashData).length === 0) {
       return Result.ok([])
     }
 
-    // Parse each hash value (JSON string) to an ActiveEvaluation object
     const activeEvaluations: ActiveEvaluation[] = []
     const now = Date.now()
 

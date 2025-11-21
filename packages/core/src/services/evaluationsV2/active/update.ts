@@ -29,7 +29,6 @@ export async function updateActiveEvaluation({
   const redisCache = cache ?? (await redis())
 
   try {
-    // Get the value of the hash field (O(1) operation)
     const jsonValue = await redisCache.hget(key, evaluationUuid)
     if (!jsonValue) {
       return Result.error(
@@ -56,7 +55,7 @@ export async function updateActiveEvaluation({
       error: error ?? existingEvaluation.error,
     }
 
-    // Use HSET to atomically update the evaluation in the hash, refreshing the TTL of the workspace/project key to 3 hours
+    // This refreshes the TTL of the workspace/project key to 3 hours again
     await redisCache
       .multi()
       .hset(key, evaluationUuid, JSON.stringify(updatedEvaluation))

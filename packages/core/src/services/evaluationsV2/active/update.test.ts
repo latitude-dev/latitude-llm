@@ -1,6 +1,4 @@
-import {
-  ACTIVE_EVALUATIONS_CACHE_KEY,
-} from '@latitude-data/constants/evaluations'
+import { ACTIVE_EVALUATIONS_CACHE_KEY } from '@latitude-data/constants/evaluations'
 import { NotFoundError } from '../../../lib/errors'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { Cache } from '../../../cache'
@@ -13,7 +11,7 @@ describe('updateActiveEvaluation', () => {
   let workspaceId: number
   let projectId: number
   const testKeys = new Set<string>()
-  let testCounter = Date.now()
+  let testCounter = Math.floor(Date.now() / 100)
 
   beforeAll(async () => {
     redis = await cache()
@@ -22,7 +20,7 @@ describe('updateActiveEvaluation', () => {
 
   beforeEach(async () => {
     // Generate unique IDs for each test to avoid collisions in parallel execution
-    workspaceId = testCounter++
+    workspaceId = testCounter
     projectId = testCounter++
     testKeys.clear()
   })
@@ -68,8 +66,8 @@ describe('updateActiveEvaluation', () => {
 
     const updatedEvaluation = result.unwrap()
 
-    expect(updatedEvaluation.startedAt).toEqual(startedAt)
-    expect(updatedEvaluation.queuedAt).toEqual(queuedAt)
+    expect(updatedEvaluation.startedAt).toBeSameTimeIgnoringNanos(startedAt)
+    expect(updatedEvaluation.queuedAt).toBeSameTimeIgnoringNanos(queuedAt)
     expect(updatedEvaluation.issueId).toBe(issueId)
   })
 
@@ -105,7 +103,7 @@ describe('updateActiveEvaluation', () => {
 
     const updatedEvaluation = result.unwrap()
 
-    expect(updatedEvaluation.endedAt).toEqual(endedAt)
+    expect(updatedEvaluation.endedAt).toBeSameTimeIgnoringNanos(endedAt)
   })
 
   it('updates both startedAt and endedAt', async () => {
@@ -142,8 +140,8 @@ describe('updateActiveEvaluation', () => {
 
     const updatedEvaluation = result.unwrap()
 
-    expect(updatedEvaluation.startedAt).toEqual(startedAt)
-    expect(updatedEvaluation.endedAt).toEqual(endedAt)
+    expect(updatedEvaluation.startedAt).toBeSameTimeIgnoringNanos(startedAt)
+    expect(updatedEvaluation.endedAt).toBeSameTimeIgnoringNanos(endedAt)
     expect(updatedEvaluation.issueId).toBe(issueId) // Original issueId preserved
   })
 
@@ -187,8 +185,10 @@ describe('updateActiveEvaluation', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     const updatedEvaluation = result.unwrap()
-    expect(updatedEvaluation.endedAt).toEqual(endedAt)
-    expect(updatedEvaluation.startedAt).toEqual(originalStartedAt) // Preserved
+    expect(updatedEvaluation.endedAt).toBeSameTimeIgnoringNanos(endedAt)
+    expect(updatedEvaluation.startedAt).toBeSameTimeIgnoringNanos(
+      originalStartedAt,
+    ) // Preserved
     expect(updatedEvaluation.issueId).toBe(issueId) // Preserved
   })
 
@@ -252,4 +252,3 @@ describe('updateActiveEvaluation', () => {
     }
   })
 })
-

@@ -9,7 +9,7 @@ describe('createActiveEvaluation', () => {
   let workspaceId: number
   let projectId: number
   const testKeys = new Set<string>()
-  let testCounter = Date.now()
+  let testCounter = Math.floor(Date.now() / 1000)
 
   beforeAll(async () => {
     redis = await cache()
@@ -18,7 +18,7 @@ describe('createActiveEvaluation', () => {
 
   beforeEach(async () => {
     // Generate unique IDs for each test to avoid collisions in parallel execution
-    workspaceId = testCounter++
+    workspaceId = testCounter
     projectId = testCounter++
     testKeys.clear()
   })
