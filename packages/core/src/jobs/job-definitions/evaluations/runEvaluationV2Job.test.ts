@@ -45,7 +45,7 @@ vi.spyOn(progressTracker, 'ProgressTracker').mockImplementation(() => ({
   evaluationError: evaluationErrorSpy,
   // @ts-expect-error - mock
   getProgress: vi.fn(() => Promise.resolve({ completed: 1, total: 1 })),
-  cleanup: vi.fn(),
+  cleanup: vi.fn().mockReturnValue(Promise.resolve()),
 }))
 
 let jobData: Job<RunEvaluationV2JobData>
