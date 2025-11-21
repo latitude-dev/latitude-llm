@@ -11,6 +11,10 @@ export class RedisStream {
   private cap: number
   private ttl: number
   private connection?: Redis
+  private writeConnection?: Redis
+  private writeConnectionPromise?: Promise<Redis>
+  private writeCount: number = 0
+  private readonly EXPIRE_INTERVAL = 100 // Refresh TTL every 100 writes
 
   /**
    * Creates a new RedisStream instance.
@@ -36,13 +40,41 @@ export class RedisStream {
   /**
    * Writes an event to the Redis stream.
    * Automatically handles MAXLEN trimming and key expiration.
+   * Reuses a persistent connection for efficiency and only refreshes TTL periodically.
    * @param event - The event data to write (will be JSON serialized)
    */
   async write(event: unknown): Promise<void> {
-    const c = await cache()
-    await c
-      .multi()
-      .xadd(
+    if (!this.writeConnection) {
+      // Using a promise to avoid race conditions when multiple writes ask for a write connection at the same time.
+      if (!this.writeConnectionPromise) {
+        this.writeConnectionPromise = cache().then((c) => c.duplicate())
+      }
+      this.writeConnection = await this.writeConnectionPromise
+      // Clear promise once connection is established - we only need it during setup
+      this.writeConnectionPromise = undefined
+    }
+
+    this.writeCount++
+    const shouldExpire =
+      this.writeCount === 1 || this.writeCount % this.EXPIRE_INTERVAL === 0
+
+    // MULTI/EXEC adds overhead, only use it when needed
+    if (shouldExpire) {
+      await this.writeConnection
+        .multi()
+        .xadd(
+          this.key,
+          'MAXLEN',
+          '~',
+          this.cap,
+          '*',
+          'event',
+          JSON.stringify(event),
+        )
+        .expire(this.key, this.ttl)
+        .exec()
+    } else {
+      await this.writeConnection.xadd(
         this.key,
         'MAXLEN',
         '~',
@@ -51,8 +83,7 @@ export class RedisStream {
         'event',
         JSON.stringify(event),
       )
-      .expire(this.key, this.ttl)
-      .exec()
+    }
   }
 
   /**
@@ -94,13 +125,17 @@ export class RedisStream {
   }
 
   /**
-   * Closes the persistent Redis connection used for reading.
+   * Closes the persistent Redis connections used for reading and writing.
    * Should be called when done with the stream to free resources.
    */
   async close(): Promise<void> {
     if (this.connection) {
       await this.connection.quit()
       this.connection = undefined
+    }
+    if (this.writeConnection) {
+      await this.writeConnection.quit()
+      this.writeConnection = undefined
     }
   }
 
