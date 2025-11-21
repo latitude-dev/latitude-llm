@@ -50,7 +50,6 @@ export class RedisStream {
         this.writeConnectionPromise = cache().then((c) => c.duplicate())
       }
       this.writeConnection = await this.writeConnectionPromise
-      // Clear promise once connection is established - we only need it during setup
       this.writeConnectionPromise = undefined
     }
 
