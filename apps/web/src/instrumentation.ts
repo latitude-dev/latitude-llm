@@ -18,5 +18,11 @@ export async function register() {
     tracer.use('next', {
       service: 'latitude-llm-web',
     })
+
+    // Configure ioredis plugin to skip tracing XREAD commands
+    // to avoid generating millions of spans from high-frequency polling
+    tracer.use('ioredis', {
+      blocklist: ['xread'],
+    })
   }
 }

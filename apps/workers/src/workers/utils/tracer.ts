@@ -6,4 +6,10 @@ tracer.init({
   env: process.env.NODE_ENV,
 })
 
+// Configure ioredis plugin to skip tracing XREAD commands
+// to avoid generating millions of spans from high-frequency polling
+tracer.use('ioredis', {
+  blocklist: ['xread'],
+})
+
 export default tracer
