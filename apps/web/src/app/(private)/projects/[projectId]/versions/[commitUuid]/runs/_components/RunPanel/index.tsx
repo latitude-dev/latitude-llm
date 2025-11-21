@@ -123,20 +123,6 @@ function CompletedRunPanel({
     })
   }, [conversation])
 
-  const isLoading = isLoadingTrace || isLoadingAnnotations
-  if (isLoading) {
-    return (
-      <div className='w-full h-full flex flex-1 justify-center items-center gap-2'>
-        <Icon
-          name='loader'
-          color='foregroundMuted'
-          className='animate-spin mt-px stroke-[2.25]'
-        />
-        <Text.H4M color='foregroundMuted'>Assembling run...</Text.H4M>
-      </div>
-    )
-  }
-
   const buildSelectedSpanUrl = useCallback(
     ({
       projectId,
@@ -163,6 +149,20 @@ function CompletedRunPanel({
     },
     [],
   )
+
+  const isLoading = isLoadingTrace || isLoadingAnnotations
+  if (isLoading) {
+    return (
+      <div className='w-full h-full flex flex-1 justify-center items-center gap-2'>
+        <Icon
+          name='loader'
+          color='foregroundMuted'
+          className='animate-spin mt-px stroke-[2.25]'
+        />
+        <Text.H4M color='foregroundMuted'>Assembling run...</Text.H4M>
+      </div>
+    )
+  }
 
   return (
     <div className='w-full flex flex-col gap-6 p-6 overflow-hidden overflow-y-auto custom-scrollbar relative'>
