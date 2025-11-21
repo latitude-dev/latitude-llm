@@ -1,5 +1,4 @@
-import { and, eq, getTableColumns } from 'drizzle-orm'
-
+import { eq, getTableColumns } from 'drizzle-orm'
 import { type Membership } from '../schema/models/types/Membership'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
@@ -31,20 +30,5 @@ export class MembershipsRepository extends RepositoryLegacy<
     }
 
     return Result.ok(result[0]!)
-  }
-
-  async findAnyMembershipForUser({
-    userId,
-    membershipId,
-  }: {
-    userId: string
-    membershipId: number
-  }) {
-    return this.db
-      .select()
-      .from(this.scope)
-      .where(
-        and(eq(this.scope.userId, userId), eq(memberships.id, membershipId)),
-      ).then((res) => res[0])
   }
 }

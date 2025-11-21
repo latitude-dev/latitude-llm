@@ -1,35 +1,47 @@
+import { and, eq } from 'drizzle-orm'
 import { notFound, redirect } from 'next/navigation'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import { WorkspaceSwitcherRedirect } from './_components/WorkspaceSwitcherRedirect'
 import { ROUTES } from '$/services/routes'
-import { switchWorkspace } from '@latitude-data/core/services/workspaces/switch'
-import { MembershipsRepository } from '@latitude-data/core/repositories'
+import { database } from '@latitude-data/core/client'
+import { memberships } from '@latitude-data/core/schema/models/memberships'
+
+async function findAnyMembershipForUser({
+  userId,
+  membershipId,
+}: {
+  userId: string
+  membershipId: number
+}) {
+  return database
+    .select()
+    .from(memberships)
+    .where(
+      and(eq(memberships.userId, userId), eq(memberships.id, membershipId)),
+    )
+    .then((res) => res[0])
+}
 
 export default async function NotificationsByMemberIdPage({
   params,
 }: {
-  params: { memberId: string }
+  params: Promise<{ memberId: string }>
 }) {
-  const { user, workspace: currentWorkspace } = await getCurrentUserOrRedirect()
-  const memberId = parseInt(params.memberId, 10)
-
-  if (isNaN(memberId)) {
-    notFound()
-  }
-
-  const repo = new MembershipsRepository(currentWorkspace.id)
-  const membership = await repo.findAnyMembershipForUser({
-    userId: user.id,
+  const paramsResolved = await params
+  const { user: currentUser, workspace: currentWorkspace } =
+    await getCurrentUserOrRedirect()
+  const memberId = parseInt(paramsResolved.memberId, 10)
+  const membership = await findAnyMembershipForUser({
+    userId: currentUser.id,
     membershipId: memberId,
   })
 
-  // This membership does not belongs to the current user
   if (!membership) return notFound()
-
   if (membership.workspaceId === currentWorkspace.id) {
-    redirect(ROUTES.dashboard.notifications.root)
+    return redirect(ROUTES.dashboard.notifications.root)
   }
 
-  // Otherwise, switch to the workspace and then redirect
-  await switchWorkspace({ workspaceId: membership.workspaceId })
-  redirect(ROUTES.dashboard.notifications.root)
+  return (
+    <WorkspaceSwitcherRedirect targetWorkspaceId={membership.workspaceId} />
+  )
 }

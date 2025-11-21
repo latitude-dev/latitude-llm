@@ -1,31 +1,12 @@
-'use client'
+import { Metadata } from 'next'
+import buildMetatags from '$/app/_lib/buildMetatags'
+import NotificationsModal from '$/components/Notifications/Modal'
 
-import Notifications from '$/components/Notifications'
-import { Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
-import { useRouter } from 'next/navigation'
+export const metadata: Promise<Metadata> = buildMetatags({
+  title: 'Notifications',
+  locationDescription: 'Email Notifications',
+})
 
-export default function NotificationsModal() {
-  const router = useRouter()
-
-  return (
-    <Modal
-      dismissible
-      open
-      onOpenChange={(open) => {
-        if (!open) {
-          router.back()
-        }
-      }}
-      title='Email Notifications'
-      description='Manage your email notification preferences.'
-      footer={
-        <>
-          <CloseTrigger />
-        </>
-      }
-    >
-      <Notifications />
-    </Modal>
-  )
+export default function NotificationsModalPage() {
+  return <NotificationsModal />
 }

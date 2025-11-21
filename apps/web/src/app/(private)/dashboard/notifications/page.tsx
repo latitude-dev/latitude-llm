@@ -1,21 +1,10 @@
 import { Metadata } from 'next'
-import { Container } from '@latitude-data/web-ui/atoms/Container'
-import { TitleWithActions } from '@latitude-data/web-ui/molecules/TitleWithActions'
-import buildMetatags from '$/app/_lib/buildMetatags'
-import { AppTabs } from '$/app/(private)/AppTabs'
-import Notifications from '$/components/Notifications'
+import NotificationsModal from '$/components/Notifications/Modal'
+import { metadata as modalMetadata } from '../../@modal/(.)notifications/page'
+import { ROUTES } from '$/services/routes'
 
-export const metadata: Promise<Metadata> = buildMetatags({
-  title: 'Notifications',
-  locationDescription: 'Email Notifications',
-})
+export const metadata: Promise<Metadata> = modalMetadata
 
 export default function DashboardNotificationsPage() {
-  return (
-    <Container>
-      <AppTabs />
-      <TitleWithActions title='Email Notifications' />
-      <Notifications />
-    </Container>
-  )
+  return <NotificationsModal route={ROUTES.dashboard.root} />
 }
