@@ -25,8 +25,10 @@ export const metadata = buildMetatags({
 
 export default async function PrivateLayout({
   children,
+  modal,
 }: Readonly<{
   children: ReactNode
+  modal: ReactNode
 }>) {
   const { workspace, user, subscriptionPlan } = await getCurrentUserOrRedirect()
 
@@ -67,6 +69,7 @@ export default async function PrivateLayout({
                     isCloud={isCloud}
                   >
                     {children}
+                    {modal}
                   </AppLayout>
                 </PaywallModalProvider>
               </LatitudeWebsocketsProvider>

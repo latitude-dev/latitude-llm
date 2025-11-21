@@ -1,20 +1,18 @@
 import { Metadata } from 'next'
-import { Container } from '@latitude-data/web-ui/atoms/Container'
 import buildMetatags from '$/app/_lib/buildMetatags'
-import { AppTabs } from '$/app/(private)/AppTabs'
 
-import Notifications from '../settings/_components/Notifications'
+import Notifications from '$/components/Notifications'
+import { FocusLayout } from '$/components/layouts'
 
 export const metadata: Promise<Metadata> = buildMetatags({
   title: 'Notifications',
-  locationDescription: 'Notifications Page',
+  locationDescription: 'Email Notifications',
 })
 
-export default async function NotificationsPage() {
+export default function NotificationsPage() {
   return (
-    <Container>
-      <AppTabs />
+    <FocusLayout>
       <Notifications />
-    </Container>
+    </FocusLayout>
   )
 }

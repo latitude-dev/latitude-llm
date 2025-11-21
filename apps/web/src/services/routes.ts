@@ -84,9 +84,6 @@ export const ROUTES = {
   noWorkspace: {
     root: '/no-workspace',
   },
-  notifications: {
-    root: '/notifications',
-  },
   settings: {
     root: '/settings',
     webhooks: {
@@ -132,6 +129,9 @@ export const ROUTES = {
         return { root: `/settings/users/${userId}/destroy` }
       },
     },
+  },
+  notifications: {
+    root: '/notifications',
   },
   dashboard: {
     root: '/dashboard',
