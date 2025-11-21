@@ -690,9 +690,9 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const conditions = [
       this.scopeFilter,
       eq(issueEvaluationResults.issueId, issueId),
+      isNotNull(commits.mergedAt),
       isNull(evaluationResultsV2.error),
       sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
-      isNotNull(commits.mergedAt),
     ]
 
     const newerLimit = Math.ceil(
@@ -730,6 +730,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         issueEvaluationResults,
         eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
       )
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .where(and(...conditions))
       .orderBy(
         asc(evaluationResultsV2.createdAt),
