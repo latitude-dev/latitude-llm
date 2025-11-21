@@ -77,6 +77,8 @@ describe('AnalyticsClient', () => {
             updatedAt: new Date(),
             authorId: '123',
             userEmail: 'owner@example.com',
+            wantToReceiveWeeklyEmail: true,
+            wantToReceiveEscalatingIssuesEmail: true,
           },
         },
       })
