@@ -1,19 +1,24 @@
 import React from 'react'
 
 import { Link, Text } from '@react-email/components'
-import ContainerLayout from '../_components/ContainerLayout'
+import ContainerLayoutWithNotificationSettings, {
+  NotificiationsLayoutProps,
+} from '../_components/ContainerLayoutWithNotificationSettings'
 
 export default function IssueEscalatingMail({
   issueTitle,
   link,
+  currentUser,
 }: {
   issueTitle: string
   link: string
+  currentUser: NotificiationsLayoutProps['currentUser']
 }) {
   return (
-    <ContainerLayout
+    <ContainerLayoutWithNotificationSettings
       title='Issue Escalating'
       previewText={`Issue "${issueTitle}" is escalating.`}
+      currentUser={currentUser}
     >
       <Text>Hello team</Text>
       <Text>
@@ -31,11 +36,12 @@ export default function IssueEscalatingMail({
       >
         View issue in dashboard
       </Link>
-    </ContainerLayout>
+    </ContainerLayoutWithNotificationSettings>
   )
 }
 
 IssueEscalatingMail.PreviewProps = {
   issueTitle: 'API timeout error in payment processing',
   link: 'https://example.com',
+  membershipId: 1,
 }

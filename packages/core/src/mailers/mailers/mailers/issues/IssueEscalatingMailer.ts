@@ -5,6 +5,7 @@ import SMTPTransport from 'nodemailer/lib/smtp-transport'
 import { TypedResult } from '../../../../lib/Result'
 import IssueEscalatingMail from '../../../emails/issues/IssueEscalatingMail'
 import Mailer from '../../Mailer'
+import { NotificiationsLayoutProps } from '../../../emails/_components/ContainerLayoutWithNotificationSettings'
 
 function convertTo(to: Mail.Options['to']): Address[] {
   if (!Array.isArray(to)) {
@@ -26,6 +27,7 @@ function convertTo(to: Mail.Options['to']): Address[] {
 export type SendIssueEscalatingMailOptions = {
   to: Mail.Options['to']
   recipientVariables?: Record<string, Record<string, unknown>>
+  currentUser: NotificiationsLayoutProps['currentUser']
 }
 export class IssueEscalatingMailer extends Mailer {
   issueTitle: string
@@ -44,6 +46,7 @@ export class IssueEscalatingMailer extends Mailer {
   async send({
     to,
     recipientVariables,
+    currentUser,
   }: SendIssueEscalatingMailOptions): Promise<
     TypedResult<SMTPTransport.SentMessageInfo, Error>
   > {
@@ -57,6 +60,7 @@ export class IssueEscalatingMailer extends Mailer {
         IssueEscalatingMail({
           issueTitle: this.issueTitle,
           link: this.link,
+          currentUser,
         }),
       ),
     })

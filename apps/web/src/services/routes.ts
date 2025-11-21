@@ -135,6 +135,9 @@ export const ROUTES = {
   },
   dashboard: {
     root: '/dashboard',
+    notifications: {
+      root: '/dashboard/notifications',
+    },
     projects: {
       new: {
         root: `/dashboard/projects/new`,

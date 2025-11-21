@@ -24,6 +24,7 @@ async function findNotificableMembers(workspace: Workspace) {
       id: users.id,
       email: users.email,
       name: users.name,
+      membershipId: memberships.id,
     })
     .from(users)
     .innerJoin(memberships, eq(users.id, memberships.userId))
@@ -64,6 +65,7 @@ async function sendEmail({
     id: member.id,
     address: member.email,
     name: member.name || member.email,
+    membershipId: member.membershipId,
   }))
 
   const batches: SendIssueEscalatingMailOptions[] = []
@@ -76,6 +78,7 @@ async function sendEmail({
       recipientVariables[user.address] = {
         name: user.name,
         id: user.id,
+        membershipId: user.membershipId,
       }
     })
 

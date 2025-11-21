@@ -16,17 +16,20 @@ import {
   Text,
 } from '@react-email/components'
 
+export type ContainerLayoutProps = {
+  children: ReactNode
+  title?: string
+  previewText: string
+  footerText?: string | string[]
+  footer?: ReactNode
+}
 export default function ContainerLayout({
   children,
   title,
   previewText,
   footerText = 'The Latitude Team',
-}: {
-  children: ReactNode
-  title?: string
-  previewText: string
-  footerText?: string | string[]
-}) {
+  footer,
+}: ContainerLayoutProps) {
   const rootUrl = env.APP_URL
   return (
     <Html>
@@ -68,6 +71,7 @@ export default function ContainerLayout({
                 )}
               </Section>
             </Section>
+            {footer}
             <Section className='w-full pt-4'>
               <Link href={rootUrl} className='text-center'>
                 <Img

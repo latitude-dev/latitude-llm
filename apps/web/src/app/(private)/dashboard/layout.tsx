@@ -19,8 +19,10 @@ export const metadata = buildMetatags({
 
 export default async function DashboardLayout({
   children,
+  modal,
 }: Readonly<{
   children: ReactNode
+  modal: ReactNode
 }>) {
   const { workspace } = await getCurrentUserOrRedirect()
 
@@ -30,6 +32,7 @@ export default async function DashboardLayout({
     <Container>
       <AppTabs />
       {children}
+      {modal}
       <TableWithHeader
         title='Projects'
         actions={
