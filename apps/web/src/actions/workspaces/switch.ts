@@ -7,7 +7,6 @@ import { setSession } from '$/services/auth/setSession'
 import { authProcedure } from '../procedures'
 import { cookies } from 'next/headers'
 import { removeSession, Session } from '$/services/auth/removeSession'
-import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
 export const switchWorkspaceAction = authProcedure
@@ -40,5 +39,9 @@ export const switchWorkspaceAction = authProcedure
       await cookies(),
     )
 
-    return redirect(parsedInput.redirectTo ?? ROUTES.root)
+    if (parsedInput.redirectTo) {
+      return redirect(parsedInput.redirectTo)
+    }
+
+    return workspace
   })
