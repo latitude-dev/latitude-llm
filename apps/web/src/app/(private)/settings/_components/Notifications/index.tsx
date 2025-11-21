@@ -2,67 +2,16 @@
 
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { updateWeeklyEmailPreferenceAction } from '$/actions/memberships/updateWeeklyEmailPreference'
-import { updateEscalatingIssuesEmailPreferenceAction } from '$/actions/memberships/updateEscalatingIssuesEmailPreference'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useCurrentUser } from '$/stores/currentUser'
 
 export default function Notifications() {
-  const { data: user, mutate } = useCurrentUser()
-  const { toast } = useToast()
-
-  const { execute: updateWeeklyEmail, isPending: isUpdatingWeeklyEmail } =
-    useLatitudeAction(updateWeeklyEmailPreferenceAction, {
-      onSuccess: async ({ data: updatedMembership }) => {
-        toast({
-          title: 'Success',
-          description: 'Weekly email preference updated successfully',
-        })
-        mutate({
-          ...user!,
-          notifications: {
-            ...user!.notifications,
-            wantToReceiveWeeklyEmail:
-              updatedMembership.wantToReceiveWeeklyEmail,
-          },
-        })
-      },
-      onError: async (error) => {
-        toast({
-          title: 'Error',
-          description: error?.message,
-          variant: 'destructive',
-        })
-      },
-    })
-
   const {
-    execute: updateEscalatingIssuesEmail,
-    isPending: isUpdatingEscalatingIssuesEmail,
-  } = useLatitudeAction(updateEscalatingIssuesEmailPreferenceAction, {
-    onSuccess: async ({ data: updatedMembership }) => {
-      toast({
-        title: 'Success',
-        description: 'Issue email preference updated successfully',
-      })
-      mutate({
-        ...user!,
-        notifications: {
-          ...user!.notifications,
-          wantToReceiveEscalatingIssuesEmail:
-            updatedMembership.wantToReceiveEscalatingIssuesEmail,
-        },
-      })
-    },
-    onError: async (error) => {
-      toast({
-        title: 'Error',
-        description: error?.message,
-        variant: 'destructive',
-      })
-    },
-  })
+    data: user,
+    updateWeeklyEmail,
+    isUpdatingWeeklyEmail,
+    updateEscalatingIssuesEmail,
+    isUpdatingEscalatingIssuesEmail,
+  } = useCurrentUser()
 
   if (!user) return null
 

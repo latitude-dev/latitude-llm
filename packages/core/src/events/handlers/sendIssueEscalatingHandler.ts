@@ -1,6 +1,6 @@
+import { and, eq, asc } from 'drizzle-orm'
 import { ESCALATION_EXPIRATION_DAYS } from '@latitude-data/constants/issues'
 import { env } from '@latitude-data/env'
-import { findAllUsersInWorkspace } from '../../data-access/users'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import {
@@ -12,8 +12,29 @@ import { updateEscalatingIssue } from '../../services/issues/updateEscalating'
 import { captureException } from '../../utils/datadogCapture'
 import { IssueIncrementedEvent } from '../events'
 import { Workspace } from '../../schema/models/types/Workspace'
+import { users } from '../../schema/models/users'
+import { database } from '../../client'
+import { memberships } from '../../schema/models/memberships'
 
 const BATCH_SIZE = 100 // Batch size can be up to 1000 in mailgun
+
+async function findNotificableMembers(workspace: Workspace) {
+  return database
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+    })
+    .from(users)
+    .innerJoin(memberships, eq(users.id, memberships.userId))
+    .where(
+      and(
+        eq(memberships.workspaceId, workspace.id),
+        eq(memberships.wantToReceiveEscalatingIssuesEmail, true),
+      ),
+    )
+    .orderBy(asc(users.createdAt))
+}
 
 // TODO: Refactor common batching logic with other mailers
 async function sendEmail({
@@ -27,9 +48,9 @@ async function sendEmail({
 }) {
   if (!workspace) return
 
-  const users = await findAllUsersInWorkspace(workspace)
+  const members = await findNotificableMembers(workspace)
 
-  if (users.length === 0) return
+  if (members.length === 0) return
 
   const mailer = new IssueEscalatingMailer(
     {}, // No mailer options, we'll set recipients later
@@ -39,10 +60,10 @@ async function sendEmail({
     },
   )
 
-  const addresses = users.map((u) => ({
-    id: u.id,
-    address: u.email,
-    name: u.name || u.email,
+  const addresses = members.map((member) => ({
+    id: member.id,
+    address: member.email,
+    name: member.name || member.email,
   }))
 
   const batches: SendIssueEscalatingMailOptions[] = []

@@ -147,6 +147,7 @@ function SwitchInput({
             />
             <SwitchToggle
               {...rest}
+              id={formItemId}
               checked={isChecked}
               onCheckedChange={onChange}
               className={innerClassName}

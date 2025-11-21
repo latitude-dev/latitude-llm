@@ -25,9 +25,10 @@ async function getCurrentUser({
     },
   }
 }
-type CurrentUser = Awaited<ReturnType<typeof getCurrentUser>>
 
-export const GET = errorHandler<CurrentUser>(
+export type CurrentUser = Awaited<ReturnType<typeof getCurrentUser>>
+
+export const GET = errorHandler(
   authHandler(
     async (
       _: NextRequest,

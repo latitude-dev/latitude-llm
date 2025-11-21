@@ -413,4 +413,127 @@ describe('sendIssueEscalatingHandler', () => {
       })
     })
   })
+
+  describe('notification preferences', () => {
+    it('should NOT send email to users who opted out of escalating issue notifications', async () => {
+      const doc = documents[0]!
+
+      // Create 2 additional users
+      const { createUser } = await import('../../tests/factories/users')
+      const { createMembership } = await import(
+        '../../services/memberships/create'
+      )
+
+      const user2 = await createUser({ email: 'user2@example.com' })
+      const user3 = await createUser({ email: 'user3@example.com' })
+
+      // user2 opts in (wants to receive emails)
+      await createMembership({
+        workspace,
+        user: user2,
+        wantToReceiveEscalatingIssuesEmail: true,
+      }).then((r) => r.unwrap())
+
+      // user3 opts out (does NOT want to receive emails)
+      await createMembership({
+        workspace,
+        user: user3,
+        wantToReceiveEscalatingIssuesEmail: false,
+      }).then((r) => r.unwrap())
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      // Mock checkEscalation to return isEscalating: true
+      vi.mocked(checkEscalationModule.checkEscalation).mockResolvedValueOnce({
+        isEscalating: true,
+      })
+
+      // Mock mailer to track recipients
+      const mockSend = vi
+        .fn()
+        .mockResolvedValue(Result.ok({ messageId: 'test' }))
+      vi.mocked(IssueEscalatingMailer).mockImplementation(
+        () =>
+          ({
+            send: mockSend,
+          }) as unknown as IssueEscalatingMailer,
+      )
+
+      const event: IssueIncrementedEvent = {
+        type: 'issueIncremented',
+        data: {
+          workspaceId: workspace.id,
+          issueId: issue.id,
+          histogramId: 1,
+        },
+      }
+
+      await sendIssueEscalatingHandler({ data: event })
+
+      // Verify mailer was called
+      expect(mockSend).toHaveBeenCalled()
+
+      // Get all recipients from all batches
+      const allRecipients = mockSend.mock.calls.flatMap((call) => call[0].to)
+
+      // Should only include user (default opted-in) and user2 (explicitly opted-in)
+      // Should NOT include user3 (opted-out)
+      expect(allRecipients).toHaveLength(2)
+      expect(allRecipients).toContain(user.email)
+      expect(allRecipients).toContain(user2.email)
+      expect(allRecipients).not.toContain(user3.email)
+    })
+
+    it('should NOT send any emails if all users opted out', async () => {
+      const doc = documents[0]!
+
+      // Update the default user's membership to opt out
+      const { MembershipsRepository } = await import('../../repositories')
+      const { updateEscalatingIssuesEmailPreference } = await import(
+        '../../services/memberships/updateEscalatingIssuesEmailPreference'
+      )
+
+      const membershipsRepo = new MembershipsRepository(workspace.id)
+      const membership = await membershipsRepo
+        .findByUserId(user.id)
+        .then((r) => r.unwrap())
+
+      await updateEscalatingIssuesEmailPreference({
+        membership,
+        wantToReceive: false,
+        userEmail: user.email,
+      }).then((r) => r.unwrap())
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      // Mock checkEscalation to return isEscalating: true
+      vi.mocked(checkEscalationModule.checkEscalation).mockResolvedValueOnce({
+        isEscalating: true,
+      })
+
+      const event: IssueIncrementedEvent = {
+        type: 'issueIncremented',
+        data: {
+          workspaceId: workspace.id,
+          issueId: issue.id,
+          histogramId: 1,
+        },
+      }
+
+      await sendIssueEscalatingHandler({ data: event })
+
+      // Verify mailer was NOT instantiated (no recipients)
+      expect(IssueEscalatingMailer).not.toHaveBeenCalled()
+    })
+  })
 })

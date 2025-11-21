@@ -83,7 +83,7 @@ export function StatusBadges({ issue }: { issue: SerializedIssue }) {
   if (statuses.length === 0) return null
 
   return (
-    <>
+    <div className='flex flex-row gap-x-2'>
       {statuses.map((status, index) => {
         if (!status.tooltip) {
           return (
@@ -111,6 +111,6 @@ export function StatusBadges({ issue }: { issue: SerializedIssue }) {
           </Tooltip>
         )
       })}
-    </>
+    </div>
   )
 }

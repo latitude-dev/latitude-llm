@@ -1681,6 +1681,13 @@
       "when": 1763713932266,
       "tag": "0240_add_notification_columns_for_weekly_and_issues_to_membership",
       "breakpoints": true
+    },
+    {
+      "idx": 241,
+      "version": "7",
+      "when": 1763733467846,
+      "tag": "0241_add_default_to_notification_settings",
+      "breakpoints": true
     }
   ]
 }
