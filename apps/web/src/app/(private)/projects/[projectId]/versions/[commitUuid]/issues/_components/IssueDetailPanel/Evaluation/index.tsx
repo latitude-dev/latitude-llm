@@ -280,6 +280,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
           setModel={setModel}
           provider={provider}
           model={model}
+          issue={issue}
         />
       </div>
     </div>

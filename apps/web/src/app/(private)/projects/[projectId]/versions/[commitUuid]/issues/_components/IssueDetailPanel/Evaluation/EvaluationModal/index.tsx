@@ -3,8 +3,10 @@ import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useMemo } from 'react'
-import { useMetadataStore } from '$/hooks/useMetadata'
+import { useEffect } from 'react'
+import { scan } from 'promptl-ai'
+import useDocumentVersion from '$/stores/useDocumentVersion'
+import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 
 export function EvaluationModal({
   open,
@@ -14,6 +16,7 @@ export function EvaluationModal({
   setModel,
   provider,
   model,
+  issue,
 }: {
   open: boolean
   setOpen: (open: boolean) => void
@@ -22,17 +25,42 @@ export function EvaluationModal({
   setModel: (model: string | undefined | null) => void
   provider: ProviderApiKey | undefined
   model: string | undefined | null
+  issue: Issue
 }) {
-  // TODO: get metadata from here to get the provider used in the document
-  const { metadata } = useMetadataStore()
+  const { data: document } = useDocumentVersion(issue.documentUuid)
   const { data: providers } = useProviderApiKeys()
-  const providerUsedInDocument = useMemo(() => {
-    if (!metadata?.config?.['provider']) return undefined
-    if (!providers) return undefined
 
-    const providerName = metadata.config['provider']
-    return providers.find((p) => p.name === providerName)
-  }, [metadata, providers])
+  // Parse metadata from document content
+  useEffect(() => {
+    if (!document?.content || !open || !providers) return
+
+    const parseMetadata = async () => {
+      try {
+        const metadata = await scan({
+          prompt: document.content,
+          fullPath: document.path,
+        })
+        const providerName = metadata.config?.['provider']
+        const model = metadata.config?.['model'] as string | undefined
+        const foundProvider = providers.find((p) => p.name === providerName)
+        setProvider(foundProvider)
+        setModel(model)
+      } catch (error) {
+        setProvider(undefined)
+        setModel(undefined)
+      }
+    }
+
+    parseMetadata()
+  }, [
+    document?.content,
+    document?.path,
+    open,
+    providers,
+    provider,
+    setProvider,
+    setModel,
+  ])
 
   return (
     <ConfirmModal
@@ -54,6 +82,8 @@ export function EvaluationModal({
       <div className='flex flex-col gap-2'>
         <Text.H5M>Provider</Text.H5M>
         <ProviderModelSelector
+          defaultProvider={provider}
+          defaultModel={model}
           fancyButton
           alignPopover='end'
           prompt={''}

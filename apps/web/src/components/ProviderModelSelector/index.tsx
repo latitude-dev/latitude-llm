@@ -85,6 +85,8 @@ export function ProviderModelSelector({
   updatePromptMetadata,
   setProvider: setProviderCallback,
   setModel: setModelCallback,
+  defaultProvider,
+  defaultModel,
 }: {
   prompt: string
   onChangePrompt: (prompt: string) => void
@@ -95,15 +97,19 @@ export function ProviderModelSelector({
   updatePromptMetadata?: typeof updatePromptMetadataFunction
   setProvider?: (provider: ProviderApiKey | undefined) => void
   setModel?: (model: string | undefined | null) => void
+  defaultProvider?: ProviderApiKey
+  defaultModel?: string | null
 }) {
   const [isInitialized, setInitialized] = useState(
     !updatePromptMetadata ? true : false,
   )
   const { data: workspace } = useCurrentWorkspace()
   const [open, setOpen] = useState(false)
-  const [provider, setProvider] = useState<ProviderApiKey | undefined>()
+  const [provider, setProvider] = useState<ProviderApiKey | undefined>(
+    defaultProvider,
+  )
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
-  const [model, setModel] = useState<string | undefined | null>()
+  const [model, setModel] = useState<string | undefined | null>(defaultModel)
   const defaultProviderId = workspace?.defaultProviderId
   const providerOptions = useMemo<TwoColumnSelectOption<number>[]>(
     () =>
