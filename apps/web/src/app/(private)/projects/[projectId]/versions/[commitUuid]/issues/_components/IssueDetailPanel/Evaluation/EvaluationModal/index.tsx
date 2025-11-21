@@ -31,7 +31,7 @@ export function EvaluationModal({
   const { data: providers } = useProviderApiKeys()
 
   useEffect(() => {
-    if (!document?.content || !open || !providers) return
+    if (!document?.content || !providers) return
 
     const parseMetadata = async () => {
       try {
