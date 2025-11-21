@@ -110,6 +110,7 @@
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
     "db:migrate:test": "NODE_ENV=test pnpm run db:migrate",
     "db:fix": "tsx scripts/fixMigrations/index.ts",
+    "db:fix:test": "NODE_ENV=test pnpm run db:fix",
     "db:drop": "drizzle-kit drop",
     "db:check": "drizzle-kit check",
     "db:studio": "drizzle-kit studio --port 3003",
