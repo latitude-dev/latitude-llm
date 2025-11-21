@@ -17,30 +17,36 @@ export async function updateExperimentStatus(
 ): PromisedResult<undefined, LatitudeError> {
   const progressTracker = new ProgressTracker(experiment.uuid)
 
-  await updateProgressFn?.(progressTracker)
-  const progress = await progressTracker.getProgress()
+  try {
+    await updateProgressFn?.(progressTracker)
+    const progress = await progressTracker.getProgress()
 
-  if (progress.completed >= progress.total) {
-    const completeResult = await completeExperiment(experiment)
-    if (!Result.isOk(completeResult)) {
-      return completeResult as ErrorResult<LatitudeError>
+    if (progress.completed >= progress.total) {
+      const completeResult = await completeExperiment(experiment)
+      if (!Result.isOk(completeResult)) {
+        return completeResult as ErrorResult<LatitudeError>
+      }
+
+      experiment = completeResult.unwrap()
     }
 
-    experiment = completeResult.unwrap()
-    await progressTracker.cleanup()
-  }
-
-  WebsocketClient.sendEvent('experimentStatus', {
-    workspaceId,
-    data: {
-      experiment: {
-        ...experiment,
-        results: progress,
+    WebsocketClient.sendEvent('experimentStatus', {
+      workspaceId,
+      data: {
+        experiment: {
+          ...experiment,
+          results: progress,
+        },
       },
-    },
-  })
+    })
 
-  return Result.nil()
+    return Result.nil()
+  } finally {
+    // CRITICAL: Always cleanup Redis connection to prevent memory leaks
+    await progressTracker.cleanup().catch(() => {
+      // Silently ignore cleanup errors to not mask the original error
+    })
+  }
 }
 
 export async function initializeExperimentStatus({
@@ -53,21 +59,29 @@ export async function initializeExperimentStatus({
   uuids: string[]
 }): PromisedResult<undefined, LatitudeError> {
   const progressTracker = new ProgressTracker(experiment.uuid)
-  await progressTracker.initializeProgress(
-    uuids,
-    experiment.evaluationUuids.length,
-  )
-  const progress = await progressTracker.getProgress()
 
-  WebsocketClient.sendEvent('experimentStatus', {
-    workspaceId,
-    data: {
-      experiment: {
-        ...experiment,
-        results: progress,
+  try {
+    await progressTracker.initializeProgress(
+      uuids,
+      experiment.evaluationUuids.length,
+    )
+    const progress = await progressTracker.getProgress()
+
+    WebsocketClient.sendEvent('experimentStatus', {
+      workspaceId,
+      data: {
+        experiment: {
+          ...experiment,
+          results: progress,
+        },
       },
-    },
-  })
+    })
 
-  return Result.nil()
+    return Result.nil()
+  } finally {
+    // CRITICAL: Always cleanup Redis connection to prevent memory leaks
+    await progressTracker.cleanup().catch(() => {
+      // Silently ignore cleanup errors to not mask the original error
+    })
+  }
 }
