@@ -8,7 +8,6 @@ export function buildRedisConnection({ port, host, ...opts }: RedisOptions) {
 
   return new Promise<Redis>((resolve) => {
     const instance = new Redis(port, host, {
-      ...opts,
       // Limit connection attempts to prevent resource exhaustion
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
@@ -25,6 +24,9 @@ export function buildRedisConnection({ port, host, ...opts }: RedisOptions) {
       // Set reasonable timeouts to prevent hanging connections
       connectTimeout: 10000, // 10 seconds
       commandTimeout: 5000, // 5 seconds for commands
+
+      // Override default key prefix
+      ...opts,
     })
 
     instance.connect(() => {
