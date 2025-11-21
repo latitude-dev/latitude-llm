@@ -151,18 +151,29 @@ export function RunsPage({
       },
       realtime,
     },
-    { fallbackData: serverActive.runs, keepPreviousData: true },
-  )
-  // Note: prefetch next results
-  const { data: nextActiveRuns } = useActiveRuns({
-    project,
-    search: {
-      ...debouncedActiveSearch,
-      page: (debouncedActiveSearch.page ?? 1) + 1,
-      sourceGroup: debouncedSourceGroup,
+    {
+      fallbackData: serverActive.runs,
+      keepPreviousData: false, // Prevent memory accumulation
+      dedupingInterval: 5000, // Reduce duplicate requests
     },
-    realtime: false,
-  })
+  )
+  // Note: prefetch next results only on first page to reduce memory usage
+  const shouldPrefetch = (debouncedActiveSearch.page ?? 1) === 1
+  const { data: nextActiveRuns } = useActiveRuns(
+    {
+      project,
+      search: {
+        ...debouncedActiveSearch,
+        page: (debouncedActiveSearch.page ?? 1) + 1,
+        sourceGroup: debouncedSourceGroup,
+      },
+      realtime: false,
+    },
+    {
+      isPaused: () => !shouldPrefetch, // Only prefetch on first page
+      dedupingInterval: 5000,
+    },
+  )
 
   const { data: activeCountBySource, isLoading: isActiveCountLoading } = use(
     ActiveRunsCountContext,
@@ -189,7 +200,10 @@ export function RunsPage({
       initialItems: serverCompleted.runs,
       sourceGroup: debouncedSourceGroup,
     },
-    { keepPreviousData: true },
+    {
+      keepPreviousData: false, // Prevent memory accumulation
+      dedupingInterval: 5000, // Reduce duplicate requests
+    },
   )
 
   // Update completed runs store on run ended

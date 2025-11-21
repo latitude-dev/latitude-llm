@@ -47,7 +47,11 @@ export function useActiveRuns(
       search?.pageSize,
     ],
     fetcher,
-    opts,
+    {
+      ...opts,
+      dedupingInterval: opts?.dedupingInterval ?? 5000, // Prevent duplicate requests within 5s
+      revalidateOnFocus: false, // Prevent refetch on tab focus
+    },
   )
 
   const { createStreamHandler, hasActiveStream, createAbortController } =
@@ -157,7 +161,11 @@ export function useActiveRunsCount(
   } = useSWR<Record<LogSources, number>>(
     ['activeRunsCount', project.id],
     fetcher,
-    opts,
+    {
+      ...opts,
+      dedupingInterval: opts?.dedupingInterval ?? 5000, // Prevent duplicate requests within 5s
+      revalidateOnFocus: false, // Prevent refetch on tab focus
+    },
   )
 
   const onMessage = useCallback(

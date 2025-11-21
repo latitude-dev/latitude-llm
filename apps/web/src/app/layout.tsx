@@ -38,7 +38,30 @@ export default function RootLayout({
       >
         <NextTopLoader showSpinner={false} />
         <DatadogProvider>
-          <SWRProvider config={{ revalidateOnFocus: false }}>
+          <SWRProvider
+            config={{
+              revalidateOnFocus: false,
+              dedupingInterval: 5000, // Prevent duplicate requests within 5s
+              provider: () => {
+                // Limit cache size to prevent memory issues
+                const map = new Map()
+                const maxSize = 100 // Keep only 100 most recent cache entries
+                return {
+                  get: (key: string) => map.get(key),
+                  set: (key: string, value: any) => {
+                    if (map.size >= maxSize) {
+                      // Remove oldest entry when cache is full
+                      const firstKey = map.keys().next().value
+                      map.delete(firstKey)
+                    }
+                    map.set(key, value)
+                  },
+                  delete: (key: string) => map.delete(key),
+                  keys: () => Array.from(map.keys()),
+                } as any
+              },
+            }}
+          >
             <ThemeProvider
               attribute='class'
               defaultTheme='light'
