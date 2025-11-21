@@ -36,6 +36,8 @@ const nextConfig = {
   },
   // Serve static assets from S3 for persistent chunk availability
   assetPrefix: process.env.NEXT_PUBLIC_STATIC_ASSETS_URL,
+  // Enable source maps for Datadog error tracking
+  productionBrowserSourceMaps: true,
 }
 
 export default nextConfig

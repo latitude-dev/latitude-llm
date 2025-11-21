@@ -136,6 +136,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   S3_BUCKET=$S3_BUCKET && \
   BUILD_ID=$BUILD_ID && \
   RELEASE_VERSION=$RELEASE_VERSION && \
+  NEXT_PUBLIC_RELEASE_VERSION=$RELEASE_VERSION && \
   STATIC_ASSETS_HOST=$STATIC_ASSETS_HOST && \
   if [ -n "$STATIC_ASSETS_HOST" ] && [ -n "$BUILD_ID" ]; then NEXT_PUBLIC_STATIC_ASSETS_URL="https://$STATIC_ASSETS_HOST/static-assets/$BUILD_ID"; fi && \
   NODE_OPTIONS="--max-old-space-size=8192" && \
@@ -166,13 +167,27 @@ RUN --mount=type=secret,id=DATADOG_API_KEY \
   if [ -s /run/secrets/DATADOG_API_KEY ]; then \
     echo "Uploading source maps to Datadog..."; \
     export DATADOG_API_KEY="$(cat /run/secrets/DATADOG_API_KEY)" && \
+    export DD_SITE=${DD_SITE:-datadoghq.eu} && \
     cd apps/web && \
     echo "Current directory: $(pwd)" && \
-    echo "Contents of .next directory:" && \
-    ls -la .next/ 2>/dev/null || echo ".next directory not found" && \
-    echo "Contents of .next/static directory:" && \
-    ls -la .next/static/ 2>/dev/null || echo ".next/static directory not found" && \
-    pnpm datadog:sourcemaps; \
+    echo "Absolute path: /app/apps/web" && \
+    echo "Release version: ${RELEASE_VERSION:-unknown}" && \
+    echo "Service: latitude-llm-web" && \
+    echo "DD Site: ${DD_SITE}" && \
+    echo "" && \
+    echo "=== CLIENT-SIDE SOURCE MAPS (web URLs) ===" && \
+    echo "Source map files in .next/static:" && \
+    find .next/static -name "*.map" -type f | head -10 && \
+    echo "" && \
+    echo "=== SERVER-SIDE SOURCE MAPS (filesystem paths) ===" && \
+    echo "Source map files in .next/server:" && \
+    find .next/server -name "*.map" -type f | head -10 && \
+    echo "" && \
+    echo "Uploading client-side source maps with prefix: /_next/static/" && \
+    pnpm datadog:sourcemaps:client && \
+    echo "" && \
+    echo "Uploading server-side source maps with prefix: /app/apps/web/.next/server/" && \
+    pnpm datadog:sourcemaps:server; \
   else \
     echo "Skipping Datadog source map upload - DATADOG_API_KEY secret not provided"; \
   fi

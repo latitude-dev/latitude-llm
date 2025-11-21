@@ -33,6 +33,9 @@ export const envClient = createEnv({
     NEXT_PUBLIC_DATADOG_SITE:
       process.env.NEXT_PUBLIC_DATADOG_SITE ?? 'datadoghq.eu',
     NEXT_PUBLIC_NODE_ENV: process.env.NODE_ENV ?? 'development',
-    NEXT_PUBLIC_RELEASE_VERSION: process.env.RELEASE_VERSION ?? '',
+    NEXT_PUBLIC_RELEASE_VERSION:
+      process.env.NEXT_PUBLIC_RELEASE_VERSION ??
+      process.env.RELEASE_VERSION ??
+      '',
   },
 })
