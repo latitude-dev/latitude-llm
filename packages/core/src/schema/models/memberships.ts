@@ -4,8 +4,10 @@ import {
   bigserial,
   text,
   timestamp,
+  index,
   uniqueIndex,
   uuid,
+  boolean,
 } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
@@ -28,13 +30,20 @@ export const memberships = latitudeSchema.table(
       .unique()
       .default(sql`gen_random_uuid()`),
     confirmedAt: timestamp('confirmed_at'),
+    wantToReceiveWeeklyEmail: boolean('want_to_receive_weekly_email'),
+    wantToReceiveEscalatingIssuesEmail: boolean(
+      'want_to_receive_escalating_issues_email',
+    ),
     ...timestamps(),
   },
-  (membership) => ({
-    uniqueMembershipIndex: uniqueIndex().on(
-      membership.workspaceId,
-      membership.userId,
+  (membership) => [
+    uniqueIndex().on(membership.workspaceId, membership.userId),
+    uniqueIndex().on(membership.invitationToken),
+    index('want_to_receive_weekly_email_idx').on(
+      membership.wantToReceiveWeeklyEmail,
     ),
-    invitationTokenIdx: uniqueIndex().on(membership.invitationToken),
-  }),
+    index('want_to_receive_escalating_issues_email_idx').on(
+      membership.wantToReceiveEscalatingIssuesEmail,
+    ),
+  ],
 )

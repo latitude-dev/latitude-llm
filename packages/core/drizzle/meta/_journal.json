@@ -1674,6 +1674,13 @@
       "when": 1763630751517,
       "tag": "0239_overrated_husk",
       "breakpoints": true
+    },
+    {
+      "idx": 240,
+      "version": "7",
+      "when": 1763713932266,
+      "tag": "0240_add_notification_columns_for_weekly_and_issues_to_membership",
+      "breakpoints": true
     }
   ]
 }
