@@ -3,15 +3,19 @@ import { env } from '@latitude-data/env'
 import { findAllUsersInWorkspace } from '../../data-access/users'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
-import { IssueEscalatingMailer } from '../../mailers'
+import {
+  IssueEscalatingMailer,
+  SendIssueEscalatingMailOptions,
+} from '../../mailers'
 import { IssuesRepository } from '../../repositories'
 import { updateEscalatingIssue } from '../../services/issues/updateEscalating'
 import { captureException } from '../../utils/datadogCapture'
 import { IssueIncrementedEvent } from '../events'
 import { Workspace } from '../../schema/models/types/Workspace'
 
-const BATCH_SIZE = 100
+const BATCH_SIZE = 100 // Batch size can be up to 1000 in mailgun
 
+// TODO: Refactor common batching logic with other mailers
 async function sendEmail({
   workspace,
   issue,
@@ -36,28 +40,43 @@ async function sendEmail({
   )
 
   const addresses = users.map((u) => ({
+    id: u.id,
     address: u.email,
     name: u.name || u.email,
   }))
 
-  const batches: (typeof addresses)[] = []
+  const batches: SendIssueEscalatingMailOptions[] = []
 
   for (let i = 0; i < addresses.length; i += batchSize) {
-    batches.push(addresses.slice(i, i + batchSize))
+    const batchAddresses = addresses.slice(i, i + batchSize)
+    const recipientVariables: Record<string, Record<string, unknown>> = {}
+
+    batchAddresses.forEach((user) => {
+      recipientVariables[user.address] = {
+        name: user.name,
+        id: user.id,
+      }
+    })
+
+    batches.push({
+      to: batchAddresses.map((u) => u.address),
+      recipientVariables,
+    })
   }
 
   // Send all batches in parallel and capture any errors
   await Promise.all(
     batches.map(async (batch, index) => {
-      const result = await mailer.send({ to: batch })
+      const result = await mailer.send(batch)
 
       if (result.error) {
+        const batchSize = Array.isArray(batch.to) ? batch.to.length : 1
         captureException(result.error, {
           issueId: issue.id,
           issueTitle: issue.title,
           workspaceId: workspace.id,
           batchIndex: index,
-          batchSize: batch.length,
+          batchSize: batchSize,
           context: 'issue_escalation_email',
         })
       }
@@ -115,9 +134,7 @@ export async function sendIssueEscalatingHandler({
   const wasEscalatingButExpired =
     previousEscalatingAt && previousEscalatingAt <= expirationDate
 
-  // Early return if still in same escalation period
   if (!wasNotEscalating && !wasEscalatingButExpired) return
 
-  // Send email for new escalation
   await sendEmail({ workspace, issue: updatedIssue, batchSize })
 }

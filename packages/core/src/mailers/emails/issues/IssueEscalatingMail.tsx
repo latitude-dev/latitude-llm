@@ -15,7 +15,7 @@ export default function IssueEscalatingMail({
       title='Issue Escalating'
       previewText={`Issue "${issueTitle}" is escalating.`}
     >
-      <Text>Hello</Text>
+      <Text>Hello team</Text>
       <Text>
         We have detected that the issue <strong>"{issueTitle}"</strong> is
         escalating. This means the error frequency has increased significantly

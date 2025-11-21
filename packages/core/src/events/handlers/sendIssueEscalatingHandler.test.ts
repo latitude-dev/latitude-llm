@@ -188,17 +188,21 @@ describe('sendIssueEscalatingHandler', () => {
       // Verify first batch has 2 users
       const firstBatch = mockSend.mock.calls[0][0]
       expect(firstBatch.to).toHaveLength(2)
+      expect(firstBatch.recipientVariables).toBeDefined()
+      expect(Object.keys(firstBatch.recipientVariables)).toHaveLength(2)
 
       // Verify second batch has 1 user
       const secondBatch = mockSend.mock.calls[1][0]
       expect(secondBatch.to).toHaveLength(1)
+      expect(secondBatch.recipientVariables).toBeDefined()
+      expect(Object.keys(secondBatch.recipientVariables)).toHaveLength(1)
 
       // Verify all 3 users were sent emails
       const allRecipients = [...firstBatch.to, ...secondBatch.to]
       expect(allRecipients).toHaveLength(3)
-      expect(
-        allRecipients.map((r: { address: string; name: string }) => r.address),
-      ).toEqual(expect.arrayContaining([user.email, user2.email, user3.email]))
+      expect(allRecipients).toEqual(
+        expect.arrayContaining([user.email, user2.email, user3.email]),
+      )
     })
   })
 
@@ -397,14 +401,15 @@ describe('sendIssueEscalatingHandler', () => {
       const mailerInstance = vi.mocked(IssueEscalatingMailer).mock.results[0]
         ?.value
 
-      // Verify send was called with Address objects
+      // Verify send was called with proper format
       expect(mailerInstance?.send).toHaveBeenCalledWith({
-        to: expect.arrayContaining([
-          expect.objectContaining({
-            address: expect.any(String),
+        to: expect.arrayContaining([expect.any(String)]),
+        recipientVariables: expect.objectContaining({
+          [user.email]: expect.objectContaining({
             name: expect.any(String),
+            id: expect.any(String),
           }),
-        ]),
+        }),
       })
     })
   })

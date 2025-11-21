@@ -23,6 +23,10 @@ function convertTo(to: Mail.Options['to']): Address[] {
   })
 }
 
+export type SendIssueEscalatingMailOptions = {
+  to: Mail.Options['to']
+  recipientVariables?: Record<string, Record<string, unknown>>
+}
 export class IssueEscalatingMailer extends Mailer {
   issueTitle: string
   link: string
@@ -39,7 +43,8 @@ export class IssueEscalatingMailer extends Mailer {
 
   async send({
     to,
-  }: Pick<Mail.Options, 'to'>): Promise<
+    recipientVariables,
+  }: SendIssueEscalatingMailOptions): Promise<
     TypedResult<SMTPTransport.SentMessageInfo, Error>
   > {
     const emails = convertTo(to ?? this.options.to)
@@ -47,6 +52,7 @@ export class IssueEscalatingMailer extends Mailer {
       to: emails,
       from: this.options.from,
       subject: `📈 Latitude issue Escalating: ${this.issueTitle}`,
+      'recipient-variables': recipientVariables,
       html: await render(
         IssueEscalatingMail({
           issueTitle: this.issueTitle,
