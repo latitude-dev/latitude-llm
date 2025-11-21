@@ -16,4 +16,9 @@ export const MAIN_NAV_LINKS = [
     value: ROUTES.settings.root,
     route: ROUTES.settings.root,
   },
+  {
+    label: 'Notifications',
+    value: ROUTES.notifications.root,
+    route: ROUTES.notifications.root,
+  },
 ]
