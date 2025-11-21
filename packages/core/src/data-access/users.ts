@@ -21,6 +21,19 @@ export async function findFirstUserInWorkspace(
   return results[0]
 }
 
+export async function findAllUsersInWorkspace(
+  workspace: WorkspaceDto | Workspace,
+) {
+  const results = await database
+    .select(getTableColumns(users))
+    .from(users)
+    .innerJoin(memberships, eq(users.id, memberships.userId))
+    .where(eq(memberships.workspaceId, workspace.id))
+    .orderBy(asc(users.createdAt))
+
+  return results
+}
+
 export function unsafelyGetUser(id?: string) {
   return database
     .select()

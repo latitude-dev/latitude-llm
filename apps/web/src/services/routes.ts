@@ -84,6 +84,9 @@ export const ROUTES = {
   noWorkspace: {
     root: '/no-workspace',
   },
+  notifications: {
+    root: '/notifications',
+  },
   settings: {
     root: '/settings',
     webhooks: {

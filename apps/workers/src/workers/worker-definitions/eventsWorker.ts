@@ -43,6 +43,7 @@ const eventHandlersJobMappings = {
   clearProviderApiKeysCache: jobs.clearProviderApiKeysCache,
   notifyClientOfRunStatus: jobs.notifyClientOfRunStatus,
   assignIssueToEvaluationResultV2Job: jobs.assignIssueToEvaluationResultV2Job,
+  sendIssueEscalatingHandler: jobs.sendIssueEscalatingHandler,
 }
 
 export function startEventsWorker() {

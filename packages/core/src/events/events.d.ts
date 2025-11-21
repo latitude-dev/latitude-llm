@@ -91,6 +91,8 @@ export type Events =
   | 'issueUnresolved'
   | 'issueIgnored'
   | 'issueUnignored'
+  | 'weeklyEmailPreferenceUpdated'
+  | 'escalatingIssuesEmailPreferenceUpdated'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -778,6 +780,26 @@ export type IssueUnignoredEvent = LatitudeEventGeneric<
   }
 >
 
+export type WeeklyEmailPreferenceUpdatedEvent = LatitudeEventGeneric<
+  'weeklyEmailPreferenceUpdated',
+  {
+    workspaceId: number
+    userId: string
+    userEmail: string
+    wantToReceive: boolean
+  }
+>
+
+export type EscalatingIssuesEmailPreferenceUpdatedEvent = LatitudeEventGeneric<
+  'escalatingIssuesEmailPreferenceUpdated',
+  {
+    workspaceId: number
+    userId: string
+    userEmail: string
+    wantToReceive: boolean
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -853,6 +875,8 @@ export type LatitudeEvent =
   | IssueUnresolvedEvent
   | IssueIgnoredEvent
   | IssueUnignoredEvent
+  | WeeklyEmailPreferenceUpdatedEvent
+  | EscalatingIssuesEmailPreferenceUpdatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -929,4 +953,6 @@ export interface IEventsHandlers {
   issueUnresolved: EventHandler<IssueUnresolvedEvent>[]
   issueIgnored: EventHandler<IssueIgnoredEvent>[]
   issueUnignored: EventHandler<IssueUnignoredEvent>[]
+  weeklyEmailPreferenceUpdated: EventHandler<WeeklyEmailPreferenceUpdatedEvent>[]
+  escalatingIssuesEmailPreferenceUpdated: EventHandler<EscalatingIssuesEmailPreferenceUpdatedEvent>[]
 }

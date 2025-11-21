@@ -48,6 +48,7 @@ async function createIssueHistogramsBulk(
 
 export type ICreateIssue = {
   createdAt: Date
+  escalatingAt?: Date | null
   document: DocumentVersion
   workspace?: Workspace | ICreateWorkspace
   project?: Project | ICreateProject
@@ -90,6 +91,7 @@ export async function createIssue(issueData: Partial<ICreateIssue> = {}) {
     title,
     description,
     createdAt: issueData.createdAt,
+    escalatingAt: issueData.escalatingAt,
   })
 
   const issue = result.unwrap().issue

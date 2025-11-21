@@ -6,6 +6,14 @@ import SMTPTransport from 'nodemailer/lib/smtp-transport'
 import { Result, TypedResult } from '../../lib/Result'
 import { createAdapter } from './adapters'
 
+/**
+ * Batch sending options for Mailgun.
+ * https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages/batch-sending
+ */
+export type ExtendedMailOptions = Mail.Options & {
+  'recipient-variables'?: Record<string, Record<string, unknown>>
+}
+
 export default abstract class Mailer {
   protected options: Mail.Options
 
@@ -21,12 +29,12 @@ export default abstract class Mailer {
   }
 
   abstract send(
-    _options: Mail.Options,
+    _options: ExtendedMailOptions,
     _attrs: unknown,
   ): Promise<TypedResult<SMTPTransport.SentMessageInfo, Error>>
 
   protected async sendMail(
-    options: Mail.Options,
+    options: ExtendedMailOptions,
   ): Promise<TypedResult<SMTPTransport.SentMessageInfo, Error>> {
     let result
     try {
