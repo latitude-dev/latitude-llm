@@ -19,6 +19,8 @@ import { useTypeWriterValue } from '@latitude-data/web-ui/browser'
 import { scan } from 'promptl-ai'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import useDocumentVersion from '$/stores/useDocumentVersion'
+import Link from 'next/link'
+import { ROUTES } from '$/services/routes'
 
 const GENERATION_DESCRIPTIONS = [
   'Thinking of a good configuration...',
@@ -208,7 +210,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     return (
       <div className='grid grid-cols-2 gap-x-4 items-center'>
         <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
-        <div>
+        <div className='flex flex-row items-center gap-2'>
           <Select
             badgeLabel
             align='end'
@@ -226,6 +228,22 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
             loading={isUpdatingEvaluation}
             onChange={setIssueForNewEvaluation}
           />
+          <Link
+            href={
+              ROUTES.projects
+                .detail({ id: project.id })
+                .commits.detail({ uuid: commit.uuid })
+                .documents.detail({ uuid: issue.documentUuid })
+                .evaluations.detail({ uuid: evaluationWithIssue.uuid }).root
+            }
+            target='_blank'
+          >
+            <Icon
+              name='externalLink'
+              color='foregroundMuted'
+              className='hover:text-primary'
+            />
+          </Link>
         </div>
       </div>
     )

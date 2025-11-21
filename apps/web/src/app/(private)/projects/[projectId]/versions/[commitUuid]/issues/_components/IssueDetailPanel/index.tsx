@@ -111,10 +111,10 @@ export function IssuesDetailPanel({
             <DetailsPanel.Body>
               <div className='flex flex-col gap-y-6'>
                 {isEvaluationGeneratorEnabled ? (
-                  <>
+                  <div className='flex flex-col pt-1 gap-y-6'>
                     <IssueEvaluation issue={issue} />
                     <Separator variant='dashed' />
-                  </>
+                  </div>
                 ) : null}
                 <IssueDetails issue={issue} />
                 <TracesList issue={issue} onView={onSelectSpan} />
