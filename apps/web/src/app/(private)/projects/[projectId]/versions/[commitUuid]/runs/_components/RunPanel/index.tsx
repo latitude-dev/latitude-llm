@@ -137,6 +137,33 @@ function CompletedRunPanel({
     )
   }
 
+  const buildSelectedSpanUrl = useCallback(
+    ({
+      projectId,
+      commitUuid,
+      run,
+    }: {
+      projectId: number
+      commitUuid: string
+      run: CompletedRun
+    }) => {
+      const filters = encodeURIComponent(
+        JSON.stringify({
+          spanId: run.span.id,
+          traceId: run.span.traceId,
+        }),
+      )
+      return (
+        ROUTES.projects
+          .detail({ id: projectId })
+          .commits.detail({ uuid: commitUuid })
+          .documents.detail({ uuid: run.span.documentUuid! }).traces.root +
+        `?filters=${filters}`
+      )
+    },
+    [],
+  )
+
   return (
     <div className='w-full flex flex-col gap-6 p-6 overflow-hidden overflow-y-auto custom-scrollbar relative'>
       <div className='w-full min-h-0 flex flex-1 flex-col justify-start items-start gap-4'>
@@ -154,13 +181,11 @@ function CompletedRunPanel({
         )}
         <div className='w-full flex justify-center items-center'>
           <Link
-            href={
-              ROUTES.projects
-                .detail({ id: project.id })
-                .commits.detail({ uuid: commit.uuid })
-                .documents.detail({ uuid: run.span.documentUuid! }).traces
-                .root + `?spanId=${run.span.id}&traceId=${run.span.traceId}`
-            }
+            href={buildSelectedSpanUrl({
+              projectId: project.id,
+              commitUuid: commit.uuid,
+              run,
+            })}
             target='_blank'
           >
             <Button
