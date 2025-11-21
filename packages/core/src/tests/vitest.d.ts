@@ -13,4 +13,10 @@ declare module 'vitest' {
     }
     factories: typeof factories
   }
+
+  interface CustomMatchers<R = unknown> {
+    toBeSameTimeIgnoringNanos(expected: Date): R
+  }
+
+  interface Matchers<T = unknown> extends CustomMatchers<T> {}
 }

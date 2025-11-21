@@ -20,6 +20,7 @@ import {
   Message,
 } from '../schema/types'
 import { Run } from '@latitude-data/constants'
+import { ActiveEvaluation } from '@latitude-data/constants/evaluations'
 
 export type Events =
   | 'magicLinkTokenCreated'
@@ -643,6 +644,42 @@ export type RunStatusEvent =
   | RunProgressEvent
   | RunEndedEvent
 
+type EvaluationStatusEventData = {
+  workspaceId: number
+  projectId: number
+  evaluation: ActiveEvaluation
+}
+
+export type EvaluationQueuedEvent = LatitudeEventGeneric<
+  'evaluationQueued',
+  EvaluationStatusEventData
+>
+export type EvaluationStartedEvent = LatitudeEventGeneric<
+  'evaluationStarted',
+  EvaluationStatusEventData
+>
+export type EvaluationProgressEvent = LatitudeEventGeneric<
+  'evaluationProgress',
+  EvaluationStatusEventData
+>
+export type EvaluationEndedEvent = LatitudeEventGeneric<
+  'evaluationEnded',
+  EvaluationStatusEventData
+>
+export type EvaluationFailedEvent = LatitudeEventGeneric<
+  'evaluationFailed',
+  EvaluationStatusEventData & {
+    error: Error
+  }
+>
+
+export type EvaluationStatusEvent =
+  | EvaluationQueuedEvent
+  | EvaluationStartedEvent
+  | EvaluationProgressEvent
+  | EvaluationEndedEvent
+  | EvaluationFailedEvent
+
 export type CommitUpdatedEvent = LatitudeEventGeneric<
   'commitUpdated',
   {
@@ -853,6 +890,11 @@ export type LatitudeEvent =
   | IssueUnresolvedEvent
   | IssueIgnoredEvent
   | IssueUnignoredEvent
+  | EvaluationQueuedEvent
+  | EvaluationStartedEvent
+  | EvaluationProgressEvent
+  | EvaluationEndedEvent
+  | EvaluationFailedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -929,4 +971,9 @@ export interface IEventsHandlers {
   issueUnresolved: EventHandler<IssueUnresolvedEvent>[]
   issueIgnored: EventHandler<IssueIgnoredEvent>[]
   issueUnignored: EventHandler<IssueUnignoredEvent>[]
+  evaluationQueued: EventHandler<EvaluationQueuedEvent>[]
+  evaluationStarted: EventHandler<EvaluationStartedEvent>[]
+  evaluationProgress: EventHandler<EvaluationProgressEvent>[]
+  evaluationFailed: EventHandler<EvaluationFailedEvent>[]
+  evaluationEnded: EventHandler<EvaluationEndedEvent>[]
 }

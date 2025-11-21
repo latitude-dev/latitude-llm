@@ -6,6 +6,7 @@ import { getCopilot } from '../copilot/get'
 import { runCopilot } from '../copilot/run'
 import { z } from 'zod'
 import { CLOUD_MESSAGES } from '../../constants'
+import { assertCopilotIsSupported } from '../copilot/assertItsSupported'
 
 const generatedDatasetResponseSchema = z.object({
   rows: z.array(z.record(z.string(), z.unknown())),
@@ -26,21 +27,14 @@ export async function generateDatasetWithCopilot(
   },
   db = database,
 ) {
-  if (!env.LATITUDE_CLOUD) {
-    return Result.error(new BadRequestError(CLOUD_MESSAGES.generateDatasets))
+  const assertResult = assertCopilotIsSupported(CLOUD_MESSAGES.generateDatasets)
+  if (!Result.isOk(assertResult)) {
+    return assertResult
   }
 
-  if (!env.COPILOT_PROJECT_ID) {
-    return Result.error(new BadRequestError('COPILOT_PROJECT_ID is not set'))
-  }
   if (!env.COPILOT_PROMPT_DATASET_GENERATOR_PATH) {
     return Result.error(
       new BadRequestError('COPILOT_PROMPT_DATASET_GENERATOR_PATH is not set'),
-    )
-  }
-  if (!env.COPILOT_WORKSPACE_API_KEY) {
-    return Result.error(
-      new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set'),
     )
   }
 

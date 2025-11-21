@@ -4,7 +4,7 @@ import {
   DEFAULT_REDACT_SPAN_PROCESSOR,
   LatitudeTelemetry,
 } from '@latitude-data/telemetry'
-import { afterAll, beforeEach, vi } from 'vitest'
+import { afterAll, beforeEach, expect, vi } from 'vitest'
 import * as telemetry from '../telemetry'
 import * as factories from './factories'
 import { MockSpanExporter, MockSpanProcessor } from './telemetry'
@@ -37,4 +37,19 @@ afterAll(async () => {
   // Clean up the shared telemetry instance
   await telemetryInstance.shutdown()
   removeTestFolder()
+})
+
+expect.extend({
+  toBeSameTimeIgnoringNanos(received: Date, expected: Date) {
+    const r = Math.floor(received.getTime() / 1000)
+    const e = Math.floor(expected.getTime() / 1000)
+
+    const pass = r === e
+
+    return {
+      pass,
+      message: () =>
+        `Expected ${received.toISOString()} to equal ${expected.toISOString()} ignoring nanos`,
+    }
+  },
 })

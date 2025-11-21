@@ -11,6 +11,7 @@ import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTr
 import { notifyClientOfDocumentTriggerDeleted } from './notifyClientOfDocumentTriggerDeleted'
 import { notifyClientOfDocumentTriggerEventCreated } from './notifyClientOfDocumentTriggerEventCreated'
 import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluationResultV2Created'
+import { notifyClientOfEvaluationStatus } from './notifyClientOfEvaluationStatus'
 import { notifyClientOfExportReady } from './notifyClientOfExportReady'
 import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
 import { notifyClientOfRunStatus } from './notifyClientOfRunStatus'
@@ -109,4 +110,9 @@ export const EventHandlers: IEventsHandlers = {
   issueUnresolved: [],
   issueIgnored: [],
   issueUnignored: [],
+  evaluationQueued: [notifyClientOfEvaluationStatus],
+  evaluationStarted: [notifyClientOfEvaluationStatus],
+  evaluationProgress: [notifyClientOfEvaluationStatus],
+  evaluationEnded: [notifyClientOfEvaluationStatus],
+  evaluationFailed: [notifyClientOfEvaluationStatus],
 }

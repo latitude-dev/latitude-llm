@@ -414,6 +414,9 @@ export const API_ROUTES = {
             attach: `${projectRoot}/runs/${uuid}/attach`,
           }),
         },
+        activeEvaluations: {
+          root: `${projectRoot}/active-evaluations`,
+        },
       }
     },
   },

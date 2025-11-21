@@ -59,5 +59,7 @@ export function useTypeWriterValue(
     pauseTime,
   ])
 
-  return prefix + currentText
+  // Always return at least a space to prevent layout collapse
+  const displayedText = currentText || '\u00A0'
+  return prefix + displayedText
 }

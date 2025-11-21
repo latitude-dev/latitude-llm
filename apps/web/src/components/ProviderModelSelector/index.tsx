@@ -9,7 +9,6 @@ import {
 import { ROUTES } from '$/services/routes'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { SerializedProviderApiKey } from '$/stores/providerApiKeys'
-import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
@@ -28,6 +27,7 @@ import { Providers } from '@latitude-data/constants'
 import { findFirstModelForProvider } from '@latitude-data/core/services/ai/providers/models/index'
 
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import { updatePromptMetadata as updatePromptMetadataFunction } from '@latitude-data/core/lib/updatePromptMetadata'
 function getProviderIcon({
   provider,
   model,
@@ -82,6 +82,11 @@ export function ProviderModelSelector({
   disabledMetadataSelectors = false,
   alignPopover = 'start',
   fancyButton = false,
+  updatePromptMetadata,
+  setProvider: setProviderCallback,
+  setModel: setModelCallback,
+  defaultProvider,
+  defaultModel,
 }: {
   prompt: string
   onChangePrompt: (prompt: string) => void
@@ -89,13 +94,22 @@ export function ProviderModelSelector({
   disabledMetadataSelectors?: boolean
   alignPopover?: PopoverContentProps['align']
   fancyButton?: boolean
+  updatePromptMetadata?: typeof updatePromptMetadataFunction
+  setProvider?: (provider: ProviderApiKey | undefined) => void
+  setModel?: (model: string | undefined | null) => void
+  defaultProvider?: ProviderApiKey
+  defaultModel?: string | null
 }) {
-  const [isInitialized, setInitialized] = useState(false)
+  const [isInitialized, setInitialized] = useState(
+    !updatePromptMetadata ? true : false,
+  )
   const { data: workspace } = useCurrentWorkspace()
   const [open, setOpen] = useState(false)
-  const [provider, setProvider] = useState<ProviderApiKey | undefined>()
+  const [provider, setProvider] = useState<ProviderApiKey | undefined>(
+    defaultProvider,
+  )
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
-  const [model, setModel] = useState<string | undefined | null>()
+  const [model, setModel] = useState<string | undefined | null>(defaultModel)
   const defaultProviderId = workspace?.defaultProviderId
   const providerOptions = useMemo<TwoColumnSelectOption<number>[]>(
     () =>
@@ -124,13 +138,23 @@ export function ProviderModelSelector({
       setProvider(selectedProvider)
       setModel(firstModel)
 
-      const updatedPrompt = updatePromptMetadata(prompt, {
+      const updatedPrompt = updatePromptMetadata?.(prompt, {
         provider: selectedProvider.name,
         model: firstModel,
       })
-      onChangePrompt(updatedPrompt)
+      setProviderCallback?.(selectedProvider)
+      setModelCallback?.(firstModel)
+      onChangePrompt(updatedPrompt ?? prompt)
     },
-    [providers, provider, prompt, onChangePrompt],
+    [
+      providers,
+      provider,
+      prompt,
+      onChangePrompt,
+      updatePromptMetadata,
+      setProviderCallback,
+      setModelCallback,
+    ],
   )
   const navigate = useNavigate()
   const onAddNewProvider = useCallback(() => {
@@ -163,7 +187,7 @@ export function ProviderModelSelector({
         )
       }
 
-      const updatedPrompt = updatePromptMetadata(
+      const updatedPrompt = updatePromptMetadata?.(
         prompt,
         {
           provider: provider?.name || '',
@@ -171,10 +195,19 @@ export function ProviderModelSelector({
         },
         { keysToBeRemovedWhenNull: ['model'] },
       )
+      setProviderCallback?.(provider)
+      setModelCallback?.(selectedModel)
       setOpen(false)
-      onChangePrompt(updatedPrompt)
+      onChangePrompt(updatedPrompt ?? prompt)
     },
-    [prompt, provider, onChangePrompt],
+    [
+      prompt,
+      provider,
+      onChangePrompt,
+      setProviderCallback,
+      setModelCallback,
+      updatePromptMetadata,
+    ],
   )
   const modelDisabled = useMemo(() => {
     if (isDisabled || !provider) return true
@@ -189,6 +222,7 @@ export function ProviderModelSelector({
 
   useEvents({
     onPromptMetadataChanged: ({ promptLoaded, metadata }) => {
+      if (!updatePromptMetadata) return
       if (!promptLoaded) return
       if (!isInitialized && !!metadata) setInitialized(true)
 
