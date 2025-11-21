@@ -30,7 +30,6 @@ export function EvaluationModal({
   const { data: document } = useDocumentVersion(issue.documentUuid)
   const { data: providers } = useProviderApiKeys()
 
-  // Parse metadata from document content
   useEffect(() => {
     if (!document?.content || !open || !providers) return
 
@@ -38,7 +37,6 @@ export function EvaluationModal({
       try {
         const metadata = await scan({
           prompt: document.content,
-          fullPath: document.path,
         })
         const providerName = metadata.config?.['provider']
         const model = metadata.config?.['model'] as string | undefined
@@ -52,15 +50,7 @@ export function EvaluationModal({
     }
 
     parseMetadata()
-  }, [
-    document?.content,
-    document?.path,
-    open,
-    providers,
-    provider,
-    setProvider,
-    setModel,
-  ])
+  }, [document?.content, open, providers, setProvider, setModel])
 
   return (
     <ConfirmModal
