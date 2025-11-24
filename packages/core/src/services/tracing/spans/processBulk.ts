@@ -47,7 +47,7 @@ import {
 } from '../../../constants'
 import { publisher } from '../../../events/publisher'
 import { diskFactory, DiskWrapper } from '../../../lib/disk'
-import { UnprocessableEntityError } from '../../../lib/errors'
+import { LatitudeError, UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import { SpansRepository } from '../../../repositories'
@@ -56,6 +56,7 @@ import { type ApiKey } from '../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { convertTimestamp } from './shared'
 import { SPAN_SPECIFICATIONS } from './specifications'
+import { captureException } from '../../../utils/datadogCapture'
 
 export async function processSpansBulk(
   {
@@ -119,7 +120,11 @@ export async function processSpansBulk(
     // Convert span attributes
     const convertingsa = convertSpanAttributes(span.attributes || [])
     if (convertingsa.error) {
-      console.error('Error converting span attributes:', convertingsa.error)
+      captureException(
+        new UnprocessableEntityError(
+          `Error converting span attributes: ${convertingsa.error}`,
+        ),
+      )
       continue
     }
     const attributes = convertingsa.value
@@ -132,7 +137,11 @@ export async function processSpansBulk(
     // Convert span kind
     const convertingsk = convertSpanKind(span.kind)
     if (convertingsk.error) {
-      console.error('Error converting span kind:', convertingsk.error)
+      captureException(
+        new UnprocessableEntityError(
+          `Error converting span kind: ${convertingsk.error}`,
+        ),
+      )
       continue
     }
     const kind = convertingsk.value
@@ -140,7 +149,11 @@ export async function processSpansBulk(
     // Extract span type
     const convertingst = extractSpanType(attributes)
     if (convertingst.error) {
-      console.error('Error extracting span type:', convertingst.error)
+      captureException(
+        new UnprocessableEntityError(
+          `Error extracting span type: ${convertingst.error}`,
+        ),
+      )
       continue
     }
     const type = convertingst.value
@@ -148,14 +161,20 @@ export async function processSpansBulk(
     // Check if span type is supported
     const specification = SPAN_SPECIFICATIONS[type]
     if (!specification) {
-      console.error('Invalid span type:', type)
+      captureException(
+        new UnprocessableEntityError(`Invalid span type: ${type}`),
+      )
       continue
     }
 
     // Convert span status
     const convertingss = convertSpanStatus(span.status || { code: 0 })
     if (convertingss.error) {
-      console.error('Error converting span status:', convertingss.error)
+      captureException(
+        new UnprocessableEntityError(
+          `Error converting span status: ${convertingss.error}`,
+        ),
+      )
       continue
     }
     let status = convertingss.value
@@ -165,35 +184,51 @@ export async function processSpansBulk(
     // Convert timestamps
     const convertingat = convertSpanTimestamp(span.startTimeUnixNano)
     if (convertingat.error) {
-      console.error('Error converting start timestamp:', convertingat.error)
+      captureException(
+        new UnprocessableEntityError(
+          `Error converting start timestamp: ${convertingat.error}`,
+        ),
+      )
       continue
     }
     const startedAt = convertingat.value
 
     const convertinget = convertSpanTimestamp(span.endTimeUnixNano)
     if (convertinget.error) {
-      console.error('Error converting end timestamp:', convertinget.error)
+      captureException(
+        new UnprocessableEntityError(
+          `Error converting end timestamp: ${convertinget.error}`,
+        ),
+      )
       continue
     }
     const endedAt = convertinget.value
 
     const duration = differenceInMilliseconds(endedAt, startedAt)
     if (duration < 0) {
-      console.error('Invalid span duration')
+      captureException(new UnprocessableEntityError('Invalid span duration'))
       continue
     }
 
     // Convert events and links
     const convertingse = convertSpanEvents(span.events || [])
     if (convertingse.error) {
-      console.error('Error converting span events:', convertingse.error)
+      captureException(
+        new UnprocessableEntityError(
+          `Error converting span events: ${convertingse.error}`,
+        ),
+      )
       continue
     }
     const events = convertingse.value
 
     const convertingsl = convertSpanLinks(span.links || [])
     if (convertingsl.error) {
-      console.error('Error converting span links:', convertingsl.error)
+      captureException(
+        new UnprocessableEntityError(
+          `Error converting span links: ${convertingsl.error}`,
+        ),
+      )
       continue
     }
     const links = convertingsl.value
@@ -201,7 +236,11 @@ export async function processSpansBulk(
     // Extract span error
     const extractingse = extractSpanError(attributes, events)
     if (extractingse.error) {
-      console.error('Error extracting span error:', extractingse.error)
+      captureException(
+        new UnprocessableEntityError(
+          `Error extracting span error: ${extractingse.error}`,
+        ),
+      )
       continue
     }
     if (extractingse.value != undefined) {
@@ -230,10 +269,12 @@ export async function processSpansBulk(
       workspace,
     })
     if (processing.error) {
-      console.error(
-        'Error processing span with specification:',
-        processing.error,
+      captureException(
+        new UnprocessableEntityError(
+          `Error processing span with specification: ${processing.error},`,
+        ),
       )
+
       continue
     }
     metadata = { ...metadata, ...processing.value }
@@ -424,7 +465,7 @@ async function saveMetadataBatch(
         await disk.put(key, payload).then((r) => r.unwrap())
         await cache.del(key)
       } catch (error) {
-        console.error('Error saving metadata:', error)
+        captureException(new LatitudeError(`Error saving metadata:, ${error}`))
       }
     })()
 
