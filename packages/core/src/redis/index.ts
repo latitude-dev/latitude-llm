@@ -23,7 +23,7 @@ export function buildRedisConnection({ port, host, ...opts }: RedisOptions) {
       },
       // Set reasonable timeouts to prevent hanging connections
       connectTimeout: 10000, // 10 seconds
-      commandTimeout: 5000, // 5 seconds for commands
+      commandTimeout: 30000, // 30 seconds for commands
 
       // Override default key prefix
       ...opts,
