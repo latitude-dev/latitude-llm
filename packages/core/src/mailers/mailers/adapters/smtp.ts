@@ -8,7 +8,7 @@ export default function createSmtpTransport({
 }: MailerOptions): Transporter | null {
   const host = env.SMTP_HOST
   const port = env.SMTP_PORT
-  const secure = env.SMTP_SECURE
+  const secure = env.SMTP_SECURE === 'true'
   const user = env.SMTP_USER
   const pass = env.SMTP_PASS
 
