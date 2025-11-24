@@ -1,6 +1,4 @@
-import {
-  ACTIVE_EVALUATIONS_CACHE_KEY,
-} from '@latitude-data/constants/evaluations'
+import { ACTIVE_EVALUATIONS_CACHE_KEY } from '@latitude-data/constants/evaluations'
 import { NotFoundError } from '../../../lib/errors'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { Cache } from '../../../cache'
@@ -230,4 +228,3 @@ describe('deleteActiveEvaluation', () => {
     }
   })
 })
-

@@ -1,16 +1,12 @@
-import { useCallback, useState } from 'react'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-
-import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import useDocumentLogs from '$/stores/documentLogs'
-import useDocumentLogWithPaginationPosition, {
-  LogWithPosition,
-} from '$/stores/documentLogWithPaginationPosition'
-import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-
-const ONLY_ONE_PAGE = '1'
+import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
+import { PromptSpanMetadata } from '@latitude-data/constants'
+import { useOnce } from '$/hooks/useMount'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import { useSpan } from '$/stores/spans'
+import { useCallback, useEffect } from 'react'
 
 export function useLogHistoryParams({
   document,
@@ -21,90 +17,81 @@ export function useLogHistoryParams({
 }) {
   const { project } = useCurrentProject()
   const {
-    history: { setHistoryLog, logUuid, mapDocParametersToInputs },
+    history: { mapDocParametersToInputs },
   } = useDocumentParameters({
     document,
     commitVersionUuid,
   })
 
-  // Note: If we need to speed up history logs as a best-effort basis, filter by playground logs.
-  const filterOptions = useDefaultLogFilterOptions()
-  const { data: pagination, isLoading: isLoadingCounter } =
-    useDocumentLogsPagination({
-      projectId: project.id,
-      commitUuid: commitVersionUuid,
-      documentUuid: document.documentUuid,
-      filterOptions,
-      page: '1', // Not used really. This is only for the counter.
-      pageSize: ONLY_ONE_PAGE,
-      excludeErrors: true,
-    })
-
-  const [position, setPosition] = useState<LogWithPosition | undefined>(
-    logUuid ? undefined : { position: 1, page: 1 },
-  )
-  const onFetchCurrentLog = useCallback((data: LogWithPosition) => {
-    setPosition(data)
-  }, [])
-  const { isLoading: isLoadingPosition } = useDocumentLogWithPaginationPosition(
-    {
-      documentLogUuid: logUuid,
-      document,
-      projectId: project.id,
-      filterOptions,
-      onFetched: onFetchCurrentLog,
-      excludeErrors: true,
-    },
-  )
-
-  const { data: logs, isLoading: isLoadingLog } = useDocumentLogs({
-    documentUuid: position === undefined ? undefined : document.documentUuid,
-    filterOptions,
-    projectId: project.id,
-    page: position === undefined ? undefined : String(position.position),
-    pageSize: ONLY_ONE_PAGE,
-    excludeErrors: true,
-    onFetched: (logs) => {
-      const log = logs?.[0]
-      if (!log) return
-
-      mapDocParametersToInputs({ parameters: log.parameters })
-      setHistoryLog(log)
-    },
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const spanId = searchParams.get('spanId')
+  const traceId = searchParams.get('traceId')
+  const { data: urlSpan, isLoading: isLoadingUrlSpan } = useSpan({
+    spanId,
+    traceId,
   })
 
-  const updatePosition = useCallback(
-    (position: number) => {
-      if (isLoadingLog) return
+  useOnce(() => {
+    if (!urlSpan) return
+    if (!urlSpan.metadata) return
 
-      setPosition((prev) =>
-        prev ? { ...prev, position } : { position, page: 1 },
-      )
+    mapDocParametersToInputs({
+      parameters: (urlSpan.metadata as PromptSpanMetadata).parameters,
+    })
+  }, !!urlSpan)
+
+  const {
+    items: spans,
+    isLoading: isLoadingSpans,
+    hasNext,
+    hasPrev,
+    goToNextPage,
+    goToPrevPage,
+  } = useSpansKeysetPaginationStore({
+    documentUuid: document.documentUuid,
+    projectId: String(project.id),
+    commitUuid: commitVersionUuid,
+    limit: 1,
+  })
+  const { data: selectedSpan, isLoading: isLoadingSelectedSpan } = useSpan(
+    {
+      spanId: spans?.[0]?.id,
+      traceId: spans?.[0]?.traceId,
     },
-    [isLoadingLog],
+    {},
   )
 
-  const onNextPage = useCallback(
-    (position: number) => updatePosition(position + 1),
-    [updatePosition],
-  )
+  useEffect(() => {
+    if (urlSpan) return
+    if (!selectedSpan || !selectedSpan.metadata) return
 
-  const onPrevPage = useCallback(
-    (position: number) => updatePosition(position - 1),
-    [updatePosition],
-  )
+    mapDocParametersToInputs({
+      parameters: (selectedSpan.metadata as PromptSpanMetadata).parameters,
+    })
+    // TODO: mapDocParametersToInputs mutates on each call to itself, so we
+    // cannot add it to the deps array. Fix the underlying issue.
+    /* eslint-disable react-hooks/exhaustive-deps */
+  }, [urlSpan, selectedSpan])
 
-  const isLoading = isLoadingLog || isLoadingCounter
-  const log = logs?.[0]
+  const clearUrlSelection = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('spanId')
+    params.delete('traceId')
+    router.push(`${pathname}?${params.toString()}`)
+  }, [pathname, searchParams, router])
+  const isLoading = isLoadingUrlSpan || isLoadingSpans || isLoadingSelectedSpan
+
   return {
-    selectedLog: log,
-    isLoadingLog: isLoadingPosition || isLoadingLog,
+    urlSpan,
+    selectedSpan,
     isLoading,
-    page: position?.page,
-    position: position?.position,
-    count: pagination?.count ?? 0,
-    onNextPage,
-    onPrevPage,
+    hasNext,
+    hasPrev,
+    onNextPage: goToNextPage,
+    onPrevPage: goToPrevPage,
+    clearUrlSelection,
   }
 }
 

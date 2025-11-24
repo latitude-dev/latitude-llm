@@ -1,7 +1,10 @@
 import { describe, expect, it, beforeAll } from 'vitest'
 import { subDays } from 'date-fns'
 import { database } from '../../../client'
-import { createIssue, IssueHistogramData } from '../../../tests/factories/issues'
+import {
+  createIssue,
+  IssueHistogramData,
+} from '../../../tests/factories/issues'
 import { createProject } from '../../../tests/factories/projects'
 import { checkEscalation } from './checkEscalation'
 import { Commit } from '../../../schema/models/types/Commit'

@@ -12,10 +12,10 @@ import { useTrace } from '$/stores/traces'
 import { findAllSpansOfType } from '@latitude-data/core/services/tracing/spans/findAllSpansOfType'
 import { useMemo } from 'react'
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
-import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/logs/_components/DocumentLogs/DocumentLogInfo/Metadata'
 import { findLastSpanOfType } from '@latitude-data/core/services/tracing/spans/findLastSpanOfType'
 import { MessageList } from '$/components/ChatWrapper'
 import { adaptPromptlMessageToLegacy } from '@latitude-data/core/utils/promptlAdapter'
+import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SpanParameters'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Prompt]
 export default {

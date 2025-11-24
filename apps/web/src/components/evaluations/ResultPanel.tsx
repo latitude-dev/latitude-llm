@@ -1,7 +1,6 @@
 'use client'
 
 import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
-import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/logs/_components/DocumentLogs/DocumentLogInfo/Metadata'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   useCurrentProject,
@@ -44,6 +43,7 @@ import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
 import { useSpan } from '$/stores/spans'
 import { MetadataInfoTabs } from '$/components/MetadataInfoTabs'
+import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SpanParameters'
 
 const DataGrid = dynamic(
   () =>
