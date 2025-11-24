@@ -31,7 +31,7 @@ export const spans = latitudeSchema.table(
     kind: varchar('kind', { length: 32 }).notNull().$type<SpanKind>(),
     type: varchar('type', { length: 32 }).notNull().$type<SpanType>(),
     status: varchar('status', { length: 32 }).notNull().$type<SpanStatus>(),
-    message: varchar('message', { length: 256 }),
+    message: varchar('message'),
     duration: bigint('duration', { mode: 'number' }).notNull(),
     startedAt: timestamp('started_at').notNull(),
     endedAt: timestamp('ended_at').notNull(),
@@ -48,7 +48,7 @@ export const spans = latitudeSchema.table(
     tokensReasoning: integer('tokens_reasoning'),
     tokensCompletion: integer('tokens_completion'),
 
-    model: varchar('model', { length: 32 }),
+    model: varchar('model'),
     cost: integer('cost'),
 
     ...timestamps(),
