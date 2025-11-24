@@ -26,6 +26,9 @@ import { IssuesDetailPanel } from '../IssueDetailPanel'
 import { IssuesTitle } from '../IssuesTitle'
 import { IssueItemActions } from '../IssueItemActions'
 import { LastSeenCell } from '../LastSeenCell'
+import { useIssueEvaluations } from '$/stores/issues/evaluations'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 
 const FAKE_ROWS = Array.from({ length: 20 })
 const DETAILS_OFFSET = { top: 12, bottom: 12 }
@@ -89,6 +92,8 @@ export function IssuesTable({
     limit: state.limit,
     filters: state.filters,
   }))
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
   const noData = !isLoading && !issues.length
@@ -109,6 +114,12 @@ export function IssuesTable({
   const onCloseDetails = useCallback(() => {
     onSelectChange(undefined)
   }, [onSelectChange])
+
+  const { data: evaluations } = useIssueEvaluations({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuids: issues.map((issue) => issue.documentUuid),
+  })
 
   if (noData) {
     return (
@@ -169,7 +180,10 @@ export function IssuesTable({
                   )}
                 >
                   <TableCell fullWidth>
-                    <IssuesTitle issue={issue} />
+                    <IssuesTitle
+                      issue={issue}
+                      evaluations={evaluations ?? []}
+                    />
                   </TableCell>
                   <TableCell align='right'>
                     <LastSeenCell issue={issue} />

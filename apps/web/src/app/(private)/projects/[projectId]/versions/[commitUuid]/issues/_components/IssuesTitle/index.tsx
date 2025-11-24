@@ -4,6 +4,9 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { StatusBadges } from '../IssueStatusBadge'
+import { EvaluationV2 } from '@latitude-data/core/constants'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { getEvaluationTypeSpecification } from '$/components/evaluations'
 
 export function formatDocumentPath(path: string): string {
   const cleanPath = path.replace(/\.promptl$/, '')
@@ -38,10 +41,39 @@ function DocumentPath({ issue }: { issue: SerializedIssue }) {
   )
 }
 
-export function IssuesTitle({ issue }: { issue: SerializedIssue }) {
+export function IssuesTitle({
+  issue,
+  evaluations,
+}: {
+  issue: SerializedIssue
+  evaluations: EvaluationV2[]
+}) {
+  const evaluation = useMemo(
+    () => evaluations.find((e) => e.issueId === issue.id),
+    [evaluations, issue.id],
+  )
+
+  const typeSpec = evaluation
+    ? getEvaluationTypeSpecification(evaluation)
+    : null
+
   return (
     <div className='flex flex-col justify-start items-start gap-y-1 py-4'>
-      <Text.H5>{issue.title}</Text.H5>
+      <div className='flex flex-row items-center gap-x-1'>
+        <Text.H5>{issue.title}</Text.H5>
+        {evaluation ? (
+          <Tooltip
+            asChild
+            trigger={
+              <div className='flex flex-row items-center bg-primary-muted p-1 rounded-md'>
+                <Icon name='wandSparkles' color='primary' size='small' />
+              </div>
+            }
+          >
+            Includes an {typeSpec?.name} evaluation
+          </Tooltip>
+        ) : null}
+      </div>
       <div className='flex items-center gap-x-2'>
         <StatusBadges issue={issue} />
         <DocumentPath issue={issue} />
