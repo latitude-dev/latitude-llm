@@ -197,6 +197,9 @@ export const API_ROUTES = {
                       traces: {
                         root: `${documentRoot}/evaluations/results/traces`,
                       },
+                      issues: {
+                        root: `${documentRoot}/evaluations/results/issues`,
+                      },
                     },
                   },
                   spans: {

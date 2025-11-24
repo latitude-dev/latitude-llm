@@ -498,6 +498,33 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok(results)
   }
 
+  async listByIssueIds(issueIds: number[]) {
+    issueIds = [...new Set(issueIds)].filter(Boolean)
+    if (!issueIds.length) {
+      return Result.ok([])
+    }
+
+    const results = await this.db
+      .select({
+        ...tt,
+        commitUuid: commits.uuid,
+      })
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .where(
+        and(
+          this.scopeFilter,
+          isNull(commits.deletedAt),
+          inArray(evaluationResultsV2.issueId, issueIds),
+        ),
+      )
+      .orderBy(
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+      )
+    return Result.ok(results)
+  }
+
   async listByDocumentLogs({
     projectId,
     documentUuid,
