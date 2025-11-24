@@ -57,6 +57,9 @@ export function useSocketConnection({
 
   const { execute: refreshToken } = useLatitudeAction(
     refreshWebsocketTokenAction,
+    {
+      onSuccess: () => {}, // No-op to prevent default toast
+    },
   )
 
   useEffect(() => {
