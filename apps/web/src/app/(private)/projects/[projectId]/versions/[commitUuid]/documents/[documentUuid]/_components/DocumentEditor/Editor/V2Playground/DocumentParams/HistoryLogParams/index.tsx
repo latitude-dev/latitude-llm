@@ -11,7 +11,6 @@ import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import Link from 'next/link'
-
 import { type UseLogHistoryParams } from './useLogHistoryParams'
 import {
   asPromptLFile,
@@ -20,13 +19,12 @@ import {
 import { ChangeEvent, useCallback, useEffect, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { ParametersWrapper } from '../ParametersWrapper'
-import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
-import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
-import { useLimitedHistoryLogs } from '../../../V2Playground/hooks/useLimitedHistoryLogs'
-
 import { PlaygroundInput } from '@latitude-data/core/lib/documentPersistedInputs'
-
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
+import { ROUTES } from '$/services/routes'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+
 function DebouncedTextArea({
   input,
   setInput,
@@ -86,52 +84,64 @@ export function HistoryLogParams({
     document,
     commitVersionUuid: commit.uuid,
   })
-  const urlData = usePaginatedDocumentLogUrl({
-    selectedLog: data.selectedLog,
-    page: data.page,
-    isLoading: data.isLoadingLog,
-  })
+  const {
+    selectedSpan,
+    urlSpan,
+    clearUrlSelection,
+    isLoading,
+    hasNext,
+    hasPrev,
+    onNextPage,
+    onPrevPage,
+  } = data
+  const span = urlSpan || selectedSpan
 
-  const hasLogs = data.count > 0
-  const { limitedCount, limitedPosition } = useLimitedHistoryLogs(data)
+  const url = span
+    ? `${ROUTES.projects.detail({ id: commit.projectId }).commits.detail({ uuid: commit.uuid }).documents.detail({ uuid: document.documentUuid }).traces.root}?spanId=${span.id}&traceId=${span.traceId}`
+    : undefined
 
   return (
     <div className='flex flex-col gap-y-4'>
       <div className='flex flex-row gap-x-4 justify-between items-center border-border border-b pb-4'>
-        {data.isLoading || hasLogs ? (
+        {data.isLoading || span ? (
           <>
             <div className='flex flex-grow min-w-0'>
-              {data.isLoadingLog ? (
+              {isLoading ? (
                 <div className='flex flex-row gap-x-2 w-full'>
                   <Skeleton height='h3' className='w-2/3' />
                   <Skeleton height='h3' className='w-1/3' />
                 </div>
               ) : null}
-              {!data.isLoadingLog && urlData ? (
+              {!isLoading && span && url && (
                 <Link
-                  href={urlData.url}
+                  href={url}
                   className='flex-grow min-w-0 flex flex-row items-center gap-x-2'
                 >
                   <Text.H5 ellipsis noWrap>
-                    {urlData.createdAt}
+                    {span.startedAt.toISOString()}
                   </Text.H5>
-                  <Badge variant='accent'>{urlData.shortCode}</Badge>
+                  <Badge variant='accent'>{span.id.slice(0, 8)}</Badge>
                   <Icon
                     name='externalLink'
                     color='foregroundMuted'
                     className='flex-none'
                   />
                 </Link>
-              ) : null}
+              )}
             </div>
-            <ParametersPaginationNav
-              disabled={data.isLoadingLog}
-              label='history logs'
-              currentIndex={limitedPosition}
-              totalCount={limitedCount}
-              onPrevPage={data.onPrevPage}
-              onNextPage={data.onNextPage}
-            />
+            {urlSpan ? (
+              <Button variant='link' onClick={clearUrlSelection}>
+                Clear selection
+              </Button>
+            ) : (
+              <SimpleKeysetTablePaginationFooter
+                hasNext={hasNext}
+                hasPrev={hasPrev}
+                setNext={onNextPage}
+                setPrev={onPrevPage}
+                isLoading={isLoading}
+              />
+            )}
           </>
         ) : (
           <div className='w-full flex justify-center'>
@@ -144,11 +154,9 @@ export function HistoryLogParams({
           {({ metadataParameters }) =>
             metadataParameters.map((param, idx) => {
               const input = inputs?.[param]
-
               if (!input) return null
 
               const includedInPrompt = input.metadata.includeInPrompt ?? true
-
               const file = asPromptLFile(input.value)
 
               return (

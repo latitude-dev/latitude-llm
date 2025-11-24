@@ -17,7 +17,7 @@ export function SimpleKeysetTablePaginationFooter({
   setPrev: () => void
   hasNext: boolean
   hasPrev: boolean
-  count: number | null
+  count?: number | null
   countLabel?: (count: number) => string
   isLoading?: boolean
 }) {
