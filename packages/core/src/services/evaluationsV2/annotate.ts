@@ -21,12 +21,12 @@ import {
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { type User } from '../../schema/models/types/User'
+import { findFirstSpanOfType } from '../tracing/spans/findFirstSpanOfType'
 import { assembleTrace } from '../tracing/traces/assemble'
 import { extractActualOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { updateEvaluationResultV2 } from './results/update'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
-import { findLastSpanOfType } from '../tracing/spans/findLastSpanOfType'
 
 export async function annotateEvaluationV2<
   T extends EvaluationType,
@@ -84,7 +84,7 @@ export async function annotateEvaluationV2<
     workspace,
   }).then((r) => r.value)
   if (assembledtrace) {
-    const completionSpan = findLastSpanOfType(
+    const completionSpan = findFirstSpanOfType(
       assembledtrace.trace.children,
       SpanType.Completion,
     )

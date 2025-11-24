@@ -20,7 +20,7 @@ import {
 } from '../shared'
 import { buildEvaluationParameters, promptTask, runPrompt } from './shared'
 import { assembleTrace } from '../../tracing/traces/assemble'
-import { findLastSpanOfType } from '../../tracing/spans/findLastSpanOfType'
+import { findFirstSpanOfType } from '../../tracing/spans/findFirstSpanOfType'
 
 export const LlmEvaluationComparisonSpecification = {
   ...specification,
@@ -219,7 +219,7 @@ async function run(
     db,
   ).then((r) => r.value)
   if (assembledTrace) {
-    completionSpan = findLastSpanOfType(
+    completionSpan = findFirstSpanOfType(
       assembledTrace.trace.children,
       SpanType.Completion,
     )

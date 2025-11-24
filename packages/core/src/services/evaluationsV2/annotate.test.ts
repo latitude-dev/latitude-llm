@@ -110,8 +110,8 @@ describe('annotateEvaluationV2', () => {
     )
 
     vi.spyOn(
-      await import('../tracing/spans/findLastSpanOfType'),
-      'findLastSpanOfType',
+      await import('../tracing/spans/findFirstSpanOfType'),
+      'findFirstSpanOfType',
     ).mockReturnValue({
       id: 'completion-span-id',
       traceId: 'trace-id',
@@ -157,8 +157,8 @@ describe('annotateEvaluationV2', () => {
   it('fails when evaluating a log that does not end with an assistant message', async () => {
     // Mock the span to return a conversation that doesn't end with assistant message
     vi.spyOn(
-      await import('../tracing/spans/findLastSpanOfType'),
-      'findLastSpanOfType',
+      await import('../tracing/spans/findFirstSpanOfType'),
+      'findFirstSpanOfType',
     ).mockReturnValue({
       id: 'completion-span-id',
       traceId: 'trace-id',
