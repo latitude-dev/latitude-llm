@@ -1,4 +1,4 @@
-import { DelayedError, Job, WaitingError } from 'bullmq'
+import { DelayedError, Job } from 'bullmq'
 import { SpanType } from '../../../constants'
 import { SpansRepository } from '../../../repositories/spansRepository'
 import { queues } from '../../queues'
@@ -24,6 +24,7 @@ export async function runEvaluationForExperimentJob(
   const traceId = await spansRepo.getLastTraceByLogUuid(conversationUuid)
   if (!traceId && job.attemptsStarted < 10) {
     job.moveToDelayed(1000, token)
+
     throw new DelayedError('Waiting for trace to show up')
   }
 
@@ -31,9 +32,10 @@ export async function runEvaluationForExperimentJob(
     .list({ traceId })
     .then((r) => r.unwrap().filter((span) => span.type === SpanType.Prompt))
   const span = spans[0]
-  if (!span) {
-    job.moveToWait(token)
-    throw new WaitingError('Waiting for span')
+  if (!span && job.attemptsStarted < 10) {
+    job.moveToDelayed(1000, token)
+
+    throw new DelayedError('Waiting for span to show up')
   }
 
   const { evaluationsQueue } = await queues()
