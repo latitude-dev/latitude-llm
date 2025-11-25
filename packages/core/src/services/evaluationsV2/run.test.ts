@@ -356,7 +356,7 @@ value1,value2,value3
   })
 
   it('succeeds when extract actual output fails learnable', async () => {
-    vi.spyOn(outputs, 'extractActualOutput').mockResolvedValue(
+    vi.spyOn(outputs, 'extractActualOutput').mockReturnValue(
       Result.error(
         new UnprocessableEntityError(
           "Field 'arguments' is not present in the actual output",
@@ -429,7 +429,7 @@ value1,value2,value3
   })
 
   it('succeeds when extract actual output fails non-learnable', async () => {
-    vi.spyOn(outputs, 'extractActualOutput').mockResolvedValue(
+    vi.spyOn(outputs, 'extractActualOutput').mockReturnValue(
       Result.error(new BadRequestError('Invalid message content filter')),
     )
     mocks.publisher.mockClear()
@@ -490,7 +490,7 @@ value1,value2,value3
   })
 
   it('succeeds when extract expected output fails', async () => {
-    vi.spyOn(outputs, 'extractExpectedOutput').mockResolvedValue(
+    vi.spyOn(outputs, 'extractExpectedOutput').mockReturnValue(
       Result.error(new UnprocessableEntityError('Expected output is required')),
     )
     mocks.publisher.mockClear()
