@@ -171,7 +171,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 3,
-      positiveOrOtherNegativeAnnotationsOfOtherIssues: 10,
+      positiveAndNegativeAnnotationsOfOtherIssues: 10,
     })
   })
 
@@ -206,7 +206,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 10,
-      positiveOrOtherNegativeAnnotationsOfOtherIssues: 3,
+      positiveAndNegativeAnnotationsOfOtherIssues: 3,
     })
   })
 
@@ -241,7 +241,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 10,
-      positiveOrOtherNegativeAnnotationsOfOtherIssues: 10,
+      positiveAndNegativeAnnotationsOfOtherIssues: 10,
     })
   })
 
@@ -285,7 +285,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 5, // Only negative ones
-      positiveOrOtherNegativeAnnotationsOfOtherIssues: 10,
+      positiveAndNegativeAnnotationsOfOtherIssues: 10,
     })
   })
 
@@ -348,7 +348,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 10,
-      positiveOrOtherNegativeAnnotationsOfOtherIssues: 8,
+      positiveAndNegativeAnnotationsOfOtherIssues: 8,
     })
   })
 

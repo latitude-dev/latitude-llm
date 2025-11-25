@@ -9,7 +9,8 @@ import { Project } from '../../schema/models/types/Project'
 import { Commit } from '../../schema/models/types/Commit'
 
 /*
-To be able to generate an evaluation, we need enough annotations to do a minimally good MCC %.
+To be able to generate an evaluation, we need enough annotations to do a minimally good MCC (Matthews Correlation Coefficient) %.
+The reason we used MCC is because it's a good metric to measure the quality of the evaluation for a binary classification of the selected issue.
 We've decided we need, at least:
 - 5 negative annotations for this issue
 - 5 positive or other negative annotations for other issues of the same document
