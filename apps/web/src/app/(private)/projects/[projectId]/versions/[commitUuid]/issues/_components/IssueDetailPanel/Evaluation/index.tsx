@@ -22,6 +22,10 @@ import useDocumentVersion from '$/stores/useDocumentVersion'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { useEnoughAnnotationsForIssue } from '$/stores/issues/enoughAnnotationsForIssue'
+import {
+  MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE,
+  MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES,
+} from '@latitude-data/constants/issues'
 
 const GENERATION_DESCRIPTIONS = [
   'Thinking of a good configuration...',
@@ -56,7 +60,20 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     project: project,
     commit: commit,
     issueId: issue.id,
+    documentUuid: issue.documentUuid,
   })
+
+  const hasEnoughAnnotations = useMemo(() => {
+    return (
+      issueEvaluationStats?.negativeAnnotationsOfThisIssue! >=
+        MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE &&
+      issueEvaluationStats?.positiveAndNegativeAnnotationsOfOtherIssues! >=
+        MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES
+    )
+  }, [
+    issueEvaluationStats?.negativeAnnotationsOfThisIssue,
+    issueEvaluationStats?.positiveAndNegativeAnnotationsOfOtherIssues,
+  ])
 
   const [openGenerateModal, setOpenGenerateModal] = useState(false)
   const [provider, setProvider] = useState<ProviderApiKey | undefined>()
@@ -113,7 +130,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     const ended = !!activeEvaluationForThisIssue?.endedAt
     const error = !!activeEvaluationForThisIssue?.error
 
-    if (!issueEvaluationStats?.hasEnoughAnnotations) {
+    if (!hasEnoughAnnotations) {
       return {
         name: 'alert',
         color: 'warningMutedForeground',
@@ -145,7 +162,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       color: 'primary',
       spin: true,
     }
-  }, [activeEvaluationForThisIssue, issueEvaluationStats?.hasEnoughAnnotations])
+  }, [activeEvaluationForThisIssue, hasEnoughAnnotations])
 
   const generationDescription = useTypeWriterValue(GENERATION_DESCRIPTIONS)
 
@@ -211,7 +228,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     setOpenGenerateModal,
   ])
 
-  if (isLoadingEvaluations) {
+  if (isLoadingEvaluations || !issueEvaluationStats) {
     return (
       <div className='grid grid-cols-2 gap-x-4 items-center'>
         <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
@@ -263,7 +280,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     )
   }
 
-  if (!issueEvaluationStats?.hasEnoughAnnotations) {
+  if (!hasEnoughAnnotations) {
     return (
       <div className='grid grid-cols-2 gap-x-4 items-center'>
         <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
@@ -272,9 +289,10 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
           <div className='flex flex-col'>
             <Text.H6M>Insufficient input</Text.H6M>
             <Text.H6 color='foregroundMuted'>
-              {issueEvaluationStats?.negativeAnnotationsOfThisIssue! < 5
-                ? 'You need 5 negative annotations for this issue'
-                : 'You need 5 positive annotations'}
+              {issueEvaluationStats?.negativeAnnotationsOfThisIssue! <
+              MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE
+                ? `You need ${MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE - issueEvaluationStats?.negativeAnnotationsOfThisIssue!} more negative annotations for this issue`
+                : `You need ${MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES - issueEvaluationStats?.positiveAndNegativeAnnotationsOfOtherIssues!} more positive annotations`}
             </Text.H6>
           </div>
         </div>

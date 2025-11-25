@@ -13,10 +13,12 @@ export function useEnoughAnnotationsForIssue(
     project,
     commit,
     issueId,
+    documentUuid,
   }: {
     project: Pick<Project, 'id'>
     commit: Pick<Commit, 'uuid'>
     issueId: number
+    documentUuid: string
   },
   opts?: SWRConfiguration,
 ) {
@@ -25,10 +27,18 @@ export function useEnoughAnnotationsForIssue(
     .commits.detail(commit.uuid)
     .issues.detail(issueId).enoughAnnotations.root
 
-  const fetcher = useFetcher<IssueEvaluationStats>(route, {})
+  const fetcher = useFetcher<IssueEvaluationStats>(route, {
+    searchParams: { documentUuid },
+  })
 
   const { data = undefined, ...rest } = useSWR<IssueEvaluationStats>(
-    compact(['enoughAnnotations', project.id, commit.uuid, issueId]),
+    compact([
+      'enoughAnnotationsForIssue',
+      project.id,
+      commit.uuid,
+      issueId,
+      documentUuid,
+    ]),
     fetcher,
     opts,
   )
