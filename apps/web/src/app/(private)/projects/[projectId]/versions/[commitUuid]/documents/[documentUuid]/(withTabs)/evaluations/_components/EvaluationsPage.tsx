@@ -8,7 +8,6 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { EvaluationsActions } from './EvaluationsActions'
 import { EvaluationsTable } from './EvaluationsTable'
-import { EvaluationsTemplates } from './EvaluationsTemplates'
 import { EvaluationV2 } from '@latitude-data/core/constants'
 
 export function EvaluationsPage({
@@ -62,11 +61,6 @@ export function EvaluationsPage({
         isCreatingEvaluation={isCreatingEvaluation}
         isDeletingEvaluation={isDeletingEvaluation}
         isGeneratingEvaluation={isGeneratingEvaluation}
-      />
-      <EvaluationsTemplates
-        evaluations={evaluations}
-        createEvaluation={createEvaluation}
-        isCreatingEvaluation={isCreatingEvaluation}
       />
     </div>
   )
