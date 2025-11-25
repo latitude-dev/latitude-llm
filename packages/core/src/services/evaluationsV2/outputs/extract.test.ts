@@ -80,8 +80,8 @@ describe('extractActualOutput', () => {
     ]
   })
 
-  it('fails when conversation does not contain any assistant messages', async () => {
-    await expect(
+  it('fails when conversation does not contain any assistant messages', () => {
+    expect(() =>
       extractActualOutput({
         conversation: conversation,
         configuration: {
@@ -90,18 +90,18 @@ describe('extractActualOutput', () => {
           parsingFormat: 'string',
         },
       }).unwrap(),
-    ).rejects.toThrowError(
+    ).toThrowError(
       new UnprocessableEntityError(
         'Conversation does not contain any assistant messages with file content',
       ),
     )
   })
 
-  it('fails when output cannot be parsed with the format', async () => {
+  it('fails when output cannot be parsed with the format', () => {
     ;(conversation[2].content[3] as unknown as TextContent).text =
       'not a valid json'
 
-    await expect(
+    expect(() =>
       extractActualOutput({
         conversation,
         configuration: {
@@ -109,18 +109,18 @@ describe('extractActualOutput', () => {
           parsingFormat: 'json',
         },
       }).unwrap(),
-    ).rejects.toThrowError(
+    ).toThrowError(
       new UnprocessableEntityError(
         `Unexpected token 'o', "not a valid json" is not valid JSON`,
       ),
     )
   })
 
-  it('fails when field is not present in the output', async () => {
+  it('fails when field is not present in the output', () => {
     ;(conversation[2].content[3] as unknown as TextContent).text =
       '{"answer": 42}'
 
-    await expect(
+    expect(() =>
       extractActualOutput({
         conversation,
         configuration: {
@@ -129,20 +129,20 @@ describe('extractActualOutput', () => {
           fieldAccessor: 'response',
         },
       }).unwrap(),
-    ).rejects.toThrowError(
+    ).toThrowError(
       new UnprocessableEntityError(
         `Field 'response' is not present in the actual output`,
       ),
     )
   })
 
-  it('fails when configuration is not set', async () => {
-    await expect(
+  it('fails when configuration is not set', () => {
+    expect(() =>
       extractActualOutput({
         conversation,
         configuration: undefined as any,
       }).unwrap(),
-    ).rejects.toThrowError(
+    ).toThrowError(
       new TypeError(
         "Cannot read properties of undefined (reading 'contentFilter')",
       ),
