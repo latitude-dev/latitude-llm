@@ -148,6 +148,9 @@ export const API_ROUTES = {
                   spans: {
                     root: `${projectRoot}/commits/${commitUuid}/issues/${issueId}/spans`,
                   },
+                  enoughAnnotations: {
+                    root: `${projectRoot}/commits/${commitUuid}/issues/${issueId}/enoughAnnotations`,
+                  },
                 }
               },
             },

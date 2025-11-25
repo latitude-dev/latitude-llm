@@ -1,4 +1,5 @@
 export * from './constants'
+export * from './evaluations'
 export { type IssuesFiltersQueryParamsInput } from './parameters'
 export {
   parseIssuesQueryParams,

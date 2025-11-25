@@ -21,6 +21,11 @@ import useProviderApiKeys from '$/stores/providerApiKeys'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
+import { useEnoughAnnotationsForIssue } from '$/stores/issues/enoughAnnotationsForIssue'
+import {
+  MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE,
+  MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES,
+} from '@latitude-data/constants/issues'
 
 const GENERATION_DESCRIPTIONS = [
   'Thinking of a good configuration...',
@@ -50,6 +55,29 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       documentUuid: issue.documentUuid,
     },
   })
+
+  const { data: issueEvaluationStats } = useEnoughAnnotationsForIssue({
+    project: project,
+    commit: commit,
+    issueId: issue.id,
+    documentUuid: issue.documentUuid,
+  })
+
+  const hasEnoughAnnotations = useMemo(() => {
+    return (
+      issueEvaluationStats?.negativeAnnotationsOfThisIssue! >=
+        MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE &&
+      issueEvaluationStats?.positiveAndNegativeAnnotationsOfOtherIssues! >=
+        MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES
+    )
+  }, [
+    issueEvaluationStats?.negativeAnnotationsOfThisIssue,
+    issueEvaluationStats?.positiveAndNegativeAnnotationsOfOtherIssues,
+  ])
+
+  const [openGenerateModal, setOpenGenerateModal] = useState(false)
+  const [provider, setProvider] = useState<ProviderApiKey | undefined>()
+  const [model, setModel] = useState<string | undefined | null>()
 
   const [endedEvaluation, setEndedEvaluation] = useState<{
     uuid: string
@@ -102,6 +130,13 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     const ended = !!activeEvaluationForThisIssue?.endedAt
     const error = !!activeEvaluationForThisIssue?.error
 
+    if (!hasEnoughAnnotations) {
+      return {
+        name: 'alert',
+        color: 'warningMutedForeground',
+      }
+    }
+
     if (error) {
       return {
         name: 'circleX',
@@ -127,11 +162,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       color: 'primary',
       spin: true,
     }
-  }, [activeEvaluationForThisIssue])
-
-  const [openGenerateModal, setOpenGenerateModal] = useState(false)
-  const [provider, setProvider] = useState<ProviderApiKey | undefined>()
-  const [model, setModel] = useState<string | undefined | null>()
+  }, [activeEvaluationForThisIssue, hasEnoughAnnotations])
 
   const generationDescription = useTypeWriterValue(GENERATION_DESCRIPTIONS)
 
@@ -197,7 +228,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     setOpenGenerateModal,
   ])
 
-  if (isLoadingEvaluations) {
+  if (isLoadingEvaluations || !issueEvaluationStats) {
     return (
       <div className='grid grid-cols-2 gap-x-4 items-center'>
         <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
@@ -244,6 +275,26 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
               className='hover:text-primary'
             />
           </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (!hasEnoughAnnotations) {
+    return (
+      <div className='grid grid-cols-2 gap-x-4 items-center'>
+        <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
+        <div className='flex flex-row items-center gap-2'>
+          <Icon {...iconPropsByEvaluationStatus} />
+          <div className='flex flex-col'>
+            <Text.H6M>Insufficient input</Text.H6M>
+            <Text.H6 color='foregroundMuted'>
+              {issueEvaluationStats?.negativeAnnotationsOfThisIssue! <
+              MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE
+                ? `You need ${MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE - issueEvaluationStats?.negativeAnnotationsOfThisIssue!} more negative annotations for this issue`
+                : `You need ${MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES - issueEvaluationStats?.positiveAndNegativeAnnotationsOfOtherIssues!} more positive annotations`}
+            </Text.H6>
+          </div>
         </div>
       </div>
     )
