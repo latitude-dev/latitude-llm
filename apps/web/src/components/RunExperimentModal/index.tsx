@@ -92,7 +92,11 @@ export function RunExperimentModal({
     }
 
     // Validation: if using logs source, need at least 1 log
-    if (source === 'logs' && (!formPayload.toLine || formPayload.toLine < 1)) {
+    if (
+      source === 'logs' &&
+      (formPayload.toLine === undefined ||
+        formPayload.toLine < (formPayload.fromLine ?? 0))
+    ) {
       toast({
         title: 'Error',
         description: 'Please select at least 1 log',
@@ -104,7 +108,8 @@ export function RunExperimentModal({
     // Validation: if using manual source, need at least 1 run
     if (
       source === 'manual' &&
-      (!formPayload.toLine || formPayload.toLine < 0)
+      (formPayload.toLine === undefined ||
+        formPayload.toLine < (formPayload.fromLine ?? 0))
     ) {
       toast({
         title: 'Error',
