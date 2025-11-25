@@ -170,7 +170,7 @@ export function RunExperimentModal({
     formPayload.selectedParametersSource === 'dataset'
       ? !formPayload.selectedDataset
       : formPayload.toLine === undefined ||
-        formPayload.toLine < formPayload.fromLine
+        formPayload.toLine < (formPayload?.fromLine ?? 0)
 
   return (
     <Modal
