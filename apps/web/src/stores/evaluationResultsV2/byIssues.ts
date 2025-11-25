@@ -2,48 +2,33 @@
 
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import { IssueEvaluationStats } from '$/app/api/projects/[projectId]/commits/[commitUuid]/issues/[issueId]/enoughAnnotations/route'
 import { compact } from 'lodash-es'
 import useSWR, { SWRConfiguration } from 'swr'
-
-import { EvaluationResultV2 } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
-import { compactObject } from '@latitude-data/core/lib/compactObject'
 
 export function useEvaluationResultsV2ByIssues(
   {
     project,
     commit,
-    document,
-    issueIds,
+    issueId,
   }: {
     project: Pick<Project, 'id'>
     commit: Pick<Commit, 'uuid'>
-    document: Pick<DocumentVersion, 'documentUuid'>
-    issueIds: number[]
+    issueId: number
   },
   opts?: SWRConfiguration,
 ) {
   const route = ROUTES.api.projects
     .detail(project.id)
     .commits.detail(commit.uuid)
-    .documents.detail(document.documentUuid).evaluations.results.issues.root
+    .issues.detail(issueId).enoughAnnotations.root
 
-  const fetcher = useFetcher<EvaluationResultV2[]>(route, {
-    searchParams: compactObject({
-      issueIds: issueIds.join(','),
-    }) as Record<string, string>,
-  })
+  const fetcher = useFetcher<IssueEvaluationStats>(route, {})
 
-  const { data = [], ...rest } = useSWR<EvaluationResultV2[]>(
-    compact([
-      'evaluationResultsV2ByIssues',
-      project.id,
-      commit.uuid,
-      document.documentUuid,
-      issueIds,
-    ]),
+  const { data = undefined, ...rest } = useSWR<IssueEvaluationStats>(
+    compact(['enoughAnnotations', project.id, commit.uuid, issueId]),
     fetcher,
     opts,
   )

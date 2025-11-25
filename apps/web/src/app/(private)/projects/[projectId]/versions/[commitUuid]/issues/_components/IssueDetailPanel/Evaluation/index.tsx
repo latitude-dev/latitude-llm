@@ -22,7 +22,6 @@ import useDocumentVersion from '$/stores/useDocumentVersion'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationResultsV2ByIssues } from '$/stores/evaluationResultsV2/byIssues'
-import { useIssues } from '$/stores/issues'
 
 const GENERATION_DESCRIPTIONS = [
   'Thinking of a good configuration...',
@@ -52,45 +51,12 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       documentUuid: issue.documentUuid,
     },
   })
-  const { data: issues } = useIssues({
-    projectId: project.id,
-    commitUuid: commit.uuid,
-    initialPage: 1,
-    searchParams: {
-      pageSize: '5',
-    },
-    onSuccess: () => {},
-  })
 
-  // Combining the current issue with 5 other issues to get, at least, 5 annotations of other issues for the MCC calculation
-  const issueIds = useMemo(() => {
-    return [
-      issue.id,
-      ...(issues?.filter((i) => i.id !== issue.id).map((i) => i.id) ?? []),
-    ]
-  }, [issue.id, issues])
-
-  const { data: evalResults } = useEvaluationResultsV2ByIssues({
+  const { data: issueEvaluationStats } = useEvaluationResultsV2ByIssues({
     project: project,
     commit: commit,
-    document: {
-      documentUuid: issue.documentUuid,
-    },
-    issueIds,
+    issueId: issue.id,
   })
-
-  const enoughAnnotationsFromThisIssue = useMemo(() => {
-    return evalResults.filter((r) => r.issueId === issue.id).length >= 5
-  }, [evalResults, issue.id])
-
-  const enoughAnnotationsFromOtherIssues = useMemo(() => {
-    return evalResults.filter((r) => r.issueId !== issue.id).length >= 5
-  }, [evalResults, issue.id])
-
-  // We need at least 5 negative annotations for this issue and 5 positive/other issues annotations to calculate the MCC of the generated evaluation
-  const notEnoughAnnotations = useMemo(() => {
-    return enoughAnnotationsFromThisIssue || enoughAnnotationsFromOtherIssues
-  }, [enoughAnnotationsFromThisIssue, enoughAnnotationsFromOtherIssues])
 
   const [openGenerateModal, setOpenGenerateModal] = useState(false)
   const [provider, setProvider] = useState<ProviderApiKey | undefined>()
@@ -146,9 +112,8 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     const started = !!activeEvaluationForThisIssue?.startedAt
     const ended = !!activeEvaluationForThisIssue?.endedAt
     const error = !!activeEvaluationForThisIssue?.error
-    const notEnoughEvalResults = !notEnoughAnnotations
 
-    if (notEnoughEvalResults) {
+    if (!issueEvaluationStats?.hasEnoughAnnotations) {
       return {
         name: 'alert',
         color: 'warningMutedForeground',
@@ -180,7 +145,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       color: 'primary',
       spin: true,
     }
-  }, [activeEvaluationForThisIssue, notEnoughAnnotations])
+  }, [activeEvaluationForThisIssue, issueEvaluationStats?.hasEnoughAnnotations])
 
   const generationDescription = useTypeWriterValue(GENERATION_DESCRIPTIONS)
 
@@ -298,7 +263,9 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     )
   }
 
-  if (!notEnoughAnnotations) {
+  console.log('issueEvaluationStats', issueEvaluationStats)
+
+  if (!issueEvaluationStats?.hasEnoughAnnotations) {
     return (
       <div className='grid grid-cols-2 gap-x-4 items-center'>
         <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
@@ -307,7 +274,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
           <div className='flex flex-col'>
             <Text.H6M>Insufficient input</Text.H6M>
             <Text.H6 color='foregroundMuted'>
-              {!enoughAnnotationsFromThisIssue
+              {issueEvaluationStats?.negativeAnnotationsOfThisIssue! < 5
                 ? 'You need 5 negative annotations for this issue'
                 : 'You need 5 positive annotations'}
             </Text.H6>
