@@ -1,8 +1,5 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import {
-  getEvaluationMetricSpecification,
-  getEvaluationTypeSpecification,
-} from '$/components/evaluations'
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
