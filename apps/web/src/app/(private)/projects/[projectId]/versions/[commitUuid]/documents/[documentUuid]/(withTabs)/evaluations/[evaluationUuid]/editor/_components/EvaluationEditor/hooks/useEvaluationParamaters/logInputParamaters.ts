@@ -3,27 +3,26 @@ import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   EvaluatedDocumentLog,
   LLM_EVALUATION_PROMPT_PARAMETERS,
+  SpanType,
+  SpanWithDetails,
 } from '@latitude-data/core/constants'
+import { Message, ToolMessage } from '@latitude-data/constants/legacyCompiler'
 
 export type LogInput = {
   value: string
   metadata: { includedInPrompt: boolean }
 }
-type EvaluatedLogParameters = Pick<
-  EvaluatedDocumentLog,
-  | 'actualOutput'
-  | 'conversation'
-  | 'messages'
-  | 'toolCalls'
-  | 'cost'
-  | 'tokens'
-  | 'duration'
-  | 'prompt'
-  | 'config'
-  | 'parameters'
-  | 'context'
-  | 'response'
->
+type EvaluatedLogParameters = {
+  actualOutput: string
+  conversation: Message[]
+  tools: ToolMessage[]
+  cost: number
+  tokens: number
+  duration: number
+  prompt: string
+  config: Record<string, unknown>
+  parameters: Record<string, unknown>
+}
 
 function typedFilterObject<T extends object>(
   obj: T,
@@ -91,8 +90,6 @@ function deserializeInputs(
 
       case 'actualOutput':
       case 'expectedOutput':
-      case 'context':
-      case 'response':
       case 'prompt':
         result[key] = value
         break
@@ -100,7 +97,7 @@ function deserializeInputs(
       case 'config': {
         const config = safeParseJson<EvaluatedDocumentLog['config']>(value)
         if (!config) break
-        result[key] = config
+        result[key] = config as Record<string, unknown>
         break
       }
       case 'parameters': {
@@ -111,22 +108,7 @@ function deserializeInputs(
         break
       }
       case 'conversation': {
-        const parsed =
-          safeParseJson<EvaluatedDocumentLog['conversation']>(value)
-        if (!parsed) break
-
-        result[key] = parsed
-        break
-      }
-      case 'messages': {
-        const parsed = safeParseJson<EvaluatedDocumentLog['messages']>(value)
-        if (!parsed) break
-
-        result[key] = parsed
-        break
-      }
-      case 'toolCalls': {
-        const parsed = safeParseJson<EvaluatedDocumentLog['toolCalls']>(value)
+        const parsed = safeParseJson<Message[]>(value)
         if (!parsed) break
 
         result[key] = parsed
@@ -156,7 +138,13 @@ type EvaluatedLogInputsState = {
   filteredParameters: Partial<EvaluatedLogParameters> | undefined
   metadataParameters: string[]
   expectedOutput: LogInput
-  mapLogParametersToInputs: (log: EvaluatedDocumentLog) => void
+  mapLogParametersToInputs: ({
+    promptSpan,
+    completionSpan,
+  }: {
+    promptSpan: SpanWithDetails<SpanType.Prompt>
+    completionSpan: SpanWithDetails<SpanType.Completion>
+  }) => void
   onMetadataChange: (metadata: ResolvedMetadata | undefined) => void
   setInputs: (inputs: Record<string, string>) => void
 }
@@ -169,28 +157,45 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
     parameters: {} as EvaluatedLogParameters,
     filteredParameters: {} as Partial<EvaluatedLogParameters>,
     metadataParameters: [],
-    mapLogParametersToInputs: (log: EvaluatedDocumentLog) => {
-      const { expectedOutput, metadataParameters } = get()
+    mapLogParametersToInputs: ({
+      promptSpan,
+      completionSpan,
+    }: {
+      promptSpan: SpanWithDetails<SpanType.Prompt>
+      completionSpan: SpanWithDetails<SpanType.Completion>
+    }) => {
+      const { metadataParameters, expectedOutput } = get()
+      const conversation = [
+        ...(completionSpan.metadata?.input ?? []),
+        ...(completionSpan.metadata?.output ?? []),
+      ] as unknown as Message[]
+      const tokens =
+        (completionSpan.tokensCompletion ?? 0) +
+        (completionSpan.tokensCached ?? 0) +
+        (completionSpan.tokensPrompt ?? 0) +
+        (completionSpan.tokensReasoning ?? 0)
       const parameters = {
-        actualOutput: log.actualOutput,
-        conversation: log.conversation,
-        messages: log.messages,
-        toolCalls: log.toolCalls,
-        cost: log.cost,
-        tokens: log.tokens,
-        duration: log.duration,
-        prompt: log.prompt,
-        config: log.config,
-        parameters: log.parameters,
-        context: log.context,
-        response: log.response,
+        conversation,
+        tokens,
+        // NOTE(tracing): This is probably wrong
+        actualOutput: (conversation.at(-1)?.content as string) ?? '',
+        tools: conversation.filter((m) => m.role === 'tool'),
+        cost: completionSpan.cost ?? 0,
+        duration: promptSpan.duration,
+        prompt: promptSpan.metadata?.template ?? '',
+        config: completionSpan.metadata?.configuration ?? {},
+        parameters: promptSpan.metadata?.parameters ?? {},
+        expectedOutput: expectedOutput.value,
       }
-      const filteredParameters = typedFilterObject(
-        { ...parameters, expectedOutput: expectedOutput.value },
-        metadataParameters as (keyof EvaluatedLogParameters)[],
-      )
+
       const inputs = serializeInputs(parameters, metadataParameters)
-      set({ parameters, filteredParameters, inputs, logsInitiallyLoaded: true })
+
+      set({
+        parameters,
+        filteredParameters: parameters,
+        inputs,
+        logsInitiallyLoaded: true,
+      })
     },
     onMetadataChange: (metadata: ResolvedMetadata | undefined) => {
       if (!metadata) return
@@ -198,14 +203,11 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
       const metadataParameters = Array.from(metadata.parameters)
       const { expectedOutput, parameters } = get()
       const params = parameters ?? ({} as EvaluatedLogParameters)
-      const filteredParameters = typedFilterObject(
-        { ...params, expectedOutput: expectedOutput.value },
-        metadataParameters as (keyof EvaluatedLogParameters)[],
-      )
       const inputs = serializeInputs(params, metadataParameters)
       expectedOutput.metadata.includedInPrompt =
         metadataParameters.includes('expectedOutput')
-      set({ metadataParameters, filteredParameters, inputs })
+
+      set({ metadataParameters, inputs })
     },
     setInputs: (allUpdatedInputs: Record<string, string>) => {
       const {

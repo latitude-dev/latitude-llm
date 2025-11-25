@@ -37,7 +37,8 @@ export function EvaluationEditor(props: {
   providerApiKeys: ProviderApiKey[]
   copilotEnabled: boolean
   freeRunsCount?: number
-  selectedDocumentLogUuid?: string
+  selectedSpanId?: string
+  selectedTraceId?: string
 }) {
   return (
     <MetadataProvider>
@@ -56,14 +57,16 @@ function EvaluationEditorContent({
   providerApiKeys,
   freeRunsCount,
   copilotEnabled,
-  selectedDocumentLogUuid,
+  selectedSpanId,
+  selectedTraceId,
 }: {
   document: DocumentVersion
   commit: Commit
   providerApiKeys: ProviderApiKey[]
   copilotEnabled: boolean
   freeRunsCount?: number
-  selectedDocumentLogUuid?: string
+  selectedSpanId?: string
+  selectedTraceId?: string
 }) {
   const { project } = useCurrentProject()
   const { evaluation } = useCurrentEvaluationV2<
@@ -201,7 +204,8 @@ function EvaluationEditorContent({
                 document={document}
                 evaluation={evaluation}
                 metadata={metadata!}
-                selectedDocumentLogUuid={selectedDocumentLogUuid}
+                selectedSpanId={selectedSpanId}
+                selectedTraceId={selectedTraceId}
               />
             </div>
           </SplitPane.Pane>

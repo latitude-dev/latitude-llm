@@ -13,8 +13,6 @@ import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import { env } from '@latitude-data/env'
 import { redirect } from 'next/navigation'
 import { EvaluationEditor } from './_components/EvaluationEditor'
-import { LOG_UUID_PARAM } from '$/lib/useEvaluationEditorLink'
-import { DocumentLogsRepository } from '@latitude-data/core/repositories'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import {
   EvaluationType,
@@ -85,18 +83,8 @@ export default async function EvaluationEditorPage({
     )
   }
 
-  const logUuid = queryParams[LOG_UUID_PARAM]?.toString()
-
-  let selectedDocumentLogUuid: string | undefined = undefined
-
-  if (logUuid) {
-    const logsRepo = new DocumentLogsRepository(workspace.id)
-    const logResult = await logsRepo.findByUuid(logUuid)
-    if (!logResult.error) {
-      selectedDocumentLogUuid = logResult.value.uuid
-    }
-  }
-
+  const selectedSpanId = queryParams.spanId
+  const selectedTraceId = queryParams.traceId
   const freeRunsCount = await getFreeRuns(workspace.id)
 
   return (
@@ -105,7 +93,8 @@ export default async function EvaluationEditorPage({
       commit={commit}
       providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
       freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
-      selectedDocumentLogUuid={selectedDocumentLogUuid}
+      selectedSpanId={selectedSpanId as string | undefined}
+      selectedTraceId={selectedTraceId as string | undefined}
       copilotEnabled={env.LATITUDE_CLOUD}
     />
   )
