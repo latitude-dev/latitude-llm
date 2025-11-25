@@ -147,7 +147,7 @@ export async function runEvaluationV2<
   let value
   try {
     // Note: some actual output errors are learnable and thus are treated as failures
-    const actualOutput = await extractActualOutput({
+    const actualOutput = extractActualOutput({
       conversation,
       configuration: evaluation.configuration.actualOutput,
     })

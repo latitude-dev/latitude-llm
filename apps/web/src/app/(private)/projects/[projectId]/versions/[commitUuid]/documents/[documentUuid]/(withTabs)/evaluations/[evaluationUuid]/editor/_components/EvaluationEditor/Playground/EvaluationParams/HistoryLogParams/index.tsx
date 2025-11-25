@@ -1,51 +1,63 @@
-import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
-import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import {
+  useCurrentCommit,
+  type ICommitContextType,
+} from '$/app/providers/CommitProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { EditableParameters } from './EditableParameters'
 import { type UseLogHistoryParams } from './useLogHistoryParams'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-
+import { EvaluationType } from '@latitude-data/core/constants'
+import { ROUTES } from '$/services/routes'
+import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
-  EvaluationType,
   EvaluationV2,
   LlmEvaluationMetricAnyCustom,
-} from '@latitude-data/core/constants'
+} from '@latitude-data/constants'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {
-  const urlData = usePaginatedDocumentLogUrl({
-    selectedLog: data.selectedLog,
-    page: data.page,
-    isLoading: data.isLoadingLog,
-  })
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+  const url = ROUTES.projects
+    .detail({ id: project.id })
+    .commits.detail({ uuid: commit.uuid })
+    .documents.detail({ uuid: document.documentUuid }).traces.root
+  const route = data.selectedPromptSpan
+    ? `${url}?spanId=${data.selectedPromptSpan.id}&traceId=${data.selectedPromptSpan.traceId}`
+    : undefined
 
-  const hasLogs = data.count > 0
   return (
     <>
-      {data.isLoading || hasLogs ? (
+      {data.isLoading || data.selectedPromptSpan || data.urlPromptSpan ? (
         <>
           <div className='flex flex-grow min-w-0'>
-            {data.isLoadingLog ? (
+            {data.isLoading ? (
               <div className='flex flex-row gap-x-2 w-full'>
                 <Skeleton height='h3' className='w-2/3' />
                 <Skeleton height='h3' className='w-1/3' />
               </div>
             ) : null}
-            {!data.isLoadingLog && urlData ? (
+            {!data.isLoading && route && data.selectedPromptSpan ? (
               <Link
-                href={urlData.url}
+                href={route}
                 className='flex-grow min-w-0 flex flex-row items-center gap-x-2'
               >
                 <Text.H5 ellipsis noWrap>
-                  {urlData.createdAt}
+                  {data.selectedPromptSpan?.startedAt instanceof Date
+                    ? data.selectedPromptSpan?.startedAt.toISOString()
+                    : data.selectedPromptSpan?.startedAt}
                 </Text.H5>
-                <Badge variant='accent'>{urlData.shortCode}</Badge>
+                <Badge variant='accent'>
+                  {data.selectedPromptSpan?.id.slice(0, 8)}
+                </Badge>
                 <Icon
                   name='externalLink'
                   color='foregroundMuted'
@@ -54,14 +66,19 @@ function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {
               </Link>
             ) : null}
           </div>
-          <ParametersPaginationNav
-            disabled={data.isLoadingLog}
-            label='history logs'
-            currentIndex={data.position}
-            totalCount={data.count}
-            onPrevPage={data.onPrevPage}
-            onNextPage={data.onNextPage}
-          />
+          {data.urlPromptSpan ? (
+            <Button variant='link' onClick={data.clearUrlSelection}>
+              Clear selection
+            </Button>
+          ) : (
+            <SimpleKeysetTablePaginationFooter
+              isLoading={data.isLoading}
+              hasNext={data.hasNext}
+              hasPrev={data.hasPrev}
+              setPrev={data.onPrevPage}
+              setNext={data.onNextPage}
+            />
+          )}
         </>
       ) : (
         <div className='w-full flex justify-center'>
@@ -91,30 +108,21 @@ export function HistoryLogParams({
           <DocumentLogsNavigation data={data} />
         </div>
       </div>
-      {data.error ? (
-        <div className='w-full flex justify-center pr-4'>
-          <Alert
-            variant='destructive'
-            description={data.error || 'Error while fetching logs'}
-          />
-        </div>
-      ) : (
-        <div
-          className={cn(
-            'w-full p-1 pb-3.5 flex flex-col gap-y-4 custom-scrollbar',
-            {
-              'opacity-50': data.isLoading,
-            },
-          )}
-        >
-          <EditableParameters
-            commit={commit}
-            document={document}
-            evaluation={evaluation}
-            isLoading={isLoading}
-          />
-        </div>
-      )}
+      <div
+        className={cn(
+          'w-full p-1 pb-3.5 flex flex-col gap-y-4 custom-scrollbar',
+          {
+            'opacity-50': data.isLoading,
+          },
+        )}
+      >
+        <EditableParameters
+          commit={commit}
+          document={document}
+          evaluation={evaluation}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   )
 }

@@ -89,7 +89,7 @@ describe('extractActualOutput', () => {
           contentFilter: 'file',
           parsingFormat: 'string',
         },
-      }).then((r) => r.unwrap()),
+      }).unwrap(),
     ).rejects.toThrowError(
       new UnprocessableEntityError(
         'Conversation does not contain any assistant messages with file content',
@@ -108,7 +108,7 @@ describe('extractActualOutput', () => {
           messageSelection: 'last',
           parsingFormat: 'json',
         },
-      }).then((r) => r.unwrap()),
+      }).unwrap(),
     ).rejects.toThrowError(
       new UnprocessableEntityError(
         `Unexpected token 'o', "not a valid json" is not valid JSON`,
@@ -128,7 +128,7 @@ describe('extractActualOutput', () => {
           parsingFormat: 'json',
           fieldAccessor: 'response',
         },
-      }).then((r) => r.unwrap()),
+      }).unwrap(),
     ).rejects.toThrowError(
       new UnprocessableEntityError(
         `Field 'response' is not present in the actual output`,
@@ -141,7 +141,7 @@ describe('extractActualOutput', () => {
       extractActualOutput({
         conversation,
         configuration: undefined as any,
-      }).then((r) => r.unwrap()),
+      }).unwrap(),
     ).rejects.toThrowError(
       new TypeError(
         "Cannot read properties of undefined (reading 'contentFilter')",
@@ -150,13 +150,13 @@ describe('extractActualOutput', () => {
   })
 
   it('succeeds when selecting the messages', async () => {
-    const result = await extractActualOutput({
+    const result = extractActualOutput({
       conversation,
       configuration: {
         messageSelection: 'all',
         parsingFormat: 'string',
       },
-    }).then((r) => r.unwrap())
+    }).unwrap()
 
     expect(result).toEqual(
       `
@@ -172,14 +172,14 @@ Some assistant response 2
   })
 
   it('succeeds when filtering by content type', async () => {
-    const result = await extractActualOutput({
+    const result = extractActualOutput({
       conversation,
       configuration: {
         messageSelection: 'all',
         contentFilter: 'tool_call',
         parsingFormat: 'string',
       },
-    }).then((r) => r.unwrap())
+    }).unwrap()
 
     expect(result).toEqual(
       `
@@ -191,14 +191,14 @@ Some assistant response 2
   })
 
   it('succeeds when parsing the output', async () => {
-    const result = await extractActualOutput({
+    const result = extractActualOutput({
       conversation,
       configuration: {
         messageSelection: 'all',
         contentFilter: 'tool_call',
         parsingFormat: 'json',
       },
-    }).then((r) => r.unwrap())
+    }).unwrap()
 
     expect(result).toEqual(
       '[{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}},{"type":"tool-call","toolCallId":"tool-call-2","toolName":"tool-2","args":{"answer":"Some answer"}}]',
@@ -206,7 +206,7 @@ Some assistant response 2
   })
 
   it('succeeds when accessing the output by field', async () => {
-    const result = await extractActualOutput({
+    const result = extractActualOutput({
       conversation,
       configuration: {
         messageSelection: 'all',
@@ -214,7 +214,7 @@ Some assistant response 2
         parsingFormat: 'json',
         fieldAccessor: '[-2].args.classes[1].variants[-1]',
       },
-    }).then((r) => r.unwrap())
+    }).unwrap()
 
     expect(result).toEqual('class-2-variant-2')
   })

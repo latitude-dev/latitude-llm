@@ -129,7 +129,7 @@ function flattenConversation(conversation: Message[]) {
   return flattenedConversation
 }
 
-export async function extractActualOutput({
+export function extractActualOutput({
   conversation,
   configuration,
 }: {

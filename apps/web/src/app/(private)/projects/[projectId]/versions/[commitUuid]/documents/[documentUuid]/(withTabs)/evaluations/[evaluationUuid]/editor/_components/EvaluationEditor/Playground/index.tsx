@@ -39,13 +39,14 @@ export const Playground = memo(
     document,
     evaluation,
     metadata,
-    selectedDocumentLogUuid,
+    selectedTraceId,
   }: {
     commit: Commit
     document: DocumentVersion
     evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
     metadata: ResolvedMetadata
-    selectedDocumentLogUuid?: string
+    selectedSpanId?: string
+    selectedTraceId?: string
   }) => {
     const { project } = useCurrentProject()
     const [mode, setMode] = useState<'preview' | 'chat'>('preview')
@@ -71,7 +72,7 @@ export const Playground = memo(
       commitVersionUuid: commit.uuid,
       document,
       evaluation,
-      selectedDocumentLogUuid,
+      selectedTraceId,
     })
     const { runPromptFn, abortCurrentStream, hasActiveStream } =
       useRunEvaluationPlaygroundPrompt({
@@ -154,7 +155,7 @@ export const Playground = memo(
       historyInfo.isLoading,
     ])
 
-    if (!historyInfo.isLoading && historyInfo.count === 0) {
+    if (!historyInfo.isLoading && !historyInfo.selectedPromptSpan) {
       return (
         <div className='h-full w-full'>
           <BlankSlate>
