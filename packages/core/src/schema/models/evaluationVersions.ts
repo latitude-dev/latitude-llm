@@ -53,6 +53,7 @@ export const evaluationVersions = latitudeSchema.table(
     autoApplySuggestions: boolean('auto_apply_suggestions'),
     ...timestamps(),
     deletedAt: timestamp('deleted_at'),
+    ignoredAt: timestamp('ignored_at'),
   },
   (table) => ({
     workspaceIdIdx: index('evaluation_versions_workspace_id_idx').on(

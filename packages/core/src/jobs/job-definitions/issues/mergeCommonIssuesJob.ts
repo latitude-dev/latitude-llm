@@ -1,17 +1,9 @@
-// TODO(AO): implement this
-
-/*
-- This job is throttled (leading), only runs (with mutual exclusion) max 1 every day (THIS IS ALREADY DONE WHEN ENQUEUING THE JOB in add/remove result from issue services)
-- Find the existing issue by id in the database. This job executing means that this issue is ongoing currently and could be deviating towards another existing issue/s.
-- Call mergeIssues service
-
-if UnprocessableEntityError fail silently
-*/
-
-import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { NotFoundError } from '../../../lib/errors'
+import { NotFoundError, UnprocessableEntityError } from '../../../lib/errors'
+import { IssuesRepository } from '../../../repositories'
+import { mergeIssues } from '../../../services/issues/merge'
+import { isIssueActive } from '../../../services/issues/shared'
 import { isFeatureEnabledByName } from '../../../services/workspaceFeatures/isFeatureEnabledByName'
 
 export type MergeCommonIssuesJobData = {
@@ -29,13 +21,23 @@ export function mergeCommonIssuesJobKey({
 export const mergeCommonIssuesJob = async (
   job: Job<MergeCommonIssuesJobData>,
 ) => {
-  if (!env.LATITUDE_CLOUD) return // Avoid spamming errors locally
-
-  const { workspaceId } = job.data
+  console.log('MERGING ISSUES')
+  const { workspaceId, issueId } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
   const enabled = await isFeatureEnabledByName(workspace.id, 'issues').then((r) => r.unwrap()) // prettier-ignore
   if (!enabled) return
+
+  const issuesRepository = new IssuesRepository(workspace.id)
+  const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
+
+  if (!isIssueActive(issue)) return
+
+  const merging = await mergeIssues({ workspace, issue })
+  if (merging.error) {
+    if (merging.error instanceof UnprocessableEntityError) return
+    throw merging.error
+  }
 }

@@ -35,6 +35,7 @@ import { type Project } from '../schema/models/types/Project'
 import { CommitsRepository } from './commitsRepository'
 import { IssueHistogramsRepository } from './issueHistogramsRepository'
 import Repository from './repositoryV2'
+import { alias } from 'drizzle-orm/pg-core'
 
 const tt = getTableColumns(issues)
 
@@ -99,13 +100,20 @@ export class IssuesRepository extends Repository<Issue> {
       project,
       issueId,
     })
+    const mergedIssues = alias(issues, 'mergedIssues')
     const result = await this.db
       .select({
         ...tt,
         ...this.issuesWithStatsSelect({ subquery }),
+        mergedToIssue: {
+          id: mergedIssues.id,
+          title: mergedIssues.title,
+          uuid: mergedIssues.uuid,
+        },
       })
       .from(issues)
       .innerJoin(subquery, eq(subquery.issueId, issues.id))
+      .leftJoin(mergedIssues, eq(issues.mergedToIssueId, mergedIssues.id))
       .where(
         and(
           this.scopeFilter,
@@ -114,6 +122,7 @@ export class IssuesRepository extends Repository<Issue> {
         ),
       )
       .limit(1)
+
     return result[0]
   }
 
@@ -257,13 +266,20 @@ export class IssuesRepository extends Repository<Issue> {
       filters,
     })
 
+    const mergedIssues = alias(issues, 'mergedIssues')
     const query = this.db
       .select({
         ...tt,
         ...this.issuesWithStatsSelect({ subquery }),
+        mergedToIssue: {
+          id: mergedIssues.id,
+          title: mergedIssues.title,
+          uuid: mergedIssues.uuid,
+        },
       })
       .from(issues)
       .innerJoin(subquery, eq(subquery.issueId, issues.id))
+      .leftJoin(mergedIssues, eq(issues.mergedToIssueId, mergedIssues.id))
       .where(and(...where))
       .orderBy(...orderBy)
       .limit(limit)
@@ -406,9 +422,12 @@ export class IssuesRepository extends Repository<Issue> {
     let groupConditions: SQL | undefined
     switch (group) {
       case 'active':
-        groupConditions = or(
-          and(this.withResolvedIssues(false), this.withIgnoredIssues(false)),
-          this.withRegressedIssues(true),
+        groupConditions = and(
+          or(
+            and(this.withResolvedIssues(false), this.withIgnoredIssues(false)),
+            this.withRegressedIssues(true),
+          ),
+          this.withMergedIssues(false),
         )!
         break
       case 'inactive':
@@ -416,6 +435,7 @@ export class IssuesRepository extends Repository<Issue> {
           this.withIgnoredIssues(true),
           // Resolved without regression (histogram data before or at resolved date)
           sql`(${issues.resolvedAt} IS NOT NULL AND ${sql.raw(`"${HISTOGRAM_SUBQUERY_ALIAS}"."lastSeenDate"`)} <= ${issues.resolvedAt})`,
+          this.withMergedIssues(true),
         )!
         break
       case 'activeWithResolved':
@@ -510,6 +530,7 @@ export class IssuesRepository extends Repository<Issue> {
       isIgnored: sql<boolean>`(${issues.ignoredAt} IS NOT NULL)`.as(
         'isIgnored',
       ),
+      isMerged: sql<boolean>`(${issues.mergedAt} IS NOT NULL)`.as('isMerged'),
     }
   }
 

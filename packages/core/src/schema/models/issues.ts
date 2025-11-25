@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
+  AnyPgColumn,
   bigint,
   bigserial,
   index,
@@ -33,6 +34,9 @@ export const issues = latitudeSchema.table(
     resolvedAt: timestamp('resolved_at'),
     ignoredAt: timestamp('ignored_at'),
     mergedAt: timestamp('merged_at'),
+    mergedToIssueId: bigint('merged_to_issue_id', {
+      mode: 'number',
+    }).references((): AnyPgColumn => issues.id, { onDelete: 'set null' }),
     escalatingAt: timestamp('escalating_at'),
     ...timestamps(),
   },

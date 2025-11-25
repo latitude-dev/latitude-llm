@@ -69,6 +69,14 @@ export function StatusBadges({ issue }: { issue: SerializedIssue }) {
       })
     }
 
+    if (issue.isMerged) {
+      result.push({
+        label: 'Merged',
+        tooltip: `This issue was automatically merged into issue "${issue.mergedToIssue!.title}" on ${format(issue.mergedAt!, 'PPpp')}.`,
+        dotProps: { variant: 'muted' },
+      })
+    }
+
     if (issue.isNew && !issue.isIgnored && !issue.isResolved) {
       result.push({
         label: 'New',

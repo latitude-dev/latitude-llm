@@ -90,7 +90,6 @@ export function IssuesDashboard({
   )
 
   useOnce(() => {
-    // Initialize server data for SWR
     initServerData({
       projectId: project.id,
       commitUuid: commit.uuid,
@@ -98,11 +97,9 @@ export function IssuesDashboard({
       serverResponse,
     })
 
-    // Fetch histogram mini stats
     const issueIds = serverResponse.issues.map((issue) => issue.id)
     fetchMiniStatsInBatch({ issueIds })
 
-    // Init Zustand params
     init({
       params: {
         ...params,
