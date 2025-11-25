@@ -8,7 +8,7 @@ import useSWR, { SWRConfiguration } from 'swr'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 
-export function useEvaluationResultsV2ByIssues(
+export function useEnoughAnnotationsForIssue(
   {
     project,
     commit,

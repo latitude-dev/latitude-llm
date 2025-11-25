@@ -21,7 +21,7 @@ import useProviderApiKeys from '$/stores/providerApiKeys'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
-import { useEvaluationResultsV2ByIssues } from '$/stores/evaluationResultsV2/byIssues'
+import { useEnoughAnnotationsForIssue } from '$/stores/issues/enoughAnnotationsForIssue'
 
 const GENERATION_DESCRIPTIONS = [
   'Thinking of a good configuration...',
@@ -52,7 +52,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     },
   })
 
-  const { data: issueEvaluationStats } = useEvaluationResultsV2ByIssues({
+  const { data: issueEvaluationStats } = useEnoughAnnotationsForIssue({
     project: project,
     commit: commit,
     issueId: issue.id,
@@ -262,8 +262,6 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       </div>
     )
   }
-
-  console.log('issueEvaluationStats', issueEvaluationStats)
 
   if (!issueEvaluationStats?.hasEnoughAnnotations) {
     return (
