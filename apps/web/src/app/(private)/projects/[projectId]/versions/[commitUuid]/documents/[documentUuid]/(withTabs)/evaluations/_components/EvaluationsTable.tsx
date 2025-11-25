@@ -26,9 +26,30 @@ import {
 } from '@latitude-data/web-ui/molecules/BlankSlateWithSteps'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { EvaluationsGenerator } from './EvaluationsGenerator'
-import { EvaluationV2 } from '@latitude-data/core/constants'
+import { EvaluationV2, EvaluationType } from '@latitude-data/core/constants'
+
+function groupEvaluationsByType(evaluations: EvaluationV2[]) {
+  const grouped = evaluations.reduce(
+    (acc, evaluation) => {
+      if (!acc[evaluation.type]) {
+        acc[evaluation.type] = []
+      }
+      acc[evaluation.type].push(evaluation)
+      return acc
+    },
+    {} as Record<EvaluationType, EvaluationV2[]>,
+  )
+  return grouped
+}
+
+const EVALUATION_TYPE_LABELS: Record<EvaluationType, string> = {
+  [EvaluationType.Rule]: 'Rule-based Evaluations',
+  [EvaluationType.Llm]: 'LLM Evaluations',
+  [EvaluationType.Human]: 'Human Evaluations',
+  [EvaluationType.Composite]: 'Composite Evaluations',
+}
 
 export function EvaluationsTable({
   evaluations,
@@ -72,95 +93,116 @@ export function EvaluationsTable({
     [isDeletingEvaluation, deleteEvaluation, setOpenDeleteModal],
   )
 
+  const groupedEvaluations = useMemo(
+    () => groupEvaluationsByType(evaluations),
+    [evaluations],
+  )
+
+  const evaluationTypes = useMemo(
+    () => Object.keys(groupedEvaluations) as EvaluationType[],
+    [groupedEvaluations],
+  )
+
   return (
     <div className='flex flex-col gap-4'>
       {evaluations.length > 0 ? (
-        <div className='flex flex-col gap-4'>
-          <Table className='table-auto'>
-            <TableHeader className='isolate sticky top-0 z-10'>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Metric</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading &&
-                Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow
-                    key={index}
-                    className='border-b-[0.5px] h-12 max-h-12 border-border relative'
-                    hoverable={false}
-                  >
-                    <TableCell>
-                      <Skeleton className='h-5 w-[90%] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              {!isLoading &&
-                evaluations.map((evaluation) => (
-                  <TableRow
-                    key={evaluation.uuid}
-                    className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors'
-                    onClick={() =>
-                      navigate.push(
-                        ROUTES.projects
-                          .detail({ id: project.id })
-                          .commits.detail({ uuid: commit.uuid })
-                          .documents.detail({ uuid: document.documentUuid })
-                          .evaluations.detail({ uuid: evaluation.uuid }).root,
-                      )
-                    }
-                  >
-                    <TableCell>
-                      <div className='flex items-center justify-between gap-2 truncate'>
-                        <Text.H5 noWrap ellipsis>
-                          {evaluation.name}
-                        </Text.H5>
-                        {!!evaluation.evaluateLiveLogs && (
-                          <Badge variant='accent'>Live</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Text.H5>{evaluation.description || '-'}</Text.H5>
-                    </TableCell>
-                    <TableCell>
-                      <Text.H5>
-                        {getEvaluationTypeSpecification(evaluation).name}
-                      </Text.H5>
-                    </TableCell>
-                    <TableCell>
-                      <Text.H5>
-                        {getEvaluationMetricSpecification(evaluation).name}
-                      </Text.H5>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu
-                        options={[
-                          {
-                            label: 'Remove',
-                            onElementClick: (e) => e.stopPropagation(),
-                            onClick: () => {
-                              setSelectedEvaluation(evaluation)
-                              setOpenDeleteModal(true)
-                            },
-                            type: 'destructive',
-                          },
-                        ]}
-                        side='bottom'
-                        align='end'
-                        triggerButtonProps={{
-                          className: 'border-none justify-end cursor-pointer',
-                        }}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-            </TableBody>
-          </Table>
+        <div className='flex flex-col gap-6'>
+          {evaluationTypes.map((type) => {
+            const typeEvaluations = groupedEvaluations[type]
+            if (!typeEvaluations || typeEvaluations.length === 0) return null
+
+            return (
+              <div key={type} className='flex flex-col gap-2'>
+                <Text.H5M>{EVALUATION_TYPE_LABELS[type]}</Text.H5M>
+                <Table className='table-auto'>
+                  <TableHeader className='isolate sticky top-0 z-10'>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Metric</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading &&
+                      Array.from({ length: 5 }).map((_, index) => (
+                        <TableRow
+                          key={index}
+                          className='border-b-[0.5px] h-12 max-h-12 border-border relative'
+                          hoverable={false}
+                        >
+                          <TableCell>
+                            <Skeleton className='h-5 w-[90%] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    {!isLoading &&
+                      typeEvaluations.map((evaluation) => (
+                        <TableRow
+                          key={evaluation.uuid}
+                          className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors'
+                          onClick={() =>
+                            navigate.push(
+                              ROUTES.projects
+                                .detail({ id: project.id })
+                                .commits.detail({ uuid: commit.uuid })
+                                .documents.detail({
+                                  uuid: document.documentUuid,
+                                })
+                                .evaluations.detail({ uuid: evaluation.uuid })
+                                .root,
+                            )
+                          }
+                        >
+                          <TableCell>
+                            <div className='flex items-center justify-between gap-2 truncate'>
+                              <Text.H5 noWrap ellipsis>
+                                {evaluation.name}
+                              </Text.H5>
+                              {!!evaluation.evaluateLiveLogs && (
+                                <Badge variant='accent'>Live</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Text.H5>{evaluation.description || '-'}</Text.H5>
+                          </TableCell>
+                          <TableCell>
+                            <Text.H5>
+                              {
+                                getEvaluationMetricSpecification(evaluation)
+                                  .name
+                              }
+                            </Text.H5>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu
+                              options={[
+                                {
+                                  label: 'Remove',
+                                  onElementClick: (e) => e.stopPropagation(),
+                                  onClick: () => {
+                                    setSelectedEvaluation(evaluation)
+                                    setOpenDeleteModal(true)
+                                  },
+                                  type: 'destructive',
+                                },
+                              ]}
+                              side='bottom'
+                              align='end'
+                              triggerButtonProps={{
+                                className:
+                                  'border-none justify-end cursor-pointer',
+                              }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )
+          })}
           {openDeleteModal && selectedEvaluation && (
             <ConfirmModal
               dismissible
