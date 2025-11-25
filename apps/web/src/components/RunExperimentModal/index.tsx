@@ -165,6 +165,13 @@ export function RunExperimentModal({
     addNewVariant()
   }, [setVariants, addNewVariant, isOpen])
 
+  const isLoading = !document || isCreating || formPayload.isLoadingMetadata
+  const noRunsSelected =
+    formPayload.selectedParametersSource === 'dataset'
+      ? !formPayload.selectedDataset
+      : formPayload.toLine === undefined ||
+        formPayload.toLine < formPayload.fromLine
+
   return (
     <Modal
       open={isOpen}
@@ -177,18 +184,7 @@ export function RunExperimentModal({
         <>
           <CloseTrigger />
           <Button
-            disabled={
-              !document ||
-              isCreating ||
-              formPayload.isLoadingMetadata ||
-              (formPayload.selectedParametersSource === 'dataset' &&
-                formPayload.parameters.length > 0 &&
-                !formPayload.selectedDataset) ||
-              (formPayload.selectedParametersSource === 'logs' &&
-                (!formPayload.toLine || formPayload.toLine < 1)) ||
-              (formPayload.selectedParametersSource === 'manual' &&
-                (formPayload.toLine === undefined || formPayload.toLine < 0))
-            }
+            disabled={isLoading || noRunsSelected}
             fancy
             onClick={createExperiment}
           >
