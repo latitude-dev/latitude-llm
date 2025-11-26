@@ -21,6 +21,9 @@ export default defineConfig({
     '@latitude-data/env',
     '@latitude-data/core',
     '@latitude-data/constants',
+    // Why is this here:
+    // Core use `emails` -> emails use `web-ui`
+    '@latitude-data/web-ui',
     '@latitude-data/emails',
   ],
 })
