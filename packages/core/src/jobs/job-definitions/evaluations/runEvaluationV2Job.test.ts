@@ -45,6 +45,7 @@ vi.spyOn(progressTracker, 'ProgressTracker').mockImplementation(() => ({
   evaluationError: evaluationErrorSpy,
   // @ts-expect-error - mock
   getProgress: vi.fn(() => Promise.resolve({ completed: 1, total: 1 })),
+  disconnect: vi.fn().mockReturnValue(Promise.resolve()),
   cleanup: vi.fn().mockReturnValue(Promise.resolve()),
 }))
 

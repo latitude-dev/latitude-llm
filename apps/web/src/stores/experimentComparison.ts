@@ -319,7 +319,12 @@ export function useExperimentComparison(
       const { documentLogWithMetadata } = message
       if (!documentLogWithMetadata) return
 
+      let alreadyRegistered = false
       setExperimentsWithScores((prev) => {
+        // Prevent StrictMode double rendering
+        if (alreadyRegistered) return prev
+        alreadyRegistered = true
+
         if (!prev) return prev
 
         // Find the experiment that was updated
