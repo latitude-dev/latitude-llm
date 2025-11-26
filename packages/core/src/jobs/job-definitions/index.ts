@@ -28,6 +28,9 @@ export * from '../../events/handlers/undeployDocumentTriggerJob'
 export * from '../../events/handlers/webhooks'
 export * from '../../events/handlers/assignIssueToEvaluationResultV2Job'
 export * from '../../events/handlers/sendIssueEscalatingHandler'
+export * from '../../events/handlers/removeMergedIssueVectors'
+export * from '../../events/handlers/generateDetailsForMergedIssue'
+export * from '../../events/handlers/notifyClientOfCommitUpdated'
 
 // Jobs
 export * from './actions/generateProjectNameJob'
