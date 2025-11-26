@@ -121,7 +121,7 @@ async function createEvaluationResultWithIssue({
     span: span as SpanWithDetails<SpanType.Prompt>,
     hasPassed,
   })
-  if (issueId !== null) {
+  if (issueId !== null && !hasPassed) {
     await database
       .update(evaluationResultsV2)
       .set({ issueId })
@@ -285,7 +285,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 5, // Only negative ones
-      positiveAndNegativeAnnotationsOfOtherIssues: 10,
+      positiveAndNegativeAnnotationsOfOtherIssues: 13, // 10 annotations for other issues + 3 positive annotations for the main issue
     })
   })
 
