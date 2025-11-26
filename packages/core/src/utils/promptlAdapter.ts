@@ -53,43 +53,43 @@ export function adaptPromptlMessageToLegacy(
   }
 
   // Convert promptl content array to legacy content array
-  const legacyContent = message.content.map(
-    (contentItem): LegacyMessageContent => {
-      switch (contentItem.type) {
-        case PromptlContentType.text:
-          return {
-            type: 'text',
-            text: contentItem.text,
-          }
+  const legacyContent = Array.isArray(message.content)
+    ? message.content.map((contentItem): LegacyMessageContent => {
+        switch (contentItem.type) {
+          case PromptlContentType.text:
+            return {
+              type: 'text',
+              text: contentItem.text,
+            }
 
-        case PromptlContentType.image:
-          return {
-            type: 'image',
-            image: contentItem.image,
-          }
+          case PromptlContentType.image:
+            return {
+              type: 'image',
+              image: contentItem.image,
+            }
 
-        case PromptlContentType.file:
-          return {
-            type: 'file',
-            file: contentItem.file,
-            mimeType: contentItem.mimeType,
-          }
+          case PromptlContentType.file:
+            return {
+              type: 'file',
+              file: contentItem.file,
+              mimeType: contentItem.mimeType,
+            }
 
-        case PromptlContentType.toolCall:
-          return {
-            type: 'tool-call',
-            toolCallId: contentItem.toolCallId,
-            toolName: contentItem.toolName,
-            // @ts-expect-error - TODO: What is happening here? promptl
-            // messages are supposed to have a toolArguments property yet in
-            // truth this has a .args argument
-            args: contentItem.args,
-          }
-        default:
-          return contentItem
-      }
-    },
-  )
+          case PromptlContentType.toolCall:
+            return {
+              type: 'tool-call',
+              toolCallId: contentItem.toolCallId,
+              toolName: contentItem.toolName,
+              // @ts-expect-error - TODO: What is happening here? promptl
+              // messages are supposed to have a toolArguments property yet in
+              // truth this has a .args argument
+              args: contentItem.args,
+            }
+          default:
+            return contentItem
+        }
+      })
+    : message.content
 
   // Handle special cases for different message types
   if (message.role === PromptlMessageRole.assistant) {
