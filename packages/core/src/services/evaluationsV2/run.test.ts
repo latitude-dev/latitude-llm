@@ -491,6 +491,7 @@ value1,value2,value3
 
   it('succeeds when extract expected output fails', async () => {
     vi.spyOn(outputs, 'extractExpectedOutput').mockReturnValue(
+      // @ts-expect-error - mock
       Result.error(new UnprocessableEntityError('Expected output is required')),
     )
     mocks.publisher.mockClear()
