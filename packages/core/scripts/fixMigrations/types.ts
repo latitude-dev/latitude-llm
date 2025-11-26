@@ -1,3 +1,8 @@
+import type blessed from 'blessed'
+
+/**
+ * Journal entry from drizzle's _journal.json
+ */
 export type JournalEntry = {
   idx: number
   version: string
@@ -6,31 +11,108 @@ export type JournalEntry = {
   breakpoints: boolean
 }
 
+/**
+ * Full journal structure from _journal.json
+ */
 export type Journal = {
   version: string
   dialect: string
   entries: JournalEntry[]
 }
 
+/**
+ * Row from drizzle.__drizzle_migrations table
+ */
 export type AppliedMigrationRow = {
-  id: number
   hash: string
-  created_at: string | number | bigint
+  created_at: string
 }
 
-export enum MenuAction {
-  RunAll = '__RUN_ALL__',
-  Close = '__CLOSE__',
+/**
+ * Migration with computed status information
+ */
+export type Migration = {
+  name: string
+  fileName: string
+  sql: string
+  createdAt: Date
+  appliedAt: Date | null
+  isApplied: boolean
 }
 
-export enum MigrationAction {
-  Open = 'Open',
-  MarkAsExecuted = 'Mark as executed',
-  Run = 'Run',
-  Back = 'Back',
+/**
+ * Result of a migration operation
+ */
+export type OperationResult =
+  | { success: true; message?: string }
+  | { success: false; error: string }
+
+/**
+ * Main menu action choices
+ */
+export type MainMenuAction =
+  | 'apply'
+  | 'browse_all'
+  | 'browse_unapplied'
+  | 'exit'
+
+/**
+ * Migration action choices in the action screen
+ */
+export type MigrationAction =
+  | 'edit'
+  | 'run'
+  | 'run_statement'
+  | 'toggle'
+  | 'back'
+
+/**
+ * Blessed screen wrapper for type safety
+ */
+export type Screen = blessed.Widgets.Screen
+
+/**
+ * Blessed box widget for type safety
+ */
+export type Box = blessed.Widgets.BoxElement
+
+/**
+ * Key event from blessed
+ */
+export type KeyEvent = {
+  name: string
+  ctrl?: boolean
+  shift?: boolean
 }
 
-export type MenuResult =
-  | { type: 'exit'; code: number }
-  | { type: 'continue' }
-  | { type: 'back' }
+/**
+ * Common panel configuration
+ */
+export type PanelConfig = {
+  top: string | number
+  left: string | number
+  width: string | number
+  height: string | number
+  label: string
+  borderColor: string
+  scrollable?: boolean
+}
+
+/**
+ * State for the browser screen
+ */
+export type BrowserState = {
+  currentIndex: number
+  migrations: Migration[]
+  showOnlyUnapplied: boolean
+}
+
+/**
+ * State for the action screen
+ */
+export type ActionState = {
+  migration: Migration
+  actionIndex: number
+  isProcessing: boolean
+  errorMessage: string | null
+}
