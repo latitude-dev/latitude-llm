@@ -44,6 +44,7 @@ const eventHandlersJobMappings = {
   notifyClientOfRunStatus: jobs.notifyClientOfRunStatus,
   assignIssueToEvaluationResultV2Job: jobs.assignIssueToEvaluationResultV2Job,
   notifyClientOfEvaluationStatus: jobs.notifyClientOfEvaluationStatus,
+  sendIssueEscalatingHandler: jobs.sendIssueEscalatingHandler,
 }
 
 export function startEventsWorker() {

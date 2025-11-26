@@ -51,6 +51,10 @@ export default function AvatarDropdown({
     router.push(ROUTES.backoffice.root)
   }, [router])
 
+  const onClickNotifications = useCallback(() => {
+    router.push(ROUTES.notifications.root)
+  }, [router])
+
   const onClickLogout = useCallback(async () => {
     await logoutAction()
   }, [])
@@ -60,6 +64,10 @@ export default function AvatarDropdown({
       [
         currentUser?.email && {
           label: currentUser.email,
+        },
+        {
+          label: 'Notifications',
+          onClick: onClickNotifications,
         },
         currentUser?.admin &&
           isCloud && {
@@ -74,7 +82,13 @@ export default function AvatarDropdown({
           onClick: onClickLogout,
         },
       ].filter(Boolean) as DropdownItemProps[],
-    [currentUser, isCloud, onClickBackoffice, onClickLogout],
+    [
+      currentUser,
+      isCloud,
+      onClickBackoffice,
+      onClickNotifications,
+      onClickLogout,
+    ],
   )
 
   const info = currentUser ? getUserInfoFromSession(currentUser) : null

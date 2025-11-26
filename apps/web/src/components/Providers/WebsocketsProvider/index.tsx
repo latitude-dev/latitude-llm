@@ -10,7 +10,7 @@ import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
 import { refreshWebsocketTokenAction as refreshWebsocketTokenAction } from '$/actions/user/refreshWebsocketTokenAction'
 import { IoProvider, useSocket } from '@latitude-data/socket.io-react-hook'
-import { useSession } from '@latitude-data/web-ui/providers'
+import { useSession } from '../SessionProvider'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { captureClientError } from '$/instrumentation-client'
 import {

@@ -6,7 +6,7 @@ import {
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { DiffValue } from '@latitude-data/core/constants'
+import { DiffValue } from '@latitude-data/constants'
 
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'

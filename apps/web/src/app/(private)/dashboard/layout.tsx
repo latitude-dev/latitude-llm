@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { Metadata } from 'next'
 
 import { Container } from '@latitude-data/web-ui/atoms/Container'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
@@ -12,15 +13,17 @@ import Link from 'next/link'
 import { getActiveProjectsCached } from '../_data-access'
 import { ProjectsTable } from './_components/ProjectsTable'
 
-export const metadata = buildMetatags({
+export const metadata: Promise<Metadata> = buildMetatags({
   title: 'Dashboard',
   locationDescription: 'Projects List',
 })
 
 export default async function DashboardLayout({
   children,
+  modal,
 }: Readonly<{
   children: ReactNode
+  modal: ReactNode
 }>) {
   const { workspace } = await getCurrentUserOrRedirect()
 
@@ -30,6 +33,7 @@ export default async function DashboardLayout({
     <Container>
       <AppTabs />
       {children}
+      {modal}
       <TableWithHeader
         title='Projects'
         actions={

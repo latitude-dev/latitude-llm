@@ -1,10 +1,10 @@
-import { render } from '@react-email/components'
+import { render } from '@latitude-data/emails/render'
+import InvitationMail from '@latitude-data/emails/InvitationMail'
 import Mail from 'nodemailer/lib/mailer'
 import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
 import { type User } from '../../../../schema/models/types/User'
 import { TypedResult } from '../../../../lib/Result'
-import InvitationMail from '../../../emails/invitations/InvitationMail'
 import Mailer from '../../Mailer'
 
 export class InvitationMailer extends Mailer {

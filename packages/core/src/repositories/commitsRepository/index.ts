@@ -15,7 +15,7 @@ import {
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Project } from '../../schema/models/types/Project'
 import { CommitStatus, HEAD_COMMIT } from '../../constants'
-import { InferedReturnType } from '../../lib/commonTypes'
+import { InferedReturnType } from '@latitude-data/constants/commonTypes'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { documentVersions } from '../../schema/models/documentVersions'

@@ -3,7 +3,8 @@
 import { useEffect } from 'react'
 
 import { captureClientError } from '$/instrumentation-client'
-import { ErrorComponent, useSession } from '@latitude-data/web-ui/browser'
+import { ErrorComponent } from '@latitude-data/web-ui/browser'
+import { useSession } from '$/components/Providers/SessionProvider'
 
 export default function Error({
   error,

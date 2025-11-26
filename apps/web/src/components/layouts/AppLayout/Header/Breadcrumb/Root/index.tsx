@@ -32,15 +32,13 @@ export function RootBreadcrumbItems({ segments }: { segments: string[] }) {
   const rootSegment = segments[0] === 'dashboard' ? 'projects' : segments[0]
   const selectedOption = rootSegment ? options[rootSegment] : undefined
 
-  if (!selectedOption) return null
-
   return (
     <>
       <WorkspaceSwitcher />
       <BreadcrumbSeparator />
       <BreadcrumbItem noShrink>
         <BreadcrumbSelector
-          label={selectedOption.label}
+          label={selectedOption?.label ?? 'Select'}
           options={Object.values(options)}
         />
       </BreadcrumbItem>

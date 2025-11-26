@@ -27,6 +27,7 @@ export * from '../../events/handlers/touchProviderApiKeyJob'
 export * from '../../events/handlers/undeployDocumentTriggerJob'
 export * from '../../events/handlers/webhooks'
 export * from '../../events/handlers/assignIssueToEvaluationResultV2Job'
+export * from '../../events/handlers/sendIssueEscalatingHandler'
 
 // Jobs
 export * from './actions/generateProjectNameJob'

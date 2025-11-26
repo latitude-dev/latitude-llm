@@ -1688,6 +1688,13 @@
       "when": 1763994268043,
       "tag": "0241_late_doctor_strange",
       "breakpoints": true
+    },
+    {
+      "idx": 242,
+      "version": "7",
+      "when": 1764075446536,
+      "tag": "0242_add_default_to_notification_settings",
+      "breakpoints": true
     }
   ]
 }

@@ -7,7 +7,7 @@ import {
 } from 'react'
 import { Slot } from '@radix-ui/react-slot'
 
-import { ExtendsUnion } from '@latitude-data/core/lib/commonTypes'
+import { ExtendsUnion } from '@latitude-data/constants/commonTypes'
 
 import { CurrentTheme } from '../../../constants'
 import { cn } from '../../../lib/utils'

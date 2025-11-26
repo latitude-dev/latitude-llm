@@ -11,7 +11,7 @@ import {
   subMonths,
   subWeeks,
 } from 'date-fns'
-import type { RelativeDate } from '@latitude-data/core/constants'
+import type { RelativeDate } from '@latitude-data/constants/relativeDates'
 import { SelectOption } from '../../Select'
 import { DateRange } from 'react-day-picker'
 import { useMemo } from 'react'

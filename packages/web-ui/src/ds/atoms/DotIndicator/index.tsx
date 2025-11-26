@@ -1,3 +1,6 @@
+// NOTE: DO NOT REMOVE this import React - it's needed for JSX syntax
+// This component is used in packages/emails which doesn't have automatic React import
+import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '../../../lib/utils'
@@ -42,15 +45,17 @@ const indicatorVariants = cva(cn('relative rounded-full'), {
 
 export type DotIndicatorProps = VariantProps<typeof indicatorVariants> & {
   pulse?: boolean
+  className?: string
 }
 
 export function DotIndicator({
   size,
   variant,
   pulse = false,
+  className,
 }: DotIndicatorProps) {
   return (
-    <div className={cn('relative flex', indicatorWrapper({ size }))}>
+    <div className={cn('relative flex', indicatorWrapper({ size }), className)}>
       <div
         className={cn(
           'absolute inline-flex h-full w-full opacity-75',

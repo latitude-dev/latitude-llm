@@ -1,5 +1,5 @@
 'use client'
-import { ModifiedDocumentType } from '@latitude-data/core/constants'
+import { ModifiedDocumentType } from '@latitude-data/constants'
 import { Button } from '../../atoms/Button'
 import { DropdownMenu, MenuOption } from '../../atoms/DropdownMenu'
 import { Icon } from '../../atoms/Icons'
