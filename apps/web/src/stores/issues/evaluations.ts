@@ -23,7 +23,9 @@ export function useIssueEvaluations(
     searchParams: { documentUuids: documentUuids.join(',') },
   })
   const { data, isLoading } = useSWR<EvaluationV2[]>(
-    ['issueEvaluations', projectId, commitUuid, documentUuids],
+    documentUuids.length > 0
+      ? ['issueEvaluations', projectId, commitUuid, documentUuids]
+      : null,
     fetcher,
     opts,
   )
