@@ -118,10 +118,10 @@ value1,value2,value3
         .mockImplementation(async () => {}),
     }
 
-    // Mock findFirstSpanOfType to return a completion span by default
+    // Mock findCompletionSpanFromTrace to return a completion span by default
     vi.spyOn(
-      await import('../tracing/spans/findFirstSpanOfType'),
-      'findFirstSpanOfType',
+      await import('../tracing/spans/findCompletionSpanFromTrace'),
+      'findCompletionSpanFromTrace',
     ).mockReturnValue({
       id: 'completion-span-id',
       traceId: span.traceId,
@@ -142,16 +142,26 @@ value1,value2,value3
           id: span.traceId,
           children: [
             {
-              id: 'completion-span-id',
+              id: 'prompt-span-id',
               traceId: span.traceId,
-              type: SpanType.Completion,
+              type: SpanType.Prompt,
+              children: [
+                {
+                  id: 'completion-span-id',
+                  traceId: span.traceId,
+                  type: SpanType.Completion,
+                  metadata: {
+                    input: [{ role: 'user', content: 'test input' }],
+                    output: [{ role: 'assistant', content: 'test output' }],
+                  },
+                },
+              ],
               metadata: {
                 input: [{ role: 'user', content: 'test input' }],
-                output: [{ role: 'assistant', content: 'test output' }],
               },
             },
           ],
-          spans: 1,
+          spans: 2,
           duration: 1000,
           startedAt: new Date(),
           endedAt: new Date(),
@@ -313,9 +323,9 @@ value1,value2,value3
   })
 
   it('fails when type and metric run fails and error is retryable', async () => {
-    // Mock findFirstSpanOfType to return a completion span
-    vi.doMock('../tracing/spans/findFirstSpanOfType', () => ({
-      findFirstSpanOfType: vi.fn().mockReturnValue({
+    // Mock findCompletionSpanFromTrace to return a completion span
+    vi.doMock('../tracing/spans/findCompletionSpanFromTrace', () => ({
+      findCompletionSpanFromTrace: vi.fn().mockReturnValue({
         id: 'completion-span-id',
         traceId: span.traceId,
         type: SpanType.Completion,
