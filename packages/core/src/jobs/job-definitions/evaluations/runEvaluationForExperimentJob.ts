@@ -22,20 +22,28 @@ export async function runEvaluationForExperimentJob(
   const { conversationUuid, workspaceId, ...rest } = job.data
   const spansRepo = new SpansRepository(workspaceId)
   const traceId = await spansRepo.getLastTraceByLogUuid(conversationUuid)
-  if (!traceId && job.attemptsStarted < 10) {
-    job.moveToDelayed(1000, token)
+  if (!traceId) {
+    if (job.attemptsStarted < 10) {
+      job.moveToDelayed(1000, token)
 
-    throw new DelayedError('Waiting for trace to show up')
+      throw new DelayedError('Waiting for trace to show up')
+    }
+
+    return
   }
 
   const spans = await spansRepo
     .list({ traceId })
     .then((r) => r.unwrap().filter((span) => span.type === SpanType.Prompt))
   const span = spans[0]
-  if (!span && job.attemptsStarted < 10) {
-    job.moveToDelayed(1000, token)
+  if (!span) {
+    if (job.attemptsStarted < 10) {
+      job.moveToDelayed(1000, token)
 
-    throw new DelayedError('Waiting for span to show up')
+      throw new DelayedError('Waiting for span to show up')
+    }
+
+    return
   }
 
   const { evaluationsQueue } = await queues()
