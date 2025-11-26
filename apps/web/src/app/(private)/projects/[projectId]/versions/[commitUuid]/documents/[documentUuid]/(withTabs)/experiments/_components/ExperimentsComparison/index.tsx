@@ -19,17 +19,12 @@ export function ExperimentComparison({
   const { document } = useCurrentDocument()
 
   const { experiments, evaluations, bestLogsMetadata } =
-    useExperimentComparison(
-      {
-        project: project as Project,
-        commit: commit as Commit,
-        document,
-        experimentUuids: selectedExperimentUuids,
-      },
-      {
-        refreshInterval: 5000, // Refresh every 5 seconds
-      },
-    )
+    useExperimentComparison({
+      project: project as Project,
+      commit: commit as Commit,
+      document,
+      experimentUuids: selectedExperimentUuids,
+    })
 
   return (
     <div className='flex flex-shrink-0 flex-row w-full max-w-full relative border border-border rounded-lg overflow-auto custom-scrollbar'>

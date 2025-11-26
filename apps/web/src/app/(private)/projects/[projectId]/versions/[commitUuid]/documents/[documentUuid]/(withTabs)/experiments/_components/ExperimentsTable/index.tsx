@@ -63,17 +63,12 @@ export function ExperimentsTable({
     mutate,
     data: experiments,
     isLoading,
-  } = useExperiments(
-    {
-      projectId: project.id,
-      documentUuid: document.documentUuid,
-      page,
-      pageSize,
-    },
-    {
-      refreshInterval: 30_000, // 30 seconds
-    },
-  )
+  } = useExperiments({
+    projectId: project.id,
+    documentUuid: document.documentUuid,
+    page,
+    pageSize,
+  })
 
   useSockets({
     event: 'experimentStatus',

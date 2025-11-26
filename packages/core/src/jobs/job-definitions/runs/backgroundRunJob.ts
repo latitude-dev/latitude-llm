@@ -202,6 +202,7 @@ export const backgroundRunJob = async (
     })
     await writeStream.cleanup()
     await publisher.unsubscribe('cancelJob', cancelJob)
+
     try {
       const endResult = await endRun({ workspaceId, projectId, runUuid })
       if (!Result.isOk(endResult)) {

@@ -3,7 +3,6 @@ import { useTrace } from '$/stores/traces'
 import { SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 import { MessageList } from '$/components/ChatWrapper'
-import { adaptPromptlMessageToLegacy } from '@latitude-data/core/utils/promptlAdapter'
 import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
@@ -14,6 +13,10 @@ import { AnnotationForms } from './AnnotationForms'
 import { TraceEvaluations } from './TraceEvaluations'
 import { MetadataInfoTabs } from '../MetadataInfoTabs'
 import { useMemo } from 'react'
+import {
+  adaptCompletionSpanMessagesToLegacy,
+  findCompletionSpanFromTrace,
+} from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
 
 export const DEFAULT_TABS = [
   { label: 'Metadata', value: 'metadata' },
@@ -99,20 +102,11 @@ function TraceMetadata({
 
 function TraceMessages({ traceId }: { traceId: string | null }) {
   const { data: trace } = useTrace({ traceId })
-  const completionSpan = findFirstSpanOfType(
-    trace?.children ?? [],
-    SpanType.Completion,
-  )
-  if (!completionSpan) return null
-
   const promptSpan = findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt)
-  const completionMetadata = completionSpan?.metadata
   const promptMetadata = promptSpan?.metadata
-  const legacyMessages = [
-    ...(completionMetadata?.input || []).map(adaptPromptlMessageToLegacy),
-    ...(completionMetadata?.output || []).map(adaptPromptlMessageToLegacy),
-  ]
-  if (!legacyMessages.length) {
+  const completionSpan = findCompletionSpanFromTrace(trace)
+  const messages = adaptCompletionSpanMessagesToLegacy(completionSpan)
+  if (!messages.length) {
     return (
       <div className='flex flex-row items-center justify-center w-full'>
         <Text.H6M color='foregroundMuted'>No messages</Text.H6M>
@@ -123,7 +117,7 @@ function TraceMessages({ traceId }: { traceId: string | null }) {
   return (
     <MessageList
       debugMode
-      messages={legacyMessages}
+      messages={messages}
       parameters={
         promptMetadata?.parameters
           ? Object.keys(promptMetadata.parameters)

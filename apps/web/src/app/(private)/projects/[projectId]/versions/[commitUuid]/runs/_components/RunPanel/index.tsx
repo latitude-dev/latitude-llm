@@ -32,7 +32,10 @@ import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap
 import Link from 'next/link'
 import { RunPanelStats } from './Stats'
 import { useTrace } from '$/stores/traces'
-import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
+import {
+  findCompletionSpanFromTrace,
+  adaptCompletionSpanMessagesToLegacy,
+} from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { sum } from 'lodash-es'
 import { useCompletedRunsKeysetPaginationStore } from '$/stores/completedRunsKeysetPagination'
@@ -98,23 +101,19 @@ function CompletedRunPanel({
   const { data: trace, isLoading: isLoadingTrace } = useTrace({
     traceId: run.span.traceId,
   })
-  const completionSpan = findFirstSpanOfType(
-    trace?.children ?? [],
-    SpanType.Completion,
+  const completionSpan = useMemo(
+    () => findCompletionSpanFromTrace(trace),
+    [trace],
+  )
+  const conversation = useMemo(
+    () => adaptCompletionSpanMessagesToLegacy(completionSpan),
+    [completionSpan],
   )
   const { annotations, isLoading: isLoadingAnnotations } = useAnnotationBySpan({
     project,
     commit,
     span: run.span,
   })
-  const conversation = useMemo(() => {
-    if (!completionSpan) return []
-
-    return [
-      ...(completionSpan?.metadata?.input ?? []),
-      ...(completionSpan?.metadata?.output ?? []),
-    ]
-  }, [completionSpan])
   const toolContentMap = useToolContentMap(conversation as unknown as Message[])
   const sourceMapAvailable = useMemo(() => {
     return conversation.some((message) => {
