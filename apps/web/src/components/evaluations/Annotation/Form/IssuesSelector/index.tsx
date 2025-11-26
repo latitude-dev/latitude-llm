@@ -10,16 +10,18 @@ import { updateEvaluationResultInstance } from './updateEvaluationResultInstance
 import { use, useCallback, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ISSUE_GROUP } from '@latitude-data/constants/issues'
 
 export function IssuesSelector() {
   const issuesFeature = useFeature('issues')
   const newIssueModal = useToggleModal()
   const { project } = useCurrentProject()
-  const { span, evaluation, result, commit, documentUuid } =
+  const { span, evaluation, result, commit, documentUuid, mergedToIssueId } =
     use(AnnotationContext)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+  const isMergedIssue = Boolean(mergedToIssueId)
   const projectId = project.id
   const { mutate: mutateResults } = useEvaluationResultsV2BySpans({
     project,
@@ -157,35 +159,50 @@ export function IssuesSelector() {
 
   if (!result || result.hasPassed || !hasReason) return null
 
+  const selectElement = (
+    <Select<number>
+      searchable
+      removable={!isMergedIssue}
+      width='auto'
+      align='center'
+      side='top'
+      sideOffset={8}
+      open={open}
+      onOpenChange={onOpenChange}
+      options={options}
+      name='annotation-issue'
+      loading={isLoading && !isSearchingIssues}
+      disabled={(isLoading && !isSearchingIssues) || isMergedIssue}
+      placeholder='Auto-discover issue'
+      searchPlaceholder='Search existing issues...'
+      placeholderIcon='sparkles'
+      tooltip={
+        isMergedIssue
+          ? 'This span belongs to a merged issue. The assigned issue cannot be changed.'
+          : 'Discovery could take a few minutes...'
+      }
+      onChange={onChange}
+      onSearch={onSearch}
+      value={resultIssue?.id}
+      footerAction={{
+        label: 'Create new issue',
+        icon: 'plus',
+        onClick: onClickCreate,
+      }}
+    />
+  )
+
   return (
     <>
       <AnnotationFormWrapper.Body>
-        <Select<number>
-          searchable
-          removable
-          width='auto'
-          align='center'
-          side='top'
-          sideOffset={8}
-          open={open}
-          onOpenChange={onOpenChange}
-          options={options}
-          name='annotation-issue'
-          loading={isLoading && !isSearchingIssues}
-          disabled={isLoading && !isSearchingIssues}
-          placeholder='Auto-discover issue'
-          searchPlaceholder='Search existing issues...'
-          placeholderIcon='sparkles'
-          tooltip='Discovery could take a few minutes...'
-          onChange={onChange}
-          onSearch={onSearch}
-          value={resultIssue?.id}
-          footerAction={{
-            label: 'Create new issue',
-            icon: 'plus',
-            onClick: onClickCreate,
-          }}
-        />
+        {isMergedIssue ? (
+          <Tooltip trigger={<div>{selectElement}</div>}>
+            This span belongs to a merged issue. The assigned issue cannot be
+            changed.
+          </Tooltip>
+        ) : (
+          selectElement
+        )}
       </AnnotationFormWrapper.Body>
 
       {newIssueModal.open ? (

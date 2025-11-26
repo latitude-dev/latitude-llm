@@ -6,8 +6,10 @@ import { SpanType, SpanWithDetails } from '@latitude-data/core/constants'
 
 export function AnnotationForms({
   span,
+  mergedToIssueId,
 }: {
   span: SpanWithDetails<SpanType.Prompt>
+  mergedToIssueId?: number
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -25,6 +27,7 @@ export function AnnotationForms({
         evaluation={annotations.bottom.evaluation}
         span={span}
         result={annotations.bottom.result}
+        mergedToIssueId={mergedToIssueId}
       />
     </div>
   )

@@ -150,6 +150,7 @@ export function IssuesDetailPanel({
                   spanId={selectedSpan.id}
                   traceId={selectedSpan.traceId}
                   documentUuid={issue.documentUuid}
+                  mergedToIssueId={issue.mergedToIssueId ?? undefined}
                 />
               ) : null}
             </DetailsPanel.Body>

@@ -40,6 +40,7 @@ type IAnnotationForm<
   setDisabled: ReactStateDispatch<boolean>
   isExpanded: boolean
   setIsExpanded: ReactStateDispatch<boolean>
+  mergedToIssueId?: number
 }
 
 export function createAnnotationContext<
@@ -68,6 +69,7 @@ export const AnnotationProvider = <
   result,
   isExpanded,
   setIsExpanded,
+  mergedToIssueId,
 }: {
   children: ReactNode
   isSubmitting: boolean
@@ -79,6 +81,7 @@ export const AnnotationProvider = <
   documentUuid: string
   isExpanded: boolean
   setIsExpanded: ReactStateDispatch<boolean>
+  mergedToIssueId?: number
 }) => {
   const [disabled, setDisabled] = useState(false)
   return (
@@ -95,6 +98,7 @@ export const AnnotationProvider = <
         isSubmitting,
         isExpanded,
         setIsExpanded,
+        mergedToIssueId,
       }}
     >
       {children}

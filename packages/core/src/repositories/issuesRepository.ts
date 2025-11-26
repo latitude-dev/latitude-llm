@@ -439,9 +439,18 @@ export class IssuesRepository extends Repository<Issue> {
         )!
         break
       case 'activeWithResolved':
+        // Include active (not resolved, not ignored) and resolved issues
+        // Exclude ignored and merged issues
         groupConditions = and(
-          this.withResolvedIssues(true),
+          or(
+            // Active: not resolved and not ignored
+            and(this.withResolvedIssues(false), this.withIgnoredIssues(false)),
+            // OR Resolved: has resolvedAt timestamp
+            this.withResolvedIssues(true),
+          ),
+          // But exclude ignored and merged issues
           this.withIgnoredIssues(false),
+          this.withMergedIssues(false),
         )!
         break
     }

@@ -25,11 +25,13 @@ export function TraceInfoPanel({
   traceId,
   documentUuid,
   insideOtherPanel = false,
+  mergedToIssueId,
 }: {
   spanId: string
   traceId: string
   documentUuid: string
   insideOtherPanel?: boolean
+  mergedToIssueId?: number
 }) {
   const { commit } = useCurrentCommit()
   const document = useMemo(
@@ -60,7 +62,11 @@ export function TraceInfoPanel({
         {({ selectedTab }) => (
           <>
             {selectedTab === 'metadata' && (
-              <TraceMetadata isLoading={isLoading} span={span} />
+              <TraceMetadata
+                isLoading={isLoading}
+                span={span}
+                mergedToIssueId={mergedToIssueId}
+              />
             )}
             {selectedTab === 'messages' && <TraceMessages traceId={traceId} />}
             {selectedTab === 'evaluations' && (
@@ -80,9 +86,11 @@ export function TraceInfoPanel({
 function TraceMetadata({
   span,
   isLoading,
+  mergedToIssueId,
 }: {
   span?: SpanWithDetails<SpanType> | null
   isLoading: boolean
+  mergedToIssueId?: number
 }) {
   if (isLoading) return <LoadingText alignX='center' />
   if (!span) return null
@@ -91,7 +99,10 @@ function TraceMetadata({
     <div className='flex flex-col gap-4'>
       <DetailsPanel span={span} />
       {span.type === SpanType.Prompt && (
-        <AnnotationForms span={span as SpanWithDetails<SpanType.Prompt>} />
+        <AnnotationForms
+          span={span as SpanWithDetails<SpanType.Prompt>}
+          mergedToIssueId={mergedToIssueId}
+        />
       )}
     </div>
   )
