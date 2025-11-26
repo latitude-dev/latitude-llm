@@ -10,6 +10,7 @@ import {
   not,
   or,
   lte,
+  getTableColumns,
 } from 'drizzle-orm'
 
 import { type Commit } from '../../schema/models/types/Commit'
@@ -17,11 +18,12 @@ import { type Project } from '../../schema/models/types/Project'
 import { CommitStatus, HEAD_COMMIT } from '../../constants'
 import { InferedReturnType } from '@latitude-data/constants/commonTypes'
 import { NotFoundError } from '../../lib/errors'
-import { Result } from '../../lib/Result'
+import { Result, TypedResult } from '../../lib/Result'
 import { documentVersions } from '../../schema/models/documentVersions'
 import RepositoryLegacy from '../repository'
 import { buildCommitsScope, columnSelection } from './utils/buildCommitsScope'
 import { getHeadCommitForProject } from './utils/getHeadCommit'
+import { commits } from '../../schema/models/commits'
 
 function filterByStatusQuery({
   scope,

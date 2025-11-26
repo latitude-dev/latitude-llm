@@ -11,6 +11,7 @@ import { ROUTES } from '$/services/routes'
 import { DocumentTracesPage } from './_components/DocumentTracesPage'
 import { SpanType, Span } from '@latitude-data/constants'
 import { parseSpansFilters, SpansFilters } from '$/lib/schemas/filters'
+import { buildCommitFilter } from '$/app/api/projects/[projectId]/commits/[commitUuid]/documents/[documentUuid]/spans/limited/route'
 
 export const metadata = buildMetatags({
   locationDescription: 'Document Traces Page',
@@ -47,10 +48,7 @@ export default async function TracesPage({
   }
 
   const commitsRepo = new CommitsRepository(workspace.id)
-  const headCommit = await commitsRepo.getHeadCommit(Number(projectId))
   const spansRepository = new SpansRepository(workspace.id)
-
-  // Build filter options from URL params
   const spanFilterOptions: SpansFilters = {
     traceId: validatedFilters?.traceId,
     spanId: validatedFilters?.spanId,
@@ -58,7 +56,9 @@ export default async function TracesPage({
     experimentUuids: validatedFilters?.experimentUuids,
     createdAt: validatedFilters?.createdAt,
   }
-
+  const commit = await commitsRepo
+    .getCommitByUuid({ uuid: commitUuid, projectId: Number(projectId) })
+    .then((r) => r.unwrap())
   const initialSpans: Span[] = traceId
     ? await spansRepository
         .list({ traceId })
@@ -66,8 +66,11 @@ export default async function TracesPage({
     : await spansRepository
         .findByDocumentAndCommitLimited({
           documentUuid,
-          commitUuids:
-            headCommit?.uuid === commitUuid ? undefined : [commitUuid],
+          commitUuids: await buildCommitFilter({
+            filters: spanFilterOptions,
+            currentCommit: commit,
+            commitsRepo,
+          }),
           type: SpanType.Prompt,
         })
         .then((r) => r.unwrap().items)

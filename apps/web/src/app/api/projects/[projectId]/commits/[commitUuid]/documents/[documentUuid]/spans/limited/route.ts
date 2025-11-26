@@ -10,6 +10,7 @@ import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { parseSpansFilters } from '$/lib/schemas/filters'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 const searchParamsSchema = z.object({
   from: z.string().optional(),
@@ -51,7 +52,6 @@ export const GET = errorHandler(
         parseSpansFilters(parsedParams.filters, 'spans limited API') || {}
 
       const commitsRepo = new CommitsRepository(workspace.id)
-      const headCommit = await commitsRepo.getHeadCommit(Number(projectId))
       const repository = new DocumentVersionsRepository(workspace.id)
       await repository
         .getSomeDocumentByUuid({ projectId: Number(projectId), documentUuid })
@@ -78,6 +78,9 @@ export const GET = errorHandler(
         }
       } else {
         // Otherwise, fetch spans directly from the repository
+        const currentCommit = await commitsRepo
+          .getCommitByUuid({ uuid: commitUuid, projectId: Number(projectId) })
+          .then((r) => r.unwrap())
         const spansRepository = new SpansRepository(workspace.id)
         const result = await spansRepository.findByDocumentAndCommitLimited({
           documentUuid,
@@ -86,11 +89,11 @@ export const GET = errorHandler(
             ? { startedAt: fromCursor.value, id: fromCursor.id }
             : undefined,
           limit: parsedParams.limit,
-          commitUuids: filters.commitUuids
-            ? filters.commitUuids
-            : headCommit?.uuid === commitUuid
-              ? undefined
-              : [commitUuid],
+          commitUuids: await buildCommitFilter({
+            filters,
+            currentCommit,
+            commitsRepo,
+          }),
           experimentUuids: filters.experimentUuids,
           createdAt: filters.createdAt,
         })
@@ -115,3 +118,26 @@ export const GET = errorHandler(
     },
   ),
 )
+
+export function buildCommitFilter({
+  filters = {},
+  currentCommit,
+  commitsRepo,
+}: {
+  filters?: { commitUuids?: string[] }
+  currentCommit: Commit
+  commitsRepo: CommitsRepository
+}) {
+  if (filters.commitUuids) return filters.commitUuids
+
+  const commits = commitsRepo
+    .getCommitsHistory({ commit: currentCommit })
+    .then((commits) => {
+      return commits.map((commit) => commit.uuid)
+    })
+    .catch(() => [])
+
+  console.log(commits)
+
+  return commits
+}
