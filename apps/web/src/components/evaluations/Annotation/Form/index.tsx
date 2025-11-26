@@ -11,7 +11,13 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 export function AnnotationForm<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
->({ evaluation, span, result, onAnnotate }: FormProps<T, M>) {
+>({
+  evaluation,
+  span,
+  result,
+  onAnnotate,
+  mergedToIssueId,
+}: FormProps<T, M> & { mergedToIssueId?: number }) {
   const spec = EVALUATION_SPECIFICATIONS[evaluation.type]
   const { commit } = useCurrentCommit()
   const { onSubmit, isSubmitting } = useAnnotationForm<T, M>({
@@ -36,6 +42,7 @@ export function AnnotationForm<
       isSubmitting={isSubmitting}
       isExpanded={isExpanded}
       setIsExpanded={setIsExpanded}
+      mergedToIssueId={mergedToIssueId}
     >
       <div
         className={cn(

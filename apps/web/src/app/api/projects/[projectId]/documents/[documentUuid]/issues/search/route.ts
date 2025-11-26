@@ -17,8 +17,6 @@ export type SearchIssueResponse = Awaited<
 const paramsSchema = z.object({
   projectId: z.coerce.number(),
   documentUuid: z.string(),
-  statuses: z.string().optional(),
-  group: z.string().optional(),
 })
 
 export const GET = errorHandler(
@@ -39,13 +37,13 @@ export const GET = errorHandler(
       },
     ) => {
       const query = request.nextUrl.searchParams
-      const { projectId, documentUuid, statuses, group } = paramsSchema.parse({
+      const { projectId, documentUuid } = paramsSchema.parse({
         projectId: params.projectId,
         documentUuid: params.documentUuid,
-        statuses: params.statuses,
-        group: params.group,
       })
       const title = query.get('query')
+      const statusesParam = query.get('statuses')
+      const groupParam = query.get('group')
       const projectsRepo = new ProjectsRepository(workspace.id)
       const project = await projectsRepo.find(projectId).then((r) => r.unwrap())
       const docsScope = new DocumentVersionsRepository(workspace.id)
@@ -60,8 +58,14 @@ export const GET = errorHandler(
         project,
         document,
         title,
-        statuses: statuses?.split(',') as IssueStatuses[],
-        group: group as IssueGroup,
+        statuses:
+          statusesParam && statusesParam.length > 0
+            ? (statusesParam.split(',') as IssueStatuses[])
+            : undefined,
+        group:
+          groupParam && groupParam.length > 0
+            ? (groupParam as IssueGroup)
+            : undefined,
       })
 
       return NextResponse.json(result, { status: 200 })
