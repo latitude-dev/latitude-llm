@@ -48,6 +48,7 @@ import {
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import { IssueEvaluationResultsRepository } from './issueEvaluationResultsRepository'
 import Repository from './repositoryV2'
+import { evaluationVersions } from '../schema/models/evaluationVersions'
 
 const tt = getTableColumns(evaluationResultsV2)
 
@@ -501,7 +502,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   async listByIssueIds(issueIds: number[]) {
     issueIds = [...new Set(issueIds)].filter(Boolean)
     if (!issueIds.length) {
-      return Result.ok([])
+      return []
     }
 
     const results = await this.db
@@ -522,7 +523,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         desc(evaluationResultsV2.createdAt),
         desc(evaluationResultsV2.id),
       )
-    return Result.ok(results)
+    return results as EvaluationResultV2[]
   }
 
   async listByDocumentLogs({
@@ -774,6 +775,33 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     results = results.slice(0, ISSUE_GENERATION_MAX_RESULTS)
 
     return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
+  }
+
+  async listPassedByDocumentUuid(documentUuid: string) {
+    const results = await this.db
+      .select(tt)
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .innerJoin(
+        evaluationVersions,
+        eq(
+          evaluationResultsV2.evaluationUuid,
+          evaluationVersions.evaluationUuid,
+        ),
+      )
+      .where(
+        and(
+          this.scopeFilter,
+          isNull(commits.deletedAt),
+          eq(evaluationVersions.documentUuid, documentUuid),
+          eq(evaluationResultsV2.hasPassed, true),
+        ),
+      )
+      .orderBy(
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+      )
+    return results as EvaluationResultV2[]
   }
 
   private async getEvaluationsByCommit({

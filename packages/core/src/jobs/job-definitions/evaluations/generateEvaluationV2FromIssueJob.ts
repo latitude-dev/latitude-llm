@@ -48,13 +48,15 @@ export const generateEvaluationV2FromIssueJob = async (
       evaluationUuid: evaluationUuid,
     })
 
-    return await generateEvaluationFromIssueWithCopilot({
+    const generatedEvaluation = await generateEvaluationFromIssueWithCopilot({
       issue,
       commit,
       workspace,
       providerName,
       model,
-    }).then((r) => r.unwrap())
+    })
+
+    return generatedEvaluation.unwrap()
   } catch (error) {
     captureException(error as Error)
     const failResult = await failActiveEvaluation({

@@ -70,7 +70,7 @@ export function IssuesTitle({
               </div>
             }
           >
-            Includes an {typeSpec?.name} evaluation
+            Issue detection automated by an {typeSpec?.name} evaluation
           </Tooltip>
         ) : null}
       </div>
