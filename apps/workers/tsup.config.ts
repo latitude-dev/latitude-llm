@@ -21,5 +21,6 @@ export default defineConfig({
     '@latitude-data/env',
     '@latitude-data/core',
     '@latitude-data/constants',
+    '@latitude-data/emails',
   ],
 })
