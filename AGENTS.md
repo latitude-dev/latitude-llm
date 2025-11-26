@@ -24,6 +24,8 @@
 - Avoid enums, use const maps or type unions instead
 - Use JSDoc comments for functions and classes that are exported. You can skip
   JSDoc for internal functions that are simple and self-explanatory.
+- Exports go top of file, internal methods at the bottom
+- If possible, use the instrumentation's captureException method rather than logging errors with console.error
 
 ## Architecture
 

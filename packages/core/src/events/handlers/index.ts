@@ -28,6 +28,8 @@ import { touchApiKeyJob } from './touchApiKeyJob'
 import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
 import { undeployDocumentTriggerJob } from './undeployDocumentTriggerJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
+import { removeMergedIssueVectors } from './removeMergedIssueVectors'
+import { generateDetailsForMergedIssue } from './generateDetailsForMergedIssue'
 
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
@@ -106,7 +108,7 @@ export const EventHandlers: IEventsHandlers = {
   issueIncremented: [sendIssueEscalatingHandler],
   issueDecremented: [],
   issueDiscovered: [],
-  issueMerged: [],
+  issueMerged: [removeMergedIssueVectors, generateDetailsForMergedIssue],
   issueResolved: [],
   issueUnresolved: [],
   issueIgnored: [],

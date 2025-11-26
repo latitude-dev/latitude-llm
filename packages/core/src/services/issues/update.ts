@@ -27,6 +27,7 @@ export async function updateIssue(
   const updatedAt = new Date()
 
   // Note: optimistically upserting in vector db
+  // TODO:: Side effect inside transaction. Move to event handler.
   const updating = await upsertVector({
     uuid: issue.uuid,
     workspaceId: issue.workspaceId,
