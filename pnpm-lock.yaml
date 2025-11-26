@@ -961,6 +961,9 @@ importers:
       '@faker-js/faker':
         specifier: ^8.4.1
         version: 8.4.1
+      '@types/blessed':
+        specifier: ^0.1.25
+        version: 0.1.26
       '@types/diff-match-patch':
         specifier: ^1.0.36
         version: 1.0.36
@@ -1009,6 +1012,9 @@ importers:
       '@typescript/analyze-trace':
         specifier: ^0.10.1
         version: 0.10.1
+      blessed:
+        specifier: ^0.1.81
+        version: 0.1.81
       chalk:
         specifier: ^5.4.1
         version: 5.6.2
@@ -6116,6 +6122,9 @@ packages:
 
   '@types/aria-query@5.0.4':
     resolution: {integrity: sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw==}
+
+  '@types/blessed@0.1.26':
+    resolution: {integrity: sha512-TAFZ4PF1bU0uVy86NTVAyhtC8BBWhjQLUfIS2N5P7YTJil+PtxpdPZ0AmpmJWO8pZ7RYPrcbGYZW0sVYVCEVLA==}
 
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
@@ -20698,6 +20707,10 @@ snapshots:
 
   '@types/aria-query@5.0.4': {}
 
+  '@types/blessed@0.1.26':
+    dependencies:
+      '@types/node': 22.18.8
+
   '@types/body-parser@1.19.6':
     dependencies:
       '@types/connect': 3.4.38
@@ -21328,7 +21341,7 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)
       '@typescript-eslint/parser': 6.21.0(eslint@8.57.1)(typescript@5.9.3)
       eslint-config-prettier: 9.1.2(eslint@8.57.1)
-      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))
+      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0)
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@8.57.1)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.57.1)
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)
@@ -23229,7 +23242,7 @@ snapshots:
       eslint-plugin-turbo: 2.5.8(eslint@8.57.1)(turbo@2.5.8)
       turbo: 2.5.8
 
-  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)):
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0):
     dependencies:
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)
 
