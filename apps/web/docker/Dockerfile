@@ -191,7 +191,7 @@ RUN --mount=type=secret,id=DATADOG_API_KEY \
     find .next/server -name "*.map" -type f | head -10 && \
     echo "" && \
     echo "Uploading client-side source maps with prefix: $CLIENT_MINIFIED_PREFIX" && \
-    datadog-ci sourcemaps upload .next/static --service=latitude-llm-web --minified-path-prefix="$CLIENT_MINIFIED_PREFIX" --release-version="${RELEASE_VERSION:-unknown}" --disable-git --max-concurrency=20 && \
+    pnpm exec datadog-ci sourcemaps upload .next/static --service=latitude-llm-web --minified-path-prefix="$CLIENT_MINIFIED_PREFIX" --release-version="${RELEASE_VERSION:-unknown}" --disable-git --max-concurrency=20 && \
     echo "" && \
     echo "Uploading server-side source maps with prefix: /app/apps/web/.next/server/" && \
     pnpm datadog:sourcemaps:server; \
