@@ -175,6 +175,13 @@ RUN --mount=type=secret,id=DATADOG_API_KEY \
     echo "Service: latitude-llm-web" && \
     echo "DD Site: ${DD_SITE}" && \
     echo "" && \
+    if [ -n "$NEXT_PUBLIC_STATIC_ASSETS_URL" ]; then \
+      CLIENT_MINIFIED_PREFIX="${NEXT_PUBLIC_STATIC_ASSETS_URL}/_next/static/"; \
+    else \
+      CLIENT_MINIFIED_PREFIX="/_next/static/"; \
+    fi && \
+    echo "Client minified path prefix: $CLIENT_MINIFIED_PREFIX" && \
+    echo "" && \
     echo "=== CLIENT-SIDE SOURCE MAPS (web URLs) ===" && \
     echo "Source map files in .next/static:" && \
     find .next/static -name "*.map" -type f | head -10 && \
@@ -183,8 +190,8 @@ RUN --mount=type=secret,id=DATADOG_API_KEY \
     echo "Source map files in .next/server:" && \
     find .next/server -name "*.map" -type f | head -10 && \
     echo "" && \
-    echo "Uploading client-side source maps with prefix: /_next/static/" && \
-    pnpm datadog:sourcemaps:client && \
+    echo "Uploading client-side source maps with prefix: $CLIENT_MINIFIED_PREFIX" && \
+    datadog-ci sourcemaps upload .next/static --service=latitude-llm-web --minified-path-prefix="$CLIENT_MINIFIED_PREFIX" --release-version="${RELEASE_VERSION:-unknown}" --disable-git --max-concurrency=20 && \
     echo "" && \
     echo "Uploading server-side source maps with prefix: /app/apps/web/.next/server/" && \
     pnpm datadog:sourcemaps:server; \
