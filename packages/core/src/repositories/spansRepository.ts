@@ -194,6 +194,7 @@ export class SpansRepository extends Repository<Span> {
     limit?: number
   }) {
     // Fetch commit UUIDs - this should be fast with proper commit indexes
+    // FIXME: This is wrong use CommitRepository.getCommitsHistory
     const commitUuids = await this.db
       .select({ uuid: commits.uuid })
       .from(commits)

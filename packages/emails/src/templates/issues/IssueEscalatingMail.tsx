@@ -174,13 +174,14 @@ export default function IssueEscalatingMail({
   )
 }
 
+const EXAMPLE_ISSUE_TITLE = 'Incorrect JSON formatting'
 // cd packages/core && pnpm email:dev for checking the UI
 IssueEscalatingMail.PreviewProps = {
-  issueTitle: 'API timeout error in payment processing',
+  issueTitle: EXAMPLE_ISSUE_TITLE,
   link: 'https://example.com',
   currentWorkspace: { id: 1 },
   issue: {
-    title: 'API timeout error in payment processing',
+    title: EXAMPLE_ISSUE_TITLE,
     eventsCount: 60,
     histogram: [
       {

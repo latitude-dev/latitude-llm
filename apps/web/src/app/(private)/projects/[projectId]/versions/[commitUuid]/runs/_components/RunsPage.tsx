@@ -82,11 +82,13 @@ function useSearchByGroup({
 }
 
 export function RunsPage({
+  issuesEnabled,
   active: serverActive,
   completed: serverCompleted,
   limitedView,
   defaultSourceGroup,
 }: {
+  issuesEnabled: boolean
   active: { runs: ActiveRun[]; search: Pagination }
   completed: { runs: CompletedRun[] }
   limitedView?: Pick<ProjectLimitedView, 'totalRuns'>
@@ -263,6 +265,7 @@ export function RunsPage({
         minSize={400}
         firstPane={
           <RunsList
+            issuesEnabled={issuesEnabled}
             active={{
               runs: activeRuns,
               next: nextActiveRuns?.length ?? 0,

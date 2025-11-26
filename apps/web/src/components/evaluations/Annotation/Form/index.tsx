@@ -1,12 +1,18 @@
 import { useState } from 'react'
+import Link from 'next/link'
 import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
-import { EVALUATION_SPECIFICATIONS } from '../..'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { cn } from '@latitude-data/web-ui/utils'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { AnnotationProvider } from '../FormWrapper'
+import { useHasPassed } from '../../hooks/useHasPassed'
+import { EVALUATION_SPECIFICATIONS } from '../../index'
 import { FormProps } from '../types'
 import { useAnnotationForm } from '../useAnnotationForm'
 import { IssuesSelector } from './IssuesSelector'
-import { cn } from '@latitude-data/web-ui/utils'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { AnnotationsProgressIcon } from '$/components/AnnotationProgressPanel/AnntationsProgressIcon'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { ROUTES } from '$/services/routes'
 
 export function AnnotationForm<
   T extends EvaluationType,
@@ -19,7 +25,11 @@ export function AnnotationForm<
   mergedToIssueId,
 }: FormProps<T, M> & { mergedToIssueId?: number }) {
   const spec = EVALUATION_SPECIFICATIONS[evaluation.type]
+  const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
+  const issuesDashboardLink = ROUTES.projects
+    .detail({ id: project.id })
+    .commits.detail({ uuid: commit.uuid }).issues.root
   const { onSubmit, isSubmitting } = useAnnotationForm<T, M>({
     evaluation,
     span,
@@ -28,8 +38,18 @@ export function AnnotationForm<
 
   // Start expanded if there's already a result
   const [isExpanded, setIsExpanded] = useState(!!result)
+  const hasPassed = useHasPassed({
+    evaluation,
+    result,
+    score: result?.score,
+  })
 
   if (!spec.AnnotationForm) return null
+
+  const hasReason = Boolean(
+    result?.metadata && 'reason' in result.metadata && result.metadata.reason,
+  )
+  const isFailedWithoutReason = hasPassed === false && !hasReason
 
   return (
     <AnnotationProvider
@@ -70,6 +90,23 @@ export function AnnotationForm<
           evaluation={evaluation}
           result={result}
         />
+        {isFailedWithoutReason ? (
+          <div className='rounded-lg mx-3 my-2 p-1.5 border border-dashed bg-secondary'>
+            <div className='px-3 py-2 bg-background rounded-md flex items-center gap-x-2'>
+              <AnnotationsProgressIcon isCompleted />
+              <Text.H6 color='foregroundMuted'>
+                Please provide feedback on why this annotation did not pass.
+                This is important for improving your prompt and ensuring
+                Latitude can create better issues. Check the{' '}
+                <Link href={issuesDashboardLink} target='_blank'>
+                  <Text.H6M underline color='foregroundMuted'>
+                    issues section
+                  </Text.H6M>
+                </Link>
+              </Text.H6>
+            </div>
+          </div>
+        ) : null}
       </div>
     </AnnotationProvider>
   )

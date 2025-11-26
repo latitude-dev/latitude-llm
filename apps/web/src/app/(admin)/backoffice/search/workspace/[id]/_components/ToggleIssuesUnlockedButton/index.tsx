@@ -44,9 +44,7 @@ export function ToggleIssuesUnlockedButton({
     <div className='flex flex-col gap-2'>
       <SwitchInput
         checked={unlocked}
-        label={
-          unlocked ? 'Issues Dashboard Unlocked' : 'Issues Dashboard Locked'
-        }
+        label='Issues Dashboard un-locked'
         onCheckedChange={handleToggle}
         disabled={isPending}
       />
