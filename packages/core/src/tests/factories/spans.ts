@@ -33,6 +33,7 @@ export async function createSpan<T extends SpanType = SpanType.Prompt>({
   documentUuid,
   commitUuid,
   experimentUuid,
+  projectId,
 
   source = LogSources.API,
 
@@ -64,6 +65,7 @@ export async function createSpan<T extends SpanType = SpanType.Prompt>({
   documentUuid?: string
   commitUuid?: string
   experimentUuid?: string
+  projectId?: number
 
   source?: LogSources
 
@@ -108,6 +110,7 @@ export async function createSpan<T extends SpanType = SpanType.Prompt>({
       documentUuid,
       commitUuid,
       experimentUuid,
+      projectId,
 
       // source
       source,

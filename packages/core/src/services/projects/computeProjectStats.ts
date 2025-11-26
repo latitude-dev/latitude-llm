@@ -49,58 +49,22 @@ export async function computeProjectStats(
     }
   }
 
-  const commitUuids = await db
-    .select({ commitUuid: commits.uuid })
-    .from(commits)
-    .where(eq(commits.projectId, projectId))
-    .then((result) => result.map((r) => r.commitUuid))
-
-  const activeCommitUuids = await db
-    .select({ commitUuid: commits.uuid })
-    .from(commits)
-    .where(and(eq(commits.projectId, projectId), isNull(commits.deletedAt)))
-    .then((result) => result.map((r) => r.commitUuid))
-
   const activeCommitIds = await db
     .select({ commitId: commits.id })
     .from(commits)
     .where(and(eq(commits.projectId, projectId), isNull(commits.deletedAt)))
     .then((result) => result.map((r) => r.commitId))
 
-  if (!commitUuids.length || !activeCommitUuids.length) {
-    return Result.ok<ProjectStats>({
-      totalTokens: 0,
-      totalRuns: 0,
-      totalDocuments: 0,
-      runsPerModel: {},
-      costPerModel: {},
-      rollingDocumentLogs: [],
-      totalEvaluations: 0,
-      totalEvaluationResults: 0,
-      costPerEvaluation: {},
-    })
-  }
-
   const totalRuns = await db
     .select({ count: sql`count(distinct ${spans.traceId})`.as('count') })
     .from(spans)
-    .where(
-      and(
-        inArray(spans.commitUuid, commitUuids),
-        eq(spans.type, SpanType.Prompt),
-      ),
-    )
+    .where(and(eq(spans.projectId, projectId), eq(spans.type, SpanType.Prompt)))
     .then((result) => Number(result[0]?.count ?? 0))
 
   const traceIds = await db
     .selectDistinct({ traceId: spans.traceId })
     .from(spans)
-    .where(
-      and(
-        inArray(spans.commitUuid, commitUuids),
-        eq(spans.type, SpanType.Prompt),
-      ),
-    )
+    .where(and(eq(spans.projectId, projectId), eq(spans.type, SpanType.Prompt)))
     .then((result) => result.map((r) => r.traceId))
 
   // Get total tokens and per-model stats from all provider logs
@@ -156,7 +120,7 @@ export async function computeProjectStats(
       db
         .selectDistinct({ documentUuid: spans.documentUuid })
         .from(spans)
-        .where(inArray(spans.commitUuid, commitUuids))
+        .where(eq(spans.projectId, projectId))
         .as('unique_docs'),
     )
     .then((result) => result[0]?.count ?? 0)
@@ -170,7 +134,7 @@ export async function computeProjectStats(
     .from(spans)
     .where(
       and(
-        inArray(spans.commitUuid, activeCommitUuids),
+        eq(spans.projectId, projectId),
         eq(spans.type, SpanType.Prompt),
         sql`${spans.createdAt} >= NOW() - INTERVAL '30 days'`,
       ),
