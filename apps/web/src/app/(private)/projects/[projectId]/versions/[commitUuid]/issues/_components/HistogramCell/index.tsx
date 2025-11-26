@@ -138,7 +138,7 @@ function MiniHistogramBar({
               }
             >
               {!isPlaceholder && (
-                <div className='flex flex-col w-3'>
+                <div className='flex flex-col'>
                   <div className='flex justify-between'>
                     <Text.H6M color={color}>Issues</Text.H6M>
                     <Text.H6M color={color}>{item.count}</Text.H6M>
