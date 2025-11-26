@@ -106,36 +106,6 @@ export async function generateEvaluationFromIssueWithCopilot(
 
   //TODO (evaluation-generation): We can add a progress caption here as well if things are getting long and we want to know what is really happening.
 
-  const spansResult = await getSpansByIssue({
-    workspace: workspace,
-    commit: commit,
-    issue: issue,
-    page: 1,
-    pageSize: 4,
-  })
-
-  if (!Result.isOk(spansResult)) {
-    return spansResult
-  }
-
-  const spans = spansResult.unwrap()
-
-  const evaluationResultsRepository = new EvaluationResultsV2Repository(
-    workspace.id,
-  )
-  const evaluationResultsResult = await evaluationResultsRepository.listBySpans(
-    spans.spans,
-  )
-
-  if (!Result.isOk(evaluationResultsResult)) {
-    return evaluationResultsResult
-  }
-
-  const evaluationResults = evaluationResultsResult.unwrap()
-
-  console.log('evaluationResults', evaluationResults)
-  console.log('spans', spans)
-
   const evaluationConfigResult = await generateEvaluationConfigForIssue({
     copilot: copilot,
     issue: issue,
