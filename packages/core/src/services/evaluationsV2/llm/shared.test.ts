@@ -314,4 +314,21 @@ describe('runPrompt', () => {
     expect(chain.rawText.includes('structuredOutputs: true')).toBe(true)
     expect(chain.rawText.includes('strictJsonSchema: true')).toBe(true)
   })
+
+  it('passes source as LogSources.Evaluation to runChain', async () => {
+    await runPrompt({
+      prompt: prompt,
+      parameters: parameters,
+      schema: promptSchema,
+      resultUuid: 'resultUuid',
+      evaluation: evaluation,
+      providers: new Map([[provider.name, provider]]),
+      commit: commit,
+      workspace: workspace,
+    })
+
+    expect(mocks.runChain).toHaveBeenCalledOnce()
+    const runChainArgs = mocks.runChain.mock.calls[0][0]
+    expect(runChainArgs.source).toBe(LogSources.Evaluation)
+  })
 })

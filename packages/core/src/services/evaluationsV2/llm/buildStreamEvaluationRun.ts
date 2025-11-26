@@ -1,4 +1,4 @@
-import { ChainEvent } from '@latitude-data/constants'
+import { ChainEvent, LogSources } from '@latitude-data/constants'
 import { z } from 'zod'
 import {
   EvaluationType,
@@ -100,6 +100,7 @@ export async function buildStreamEvaluationRun({
     promptUuid: evaluation.uuid,
     template: evaluation.configuration.prompt,
     parameters: parameters,
+    source: LogSources.Evaluation,
   })
   const { stream } = runChain({ context: $prompt.context, ...runArgs })
   const streamHandler = buildStreamHandler(stream, $prompt)
