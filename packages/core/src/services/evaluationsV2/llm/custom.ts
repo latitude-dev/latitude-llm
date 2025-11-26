@@ -6,7 +6,6 @@ import {
   EvaluationType,
   LlmEvaluationCustomResultMetadata,
   LlmEvaluationMetric,
-  SpanType,
   LlmEvaluationCustomSpecification as specification,
 } from '../../../constants'
 import { BadRequestError } from '../../../lib/errors'
@@ -18,7 +17,7 @@ import {
 } from '../shared'
 import { buildEvaluationParameters, runPrompt } from './shared'
 import { assembleTrace } from '../../tracing/traces/assemble'
-import { findFirstSpanOfType } from '../../tracing/spans/findFirstSpanOfType'
+import { findCompletionSpanFromTrace } from '../../tracing/spans/findCompletionSpanFromTrace'
 
 export const LlmEvaluationCustomSpecification = {
   ...specification,
@@ -212,10 +211,7 @@ async function run(
     db,
   ).then((r) => r.value)
   if (assembledtrace) {
-    completionSpan = findFirstSpanOfType(
-      assembledtrace.trace.children,
-      SpanType.Completion,
-    )
+    completionSpan = findCompletionSpanFromTrace(assembledtrace.trace)
   }
 
   let result

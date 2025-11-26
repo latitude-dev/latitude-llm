@@ -6,7 +6,6 @@ import {
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationMetric,
   LlmEvaluationRatingResultMetadata,
-  SpanType,
   LlmEvaluationRatingSpecification as specification,
 } from '../../../constants'
 import { BadRequestError } from '../../../lib/errors'
@@ -20,7 +19,7 @@ import {
 } from '../shared'
 import { buildEvaluationParameters, promptTask, runPrompt } from './shared'
 import { assembleTrace } from '../../tracing/traces/assemble'
-import { findFirstSpanOfType } from '../../tracing/spans/findFirstSpanOfType'
+import { findCompletionSpanFromTrace } from '../../tracing/spans/findCompletionSpanFromTrace'
 
 export const LlmEvaluationRatingSpecification = {
   ...specification,
@@ -224,10 +223,7 @@ async function run(
     db,
   ).then((r) => r.value)
   if (assembledtrace) {
-    completionSpan = findFirstSpanOfType(
-      assembledtrace.trace.children,
-      SpanType.Completion,
-    )
+    completionSpan = findCompletionSpanFromTrace(assembledtrace.trace)
   }
 
   const promptSchema = z.object({

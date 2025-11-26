@@ -14,6 +14,7 @@ import { useConversation } from '$/stores/conversations'
 import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
 import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { findCompletionSpanFromTrace } from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
 
 /**
  * `selectedDocumentLogUuid` is the log that comes from
@@ -50,10 +51,7 @@ export function useLogHistoryParams({
     trace?.children ?? [],
     SpanType.Prompt,
   )
-  const urlCompletionSpan = findFirstSpanOfType(
-    trace?.children ?? [],
-    SpanType.Completion,
-  )
+  const urlCompletionSpan = findCompletionSpanFromTrace(trace)
 
   const {
     items: spans,
@@ -92,10 +90,7 @@ export function useLogHistoryParams({
     if (urlPromptSpan || urlCompletionSpan) return
     if (!promptSpan || !promptSpan.metadata) return
 
-    const completionSpan = findFirstSpanOfType(
-      promptSpan.children ?? [],
-      SpanType.Completion,
-    )
+    const completionSpan = findCompletionSpanFromTrace(selectedTrace)
     if (!completionSpan || !completionSpan.metadata) return
 
     mapLogParametersToInputs({
