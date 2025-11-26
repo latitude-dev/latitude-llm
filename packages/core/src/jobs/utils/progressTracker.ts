@@ -133,6 +133,13 @@ export class ProgressTracker {
     }
   }
 
+  async disconnect() {
+    if (this.redis) {
+      await this.redis.quit()
+      this.redis = null
+    }
+  }
+
   async cleanup() {
     if (this.redis) {
       // Delete all keys associated with this batch

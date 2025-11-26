@@ -22,6 +22,10 @@ export async function updateExperimentStatus(
     const progress = await progressTracker.getProgress()
 
     if (progress.completed >= progress.total) {
+      await progressTracker.cleanup().catch(() => {
+        // Silently ignore cleanup errors to not mask the original error
+      })
+
       const completeResult = await completeExperiment(experiment)
       if (!Result.isOk(completeResult)) {
         return completeResult as ErrorResult<LatitudeError>
@@ -43,7 +47,7 @@ export async function updateExperimentStatus(
     return Result.nil()
   } finally {
     // CRITICAL: Always cleanup Redis connection to prevent memory leaks
-    await progressTracker.cleanup().catch(() => {
+    await progressTracker.disconnect().catch(() => {
       // Silently ignore cleanup errors to not mask the original error
     })
   }
@@ -80,7 +84,7 @@ export async function initializeExperimentStatus({
     return Result.nil()
   } finally {
     // CRITICAL: Always cleanup Redis connection to prevent memory leaks
-    await progressTracker.cleanup().catch(() => {
+    await progressTracker.disconnect().catch(() => {
       // Silently ignore cleanup errors to not mask the original error
     })
   }
