@@ -412,10 +412,32 @@ async function mergeHistograms({
 
     if (histograms.length === 0) return Result.nil()
 
+    // Aggregate histograms by (commitId, date) to avoid duplicate conflict keys
+    const aggregatedHistograms = Array.from(
+      histograms
+        .reduce((map, histogram) => {
+          const key = `${histogram.commitId}:${histogram.date}`
+          const existing = map.get(key)
+          if (existing) {
+            existing.count += histogram.count
+            existing.occurredAt = new Date(
+              Math.max(
+                existing.occurredAt.getTime(),
+                histogram.occurredAt.getTime(),
+              ),
+            )
+          } else {
+            map.set(key, { ...histogram })
+          }
+          return map
+        }, new Map<string, (typeof histograms)[0]>())
+        .values(),
+    )
+
     await tx
       .insert(issueHistograms)
       .values(
-        histograms.map((histogram) => ({
+        aggregatedHistograms.map((histogram) => ({
           workspaceId: winner.workspaceId,
           projectId: winner.projectId,
           documentUuid: winner.documentUuid,

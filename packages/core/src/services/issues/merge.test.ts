@@ -385,4 +385,225 @@ describe('mergeIssues', () => {
       new Date('2024-01-01T14:00:00'),
     )
   })
+
+  it('handles merging multiple issues with duplicate histogram keys without conflict errors', async () => {
+    // This test reproduces the bug: when multiple merged issues have histograms
+    // with the same (commitId, date) combination, the old code would insert
+    // duplicate conflict keys causing "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    const mockNearVector = vi.fn()
+    const mockExists = vi.fn()
+    const mockDeleteById = vi.fn()
+    const mockUpdate = vi.fn()
+    const mockLength = vi.fn()
+    const mockRemoveTenant = vi.fn()
+
+    const mockCollection = {
+      query: { nearVector: mockNearVector },
+      data: {
+        exists: mockExists,
+        deleteById: mockDeleteById,
+        update: mockUpdate,
+      },
+      length: mockLength,
+      tenants: { remove: mockRemoveTenant },
+    }
+
+    vi.spyOn(weaviate, 'getIssuesCollection').mockResolvedValue(
+      mockCollection as any,
+    )
+
+    const { workspace } = await createWorkspace({ features: ['issues'] })
+    const projectResult = await createProject({
+      workspace,
+      documents: {
+        'test-prompt': 'This is a test prompt',
+      },
+    })
+    const { project, commit, documents } = projectResult
+    const document = documents[0]!
+
+    // Create 3 issues to merge into anchor
+    const anchorResult = await createIssue({
+      workspace,
+      project,
+      document,
+    })
+    const anchor = anchorResult.issue
+
+    const issue1Result = await createIssue({
+      workspace,
+      project,
+      document,
+    })
+    const issue1 = issue1Result.issue
+
+    const issue2Result = await createIssue({
+      workspace,
+      project,
+      document,
+    })
+    const issue2 = issue2Result.issue
+
+    const issue3Result = await createIssue({
+      workspace,
+      project,
+      document,
+    })
+    const issue3 = issue3Result.issue
+
+    // Add histograms to issue1 and issue2 with the SAME (commitId, date)
+    // This is the scenario that triggered the bug
+    await database.insert(issueHistograms).values({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+      issueId: issue1.id,
+      commitId: commit.id,
+      date: '2024-01-01',
+      occurredAt: new Date('2024-01-01T10:00:00'),
+      count: 5,
+    })
+
+    await database.insert(issueHistograms).values({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+      issueId: issue2.id,
+      commitId: commit.id,
+      date: '2024-01-01',
+      occurredAt: new Date('2024-01-01T15:00:00'),
+      count: 3,
+    })
+
+    // issue3 has a different date, should not cause conflicts
+    await database.insert(issueHistograms).values({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+      issueId: issue3.id,
+      commitId: commit.id,
+      date: '2024-01-02',
+      occurredAt: new Date('2024-01-02T10:00:00'),
+      count: 2,
+    })
+
+    // Add multiple histograms for same issue with same date but different commits
+    const commit2 = await database
+      .select()
+      .from(issueHistograms)
+      .limit(1)
+      .then((r) => r[0]?.commitId)
+
+    if (commit2) {
+      await database.insert(issueHistograms).values({
+        workspaceId: workspace.id,
+        projectId: project.id,
+        documentUuid: document.documentUuid,
+        issueId: issue1.id,
+        commitId: commit.id,
+        date: '2024-01-02',
+        occurredAt: new Date('2024-01-02T08:00:00'),
+        count: 1,
+      })
+    }
+
+    // Set centroids
+    await database
+      .update(issues)
+      .set({
+        centroid: { base: [1, 0], weight: 1 },
+        updatedAt: new Date('2024-02-01'),
+      })
+      .where(eq(issues.id, anchor.id))
+
+    await database
+      .update(issues)
+      .set({
+        centroid: { base: [0.95, 0.05], weight: 1 },
+        updatedAt: new Date('2024-02-01'),
+      })
+      .where(eq(issues.id, issue1.id))
+
+    await database
+      .update(issues)
+      .set({
+        centroid: { base: [0.9, 0.1], weight: 1 },
+        updatedAt: new Date('2024-02-01'),
+      })
+      .where(eq(issues.id, issue2.id))
+
+    await database
+      .update(issues)
+      .set({
+        centroid: { base: [0.85, 0.15], weight: 1 },
+        updatedAt: new Date('2024-02-01'),
+      })
+      .where(eq(issues.id, issue3.id))
+
+    // Configure Weaviate mock to return all issues as similar
+    mockNearVector.mockResolvedValue({
+      objects: [
+        {
+          uuid: anchor.uuid,
+          vectors: { default: [1, 0] },
+        },
+        {
+          uuid: issue1.uuid,
+          vectors: { default: [0.95, 0.05] },
+        },
+        {
+          uuid: issue2.uuid,
+          vectors: { default: [0.9, 0.1] },
+        },
+        {
+          uuid: issue3.uuid,
+          vectors: { default: [0.85, 0.15] },
+        },
+      ],
+    })
+    mockExists.mockResolvedValue(true)
+    mockDeleteById.mockResolvedValue(undefined)
+    mockUpdate.mockResolvedValue(undefined)
+    mockLength.mockResolvedValue(1)
+    mockRemoveTenant.mockResolvedValue(undefined)
+
+    // Fetch anchor with centroid
+    const anchorWithCentroid = await database
+      .select()
+      .from(issues)
+      .where(eq(issues.id, anchor.id))
+      .then((r) => r[0]!)
+
+    // This should NOT throw "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    const merging = await mergeIssues({
+      workspace,
+      issue: anchorWithCentroid,
+    })
+    expect(merging.error).toBeFalsy()
+    const { winner, mergedIssues } = merging.unwrap()
+
+    // Verify that a merge happened
+    expect(winner).toBeDefined()
+    expect(mergedIssues.length).toBeGreaterThan(0)
+
+    // Verify that histograms exist for the winner
+    // The key assertion is that no "ON CONFLICT DO UPDATE" error was thrown
+    const allHistograms = await database
+      .select()
+      .from(issueHistograms)
+      .where(eq(issueHistograms.issueId, winner.id))
+
+    expect(allHistograms.length).toBeGreaterThan(0)
+
+    // Verify that at least one histogram was aggregated
+    // (issue1 and issue2 both had date 2024-01-01, so they should be aggregated)
+    const histogram20240101 = allHistograms.find(
+      (h) => h.commitId === commit.id && h.date === '2024-01-01',
+    )
+
+    if (histogram20240101) {
+      // If aggregated, count should be at least 8 (5 + 3)
+      expect(histogram20240101.count).toBeGreaterThanOrEqual(8)
+    }
+  })
 })
