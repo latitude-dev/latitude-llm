@@ -2,7 +2,6 @@ import { Commit } from '../../schema/models/types/Commit'
 import { Workspace } from '../../schema/models/types/Workspace'
 import {
   DocumentVersionsRepository,
-  EvaluationResultsV2Repository,
   EvaluationsV2Repository,
 } from '../../repositories'
 import { Result } from '../../lib/Result'
@@ -22,7 +21,6 @@ import { createEvaluationV2 } from './create'
 import { assertCopilotIsSupported } from '../copilot/assertItsSupported'
 import z from 'zod'
 import { BadRequestError } from '../../lib/errors'
-import { getSpansByIssue } from '../../data-access/issues/getSpansByIssue'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration
