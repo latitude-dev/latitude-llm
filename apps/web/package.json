@@ -71,7 +71,7 @@
     "oslo": "1.2.0",
     "pdfjs-dist": "4.9.155",
     "pg": "catalog:",
-    "posthog-js": "1.252.1",
+    "posthog-js": "1.298.0",
     "promptl-ai": "catalog:",
     "rate-limiter-flexible": "5.0.3",
     "react": "catalog:",
