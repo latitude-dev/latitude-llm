@@ -291,8 +291,8 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
             <Text.H6 color='foregroundMuted'>
               {issueEvaluationStats?.negativeAnnotationsOfThisIssue! <
               MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE
-                ? `You need ${MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE - issueEvaluationStats?.negativeAnnotationsOfThisIssue!} more negative annotations for this issue`
-                : `You need ${MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES - issueEvaluationStats?.positiveAndNegativeAnnotationsOfOtherIssues!} more positive annotations`}
+                ? `You need ${MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE - issueEvaluationStats?.negativeAnnotationsOfThisIssue!} more negative annotations for this issue to generate an evaluation`
+                : `You need ${MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES - issueEvaluationStats?.positiveAndNegativeAnnotationsOfOtherIssues!} more positive annotations to generate an evaluation`}
             </Text.H6>
           </div>
         </div>
