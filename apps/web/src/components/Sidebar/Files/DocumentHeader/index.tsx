@@ -1,8 +1,11 @@
 import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
-import { ROUTES } from '$/services/routes'
+import { DocumentRoutes, ROUTES } from '$/services/routes'
+import { DocumentType } from '@latitude-data/core/constants'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { type ParamValue } from 'next/dist/server/request/params'
+import { usePathname } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper, {
@@ -11,9 +14,23 @@ import NodeHeaderWrapper, {
 } from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
-import { DocumentType } from '@latitude-data/core/constants'
 
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+/**
+ * Detects the current document page type from the pathname.
+ * The URL structure is: /projects/[id]/versions/[uuid]/documents/[uuid]/[pageType]
+ * Where pageType can be: evaluations, experiments, traces, logs, or nothing (editor)
+ */
+function getDocumentPageType(pathname: string): DocumentRoutes | null {
+  // Match the segment after /documents/[uuid]/
+  const match = pathname.match(/\/documents\/[^/]+\/([^/]+)/)
+  if (!match) return null
+
+  const segment = match[1]
+  if (Object.values(DocumentRoutes).includes(segment as DocumentRoutes)) {
+    return segment as DocumentRoutes
+  }
+  return null
+}
 export default function DocumentHeader({
   open,
   selected,
@@ -67,6 +84,11 @@ export default function DocumentHeader({
     [setMainDocumentUuid, node.doc],
   )
   const documentUuid = node.doc!.documentUuid
+  const pathname = usePathname()
+  const currentPageType = useMemo(
+    () => getDocumentPageType(pathname),
+    [pathname],
+  )
   const url = useMemo(() => {
     if (!documentUuid) return undefined
     if (!node.isPersisted) return undefined
@@ -78,16 +100,32 @@ export default function DocumentHeader({
       return undefined
     }
 
-    return ROUTES.projects
+    const documentDetails = ROUTES.projects
       .detail({ id: sidebarLinkContext.projectId })
       .commits.detail({ uuid: sidebarLinkContext.commitUuid })
-      .documents.detail({ uuid: documentUuid }).root
+      .documents.detail({ uuid: documentUuid })
+
+    // Preserve the current page type when navigating to another document
+    // But always go to the list page, not specific items (evaluationUuid, etc.)
+    switch (currentPageType) {
+      case DocumentRoutes.evaluations:
+        return documentDetails.evaluations.root
+      case DocumentRoutes.experiments:
+        return documentDetails.experiments.root
+      case DocumentRoutes.traces:
+        return documentDetails.traces.root
+      case DocumentRoutes.logs:
+        return documentDetails.logs.root
+      default:
+        return documentDetails.root
+    }
   }, [
     documentUuid,
     selected,
     node.isPersisted,
     sidebarLinkContext,
     currentEvaluationUuid,
+    currentPageType,
   ])
   const [isEditing, setIsEditing] = useState(node.name === ' ')
   const actions = useMemo<MenuOption[]>(
