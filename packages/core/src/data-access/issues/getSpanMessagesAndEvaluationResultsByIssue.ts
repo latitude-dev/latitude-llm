@@ -44,7 +44,7 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
     workspace.id,
   )
   const evaluationResultsResult =
-    await evaluationResultsRepository.listByIssueId(issue.id)
+    await evaluationResultsRepository.listByIssueIds([issue.id])
 
   const messagesAndEvaluationResults: SpanMessagesWithEvalResultReason[] = []
   for (const span of spans.spans) {

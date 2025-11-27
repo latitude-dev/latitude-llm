@@ -50,24 +50,20 @@ export async function getEvaluationResultsToGenerateEvaluationForIssue({
   })
 
   const negativeAnnotationsOfThisIssue =
-    evaluationResults.failedEvaluationResultsByIssueId[issueId].filter(
-      (r) => r.hasPassed === false,
+    evaluationResults.failedEvaluationResultsByIssueId.filter(
+      (r) => r.joinedIssueId === issueId,
     ).length
 
-  let negativeAnnotationsOfOtherIssues = 0
-  for (const otherIssueId in evaluationResults.failedEvaluationResultsByIssueId) {
-    if (Number(otherIssueId) === issueId) continue
-    negativeAnnotationsOfOtherIssues +=
-      evaluationResults.failedEvaluationResultsByIssueId[otherIssueId].length
-  }
-
-  const positiveAndNegativeAnnotationsOfOtherIssues =
-    negativeAnnotationsOfOtherIssues +
-    evaluationResults.passedEvaluationResults.length
+  const negativeAnnotationsOfOtherIssues =
+    evaluationResults.failedEvaluationResultsByIssueId.filter(
+      (r) => r.joinedIssueId !== issueId,
+    ).length
 
   return {
     negativeAnnotationsOfThisIssue,
-    positiveAndNegativeAnnotationsOfOtherIssues,
+    positiveAndNegativeAnnotationsOfOtherIssues:
+      negativeAnnotationsOfOtherIssues +
+      evaluationResults.passedEvaluationResults.length,
   }
 }
 
@@ -106,7 +102,7 @@ const getEvaluationResultsFromIssues = async ({
     .then((r) => r.unwrap())
 
   const failedEvaluationResultsByIssueId =
-    await resultsRepository.listByIssueIdsGrouped([
+    await resultsRepository.listByIssueIds([
       issueId,
       ...issuesFromSameDocument.issues.map((i) => i.id),
     ])
