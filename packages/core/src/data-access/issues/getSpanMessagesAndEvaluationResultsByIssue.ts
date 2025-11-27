@@ -48,9 +48,6 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
 
   const messagesAndEvaluationResults: SpanMessagesWithEvalResultReason[] = []
   for (const span of spans.spans) {
-    if (span.type !== SpanType.Prompt) {
-      continue
-    }
     const messagesResult = await getMessagesFromSpan({
       workspaceId: workspace.id,
       span: span as Span<SpanType.Prompt>,

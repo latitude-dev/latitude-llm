@@ -531,41 +531,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       )
 
     return results as (EvaluationResultV2 & { joinedIssueId: number })[]
-
-    //   if (!resultsById.has(resultId)) {
-    //     resultsById.set(resultId, [])
-    //   }
-    //   resultsById.get(resultId)!.push({ result, joinedIssueId })
-    // }
-
-    // const grouped: Record<number, EvaluationResultV2[]> = {}
-    // for (const [, resultInstances] of resultsById.entries()) {
-    //   let result: EvaluationResultV2
-    //   let issueId: number
-
-    //   if (resultInstances.length === 1) {
-    //     result = resultInstances[0]!.result
-    //     issueId = resultInstances[0]!.joinedIssueId!
-    //   } else {
-    //     const firstResult = resultInstances[0]!.result
-    //     const activeAssignment =
-    //       await issueEvalResultsRepo.findLastActiveAssignedIssue({
-    //         result: firstResult,
-    //       })
-
-    //     issueId =
-    //       activeAssignment?.issueId ?? resultInstances[0]!.joinedIssueId ?? null
-
-    //     const activeInstance =
-    //       resultInstances.find((r) => r.joinedIssueId === issueId) ??
-    //       resultInstances[0]!
-
-    //     result = activeInstance.result
-    //   }
-
-    //   grouped[issueId] = [...(grouped[issueId] ?? []), result]
-    // }
-    // return grouped
   }
 
   async listByDocumentLogs({
