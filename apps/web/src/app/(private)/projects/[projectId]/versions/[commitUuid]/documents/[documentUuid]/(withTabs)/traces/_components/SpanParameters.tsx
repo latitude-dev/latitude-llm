@@ -116,6 +116,7 @@ function UseSpanInEditorButton({ span }: { span: SpanWithDetails }) {
   }, [
     navigate,
     route,
+    setSource,
     setHistoryLog,
     span.documentLogUuid,
     span.documentUuid,
