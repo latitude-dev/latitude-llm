@@ -12,6 +12,8 @@ import type { SpanWithDetails } from '@latitude-data/constants'
 import { SpanType } from '@latitude-data/constants'
 
 import { getEvaluationResultsToGenerateEvaluationForIssue } from './getEvaluationResultsToGenerateEvaluation'
+import { evaluationVersions } from '../../schema/models/evaluationVersions'
+import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
 
 type TestSetup = {
   workspace: Workspace
@@ -114,6 +116,12 @@ async function createEvaluationResultWithIssue({
     commitUuid: setup.commit.uuid,
     apiKeyId: setup.apiKeys[0]?.id,
   })
+  if (issueId !== null) {
+    await database
+      .update(evaluationVersions)
+      .set({ issueId })
+      .where(eq(evaluationVersions.evaluationUuid, setup.evaluation.uuid))
+  }
   const result = await factories.createEvaluationResultV2({
     workspace: setup.workspace,
     evaluation: setup.evaluation,
@@ -122,10 +130,12 @@ async function createEvaluationResultWithIssue({
     hasPassed,
   })
   if (issueId !== null && !hasPassed) {
-    await database
-      .update(evaluationResultsV2)
-      .set({ issueId })
-      .where(eq(evaluationResultsV2.id, result.id))
+    // Cant wait for the job to run, so we insert the issue evaluation result directly
+    await database.insert(issueEvaluationResults).values({
+      workspaceId: setup.workspace.id,
+      issueId,
+      evaluationResultId: result.id,
+    })
   }
   return result
 }

@@ -18,7 +18,6 @@ import {
   isNotNull,
   isNull,
   lte,
-  or,
   sql,
 } from 'drizzle-orm'
 import {
@@ -500,12 +499,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok(results)
   }
 
-  async listByIssueIds(issueIds: number[]) {
-    issueIds = [...new Set(issueIds)].filter(Boolean)
-    if (!issueIds.length) {
-      return []
-    }
-
+  async listByIssueId(issueId: number) {
     const results = await this.db
       .select({
         ...tt,
@@ -521,10 +515,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         and(
           this.scopeFilter,
           isNull(commits.deletedAt),
-          or(
-            inArray(issueEvaluationResults.issueId, issueIds),
-            isNull(issueEvaluationResults.issueId),
-          ),
+          eq(issueEvaluationResults.issueId, issueId),
         ),
       )
       .orderBy(
@@ -532,6 +523,94 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         desc(evaluationResultsV2.id),
       )
     return results as EvaluationResultV2[]
+  }
+
+  async listByIssueIdsGrouped(
+    issueIds: number[],
+  ): Promise<Record<number, EvaluationResultV2[]>> {
+    const uniqueIssueIds = [...new Set(issueIds)].filter(Boolean)
+    if (!uniqueIssueIds.length) {
+      return {}
+    }
+
+    const issueEvalResultsRepo = new IssueEvaluationResultsRepository(
+      this.workspaceId,
+      this.db,
+    )
+
+    const results = await this.db
+      .select({
+        ...tt,
+        commitUuid: commits.uuid,
+        joinedIssueId: issueEvaluationResults.issueId,
+      })
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .innerJoin(
+        issueEvaluationResults,
+        eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+      )
+      .where(
+        and(
+          this.scopeFilter,
+          isNull(commits.deletedAt),
+          inArray(issueEvaluationResults.issueId, uniqueIssueIds),
+        ),
+      )
+      .orderBy(
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+      )
+
+    // Check for duplicate evaluation results (same result.id appearing multiple times)
+    const resultsById = new Map<
+      number,
+      Array<{ result: EvaluationResultV2; joinedIssueId: number | null }>
+    >()
+    for (const row of results) {
+      const result = row as Omit<
+        typeof row,
+        'joinedIssueId'
+      > as EvaluationResultV2
+      const resultId = result.id
+      const joinedIssueId = (row as { joinedIssueId: number | null })
+        .joinedIssueId
+
+      if (!resultsById.has(resultId)) {
+        resultsById.set(resultId, [])
+      }
+      resultsById.get(resultId)!.push({ result, joinedIssueId })
+    }
+
+    const grouped: Record<number, EvaluationResultV2[]> = {}
+    for (const [, resultInstances] of resultsById.entries()) {
+      let result: EvaluationResultV2
+      let issueId: number
+
+      if (resultInstances.length === 1) {
+        result = resultInstances[0]!.result
+        issueId = resultInstances[0]!.joinedIssueId!
+      } else {
+        const firstResult = resultInstances[0]!.result
+        const activeAssignment =
+          await issueEvalResultsRepo.findLastActiveAssignedIssue({
+            result: firstResult,
+          })
+
+        issueId =
+          activeAssignment?.issueId ?? resultInstances[0]!.joinedIssueId ?? null
+
+        const activeInstance =
+          resultInstances.find((r) => r.joinedIssueId === issueId) ??
+          resultInstances[0]!
+
+        result = activeInstance.result
+      }
+
+      grouped[issueId] = [...(grouped[issueId] ?? []), result]
+    }
+
+    return grouped
   }
 
   async listByDocumentLogs({
