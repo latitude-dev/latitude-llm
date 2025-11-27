@@ -21,6 +21,10 @@ import { createEvaluationV2 } from './create'
 import { assertCopilotIsSupported } from '../copilot/assertItsSupported'
 import z from 'zod'
 import { BadRequestError } from '../../lib/errors'
+import {
+  getSpanMessagesAndEvaluationResultsByIssue,
+  type SpanMessagesWithEvalResultReason,
+} from '../../data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration
@@ -103,6 +107,24 @@ export async function generateEvaluationFromIssueWithCopilot(
   const existingEvaluationNames = existingEvaluations.map((e) => e.name)
 
   //TODO (evaluation-generation): We can add a progress caption here as well if things are getting long and we want to know what is really happening.
+  //TODO (evaluation-generation): We can find some passed results to give to the copilot to make it more accurate, but we would have to potentially summarize the messages to avoid many tokens
+  const messagesAndEvaluationResultsResult =
+    await getSpanMessagesAndEvaluationResultsByIssue({
+      workspace: workspace,
+      commit: commit,
+      issue: issue,
+    })
+
+  if (!Result.isOk(messagesAndEvaluationResultsResult)) {
+    return messagesAndEvaluationResultsResult
+  }
+  const messagesAndEvaluationResults =
+    messagesAndEvaluationResultsResult.unwrap()
+
+  console.log(
+    'messagesAndEvaluationResults',
+    JSON.stringify(messagesAndEvaluationResults, null, 2),
+  )
 
   const evaluationConfigResult = await generateEvaluationConfigForIssue({
     copilot: copilot,
@@ -111,6 +133,7 @@ export async function generateEvaluationFromIssueWithCopilot(
     providerName: providerName,
     model: model,
     existingEvaluationNames: existingEvaluationNames,
+    messagesAndEvaluationResults: messagesAndEvaluationResults,
   })
 
   if (!Result.isOk(evaluationConfigResult)) {
@@ -149,6 +172,7 @@ async function generateEvaluationConfigForIssue({
   providerName,
   model,
   existingEvaluationNames,
+  messagesAndEvaluationResults,
 }: {
   copilot: Copilot
   issue: Issue
@@ -156,6 +180,7 @@ async function generateEvaluationConfigForIssue({
   providerName: string
   model: string
   existingEvaluationNames: string[]
+  messagesAndEvaluationResults: SpanMessagesWithEvalResultReason[]
 }) {
   //TODO(evaluation-generation): Add validation loop here
   const evaluationConfigResult = await runCopilot({
@@ -165,6 +190,7 @@ async function generateEvaluationConfigForIssue({
       issueDescription: issue.description,
       prompt: document.content,
       existingEvaluationNames: existingEvaluationNames,
+      messagesWithReasonWhyItFailed: messagesAndEvaluationResults,
     },
     schema: llmEvaluationBinarySpecificationWithoutModel,
   })

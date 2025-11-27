@@ -18,6 +18,7 @@ import {
   isNotNull,
   isNull,
   lte,
+  or,
   sql,
 } from 'drizzle-orm'
 import {
@@ -512,11 +513,18 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       })
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .innerJoin(
+        issueEvaluationResults,
+        eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+      )
       .where(
         and(
           this.scopeFilter,
           isNull(commits.deletedAt),
-          inArray(evaluationResultsV2.issueId, issueIds),
+          or(
+            inArray(issueEvaluationResults.issueId, issueIds),
+            isNull(issueEvaluationResults.issueId),
+          ),
         ),
       )
       .orderBy(
