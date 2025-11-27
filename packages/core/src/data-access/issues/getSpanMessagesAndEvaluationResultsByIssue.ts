@@ -2,11 +2,16 @@ import { Commit } from '../../schema/models/types/Commit'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { EvaluationResultsV2Repository } from '../../repositories'
 import { Result } from '../../lib/Result'
-import { EvaluationResultV2, Span, SpanType } from '../../constants'
+import { EvaluationResultV2 } from '../../constants'
 import { Issue } from '../../schema/models/types/Issue'
 import { getSpansByIssue } from '../../data-access/issues/getSpansByIssue'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { getMessagesFromSpan } from '../../services/tracing/spans/getMessages'
+import { assembleTrace } from '../../services/tracing/traces/assemble'
+import {
+  adaptCompletionSpanMessagesToLegacy,
+  findCompletionSpanFromTrace,
+} from '../../services/tracing/spans/findCompletionSpanFromTrace'
+import { UnprocessableEntityError } from '../../lib/errors'
 
 export type SpanMessagesWithEvalResultReason = {
   messages: LegacyMessage[]
@@ -48,12 +53,20 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
 
   const messagesAndEvaluationResults: SpanMessagesWithEvalResultReason[] = []
   for (const span of spans.spans) {
-    const messagesResult = await getMessagesFromSpan({
-      workspaceId: workspace.id,
-      span: span as Span<SpanType.Prompt>,
+    const assembledTrace = await assembleTrace({
+      traceId: span.traceId,
+      workspace: workspace,
     })
-    if (!Result.isOk(messagesResult)) {
-      continue
+    if (!Result.isOk(assembledTrace)) {
+      return assembledTrace
+    }
+    const completionSpan = findCompletionSpanFromTrace(
+      assembledTrace.value.trace,
+    )
+    if (!completionSpan) {
+      return Result.error(
+        new UnprocessableEntityError('Could not find completion span'),
+      )
     }
 
     // There will always be exactly one evaluation result for a span and trace id
@@ -64,7 +77,7 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
     )[0]
 
     messagesAndEvaluationResults.push({
-      messages: messagesResult.value,
+      messages: adaptCompletionSpanMessagesToLegacy(completionSpan),
       reason: getReasonFromEvaluationResult(evaluationResults),
     })
   }
