@@ -10,6 +10,7 @@ import { Result } from '../../lib/Result'
 import {
   DocumentLogsRepository,
   ProviderLogsRepository,
+  SpansRepository,
 } from '../../repositories'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
@@ -84,14 +85,46 @@ export async function serializeEvaluationResult<
       result as EvaluationResultSuccessValue<T, M>,
     ) || 'No reason reported'
 
-  const providerLogsRepository = new ProviderLogsRepository(workspace.id, db)
-  const providerLog = await providerLogsRepository
-    .find(result.evaluatedLogId)
-    .then((r) => r.unwrap())
+  let documentLogUuid: string
+  if (result.evaluatedSpanId && result.evaluatedTraceId) {
+    const spansRepository = new SpansRepository(workspace.id, db)
+    const span = await spansRepository
+      .get({
+        spanId: result.evaluatedSpanId,
+        traceId: result.evaluatedTraceId,
+      })
+      .then((r) => r.unwrap())
+
+    if (!span) {
+      return Result.error(
+        new Error(`Span not found for spanId and traceId combination`),
+      )
+    }
+
+    if (!span.documentLogUuid) {
+      return Result.error(new Error(`Span missing documentLogUuid`))
+    }
+
+    documentLogUuid = span.documentLogUuid
+  } else if (result.evaluatedLogId) {
+    // Fallback to legacy providerLog approach for backward compatibility
+    const providerLogsRepository = new ProviderLogsRepository(workspace.id, db)
+    const providerLog = await providerLogsRepository
+      .find(result.evaluatedLogId)
+      .then((r) => r.unwrap())
+
+    documentLogUuid = providerLog.documentLogUuid!
+  } else {
+    return Result.error(
+      new Error(
+        'Evaluation result missing both span references and evaluatedLogId',
+      ),
+    )
+  }
 
   const documentLogsRepository = new DocumentLogsRepository(workspace.id, db)
   const documentLog = await documentLogsRepository
-    .findByUuid(providerLog.documentLogUuid!)
+    .findByUuid(documentLogUuid)
     .then((r) => r.unwrap())
 
   const evaluatedLog = await serializeDocumentLog(
