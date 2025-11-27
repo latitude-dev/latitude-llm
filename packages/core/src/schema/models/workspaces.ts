@@ -2,6 +2,7 @@ import {
   AnyPgColumn,
   bigint,
   bigserial,
+  boolean,
   text,
   uuid,
   varchar,
@@ -28,5 +29,6 @@ export const workspaces = latitudeSchema.table('workspaces', {
   }).references((): AnyPgColumn => providerApiKeys.id, {
     onDelete: 'set null',
   }),
+  issuesUnlocked: boolean('issues_unlocked').notNull().default(false),
   ...timestamps(),
 })

@@ -15,6 +15,7 @@ import { DashboardHeader } from '$/app/(admin)/backoffice/search/_components/Das
 import { DataTable } from '$/app/(admin)/backoffice/search/_components/DataTable'
 import { ClearCacheButton } from '../ClearCacheButton'
 import { ChangePlanButton } from '../ChangePlanButton'
+import { ToggleIssuesUnlockedButton } from '../ToggleIssuesUnlockedButton'
 
 type Props = {
   workspace: WorkspaceWithDetails
@@ -79,12 +80,18 @@ export function WorkspaceDashboard({ workspace }: Props) {
 
         <BasicInfoList items={basicInfo} title='Workspace Information' />
 
-        <div className='flex justify-end gap-2'>
-          <ChangePlanButton
+        <div className='flex justify-between gap-2'>
+          <ToggleIssuesUnlockedButton
             workspaceId={workspace.id}
-            currentPlan={workspace.subscription.plan}
+            issuesUnlocked={workspace.issuesUnlocked}
           />
-          <ClearCacheButton workspaceId={workspace.id} />
+          <div className='flex gap-2'>
+            <ChangePlanButton
+              workspaceId={workspace.id}
+              currentPlan={workspace.subscription.plan}
+            />
+            <ClearCacheButton workspaceId={workspace.id} />
+          </div>
         </div>
 
         <DataTable
