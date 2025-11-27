@@ -7,7 +7,6 @@ import {
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Project } from '../../schema/models/types/Project'
 import { Commit } from '../../schema/models/types/Commit'
-import { EvaluationResultV2 } from '@latitude-data/constants'
 
 /*
 To be able to generate an evaluation, we need enough annotations to do a minimally good MCC (Matthews Correlation Coefficient) %.
@@ -50,18 +49,21 @@ export async function getEvaluationResultsToGenerateEvaluationForIssue({
     resultsRepository,
   })
 
-  // These are from the same document as the issue we're checking (IMPORTANT)
-  const positiveAndNegativeAnnotationsOfOtherIssues = evaluationResults.filter(
-    (r) => r.issueId !== issueId,
-  ).length
+  const negativeAnnotationsOfThisIssue =
+    evaluationResults.failedEvaluationResultsByIssueId.filter(
+      (r) => r.joinedIssueId === issueId,
+    ).length
 
-  const negativeAnnotationsOfThisIssue = evaluationResults.filter(
-    (r) => r.issueId === issueId && r.hasPassed === false,
-  ).length
+  const negativeAnnotationsOfOtherIssues =
+    evaluationResults.failedEvaluationResultsByIssueId.filter(
+      (r) => r.joinedIssueId !== issueId,
+    ).length
 
   return {
     negativeAnnotationsOfThisIssue,
-    positiveAndNegativeAnnotationsOfOtherIssues,
+    positiveAndNegativeAnnotationsOfOtherIssues:
+      negativeAnnotationsOfOtherIssues +
+      evaluationResults.passedEvaluationResults.length,
   }
 }
 
@@ -79,7 +81,7 @@ const getEvaluationResultsFromIssues = async ({
   documentUuid: string
   issueId: number
   resultsRepository: EvaluationResultsV2Repository
-}): Promise<EvaluationResultV2[]> => {
+}) => {
   // We need to get also the positive or other negative annotations of other issues of the same document
   // As the minimum number of positive/other issue annotations is 5, we need to get at least 5 other issues to calculate the MCC of the generated evaluation (6 just in case one of the 5 is the same as the issue we're checking)
   const issuesRepo = new IssuesRepository(workspace.id)
@@ -99,13 +101,17 @@ const getEvaluationResultsFromIssues = async ({
     })
     .then((r) => r.unwrap())
 
-  const evaluationResults = await resultsRepository.listByIssueIds([
-    issueId,
-    ...issuesFromSameDocument.issues.map((i) => i.id),
-  ])
+  const failedEvaluationResultsByIssueId =
+    await resultsRepository.listByIssueIds([
+      issueId,
+      ...issuesFromSameDocument.issues.map((i) => i.id),
+    ])
 
   const passedEvaluationResults =
     await resultsRepository.listPassedByDocumentUuid(documentUuid)
 
-  return [...evaluationResults, ...passedEvaluationResults]
+  return {
+    passedEvaluationResults,
+    failedEvaluationResultsByIssueId,
+  }
 }

@@ -23,6 +23,8 @@ import type { Workspace } from '../../schema/models/types/Workspace'
 import type { Issue } from '../../schema/models/types/Issue'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import type { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import * as getSpanMessagesAndEvaluationResultsByIssue from '../../data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
+import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 
 vi.mock('../copilot/get', () => ({
   getCopilot: vi.fn(),
@@ -40,9 +42,16 @@ vi.mock('../ai/providers/models', () => ({
   findFirstModelForProvider: vi.fn(),
 }))
 
+vi.mock(
+  '../../data-access/issues/getSpanMessagesAndEvaluationResultsByIssue',
+  () => ({
+    getSpanMessagesAndEvaluationResultsByIssue: vi.fn(),
+  }),
+)
+
 const MODEL = 'gpt-4o'
 
-describe('generateEvaluationFromIssueWithCopilot', () => {
+describe('generateFromIssue', () => {
   const mockGetCopilot = vi.mocked(copilotGet.getCopilot)
   const mockRunCopilot = vi.mocked(copilotRun.runCopilot)
   const mockCreateEvaluationV2 = vi.mocked(
@@ -51,12 +60,16 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
   const mockFindFirstModelForProvider = vi.mocked(
     findFirstModelForProviderModule.findFirstModelForProvider,
   )
+  const mockGetSpanMessagesAndEvaluationResultsByIssue = vi.mocked(
+    getSpanMessagesAndEvaluationResultsByIssue.getSpanMessagesAndEvaluationResultsByIssue,
+  )
 
   let workspace: Workspace
   let commit: Commit
   let issue: Issue
   let document: DocumentVersion
   let provider: ProviderApiKey
+  let messages: Message[]
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -134,6 +147,22 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
 
     mockFindFirstModelForProvider.mockReturnValue(MODEL)
 
+    messages = [
+      {
+        role: MessageRole.user,
+        content: [{ type: 'text', text: 'Test question' }],
+      },
+      {
+        role: MessageRole.assistant,
+        content: [{ type: 'text', text: 'Test answer' }],
+        toolCalls: [],
+      },
+    ] as Message[]
+
+    mockGetSpanMessagesAndEvaluationResultsByIssue.mockResolvedValue(
+      Result.ok([{ messages, reason: 'Test reason' }]),
+    )
+
     // Setup default mocks for repositories
     vi.spyOn(
       DocumentVersionsRepository.prototype,
@@ -172,6 +201,7 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
         issueDescription: issue.description,
         prompt: document.content,
         existingEvaluationNames: [],
+        messagesWithReasonWhyItFailed: [{ messages, reason: 'Test reason' }],
       },
       schema: __test__.llmEvaluationBinarySpecificationWithoutModel,
     })
@@ -352,6 +382,7 @@ describe('generateEvaluationFromIssueWithCopilot', () => {
         issueDescription: issue.description,
         existingEvaluationNames: [],
         prompt: document.content,
+        messagesWithReasonWhyItFailed: [{ messages, reason: 'Test reason' }],
       },
       schema: expect.anything(),
     })

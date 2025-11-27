@@ -499,9 +499,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok(results)
   }
 
+  // Be careful using this with merged issues, as there will be multiple evaluation results for the same issue
   async listByIssueIds(issueIds: number[]) {
-    issueIds = [...new Set(issueIds)].filter(Boolean)
-    if (!issueIds.length) {
+    const uniqueIssueIds = [...new Set(issueIds)].filter(Boolean)
+    if (!uniqueIssueIds.length) {
       return []
     }
 
@@ -509,21 +510,27 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .select({
         ...tt,
         commitUuid: commits.uuid,
+        joinedIssueId: issueEvaluationResults.issueId,
       })
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .innerJoin(
+        issueEvaluationResults,
+        eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+      )
       .where(
         and(
           this.scopeFilter,
           isNull(commits.deletedAt),
-          inArray(evaluationResultsV2.issueId, issueIds),
+          inArray(issueEvaluationResults.issueId, uniqueIssueIds),
         ),
       )
       .orderBy(
         desc(evaluationResultsV2.createdAt),
         desc(evaluationResultsV2.id),
       )
-    return results as EvaluationResultV2[]
+
+    return results as (EvaluationResultV2 & { joinedIssueId: number })[]
   }
 
   async listByDocumentLogs({

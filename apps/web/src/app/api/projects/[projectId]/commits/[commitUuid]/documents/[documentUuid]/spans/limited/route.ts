@@ -137,7 +137,5 @@ export function buildCommitFilter({
     })
     .catch(() => [])
 
-  console.log(commits)
-
   return commits
 }

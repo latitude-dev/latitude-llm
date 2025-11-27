@@ -10,7 +10,7 @@ import { commits } from '../../schema/models/commits'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
 import { spans } from '../../schema/models/spans'
-import { Span } from '@latitude-data/constants'
+import { Span, SpanType } from '@latitude-data/constants'
 
 async function fetchPaginatedEvaluationResults({
   workspace,
@@ -118,6 +118,7 @@ export async function getSpansByIssue({
       and(
         eq(spans.workspaceId, workspace.id),
         sql`(${spans.id}, ${spans.traceId}) IN (${sql.join(spanTraceIdPairs, sql`, `)})`,
+        eq(spans.type, SpanType.Prompt),
       ),
     )
 
