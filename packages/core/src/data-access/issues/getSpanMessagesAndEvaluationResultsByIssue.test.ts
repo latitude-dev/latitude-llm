@@ -202,14 +202,14 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const data = result.value
+    const data = result.value!
     expect(data).toHaveLength(1)
     expect(data[0]!.messages).toHaveLength(2)
-    expect(data[0]!.messages[0]!.role).toBe('user')
+    expect(data[0]!.messages[0]!.role).toBe(MessageRole.user)
     expect(data[0]!.messages[0]!.content).toEqual([
       { type: 'text', text: 'Hello, how are you?' },
     ])
-    expect(data[0]!.messages[1]!.role).toBe('assistant')
+    expect(data[0]!.messages[1]!.role).toBe(MessageRole.assistant)
     expect(data[0]!.messages[1]!.content).toEqual([
       { type: 'text', text: 'I am doing well, thank you!' },
     ])
@@ -237,7 +237,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const data = result.value
+    const data = result.value!
     expect(data).toHaveLength(1)
     expect(data[0]!.reason).toBe('')
   })
@@ -264,7 +264,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const data = result.value
+    const data = result.value!
     expect(data).toHaveLength(1)
     expect(data[0]!.reason).toBe('')
   })
@@ -288,7 +288,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const data = result.value
+    const data = result.value!
     expect(data).toHaveLength(1)
     expect(data[0]!.reason).toBe('')
   })
@@ -318,11 +318,11 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const data = result.value
+    const data = result.value!
     expect(data).toHaveLength(0)
   })
 
-  it('should handle spans without completion spans', async () => {
+  it('should return error when completion span is not found', async () => {
     // Create a prompt span without a completion span
     const promptSpan = await createSpan({
       workspaceId: workspace.id,
@@ -334,7 +334,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     await createEvaluationResultForIssue({
       span: promptSpan,
       metadata: {
-        reason: 'This should be skipped due to no messages',
+        reason: 'This should cause an error',
       },
     })
 
@@ -344,13 +344,10 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       issue,
     })
 
-    expect(result.ok).toBe(true)
-    if (!result.ok) return
+    expect(result.ok).toBe(false)
+    if (result.ok) return
 
-    const data = result.value
-    expect(data).toHaveLength(1)
-    expect(data[0]!.messages).toHaveLength(0)
-    expect(data[0]!.reason).toBe('This should be skipped due to no messages')
+    expect(result.error!.message).toBe('Could not find completion span')
   })
 
   it('should return empty array when no spans are found', async () => {
@@ -363,7 +360,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const data = result.value
+    const data = result.value!
     expect(data).toHaveLength(0)
   })
 
@@ -410,12 +407,12 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const data = result.value
+    const data = result.value!
     expect(data).toHaveLength(1)
     expect(data[0]!.messages).toHaveLength(4) // 2 input + 2 output
-    expect(data[0]!.messages[0]!.role).toBe('user')
-    expect(data[0]!.messages[1]!.role).toBe('user')
-    expect(data[0]!.messages[2]!.role).toBe('assistant')
-    expect(data[0]!.messages[3]!.role).toBe('assistant')
+    expect(data[0]!.messages[0]!.role).toBe(MessageRole.user)
+    expect(data[0]!.messages[1]!.role).toBe(MessageRole.user)
+    expect(data[0]!.messages[2]!.role).toBe(MessageRole.assistant)
+    expect(data[0]!.messages[3]!.role).toBe(MessageRole.assistant)
   })
 })
