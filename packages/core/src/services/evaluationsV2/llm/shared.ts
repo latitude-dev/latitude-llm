@@ -196,6 +196,7 @@ export async function runPrompt<
     promptUuid: evaluation.uuid,
     template: prompt,
     parameters: parameters,
+    source: LogSources.Evaluation,
   })
 
   let response
