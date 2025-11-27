@@ -109,7 +109,7 @@ async function getExperimentLogsRows(
     .limit(count)
 
   return logs.map((log) => ({
-    uuid: log.uuid,
+    uuid: generateUUIDIdentifier(),
     parameters: log.parameters,
     datasetRowId: undefined,
   }))
