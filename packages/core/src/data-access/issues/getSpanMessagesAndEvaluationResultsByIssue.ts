@@ -25,6 +25,7 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
   commit: Commit
   issue: Issue
 }) {
+  // Three is enough, as we don't want to overfit or add too many tokens to the prompt
   const spansResult = await getSpansByIssue({
     workspace: workspace,
     commit: commit,

@@ -121,11 +121,6 @@ export async function generateEvaluationFromIssueWithCopilot(
   const messagesAndEvaluationResults =
     messagesAndEvaluationResultsResult.unwrap()
 
-  console.log(
-    'messagesAndEvaluationResults',
-    JSON.stringify(messagesAndEvaluationResults, null, 2),
-  )
-
   const evaluationConfigResult = await generateEvaluationConfigForIssue({
     copilot: copilot,
     issue: issue,
