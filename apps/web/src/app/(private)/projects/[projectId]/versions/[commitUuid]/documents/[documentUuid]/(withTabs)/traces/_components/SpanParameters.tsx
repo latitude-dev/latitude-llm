@@ -98,6 +98,7 @@ function UseSpanInEditorButton({ span }: { span: SpanWithDetails }) {
   const navigate = useNavigate()
   const {
     history: { setHistoryLog },
+    setSource,
   } = useDocumentParameters({ document, commitVersionUuid: commit.uuid })
   const url = ROUTES.projects
     .detail({ id: project.id })
@@ -108,6 +109,7 @@ function UseSpanInEditorButton({ span }: { span: SpanWithDetails }) {
     if (!span.documentUuid) return
     if (!span.documentLogUuid) return
 
+    setSource('history')
     setHistoryLog({ uuid: span.documentLogUuid, source: span.source })
 
     navigate.push(route)
