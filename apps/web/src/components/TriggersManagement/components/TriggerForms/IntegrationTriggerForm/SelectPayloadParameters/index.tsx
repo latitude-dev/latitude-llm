@@ -3,30 +3,19 @@ import { useCallback, useMemo } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useMetadataParameters } from '$/hooks/useMetadataParameters'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export function SelectPayloadParameters({
-  document,
   payloadParameters,
   setPayloadParameters,
 }: {
   payloadParameters: string[]
   setPayloadParameters: ReactStateDispatch<string[]>
   value?: string
-  document: DocumentVersion
 }) {
-  const { commit } = useCurrentCommit()
-  const {
-    manual: { inputs },
-  } = useDocumentParameters({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
-  const parameterNames = Object.keys(inputs)
+  const { parameters: parameterNames } = useMetadataParameters()
   const options = useMemo<SelectOption<string>[]>(
     () =>
       parameterNames.map((value) => ({

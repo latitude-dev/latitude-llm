@@ -2,14 +2,15 @@
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useMetadataParameters } from '$/hooks/useMetadataParameters'
+import { useMetadata } from '$/hooks/useMetadata'
 
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { cn } from '@latitude-data/web-ui/utils'
-import { KeyboardEvent, useCallback, useMemo, useState } from 'react'
+import { KeyboardEvent, useCallback, useState } from 'react'
 import { RunProps } from '../types'
 import { useRefreshPromptMetadata } from '$/hooks/useDocumentValueContext'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
@@ -93,16 +94,18 @@ export function AgentInput({
     devMode: false,
   })
 
-  const {
-    manual: { inputs: parametersObject },
-  } = useDocumentParameters({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
+  const { parameters } = useMetadataParameters()
+  const { metadata } = useMetadata()
 
-  const parameters = useMemo(
-    () => (parametersObject ? Object.keys(parametersObject) : []),
-    [parametersObject],
+  const getParameterType = useCallback(
+    (param: string): ParameterType => {
+      const type = ((metadata?.config?.parameters as Record<string, any>) ||
+        {})[param]?.type
+      return type && Object.values(ParameterType).includes(type)
+        ? type
+        : ParameterType.Text
+    },
+    [metadata],
   )
 
   const [value, setValue] = useState({
@@ -133,13 +136,6 @@ export function AgentInput({
     })
   }, [runPromptFn, document, value])
 
-  const inputType = useCallback(
-    (parameter: string): ParameterType => {
-      return parametersObject[parameter]?.metadata.type || ParameterType.Text
-    },
-    [parametersObject],
-  )
-
   return (
     <div className='relative'>
       <div
@@ -167,7 +163,7 @@ export function AgentInput({
                 placeholder='Enter value...'
                 className='p-3'
                 large={parameters.length === 1}
-                inputType={inputType(parameter)}
+                inputType={getParameterType(parameter)}
                 value={value.parameters[parameter] ?? ''}
                 onChange={(value) => setParameter(parameter, value)}
                 onSubmit={onSubmit}

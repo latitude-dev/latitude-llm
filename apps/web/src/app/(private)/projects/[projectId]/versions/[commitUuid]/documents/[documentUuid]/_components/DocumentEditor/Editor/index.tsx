@@ -12,6 +12,7 @@ import { DocumentEditorContentArea } from './ContentArea'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useToggleStates } from './ContentArea/hooks/usePlaygroundLogic'
 import { DocumentEditorSidebarArea } from './SidebarArea'
+import { DocumentParametersProvider } from './V2Playground/DocumentParams/DocumentParametersContext'
 
 export default function DocumentEditor(props: {
   freeRunsCount?: number
@@ -66,15 +67,17 @@ export default function DocumentEditor(props: {
       </div>
       <div className='flex flex-1 gap-x-8 min-h-0'>
         <div className='flex flex-1 h-full'>
-          <DocumentEditorContentArea
-            refinementEnabled={props.refinementEnabled}
-            setSelectedTab={setSelectedTab}
-            isPlaygroundOpen={isPlaygroundOpen}
-            isPlaygroundTransitioning={isPlaygroundTransitioning}
-            isExperimentModalOpen={isExperimentModalOpen}
-            toggleExperimentModal={toggleExperimentModal}
-            togglePlaygroundOpen={togglePlaygroundOpen}
-          />
+          <DocumentParametersProvider documentUuid={document.documentUuid}>
+            <DocumentEditorContentArea
+              refinementEnabled={props.refinementEnabled}
+              setSelectedTab={setSelectedTab}
+              isPlaygroundOpen={isPlaygroundOpen}
+              isPlaygroundTransitioning={isPlaygroundTransitioning}
+              isExperimentModalOpen={isExperimentModalOpen}
+              toggleExperimentModal={toggleExperimentModal}
+              togglePlaygroundOpen={togglePlaygroundOpen}
+            />
+          </DocumentParametersProvider>
         </div>
         <div className='flex min-w-56 w-96 min-h-0 pr-2'>
           <DocumentEditorSidebarArea freeRunsCount={props.freeRunsCount} />

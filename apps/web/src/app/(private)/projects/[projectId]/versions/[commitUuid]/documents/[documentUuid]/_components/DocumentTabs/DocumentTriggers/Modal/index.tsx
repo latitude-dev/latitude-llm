@@ -206,7 +206,6 @@ export function TriggerConfigModal({
           {integration && component && (
             <IntegrationTriggerConfig
               key={component.key}
-              document={document}
               integration={integration}
               component={component}
               configuredProps={configuredProps}

@@ -1,17 +1,9 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { SelectTriggerPrimitive } from '@latitude-data/web-ui/atoms/Select'
 import { ParameterType } from '@latitude-data/constants'
-import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
-import {
-  Inputs,
-  InputSource,
-  PlaygroundInput,
-} from '@latitude-data/core/lib/documentPersistedInputs'
-
-const ParameterTypes = Object.values(ParameterType) as string[]
 
 const ParameterTypeDetails = {
   [ParameterType.Text]: {
@@ -28,57 +20,37 @@ const ParameterTypeDetails = {
   },
 }
 
-// TODO: Because document edition is debounced, when the type
-// changes it delays the render and the experience is very odd
 export function ParameterTypeSelector({
   parameter,
-  inputs,
-  setInput,
-  prompt,
-  setPrompt,
+  parameterType,
+  onTypeChange,
   disabled = false,
 }: {
   parameter: string
-  inputs: Inputs<InputSource>
-  setInput: (param: string, value: PlaygroundInput<InputSource>) => void
-  prompt: string
-  setPrompt: (prompt: string) => void
+  parameterType: ParameterType
+  onTypeChange: (type: ParameterType) => void
   disabled?: boolean
 }) {
-  const input = inputs[parameter]!
-  const parameters = useMemo(
-    () =>
-      Object.entries(inputs).reduce(
-        (acc, [param, input]) => {
-          if (input.metadata.type) acc[param] = { type: input.metadata.type }
-          return acc
-        },
-        {} as Record<string, { type: ParameterType }>,
-      ),
-    [inputs],
-  )
   const selectedType = useMemo(
     () =>
-      ParameterTypes.includes(input.metadata.type || '')
-        ? input.metadata.type
+      Object.values(ParameterType).includes(parameterType)
+        ? parameterType
         : ParameterType.Text,
-    [input.metadata.type],
-  )!
+    [parameterType],
+  )
+
+  const handleTypeChange = useCallback(
+    (type: ParameterType) => {
+      onTypeChange(type)
+    },
+    [onTypeChange],
+  )
 
   return (
-    <Select
-      name='type'
+    <Select<ParameterType>
+      name={`type-${parameter}`}
       value={selectedType}
-      onChange={(value) => {
-        setInput(parameter, { ...input, value: '' })
-
-        parameters[parameter] = { type: value as ParameterType }
-        setPrompt(
-          updatePromptMetadata(prompt, {
-            parameters: parameters,
-          }),
-        )
-      }}
+      onChange={handleTypeChange}
       options={Object.values(ParameterType).map((type) => ({
         value: type,
         label: ParameterTypeDetails[type].label,

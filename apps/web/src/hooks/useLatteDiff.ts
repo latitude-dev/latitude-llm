@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useLatteStore } from '$/stores/latte/index'
@@ -32,18 +32,20 @@ export function useLatteDiff() {
   }, [document, checkpoints])
 
   const diff = useMemo(() => {
-    const newDiff = checkpoint
+    return checkpoint
       ? {
           oldValue: checkpoint.data?.content ?? '',
           newValue: document.content ?? '',
         }
       : undefined
+  }, [document.content, checkpoint])
 
+  useEffect(() => {
     setDiffOptions((prev) => {
-      if (newDiff) {
+      if (diff) {
         // Update the diff with the latest latte changes
         return {
-          ...newDiff,
+          ...diff,
           source: 'latte',
         }
       }
@@ -54,9 +56,7 @@ export function useLatteDiff() {
       // Otherwise, keep the previous diff
       return prev
     })
-
-    return newDiff
-  }, [document.content, checkpoint, setDiffOptions])
+  }, [diff, setDiffOptions])
 
   return { diff }
 }

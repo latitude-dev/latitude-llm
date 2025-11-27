@@ -1,15 +1,14 @@
 'use client'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useMetadataParameters } from '$/hooks/useMetadataParameters'
 
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { cn } from '@latitude-data/web-ui/utils'
-import { KeyboardEvent, useCallback, useMemo, useState } from 'react'
+import { KeyboardEvent, useCallback, useState } from 'react'
 
 function InputField({
   placeholder,
@@ -67,19 +66,7 @@ export function AgentInput({
     aiParameters: boolean
   }) => void
 }) {
-  const { commit } = useCurrentCommit()
-
-  const {
-    manual: { inputs: parametersObject },
-  } = useDocumentParameters({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
-
-  const parameters = useMemo(
-    () => (parametersObject ? Object.keys(parametersObject) : []),
-    [parametersObject],
-  )
+  const { parameters } = useMetadataParameters()
 
   const [value, setValue] = useState({
     parameters: {} as Record<string, string>,

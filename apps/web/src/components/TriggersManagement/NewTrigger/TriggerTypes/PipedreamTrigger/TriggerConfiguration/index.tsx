@@ -78,7 +78,6 @@ export function TriggerConfiguration({
 
         {doc.document ? (
           <SelectPayloadParameters
-            document={doc.document}
             payloadParameters={doc.payloadParameters}
             setPayloadParameters={doc.onSetPayloadParameters}
           />
