@@ -120,4 +120,5 @@ export const EventHandlers: IEventsHandlers = {
   evaluationFailed: [notifyClientOfEvaluationStatus],
   weeklyEmailPreferenceUpdated: [],
   escalatingIssuesEmailPreferenceUpdated: [],
+  workspaceIssuesDashboardUnlocked: [],
 }

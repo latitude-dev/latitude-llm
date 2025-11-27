@@ -22,6 +22,7 @@ export type WorkspaceWithDetails = {
   id: number
   name: string
   createdAt: Date
+  issuesUnlocked: boolean
   subscription: OkType<typeof findWorkspaceSubscription>
   subscriptions: Subscription[]
   quotas: {
