@@ -1,5 +1,5 @@
 import { FinishReason } from 'ai'
-import { Message } from 'promptl-ai'
+import type { Message } from 'promptl-ai'
 import { LogSources } from '../models'
 
 export enum SpanKind {
@@ -134,14 +134,15 @@ export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
 }
 
 export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
-  experimentUuid: string
-  externalId: string
+  experimentUuid?: string
+  externalId?: string
   parameters: Record<string, unknown>
-  promptUuid: string
-  template: string
+  promptUuid?: string // Document UUID (may be resolved from promptPath server-side)
+  promptPath?: string // Path-based prompt identification
+  template?: string
   versionUuid: string
-  source: LogSources
-  projectId: number
+  source?: LogSources
+  projectId?: number
 }
 
 export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {

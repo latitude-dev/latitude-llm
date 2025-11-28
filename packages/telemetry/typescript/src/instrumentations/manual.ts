@@ -30,6 +30,7 @@ import {
   ATTR_HTTP_REQUEST_URL,
   ATTR_HTTP_RESPONSE_BODY,
   ATTR_HTTP_RESPONSE_HEADER,
+  ATTR_LATITUDE_PROMPT_PATH,
   ATTR_LATITUDE_TYPE,
   GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
   HEAD_COMMIT,
@@ -125,11 +126,12 @@ export type EndHttpSpanOptions = EndSpanOptions & {
 export type PromptSpanOptions = StartSpanOptions & {
   documentLogUuid?: string // TODO(tracing): temporal related log, remove when observability is ready
   versionUuid?: string // Alias for commitUuid
-  promptUuid: string // Alias for documentUuid
+  promptUuid?: string // Alias for documentUuid
+  promptPath?: string // Path-based prompt identification (resolved server-side)
   projectId?: string
   experimentUuid?: string
   externalId?: string
-  template: string
+  template?: string
   parameters?: Record<string, unknown>
   source?: LogSources
 }
@@ -721,6 +723,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       documentLogUuid,
       versionUuid,
       promptUuid,
+      promptPath,
       projectId,
       experimentUuid,
       externalId,
@@ -739,11 +742,12 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
 
     const attributes = {
-      [ATTR_GEN_AI_REQUEST_TEMPLATE]: template,
+      ...(template && { [ATTR_GEN_AI_REQUEST_TEMPLATE]: template }),
       [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
       ['latitude.commitUuid']: versionUuid || HEAD_COMMIT,
-      ['latitude.documentUuid']: promptUuid,
-      ['latitude.projectId']: projectId,
+      ...(promptUuid && { ['latitude.documentUuid']: promptUuid }),
+      ...(promptPath && { [ATTR_LATITUDE_PROMPT_PATH]: promptPath }),
+      ...(projectId && { ['latitude.projectId']: projectId }),
       ...(documentLogUuid && { ['latitude.documentLogUuid']: documentLogUuid }),
       ...(experimentUuid && { ['latitude.experimentUuid']: experimentUuid }),
       ...(externalId && { ['latitude.externalId']: externalId }),
@@ -751,7 +755,13 @@ export class ManualInstrumentation implements BaseInstrumentation {
       ...(rest.attributes || {}),
     }
 
-    return this.span(ctx, name || `prompt-${promptUuid}`, SpanType.Prompt, {
+    const spanName =
+      name ||
+      (promptPath
+        ? `prompt-${promptPath}`
+        : `prompt-${promptUuid || 'external'}`)
+
+    return this.span(ctx, spanName, SpanType.Prompt, {
       attributes,
     })
   }

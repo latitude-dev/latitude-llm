@@ -237,6 +237,22 @@ function extractConfiguration(
   return Result.ok(toCamelCase(configuration))
 }
 
+/**
+ * Safely parse JSON payloads which can come either as JSON string or an object.
+ */
+function parseJsonPayload(value: unknown): Record<string, unknown> {
+  if (value === undefined || value === null) return {}
+  if (typeof value === 'object') return value as Record<string, unknown>
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value)
+    } catch {
+      return {}
+    }
+  }
+  return {}
+}
+
 function convertToolCalls(
   raws: Record<string, unknown>[],
 ): TypedResult<ToolCallContent[]> {
@@ -252,14 +268,18 @@ function convertToolCalls(
           type: ContentType.toolCall,
           toolCallId: String(toolCall.id || ''),
           toolName: String(func.name || ''),
-          toolArguments: JSON.parse(String(func.arguments || '{}')),
+          toolArguments: parseJsonPayload(func.arguments),
         })
       } else {
+        // Handles multiple formats:
+        // - OpenAI: { id, name, arguments (string) }
+        // - Anthropic: { toolUseId, toolName, input (object) }
+        // - Vercel AI SDK: { toolCallId, toolName, input (object) }
         toolCalls.push({
           type: ContentType.toolCall,
           toolCallId: String(toolCall.id || toolCall.toolCallId || toolCall.toolUseId || ''), // prettier-ignore
           toolName: String(toolCall.name || toolCall.toolName || ''),
-          toolArguments: JSON.parse(String(toolCall.arguments || toolCall.toolArguments || toolCall.input || '{}')), // prettier-ignore
+          toolArguments: parseJsonPayload(toolCall.arguments || toolCall.toolArguments || toolCall.input), // prettier-ignore
         })
       }
     }

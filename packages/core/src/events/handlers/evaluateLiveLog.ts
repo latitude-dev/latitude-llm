@@ -50,6 +50,11 @@ export const evaluateLiveLogJob = async ({
     return
   }
 
+  // Cannot evaluate logs without a document UUID
+  if (!promptSpanMetadata.promptUuid) {
+    return
+  }
+
   const commitsRepository = new CommitsRepository(workspace.id)
   const commit = await commitsRepository
     .getCommitByUuid({ uuid: promptSpanMetadata.versionUuid })

@@ -10,8 +10,11 @@ import {
   StartSpanOptions,
   StartToolSpanOptions,
 } from '$telemetry/instrumentations'
+import { NormalizingSpanProcessor } from '$telemetry/processors'
 import { DEFAULT_REDACT_SPAN_PROCESSOR } from '$telemetry/sdk/redact'
 import {
+  ATTR_LATITUDE_PROMPT_PATH,
+  HEAD_COMMIT,
   InstrumentationScope,
   SCOPE_LATITUDE,
   TraceContext,
@@ -142,6 +145,30 @@ export type TelemetryOptions = {
   exporter?: SpanExporter
   processors?: SpanProcessor[]
   propagators?: TextMapPropagator[]
+  /** Enable debug logging to see all spans being created */
+  debug?: boolean
+}
+
+/**
+ * Options for the trace() method that wraps user code in a scoped context.
+ * All child spans created within the trace callback will inherit these metadata
+ * via OpenTelemetry baggage propagation.
+ */
+export type TraceOptions = {
+  /** Optional name for the trace span */
+  name?: string
+  /** Project ID for the trace */
+  projectId?: number | string
+  /** Version UUID (commit UUID) for the trace */
+  versionUuid?: string
+  /** Path-based prompt identification (resolved server-side to documentUuid) */
+  promptPath?: string
+  /** UUID-based prompt identification */
+  promptUuid?: string
+  /** External identifier for correlation */
+  externalId?: string
+  /** Additional custom metadata */
+  metadata?: Record<string, unknown>
 }
 
 export class LatitudeTelemetry {
@@ -179,6 +206,9 @@ export class LatitudeTelemetry {
     this.provider.addSpanProcessor(
       new BaggageSpanProcessor(ALLOW_ALL_BAGGAGE_KEYS),
     )
+
+    // Normalize Vercel AI SDK spans to standard GenAI semantic conventions
+    this.provider.addSpanProcessor(new NormalizingSpanProcessor())
 
     if (this.options.processors) {
       this.options.processors.forEach((processor) => {
@@ -429,6 +459,107 @@ export class LatitudeTelemetry {
 
   step(ctx: otel.Context, options?: StartSpanOptions) {
     return this.telemetry.step(ctx, options)
+  }
+
+  /**
+   * Wraps a function execution in a trace scope.
+   * All OpenTelemetry spans created within the callback will be children
+   * of this trace and inherit the metadata via baggage propagation.
+   *
+   * @example
+   * ```typescript
+   * const result = await telemetry.trace({
+   *   projectId: 123,
+   *   versionUuid: 'abc-123',
+   *   promptPath: 'chat/greeting',
+   * }, async () => {
+   *   // All spans created here (e.g., OpenAI calls) will be children of this trace
+   *   return openai.chat.completions.create({ ... })
+   * })
+   * ```
+   */
+  async trace<T>(options: TraceOptions, fn: () => Promise<T>): Promise<T> {
+    const {
+      name,
+      projectId,
+      versionUuid,
+      promptPath,
+      promptUuid,
+      externalId,
+      metadata,
+    } = options
+
+    // Create parent "prompt" span with latitude.* attributes
+    const span = this.telemetry.prompt(context.active(), {
+      name,
+      projectId: projectId?.toString(),
+      versionUuid: versionUuid || HEAD_COMMIT,
+      promptUuid,
+      promptPath,
+      externalId,
+      attributes: metadata as otel.Attributes,
+    })
+
+    // Set baggage for metadata propagation to child spans
+    // The BaggageSpanProcessor will copy these to span attributes
+    let ctx = span.context
+    const baggageEntries: Record<string, { value: string }> = {}
+
+    if (projectId) {
+      baggageEntries['latitude.projectId'] = { value: String(projectId) }
+    }
+    if (versionUuid) {
+      baggageEntries['latitude.commitUuid'] = { value: versionUuid }
+    } else {
+      baggageEntries['latitude.commitUuid'] = { value: HEAD_COMMIT }
+    }
+    if (promptUuid) {
+      baggageEntries['latitude.documentUuid'] = { value: promptUuid }
+    }
+    if (promptPath) {
+      baggageEntries[ATTR_LATITUDE_PROMPT_PATH] = { value: promptPath }
+    }
+    if (externalId) {
+      baggageEntries['latitude.externalId'] = { value: externalId }
+    }
+
+    const baggage = propagation.createBaggage(baggageEntries)
+    ctx = propagation.setBaggage(ctx, baggage)
+
+    try {
+      // Execute the function within this context
+      // All child spans will be parented to our span and inherit baggage
+      const result = await context.with(ctx, fn)
+      span.end()
+      return result
+    } catch (error) {
+      span.fail(error as Error)
+      throw error
+    }
+  }
+
+  /**
+   * Creates a higher-order function wrapper for tracing.
+   * Returns a new function that, when called, automatically traces its execution
+   * with the provided options.
+   *
+   * @example
+   * ```typescript
+   * const tracedGenerate = telemetry.wrap(generateAIResponse, {
+   *   projectId: 123,
+   *   versionUuid: 'abc-123',
+   *   promptPath: 'chat/greeting',
+   * })
+   *
+   * // Later, each call is automatically traced:
+   * const result = await tracedGenerate(prompt, options)
+   * ```
+   */
+  wrap<TArgs extends unknown[], TResult>(
+    fn: (...args: TArgs) => Promise<TResult>,
+    options: TraceOptions,
+  ): (...args: TArgs) => Promise<TResult> {
+    return (...args: TArgs) => this.trace(options, () => fn(...args))
   }
 }
 
