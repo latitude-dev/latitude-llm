@@ -28,6 +28,7 @@ export type RunEvaluationV2JobData = {
   datasetId?: number
   datasetLabel?: string
   datasetRowId?: number
+  dry?: boolean
 }
 
 export function runEvaluationV2JobKey({
@@ -55,6 +56,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     datasetId,
     datasetLabel,
     datasetRowId,
+    dry,
   } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
@@ -121,9 +123,10 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       datasetRow: datasetRow,
       commit: commit,
       workspace: workspace,
+      dry: false,
     }).then((r) => r.unwrap())
 
-    if (experiment && span.documentLogUuid) {
+    if (experiment && span.documentLogUuid && !dry) {
       await updateExperimentStatus(
         { workspaceId, experiment },
         async (progressTracker) => {
@@ -138,17 +141,27 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
         },
       ).then((r) => r.unwrap())
     }
+    //if (dry) {
+    return {
+      hasPassed: result.hasPassed,
+      evaluatedSpanId: result.evaluatedSpanId,
+      evaluatedTraceId: result.evaluatedTraceId,
+    }
+    //}
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error
 
+    console.error('Error running evaluation V2', error)
+
     captureException(error as Error)
 
-    if (experiment && span?.documentLogUuid) {
+    if (experiment && span?.documentLogUuid && !dry) {
       await updateExperimentStatus(
         { workspaceId, experiment },
         (progressTracker) =>
           progressTracker.evaluationError(span.documentLogUuid!),
       )
     }
+    if (dry) throw error
   }
 }

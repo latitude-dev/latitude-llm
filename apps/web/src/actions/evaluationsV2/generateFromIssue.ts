@@ -45,15 +45,18 @@ export const generateEvaluationV2FromIssueAction = withDocument
       cache: redisCache,
     }).then((r) => r.unwrap())
 
-    const { evaluationsQueue } = await queues()
-    const job = await evaluationsQueue.add('generateEvaluationV2FromIssueJob', {
-      workspaceId: workspace.id,
-      commitId: commit.id,
-      issueId: issueId,
-      providerName: providerName,
-      model: model,
-      evaluationUuid: activeEvaluation.uuid,
-    })
+    const { generateEvaluationsQueue } = await queues()
+    const job = await generateEvaluationsQueue.add(
+      'generateEvaluationV2FromIssueJob',
+      {
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        issueId: issueId,
+        providerName: providerName,
+        model: model,
+        evaluationUuid: activeEvaluation.uuid,
+      },
+    )
 
     if (!job.id) {
       await deleteActiveEvaluation({

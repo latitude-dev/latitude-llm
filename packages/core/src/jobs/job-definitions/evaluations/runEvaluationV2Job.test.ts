@@ -1,29 +1,29 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { type Commit } from '../../../schema/models/types/Commit'
-import { type Dataset } from '../../../schema/models/types/Dataset'
-import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
-import { type Experiment } from '../../../schema/models/types/Experiment'
-import { type Workspace } from '../../../schema/models/types/Workspace'
+import { type Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { type Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+import { type DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
+import { type Experiment } from '@latitude-data/core/schema/models/types/Experiment'
+import { type Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import {
   EvaluationV2,
   Providers,
   Span,
   SpanType,
 } from '@latitude-data/constants'
-import { Result } from '../../../lib/Result'
-import { UnprocessableEntityError } from '../../../lib/errors'
-import * as evaluationsV2 from '../../../services/evaluationsV2/run'
-import { completeExperiment } from '../../../services/experiments/complete'
+import { Result } from '@latitude-data/core/lib/Result'
+import { UnprocessableEntityError } from '@latitude-data/core/lib/errors'
+import * as evaluationsV2 from '@latitude-data/core/services/evaluationsV2/run'
+import { completeExperiment } from '@latitude-data/core/services/experiments/complete'
 import * as factories from '../../../tests/factories'
-import { WebsocketClient } from '../../../websockets/workers'
+import { WebsocketClient } from '@latitude-data/core/websockets/workers'
 import * as progressTracker from '../../utils/progressTracker'
 import {
   runEvaluationV2Job,
   type RunEvaluationV2JobData,
 } from './runEvaluationV2Job'
-import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 
 vi.mock(import('../../../redis'), async (importOriginal) => {
   const actual = await importOriginal()

@@ -5,25 +5,25 @@ import {
   BadRequestError,
   NotFoundError,
   UnprocessableEntityError,
-} from '../../lib/errors'
-import { Result } from '../../lib/Result'
-import { CLOUD_MESSAGES } from '../../constants'
-import * as copilotGet from '../copilot/get'
-import * as copilotRun from '../copilot/run'
-import * as createEvaluationV2Module from './create'
-import * as findFirstModelForProviderModule from '../ai/providers/models'
-import { DocumentVersionsRepository } from '../../repositories'
+} from '@latitude-data/core/lib/errors'
+import { Result } from '@latitude-data/core/lib/Result'
+import { CLOUD_MESSAGES } from '../../../constants'
+import * as copilotGet from '@latitude-data/core/services/copilot/get'
+import * as copilotRun from '@latitude-data/core/services/copilot/run'
+import * as createEvaluationV2Module from '../create'
+import * as findFirstModelForProviderModule from '../../ai/providers/models'
+import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import {
   __test__,
   generateEvaluationFromIssueWithCopilot,
 } from './generateFromIssue'
-import * as factories from '../../tests/factories'
-import type { Commit } from '../../schema/models/types/Commit'
-import type { Workspace } from '../../schema/models/types/Workspace'
-import type { Issue } from '../../schema/models/types/Issue'
-import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import type { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
-import * as getSpanMessagesAndEvaluationResultsByIssue from '../../data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
+import * as factories from '../../../tests/factories'
+import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import * as getSpanMessagesAndEvaluationResultsByIssue from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 
 vi.mock('../copilot/get', () => ({
