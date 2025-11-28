@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useMetadataParameters } from '$/hooks/useMetadataParameters'
 import useUsers from '$/stores/users'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { DocumentTriggerParameters } from '@latitude-data/constants'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
@@ -30,15 +29,8 @@ export function useEmailTriggerConfiguration({
   document: DocumentVersion
   emailTriggerConfig?: EmailTriggerConfiguration
 }) {
-  const { commit } = useCurrentCommit()
   const { data: users } = useUsers()
-  const {
-    manual: { inputs },
-  } = useDocumentParameters({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
-  const documentParameters = Object.keys(inputs)
+  const { parameters: documentParameters } = useMetadataParameters()
   const availabilityOptions = useMemo(
     () =>
       Object.entries(AVAILABILITY_OPTIONS).map(([key, value]) => ({

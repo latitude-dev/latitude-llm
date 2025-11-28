@@ -5,8 +5,6 @@ import {
   asPromptLFile,
   PromptLFileParameter,
 } from '$/components/PromptLFileParameter'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import {
   PromptSpanMetadata,
@@ -95,33 +93,29 @@ function UseSpanInEditorButton({ span }: { span: SpanWithDetails }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
-  const navigate = useNavigate()
-  const {
-    history: { setHistoryLog },
-    setSource,
-  } = useDocumentParameters({ document, commitVersionUuid: commit.uuid })
   const url = ROUTES.projects
     .detail({ id: project.id })
     .commits.detail({ uuid: commit.uuid })
     .documents.detail({ uuid: document.documentUuid }).root
-  const route = `${url}?spanId=${span.id}&traceId=${span.traceId}&showPreview=true`
+  const route = useMemo(() => {
+    const params = new URLSearchParams({
+      spanId: span.id,
+      traceId: span.traceId,
+      showPreview: 'true',
+      source: 'history',
+    })
+    if (span.source) {
+      params.set('logSource', span.source)
+    }
+    return `${url}?${params.toString()}`
+  }, [url, span.id, span.traceId, span.source])
+
   const handleClick = useCallback(() => {
     if (!span.documentUuid) return
     if (!span.documentLogUuid) return
 
-    setSource('history')
-    setHistoryLog({ uuid: span.documentLogUuid, source: span.source })
-
-    navigate.push(route)
-  }, [
-    navigate,
-    route,
-    setSource,
-    setHistoryLog,
-    span.documentLogUuid,
-    span.documentUuid,
-    span.source,
-  ])
+    window.open(route, '_blank')
+  }, [route, span.documentLogUuid, span.documentUuid])
 
   return (
     <Tooltip

@@ -1,38 +1,26 @@
 import { PipedreamComponentPropsForm } from '$/components/Pipedream/PipedreamPropsForm'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useMetadataParameters } from '$/hooks/useMetadataParameters'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import {
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/constants'
 
 function ParameterSelects({
-  document,
   payloadParameters,
   setPayloadParameters,
   disabled,
 }: {
-  document: DocumentVersion
   payloadParameters: string[]
   setPayloadParameters: ReactStateDispatch<string[]>
   disabled: boolean
 }) {
-  const { commit } = useCurrentCommit()
-
-  const {
-    manual: { inputs },
-  } = useDocumentParameters({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
-  const parameterNames = Object.keys(inputs)
+  const { parameters: parameterNames } = useMetadataParameters()
 
   return (
     <div className='flex flex-col gap-2'>
@@ -90,7 +78,6 @@ function ParameterSelects({
 export function IntegrationTriggerConfig({
   integration,
   component,
-  document,
   configuredProps,
   setConfiguredProps,
   payloadParameters,
@@ -99,7 +86,6 @@ export function IntegrationTriggerConfig({
 }: {
   integration: IntegrationDto
   component: PipedreamComponent<PipedreamComponentType.Trigger>
-  document: DocumentVersion
   configuredProps: ConfiguredProps<ConfigurableProps>
   setConfiguredProps: ReactStateDispatch<ConfiguredProps<ConfigurableProps>>
   payloadParameters: string[]
@@ -116,7 +102,6 @@ export function IntegrationTriggerConfig({
         disabled={disabled}
       />
       <ParameterSelects
-        document={document}
         payloadParameters={payloadParameters}
         setPayloadParameters={setPayloadParameters}
         disabled={disabled}

@@ -72,7 +72,6 @@ export function EditIntegrationTrigger({
         </Text.H5>
       </div>
       <SelectPayloadParameters
-        document={document}
         payloadParameters={payloadParameters}
         setPayloadParameters={setPayloadParameters}
       />

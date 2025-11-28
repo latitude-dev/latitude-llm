@@ -1,7 +1,3 @@
-import {
-  UseDocumentParameters,
-  useDocumentParameters,
-} from '$/hooks/useDocumentParameters'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TabSelector } from '$/components/TabSelector'
 import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
@@ -11,10 +7,6 @@ import { DocumentVersion } from '@latitude-data/core/schema/models/types/Documen
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
 import { DatasetParams } from './DatasetParams'
-import {
-  UseSelectDataset,
-  useSelectDataset,
-} from './DatasetParams/useSelectDataset'
 import { HistoryLogParams } from './HistoryLogParams'
 import { ManualParams } from './ManualParams'
 
@@ -22,11 +14,9 @@ import {
   INPUT_SOURCE,
   InputSource,
 } from '@latitude-data/core/lib/documentPersistedInputs'
-import { memo } from 'react'
-import {
-  useLogHistoryParams,
-  UseLogHistoryParams,
-} from './HistoryLogParams/useLogHistoryParams'
+import { memo, useState, useCallback, useEffect } from 'react'
+import { useMetadataParameters } from '$/hooks/useMetadataParameters'
+import { useDocumentParameterValues } from './DocumentParametersContext'
 
 export const TABS: TabSelectorOption<InputSource>[] = [
   { label: 'Manual', value: INPUT_SOURCE.manual },
@@ -37,83 +27,73 @@ export const TABS: TabSelectorOption<InputSource>[] = [
 export type Props = {
   document: DocumentVersion
   commit: ICommitContextType['commit']
-  prompt: string
-  setPrompt: (prompt: string) => void
-}
-type ContentProps = Props & {
-  source: InputSource
-  setSource: ReturnType<typeof useDocumentParameters>['setSource']
-  datasetInfo: UseSelectDataset
-  historyInfo: UseLogHistoryParams
+  source?: InputSource
+  setSource?: (source: InputSource) => void
 }
 
 function ParamsTabs({
   document,
   commit,
-  prompt,
-  setPrompt,
-  setSource,
   source,
-  datasetInfo,
-  historyInfo,
-}: ContentProps) {
+  onSourceChange,
+  metadataParameters,
+}: {
+  document: DocumentVersion
+  commit: ICommitContextType['commit']
+  source: InputSource
+  onSourceChange: (source: InputSource) => void
+  metadataParameters: string[]
+}) {
   return (
     <div className='w-full flex flex-col gap-4'>
       <TabSelector<InputSource>
         fullWidth
         options={TABS}
         selected={source}
-        onSelect={setSource}
+        onSelect={onSourceChange}
       />
       {source === INPUT_SOURCE.manual && (
-        <ManualParams
-          document={document}
-          commit={commit}
-          prompt={prompt}
-          setPrompt={setPrompt}
-        />
+        <ManualParams metadataParameters={metadataParameters} />
       )}
       {source === INPUT_SOURCE.dataset && (
-        <DatasetParams data={datasetInfo} document={document} commit={commit} />
+        <DatasetParams
+          document={document}
+          metadataParameters={metadataParameters}
+        />
       )}
       {source === INPUT_SOURCE.history && (
         <HistoryLogParams
-          data={historyInfo}
           document={document}
           commit={commit}
+          metadataParameters={metadataParameters}
         />
       )}
     </div>
   )
 }
 
-type DocumentParamsProps = Props & {
-  source: UseDocumentParameters['source']
-  setSource: UseDocumentParameters['setSource']
-}
-export default memo(function DocumentParams({
-  setSource,
-  source,
-  ...props
-}: DocumentParamsProps) {
-  const commit = props.commit
-  const datasetInfo = useSelectDataset({
-    document: props.document,
-    commitVersionUuid: commit.uuid,
-    source,
-  })
-  const historyInfo = useLogHistoryParams({
-    document: props.document,
-    commitVersionUuid: commit.uuid,
-  })
+function DocumentParamsContent(props: Props) {
+  const [internalSource, setInternalSource] = useState<InputSource>(
+    INPUT_SOURCE.manual,
+  )
+  const { parameters: metadataParameters } = useMetadataParameters()
+  const { setCurrentSource } = useDocumentParameterValues()
 
-  const contentProps = {
-    ...props,
-    source,
-    setSource,
-    datasetInfo,
-    historyInfo,
-  }
+  // Use provided source/setSource if available, otherwise use internal state
+  const source = props.source ?? internalSource
+
+  // Sync context's current source when source changes
+  useEffect(() => {
+    setCurrentSource(source)
+  }, [source, setCurrentSource])
+
+  const handleSourceChange = useCallback(
+    (newSource: InputSource) => {
+      props.setSource?.(newSource)
+      setInternalSource(newSource)
+    },
+    [props],
+  )
 
   return (
     <div className='w-full border rounded-xl relative bg-background'>
@@ -132,8 +112,18 @@ export default memo(function DocumentParams({
         </div>
       </div>
       <div className='px-4 pb-3.5'>
-        <ParamsTabs {...contentProps} />
+        <ParamsTabs
+          document={props.document}
+          commit={props.commit}
+          source={source}
+          onSourceChange={handleSourceChange}
+          metadataParameters={metadataParameters}
+        />
       </div>
     </div>
   )
+}
+
+export default memo(function DocumentParams(props: Props) {
+  return <DocumentParamsContent {...props} />
 })

@@ -1,5 +1,5 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useMetadataParameters } from '$/hooks/useMetadataParameters'
 import useUsers from '$/stores/users'
 import { DocumentTriggerParameters } from '@latitude-data/constants'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
@@ -11,7 +11,6 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ReactNode, useCallback, useState } from 'react'
 
 enum EmailAvailabilityOptions {
@@ -144,16 +143,10 @@ export function EmailTriggerConfig({
   const { data: users } = useUsers()
 
   const { document } = useCurrentDocument()
-  const { commit } = useCurrentCommit()
-  const disabled = !!commit.mergedAt || isLoading
 
-  const {
-    manual: { inputs },
-  } = useDocumentParameters({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
-  const documentParameters = Object.keys(inputs)
+  const { parameters: documentParameters } = useMetadataParameters()
+
+  const disabled = isLoading
 
   const [emailWhitelist, setEmailWhitelist] = useState<string[]>(
     emailTriggerConfig?.emailWhitelist ?? [],

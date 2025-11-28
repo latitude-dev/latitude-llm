@@ -4,9 +4,11 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { useDevMode } from '$/hooks/useDevMode'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { useDocumentValue } from '$/hooks/useDocumentValueContext'
+
 import { useMetadata } from '$/hooks/useMetadata'
+import { useMetadataParameters } from '$/hooks/useMetadataParameters'
+import { useFormattedParameters } from '../V2Playground/DocumentParams/DocumentParametersContext'
+import { useInputSource } from '$/hooks/useInputSource'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -41,17 +43,16 @@ export function DocumentEditorContentArea({
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const { metadata } = useMetadata()
+  const { parameters: metadataParameters } = useMetadataParameters()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
-  const { updateDocumentContent } = useDocumentValue()
-  const { parameters, source, setSource } = useDocumentParameters({
-    commitVersionUuid: commit.uuid,
-    document,
-  })
+
+  const { source, setSource } = useInputSource()
+  const parameters = useFormattedParameters()
   const hasParameters = useMemo(
-    () => parameters && Object.keys(parameters).length > 0,
-    [parameters],
+    () => metadataParameters && metadataParameters.length > 0,
+    [metadataParameters],
   )
 
   const [_userMessage, setUserMessage] = useState<string>('')
@@ -67,7 +68,7 @@ export function DocumentEditorContentArea({
       commit,
       project,
       document,
-      parameters,
+      parameters: parameters,
       userMessage,
       togglePlaygroundOpen,
       setSelectedTab,
@@ -168,10 +169,8 @@ export function DocumentEditorContentArea({
                 <DocumentParams
                   commit={commit}
                   document={document}
-                  prompt={document.content}
                   source={source}
                   setSource={setSource}
-                  setPrompt={updateDocumentContent}
                 />
               )}
               <V2Playground

@@ -1,43 +1,15 @@
 import { TABS } from '../index'
 import { ParameterInputSkeleton } from '$/components/ParameterInput'
-import { ParameterTypeSelector } from '../../../V2Playground/DocumentParams/ManualParams/ParameterTypeSelector'
-import { ParameterType } from '@latitude-data/constants'
 import { TabSelector } from '$/components/TabSelector'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
-import {
-  Inputs,
-  InputSource,
-  PlaygroundInput,
-} from '@latitude-data/core/lib/documentPersistedInputs'
-
-const FAKE_INPUTS: Inputs<InputSource> = {
-  '...': {
-    value: '...',
-    metadata: {
-      type: ParameterType.Text,
-    },
-  },
-}
-const fakeSetPrompt = (_prompt: string) => {}
-const fakeSetInput = (
-  _param: string,
-  _input: PlaygroundInput<InputSource>,
-) => {}
+import { InputSource } from '@latitude-data/core/lib/documentPersistedInputs'
 
 function LoadingInput() {
   return (
     <div className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'>
       <div className='flex flex-row items-center gap-x-2 min-h-8'>
-        <ParameterTypeSelector
-          disabled
-          parameter='...'
-          prompt='...'
-          setPrompt={fakeSetPrompt}
-          inputs={FAKE_INPUTS}
-          setInput={fakeSetInput}
-        />
         <Badge variant='accent'>&#123;&#123;...&#125;&#125;</Badge>
       </div>
       <div className='flex flex-grow w-full min-w-0'>
