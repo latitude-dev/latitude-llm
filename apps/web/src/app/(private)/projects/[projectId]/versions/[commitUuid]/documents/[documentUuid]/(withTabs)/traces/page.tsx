@@ -4,10 +4,6 @@ import {
   SpansRepository,
 } from '@latitude-data/core/repositories'
 import buildMetatags from '$/app/_lib/buildMetatags'
-import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
-import { redirect } from 'next/navigation'
-import { ROUTES } from '$/services/routes'
-
 import { DocumentTracesPage } from './_components/DocumentTracesPage'
 import { SpanType, Span } from '@latitude-data/constants'
 import { parseSpansFilters, SpansFilters } from '$/lib/schemas/filters'
@@ -33,19 +29,6 @@ export default async function TracesPage({
   const { filters: filtersParam } = await searchParams
   const validatedFilters = parseSpansFilters(filtersParam, 'traces page')
   const traceId = validatedFilters?.traceId
-
-  // Check if traces feature is enabled
-  const isTracesEnabled = await isFeatureEnabledByName(
-    workspace.id,
-    'traces',
-  ).then((r) => r.unwrap())
-  if (!isTracesEnabled) {
-    const logsRoute = ROUTES.projects
-      .detail({ id: Number(projectId) })
-      .commits.detail({ uuid: commitUuid })
-      .documents.detail({ uuid: documentUuid }).logs.root
-    redirect(logsRoute)
-  }
 
   const commitsRepo = new CommitsRepository(workspace.id)
   const spansRepository = new SpansRepository(workspace.id)

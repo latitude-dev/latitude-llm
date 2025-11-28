@@ -2,7 +2,6 @@
 
 import { formatCount } from '$/lib/formatCount'
 import { ROUTES } from '$/services/routes'
-import useFeature from '$/stores/useFeature'
 import { ActiveRunsCountContext } from '../../ActiveRunsCountProvider'
 
 import { LogSources, RunSourceGroup } from '@latitude-data/constants'
@@ -95,7 +94,6 @@ export default function ProjectSection({
   limitedView?: boolean
 }) {
   const disableRunsNotifications = !!limitedView
-  const issuesFeature = useFeature('issues')
   const { data: activeCountBySource } = use(ActiveRunsCountContext)
 
   const activeCount = useMemo(
@@ -133,7 +131,7 @@ export default function ProjectSection({
                 : `There are ${count} runs in progress`,
           },
         },
-        issuesFeature.isEnabled && {
+        {
           label: 'Issues',
           iconName: 'shieldAlert',
           route: ROUTES.projects
@@ -155,14 +153,7 @@ export default function ProjectSection({
           iconName: 'history',
         },
       ].filter(Boolean) as ProjectRoute[],
-    [
-      project,
-      commit,
-      issuesFeature.isEnabled,
-      activeCount,
-      disableRunsNotifications,
-      lastRunTab,
-    ],
+    [project, commit, activeCount, disableRunsNotifications, lastRunTab],
   )
 
   return (

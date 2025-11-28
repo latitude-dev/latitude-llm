@@ -16,7 +16,6 @@ import {
 import { assignEvaluationResultV2ToIssue } from '../../../services/evaluationsV2/results/assign'
 import { discoverIssue } from '../../../services/issues/discover'
 import { generateIssue } from '../../../services/issues/generate'
-import { isFeatureEnabledByName } from '../../../services/workspaceFeatures/isFeatureEnabledByName'
 import { captureException } from '../../../utils/datadogCapture'
 
 export type DiscoverResultIssueJobData = {
@@ -41,9 +40,6 @@ export const discoverResultIssueJob = async (
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
-
-  const enabled = await isFeatureEnabledByName(workspace.id, 'issues').then((r) => r.unwrap()) // prettier-ignore
-  if (!enabled) return
 
   const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
   const result = await resultsRepository.find(resultId).then((r) => r.unwrap())

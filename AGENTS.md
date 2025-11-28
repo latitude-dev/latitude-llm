@@ -344,3 +344,194 @@ publisher.publishLater({
 // For real-time pub/sub events
 publisher.publish('realTimeEvent', { data: 'value' })
 ```
+
+## Prompt Running Architecture
+
+The prompt running system handles executing AI prompts against LLM providers. It supports both foreground (streaming) and background (queued) execution modes.
+
+### High-Level Flow
+
+```
+API Request → Gateway Handler → runDocumentAtCommit → ChainStreamManager → AI Provider → Response
+                    ↓                                          ↓
+            (background mode)                          Telemetry (spans/traces)
+                    ↓                                          ↓
+              enqueueRun → BullMQ Job                   Event Handlers
+                                                              ↓
+                                                    Live Evaluations (if enabled)
+```
+
+### Entry Points
+
+#### Gateway API (`apps/gateway/src/routes/api/v3/projects/versions/documents/run/`)
+
+The main entry point is `run.handler.ts` which:
+
+1. Validates request parameters (path, parameters, tools, stream mode)
+2. Fetches document, commit, and project using `getData()`
+3. Publishes a `documentRunRequested` event for analytics
+4. Routes to either `handleBackgroundRun()` or `handleForegroundRun()` based on:
+   - Explicit `background` parameter
+   - `api-background-runs` feature flag for the workspace
+
+### Core Services
+
+#### `runDocumentAtCommit` (`packages/core/src/services/commits/runDocumentAtCommit.ts`)
+
+The main orchestration service that:
+
+1. **Builds provider map**: Fetches all configured provider API keys for the workspace
+2. **Resolves content**: Processes the prompt template, handling includes and references via `getResolvedContent()`
+3. **Creates telemetry context**: Initializes a prompt span via `telemetry.prompt()` for tracing
+4. **Validates the chain**: Uses `RunDocumentChecker` to:
+   - Parse the prompt using PromptL
+   - Handle `userMessage` parameter (adds `<user>{{LATITUDE_USER_MESSAGE}}</user>` if needed)
+   - Process and validate parameters (including file type conversions)
+   - Create a `Chain` object for execution
+5. **Runs the chain**: Delegates to `runChain()` which creates a `ChainStreamManager`
+
+#### `ChainStreamManager` (`packages/core/src/lib/streamManager/chainStreamManager.ts`)
+
+Manages multi-step chain execution and streaming:
+
+1. **Step execution**: Recursively calls `step()` to advance through the chain
+2. **Chain validation**: Uses `validateChain()` to:
+   - Render the next step of the chain
+   - Find the appropriate provider from `providersMap`
+   - Check provider quota limits
+   - Apply provider-specific rules
+3. **Tool resolution**: Calls `lookupTools()` and `resolveTools()` to prepare tools
+4. **AI streaming**: Calls `streamAIResponse()` to stream responses from the provider
+5. **State management**: Tracks messages, token usage, and responses across steps
+
+#### `ai()` Service (`packages/core/src/services/ai/index.ts`)
+
+Low-level AI provider integration:
+
+1. **Rule application**: Applies provider-specific rules and validations
+2. **Provider creation**: Creates the appropriate Vercel AI SDK provider adapter
+3. **Model configuration**: Configures the language model with settings from the prompt config
+4. **Stream execution**: Uses Vercel AI SDK's `streamText()` for streaming responses
+5. **Schema support**: Handles structured output schemas when specified
+
+### Background Execution
+
+#### `enqueueRun` (`packages/core/src/services/runs/enqueue.ts`)
+
+For background/async execution:
+
+1. Creates an active run entry in Redis cache
+2. Adds job to BullMQ `runsQueue` with deduplication
+3. Publishes `runQueued` event
+
+#### `backgroundRunJob` (`packages/core/src/jobs/job-definitions/runs/backgroundRunJob.ts`)
+
+Processes queued runs:
+
+1. Fetches document data using `getJobDocumentData()`
+2. Marks run as started via `startRun()`
+3. Calls `runDocumentAtCommit()` with abort controller
+4. Forwards stream events to Redis stream for client consumption
+5. Handles experiment integration (if applicable)
+6. Cleans up and marks run as ended
+
+### Telemetry & Tracing
+
+#### Span/Trace Creation (`packages/core/src/telemetry/index.ts`)
+
+Latitude uses OpenTelemetry for tracing prompt executions:
+
+1. **LatitudeTelemetry**: Wraps OpenTelemetry SDK with custom span processors
+2. **InternalExporter**: Converts spans to OTLP format and enqueues for processing
+3. **Span Types** (`SpanType` enum):
+   - `Prompt`: Top-level prompt execution
+   - `Completion`: LLM completion calls
+   - `Tool`: Tool executions
+   - `Step`: Chain steps
+   - `Embedding`, `Retrieval`, `Reranking`: Specialized operations
+
+#### Span Ingestion (`packages/core/src/services/tracing/spans/`)
+
+Spans are processed and stored:
+
+1. `ingest.ts`: Entry point for span ingestion, extracts workspace/API key from attributes
+2. `process.ts`: Converts OTLP attributes to internal format, determines span type
+3. `prompt.ts`: Processes prompt-specific metadata (parameters, template, references)
+4. Span metadata includes: `documentLogUuid`, `experimentUuid`, `promptUuid`, `versionUuid`, `source`
+
+### Event System & Handlers
+
+#### Event Handler Registration (`packages/core/src/events/handlers/index.ts`)
+
+Events trigger asynchronous processing via registered handlers:
+
+```typescript
+export const EventHandlers: IEventsHandlers = {
+  spanCreated: [evaluateLiveLogJob],
+  providerLogCreated: [touchApiKeyJob, touchProviderApiKeyJob],
+  evaluationResultV2Created: [requestDocumentSuggestionJobV2, ...],
+  runQueued: [notifyClientOfRunStatus],
+  // ... many more event handlers
+}
+```
+
+#### Live Evaluation Handler (`packages/core/src/events/handlers/evaluateLiveLog.ts`)
+
+Automatically runs evaluations on prompt executions:
+
+1. Triggered by `spanCreated` event for `SpanType.Prompt` spans
+2. Filters to live-evaluable log sources (excludes `evaluation`, `experiment`)
+3. Fetches evaluations configured for the document with `evaluateLiveLogs: true`
+4. Enqueues `runEvaluationV2Job` for each applicable evaluation
+
+### Evaluation System
+
+#### Running Evaluations (`packages/core/src/services/evaluationsV2/run.ts`)
+
+Evaluations assess prompt outputs:
+
+1. Finds the prompt span and extracts actual/expected outputs
+2. Validates evaluation hasn't already run for this span
+3. Runs the evaluation specification (LLM-as-judge, rule-based, etc.)
+4. Creates `EvaluationResultV2` record
+5. Triggers downstream events (suggestions, issue detection)
+
+#### Evaluation Specifications (`packages/core/src/services/evaluationsV2/specifications/`)
+
+Different evaluation types with their own logic:
+
+- LLM-as-judge evaluations
+- Rule-based evaluations
+- Custom metric evaluations
+- Each specification defines `run()` and `supportsLiveEvaluation`
+
+### Key Data Structures
+
+#### PromptL Chain
+
+The prompt is compiled into a `Chain` object (from `promptl-ai`) that:
+
+- Holds the parsed AST and resolved prompt content
+- Manages step-by-step execution via `chain.step()`
+- Tracks completion state
+
+#### ChainEvent
+
+Stream events use the `ChainEvent` type with event types:
+
+- `ChainStarted`, `ChainCompleted`, `ChainError`
+- `StepStarted`, `StepCompleted`
+- `ProviderStarted`, `ProviderCompleted`
+- `ToolsStarted`, `ToolsCompleted`, `ToolsRequested`
+- `IntegrationWakingUp`
+
+### Tool Handling
+
+Tools are resolved from multiple sources:
+
+1. **Client tools**: Defined in the API request, handled by `buildClientToolHandlersMap()`
+2. **Latitude tools**: Built-in tools like web search
+3. **MCP tools**: From configured MCP integrations
+4. **Agent tools**: Sub-prompts that can be called as tools
+
+Tool resolution happens in `lookupTools()` and `resolveTools()` within the stream manager

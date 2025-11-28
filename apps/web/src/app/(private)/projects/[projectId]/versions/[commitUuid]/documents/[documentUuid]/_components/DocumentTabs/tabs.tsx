@@ -5,7 +5,6 @@ import { TabSelector } from '$/components/TabSelector'
 import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
 import { useSelectedLayoutSegment, useSearchParams } from 'next/navigation'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import useFeature from '$/stores/useFeature'
 
 export type TabValue = DocumentRoutes | 'preview'
 
@@ -27,7 +26,6 @@ export const DocumentTabSelector = memo(
   }) => {
     const selectedSegment = useSelectedLayoutSegment() as DocumentRoutes | null
     const searchParams = useSearchParams()
-    const { isEnabled: isTracesEnabled, isLoading } = useFeature('traces')
 
     // --- Internal fallback state (uncontrolled mode) ---
     const [internalTab, setInternalTab] = useState<TabValue>(
@@ -108,14 +106,10 @@ export const DocumentTabSelector = memo(
           [tabs[DocumentRoutes.editor], tabs.preview],
           tabs[DocumentRoutes.evaluations],
           tabs[DocumentRoutes.experiments],
-          ...(isLoading
-            ? []
-            : isTracesEnabled
-              ? [tabs[DocumentRoutes.traces]]
-              : [tabs[DocumentRoutes.logs]]),
+          tabs[DocumentRoutes.traces],
         ],
       }
-    }, [baseRoute, isTracesEnabled, isLoading])
+    }, [baseRoute])
 
     const setPreviewState = useCallback(
       (showPreview: boolean) => {

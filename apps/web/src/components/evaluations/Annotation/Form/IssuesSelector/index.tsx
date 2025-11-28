@@ -3,7 +3,6 @@ import { useSearchIssues } from '$/stores/issues/selectorIssues'
 import { AnnotationContext, AnnotationFormWrapper } from '../../FormWrapper'
 import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import useFeature from '$/stores/useFeature'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { NewIssueModal } from './NewIssueModal'
 import { updateEvaluationResultInstance } from './updateEvaluationResultInstance'
@@ -14,7 +13,6 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ISSUE_GROUP } from '@latitude-data/constants/issues'
 
 export function IssuesSelector() {
-  const issuesFeature = useFeature('issues')
   const newIssueModal = useToggleModal()
   const { project } = useCurrentProject()
   const { span, evaluation, result, commit, documentUuid, mergedToIssueId } =
@@ -150,8 +148,6 @@ export function IssuesSelector() {
     setOpen(false)
     newIssueModal.onOpen()
   }, [newIssueModal])
-
-  if (!issuesFeature.isEnabled) return null
 
   const hasReason = Boolean(
     result?.metadata && 'reason' in result.metadata && result.metadata.reason,

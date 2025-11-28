@@ -10,7 +10,6 @@ import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
 import { SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
-import useFeature from '$/stores/useFeature'
 import { useAnnotationBySpan } from '$/hooks/useAnnotationsBySpan'
 
 export default function Chat({
@@ -105,14 +104,11 @@ function AnnotationSpanForm({
   commit: Commit
   span: SpanWithDetails<SpanType.Prompt>
 }) {
-  const issuesFeature = useFeature('issues')
   const uiAnnotations = useAnnotationBySpan({
     project,
     commit,
     span,
   })
-
-  if (!issuesFeature.isEnabled) return null
 
   const manualAnnotation = uiAnnotations.annotations.bottom
 

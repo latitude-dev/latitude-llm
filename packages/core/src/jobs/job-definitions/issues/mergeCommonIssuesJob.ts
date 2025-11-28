@@ -4,7 +4,6 @@ import { NotFoundError, UnprocessableEntityError } from '../../../lib/errors'
 import { IssuesRepository } from '../../../repositories'
 import { mergeIssues } from '../../../services/issues/merge'
 import { isIssueActive } from '../../../services/issues/shared'
-import { isFeatureEnabledByName } from '../../../services/workspaceFeatures/isFeatureEnabledByName'
 
 export type MergeCommonIssuesJobData = {
   workspaceId: number
@@ -26,9 +25,6 @@ export const mergeCommonIssuesJob = async (
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
-
-  const enabled = await isFeatureEnabledByName(workspace.id, 'issues').then((r) => r.unwrap()) // prettier-ignore
-  if (!enabled) return
 
   const issuesRepository = new IssuesRepository(workspace.id)
   const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
