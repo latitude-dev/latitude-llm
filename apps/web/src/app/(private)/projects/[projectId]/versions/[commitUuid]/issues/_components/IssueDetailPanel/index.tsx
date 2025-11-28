@@ -53,98 +53,100 @@ export function IssuesDetailPanel({
 
   return (
     <DetailsPanel bordered ref={ref}>
-      <div className='relative w-full overflow-hidden custom-scrollbar'>
-        {/* === SLIDING PANEL WRAPPER === */}
-        <div
-          className={cn(
-            'grid grid-cols-2 w-[200%]',
-            'transition-transform duration-300',
-            {
-              '-translate-x-1/2': showDetails,
-            },
-          )}
-        >
-          {/* === LIST OF SPANS === */}
+      <div className='w-full custom-scrollbar'>
+        <div className='relative w-full overflow-hidden'>
+          {/* === SLIDING PANEL WRAPPER === */}
           <div
             className={cn(
-              'relative w-full transition-opacity duration-300',
-              'flex flex-col gap-y-4',
+              'grid grid-cols-2 w-[200%]',
+              'transition-transform duration-300',
               {
-                'opacity-0': showDetails,
-                'opacity-100': !showDetails,
+                '-translate-x-1/2': showDetails,
               },
             )}
           >
-            <DetailsPanel.Header>
-              <div className='flex justify-between items-center mb-8'>
-                <Tooltip
-                  asChild
-                  trigger={
-                    <Button
-                      variant='ghost'
-                      size='icon'
-                      onClick={onCloseDetails}
-                      iconProps={{ name: 'chevronsRight' }}
-                    />
-                  }
-                >
-                  Close details
-                </Tooltip>
-                <IssueItemActions
-                  placement='details'
-                  issue={issue}
-                  onOptimisticAction={onCloseDetails}
-                />
-              </div>
-              <div className='flex flex-col gap-y-3 border-b border-dashed border-border pb-6'>
-                <Text.H3M>{issue.title}</Text.H3M>
-                <Text.H5 color='foregroundMuted'>{issue.description}</Text.H5>
-              </div>
-            </DetailsPanel.Header>
-            <DetailsPanel.Body>
-              <div className='flex flex-col gap-y-6'>
-                <div className='flex flex-col pt-1 gap-y-6'>
-                  <IssueEvaluation issue={issue} />
-                  <Separator variant='dashed' />
+            {/* === LIST OF SPANS === */}
+            <div
+              className={cn(
+                'relative w-full transition-opacity duration-300',
+                'flex flex-col gap-y-4',
+                {
+                  'opacity-0': showDetails,
+                  'opacity-100': !showDetails,
+                },
+              )}
+            >
+              <DetailsPanel.Header>
+                <div className='flex justify-between items-center mb-8'>
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        onClick={onCloseDetails}
+                        iconProps={{ name: 'chevronsRight' }}
+                      />
+                    }
+                  >
+                    Close details
+                  </Tooltip>
+                  <IssueItemActions
+                    placement='details'
+                    issue={issue}
+                    onOptimisticAction={onCloseDetails}
+                  />
                 </div>
-                <IssueDetails issue={issue} />
-                <TracesList issue={issue} onView={onSelectSpan} />
-              </div>
-            </DetailsPanel.Body>
-          </div>
+                <div className='flex flex-col gap-y-3 border-b border-dashed border-border pb-6'>
+                  <Text.H3M>{issue.title}</Text.H3M>
+                  <Text.H5 color='foregroundMuted'>{issue.description}</Text.H5>
+                </div>
+              </DetailsPanel.Header>
+              <DetailsPanel.Body>
+                <div className='flex flex-col gap-y-6'>
+                  <div className='flex flex-col pt-1 gap-y-6'>
+                    <IssueEvaluation issue={issue} />
+                    <Separator variant='dashed' />
+                  </div>
+                  <IssueDetails issue={issue} />
+                  <TracesList issue={issue} onView={onSelectSpan} />
+                </div>
+              </DetailsPanel.Body>
+            </div>
 
-          {/* === DETAILS SCREEN === */}
-          <div
-            className={cn(
-              'relative w-full transition-opacity duration-300',
-              'flex flex-col gap-y-4',
-              {
-                'opacity-0': !showDetails,
-                'opacity-100': showDetails,
-              },
-            )}
-          >
-            <DetailsPanel.Header>
-              <Button
-                variant='ghost'
-                size='none'
-                iconProps={{ name: 'chevronLeft' }}
-                onClick={() => setSelectedSpan(null)}
-              >
-                Back to list
-              </Button>
-            </DetailsPanel.Header>
-            <DetailsPanel.Body>
-              {selectedSpan ? (
-                <TraceInfoPanel
-                  insideOtherPanel
-                  spanId={selectedSpan.id}
-                  traceId={selectedSpan.traceId}
-                  documentUuid={issue.documentUuid}
-                  mergedToIssueId={issue.mergedToIssueId ?? undefined}
-                />
-              ) : null}
-            </DetailsPanel.Body>
+            {/* === DETAILS SCREEN === */}
+            <div
+              className={cn(
+                'relative w-full transition-opacity duration-300',
+                'flex flex-col gap-y-4',
+                {
+                  'opacity-0': !showDetails,
+                  'opacity-100': showDetails,
+                },
+              )}
+            >
+              <DetailsPanel.Header>
+                <Button
+                  variant='ghost'
+                  size='none'
+                  iconProps={{ name: 'chevronLeft' }}
+                  onClick={() => setSelectedSpan(null)}
+                >
+                  Back to list
+                </Button>
+              </DetailsPanel.Header>
+              <DetailsPanel.Body>
+                {selectedSpan ? (
+                  <TraceInfoPanel
+                    insideOtherPanel
+                    spanId={selectedSpan.id}
+                    traceId={selectedSpan.traceId}
+                    documentUuid={issue.documentUuid}
+                    mergedToIssueId={issue.mergedToIssueId ?? undefined}
+                  />
+                ) : null}
+              </DetailsPanel.Body>
+            </div>
           </div>
         </div>
       </div>

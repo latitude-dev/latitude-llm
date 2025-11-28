@@ -20,8 +20,7 @@ import { HumanEvaluationRatingSpecification } from './human/rating'
 import { extractActualOutput } from './outputs/extract'
 
 vi.mock('./outputs/extract', async (importOriginal) => {
-  const original =
-    await importOriginal<typeof import('./outputs/extract')>()
+  const original = await importOriginal<typeof import('./outputs/extract')>()
   return {
     ...original,
     extractActualOutput: vi.fn(original.extractActualOutput),
@@ -31,7 +30,9 @@ vi.mock('./outputs/extract', async (importOriginal) => {
 describe('annotateEvaluationV2', () => {
   let mocks: {
     publisher: MockInstance
-    extractActualOutput: ReturnType<typeof vi.mocked<typeof extractActualOutput>>
+    extractActualOutput: ReturnType<
+      typeof vi.mocked<typeof extractActualOutput>
+    >
   }
 
   let workspace: Workspace
