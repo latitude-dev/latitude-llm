@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   uuid,
   varchar,
+  real,
 } from 'drizzle-orm/pg-core'
 import {
   EvaluationConfiguration,
@@ -47,6 +48,7 @@ export const evaluationVersions = latitudeSchema.table(
     configuration: jsonb('configuration')
       .notNull()
       .$type<EvaluationConfiguration>(),
+    mcc: real('mcc'),
     // Denormalized configuration fields - create indexes if necessary
     evaluateLiveLogs: boolean('evaluate_live_logs'),
     enableSuggestions: boolean('enable_suggestions'),

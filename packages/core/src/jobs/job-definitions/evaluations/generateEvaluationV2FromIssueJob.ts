@@ -1,13 +1,16 @@
 import { Job } from 'bullmq'
-import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { NotFoundError } from '../../../lib/errors'
-import { CommitsRepository, IssuesRepository } from '../../../repositories'
-import { generateEvaluationFromIssueWithCopilot } from '../../../services/evaluationsV2/generateFromIssue'
-import { captureException } from '../../../utils/datadogCapture'
-import { startActiveEvaluation } from '../../../services/evaluationsV2/active/start'
-import { endActiveEvaluation } from '../../../services/evaluationsV2/active/end'
-import { failActiveEvaluation } from '../../../services/evaluationsV2/active/fail'
-import { Result } from '../../../lib/Result'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
+import {
+  CommitsRepository,
+  IssuesRepository,
+} from '@latitude-data/core/repositories'
+import { captureException } from '@latitude-data/core/utils/datadogCapture'
+import { startActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/start'
+import { endActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/end'
+import { failActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/fail'
+import { Result } from '@latitude-data/core/lib/Result'
+import { generateEvaluationFromIssue } from '@latitude-data/core/services/evaluationsV2/generateFromIssue/generateEvaluationFromIssue'
 
 export type GenerateEvaluationV2FromIssueJobData = {
   workspaceId: number
@@ -48,15 +51,13 @@ export const generateEvaluationV2FromIssueJob = async (
       evaluationUuid: evaluationUuid,
     })
 
-    const generatedEvaluation = await generateEvaluationFromIssueWithCopilot({
+    await generateEvaluationFromIssue({
       issue,
-      commit,
       workspace,
+      commit,
       providerName,
       model,
-    })
-
-    return generatedEvaluation.unwrap()
+    }).then((r) => r.unwrap())
   } catch (error) {
     captureException(error as Error)
     const failResult = await failActiveEvaluation({

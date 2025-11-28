@@ -134,6 +134,13 @@ export async function runEvaluationV2<
       new UnprocessableEntityError('Cannot find completion span'),
     )
   }
+
+  if (!completionSpan.metadata) {
+    return Result.error(
+      new UnprocessableEntityError('Completion span metadata is missing'),
+    )
+  }
+
   const completionSpanMetadata =
     completionSpan.metadata as CompletionSpanMetadata
   const conversation = [

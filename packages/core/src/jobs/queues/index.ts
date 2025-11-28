@@ -17,6 +17,7 @@ let _queues:
       latteQueue: Queue
       runsQueue: Queue
       issuesQueue: Queue
+      generateEvaluationsQueue: Queue
     }
   | undefined
 
@@ -36,8 +37,17 @@ export async function queues() {
         type: 'exponential',
         delay: 1000,
       },
-      removeOnFail: 100,
+      removeOnFail: false,
       removeOnComplete: true,
+    },
+  }
+
+  const generateEvaluationsOptions: QueueOptions = {
+    ...options,
+    defaultJobOptions: {
+      ...options.defaultJobOptions,
+      removeOnFail: false,
+      removeOnComplete: false,
     },
   }
 
@@ -54,6 +64,7 @@ export async function queues() {
     latteQueue: new Queue(Queues.latteQueue, options),
     runsQueue: new Queue(Queues.runsQueue, options),
     issuesQueue: new Queue(Queues.issuesQueue, options),
+    generateEvaluationsQueue: new Queue(Queues.generateEvaluationsQueue, generateEvaluationsOptions), // prettier-ignore
   }
 
   return _queues

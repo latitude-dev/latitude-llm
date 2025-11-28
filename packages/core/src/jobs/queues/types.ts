@@ -12,4 +12,5 @@ export enum Queues {
   latteQueue = 'latteQueue',
   runsQueue = 'runsQueue',
   issuesQueue = 'issuesQueue',
+  generateEvaluationsQueue = 'generateEvaluationsQueue',
 }
