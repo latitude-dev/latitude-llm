@@ -48,6 +48,7 @@ const eventHandlersJobMappings = {
   removeMergedIssueVectors: jobs.removeMergedIssueVectors,
   generateDetailsForMergedIssue: jobs.generateDetailsForMergedIssue,
   notifyClientOfCommitUpdated: jobs.notifyClientOfCommitUpdated,
+  unlockIssuesDashboardOnAnnotation: jobs.unlockIssuesDashboardOnAnnotation,
 }
 
 export function startEventsWorker() {

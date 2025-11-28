@@ -11,6 +11,7 @@ import {
 import {
   and,
   asc,
+  count,
   desc,
   eq,
   getTableColumns,
@@ -58,6 +59,18 @@ export class IssuesRepository extends Repository<Issue> {
 
   get scope() {
     return this.db.select(tt).from(issues).where(this.scopeFilter).$dynamic()
+  }
+
+  /**
+   * We want to get the absolute count of issues in a project,
+   * regardless of any filtering applied.
+   */
+  async getAbsoluteIssuesCount({ project }: { project: Project }) {
+    const result = await this.db
+      .select({ count: count() })
+      .from(issues)
+      .where(and(this.scopeFilter, eq(issues.projectId, project.id)))
+    return result[0]?.count ?? 0
   }
 
   async lock({ id, wait }: { id: number; wait?: boolean }) {

@@ -12,6 +12,8 @@ import {
 } from '@latitude-data/core/constants'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { RunsPage as ClientRunsPage } from './_components/RunsPage'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 
 export default async function RunsPage({
   params,
@@ -24,6 +26,11 @@ export default async function RunsPage({
   const { activePage, activePageSize, sourceGroup } = await searchParams
 
   const defaultSourceGroup = RunSourceGroup.Production
+  const { workspace } = await getCurrentUserOrRedirect()
+  const issuesEnabled = await isFeatureEnabledByName(
+    workspace.id,
+    'issues',
+  ).then((r) => r.unwrap())
 
   const projectId = Number(_projectId)
   const activeSearch = {
@@ -46,6 +53,7 @@ export default async function RunsPage({
 
   return (
     <ClientRunsPage
+      issuesEnabled={issuesEnabled}
       active={{ runs: activeRuns, search: activeSearch }}
       completed={{ runs: completedRuns.items }}
       limitedView={limitedView}

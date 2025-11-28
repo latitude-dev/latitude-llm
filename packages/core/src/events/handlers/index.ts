@@ -30,6 +30,7 @@ import { undeployDocumentTriggerJob } from './undeployDocumentTriggerJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
 import { removeMergedIssueVectors } from './removeMergedIssueVectors'
 import { generateDetailsForMergedIssue } from './generateDetailsForMergedIssue'
+import { unlockIssuesDashboardOnAnnotation } from './unlockIssuesDashboardOnAnnotation'
 
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
@@ -71,7 +72,7 @@ export const EventHandlers: IEventsHandlers = {
   evaluationV2Updated: [pingProjectUpdateJob],
   evaluationV2Deleted: [pingProjectUpdateJob],
   evaluationV2Ran: [],
-  evaluationV2Annotated: [],
+  evaluationV2Annotated: [unlockIssuesDashboardOnAnnotation],
   evaluationResultV2Created: [
     requestDocumentSuggestionJobV2,
     notifyClientOfEvaluationResultV2Created,

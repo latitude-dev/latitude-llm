@@ -40,6 +40,7 @@ import { Message } from '@latitude-data/constants/legacyCompiler'
 import { sum } from 'lodash-es'
 import { useCompletedRunsKeysetPaginationStore } from '$/stores/completedRunsKeysetPagination'
 import { useAnnotationBySpan } from '$/hooks/useAnnotationsBySpan'
+import { useAnnotationsProgress } from '$/stores/issues/annotationsProgress'
 
 export function RunPanel({
   run,
@@ -255,14 +256,20 @@ function AnnotationFormWrapper({
   sourceGroup: RunSourceGroup
 }) {
   const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { refetch: refetchProgress } = useAnnotationsProgress({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+  })
   const { mutate } = useCompletedRunsKeysetPaginationStore({
     projectId: project.id,
     sourceGroup,
   })
 
   const handleAnnotate = useCallback(() => {
+    refetchProgress()
     mutate()
-  }, [mutate])
+  }, [mutate, refetchProgress])
 
   return (
     <AnnotationForm

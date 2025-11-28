@@ -16,11 +16,22 @@ import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { annotateEvaluationV2 } from './annotate'
 import { HumanEvaluationRatingSpecification } from './human/rating'
-import * as outputs from './outputs/extract'
+
+import { extractActualOutput } from './outputs/extract'
+
+vi.mock('./outputs/extract', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('./outputs/extract')>()
+  return {
+    ...original,
+    extractActualOutput: vi.fn(original.extractActualOutput),
+  }
+})
 
 describe('annotateEvaluationV2', () => {
   let mocks: {
     publisher: MockInstance
+    extractActualOutput: ReturnType<typeof vi.mocked<typeof extractActualOutput>>
   }
 
   let workspace: Workspace
@@ -91,6 +102,7 @@ describe('annotateEvaluationV2', () => {
       publisher: vi
         .spyOn(publisher, 'publishLater')
         .mockImplementation(async () => {}),
+      extractActualOutput: vi.mocked(extractActualOutput),
     }
 
     // Mock the same functions we mocked in run.test.ts
@@ -207,7 +219,7 @@ describe('annotateEvaluationV2', () => {
   })
 
   it('succeeds when extract actual output fails learnable', async () => {
-    vi.spyOn(outputs, 'extractActualOutput').mockResolvedValue(
+    mocks.extractActualOutput.mockReturnValue(
       Result.error(
         new UnprocessableEntityError(
           "Field 'arguments' is not present in the actual output",
@@ -273,7 +285,7 @@ describe('annotateEvaluationV2', () => {
   })
 
   it('succeeds when extract actual output fails non-learnable', async () => {
-    vi.spyOn(outputs, 'extractActualOutput').mockResolvedValue(
+    mocks.extractActualOutput.mockReturnValue(
       Result.error(new BadRequestError('Invalid message content filter')),
     )
     mocks.publisher.mockClear()

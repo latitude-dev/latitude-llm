@@ -21,6 +21,7 @@ import {
   ResultBadgeProps,
 } from '../index'
 import { useAnnotationFormState } from './useAnnotationForm'
+import { useHasPassed } from '../hooks/useHasPassed'
 
 const specification = HumanEvaluationBinarySpecification
 export default {
@@ -149,17 +150,16 @@ function AnnotationForm({
     result?.score ?? undefined,
   )
   const { reason, onChangeReason } = useAnnotationFormState({ score })
+  const hasPassed = useHasPassed({
+    evaluation,
+    result,
+    score,
+  })
 
   const [thumbsUp, setThumbsUp] = useState<boolean | null>(() =>
     getThumbsUpFromScore(result?.score),
   )
 
-  // Calculate hasPassed optimistically based on current score
-  const hasPassed = useMemo(() => {
-    if (score === undefined) return result?.hasPassed
-    const reverseScale = evaluation.configuration.reverseScale
-    return reverseScale ? score === 0 : score === 1
-  }, [score, evaluation.configuration.reverseScale, result?.hasPassed])
   const onThumbsUpClick = useCallback(
     (newThumbsUp: boolean) => {
       if (newThumbsUp === thumbsUp) return

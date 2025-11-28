@@ -14,6 +14,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RunsListItem } from './Item'
 import { RunSourceSelector } from './SourceSelector'
+import { AnnotationProgressPanel } from '$/components/AnnotationProgressPanel'
 
 type ActiveRunsProps = {
   runs: ActiveRun[]
@@ -38,6 +39,7 @@ type CompletedRunsProps = {
 }
 
 export function RunsList({
+  issuesEnabled,
   active,
   completed,
   selectedRunUuid,
@@ -49,6 +51,7 @@ export function RunsList({
   sourceGroup,
   setSourceGroup,
 }: {
+  issuesEnabled: boolean
   active: ActiveRunsProps
   completed: CompletedRunsProps
   selectedRunUuid?: string
@@ -102,6 +105,13 @@ export function RunsList({
             <RealtimeToggle enabled={realtime} setEnabled={setRealtime} />
           </div>
         </div>
+
+        {issuesEnabled ? (
+          <div className='w-full flex-shrink-0'>
+            <AnnotationProgressPanel isReady={!completed.isLoading} />
+          </div>
+        ) : null}
+
         {active.runs.length > 0 ? (
           <div className='w-full min-h-0 flex flex-col border border-border rounded-xl overflow-hidden'>
             <div className='w-full flex flex-col divide-border divide-y rounded-t-xl overflow-hidden overflow-y-auto custom-scrollbar relative'>
