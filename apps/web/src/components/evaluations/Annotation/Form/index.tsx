@@ -95,9 +95,9 @@ export function AnnotationForm<
             <div className='px-3 py-2 bg-background rounded-md flex items-center gap-x-2'>
               <AnnotationsProgressIcon isCompleted />
               <Text.H6 color='foregroundMuted'>
-                Please provide feedback on why this annotation did not pass.
-                This is important for improving your prompt and ensuring
-                Latitude can create better issues. Check the{' '}
+                Please write feedback on why this annotation did not pass. This
+                is important for improving your prompt and ensuring Latitude can
+                create better issues. Check the{' '}
                 <Link href={issuesDashboardLink} target='_blank'>
                   <Text.H6M underline color='foregroundMuted'>
                     issues section
