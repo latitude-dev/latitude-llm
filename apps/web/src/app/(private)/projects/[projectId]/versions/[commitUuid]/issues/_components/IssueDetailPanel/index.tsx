@@ -1,4 +1,4 @@
-import { RefObject, useCallback, useMemo, useRef } from 'react'
+import { RefObject, useCallback, useRef } from 'react'
 import { usePanelDomRef } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
@@ -8,7 +8,6 @@ import { TracesList } from './TracesList'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import useFeature from '$/stores/useFeature'
 import { IssueEvaluation } from './Evaluation'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Span } from '@latitude-data/constants'
@@ -35,12 +34,6 @@ export function IssuesDetailPanel({
   offset: StickyOffset
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const { isEnabled: itIs, isLoading: isLoadingEvaluationGeneratorEnabled } =
-    useFeature('evaluationGenerator')
-  const isEvaluationGeneratorEnabled = useMemo(
-    () => itIs && !isLoadingEvaluationGeneratorEnabled,
-    [itIs, isLoadingEvaluationGeneratorEnabled],
-  )
   const scrollableArea = usePanelDomRef({ selfRef: ref.current })
   const beacon = stickyRef?.current
   const showDetails = selectedSpan !== null
@@ -110,12 +103,10 @@ export function IssuesDetailPanel({
             </DetailsPanel.Header>
             <DetailsPanel.Body>
               <div className='flex flex-col gap-y-6'>
-                {isEvaluationGeneratorEnabled ? (
-                  <div className='flex flex-col pt-1 gap-y-6'>
-                    <IssueEvaluation issue={issue} />
-                    <Separator variant='dashed' />
-                  </div>
-                ) : null}
+                <div className='flex flex-col pt-1 gap-y-6'>
+                  <IssueEvaluation issue={issue} />
+                  <Separator variant='dashed' />
+                </div>
                 <IssueDetails issue={issue} />
                 <TracesList issue={issue} onView={onSelectSpan} />
               </div>

@@ -10,7 +10,6 @@ import { NotFoundError } from '../../lib/errors'
 import { IssuesRepository } from '../../repositories'
 import { assignEvaluationResultV2ToIssue } from '../../services/evaluationsV2/results/assign'
 import { validateResultForIssue } from '../../services/issues/results/validate'
-import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatureEnabledByName'
 import { EvaluationResultV2CreatedEvent } from '../events'
 
 export const assignIssueToEvaluationResultV2Job = async ({
@@ -52,9 +51,6 @@ export const assignIssueToEvaluationResultV2Job = async ({
       issue,
     }).then((r) => r.unwrap())
   } else {
-    const enabled = await isFeatureEnabledByName(workspace.id, 'issues').then((r) => r.unwrap()) // prettier-ignore
-    if (!enabled) return
-
     const payload = { workspaceId: workspace.id, resultId: result.id }
     const { issuesQueue } = await queues()
 

@@ -12,7 +12,6 @@ import {
 import { generateIssue } from '../../../services/issues/generate'
 import { isIssueActive } from '../../../services/issues/shared'
 import { updateIssue } from '../../../services/issues/update'
-import { isFeatureEnabledByName } from '../../../services/workspaceFeatures/isFeatureEnabledByName'
 import { captureException } from '../../../utils/datadogCapture'
 
 export type GenerateIssueDetailsJobData = {
@@ -36,9 +35,6 @@ export const generateIssueDetailsJob = async (
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
-
-  const enabled = await isFeatureEnabledByName(workspace.id, 'issues').then((r) => r.unwrap()) // prettier-ignore
-  if (!enabled) return
 
   const issuesRepository = new IssuesRepository(workspace.id)
   const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
