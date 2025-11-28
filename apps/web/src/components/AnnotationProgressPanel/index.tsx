@@ -105,7 +105,7 @@ function ProgressBar({
         {showCurrentIndicator ? (
           <div
             className={cn(
-              'z-10 absolute -top-3.5 -translate-x-full pointer-events-auto',
+              'z-10 absolute -top-3.5 -translate-x-full',
             )}
             style={{ left: `${minimumPosition}%` }}
           >
@@ -116,7 +116,7 @@ function ProgressBar({
           </div>
         ) : null}
 
-        <div className='absolute -top-3.5 right-0 pointer-events-auto'>
+        <div className='absolute -top-3.5 right-0'>
           <OptimalIndicator
             isOptimal={optimalAchieved}
             optimalAnnotations={optimalAnnotations}
@@ -261,7 +261,7 @@ export function AnnotationProgressPanel({ isReady }: { isReady: boolean }) {
       <div className='mt-4 flex justify-between items-center opacity-60'>
         <Popover.Root open={whatOpen} onOpenChange={setWhatOpen}>
           <Popover.Trigger>
-            <Text.H6 underline>What'a an annotation?</Text.H6>
+            <Text.H6 underline>What's an annotation?</Text.H6>
           </Popover.Trigger>
           <Popover.Content>
             <AnnotationExplanation

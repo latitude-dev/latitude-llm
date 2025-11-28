@@ -33,6 +33,7 @@ export default async function IssuesPageRoute({
   if (!session.workspace.issuesUnlocked) {
     return (
       <LockedIssuesDashboard
+        isLocked
         projectId={Number((await params).projectId)}
         commitUuid={(await params).commitUuid}
       />
@@ -78,6 +79,7 @@ export default async function IssuesPageRoute({
     if (absoluteCount === 0) {
       return (
         <LockedIssuesDashboard
+          isLocked={false}
           projectId={Number(projectId)}
           commitUuid={commitUuid}
         />

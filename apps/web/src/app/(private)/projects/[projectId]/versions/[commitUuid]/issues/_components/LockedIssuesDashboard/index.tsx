@@ -15,9 +15,11 @@ import { PlaceholderTable } from './PlaceholderTable'
 import { WHAT_ARE_ANNOTATIONS_VIDEO_ID } from '@latitude-data/constants/issues'
 
 function LockedIssuesHeader({
+  isLocked,
   projectId,
   commitUuid,
 }: {
+  isLocked: boolean
   projectId: number
   commitUuid: string
 }) {
@@ -33,7 +35,11 @@ function LockedIssuesHeader({
   return (
     <div className='flex flex-col max-w-md justify-center items-center gap-4 mx-auto'>
       <div className='flex flex-col items-center gap-2'>
-        <Text.H3M>You don't have access to issues...yet</Text.H3M>
+        <Text.H3M>
+          {isLocked
+            ? "You don't have access to issues...yet"
+            : 'Your project does not have any issues'}
+        </Text.H3M>
         <Text.H5 color='foregroundMuted' align='center'>
           Annotate more logs to unlock the issue section and automate the
           evaluation process
@@ -60,16 +66,22 @@ function LockedIssuesHeader({
 }
 
 export function LockedIssuesDashboard({
+  isLoacked,
   projectId,
   commitUuid,
 }: {
+  isLocked: boolean
   projectId: number
   commitUuid: string
 }) {
   return (
     <div className='flex flex-col items-center w-full px-20'>
       <div className='max-w-[680px] flex flex-col w-full gap-8 pt-20 xl:pt-40'>
-        <LockedIssuesHeader projectId={projectId} commitUuid={commitUuid} />
+        <LockedIssuesHeader
+          isLocked={isLoacked}
+          projectId={projectId}
+          commitUuid={commitUuid}
+        />
         <PlaceholderTable />
       </div>
     </div>
