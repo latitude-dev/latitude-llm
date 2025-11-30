@@ -33,6 +33,7 @@ export async function validateEvaluationV2<
     commit,
     workspace,
     issue,
+    qualityMetric,
   }: {
     mode: 'create' | 'update'
     evaluation?: EvaluationV2<T, M>
@@ -42,6 +43,7 @@ export async function validateEvaluationV2<
     commit: Commit
     workspace: Workspace
     issue: Issue | null
+    qualityMetric?: number
   },
   db = database,
 ) {
@@ -181,6 +183,12 @@ export async function validateEvaluationV2<
   if (issue && issue.ignoredAt) {
     return Result.error(
       new BadRequestError('Cannot use an issue that has been ignored'),
+    )
+  }
+
+  if (qualityMetric && (qualityMetric < 0 || qualityMetric > 100)) {
+    return Result.error(
+      new BadRequestError(`Quality metric must be a number between 0 and 100`),
     )
   }
 

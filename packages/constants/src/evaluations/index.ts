@@ -172,6 +172,7 @@ export type EvaluationV2<
   description: string
   type: T
   metric: M
+  qualityMetric?: number
   configuration: EvaluationConfiguration<T, M>
   evaluateLiveLogs?: boolean | null
   enableSuggestions?: boolean | null

@@ -7,7 +7,6 @@ import {
 } from '@latitude-data/core/repositories'
 import { captureException } from '@latitude-data/core/utils/datadogCapture'
 import { startActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/start'
-import { endActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/end'
 import { failActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/fail'
 import { Result } from '@latitude-data/core/lib/Result'
 import { generateEvaluationFromIssue } from '@latitude-data/core/services/evaluationsV2/generateFromIssue/generateEvaluationFromIssue'
@@ -59,32 +58,27 @@ export const generateEvaluationV2FromIssueJob = async (
       model,
     }).then((r) => r.unwrap())
   } catch (error) {
-    captureException(error as Error)
-    const failResult = await failActiveEvaluation({
-      workspaceId,
-      projectId: commit.projectId,
-      evaluationUuid: evaluationUuid,
-      error: error as Error,
-    })
-    if (!Result.isOk(failResult)) {
-      captureException(
-        new Error(
-          `[GenerateEvaluationV2FromIssueJob] Failed to fail active evaluation`,
-        ),
-      )
+    const { attemptsMade, opts } = job
+    const maxAttempts = opts.attempts ?? 1
+    const isLastAttempt = attemptsMade + 1 >= maxAttempts
+
+    // Only failing in last attempt of the job, else the retry system is useless
+    if (isLastAttempt) {
+      captureException(error as Error)
+      const failResult = await failActiveEvaluation({
+        workspaceId,
+        projectId: commit.projectId,
+        evaluationUuid: evaluationUuid,
+        error: error as Error,
+      })
+      if (!Result.isOk(failResult)) {
+        captureException(
+          new Error(
+            `[GenerateEvaluationV2FromIssueJob] Failed to fail active evaluation`,
+          ),
+        )
+      }
     }
-  } finally {
-    const endResult = await endActiveEvaluation({
-      workspaceId,
-      projectId: commit.projectId,
-      evaluationUuid,
-    })
-    if (!Result.isOk(endResult)) {
-      captureException(
-        new Error(
-          `[GenerateEvaluationV2FromIssueJob] Failed to end active evaluation`,
-        ),
-      )
-    }
+    throw error
   }
 }
