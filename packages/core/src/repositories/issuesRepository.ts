@@ -182,12 +182,14 @@ export class IssuesRepository extends Repository<Issue> {
   async findByTitleAndStatuses({
     project,
     document,
+    commit,
     title,
     statuses,
     group,
   }: {
     project: Project
     document: DocumentVersion
+    commit: Commit
     title: string | null
     statuses?: IssueStatuses[]
     group?: IssueGroup
@@ -197,6 +199,13 @@ export class IssuesRepository extends Repository<Issue> {
       group,
     })
 
+    const commitIds = await this.getCommitIds({ commit })
+    const subquery = this.buildHistogramSubquery({
+      project,
+      commitIds,
+      filters: { documentUuid: document.documentUuid },
+    })
+
     return this.db
       .select({
         id: issues.id,
@@ -204,6 +213,7 @@ export class IssuesRepository extends Repository<Issue> {
         documentUuid: issues.documentUuid,
       })
       .from(issues)
+      .innerJoin(subquery, eq(subquery.issueId, issues.id))
       .where(
         and(
           this.scopeFilter,

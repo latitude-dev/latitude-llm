@@ -5,6 +5,7 @@ import {
   ProjectsRepository,
   IssuesRepository,
   DocumentVersionsRepository,
+  CommitsRepository,
 } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
@@ -32,6 +33,7 @@ export const GET = errorHandler(
           documentUuid: string
           statuses: string | undefined
           group: string | undefined
+          commitUuid: string
         }
         workspace: Workspace
       },
@@ -41,11 +43,16 @@ export const GET = errorHandler(
         projectId: params.projectId,
         documentUuid: params.documentUuid,
       })
+      const commitUuid = query.get('commitUuid')
       const title = query.get('query')
       const statusesParam = query.get('statuses')
       const groupParam = query.get('group')
       const projectsRepo = new ProjectsRepository(workspace.id)
       const project = await projectsRepo.find(projectId).then((r) => r.unwrap())
+      const commitsRepo = new CommitsRepository(workspace.id)
+      const commit = await commitsRepo
+        .getCommitByUuid({ uuid: commitUuid! })
+        .then((r) => r.unwrap())
       const docsScope = new DocumentVersionsRepository(workspace.id)
       const document = await docsScope
         .getSomeDocumentByUuid({
@@ -54,9 +61,11 @@ export const GET = errorHandler(
         })
         .then((r) => r.unwrap())
       const issuesRepo = new IssuesRepository(workspace.id)
+
       const result = await issuesRepo.findByTitleAndStatuses({
         project,
         document,
+        commit,
         title,
         statuses:
           statusesParam && statusesParam.length > 0

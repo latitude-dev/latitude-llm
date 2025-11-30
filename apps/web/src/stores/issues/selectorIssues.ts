@@ -38,12 +38,14 @@ export function useSearchIssues(
   {
     projectId,
     documentUuid,
+    commitUuid,
     query,
     statuses,
     group,
   }: {
     projectId: number
     documentUuid: string
+    commitUuid: string
     query?: string
     statuses?: IssueStatuses[]
     group?: IssueGroup
@@ -58,6 +60,7 @@ export function useSearchIssues(
   const fetcher = useFetcher<SearchIssueResponse>(route, {
     searchParams: {
       documentUuid,
+      commitUuid,
       query: query ?? '',
       statuses: issueStatusesQueryParam ?? '',
       group: group ?? '',

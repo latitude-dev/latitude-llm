@@ -204,6 +204,7 @@ describe('IssuesRepository - Group Filtering', () => {
       const issues = await repository.findByTitleAndStatuses({
         project,
         document,
+        commitId: commit.id,
         title: null,
         group: ISSUE_GROUP.activeWithResolved,
       })
