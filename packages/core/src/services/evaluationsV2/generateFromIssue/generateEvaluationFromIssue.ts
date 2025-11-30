@@ -7,6 +7,8 @@ import { getSpansByIssue } from '@latitude-data/core/data-access/issues/getSpans
 import { generateEvaluationFromIssueWithCopilot } from './generateFromIssue'
 import { getSpansWithoutIssuesByDocumentUuid } from '../../../data-access/issues/getSpansWithoutIssuesByDocumentUuid'
 
+const MAX_COMPARISON_ANNOTATIONS = 100
+
 export async function generateEvaluationFromIssue({
   issue,
   workspace,
@@ -97,7 +99,7 @@ async function getEqualAmountsOfPositiveAndNegativeEvaluationResults({
     workspace,
     commit,
     issue,
-    pageSize: 100,
+    pageSize: MAX_COMPARISON_ANNOTATIONS,
     page: 1,
   })
   if (!Result.isOk(spansResult)) {

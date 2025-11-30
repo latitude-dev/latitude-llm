@@ -48,7 +48,8 @@ export const evaluationVersions = latitudeSchema.table(
     configuration: jsonb('configuration')
       .notNull()
       .$type<EvaluationConfiguration>(),
-    mcc: real('mcc'),
+    // Currently MCC, but generalizing name to qualityMetric to allow for other metrics in the future
+    qualityMetric: real('quality_metric'),
     // Denormalized configuration fields - create indexes if necessary
     evaluateLiveLogs: boolean('evaluate_live_logs'),
     enableSuggestions: boolean('enable_suggestions'),

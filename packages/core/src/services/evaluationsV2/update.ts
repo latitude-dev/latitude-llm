@@ -34,6 +34,7 @@ export async function updateEvaluationV2<
     options,
     issueId = null,
     workspace,
+    qualityMetric,
   }: {
     evaluation: EvaluationV2<T, M>
     commit: Commit
@@ -41,6 +42,7 @@ export async function updateEvaluationV2<
     settings?: Partial<Omit<EvaluationSettings<T, M>, 'type' | 'metric'>>
     options?: Partial<EvaluationOptions>
     issueId?: number | null
+    qualityMetric?: number
   },
   transaction = new Transaction(),
 ) {
@@ -97,6 +99,7 @@ export async function updateEvaluationV2<
         commit: commit,
         workspace: workspace,
         issue: issue,
+        qualityMetric: qualityMetric,
       },
       tx,
     )
@@ -111,6 +114,7 @@ export async function updateEvaluationV2<
         id: undefined,
         commitId: commit.id,
         issueId,
+        qualityMetric,
         ...settings,
         ...options,
         updatedAt: new Date(),

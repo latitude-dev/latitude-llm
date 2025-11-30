@@ -44,6 +44,8 @@ export async function createEvaluationFlow({
     queueName: Queues.generateEvaluationsQueue,
     data: {
       workspaceId: workspace.id,
+      commitId: commit.id,
+      evaluationUuid: evaluationToEvaluate.uuid,
       spanAndTraceIdPairsOfPositiveEvaluationRuns,
       spanAndTraceIdPairsOfNegativeEvaluationRuns,
     },
@@ -57,6 +59,14 @@ export async function createEvaluationFlow({
         spanId: span.id,
         traceId: span.traceId,
         dry: true,
+      },
+      opts: {
+        // overriding eval queue options for faster retry policy to avoid user waiting too long for the evaluation to be generated
+        attempts: 2,
+        backoff: {
+          type: 'fixed',
+          delay: 1000,
+        },
       },
     })),
   })

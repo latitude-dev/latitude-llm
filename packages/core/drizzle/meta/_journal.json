@@ -1709,6 +1709,13 @@
       "when": 1764244643756,
       "tag": "0244_tiny_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 245,
+      "version": "7",
+      "when": 1764354071791,
+      "tag": "0245_add_quality_metric_stat",
+      "breakpoints": true
     }
   ]
 }

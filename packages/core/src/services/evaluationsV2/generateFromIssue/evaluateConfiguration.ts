@@ -1,6 +1,6 @@
 import { calculateMCC } from './calculateMCC'
 import { Result } from '@latitude-data/core/lib/Result'
-import { MIN_MCC_THRESHOLD } from '@latitude-data/constants/issues'
+import { MIN_QUALITY_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
 
 export async function evaluateConfiguration({
   childrenValues,
@@ -37,8 +37,10 @@ export async function evaluateConfiguration({
 
   console.log('mcc', mcc)
 
-  if (mcc < MIN_MCC_THRESHOLD) {
-    return Result.error(new Error(`MCC is less than ${MIN_MCC_THRESHOLD}`))
+  if (mcc < MIN_QUALITY_METRIC_THRESHOLD) {
+    return Result.error(
+      new Error(`MCC is less than ${MIN_QUALITY_METRIC_THRESHOLD}`),
+    )
   }
 
   return Result.ok(mcc)
