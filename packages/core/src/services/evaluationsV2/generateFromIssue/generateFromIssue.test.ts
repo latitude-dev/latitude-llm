@@ -8,10 +8,8 @@ import {
 } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import { CLOUD_MESSAGES } from '../../../constants'
-import * as copilotGet from '@latitude-data/core/services/copilot/get'
-import * as copilotRun from '@latitude-data/core/services/copilot/run'
+import * as copilotModule from '../../copilot'
 import * as createEvaluationV2Module from '../create'
-import * as findFirstModelForProviderModule from '../../ai/providers/models'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import {
   __test__,
@@ -26,24 +24,17 @@ import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/Pro
 import * as getSpanMessagesAndEvaluationResultsByIssue from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 
-vi.mock('../copilot/get', () => ({
+vi.mock('../../copilot', () => ({
   getCopilot: vi.fn(),
-}))
-
-vi.mock('../copilot/run', () => ({
   runCopilot: vi.fn(),
 }))
 
-vi.mock('../evaluationsV2/create', () => ({
+vi.mock('../create', () => ({
   createEvaluationV2: vi.fn(),
 }))
 
-vi.mock('../ai/providers/models', () => ({
-  findFirstModelForProvider: vi.fn(),
-}))
-
 vi.mock(
-  '../../data-access/issues/getSpanMessagesAndEvaluationResultsByIssue',
+  '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue',
   () => ({
     getSpanMessagesAndEvaluationResultsByIssue: vi.fn(),
   }),
@@ -52,13 +43,10 @@ vi.mock(
 const MODEL = 'gpt-4o'
 
 describe('generateFromIssue', () => {
-  const mockGetCopilot = vi.mocked(copilotGet.getCopilot)
-  const mockRunCopilot = vi.mocked(copilotRun.runCopilot)
+  const mockGetCopilot = vi.mocked(copilotModule.getCopilot)
+  const mockRunCopilot = vi.mocked(copilotModule.runCopilot)
   const mockCreateEvaluationV2 = vi.mocked(
     createEvaluationV2Module.createEvaluationV2,
-  )
-  const mockFindFirstModelForProvider = vi.mocked(
-    findFirstModelForProviderModule.findFirstModelForProvider,
   )
   const mockGetSpanMessagesAndEvaluationResultsByIssue = vi.mocked(
     getSpanMessagesAndEvaluationResultsByIssue.getSpanMessagesAndEvaluationResultsByIssue,
@@ -70,6 +58,7 @@ describe('generateFromIssue', () => {
   let document: DocumentVersion
   let provider: ProviderApiKey
   let messages: Message[]
+  const TEST_EVALUATION_UUID = 'test-evaluation-uuid'
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -145,8 +134,6 @@ describe('generateFromIssue', () => {
       }) as any,
     )
 
-    mockFindFirstModelForProvider.mockReturnValue(MODEL)
-
     messages = [
       {
         role: MessageRole.user,
@@ -177,6 +164,7 @@ describe('generateFromIssue', () => {
       commit,
       providerName: provider.name,
       model: MODEL,
+      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(Result.isOk(result)).toBe(true)
@@ -219,6 +207,7 @@ describe('generateFromIssue', () => {
         document,
         workspace,
         commit,
+        evaluationUuid: TEST_EVALUATION_UUID,
       }),
     )
   })
@@ -237,6 +226,7 @@ describe('generateFromIssue', () => {
       commit,
       providerName: provider.name,
       model: MODEL,
+      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(Result.isOk(result)).toBe(false)
@@ -262,6 +252,7 @@ describe('generateFromIssue', () => {
       model: MODEL,
       workspace,
       commit,
+      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(Result.isOk(result)).toBe(false)
@@ -287,6 +278,7 @@ describe('generateFromIssue', () => {
         model: MODEL,
         workspace,
         commit,
+        evaluationUuid: TEST_EVALUATION_UUID,
       }),
     ).rejects.toThrow('Document not found')
 
@@ -308,6 +300,7 @@ describe('generateFromIssue', () => {
       model: MODEL,
       workspace,
       commit,
+      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(Result.isOk(result)).toBe(false)
@@ -331,6 +324,7 @@ describe('generateFromIssue', () => {
       model: MODEL,
       workspace,
       commit,
+      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(Result.isOk(result)).toBe(false)
@@ -354,6 +348,7 @@ describe('generateFromIssue', () => {
       model: MODEL,
       workspace,
       commit,
+      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(Result.isOk(result)).toBe(false)
@@ -373,6 +368,7 @@ describe('generateFromIssue', () => {
       model: MODEL,
       workspace,
       commit,
+      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(mockRunCopilot).toHaveBeenCalledWith({

@@ -17,6 +17,7 @@ export type CalculateMCCParentJobData = {
   workspaceId: number
   commitId: number
   evaluationUuid: string
+  documentUuid: string
   spanAndTraceIdPairsOfPositiveEvaluationRuns: {
     spanId: string
     traceId: string
@@ -30,10 +31,14 @@ export type CalculateMCCParentJobData = {
 export const calculateMCCParentJob = async (
   job: Job<CalculateMCCParentJobData>,
 ) => {
+  let caughtError: Error | null = null
+  let isLastAttempt: boolean = false
+
   const {
     workspaceId,
     commitId,
     evaluationUuid,
+    documentUuid,
     spanAndTraceIdPairsOfPositiveEvaluationRuns,
     spanAndTraceIdPairsOfNegativeEvaluationRuns,
   } = job.data
@@ -69,54 +74,40 @@ export const calculateMCCParentJob = async (
     const childrenValues = await job.getChildrenValues()
     console.log('childrenValues', childrenValues)
 
-    const evaluateConfigurationResult = await evaluateConfiguration({
+    const mcc = await evaluateConfiguration({
       childrenValues,
       spanAndTraceIdPairsOfPositiveEvaluationRuns,
       spanAndTraceIdPairsOfNegativeEvaluationRuns,
-    })
+    }).then((r) => r.unwrap())
 
-    if (!Result.isOk(evaluateConfigurationResult)) {
-      return evaluateConfigurationResult
-    }
-    const mcc = evaluateConfigurationResult.unwrap()
+    console.log('mcc', mcc)
 
     // TODO(evaluation-generation): If the quality metric is less than the minimum threshold, we retry generating another configuration
     if (mcc < MIN_QUALITY_METRIC_THRESHOLD) {
-      return Result.error(
-        new Error(`MCC is less than ${MIN_QUALITY_METRIC_THRESHOLD}`),
-      )
+      throw new Error(`MCC is less than ${MIN_QUALITY_METRIC_THRESHOLD}`)
     }
 
     const evaluationRepository = new EvaluationsV2Repository(workspace.id)
-    const evaluationResult = await evaluationRepository.find(evaluationUuid)
-
-    if (!Result.isOk(evaluationResult)) {
-      throw new Error(`Evaluation not found`)
-    }
-
-    const evaluation = evaluationResult.unwrap()
+    const evaluation = await evaluationRepository
+      .getAtCommitByDocument({
+        projectId: commit.projectId,
+        commitUuid: commit.uuid,
+        documentUuid,
+        evaluationUuid,
+      })
+      .then((r) => r.unwrap())
 
     await updateEvaluationV2({
       evaluation,
       workspace,
       commit: commit,
       qualityMetric: mcc,
-    })
-
-    const endResult = await endActiveEvaluation({
-      workspaceId,
-      projectId: commit.projectId,
-      evaluationUuid,
-    })
-    if (!Result.isOk(endResult)) {
-      captureException(
-        new Error(`[CalculateMCCParentJob] Failed to end active evaluation`),
-      )
-    }
+    }).then((r) => r.unwrap())
   } catch (error) {
+    caughtError = error as Error
     const { attemptsMade, opts } = job
     const maxAttempts = opts.attempts ?? 1
-    const isLastAttempt = attemptsMade + 1 >= maxAttempts
+    isLastAttempt = attemptsMade + 1 >= maxAttempts
 
     // Only failing in last attempt of the job, else the retry system is useless
     if (isLastAttempt) {
@@ -124,7 +115,7 @@ export const calculateMCCParentJob = async (
       const failResult = await failActiveEvaluation({
         workspaceId,
         projectId: commit.projectId,
-        evaluationUuid: evaluationUuid,
+        evaluationUuid,
         error: error as Error,
       })
       if (!Result.isOk(failResult)) {
@@ -134,5 +125,20 @@ export const calculateMCCParentJob = async (
       }
     }
     throw error
+  } finally {
+    const jobEndedCorrectlyOrLastAttemptWithError =
+      !caughtError || (caughtError && isLastAttempt)
+    if (jobEndedCorrectlyOrLastAttemptWithError) {
+      const endResult = await endActiveEvaluation({
+        workspaceId,
+        projectId: commit.projectId,
+        evaluationUuid,
+      })
+      if (!Result.isOk(endResult)) {
+        captureException(
+          new Error(`[CalculateMCCParentJob] Failed to end active evaluation`),
+        )
+      }
+    }
   }
 }

@@ -41,12 +41,14 @@ export async function generateEvaluationFromIssueWithCopilot(
     commit,
     providerName,
     model,
+    evaluationUuid,
   }: {
     issue: Issue
     commit: Commit
     workspace: Workspace
     providerName: string
     model: string
+    evaluationUuid: string
   },
   db = database,
 ) {
@@ -154,6 +156,7 @@ export async function generateEvaluationFromIssueWithCopilot(
     document: document,
     workspace: workspace,
     commit: commit,
+    evaluationUuid: evaluationUuid,
   })
 
   if (!Result.isOk(evaluationResult)) {

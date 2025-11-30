@@ -15,12 +15,14 @@ export async function generateEvaluationFromIssue({
   commit,
   providerName,
   model,
+  evaluationUuid,
 }: {
   issue: Issue
   workspace: Workspace
   commit: Commit
   providerName: string
   model: string
+  evaluationUuid: string
 }) {
   const evaluationResult = await generateEvaluationFromIssueWithCopilot({
     issue,
@@ -28,6 +30,7 @@ export async function generateEvaluationFromIssue({
     workspace,
     providerName,
     model,
+    evaluationUuid,
   })
   if (!Result.isOk(evaluationResult)) {
     return evaluationResult
@@ -64,6 +67,7 @@ export async function generateEvaluationFromIssue({
     workspace,
     commit,
     evaluationToEvaluate: evaluation,
+    documentUuid: issue.documentUuid,
     spans: allSpans,
     spanAndTraceIdPairsOfPositiveEvaluationRuns,
     spanAndTraceIdPairsOfNegativeEvaluationRuns,

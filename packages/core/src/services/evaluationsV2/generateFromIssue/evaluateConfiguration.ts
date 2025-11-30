@@ -1,6 +1,5 @@
 import { calculateMCC } from './calculateMCC'
 import { Result } from '@latitude-data/core/lib/Result'
-import { MIN_QUALITY_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
 
 export async function evaluateConfiguration({
   childrenValues,
@@ -35,14 +34,6 @@ export async function evaluateConfiguration({
   }
   const mcc = mccResult.unwrap()
 
-  console.log('mcc', mcc)
-
-  if (mcc < MIN_QUALITY_METRIC_THRESHOLD) {
-    return Result.error(
-      new Error(`MCC is less than ${MIN_QUALITY_METRIC_THRESHOLD}`),
-    )
-  }
-
   return Result.ok(mcc)
 }
 
@@ -60,7 +51,7 @@ function sortEvaluationResultsByPositiveAndNegative({
     traceId: string
   }>
   evaluationResults: {
-    [jobKey: string]: any
+    [jobKey: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any -- this is returned by bullmq
   }
 }) {
   const positiveEvaluationResults: boolean[] = []

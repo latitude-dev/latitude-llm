@@ -12,6 +12,7 @@ import { Span } from '@latitude-data/constants'
 export async function createEvaluationFlow({
   workspace,
   commit,
+  documentUuid,
   spanAndTraceIdPairsOfPositiveEvaluationRuns,
   spanAndTraceIdPairsOfNegativeEvaluationRuns,
   evaluationToEvaluate,
@@ -19,6 +20,7 @@ export async function createEvaluationFlow({
 }: {
   workspace: Workspace
   commit: Commit
+  documentUuid: string
   spanAndTraceIdPairsOfPositiveEvaluationRuns: {
     spanId: string
     traceId: string
@@ -46,8 +48,16 @@ export async function createEvaluationFlow({
       workspaceId: workspace.id,
       commitId: commit.id,
       evaluationUuid: evaluationToEvaluate.uuid,
+      documentUuid,
       spanAndTraceIdPairsOfPositiveEvaluationRuns,
       spanAndTraceIdPairsOfNegativeEvaluationRuns,
+    },
+    opts: {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 1000,
+      },
     },
     children: spans.map((span) => ({
       name: `runEvaluationV2Job`,

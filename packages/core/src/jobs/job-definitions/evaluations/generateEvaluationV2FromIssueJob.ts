@@ -10,6 +10,7 @@ import { startActiveEvaluation } from '@latitude-data/core/services/evaluationsV
 import { failActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/fail'
 import { Result } from '@latitude-data/core/lib/Result'
 import { generateEvaluationFromIssue } from '@latitude-data/core/services/evaluationsV2/generateFromIssue/generateEvaluationFromIssue'
+import { endActiveEvaluation } from '../../../services/evaluationsV2/active/end'
 
 export type GenerateEvaluationV2FromIssueJobData = {
   workspaceId: number
@@ -23,6 +24,8 @@ export type GenerateEvaluationV2FromIssueJobData = {
 export const generateEvaluationV2FromIssueJob = async (
   job: Job<GenerateEvaluationV2FromIssueJobData>,
 ) => {
+  let isLastAttempt: boolean = false
+
   const {
     workspaceId,
     commitId,
@@ -56,11 +59,12 @@ export const generateEvaluationV2FromIssueJob = async (
       commit,
       providerName,
       model,
+      evaluationUuid,
     }).then((r) => r.unwrap())
   } catch (error) {
     const { attemptsMade, opts } = job
     const maxAttempts = opts.attempts ?? 1
-    const isLastAttempt = attemptsMade + 1 >= maxAttempts
+    isLastAttempt = attemptsMade + 1 >= maxAttempts
 
     // Only failing in last attempt of the job, else the retry system is useless
     if (isLastAttempt) {
@@ -80,5 +84,18 @@ export const generateEvaluationV2FromIssueJob = async (
       }
     }
     throw error
+  } finally {
+    if (isLastAttempt) {
+      const endResult = await endActiveEvaluation({
+        workspaceId,
+        projectId: commit.projectId,
+        evaluationUuid,
+      })
+      if (!Result.isOk(endResult)) {
+        captureException(
+          new Error(`[CalculateMCCParentJob] Failed to end active evaluation`),
+        )
+      }
+    }
   }
 }

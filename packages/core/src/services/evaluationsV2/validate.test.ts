@@ -532,4 +532,105 @@ describe('validateEvaluationV2', () => {
       new BadRequestError('Cannot use an issue that has been ignored'),
     )
   })
+
+  it('fails when qualityMetric is less than 0', async () => {
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: settings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: null,
+        qualityMetric: -1,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Quality metric must be a number between 0 and 100'),
+    )
+  })
+
+  it('fails when qualityMetric is greater than 100', async () => {
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: settings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: null,
+        qualityMetric: 101,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Quality metric must be a number between 0 and 100'),
+    )
+  })
+
+  it('succeeds when qualityMetric is 0', async () => {
+    const { settings: validatedSettings, options: validatedOptions } =
+      await validateEvaluationV2({
+        mode: 'create',
+        settings: settings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: null,
+        qualityMetric: 0,
+      }).then((r) => r.unwrap())
+
+    expect(validatedSettings).toEqual(settings)
+    expect(validatedOptions).toEqual(options)
+  })
+
+  it('succeeds when qualityMetric is 100', async () => {
+    const { settings: validatedSettings, options: validatedOptions } =
+      await validateEvaluationV2({
+        mode: 'create',
+        settings: settings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: null,
+        qualityMetric: 100,
+      }).then((r) => r.unwrap())
+
+    expect(validatedSettings).toEqual(settings)
+    expect(validatedOptions).toEqual(options)
+  })
+
+  it('succeeds when qualityMetric is a valid value between 0 and 100', async () => {
+    const { settings: validatedSettings, options: validatedOptions } =
+      await validateEvaluationV2({
+        mode: 'create',
+        settings: settings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: null,
+        qualityMetric: 75,
+      }).then((r) => r.unwrap())
+
+    expect(validatedSettings).toEqual(settings)
+    expect(validatedOptions).toEqual(options)
+  })
+
+  it('succeeds when qualityMetric is not provided', async () => {
+    const { settings: validatedSettings, options: validatedOptions } =
+      await validateEvaluationV2({
+        mode: 'create',
+        settings: settings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: null,
+      }).then((r) => r.unwrap())
+
+    expect(validatedSettings).toEqual(settings)
+    expect(validatedOptions).toEqual(options)
+  })
 })

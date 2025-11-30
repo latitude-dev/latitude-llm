@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { calculateMCC } from './calculateMCC'
-import { Result } from '../../lib/Result'
+import { Result } from '@latitude-data/core/lib/Result'
 
 describe('calculateMCC', () => {
   it('calculates perfect MCC (1.0) when all classifications are correct', () => {
