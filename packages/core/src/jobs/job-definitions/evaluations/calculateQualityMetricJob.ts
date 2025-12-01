@@ -13,7 +13,7 @@ import { endActiveEvaluation } from '../../../services/evaluationsV2/active/end'
 import { captureException } from '../../../utils/datadogCapture'
 import { failActiveEvaluation } from '../../../services/evaluationsV2/active/fail'
 
-export type CalculateMCCParentJobData = {
+export type CalculateQualityMetricJobData = {
   workspaceId: number
   commitId: number
   evaluationUuid: string
@@ -28,8 +28,13 @@ export type CalculateMCCParentJobData = {
   }[]
 }
 
-export const calculateMCCParentJob = async (
-  job: Job<CalculateMCCParentJobData>,
+/*
+  This job is a parent job of a BullMQ flow which calculates the quality metric of an evaluation when all its runEvaluationV2Job children have finished.
+  The quality metric used at the moment is the MCC (Matthews Correlation Coefficient)
+*/
+
+export const calculateQualityMetricJob = async (
+  job: Job<CalculateQualityMetricJobData>,
 ) => {
   let caughtError: Error | null = null
   let isLastAttempt: boolean = false
@@ -120,7 +125,9 @@ export const calculateMCCParentJob = async (
       })
       if (!Result.isOk(failResult)) {
         captureException(
-          new Error(`[CalculateMCCParentJob] Failed to fail active evaluation`),
+          new Error(
+            `[CalculateQualityMetricJob] Failed to fail active evaluation`,
+          ),
         )
       }
     }
@@ -136,7 +143,9 @@ export const calculateMCCParentJob = async (
       })
       if (!Result.isOk(endResult)) {
         captureException(
-          new Error(`[CalculateMCCParentJob] Failed to end active evaluation`),
+          new Error(
+            `[CalculateQualityMetricJob] Failed to end active evaluation`,
+          ),
         )
       }
     }

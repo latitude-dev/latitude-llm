@@ -42,7 +42,7 @@ export async function createEvaluationFlow({
   })
 
   const { job } = await flowProducer.add({
-    name: `calculateMCCParentJob`,
+    name: `calculateQualityMetricJob`,
     queueName: Queues.generateEvaluationsQueue,
     data: {
       workspaceId: workspace.id,

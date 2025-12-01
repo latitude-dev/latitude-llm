@@ -115,15 +115,15 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     }
 
     const { result } = await runEvaluationV2({
-      evaluation: evaluation,
+      evaluation,
       span: { ...span, metadata } as SpanWithDetails<SpanType.Prompt>,
-      experiment: experiment,
-      dataset: dataset,
-      datasetLabel: datasetLabel,
-      datasetRow: datasetRow,
-      commit: commit,
-      workspace: workspace,
-      dry: false,
+      experiment,
+      dataset,
+      datasetLabel,
+      datasetRow,
+      commit,
+      workspace,
+      dry,
     }).then((r) => r.unwrap())
 
     if (experiment && span.documentLogUuid && !dry) {
@@ -141,17 +141,15 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
         },
       ).then((r) => r.unwrap())
     }
-    //if (dry) {
-    return {
-      hasPassed: result.hasPassed,
-      evaluatedSpanId: result.evaluatedSpanId,
-      evaluatedTraceId: result.evaluatedTraceId,
+    if (dry) {
+      return {
+        hasPassed: result.hasPassed,
+        evaluatedSpanId: result.evaluatedSpanId,
+        evaluatedTraceId: result.evaluatedTraceId,
+      }
     }
-    //}
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error
-
-    console.error('Error running evaluation V2', error)
 
     captureException(error as Error)
 
