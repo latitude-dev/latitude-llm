@@ -102,19 +102,22 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
   }) {
     // .for('no key update', { noWait: true }) is bugged in drizzle!
     // https://github.com/drizzle-team/drizzle-orm/issues/3554
+    // Default to waiting for locks to handle concurrent job processing.
+    // Set wait: false explicitly if NOWAIT behavior is needed.
+    const shouldWait = wait !== false
 
     try {
       await this.db.execute(sql<boolean>`
-        SELECT TRUE
-        FROM ${documentVersions}
-        INNER JOIN ${commits} ON ${commits.id} = ${documentVersions.commitId}
-        INNER JOIN ${projects} ON ${projects.id} = ${commits.projectId}
-        WHERE (
-          ${projects.workspaceId} = ${this.workspaceId} AND
-          ${documentVersions.commitId} = ${commitId} AND
-          ${documentVersions.documentUuid} = ${documentUuid}
-        ) LIMIT 1 FOR NO KEY UPDATE ${sql.raw(wait ? '' : 'NOWAIT')};
-          `)
+         SELECT TRUE
+         FROM ${documentVersions}
+         INNER JOIN ${commits} ON ${commits.id} = ${documentVersions.commitId}
+         INNER JOIN ${projects} ON ${projects.id} = ${commits.projectId}
+         WHERE (
+           ${projects.workspaceId} = ${this.workspaceId} AND
+           ${documentVersions.commitId} = ${commitId} AND
+           ${documentVersions.documentUuid} = ${documentUuid}
+         ) LIMIT 1 FOR NO KEY UPDATE ${sql.raw(!shouldWait ? 'NOWAIT' : '')};
+           `)
     } catch (error: any) {
       if (error?.code === databaseErrorCodes.lockNotAvailable) {
         return Result.error(

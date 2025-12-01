@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 import { IssueCentroid } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { BadRequestError, NotFoundError } from '../../lib/errors'
+import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { issues } from '../../schema/models/issues'
