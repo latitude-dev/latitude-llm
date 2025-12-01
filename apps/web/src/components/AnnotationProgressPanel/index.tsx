@@ -104,9 +104,7 @@ function ProgressBar({
       <div className='z-10 absolute top-0 left-0 w-full'>
         {showCurrentIndicator ? (
           <div
-            className={cn(
-              'z-10 absolute -top-3.5 -translate-x-full',
-            )}
+            className={cn('z-10 absolute -top-3.5 -translate-x-full')}
             style={{ left: `${minimumPosition}%` }}
           >
             <CurrentIndicator

@@ -28,16 +28,18 @@ import { EvaluationsGenerator } from './EvaluationsGenerator'
 import { EvaluationV2, EvaluationType } from '@latitude-data/core/constants'
 
 function groupEvaluationsByType(evaluations: EvaluationV2[]) {
-  const grouped = evaluations.reduce(
-    (acc, evaluation) => {
-      if (!acc[evaluation.type]) {
-        acc[evaluation.type] = []
-      }
-      acc[evaluation.type].push(evaluation)
-      return acc
-    },
-    {} as Record<EvaluationType, EvaluationV2[]>,
-  )
+  const grouped = evaluations
+    .filter((e) => !e.ignoredAt)
+    .reduce(
+      (acc, evaluation) => {
+        if (!acc[evaluation.type]) {
+          acc[evaluation.type] = []
+        }
+        acc[evaluation.type].push(evaluation)
+        return acc
+      },
+      {} as Record<EvaluationType, EvaluationV2[]>,
+    )
   return grouped
 }
 
@@ -74,9 +76,7 @@ export function EvaluationsTable({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-
   const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationV2>()
-
   const [openDeleteModal, setOpenDeleteModal] = useState(false)
   const onDelete = useCallback(
     async (evaluation: EvaluationV2) => {

@@ -4,25 +4,22 @@ import useFetcher from '$/hooks/useFetcher'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { useMemo } from 'react'
 import { SearchIssueResponse } from '$/app/api/projects/[projectId]/documents/[documentUuid]/issues/search/route'
-import { IssueGroup, IssueStatuses } from '@latitude-data/constants/issues'
+import { IssueGroup } from '@latitude-data/constants/issues'
 
-export function createSearchIssuesKey({
+function createSearchIssuesKey({
   projectId,
+  commitUuid,
   documentUuid,
   query,
-  statuses,
   group,
 }: {
   projectId: number
+  commitUuid: string
   documentUuid: string
   query?: string
-  statuses?: IssueStatuses[]
   group?: IssueGroup
 }) {
-  const base = ['searchIssues', projectId, documentUuid]
-  if (statuses) {
-    base.push(...statuses)
-  }
+  const base = ['searchIssues', projectId, documentUuid, commitUuid]
   if (group) {
     base.push(group)
   }
@@ -37,15 +34,15 @@ const EMPTY_LIST: Issue[] = []
 export function useSearchIssues(
   {
     projectId,
+    commitUuid,
     documentUuid,
     query,
-    statuses,
     group,
   }: {
     projectId: number
     documentUuid: string
+    commitUuid: string
     query?: string
-    statuses?: IssueStatuses[]
     group?: IssueGroup
   },
   swrConfig?: SWRConfiguration<SearchIssueResponse, any>,
@@ -54,17 +51,22 @@ export function useSearchIssues(
     .detail(projectId)
     .documents.detail(documentUuid)
   const route = base.issues.search
-  const issueStatusesQueryParam = statuses?.join(',')
   const fetcher = useFetcher<SearchIssueResponse>(route, {
     searchParams: {
       documentUuid,
+      commitUuid,
       query: query ?? '',
-      statuses: issueStatusesQueryParam ?? '',
       group: group ?? '',
     },
   })
   const { data = EMPTY_LIST, isLoading } = useSWR<SearchIssueResponse>(
-    createSearchIssuesKey({ projectId, documentUuid, query, statuses, group }),
+    createSearchIssuesKey({
+      projectId,
+      documentUuid,
+      commitUuid,
+      query,
+      group,
+    }),
     fetcher,
     swrConfig,
   )

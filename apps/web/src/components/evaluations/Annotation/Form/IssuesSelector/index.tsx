@@ -68,6 +68,7 @@ export function IssuesSelector() {
 
   const { data: searchIssues, isLoading: isSearchingIssues } = useSearchIssues({
     projectId,
+    commitUuid: commit.uuid,
     documentUuid,
     query,
     group: ISSUE_GROUP.activeWithResolved,

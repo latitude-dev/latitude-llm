@@ -18,6 +18,7 @@ type IssueAction = 'resolve' | 'unresolve' | 'ignore' | 'unignore'
 
 export function useIssueActions({ issue }: { issue: SerializedIssue }) {
   const [action, setAction] = useState<IssueAction | null>(null)
+  const [ignoreEvaluations, setIgnoreEvaluations] = useState(false)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { mutate } = useSWRConfig()
@@ -74,14 +75,23 @@ export function useIssueActions({ issue }: { issue: SerializedIssue }) {
     isUnignoringIssue
 
   const onAction = useCallback(
-    ({ action }: { action: IssueAction }) => {
+    ({
+      action,
+      ignoreEvals,
+    }: {
+      action: IssueAction
+      ignoreEvals?: boolean
+    }) => {
       const actionParams = {
         projectId: project.id,
         commitUuid: commit.uuid,
         issueId: issue.id,
       }
       if (action === 'resolve') {
-        resolveIssue(actionParams)
+        resolveIssue({
+          ...actionParams,
+          ignoreEvaluations: ignoreEvals ?? ignoreEvaluations,
+        })
       } else if (action === 'unresolve') {
         unresolveIssue(actionParams)
       } else if (action === 'ignore') {
@@ -98,6 +108,7 @@ export function useIssueActions({ issue }: { issue: SerializedIssue }) {
       project.id,
       commit.uuid,
       issue.id,
+      ignoreEvaluations,
     ],
   )
 
@@ -111,7 +122,7 @@ export function useIssueActions({ issue }: { issue: SerializedIssue }) {
       if (optimistic === 'resolve') {
         unresolveIssue(actionParams)
       } else if (optimistic === 'unresolve') {
-        resolveIssue(actionParams)
+        resolveIssue({ ...actionParams, ignoreEvaluations: false })
       } else if (optimistic === 'ignore') {
         unignoreIssue(actionParams)
       } else if (optimistic === 'unignore') {
@@ -133,10 +144,20 @@ export function useIssueActions({ issue }: { issue: SerializedIssue }) {
     () => ({
       action,
       setAction,
+      ignoreEvaluations,
+      setIgnoreEvaluations,
       onAction,
       onReverseAction,
       isRunningAction,
     }),
-    [onAction, isRunningAction, action, setAction, onReverseAction],
+    [
+      onAction,
+      isRunningAction,
+      action,
+      setAction,
+      ignoreEvaluations,
+      setIgnoreEvaluations,
+      onReverseAction,
+    ],
   )
 }

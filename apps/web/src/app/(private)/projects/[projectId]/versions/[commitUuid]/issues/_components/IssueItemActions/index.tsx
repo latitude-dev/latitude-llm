@@ -1,4 +1,4 @@
-import { MouseEvent, useCallback, useMemo, useRef } from 'react'
+import { MouseEvent, useCallback, useMemo, useRef, useState } from 'react'
 import { useSWRConfig } from 'swr'
 import { SerializedIssue } from '$/stores/issues'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
@@ -9,6 +9,8 @@ import { buildIssuesCacheKey } from '@latitude-data/constants/issues'
 import { useIssuesParameters } from '$/stores/issues/useIssuesParameters'
 import { useIssueActions } from './useActions'
 import { useOptimisticAction } from '$/hooks/useOptimisticActions'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { ResolveConfirmModal } from './ResolveConfirmModal'
 
 type IssueAction = 'resolve' | 'unresolve' | 'ignore' | 'unignore'
 
@@ -53,6 +55,23 @@ export function IssueItemActions({
     urlParameters: state.urlParameters,
   }))
   const actions = useIssueActions({ issue })
+  const [showResolveModal, setShowResolveModal] = useState(false)
+
+  // Fetch evaluations to check if any are associated with this issue
+  const { data: evaluations = [] } = useEvaluationsV2({
+    project,
+    commit,
+    document: {
+      commitId: commit.id,
+      documentUuid: issue.documentUuid,
+    },
+  })
+
+  // Filter evaluations associated with this issue
+  const issueEvaluations = useMemo(
+    () => evaluations.filter((e) => e.issueId === issue.id),
+    [evaluations, issue.id],
+  )
   const undoToast = useMemo(
     () => UNDO_MESSAGES[actions.action ?? 'resolve'],
     [actions.action],
@@ -138,11 +157,88 @@ export function IssueItemActions({
       return (e: MouseEvent) => {
         e.stopPropagation()
 
+        // For resolve action, check if we need to show the modal
+        if (action === 'resolve') {
+          if (issueEvaluations.length > 0) {
+            setShowResolveModal(true)
+            return
+          }
+          // No evaluations, proceed with ignoreEvaluations: false
+          actions.setAction(action)
+          actions.onAction({ action, ignoreEvals: false })
+
+          // Perform optimistic update
+          originalIssue.current = issue
+          mutate(
+            cacheKey,
+            (currentData: any) => {
+              if (!currentData?.issues) return currentData
+
+              originalIndex.current = currentData.issues.findIndex(
+                (i: SerializedIssue) => i.id === issue.id,
+              )
+              if (originalIndex.current === -1) return currentData
+
+              return {
+                ...currentData,
+                issues: currentData.issues.filter(
+                  (i: SerializedIssue) => i.id !== issue.id,
+                ),
+                totalCount: Math.max(0, currentData.totalCount - 1),
+              }
+            },
+            { revalidate: false },
+          )
+          onOptimisticAction?.()
+          return
+        }
+
         actions.setAction(action)
         doOptimisticAction(action)
       }
     },
-    [actions, doOptimisticAction],
+    [
+      actions,
+      doOptimisticAction,
+      issueEvaluations,
+      issue,
+      mutate,
+      cacheKey,
+      onOptimisticAction,
+    ],
+  )
+
+  const handleResolveConfirm = useCallback(
+    (ignoreEvaluations: boolean) => {
+      setShowResolveModal(false)
+      actions.setAction('resolve')
+      actions.onAction({ action: 'resolve', ignoreEvals: ignoreEvaluations })
+
+      // Perform optimistic update
+      originalIssue.current = issue
+      mutate(
+        cacheKey,
+        (currentData: any) => {
+          if (!currentData?.issues) return currentData
+
+          originalIndex.current = currentData.issues.findIndex(
+            (i: SerializedIssue) => i.id === issue.id,
+          )
+          if (originalIndex.current === -1) return currentData
+
+          return {
+            ...currentData,
+            issues: currentData.issues.filter(
+              (i: SerializedIssue) => i.id !== issue.id,
+            ),
+            totalCount: Math.max(0, currentData.totalCount - 1),
+          }
+        },
+        { revalidate: false },
+      )
+      onOptimisticAction?.()
+    },
+    [actions, issue, mutate, cacheKey, onOptimisticAction],
   )
 
   const isResolved = issue.resolvedAt !== null
@@ -186,37 +282,46 @@ export function IssueItemActions({
   }
 
   return (
-    <div className='min-w-14 flex gap-x-2'>
-      <Tooltip
-        asChild
-        trigger={
-          <Button
-            {...buttonProps}
-            onClick={handleOptimisticUpdate('resolve')}
-            disabled={actions.isRunningAction}
-            iconProps={{ name: 'checkClean', color: 'foregroundMuted' }}
-          >
-            {placement === 'details' ? 'Resolve' : ''}
-          </Button>
-        }
-      >
-        Resolve
-      </Tooltip>
-      <Tooltip
-        asChild
-        trigger={
-          <Button
-            {...buttonProps}
-            onClick={handleOptimisticUpdate('ignore')}
-            disabled={actions.isRunningAction}
-            iconProps={{ name: 'eyeOff', color: 'foregroundMuted' }}
-          >
-            {placement === 'details' ? 'Ignore' : ''}
-          </Button>
-        }
-      >
-        Ignore, evaluations associated with this issue will stop running
-      </Tooltip>
-    </div>
+    <>
+      <div className='min-w-14 flex gap-x-2'>
+        <Tooltip
+          asChild
+          trigger={
+            <Button
+              {...buttonProps}
+              onClick={handleOptimisticUpdate('resolve')}
+              disabled={actions.isRunningAction}
+              iconProps={{ name: 'checkClean', color: 'foregroundMuted' }}
+            >
+              {placement === 'details' ? 'Resolve' : ''}
+            </Button>
+          }
+        >
+          Resolve
+        </Tooltip>
+        <Tooltip
+          asChild
+          trigger={
+            <Button
+              {...buttonProps}
+              onClick={handleOptimisticUpdate('ignore')}
+              disabled={actions.isRunningAction}
+              iconProps={{ name: 'eyeOff', color: 'foregroundMuted' }}
+            >
+              {placement === 'details' ? 'Ignore' : ''}
+            </Button>
+          }
+        >
+          Ignore, evaluations associated with this issue will stop running
+        </Tooltip>
+      </div>
+
+      <ResolveConfirmModal
+        open={showResolveModal}
+        onOpenChange={setShowResolveModal}
+        onConfirm={handleResolveConfirm}
+        evaluations={issueEvaluations}
+      />
+    </>
   )
 }

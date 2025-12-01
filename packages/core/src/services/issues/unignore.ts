@@ -3,11 +3,10 @@ import { publisher } from '../../events/publisher'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
 import { User } from '../../schema/models/types/User'
-import { getEvaluationMetricSpecification } from '../evaluationsV2/specifications'
+import { unignoreIssueEvaluations } from './evaluations/unignoreIssueEvaluations'
 
 export async function unignoreIssue(
   {
@@ -51,41 +50,7 @@ export async function unignoreIssue(
         .returning()
         .then((r) => r[0]!)) as Issue
 
-      // Find all evaluations that have this issueId
-      const allEvaluations = await tx
-        .select()
-        .from(evaluationVersions)
-        .where(
-          and(
-            eq(evaluationVersions.workspaceId, issue.workspaceId),
-            eq(evaluationVersions.issueId, issue.id),
-          ),
-        )
-
-      // For each evaluation, check if it supports live evaluation
-      // If it does AND evaluateLiveLogs is false, set it back to true
-      for (const evaluation of allEvaluations) {
-        // Cast to the expected type
-        const evalV2 = {
-          ...evaluation,
-          uuid: evaluation.evaluationUuid,
-          versionId: evaluation.id,
-        }
-
-        // Get the metric specification to check if it supports live evaluation
-        const metricSpec = getEvaluationMetricSpecification(evalV2)
-
-        // Only update if this metric supports live evaluation AND evaluateLiveLogs is currently false
-        if (metricSpec.supportsLiveEvaluation && !evaluation.evaluateLiveLogs) {
-          await tx
-            .update(evaluationVersions)
-            .set({
-              evaluateLiveLogs: true,
-              updatedAt: new Date(),
-            })
-            .where(eq(evaluationVersions.id, evaluation.id))
-        }
-      }
+      await unignoreIssueEvaluations({ issue }, tx)
 
       return Result.ok({ issue: unignoredIssue })
     },

@@ -5,7 +5,6 @@ import {
   ISSUE_STATUS,
   IssueGroup,
   IssueSort,
-  IssueStatuses,
   SafeIssuesParams,
 } from '@latitude-data/constants/issues'
 import {
@@ -181,20 +180,27 @@ export class IssuesRepository extends Repository<Issue> {
 
   async findByTitleAndStatuses({
     project,
+    commit,
     document,
     title,
-    statuses,
     group,
   }: {
     project: Project
+    commit: Commit
     document: DocumentVersion
     title: string | null
-    statuses?: IssueStatuses[]
     group?: IssueGroup
   }) {
-    const whereConditions = this.buildGroupAndStatusConditions({
-      statuses,
-      group,
+    const whereConditions: SQL[] = []
+    const groupConditions = this.buildGroupConditions(group)
+    if (groupConditions) {
+      whereConditions.push(groupConditions)
+    }
+    const commitIds = await this.getCommitIds({ commit })
+    const subquery = this.buildHistogramSubquery({
+      project,
+      commitIds,
+      filters: { documentUuid: document.documentUuid },
     })
 
     return this.db
@@ -204,6 +210,7 @@ export class IssuesRepository extends Repository<Issue> {
         documentUuid: issues.documentUuid,
       })
       .from(issues)
+      .innerJoin(subquery, eq(subquery.issueId, issues.id))
       .where(
         and(
           this.scopeFilter,
@@ -389,46 +396,6 @@ export class IssuesRepository extends Repository<Issue> {
     return conditions
   }
 
-  private buildGroupAndStatusConditions({
-    statuses,
-    group,
-  }: { statuses?: IssueStatuses[]; group?: IssueGroup } = {}) {
-    const conditions: SQL[] = []
-    if (group) {
-      conditions.push(this.buildGroupConditions(group)!)
-    } else if (statuses && statuses.length > 0) {
-      conditions.push(this.buildStatusConditions(statuses)!)
-    }
-    return conditions
-  }
-
-  private buildStatusConditions(statuses: IssueStatuses[]) {
-    const statusConditions: SQL[] = []
-    for (const status of statuses) {
-      switch (status) {
-        case IssueStatuses.merged:
-          statusConditions.push(this.withMergedIssues(true))
-          break
-        case IssueStatuses.regressed:
-          statusConditions.push(this.withRegressedIssues(true))
-          break
-        case IssueStatuses.resolved:
-          statusConditions.push(this.withResolvedIssues(true))
-          break
-        case IssueStatuses.ignored:
-          statusConditions.push(this.withIgnoredIssues(true))
-          break
-        case IssueStatuses.escalating:
-          statusConditions.push(this.withEscalatingIssues(true))
-          break
-        case IssueStatuses.new:
-          statusConditions.push(this.withNewIssues(true))
-          break
-      }
-    }
-    return statusConditions.length > 0 ? and(...statusConditions) : undefined
-  }
-
   private buildGroupConditions(group: IssueGroup = ISSUE_GROUP.active) {
     // Default to active
     // Can only apply one group condition at a time
@@ -486,22 +453,6 @@ export class IssuesRepository extends Repository<Issue> {
 
   private withIgnoredIssues(include: boolean): SQL {
     return include ? isNotNull(issues.ignoredAt) : isNull(issues.ignoredAt)
-  }
-
-  private withEscalatingIssues(include: boolean): SQL {
-    // Use persisted escalating_at field with expiration check
-    // An issue is escalating if:
-    // 1. escalating_at is set, AND
-    // 2. escalating_at is within the expiration window (ESCALATION_EXPIRATION_DAYS)
-    return include
-      ? sql`${issues.escalatingAt} IS NOT NULL AND ${issues.escalatingAt} > NOW() - INTERVAL '${sql.raw(String(ESCALATION_EXPIRATION_DAYS))} days'`
-      : sql`${issues.escalatingAt} IS NULL OR ${issues.escalatingAt} <= NOW() - INTERVAL '${sql.raw(String(ESCALATION_EXPIRATION_DAYS))} days'`
-  }
-
-  private withNewIssues(include: boolean): SQL {
-    return include
-      ? sql`${issues.createdAt} >= NOW() - INTERVAL '7 days'`
-      : sql`${issues.createdAt} < NOW() - INTERVAL '7 days'`
   }
 
   private buildOrderByClause({

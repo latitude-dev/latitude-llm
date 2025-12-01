@@ -217,7 +217,6 @@ export function AnnotationExplanation({
           </Button>
         ) : (
           <Button
-            fancy
             variant='outline'
             size='small'
             onClick={handleNext}
