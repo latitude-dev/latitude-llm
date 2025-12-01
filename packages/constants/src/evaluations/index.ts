@@ -178,6 +178,7 @@ export type EvaluationV2<
   autoApplySuggestions?: boolean | null
   createdAt: Date
   updatedAt: Date
+  ignoredAt?: Date | null
   deletedAt?: Date | null
 }
 

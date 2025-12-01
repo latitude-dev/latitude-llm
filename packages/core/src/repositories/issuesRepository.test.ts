@@ -63,7 +63,11 @@ describe('IssuesRepository - Group Filtering', () => {
         },
       ],
     })
-    await resolveIssue({ issue: resolvedIssueData.issue, user })
+    await resolveIssue({
+      issue: resolvedIssueData.issue,
+      user,
+      ignoreEvaluations: false,
+    })
 
     // 3. Ignored issue
     const ignoredIssueData = await factories.createIssue({
@@ -204,6 +208,7 @@ describe('IssuesRepository - Group Filtering', () => {
       const issues = await repository.findByTitleAndStatuses({
         project,
         document,
+        commit,
         title: null,
         group: ISSUE_GROUP.activeWithResolved,
       })

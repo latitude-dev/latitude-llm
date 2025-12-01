@@ -9,6 +9,7 @@ export const resolveIssueAction = withCommit
   .inputSchema(
     withCommitSchema.extend({
       issueId: z.number(),
+      ignoreEvaluations: z.boolean(),
     }),
   )
   .action(async ({ ctx, parsedInput }) => {
@@ -19,6 +20,7 @@ export const resolveIssueAction = withCommit
     const response = await resolveIssue({
       issue,
       user: ctx.user,
+      ignoreEvaluations: parsedInput.ignoreEvaluations,
     }).then((r) => r.unwrap())
 
     return response.issue

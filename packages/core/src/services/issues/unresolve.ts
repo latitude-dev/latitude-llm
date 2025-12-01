@@ -6,6 +6,7 @@ import Transaction from '../../lib/Transaction'
 import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
 import { User } from '../../schema/models/types/User'
+import { unignoreIssueEvaluations } from './evaluations/unignoreIssueEvaluations'
 
 export async function unresolveIssue(
   {
@@ -47,6 +48,8 @@ export async function unresolveIssue(
         )
         .returning()
         .then((r) => r[0]!)) as Issue
+
+      await unignoreIssueEvaluations({ issue }, tx)
 
       return Result.ok({ issue: unresolvedIssue })
     },

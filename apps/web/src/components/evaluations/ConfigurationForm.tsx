@@ -113,6 +113,7 @@ export function ConfigurationAdvancedForm<
 
   const { data: issues, isLoading: isLoadingIssues } = useSearchIssues({
     projectId: project.id,
+    commitUuid: commit.uuid,
     documentUuid: document.documentUuid,
     query,
     group: ISSUE_GROUP.active,

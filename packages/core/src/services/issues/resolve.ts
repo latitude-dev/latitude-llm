@@ -6,14 +6,17 @@ import Transaction from '../../lib/Transaction'
 import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
 import { User } from '../../schema/models/types/User'
+import { ignoreIssueEvaluations } from './evaluations/ignoreIssueEvaluations'
 
 export async function resolveIssue(
   {
     issue,
     user,
+    ignoreEvaluations,
   }: {
     issue: Issue
     user: User
+    ignoreEvaluations: boolean
   },
   transaction = new Transaction(),
 ) {
@@ -47,6 +50,10 @@ export async function resolveIssue(
         )
         .returning()
         .then((r) => r[0]!)) as Issue
+
+      if (ignoreEvaluations) {
+        await ignoreIssueEvaluations({ issue }, tx)
+      }
 
       return Result.ok({ issue: resolvedIssue })
     },

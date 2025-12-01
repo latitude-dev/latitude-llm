@@ -182,4 +182,16 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
 
     return Result.ok<EvaluationV2[]>(result)
   }
+
+  async getByIssue(issueId: number) {
+    return await this.db
+      .select(tt)
+      .from(evaluationVersions)
+      .where(
+        and(
+          eq(evaluationVersions.workspaceId, this.workspaceId),
+          eq(evaluationVersions.issueId, issueId),
+        ),
+      )
+  }
 }
