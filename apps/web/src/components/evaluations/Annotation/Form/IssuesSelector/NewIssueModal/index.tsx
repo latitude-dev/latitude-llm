@@ -11,6 +11,7 @@ import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { updateEvaluationResultInstance } from '../updateEvaluationResultInstance'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useIssue } from '$/stores/issues/issue'
+import { useOnce } from '$/hooks/useMount'
 
 export function NewIssueModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState<string | undefined>(undefined)
@@ -33,27 +34,28 @@ export function NewIssueModal({ onClose }: { onClose: () => void }) {
     spanId: span.id,
     traceId: span.traceId,
   })
-  const { createIssue, isCreatingIssue, isGeneratingIssue } = useIssue({
-    projectId: project.id,
-    commitUuid: commit.uuid,
-    issueId: result?.issueId,
-    onIssueGenerated: ({ data: { title, description } }) => {
-      setTitle(title)
-      setDescription(description)
-    },
-    onIssueAssigned: ({ data: { evaluationResult } }) => {
-      mutateResults((results) =>
-        updateEvaluationResultInstance({
-          prev: results,
-          updatedResultWithEvaluation: {
-            evaluation,
-            result: evaluationResult,
-          },
-        }),
-      )
-      onClose()
-    },
-  })
+  const { createIssue, isCreatingIssue, isGeneratingIssue, generateIssue } =
+    useIssue({
+      projectId: project.id,
+      commitUuid: commit.uuid,
+      issueId: result?.issueId,
+      onIssueGenerated: ({ data: { title, description } }) => {
+        setTitle(title)
+        setDescription(description)
+      },
+      onIssueAssigned: ({ data: { evaluationResult } }) => {
+        mutateResults((results) =>
+          updateEvaluationResultInstance({
+            prev: results,
+            updatedResultWithEvaluation: {
+              evaluation,
+              result: evaluationResult,
+            },
+          }),
+        )
+        onClose()
+      },
+    })
 
   const onSubmit = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
@@ -87,6 +89,18 @@ export function NewIssueModal({ onClose }: { onClose: () => void }) {
     },
     [createIssue, evaluation, project.id, commit.uuid, result, onClose],
   )
+
+  useOnce(() => {
+    if (!result) return
+
+    generateIssue({
+      projectId: project.id,
+      commitUuid: commit.uuid,
+      documentUuid: evaluation.documentUuid,
+      evaluationUuid: evaluation.uuid,
+      evaluationResultUuid: result.uuid,
+    })
+  })
 
   if (isGeneratingIssue) {
     return (

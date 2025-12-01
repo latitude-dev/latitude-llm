@@ -29,13 +29,13 @@ export async function updateIssue(
   // Note: optimistically upserting in vector db
   // TODO:: Side effect inside transaction. Move to event handler.
   const updating = await upsertVector({
+    title,
+    description,
+    centroid,
     uuid: issue.uuid,
     workspaceId: issue.workspaceId,
     projectId: issue.projectId,
     documentUuid: issue.documentUuid,
-    title: title,
-    description: description,
-    centroid: centroid,
   })
   if (updating.error) {
     return Result.error(updating.error)
