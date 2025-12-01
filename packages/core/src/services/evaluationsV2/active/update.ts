@@ -12,6 +12,7 @@ export async function updateActiveEvaluation({
   workspaceId,
   projectId,
   evaluationUuid,
+  workflowUuid,
   startedAt,
   endedAt,
   error,
@@ -19,7 +20,8 @@ export async function updateActiveEvaluation({
 }: {
   workspaceId: number
   projectId: number
-  evaluationUuid: string
+  workflowUuid: string
+  evaluationUuid?: string
   startedAt?: Date
   endedAt?: Date
   error?: Error
@@ -29,11 +31,11 @@ export async function updateActiveEvaluation({
   const redisCache = cache ?? (await redis())
 
   try {
-    const jsonValue = await redisCache.hget(key, evaluationUuid)
+    const jsonValue = await redisCache.hget(key, workflowUuid)
     if (!jsonValue) {
       return Result.error(
         new NotFoundError(
-          `Evaluation not found with uuid ${evaluationUuid} while updating the evaluation`,
+          `Active evaluation not found with workflowUuid ${workflowUuid} while updating the evaluation`,
         ),
       )
     }
@@ -41,6 +43,7 @@ export async function updateActiveEvaluation({
     const existingEvaluation = JSON.parse(jsonValue)
     const updatedEvaluation: ActiveEvaluation = {
       ...existingEvaluation,
+      evaluationUuid: evaluationUuid ?? existingEvaluation.evaluationUuid,
       queuedAt: new Date(existingEvaluation.queuedAt),
       startedAt:
         startedAt ??
@@ -58,7 +61,7 @@ export async function updateActiveEvaluation({
     // This refreshes the TTL of the workspace/project key to 3 hours again
     await redisCache
       .multi()
-      .hset(key, evaluationUuid, JSON.stringify(updatedEvaluation))
+      .hset(key, workflowUuid, JSON.stringify(updatedEvaluation))
       .expire(key, ACTIVE_EVALUATIONS_CACHE_TTL_SECONDS)
       .exec()
 

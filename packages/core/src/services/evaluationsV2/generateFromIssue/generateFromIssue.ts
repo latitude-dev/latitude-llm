@@ -7,20 +7,17 @@ import {
 import { Result } from '@latitude-data/core/lib/Result'
 import {
   CLOUD_MESSAGES,
-  EvaluationType,
   LlmEvaluationBinarySpecification,
-  LlmEvaluationMetric,
 } from '../../../constants'
 import { env } from '@latitude-data/env'
-import { database } from '@latitude-data/core/client'
 import { getCopilot } from '../../copilot'
 import { runCopilot } from '../../copilot'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
-import { createEvaluationV2 } from '../create'
 import { assertCopilotIsSupported } from '@latitude-data/core/services/copilot/assertItsSupported'
 import z from 'zod'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { getSpanMessagesAndEvaluationResultsByIssue } from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
+import { database } from '../../../client'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration
@@ -35,26 +32,24 @@ const llmEvaluationBinarySpecificationWithoutModel =
     })
 
 /*
-  This function generates an evaluation from an issue using the copilot.
+  This function generates the configuration for an evaluation from an issue using the copilot.
 
   We give the copilot the issue name, description, prompt, existing evaluation names, and messages with reason why it failed
     to create a unique evaluation configuration with context from the issue and its annotations.
 */
-export async function generateEvaluationFromIssueWithCopilot(
+export async function generateEvaluationConfigFromIssueWithCopilot(
   {
     issue,
     workspace,
     commit,
     providerName,
     model,
-    evaluationUuid,
   }: {
     issue: Issue
     commit: Commit
     workspace: Workspace
     providerName: string
     model: string
-    evaluationUuid: string
   },
   db = database,
 ) {
@@ -107,7 +102,6 @@ export async function generateEvaluationFromIssueWithCopilot(
 
   const existingEvaluationNames = existingEvaluationNamesResult.unwrap()
 
-  //TODO (evaluation-generation): We can add a progress caption here as well if things are getting long and we want to know what is really happening.
   //TODO (evaluation-generation): We can find some passed results to give to the copilot to make it more accurate, but we would have to potentially summarize the messages to avoid many tokens
   const messagesAndEvaluationResultsResult =
     await getSpanMessagesAndEvaluationResultsByIssue({
@@ -149,27 +143,7 @@ export async function generateEvaluationFromIssueWithCopilot(
       parsingFormat: 'string' as const,
     },
   }
-  // TODO(evaluation-generation): zod error popped in workers, but didnt show up in frontend??
-  const evaluationResult = await createEvaluationV2({
-    settings: {
-      name: evaluationConfig.name,
-      description: evaluationConfig.description,
-      type: EvaluationType.Llm,
-      metric: LlmEvaluationMetric.Binary,
-      configuration: evaluationConfigWithProviderAndModel,
-    },
-    issueId: issue.id,
-    document: document,
-    workspace: workspace,
-    commit: commit,
-    evaluationUuid: evaluationUuid,
-  })
-
-  if (!Result.isOk(evaluationResult)) {
-    return evaluationResult
-  }
-
-  return Result.ok(evaluationResult.unwrap())
+  return Result.ok(evaluationConfigWithProviderAndModel)
 }
 
 async function getExistingEvaluationNames({

@@ -11,6 +11,7 @@ import { failActiveEvaluation } from '@latitude-data/core/services/evaluationsV2
 import { Result } from '@latitude-data/core/lib/Result'
 import { generateEvaluationFromIssue } from '@latitude-data/core/services/evaluationsV2/generateFromIssue/generateEvaluationFromIssue'
 import { endActiveEvaluation } from '../../../services/evaluationsV2/active/end'
+import { MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE } from '@latitude-data/constants/issues'
 
 export type GenerateEvaluationV2FromIssueJobData = {
   workspaceId: number
@@ -18,21 +19,22 @@ export type GenerateEvaluationV2FromIssueJobData = {
   issueId: number
   providerName: string
   model: string
-  evaluationUuid: string
+  workflowUuid: string
+  generationAttempt: number
 }
 
 export const generateEvaluationV2FromIssueJob = async (
   job: Job<GenerateEvaluationV2FromIssueJobData>,
 ) => {
-  let isLastAttempt: boolean = false
-
+  let isLastJobRetryAttempt: boolean = false
   const {
     workspaceId,
     commitId,
     issueId,
     providerName,
     model,
-    evaluationUuid,
+    workflowUuid,
+    generationAttempt,
   } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
@@ -47,11 +49,17 @@ export const generateEvaluationV2FromIssueJob = async (
     const issuesRepository = new IssuesRepository(workspace.id)
     const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
 
-    await startActiveEvaluation({
-      workspaceId,
-      projectId: commit.projectId,
-      evaluationUuid: evaluationUuid,
-    })
+    if (generationAttempt >= MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE) {
+      throw new Error(`Max attempts to generate evaluation from issue reached`)
+    }
+
+    if (generationAttempt == 1) {
+      await startActiveEvaluation({
+        workspaceId,
+        projectId: commit.projectId,
+        workflowUuid,
+      })
+    }
 
     await generateEvaluationFromIssue({
       issue,
@@ -59,20 +67,21 @@ export const generateEvaluationV2FromIssueJob = async (
       commit,
       providerName,
       model,
-      evaluationUuid,
+      workflowUuid,
+      generationAttempt,
     }).then((r) => r.unwrap())
   } catch (error) {
-    const { attemptsMade, opts } = job
-    const maxAttempts = opts.attempts ?? 1
-    isLastAttempt = attemptsMade + 1 >= maxAttempts
+    const { attemptsMade: jobRetryAttempts } = job
+    isLastJobRetryAttempt =
+      jobRetryAttempts + 1 >= MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE
 
     // Only failing in last attempt of the job, else the retry system is useless
-    if (isLastAttempt) {
+    if (isLastJobRetryAttempt) {
       captureException(error as Error)
       const failResult = await failActiveEvaluation({
         workspaceId,
         projectId: commit.projectId,
-        evaluationUuid: evaluationUuid,
+        workflowUuid,
         error: error as Error,
       })
       if (!Result.isOk(failResult)) {
@@ -85,15 +94,17 @@ export const generateEvaluationV2FromIssueJob = async (
     }
     throw error
   } finally {
-    if (isLastAttempt) {
+    if (isLastJobRetryAttempt) {
       const endResult = await endActiveEvaluation({
         workspaceId,
         projectId: commit.projectId,
-        evaluationUuid,
+        workflowUuid,
       })
       if (!Result.isOk(endResult)) {
         captureException(
-          new Error(`[CalculateMCCParentJob] Failed to end active evaluation`),
+          new Error(
+            `[GenerateEvaluationV2FromIssueJob] Failed to end active evaluation`,
+          ),
         )
       }
     }

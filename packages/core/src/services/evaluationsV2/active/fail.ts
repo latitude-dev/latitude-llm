@@ -5,25 +5,25 @@ import { updateActiveEvaluation } from './update'
 export async function failActiveEvaluation({
   workspaceId,
   projectId,
-  evaluationUuid,
+  workflowUuid,
   error,
 }: {
   workspaceId: number
   projectId: number
-  evaluationUuid: string
+  workflowUuid: string
   error: Error
 }) {
   const deleteResult = await updateActiveEvaluation({
     workspaceId,
     projectId,
-    evaluationUuid,
+    workflowUuid,
     error,
   })
   if (!Result.isOk(deleteResult)) return deleteResult
-  const evaluation = deleteResult.unwrap()
+  const activeEvaluation = deleteResult.unwrap()
   await publisher.publishLater({
     type: 'evaluationFailed',
-    data: { workspaceId, projectId, evaluation, error },
+    data: { workspaceId, projectId, evaluation: activeEvaluation, error },
   })
   return deleteResult
 }

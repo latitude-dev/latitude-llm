@@ -33,7 +33,8 @@ describe('createActiveEvaluation', () => {
   })
 
   it('creates an active evaluation in cache', async () => {
-    const evaluationUuid = 'test-uuid-1'
+    const workflowUuid = 'test-uuid-1'
+    const evaluationUuid = 'test-uuid-123123'
     const issueId = 123
     const queuedAt = new Date()
 
@@ -42,6 +43,7 @@ describe('createActiveEvaluation', () => {
     const result = await createActiveEvaluation({
       workspaceId,
       projectId,
+      workflowUuid,
       evaluationUuid,
       issueId,
       queuedAt,
@@ -51,13 +53,15 @@ describe('createActiveEvaluation', () => {
     expect(result.ok).toBe(true)
     if (!result.ok || !result.value) return
 
-    expect(result.value.uuid).toBe(evaluationUuid)
+    expect(result.value.workflowUuid).toBe(workflowUuid)
+    expect(result.value.evaluationUuid).toBe(evaluationUuid)
     expect(result.value.issueId).toBe(issueId)
     expect(result.value.queuedAt).toEqual(queuedAt)
   })
 
   it('stores evaluation in Redis hash', async () => {
-    const evaluationUuid = 'test-uuid-2'
+    const workflowUuid = 'test-uuid-2'
+    const evaluationUuid = 'test-uuid-223232'
     const issueId = 456
     const queuedAt = new Date()
 
@@ -66,6 +70,7 @@ describe('createActiveEvaluation', () => {
     const result = await createActiveEvaluation({
       workspaceId,
       projectId,
+      workflowUuid,
       evaluationUuid,
       issueId,
       queuedAt,
@@ -77,15 +82,17 @@ describe('createActiveEvaluation', () => {
 
     // Verify it's stored in Redis
     const hashData = await redis.hgetall(key)
-    expect(hashData).toHaveProperty(evaluationUuid)
+    expect(hashData).toHaveProperty(workflowUuid)
 
-    const storedEvaluation = JSON.parse(hashData[evaluationUuid]!)
-    expect(storedEvaluation.uuid).toBe(evaluationUuid)
+    const storedEvaluation = JSON.parse(hashData[workflowUuid]!)
+    expect(storedEvaluation.workflowUuid).toBe(workflowUuid)
+    expect(storedEvaluation.evaluationUuid).toBe(evaluationUuid)
     expect(storedEvaluation.issueId).toBe(issueId)
   })
 
   it('sets TTL on the hash key', async () => {
-    const evaluationUuid = 'test-uuid-3'
+    const workflowUuid = 'test-uuid-3'
+    const evaluationUuid = 'test-uuid-333333'
     const issueId = 789
     const queuedAt = new Date()
 
@@ -94,6 +101,7 @@ describe('createActiveEvaluation', () => {
     const result = await createActiveEvaluation({
       workspaceId,
       projectId,
+      workflowUuid,
       evaluationUuid,
       issueId,
       queuedAt,
@@ -115,12 +123,14 @@ describe('createActiveEvaluation', () => {
     const key = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
     testKeys.add(key)
     for (const issueId of issueIds) {
-      const evaluationUuid = `test-uuid-${issueId}`
+      const workflowUuid = `test-uuid-${issueId}`
+      const evaluationUuid = `test-uuid-${issueId}-222222`
       const queuedAt = new Date()
 
       const result = await createActiveEvaluation({
         workspaceId,
         projectId,
+        workflowUuid,
         evaluationUuid,
         issueId,
         queuedAt,
@@ -137,9 +147,9 @@ describe('createActiveEvaluation', () => {
 
   it('handles multiple evaluations for same workspace/project', async () => {
     const evaluations = [
-      { uuid: 'eval-1', issueId: 101 },
-      { uuid: 'eval-2', issueId: 102 },
-      { uuid: 'eval-3', issueId: 103 },
+      { workflowUuid: 'eval-1', evaluationUuid: 'eval-111111', issueId: 101 },
+      { workflowUuid: 'eval-2', evaluationUuid: 'eval-222222', issueId: 102 },
+      { workflowUuid: 'eval-3', evaluationUuid: 'eval-333333', issueId: 103 },
     ]
 
     const key = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
@@ -148,7 +158,8 @@ describe('createActiveEvaluation', () => {
       const result = await createActiveEvaluation({
         workspaceId,
         projectId,
-        evaluationUuid: evaluation.uuid,
+        workflowUuid: evaluation.workflowUuid,
+        evaluationUuid: evaluation.evaluationUuid,
         issueId: evaluation.issueId,
         queuedAt: new Date(),
         cache: redis,
@@ -182,7 +193,7 @@ describe('createActiveEvaluation', () => {
       const result = await createActiveEvaluation({
         workspaceId: wsId,
         projectId: projId,
-        evaluationUuid: `eval-${wsId}-${projId}`,
+        workflowUuid: `eval-${wsId}-${projId}`,
         issueId: 1,
         queuedAt: new Date(),
         cache: redis,
@@ -197,7 +208,7 @@ describe('createActiveEvaluation', () => {
       testKeys.add(key)
       const hashData = await redis.hgetall(key)
       const evalKeys = Object.keys(hashData).filter((k) =>
-        k.startsWith('eval-'),
+        k.startsWith(`eval-${wsId}-${projId}`),
       )
       expect(evalKeys).toHaveLength(1)
     }

@@ -12,12 +12,18 @@ import { updateEvaluationV2 } from '../../../services/evaluationsV2/update'
 import { endActiveEvaluation } from '../../../services/evaluationsV2/active/end'
 import { captureException } from '../../../utils/datadogCapture'
 import { failActiveEvaluation } from '../../../services/evaluationsV2/active/fail'
+import { queues } from '../../queues'
 
 export type CalculateQualityMetricJobData = {
   workspaceId: number
   commitId: number
+  workflowUuid: string
+  generationAttempt: number
   evaluationUuid: string
   documentUuid: string
+  issueId: number
+  providerName: string
+  model: string
   spanAndTraceIdPairsOfPositiveEvaluationRuns: {
     spanId: string
     traceId: string
@@ -42,8 +48,13 @@ export const calculateQualityMetricJob = async (
   const {
     workspaceId,
     commitId,
+    workflowUuid,
+    generationAttempt,
     evaluationUuid,
     documentUuid,
+    issueId,
+    providerName,
+    model,
     spanAndTraceIdPairsOfPositiveEvaluationRuns,
     spanAndTraceIdPairsOfNegativeEvaluationRuns,
   } = job.data
@@ -87,9 +98,25 @@ export const calculateQualityMetricJob = async (
 
     console.log('mcc', mcc)
 
-    // TODO(evaluation-generation): If the quality metric is less than the minimum threshold, we retry generating another configuration
     if (mcc < MIN_QUALITY_METRIC_THRESHOLD) {
-      throw new Error(`MCC is less than ${MIN_QUALITY_METRIC_THRESHOLD}`)
+      const { generateEvaluationsQueue } = await queues()
+      // TODO(evaluation-generation): add feedback to the generation from what failed
+      await generateEvaluationsQueue.add(
+        'generateEvaluationV2FromIssueJob',
+        {
+          workspaceId: workspace.id,
+          commitId: commit.id,
+          issueId: issueId,
+          providerName: providerName,
+          model: model,
+          workflowUuid: workflowUuid,
+          generationAttempt: generationAttempt + 1, // retry generating another configuration
+        },
+        {
+          jobId: `generateEvaluationV2FromIssueJob:wf=${workflowUuid}:generationAttempt=${generationAttempt + 1}`,
+        },
+      )
+      return
     }
 
     const evaluationRepository = new EvaluationsV2Repository(workspace.id)
@@ -120,7 +147,7 @@ export const calculateQualityMetricJob = async (
       const failResult = await failActiveEvaluation({
         workspaceId,
         projectId: commit.projectId,
-        evaluationUuid,
+        workflowUuid,
         error: error as Error,
       })
       if (!Result.isOk(failResult)) {
@@ -139,7 +166,7 @@ export const calculateQualityMetricJob = async (
       const endResult = await endActiveEvaluation({
         workspaceId,
         projectId: commit.projectId,
-        evaluationUuid,
+        workflowUuid,
       })
       if (!Result.isOk(endResult)) {
         captureException(

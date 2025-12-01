@@ -36,27 +36,27 @@ describe('deleteActiveEvaluation', () => {
   })
 
   it('deletes an active evaluation from cache', async () => {
-    const evaluationUuid = 'test-uuid-1'
+    const workflowUuid = 'test-uuid-1'
     const issueId = 123
     const queuedAt = new Date()
 
-    // Create evaluation first
+    // Create active evaluation without evaluationUuid
     const key = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
     testKeys.add(key)
     await createActiveEvaluation({
       workspaceId,
       projectId,
-      evaluationUuid,
+      workflowUuid,
       issueId,
       queuedAt,
       cache: redis,
     })
 
-    // Delete evaluation
+    // Delete active evaluation
     const result = await deleteActiveEvaluation({
       workspaceId,
       projectId,
-      evaluationUuid,
+      workflowUuid,
       cache: redis,
     })
 
@@ -64,39 +64,43 @@ describe('deleteActiveEvaluation', () => {
     if (!result.ok) return
     const deletedEvaluation = result.unwrap()
 
-    expect(deletedEvaluation.uuid).toBe(evaluationUuid)
+    expect(deletedEvaluation.evaluationUuid).toBeUndefined()
     expect(deletedEvaluation.issueId).toBe(issueId)
 
     // Verify it's removed from Redis
     const verifyKey = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
     const hashData = await redis.hgetall(verifyKey)
-    expect(hashData).not.toHaveProperty(evaluationUuid)
+    expect(hashData).not.toHaveProperty(workflowUuid)
   })
 
   it('returns the deleted evaluation data', async () => {
-    const evaluationUuid = 'test-uuid-2'
+    const workflowUuid = 'test-uuid-2'
+    const initialEvaluationUuid = 'test-uuid-223232'
     const issueId = 456
     const queuedAt = new Date()
-    const startedAt = new Date()
-    const endedAt = new Date()
 
-    // Create evaluation
+    // Create active evaluation with initialEvaluationUuid
     const key = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
     testKeys.add(key)
     await createActiveEvaluation({
       workspaceId,
       projectId,
-      evaluationUuid,
+      workflowUuid,
+      evaluationUuid: initialEvaluationUuid,
       issueId,
       queuedAt,
       cache: redis,
     })
 
-    // Update with startedAt and endedAt
+    // Update evaluationUuid, startedAt, and endedAt
+    const newEvaluationUuid = 'test-uuid-223232-updated'
+    const startedAt = new Date()
+    const endedAt = new Date()
     await updateActiveEvaluation({
       workspaceId,
       projectId,
-      evaluationUuid,
+      workflowUuid,
+      evaluationUuid: newEvaluationUuid,
       startedAt,
       endedAt,
       cache: redis,
@@ -106,7 +110,7 @@ describe('deleteActiveEvaluation', () => {
     const result = await deleteActiveEvaluation({
       workspaceId,
       projectId,
-      evaluationUuid,
+      workflowUuid,
       cache: redis,
     })
 
@@ -114,7 +118,8 @@ describe('deleteActiveEvaluation', () => {
     if (!result.ok) return
     const deletedEvaluation = result.unwrap()
 
-    expect(deletedEvaluation.uuid).toBe(evaluationUuid)
+    expect(deletedEvaluation.workflowUuid).toBe(workflowUuid)
+    expect(deletedEvaluation.evaluationUuid).toBe(newEvaluationUuid)
     expect(deletedEvaluation.queuedAt).toEqual(queuedAt)
     expect(deletedEvaluation.startedAt).toEqual(startedAt)
     expect(deletedEvaluation.endedAt).toEqual(endedAt)
@@ -125,7 +130,7 @@ describe('deleteActiveEvaluation', () => {
     const result = await deleteActiveEvaluation({
       workspaceId,
       projectId,
-      evaluationUuid: 'non-existent-uuid',
+      workflowUuid: 'non-existent-uuid',
       cache: redis,
     })
 
@@ -133,16 +138,28 @@ describe('deleteActiveEvaluation', () => {
     if (result.ok) return
 
     expect(result.error).toBeInstanceOf(NotFoundError)
-    expect(result.error?.message).toContain('Evaluation not found')
+    expect(result.error?.message).toContain('Active evaluation not found')
   })
 
   it('handles deleting from hash with multiple evaluations', async () => {
     // Use unique evaluation UUIDs to avoid conflicts
     const testId = Date.now()
     const evaluations = [
-      { uuid: `eval-1-${testId}`, issueId: 101 },
-      { uuid: `eval-2-${testId}`, issueId: 102 },
-      { uuid: `eval-3-${testId}`, issueId: 103 },
+      {
+        workflowUuid: `eval-1-${testId}`,
+        evaluationUuid: 'eval-111111',
+        issueId: 101,
+      },
+      {
+        workflowUuid: `eval-2-${testId}`,
+        evaluationUuid: 'eval-222222',
+        issueId: 102,
+      },
+      {
+        workflowUuid: `eval-3-${testId}`,
+        evaluationUuid: 'eval-333333',
+        issueId: 103,
+      },
     ]
 
     // Create all evaluations
@@ -152,7 +169,8 @@ describe('deleteActiveEvaluation', () => {
       const createResult = await createActiveEvaluation({
         workspaceId,
         projectId,
-        evaluationUuid: evaluation.uuid,
+        workflowUuid: evaluation.workflowUuid,
+        evaluationUuid: evaluation.evaluationUuid,
         issueId: evaluation.issueId,
         queuedAt: new Date(),
         cache: redis,
@@ -164,7 +182,7 @@ describe('deleteActiveEvaluation', () => {
     const result = await deleteActiveEvaluation({
       workspaceId,
       projectId,
-      evaluationUuid: `eval-2-${testId}`,
+      workflowUuid: `eval-2-${testId}`,
       cache: redis,
     })
 
@@ -185,7 +203,7 @@ describe('deleteActiveEvaluation', () => {
   it('handles deleting all evaluations from a workspace/project', async () => {
     // Use unique test ID to avoid conflicts
     const testId = Date.now()
-    const evaluationUuids = [
+    const workflowUuids = [
       `eval-1-${testId}`,
       `eval-2-${testId}`,
       `eval-3-${testId}`,
@@ -194,11 +212,11 @@ describe('deleteActiveEvaluation', () => {
     // Create evaluations
     const key = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
     testKeys.add(key)
-    for (const uuid of evaluationUuids) {
+    for (const workflowUuid of workflowUuids) {
       const createResult = await createActiveEvaluation({
         workspaceId,
         projectId,
-        evaluationUuid: uuid,
+        workflowUuid,
         issueId: 1,
         queuedAt: new Date(),
         cache: redis,
@@ -207,24 +225,21 @@ describe('deleteActiveEvaluation', () => {
     }
 
     // Delete all evaluations
-    for (const uuid of evaluationUuids) {
+    for (const workflowUuid of workflowUuids) {
       const result = await deleteActiveEvaluation({
         workspaceId,
         projectId,
-        evaluationUuid: uuid,
+        workflowUuid,
         cache: redis,
       })
       expect(result.ok).toBe(true)
-      if (!result.ok) {
-        console.error('Delete failed for:', uuid, result.error)
-      }
     }
 
     // Verify our test evaluations are deleted (hash might have other evaluations from other tests)
     const verifyKey = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
     const hashData = await redis.hgetall(verifyKey)
-    for (const uuid of evaluationUuids) {
-      expect(hashData).not.toHaveProperty(uuid)
+    for (const workflowUuid of workflowUuids) {
+      expect(hashData).not.toHaveProperty(workflowUuid)
     }
   })
 })

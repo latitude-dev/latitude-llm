@@ -5,24 +5,24 @@ import { updateActiveEvaluation } from './update'
 export async function startActiveEvaluation({
   workspaceId,
   projectId,
-  evaluationUuid,
+  workflowUuid,
 }: {
   workspaceId: number
   projectId: number
-  evaluationUuid: string
+  workflowUuid: string
 }) {
   const updateResult = await updateActiveEvaluation({
     workspaceId,
     projectId,
-    evaluationUuid,
+    workflowUuid,
     startedAt: new Date(),
   })
   if (!Result.isOk(updateResult)) return updateResult
-  const evaluation = updateResult.unwrap()
+  const activeEvaluation = updateResult.unwrap()
 
   await publisher.publishLater({
     type: 'evaluationStarted',
-    data: { workspaceId, projectId, evaluation },
+    data: { workspaceId, projectId, evaluation: activeEvaluation },
   })
 
   return updateResult

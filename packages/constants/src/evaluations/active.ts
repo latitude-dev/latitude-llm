@@ -1,7 +1,9 @@
-import { EvaluationV2 } from '..'
-
-export type ActiveEvaluation = Pick<EvaluationV2, 'uuid' | 'issueId'> & {
+// Adding a workflowUuid to have a cross-reference id to track all the evaluation generation/validation loop
+export type ActiveEvaluation = {
+  workflowUuid: string
+  issueId: number | null
   queuedAt: Date
+  evaluationUuid?: string // Can be null in the beginning of the workflow, when the first eval config hasnt been generated yet
   startedAt?: Date
   endedAt?: Date
   error?: Error

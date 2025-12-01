@@ -39,7 +39,7 @@ export const generateEvaluationV2FromIssueAction = withDocument
     const activeEvaluation = await createActiveEvaluation({
       workspaceId: workspace.id,
       projectId: commit.projectId,
-      evaluationUuid: generateUUIDIdentifier(),
+      workflowUuid: generateUUIDIdentifier(),
       issueId: issueId,
       queuedAt: new Date(),
       cache: redisCache,
@@ -54,7 +54,12 @@ export const generateEvaluationV2FromIssueAction = withDocument
         issueId: issueId,
         providerName: providerName,
         model: model,
-        evaluationUuid: activeEvaluation.uuid,
+        workflowUuid: activeEvaluation.workflowUuid,
+        generationAttempt: 1, // first attempt
+      },
+      {
+        // Idempotency key
+        jobId: `generateEvaluationV2FromIssueJob:wf=${activeEvaluation.workflowUuid}:generationAttempt=1`,
       },
     )
 
@@ -62,7 +67,7 @@ export const generateEvaluationV2FromIssueAction = withDocument
       await deleteActiveEvaluation({
         workspaceId: workspace.id,
         projectId: commit.projectId,
-        evaluationUuid: activeEvaluation.uuid,
+        workflowUuid: activeEvaluation.workflowUuid,
         cache: redisCache,
       }).then((r) => r.unwrap())
       throw new LatitudeError(

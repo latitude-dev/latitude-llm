@@ -10,32 +10,36 @@ import { PromisedResult } from '../../../lib/Transaction'
 export async function getActiveEvaluation({
   workspaceId,
   projectId,
-  evaluationUuid,
+  workflowUuid,
   cache,
 }: {
   workspaceId: number
   projectId: number
-  evaluationUuid: string
+  workflowUuid: string
   cache?: Cache
 }): PromisedResult<ActiveEvaluation, Error> {
   const key = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
   const redisCache = cache ?? (await redis())
 
   try {
-    const jsonValue = await redisCache.hget(key, evaluationUuid)
+    const jsonValue = await redisCache.hget(key, workflowUuid)
     if (!jsonValue) {
       return Result.error(
-        new NotFoundError(`Evaluation not found with uuid ${evaluationUuid}`),
+        new NotFoundError(
+          `Active evaluation not found with workflowUuid ${workflowUuid} while getting the evaluation`,
+        ),
       )
     }
-    const evaluation = JSON.parse(jsonValue) as ActiveEvaluation
+    const activeEvaluation = JSON.parse(jsonValue) as ActiveEvaluation
     return Result.ok({
-      ...evaluation,
-      queuedAt: new Date(evaluation.queuedAt),
-      startedAt: evaluation.startedAt
-        ? new Date(evaluation.startedAt)
+      ...activeEvaluation,
+      queuedAt: new Date(activeEvaluation.queuedAt),
+      startedAt: activeEvaluation.startedAt
+        ? new Date(activeEvaluation.startedAt)
         : undefined,
-      endedAt: evaluation.endedAt ? new Date(evaluation.endedAt) : undefined,
+      endedAt: activeEvaluation.endedAt
+        ? new Date(activeEvaluation.endedAt)
+        : undefined,
     })
   } catch (error) {
     return Result.error(error as Error)

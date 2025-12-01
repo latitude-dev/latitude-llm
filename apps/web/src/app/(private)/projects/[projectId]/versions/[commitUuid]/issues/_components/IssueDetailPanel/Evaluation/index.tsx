@@ -37,6 +37,7 @@ const GENERATION_DESCRIPTIONS = [
 
 const ENDED_EVALUATION_DESCRIPTION_DELAY = 3000
 
+// TODO(evaluation-generation): Separate each case into a separate component
 export function IssueEvaluation({ issue }: { issue: Issue }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -80,7 +81,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
   const [model, setModel] = useState<string | undefined | null>()
 
   const [endedEvaluation, setEndedEvaluation] = useState<{
-    uuid: string
+    uuid: string | undefined
     hasError: boolean
   } | null>(null)
 
@@ -93,7 +94,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
         onEvaluationEnded: async (evaluation) => {
           if (evaluation.issueId !== issue.id) return
           const hasError = !!evaluation.error
-          setEndedEvaluation({ uuid: evaluation.uuid, hasError })
+          setEndedEvaluation({ uuid: evaluation.evaluationUuid, hasError })
 
           if (hasError) {
             toast({
@@ -228,7 +229,23 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     setOpenGenerateModal,
   ])
 
-  if (isLoadingEvaluations || !issueEvaluationStats) {
+  const evaluationIsGenerating = useMemo(() => {
+    return (
+      activeEvaluationForThisIssue ||
+      isLoadingActiveEvaluations ||
+      (endedEvaluation && !endedEvaluation.hasError)
+    )
+  }, [
+    activeEvaluationForThisIssue,
+    endedEvaluation,
+    isLoadingActiveEvaluations,
+  ])
+
+  const evaluationGenerationIsLoading = useMemo(() => {
+    return isLoadingEvaluations || !issueEvaluationStats
+  }, [isLoadingEvaluations, issueEvaluationStats])
+
+  if (evaluationGenerationIsLoading) {
     return (
       <div className='grid grid-cols-2 gap-x-4 items-center'>
         <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
@@ -300,11 +317,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     )
   }
 
-  if (
-    activeEvaluationForThisIssue ||
-    isLoadingActiveEvaluations ||
-    (endedEvaluation && !endedEvaluation.hasError)
-  ) {
+  if (evaluationIsGenerating) {
     return (
       <div className='grid grid-cols-2 gap-x-4 items-center'>
         <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
@@ -350,6 +363,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     )
   }
 
+  // If we have enough annotations, and the evaluation is not generating/generated yet, show the generate button
   return (
     <div className='grid grid-cols-2 gap-x-4 items-center'>
       <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>

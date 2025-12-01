@@ -30,7 +30,6 @@ export async function createEvaluationV2<
     options,
     issueId = null,
     workspace,
-    evaluationUuid,
   }: {
     document: DocumentVersion
     commit: Commit
@@ -38,7 +37,6 @@ export async function createEvaluationV2<
     options?: Partial<EvaluationOptions>
     issueId?: number | null
     workspace: Workspace
-    evaluationUuid?: string
   },
   transaction = new Transaction(),
 ) {
@@ -88,7 +86,6 @@ export async function createEvaluationV2<
         workspaceId: workspace.id,
         commitId: commit.id,
         documentUuid: document.documentUuid,
-        evaluationUuid,
         issueId,
         ...settings,
         ...options,

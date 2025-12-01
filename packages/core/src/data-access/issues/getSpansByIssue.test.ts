@@ -135,7 +135,7 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(1)
       expect(spans[0]!.id).toBe(span1.id)
       expect(spans[0]!.workspaceId).toBe(workspace.id)
@@ -247,7 +247,7 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(2)
 
       const spanIds = spans.map((s) => s.id)
@@ -359,7 +359,7 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(3)
 
       const spanIds = spans.map((s) => s.id)
@@ -450,7 +450,7 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(1)
       expect(spans[0]!.id).toBe(span2.id)
     })
@@ -528,7 +528,7 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result1.ok).toBe(true)
-      const { spans: spans1 } = result1.value
+      const { spans: spans1 } = result1.unwrap()
       expect(spans1).toHaveLength(1)
       expect(spans1[0]!.id).toBe(span1.id)
 
@@ -542,7 +542,7 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result2.ok).toBe(true)
-      const { spans: spans2 } = result2.value
+      const { spans: spans2 } = result2.unwrap()
       expect(spans2).toHaveLength(1)
       expect(spans2[0]!.id).toBe(span2.id)
     })
@@ -621,7 +621,7 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(1)
       expect(spans[0]!.id).toBe(span1.id)
     })
@@ -672,8 +672,9 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result1.ok).toBe(true)
-      expect(result1.value.spans).toHaveLength(2)
-      expect(result1.value.hasNextPage).toBe(true)
+      const { spans: spans1, hasNextPage: hasNextPage1 } = result1.unwrap()
+      expect(spans1).toHaveLength(2)
+      expect(hasNextPage1).toBe(true)
 
       // Page 2 with pageSize 2
       const result2 = await getSpansByIssue({
@@ -685,8 +686,9 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result2.ok).toBe(true)
-      expect(result2.value.spans).toHaveLength(2)
-      expect(result2.value.hasNextPage).toBe(true)
+      const { spans: spans2, hasNextPage: hasNextPage2 } = result2.unwrap()
+      expect(spans2).toHaveLength(2)
+      expect(hasNextPage2).toBe(true)
 
       // Page 3 with pageSize 2 (last page with 1 item)
       const result3 = await getSpansByIssue({
@@ -698,8 +700,9 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result3.ok).toBe(true)
-      expect(result3.value.spans).toHaveLength(1)
-      expect(result3.value.hasNextPage).toBe(false)
+      const { spans: spans3, hasNextPage: hasNextPage3 } = result3.unwrap()
+      expect(spans3).toHaveLength(1)
+      expect(hasNextPage3).toBe(false)
     })
 
     it('returns empty array when page is beyond available data', async () => {
@@ -712,8 +715,9 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result.ok).toBe(true)
-      expect(result.value.spans).toHaveLength(0)
-      expect(result.value.hasNextPage).toBe(false)
+      const { spans: spans, hasNextPage: hasNextPage } = result.unwrap()
+      expect(spans).toHaveLength(0)
+      expect(hasNextPage).toBe(false)
     })
   })
 
@@ -804,7 +808,7 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(3)
 
       // Should be ordered: span2 (2024-01-03), span3 (2024-01-02), span1 (2024-01-01)
@@ -997,7 +1001,7 @@ describe('getSpansByIssue', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(1)
       expect(spans[0]!.id).toBe(span1.id)
     })

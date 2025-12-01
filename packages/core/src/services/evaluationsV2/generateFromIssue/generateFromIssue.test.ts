@@ -9,11 +9,10 @@ import {
 import { Result } from '@latitude-data/core/lib/Result'
 import { CLOUD_MESSAGES } from '../../../constants'
 import * as copilotModule from '../../copilot'
-import * as createEvaluationV2Module from '../create'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import {
   __test__,
-  generateEvaluationFromIssueWithCopilot,
+  generateEvaluationConfigFromIssueWithCopilot,
 } from './generateFromIssue'
 import * as factories from '../../../tests/factories'
 import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
@@ -29,10 +28,6 @@ vi.mock('../../copilot', () => ({
   runCopilot: vi.fn(),
 }))
 
-vi.mock('../create', () => ({
-  createEvaluationV2: vi.fn(),
-}))
-
 vi.mock(
   '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue',
   () => ({
@@ -45,9 +40,7 @@ const MODEL = 'gpt-4o'
 describe('generateFromIssue', () => {
   const mockGetCopilot = vi.mocked(copilotModule.getCopilot)
   const mockRunCopilot = vi.mocked(copilotModule.runCopilot)
-  const mockCreateEvaluationV2 = vi.mocked(
-    createEvaluationV2Module.createEvaluationV2,
-  )
+
   const mockGetSpanMessagesAndEvaluationResultsByIssue = vi.mocked(
     getSpanMessagesAndEvaluationResultsByIssue.getSpanMessagesAndEvaluationResultsByIssue,
   )
@@ -58,7 +51,6 @@ describe('generateFromIssue', () => {
   let document: DocumentVersion
   let provider: ProviderApiKey
   let messages: Message[]
-  const TEST_EVALUATION_UUID = 'test-evaluation-uuid'
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -112,28 +104,6 @@ describe('generateFromIssue', () => {
       }),
     )
 
-    // Setup default mocks for services
-    const mockEvaluation = {
-      uuid: 'test-evaluation-uuid',
-      versionId: 1,
-      workspaceId: workspace.id,
-      commitId: commit.id,
-      documentUuid: document.documentUuid,
-      name: 'Test Evaluation',
-      description: 'Test Description',
-      type: 'llm' as const,
-      metric: 'binary' as const,
-      configuration: {},
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    mockCreateEvaluationV2.mockResolvedValue(
-      Result.ok({
-        evaluation: mockEvaluation,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      }) as any,
-    )
-
     messages = [
       {
         role: MessageRole.user,
@@ -158,20 +128,17 @@ describe('generateFromIssue', () => {
   })
 
   it('successfully generates an evaluation from issue using copilot', async () => {
-    const result = await generateEvaluationFromIssueWithCopilot({
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
       issue: issue,
       workspace,
       commit,
       providerName: provider.name,
       model: MODEL,
-      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(Result.isOk(result)).toBe(true)
-    const { evaluation } = result.value!
+    const evaluation = result.unwrap()
     expect(evaluation).toBeDefined()
-    expect(evaluation.uuid).toBe('test-evaluation-uuid')
-    expect(evaluation.versionId).toBe(1)
 
     // Verify repository calls
     expect(
@@ -193,23 +160,6 @@ describe('generateFromIssue', () => {
       },
       schema: __test__.llmEvaluationBinarySpecificationWithoutModel,
     })
-
-    // Verify evaluation creation
-    expect(mockCreateEvaluationV2).toHaveBeenCalledWith(
-      expect.objectContaining({
-        settings: expect.objectContaining({
-          configuration: expect.objectContaining({
-            provider: provider.name,
-            model: MODEL,
-          }),
-        }),
-        issueId: issue.id,
-        document,
-        workspace,
-        commit,
-        evaluationUuid: TEST_EVALUATION_UUID,
-      }),
-    )
   })
 
   it('returns error when LATITUDE_CLOUD is not enabled', async () => {
@@ -220,13 +170,12 @@ describe('generateFromIssue', () => {
         '/copilot/evaluations/generator',
     } as typeof env.env)
 
-    const result = await generateEvaluationFromIssueWithCopilot({
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
       issue: issue,
       workspace,
       commit,
       providerName: provider.name,
       model: MODEL,
-      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(Result.isOk(result)).toBe(false)
@@ -246,13 +195,12 @@ describe('generateFromIssue', () => {
       COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH: '',
     } as typeof env.env)
 
-    const result = await generateEvaluationFromIssueWithCopilot({
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
       issue: issue,
       providerName: provider.name,
       model: MODEL,
       workspace,
       commit,
-      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(Result.isOk(result)).toBe(false)
@@ -272,13 +220,12 @@ describe('generateFromIssue', () => {
     ).mockResolvedValue(Result.error(new NotFoundError('Document not found')))
 
     await expect(
-      generateEvaluationFromIssueWithCopilot({
+      generateEvaluationConfigFromIssueWithCopilot({
         issue,
         providerName: provider.name,
         model: MODEL,
         workspace,
         commit,
-        evaluationUuid: TEST_EVALUATION_UUID,
       }),
     ).rejects.toThrow('Document not found')
 
@@ -294,13 +241,12 @@ describe('generateFromIssue', () => {
       Result.error(new NotFoundError('Copilot not found')),
     )
 
-    const result = await generateEvaluationFromIssueWithCopilot({
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
       issue,
       providerName: provider.name,
       model: MODEL,
       workspace,
       commit,
-      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(Result.isOk(result)).toBe(false)
@@ -310,7 +256,6 @@ describe('generateFromIssue', () => {
     // Verify copilot was called but no further calls
     expect(mockGetCopilot).toHaveBeenCalled()
     expect(mockRunCopilot).not.toHaveBeenCalled()
-    expect(mockCreateEvaluationV2).not.toHaveBeenCalled()
   })
 
   it('returns error when runCopilot fails', async () => {
@@ -318,13 +263,12 @@ describe('generateFromIssue', () => {
       Result.error(new UnprocessableEntityError('Copilot execution failed')),
     )
 
-    const result = await generateEvaluationFromIssueWithCopilot({
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
       issue,
       providerName: provider.name,
       model: MODEL,
       workspace,
       commit,
-      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(Result.isOk(result)).toBe(false)
@@ -334,41 +278,15 @@ describe('generateFromIssue', () => {
     // Verify copilot run was called but evaluation creation was not
     expect(mockGetCopilot).toHaveBeenCalled()
     expect(mockRunCopilot).toHaveBeenCalled()
-    expect(mockCreateEvaluationV2).not.toHaveBeenCalled()
-  })
-
-  it('returns error when createEvaluationV2 fails', async () => {
-    mockCreateEvaluationV2.mockResolvedValue(
-      Result.error(new BadRequestError('Evaluation creation failed')),
-    )
-
-    const result = await generateEvaluationFromIssueWithCopilot({
-      issue,
-      providerName: provider.name,
-      model: MODEL,
-      workspace,
-      commit,
-      evaluationUuid: TEST_EVALUATION_UUID,
-    })
-
-    expect(Result.isOk(result)).toBe(false)
-    expect(result.error).toBeInstanceOf(BadRequestError)
-    expect(result.error?.message).toBe('Evaluation creation failed')
-
-    // Verify all steps were called
-    expect(mockGetCopilot).toHaveBeenCalled()
-    expect(mockRunCopilot).toHaveBeenCalled()
-    expect(mockCreateEvaluationV2).toHaveBeenCalled()
   })
 
   it('passes correct parameters to runCopilot', async () => {
-    await generateEvaluationFromIssueWithCopilot({
+    await generateEvaluationConfigFromIssueWithCopilot({
       issue,
       providerName: provider.name,
       model: MODEL,
       workspace,
       commit,
-      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
     expect(mockRunCopilot).toHaveBeenCalledWith({

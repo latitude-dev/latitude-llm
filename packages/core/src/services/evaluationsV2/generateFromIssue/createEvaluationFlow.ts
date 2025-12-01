@@ -10,6 +10,7 @@ import { EvaluationV2 } from '@latitude-data/constants'
 import { Issue } from '../../../schema/models/types/Issue'
 import { getSpansByIssue } from '../../../data-access/issues/getSpansByIssue'
 import { getSpansWithoutIssuesByDocumentUuid } from '../../../data-access/issues/getSpansWithoutIssuesByDocumentUuid'
+import Transaction from '../../../lib/Transaction'
 
 const MAX_COMPARISON_ANNOTATIONS = 100
 
@@ -21,100 +22,127 @@ const MAX_COMPARISON_ANNOTATIONS = 100
    and runs it against the created evalaluation. 
 */
 // TODO(evaluation-generation): Add new argument if its in the generation flow or if its just to get the current MCC (when we calculate it daily)
-export async function createValidationFlow({
-  workspace,
-  commit,
-  evaluationToEvaluate,
-  issue,
-}: {
-  workspace: Workspace
-  commit: Commit
-  evaluationToEvaluate: EvaluationV2
-  issue: Issue
-}) {
-  const spansResult =
-    await getEqualAmountsOfPositiveAndNegativeEvaluationResults({
-      workspace,
-      commit,
-      issue,
+export async function createValidationFlow(
+  {
+    workspace,
+    commit,
+    workflowUuid,
+    evaluationToEvaluate,
+    issue,
+    generationAttempt,
+    providerName,
+    model,
+  }: {
+    workspace: Workspace
+    commit: Commit
+    workflowUuid: string
+    evaluationToEvaluate: EvaluationV2
+    issue: Issue
+    generationAttempt: number
+    providerName: string
+    model: string
+  },
+  transaction = new Transaction(),
+) {
+  return await transaction.call(async () => {
+    const spansResult =
+      await getEqualAmountsOfPositiveAndNegativeEvaluationResults(
+        {
+          workspace,
+          commit,
+          issue,
+        },
+        transaction,
+      )
+    if (!Result.isOk(spansResult)) {
+      return spansResult
+    }
+    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
+      spansResult.unwrap()
+
+    const spanAndTraceIdPairsOfPositiveEvaluationRuns =
+      positiveEvaluationResultsSpans.map((span) => ({
+        spanId: span.id,
+        traceId: span.traceId,
+      }))
+    const spanAndTraceIdPairsOfNegativeEvaluationRuns =
+      negativeEvaluationResultsSpans.map((span) => ({
+        spanId: span.id,
+        traceId: span.traceId,
+      }))
+
+    const allSpans = [
+      ...positiveEvaluationResultsSpans,
+      ...negativeEvaluationResultsSpans,
+    ]
+
+    const flowProducer = new FlowProducer({
+      prefix: REDIS_KEY_PREFIX,
+      connection: await buildRedisConnection({
+        host: env.QUEUE_HOST,
+        port: env.QUEUE_PORT,
+        password: env.QUEUE_PASSWORD,
+      }),
     })
-  if (!Result.isOk(spansResult)) {
-    return spansResult
-  }
-  const spans = spansResult.unwrap()
 
-  const spanAndTraceIdPairsOfPositiveEvaluationRuns =
-    spans.positiveEvaluationResults.map((span) => ({
-      spanId: span.id,
-      traceId: span.traceId,
-    }))
-  const spanAndTraceIdPairsOfNegativeEvaluationRuns =
-    spans.negativeEvaluationResults.map((span) => ({
-      spanId: span.id,
-      traceId: span.traceId,
-    }))
-  const allSpans = [
-    ...spans.positiveEvaluationResults,
-    ...spans.negativeEvaluationResults,
-  ]
-
-  const flowProducer = new FlowProducer({
-    prefix: REDIS_KEY_PREFIX,
-    connection: await buildRedisConnection({
-      host: env.QUEUE_HOST,
-      port: env.QUEUE_PORT,
-      password: env.QUEUE_PASSWORD,
-    }),
-  })
-
-  const { job: validationFlowJob } = await flowProducer.add({
-    name: `calculateQualityMetricJob`,
-    queueName: Queues.generateEvaluationsQueue,
-    data: {
-      workspaceId: workspace.id,
-      commitId: commit.id,
-      evaluationUuid: evaluationToEvaluate.uuid,
-      documentUuid: issue.documentUuid,
-      spanAndTraceIdPairsOfPositiveEvaluationRuns,
-      spanAndTraceIdPairsOfNegativeEvaluationRuns,
-    },
-    opts: {
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 1000,
-      },
-    },
-    children: allSpans.map((span) => ({
-      name: `runEvaluationV2Job`,
-      queueName: Queues.evaluationsQueue,
+    const { job: validationFlowJob } = await flowProducer.add({
+      name: `calculateQualityMetricJob`,
+      queueName: Queues.generateEvaluationsQueue,
       data: {
         workspaceId: workspace.id,
         commitId: commit.id,
+        workflowUuid,
+        generationAttempt,
+        providerName,
+        model,
+        issueId: issue.id,
         evaluationUuid: evaluationToEvaluate.uuid,
-        spanId: span.id,
-        traceId: span.traceId,
-        dry: true,
+        documentUuid: issue.documentUuid,
+        spanAndTraceIdPairsOfPositiveEvaluationRuns,
+        spanAndTraceIdPairsOfNegativeEvaluationRuns,
       },
       opts: {
-        // overriding eval queue options for faster retry policy to avoid user waiting too long for the evaluation to be generated
-        attempts: 2,
+        // Idempotency key
+        jobId: `calculateQualityMetricJob:wf=${workflowUuid}:generationAttempt=${generationAttempt}`,
+        // FlowProducer does not inherit
+        attempts: 3,
         backoff: {
-          type: 'fixed',
+          type: 'exponential',
           delay: 1000,
         },
       },
-    })),
+      children: allSpans.map((span) => ({
+        name: `runEvaluationV2Job`,
+        queueName: Queues.evaluationsQueue,
+        data: {
+          workspaceId: workspace.id,
+          commitId: commit.id,
+          evaluationUuid: evaluationToEvaluate.uuid,
+          spanId: span.id,
+          traceId: span.traceId,
+          dry: true,
+        },
+        opts: {
+          // Idempotency key
+          jobId: `runEvaluationV2Job:wf=${workflowUuid}:generationAttempt=${generationAttempt}`,
+          // Overriding eval queue options for faster retry policy to avoid user waiting too long for the evaluation to be generated
+          attempts: 2,
+          backoff: {
+            type: 'fixed',
+            delay: 1000,
+          },
+        },
+      })),
+    })
+
+    if (!validationFlowJob.id) {
+      return Result.error(
+        new Error('Failed to create evaluation validation flow'),
+      )
+    }
+    return Result.ok(validationFlowJob)
   })
-
-  if (!validationFlowJob.id) {
-    return Result.error(
-      new Error('Failed to create evaluation validation flow'),
-    )
-  }
-  return Result.ok(validationFlowJob)
 }
-
 /*
 Gets:
 - the spans of the issue (positive evalResults)
@@ -123,44 +151,55 @@ Gets:
 Thumbs up evalResults of the same document or evalResults of other issues of the same document count as negative evalResults because
  they are cases in which the new evaluation should return a negative result, as that span doesnt have that issue
 */
-async function getEqualAmountsOfPositiveAndNegativeEvaluationResults({
-  workspace,
-  commit,
-  issue,
-}: {
-  workspace: Workspace
-  commit: Commit
-  issue: Issue
-}) {
-  const spansResult = await getSpansByIssue({
+async function getEqualAmountsOfPositiveAndNegativeEvaluationResults(
+  {
     workspace,
     commit,
     issue,
-    pageSize: MAX_COMPARISON_ANNOTATIONS,
-    page: 1,
-  })
-  if (!Result.isOk(spansResult)) {
-    return spansResult
-  }
-  const { spans } = spansResult.unwrap()
+  }: {
+    workspace: Workspace
+    commit: Commit
+    issue: Issue
+  },
+  transaction = new Transaction(),
+) {
+  return await transaction.call(async () => {
+    const spansResult = await getSpansByIssue(
+      {
+        workspace,
+        commit,
+        issue,
+        pageSize: MAX_COMPARISON_ANNOTATIONS,
+        page: 1,
+      },
+      transaction,
+    )
+    if (!Result.isOk(spansResult)) {
+      return spansResult
+    }
+    const { spans } = spansResult.unwrap()
 
-  // Getting the same amount of negative evaluation results spans as the positive evaluation results spans
-  const spansWithoutIssuesResult = await getSpansWithoutIssuesByDocumentUuid({
-    workspace,
-    commit,
-    documentUuid: issue.documentUuid,
-    pageSize: spans.length,
-    page: 1,
-  })
-  if (!Result.isOk(spansWithoutIssuesResult)) {
-    return spansWithoutIssuesResult
-  }
-  const { spans: spansWithoutIssues } = spansWithoutIssuesResult.unwrap()
+    // Getting the same amount of negative evaluation results spans as the positive evaluation results spans
+    const spansWithoutIssuesResult = await getSpansWithoutIssuesByDocumentUuid(
+      {
+        workspace,
+        commit,
+        documentUuid: issue.documentUuid,
+        pageSize: spans.length,
+        page: 1,
+      },
+      transaction,
+    )
+    if (!Result.isOk(spansWithoutIssuesResult)) {
+      return spansWithoutIssuesResult
+    }
+    const { spans: spansWithoutIssues } = spansWithoutIssuesResult.unwrap()
 
-  const targetLength = Math.min(spans.length, spansWithoutIssues.length)
-  return Result.ok({
-    positiveEvaluationResults: spans.slice(0, targetLength),
-    negativeEvaluationResults: spansWithoutIssues.slice(0, targetLength),
+    const targetLength = Math.min(spans.length, spansWithoutIssues.length)
+    return Result.ok({
+      positiveEvaluationResultsSpans: spans.slice(0, targetLength),
+      negativeEvaluationResultsSpans: spansWithoutIssues.slice(0, targetLength),
+    })
   })
 }
 

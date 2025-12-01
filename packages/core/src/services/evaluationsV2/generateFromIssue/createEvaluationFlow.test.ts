@@ -113,16 +113,16 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResults, negativeEvaluationResults } =
+    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
       result.unwrap()
-    expect(positiveEvaluationResults).toHaveLength(3)
-    expect(negativeEvaluationResults).toHaveLength(3)
+    expect(positiveEvaluationResultsSpans).toHaveLength(3)
+    expect(negativeEvaluationResultsSpans).toHaveLength(3)
     // Check that all positive spans are present (order may vary)
-    expect(positiveEvaluationResults.map((s: Span) => s.id).sort()).toEqual(
+    expect(positiveEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
       positiveSpans.map((s) => s.id).sort(),
     )
     // Check that all negative spans are present (order may vary)
-    expect(negativeEvaluationResults.map((s: Span) => s.id).sort()).toEqual(
+    expect(negativeEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
       negativeSpans.map((s) => s.id).sort(),
     )
   })
@@ -187,19 +187,19 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResults, negativeEvaluationResults } =
+    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
       result.unwrap()
     // Both should have the same length (minimum of 5 and 2 = 2)
-    expect(positiveEvaluationResults).toHaveLength(2)
-    expect(negativeEvaluationResults).toHaveLength(2)
+    expect(positiveEvaluationResultsSpans).toHaveLength(2)
+    expect(negativeEvaluationResultsSpans).toHaveLength(2)
     // Check that positive spans are a subset (first 2 of 5)
-    expect(positiveEvaluationResults).toHaveLength(2)
+    expect(positiveEvaluationResultsSpans).toHaveLength(2)
     const positiveSpanIds = positiveSpans.map((s) => s.id)
-    positiveEvaluationResults.forEach((span: Span) => {
+    positiveEvaluationResultsSpans.forEach((span: Span) => {
       expect(positiveSpanIds).toContain(span.id)
     })
     // Check that all negative spans are present (order may vary)
-    expect(negativeEvaluationResults.map((s: Span) => s.id).sort()).toEqual(
+    expect(negativeEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
       negativeSpans.map((s) => s.id).sort(),
     )
   })
@@ -264,19 +264,19 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResults, negativeEvaluationResults } =
+    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
       result.unwrap()
-    expect(positiveEvaluationResults).toHaveLength(3)
-    expect(negativeEvaluationResults).toHaveLength(3) // Limited to match positive
+    expect(positiveEvaluationResultsSpans).toHaveLength(3)
+    expect(negativeEvaluationResultsSpans).toHaveLength(3) // Limited to match positive
     // Check that all positive spans are present (order may vary)
-    expect(positiveEvaluationResults.map((s: Span) => s.id).sort()).toEqual(
+    expect(positiveEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
       positiveSpans.map((s) => s.id).sort(),
     )
     // Check that negative spans are a subset of all negative spans (order may vary)
     // The function may return any 3 negative spans, not necessarily the first 3
-    expect(negativeEvaluationResults).toHaveLength(3)
+    expect(negativeEvaluationResultsSpans).toHaveLength(3)
     const negativeSpanIds = negativeSpans.map((s) => s.id)
-    negativeEvaluationResults.forEach((span: Span) => {
+    negativeEvaluationResultsSpans.forEach((span: Span) => {
       expect(negativeSpanIds).toContain(span.id)
     })
   })
@@ -292,10 +292,10 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResults, negativeEvaluationResults } =
+    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
       result.unwrap()
-    expect(positiveEvaluationResults).toHaveLength(0)
-    expect(negativeEvaluationResults).toHaveLength(0)
+    expect(positiveEvaluationResultsSpans).toHaveLength(0)
+    expect(negativeEvaluationResultsSpans).toHaveLength(0)
   })
 
   it('returns empty arrays when no negative spans exist', async () => {
@@ -347,13 +347,18 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResults, negativeEvaluationResults } =
+    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
       result.unwrap()
     // Both should be empty (minimum of 3 and 0 = 0)
-    expect(positiveEvaluationResults).toHaveLength(0)
-    expect(negativeEvaluationResults).toHaveLength(0)
+    expect(positiveEvaluationResultsSpans).toHaveLength(0)
+    expect(negativeEvaluationResultsSpans).toHaveLength(0)
   })
 })
+
+const TEST_JOB_ID = 'test-job-id'
+const TEST_WORKFLOW_UUID = 'test-workflow-uuid'
+const TEST_PROVIDER_NAME = 'openai'
+const TEST_MODEL = 'gpt-4o'
 
 describe('createValidationFlow', () => {
   let workspace: Workspace
@@ -395,7 +400,7 @@ describe('createValidationFlow', () => {
     // Mock FlowProducer
     mockFlowProducer = {
       add: vi.fn().mockResolvedValue({
-        job: { id: 'test-job-id' },
+        job: { id: TEST_JOB_ID },
       }),
     }
     vi.mocked(FlowProducer).mockImplementation(() => mockFlowProducer)
@@ -448,13 +453,17 @@ describe('createValidationFlow', () => {
     const result = await createValidationFlow({
       workspace,
       commit,
+      workflowUuid: TEST_WORKFLOW_UUID,
       evaluationToEvaluate: evaluation,
       issue,
+      generationAttempt: 1,
+      providerName: TEST_PROVIDER_NAME,
+      model: TEST_MODEL,
     })
 
     expect(Result.isOk(result)).toBe(true)
     const validationFlowJob = result.unwrap()
-    expect(validationFlowJob.id).toBe('test-job-id')
+    expect(validationFlowJob.id).toBe(TEST_JOB_ID)
 
     // Verify FlowProducer was called correctly
     expect(mockFlowProducer.add).toHaveBeenCalledTimes(1)
@@ -462,6 +471,8 @@ describe('createValidationFlow', () => {
     expect(callArgs.name).toBe('calculateQualityMetricJob')
     expect(callArgs.data.workspaceId).toBe(workspace.id)
     expect(callArgs.data.commitId).toBe(commit.id)
+    expect(callArgs.data.workflowUuid).toBe(TEST_WORKFLOW_UUID)
+    expect(callArgs.data.generationAttempt).toBe(1)
     expect(callArgs.data.evaluationUuid).toBe(evaluation.uuid)
     expect(callArgs.data.documentUuid).toBe(document.documentUuid)
     expect(
@@ -479,13 +490,17 @@ describe('createValidationFlow', () => {
     const result = await createValidationFlow({
       workspace,
       commit,
+      workflowUuid: TEST_WORKFLOW_UUID,
       evaluationToEvaluate: evaluation,
       issue,
+      generationAttempt: 1,
+      providerName: TEST_PROVIDER_NAME,
+      model: TEST_MODEL,
     })
 
     expect(Result.isOk(result)).toBe(true)
     const validationFlowJob = result.unwrap()
-    expect(validationFlowJob.id).toBe('test-job-id')
+    expect(validationFlowJob.id).toBe(TEST_JOB_ID)
 
     // Verify FlowProducer was called with empty arrays
     const callArgs = mockFlowProducer.add.mock.calls[0]![0]
@@ -506,8 +521,12 @@ describe('createValidationFlow', () => {
     const result = await createValidationFlow({
       workspace,
       commit,
+      workflowUuid: TEST_WORKFLOW_UUID,
       evaluationToEvaluate: evaluation,
       issue,
+      generationAttempt: 1,
+      providerName: TEST_PROVIDER_NAME,
+      model: TEST_MODEL,
     })
 
     expect(Result.isOk(result)).toBe(false)

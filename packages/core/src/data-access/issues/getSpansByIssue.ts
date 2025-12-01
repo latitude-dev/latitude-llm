@@ -1,5 +1,4 @@
 import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
-import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination'
 import { Result } from '../../lib/Result'
 import { CommitsRepository } from '../../repositories'
@@ -11,55 +10,64 @@ import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
 import { spans } from '../../schema/models/spans'
 import { Span, SpanType } from '@latitude-data/constants'
+import Transaction from '../../lib/Transaction'
 
-async function fetchPaginatedEvaluationResults({
-  workspace,
-  commit,
-  issue,
-  page,
-  pageSize,
-}: {
-  workspace: Workspace
-  commit: Commit
-  issue: Issue
-  page: number
-  pageSize: number
-}) {
-  const commitsRepo = new CommitsRepository(workspace.id, database)
-  const commitHistory = await commitsRepo.getCommitsHistory({ commit })
-  const commitIds = commitHistory.map((c) => c.id)
-  const limit = pageSize + 1
-  const offset = calculateOffset(page, pageSize)
-  const evalResults = await database
-    .select({
-      id: evaluationResultsV2.id,
-      evaluatedSpanId: evaluationResultsV2.evaluatedSpanId,
-      evaluatedTraceId: evaluationResultsV2.evaluatedTraceId,
-      createdAt: evaluationResultsV2.createdAt,
-    })
-    .from(issueEvaluationResults)
-    .innerJoin(
-      evaluationResultsV2,
-      eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
-    )
-    .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
-    .where(
-      and(
-        eq(issueEvaluationResults.workspaceId, workspace.id),
-        eq(issueEvaluationResults.issueId, issue.id),
-        isNotNull(evaluationResultsV2.evaluatedSpanId),
-        isNotNull(evaluationResultsV2.evaluatedTraceId),
-        isNull(commits.deletedAt),
-        inArray(evaluationResultsV2.commitId, commitIds),
-      ),
-    )
-    .orderBy(desc(evaluationResultsV2.createdAt), desc(evaluationResultsV2.id))
-    .limit(limit)
-    .offset(offset)
+async function fetchPaginatedEvaluationResults(
+  {
+    workspace,
+    commit,
+    issue,
+    page,
+    pageSize,
+  }: {
+    workspace: Workspace
+    commit: Commit
+    issue: Issue
+    page: number
+    pageSize: number
+  },
+  transaction = new Transaction(),
+) {
+  return await transaction.call(async (tx) => {
+    const commitsRepo = new CommitsRepository(workspace.id, tx)
+    const commitHistory = await commitsRepo.getCommitsHistory({ commit })
+    const commitIds = commitHistory.map((c) => c.id)
+    const limit = pageSize + 1
+    const offset = calculateOffset(page, pageSize)
+    const evalResults = await tx
+      .select({
+        id: evaluationResultsV2.id,
+        evaluatedSpanId: evaluationResultsV2.evaluatedSpanId,
+        evaluatedTraceId: evaluationResultsV2.evaluatedTraceId,
+        createdAt: evaluationResultsV2.createdAt,
+      })
+      .from(issueEvaluationResults)
+      .innerJoin(
+        evaluationResultsV2,
+        eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+      )
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .where(
+        and(
+          eq(issueEvaluationResults.workspaceId, workspace.id),
+          eq(issueEvaluationResults.issueId, issue.id),
+          isNotNull(evaluationResultsV2.evaluatedSpanId),
+          isNotNull(evaluationResultsV2.evaluatedTraceId),
+          isNull(commits.deletedAt),
+          inArray(evaluationResultsV2.commitId, commitIds),
+        ),
+      )
+      .orderBy(
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+      )
+      .limit(limit)
+      .offset(offset)
 
-  const hasNextPage = evalResults.length > pageSize
-  const results = hasNextPage ? evalResults.slice(0, pageSize) : evalResults
-  return { results, hasNextPage }
+    const hasNextPage = evalResults.length > pageSize
+    const results = hasNextPage ? evalResults.slice(0, pageSize) : evalResults
+    return Result.ok({ results, hasNextPage })
+  })
 }
 
 /**
@@ -78,65 +86,77 @@ async function fetchPaginatedEvaluationResults({
  *
  * This ensures the query planner can apply LIMIT before scanning the spans table.
  */
-export async function getSpansByIssue({
-  workspace,
-  commit,
-  issue,
-  page,
-  pageSize,
-}: {
-  workspace: Workspace
-  commit: Commit
-  issue: Issue
-  page: number
-  pageSize: number
-}) {
-  const { results: paginatedResults, hasNextPage } =
-    await fetchPaginatedEvaluationResults({
-      workspace,
-      commit,
-      issue,
-      page,
-      pageSize,
-    })
+export async function getSpansByIssue(
+  {
+    workspace,
+    commit,
+    issue,
+    page,
+    pageSize,
+  }: {
+    workspace: Workspace
+    commit: Commit
+    issue: Issue
+    page: number
+    pageSize: number
+  },
+  transaction = new Transaction(),
+) {
+  return await transaction.call(async (tx) => {
+    const evaluationResultsResult = await fetchPaginatedEvaluationResults(
+      {
+        workspace,
+        commit,
+        issue,
+        page,
+        pageSize,
+      },
+      transaction,
+    )
+    if (!Result.isOk(evaluationResultsResult)) {
+      return Result.error(evaluationResultsResult.error)
+    }
+    const { results: paginatedResults, hasNextPage } =
+      evaluationResultsResult.unwrap()
 
-  if (paginatedResults.length === 0) {
-    return Result.ok({
-      spans: [] as Span[],
-      hasNextPage: false,
-    })
-  }
+    if (paginatedResults.length === 0) {
+      return Result.ok({
+        spans: [] as Span[],
+        hasNextPage: false,
+      })
+    }
 
-  const spanTraceIdPairs = paginatedResults.map(
-    (result) => sql`(${result.evaluatedSpanId}, ${result.evaluatedTraceId})`,
-  )
-
-  const fetchedSpans = await database
-    .select()
-    .from(spans)
-    .where(
-      and(
-        eq(spans.workspaceId, workspace.id),
-        sql`(${spans.id}, ${spans.traceId}) IN (${sql.join(spanTraceIdPairs, sql`, `)})`,
-        eq(spans.type, SpanType.Prompt),
-      ),
+    const spanTraceIdPairs = paginatedResults.map(
+      (result) => sql`(${result.evaluatedSpanId}, ${result.evaluatedTraceId})`,
     )
 
-  const spanMap = new Map<string, Span>()
-  for (const span of fetchedSpans) {
-    const key = `${span.id}:${span.traceId}`
-    spanMap.set(key, span as Span)
-  }
+    const fetchedSpans = await tx
+      .select()
+      .from(spans)
+      .where(
+        and(
+          eq(spans.workspaceId, workspace.id),
+          sql`(${spans.id}, ${spans.traceId}) IN (${sql.join(spanTraceIdPairs, sql`, `)})`,
+          eq(spans.type, SpanType.Prompt),
+        ),
+      )
 
-  const orderedSpans = paginatedResults
-    .map((result) => {
-      const key = `${result.evaluatedSpanId}:${result.evaluatedTraceId}`
-      return spanMap.get(key)
+    const spanMap = new Map<string, Span>()
+    for (const span of fetchedSpans) {
+      const key = `${span.id}:${span.traceId}`
+      spanMap.set(key, span as Span)
+    }
+
+    const orderedSpans = paginatedResults
+      .map((result) => {
+        const key = `${result.evaluatedSpanId}:${result.evaluatedTraceId}`
+        return spanMap.get(key)
+      })
+      .filter((span): span is Span => span !== undefined)
+
+    return Result.ok({
+      spans: orderedSpans,
+      hasNextPage,
     })
-    .filter((span): span is Span => span !== undefined)
-
-  return Result.ok({
-    spans: orderedSpans,
-    hasNextPage,
   })
 }

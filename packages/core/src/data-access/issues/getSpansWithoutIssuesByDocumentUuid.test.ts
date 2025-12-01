@@ -95,7 +95,7 @@ describe('getSpansWithoutIssuesByDocumentUuid', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(1)
       expect(spans[0]!.id).toBe(span1.id)
       expect(spans[0]!.workspaceId).toBe(workspace.id)
@@ -160,7 +160,7 @@ describe('getSpansWithoutIssuesByDocumentUuid', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(2)
 
       const spanIds = spans.map((s) => s.id)
@@ -225,7 +225,7 @@ describe('getSpansWithoutIssuesByDocumentUuid', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(3)
 
       const spanIds = spans.map((s) => s.id)
@@ -282,7 +282,7 @@ describe('getSpansWithoutIssuesByDocumentUuid', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(1)
       expect(spans[0]!.id).toBe(span2.id)
     })
@@ -353,7 +353,7 @@ describe('getSpansWithoutIssuesByDocumentUuid', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(1)
       expect(spans[0]!.id).toBe(span2.id)
     })
@@ -435,7 +435,7 @@ describe('getSpansWithoutIssuesByDocumentUuid', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(0)
     })
   })
@@ -479,7 +479,7 @@ describe('getSpansWithoutIssuesByDocumentUuid', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(1)
       expect(spans[0]!.id).toBe(span1.id)
     })
@@ -510,7 +510,7 @@ describe('getSpansWithoutIssuesByDocumentUuid', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans: resultSpans, hasNextPage } = result.value
+      const { spans: resultSpans, hasNextPage } = result.unwrap()
       expect(resultSpans).toHaveLength(2)
       expect(hasNextPage).toBe(true)
     })
@@ -538,7 +538,7 @@ describe('getSpansWithoutIssuesByDocumentUuid', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans: resultSpans, hasNextPage } = result.value
+      const { spans: resultSpans, hasNextPage } = result.unwrap()
       expect(resultSpans).toHaveLength(pageSize)
       expect(hasNextPage).toBe(false)
     })
@@ -553,7 +553,7 @@ describe('getSpansWithoutIssuesByDocumentUuid', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans: resultSpans, hasNextPage } = result.value
+      const { spans: resultSpans, hasNextPage } = result.unwrap()
       expect(resultSpans).toHaveLength(0)
       expect(hasNextPage).toBe(false)
     })
@@ -588,7 +588,7 @@ describe('getSpansWithoutIssuesByDocumentUuid', () => {
       })
 
       expect(result.ok).toBe(true)
-      const { spans } = result.value
+      const { spans } = result.unwrap()
       expect(spans).toHaveLength(1)
       expect(spans[0]!.id).toBe(promptSpan.id)
       expect(spans[0]!.type).toBe(SpanType.Prompt)
