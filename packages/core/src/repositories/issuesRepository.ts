@@ -75,6 +75,9 @@ export class IssuesRepository extends Repository<Issue> {
   async lock({ id, wait }: { id: number; wait?: boolean }) {
     // .for('no key update', { noWait: true }) is bugged in drizzle!
     // https://github.com/drizzle-team/drizzle-orm/issues/3554
+    // Default to waiting for locks to handle concurrent job processing.
+    // Set wait: false explicitly if NOWAIT behavior is needed.
+    const shouldWait = wait !== false
 
     try {
       await this.db.execute(sql<boolean>`
@@ -83,7 +86,7 @@ export class IssuesRepository extends Repository<Issue> {
         WHERE (
           ${issues.workspaceId} = ${this.workspaceId} AND
           ${issues.id} = ${id}
-        ) LIMIT 1 FOR NO KEY UPDATE ${sql.raw(wait ? '' : 'NOWAIT')};
+        ) LIMIT 1 FOR NO KEY UPDATE ${sql.raw(!shouldWait ? 'NOWAIT' : '')};
           `)
     } catch (error: any) {
       if (error?.code === databaseErrorCodes.lockNotAvailable) {
