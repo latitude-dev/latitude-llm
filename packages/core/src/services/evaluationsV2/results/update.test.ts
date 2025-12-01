@@ -95,6 +95,7 @@ describe('updateEvaluationResultV2', () => {
         normalizedScore: 0,
       },
       workspace: workspace,
+      evaluation: evaluation,
     }).then((r) => r.unwrap())
 
     expect(updatedResult).toEqual(
@@ -126,6 +127,8 @@ describe('updateEvaluationResultV2', () => {
       data: {
         result: updatedResult,
         workspaceId: workspace.id,
+        previousHasPassed: result.hasPassed,
+        evaluation: evaluation,
       },
     })
   })

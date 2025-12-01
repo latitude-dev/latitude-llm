@@ -68,10 +68,12 @@ export const discoverResultIssueJob = async (
   const span = await spansRepository
     .get({ spanId: result.evaluatedSpanId!, traceId: result.evaluatedTraceId! })
     .then((r) => r.unwrap())
-  if (!span)
+
+  if (!span) {
     throw new NotFoundError(
       `Span not found for spanId: ${result.evaluatedSpanId} and traceId: ${result.evaluatedTraceId}`,
     )
+  }
 
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
   const evaluation = await evaluationsRepository

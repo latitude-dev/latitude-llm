@@ -1,7 +1,6 @@
-import { use, useCallback, useMemo, useState } from 'react'
+import { use, useCallback, useMemo } from 'react'
 import { formatCount } from '$/lib/formatCount'
 import {
-  EvaluationResultMetadata,
   EvaluationType,
   EvaluationV2,
   HumanEvaluationMetric,
@@ -25,8 +24,6 @@ import {
   ResultBadgeProps,
 } from '../index'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { useAnnotationFormState } from './useAnnotationForm'
-import { useDebouncedCallback } from 'use-debounce'
 
 const specification = HumanEvaluationRatingSpecification
 export default {
@@ -297,48 +294,47 @@ function AnnotationForm({
   result,
 }: AnnotationFormProps<EvaluationType.Human, HumanEvaluationMetric.Rating>) {
   const criteria = useMemo(() => getCriteria(evaluation), [evaluation])
-  const [score, setScore] = useState<number | undefined>(
-    result?.score ?? undefined,
-  )
-  const { reason, onChangeReason } = useAnnotationFormState({ score })
-  const { onSubmit, isExpanded, setIsExpanded } = use(AnnotationContext)
+  const {
+    onSubmit,
+    isExpanded,
+    setIsExpanded,
+    localReason,
+    setLocalReason,
+    localScore,
+    setLocalScore,
+  } = use(AnnotationContext)
+
   const variant = result?.hasPassed
     ? result.hasPassed === true
       ? 'success'
       : 'destructive'
     : 'default'
-  const onSubmitDebounced = useDebouncedCallback(
-    ({
-      value,
-      resultMetadata,
-    }: {
-      value: number
-      resultMetadata: Partial<
-        EvaluationResultMetadata<EvaluationType.Human, HumanEvaluationMetric>
-      >
-    }) => {
-      onSubmit({ score: value, resultMetadata })
-    },
-    500,
-  )
+
   const handleScoreChange = useCallback(
     (value: number | undefined) => {
       if (value === undefined) return
 
-      setScore(value)
+      setLocalScore(value)
 
       // Expand the form when user interacts
       if (!isExpanded) {
         setIsExpanded(true)
       }
-
-      onSubmitDebounced({
-        value,
-        resultMetadata: result?.metadata ?? {},
-      })
     },
-    [onSubmitDebounced, result?.metadata, isExpanded, setIsExpanded],
+    [isExpanded, setIsExpanded, setLocalScore],
   )
+
+  const handleSave = useCallback(() => {
+    if (localScore === undefined) return
+
+    onSubmit({
+      score: localScore,
+      resultMetadata: {
+        ...result?.metadata,
+        reason: localReason,
+      },
+    })
+  }, [localScore, localReason, result?.metadata, onSubmit])
 
   return (
     <>
@@ -347,8 +343,8 @@ function AnnotationForm({
           <AForm.Body>
             <AForm.TextArea
               name='reason'
-              value={reason}
-              onChange={onChangeReason}
+              value={localReason}
+              onChange={setLocalReason}
             />
           </AForm.Body>
         </div>
@@ -357,7 +353,7 @@ function AnnotationForm({
         <div className='flex items-center gap-x-2'>
           <StepperNumberInput
             name='score'
-            value={score}
+            value={localScore}
             min={evaluation.configuration.minRating}
             max={evaluation.configuration.maxRating}
             onChange={handleScoreChange}
@@ -386,7 +382,8 @@ function AnnotationForm({
         </div>
 
         {isExpanded && (
-          <div className='animate-in fade-in duration-300'>
+          <div className='animate-in fade-in duration-300 flex items-center gap-x-2'>
+            <AForm.SaveButton onClick={handleSave} />
             <AForm.AnnotationTooltipInfo
               tooltip={
                 criteria ? <CriteriaDescription {...criteria} /> : undefined

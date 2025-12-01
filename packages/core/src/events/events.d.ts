@@ -489,6 +489,8 @@ export type EvaluationResultV2UpdatedEvent = LatitudeEventGeneric<
   {
     workspaceId: number
     result: EvaluationResultV2
+    previousHasPassed: boolean | null
+    evaluation: EvaluationV2
   }
 >
 

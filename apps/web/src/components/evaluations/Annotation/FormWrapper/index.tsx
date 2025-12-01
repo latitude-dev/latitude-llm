@@ -7,8 +7,10 @@ import {
   useCallback,
   useState,
 } from 'react'
+import Link from 'next/link'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea as TextAreaAtom } from '@latitude-data/web-ui/atoms/TextArea'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { font } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import {
@@ -24,6 +26,10 @@ import { OnSubmitProps } from '../useAnnotationForm'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { AnnotationsProgressIcon } from '$/components/AnnotationProgressPanel/AnntationsProgressIcon'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { ROUTES } from '$/services/routes'
 
 type IAnnotationForm<
   T extends EvaluationType,
@@ -41,6 +47,11 @@ type IAnnotationForm<
   isExpanded: boolean
   setIsExpanded: ReactStateDispatch<boolean>
   mergedToIssueId?: number
+  localReason: string
+  setLocalReason: ReactStateDispatch<string>
+  localScore: number | undefined
+  setLocalScore: ReactStateDispatch<number | undefined>
+  hasChanges: boolean
 }
 
 export function createAnnotationContext<
@@ -84,6 +95,25 @@ export const AnnotationProvider = <
   mergedToIssueId?: number
 }) => {
   const [disabled, setDisabled] = useState(false)
+
+  // Local state for score and reason (lifted from individual components)
+  const [localScore, setLocalScore] = useState<number | undefined>(
+    result?.score ?? undefined,
+  )
+  const [localReason, setLocalReason] = useState<string>(() => {
+    if (!result?.metadata) return ''
+    if (!('reason' in result.metadata)) return ''
+    return result.metadata.reason || ''
+  })
+
+  // Check if there are unsaved changes
+  const hasChanges =
+    localScore !== result?.score ||
+    localReason !==
+      (result?.metadata && 'reason' in result.metadata
+        ? result.metadata.reason || ''
+        : '')
+
   return (
     <AnnotationContext.Provider
       value={{
@@ -99,6 +129,11 @@ export const AnnotationProvider = <
         isExpanded,
         setIsExpanded,
         mergedToIssueId,
+        localReason,
+        setLocalReason,
+        localScore,
+        setLocalScore,
+        hasChanges,
       }}
     >
       {children}
@@ -142,15 +177,26 @@ AnnotationFormWrapper.Footer = function Footer({
   )
 }
 
-AnnotationFormWrapper.SavingSpinner = function SavingSpinner() {
-  const { isSubmitting } = use(AnnotationContext)
-  if (!isSubmitting) return null
+AnnotationFormWrapper.SaveButton = function SaveButton({
+  onClick,
+}: {
+  onClick: () => void
+}) {
+  const { isSubmitting, hasChanges } = use(AnnotationContext)
+
+  if (!hasChanges) return null
 
   return (
-    <div className='flex items-center gap-x-2'>
-      <Text.H6 color='foregroundMuted'>Saving...</Text.H6>
-      <Icon name='loader' spin color='foregroundMuted' />
-    </div>
+    <Button
+      type='button'
+      size='small'
+      variant='default'
+      {...(isSubmitting ? { iconProps: { name: 'loader', spin: true } } : {})}
+      onClick={onClick}
+      disabled={isSubmitting}
+    >
+      {isSubmitting ? 'Saving...' : 'Save annotation'}
+    </Button>
   )
 }
 
@@ -159,24 +205,21 @@ AnnotationFormWrapper.AnnotationTooltipInfo = function AnnotationTooltipInfo({
 }: {
   tooltip?: string | ReactNode
 }) {
-  if (!tooltip) return <AnnotationFormWrapper.SavingSpinner />
+  if (!tooltip) return null
 
   return (
-    <div className='flex items-center gap-x-2'>
-      <AnnotationFormWrapper.SavingSpinner />
-      <Tooltip
-        asChild
-        align='center'
-        side='bottom'
-        trigger={
-          <div className='flex gap-x-3 items-center'>
-            <Icon name='info' color='foregroundMuted' />
-          </div>
-        }
-      >
-        {tooltip}
-      </Tooltip>
-    </div>
+    <Tooltip
+      asChild
+      align='center'
+      side='bottom'
+      trigger={
+        <div className='flex gap-x-3 items-center'>
+          <Icon name='info' color='foregroundMuted' />
+        </div>
+      }
+    >
+      {tooltip}
+    </Tooltip>
   )
 }
 
@@ -221,3 +264,30 @@ AnnotationFormWrapper.TextArea = function TextArea({
     />
   )
 }
+
+AnnotationFormWrapper.FailedWithoutReasonWarning =
+  function FailedWithoutReasonWarning() {
+    const { project } = useCurrentProject()
+    const { commit } = useCurrentCommit()
+    const issuesDashboardLink = ROUTES.projects
+      .detail({ id: project.id })
+      .commits.detail({ uuid: commit.uuid }).issues.root
+
+    return (
+      <div className='rounded-lg mx-3 my-2 p-1.5 border border-dashed bg-secondary'>
+        <div className='px-3 py-2 bg-background rounded-md flex items-center gap-x-2'>
+          <AnnotationsProgressIcon isCompleted />
+          <Text.H6 color='foregroundMuted'>
+            Please write feedback on why this annotation did not pass. This is
+            important for improving your prompt and ensuring Latitude can create
+            better issues. Check the{' '}
+            <Link href={issuesDashboardLink} target='_blank'>
+              <Text.H6M underline color='foregroundMuted'>
+                issues section
+              </Text.H6M>
+            </Link>
+          </Text.H6>
+        </div>
+      </div>
+    )
+  }

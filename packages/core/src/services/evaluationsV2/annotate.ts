@@ -168,6 +168,7 @@ export async function annotateEvaluationV2<
             result: existingResult,
             commit: commit,
             value: value as EvaluationResultValue<T, M>,
+            evaluation,
           },
           transaction,
         ).then((r) => r.unwrap())

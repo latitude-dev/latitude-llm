@@ -750,6 +750,8 @@ describe('annotateEvaluationV2', () => {
       data: {
         result: result,
         workspaceId: workspace.id,
+        previousHasPassed: originalResult.hasPassed,
+        evaluation: evaluation,
       },
     })
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
@@ -814,6 +816,8 @@ describe('annotateEvaluationV2', () => {
       data: {
         result: result,
         workspaceId: workspace.id,
+        previousHasPassed: originalResult.hasPassed,
+        evaluation: evaluation,
       },
     })
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
@@ -877,6 +881,8 @@ describe('annotateEvaluationV2', () => {
       data: {
         result: result,
         workspaceId: workspace.id,
+        previousHasPassed: originalResult.hasPassed,
+        evaluation: evaluation,
       },
     })
     expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
