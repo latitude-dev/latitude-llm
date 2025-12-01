@@ -34,6 +34,12 @@ const llmEvaluationBinarySpecificationWithoutModel =
       description: z.string(),
     })
 
+/*
+  This function generates an evaluation from an issue using the copilot.
+
+  We give the copilot the issue name, description, prompt, existing evaluation names, and messages with reason why it failed
+    to create a unique evaluation configuration with context from the issue and its annotations.
+*/
 export async function generateEvaluationFromIssueWithCopilot(
   {
     issue,
