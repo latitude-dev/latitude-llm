@@ -13,6 +13,10 @@ import { endActiveEvaluation } from '../../../services/evaluationsV2/active/end'
 import { captureException } from '../../../utils/datadogCapture'
 import { failActiveEvaluation } from '../../../services/evaluationsV2/active/fail'
 import { queues } from '../../queues'
+import { deleteEvaluationV2 } from '../../../services/evaluationsV2/delete'
+import { EvaluationV2 } from '../../../constants'
+import { Commit } from '../../../schema/models/types/Commit'
+import { Workspace } from '../../../schema/models/types/Workspace'
 
 export type CalculateQualityMetricJobData = {
   workspaceId: number
@@ -37,13 +41,19 @@ export type CalculateQualityMetricJobData = {
 /*
   This job is a parent job of a BullMQ flow which calculates the quality metric of an evaluation when all its runEvaluationV2Job children have finished.
   The quality metric used at the moment is the MCC (Matthews Correlation Coefficient)
+
+  The possible scenarios of this job are:
+  1. The job is successful (no error and not retrying the generation) -> update the evaluation with the quality metric and end the active evaluation
+  2. The job failed but not in the last attempt -> let BullMQ retry the job
+  3. The job failed in the last attempt -> fail the active evaluation and end the active evaluation
+  4. The job is retrying the generation -> delete the evaluation and retry the generation
 */
 
 export const calculateQualityMetricJob = async (
   job: Job<CalculateQualityMetricJobData>,
 ) => {
   let caughtError: Error | null = null
-  let isLastAttempt: boolean = false
+  let retryGeneration: boolean = false
 
   const {
     workspaceId,
@@ -78,17 +88,35 @@ export const calculateQualityMetricJob = async (
     console.log('processed', processed)
     console.log('unprocessed', unprocessed)
 
-    // TODO(evaluation-generation): If more than 10% of the evaluation runs failed, we retry the generation of the evaluation runs (or we just fail the job)
+    const evaluationRepository = new EvaluationsV2Repository(workspace.id)
+    const evaluation = await evaluationRepository
+      .getAtCommitByDocument({
+        projectId: commit.projectId,
+        commitUuid: commit.uuid,
+        documentUuid,
+        evaluationUuid,
+      })
+      .then((r) => r.unwrap())
+
     const tooManyFailedEvaluationRuns =
       (failed ?? 0) + (ignored ?? 0) + (unprocessed ?? 0) >
       (processed ?? 0) % 10
 
     if (tooManyFailedEvaluationRuns) {
-      throw new Error('Too many failed evaluation runs')
+      retryGeneration = true
+      return await deleteEvaluationAndRetryGeneration({
+        evaluation: evaluation,
+        commit: commit,
+        workspace: workspace,
+        issueId: issueId,
+        providerName: providerName,
+        model: model,
+        workflowUuid: workflowUuid,
+        generationAttempt: generationAttempt,
+      })
     }
 
     const childrenValues = await job.getChildrenValues()
-    console.log('childrenValues', childrenValues)
 
     const mcc = await evaluateConfiguration({
       childrenValues,
@@ -99,35 +127,18 @@ export const calculateQualityMetricJob = async (
     console.log('mcc', mcc)
 
     if (mcc < MIN_QUALITY_METRIC_THRESHOLD) {
-      const { generateEvaluationsQueue } = await queues()
-      // TODO(evaluation-generation): add feedback to the generation from what failed
-      await generateEvaluationsQueue.add(
-        'generateEvaluationV2FromIssueJob',
-        {
-          workspaceId: workspace.id,
-          commitId: commit.id,
-          issueId: issueId,
-          providerName: providerName,
-          model: model,
-          workflowUuid: workflowUuid,
-          generationAttempt: generationAttempt + 1, // retry generating another configuration
-        },
-        {
-          jobId: `generateEvaluationV2FromIssueJob:wf=${workflowUuid}:generationAttempt=${generationAttempt + 1}`,
-        },
-      )
-      return
-    }
-
-    const evaluationRepository = new EvaluationsV2Repository(workspace.id)
-    const evaluation = await evaluationRepository
-      .getAtCommitByDocument({
-        projectId: commit.projectId,
-        commitUuid: commit.uuid,
-        documentUuid,
-        evaluationUuid,
+      retryGeneration = true
+      return await deleteEvaluationAndRetryGeneration({
+        evaluation: evaluation,
+        commit: commit,
+        workspace: workspace,
+        issueId: issueId,
+        providerName: providerName,
+        model: model,
+        workflowUuid: workflowUuid,
+        generationAttempt: generationAttempt,
       })
-      .then((r) => r.unwrap())
+    }
 
     await updateEvaluationV2({
       evaluation,
@@ -139,9 +150,9 @@ export const calculateQualityMetricJob = async (
     caughtError = error as Error
     const { attemptsMade, opts } = job
     const maxAttempts = opts.attempts ?? 1
-    isLastAttempt = attemptsMade + 1 >= maxAttempts
+    const isLastAttempt = attemptsMade + 1 >= maxAttempts
 
-    // Only failing in last attempt of the job, else the retry system is useless
+    // Only failing in last attempt of the job, there are more attempts to retry to calculate the quality metric if not
     if (isLastAttempt) {
       captureException(error as Error)
       const failResult = await failActiveEvaluation({
@@ -160,15 +171,25 @@ export const calculateQualityMetricJob = async (
     }
     throw error
   } finally {
-    const jobEndedCorrectlyOrLastAttemptWithError =
-      !caughtError || (caughtError && isLastAttempt)
-    if (jobEndedCorrectlyOrLastAttemptWithError) {
+    // If we are retrying the generation, we don't want to end the active evaluation, as the generation process isn't over yet
+    if (retryGeneration) {
+      return // eslint-disable-line no-unsafe-finally
+    }
+
+    const { attemptsMade, opts } = job
+    const maxAttempts = opts.attempts ?? 1
+    const isLastAttempt = attemptsMade + 1 >= maxAttempts
+
+    // If the job is successful (no error and not retrying the generation) or its the job's last attempt and it failed, we want to end the active evaluation
+    const jobFailedButNotLastAttempt = caughtError && !isLastAttempt
+    if (!jobFailedButNotLastAttempt) {
       const endResult = await endActiveEvaluation({
         workspaceId,
         projectId: commit.projectId,
         workflowUuid,
       })
       if (!Result.isOk(endResult)) {
+        console.log(endResult.error)
         captureException(
           new Error(
             `[CalculateQualityMetricJob] Failed to end active evaluation`,
@@ -176,5 +197,49 @@ export const calculateQualityMetricJob = async (
         )
       }
     }
+    // If the job failed but not in the last attempt, the error from catch block will propagate
   }
+}
+
+async function deleteEvaluationAndRetryGeneration({
+  evaluation,
+  commit,
+  workspace,
+  issueId,
+  providerName,
+  model,
+  workflowUuid,
+  generationAttempt,
+}: {
+  evaluation: EvaluationV2
+  commit: Commit
+  workspace: Workspace
+  issueId: number
+  providerName: string
+  model: string
+  workflowUuid: string
+  generationAttempt: number
+}) {
+  const { generateEvaluationsQueue } = await queues()
+  await deleteEvaluationV2({
+    evaluation: evaluation,
+    commit: commit,
+    workspace: workspace,
+  })
+  // TODO(evaluation-generation): add feedback to the generation from what failed
+  await generateEvaluationsQueue.add(
+    'generateEvaluationV2FromIssueJob',
+    {
+      workspaceId: workspace.id,
+      commitId: commit.id,
+      issueId: issueId,
+      providerName: providerName,
+      model: model,
+      workflowUuid: workflowUuid,
+      generationAttempt: generationAttempt + 1, // retry generating another configuration
+    },
+    {
+      jobId: `generateEvaluationV2FromIssueJob:wf=${workflowUuid}:generationAttempt=${generationAttempt + 1}`,
+    },
+  )
 }

@@ -103,7 +103,7 @@ export async function createValidationFlow(
       },
       opts: {
         // Idempotency key
-        jobId: `calculateQualityMetricJob:wf=${workflowUuid}:generationAttempt=${generationAttempt}`,
+        jobId: `calculateQualityMetricJob-wf=${workflowUuid}-generationAttempt=${generationAttempt}`,
         // FlowProducer does not inherit
         attempts: 3,
         backoff: {
@@ -124,7 +124,7 @@ export async function createValidationFlow(
         },
         opts: {
           // Idempotency key
-          jobId: `runEvaluationV2Job:wf=${workflowUuid}:generationAttempt=${generationAttempt}`,
+          jobId: `runEvaluationV2Job-wf=${workflowUuid}-generationAttempt=${generationAttempt}-spanId=${span.id}-traceId=${span.traceId}`,
           // Overriding eval queue options for faster retry policy to avoid user waiting too long for the evaluation to be generated
           attempts: 2,
           backoff: {

@@ -4,7 +4,7 @@ import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
-  calculateMCCParentJob: jobs.calculateMCCParentJob,
+  calculateQualityMetricJob: jobs.calculateQualityMetricJob,
   generateEvaluationV2FromIssueJob: jobs.generateEvaluationV2FromIssueJob,
 }
 

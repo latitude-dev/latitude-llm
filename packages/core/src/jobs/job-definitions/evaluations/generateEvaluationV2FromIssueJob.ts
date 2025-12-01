@@ -23,6 +23,14 @@ export type GenerateEvaluationV2FromIssueJobData = {
   generationAttempt: number
 }
 
+/*
+  This job is in charge of generating an evaluation from an issue.
+
+  The possible scenarios of this job are:
+  1. The job is successful (no error and not retrying the generation) -> generate the evaluation and end the active evaluation
+  2. The job failed but not in the last attempt -> let BullMQ retry the job
+  3. The job failed in the last attempt -> fail the active evaluation and end the active evaluation
+*/
 export const generateEvaluationV2FromIssueJob = async (
   job: Job<GenerateEvaluationV2FromIssueJobData>,
 ) => {
@@ -49,7 +57,7 @@ export const generateEvaluationV2FromIssueJob = async (
     const issuesRepository = new IssuesRepository(workspace.id)
     const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
 
-    if (generationAttempt >= MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE) {
+    if (generationAttempt > MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE) {
       throw new Error(`Max attempts to generate evaluation from issue reached`)
     }
 
