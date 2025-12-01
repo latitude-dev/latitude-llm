@@ -20,7 +20,6 @@ export function mergeCommonIssuesJobKey({
 export const mergeCommonIssuesJob = async (
   job: Job<MergeCommonIssuesJobData>,
 ) => {
-  console.log('MERGING ISSUES')
   const { workspaceId, issueId } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)

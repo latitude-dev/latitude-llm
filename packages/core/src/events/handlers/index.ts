@@ -5,6 +5,7 @@ import { createClaimInvitationReferralJob } from './createClaimInvitationReferra
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
 import { createLoopsContact } from './createLoopsContact'
 import { evaluateLiveLogJob } from './evaluateLiveLog'
+import { handleEvaluationResultV2Updated } from './handleEvaluationResultV2Updated'
 import { notifyClientOfCommitUpdated } from './notifyClientOfCommitUpdated'
 import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
 import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTriggerCreated'
@@ -78,7 +79,7 @@ export const EventHandlers: IEventsHandlers = {
     notifyClientOfEvaluationResultV2Created,
     assignIssueToEvaluationResultV2Job,
   ],
-  evaluationResultV2Updated: [],
+  evaluationResultV2Updated: [handleEvaluationResultV2Updated],
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],
   mcpServerConnected: [notifyClientOfMcpServerConnected],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],

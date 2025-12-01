@@ -4,6 +4,7 @@ import {
   EvaluationResultV2,
   EvaluationResultValue,
   EvaluationType,
+  EvaluationV2,
 } from '../../../constants'
 import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib/Result'
@@ -19,16 +20,20 @@ export async function updateEvaluationResultV2<
   {
     workspace,
     commit,
-    result: { uuid },
+    result: previousResult,
     value,
+    evaluation,
   }: {
     workspace: Workspace
     commit: Commit
     result: EvaluationResultV2<T, M>
     value: Partial<EvaluationResultValue<T, M>>
+    evaluation: EvaluationV2<T, M>
   },
   transaction = new Transaction(),
 ) {
+  const previousHasPassed = previousResult.hasPassed ?? null
+
   return await transaction.call(
     async (tx) => {
       const result = (await tx
@@ -41,7 +46,7 @@ export async function updateEvaluationResultV2<
         .where(
           and(
             eq(evaluationResultsV2.workspaceId, workspace.id),
-            eq(evaluationResultsV2.uuid, uuid),
+            eq(evaluationResultsV2.uuid, previousResult.uuid),
           ),
         )
         .returning()
@@ -53,8 +58,10 @@ export async function updateEvaluationResultV2<
       await publisher.publishLater({
         type: 'evaluationResultV2Updated',
         data: {
-          result: result,
+          result,
           workspaceId: workspace.id,
+          previousHasPassed,
+          evaluation,
         },
       })
     },

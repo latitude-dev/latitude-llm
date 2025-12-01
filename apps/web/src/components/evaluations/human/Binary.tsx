@@ -20,7 +20,6 @@ import {
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
-import { useAnnotationFormState } from './useAnnotationForm'
 import { useHasPassed } from '../hooks/useHasPassed'
 
 const specification = HumanEvaluationBinarySpecification
@@ -145,20 +144,25 @@ function AnnotationForm({
   result,
 }: AnnotationFormProps<EvaluationType.Human, HumanEvaluationMetric.Binary>) {
   const criteria = useMemo(() => getCriteria(evaluation), [evaluation])
-  const { onSubmit, isExpanded, setIsExpanded } = use(AnnotationContext)
-  const [score, setScore] = useState<number | undefined>(
-    result?.score ?? undefined,
-  )
-  const { reason, onChangeReason } = useAnnotationFormState({ score })
-  const hasPassed = useHasPassed({
-    evaluation,
-    result,
-    score,
-  })
+  const {
+    onSubmit,
+    isExpanded,
+    setIsExpanded,
+    localReason,
+    setLocalReason,
+    localScore,
+    setLocalScore,
+  } = use(AnnotationContext)
 
   const [thumbsUp, setThumbsUp] = useState<boolean | null>(() =>
     getThumbsUpFromScore(result?.score),
   )
+
+  const hasPassed = useHasPassed({
+    evaluation,
+    result,
+    score: localScore,
+  })
 
   const onThumbsUpClick = useCallback(
     (newThumbsUp: boolean) => {
@@ -166,20 +170,27 @@ function AnnotationForm({
 
       setThumbsUp(newThumbsUp)
       const newScore = newThumbsUp ? 1 : 0
-      setScore(newScore)
+      setLocalScore(newScore)
 
       // Expand the form when user interacts
       if (!isExpanded) {
         setIsExpanded(true)
       }
-
-      onSubmit({
-        score: newScore,
-        resultMetadata: result?.metadata ?? {},
-      })
     },
-    [onSubmit, result?.metadata, thumbsUp, isExpanded, setIsExpanded],
+    [thumbsUp, isExpanded, setIsExpanded, setLocalScore],
   )
+
+  const handleSave = useCallback(() => {
+    if (localScore === undefined) return
+
+    onSubmit({
+      score: localScore,
+      resultMetadata: {
+        ...result?.metadata,
+        reason: localReason,
+      },
+    })
+  }, [localScore, localReason, result?.metadata, onSubmit])
 
   return (
     <>
@@ -188,8 +199,8 @@ function AnnotationForm({
           <AForm.Body>
             <AForm.TextArea
               name='reason'
-              value={reason}
-              onChange={onChangeReason}
+              value={localReason}
+              onChange={setLocalReason}
             />
           </AForm.Body>
         </div>
@@ -202,7 +213,8 @@ function AnnotationForm({
           hasPassed={hasPassed ?? undefined}
         />
         {isExpanded && (
-          <div className='animate-in fade-in duration-300'>
+          <div className='animate-in fade-in duration-300 flex items-center gap-x-2'>
+            <AForm.SaveButton onClick={handleSave} />
             <AForm.AnnotationTooltipInfo
               tooltip={
                 criteria ? <CriteriaDescription {...criteria} /> : undefined

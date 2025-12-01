@@ -12,7 +12,13 @@ import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ISSUE_GROUP } from '@latitude-data/constants/issues'
 
-export function IssuesSelector() {
+export function IssuesSelector({
+  hasPassed,
+  hasReason,
+}: {
+  hasPassed: boolean | null
+  hasReason: boolean
+}) {
   const newIssueModal = useToggleModal()
   const { project } = useCurrentProject()
   const { span, evaluation, result, commit, documentUuid, mergedToIssueId } =
@@ -150,11 +156,13 @@ export function IssuesSelector() {
     newIssueModal.onOpen()
   }, [newIssueModal])
 
-  const hasReason = Boolean(
-    result?.metadata && 'reason' in result.metadata && result.metadata.reason,
-  )
+  // Don't show if it passed or if there's no reason
+  if (hasPassed || !hasReason) return null
 
-  if (!result || result.hasPassed || !hasReason) return null
+  // If no result yet (new annotation), show disabled selector with message to save first
+  const needsSave = !result
+  const isDisabled =
+    needsSave || (isLoading && !isSearchingIssues) || isMergedIssue
 
   const selectElement = (
     <Select<number>
@@ -169,14 +177,16 @@ export function IssuesSelector() {
       options={options}
       name='annotation-issue'
       loading={isLoading && !isSearchingIssues}
-      disabled={(isLoading && !isSearchingIssues) || isMergedIssue}
+      disabled={isDisabled}
       placeholder='Auto-discover issue'
       searchPlaceholder='Search existing issues...'
       placeholderIcon='sparkles'
       tooltip={
-        isMergedIssue
-          ? 'This span belongs to a merged issue. The assigned issue cannot be changed.'
-          : 'Discovery could take a few minutes...'
+        needsSave
+          ? 'Save the annotation first to assign an issue'
+          : isMergedIssue
+            ? 'This span belongs to a merged issue. The assigned issue cannot be changed.'
+            : 'Discovery could take a few minutes...'
       }
       onChange={onChange}
       onSearch={onSearch}
