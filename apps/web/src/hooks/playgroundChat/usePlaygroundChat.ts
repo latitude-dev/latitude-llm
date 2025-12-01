@@ -1,7 +1,9 @@
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { tokenizeMessages, tokenizeText } from '$/lib/tokenize'
 import useProviderApiKeys from '$/stores/providerApiKeys'
-import { useActiveRuns } from '$/stores/runs/activeRuns'
+import { useActiveRunsByDocument } from '$/stores/runs/activeRunsByDocument'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -490,7 +492,16 @@ export function usePlaygroundChat({
   )
 
   const { project } = useCurrentProject()
-  const { stopRun, isStoppingRun } = useActiveRuns({ project, realtime: false })
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+
+  const { stopRun, isStoppingRun } = useActiveRunsByDocument({
+    project,
+    commit,
+    document,
+    realtime: false,
+  })
+
   const stop = useCallback(async () => {
     if (!isLoading) return
     if (!documentLogUuid) return

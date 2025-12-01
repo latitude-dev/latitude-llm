@@ -46,7 +46,7 @@ export function useStickyNested({
   offset: StickyOffset
 }) {
   useEffect(() => {
-    const ready = scrollableArea && target && beacon
+    const ready = !!scrollableArea && !!target && !!beacon
     if (!ready) return
 
     const handleScroll = () => {
@@ -72,6 +72,7 @@ export function useStickyNested({
         target.style.width = `${targetWidth}px`
         target.style.top = ''
       }
+
       target.style.maxHeight = `${constrainedHeight}px`
     }
 

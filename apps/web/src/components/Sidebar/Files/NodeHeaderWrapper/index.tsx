@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { ReactNode, RefObject, useEffect, useRef, useState } from 'react'
 import { useNodeValidator } from './useNodeValidator'
 import { MainPromptIcon } from './MainPromptIcon'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 
 export type IndentType = { isLast: boolean; invisible?: boolean }
 
@@ -51,6 +52,8 @@ export type NodeHeaderWrapperProps = {
   onSaveValueAndTab?: (args: { path: string }) => void
   onLeaveWithoutSave?: () => void
   children?: ReactNode
+  isRunning?: boolean
+  runningCount?: number
 }
 
 function NodeHeaderWrapper({
@@ -77,6 +80,8 @@ function NodeHeaderWrapper({
   onClick,
   children,
   childrenSelected,
+  isRunning = false,
+  runningCount = 0,
 }: NodeHeaderWrapperProps) {
   const [tmpName, setTmpName] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -209,6 +214,22 @@ function NodeHeaderWrapper({
             )}
           </div>
         </ItemComponent>
+        {isRunning && runningCount > 0 && (
+          <Tooltip
+            trigger={
+              <Badge
+                iconProps={{ name: 'loader', spin: true, placement: 'start' }}
+                variant='noBorderMuted'
+                ellipsis
+                noWrap
+              >
+                {runningCount.toString()}
+              </Badge>
+            }
+          >
+            {runningCount === 1 ? '1 run' : `${runningCount} runs`}
+          </Tooltip>
+        )}
         {showActions && isHovered ? (
           <div className={cn('flex items-center gap-x-2')}>
             {actions.map((action, index) => (

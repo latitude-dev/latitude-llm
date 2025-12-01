@@ -7,9 +7,9 @@ import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { Fragment, useMemo } from 'react'
+import { Fragment, use, useMemo } from 'react'
 import { Trace } from './Trace'
-import { useTraceSpanSelection } from './TraceSpanSelectionContext'
+import { TraceSpanSelectionContext } from './TraceSpanSelectionContext'
 import { useCommits } from '$/stores/commitsStore'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
@@ -102,7 +102,7 @@ export function SpanRow({
   evaluationResults = [],
   isEvaluationResultsLoading = false,
 }: SpanRowProps) {
-  const { selectTraceSpan } = useTraceSpanSelection()
+  const { onClickTraceRow } = use(TraceSpanSelectionContext)
   const { data: commits } = useCommits()
   const commit = commits?.find((c) => c.uuid === span.commitUuid)
   const hasError = span.status === 'error'
@@ -112,7 +112,10 @@ export function SpanRow({
   return (
     <Fragment>
       <TableRow
-        onClick={() => selectTraceSpan(span.traceId, span.id)}
+        onClick={onClickTraceRow({
+          type: 'trace',
+          data: { traceId: span.traceId, spanId: span.id },
+        })}
         className={cn(
           'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
           {

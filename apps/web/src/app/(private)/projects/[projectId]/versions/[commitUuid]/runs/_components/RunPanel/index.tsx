@@ -1,16 +1,11 @@
 import { useCallback, useMemo } from 'react'
 import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
-import Chat from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MessageList } from '$/components/ChatWrapper'
 import DebugToggle from '$/components/DebugToggle'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { useOnce } from '$/hooks/useMount'
 import { ROUTES } from '$/services/routes'
-import { useActiveRuns } from '$/stores/runs/activeRuns'
 import {
-  ActiveRun,
   CompletedRun,
   EvaluationResultV2,
   EvaluationType,
@@ -30,7 +25,6 @@ import {
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import Link from 'next/link'
-import { RunPanelStats } from './Stats'
 import { useTrace } from '$/stores/traces'
 import {
   findCompletionSpanFromTrace,
@@ -41,20 +35,13 @@ import { sum } from 'lodash-es'
 import { useCompletedRunsKeysetPaginationStore } from '$/stores/completedRunsKeysetPagination'
 import { useAnnotationBySpan } from '$/hooks/useAnnotationsBySpan'
 import { useAnnotationsProgress } from '$/stores/issues/annotationsProgress'
+import { RunPanelStats } from '$/components/RunPanelStats'
 
 export function RunPanel({
   run,
-  attachRun,
-  isAttachingRun,
-  stopRun,
-  isStoppingRun,
   sourceGroup,
 }: {
   run: Run
-  attachRun: ReturnType<typeof useActiveRuns>['attachRun']
-  isAttachingRun: ReturnType<typeof useActiveRuns>['isAttachingRun']
-  stopRun: ReturnType<typeof useActiveRuns>['stopRun']
-  isStoppingRun: ReturnType<typeof useActiveRuns>['isStoppingRun']
   sourceGroup: RunSourceGroup
 }) {
   const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
@@ -62,26 +49,12 @@ export function RunPanel({
     defaultValue: false,
   })
 
-  if (run.endedAt) {
-    return (
-      <CompletedRunPanel
-        run={run as CompletedRun}
-        debugMode={debugMode}
-        setDebugMode={setDebugMode}
-        sourceGroup={sourceGroup}
-      />
-    )
-  }
-
   return (
-    <ActiveRunPanel
-      run={run as ActiveRun}
-      attachRun={attachRun}
-      isAttachingRun={isAttachingRun}
-      stopRun={stopRun}
-      isStoppingRun={isStoppingRun}
+    <CompletedRunPanel
+      run={run as CompletedRun}
       debugMode={debugMode}
       setDebugMode={setDebugMode}
+      sourceGroup={sourceGroup}
     />
   )
 }
@@ -278,93 +251,5 @@ function AnnotationFormWrapper({
       span={span}
       onAnnotate={handleAnnotate}
     />
-  )
-}
-
-function ActiveRunPanel({
-  run,
-  attachRun,
-  isAttachingRun,
-  stopRun,
-  isStoppingRun,
-  debugMode,
-  setDebugMode,
-}: {
-  run: ActiveRun
-  attachRun: ReturnType<typeof useActiveRuns>['attachRun']
-  isAttachingRun: ReturnType<typeof useActiveRuns>['isAttachingRun']
-  stopRun: ReturnType<typeof useActiveRuns>['stopRun']
-  isStoppingRun: ReturnType<typeof useActiveRuns>['isStoppingRun']
-  debugMode: boolean
-  setDebugMode: (debugMode: boolean) => void
-}) {
-  const runPromptFn = useCallback(() => {
-    return attachRun({ runUuid: run.uuid })
-  }, [run.uuid, attachRun])
-
-  const abortRunFn = useCallback(() => {
-    return stopRun({ runUuid: run.uuid })
-  }, [run.uuid, stopRun])
-
-  const playground = usePlaygroundChat({ runPromptFn })
-  useOnce(() => playground.start(), !!run.startedAt)
-
-  if (!run.startedAt) {
-    return (
-      <div className='w-full h-full flex flex-1 justify-center items-center gap-2'>
-        <Icon
-          name='loader'
-          color='foregroundMuted'
-          className='animate-spin mt-px stroke-[2.25]'
-        />
-        <Text.H4M color='foregroundMuted'>
-          Waiting run to get started...
-        </Text.H4M>
-      </div>
-    )
-  }
-
-  return (
-    <div className='w-full flex flex-col gap-6 p-6 overflow-hidden overflow-y-auto custom-scrollbar relative'>
-      <div className='w-full min-h-0 flex flex-1 flex-col justify-start items-start gap-6'>
-        <RunPanelStats
-          tokens={
-            // TODO(runs): add all token types
-            (playground.usage.totalTokens ||
-              playground.usage.promptTokens ||
-              playground.usage.completionTokens) ??
-            0
-          }
-          cost={playground.cost ?? 0}
-          duration={playground.duration ?? 0}
-          error={playground.error?.message ?? undefined}
-          isWaiting={!run.startedAt && !playground.isLoading}
-          isRunning={playground.isLoading}
-          abortRun={abortRunFn}
-          isAbortingRun={isStoppingRun}
-          canAbortRun={isAttachingRun() && playground.isLoading}
-          runAborted={!isAttachingRun() && !playground.isLoading}
-        />
-        <Chat
-          showHeader={true}
-          playground={playground}
-          parameters={undefined} // Note: we don't know which version was used
-          debugMode={debugMode}
-          setDebugMode={setDebugMode}
-        />
-        {!playground.duration && (
-          <div className='w-full h-full flex flex-1 justify-center items-center gap-2'>
-            <Icon
-              name='loader'
-              color='foregroundMuted'
-              className='animate-spin mt-px stroke-[2.25]'
-            />
-            <Text.H4M color='foregroundMuted'>
-              Waiting for a response...
-            </Text.H4M>
-          </div>
-        )}
-      </div>
-    </div>
   )
 }

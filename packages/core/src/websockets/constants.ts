@@ -5,14 +5,15 @@
 
 import {
   ActiveEvaluation,
+  ActiveRun,
   DocumentLogWithMetadataAndError,
   EvaluationResultV2,
   EvaluationV2,
   LatteChange,
   LatteUsage,
-  Run,
+  Span,
 } from '../constants'
-import { EvaluationStatusEvent, RunStatusEvent } from '../events/events'
+import { DocumentRunStatusEvent, EvaluationStatusEvent } from '../events/events'
 import type { ProviderLogDto } from '../schema/types'
 import type { DatasetRow } from '../schema/models/types/DatasetRow'
 import type { DocumentSuggestion } from '../schema/models/types/DocumentSuggestion'
@@ -174,11 +175,19 @@ export type LatteProjectChangesArgs = {
   changes: LatteChange[]
 }
 
-type RunStatusArgs = {
-  event: RunStatusEvent['type']
+type DocumentRunStatusArgs = {
+  event: DocumentRunStatusEvent['type']
   workspaceId: number
   projectId: number
-  run: Run
+  documentUuid: string
+  commitUuid: string
+  run: ActiveRun
+}
+
+type SpanCreatedArgs = {
+  workspaceId: number
+  documentUuid: string
+  span: Span
 }
 
 export type WebServerToClientEvents = {
@@ -197,7 +206,8 @@ export type WebServerToClientEvents = {
   triggerEventCreated: (args: DocumentTriggerEventCreatedArgs) => void
   latteThreadUpdate: (args: LatteThreadUpdateArgs) => void
   latteProjectChanges: (args: LatteProjectChangesArgs) => void
-  runStatus: (args: RunStatusArgs) => void
+  documentRunStatus: (args: DocumentRunStatusArgs) => void
+  spanCreated: (args: SpanCreatedArgs) => void
 }
 
 export type WebClientToServerEvents = {
@@ -257,5 +267,9 @@ export type WorkersClientToServerEvents = {
     workspaceId: number
     data: LatteProjectChangesArgs
   }) => void
-  runStatus: (args: { workspaceId: number; data: RunStatusArgs }) => void
+  documentRunStatus: (args: {
+    workspaceId: number
+    data: DocumentRunStatusArgs
+  }) => void
+  spanCreated: (args: { workspaceId: number; data: SpanCreatedArgs }) => void
 }

@@ -14,6 +14,7 @@ import { FilesTree } from '$/components/Sidebar/Files'
 import { SidebarDocument } from '$/components/Sidebar/Files/useTree'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 import { useCommits } from '$/stores/commitsStore'
+import { useRunningDocuments } from '$/stores/runs/runningDocuments'
 
 export default function ClientFilesTree({
   documents: serverDocuments,
@@ -86,6 +87,10 @@ export default function ClientFilesTree({
       fallbackData: serverLiveDocuments,
     },
   )
+  const runningDocumentsMap = useRunningDocuments({
+    project,
+    commit,
+  })
   const onMergeCommitClick = useCallback(() => {
     setWarningOpen(true)
   }, [setWarningOpen])
@@ -127,6 +132,7 @@ export default function ClientFilesTree({
         setMainDocumentUuid={setMainDocumentUuid}
         isDestroying={isDestroying}
         liveDocuments={commit.mergedAt ? undefined : liveDocuments}
+        runningDocumentsMap={runningDocumentsMap}
       />
       <CreateDraftCommitModal
         open={createDraftCommitModalOpen}

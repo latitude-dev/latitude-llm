@@ -41,7 +41,8 @@ const eventHandlersJobMappings = {
   notifyClientOfDocumentTriggerEventCreated:
     jobs.notifyClientOfDocumentTriggerEventCreated,
   clearProviderApiKeysCache: jobs.clearProviderApiKeysCache,
-  notifyClientOfRunStatus: jobs.notifyClientOfRunStatus,
+  notifyClientOfRunStatusByDocument: jobs.notifyClientOfRunStatusByDocument,
+  notifyClientOfSpanCreated: jobs.notifyClientOfSpanCreated,
   assignIssueToEvaluationResultV2Job: jobs.assignIssueToEvaluationResultV2Job,
   notifyClientOfEvaluationStatus: jobs.notifyClientOfEvaluationStatus,
   sendIssueEscalatingHandler: jobs.sendIssueEscalatingHandler,

@@ -1,5 +1,5 @@
 import { PlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import Chat from '../../../documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
+import PromptPlaygroundChat from '$/components/PlaygroundCommon/PromptPlaygroundChat'
 import { useRef } from 'react'
 import { ChatInputBox } from '../../../documents/[documentUuid]/_components/DocumentEditor/Editor/ChatInputBox'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
@@ -46,7 +46,7 @@ export function AgentChatSection({
       />
       <div className='flex-1 flex flex-col w-full flex-grow min-h-0 justify-between max-w-[800px]'>
         <div className='flex-1 pt-8 pb-20'>
-          <Chat
+          <PromptPlaygroundChat
             showHeader={false}
             playground={playground}
             parameters={parameters}

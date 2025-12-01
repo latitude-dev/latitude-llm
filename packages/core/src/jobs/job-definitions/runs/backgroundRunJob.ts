@@ -105,7 +105,13 @@ export const backgroundRunJob = async (
 
     experiment = await fetchExperiment({ workspaceId, experimentId })
 
-    await startRun({ workspaceId, projectId, runUuid }).then((r) => r.unwrap())
+    await startRun({
+      workspaceId,
+      projectId,
+      documentUuid,
+      commitUuid,
+      runUuid,
+    }).then((r) => r.unwrap())
 
     publisher.subscribe('cancelJob', cancelJob)
 
@@ -129,6 +135,8 @@ export const backgroundRunJob = async (
     await forwardStreamEvents({
       workspaceId,
       projectId,
+      documentUuid,
+      commitUuid,
       runUuid,
       writeStream,
       readStream: result.stream,
@@ -204,7 +212,13 @@ export const backgroundRunJob = async (
     await publisher.unsubscribe('cancelJob', cancelJob)
 
     try {
-      const endResult = await endRun({ workspaceId, projectId, runUuid })
+      const endResult = await endRun({
+        workspaceId,
+        projectId,
+        documentUuid,
+        commitUuid,
+        runUuid,
+      })
       if (!Result.isOk(endResult)) {
         captureException(new Error(`[BackgroundRunJob] Failed to end run`))
       }
@@ -218,10 +232,15 @@ async function forwardStreamEvents({
   runUuid,
   readStream,
   writeStream,
-  ...rest
+  workspaceId,
+  projectId,
+  documentUuid,
+  commitUuid,
 }: {
   workspaceId: number
   projectId: number
+  documentUuid: string
+  commitUuid: string
   runUuid: string
   readStream: ReadableStream<ChainEvent>
   writeStream: RedisStream
@@ -240,7 +259,14 @@ async function forwardStreamEvents({
       if (done) break
 
       await writeStream.write(event)
-      await forwardRunCaption({ ...rest, runUuid, event })
+      await forwardRunCaption({
+        runUuid,
+        event,
+        workspaceId,
+        projectId,
+        documentUuid,
+        commitUuid,
+      })
     }
   } finally {
     reader.releaseLock()
@@ -250,11 +276,15 @@ async function forwardStreamEvents({
 async function forwardRunCaption({
   workspaceId,
   projectId,
+  documentUuid,
+  commitUuid,
   runUuid,
   event: { event, data },
 }: {
   workspaceId: number
   projectId: number
+  documentUuid: string
+  commitUuid: string
   runUuid: string
   event: ChainEvent
 }) {
@@ -285,5 +315,12 @@ async function forwardRunCaption({
   if (!caption) return
 
   // TODO: capture exception if we fail to update the run (but do not throw)
-  await updateRun({ workspaceId, projectId, runUuid, caption })
+  await updateRun({
+    workspaceId,
+    projectId,
+    documentUuid,
+    commitUuid,
+    runUuid,
+    caption,
+  })
 }

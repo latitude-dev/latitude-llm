@@ -13,7 +13,6 @@ import {
   ProviderApiKeysRepository,
   ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
-import { listActiveRuns } from '@latitude-data/core/services/runs/active/listActive'
 import { listCompletedRuns } from '@latitude-data/core/services/runs/completed/listCompleted'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
@@ -370,31 +369,6 @@ export const getLastLatteThreadUuidCached = async ({
   const uuid = await client.get(key)
   return uuid || undefined
 }
-
-export const listActiveRunsCached = cache(
-  async ({
-    projectId,
-    page,
-    pageSize,
-    sourceGroup,
-  }: {
-    projectId: number
-    page?: number
-    pageSize?: number
-    sourceGroup?: RunSourceGroup
-  }) => {
-    const { workspace } = await getCurrentUserOrRedirect()
-    const runs = await listActiveRuns({
-      workspaceId: workspace.id,
-      projectId,
-      page,
-      pageSize,
-      sourceGroup,
-    }).then((r) => r.unwrap())
-
-    return runs
-  },
-)
 
 export const listCompletedRunsCached = cache(
   async ({

@@ -131,15 +131,15 @@ async function handleBackgroundRun({
   source: any
 }) {
   const { run } = await enqueueRun({
-    document: document,
-    commit: commit,
-    project: project,
-    workspace: workspace,
-    parameters: parameters,
-    customIdentifier: customIdentifier,
-    tools: tools,
-    userMessage: userMessage,
-    source: source,
+    document,
+    commit,
+    project,
+    workspace,
+    parameters,
+    customIdentifier,
+    tools,
+    userMessage,
+    source,
   }).then((r) => r.unwrap())
 
   return c.json({ uuid: run.uuid })

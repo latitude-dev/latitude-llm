@@ -161,7 +161,9 @@ describe('listCachedEvaluations', () => {
     const workflowUuid1 = 'test-uuid-list-error-1'
     const workflowUuid2 = 'test-uuid-list-error-2'
     const queuedAt = new Date()
-    const error1 = new Error('Max attempts to generate evaluation from issue reached')
+    const error1 = new Error(
+      'Max attempts to generate evaluation from issue reached',
+    )
     error1.name = 'CustomError1'
     const error2 = new Error('Another error')
     error2.name = 'CustomError2'
@@ -277,4 +279,3 @@ describe('listCachedEvaluations', () => {
     expect(evaluations.every((e) => e.error === undefined)).toBe(true)
   })
 })
-

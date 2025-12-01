@@ -87,8 +87,8 @@ function buildInProgress(progress: Data): ProgressInProgress {
         : `You've annotated ${current} runs. Annotate ${remaining} more to unlock the issues overview!`,
     message: (
       <Text.H5 color='foregroundMuted'>
-        Annotate <strong>{remaining} more</strong> runs with notes to unlock the{' '}
-        <SimpleLink href={progress.issuesDashboardLink} />.
+        Annotate <strong>{remaining} more</strong> traces with notes to unlock
+        the <SimpleLink href={progress.issuesDashboardLink} />.
       </Text.H5>
     ),
   }
@@ -117,11 +117,7 @@ function buildAccomplished(progress: Data): ProgessAccomplished {
 /**
  * Hook to fetch annotation progress data
  */
-export function useAnnotationProgress({
-  isReady,
-}: {
-  isReady: boolean
-}): AnnotationProgress {
+export function useAnnotationProgress(): AnnotationProgress {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { isLoading, data } = useAnnotationsProgress({
@@ -133,7 +129,8 @@ export function useAnnotationProgress({
     .commits.detail({ uuid: commit.uuid }).issues.root
 
   return useMemo(() => {
-    if (!isReady || isLoading) return { status: 'loading' }
+    if (isLoading) return { status: 'loading' }
+
     const progressData: Data = {
       issuesDashboardLink,
       data: {
@@ -144,6 +141,7 @@ export function useAnnotationProgress({
         ),
       },
     }
+
     if (data.currentAnnotations === 0) {
       return buildNotStarted(progressData)
     } else if (data.currentAnnotations < MINIMUM_MONTLY_ANNOTATIONS) {
@@ -151,5 +149,5 @@ export function useAnnotationProgress({
     } else {
       return buildAccomplished(progressData)
     }
-  }, [data, issuesDashboardLink, isLoading, isReady])
+  }, [data, issuesDashboardLink, isLoading])
 }

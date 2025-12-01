@@ -1,13 +1,13 @@
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { use, useCallback, useEffect, useRef, useState } from 'react'
 import { TimelineGraph } from '$/components/tracing/traces/Timeline/Graph'
 import { TimelineScale } from '$/components/tracing/traces/Timeline/Scale'
 import { TimelineTree } from '$/components/tracing/traces/Timeline/Tree'
 import { useTrace } from '$/stores/traces'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { useTraceSpanSelection } from './TraceSpanSelectionContext'
 import { AssembledSpan, AssembledTrace } from '@latitude-data/core/constants'
+import { TraceSpanSelectionContext } from './TraceSpanSelectionContext'
 
 export function Trace({ traceId }: { traceId: string }) {
   const { data: trace, isLoading } = useTrace({ traceId })
@@ -62,10 +62,7 @@ function findSpanByIdBFS(
 }
 
 function Timeline({ trace }: { trace: AssembledTrace }) {
-  const { selection, selectTraceSpan } = useTraceSpanSelection()
-  const setSelectedSpan = (span?: AssembledSpan) =>
-    span && selectTraceSpan(selection.traceId!, span.id)
-
+  const { selection, selectSpan } = use(TraceSpanSelectionContext)
   const selectedSpan = findSpanByIdBFS(trace, selection.spanId)
   const treeRef = useRef<HTMLDivElement>(null)
   const [treeWidth, setTreeWidth] = useState(0)
@@ -120,7 +117,7 @@ function Timeline({ trace }: { trace: AssembledTrace }) {
               width={treeWidth}
               minWidth={TREE_MIN_WIDTH}
               selectedSpan={selectedSpan}
-              selectSpan={setSelectedSpan}
+              selectSpan={selectSpan}
               collapsedSpans={collapsedSpans}
               toggleCollapsed={toggleCollapsed}
             />
@@ -133,7 +130,7 @@ function Timeline({ trace }: { trace: AssembledTrace }) {
               width={graphWidth}
               minWidth={GRAPH_MIN_WIDTH}
               selectedSpan={selectedSpan}
-              selectSpan={setSelectedSpan}
+              selectSpan={selectSpan}
               collapsedSpans={collapsedSpans}
             />
           </div>

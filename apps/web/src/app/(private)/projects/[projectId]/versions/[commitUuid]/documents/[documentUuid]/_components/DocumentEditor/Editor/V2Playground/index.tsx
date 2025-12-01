@@ -1,12 +1,12 @@
+import { memo } from 'react'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import Chat from './Chat'
+import PromptPlaygroundChat from '$/components/PlaygroundCommon/PromptPlaygroundChat'
 import PreviewPrompt from './PreviewPrompt'
-import { memo } from 'react'
 
 export const V2Playground = memo(function V2Playground({
   mode,
@@ -33,7 +33,7 @@ export const V2Playground = memo(function V2Playground({
       setDebugMode={setDebugMode}
     />
   ) : (
-    <Chat
+    <PromptPlaygroundChat
       showHeader
       playground={playground}
       parameters={parameters}
