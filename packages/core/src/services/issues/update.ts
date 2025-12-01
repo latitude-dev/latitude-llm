@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 import { IssueCentroid } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { NotFoundError } from '../../lib/errors'
+import { BadRequestError, NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { issues } from '../../schema/models/issues'
@@ -102,26 +102,31 @@ async function upsertVector({
       documentUuid,
     })
 
-    const exists = await issues.data.exists(uuid)
-    if (!exists) {
-      if (title && description && embedding) {
-        await issues.data.insert({
-          id: uuid,
-          properties: { title, description },
-          vectors: embedding,
-        })
-
-        return Result.nil()
-      }
-
-      return Result.error(new NotFoundError('Issue not found in vector db'))
+    const payload: {
+      id: string
+      properties?: { title: string; description: string }
+      vectors?: number[]
+    } = { id: uuid }
+    if (embedding) {
+      payload.vectors = embedding
+    }
+    if (title && description) {
+      payload.properties = { title, description }
+    }
+    if (!payload.vectors && !payload.properties) {
+      return Result.error(
+        new BadRequestError(
+          'Received update issue operation without values to update',
+        ),
+      )
     }
 
-    await issues.data.update({
-      id: uuid,
-      properties: { title, description },
-      vectors: embedding,
-    })
+    const exists = await issues.data.exists(uuid)
+    if (!exists) {
+      await issues.data.insert(payload)
+    } else {
+      await issues.data.update(payload)
+    }
 
     return Result.nil()
   } catch (error) {
