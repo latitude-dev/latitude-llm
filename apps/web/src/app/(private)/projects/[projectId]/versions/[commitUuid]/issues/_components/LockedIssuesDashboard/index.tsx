@@ -66,7 +66,7 @@ function LockedIssuesHeader({
 }
 
 export function LockedIssuesDashboard({
-  isLoacked,
+  isLocked,
   projectId,
   commitUuid,
 }: {
@@ -78,7 +78,7 @@ export function LockedIssuesDashboard({
     <div className='flex flex-col items-center w-full px-20'>
       <div className='max-w-[680px] flex flex-col w-full gap-8 pt-20 xl:pt-40'>
         <LockedIssuesHeader
-          isLocked={isLoacked}
+          isLocked={isLocked}
           projectId={projectId}
           commitUuid={commitUuid}
         />
