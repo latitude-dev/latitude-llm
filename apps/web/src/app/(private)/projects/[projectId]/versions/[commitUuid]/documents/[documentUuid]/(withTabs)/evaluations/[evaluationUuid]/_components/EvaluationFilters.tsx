@@ -6,7 +6,7 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { endOfDay, startOfDay } from 'date-fns'
 import { isEqual } from 'lodash-es'
 import { ComponentProps, useMemo } from 'react'
-import { CommitFilter } from '../../../logs/_components/Filters/CommitFilter'
+import { CommitFilter } from './CommitFilter'
 import { EvaluationResultsV2Search } from '@latitude-data/core/helpers'
 
 export function EvaluationFilters({

@@ -4,11 +4,7 @@ import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experimen
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-
-import {
-  FilterButton,
-  useFilterButtonColor,
-} from '../../../logs/_components/Filters/FilterButton'
+import { useFilterButtonColor, FilterButton } from '$/components/FilterButton'
 
 function ExperimentCheckbox({
   experiment,

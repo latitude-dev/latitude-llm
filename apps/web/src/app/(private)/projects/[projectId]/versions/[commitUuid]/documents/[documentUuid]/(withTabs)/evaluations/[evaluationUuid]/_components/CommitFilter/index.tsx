@@ -6,8 +6,8 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
+import { useFilterButtonColor, FilterButton } from '$/components/FilterButton'
 import { BadgeCommit } from '../../../../../../../_components/Sidebar/CommitSelector/CommitItem'
-import { FilterButton, useFilterButtonColor } from '../FilterButton'
 
 function CommitCheckbox({
   commit,
