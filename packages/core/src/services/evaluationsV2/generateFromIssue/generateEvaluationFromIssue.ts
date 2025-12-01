@@ -37,7 +37,6 @@ export async function generateEvaluationFromIssue({
     workspace,
     commit,
     evaluationToEvaluate: evaluation,
-    documentUuid: issue.documentUuid,
     issue,
   })
 

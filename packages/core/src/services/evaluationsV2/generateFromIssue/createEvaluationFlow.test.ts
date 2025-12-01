@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { SpanType } from '@latitude-data/constants'
+import { EvaluationV2, SpanType } from '@latitude-data/constants'
 import { Result } from '@latitude-data/core/lib/Result'
 import { __test__ as createEvaluationFlowTest } from './createEvaluationFlow'
 import * as factories from '../../../tests/factories'
@@ -360,7 +360,7 @@ describe('createValidationFlow', () => {
   let commit: Commit
   let issue: Issue
   let document: DocumentVersion
-  let evaluation: any
+  let evaluation: EvaluationV2
   let mockFlowProducer: any
   let mockRedisConnection: any
 
@@ -448,7 +448,6 @@ describe('createValidationFlow', () => {
     const result = await createValidationFlow({
       workspace,
       commit,
-      documentUuid: document.documentUuid,
       evaluationToEvaluate: evaluation,
       issue,
     })
@@ -465,12 +464,12 @@ describe('createValidationFlow', () => {
     expect(callArgs.data.commitId).toBe(commit.id)
     expect(callArgs.data.evaluationUuid).toBe(evaluation.uuid)
     expect(callArgs.data.documentUuid).toBe(document.documentUuid)
-    expect(callArgs.data.spanAndTraceIdPairsOfPositiveEvaluationRuns).toHaveLength(
-      2,
-    )
-    expect(callArgs.data.spanAndTraceIdPairsOfNegativeEvaluationRuns).toHaveLength(
-      2,
-    )
+    expect(
+      callArgs.data.spanAndTraceIdPairsOfPositiveEvaluationRuns,
+    ).toHaveLength(2)
+    expect(
+      callArgs.data.spanAndTraceIdPairsOfNegativeEvaluationRuns,
+    ).toHaveLength(2)
     expect(callArgs.children).toHaveLength(4) // 2 positive + 2 negative spans
     expect(callArgs.children[0]!.name).toBe('runEvaluationV2Job')
     expect(callArgs.children[0]!.data.dry).toBe(true)
@@ -480,7 +479,6 @@ describe('createValidationFlow', () => {
     const result = await createValidationFlow({
       workspace,
       commit,
-      documentUuid: document.documentUuid,
       evaluationToEvaluate: evaluation,
       issue,
     })
@@ -491,12 +489,12 @@ describe('createValidationFlow', () => {
 
     // Verify FlowProducer was called with empty arrays
     const callArgs = mockFlowProducer.add.mock.calls[0]![0]
-    expect(callArgs.data.spanAndTraceIdPairsOfPositiveEvaluationRuns).toHaveLength(
-      0,
-    )
-    expect(callArgs.data.spanAndTraceIdPairsOfNegativeEvaluationRuns).toHaveLength(
-      0,
-    )
+    expect(
+      callArgs.data.spanAndTraceIdPairsOfPositiveEvaluationRuns,
+    ).toHaveLength(0)
+    expect(
+      callArgs.data.spanAndTraceIdPairsOfNegativeEvaluationRuns,
+    ).toHaveLength(0)
     expect(callArgs.children).toHaveLength(0)
   })
 
@@ -508,7 +506,6 @@ describe('createValidationFlow', () => {
     const result = await createValidationFlow({
       workspace,
       commit,
-      documentUuid: document.documentUuid,
       evaluationToEvaluate: evaluation,
       issue,
     })
@@ -519,4 +516,3 @@ describe('createValidationFlow', () => {
     )
   })
 })
-

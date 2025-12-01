@@ -24,13 +24,11 @@ const MAX_COMPARISON_ANNOTATIONS = 100
 export async function createValidationFlow({
   workspace,
   commit,
-  documentUuid,
   evaluationToEvaluate,
   issue,
 }: {
   workspace: Workspace
   commit: Commit
-  documentUuid: string
   evaluationToEvaluate: EvaluationV2
   issue: Issue
 }) {
@@ -76,7 +74,7 @@ export async function createValidationFlow({
       workspaceId: workspace.id,
       commitId: commit.id,
       evaluationUuid: evaluationToEvaluate.uuid,
-      documentUuid,
+      documentUuid: issue.documentUuid,
       spanAndTraceIdPairsOfPositiveEvaluationRuns,
       spanAndTraceIdPairsOfNegativeEvaluationRuns,
     },

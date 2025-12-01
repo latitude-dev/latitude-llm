@@ -121,7 +121,6 @@ describe('generateEvaluationFromIssue', () => {
       workspace,
       commit,
       evaluationToEvaluate: mockEvaluation,
-      documentUuid: issue.documentUuid,
       issue,
     })
   })
