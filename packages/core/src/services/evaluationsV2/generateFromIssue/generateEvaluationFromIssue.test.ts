@@ -1,35 +1,64 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { SpanType } from '@latitude-data/constants'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { Result } from '@latitude-data/core/lib/Result'
-import { __test__ as generateEvaluationFromIssueTest } from './generateEvaluationFromIssue'
+import { generateEvaluationFromIssue } from './generateEvaluationFromIssue'
+import * as generateFromIssueModule from './generateFromIssue'
+import * as createValidationFlowModule from './createEvaluationFlow'
 import * as factories from '../../../tests/factories'
 import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import {
-  createEvaluationResultV2,
-  createEvaluationV2,
-  createIssueEvaluationResult,
-  createSpan,
-} from '../../../tests/factories'
-import { Span, SpanWithDetails } from '@latitude-data/constants'
+  Providers,
+  EvaluationType,
+  LlmEvaluationMetric,
+  EvaluationV2,
+} from '@latitude-data/constants'
+import type { Job } from 'bullmq'
 
-describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
+vi.mock('./generateFromIssue', () => ({
+  generateEvaluationFromIssueWithCopilot: vi.fn(),
+}))
+
+vi.mock('./createEvaluationFlow', () => ({
+  createValidationFlow: vi.fn(),
+}))
+
+describe('generateEvaluationFromIssue', () => {
+  const mockGenerateEvaluationFromIssueWithCopilot = vi.mocked(
+    generateFromIssueModule.generateEvaluationFromIssueWithCopilot,
+  )
+  const mockCreateValidationFlow = vi.mocked(
+    createValidationFlowModule.createValidationFlow,
+  )
+
   let workspace: Workspace
   let commit: Commit
   let issue: Issue
   let document: DocumentVersion
+  let provider: ProviderApiKey
+  const TEST_EVALUATION_UUID = 'test-evaluation-uuid'
+  const MODEL = 'gpt-4o'
 
   beforeEach(async () => {
+    vi.clearAllMocks()
+
+    // Setup test data using factories
     const projectData = await factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
-        'test-doc': 'Test content',
+        prompt: factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Test prompt content',
+        }),
+        model: MODEL,
       },
     })
     workspace = projectData.workspace
     commit = projectData.commit
     document = projectData.documents[0]!
+    provider = projectData.providers[0]!
 
     const issueData = await factories.createIssue({
       document,
@@ -38,304 +67,123 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
     issue = issueData.issue
   })
 
-  it('returns equal amounts when positive and negative spans are equal', async () => {
-    const evaluation = await createEvaluationV2({
+  it('successfully generates evaluation and creates validation flow', async () => {
+    const mockEvaluation = {
+      uuid: TEST_EVALUATION_UUID,
+      versionId: 1,
+      workspaceId: workspace.id,
+      commitId: commit.id,
+      documentUuid: document.documentUuid,
+      name: 'Test Evaluation',
+      description: 'Test Description',
+      type: EvaluationType.Llm,
+      metric: LlmEvaluationMetric.Binary,
+      configuration: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
+
+    const mockValidationFlowJob = {
+      id: 'test-validation-flow-job-id',
+    } as Job
+
+    mockGenerateEvaluationFromIssueWithCopilot.mockResolvedValue(
+      Result.ok({ evaluation: mockEvaluation }),
+    )
+    mockCreateValidationFlow.mockResolvedValue(Result.ok(mockValidationFlowJob))
+
+    const result = await generateEvaluationFromIssue({
+      issue,
       workspace,
-      document,
       commit,
+      providerName: provider.name,
+      model: MODEL,
+      evaluationUuid: TEST_EVALUATION_UUID,
     })
-
-    // Create 3 spans with issues (positive)
-    const positiveSpans = []
-    for (let i = 0; i < 3; i++) {
-      const span = await createSpan({
-        workspaceId: workspace.id,
-        traceId: `trace-positive-${i}`,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
-
-      const evalResult = await createEvaluationResultV2({
-        workspace,
-        evaluation,
-        commit,
-        span: {
-          ...span,
-          type: SpanType.Prompt,
-        } as unknown as SpanWithDetails<SpanType.Prompt>,
-      })
-
-      await createIssueEvaluationResult({
-        workspace,
-        issue,
-        evaluationResult: evalResult,
-      })
-
-      positiveSpans.push(span)
-    }
-
-    // Create 3 spans without issues (negative)
-    const negativeSpans = []
-    for (let i = 0; i < 3; i++) {
-      const span = await createSpan({
-        workspaceId: workspace.id,
-        traceId: `trace-negative-${i}`,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
-      negativeSpans.push(span)
-    }
-
-    const result =
-      await generateEvaluationFromIssueTest.getEqualAmountsOfPositiveAndNegativeEvaluationResults(
-        {
-          workspace,
-          commit,
-          issue,
-        },
-      )
 
     expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResults, negativeEvaluationResults } =
-      result.unwrap()
-    expect(positiveEvaluationResults).toHaveLength(3)
-    expect(negativeEvaluationResults).toHaveLength(3)
-    // Check that all positive spans are present (order may vary)
-    expect(positiveEvaluationResults.map((s: Span) => s.id).sort()).toEqual(
-      positiveSpans.map((s) => s.id).sort(),
-    )
-    // Check that all negative spans are present (order may vary)
-    expect(negativeEvaluationResults.map((s: Span) => s.id).sort()).toEqual(
-      negativeSpans.map((s) => s.id).sort(),
-    )
-  })
+    const { validationFlowJob } = result.unwrap()
+    expect(validationFlowJob).toBe(mockValidationFlowJob)
+    expect(validationFlowJob.id).toBe('test-validation-flow-job-id')
 
-  it('returns equal amounts when negative spans are less than positive spans', async () => {
-    const evaluation = await createEvaluationV2({
-      workspace,
-      document,
+    // Verify generateEvaluationFromIssueWithCopilot was called
+    expect(mockGenerateEvaluationFromIssueWithCopilot).toHaveBeenCalledWith({
+      issue,
       commit,
-    })
-
-    // Create 5 spans with issues (positive)
-    const positiveSpans = []
-    for (let i = 0; i < 5; i++) {
-      const span = await createSpan({
-        workspaceId: workspace.id,
-        traceId: `trace-positive-${i}`,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
-
-      const evalResult = await createEvaluationResultV2({
-        workspace,
-        evaluation,
-        commit,
-        span: {
-          ...span,
-          type: SpanType.Prompt,
-        } as unknown as SpanWithDetails<SpanType.Prompt>,
-      })
-
-      await createIssueEvaluationResult({
-        workspace,
-        issue,
-        evaluationResult: evalResult,
-      })
-
-      positiveSpans.push(span)
-    }
-
-    // Create only 2 spans without issues (negative)
-    const negativeSpans = []
-    for (let i = 0; i < 2; i++) {
-      const span = await createSpan({
-        workspaceId: workspace.id,
-        traceId: `trace-negative-${i}`,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
-      negativeSpans.push(span)
-    }
-
-    const result =
-      await generateEvaluationFromIssueTest.getEqualAmountsOfPositiveAndNegativeEvaluationResults(
-        {
-          workspace,
-          commit,
-          issue,
-        },
-      )
-
-    expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResults, negativeEvaluationResults } =
-      result.unwrap()
-    // Both should have the same length (minimum of 5 and 2 = 2)
-    expect(positiveEvaluationResults).toHaveLength(2)
-    expect(negativeEvaluationResults).toHaveLength(2)
-    // Check that positive spans are a subset (first 2 of 5)
-    expect(positiveEvaluationResults).toHaveLength(2)
-    const positiveSpanIds = positiveSpans.map((s) => s.id)
-    positiveEvaluationResults.forEach((span: Span) => {
-      expect(positiveSpanIds).toContain(span.id)
-    })
-    // Check that all negative spans are present (order may vary)
-    expect(negativeEvaluationResults.map((s: Span) => s.id).sort()).toEqual(
-      negativeSpans.map((s) => s.id).sort(),
-    )
-  })
-
-  it('returns equal amounts when negative spans are more than positive spans', async () => {
-    const evaluation = await createEvaluationV2({
       workspace,
-      document,
-      commit,
+      providerName: provider.name,
+      model: MODEL,
+      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
-    // Create 3 spans with issues (positive)
-    const positiveSpans = []
-    for (let i = 0; i < 3; i++) {
-      const span = await createSpan({
-        workspaceId: workspace.id,
-        traceId: `trace-positive-${i}`,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
-
-      const evalResult = await createEvaluationResultV2({
-        workspace,
-        evaluation,
-        commit,
-        span: {
-          ...span,
-          type: SpanType.Prompt,
-        } as unknown as SpanWithDetails<SpanType.Prompt>,
-      })
-
-      await createIssueEvaluationResult({
-        workspace,
-        issue,
-        evaluationResult: evalResult,
-      })
-
-      positiveSpans.push(span)
-    }
-
-    // Create 5 spans without issues (negative)
-    const negativeSpans = []
-    for (let i = 0; i < 5; i++) {
-      const span = await createSpan({
-        workspaceId: workspace.id,
-        traceId: `trace-negative-${i}`,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
-      negativeSpans.push(span)
-    }
-
-    const result =
-      await generateEvaluationFromIssueTest.getEqualAmountsOfPositiveAndNegativeEvaluationResults(
-        {
-          workspace,
-          commit,
-          issue,
-        },
-      )
-
-    expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResults, negativeEvaluationResults } =
-      result.unwrap()
-    expect(positiveEvaluationResults).toHaveLength(3)
-    expect(negativeEvaluationResults).toHaveLength(3) // Limited to match positive
-    // Check that all positive spans are present (order may vary)
-    expect(positiveEvaluationResults.map((s: Span) => s.id).sort()).toEqual(
-      positiveSpans.map((s) => s.id).sort(),
-    )
-    // Check that negative spans are a subset of all negative spans (order may vary)
-    // The function may return any 3 negative spans, not necessarily the first 3
-    expect(negativeEvaluationResults).toHaveLength(3)
-    const negativeSpanIds = negativeSpans.map((s) => s.id)
-    negativeEvaluationResults.forEach((span: Span) => {
-      expect(negativeSpanIds).toContain(span.id)
+    // Verify createValidationFlow was called with correct parameters
+    expect(mockCreateValidationFlow).toHaveBeenCalledWith({
+      workspace,
+      commit,
+      evaluationToEvaluate: mockEvaluation,
+      documentUuid: issue.documentUuid,
+      issue,
     })
   })
 
-  it('returns empty arrays when no spans exist', async () => {
-    const result =
-      await generateEvaluationFromIssueTest.getEqualAmountsOfPositiveAndNegativeEvaluationResults(
-        {
-          workspace,
-          commit,
-          issue,
-        },
-      )
+  it('returns error when generateEvaluationFromIssueWithCopilot fails', async () => {
+    const error = new Error('Failed to generate evaluation')
+    mockGenerateEvaluationFromIssueWithCopilot.mockResolvedValue(
+      Result.error(error),
+    )
 
-    expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResults, negativeEvaluationResults } =
-      result.unwrap()
-    expect(positiveEvaluationResults).toHaveLength(0)
-    expect(negativeEvaluationResults).toHaveLength(0)
-  })
-
-  it('returns empty arrays when no negative spans exist', async () => {
-    const evaluation = await createEvaluationV2({
+    const result = await generateEvaluationFromIssue({
+      issue,
       workspace,
-      document,
       commit,
+      providerName: provider.name,
+      model: MODEL,
+      evaluationUuid: TEST_EVALUATION_UUID,
     })
 
-    // Create 3 spans with issues (positive)
-    const positiveSpans = []
-    for (let i = 0; i < 3; i++) {
-      const span = await createSpan({
-        workspaceId: workspace.id,
-        traceId: `trace-positive-${i}`,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
+    expect(Result.isOk(result)).toBe(false)
+    expect(result.error).toBe(error)
 
-      const evalResult = await createEvaluationResultV2({
-        workspace,
-        evaluation,
-        commit,
-        span: {
-          ...span,
-          type: SpanType.Prompt,
-        } as unknown as SpanWithDetails<SpanType.Prompt>,
-      })
+    // Verify createValidationFlow was not called
+    expect(mockCreateValidationFlow).not.toHaveBeenCalled()
+  })
 
-      await createIssueEvaluationResult({
-        workspace,
-        issue,
-        evaluationResult: evalResult,
-      })
+  it('returns error when createValidationFlow fails', async () => {
+    const mockEvaluation = {
+      uuid: TEST_EVALUATION_UUID,
+      versionId: 1,
+      workspaceId: workspace.id,
+      commitId: commit.id,
+      documentUuid: document.documentUuid,
+      name: 'Test Evaluation',
+      description: 'Test Description',
+      type: EvaluationType.Llm,
+      metric: LlmEvaluationMetric.Binary,
+      configuration: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
 
-      positiveSpans.push(span)
-    }
+    const error = new Error('Failed to create validation flow')
+    mockGenerateEvaluationFromIssueWithCopilot.mockResolvedValue(
+      Result.ok({ evaluation: mockEvaluation }),
+    )
+    mockCreateValidationFlow.mockResolvedValue(Result.error(error))
 
-    // All spans in document have issues, so no negative spans
+    const result = await generateEvaluationFromIssue({
+      issue,
+      workspace,
+      commit,
+      providerName: provider.name,
+      model: MODEL,
+      evaluationUuid: TEST_EVALUATION_UUID,
+    })
 
-    const result =
-      await generateEvaluationFromIssueTest.getEqualAmountsOfPositiveAndNegativeEvaluationResults(
-        {
-          workspace,
-          commit,
-          issue,
-        },
-      )
+    expect(Result.isOk(result)).toBe(false)
+    expect(result.error).toBe(error)
 
-    expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResults, negativeEvaluationResults } =
-      result.unwrap()
-    // Both should be empty (minimum of 3 and 0 = 0)
-    expect(positiveEvaluationResults).toHaveLength(0)
-    expect(negativeEvaluationResults).toHaveLength(0)
+    // Verify both functions were called
+    expect(mockGenerateEvaluationFromIssueWithCopilot).toHaveBeenCalled()
+    expect(mockCreateValidationFlow).toHaveBeenCalled()
   })
 })
