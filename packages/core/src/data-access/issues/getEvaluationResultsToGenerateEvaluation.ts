@@ -7,6 +7,7 @@ import {
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Project } from '../../schema/models/types/Project'
 import { Commit } from '../../schema/models/types/Commit'
+import { MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES } from '@latitude-data/constants/issues'
 
 /*
 To be able to generate an evaluation, we need enough annotations to do a minimally good MCC (Matthews Correlation Coefficient) %.
@@ -97,18 +98,26 @@ const getEvaluationResultsFromIssues = async ({
         sortDirection: 'desc',
       },
       page: 1,
-      limit: 6,
+      limit:
+        MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES + 1,
     })
     .then((r) => r.unwrap())
 
+  const commitsRepo = new CommitsRepository(workspace.id)
+  const commitHistory = await commitsRepo.getCommitsHistory({ commit })
+  const commitHistoryIds = commitHistory.map((c) => c.id)
+
   const failedEvaluationResultsByIssueId =
-    await resultsRepository.listByIssueIds([
-      issueId,
-      ...issuesFromSameDocument.issues.map((i) => i.id),
-    ])
+    await resultsRepository.listByIssueIds(
+      [issueId, ...issuesFromSameDocument.issues.map((i) => i.id)],
+      commitHistoryIds,
+    )
 
   const passedEvaluationResults =
-    await resultsRepository.listPassedByDocumentUuid(documentUuid)
+    await resultsRepository.listPassedByDocumentUuid(
+      documentUuid,
+      commitHistoryIds,
+    )
 
   return {
     passedEvaluationResults,

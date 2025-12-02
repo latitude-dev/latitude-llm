@@ -1,6 +1,9 @@
 import { Commit } from '../../schema/models/types/Commit'
 import { Workspace } from '../../schema/models/types/Workspace'
-import { EvaluationResultsV2Repository } from '../../repositories'
+import {
+  CommitsRepository,
+  EvaluationResultsV2Repository,
+} from '../../repositories'
 import { Result } from '../../lib/Result'
 import { EvaluationResultV2 } from '../../constants'
 import { Issue } from '../../schema/models/types/Issue'
@@ -48,8 +51,15 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
   const evaluationResultsRepository = new EvaluationResultsV2Repository(
     workspace.id,
   )
+  const commitsRepo = new CommitsRepository(workspace.id)
+  const commitHistory = await commitsRepo.getCommitsHistory({ commit })
+  const commitHistoryIds = commitHistory.map((c) => c.id)
+
   const evaluationResultsResult =
-    await evaluationResultsRepository.listByIssueIds([issue.id])
+    await evaluationResultsRepository.listByIssueIds(
+      [issue.id],
+      commitHistoryIds,
+    )
 
   const messagesAndEvaluationResults: SpanMessagesWithEvalResultReason[] = []
   for (const span of spans.spans) {

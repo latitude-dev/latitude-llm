@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { SpanType, SPAN_METADATA_STORAGE_KEY } from '@latitude-data/constants'
 import {
+  createCommit,
   createEvaluationResultV2,
   createEvaluationV2,
   createIssue,
@@ -19,6 +20,11 @@ import { diskFactory } from '../../lib/disk'
 import { cache as redis } from '../../cache'
 import { CompletionSpanMetadata, Span } from '@latitude-data/constants'
 import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { database } from '../../client'
+import { spans } from '../../schema/models/spans'
+import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
+import { eq } from 'drizzle-orm'
+import { User } from '../../schema/models/types/User'
 
 describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
   let workspace: Workspace
@@ -27,6 +33,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
   let document: DocumentVersion
   let issue: Issue
   let evaluation: EvaluationV2
+  let user: User
 
   beforeEach(async () => {
     const setup = await createProject({
@@ -38,6 +45,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     project = setup.project
     commit = setup.commit
     document = setup.documents[0]!
+    user = setup.user
 
     const issueSetup = await createIssue({
       workspace,
@@ -414,5 +422,222 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     expect(data[0]!.messages[1]!.role).toBe(MessageRole.user)
     expect(data[0]!.messages[2]!.role).toBe(MessageRole.assistant)
     expect(data[0]!.messages[3]!.role).toBe(MessageRole.assistant)
+  })
+
+  describe('commit history filtering', () => {
+    it('should only return evaluation results from commits in the commit history', async () => {
+      // Create first merged commit
+      const commit1 = await createCommit({
+        projectId: project.id,
+        user,
+        mergedAt: new Date('2024-01-01'),
+      })
+
+      // Create second merged commit (more recent)
+      const commit2 = await createCommit({
+        projectId: project.id,
+        user,
+        mergedAt: new Date('2024-01-02'),
+      })
+
+      // Create third merged commit (most recent - future commit)
+      const commit3 = await createCommit({
+        projectId: project.id,
+        user,
+        mergedAt: new Date('2024-01-03'),
+      })
+
+      // Create spans in different commits
+      const { promptSpan: span1 } = await createPromptSpanWithCompletion({
+        traceId: 'trace-commit1',
+      })
+
+      const { promptSpan: span2 } = await createPromptSpanWithCompletion({
+        traceId: 'trace-commit2',
+      })
+
+      const { promptSpan: span3 } = await createPromptSpanWithCompletion({
+        traceId: 'trace-commit3',
+      })
+
+      // Update spans to be in different commits
+      await database
+        .update(spans)
+        .set({ commitUuid: commit1.uuid })
+        .where(eq(spans.id, span1.id))
+
+      await database
+        .update(spans)
+        .set({ commitUuid: commit2.uuid })
+        .where(eq(spans.id, span2.id))
+
+      await database
+        .update(spans)
+        .set({ commitUuid: commit3.uuid })
+        .where(eq(spans.id, span3.id))
+
+      // Create evaluation results for each commit
+      const evalResult1 = await createEvaluationResultForIssue({
+        span: span1,
+        metadata: {
+          reason: 'Reason from commit1',
+        },
+      })
+
+      const evalResult2 = await createEvaluationResultForIssue({
+        span: span2,
+        metadata: {
+          reason: 'Reason from commit2',
+        },
+      })
+
+      const evalResult3 = await createEvaluationResultForIssue({
+        span: span3,
+        metadata: {
+          reason: 'Reason from commit3',
+        },
+      })
+
+      // Update evaluation results to be in different commits
+      await database
+        .update(evaluationResultsV2)
+        .set({ commitId: commit1.id })
+        .where(eq(evaluationResultsV2.id, evalResult1.id))
+
+      await database
+        .update(evaluationResultsV2)
+        .set({ commitId: commit2.id })
+        .where(eq(evaluationResultsV2.id, evalResult2.id))
+
+      await database
+        .update(evaluationResultsV2)
+        .set({ commitId: commit3.id })
+        .where(eq(evaluationResultsV2.id, evalResult3.id))
+
+      // Query with commit2 - should include commit1 and commit2 but not commit3
+      const result = await getSpanMessagesAndEvaluationResultsByIssue({
+        workspace,
+        commit: commit2,
+        issue,
+      })
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+
+      const data = result.value!
+      expect(data).toHaveLength(2)
+
+      const reasons = data.map((d) => d.reason)
+      expect(reasons).toContain('Reason from commit1')
+      expect(reasons).toContain('Reason from commit2')
+      expect(reasons).not.toContain('Reason from commit3')
+    })
+
+    it('should include draft commit and all previous merged commits', async () => {
+      // Create merged commits
+      const commit1 = await createCommit({
+        projectId: project.id,
+        user,
+        mergedAt: new Date('2024-01-01'),
+      })
+
+      const commit2 = await createCommit({
+        projectId: project.id,
+        user,
+        mergedAt: new Date('2024-01-02'),
+      })
+
+      // Create draft commit (mergedAt = null)
+      const draftCommit = await createCommit({
+        projectId: project.id,
+        user,
+        mergedAt: null,
+      })
+
+      // Create spans
+      const { promptSpan: span1 } = await createPromptSpanWithCompletion({
+        traceId: 'trace-commit1',
+      })
+
+      const { promptSpan: span2 } = await createPromptSpanWithCompletion({
+        traceId: 'trace-commit2',
+      })
+
+      const { promptSpan: spanDraft } = await createPromptSpanWithCompletion({
+        traceId: 'trace-draft',
+      })
+
+      // Update spans to be in different commits
+      await database
+        .update(spans)
+        .set({ commitUuid: commit1.uuid })
+        .where(eq(spans.id, span1.id))
+
+      await database
+        .update(spans)
+        .set({ commitUuid: commit2.uuid })
+        .where(eq(spans.id, span2.id))
+
+      await database
+        .update(spans)
+        .set({ commitUuid: draftCommit.uuid })
+        .where(eq(spans.id, spanDraft.id))
+
+      // Create evaluation results
+      const evalResult1 = await createEvaluationResultForIssue({
+        span: span1,
+        metadata: {
+          reason: 'Reason from commit1',
+        },
+      })
+
+      const evalResult2 = await createEvaluationResultForIssue({
+        span: span2,
+        metadata: {
+          reason: 'Reason from commit2',
+        },
+      })
+
+      const evalResultDraft = await createEvaluationResultForIssue({
+        span: spanDraft,
+        metadata: {
+          reason: 'Reason from draft',
+        },
+      })
+
+      // Update evaluation results to be in different commits
+      await database
+        .update(evaluationResultsV2)
+        .set({ commitId: commit1.id })
+        .where(eq(evaluationResultsV2.id, evalResult1.id))
+
+      await database
+        .update(evaluationResultsV2)
+        .set({ commitId: commit2.id })
+        .where(eq(evaluationResultsV2.id, evalResult2.id))
+
+      await database
+        .update(evaluationResultsV2)
+        .set({ commitId: draftCommit.id })
+        .where(eq(evaluationResultsV2.id, evalResultDraft.id))
+
+      // Query with draft commit - should include all commits (draft + all merged)
+      const result = await getSpanMessagesAndEvaluationResultsByIssue({
+        workspace,
+        commit: draftCommit,
+        issue,
+      })
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+
+      const data = result.value!
+      expect(data).toHaveLength(3)
+
+      const reasons = data.map((d) => d.reason)
+      expect(reasons).toContain('Reason from commit1')
+      expect(reasons).toContain('Reason from commit2')
+      expect(reasons).toContain('Reason from draft')
+    })
   })
 })

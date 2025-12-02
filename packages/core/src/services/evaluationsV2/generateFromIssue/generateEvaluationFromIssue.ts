@@ -44,6 +44,8 @@ export async function generateEvaluationFromIssue(
   }
   const evaluationConfig = evaluationConfigResult.unwrap()
 
+  // Adding a transaction here as we want to ensure that if there is an error after the creation of the evaluation, we rollback the created evaluation
+  // The validation flow cant be rolled back (its BullMQ), but the idempotency key will prevent the flow being created twice
   return await transaction.call(async (tx) => {
     const documentRepository = new DocumentVersionsRepository(workspace.id, tx)
     const document = await documentRepository
