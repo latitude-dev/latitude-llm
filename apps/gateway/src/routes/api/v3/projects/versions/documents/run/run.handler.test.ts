@@ -40,7 +40,7 @@ const mocks = vi.hoisted(() => ({
   captureExceptionMock: vi.fn(),
   enqueueRun: vi.fn(),
   isFeatureEnabledByName: vi.fn(),
-  findActiveForDocument: vi.fn(),
+  findActiveForCommit: vi.fn(),
   getCommitById: vi.fn(),
   routeRequest: vi.fn(),
   queues: {
@@ -91,7 +91,7 @@ vi.mock(
 
 vi.mock('@latitude-data/core/repositories/deploymentTestsRepository', () => ({
   DeploymentTestsRepository: vi.fn().mockImplementation(() => ({
-    findActiveForDocument: mocks.findActiveForDocument,
+    findActiveForCommit: mocks.findActiveForCommit,
   })),
 }))
 
@@ -1272,7 +1272,7 @@ describe('POST /run', () => {
       // Reset all mocks
       mocks.runDocumentAtCommit.mockClear()
       mocks.enqueueRun.mockClear()
-      mocks.findActiveForDocument.mockClear()
+      mocks.findActiveForCommit.mockClear()
       mocks.getCommitById.mockClear()
       mocks.routeRequest.mockClear()
 
@@ -1284,7 +1284,7 @@ describe('POST /run', () => {
         return Promise.resolve(Result.ok(false))
       })
 
-      mocks.findActiveForDocument.mockResolvedValue(undefined)
+      mocks.findActiveForCommit.mockResolvedValue(undefined)
     })
 
     describe('with shadow test', () => {
@@ -1302,7 +1302,7 @@ describe('POST /run', () => {
           status: 'running',
         }
 
-        mocks.findActiveForDocument.mockResolvedValue(shadowTest)
+        mocks.findActiveForCommit.mockResolvedValue(shadowTest)
 
         const documentLogUuid = generateUUIDIdentifier()
         const usage = {
@@ -1400,7 +1400,7 @@ describe('POST /run', () => {
           status: 'running',
         }
 
-        mocks.findActiveForDocument.mockResolvedValue(abTest)
+        mocks.findActiveForCommit.mockResolvedValue(abTest)
         mocks.routeRequest.mockReturnValue('baseline')
 
         const documentLogUuid = generateUUIDIdentifier()
@@ -1491,7 +1491,7 @@ describe('POST /run', () => {
           status: 'running',
         }
 
-        mocks.findActiveForDocument.mockResolvedValue(abTest)
+        mocks.findActiveForCommit.mockResolvedValue(abTest)
         mocks.routeRequest.mockReturnValue('challenger')
         mocks.getCommitById.mockResolvedValue(Result.ok(challengerCommit))
 
@@ -1584,7 +1584,7 @@ describe('POST /run', () => {
           status: 'running',
         }
 
-        mocks.findActiveForDocument.mockResolvedValue(abTest)
+        mocks.findActiveForCommit.mockResolvedValue(abTest)
         mocks.routeRequest.mockReturnValue('baseline')
 
         const documentLogUuid = generateUUIDIdentifier()
@@ -1670,7 +1670,7 @@ describe('POST /run', () => {
           status: 'running',
         }
 
-        mocks.findActiveForDocument.mockResolvedValue(shadowTest)
+        mocks.findActiveForCommit.mockResolvedValue(shadowTest)
         mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
           if (featureName === 'api-background-runs') {
             return Promise.resolve(Result.ok(true))

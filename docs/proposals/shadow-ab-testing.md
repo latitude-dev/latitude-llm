@@ -12,13 +12,14 @@ This proposal outlines the implementation of **Shadow Testing** and **A/B Testin
 
 #### `deployment_tests` (Main Test Configuration Table)
 
+Tests are scoped to **commits**, not documents. A single test can evaluate changes across multiple documents in the challenger commit compared to the baseline commit.
+
 ```sql
 CREATE TABLE deployment_tests (
   id BIGSERIAL PRIMARY KEY,
   uuid UUID NOT NULL UNIQUE,
   workspace_id BIGINT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  document_uuid UUID NOT NULL, -- The document being tested
 
   -- Version Configuration
   baseline_commit_id BIGINT NOT NULL REFERENCES commits(id), -- Live/control version
@@ -32,10 +33,6 @@ CREATE TABLE deployment_tests (
   status VARCHAR(20) NOT NULL DEFAULT 'pending', -- 'pending' | 'running' | 'paused' | 'completed' | 'cancelled'
   started_at TIMESTAMP,
   ended_at TIMESTAMP,
-
-  -- Evaluation Configuration
-  evaluation_uuids TEXT[] DEFAULT '{}', -- Which evaluations to run
-  use_composite_evaluation BOOLEAN DEFAULT true,
 
   -- Metadata
   name VARCHAR(256),
@@ -51,9 +48,6 @@ CREATE TABLE deployment_tests (
 CREATE INDEX idx_deployment_tests_workspace ON deployment_tests(workspace_id);
 CREATE INDEX idx_deployment_tests_project ON deployment_tests(project_id);
 CREATE INDEX idx_deployment_tests_status ON deployment_tests(status);
-CREATE INDEX idx_deployment_tests_document ON deployment_tests(document_uuid);
-CREATE UNIQUE INDEX idx_active_test_per_document ON deployment_tests(project_id, document_uuid)
-  WHERE status IN ('pending', 'running', 'paused') AND deleted_at IS NULL;
 ```
 
 #### `deployment_test_runs` (Track Individual Runs)
@@ -644,8 +638,9 @@ INSERT INTO features (name, description, enabled) VALUES
 
 ### 9.3 Evaluation Timing
 
-- **Live evaluations**: Existing `evaluateLiveLogs` will run on both versions
-- **Comparison fairness**: Both versions evaluated with same evaluations at same time
+- **Automatic evaluations**: Evaluations configured on commits run automatically on both baseline and challenger
+- **No configuration needed**: Since the challenger commit is created as part of the test setup, evaluations already configured on it will run automatically via the existing `evaluateLiveLogs` system
+- **Comparison fairness**: Both versions evaluated with the same evaluations at the same time
 
 ### 9.4 Edge Cases
 

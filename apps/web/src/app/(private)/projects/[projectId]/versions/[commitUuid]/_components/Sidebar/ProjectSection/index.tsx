@@ -132,6 +132,13 @@ export default function ProjectSection({
           },
         },
         {
+          label: 'Testing',
+          route: ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid }).testing.root,
+          iconName: 'blocks',
+        },
+        {
           label: 'Issues',
           iconName: 'shieldAlert',
           route: ROUTES.projects

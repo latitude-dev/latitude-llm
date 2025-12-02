@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns, isNull } from 'drizzle-orm'
+import { and, eq, getTableColumns, isNull, or } from 'drizzle-orm'
 import Repository from './repositoryV2'
 import { deploymentTests } from '../schema/models/deploymentTests'
 import { DeploymentTest } from '../schema/models/types/DeploymentTest'
@@ -21,33 +21,6 @@ export class DeploymentTestsRepository extends Repository<DeploymentTest> {
       .from(deploymentTests)
       .where(this.scopeFilter)
       .$dynamic()
-  }
-
-  async findActiveForDocument(
-    projectId: number,
-    documentUuid: string,
-  ): Promise<DeploymentTest | null> {
-    const result = await this.db
-      .select()
-      .from(deploymentTests)
-      .where(
-        and(
-          eq(deploymentTests.projectId, projectId),
-          eq(deploymentTests.documentUuid, documentUuid),
-          eq(deploymentTests.workspaceId, this.workspaceId),
-          // Only get pending, running, or paused tests
-          // Filter will be handled by the calling code
-          isNull(deploymentTests.deletedAt),
-        ),
-      )
-      .limit(1)
-
-    // Filter to only active tests
-    const test = result[0]
-    if (test && ['pending', 'running', 'paused'].includes(test.status)) {
-      return test
-    }
-    return null
   }
 
   async findByUuid(uuid: string): Promise<TypedResult<DeploymentTest>> {
@@ -86,5 +59,37 @@ export class DeploymentTestsRepository extends Repository<DeploymentTest> {
       .orderBy(deploymentTests.createdAt)
 
     return result
+  }
+
+  /**
+   * Find an active deployment test for a given commit
+   * Returns the test if the commit is either the baseline or challenger in an active test
+   */
+  async findActiveForCommit(
+    projectId: number,
+    commitId: number,
+  ): Promise<DeploymentTest | null> {
+    const result = await this.db
+      .select()
+      .from(deploymentTests)
+      .where(
+        and(
+          eq(deploymentTests.projectId, projectId),
+          eq(deploymentTests.workspaceId, this.workspaceId),
+          isNull(deploymentTests.deletedAt),
+          // Check if the commit is either baseline or challenger
+          or(
+            eq(deploymentTests.baselineCommitId, commitId),
+            eq(deploymentTests.challengerCommitId, commitId),
+          ),
+        ),
+      )
+      .limit(1)
+
+    const test = result[0]
+    if (test && ['pending', 'running', 'paused'].includes(test.status)) {
+      return test
+    }
+    return null
   }
 }

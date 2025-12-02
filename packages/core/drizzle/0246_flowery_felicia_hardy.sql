@@ -20,7 +20,6 @@ CREATE TABLE "latitude"."deployment_tests" (
 	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" bigint NOT NULL,
 	"project_id" bigint NOT NULL,
-	"document_uuid" uuid NOT NULL,
 	"baseline_commit_id" bigint NOT NULL,
 	"challenger_commit_id" bigint NOT NULL,
 	"test_type" varchar(20) NOT NULL,
@@ -28,8 +27,6 @@ CREATE TABLE "latitude"."deployment_tests" (
 	"status" varchar(20) DEFAULT 'pending' NOT NULL,
 	"started_at" timestamp,
 	"ended_at" timestamp,
-	"evaluation_uuids" text DEFAULT '{}',
-	"use_composite_evaluation" boolean DEFAULT true,
 	"name" varchar(256),
 	"description" text,
 	"created_by_user_id" text,
@@ -50,6 +47,4 @@ CREATE INDEX "idx_test_runs_test" ON "latitude"."deployment_test_runs" USING btr
 CREATE INDEX "idx_test_runs_request" ON "latitude"."deployment_test_runs" USING btree ("api_request_id");--> statement-breakpoint
 CREATE INDEX "idx_deployment_tests_workspace" ON "latitude"."deployment_tests" USING btree ("workspace_id");--> statement-breakpoint
 CREATE INDEX "idx_deployment_tests_project" ON "latitude"."deployment_tests" USING btree ("project_id");--> statement-breakpoint
-CREATE INDEX "idx_deployment_tests_status" ON "latitude"."deployment_tests" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_deployment_tests_document" ON "latitude"."deployment_tests" USING btree ("document_uuid");--> statement-breakpoint
-CREATE UNIQUE INDEX "idx_active_test_per_document" ON "latitude"."deployment_tests" USING btree ("project_id","document_uuid") WHERE status IN ('pending', 'running', 'paused') AND deleted_at IS NULL;
+CREATE INDEX "idx_deployment_tests_status" ON "latitude"."deployment_tests" USING btree ("status");

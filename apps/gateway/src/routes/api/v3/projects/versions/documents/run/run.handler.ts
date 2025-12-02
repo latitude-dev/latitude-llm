@@ -82,7 +82,6 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   } = await resolveDeploymentTestContext({
     workspaceId: workspace.id,
     projectId: project.id,
-    documentUuid: document.documentUuid,
     commit,
     source,
     customIdentifier,
@@ -300,22 +299,20 @@ async function handleForegroundRun({
 async function resolveDeploymentTestContext({
   workspaceId,
   projectId,
-  documentUuid,
   commit,
   source,
   customIdentifier,
 }: {
   workspaceId: number
   projectId: number
-  documentUuid: string
   commit: any
   source: LogSources
   customIdentifier?: string | null
 }) {
   const deploymentTestsRepo = new DeploymentTestsRepository(workspaceId)
-  const activeDeploymentTest = await deploymentTestsRepo.findActiveForDocument(
+  const activeDeploymentTest = await deploymentTestsRepo.findActiveForCommit(
     projectId,
-    documentUuid,
+    commit.id,
   )
 
   if (!activeDeploymentTest || activeDeploymentTest.testType !== 'ab') {

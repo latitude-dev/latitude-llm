@@ -10,13 +10,10 @@ import { BadRequestError } from '@latitude-data/constants/errors'
 export type CreateDeploymentTestInput = {
   workspaceId: number
   projectId: number
-  documentUuid: string
   baselineCommitId: number
   challengerCommitId: number
   testType: DeploymentTestType
   trafficPercentage?: number
-  evaluationUuids?: string[]
-  useCompositeEvaluation?: boolean
   name?: string
   description?: string
   createdByUserId?: string
@@ -50,9 +47,6 @@ export async function createDeploymentTest(
     .insert(deploymentTests)
     .values({
       ...input,
-      evaluationUuids: input.evaluationUuids
-        ? JSON.stringify(input.evaluationUuids)
-        : '{}',
       trafficPercentage: input.trafficPercentage ?? 50,
       status: 'pending',
     })

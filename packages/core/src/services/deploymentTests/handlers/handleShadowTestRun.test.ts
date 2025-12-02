@@ -36,12 +36,19 @@ describe('handleShadowTestRun', () => {
       uuid: 'test-uuid',
       workspaceId: 1,
       projectId: 1,
-      documentUuid: 'doc-uuid',
       baselineCommitId: 1,
       challengerCommitId: 2,
       testType: 'shadow',
       trafficPercentage: 50,
       status: 'running',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+      name: null,
+      description: null,
+      startedAt: null,
+      endedAt: null,
+      createdByUserId: null,
     } as DeploymentTest
   })
 
