@@ -1,16 +1,9 @@
 import { type ProviderApiKey } from '../../../../schema/models/types/ProviderApiKey'
 import { Providers } from '@latitude-data/constants'
-import { GROQ_MODELS } from '../../estimateCost/groq'
-import { ANTHROPIC_MODELS } from '../../estimateCost/anthropic'
-import { GOOGLE_MODELS } from '../../estimateCost/google'
-import { MISTRAL_MODELS } from '../../estimateCost/mistral'
-import { OPENAI_MODELS } from '../../estimateCost/openai'
-import { VERTEX_GOOGLE_MODELS } from '../../estimateCost/vertexGoogle'
-import { VERTEX_ANTHROPIC_MODELS } from '../../estimateCost/vertexAnthropic'
-import { XAI_MODELS } from '../../estimateCost/xai'
-import { AMAZON_BEDROCK_MODELS } from '../../estimateCost/amazonBedrock'
-import { DEEPSEEK_MODELS } from '../../estimateCost/deepseek'
-import { PERPLEXITY_MODELS } from '../../estimateCost/perplexity'
+import {
+  getModelsDevForProvider,
+  type ModelsDevModel,
+} from '../../estimateCost/modelsDev'
 
 export const DEFAULT_PROVIDER_SUPPORTED_MODELS = [
   'gpt-4o-mini',
@@ -20,24 +13,18 @@ export const DEFAULT_PROVIDER_SUPPORTED_MODELS = [
   'gpt-4.1-nano',
 ]
 
-export const PROVIDER_MODELS: Partial<
-  Record<Providers, Record<string, string>>
-> = {
-  [Providers.OpenAI]: OPENAI_MODELS.uiList,
-  [Providers.Anthropic]: ANTHROPIC_MODELS.uiList,
-  [Providers.Groq]: GROQ_MODELS.uiList,
-  [Providers.Mistral]: MISTRAL_MODELS.uiList,
-  [Providers.Google]: GOOGLE_MODELS.uiList,
-  [Providers.GoogleVertex]: VERTEX_GOOGLE_MODELS.uiList,
-  [Providers.AnthropicVertex]: VERTEX_ANTHROPIC_MODELS.uiList,
-  [Providers.XAI]: XAI_MODELS.uiList,
-  [Providers.AmazonBedrock]: AMAZON_BEDROCK_MODELS.uiList,
-  [Providers.DeepSeek]: DEEPSEEK_MODELS.uiList,
-  [Providers.Perplexity]: PERPLEXITY_MODELS.uiList,
-  [Providers.Azure]: OPENAI_MODELS.uiList,
-  [Providers.Custom]: {},
+/**
+ * Converts models.dev model list to the expected format
+ */
+function convertModelsDevToFormat(
+  models: ModelsDevModel[],
+): Record<string, string> {
+  return Object.fromEntries(models.map((m) => [m.id, m.id]))
 }
 
+/**
+ * Gets models for a provider from bundled models.dev data
+ */
 export function listModelsForProvider({
   provider,
   name,
@@ -46,19 +33,42 @@ export function listModelsForProvider({
   provider: Providers
   name?: string
   defaultProviderName?: string
-}) {
-  const models = PROVIDER_MODELS[provider]
-  if (!models) return {}
+}): Record<string, string> {
+  // Map Latitude providers to models.dev provider names
+  const providerNameMap: Record<Providers, string> = {
+    [Providers.OpenAI]: 'openai',
+    [Providers.Anthropic]: 'anthropic',
+    [Providers.Groq]: 'groq',
+    [Providers.Mistral]: 'mistral',
+    [Providers.Google]: 'google',
+    [Providers.GoogleVertex]: 'google-vertex',
+    [Providers.AnthropicVertex]: 'anthropic-vertex',
+    [Providers.XAI]: 'xai',
+    [Providers.AmazonBedrock]: 'bedrock',
+    [Providers.DeepSeek]: 'deepseek',
+    [Providers.Perplexity]: 'perplexity',
+    [Providers.Azure]: 'azure',
+    [Providers.Custom]: 'custom',
+  }
 
+  const providerName = providerNameMap[provider] || provider
+  const modelsDevData = getModelsDevForProvider(providerName)
+
+  let result: Record<string, string> = {}
+  if (modelsDevData && modelsDevData.length > 0) {
+    result = convertModelsDevToFormat(modelsDevData)
+  }
+
+  // Filter to default supported models if this is the default provider
   if (name && name === defaultProviderName) {
     return Object.fromEntries(
-      Object.entries(models).filter(([key]) =>
+      Object.entries(result).filter(([key]) =>
         DEFAULT_PROVIDER_SUPPORTED_MODELS.includes(key),
       ),
     )
   }
 
-  return models
+  return result
 }
 
 export function findFirstModelForProvider({
@@ -67,10 +77,10 @@ export function findFirstModelForProvider({
 }: {
   provider?: ProviderApiKey
   defaultProviderName?: string
-}) {
+}): string | undefined {
   if (!provider) return undefined
   if (provider.provider === Providers.Custom) {
-    return provider.defaultModel || undefined
+    return provider.defaultModel ?? undefined
   }
 
   const models = Object.values(
@@ -82,7 +92,7 @@ export function findFirstModelForProvider({
   )
 
   if (models.find((model) => model === provider.defaultModel)) {
-    return provider.defaultModel || undefined
+    return provider.defaultModel ?? undefined
   }
 
   return models[0]

@@ -3,13 +3,18 @@ import { envClient } from '$/envClient'
 import { Providers } from '@latitude-data/constants'
 import { listModelsForProvider } from '@latitude-data/core/services/ai/providers/models/index'
 
+export interface ModelOption {
+  label: string
+  value: string
+}
+
 export function getModelOptionsForProvider({
   provider,
   name,
 }: {
   provider?: Providers | string
   name?: string
-}) {
+}): ModelOption[] {
   if (!provider) return []
   if (!Object.values<string>(Providers).includes(provider)) return []
 
@@ -31,9 +36,14 @@ export default function useModelOptions({
 }: {
   provider?: Providers | string
   name?: string
-}) {
-  return useMemo(
-    () => getModelOptionsForProvider({ provider, name }),
-    [provider, name],
-  )
+}): ModelOption[] {
+  return useMemo(() => {
+    if (!provider || !Object.values<string>(Providers).includes(provider)) {
+      return []
+    }
+    return getModelOptionsForProvider({
+      provider,
+      name,
+    })
+  }, [provider, name])
 }

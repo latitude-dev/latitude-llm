@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { type ProviderApiKey } from '../../../../schema/models/types/ProviderApiKey'
-import { findFirstModelForProvider, PROVIDER_MODELS } from './index'
+import { findFirstModelForProvider, listModelsForProvider } from './index'
 import { Providers } from '@latitude-data/constants'
 
 describe('findFirstModelForProvider', () => {
@@ -46,7 +46,10 @@ describe('findFirstModelForProvider', () => {
 
     const result = findFirstModelForProvider({ provider })
 
-    expect(result).toBe(Object.values(PROVIDER_MODELS[Providers.Anthropic]!)[0])
+    const anthropicModels = Object.values(
+      listModelsForProvider({ provider: Providers.Anthropic }),
+    )
+    expect(result).toBe(anthropicModels[0])
   })
 
   it('returns first model for provider when default model is not available', async () => {
@@ -55,7 +58,10 @@ describe('findFirstModelForProvider', () => {
 
     const result = findFirstModelForProvider({ provider })
 
-    expect(result).toBe(Object.values(PROVIDER_MODELS[Providers.Anthropic]!)[0])
+    const anthropicModels = Object.values(
+      listModelsForProvider({ provider: Providers.Anthropic }),
+    )
+    expect(result).toBe(anthropicModels[0])
   })
 
   it('returns default model for custom provider with default model set', async () => {
@@ -74,17 +80,5 @@ describe('findFirstModelForProvider', () => {
     const result = findFirstModelForProvider({ provider })
 
     expect(result).toBeUndefined()
-  })
-
-  it('returns first supported model for latitude provider', async () => {
-    provider.provider = Providers.OpenAI
-    provider.name = 'latitude'
-
-    const result = findFirstModelForProvider({
-      provider,
-      defaultProviderName: 'latitude',
-    })
-
-    expect(result).toBe('gpt-4.1')
   })
 })

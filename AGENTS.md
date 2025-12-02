@@ -211,7 +211,7 @@
 - Create pages in `app/(admin)/backoffice/[section]/page.tsx`
 - Use consistent layout with `Text.H1` for titles and `Text.H4` for descriptions
 - Organize components in `_components/` subdirectory
-- Export components from `_components/index.ts`
+- **NEVER use barrel exports** (`index.ts`) - import components directly from their files
 
 ### Component Patterns
 
@@ -220,6 +220,9 @@
 - Use `TextArea` not `Textarea`
 - Button sizes: `size='small'` not `size='sm'`
 - Table components: `Table`, `TableBody`, `TableCell`, `TableHead`, `TableHeader`, `TableRow`
+- **Use `useLatitudeAction` hook** for server action calls instead of raw `fetch()`
+- **Use server actions** instead of API routes for **write operations** (POST, PUT, DELETE)
+- **Use API routes** with `useFetcher` + SWR for **read operations** (GET)
 
 ## Feature Implementation Checklist
 

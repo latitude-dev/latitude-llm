@@ -116,10 +116,20 @@ export function usePlaygroundChat({
   const cost = useMemo(() => {
     const p = providers?.find((p) => p.name === provider)
     const m = model || p?.defaultModel
-    if (!p || !m) return undefined
-    return Math.ceil(
-      estimateCost({ usage, provider: p.provider, model: m }) * 100_000,
-    )
+    if (!p || !m) {
+      return undefined
+    }
+
+    try {
+      const estimatedCost = estimateCost({
+        usage,
+        provider: p.provider,
+        model: m,
+      })
+      return Math.ceil(estimatedCost * 100_000)
+    } catch {
+      return undefined
+    }
   }, [providers, provider, model, usage])
 
   const incrementUsage = useCallback(
