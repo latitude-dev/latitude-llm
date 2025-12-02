@@ -4,12 +4,14 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useIssue } from '$/stores/issues/issue'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   ChartWrapper,
   PanelChart,
 } from '@latitude-data/web-ui/molecules/Charts'
 import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
+import { ROUTES } from '$/services/routes'
+import Link from 'next/link'
+import { EVALUATION_QUALITY_EXPLANATION } from '@latitude-data/constants/issues'
 
 export default function QualityMetricChart<
   T extends EvaluationType = EvaluationType,
@@ -27,23 +29,29 @@ export default function QualityMetricChart<
 
   const qualityMetric = evaluation.qualityMetric
 
+  const qualityMetricLink =
+    ROUTES.projects
+      .detail({ id: project.id })
+      .commits.detail({ uuid: commit.uuid }).issues.root +
+    `?issueId=${issue?.id}`
+
   return (
     <ChartWrapper
-      label='Quality metric'
-      tooltip='When an evaluation is linked to an issue, we use the Matthews Correlation Coefficient (MCC) to calculate how well the evaluation matches the issue'
+      label='Quality'
+      tooltip={EVALUATION_QUALITY_EXPLANATION}
       loading={isLoading}
     >
       {qualityMetric !== undefined && qualityMetric !== null ? (
-        <div className='flex flex-col'>
-          {issue && (
-            <div className='flex items-center gap-1.5 min-w-0'>
-              <Icon name='shieldAlert' size='large' color='foregroundMuted' />
-              <Text.H6 color='foregroundMuted' noWrap ellipsis>
-                {issue.title}
-              </Text.H6>
-            </div>
-          )}
+        <div className='flex flex-row items-center gap-1'>
           <PanelChart data={`${Math.round(qualityMetric)}%`} />
+          <Link href={qualityMetricLink} target='_blank'>
+            <Icon
+              name='externalLink'
+              color='foregroundMuted'
+              size='normal'
+              className='hover:text-primary'
+            />
+          </Link>
         </div>
       ) : !issue ? (
         <ChartBlankSlate>No issue linked to this evaluation</ChartBlankSlate>

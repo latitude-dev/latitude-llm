@@ -158,6 +158,7 @@ import {
   ChevronsRightIcon,
   TriangleAlert,
   WandSparkles,
+  CornerDownRightIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -426,6 +427,7 @@ const Icons = {
   percent: PercentIcon,
   sigma: SigmaIcon,
   wandSparkles: WandSparkles,
+  cornerDownRight: CornerDownRightIcon,
 }
 
 export type IconName = keyof typeof Icons

@@ -8,6 +8,8 @@ import { EvaluationV2 } from '@latitude-data/core/constants'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { EVALUATION_QUALITY_EXPLANATION } from '@latitude-data/constants/issues'
 
 type EvaluationWithIssueProps = {
   evaluationWithIssue: EvaluationV2
@@ -28,7 +30,7 @@ export function EvaluationWithIssue({
   const { commit } = useCurrentCommit()
 
   return (
-    <div className='grid grid-cols-2 gap-x-4 items-center'>
+    <div className='grid grid-cols-2 gap-x-4 gap-y-4 items-center'>
       <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
       <div className='flex flex-row items-center gap-2'>
         <Select
@@ -65,6 +67,20 @@ export function EvaluationWithIssue({
           />
         </Link>
       </div>
+      <div className='flex flex-row items-center gap-1'>
+        <Icon name='cornerDownRight' size='small' color='foregroundMuted' />
+        <Text.H5 color='foregroundMuted'>Quality</Text.H5>
+        <Tooltip
+          align='center'
+          side='bottom'
+          trigger={<Icon name='info' color='foregroundMuted' size='small' />}
+        >
+          {EVALUATION_QUALITY_EXPLANATION}
+        </Tooltip>
+      </div>
+      <Text.H5 color='foreground'>
+        {Math.round(evaluationWithIssue.qualityMetric ?? 0)}%
+      </Text.H5>
     </div>
   )
 }
