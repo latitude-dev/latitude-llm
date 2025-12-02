@@ -24,10 +24,12 @@ export function getModelOptionsForProvider({
       name: name,
       defaultProviderName: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
     }),
-  ).map(([key, value]) => ({
-    label: key,
-    value: value,
-  }))
+  )
+    .map(([key, value]) => ({
+      label: key,
+      value: value,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
 }
 
 export default function useModelOptions({
