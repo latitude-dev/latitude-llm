@@ -18,6 +18,9 @@ const LogSourceLabel: { [key in LogSources]: string } = {
   [LogSources.ScheduledTrigger]: 'Scheduled trigger',
   [LogSources.SharedPrompt]: 'Public prompts',
   [LogSources.User]: 'User',
+  [LogSources.ABTestBaseline]: 'A/B baseline',
+  [LogSources.ABTestChallenger]: 'A/B Challenger',
+  [LogSources.ShadowTest]: 'Shadow test',
 }
 
 function LogSourceCheckbox({

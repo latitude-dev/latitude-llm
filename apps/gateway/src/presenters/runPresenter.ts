@@ -1,19 +1,17 @@
 import { captureException } from '$/common/tracer'
 import {
   AssertedStreamType,
-  ChainStepObjectResponse,
-  ChainStepTextResponse,
+  ChainStepResponse,
   RunSyncAPIResponse,
+  StreamType,
 } from '@latitude-data/constants'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
 
-type DocumentResponse = ChainStepObjectResponse | ChainStepTextResponse
-
 export function v2RunPresenter(
-  response: DocumentResponse,
+  response: ChainStepResponse<StreamType>,
 ): TypedResult<
   Omit<RunSyncAPIResponse<AssertedStreamType>, 'toolRequests'>,
   LatitudeError
@@ -51,7 +49,7 @@ export function runPresenter({
   response,
   provider,
 }: {
-  response: DocumentResponse
+  response: ChainStepResponse<StreamType>
   provider: ProviderApiKey
 }): TypedResult<RunSyncAPIResponse<AssertedStreamType>, LatitudeError> {
   const conversation = response.providerLog?.messages

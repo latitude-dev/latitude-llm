@@ -47,7 +47,9 @@ export function YoutubeVideoModal({
           )}
         >
           <VisuallyHidden>
-            <DialogPrimitive.Title>YouTube video from Latitude</DialogPrimitive.Title>
+            <DialogPrimitive.Title>
+              YouTube video from Latitude
+            </DialogPrimitive.Title>
           </VisuallyHidden>
           <div className='relative'>
             <DialogPrimitive.Close

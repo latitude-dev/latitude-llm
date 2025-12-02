@@ -120,6 +120,7 @@ describe('backgroundRunJob', () => {
     it('should handle startRun failure by writing error to stream', async () => {
       const error = new LatitudeError('Failed to start run')
       vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        // @ts-expect-error - mock
         Result.ok({ workspace, document, commit }),
       )
       vi.mocked(startRunModule.startRun).mockResolvedValue(Result.error(error))
@@ -140,6 +141,7 @@ describe('backgroundRunJob', () => {
     it('should handle runDocumentAtCommit failure by writing error to stream', async () => {
       const error = new LatitudeError('Document execution failed')
       vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        // @ts-expect-error - mock
         Result.ok({ workspace, document, commit }),
       )
       vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
@@ -206,6 +208,7 @@ describe('backgroundRunJob', () => {
   describe('stream processing', () => {
     it('should handle stream processing errors gracefully', async () => {
       vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        // @ts-expect-error - mock
         Result.ok({ workspace, document, commit }),
       )
       vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
@@ -263,6 +266,7 @@ describe('backgroundRunJob', () => {
 
     it('should handle updateRun failure gracefully without throwing', async () => {
       vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        // @ts-expect-error - mock
         Result.ok({ workspace, document, commit }),
       )
       vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
@@ -332,6 +336,7 @@ describe('backgroundRunJob', () => {
 
     it('should handle endRun failure gracefully without throwing', async () => {
       vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        // @ts-expect-error - mock
         Result.ok({ workspace, document, commit }),
       )
       vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
@@ -390,6 +395,7 @@ describe('backgroundRunJob', () => {
 
     it('should handle job cancellation correctly', async () => {
       vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        // @ts-expect-error - mock
         Result.ok({ workspace, document, commit }),
       )
       vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
@@ -473,6 +479,7 @@ describe('backgroundRunJob', () => {
 
     it('should handle timeout in stream processing', async () => {
       vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        // @ts-expect-error - mock
         Result.ok({ workspace, document, commit }),
       )
       vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
