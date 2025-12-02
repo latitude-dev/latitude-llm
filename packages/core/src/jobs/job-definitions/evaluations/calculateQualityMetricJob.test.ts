@@ -251,11 +251,12 @@ describe('calculateQualityMetricJob', () => {
 
   describe('Case 3: Fail last attempt', () => {
     beforeEach(() => {
-      jobData = createMockJob(buildJobData(), 2, 3) // attemptsMade: 2, maxAttempts: 3 (last attempt)
+      jobData = createMockJob(buildJobData(), 3, 3) // attemptsMade: 3, maxAttempts: 3 (last attempt)
       // Mock evaluateConfiguration to return an error Result, which will throw when unwrapped
       mockEvaluateConfiguration.mockResolvedValue(
         Result.error(new Error('Test error')),
       )
+      mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
       mockFailActiveEvaluation.mockResolvedValue(
         Result.ok({
           workflowUuid: WORKFLOW_UUID,
@@ -270,6 +271,12 @@ describe('calculateQualityMetricJob', () => {
       await expect(calculateQualityMetricJob(jobData)).rejects.toThrow(
         'Test error',
       )
+
+      expect(mockDeleteEvaluationV2).toHaveBeenCalledWith({
+        evaluation: evaluation,
+        commit: commit,
+        workspace: workspace,
+      })
 
       expect(mockFailActiveEvaluation).toHaveBeenCalledWith({
         workspaceId: workspace.id,
@@ -356,7 +363,7 @@ describe('calculateQualityMetricJob', () => {
     })
 
     it('should throw error if too many failed evaluation runs', async () => {
-      jobData = createMockJob(buildJobData(), 2, 3) // last attempt to test error handling
+      jobData = createMockJob(buildJobData(), 3, 3) // last attempt to test error handling
       jobData.getDependenciesCount = vi.fn().mockResolvedValue({
         failed: 5,
         ignored: 1,
@@ -373,13 +380,15 @@ describe('calculateQualityMetricJob', () => {
       )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
-      await expect(calculateQualityMetricJob(jobData)).rejects.toThrow(
-        'Too many failed evaluation runs',
-      )
+      await calculateQualityMetricJob(jobData)
+
+      expect(mockDeleteEvaluationV2).toHaveBeenCalled()
+      expect(mockFailActiveEvaluation).not.toHaveBeenCalled()
+      expect(mockEndActiveEvaluation).not.toHaveBeenCalled()
     })
 
     it('should handle error when evaluateConfiguration fails', async () => {
-      jobData = createMockJob(buildJobData(), 2, 3) // last attempt
+      jobData = createMockJob(buildJobData(), 3, 3) // last attempt
       mockEvaluateConfiguration.mockResolvedValue(
         Result.error(new Error('Evaluation configuration error')),
       )
@@ -399,7 +408,7 @@ describe('calculateQualityMetricJob', () => {
     })
 
     it('should handle error when updateEvaluationV2 fails', async () => {
-      jobData = createMockJob(buildJobData(), 2, 3) // last attempt
+      jobData = createMockJob(buildJobData(), 3, 3) // last attempt
       mockEvaluateConfiguration.mockResolvedValue(Result.ok(70))
       mockUpdateEvaluationV2.mockResolvedValue(
         Result.error(new Error('Update failed')),
@@ -453,7 +462,7 @@ describe('calculateQualityMetricJob', () => {
     })
 
     it('should handle error when failActiveEvaluation fails', async () => {
-      jobData = createMockJob(buildJobData(), 2, 3) // last attempt
+      jobData = createMockJob(buildJobData(), 3, 3) // last attempt
       mockEvaluateConfiguration.mockRejectedValue(new Error('Test error'))
       mockFailActiveEvaluation.mockResolvedValue(
         Result.error(new Error('Failed to fail')),
