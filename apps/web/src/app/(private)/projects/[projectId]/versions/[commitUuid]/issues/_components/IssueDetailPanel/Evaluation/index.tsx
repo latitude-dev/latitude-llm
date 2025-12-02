@@ -19,8 +19,7 @@ import { InsufficientAnnotations } from './_components/InsufficientAnnotations'
 import { GeneratingEvaluation } from './_components/GeneratingEvaluation'
 import { EvaluationGenerationError } from './_components/EvaluationGenerationError'
 import { GenerateEvaluationButton } from './_components/GenerateEvaluationButton'
-
-const ENDED_EVALUATION_DESCRIPTION_DELAY = 3000
+import { ActiveEvaluation } from '@latitude-data/constants/evaluations'
 
 export function IssueEvaluation({ issue }: { issue: Issue }) {
   const { project } = useCurrentProject()
@@ -62,7 +61,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
 
   const [endedEvaluation, setEndedEvaluation] = useState<{
     uuid: string | undefined
-    hasError: boolean
+    error: Error | undefined
   } | null>(null)
 
   const { data: activeEvaluations, isLoading: isLoadingActiveEvaluations } =
@@ -71,12 +70,14 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
         project: project,
       },
       {
-        onEvaluationEnded: async (evaluation) => {
+        onEvaluationEnded: async (evaluation: ActiveEvaluation) => {
           if (evaluation.issueId !== issue.id) return
-          const hasError = !!evaluation.error
-          setEndedEvaluation({ uuid: evaluation.evaluationUuid, hasError })
+          setEndedEvaluation({
+            uuid: evaluation.evaluationUuid,
+            error: evaluation.error,
+          })
 
-          if (hasError) {
+          if (evaluation.error) {
             toast({
               title: 'Evaluation generation failed',
               description: 'Please try again',
@@ -85,7 +86,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
             // For errors, just wait the delay then clear and show button
             setTimeout(() => {
               setEndedEvaluation(null)
-            }, ENDED_EVALUATION_DESCRIPTION_DELAY)
+            }, 10000) // 10 seconds
           } else {
             toast({
               title: 'Evaluation generated successfully',
@@ -95,7 +96,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
             mutateEvaluations().then(() => {
               setTimeout(() => {
                 setEndedEvaluation(null)
-              }, ENDED_EVALUATION_DESCRIPTION_DELAY)
+              }, 3000) // 3 seconds
             })
           }
         },
@@ -146,7 +147,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     return (
       activeEvaluationForThisIssue ||
       isLoadingActiveEvaluations ||
-      (endedEvaluation && !endedEvaluation.hasError)
+      (endedEvaluation && !endedEvaluation.error)
     )
   }, [
     activeEvaluationForThisIssue,
@@ -196,8 +197,8 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     )
   }
 
-  if (endedEvaluation?.hasError) {
-    return <EvaluationGenerationError />
+  if (endedEvaluation?.error) {
+    return <EvaluationGenerationError error={endedEvaluation?.error} />
   }
 
   // If we have enough annotations, and the evaluation is not generating/generated yet, show the generate button

@@ -41,6 +41,16 @@ export async function updateActiveEvaluation({
     }
 
     const existingEvaluation = JSON.parse(jsonValue)
+
+    // Serialize error to a plain object for JSON storage
+    const serializedError = error
+      ? {
+          message: error.message,
+          name: error.name,
+          stack: error.stack,
+        }
+      : existingEvaluation.error
+
     const updatedEvaluation: ActiveEvaluation = {
       ...existingEvaluation,
       evaluationUuid: evaluationUuid ?? existingEvaluation.evaluationUuid,
@@ -55,7 +65,7 @@ export async function updateActiveEvaluation({
         (existingEvaluation.endedAt
           ? new Date(existingEvaluation.endedAt)
           : undefined),
-      error: error ?? existingEvaluation.error,
+      error: serializedError,
     }
 
     // This refreshes the TTL of the workspace/project key to 3 hours again
@@ -65,7 +75,19 @@ export async function updateActiveEvaluation({
       .expire(key, ACTIVE_EVALUATIONS_CACHE_TTL_SECONDS)
       .exec()
 
-    return Result.ok(updatedEvaluation)
+    // Reconstruct error object for return value (stored version is serialized)
+    const reconstructedError =
+      serializedError && typeof serializedError === 'object'
+        ? Object.assign(new Error(serializedError.message || 'Unknown error'), {
+            name: serializedError.name || 'Error',
+            stack: serializedError.stack,
+          })
+        : serializedError
+
+    return Result.ok({
+      ...updatedEvaluation,
+      error: reconstructedError,
+    })
   } catch (error) {
     return Result.error(error as Error)
   }

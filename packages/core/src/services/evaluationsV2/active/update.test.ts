@@ -258,4 +258,151 @@ describe('updateActiveEvaluation', () => {
     const updatedEvaluation = updateResult.unwrap()
     expect(updatedEvaluation.evaluationUuid).toBe(newEvaluationUuid)
   })
+
+  it('serializes and stores error as plain object', async () => {
+    const workflowUuid = 'test-uuid-error-1'
+    const evaluationUuid = 'test-uuid-error-123'
+    const issueId = 999
+    const queuedAt = new Date()
+    const error = new Error('Test error message')
+
+    // Create evaluation
+    const key = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
+    testKeys.add(key)
+    await createActiveEvaluation({
+      workspaceId,
+      projectId,
+      workflowUuid,
+      evaluationUuid,
+      issueId,
+      queuedAt,
+      cache: redis,
+    })
+
+    // Update with error
+    const result = await updateActiveEvaluation({
+      workspaceId,
+      projectId,
+      workflowUuid,
+      error,
+      cache: redis,
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const updatedEvaluation = result.unwrap()
+    // Should return Error object with message
+    expect(updatedEvaluation.error).toBeInstanceOf(Error)
+    expect(updatedEvaluation.error?.message).toBe('Test error message')
+    expect(updatedEvaluation.error?.name).toBe('Error')
+
+    // Verify it's stored as serialized object in Redis
+    const storedJson = await redis.hget(key, workflowUuid)
+    expect(storedJson).toBeTruthy()
+    if (storedJson) {
+      const stored = JSON.parse(storedJson)
+      // Error should be stored as plain object, not Error instance
+      expect(stored.error).toBeDefined()
+      expect(stored.error).not.toBeInstanceOf(Error)
+      expect(stored.error.message).toBe('Test error message')
+      expect(stored.error.name).toBe('Error')
+      expect(stored.error.stack).toBeDefined()
+    }
+  })
+
+  it('preserves existing error when updating other fields', async () => {
+    const workflowUuid = 'test-uuid-error-2'
+    const evaluationUuid = 'test-uuid-error-456'
+    const issueId = 888
+    const queuedAt = new Date()
+    const originalError = new Error('Original error')
+
+    // Create evaluation
+    const key = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
+    testKeys.add(key)
+    await createActiveEvaluation({
+      workspaceId,
+      projectId,
+      workflowUuid,
+      evaluationUuid,
+      issueId,
+      queuedAt,
+      cache: redis,
+    })
+
+    // Update with error first
+    await updateActiveEvaluation({
+      workspaceId,
+      projectId,
+      workflowUuid,
+      error: originalError,
+      cache: redis,
+    })
+
+    // Update with startedAt (should preserve error)
+    const startedAt = new Date()
+    const result = await updateActiveEvaluation({
+      workspaceId,
+      projectId,
+      workflowUuid,
+      startedAt,
+      cache: redis,
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const updatedEvaluation = result.unwrap()
+    expect(updatedEvaluation.startedAt).toBeSameTimeIgnoringNanos(startedAt)
+    // Error should be preserved
+    expect(updatedEvaluation.error).toBeInstanceOf(Error)
+    expect(updatedEvaluation.error?.message).toBe('Original error')
+  })
+
+  it('reconstructs error from stored serialized error', async () => {
+    const workflowUuid = 'test-uuid-error-3'
+    const evaluationUuid = 'test-uuid-error-789'
+    const issueId = 777
+    const queuedAt = new Date()
+    const error = new Error(
+      'Max attempts to generate evaluation from issue reached',
+    )
+    error.name = 'CustomError'
+
+    // Create evaluation
+    const key = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
+    testKeys.add(key)
+    await createActiveEvaluation({
+      workspaceId,
+      projectId,
+      workflowUuid,
+      evaluationUuid,
+      issueId,
+      queuedAt,
+      cache: redis,
+    })
+
+    // Update with error
+    const updateResult = await updateActiveEvaluation({
+      workspaceId,
+      projectId,
+      workflowUuid,
+      error,
+      cache: redis,
+    })
+
+    expect(updateResult.ok).toBe(true)
+    if (!updateResult.ok) return
+
+    const updatedEvaluation = updateResult.unwrap()
+    // Verify error is reconstructed properly
+    expect(updatedEvaluation.error).toBeInstanceOf(Error)
+    expect(updatedEvaluation.error?.message).toBe(
+      'Max attempts to generate evaluation from issue reached',
+    )
+    expect(updatedEvaluation.error?.name).toBe('CustomError')
+    // Verify error.message.includes works (this is what the frontend checks)
+    expect(updatedEvaluation.error?.message.includes('Max attempts')).toBe(true)
+  })
 })

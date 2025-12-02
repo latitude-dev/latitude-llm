@@ -6,7 +6,7 @@ import { ActiveEvaluation } from '@latitude-data/constants/evaluations'
 
 type GeneratingEvaluationProps = {
   activeEvaluation: ActiveEvaluation | undefined
-  endedEvaluation: { uuid: string | undefined; hasError: boolean } | null
+  endedEvaluation: { uuid: string | undefined; error: Error | undefined } | null
 }
 
 const GENERATION_DESCRIPTIONS = [

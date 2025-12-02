@@ -202,7 +202,10 @@ describe('generateEvaluationV2FromIssueJob', () => {
 
   describe('Case 2: Job succeeds on subsequent attempt (generationAttempt > 1)', () => {
     beforeEach(() => {
-      jobData = createMockJob(buildJobData({ generationAttempt: 2 }))
+      jobData = createMockJob(
+        buildJobData({ generationAttempt: 2 }),
+        MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE - 1, // Not last attempt
+      )
     })
 
     it('should NOT call startActiveEvaluation but should call generateEvaluationFromIssue', async () => {
@@ -226,20 +229,14 @@ describe('generateEvaluationV2FromIssueJob', () => {
   describe('Case 3: Fail before last attempt', () => {
     beforeEach(() => {
       jobData = createMockJob(
-        buildJobData({ generationAttempt: 1 }),
-        0, // attemptsMade: 0, maxAttempts: 3, so not last attempt
+        buildJobData({
+          generationAttempt: MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE - 1,
+        }),
+        MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE - 1, // Not last attempt
       )
       mockGenerateEvaluationFromIssue.mockResolvedValue(
         Result.error(new Error('Test error')),
       )
-      mockFailActiveEvaluation.mockResolvedValue(
-        Result.ok({
-          workflowUuid: WORKFLOW_UUID,
-          issueId: issue.id,
-          queuedAt: new Date(),
-        } as ActiveEvaluation),
-      )
-      mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
     })
 
     it('should throw error but not fail or end active evaluation', async () => {
@@ -255,8 +252,10 @@ describe('generateEvaluationV2FromIssueJob', () => {
   describe('Case 4: Fail on last attempt', () => {
     beforeEach(() => {
       jobData = createMockJob(
-        buildJobData({ generationAttempt: 1 }),
-        MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE - 1, // Last attempt
+        buildJobData({
+          generationAttempt: MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE,
+        }),
+        MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE, // Last attempt
       )
       mockGenerateEvaluationFromIssue.mockResolvedValue(
         Result.error(new Error('Last attempt failed')),

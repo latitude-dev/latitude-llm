@@ -31,6 +31,19 @@ export async function getActiveEvaluation({
       )
     }
     const activeEvaluation = JSON.parse(jsonValue) as ActiveEvaluation
+    
+    // Reconstruct error object from serialized error
+    const error =
+      activeEvaluation.error && typeof activeEvaluation.error === 'object'
+        ? Object.assign(
+            new Error(activeEvaluation.error.message || 'Unknown error'),
+            {
+              name: activeEvaluation.error.name || 'Error',
+              stack: activeEvaluation.error.stack,
+            },
+          )
+        : activeEvaluation.error
+
     return Result.ok({
       ...activeEvaluation,
       queuedAt: new Date(activeEvaluation.queuedAt),
@@ -40,6 +53,7 @@ export async function getActiveEvaluation({
       endedAt: activeEvaluation.endedAt
         ? new Date(activeEvaluation.endedAt)
         : undefined,
+      error,
     })
   } catch (error) {
     return Result.error(error as Error)

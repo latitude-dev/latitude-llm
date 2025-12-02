@@ -34,7 +34,6 @@ export type GenerateEvaluationV2FromIssueJobData = {
 export const generateEvaluationV2FromIssueJob = async (
   job: Job<GenerateEvaluationV2FromIssueJobData>,
 ) => {
-  let isLastJobRetryAttempt: boolean = false
   const {
     workspaceId,
     commitId,
@@ -53,13 +52,17 @@ export const generateEvaluationV2FromIssueJob = async (
     .getCommitById(commitId)
     .then((r) => r.unwrap())
 
-  try {
-    const issuesRepository = new IssuesRepository(workspace.id)
-    const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
+  const isOverMaxAttempts =
+    generationAttempt > MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE
 
-    if (generationAttempt > MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE) {
+  try {
+    if (isOverMaxAttempts) {
+      // Dont change the error message, it's used to change the failure message in the UI
       throw new Error(`Max attempts to generate evaluation from issue reached`)
     }
+
+    const issuesRepository = new IssuesRepository(workspace.id)
+    const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
 
     if (generationAttempt == 1) {
       await startActiveEvaluation({
@@ -80,11 +83,10 @@ export const generateEvaluationV2FromIssueJob = async (
     }).then((r) => r.unwrap())
   } catch (error) {
     const { attemptsMade: jobRetryAttempts } = job
-    isLastJobRetryAttempt =
-      jobRetryAttempts + 1 >= MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE
+    const isLastJobRetryAttempt =
+      jobRetryAttempts == MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE
 
-    // Only failing in last attempt of the job, else the retry system is useless
-    if (isLastJobRetryAttempt) {
+    if (isLastJobRetryAttempt || isOverMaxAttempts) {
       captureException(error as Error)
       const failResult = await failActiveEvaluation({
         workspaceId,
@@ -99,10 +101,7 @@ export const generateEvaluationV2FromIssueJob = async (
           ),
         )
       }
-    }
-    throw error
-  } finally {
-    if (isLastJobRetryAttempt) {
+
       const endResult = await endActiveEvaluation({
         workspaceId,
         projectId: commit.projectId,
@@ -116,5 +115,6 @@ export const generateEvaluationV2FromIssueJob = async (
         )
       }
     }
+    throw error
   }
 }
