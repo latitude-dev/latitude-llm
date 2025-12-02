@@ -49,7 +49,7 @@ describe('findFirstModelForProvider', () => {
     const anthropicModels = Object.values(
       listModelsForProvider({ provider: Providers.Anthropic }),
     )
-    expect(result).toBe(anthropicModels[0])
+    expect(result).toBe(anthropicModels[0]?.id)
   })
 
   it('returns first model for provider when default model is not available', async () => {
@@ -61,7 +61,7 @@ describe('findFirstModelForProvider', () => {
     const anthropicModels = Object.values(
       listModelsForProvider({ provider: Providers.Anthropic }),
     )
-    expect(result).toBe(anthropicModels[0])
+    expect(result).toBe(anthropicModels[0]?.id)
   })
 
   it('returns default model for custom provider with default model set', async () => {

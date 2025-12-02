@@ -84,7 +84,7 @@ export function providerPresenter(provider: ProviderApiKey) {
         name: provider.name,
         defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
       }),
-    ),
+    ).map((m) => m.id),
     defaultModel: provider.defaultModel,
   }
 }

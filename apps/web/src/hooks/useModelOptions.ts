@@ -1,11 +1,21 @@
 import { useMemo } from 'react'
 import { envClient } from '$/envClient'
 import { Providers } from '@latitude-data/constants'
-import { listModelsForProvider } from '@latitude-data/core/services/ai/providers/models/index'
+import {
+  listModelsForProvider,
+  type ModelsDevModel,
+} from '@latitude-data/core/services/ai/providers/models/index'
 
-export interface ModelOption {
+export type {
+  ModelsDevModel,
+  ModelModality,
+  ModelModalities,
+} from '@latitude-data/core/services/ai/providers/models/index'
+
+export type ModelOption = Partial<ModelsDevModel> & {
   label: string
   value: string
+  custom?: boolean
 }
 
 export function getModelOptionsForProvider({
@@ -18,18 +28,25 @@ export function getModelOptionsForProvider({
   if (!provider) return []
   if (!Object.values<string>(Providers).includes(provider)) return []
 
-  return Object.entries(
-    listModelsForProvider({
-      provider: provider as Providers,
-      name: name,
-      defaultProviderName: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
-    }),
-  )
-    .map(([key, value]) => ({
-      label: key,
-      value: value,
+  const models = listModelsForProvider({
+    provider: provider as Providers,
+    name: name,
+    defaultProviderName: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
+  })
+
+  return models
+    .map((model) => ({
+      ...model,
+      label: model.id,
+      value: model.id,
     }))
-    .sort((a, b) => a.label.localeCompare(b.label))
+    .sort((a, b) => {
+      // Sort by release date (newest first), then by label
+      if (a.releaseDate && b.releaseDate) return b.releaseDate.localeCompare(a.releaseDate) // prettier-ignore
+      if (a.releaseDate && !b.releaseDate) return -1
+      if (!a.releaseDate && b.releaseDate) return 1
+      return a.label.localeCompare(b.label)
+    })
 }
 
 export default function useModelOptions({

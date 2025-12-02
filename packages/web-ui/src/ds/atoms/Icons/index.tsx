@@ -158,6 +158,9 @@ import {
   ChevronsRightIcon,
   TriangleAlert,
   WandSparkles,
+  Type,
+  Video,
+  Volume2,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -237,6 +240,7 @@ const Icons = {
   atSign: AtSign,
   attio: Attio,
   audiense: Audiense,
+  audio: Volume2,
   awsBedrock: AwsBedrock,
   barChart4: BarChart4,
   blocks: Blocks,
@@ -376,6 +380,7 @@ const Icons = {
   sendToBack: SendToBack,
   telegram: Telegram,
   terminal: Terminal,
+  text: Type,
   thermometer: Thermometer,
   thumbsDown: ThumbsDown,
   thumbsUp: ThumbsUp,
@@ -386,6 +391,7 @@ const Icons = {
   undo: Undo,
   unplug: Unplug,
   userRound: UserRound,
+  video: Video,
   wholeWord: WholeWord,
   wordpress: Wordpress,
   youtube: Youtube,

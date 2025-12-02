@@ -5,6 +5,13 @@ import {
   type ModelsDevModel,
 } from '../../estimateCost/modelsDev'
 
+// Re-export types for convenience
+export type {
+  ModelsDevModel,
+  ModelModality,
+  ModelModalities,
+} from '../../estimateCost/modelsDev'
+
 export const DEFAULT_PROVIDER_SUPPORTED_MODELS = [
   'gpt-4o-mini',
   'gpt-4o',
@@ -14,17 +21,24 @@ export const DEFAULT_PROVIDER_SUPPORTED_MODELS = [
 ]
 
 /**
- * Converts models.dev model list to the expected format
+ * Map Latitude providers to models.dev provider names
  */
-function convertModelsDevToFormat(
-  models: ModelsDevModel[],
-): Record<string, string> {
-  return Object.fromEntries(models.map((m) => [m.id, m.id]))
+const PROVIDER_NAME_MAP: Record<Providers, string> = {
+  [Providers.OpenAI]: 'openai',
+  [Providers.Anthropic]: 'anthropic',
+  [Providers.Groq]: 'groq',
+  [Providers.Mistral]: 'mistral',
+  [Providers.Google]: 'google',
+  [Providers.GoogleVertex]: 'google-vertex',
+  [Providers.AnthropicVertex]: 'anthropic-vertex',
+  [Providers.XAI]: 'xai',
+  [Providers.AmazonBedrock]: 'bedrock',
+  [Providers.DeepSeek]: 'deepseek',
+  [Providers.Perplexity]: 'perplexity',
+  [Providers.Azure]: 'azure',
+  [Providers.Custom]: 'custom',
 }
 
-/**
- * Gets models for a provider from bundled models.dev data
- */
 export function listModelsForProvider({
   provider,
   name,
@@ -33,42 +47,18 @@ export function listModelsForProvider({
   provider: Providers
   name?: string
   defaultProviderName?: string
-}): Record<string, string> {
-  // Map Latitude providers to models.dev provider names
-  const providerNameMap: Record<Providers, string> = {
-    [Providers.OpenAI]: 'openai',
-    [Providers.Anthropic]: 'anthropic',
-    [Providers.Groq]: 'groq',
-    [Providers.Mistral]: 'mistral',
-    [Providers.Google]: 'google',
-    [Providers.GoogleVertex]: 'google-vertex',
-    [Providers.AnthropicVertex]: 'anthropic-vertex',
-    [Providers.XAI]: 'xai',
-    [Providers.AmazonBedrock]: 'bedrock',
-    [Providers.DeepSeek]: 'deepseek',
-    [Providers.Perplexity]: 'perplexity',
-    [Providers.Azure]: 'azure',
-    [Providers.Custom]: 'custom',
-  }
-
-  const providerName = providerNameMap[provider] || provider
-  const modelsDevData = getModelsDevForProvider(providerName)
-
-  let result: Record<string, string> = {}
-  if (modelsDevData && modelsDevData.length > 0) {
-    result = convertModelsDevToFormat(modelsDevData)
-  }
+}): ModelsDevModel[] {
+  const providerName = PROVIDER_NAME_MAP[provider] || provider
+  let models = getModelsDevForProvider(providerName)
 
   // Filter to default supported models if this is the default provider
   if (name && name === defaultProviderName) {
-    return Object.fromEntries(
-      Object.entries(result).filter(([key]) =>
-        DEFAULT_PROVIDER_SUPPORTED_MODELS.includes(key),
-      ),
+    models = models.filter((m) =>
+      DEFAULT_PROVIDER_SUPPORTED_MODELS.includes(m.id),
     )
   }
 
-  return result
+  return models
 }
 
 export function findFirstModelForProvider({
@@ -91,9 +81,9 @@ export function findFirstModelForProvider({
     }),
   )
 
-  if (models.find((model) => model === provider.defaultModel)) {
+  if (models.find((model) => model.id === provider.defaultModel)) {
     return provider.defaultModel ?? undefined
   }
 
-  return models[0]
+  return models[0]?.id
 }
