@@ -95,6 +95,9 @@ export type Events =
   | 'weeklyEmailPreferenceUpdated'
   | 'escalatingIssuesEmailPreferenceUpdated'
   | 'workspaceIssuesDashboardUnlocked'
+  | 'deploymentTestStarted'
+  | 'deploymentTestCompleted'
+  | 'deploymentTestRunCreated'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -849,6 +852,33 @@ export type WorkspaceIssuesDashboardUnlockedEvent = LatitudeEventGeneric<
   }
 >
 
+export type DeploymentTestStartedEvent = LatitudeEventGeneric<
+  'deploymentTestStarted',
+  {
+    workspaceId: number
+    testId: number
+    testType: 'shadow' | 'ab'
+  }
+>
+
+export type DeploymentTestCompletedEvent = LatitudeEventGeneric<
+  'deploymentTestCompleted',
+  {
+    workspaceId: number
+    testId: number
+    testType: 'shadow' | 'ab'
+  }
+>
+
+export type DeploymentTestRunCreatedEvent = LatitudeEventGeneric<
+  'deploymentTestRunCreated',
+  {
+    workspaceId: number
+    testId: number
+    runId: number
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -932,6 +962,9 @@ export type LatitudeEvent =
   | WeeklyEmailPreferenceUpdatedEvent
   | EscalatingIssuesEmailPreferenceUpdatedEvent
   | WorkspaceIssuesDashboardUnlockedEvent
+  | DeploymentTestStartedEvent
+  | DeploymentTestCompletedEvent
+  | DeploymentTestRunCreatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -1016,4 +1049,7 @@ export interface IEventsHandlers {
   weeklyEmailPreferenceUpdated: EventHandler<WeeklyEmailPreferenceUpdatedEvent>[]
   escalatingIssuesEmailPreferenceUpdated: EventHandler<EscalatingIssuesEmailPreferenceUpdatedEvent>[]
   workspaceIssuesDashboardUnlocked: EventHandler<WorkspaceIssuesDashboardUnlockedEvent>[]
+  deploymentTestStarted: EventHandler<DeploymentTestStartedEvent>[]
+  deploymentTestCompleted: EventHandler<DeploymentTestCompletedEvent>[]
+  deploymentTestRunCreated: EventHandler<DeploymentTestRunCreatedEvent>[]
 }
