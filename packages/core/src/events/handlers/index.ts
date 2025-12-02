@@ -122,4 +122,7 @@ export const EventHandlers: IEventsHandlers = {
   weeklyEmailPreferenceUpdated: [],
   escalatingIssuesEmailPreferenceUpdated: [],
   workspaceIssuesDashboardUnlocked: [],
+  deploymentTestStarted: [],
+  deploymentTestCompleted: [],
+  deploymentTestRunCreated: [],
 }
