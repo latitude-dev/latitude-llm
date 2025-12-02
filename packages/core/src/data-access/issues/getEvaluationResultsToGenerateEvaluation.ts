@@ -85,6 +85,9 @@ const getEvaluationResultsFromIssues = async ({
 }) => {
   // We need to get also the positive or other negative annotations of other issues of the same document
   // As the minimum number of positive/other issue annotations is 5, we need to get at least 5 other issues to calculate the MCC of the generated evaluation (6 just in case one of the 5 is the same as the issue we're checking)
+  const pageSize =
+    MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES + 1
+
   const issuesRepo = new IssuesRepository(workspace.id)
   const issuesFromSameDocument = await issuesRepo
     .fetchIssuesFiltered({
@@ -98,8 +101,7 @@ const getEvaluationResultsFromIssues = async ({
         sortDirection: 'desc',
       },
       page: 1,
-      limit:
-        MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES + 1,
+      limit: pageSize,
     })
     .then((r) => r.unwrap())
 
@@ -113,10 +115,11 @@ const getEvaluationResultsFromIssues = async ({
       commitHistoryIds,
     )
 
-  const passedEvaluationResults =
+  const { results: passedEvaluationResults } =
     await resultsRepository.listPassedByDocumentUuid(
       documentUuid,
       commitHistoryIds,
+      { page: 1, pageSize },
     )
 
   return {

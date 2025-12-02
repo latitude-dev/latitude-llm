@@ -788,7 +788,13 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   async listPassedByDocumentUuid(
     documentUuid: string,
     commitHistoryIds: number[],
+    options?: { page?: number; pageSize?: number },
   ) {
+    const page = options?.page ?? 1
+    const pageSize = options?.pageSize ?? 100
+    const limit = pageSize + 1 // Fetch one extra to determine hasNextPage
+    const offset = calculateOffset(page, pageSize)
+
     const results = await this.db
       .select(tt)
       .from(evaluationResultsV2)
@@ -813,7 +819,16 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         desc(evaluationResultsV2.createdAt),
         desc(evaluationResultsV2.id),
       )
-    return results as EvaluationResultV2[]
+      .limit(limit)
+      .offset(offset)
+
+    const hasNextPage = results.length > pageSize
+    const paginatedResults = hasNextPage ? results.slice(0, pageSize) : results
+
+    return {
+      results: paginatedResults as EvaluationResultV2[],
+      hasNextPage,
+    }
   }
 
   private async getEvaluationsByCommit({

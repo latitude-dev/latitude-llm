@@ -7,7 +7,7 @@ import * as factories from '../tests/factories'
 import { EvaluationResultsV2Repository } from './evaluationResultsV2Repository'
 import { database } from '../client'
 import { commits } from '../schema/models/commits'
-import { DocumentVersionsRepository } from '../repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '../repositories'
 
 describe('EvaluationResultsV2Repository', () => {
   let workspace: Workspace
@@ -99,8 +99,12 @@ describe('EvaluationResultsV2Repository', () => {
       })
 
       // Fetch passed results for document1
-      const results = await repository.listPassedByDocumentUuid(
+      const commitsRepo = new CommitsRepository(workspace.id)
+      const commitHistory = await commitsRepo.getCommitsHistory({ commit })
+      const commitHistoryIds = commitHistory.map((c) => c.id)
+      const { results } = await repository.listPassedByDocumentUuid(
         document1.documentUuid,
+        commitHistoryIds,
       )
 
       // Verify only the passed result from document1 is returned
@@ -154,8 +158,9 @@ describe('EvaluationResultsV2Repository', () => {
         .where(eq(commits.id, commit.id))
 
       // Fetch passed results
-      const results = await repository.listPassedByDocumentUuid(
+      const { results } = await repository.listPassedByDocumentUuid(
         document.documentUuid,
+        [commit.id],
       )
 
       // Verify no results are returned
@@ -199,8 +204,9 @@ describe('EvaluationResultsV2Repository', () => {
       })
 
       // Fetch passed results
-      const results = await repository.listPassedByDocumentUuid(
+      const { results } = await repository.listPassedByDocumentUuid(
         document.documentUuid,
+        [commit.id],
       )
 
       // Verify no results are returned
@@ -282,8 +288,9 @@ describe('EvaluationResultsV2Repository', () => {
       })
 
       // Fetch passed results for document1 in workspace1
-      const results = await repository.listPassedByDocumentUuid(
+      const { results } = await repository.listPassedByDocumentUuid(
         document1.documentUuid,
+        [commit1.id],
       )
 
       // Verify only results from workspace1 are returned
@@ -371,14 +378,100 @@ describe('EvaluationResultsV2Repository', () => {
       })
 
       // Fetch passed results for the document
-      const results = await repository.listPassedByDocumentUuid(
+      const commitHistory = await new CommitsRepository(
+        workspace.id,
+      ).getCommitsHistory({ commit: draftCommit })
+      const commitHistoryIds = commitHistory.map((c) => c.id)
+      const { results } = await repository.listPassedByDocumentUuid(
         document.documentUuid,
+        commitHistoryIds,
       )
 
       // Verify results from both commits are returned
       expect(results.length).toBe(2)
       expect(results.find((r) => r.id === mergedResult.id)).toBeDefined()
       expect(results.find((r) => r.id === activeResult.id)).toBeDefined()
+    })
+
+    it('supports pagination', async () => {
+      // Create project with documents
+      const { commit, documents } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          prompt: factories.helpers.createPrompt({ provider: 'openai' }),
+        },
+      })
+
+      const document = documents[0]!
+
+      // Create evaluation for the document
+      const evaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+      })
+
+      // Create multiple spans and passed results
+      const results = []
+      for (let i = 0; i < 5; i++) {
+        const span = await factories.createSpan({
+          workspaceId: workspace.id,
+          commitUuid: commit.uuid,
+          documentUuid: document.documentUuid,
+        })
+
+        const result = await factories.createEvaluationResultV2({
+          workspace,
+          evaluation,
+          commit,
+          span,
+          hasPassed: true,
+        })
+        results.push(result)
+      }
+
+      const commitsRepo = new CommitsRepository(workspace.id)
+      const commitHistory = await commitsRepo.getCommitsHistory({ commit })
+      const commitHistoryIds = commitHistory.map((c) => c.id)
+
+      // Test first page
+      const page1 = await repository.listPassedByDocumentUuid(
+        document.documentUuid,
+        commitHistoryIds,
+        { page: 1, pageSize: 2 },
+      )
+
+      expect(page1.results.length).toBe(2)
+      expect(page1.hasNextPage).toBe(true)
+
+      // Test second page
+      const page2 = await repository.listPassedByDocumentUuid(
+        document.documentUuid,
+        commitHistoryIds,
+        { page: 2, pageSize: 2 },
+      )
+
+      expect(page2.results.length).toBe(2)
+      expect(page2.hasNextPage).toBe(true)
+
+      // Test third page
+      const page3 = await repository.listPassedByDocumentUuid(
+        document.documentUuid,
+        commitHistoryIds,
+        { page: 3, pageSize: 2 },
+      )
+
+      expect(page3.results.length).toBe(1)
+      expect(page3.hasNextPage).toBe(false)
+
+      // Verify all results are unique across pages
+      const allResultIds = [
+        ...page1.results.map((r) => r.id),
+        ...page2.results.map((r) => r.id),
+        ...page3.results.map((r) => r.id),
+      ]
+      expect(new Set(allResultIds).size).toBe(5)
     })
   })
 })

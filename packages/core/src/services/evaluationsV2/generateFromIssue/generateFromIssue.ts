@@ -18,6 +18,7 @@ import z from 'zod'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { getSpanMessagesAndEvaluationResultsByIssue } from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { database } from '../../../client'
+import { getSpanMessagesByIssueDocument } from '../../../data-access/issues/getSpanMessagesAndEvaluationResultsByDocument'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration
@@ -33,9 +34,6 @@ const llmEvaluationBinarySpecificationWithoutModel =
 
 /*
   This function generates the configuration for an evaluation from an issue using the copilot.
-
-  We give the copilot the issue name, description, prompt, existing evaluation names, and messages with reason why it failed
-    to create a unique evaluation configuration with context from the issue and its annotations.
 */
 export async function generateEvaluationConfigFromIssueWithCopilot(
   {
@@ -90,6 +88,7 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
 
   const copilot = copilotResult.unwrap()
 
+  // Get the existing evaluation names for the same commit and document to avoid generating evals with the same name (unique key)
   const existingEvaluationNamesResult = await getExistingEvaluationNames({
     workspace: workspace,
     commit: commit,
@@ -102,19 +101,33 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
 
   const existingEvaluationNames = existingEvaluationNamesResult.unwrap()
 
-  //TODO (evaluation-generation): We can find some passed results to give to the copilot to make it more accurate, but we would have to potentially summarize the messages to avoid many tokens
-  const messagesAndEvaluationResultsResult =
+  // Getting negative examples (failed evaluations with the issue attached) to feed the copilot
+  const messagesAndReasonWhyFailedForIssueResult =
     await getSpanMessagesAndEvaluationResultsByIssue({
       workspace: workspace,
       commit: commit,
       issue: issue,
     })
 
-  if (!Result.isOk(messagesAndEvaluationResultsResult)) {
-    return messagesAndEvaluationResultsResult
+  if (!Result.isOk(messagesAndReasonWhyFailedForIssueResult)) {
+    return messagesAndReasonWhyFailedForIssueResult
   }
-  const messagesAndEvaluationResults =
-    messagesAndEvaluationResultsResult.unwrap()
+  const messagesAndReasonWhyFailedForIssue =
+    messagesAndReasonWhyFailedForIssueResult.unwrap()
+
+  // Getting positive examples (passed evaluations without the issue attached) to feed the copilot
+  const goodExampleMessagesFromIssueDocumentResult =
+    await getSpanMessagesByIssueDocument({
+      workspace: workspace,
+      commit: commit,
+      issue: issue,
+    })
+
+  if (!Result.isOk(goodExampleMessagesFromIssueDocumentResult)) {
+    return goodExampleMessagesFromIssueDocumentResult
+  }
+  const goodExampleMessagesFromIssueDocument =
+    goodExampleMessagesFromIssueDocumentResult.unwrap()
 
   const evaluationConfigResult = await runCopilot({
     copilot: copilot,
@@ -123,7 +136,8 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
       issueDescription: issue.description,
       prompt: document.content,
       existingEvaluationNames: existingEvaluationNames,
-      messagesWithReasonWhyItFailed: messagesAndEvaluationResults,
+      examplesWithIssueAndReasonWhy: messagesAndReasonWhyFailedForIssue,
+      goodExamplesWithoutIssue: goodExampleMessagesFromIssueDocument,
     },
     schema: llmEvaluationBinarySpecificationWithoutModel,
   })
