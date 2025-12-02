@@ -187,7 +187,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 3,
-      positiveAndNegativeAnnotationsOfOtherIssues: 10,
+      positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
     })
   })
 
@@ -301,7 +301,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 5, // Only negative ones
-      positiveAndNegativeAnnotationsOfOtherIssues: 13, // 10 annotations for other issues + 3 positive annotations for the main issue
+      positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
     })
   })
 
@@ -364,7 +364,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 10,
-      positiveAndNegativeAnnotationsOfOtherIssues: 8,
+      positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
     })
   })
 
@@ -605,7 +605,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
       expect(result).toEqual({
         negativeAnnotationsOfThisIssue: 15, // 5 from commit1 + 5 from commit2 + 5 from draft
-        positiveAndNegativeAnnotationsOfOtherIssues: 10, // 5 from commit1 + 5 from draft
+        positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
       })
     })
   })

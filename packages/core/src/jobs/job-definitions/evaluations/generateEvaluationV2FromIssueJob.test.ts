@@ -342,8 +342,17 @@ describe('generateEvaluationV2FromIssueJob', () => {
 
       expect(mockGenerateEvaluationFromIssue).not.toHaveBeenCalled()
       expect(mockStartActiveEvaluation).not.toHaveBeenCalled()
-      expect(mockFailActiveEvaluation).not.toHaveBeenCalled()
-      expect(mockEndActiveEvaluation).not.toHaveBeenCalled()
+      expect(mockFailActiveEvaluation).toHaveBeenCalledTimes(1)
+      const failCall = mockFailActiveEvaluation.mock.calls[0]![0]
+      expect(failCall.workspaceId).toBe(jobData.data.workspaceId)
+      expect(failCall.workflowUuid).toBe(jobData.data.workflowUuid)
+      expect(failCall.error.message).toBe(
+        'Max attempts to generate evaluation from issue reached',
+      )
+      expect(mockEndActiveEvaluation).toHaveBeenCalledTimes(1)
+      const endCall = mockEndActiveEvaluation.mock.calls[0]![0]
+      expect(endCall.workspaceId).toBe(jobData.data.workspaceId)
+      expect(endCall.workflowUuid).toBe(jobData.data.workflowUuid)
     })
   })
 

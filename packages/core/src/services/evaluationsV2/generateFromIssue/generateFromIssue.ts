@@ -18,7 +18,7 @@ import z from 'zod'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { getSpanMessagesAndEvaluationResultsByIssue } from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { database } from '../../../client'
-import { getSpanMessagesByIssueDocument } from '../../../data-access/issues/getSpanMessagesAndEvaluationResultsByDocument'
+import { getSpanMessagesByIssueDocument } from '../../../data-access/issues/getSpanMessagesByIssueDocument'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration

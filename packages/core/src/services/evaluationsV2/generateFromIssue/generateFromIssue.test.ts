@@ -22,6 +22,7 @@ import type { DocumentVersion } from '@latitude-data/core/schema/models/types/Do
 import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import * as getSpanMessagesAndEvaluationResultsByIssue from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import * as getSpanMessagesByIssueDocument from '../../../data-access/issues/getSpanMessagesByIssueDocument'
 
 vi.mock('../../copilot', () => ({
   getCopilot: vi.fn(),
@@ -35,6 +36,13 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  '@latitude-data/core/data-access/issues/getSpanMessagesByIssueDocument',
+  () => ({
+    getSpanMessagesByIssueDocument: vi.fn(),
+  }),
+)
+
 const MODEL = 'gpt-4o'
 
 describe('generateFromIssue', () => {
@@ -43,6 +51,10 @@ describe('generateFromIssue', () => {
 
   const mockGetSpanMessagesAndEvaluationResultsByIssue = vi.mocked(
     getSpanMessagesAndEvaluationResultsByIssue.getSpanMessagesAndEvaluationResultsByIssue,
+  )
+
+  const mockGetSpanMessagesByIssueDocument = vi.mocked(
+    getSpanMessagesByIssueDocument.getSpanMessagesByIssueDocument,
   )
 
   let workspace: Workspace
@@ -120,6 +132,8 @@ describe('generateFromIssue', () => {
       Result.ok([{ messages, reason: 'Test reason' }]),
     )
 
+    mockGetSpanMessagesByIssueDocument.mockResolvedValue(Result.ok(messages))
+
     // Setup default mocks for repositories
     vi.spyOn(
       DocumentVersionsRepository.prototype,
@@ -156,7 +170,8 @@ describe('generateFromIssue', () => {
         issueDescription: issue.description,
         prompt: document.content,
         existingEvaluationNames: [],
-        messagesWithReasonWhyItFailed: [{ messages, reason: 'Test reason' }],
+        examplesWithIssueAndReasonWhy: [{ messages, reason: 'Test reason' }],
+        goodExamplesWithoutIssue: messages,
       },
       schema: __test__.llmEvaluationBinarySpecificationWithoutModel,
     })
@@ -296,7 +311,8 @@ describe('generateFromIssue', () => {
         issueDescription: issue.description,
         existingEvaluationNames: [],
         prompt: document.content,
-        messagesWithReasonWhyItFailed: [{ messages, reason: 'Test reason' }],
+        examplesWithIssueAndReasonWhy: [{ messages, reason: 'Test reason' }],
+        goodExamplesWithoutIssue: messages,
       },
       schema: expect.anything(),
     })

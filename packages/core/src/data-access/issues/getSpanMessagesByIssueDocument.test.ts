@@ -8,7 +8,7 @@ import {
   createProject,
   createSpan,
 } from '../../tests/factories'
-import { getSpanMessagesByIssueDocument } from './getSpanMessagesAndEvaluationResultsByDocument'
+import { getSpanMessagesByIssueDocument } from './getSpanMessagesByIssueDocument'
 import type { Workspace } from '../../schema/models/types/Workspace'
 import type { Commit } from '../../schema/models/types/Commit'
 import type { Project } from '../../schema/models/types/Project'
