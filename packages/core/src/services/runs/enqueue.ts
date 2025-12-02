@@ -14,38 +14,43 @@ import { type Workspace } from '../../schema/models/types/Workspace'
 import { Experiment } from '../../schema/models/types/Experiment'
 import { SimulationSettings } from '../../../../constants/src/simulation'
 import { cache as redis, Cache } from '../../cache'
+import { DeploymentTest } from '../../schema/models/types/DeploymentTest'
 
-export async function enqueueRun({
-  runUuid,
-  workspace,
-  project,
-  commit,
-  experiment,
-  datasetRowId,
-  document,
-  parameters,
-  customIdentifier,
-  tools = [],
-  userMessage,
-  source = LogSources.API,
-  simulationSettings,
-  cache,
-}: {
-  runUuid?: string
-  workspace: Workspace
-  project: Project
+export type EnqueueRunProps = {
+  activeDeploymentTest?: DeploymentTest
+  cache?: Cache
   commit: Commit
-  experiment?: Experiment
+  customIdentifier?: string
   datasetRowId?: number
   document: DocumentVersion
+  experiment?: Experiment
   parameters?: Record<string, unknown>
-  customIdentifier?: string
+  project: Project
+  runUuid?: string
+  simulationSettings?: SimulationSettings
+  source?: LogSources
   tools?: string[]
   userMessage?: string
-  source?: LogSources
-  simulationSettings?: SimulationSettings
-  cache?: Cache
-}) {
+  workspace: Workspace
+}
+
+export async function enqueueRun({
+  activeDeploymentTest,
+  cache,
+  commit,
+  customIdentifier,
+  datasetRowId,
+  document,
+  experiment,
+  parameters,
+  project,
+  runUuid,
+  simulationSettings,
+  userMessage,
+  workspace,
+  source = LogSources.API,
+  tools = [],
+}: EnqueueRunProps) {
   runUuid = runUuid ?? generateUUIDIdentifier()
   const redisCache = cache ?? (await redis())
   const queuedAt = new Date()
@@ -83,6 +88,7 @@ export async function enqueueRun({
       userMessage: userMessage,
       source: source,
       simulationSettings,
+      activeDeploymentTest,
     } satisfies BackgroundRunJobData,
     {
       jobId: runUuid,
