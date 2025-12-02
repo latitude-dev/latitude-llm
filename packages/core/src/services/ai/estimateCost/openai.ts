@@ -1,16 +1,47 @@
-import { createModelSpec } from './helpers'
+import {
+  createModelSpec,
+  ReasoningCapabilities,
+  ReasoningEffort,
+  ReasoningSummary,
+} from './helpers'
 
 // source: https://openai.com/api/pricing/
 // NOTE: Order matters here, the first model is the default model
+
+const GPT_5_1_REASONING: ReasoningCapabilities = {
+  reasoningEffort: ['none', 'minimal', 'low', 'medium', 'high'],
+  reasoningSummary: ['auto', 'detailed'],
+}
+
+const GPT_5_REASONING: ReasoningCapabilities = {
+  reasoningEffort: ['minimal', 'low', 'medium', 'high'],
+  reasoningSummary: ['auto', 'detailed'],
+}
+
 export const OPENAI_MODELS = createModelSpec({
   defaultModel: 'gpt-4o-mini',
   models: {
     // gpt-5 family
-    'gpt-5.1': { cost: { input: 1.25, output: 10.0 } },
-    'gpt-5': { cost: { input: 1.25, output: 10.0 } },
-    'gpt-5-mini': { cost: { input: 0.25, output: 2.0 } },
-    'gpt-5-nano': { cost: { input: 0.05, output: 0.4 } },
-    'gpt-5-pro': { cost: { input: 15.0, output: 120.0 } },
+    'gpt-5.1': {
+      cost: { input: 1.25, output: 10.0 },
+      reasoning: GPT_5_1_REASONING,
+    },
+    'gpt-5': {
+      cost: { input: 1.25, output: 10.0 },
+      reasoning: GPT_5_REASONING,
+    },
+    'gpt-5-mini': {
+      cost: { input: 0.25, output: 2.0 },
+      reasoning: GPT_5_REASONING,
+    },
+    'gpt-5-nano': {
+      cost: { input: 0.05, output: 0.4 },
+      reasoning: GPT_5_REASONING,
+    },
+    'gpt-5-pro': {
+      cost: { input: 15.0, output: 120.0 },
+      reasoning: GPT_5_REASONING,
+    },
 
     // gpt-4.1 family
     'gpt-4.1': { cost: { input: 2.0, output: 8.0 } },
@@ -40,3 +71,5 @@ export const OPENAI_MODELS = createModelSpec({
     },
   },
 })
+
+export type { ReasoningCapabilities, ReasoningEffort, ReasoningSummary }

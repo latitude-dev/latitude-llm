@@ -4,13 +4,20 @@ import { GROQ_MODELS } from '../../estimateCost/groq'
 import { ANTHROPIC_MODELS } from '../../estimateCost/anthropic'
 import { GOOGLE_MODELS } from '../../estimateCost/google'
 import { MISTRAL_MODELS } from '../../estimateCost/mistral'
-import { OPENAI_MODELS } from '../../estimateCost/openai'
+import {
+  OPENAI_MODELS,
+  ReasoningCapabilities,
+  ReasoningEffort,
+  ReasoningSummary,
+} from '../../estimateCost/openai'
 import { VERTEX_GOOGLE_MODELS } from '../../estimateCost/vertexGoogle'
 import { VERTEX_ANTHROPIC_MODELS } from '../../estimateCost/vertexAnthropic'
 import { XAI_MODELS } from '../../estimateCost/xai'
 import { AMAZON_BEDROCK_MODELS } from '../../estimateCost/amazonBedrock'
 import { DEEPSEEK_MODELS } from '../../estimateCost/deepseek'
 import { PERPLEXITY_MODELS } from '../../estimateCost/perplexity'
+
+export type { ReasoningCapabilities, ReasoningEffort, ReasoningSummary }
 
 export const DEFAULT_PROVIDER_SUPPORTED_MODELS = [
   'gpt-4o-mini',
@@ -86,4 +93,20 @@ export function findFirstModelForProvider({
   }
 
   return models[0]
+}
+
+export function getReasoningCapabilities({
+  provider,
+  model,
+}: {
+  provider: Providers
+  model: string
+}): ReasoningCapabilities | undefined {
+  switch (provider) {
+    case Providers.OpenAI:
+    case Providers.Azure:
+      return OPENAI_MODELS.getReasoningCapabilities(model)
+    default:
+      return undefined
+  }
 }

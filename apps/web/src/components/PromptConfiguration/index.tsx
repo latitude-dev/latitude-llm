@@ -2,6 +2,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { useState } from 'react'
 import { GenerationSettings } from './GenerationSettings'
+import { ReasoningSettings } from './ReasoningSettings'
 import { BehaviourSettings } from './BehaviourSettings'
 import { PromptConfigurationProps, useReactiveConfig } from './utils'
 import { LimitSettings } from './LimitSettings'
@@ -46,6 +47,12 @@ export function PromptConfiguration({
       >
         <div className='flex flex-col gap-6 p-2'>
           <GenerationSettings
+            config={config}
+            canUseSubagents={canUseSubagents}
+            setConfig={setConfig}
+            disabled={disabled}
+          />
+          <ReasoningSettings
             config={config}
             canUseSubagents={canUseSubagents}
             setConfig={setConfig}

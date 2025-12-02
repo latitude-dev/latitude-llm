@@ -1,8 +1,17 @@
 import type { ModelCost } from './index'
 
+export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high'
+export type ReasoningSummary = 'auto' | 'detailed'
+
+export type ReasoningCapabilities = {
+  reasoningEffort?: ReasoningEffort[]
+  reasoningSummary?: ReasoningSummary[]
+}
+
 type ModelSpec = {
   cost?: ModelCost | ModelCost[]
   hidden?: boolean
+  reasoning?: ReasoningCapabilities
 }
 type ModelSpecValue<N extends string> = ModelSpec & { name: N }
 
@@ -86,7 +95,14 @@ export const createModelSpec = <T extends Record<string, ModelSpec>>({
     return { cost, costImplemented: true }
   }
 
-  return { modelSpec, modelList, uiList, getCost }
+  const getReasoningCapabilities = (
+    model: string,
+  ): ReasoningCapabilities | undefined => {
+    const modelKey = getModelName(model)
+    return modelSpec[modelKey]?.reasoning
+  }
+
+  return { modelSpec, modelList, uiList, getCost, getReasoningCapabilities }
 }
 
 export type ModelSpecReturn = ReturnType<typeof createModelSpec>
