@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."evaluation_versions" ADD COLUMN "mcc" real;
