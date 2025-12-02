@@ -2,9 +2,9 @@ import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { cn } from '@latitude-data/web-ui/utils'
 import AverageScoreChart from './charts/AverageScore'
 import DailyOverviewChart from './charts/DailyOverview'
+import QualityMetricChart from './charts/QualityMetric'
 import TotalCostChart from './charts/TotalCost'
 import TotalResultsChart from './charts/TotalResults'
-import TotalTokensChart from './charts/TotalTokens'
 import VersionOverviewChart from './charts/VersionOverview'
 import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
 import { EvaluationV2Stats } from '@latitude-data/core/schema/types'
@@ -30,7 +30,7 @@ export function EvaluationStats<
         >
           <TotalResultsChart stats={stats} isLoading={isLoading} />
           {evaluation.type === EvaluationType.Llm && (
-            <TotalCostChart stats={stats} isLoading={isLoading} />
+            <AverageScoreChart stats={stats} isLoading={isLoading} />
           )}
         </div>
         <div
@@ -39,9 +39,14 @@ export function EvaluationStats<
             'grid-cols-2': evaluation.type === EvaluationType.Llm,
           })}
         >
-          <AverageScoreChart stats={stats} isLoading={isLoading} />
           {evaluation.type === EvaluationType.Llm && (
-            <TotalTokensChart stats={stats} isLoading={isLoading} />
+            <>
+              <TotalCostChart stats={stats} isLoading={isLoading} />
+              <QualityMetricChart isLoading={isLoading} />
+            </>
+          )}
+          {evaluation.type !== EvaluationType.Llm && (
+            <AverageScoreChart stats={stats} isLoading={isLoading} />
           )}
         </div>
       </div>
