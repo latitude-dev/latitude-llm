@@ -11,7 +11,7 @@ import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
 import { CLOUD_MESSAGES } from '@latitude-data/core/constants'
-import { PROVIDER_MODELS } from '@latitude-data/core/services/ai/providers/models/index'
+import { listModelsForProvider } from '@latitude-data/core/services/ai/providers/models/index'
 
 // TODO: Make this generic. Pass prompts: string
 // Pass entityUuid and entityType so this can be used to track
@@ -58,7 +58,11 @@ export const requestSuggestionAction = authProcedure
       r.unwrap().map((p) => ({
         name: p.name,
         provider: p.provider,
-        models: Object.values(PROVIDER_MODELS[p.provider]!),
+        models: Object.values(
+          listModelsForProvider({
+            provider: p.provider,
+          }),
+        ),
       })),
     )
 

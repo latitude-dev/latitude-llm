@@ -126,7 +126,6 @@ export async function createNewDocumentUnsafe(
     }
 
     const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
-
     const currentDocs = await docsScope
       .getDocumentsAtCommit(commit)
       .then((r) => r.unwrap())

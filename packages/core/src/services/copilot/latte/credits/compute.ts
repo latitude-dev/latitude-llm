@@ -21,13 +21,13 @@ export async function computeLatteCredits(
   },
   _ = new Transaction(),
 ) {
-  const cost = Math.ceil(
-    estimateCost({
-      provider: LATTE_COST_PROVIDER as Providers,
-      model: LATTE_COST_MODEL,
-      usage: usage,
-    }) * 100_000,
-  )
+  const estimatedCost = estimateCost({
+    provider: LATTE_COST_PROVIDER as Providers,
+    model: LATTE_COST_MODEL,
+    usage: usage,
+  })
+
+  const cost = Math.ceil(estimatedCost * 100_000)
 
   const credits = Math.max(
     LATTE_MINIMUM_CREDITS_PER_REQUEST,

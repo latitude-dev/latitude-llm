@@ -1,17 +1,12 @@
-import { Providers } from '@latitude-data/constants'
-import { GROQ_MODELS } from './groq'
-import { OPENAI_MODELS } from './openai'
-import { ANTHROPIC_MODELS } from './anthropic'
-import { MISTRAL_MODELS } from './mistral'
-import { GOOGLE_MODELS } from './google'
-import { VERTEX_GOOGLE_MODELS } from './vertexGoogle'
-import { VERTEX_ANTHROPIC_MODELS } from './vertexAnthropic'
-import { XAI_MODELS } from './xai'
-import { AMAZON_BEDROCK_MODELS } from './amazonBedrock'
-import { DEEPSEEK_MODELS } from './deepseek'
-import { PERPLEXITY_MODELS } from './perplexity'
-import { NON_IMPLEMENTED_COST } from './helpers'
-import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
+import {
+  Providers,
+  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
+} from '@latitude-data/constants'
+import {
+  getBundledModelsDevData,
+  findModelsDevModel,
+  getModelsDevPricing,
+} from './modelsDev'
 
 export type ModelCost = {
   input: number
@@ -23,6 +18,79 @@ type ModelCostPer1M = {
   costImplemented: boolean
 }
 
+/**
+ * Maps Latitude providers to models.dev provider names
+ * models.dev uses standardized provider identifiers
+ */
+function getModelsDevProviderName(provider: Providers): string {
+  const providerMap: Record<Providers, string> = {
+    [Providers.OpenAI]: 'openai',
+    [Providers.Anthropic]: 'anthropic',
+    [Providers.Groq]: 'groq',
+    [Providers.Mistral]: 'mistral',
+    [Providers.Google]: 'google',
+    [Providers.GoogleVertex]: 'google-vertex',
+    [Providers.AnthropicVertex]: 'anthropic-vertex',
+    [Providers.XAI]: 'xai',
+    [Providers.AmazonBedrock]: 'bedrock',
+    [Providers.DeepSeek]: 'deepseek',
+    [Providers.Perplexity]: 'perplexity',
+    [Providers.Azure]: 'azure',
+    [Providers.Custom]: 'custom',
+  }
+  return providerMap[provider] || provider
+}
+
+/**
+ * Gets cost from bundled models.dev data
+ * Uses the bundled JSON file for synchronous cost estimation
+ */
+function getCostFromModelsDev(
+  provider: Providers,
+  model: string,
+): ModelCostPer1M {
+  try {
+    const modelsData = getBundledModelsDevData()
+
+    const providerName = getModelsDevProviderName(provider)
+    const modelData = findModelsDevModel(
+      modelsData.filter(
+        (m) => m.provider.toLowerCase() === providerName.toLowerCase(),
+      ),
+      model,
+    )
+
+    if (!modelData) {
+      return {
+        cost: { input: 0, output: 0 },
+        costImplemented: false,
+      }
+    }
+
+    const pricing = getModelsDevPricing(modelData)
+    if (!pricing) {
+      return {
+        cost: { input: 0, output: 0 },
+        costImplemented: false,
+      }
+    }
+
+    return {
+      cost: {
+        input: pricing.input,
+        output: pricing.output,
+      },
+      costImplemented: true,
+    }
+  } catch {
+    // If anything goes wrong, return not implemented
+    return {
+      cost: { input: 0, output: 0 },
+      costImplemented: false,
+    }
+  }
+}
+
 export function getCostPer1M({
   provider,
   model,
@@ -30,36 +98,7 @@ export function getCostPer1M({
   provider: Providers
   model: string
 }): ModelCostPer1M {
-  switch (provider) {
-    case Providers.OpenAI:
-      return OPENAI_MODELS.getCost(model)
-    case Providers.Groq:
-      return GROQ_MODELS.getCost(model)
-    case Providers.Anthropic:
-      return ANTHROPIC_MODELS.getCost(model)
-    case Providers.Mistral:
-      return MISTRAL_MODELS.getCost(model)
-    case Providers.Google:
-      return GOOGLE_MODELS.getCost(model)
-    case Providers.GoogleVertex:
-      return VERTEX_GOOGLE_MODELS.getCost(model)
-    case Providers.AnthropicVertex:
-      return VERTEX_ANTHROPIC_MODELS.getCost(model)
-    case Providers.XAI:
-      return XAI_MODELS.getCost(model)
-    case Providers.AmazonBedrock:
-      return AMAZON_BEDROCK_MODELS.getCost(model)
-    case Providers.DeepSeek:
-      return DEEPSEEK_MODELS.getCost(model)
-    case Providers.Perplexity:
-      return PERPLEXITY_MODELS.getCost(model)
-    case Providers.Azure:
-      return NON_IMPLEMENTED_COST
-    case Providers.Custom:
-      return NON_IMPLEMENTED_COST
-    default:
-      return NON_IMPLEMENTED_COST
-  }
+  return getCostFromModelsDev(provider, model)
 }
 
 function computeCost({
@@ -119,11 +158,9 @@ export function estimateCost({
   provider: Providers
   model: string
 }): number {
-  // TODO:: Calculate the cost for reasoning tokens and cached tokens.
-  // `usage` contains `reasoningTokens` and `cachedTokens` but we
-  // don't have mapped the cost for those yet.
   const { promptTokens, completionTokens } = usage
-  const costSpec = getCostPer1M({ provider, model }).cost
+  const costPer1M = getCostPer1M({ provider, model })
+  const costSpec = costPer1M.cost
 
   // Guard against NaN token counts.
   const validInputTokens = isNaN(promptTokens) ? 0 : promptTokens

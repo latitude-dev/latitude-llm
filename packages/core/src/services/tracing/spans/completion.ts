@@ -691,7 +691,7 @@ async function enrichCost(
 
   const totalTokens =
     inputTokens + outputTokens + tokens.reasoning + tokens.cached
-  let cost = estimateCost({
+  const estimatedCost = estimateCost({
     usage: {
       inputTokens,
       outputTokens,
@@ -705,7 +705,7 @@ async function enrichCost(
     model: model,
   })
 
-  cost = Math.ceil(cost * 100_000)
+  const cost = Math.ceil(estimatedCost * 100_000)
 
   return Result.ok(cost)
 }

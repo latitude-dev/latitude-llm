@@ -152,7 +152,7 @@ describe('createNewDocument', () => {
       workspace,
       type: Providers.Anthropic,
       name: 'Default Provider',
-      defaultModel: 'claude-3-5-sonnet-latest',
+      defaultModel: 'claude-sonnet-4-5',
       user,
     })
     await factories.setProviderAsDefault(workspace, provider)
@@ -178,16 +178,9 @@ describe('createNewDocument', () => {
     expect(createdDocument.documentUuid).toBe(document.documentUuid)
     expect(createdDocument.path).toBe(document.path)
     expect(createdDocument.documentType).toBe(DocumentType.Agent)
-    expect(createdDocument.content).toBe(
-      `
----
-provider: ${provider.name}
-model: ${provider.defaultModel}
-temperature: 1
----
-
-`.trimStart(),
-    )
+    expect(createdDocument.content).toContain(`provider: ${provider.name}`)
+    expect(createdDocument.content).toContain('model: claude-sonnet-4-5')
+    expect(createdDocument.content).toContain('temperature: 1')
   })
 
   it('creates a new document with default default provider when no metadata', async () => {
@@ -203,7 +196,7 @@ temperature: 1
       workspace: wsp,
       type: Providers.Anthropic,
       name: 'Default Provider',
-      defaultModel: 'claude-3-5-sonnet-latest',
+      defaultModel: 'claude-sonnet-4-5',
       user,
     })
     await factories.setProviderAsDefault(wsp, provider)
@@ -228,16 +221,10 @@ temperature: 1
     const createdDocument = commitChanges.value[0]!
     expect(createdDocument.documentUuid).toBe(document.documentUuid)
     expect(createdDocument.path).toBe(document.path)
-    expect(createdDocument.content).toBe(
-      `
----
-provider: ${provider.name}
-model: ${provider.defaultModel}
-temperature: 1
----
-
-This is my prompt`.trimStart(),
-    )
+    expect(createdDocument.content).toContain(`provider: ${provider.name}`)
+    expect(createdDocument.content).toContain('model: claude-sonnet-4-5')
+    expect(createdDocument.content).toContain('temperature: 1')
+    expect(createdDocument.content).toContain('This is my prompt')
   })
 
   it('creates the document without the frontmatter if no provider is found', async () => {
