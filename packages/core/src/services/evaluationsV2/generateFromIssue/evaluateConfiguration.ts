@@ -25,7 +25,7 @@ export async function evaluateConfiguration({
       evaluationResults: childrenValues,
     })
 
-  const mccResult = await calculateMCC({
+  const mccResult = calculateMCC({
     positiveEvaluationResults,
     negativeEvaluationResults,
   })

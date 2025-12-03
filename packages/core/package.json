@@ -114,6 +114,7 @@
     "db:drop": "drizzle-kit drop",
     "db:check": "drizzle-kit check",
     "db:studio": "drizzle-kit studio --port 3003",
+    "db:studio:test": "NODE_ENV=test pnpm run db:studio",
     "lint": "eslint src",
     "tc": "tsc --noEmit",
     "test": "pnpm run db:migrate:test && vitest run --pool=forks",

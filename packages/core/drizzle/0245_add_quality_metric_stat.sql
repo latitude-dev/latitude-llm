@@ -1,1 +1,1 @@
-ALTER TABLE "latitude"."evaluation_versions" ADD COLUMN "quality_metric" real;
+ALTER TABLE "latitude"."evaluation_versions" ADD COLUMN "quality_metric" bigint;

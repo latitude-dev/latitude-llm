@@ -64,42 +64,47 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     error: Error | undefined
   } | null>(null)
 
+  const onEvaluationEnded = useCallback(
+    async (evaluation: ActiveEvaluation) => {
+      if (evaluation.issueId !== issue.id) return
+      setEndedEvaluation({
+        uuid: evaluation.evaluationUuid,
+        error: evaluation.error,
+      })
+
+      if (evaluation.error) {
+        toast({
+          title: 'Evaluation generation failed',
+          description: 'Please try again',
+          variant: 'destructive',
+        })
+        // For errors, just wait the delay then clear and show button
+        setTimeout(() => {
+          setEndedEvaluation(null)
+        }, 10000) // 10 seconds
+      } else {
+        toast({
+          title: 'Evaluation generated successfully',
+          description: 'Let the magic begin!',
+        })
+        // For success, mutate evaluations to get the new, generated one and wait for it to appear
+        mutateEvaluations().then(() => {
+          setTimeout(() => {
+            setEndedEvaluation(null)
+          }, 3000) // 3 seconds
+        })
+      }
+    },
+    [issue.id, setEndedEvaluation, mutateEvaluations],
+  )
+
   const { data: activeEvaluations, isLoading: isLoadingActiveEvaluations } =
     useActiveEvaluations(
       {
         project: project,
       },
       {
-        onEvaluationEnded: async (evaluation: ActiveEvaluation) => {
-          if (evaluation.issueId !== issue.id) return
-          setEndedEvaluation({
-            uuid: evaluation.evaluationUuid,
-            error: evaluation.error,
-          })
-
-          if (evaluation.error) {
-            toast({
-              title: 'Evaluation generation failed',
-              description: 'Please try again',
-              variant: 'destructive',
-            })
-            // For errors, just wait the delay then clear and show button
-            setTimeout(() => {
-              setEndedEvaluation(null)
-            }, 10000) // 10 seconds
-          } else {
-            toast({
-              title: 'Evaluation generated successfully',
-              description: 'Let the magic begin!',
-            })
-            // For success, mutate evaluations to get the new, generated one and wait for it to appear
-            mutateEvaluations().then(() => {
-              setTimeout(() => {
-                setEndedEvaluation(null)
-              }, 3000) // 3 seconds
-            })
-          }
-        },
+        onEvaluationEnded: onEvaluationEnded,
       },
     )
 
@@ -188,6 +193,10 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     )
   }
 
+  if (endedEvaluation?.error) {
+    return <EvaluationGenerationError error={endedEvaluation?.error} />
+  }
+
   if (evaluationIsGenerating) {
     return (
       <GeneratingEvaluation
@@ -195,10 +204,6 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
         endedEvaluation={endedEvaluation}
       />
     )
-  }
-
-  if (endedEvaluation?.error) {
-    return <EvaluationGenerationError error={endedEvaluation?.error} />
   }
 
   // If we have enough annotations, and the evaluation is not generating/generated yet, show the generate button

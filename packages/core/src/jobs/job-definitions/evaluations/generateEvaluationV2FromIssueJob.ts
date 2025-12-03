@@ -84,7 +84,7 @@ export const generateEvaluationV2FromIssueJob = async (
   } catch (error) {
     const { attemptsMade: jobRetryAttempts } = job
     const isLastJobRetryAttempt =
-      jobRetryAttempts == MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE
+      jobRetryAttempts + 1 >= MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE
 
     if (isLastJobRetryAttempt || isOverMaxAttempts) {
       captureException(error as Error)

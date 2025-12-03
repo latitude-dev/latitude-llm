@@ -1,5 +1,5 @@
 {
-  "id": "5b93b5f0-943c-42e2-90c3-cc3ed37c9d7d",
+  "id": "ffa53e4c-6a36-4ded-9796-368d4b103cdc",
   "prevId": "cbe8d351-f881-4795-b266-31faadb08cbf",
   "version": "7",
   "dialect": "postgresql",
@@ -2676,7 +2676,7 @@
         },
         "quality_metric": {
           "name": "quality_metric",
-          "type": "real",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },

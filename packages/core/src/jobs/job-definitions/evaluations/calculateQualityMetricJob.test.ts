@@ -251,7 +251,7 @@ describe('calculateQualityMetricJob', () => {
 
   describe('Case 3: Fail last attempt', () => {
     beforeEach(() => {
-      jobData = createMockJob(buildJobData(), 3, 3) // attemptsMade: 3, maxAttempts: 3 (last attempt)
+      jobData = createMockJob(buildJobData(), 2, 3) // attemptsMade: 3, maxAttempts: 3 (last attempt)
       // Mock evaluateConfiguration to return an error Result, which will throw when unwrapped
       mockEvaluateConfiguration.mockResolvedValue(
         Result.error(new Error('Test error')),

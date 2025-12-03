@@ -150,7 +150,8 @@ export const calculateQualityMetricJob = async (
   } catch (error) {
     const { attemptsMade, opts } = job
     const maxAttempts = opts.attempts ?? 1
-    const isLastAttempt = attemptsMade == maxAttempts
+    // Job attemptsMade starts at 0
+    const isLastAttempt = attemptsMade + 1 >= maxAttempts
 
     // Only failing in last attempt of the job, there are more attempts to retry to calculate the quality metric if not
     if (isLastAttempt) {
@@ -181,6 +182,7 @@ export const calculateQualityMetricJob = async (
         projectId: commit.projectId,
         workflowUuid,
       })
+
       if (!Result.isOk(endResult)) {
         captureException(
           new Error(

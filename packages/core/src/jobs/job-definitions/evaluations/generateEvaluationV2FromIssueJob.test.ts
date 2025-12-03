@@ -230,9 +230,9 @@ describe('generateEvaluationV2FromIssueJob', () => {
     beforeEach(() => {
       jobData = createMockJob(
         buildJobData({
-          generationAttempt: MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE - 1,
+          generationAttempt: MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE - 2,
         }),
-        MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE - 1, // Not last attempt
+        MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE - 2, // Not last attempt
       )
       mockGenerateEvaluationFromIssue.mockResolvedValue(
         Result.error(new Error('Test error')),
@@ -253,7 +253,7 @@ describe('generateEvaluationV2FromIssueJob', () => {
     beforeEach(() => {
       jobData = createMockJob(
         buildJobData({
-          generationAttempt: MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE,
+          generationAttempt: MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE - 1,
         }),
         MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE, // Last attempt
       )

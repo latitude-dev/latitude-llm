@@ -47,19 +47,19 @@ export function useActiveEvaluations(
             }
             return prev.filter(
               (evaluation) =>
-                evaluation.evaluationUuid !== args.evaluation.evaluationUuid,
+                evaluation.workflowUuid !== args.evaluation.workflowUuid,
             )
           }
 
           // For queued/started/progress events, add or update the evaluation
           const existingIndex = prev.findIndex(
-            (e) => e.evaluationUuid === args.evaluation.evaluationUuid,
+            (e) => e.workflowUuid === args.evaluation.workflowUuid,
           )
 
           if (existingIndex >= 0) {
             // Update existing evaluation
             return prev.map((evaluation) =>
-              evaluation.evaluationUuid === args.evaluation.evaluationUuid
+              evaluation.workflowUuid === args.evaluation.workflowUuid
                 ? { ...evaluation, ...args.evaluation }
                 : evaluation,
             )

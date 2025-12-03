@@ -43,6 +43,6 @@ export function calculateMCC({
   }
 
   // MCC ranges from -1 to 1, so we scale it to 0-100
-  const scaledMccToPercentage = 50 * (mcc + 1)
+  const scaledMccToPercentage = Math.round(50 * (mcc + 1))
   return Result.ok(scaledMccToPercentage)
 }
