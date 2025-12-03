@@ -1,12 +1,70 @@
 // Import bundled models.dev data
 import modelsDevJson from '../../../assets/models.dev.json'
 
+export type ModelModality = 'text' | 'image' | 'audio' | 'video' | 'pdf'
+
+export type ModelModalities = {
+  input: ModelModality[]
+  output: ModelModality[]
+}
+
 export type ModelsDevModel = {
   id: string
   name: string
   provider: string
+
+  // Features
+  toolCall?: boolean
+  reasoning?: boolean
+  attachment?: boolean
+  supportsTemperature?: boolean
+  structuredOutput?: boolean
+
+  // Dates
+  knowledgeCutoff?: string // e.g., "2024-09-30"
+  releaseDate?: string
+
+  // Modalities
+  modalities?: ModelModalities
+
+  // Limits
+  contextLimit?: number // e.g., 400000
+  outputLimit?: number // e.g., 128000
+
+  // Open weights
+  openWeights?: boolean
+
+  // Pricing (per 1M tokens)
   pricing?: {
     input?: number
+    output?: number
+    cacheRead?: number
+  }
+}
+
+/**
+ * Raw model type as it appears in the models.dev JSON
+ */
+type RawModelsDevModel = {
+  id: string
+  name: string
+  attachment?: boolean
+  reasoning?: boolean
+  tool_call?: boolean
+  structured_output?: boolean
+  temperature?: boolean
+  knowledge?: string
+  release_date?: string
+  last_updated?: string
+  modalities?: ModelModalities
+  open_weights?: boolean
+  cost?: {
+    input?: number
+    output?: number
+    cache_read?: number
+  }
+  limit?: {
+    context?: number
     output?: number
   }
 }
@@ -22,14 +80,7 @@ function parseBundledModelsDevData(data: unknown): ModelsDevModel[] {
     {
       id: string
       name: string
-      models?: Record<
-        string,
-        {
-          id: string
-          name: string
-          cost?: Record<string, unknown>
-        }
-      >
+      models?: Record<string, RawModelsDevModel>
     }
   >
 
@@ -39,20 +90,45 @@ function parseBundledModelsDevData(data: unknown): ModelsDevModel[] {
 
     for (const modelId in provider.models) {
       const model = provider.models[modelId]
-      const cost = model.cost as Record<string, unknown>
+      const cost = model.cost
+      const limit = model.limit
 
       models.push({
         id: model.id,
         name: model.name,
         provider: providerId,
+
+        // Features
+        toolCall: model.tool_call,
+        reasoning: model.reasoning,
+        structuredOutput: model.structured_output,
+        attachment: model.attachment,
+        supportsTemperature: model.temperature,
+
+        // Dates
+        knowledgeCutoff: model.knowledge,
+        releaseDate: model.release_date,
+
+        // Modalities
+        modalities: model.modalities,
+
+        // Limits
+        contextLimit: limit?.context,
+        outputLimit: limit?.output,
+
+        // Open weights
+        openWeights: model.open_weights,
+
+        // Pricing
         pricing:
           cost &&
           typeof cost === 'object' &&
           'input' in cost &&
           'output' in cost
             ? {
-                input: cost.input as number,
-                output: cost.output as number,
+                input: cost.input,
+                output: cost.output,
+                cacheRead: cost.cache_read,
               }
             : undefined,
       })
