@@ -95,3 +95,50 @@ describe('findAll', () => {
     expect(list[0]!.id).toBe(commit.id)
   })
 })
+
+describe('getCommitsHistory', () => {
+  it('handles commit with mergedAt as a string (from queue serialization)', async () => {
+    const { workspace, project, user, providers, commit } =
+      await factories.createProject()
+
+    // Create additional commits
+    const draft1 = await factories.createDraft({ project, user })
+    await createNewDocument({
+      user,
+      workspace,
+      commit: draft1.commit,
+      path: 'doc1',
+      content: factories.helpers.createPrompt({ provider: providers[0]! }),
+    })
+    await mergeCommit(draft1.commit)
+
+    const draft2 = await factories.createDraft({ project, user })
+    await createNewDocument({
+      user,
+      workspace,
+      commit: draft2.commit,
+      path: 'doc2',
+      content: factories.helpers.createPrompt({ provider: providers[0]! }),
+    })
+    const mergedCommit2 = await mergeCommit(draft2.commit).then((r) =>
+      r.unwrap(),
+    )
+
+    const repository = new CommitsRepository(workspace.id)
+
+    // Simulate commit coming from queue with mergedAt as string
+    const commitWithStringDate = {
+      ...mergedCommit2,
+      mergedAt: mergedCommit2.mergedAt!.toISOString() as any, // Simulate JSON serialization
+    }
+
+    const history = await repository.getCommitsHistory({
+      commit: commitWithStringDate,
+    })
+
+    // Should include the current commit and all previous merged commits
+    expect(history.length).toBeGreaterThanOrEqual(2)
+    expect(history.some((c) => c.id === mergedCommit2.id)).toBe(true)
+    expect(history.some((c) => c.id === commit.id)).toBe(true)
+  })
+})

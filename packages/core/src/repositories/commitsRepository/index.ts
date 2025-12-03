@@ -143,11 +143,16 @@ export class CommitsRepository extends RepositoryLegacy<
    * so it's the first in the history
    */
   async getCommitsHistory({ commit }: { commit: Commit }) {
-    const condition = commit.mergedAt
-      ? and(
-          isNotNull(this.scope.mergedAt),
-          lte(this.scope.mergedAt, commit.mergedAt),
-        )
+    // Ensure mergedAt is a Date object
+    // (it might be a string if coming from a queue)
+    const mergedAt = commit.mergedAt
+      ? commit.mergedAt instanceof Date
+        ? commit.mergedAt
+        : new Date(commit.mergedAt)
+      : null
+
+    const condition = mergedAt
+      ? and(isNotNull(this.scope.mergedAt), lte(this.scope.mergedAt, mergedAt))
       : or(isNotNull(this.scope.mergedAt), eq(this.scope.id, commit.id))
 
     return this.db
