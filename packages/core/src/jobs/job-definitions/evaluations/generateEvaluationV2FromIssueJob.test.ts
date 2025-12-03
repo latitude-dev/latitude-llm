@@ -1,13 +1,13 @@
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Result } from '@latitude-data/core/lib/Result'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { Result } from '../../../lib/Result'
+import { NotFoundError } from '../../../lib/errors'
 import { MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE } from '@latitude-data/constants/issues'
 import { Providers, ActiveEvaluation } from '@latitude-data/constants'
 import * as factories from '../../../tests/factories'
-import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import type { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
-import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import type { Commit } from '../../../schema/models/types/Commit'
+import type { WorkspaceDto } from '../../../schema/models/types/Workspace'
+import type { Issue } from '../../../schema/models/types/Issue'
 import {
   generateEvaluationV2FromIssueJob,
   type GenerateEvaluationV2FromIssueJobData,

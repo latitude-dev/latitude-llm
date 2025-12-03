@@ -3,8 +3,8 @@ import {
   EvaluationResultsV2Repository,
   IssuesRepository,
   ProjectsRepository,
-} from '@latitude-data/core/repositories'
-import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+} from '../../repositories'
+import { Workspace } from '../../schema/models/types/Workspace'
 import { Project } from '../../schema/models/types/Project'
 import { Commit } from '../../schema/models/types/Commit'
 import { MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES } from '@latitude-data/constants/issues'

@@ -1,7 +1,7 @@
 import { Job } from 'bullmq'
-import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { Result } from '@latitude-data/core/lib/Result'
+import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
+import { NotFoundError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import { evaluateConfiguration } from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
 import { MIN_QUALITY_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
 import {

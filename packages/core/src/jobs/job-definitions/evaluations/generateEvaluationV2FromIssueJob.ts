@@ -83,6 +83,7 @@ export const generateEvaluationV2FromIssueJob = async (
     }).then((r) => r.unwrap())
   } catch (error) {
     const { attemptsMade: jobRetryAttempts } = job
+    // Job attemptsMade starts at 0
     const isLastJobRetryAttempt =
       jobRetryAttempts + 1 >= MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE
 

@@ -1,7 +1,7 @@
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Result } from '@latitude-data/core/lib/Result'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { Result } from '../../../lib/Result'
+import { NotFoundError } from '../../../lib/errors'
 import { MIN_QUALITY_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
 import {
   EvaluationV2,
@@ -9,9 +9,9 @@ import {
   ActiveEvaluation,
 } from '@latitude-data/constants'
 import * as factories from '../../../tests/factories'
-import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import type { Commit } from '../../../schema/models/types/Commit'
+import type { Workspace } from '../../../schema/models/types/Workspace'
+import type { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import {
   calculateQualityMetricJob,
   type CalculateQualityMetricJobData,
