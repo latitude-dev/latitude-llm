@@ -97,7 +97,7 @@ export async function generateEvaluationFromIssue(
         providerName,
         model,
       },
-      transaction,
+      tx,
     )
 
     if (!Result.isOk(validationFlowResult)) {

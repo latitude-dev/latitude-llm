@@ -29,6 +29,7 @@ import {
   ISSUE_GENERATION_RECENCY_RATIO,
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
   Span,
+  DEFAULT_PAGINATION_SIZE,
 } from '../constants'
 import { EvaluationResultsV2Search } from '../helpers'
 import { NotFoundError } from '../lib/errors'
@@ -791,7 +792,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     options?: { page?: number; pageSize?: number },
   ) {
     const page = options?.page ?? 1
-    const pageSize = options?.pageSize ?? 100
+    const pageSize = options?.pageSize ?? DEFAULT_PAGINATION_SIZE
     const limit = pageSize + 1 // Fetch one extra to determine hasNextPage
     const offset = calculateOffset(page, pageSize)
 

@@ -10,7 +10,7 @@ import { EvaluationV2 } from '@latitude-data/constants'
 import { Issue } from '../../../schema/models/types/Issue'
 import { getSpansByIssue } from '../../../data-access/issues/getSpansByIssue'
 import { getSpansWithoutIssuesByDocumentUuid } from '../../../data-access/issues/getSpansWithoutIssuesByDocumentUuid'
-import Transaction from '../../../lib/Transaction'
+import { database } from '../../../client'
 
 const MAX_COMPARISON_ANNOTATIONS = 100
 
@@ -42,106 +42,104 @@ export async function createValidationFlow(
     providerName: string
     model: string
   },
-  transaction = new Transaction(),
+  db = database,
 ) {
-  return await transaction.call(async () => {
-    const spansResult =
-      await getEqualAmountsOfPositiveAndNegativeEvaluationResults(
-        {
-          workspace,
-          commit,
-          issue,
-        },
-        transaction,
-      )
-    if (!Result.isOk(spansResult)) {
-      return spansResult
-    }
-    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
-      spansResult.unwrap()
+  const spansResult =
+    await getEqualAmountsOfPositiveAndNegativeEvaluationResults(
+      {
+        workspace,
+        commit,
+        issue,
+      },
+      db,
+    )
+  if (!Result.isOk(spansResult)) {
+    return spansResult
+  }
+  const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
+    spansResult.unwrap()
 
-    const spanAndTraceIdPairsOfPositiveEvaluationRuns =
-      positiveEvaluationResultsSpans.map((span) => ({
-        spanId: span.id,
-        traceId: span.traceId,
-      }))
-    const spanAndTraceIdPairsOfNegativeEvaluationRuns =
-      negativeEvaluationResultsSpans.map((span) => ({
-        spanId: span.id,
-        traceId: span.traceId,
-      }))
+  const spanAndTraceIdPairsOfPositiveEvaluationRuns =
+    positiveEvaluationResultsSpans.map((span) => ({
+      spanId: span.id,
+      traceId: span.traceId,
+    }))
+  const spanAndTraceIdPairsOfNegativeEvaluationRuns =
+    negativeEvaluationResultsSpans.map((span) => ({
+      spanId: span.id,
+      traceId: span.traceId,
+    }))
 
-    const allSpans = [
-      ...positiveEvaluationResultsSpans,
-      ...negativeEvaluationResultsSpans,
-    ]
+  const allSpans = [
+    ...positiveEvaluationResultsSpans,
+    ...negativeEvaluationResultsSpans,
+  ]
 
-    const flowProducer = new FlowProducer({
-      prefix: REDIS_KEY_PREFIX,
-      connection: await buildRedisConnection({
-        host: env.QUEUE_HOST,
-        port: env.QUEUE_PORT,
-        password: env.QUEUE_PASSWORD,
-      }),
-    })
+  const flowProducer = new FlowProducer({
+    prefix: REDIS_KEY_PREFIX,
+    connection: await buildRedisConnection({
+      host: env.QUEUE_HOST,
+      port: env.QUEUE_PORT,
+      password: env.QUEUE_PASSWORD,
+    }),
+  })
 
-    const { job: validationFlowJob } = await flowProducer.add({
-      name: `calculateQualityMetricJob`,
-      queueName: Queues.generateEvaluationsQueue,
+  const { job: validationFlowJob } = await flowProducer.add({
+    name: `calculateQualityMetricJob`,
+    queueName: Queues.generateEvaluationsQueue,
+    data: {
+      workspaceId: workspace.id,
+      commitId: commit.id,
+      workflowUuid,
+      generationAttempt,
+      providerName,
+      model,
+      issueId: issue.id,
+      evaluationUuid: evaluationToEvaluate.uuid,
+      documentUuid: issue.documentUuid,
+      spanAndTraceIdPairsOfPositiveEvaluationRuns,
+      spanAndTraceIdPairsOfNegativeEvaluationRuns,
+    },
+    opts: {
+      // Idempotency key
+      jobId: `calculateQualityMetricJob-wf=${workflowUuid}-generationAttempt=${generationAttempt}`,
+      // FlowProducer does not inherit
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 1000,
+      },
+    },
+    children: allSpans.map((span) => ({
+      name: `runEvaluationV2Job`,
+      queueName: Queues.evaluationsQueue,
       data: {
         workspaceId: workspace.id,
         commitId: commit.id,
-        workflowUuid,
-        generationAttempt,
-        providerName,
-        model,
-        issueId: issue.id,
         evaluationUuid: evaluationToEvaluate.uuid,
-        documentUuid: issue.documentUuid,
-        spanAndTraceIdPairsOfPositiveEvaluationRuns,
-        spanAndTraceIdPairsOfNegativeEvaluationRuns,
+        spanId: span.id,
+        traceId: span.traceId,
+        dry: true,
       },
       opts: {
         // Idempotency key
-        jobId: `calculateQualityMetricJob-wf=${workflowUuid}-generationAttempt=${generationAttempt}`,
-        // FlowProducer does not inherit
-        attempts: 3,
+        jobId: `runEvaluationV2Job-wf=${workflowUuid}-generationAttempt=${generationAttempt}-spanId=${span.id}-traceId=${span.traceId}`,
+        // Overriding eval queue options for faster retry policy to avoid user waiting too long for the evaluation to be generated
+        attempts: 2,
         backoff: {
-          type: 'exponential',
+          type: 'fixed',
           delay: 1000,
         },
       },
-      children: allSpans.map((span) => ({
-        name: `runEvaluationV2Job`,
-        queueName: Queues.evaluationsQueue,
-        data: {
-          workspaceId: workspace.id,
-          commitId: commit.id,
-          evaluationUuid: evaluationToEvaluate.uuid,
-          spanId: span.id,
-          traceId: span.traceId,
-          dry: true,
-        },
-        opts: {
-          // Idempotency key
-          jobId: `runEvaluationV2Job-wf=${workflowUuid}-generationAttempt=${generationAttempt}-spanId=${span.id}-traceId=${span.traceId}`,
-          // Overriding eval queue options for faster retry policy to avoid user waiting too long for the evaluation to be generated
-          attempts: 2,
-          backoff: {
-            type: 'fixed',
-            delay: 1000,
-          },
-        },
-      })),
-    })
-
-    if (!validationFlowJob.id) {
-      return Result.error(
-        new Error('Failed to create evaluation validation flow'),
-      )
-    }
-    return Result.ok(validationFlowJob)
+    })),
   })
+
+  if (!validationFlowJob.id) {
+    return Result.error(
+      new Error('Failed to create evaluation validation flow'),
+    )
+  }
+  return Result.ok(validationFlowJob)
 }
 /*
 Gets:
@@ -161,45 +159,43 @@ async function getEqualAmountsOfPositiveAndNegativeEvaluationResults(
     commit: Commit
     issue: Issue
   },
-  transaction = new Transaction(),
+  db = database,
 ) {
-  return await transaction.call(async () => {
-    const spansResult = await getSpansByIssue(
-      {
-        workspace,
-        commit,
-        issue,
-        pageSize: MAX_COMPARISON_ANNOTATIONS,
-        page: 1,
-      },
-      transaction,
-    )
-    if (!Result.isOk(spansResult)) {
-      return spansResult
-    }
-    const { spans } = spansResult.unwrap()
+  const spansResult = await getSpansByIssue(
+    {
+      workspace,
+      commit,
+      issue,
+      pageSize: MAX_COMPARISON_ANNOTATIONS,
+      page: 1,
+    },
+    db,
+  )
+  if (!Result.isOk(spansResult)) {
+    return spansResult
+  }
+  const { spans } = spansResult.unwrap()
 
-    // Getting the same amount of negative evaluation results spans as the positive evaluation results spans
-    const spansWithoutIssuesResult = await getSpansWithoutIssuesByDocumentUuid(
-      {
-        workspace,
-        commit,
-        documentUuid: issue.documentUuid,
-        pageSize: spans.length,
-        page: 1,
-      },
-      transaction,
-    )
-    if (!Result.isOk(spansWithoutIssuesResult)) {
-      return spansWithoutIssuesResult
-    }
-    const { spans: spansWithoutIssues } = spansWithoutIssuesResult.unwrap()
+  // Getting the same amount of negative evaluation results spans as the positive evaluation results spans
+  const spansWithoutIssuesResult = await getSpansWithoutIssuesByDocumentUuid(
+    {
+      workspace,
+      commit,
+      documentUuid: issue.documentUuid,
+      pageSize: spans.length,
+      page: 1,
+    },
+    db,
+  )
+  if (!Result.isOk(spansWithoutIssuesResult)) {
+    return spansWithoutIssuesResult
+  }
+  const { spans: spansWithoutIssues } = spansWithoutIssuesResult.unwrap()
 
-    const targetLength = Math.min(spans.length, spansWithoutIssues.length)
-    return Result.ok({
-      positiveEvaluationResultsSpans: spans.slice(0, targetLength),
-      negativeEvaluationResultsSpans: spansWithoutIssues.slice(0, targetLength),
-    })
+  const targetLength = Math.min(spans.length, spansWithoutIssues.length)
+  return Result.ok({
+    positiveEvaluationResultsSpans: spans.slice(0, targetLength),
+    negativeEvaluationResultsSpans: spansWithoutIssues.slice(0, targetLength),
   })
 }
 
