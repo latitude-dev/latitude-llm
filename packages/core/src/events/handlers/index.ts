@@ -6,7 +6,6 @@ import { createDatasetRowsJob } from './createDatasetRowsJobs'
 import { createLoopsContact } from './createLoopsContact'
 import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { handleEvaluationResultV2Updated } from './handleEvaluationResultV2Updated'
-import { notifyClientOfCommitUpdated } from './notifyClientOfCommitUpdated'
 import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
 import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTriggerCreated'
 import { notifyClientOfDocumentTriggerDeleted } from './notifyClientOfDocumentTriggerDeleted'
@@ -99,7 +98,7 @@ export const EventHandlers: IEventsHandlers = {
   runStarted: [notifyClientOfRunStatus],
   runProgress: [notifyClientOfRunStatus],
   runEnded: [notifyClientOfRunStatus],
-  commitUpdated: [notifyClientOfCommitUpdated],
+  commitUpdated: [],
   pasteYourPromptOnboardingPageVisited: [],
   generateDatasetOnboardingPageVisited: [],
   runExperimentOnboardingPageVisited: [],
