@@ -155,11 +155,11 @@ export function useCommandItemStyles({
   return cn(
     'data-[disabled=true]:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
     'data-[disabled=true]:opacity-50 outline-none select-none',
-    className,
     {
       "relative flex cursor-default gap-2 items-center rounded-sm px-2 py-1.5 text-sm data-[selected='true']:bg-muted data-[selected=true]:text-accent-foreground":
         !unstyled,
     },
+    className,
   )
 }
 

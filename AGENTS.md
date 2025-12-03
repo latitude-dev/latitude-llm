@@ -26,6 +26,7 @@
   JSDoc for internal functions that are simple and self-explanatory.
 - Exports go top of file, internal methods at the bottom
 - If possible, use the instrumentation's captureException method rather than logging errors with console.error
+- **DO NOT** add comments unless they are JSDocs or you are explicitely asked to.
 
 ## Architecture
 

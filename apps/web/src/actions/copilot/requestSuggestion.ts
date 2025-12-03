@@ -61,7 +61,7 @@ export const requestSuggestionAction = authProcedure
         models: Object.values(
           listModelsForProvider({
             provider: p.provider,
-          }),
+          }).map((m) => m.id),
         ),
       })),
     )
