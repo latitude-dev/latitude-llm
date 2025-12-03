@@ -114,11 +114,20 @@ async function upsertVector({
       payload.properties = { title, description }
     }
     if (!payload.vectors && !payload.properties) {
-      return Result.error(
-        new BadRequestError(
-          'Received update issue operation without values to update',
-        ),
-      )
+      if (!payload.vectors) {
+        return Result.error(
+          new BadRequestError(
+            'Received update issue operation without vectors',
+          ),
+        )
+      }
+      if (!payload.properties) {
+        return Result.error(
+          new BadRequestError(
+            'Received update issue operation without vectors, title and description',
+          ),
+        )
+      }
     }
 
     const exists = await issues.data.exists(uuid)
