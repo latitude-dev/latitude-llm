@@ -130,7 +130,7 @@ describe('updateIssue', () => {
       // Should fail because update requires both title AND description
       expect(result.error).toBeTruthy()
       expect(result.error?.message).toContain(
-        'Received update issue operation without values to update',
+        'Received update issue operation without vectors',
       )
     })
 
@@ -174,7 +174,7 @@ describe('updateIssue', () => {
       // Should fail because update requires both title AND description
       expect(result.error).toBeTruthy()
       expect(result.error?.message).toContain(
-        'Received update issue operation without values to update',
+        'Received update issue operation without vectors',
       )
     })
   })
