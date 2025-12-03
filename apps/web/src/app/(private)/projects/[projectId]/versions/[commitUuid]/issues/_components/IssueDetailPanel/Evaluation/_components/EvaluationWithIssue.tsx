@@ -9,7 +9,7 @@ import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { EVALUATION_QUALITY_EXPLANATION } from '@latitude-data/constants/issues'
+import { ConfusionMatrixTooltipContent } from '$/components/ConfusionMatrix'
 
 type EvaluationWithIssueProps = {
   evaluationWithIssue: EvaluationV2
@@ -75,7 +75,11 @@ export function EvaluationWithIssue({
           side='bottom'
           trigger={<Icon name='info' color='foregroundMuted' size='small' />}
         >
-          {EVALUATION_QUALITY_EXPLANATION}
+          <ConfusionMatrixTooltipContent
+            confusionMatrix={
+              evaluationWithIssue.qualityMetricMetadata?.confusionMatrix
+            }
+          />
         </Tooltip>
       </div>
       <Text.H5 color='foreground'>

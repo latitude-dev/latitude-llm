@@ -11,7 +11,7 @@ import {
 import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
-import { EVALUATION_QUALITY_EXPLANATION } from '@latitude-data/constants/issues'
+import { ConfusionMatrixTooltipContent } from '$/components/ConfusionMatrix'
 
 export default function QualityMetricChart<
   T extends EvaluationType = EvaluationType,
@@ -28,6 +28,7 @@ export default function QualityMetricChart<
   })
 
   const qualityMetric = evaluation.qualityMetric
+  const confusionMatrix = evaluation.qualityMetricMetadata?.confusionMatrix
 
   const qualityMetricLink =
     ROUTES.projects
@@ -38,12 +39,15 @@ export default function QualityMetricChart<
   return (
     <ChartWrapper
       label='Quality'
-      tooltip={EVALUATION_QUALITY_EXPLANATION}
+      tooltip={
+        <ConfusionMatrixTooltipContent confusionMatrix={confusionMatrix} />
+      }
       loading={isLoading}
     >
       {qualityMetric !== undefined && qualityMetric !== null ? (
         <div className='flex flex-row items-center gap-1'>
           <PanelChart data={`${Math.round(qualityMetric)}%`} />
+
           <Link href={qualityMetricLink} target='_blank'>
             <Icon
               name='externalLink'

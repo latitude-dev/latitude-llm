@@ -158,6 +158,15 @@ export type BatchEvaluationMetric<T extends EvaluationType = EvaluationType> =
 export type ManualEvaluationMetric<T extends EvaluationType = EvaluationType> =
   EvaluationMetricSpecificationFilter<'supportsManualEvaluation', T>
 
+export type QualityMetricMetadata = {
+  confusionMatrix: {
+    truePositives: number
+    trueNegatives: number
+    falsePositives: number
+    falseNegatives: number
+  }
+}
+
 export type EvaluationV2<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
@@ -173,6 +182,7 @@ export type EvaluationV2<
   type: T
   metric: M
   qualityMetric?: number | null
+  qualityMetricMetadata?: QualityMetricMetadata | null
   configuration: EvaluationConfiguration<T, M>
   evaluateLiveLogs?: boolean | null
   enableSuggestions?: boolean | null

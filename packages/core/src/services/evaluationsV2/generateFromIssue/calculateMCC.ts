@@ -1,4 +1,4 @@
-import { Result } from '@latitude-data/core/lib/Result'
+import { Result } from '../../../lib/Result'
 
 /*
 We use the MCC (Matthews Correlation Coefficient) to calculate the quality of the evaluation for a binary classification of the selected issue.
@@ -39,10 +39,26 @@ export function calculateMCC({
 
   // There can be a case where the denominator is 0 (i.e. all results are false positives or false negatives), so we return 0 instead of NaN
   if (Number.isNaN(mcc)) {
-    return Result.ok(0)
+    return Result.ok({
+      mcc: 0,
+      confusionMatrix: {
+        truePositives,
+        trueNegatives,
+        falsePositives,
+        falseNegatives,
+      },
+    })
   }
 
   // MCC ranges from -1 to 1, so we scale it to 0-100
   const scaledMccToPercentage = Math.round(50 * (mcc + 1))
-  return Result.ok(scaledMccToPercentage)
+  return Result.ok({
+    mcc: scaledMccToPercentage,
+    confusionMatrix: {
+      truePositives,
+      trueNegatives,
+      falsePositives,
+      falseNegatives,
+    },
+  })
 }

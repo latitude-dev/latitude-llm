@@ -109,7 +109,7 @@ export const calculateQualityMetricJob = async (
 
     const childrenValues = await job.getChildrenValues()
 
-    const mcc = await evaluateConfiguration({
+    const { mcc, confusionMatrix } = await evaluateConfiguration({
       childrenValues,
       spanAndTraceIdPairsOfPositiveEvaluationRuns,
       spanAndTraceIdPairsOfNegativeEvaluationRuns,
@@ -133,6 +133,9 @@ export const calculateQualityMetricJob = async (
       workspace,
       commit: commit,
       qualityMetric: mcc,
+      qualityMetricMetadata: {
+        confusionMatrix,
+      },
     }).then((r) => r.unwrap())
 
     const endResult = await endActiveEvaluation({

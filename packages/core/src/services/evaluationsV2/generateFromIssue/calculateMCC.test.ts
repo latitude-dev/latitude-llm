@@ -14,8 +14,14 @@ describe('calculateMCC', () => {
     })
 
     expect(Result.isOk(mccResult)).toBe(true)
-    const mcc = mccResult.unwrap()
+    const { mcc, confusionMatrix } = mccResult.unwrap()
     expect(mcc).toBe(100)
+    expect(confusionMatrix).toEqual({
+      truePositives: 3,
+      trueNegatives: 3,
+      falsePositives: 0,
+      falseNegatives: 0,
+    })
   })
 
   it('calculates worst MCC (-1.0) when all classifications are incorrect', () => {
@@ -28,8 +34,14 @@ describe('calculateMCC', () => {
     })
 
     expect(Result.isOk(mccResult)).toBe(true)
-    const mcc = mccResult.unwrap()
+    const { mcc, confusionMatrix } = mccResult.unwrap()
     expect(mcc).toBe(0)
+    expect(confusionMatrix).toEqual({
+      truePositives: 0,
+      trueNegatives: 0,
+      falsePositives: 2,
+      falseNegatives: 2,
+    })
   })
 
   it('returns 0 when all positive results are false positives (no true positives)', () => {
@@ -44,8 +56,14 @@ describe('calculateMCC', () => {
     })
 
     expect(Result.isOk(mccResult)).toBe(true)
-    const mcc = mccResult.unwrap()
+    const { mcc, confusionMatrix } = mccResult.unwrap()
     expect(mcc).toBe(0)
+    expect(confusionMatrix).toEqual({
+      truePositives: 0,
+      trueNegatives: 1,
+      falsePositives: 2,
+      falseNegatives: 0,
+    })
   })
 
   it('handles empty positive results array', () => {
@@ -90,7 +108,13 @@ describe('calculateMCC', () => {
     })
 
     expect(Result.isOk(mccResult)).toBe(true)
-    const mcc = mccResult.unwrap()
+    const { mcc, confusionMatrix } = mccResult.unwrap()
     expect(mcc).toBe(80)
+    expect(confusionMatrix).toEqual({
+      truePositives: 8,
+      trueNegatives: 8,
+      falsePositives: 2,
+      falseNegatives: 2,
+    })
   })
 })

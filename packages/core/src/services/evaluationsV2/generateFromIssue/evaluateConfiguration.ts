@@ -32,9 +32,9 @@ export async function evaluateConfiguration({
   if (!Result.isOk(mccResult)) {
     return mccResult
   }
-  const mcc = mccResult.unwrap()
+  const { mcc, confusionMatrix } = mccResult.unwrap()
 
-  return Result.ok(mcc)
+  return Result.ok({ mcc, confusionMatrix })
 }
 
 function sortEvaluationResultsByPositiveAndNegative({
