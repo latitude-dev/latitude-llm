@@ -10,19 +10,19 @@ import { PromisedResult } from '../../../lib/Transaction'
 export async function deleteActiveEvaluation({
   workspaceId,
   projectId,
-  evaluationUuid,
+  workflowUuid,
   cache,
 }: {
   workspaceId: number
   projectId: number
-  evaluationUuid: string
+  workflowUuid: string
   cache?: Cache
 }): PromisedResult<ActiveEvaluation, Error> {
   const key = ACTIVE_EVALUATIONS_CACHE_KEY(workspaceId, projectId)
   const redisCache = cache ?? (await redis())
 
   try {
-    const jsonValue = await redisCache.hget(key, evaluationUuid)
+    const jsonValue = await redisCache.hget(key, workflowUuid)
     const deletedEvaluation = jsonValue
       ? (() => {
           const parsed = JSON.parse(jsonValue) as ActiveEvaluation
@@ -37,7 +37,7 @@ export async function deleteActiveEvaluation({
         })()
       : undefined
 
-    await redisCache.hdel(key, evaluationUuid)
+    await redisCache.hdel(key, workflowUuid)
 
     if (deletedEvaluation) {
       return Result.ok(deletedEvaluation)
@@ -45,7 +45,7 @@ export async function deleteActiveEvaluation({
 
     return Result.error(
       new NotFoundError(
-        `Evaluation not found with uuid ${evaluationUuid} while deleting the evaluation`,
+        `Active evaluation not found with workflowUuid ${workflowUuid} while deleting the evaluation`,
       ),
     )
   } catch (error) {

@@ -6,6 +6,7 @@ import {
   startEventHandlersWorker,
   startEventsWorker,
 } from './worker-definitions/eventsWorker'
+import { startGenerateEvaluationWorker } from './worker-definitions/generateEvaluationWorker'
 import { startIssuesWorker } from './worker-definitions/issuesWorker'
 import { startLatteWorker } from './worker-definitions/latteWorker'
 import { startMaintenanceWorker } from './worker-definitions/maintenanceWorker'
@@ -26,6 +27,7 @@ export async function startWorkers() {
   const tracingWorker = startTracingWorker()
   const runsWorker = startRunsWorker()
   const issuesWorker = startIssuesWorker()
+  const generateEvaluationWorker = startGenerateEvaluationWorker()
 
   const workers = [
     defaultWorker,
@@ -40,6 +42,7 @@ export async function startWorkers() {
     tracingWorker,
     runsWorker,
     issuesWorker,
+    generateEvaluationWorker,
   ]
 
   return Promise.all(workers)

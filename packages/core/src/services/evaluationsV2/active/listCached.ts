@@ -36,12 +36,28 @@ export async function listCachedEvaluations({
 
         // Filter expired evaluations (the entire hash expires in 3 hours, but it updates back to its initial TTL on every update to the hash, so we need to check each evaluation individually of the hash to check if they're still valid)
         if (queuedAt.getTime() > now - ACTIVE_EVALUATIONS_CACHE_TTL) {
+          // Reconstruct error object from serialized error
+          const error =
+            evaluation.error && typeof evaluation.error === 'object'
+              ? Object.assign(
+                  new Error(evaluation.error.message || 'Unknown error'),
+                  {
+                    name: evaluation.error.name || 'Error',
+                    stack: evaluation.error.stack,
+                  },
+                )
+              : evaluation.error
+
           activeEvaluations.push({
             ...evaluation,
             queuedAt,
             startedAt: evaluation.startedAt
               ? new Date(evaluation.startedAt)
               : undefined,
+            endedAt: evaluation.endedAt
+              ? new Date(evaluation.endedAt)
+              : undefined,
+            error,
           })
         }
       } catch (parseError) {

@@ -5,6 +5,7 @@ import { database } from '../../client'
 import {
   EvaluationType,
   EvaluationV2,
+  LlmEvaluationMetric,
   RuleEvaluationMetric,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
@@ -250,6 +251,239 @@ describe('updateEvaluationV2', () => {
         updatedAt: expect.any(Date),
       }),
     ])
+    expect(mocks.publisher).toHaveBeenCalledExactlyOnceWith({
+      type: 'evaluationV2Updated',
+      data: {
+        evaluation: updatedEvaluation,
+        workspaceId: workspace.id,
+      },
+    })
+  })
+
+  it('succeeds when updating qualityMetric', async () => {
+    mocks.publisher.mockClear()
+
+    const { evaluation: updatedEvaluation } = await updateEvaluationV2({
+      evaluation: evaluation,
+      commit: commit,
+      workspace: workspace,
+      qualityMetric: 85,
+    }).then((r) => r.unwrap())
+
+    const dbEvaluation = await database
+      .select()
+      .from(evaluationVersions)
+      .where(eq(evaluationVersions.evaluationUuid, evaluation.uuid))
+      .orderBy(desc(evaluationVersions.updatedAt))
+      .then((r) => r[0]!)
+
+    expect(dbEvaluation.qualityMetric).toBe(85)
+    expect(mocks.publisher).toHaveBeenCalledExactlyOnceWith({
+      type: 'evaluationV2Updated',
+      data: {
+        evaluation: updatedEvaluation,
+        workspaceId: workspace.id,
+      },
+    })
+  })
+
+  it('preserves existing issueId when not provided', async () => {
+    const { issue } = await factories.createIssue({
+      document: document,
+      workspace: workspace,
+      project: project,
+    })
+
+    // Create evaluation with issueId using the create service directly
+    // Use LLM Binary evaluation as it doesn't require expected output
+    const { createEvaluationV2: createEval } = await import('./create')
+    const createResult = await createEval({
+      document: document,
+      commit: commit,
+      workspace: workspace,
+      settings: {
+        name: 'test evaluation',
+        description: 'test',
+        type: EvaluationType.Llm,
+        metric: LlmEvaluationMetric.Binary,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          provider: 'openai',
+          model: 'gpt-4o',
+          criteria: 'test criteria',
+          passDescription: 'pass',
+          failDescription: 'fail',
+        },
+      },
+      options: {
+        evaluateLiveLogs: true,
+      },
+      issueId: issue.id,
+    }).then((r) => r.unwrap())
+
+    const evaluationWithIssue = createResult.evaluation
+
+    mocks.publisher.mockClear()
+
+    const { evaluation: updatedEvaluation } = await updateEvaluationV2({
+      evaluation: evaluationWithIssue,
+      commit: commit,
+      workspace: workspace,
+      settings: {
+        name: 'updated name',
+      },
+    }).then((r) => r.unwrap())
+
+    const dbEvaluation = await database
+      .select()
+      .from(evaluationVersions)
+      .where(eq(evaluationVersions.evaluationUuid, evaluationWithIssue.uuid))
+      .orderBy(desc(evaluationVersions.updatedAt))
+      .then((r) => r[0]!)
+
+    expect(dbEvaluation.issueId).toBe(issue.id)
+    expect(mocks.publisher).toHaveBeenCalledExactlyOnceWith({
+      type: 'evaluationV2Updated',
+      data: {
+        evaluation: updatedEvaluation,
+        workspaceId: workspace.id,
+      },
+    })
+  })
+
+  it('updates issueId when explicitly provided', async () => {
+    const { issue: issue1 } = await factories.createIssue({
+      document: document,
+      workspace: workspace,
+      project: project,
+    })
+
+    const { issue: issue2 } = await factories.createIssue({
+      document: document,
+      workspace: workspace,
+      project: project,
+    })
+
+    // Create evaluation with issueId using the create service directly
+    // Use LLM Binary evaluation as it doesn't require expected output
+    const { createEvaluationV2: createEval } = await import('./create')
+    const createResult = await createEval({
+      document: document,
+      commit: commit,
+      workspace: workspace,
+      settings: {
+        name: 'test evaluation',
+        description: 'test',
+        type: EvaluationType.Llm,
+        metric: LlmEvaluationMetric.Binary,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          provider: 'openai',
+          model: 'gpt-4o',
+          criteria: 'test criteria',
+          passDescription: 'pass',
+          failDescription: 'fail',
+        },
+      },
+      options: {
+        evaluateLiveLogs: true,
+      },
+      issueId: issue1.id,
+    }).then((r) => r.unwrap())
+
+    const evaluationWithIssue = createResult.evaluation
+
+    mocks.publisher.mockClear()
+
+    const { evaluation: updatedEvaluation } = await updateEvaluationV2({
+      evaluation: evaluationWithIssue,
+      commit: commit,
+      workspace: workspace,
+      issueId: issue2.id,
+    }).then((r) => r.unwrap())
+
+    const dbEvaluation = await database
+      .select()
+      .from(evaluationVersions)
+      .where(eq(evaluationVersions.evaluationUuid, evaluationWithIssue.uuid))
+      .orderBy(desc(evaluationVersions.updatedAt))
+      .then((r) => r[0]!)
+
+    expect(dbEvaluation.issueId).toBe(issue2.id)
+    expect(mocks.publisher).toHaveBeenCalledExactlyOnceWith({
+      type: 'evaluationV2Updated',
+      data: {
+        evaluation: updatedEvaluation,
+        workspaceId: workspace.id,
+      },
+    })
+  })
+
+  it('removes issueId when explicitly set to null', async () => {
+    const { issue } = await factories.createIssue({
+      document: document,
+      workspace: workspace,
+      project: project,
+    })
+
+    // Create evaluation with issueId using the create service directly
+    // Use LLM Binary evaluation as it doesn't require expected output
+    const { createEvaluationV2: createEval } = await import('./create')
+    const createResult = await createEval({
+      document: document,
+      commit: commit,
+      workspace: workspace,
+      settings: {
+        name: 'test evaluation',
+        description: 'test',
+        type: EvaluationType.Llm,
+        metric: LlmEvaluationMetric.Binary,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          provider: 'openai',
+          model: 'gpt-4o',
+          criteria: 'test criteria',
+          passDescription: 'pass',
+          failDescription: 'fail',
+        },
+      },
+      options: {
+        evaluateLiveLogs: true,
+      },
+      issueId: issue.id,
+    }).then((r) => r.unwrap())
+
+    const evaluationWithIssue = createResult.evaluation
+
+    mocks.publisher.mockClear()
+
+    const { evaluation: updatedEvaluation } = await updateEvaluationV2({
+      evaluation: evaluationWithIssue,
+      commit: commit,
+      workspace: workspace,
+      issueId: null,
+    }).then((r) => r.unwrap())
+
+    const dbEvaluation = await database
+      .select()
+      .from(evaluationVersions)
+      .where(eq(evaluationVersions.evaluationUuid, evaluationWithIssue.uuid))
+      .orderBy(desc(evaluationVersions.updatedAt))
+      .then((r) => r[0]!)
+
+    expect(dbEvaluation.issueId).toBeNull()
     expect(mocks.publisher).toHaveBeenCalledExactlyOnceWith({
       type: 'evaluationV2Updated',
       data: {

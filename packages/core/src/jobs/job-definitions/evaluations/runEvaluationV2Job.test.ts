@@ -1,4 +1,4 @@
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '../../../lib/errors'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Commit } from '../../../schema/models/types/Commit'

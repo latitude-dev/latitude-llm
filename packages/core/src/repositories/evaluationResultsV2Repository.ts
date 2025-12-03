@@ -500,7 +500,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   }
 
   // Be careful using this with merged issues, as there will be multiple evaluation results for the same issue
-  async listByIssueIds(issueIds: number[]) {
+  async listByIssueIds(issueIds: number[], commitHistoryIds: number[]) {
     const uniqueIssueIds = [...new Set(issueIds)].filter(Boolean)
     if (!uniqueIssueIds.length) {
       return []
@@ -523,6 +523,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           this.scopeFilter,
           isNull(commits.deletedAt),
           inArray(issueEvaluationResults.issueId, uniqueIssueIds),
+          inArray(evaluationResultsV2.commitId, commitHistoryIds),
         ),
       )
       .orderBy(
@@ -784,7 +785,16 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
   }
 
-  async listPassedByDocumentUuid(documentUuid: string) {
+  async listPassedByDocumentUuid(
+    documentUuid: string,
+    commitHistoryIds: number[],
+    options?: { page?: number; pageSize?: number },
+  ) {
+    const page = options?.page ?? 1
+    const pageSize = options?.pageSize ?? 100
+    const limit = pageSize + 1 // Fetch one extra to determine hasNextPage
+    const offset = calculateOffset(page, pageSize)
+
     const results = await this.db
       .select(tt)
       .from(evaluationResultsV2)
@@ -802,13 +812,23 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           isNull(commits.deletedAt),
           eq(evaluationVersions.documentUuid, documentUuid),
           eq(evaluationResultsV2.hasPassed, true),
+          inArray(evaluationResultsV2.commitId, commitHistoryIds),
         ),
       )
       .orderBy(
         desc(evaluationResultsV2.createdAt),
         desc(evaluationResultsV2.id),
       )
-    return results as EvaluationResultV2[]
+      .limit(limit)
+      .offset(offset)
+
+    const hasNextPage = results.length > pageSize
+    const paginatedResults = hasNextPage ? results.slice(0, pageSize) : results
+
+    return {
+      results: paginatedResults as EvaluationResultV2[],
+      hasNextPage,
+    }
   }
 
   private async getEvaluationsByCommit({

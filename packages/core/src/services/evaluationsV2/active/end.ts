@@ -5,24 +5,24 @@ import { deleteActiveEvaluation } from './delete'
 export async function endActiveEvaluation({
   workspaceId,
   projectId,
-  evaluationUuid,
+  workflowUuid,
 }: {
   workspaceId: number
   projectId: number
-  evaluationUuid: string
+  workflowUuid: string
 }) {
   const deleteResult = await deleteActiveEvaluation({
     workspaceId,
     projectId,
-    evaluationUuid,
+    workflowUuid,
   })
 
   if (!Result.isOk(deleteResult)) return deleteResult
-  const evaluation = deleteResult.unwrap()
+  const activeEvaluation = deleteResult.unwrap()
 
   await publisher.publishLater({
     type: 'evaluationEnded',
-    data: { workspaceId, projectId, evaluation },
+    data: { workspaceId, projectId, evaluation: activeEvaluation },
   })
 
   return Result.ok(true)

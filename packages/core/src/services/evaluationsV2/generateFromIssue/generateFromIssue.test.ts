@@ -5,63 +5,56 @@ import {
   BadRequestError,
   NotFoundError,
   UnprocessableEntityError,
-} from '../../lib/errors'
-import { Result } from '../../lib/Result'
-import { CLOUD_MESSAGES } from '../../constants'
-import * as copilotGet from '../copilot/get'
-import * as copilotRun from '../copilot/run'
-import * as createEvaluationV2Module from './create'
-import * as findFirstModelForProviderModule from '../ai/providers/models'
-import { DocumentVersionsRepository } from '../../repositories'
+} from '@latitude-data/core/lib/errors'
+import { Result } from '@latitude-data/core/lib/Result'
+import { CLOUD_MESSAGES } from '../../../constants'
+import * as copilotModule from '../../copilot'
+import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import {
   __test__,
-  generateEvaluationFromIssueWithCopilot,
+  generateEvaluationConfigFromIssueWithCopilot,
 } from './generateFromIssue'
-import * as factories from '../../tests/factories'
-import type { Commit } from '../../schema/models/types/Commit'
-import type { Workspace } from '../../schema/models/types/Workspace'
-import type { Issue } from '../../schema/models/types/Issue'
-import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import type { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
-import * as getSpanMessagesAndEvaluationResultsByIssue from '../../data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
+import * as factories from '../../../tests/factories'
+import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import * as getSpanMessagesAndEvaluationResultsByIssue from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import * as getSpanMessagesByIssueDocument from '../../../data-access/issues/getSpanMessagesByIssueDocument'
 
-vi.mock('../copilot/get', () => ({
+vi.mock('../../copilot', () => ({
   getCopilot: vi.fn(),
-}))
-
-vi.mock('../copilot/run', () => ({
   runCopilot: vi.fn(),
 }))
 
-vi.mock('../evaluationsV2/create', () => ({
-  createEvaluationV2: vi.fn(),
-}))
-
-vi.mock('../ai/providers/models', () => ({
-  findFirstModelForProvider: vi.fn(),
-}))
-
 vi.mock(
-  '../../data-access/issues/getSpanMessagesAndEvaluationResultsByIssue',
+  '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue',
   () => ({
     getSpanMessagesAndEvaluationResultsByIssue: vi.fn(),
+  }),
+)
+
+vi.mock(
+  '@latitude-data/core/data-access/issues/getSpanMessagesByIssueDocument',
+  () => ({
+    getSpanMessagesByIssueDocument: vi.fn(),
   }),
 )
 
 const MODEL = 'gpt-4o'
 
 describe('generateFromIssue', () => {
-  const mockGetCopilot = vi.mocked(copilotGet.getCopilot)
-  const mockRunCopilot = vi.mocked(copilotRun.runCopilot)
-  const mockCreateEvaluationV2 = vi.mocked(
-    createEvaluationV2Module.createEvaluationV2,
-  )
-  const mockFindFirstModelForProvider = vi.mocked(
-    findFirstModelForProviderModule.findFirstModelForProvider,
-  )
+  const mockGetCopilot = vi.mocked(copilotModule.getCopilot)
+  const mockRunCopilot = vi.mocked(copilotModule.runCopilot)
+
   const mockGetSpanMessagesAndEvaluationResultsByIssue = vi.mocked(
     getSpanMessagesAndEvaluationResultsByIssue.getSpanMessagesAndEvaluationResultsByIssue,
+  )
+
+  const mockGetSpanMessagesByIssueDocument = vi.mocked(
+    getSpanMessagesByIssueDocument.getSpanMessagesByIssueDocument,
   )
 
   let workspace: Workspace
@@ -123,30 +116,6 @@ describe('generateFromIssue', () => {
       }),
     )
 
-    // Setup default mocks for services
-    const mockEvaluation = {
-      uuid: 'test-evaluation-uuid',
-      versionId: 1,
-      workspaceId: workspace.id,
-      commitId: commit.id,
-      documentUuid: document.documentUuid,
-      name: 'Test Evaluation',
-      description: 'Test Description',
-      type: 'llm' as const,
-      metric: 'binary' as const,
-      configuration: {},
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    mockCreateEvaluationV2.mockResolvedValue(
-      Result.ok({
-        evaluation: mockEvaluation,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      }) as any,
-    )
-
-    mockFindFirstModelForProvider.mockReturnValue(MODEL)
-
     messages = [
       {
         role: MessageRole.user,
@@ -163,6 +132,8 @@ describe('generateFromIssue', () => {
       Result.ok([{ messages, reason: 'Test reason' }]),
     )
 
+    mockGetSpanMessagesByIssueDocument.mockResolvedValue(Result.ok(messages))
+
     // Setup default mocks for repositories
     vi.spyOn(
       DocumentVersionsRepository.prototype,
@@ -171,7 +142,7 @@ describe('generateFromIssue', () => {
   })
 
   it('successfully generates an evaluation from issue using copilot', async () => {
-    const result = await generateEvaluationFromIssueWithCopilot({
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
       issue: issue,
       workspace,
       commit,
@@ -180,10 +151,8 @@ describe('generateFromIssue', () => {
     })
 
     expect(Result.isOk(result)).toBe(true)
-    const { evaluation } = result.value!
+    const evaluation = result.unwrap()
     expect(evaluation).toBeDefined()
-    expect(evaluation.uuid).toBe('test-evaluation-uuid')
-    expect(evaluation.versionId).toBe(1)
 
     // Verify repository calls
     expect(
@@ -201,26 +170,11 @@ describe('generateFromIssue', () => {
         issueDescription: issue.description,
         prompt: document.content,
         existingEvaluationNames: [],
-        messagesWithReasonWhyItFailed: [{ messages, reason: 'Test reason' }],
+        examplesWithIssueAndReasonWhy: [{ messages, reason: 'Test reason' }],
+        goodExamplesWithoutIssue: messages,
       },
       schema: __test__.llmEvaluationBinarySpecificationWithoutModel,
     })
-
-    // Verify evaluation creation
-    expect(mockCreateEvaluationV2).toHaveBeenCalledWith(
-      expect.objectContaining({
-        settings: expect.objectContaining({
-          configuration: expect.objectContaining({
-            provider: provider.name,
-            model: MODEL,
-          }),
-        }),
-        issueId: issue.id,
-        document,
-        workspace,
-        commit,
-      }),
-    )
   })
 
   it('returns error when LATITUDE_CLOUD is not enabled', async () => {
@@ -231,7 +185,7 @@ describe('generateFromIssue', () => {
         '/copilot/evaluations/generator',
     } as typeof env.env)
 
-    const result = await generateEvaluationFromIssueWithCopilot({
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
       issue: issue,
       workspace,
       commit,
@@ -256,7 +210,7 @@ describe('generateFromIssue', () => {
       COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH: '',
     } as typeof env.env)
 
-    const result = await generateEvaluationFromIssueWithCopilot({
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
       issue: issue,
       providerName: provider.name,
       model: MODEL,
@@ -281,7 +235,7 @@ describe('generateFromIssue', () => {
     ).mockResolvedValue(Result.error(new NotFoundError('Document not found')))
 
     await expect(
-      generateEvaluationFromIssueWithCopilot({
+      generateEvaluationConfigFromIssueWithCopilot({
         issue,
         providerName: provider.name,
         model: MODEL,
@@ -302,7 +256,7 @@ describe('generateFromIssue', () => {
       Result.error(new NotFoundError('Copilot not found')),
     )
 
-    const result = await generateEvaluationFromIssueWithCopilot({
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
       issue,
       providerName: provider.name,
       model: MODEL,
@@ -317,7 +271,6 @@ describe('generateFromIssue', () => {
     // Verify copilot was called but no further calls
     expect(mockGetCopilot).toHaveBeenCalled()
     expect(mockRunCopilot).not.toHaveBeenCalled()
-    expect(mockCreateEvaluationV2).not.toHaveBeenCalled()
   })
 
   it('returns error when runCopilot fails', async () => {
@@ -325,7 +278,7 @@ describe('generateFromIssue', () => {
       Result.error(new UnprocessableEntityError('Copilot execution failed')),
     )
 
-    const result = await generateEvaluationFromIssueWithCopilot({
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
       issue,
       providerName: provider.name,
       model: MODEL,
@@ -340,34 +293,10 @@ describe('generateFromIssue', () => {
     // Verify copilot run was called but evaluation creation was not
     expect(mockGetCopilot).toHaveBeenCalled()
     expect(mockRunCopilot).toHaveBeenCalled()
-    expect(mockCreateEvaluationV2).not.toHaveBeenCalled()
-  })
-
-  it('returns error when createEvaluationV2 fails', async () => {
-    mockCreateEvaluationV2.mockResolvedValue(
-      Result.error(new BadRequestError('Evaluation creation failed')),
-    )
-
-    const result = await generateEvaluationFromIssueWithCopilot({
-      issue,
-      providerName: provider.name,
-      model: MODEL,
-      workspace,
-      commit,
-    })
-
-    expect(Result.isOk(result)).toBe(false)
-    expect(result.error).toBeInstanceOf(BadRequestError)
-    expect(result.error?.message).toBe('Evaluation creation failed')
-
-    // Verify all steps were called
-    expect(mockGetCopilot).toHaveBeenCalled()
-    expect(mockRunCopilot).toHaveBeenCalled()
-    expect(mockCreateEvaluationV2).toHaveBeenCalled()
   })
 
   it('passes correct parameters to runCopilot', async () => {
-    await generateEvaluationFromIssueWithCopilot({
+    await generateEvaluationConfigFromIssueWithCopilot({
       issue,
       providerName: provider.name,
       model: MODEL,
@@ -382,7 +311,8 @@ describe('generateFromIssue', () => {
         issueDescription: issue.description,
         existingEvaluationNames: [],
         prompt: document.content,
-        messagesWithReasonWhyItFailed: [{ messages, reason: 'Test reason' }],
+        examplesWithIssueAndReasonWhy: [{ messages, reason: 'Test reason' }],
+        goodExamplesWithoutIssue: messages,
       },
       schema: expect.anything(),
     })

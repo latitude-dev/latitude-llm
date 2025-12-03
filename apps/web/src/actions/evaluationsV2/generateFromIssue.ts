@@ -39,27 +39,35 @@ export const generateEvaluationV2FromIssueAction = withDocument
     const activeEvaluation = await createActiveEvaluation({
       workspaceId: workspace.id,
       projectId: commit.projectId,
-      evaluationUuid: generateUUIDIdentifier(),
+      workflowUuid: generateUUIDIdentifier(),
       issueId: issueId,
       queuedAt: new Date(),
       cache: redisCache,
     }).then((r) => r.unwrap())
 
-    const { evaluationsQueue } = await queues()
-    const job = await evaluationsQueue.add('generateEvaluationV2FromIssueJob', {
-      workspaceId: workspace.id,
-      commitId: commit.id,
-      issueId: issueId,
-      providerName: providerName,
-      model: model,
-      evaluationUuid: activeEvaluation.uuid,
-    })
+    const { generateEvaluationsQueue } = await queues()
+    const job = await generateEvaluationsQueue.add(
+      'generateEvaluationV2FromIssueJob',
+      {
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        issueId: issueId,
+        providerName: providerName,
+        model: model,
+        workflowUuid: activeEvaluation.workflowUuid,
+        generationAttempt: 1, // first attempt
+      },
+      {
+        // Idempotency key
+        jobId: `generateEvaluationV2FromIssueJob:wf=${activeEvaluation.workflowUuid}:generationAttempt=1`,
+      },
+    )
 
     if (!job.id) {
       await deleteActiveEvaluation({
         workspaceId: workspace.id,
         projectId: commit.projectId,
-        evaluationUuid: activeEvaluation.uuid,
+        workflowUuid: activeEvaluation.workflowUuid,
         cache: redisCache,
       }).then((r) => r.unwrap())
       throw new LatitudeError(

@@ -1,13 +1,17 @@
 import { Job } from 'bullmq'
-import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { NotFoundError } from '../../../lib/errors'
-import { CommitsRepository, IssuesRepository } from '../../../repositories'
-import { generateEvaluationFromIssueWithCopilot } from '../../../services/evaluationsV2/generateFromIssue'
-import { captureException } from '../../../utils/datadogCapture'
-import { startActiveEvaluation } from '../../../services/evaluationsV2/active/start'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
+import {
+  CommitsRepository,
+  IssuesRepository,
+} from '@latitude-data/core/repositories'
+import { captureException } from '@latitude-data/core/utils/datadogCapture'
+import { startActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/start'
+import { failActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/fail'
+import { Result } from '@latitude-data/core/lib/Result'
+import { generateEvaluationFromIssue } from '@latitude-data/core/services/evaluationsV2/generateFromIssue/generateEvaluationFromIssue'
 import { endActiveEvaluation } from '../../../services/evaluationsV2/active/end'
-import { failActiveEvaluation } from '../../../services/evaluationsV2/active/fail'
-import { Result } from '../../../lib/Result'
+import { MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE } from '@latitude-data/constants/issues'
 
 export type GenerateEvaluationV2FromIssueJobData = {
   workspaceId: number
@@ -15,9 +19,18 @@ export type GenerateEvaluationV2FromIssueJobData = {
   issueId: number
   providerName: string
   model: string
-  evaluationUuid: string
+  workflowUuid: string
+  generationAttempt: number
 }
 
+/*
+  This job is in charge of generating an evaluation from an issue.
+
+  The possible scenarios of this job are:
+  1. The job is successful (no error and not retrying the generation) -> generate the evaluation and end the active evaluation
+  2. The job failed but not in the last attempt -> let BullMQ retry the job
+  3. The job failed in the last attempt -> fail the active evaluation and end the active evaluation
+*/
 export const generateEvaluationV2FromIssueJob = async (
   job: Job<GenerateEvaluationV2FromIssueJobData>,
 ) => {
@@ -27,7 +40,8 @@ export const generateEvaluationV2FromIssueJob = async (
     issueId,
     providerName,
     model,
-    evaluationUuid,
+    workflowUuid,
+    generationAttempt,
   } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
@@ -38,52 +52,70 @@ export const generateEvaluationV2FromIssueJob = async (
     .getCommitById(commitId)
     .then((r) => r.unwrap())
 
+  const isOverMaxAttempts =
+    generationAttempt > MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE
+
   try {
+    if (isOverMaxAttempts) {
+      // Dont change the error message, it's used to change the failure message in the UI
+      throw new Error(`Max attempts to generate evaluation from issue reached`)
+    }
+
     const issuesRepository = new IssuesRepository(workspace.id)
     const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
 
-    await startActiveEvaluation({
-      workspaceId,
-      projectId: commit.projectId,
-      evaluationUuid: evaluationUuid,
-    })
+    if (generationAttempt == 1) {
+      await startActiveEvaluation({
+        workspaceId,
+        projectId: commit.projectId,
+        workflowUuid,
+      })
+    }
 
-    const generatedEvaluation = await generateEvaluationFromIssueWithCopilot({
+    await generateEvaluationFromIssue({
       issue,
-      commit,
       workspace,
+      commit,
       providerName,
       model,
-    })
-
-    return generatedEvaluation.unwrap()
+      workflowUuid,
+      generationAttempt,
+    }).then((r) => r.unwrap())
   } catch (error) {
-    captureException(error as Error)
-    const failResult = await failActiveEvaluation({
-      workspaceId,
-      projectId: commit.projectId,
-      evaluationUuid: evaluationUuid,
-      error: error as Error,
-    })
-    if (!Result.isOk(failResult)) {
-      captureException(
-        new Error(
-          `[GenerateEvaluationV2FromIssueJob] Failed to fail active evaluation`,
-        ),
-      )
+    const { attemptsMade: jobRetryAttempts } = job
+    // Job attemptsMade starts at 0
+    const isLastJobRetryAttempt =
+      jobRetryAttempts + 1 >= MAX_ATTEMPTS_TO_GENERATE_EVALUATION_FROM_ISSUE
+
+    if (isLastJobRetryAttempt || isOverMaxAttempts) {
+      captureException(error as Error)
+      const failResult = await failActiveEvaluation({
+        workspaceId,
+        projectId: commit.projectId,
+        workflowUuid,
+        error: error as Error,
+      })
+      if (!Result.isOk(failResult)) {
+        captureException(
+          new Error(
+            `[GenerateEvaluationV2FromIssueJob] Failed to fail active evaluation`,
+          ),
+        )
+      }
+
+      const endResult = await endActiveEvaluation({
+        workspaceId,
+        projectId: commit.projectId,
+        workflowUuid,
+      })
+      if (!Result.isOk(endResult)) {
+        captureException(
+          new Error(
+            `[GenerateEvaluationV2FromIssueJob] Failed to end active evaluation`,
+          ),
+        )
+      }
     }
-  } finally {
-    const endResult = await endActiveEvaluation({
-      workspaceId,
-      projectId: commit.projectId,
-      evaluationUuid,
-    })
-    if (!Result.isOk(endResult)) {
-      captureException(
-        new Error(
-          `[GenerateEvaluationV2FromIssueJob] Failed to end active evaluation`,
-        ),
-      )
-    }
+    throw error
   }
 }

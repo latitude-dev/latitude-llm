@@ -1,18 +1,20 @@
-import * as factories from '@latitude-data/core/factories'
+import * as factories from '../../tests/factories'
 import { Providers } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { database } from '@latitude-data/core/client'
-import { issueHistograms } from '@latitude-data/core/schema/models/issueHistograms'
+import { database } from '../../client'
+import { issueHistograms } from '../../schema/models/issueHistograms'
 import { format } from 'date-fns'
-import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
-import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import type { Issue } from '../../schema/models/types/Issue'
+import { Workspace } from '../../schema/models/types/Workspace'
 import type { SpanWithDetails } from '@latitude-data/constants'
 import { SpanType } from '@latitude-data/constants'
 
 import { getEvaluationResultsToGenerateEvaluationForIssue } from './getEvaluationResultsToGenerateEvaluation'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
+import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
+import { User } from '../../schema/models/types/User'
 
 type TestSetup = {
   workspace: Workspace
@@ -23,6 +25,7 @@ type TestSetup = {
   evaluation: Awaited<ReturnType<typeof factories.createEvaluationV2>>
   mainIssue: Issue
   otherIssues: Issue[]
+  user: User
 }
 
 async function setupTestProject(workspace: Workspace): Promise<TestSetup> {
@@ -32,6 +35,7 @@ async function setupTestProject(workspace: Workspace): Promise<TestSetup> {
     commit,
     documents,
     apiKeys,
+    user,
   } = await factories.createProject({
     workspace,
     providers: [{ type: Providers.OpenAI, name: 'openai' }],
@@ -98,6 +102,7 @@ async function setupTestProject(workspace: Workspace): Promise<TestSetup> {
     evaluation,
     mainIssue,
     otherIssues,
+    user,
   }
 }
 
@@ -115,7 +120,9 @@ async function createEvaluationResultWithIssue({
     commitUuid: setup.commit.uuid,
     apiKeyId: setup.apiKeys[0]?.id,
   })
-  if (issueId !== null) {
+  // Only update evaluation version issueId if this is a failed result
+  // For passed results, we don't need to set issueId on the evaluation version
+  if (issueId !== null && !hasPassed) {
     await database
       .update(evaluationVersions)
       .set({ issueId })
@@ -180,7 +187,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 3,
-      positiveAndNegativeAnnotationsOfOtherIssues: 10,
+      positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
     })
   })
 
@@ -294,7 +301,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 5, // Only negative ones
-      positiveAndNegativeAnnotationsOfOtherIssues: 13, // 10 annotations for other issues + 3 positive annotations for the main issue
+      positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
     })
   })
 
@@ -357,7 +364,7 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 10,
-      positiveAndNegativeAnnotationsOfOtherIssues: 8,
+      positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
     })
   })
 
@@ -387,5 +394,219 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
         documentUuid: setup.documents[0]!.documentUuid,
       }),
     ).rejects.toThrow()
+  })
+
+  describe('commit history filtering', () => {
+    it('should only count annotations from commits in the commit history', async () => {
+      const setup = await setupTestProject(mockWorkspace)
+
+      // Create first merged commit
+      const commit1 = await factories.createCommit({
+        projectId: setup.project.id,
+        user: setup.user,
+        mergedAt: new Date('2024-01-01'),
+      })
+
+      // Create second merged commit (more recent)
+      const commit2 = await factories.createCommit({
+        projectId: setup.project.id,
+        user: setup.user,
+        mergedAt: new Date('2024-01-02'),
+      })
+
+      // Create third merged commit (most recent - future commit)
+      const commit3 = await factories.createCommit({
+        projectId: setup.project.id,
+        user: setup.user,
+        mergedAt: new Date('2024-01-03'),
+      })
+
+      // Create 5 negative annotations for main issue in commit1 (should be counted)
+      for (let i = 0; i < 5; i++) {
+        const result = await createEvaluationResultWithIssue({
+          setup,
+          issueId: setup.mainIssue.id,
+          hasPassed: false,
+        })
+        // Update to be in commit1
+        await database
+          .update(evaluationResultsV2)
+          .set({ commitId: commit1.id })
+          .where(eq(evaluationResultsV2.id, result.id))
+      }
+
+      // Create 5 negative annotations for main issue in commit2 (should be counted)
+      for (let i = 0; i < 5; i++) {
+        const result = await createEvaluationResultWithIssue({
+          setup,
+          issueId: setup.mainIssue.id,
+          hasPassed: false,
+        })
+        // Update to be in commit2
+        await database
+          .update(evaluationResultsV2)
+          .set({ commitId: commit2.id })
+          .where(eq(evaluationResultsV2.id, result.id))
+      }
+
+      // Create 5 negative annotations for main issue in commit3 (should NOT be counted when querying commit2)
+      for (let i = 0; i < 5; i++) {
+        const result = await createEvaluationResultWithIssue({
+          setup,
+          issueId: setup.mainIssue.id,
+          hasPassed: false,
+        })
+        // Update to be in commit3
+        await database
+          .update(evaluationResultsV2)
+          .set({ commitId: commit3.id })
+          .where(eq(evaluationResultsV2.id, result.id))
+      }
+
+      // Create 5 positive annotations for other issues in commit1 (should be counted)
+      for (let i = 0; i < 5; i++) {
+        const result = await createEvaluationResultWithIssue({
+          setup,
+          issueId: setup.otherIssues[i % 5]!.id,
+          hasPassed: true,
+        })
+        // Update to be in commit1
+        await database
+          .update(evaluationResultsV2)
+          .set({ commitId: commit1.id })
+          .where(eq(evaluationResultsV2.id, result.id))
+      }
+
+      // Create 5 positive annotations for other issues in commit3 (should NOT be counted when querying commit2)
+      for (let i = 0; i < 5; i++) {
+        const result = await createEvaluationResultWithIssue({
+          setup,
+          issueId: setup.otherIssues[i % 5]!.id,
+          hasPassed: true,
+        })
+        // Update to be in commit3
+        await database
+          .update(evaluationResultsV2)
+          .set({ commitId: commit3.id })
+          .where(eq(evaluationResultsV2.id, result.id))
+      }
+
+      // Query with commit2 - should only count annotations from commit1 and commit2
+      const result = await getEvaluationResultsToGenerateEvaluationForIssue({
+        workspace: setup.workspace,
+        projectId: setup.project.id,
+        commitUuid: commit2.uuid,
+        issueId: setup.mainIssue.id,
+        documentUuid: setup.documents[0]!.documentUuid,
+      })
+
+      expect(result).toEqual({
+        negativeAnnotationsOfThisIssue: 10, // 5 from commit1 + 5 from commit2 (not commit3)
+        positiveAndNegativeAnnotationsOfOtherIssues: 5, // 5 from commit1 (not commit3)
+      })
+    })
+
+    it('should include draft commit and all previous merged commits', async () => {
+      const setup = await setupTestProject(mockWorkspace)
+
+      // Create merged commits
+      const commit1 = await factories.createCommit({
+        projectId: setup.project.id,
+        user: setup.user,
+        mergedAt: new Date('2024-01-01'),
+      })
+
+      const commit2 = await factories.createCommit({
+        projectId: setup.project.id,
+        user: setup.user,
+        mergedAt: new Date('2024-01-02'),
+      })
+
+      // Create draft commit (mergedAt = null)
+      const draftCommit = await factories.createCommit({
+        projectId: setup.project.id,
+        user: setup.user,
+        mergedAt: null,
+      })
+
+      // Create 5 negative annotations for main issue in commit1
+      for (let i = 0; i < 5; i++) {
+        const result = await createEvaluationResultWithIssue({
+          setup,
+          issueId: setup.mainIssue.id,
+          hasPassed: false,
+        })
+        await database
+          .update(evaluationResultsV2)
+          .set({ commitId: commit1.id })
+          .where(eq(evaluationResultsV2.id, result.id))
+      }
+
+      // Create 5 negative annotations for main issue in commit2
+      for (let i = 0; i < 5; i++) {
+        const result = await createEvaluationResultWithIssue({
+          setup,
+          issueId: setup.mainIssue.id,
+          hasPassed: false,
+        })
+        await database
+          .update(evaluationResultsV2)
+          .set({ commitId: commit2.id })
+          .where(eq(evaluationResultsV2.id, result.id))
+      }
+
+      // Create 5 negative annotations for main issue in draft commit
+      for (let i = 0; i < 5; i++) {
+        const result = await createEvaluationResultWithIssue({
+          setup,
+          issueId: setup.mainIssue.id,
+          hasPassed: false,
+        })
+        await database
+          .update(evaluationResultsV2)
+          .set({ commitId: draftCommit.id })
+          .where(eq(evaluationResultsV2.id, result.id))
+      }
+
+      // Create 5 positive annotations for other issues in commit1
+      for (let i = 0; i < 5; i++) {
+        const result = await createEvaluationResultWithIssue({
+          setup,
+          issueId: setup.otherIssues[i]!.id,
+          hasPassed: true,
+        })
+        await database
+          .update(evaluationResultsV2)
+          .set({ commitId: commit1.id })
+          .where(eq(evaluationResultsV2.id, result.id))
+      }
+
+      // Create 5 positive annotations for other issues in draft commit
+      for (let i = 0; i < 5; i++) {
+        const result = await createEvaluationResultWithIssue({
+          setup,
+          issueId: setup.otherIssues[i]!.id,
+          hasPassed: true,
+        })
+        await database
+          .update(evaluationResultsV2)
+          .set({ commitId: draftCommit.id })
+          .where(eq(evaluationResultsV2.id, result.id))
+      }
+
+      // Query with draft commit - should include all commits (draft + all merged)
+      const result = await getEvaluationResultsToGenerateEvaluationForIssue({
+        workspace: setup.workspace,
+        projectId: setup.project.id,
+        commitUuid: draftCommit.uuid,
+        issueId: setup.mainIssue.id,
+        documentUuid: setup.documents[0]!.documentUuid,
+      })
+
+      expect(result).toEqual({
+        negativeAnnotationsOfThisIssue: 15, // 5 from commit1 + 5 from commit2 + 5 from draft
+        positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
+      })
+    })
   })
 })

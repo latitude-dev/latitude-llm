@@ -3,10 +3,11 @@ import {
   EvaluationResultsV2Repository,
   IssuesRepository,
   ProjectsRepository,
-} from '@latitude-data/core/repositories'
-import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+} from '../../repositories'
+import { Workspace } from '../../schema/models/types/Workspace'
 import { Project } from '../../schema/models/types/Project'
 import { Commit } from '../../schema/models/types/Commit'
+import { MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES } from '@latitude-data/constants/issues'
 
 /*
 To be able to generate an evaluation, we need enough annotations to do a minimally good MCC (Matthews Correlation Coefficient) %.
@@ -84,6 +85,9 @@ const getEvaluationResultsFromIssues = async ({
 }) => {
   // We need to get also the positive or other negative annotations of other issues of the same document
   // As the minimum number of positive/other issue annotations is 5, we need to get at least 5 other issues to calculate the MCC of the generated evaluation (6 just in case one of the 5 is the same as the issue we're checking)
+  const pageSize =
+    MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES + 1
+
   const issuesRepo = new IssuesRepository(workspace.id)
   const issuesFromSameDocument = await issuesRepo
     .fetchIssuesFiltered({
@@ -97,18 +101,26 @@ const getEvaluationResultsFromIssues = async ({
         sortDirection: 'desc',
       },
       page: 1,
-      limit: 6,
+      limit: pageSize,
     })
     .then((r) => r.unwrap())
 
-  const failedEvaluationResultsByIssueId =
-    await resultsRepository.listByIssueIds([
-      issueId,
-      ...issuesFromSameDocument.issues.map((i) => i.id),
-    ])
+  const commitsRepo = new CommitsRepository(workspace.id)
+  const commitHistory = await commitsRepo.getCommitsHistory({ commit })
+  const commitHistoryIds = commitHistory.map((c) => c.id)
 
-  const passedEvaluationResults =
-    await resultsRepository.listPassedByDocumentUuid(documentUuid)
+  const failedEvaluationResultsByIssueId =
+    await resultsRepository.listByIssueIds(
+      [issueId, ...issuesFromSameDocument.issues.map((i) => i.id)],
+      commitHistoryIds,
+    )
+
+  const { results: passedEvaluationResults } =
+    await resultsRepository.listPassedByDocumentUuid(
+      documentUuid,
+      commitHistoryIds,
+      { page: 1, pageSize },
+    )
 
   return {
     passedEvaluationResults,

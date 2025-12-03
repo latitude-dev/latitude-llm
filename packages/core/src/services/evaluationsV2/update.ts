@@ -32,8 +32,9 @@ export async function updateEvaluationV2<
     commit,
     settings,
     options,
-    issueId = null,
+    issueId,
     workspace,
+    qualityMetric,
   }: {
     evaluation: EvaluationV2<T, M>
     commit: Commit
@@ -41,6 +42,7 @@ export async function updateEvaluationV2<
     settings?: Partial<Omit<EvaluationSettings<T, M>, 'type' | 'metric'>>
     options?: Partial<EvaluationOptions>
     issueId?: number | null
+    qualityMetric?: number
   },
   transaction = new Transaction(),
 ) {
@@ -70,7 +72,7 @@ export async function updateEvaluationV2<
     options = compactObject(options)
 
     let issue: Issue | null = null
-    if (issueId) {
+    if (issueId !== undefined && issueId !== null) {
       const issuesRepository = new IssuesRepository(workspace.id, tx)
       const projectRepository = new ProjectsRepository(workspace.id, tx)
       const projectResult = await projectRepository.find(commit.projectId)
@@ -97,6 +99,7 @@ export async function updateEvaluationV2<
         commit: commit,
         workspace: workspace,
         issue: issue,
+        qualityMetric: qualityMetric,
       },
       tx,
     )
@@ -110,7 +113,8 @@ export async function updateEvaluationV2<
         ...evaluation,
         id: undefined,
         commitId: commit.id,
-        issueId,
+        issueId: issueId !== undefined ? issueId : evaluation.issueId,
+        qualityMetric,
         ...settings,
         ...options,
         updatedAt: new Date(),
@@ -120,7 +124,13 @@ export async function updateEvaluationV2<
           evaluationVersions.commitId,
           evaluationVersions.evaluationUuid,
         ],
-        set: { ...settings, ...options, updatedAt: new Date(), issueId },
+        set: {
+          ...settings,
+          ...options,
+          updatedAt: new Date(),
+          issueId: issueId !== undefined ? issueId : evaluation.issueId,
+          qualityMetric,
+        },
       })
       .returning()
       .then((r) => r[0]!)

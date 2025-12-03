@@ -11,14 +11,16 @@ export async function createActiveEvaluation({
   workspaceId,
   projectId,
   evaluationUuid,
+  workflowUuid,
   issueId,
   queuedAt,
   cache,
 }: {
   workspaceId: number
   projectId: number
-  evaluationUuid: string
+  workflowUuid: string
   issueId: number
+  evaluationUuid?: string
   queuedAt: Date
   cache?: Cache
 }): PromisedResult<ActiveEvaluation, Error> {
@@ -27,7 +29,8 @@ export async function createActiveEvaluation({
 
   try {
     const activeEvaluation: ActiveEvaluation = {
-      uuid: evaluationUuid,
+      workflowUuid,
+      evaluationUuid,
       issueId,
       queuedAt,
     }
@@ -35,7 +38,7 @@ export async function createActiveEvaluation({
 
     await redisCache
       .multi()
-      .hset(key, evaluationUuid, jsonValue)
+      .hset(key, workflowUuid, jsonValue)
       .expire(key, ACTIVE_EVALUATIONS_CACHE_TTL_SECONDS)
       .exec()
 

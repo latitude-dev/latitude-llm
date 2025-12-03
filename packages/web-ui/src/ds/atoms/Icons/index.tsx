@@ -158,6 +158,7 @@ import {
   ChevronsRightIcon,
   TriangleAlert,
   WandSparkles,
+  CornerDownRightIcon,
   Type,
   Video,
   Volume2,
@@ -432,6 +433,7 @@ const Icons = {
   percent: PercentIcon,
   sigma: SigmaIcon,
   wandSparkles: WandSparkles,
+  cornerDownRight: CornerDownRightIcon,
 }
 
 export type IconName = keyof typeof Icons
