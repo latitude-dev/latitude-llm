@@ -11103,7 +11103,7 @@
         "tool_call": true,
         "temperature": true,
         "release_date": "2025-11-08",
-        "last_updated": "2025-11-08",
+        "last_updated": "2025-12-03",
         "modalities": {
           "input": [
             "text"
@@ -11114,8 +11114,8 @@
         },
         "open_weights": true,
         "cost": {
-          "input": 0.03,
-          "output": 0.11
+          "input": 0.01,
+          "output": 0.05
         },
         "limit": {
           "context": 40960,
@@ -11157,7 +11157,7 @@
         "tool_call": true,
         "temperature": true,
         "release_date": "2025-11-08",
-        "last_updated": "2025-11-08",
+        "last_updated": "2025-12-03",
         "modalities": {
           "input": [
             "text"
@@ -11168,8 +11168,8 @@
         },
         "open_weights": true,
         "cost": {
-          "input": 0.15,
-          "output": 0.59
+          "input": 0.05,
+          "output": 0.2
         },
         "limit": {
           "context": 32768,
@@ -11239,7 +11239,7 @@
         "tool_call": true,
         "temperature": true,
         "release_date": "2025-11-08",
-        "last_updated": "2025-11-13",
+        "last_updated": "2025-12-03",
         "modalities": {
           "input": [
             "text"
@@ -11250,8 +11250,8 @@
         },
         "open_weights": true,
         "cost": {
-          "input": 0.55,
-          "output": 2.25
+          "input": 0.45,
+          "output": 2.35
         },
         "limit": {
           "context": 262144,
@@ -11396,6 +11396,33 @@
           "output": 163840
         }
       },
+      "tngtech/TNG-R1T-Chimera": {
+        "id": "tngtech/TNG-R1T-Chimera",
+        "name": "TNG R1T Chimera",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "release_date": "2025-12-03",
+        "last_updated": "2025-12-03",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0.3,
+          "output": 1.2
+        },
+        "limit": {
+          "context": 163840,
+          "output": 163840
+        }
+      },
       "OpenGVLab/InternVL3-78B": {
         "id": "OpenGVLab/InternVL3-78B",
         "name": "InternVL3 78B",
@@ -11513,7 +11540,7 @@
         "tool_call": true,
         "temperature": true,
         "release_date": "2025-11-08",
-        "last_updated": "2025-11-08",
+        "last_updated": "2025-12-03",
         "modalities": {
           "input": [
             "text",
@@ -11525,8 +11552,8 @@
         },
         "open_weights": true,
         "cost": {
-          "input": 0.05,
-          "output": 0.22
+          "input": 0.03,
+          "output": 0.11
         },
         "limit": {
           "context": 131072,
@@ -11596,7 +11623,7 @@
         "tool_call": false,
         "temperature": true,
         "release_date": "2025-11-08",
-        "last_updated": "2025-11-08",
+        "last_updated": "2025-12-03",
         "modalities": {
           "input": [
             "text"
@@ -11607,8 +11634,8 @@
         },
         "open_weights": true,
         "cost": {
-          "input": 0.03,
-          "output": 0.11
+          "input": 0.02,
+          "output": 0.04
         },
         "limit": {
           "context": 131072,
@@ -11846,7 +11873,7 @@
         "tool_call": false,
         "temperature": true,
         "release_date": "2025-11-08",
-        "last_updated": "2025-11-08",
+        "last_updated": "2025-12-03",
         "modalities": {
           "input": [
             "text"
@@ -11857,8 +11884,8 @@
         },
         "open_weights": true,
         "cost": {
-          "input": 0.04,
-          "output": 0.16
+          "input": 0.03,
+          "output": 0.11
         },
         "limit": {
           "context": 32768,
@@ -11955,7 +11982,7 @@
         "tool_call": false,
         "temperature": true,
         "release_date": "2025-11-08",
-        "last_updated": "2025-11-08",
+        "last_updated": "2025-12-03",
         "modalities": {
           "input": [
             "text",
@@ -11967,8 +11994,8 @@
         },
         "open_weights": true,
         "cost": {
-          "input": 0.08,
-          "output": 0.33
+          "input": 0.03,
+          "output": 0.13
         },
         "limit": {
           "context": 32768,
@@ -11983,7 +12010,7 @@
         "tool_call": true,
         "temperature": true,
         "release_date": "2025-11-08",
-        "last_updated": "2025-11-08",
+        "last_updated": "2025-12-03",
         "modalities": {
           "input": [
             "text"
@@ -11994,8 +12021,8 @@
         },
         "open_weights": true,
         "cost": {
-          "input": 0.05,
-          "output": 0.2
+          "input": 0.08,
+          "output": 0.24
         },
         "limit": {
           "context": 40960,
@@ -12335,33 +12362,6 @@
           "output": 163840
         }
       },
-      "deepseek-ai/DeepSeek-V3.2-Exp": {
-        "id": "deepseek-ai/DeepSeek-V3.2-Exp",
-        "name": "DeepSeek V3.2 Exp",
-        "attachment": false,
-        "reasoning": true,
-        "tool_call": true,
-        "temperature": true,
-        "release_date": "2025-09-29",
-        "last_updated": "2025-11-08",
-        "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": true,
-        "cost": {
-          "input": 0.25,
-          "output": 0.35
-        },
-        "limit": {
-          "context": 163840,
-          "output": 163840
-        }
-      },
       "deepseek-ai/DeepSeek-V3.1-Terminus": {
         "id": "deepseek-ai/DeepSeek-V3.1-Terminus",
         "name": "DeepSeek V3.1 Terminus",
@@ -12388,6 +12388,62 @@
         "limit": {
           "context": 163840,
           "output": 163840
+        }
+      },
+      "deepseek-ai/DeepSeek-V3.2": {
+        "id": "deepseek-ai/DeepSeek-V3.2",
+        "name": "DeepSeek V3.2",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2025-12",
+        "release_date": "2025-12-01",
+        "last_updated": "2025-12-03",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0.27,
+          "output": 0.41
+        },
+        "limit": {
+          "context": 131072,
+          "output": 16384
+        }
+      },
+      "deepseek-ai/DeepSeek-V3.2-Speciale": {
+        "id": "deepseek-ai/DeepSeek-V3.2-Speciale",
+        "name": "DeepSeek V3.2 Speciale",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": false,
+        "temperature": true,
+        "knowledge": "2025-12",
+        "release_date": "2025-12-01",
+        "last_updated": "2025-12-03",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0.27,
+          "output": 0.41
+        },
+        "limit": {
+          "context": 163840,
+          "output": 32768
         }
       },
       "deepseek-ai/DeepSeek-V3": {
@@ -13087,6 +13143,49 @@
         "limit": {
           "context": 200000,
           "output": 64000
+        }
+      }
+    }
+  },
+  "kimi-for-coding": {
+    "id": "kimi-for-coding",
+    "env": [
+      "KIMI_API_KEY"
+    ],
+    "npm": "@ai-sdk/anthropic",
+    "api": "https://api.kimi.com/coding/v1",
+    "name": "Kimi For Coding",
+    "doc": "https://www.kimi.com/coding/docs/en/third-party-agents.html",
+    "models": {
+      "kimi-k2-thinking": {
+        "id": "kimi-k2-thinking",
+        "name": "Kimi K2 Thinking",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "structured_output": true,
+        "temperature": true,
+        "knowledge": "2025-07",
+        "release_date": "2025-11",
+        "last_updated": "2025-12",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_write": 0
+        },
+        "limit": {
+          "context": 262144,
+          "output": 32768
         }
       }
     }
@@ -15268,7 +15367,7 @@
         "name": "DeepSeek-R1-0528",
         "attachment": false,
         "reasoning": true,
-        "tool_call": false,
+        "tool_call": true,
         "temperature": true,
         "knowledge": "2024-07",
         "release_date": "2025-05-28",
@@ -17510,7 +17609,7 @@
         "name": "MAI-DS-R1",
         "attachment": false,
         "reasoning": true,
-        "tool_call": true,
+        "tool_call": false,
         "temperature": true,
         "knowledge": "2024-06",
         "release_date": "2025-01-20",
@@ -22820,7 +22919,8 @@
         "limit": {
           "context": 4096,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "aura-1": {
         "id": "aura-1",
@@ -22873,7 +22973,8 @@
         },
         "limit": {
           "context": 3072,
-          "output": 3072
+          "input": 3072,
+          "output": 4096
         }
       },
       "tinyllama-1.1b-chat-v1.0": {
@@ -22901,7 +23002,8 @@
         "limit": {
           "context": 2048,
           "output": 2048
-        }
+        },
+        "status": "deprecated"
       },
       "qwen1.5-0.5b-chat": {
         "id": "qwen1.5-0.5b-chat",
@@ -22928,7 +23030,8 @@
         "limit": {
           "context": 32000,
           "output": 32000
-        }
+        },
+        "status": "deprecated"
       },
       "llama-3.2-11b-vision-instruct": {
         "id": "llama-3.2-11b-vision-instruct",
@@ -22982,7 +23085,8 @@
         "limit": {
           "context": 4096,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "llama-3.1-8b-instruct-fp8": {
         "id": "llama-3.1-8b-instruct-fp8",
@@ -23279,7 +23383,8 @@
         "limit": {
           "context": 8192,
           "output": 8192
-        }
+        },
+        "status": "deprecated"
       },
       "openhermes-2.5-mistral-7b-awq": {
         "id": "openhermes-2.5-mistral-7b-awq",
@@ -23306,7 +23411,8 @@
         "limit": {
           "context": 4096,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "lucid-origin": {
         "id": "lucid-origin",
@@ -23468,6 +23574,34 @@
         "limit": {
           "context": 15000,
           "output": 15000
+        },
+        "status": "deprecated"
+      },
+      "gemma-sea-lion-v4-27b-it": {
+        "id": "gemma-sea-lion-v4-27b-it",
+        "name": "@cf/aisingapore/gemma-sea-lion-v4-27b-it",
+        "attachment": false,
+        "reasoning": false,
+        "tool_call": true,
+        "temperature": true,
+        "release_date": "2025-09-23",
+        "last_updated": "2025-12-02",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "cost": {
+          "input": 0.35,
+          "output": 0.56
+        },
+        "limit": {
+          "context": 128000,
+          "output": 0
         }
       },
       "m2m100-1.2b": {
@@ -23630,7 +23764,8 @@
         "limit": {
           "context": 7500,
           "output": 7500
-        }
+        },
+        "status": "deprecated"
       },
       "qwen1.5-1.8b-chat": {
         "id": "qwen1.5-1.8b-chat",
@@ -23657,7 +23792,8 @@
         "limit": {
           "context": 32000,
           "output": 32000
-        }
+        },
+        "status": "deprecated"
       },
       "mistral-small-3.1-24b-instruct": {
         "id": "mistral-small-3.1-24b-instruct",
@@ -23713,6 +23849,33 @@
           "output": 8192
         }
       },
+      "qwen3-30b-a3b-fp8": {
+        "id": "qwen3-30b-a3b-fp8",
+        "name": "@cf/qwen/qwen3-30b-a3b-fp8",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "release_date": "2025-04-30",
+        "last_updated": "2025-12-02",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0.051,
+          "output": 0.34
+        },
+        "limit": {
+          "context": 32768,
+          "output": 0
+        }
+      },
       "llamaguard-7b-awq": {
         "id": "llamaguard-7b-awq",
         "name": "@hf/thebloke/llamaguard-7b-awq",
@@ -23738,7 +23901,8 @@
         "limit": {
           "context": 4096,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "hermes-2-pro-mistral-7b": {
         "id": "hermes-2-pro-mistral-7b",
@@ -23767,6 +23931,33 @@
           "output": 24000
         }
       },
+      "granite-4.0-h-micro": {
+        "id": "granite-4.0-h-micro",
+        "name": "@cf/ibm-granite/granite-4.0-h-micro",
+        "attachment": false,
+        "reasoning": false,
+        "tool_call": true,
+        "temperature": true,
+        "release_date": "2025-10-07",
+        "last_updated": "2025-12-02",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "cost": {
+          "input": 0.017,
+          "output": 0.11
+        },
+        "limit": {
+          "context": 131000,
+          "output": 0
+        }
+      },
       "falcon-7b-instruct": {
         "id": "falcon-7b-instruct",
         "name": "@cf/tiiuae/falcon-7b-instruct",
@@ -23792,7 +23983,8 @@
         "limit": {
           "context": 4096,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "llama-3.3-70b-instruct-fp8-fast": {
         "id": "llama-3.3-70b-instruct-fp8-fast",
@@ -23954,7 +24146,8 @@
         "limit": {
           "context": 4096,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "llama-2-7b-chat-int8": {
         "id": "llama-2-7b-chat-int8",
@@ -24088,8 +24281,10 @@
         },
         "limit": {
           "context": 4096,
+          "input": 3072,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "deepseek-coder-6.7b-base-awq": {
         "id": "deepseek-coder-6.7b-base-awq",
@@ -24116,7 +24311,8 @@
         "limit": {
           "context": 4096,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "gemma-3-12b-it": {
         "id": "gemma-3-12b-it",
@@ -24168,7 +24364,7 @@
           "output": 0.03
         },
         "limit": {
-          "context": 0,
+          "context": 131072,
           "output": 0
         }
       },
@@ -24197,7 +24393,8 @@
         "limit": {
           "context": 4096,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "whisper-tiny-en": {
         "id": "whisper-tiny-en",
@@ -24312,7 +24509,7 @@
         "id": "gpt-oss-20b",
         "name": "@cf/openai/gpt-oss-20b",
         "attachment": false,
-        "reasoning": false,
+        "reasoning": true,
         "tool_call": false,
         "temperature": false,
         "release_date": "2025-08-04",
@@ -24360,13 +24557,14 @@
         "limit": {
           "context": 4096,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "gpt-oss-120b": {
         "id": "gpt-oss-120b",
         "name": "@cf/openai/gpt-oss-120b",
         "attachment": false,
-        "reasoning": false,
+        "reasoning": true,
         "tool_call": false,
         "temperature": false,
         "release_date": "2025-08-04",
@@ -24441,7 +24639,8 @@
         "limit": {
           "context": 20000,
           "output": 20000
-        }
+        },
+        "status": "deprecated"
       },
       "llama-3.1-8b-instruct-fast": {
         "id": "llama-3.1-8b-instruct-fast",
@@ -24576,7 +24775,8 @@
         "limit": {
           "context": 4096,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "deepseek-coder-6.7b-instruct-awq": {
         "id": "deepseek-coder-6.7b-instruct-awq",
@@ -24603,7 +24803,8 @@
         "limit": {
           "context": 4096,
           "output": 4096
-        }
+        },
+        "status": "deprecated"
       },
       "llama-3.1-8b-instruct-awq": {
         "id": "llama-3.1-8b-instruct-awq",
@@ -27375,6 +27576,34 @@
         },
         "limit": {
           "context": 131072,
+          "output": 65536
+        }
+      },
+      "deepseek/deepseek-v3.2": {
+        "id": "deepseek/deepseek-v3.2",
+        "name": "DeepSeek V3.2",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2024-07",
+        "release_date": "2025-12-01",
+        "last_updated": "2025-12-01",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0.28,
+          "output": 0.4
+        },
+        "limit": {
+          "context": 163840,
           "output": 65536
         }
       },
@@ -36950,7 +37179,7 @@
         "name": "MAI-DS-R1",
         "attachment": false,
         "reasoning": true,
-        "tool_call": true,
+        "tool_call": false,
         "temperature": true,
         "knowledge": "2024-06",
         "release_date": "2025-01-20",
@@ -39192,7 +39421,7 @@
         "name": "DeepSeek-R1-0528",
         "attachment": false,
         "reasoning": true,
-        "tool_call": false,
+        "tool_call": true,
         "temperature": true,
         "knowledge": "2024-07",
         "release_date": "2025-05-28",
