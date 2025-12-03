@@ -29,7 +29,8 @@ export const requestDocumentSuggestionJobV2 = async ({
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
   if (result.hasPassed || result.error || result.usedForSuggestion) return
   if (!evaluation.enableSuggestions) return
-  if (!LIVE_SUGGESTION_SOURCES.includes((metadata as PromptSpanMetadata).source)) return // prettier-ignore
+  const promptMetadata = metadata as PromptSpanMetadata
+  if (!promptMetadata.source || !LIVE_SUGGESTION_SOURCES.includes(promptMetadata.source)) return // prettier-ignore
 
   const { documentSuggestionsQueue } = await queues()
   documentSuggestionsQueue.add(

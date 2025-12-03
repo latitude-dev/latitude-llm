@@ -1,0 +1,1 @@
+export { NormalizingSpanProcessor } from './normalize'
