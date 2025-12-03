@@ -139,13 +139,6 @@ export default function ProjectSection({
             .commits.detail({ uuid: commit.uuid }).issues.root,
         },
         {
-          label: 'Analytics',
-          route: ROUTES.projects
-            .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid }).analytics.root,
-          iconName: 'barChart4',
-        },
-        {
           label: 'History',
           route: ROUTES.projects
             .detail({ id: project.id })
