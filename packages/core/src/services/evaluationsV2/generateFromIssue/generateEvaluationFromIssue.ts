@@ -86,7 +86,7 @@ export async function generateEvaluationFromIssue(
       evaluationUuid: evaluation.uuid,
     })
 
-    const validationFlowResult = await createValidationFlow(
+    return await createValidationFlow(
       {
         generationAttempt,
         workspace,
@@ -99,13 +99,5 @@ export async function generateEvaluationFromIssue(
       },
       tx,
     )
-
-    if (!Result.isOk(validationFlowResult)) {
-      return validationFlowResult
-    }
-
-    const validationFlowJob = validationFlowResult.unwrap()
-
-    return Result.ok(validationFlowJob)
   })
 }
