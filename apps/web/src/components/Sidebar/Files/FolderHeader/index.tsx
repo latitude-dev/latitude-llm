@@ -17,6 +17,8 @@ export default function FolderHeader({
   onToggleOpen,
   canDrag,
   draggble,
+  isRunning,
+  runningCount,
 }: {
   node: Node
   open: boolean
@@ -24,6 +26,8 @@ export default function FolderHeader({
   onToggleOpen: () => void
   canDrag: boolean
   draggble: NodeHeaderWrapperProps['draggble']
+  isRunning?: boolean
+  runningCount?: number
 }) {
   const {
     isLoading,
@@ -219,6 +223,8 @@ export default function FolderHeader({
           open ? ['chevronDown', 'folderOpen'] : ['chevronRight', 'folderClose']
         }
         changeType={node.changeType}
+        isRunning={isRunning}
+        runningCount={runningCount}
       />
     </>
   )

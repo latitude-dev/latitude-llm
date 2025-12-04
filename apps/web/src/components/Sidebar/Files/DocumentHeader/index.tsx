@@ -39,6 +39,8 @@ export default function DocumentHeader({
   draggble,
   canDrag,
   currentEvaluationUuid,
+  isRunning,
+  runningCount,
 }: {
   open: boolean
   selected: boolean
@@ -47,6 +49,8 @@ export default function DocumentHeader({
   draggble: NodeHeaderWrapperProps['draggble']
   currentEvaluationUuid: ParamValue
   canDrag: boolean
+  isRunning?: boolean
+  runningCount?: number
 }) {
   const {
     isLoading,
@@ -105,6 +109,10 @@ export default function DocumentHeader({
       .commits.detail({ uuid: sidebarLinkContext.commitUuid })
       .documents.detail({ uuid: documentUuid })
 
+    if (isRunning) {
+      return documentDetails.traces.root
+    }
+
     // Preserve the current page type when navigating to another document
     // But always go to the list page, not specific items (evaluationUuid, etc.)
     switch (currentPageType) {
@@ -126,6 +134,7 @@ export default function DocumentHeader({
     sidebarLinkContext,
     currentEvaluationUuid,
     currentPageType,
+    isRunning,
   ])
   const [isEditing, setIsEditing] = useState(node.name === ' ')
   const actions = useMemo<MenuOption[]>(
@@ -190,6 +199,8 @@ export default function DocumentHeader({
       onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
       icons={[icon]}
       childrenSelected={!!currentEvaluationUuid}
+      isRunning={isRunning}
+      runningCount={runningCount}
     >
       {selected && (
         <EvaluationList

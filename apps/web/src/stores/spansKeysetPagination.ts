@@ -62,31 +62,32 @@ export function useSpansKeysetPaginationStore(
     }) as Record<string, string>,
   })
 
-  const { data, error, isLoading } = useSWR<SpansKeysetPaginationResult>(
-    [
-      'spansKeysetPagination',
-      projectId,
-      commitUuid,
-      documentUuid,
-      currentCursor,
-      type,
-      limit,
-      filters,
-    ],
-    fetcher,
-    {
-      ...opts,
-      keepPreviousData: true,
-      fallbackData:
-        initialItems.length > 0
-          ? {
-              count: null,
-              items: initialItems,
-              next: initialItems.at(-1)!.startedAt.toISOString(),
-            }
-          : undefined,
-    },
-  )
+  const { data, error, isLoading, mutate } =
+    useSWR<SpansKeysetPaginationResult>(
+      [
+        'spansKeysetPagination',
+        projectId,
+        commitUuid,
+        documentUuid,
+        currentCursor,
+        type,
+        limit,
+        filters,
+      ],
+      fetcher,
+      {
+        ...opts,
+        keepPreviousData: true,
+        fallbackData:
+          initialItems.length > 0
+            ? {
+                count: null,
+                items: initialItems,
+                next: initialItems.at(-1)!.startedAt.toISOString(),
+              }
+            : undefined,
+      },
+    )
 
   const goToNextPage = useCallback(() => {
     if (!data?.next || isLoading) return
@@ -121,6 +122,7 @@ export function useSpansKeysetPaginationStore(
       goToNextPage,
       goToPrevPage,
       reset,
+      mutate,
       // Expose current state for debugging if needed
       currentCursor,
       cursorHistoryLength: cursorHistory.length,
@@ -135,12 +137,13 @@ export function useSpansKeysetPaginationStore(
       goToNextPage,
       goToPrevPage,
       reset,
+      mutate,
       currentCursor,
     ],
   )
 }
 
-function serializeSpans(spans: Span[]) {
+export function serializeSpans(spans: Span[]) {
   return spans.map((span) => ({
     ...span,
     startedAt: new Date(span.startedAt),

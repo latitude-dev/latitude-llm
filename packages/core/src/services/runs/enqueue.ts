@@ -5,8 +5,8 @@ import { queues } from '../../jobs/queues'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
-import { createActiveRun } from './active/create'
-import { deleteActiveRun } from './active/delete'
+import { createActiveRunByDocument } from './active/byDocument/create'
+import { deleteActiveRunByDocument } from './active/byDocument/delete'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Project } from '../../schema/models/types/Project'
@@ -48,18 +48,22 @@ export async function enqueueRun({
 }) {
   runUuid = runUuid ?? generateUUIDIdentifier()
   const redisCache = cache ?? (await redis())
+  const queuedAt = new Date()
 
   // IMPORTANT: Create the run in cache BEFORE adding to queue
   // to prevent race condition where job starts before cache entry exists
-  const creating = await createActiveRun({
+  const creating = await createActiveRunByDocument({
     workspaceId: workspace.id,
     projectId: project.id,
+    documentUuid: document.documentUuid,
+    commitUuid: commit.uuid,
     runUuid,
-    queuedAt: new Date(),
+    queuedAt,
     source,
     cache: redisCache,
   })
   if (creating.error) return Result.error(creating.error)
+
   const run = creating.value
 
   const { runsQueue } = await queues()
@@ -90,10 +94,11 @@ export async function enqueueRun({
     },
   )
   if (!job?.id) {
-    // Job creation failed - clean up the cache entry we just created
-    await deleteActiveRun({
+    // Job creation failed - clean up cache entry
+    await deleteActiveRunByDocument({
       workspaceId: workspace.id,
       projectId: project.id,
+      documentUuid: document.documentUuid,
       runUuid,
       cache: redisCache,
     })
@@ -103,8 +108,14 @@ export async function enqueueRun({
   }
 
   await publisher.publishLater({
-    type: 'runQueued',
-    data: { projectId: project.id, workspaceId: workspace.id, run },
+    type: 'documentRunQueued',
+    data: {
+      projectId: project.id,
+      workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      run,
+    },
   })
 
   return Result.ok({ run })

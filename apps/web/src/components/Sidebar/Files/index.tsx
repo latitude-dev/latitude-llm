@@ -56,6 +56,8 @@ function NodeHeader({
         canDrag={canDrag}
         draggble={draggable}
         currentEvaluationUuid={currentEvaluationUuid}
+        isRunning={node.isRunning}
+        runningCount={node.runningCount}
       />
     )
   }
@@ -68,6 +70,8 @@ function NodeHeader({
       onToggleOpen={onToggleOpen}
       canDrag={canDrag}
       draggble={draggable}
+      isRunning={node.isRunning && !open}
+      runningCount={node.runningCount}
     />
   )
 }
@@ -213,6 +217,7 @@ export function FilesTree({
   currentUuid,
   documents,
   liveDocuments,
+  runningDocumentsMap,
   mainDocumentUuid,
   onMergeCommitClick,
   createFile,
@@ -234,6 +239,7 @@ export function FilesTree({
   destroyFolder: (path: string) => Promise<void>
   documents: SidebarDocument[]
   liveDocuments?: SidebarDocument[]
+  runningDocumentsMap?: Map<string, number>
   currentUuid: string | undefined
   isDestroying: boolean
   mainDocumentUuid: string | undefined
@@ -245,7 +251,11 @@ export function FilesTree({
     isOpenThisPath: state.isOpen,
     togglePath: state.togglePath,
   }))
-  const rootNode = useTree({ documents, liveDocuments })
+  const rootNode = useTree({
+    documents,
+    liveDocuments,
+    runningDocumentsMap,
+  })
   const [deletableNode, setDeletable] =
     useState<DeletableElement<DeletableType> | null>(null)
 

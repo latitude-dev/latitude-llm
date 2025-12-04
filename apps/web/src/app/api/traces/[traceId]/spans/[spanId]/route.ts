@@ -29,6 +29,7 @@ export const GET = errorHandler(
       const span = await spansRepository
         .get({ traceId, spanId })
         .then((r) => r.unwrap())
+
       if (!span) return notFound()
 
       const metadatasRepository = new SpanMetadatasRepository(workspace.id)

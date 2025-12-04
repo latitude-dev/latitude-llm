@@ -14,8 +14,8 @@ import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluat
 import { notifyClientOfEvaluationStatus } from './notifyClientOfEvaluationStatus'
 import { notifyClientOfExportReady } from './notifyClientOfExportReady'
 import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
-import { notifyClientOfRunStatus } from './notifyClientOfRunStatus'
 import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
+import { notifyClientOfSpanCreated } from './notifyClientOfSpanCreated'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { pingProjectUpdateJob } from './pingProjectUpdateJob'
 import { requestDocumentSuggestionJobV2 } from './requestDocumentSuggestionJob'
@@ -31,6 +31,7 @@ import { updateWebhookLastTriggeredAt } from './webhooks'
 import { removeMergedIssueVectors } from './removeMergedIssueVectors'
 import { generateDetailsForMergedIssue } from './generateDetailsForMergedIssue'
 import { unlockIssuesDashboardOnAnnotation } from './unlockIssuesDashboardOnAnnotation'
+import { notifyClientOfRunStatusByDocument } from './notifyClientOfRunStatusByDocument'
 
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
@@ -82,7 +83,7 @@ export const EventHandlers: IEventsHandlers = {
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],
   mcpServerConnected: [notifyClientOfMcpServerConnected],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],
-  spanCreated: [evaluateLiveLogJob],
+  spanCreated: [evaluateLiveLogJob, notifyClientOfSpanCreated],
   segmentCreated: [],
   segmentUpdated: [],
   actionExecuted: [],
@@ -94,10 +95,10 @@ export const EventHandlers: IEventsHandlers = {
   promocodeClaimed: [],
   subscriptionUpdated: [],
   commitMerged: [],
-  runQueued: [notifyClientOfRunStatus],
-  runStarted: [notifyClientOfRunStatus],
-  runProgress: [notifyClientOfRunStatus],
-  runEnded: [notifyClientOfRunStatus],
+  documentRunQueued: [notifyClientOfRunStatusByDocument],
+  documentRunStarted: [notifyClientOfRunStatusByDocument],
+  documentRunProgress: [notifyClientOfRunStatusByDocument],
+  documentRunEnded: [notifyClientOfRunStatusByDocument],
   commitUpdated: [],
   pasteYourPromptOnboardingPageVisited: [],
   generateDatasetOnboardingPageVisited: [],

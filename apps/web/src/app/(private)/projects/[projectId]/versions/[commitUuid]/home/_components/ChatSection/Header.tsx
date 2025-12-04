@@ -11,7 +11,7 @@ import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { extractLeadingEmoji } from '@latitude-data/web-ui/textUtils'
 import { ReactNode, useMemo } from 'react'
-import ChatActions from '../../../documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat/Actions'
+import ChatActions from '$/components/PlaygroundCommon/PromptPlaygroundChat/Actions'
 
 function ChatSectionHeaderWrapper({
   icon,

@@ -180,7 +180,7 @@ function ProgressPanelLoading() {
   )
 }
 
-export function AnnotationProgressPanel({ isReady }: { isReady: boolean }) {
+export function AnnotationProgressPanel() {
   const [whatOpen, setWhatOpen] = useState(false)
   const { open, onOpen, onOpenChange } = useToggleModal()
   const onCloseWhat = useCallback(() => {
@@ -191,7 +191,7 @@ export function AnnotationProgressPanel({ isReady }: { isReady: boolean }) {
     onOpen()
   }, [onCloseWhat, onOpen])
 
-  const progress = useAnnotationProgress({ isReady })
+  const progress = useAnnotationProgress()
   const isLoading = progress.status === 'loading'
 
   if (isLoading) return <ProgressPanelLoading />

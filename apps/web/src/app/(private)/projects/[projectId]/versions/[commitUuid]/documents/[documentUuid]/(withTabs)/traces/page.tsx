@@ -1,3 +1,4 @@
+import { Metadata } from 'next'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import {
   CommitsRepository,
@@ -9,7 +10,7 @@ import { SpanType, Span } from '@latitude-data/constants'
 import { parseSpansFilters, SpansFilters } from '$/lib/schemas/filters'
 import { buildCommitFilter } from '$/app/api/projects/[projectId]/commits/[commitUuid]/documents/[documentUuid]/spans/limited/route'
 
-export const metadata = buildMetatags({
+export const metadata: Promise<Metadata> = buildMetatags({
   locationDescription: 'Document Traces Page',
 })
 

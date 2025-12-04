@@ -1,10 +1,7 @@
 'use client'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { useMemo } from 'react'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import {
@@ -13,21 +10,18 @@ import {
   RunSourceGroup,
 } from '@latitude-data/constants'
 
-import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export function useCompletedRuns(
   {
     project,
     search,
-    realtime = true,
   }: {
     project: Pick<Project, 'id'>
     search?: {
       sourceGroup?: RunSourceGroup
       limit?: number
     }
-    realtime?: boolean
   },
   opts?: SWRConfiguration,
 ) {
@@ -45,28 +39,6 @@ export function useCompletedRuns(
     opts,
   )
 
-  const onMessage = useCallback(
-    (args: EventArgs<'runStatus'>) => {
-      if (!realtime) return
-      if (!args) return
-
-      mutate(
-        (prev) => {
-          if (!prev) return prev
-          if (args.event !== 'runEnded') return prev
-          const run = args.run as CompletedRun
-
-          return { ...prev, items: [run, ...prev.items] }
-        },
-        {
-          revalidate: false,
-        },
-      )
-    },
-    [mutate, realtime],
-  )
-  useSockets({ event: 'runStatus', onMessage })
-
   return useMemo(
     () => ({
       data,
@@ -81,12 +53,10 @@ export function useCompletedRunsCount(
   {
     project,
     sourceGroup,
-    realtime = true,
     disable = false,
   }: {
     project: Pick<Project, 'id'>
     sourceGroup: RunSourceGroup
-    realtime?: boolean
     disable?: boolean
   },
   opts?: SWRConfiguration,
@@ -111,38 +81,6 @@ export function useCompletedRunsCount(
     fetcher,
     opts,
   )
-
-  const onMessage = useCallback(
-    (args: EventArgs<'runStatus'>) => {
-      if (!realtime || disable) return
-      if (!args) return
-      if (args.projectId !== project.id) return
-
-      mutate(
-        (prev) => {
-          // When the run ended, increment the count for the source
-          if (!prev) return prev
-          const source = args.run.source
-          if (!source) return prev
-          const currentCount = prev[source] ?? 0
-
-          if (args.event === 'runEnded') {
-            return {
-              ...prev,
-              [source]: currentCount + 1,
-            }
-          }
-
-          return prev
-        },
-        {
-          revalidate: false,
-        },
-      )
-    },
-    [project, mutate, realtime, disable],
-  )
-  useSockets({ event: 'runStatus', onMessage })
 
   return useMemo(
     () => ({

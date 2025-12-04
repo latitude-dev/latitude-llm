@@ -1,4 +1,7 @@
-import { ACTIVE_RUNS_CACHE_KEY, LogSources } from '@latitude-data/constants'
+import {
+  ACTIVE_RUNS_BY_DOCUMENT_CACHE_KEY,
+  LogSources,
+} from '@latitude-data/constants'
 import {
   afterEach,
   beforeAll,
@@ -12,9 +15,9 @@ import type { Cache } from '../../cache'
 import { cache } from '../../cache'
 import { publisher } from '../../events/publisher'
 import { queues } from '../../jobs/queues'
-import { deleteActiveRun } from './active/delete'
-import { getRun } from './get'
-import { listActiveRuns } from './active/listActive'
+import { deleteActiveRunByDocument } from './active/byDocument/delete'
+import { getRunByDocument } from './active/byDocument/get'
+import { listActiveRunsByDocument } from './active/byDocument/listByDocument'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Project } from '../../schema/models/types/Project'
@@ -57,8 +60,12 @@ describe('enqueueRun', () => {
     } as Project
     testKeys.clear()
 
-    // Track the key for this workspace/project combination
-    const key = ACTIVE_RUNS_CACHE_KEY(mockWorkspace.id, mockProject.id)
+    // Track the key for this workspace/project/document combination
+    const key = ACTIVE_RUNS_BY_DOCUMENT_CACHE_KEY(
+      mockWorkspace.id,
+      mockProject.id,
+      mockDocument.documentUuid,
+    )
     testKeys.add(key)
 
     vi.mocked(queues).mockResolvedValue({
@@ -86,9 +93,9 @@ describe('enqueueRun', () => {
         queuedAt: new Date(),
       }
 
-      // Mock createActiveRun to track when cache entry is created
+      // Mock createActiveRunByDocument to track when cache entry is created
       const createSpy = vi
-        .spyOn(await import('./active/create'), 'createActiveRun')
+        .spyOn(await import('./active/byDocument/create'), 'createActiveRunByDocument')
         .mockImplementation(async () => {
           callOrder.push('cache-create')
           return { ok: true, value: mockRun } as any
@@ -133,9 +140,10 @@ describe('enqueueRun', () => {
       const run = result.value.run
 
       // Verify cache entry was created by checking it exists
-      const cached = await getRun({
+      const cached = await getRunByDocument({
         workspaceId: mockWorkspace.id,
         projectId: mockProject.id,
+        documentUuid: mockDocument.documentUuid,
         runUuid: run.uuid,
         cache: redis,
       })
@@ -147,9 +155,10 @@ describe('enqueueRun', () => {
       expect(cached.value.queuedAt).toBeInstanceOf(Date)
 
       // Clean up the cache entry we created
-      await deleteActiveRun({
+      await deleteActiveRunByDocument({
         workspaceId: mockWorkspace.id,
         projectId: mockProject.id,
+        documentUuid: mockDocument.documentUuid,
         runUuid: run.uuid,
         cache: redis,
       })
@@ -172,9 +181,10 @@ describe('enqueueRun', () => {
       expect(result.error?.message).toContain('Failed to enqueue')
 
       // Verify cache entry was cleaned up
-      const active = await listActiveRuns({
+      const active = await listActiveRunsByDocument({
         workspaceId: mockWorkspace.id,
         projectId: mockProject.id,
+        documentUuid: mockDocument.documentUuid,
         page: 1,
         pageSize: 100,
         cache: redis,
@@ -188,7 +198,7 @@ describe('enqueueRun', () => {
     it('does not create job if cache creation fails', async () => {
       // Force cache creation to fail
       const createSpy = vi
-        .spyOn(await import('./active/create'), 'createActiveRun')
+        .spyOn(await import('./active/byDocument/create'), 'createActiveRunByDocument')
         .mockResolvedValueOnce({
           ok: false,
           error: new Error('Cache error'),
@@ -236,9 +246,10 @@ describe('enqueueRun', () => {
       expect(new Set(uuids).size).toBe(concurrentCount)
 
       // All should have cache entries
-      const active = await listActiveRuns({
+      const active = await listActiveRunsByDocument({
         workspaceId: mockWorkspace.id,
         projectId: mockProject.id,
+        documentUuid: mockDocument.documentUuid,
         page: 1,
         pageSize: 100,
         cache: redis,
@@ -251,9 +262,10 @@ describe('enqueueRun', () => {
       // Clean up all cache entries
       for (const result of succeeded) {
         if (result.ok && result.value) {
-          await deleteActiveRun({
+          await deleteActiveRunByDocument({
             workspaceId: mockWorkspace.id,
             projectId: mockProject.id,
+            documentUuid: mockDocument.documentUuid,
             runUuid: result.value.run.uuid,
             cache: redis,
           })
@@ -353,11 +365,13 @@ describe('enqueueRun', () => {
       if (!result.ok || !result.value) return
 
       expect(publisher.publishLater).toHaveBeenCalledWith({
-        type: 'runQueued',
+        type: 'documentRunQueued',
         data: {
           run: result.value.run,
           projectId: mockProject.id,
           workspaceId: mockWorkspace.id,
+          documentUuid: mockDocument.documentUuid,
+          commitUuid: mockCommit.uuid,
         },
       })
     })
@@ -373,7 +387,7 @@ describe('enqueueRun', () => {
       }
 
       const createSpy = vi
-        .spyOn(await import('./active/create'), 'createActiveRun')
+        .spyOn(await import('./active/byDocument/create'), 'createActiveRunByDocument')
         .mockImplementation(async () => {
           // Simulate slow cache creation
           await new Promise((resolve) => setTimeout(resolve, 50))

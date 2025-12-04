@@ -1,7 +1,6 @@
 'use client'
 
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useActiveRuns } from '$/stores/runs/activeRuns'
 import { useCompletedRuns } from '$/stores/runs/completedRuns'
 import { RunSourceGroup } from '@latitude-data/constants'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
@@ -11,23 +10,18 @@ import { envClient } from '$/envClient'
 import { DocsRoute } from '$/components/Documentation/routes'
 
 export default function ProductionBanner({ project }: { project: Project }) {
-  const { data: activeRuns, isLoading: isLoadingActiveRuns } = useActiveRuns({
-    project,
-    search: { sourceGroup: RunSourceGroup.Production },
-  })
   const { data: completedRuns, isLoading: isLoadingCompletedRuns } =
     useCompletedRuns({
       project,
       search: { limit: 1, sourceGroup: RunSourceGroup.Production },
     })
 
-  const isLoadingRuns = isLoadingActiveRuns || isLoadingCompletedRuns
   const hasProductionRuns = useMemo(
-    () => activeRuns.length > 0 || completedRuns.items.length > 0,
-    [activeRuns, completedRuns],
+    () => completedRuns.items.length > 0,
+    [completedRuns],
   )
 
-  if (isLoadingRuns || hasProductionRuns) return null
+  if (isLoadingCompletedRuns || hasProductionRuns) return null
 
   const docsUrl = `${envClient.NEXT_PUBLIC_DOCS_URL}${DocsRoute.IntegrationOverview}`
 

@@ -426,7 +426,7 @@ For background/async execution:
 
 1. Creates an active run entry in Redis cache
 2. Adds job to BullMQ `runsQueue` with deduplication
-3. Publishes `runQueued` event
+3. Publishes `runDocumentQueued` event
 
 #### `backgroundRunJob` (`packages/core/src/jobs/job-definitions/runs/backgroundRunJob.ts`)
 
@@ -474,7 +474,7 @@ export const EventHandlers: IEventsHandlers = {
   spanCreated: [evaluateLiveLogJob],
   providerLogCreated: [touchApiKeyJob, touchProviderApiKeyJob],
   evaluationResultV2Created: [requestDocumentSuggestionJobV2, ...],
-  runQueued: [notifyClientOfRunStatus],
+  documentRunQueued: [notifyClientOfRunStatusByDocument],
   // ... many more event handlers
 }
 ```

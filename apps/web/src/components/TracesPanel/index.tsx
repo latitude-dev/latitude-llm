@@ -1,3 +1,4 @@
+import { Ref, useMemo } from 'react'
 import { DetailsPanel } from '$/components/tracing/spans/DetailsPanel'
 import { useTrace } from '$/stores/traces'
 import { SpanType, SpanWithDetails } from '@latitude-data/constants'
@@ -12,7 +13,6 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { AnnotationForms } from './AnnotationForms'
 import { TraceEvaluations } from './TraceEvaluations'
 import { MetadataInfoTabs } from '../MetadataInfoTabs'
-import { useMemo } from 'react'
 import {
   adaptCompletionSpanMessagesToLegacy,
   findCompletionSpanFromTrace,
@@ -24,6 +24,7 @@ export const DEFAULT_TABS = [
 ]
 
 export function TraceInfoPanel({
+  ref,
   spanId,
   traceId,
   documentUuid,
@@ -35,6 +36,7 @@ export function TraceInfoPanel({
   documentUuid: string
   insideOtherPanel?: boolean
   mergedToIssueId?: number
+  ref?: Ref<HTMLDivElement>
 }) {
   const { commit } = useCurrentCommit()
   const document = useMemo(
@@ -58,31 +60,28 @@ export function TraceInfoPanel({
     results.length > 0
       ? [...DEFAULT_TABS, { label: 'Evaluations', value: 'evaluations' }]
       : DEFAULT_TABS
-
   return (
-    <div className='flex flex-col gap-4'>
-      <MetadataInfoTabs tabs={tabs} insideOtherPanel={insideOtherPanel}>
-        {({ selectedTab }) => (
-          <>
-            {selectedTab === 'metadata' && (
-              <TraceMetadata
-                isLoading={isLoading}
-                span={span}
-                mergedToIssueId={mergedToIssueId}
-              />
-            )}
-            {selectedTab === 'messages' && <TraceMessages traceId={traceId} />}
-            {selectedTab === 'evaluations' && (
-              <TraceEvaluations
-                documentUuid={documentUuid}
-                span={span}
-                results={results}
-              />
-            )}
-          </>
-        )}
-      </MetadataInfoTabs>
-    </div>
+    <MetadataInfoTabs ref={ref} tabs={tabs} insideOtherPanel={insideOtherPanel}>
+      {({ selectedTab }) => (
+        <>
+          {selectedTab === 'metadata' && (
+            <TraceMetadata
+              isLoading={isLoading}
+              span={span}
+              mergedToIssueId={mergedToIssueId}
+            />
+          )}
+          {selectedTab === 'messages' && <TraceMessages traceId={traceId} />}
+          {selectedTab === 'evaluations' && (
+            <TraceEvaluations
+              documentUuid={documentUuid}
+              span={span}
+              results={results}
+            />
+          )}
+        </>
+      )}
+    </MetadataInfoTabs>
   )
 }
 

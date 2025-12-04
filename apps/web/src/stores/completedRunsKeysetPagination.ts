@@ -184,9 +184,7 @@ export function useCompletedRunsKeysetPaginationStore(
     if (cursorHistory.length === 0 || isLoading) return
 
     const previousCursor = popCursorFromHistory(projectId)
-    if (previousCursor !== null) {
-      setCurrentCursor(projectId, previousCursor)
-    }
+    setCurrentCursor(projectId, previousCursor)
   }, [
     cursorHistory.length,
     isLoading,
