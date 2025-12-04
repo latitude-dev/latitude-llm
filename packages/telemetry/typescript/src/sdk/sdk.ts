@@ -56,13 +56,9 @@ import type * as anthropic from '@anthropic-ai/sdk'
 import type * as bedrock from '@aws-sdk/client-bedrock-runtime'
 import type * as azure from '@azure/openai'
 import type * as vertexai from '@google-cloud/vertexai'
-import type * as langchain_runnables from '@langchain/core/runnables'
-import type * as langchain_vectorstores from '@langchain/core/vectorstores'
+import type * as langchain_callbacks from '@langchain/core/callbacks/manager'
 import type * as latitude from '@latitude-data/sdk'
 import type * as cohere from 'cohere-ai'
-import type * as langchain_agents from 'langchain/agents'
-import type * as langchain_chains from 'langchain/chains'
-import type * as langchain_tools from 'langchain/tools'
 import type * as openai from 'openai'
 import type * as togetherai from 'together-ai'
 
@@ -130,11 +126,7 @@ export type TelemetryOptions = {
     [Instrumentation.TogetherAI]?: typeof togetherai.Together
     [Instrumentation.Cohere]?: typeof cohere
     [Instrumentation.Langchain]?: {
-      chainsModule: typeof langchain_chains
-      agentsModule: typeof langchain_agents
-      toolsModule: typeof langchain_tools
-      vectorStoreModule: typeof langchain_vectorstores
-      runnablesModule: typeof langchain_runnables
+      callbackManagerModule?: typeof langchain_callbacks
     }
     [Instrumentation.LlamaIndex]?: any // Note: Any because this type is huge
   }
