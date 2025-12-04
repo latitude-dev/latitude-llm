@@ -58,7 +58,6 @@ export function EvaluationChangeItem({
   }, [evaluation])
 
   const iconColor = useMemo<TextColor>(() => {
-    if (change.hasIssues) return 'destructive'
     return MODIFICATION_COLORS[change.changeType]
   }, [change])
 
@@ -77,7 +76,6 @@ export function EvaluationChangeItem({
       }
       label={change.name}
       changeType={change.changeType}
-      hasIssues={change.hasIssues}
       href={
         ROUTES.projects
           .detail({ id: projectId })
