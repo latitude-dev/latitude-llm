@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { SpanType, SPAN_METADATA_STORAGE_KEY } from '@latitude-data/constants'
+import {
+  SpanType,
+  SPAN_METADATA_STORAGE_KEY,
+  EvaluationType,
+  HumanEvaluationMetric,
+  LlmEvaluationMetric,
+} from '@latitude-data/constants'
 import {
   createCommit,
   createEvaluationResultV2,
@@ -58,6 +64,16 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       workspace,
       document,
       commit,
+      type: EvaluationType.Human,
+      metric: HumanEvaluationMetric.Binary,
+      configuration: {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        criteria: 'Test criteria',
+      },
     })
   })
 
@@ -638,6 +654,96 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       expect(reasons).toContain('Reason from commit1')
       expect(reasons).toContain('Reason from commit2')
       expect(reasons).toContain('Reason from draft')
+    })
+  })
+
+  describe('HITL evaluation filtering', () => {
+    it('should only return evaluation results from HITL evaluations', async () => {
+      const setup = await createProject({
+        workspace,
+        documents: {
+          'test-doc': 'Test content',
+        },
+      })
+      const providerName = setup.providers[0]!.name
+
+      // Create a non-HITL (LLM) evaluation for the same document
+      const llmEvaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+        type: EvaluationType.Llm,
+        metric: LlmEvaluationMetric.Binary,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          provider: providerName,
+          model: 'gpt-4o',
+          criteria: 'Test criteria',
+          passDescription: 'Passes',
+          failDescription: 'Fails',
+        },
+      })
+
+      // Create two spans in the same document
+      const { promptSpan: span1 } = await createPromptSpanWithCompletion({
+        traceId: 'trace-hitl',
+      })
+
+      const { promptSpan: span2 } = await createPromptSpanWithCompletion({
+        traceId: 'trace-llm',
+      })
+
+      // Create HITL evaluation result for span1 and link to issue (should be returned)
+      await createEvaluationResultForIssue({
+        span: span1,
+        metadata: {
+          reason: 'HITL evaluation reason',
+        },
+      })
+
+      // Create LLM evaluation result for span2 and link to issue (should NOT be returned)
+      const llmEvalResult = await createEvaluationResultV2({
+        workspace,
+        evaluation: llmEvaluation,
+        commit,
+        span: {
+          ...span2,
+          type: SpanType.Prompt,
+        } as any,
+        hasPassed: false,
+        metadata: {
+          configuration: llmEvaluation.configuration,
+          actualOutput: 'actual output',
+          expectedOutput: 'expected output',
+          reason: 'LLM evaluation reason',
+        } as any,
+      } as any)
+
+      await createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: llmEvalResult,
+      })
+
+      const result = await getSpanMessagesAndEvaluationResultsByIssue({
+        workspace,
+        commit,
+        issue,
+      })
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+
+      const data = result.value!
+      // Should only have messages from span1 (HITL evaluation)
+      expect(data).toHaveLength(1)
+      expect(data[0]!.messages).toHaveLength(2)
+      expect(data[0]!.reason).toBe('HITL evaluation reason')
+      // Should not have messages from span2 (LLM evaluation)
     })
   })
 })

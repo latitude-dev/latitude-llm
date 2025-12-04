@@ -90,21 +90,16 @@ export const calculateQualityMetricJob = async (
     const { failed, ignored, processed, unprocessed } =
       await job.getDependenciesCount()
 
+    // When a runEvalJob fails, it will automatically run the parent and not wait for the other children to finish (the rest will be unprocessed)
+    //  so in this scenario, we throw an error and retry the job after the exponential delay
     const tooManyFailedEvaluationRuns =
       (failed ?? 0) + (ignored ?? 0) + (unprocessed ?? 0) >
       (processed ?? 0) % 10
 
     if (tooManyFailedEvaluationRuns) {
-      return await deleteEvaluationAndRetryGeneration({
-        evaluation: evaluation,
-        commit: commit,
-        workspace: workspace,
-        issueId: issueId,
-        providerName: providerName,
-        model: model,
-        workflowUuid: workflowUuid,
-        generationAttempt: generationAttempt,
-      })
+      throw new Error(
+        `${failed ?? 0} failed and ${ignored ?? 0} ignored children. Waiting for ${unprocessed ?? 0} unprocessed children to complete`,
+      )
     }
 
     const childrenValues = await job.getChildrenValues()

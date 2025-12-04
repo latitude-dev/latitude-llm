@@ -1,10 +1,5 @@
 import { Commit } from '../../schema/models/types/Commit'
 import { Workspace } from '../../schema/models/types/Workspace'
-import {
-  CommitsRepository,
-  EvaluationResultsV2Repository,
-  SpansRepository,
-} from '../../repositories'
 import { Result } from '../../lib/Result'
 import { Issue } from '../../schema/models/types/Issue'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
@@ -13,12 +8,16 @@ import {
   adaptCompletionSpanMessagesToLegacy,
   findCompletionSpanFromTrace,
 } from '../../services/tracing/spans/findCompletionSpanFromTrace'
+import { getHITLSpansByDocument } from './getHITLSpansByDocument'
 
 /*
 Gets the conversation (span messages) for the same document as the issue but without an issue attached.
 This is used to get positive examples (passed evaluations) to feed the copilot.
 
 We're not getting the reason why the evaluation passed, as the user rarely writes the reason why for good examples (less tokens to add to the prompt).
+
+IMPORTANT:
+- The evaluation results MUST be from HITL evaluation results, as we want to use the user's annotations to calculate the MCC, not from other evaluations results
 */
 export async function getSpanMessagesByIssueDocument({
   workspace,
@@ -29,49 +28,29 @@ export async function getSpanMessagesByIssueDocument({
   commit: Commit
   issue: Issue
 }) {
-  const evaluationResultsRepository = new EvaluationResultsV2Repository(
-    workspace.id,
-  )
-  const commitsRepo = new CommitsRepository(workspace.id)
-  const commitHistory = await commitsRepo.getCommitsHistory({ commit })
-  const commitHistoryIds = commitHistory.map((c) => c.id)
-
-  // Get passed evaluation results for the same document (without an issue attached)
   // Three is enough, as we don't want to overfit or add too many tokens to the prompt
-  const { results: passedEvaluationResults } =
-    await evaluationResultsRepository.listPassedByDocumentUuid(
-      issue.documentUuid,
-      commitHistoryIds,
-      { page: 1, pageSize: 3 },
-    )
+  const spansResult = await getHITLSpansByDocument({
+    workspace,
+    commit,
+    documentUuid: issue.documentUuid,
+    excludeIssueId: issue.id,
+    page: 1,
+    pageSize: 3,
+  })
 
-  const spansRepository = new SpansRepository(workspace.id)
+  if (!Result.isOk(spansResult)) {
+    return spansResult
+  }
+
+  const { spans } = spansResult.unwrap()
+
+  if (spans.length === 0) {
+    return Result.ok([] as LegacyMessage[])
+  }
+
   const messagesAndEvaluationResults: LegacyMessage[] = []
 
-  for (const evaluationResult of passedEvaluationResults) {
-    // Skip if evaluation result doesn't have span references
-    if (
-      !evaluationResult.evaluatedSpanId ||
-      !evaluationResult.evaluatedTraceId
-    ) {
-      continue
-    }
-
-    // Get the span for this evaluation result
-    const spanResult = await spansRepository.get({
-      spanId: evaluationResult.evaluatedSpanId,
-      traceId: evaluationResult.evaluatedTraceId,
-    })
-
-    if (!Result.isOk(spanResult)) {
-      continue
-    }
-
-    const span = spanResult.unwrap()
-    if (!span) {
-      continue
-    }
-
+  for (const span of spans) {
     // Assemble the trace to get the completion span
     const assembledTrace = await assembleTrace({
       traceId: span.traceId,

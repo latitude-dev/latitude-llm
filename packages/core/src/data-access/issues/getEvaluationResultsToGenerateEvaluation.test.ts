@@ -1,5 +1,6 @@
 import * as factories from '../../tests/factories'
-import { Providers } from '@latitude-data/constants'
+import { HumanEvaluationMetric, Providers } from '@latitude-data/constants'
+import { EvaluationType } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { database } from '../../client'
@@ -15,6 +16,10 @@ import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { User } from '../../schema/models/types/User'
+import {
+  MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE,
+  MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES,
+} from '../../constants'
 
 type TestSetup = {
   workspace: Workspace
@@ -51,6 +56,24 @@ async function setupTestProject(workspace: Workspace): Promise<TestSetup> {
     document: documents[0]!,
     commit: commit,
     workspace: w,
+    type: EvaluationType.Human,
+    metric: HumanEvaluationMetric.Rating,
+    configuration: {
+      reverseScale: false,
+      actualOutput: {
+        messageSelection: 'last',
+        parsingFormat: 'string',
+      },
+      expectedOutput: {
+        parsingFormat: 'string',
+      },
+      criteria: 'criteria',
+      minRating: 1,
+      minRatingDescription: 'min description',
+      maxRating: 5,
+      maxRatingDescription: 'max description',
+      minThreshold: 3,
+    },
   })
 
   // Create the main issue
@@ -182,12 +205,11 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
       projectId: setup.project.id,
       commitUuid: setup.commit.uuid,
       issueId: setup.mainIssue.id,
-      documentUuid: setup.documents[0]!.documentUuid,
     })
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 3,
-      positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
+      passedEvaluationResults: 6, // Limited by pagination (6 passed results max)
     })
   })
 
@@ -217,12 +239,11 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
       projectId: setup.project.id,
       commitUuid: setup.commit.uuid,
       issueId: setup.mainIssue.id,
-      documentUuid: setup.documents[0]!.documentUuid,
     })
 
     expect(result).toEqual({
-      negativeAnnotationsOfThisIssue: 10,
-      positiveAndNegativeAnnotationsOfOtherIssues: 3,
+      negativeAnnotationsOfThisIssue: 6, // Limited by pagination (6 negative results max)
+      passedEvaluationResults: 3,
     })
   })
 
@@ -252,12 +273,13 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
       projectId: setup.project.id,
       commitUuid: setup.commit.uuid,
       issueId: setup.mainIssue.id,
-      documentUuid: setup.documents[0]!.documentUuid,
     })
 
     expect(result).toEqual({
-      negativeAnnotationsOfThisIssue: 10,
-      positiveAndNegativeAnnotationsOfOtherIssues: 10,
+      negativeAnnotationsOfThisIssue:
+        MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE + 1, // Limited by pagination (10 negative results max)
+      passedEvaluationResults:
+        MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES + 1, // Limited by pagination (10 passed results max)
     })
   })
 
@@ -296,12 +318,12 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
       projectId: setup.project.id,
       commitUuid: setup.commit.uuid,
       issueId: setup.mainIssue.id,
-      documentUuid: setup.documents[0]!.documentUuid,
     })
 
     expect(result).toEqual({
       negativeAnnotationsOfThisIssue: 5, // Only negative ones
-      positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
+      passedEvaluationResults:
+        MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES + 1, // Limited by pagination (6 passed results max)
     })
   })
 
@@ -359,27 +381,14 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
       projectId: setup.project.id,
       commitUuid: setup.commit.uuid,
       issueId: setup.mainIssue.id,
-      documentUuid: setup.documents[0]!.documentUuid,
     })
 
     expect(result).toEqual({
-      negativeAnnotationsOfThisIssue: 10,
-      positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
+      negativeAnnotationsOfThisIssue:
+        MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE + 1, // Limited by pagination (6 negative results max)
+      passedEvaluationResults:
+        MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES + 1, // Limited by pagination (6 passed results max)
     })
-  })
-
-  it('should throw error when project is not found', async () => {
-    const setup = await setupTestProject(mockWorkspace)
-
-    await expect(
-      getEvaluationResultsToGenerateEvaluationForIssue({
-        workspace: setup.workspace,
-        projectId: 99999,
-        commitUuid: setup.commit.uuid,
-        issueId: setup.mainIssue.id,
-        documentUuid: setup.documents[0]!.documentUuid,
-      }),
-    ).rejects.toThrow()
   })
 
   it('should throw error when commit is not found', async () => {
@@ -391,7 +400,6 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
         projectId: setup.project.id,
         commitUuid: 'non-existent-uuid',
         issueId: setup.mainIssue.id,
-        documentUuid: setup.documents[0]!.documentUuid,
       }),
     ).rejects.toThrow()
   })
@@ -497,12 +505,12 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
         projectId: setup.project.id,
         commitUuid: commit2.uuid,
         issueId: setup.mainIssue.id,
-        documentUuid: setup.documents[0]!.documentUuid,
       })
 
       expect(result).toEqual({
-        negativeAnnotationsOfThisIssue: 10, // 5 from commit1 + 5 from commit2 (not commit3)
-        positiveAndNegativeAnnotationsOfOtherIssues: 5, // 5 from commit1 (not commit3)
+        negativeAnnotationsOfThisIssue:
+          MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE + 1, // Limited by pagination (MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE + 1 negative results max)
+        passedEvaluationResults: 5, // 5 from commit1 (not commit3)
       })
     })
 
@@ -600,12 +608,13 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
         projectId: setup.project.id,
         commitUuid: draftCommit.uuid,
         issueId: setup.mainIssue.id,
-        documentUuid: setup.documents[0]!.documentUuid,
       })
 
       expect(result).toEqual({
-        negativeAnnotationsOfThisIssue: 15, // 5 from commit1 + 5 from commit2 + 5 from draft
-        positiveAndNegativeAnnotationsOfOtherIssues: 6, // Limited by pagination (6 passed results max)
+        negativeAnnotationsOfThisIssue:
+          MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE + 1, // Limited by pagination (15 negative results max)
+        passedEvaluationResults:
+          MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES + 1, // Limited by pagination (6 passed results max)
       })
     })
   })

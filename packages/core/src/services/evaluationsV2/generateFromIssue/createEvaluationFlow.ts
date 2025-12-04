@@ -8,8 +8,8 @@ import { Queues } from '../../../jobs/queues/types'
 import { Result } from '@latitude-data/core/lib/Result'
 import { EvaluationV2 } from '@latitude-data/constants'
 import { Issue } from '../../../schema/models/types/Issue'
-import { getSpansByIssue } from '../../../data-access/issues/getSpansByIssue'
-import { getSpansWithoutIssuesByDocumentUuid } from '../../../data-access/issues/getSpansWithoutIssuesByDocumentUuid'
+import { getHITLSpansByIssue } from '../../../data-access/issues/getHITLSpansByIssue'
+import { getHITLSpansByDocument } from '../../../data-access/issues/getHITLSpansByDocument'
 import { database } from '../../../client'
 
 const MAX_COMPARISON_ANNOTATIONS = 100
@@ -108,7 +108,7 @@ export async function createValidationFlow(
       attempts: 3,
       backoff: {
         type: 'exponential',
-        delay: 1000,
+        delay: 2000,
       },
     },
     children: allSpans.map((span) => ({
@@ -131,6 +131,7 @@ export async function createValidationFlow(
           type: 'fixed',
           delay: 1000,
         },
+        continueParentOnFailure: true, // If an evaluation run fails, continue the flow to calculate the quality metric
       },
     })),
   })
@@ -140,15 +141,19 @@ export async function createValidationFlow(
       new Error('Failed to create evaluation validation flow'),
     )
   }
+
+  console.log('validationFlowJob', validationFlowJob.id)
   return Result.ok(validationFlowJob)
 }
 /*
 Gets:
-- the spans of the issue (examples that should fail the evaluation)
-- the spans of the other issues of the same document or the thumbs up evalResults of that document (examples that should pass the evaluation)
+- the spans of the issue that were annotated by the user (HITL evaluation results) (examples that should fail the evaluation)
+- the spans of the other issues of the same document or the thumbs up evalResults of that document that were annotated by the user (HITL evaluation results) (examples that should pass the evaluation)
 
-IMPORTANT: The evaluation MUST fail when the issue is present in the span, as this logic is used within the issue discovery and its how we want our end goal to be.
+IMPORTANT: 
+- The evaluation MUST fail when the issue is present in the span, as this logic is used within the issue discovery and its how we want our end goal to be.
   We want the evaluations to be like unit tests, where if all of them pass for a given trace of a document, that means that the trace has no issues, that its good!
+- The spans MUST be from HITL evaluation results, as we want to use the user's annotations to calculate the MCC, not from other evaluations results
 
 Thumbs up evalResults of the same document or evalResults of other issues of the same document count as negative evalResults because
  they are cases in which the new evaluation should return a negative result, as that span doesnt have that issue
@@ -165,7 +170,7 @@ async function getEqualAmountsOfPositiveAndNegativeExamples(
   },
   db = database,
 ) {
-  const examplesThatShouldFailTheEvaluationResult = await getSpansByIssue(
+  const examplesThatShouldFailTheEvaluationResult = await getHITLSpansByIssue(
     {
       workspace,
       commit,
@@ -183,12 +188,13 @@ async function getEqualAmountsOfPositiveAndNegativeExamples(
 
   // Getting the same amount of examples that should pass the evaluation, as we need an equal amount of both to calculate correctly the MCC
   const examplesThatShouldPassTheEvaluationResult =
-    await getSpansWithoutIssuesByDocumentUuid(
+    await getHITLSpansByDocument(
       {
         workspace,
         commit,
         documentUuid: issue.documentUuid,
         pageSize: examplesThatShouldFailTheEvaluation.length,
+        excludeIssueId: issue.id,
         page: 1,
       },
       db,

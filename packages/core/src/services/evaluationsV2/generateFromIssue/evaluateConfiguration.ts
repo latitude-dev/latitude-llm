@@ -4,8 +4,10 @@ import { Result } from '@latitude-data/core/lib/Result'
 /*
   This function evaluates the configuration of an evaluation by calculating the MCC (Matthews Correlation Coefficient) of the evaluation.
 
-  IMPORTANT: The evaluation MUST fail when the issue is present in the span, as this logic is used within the issue discovery and its how we want our end goal to be.
+  IMPORTANT: 
+  - The evaluation MUST fail when the issue is present in the span, as this logic is used within the issue discovery and its how we want our end goal to be.
     We want the evaluations to be like unit tests, where if all of them pass for a given trace of a document, that means that the trace has no issues, that its good!
+  - The spans are ONLY from HITL evaluation results, as we want to use the user's annotations to calculate the MCC, not from other evaluations results
 */
 export async function evaluateConfiguration({
   childrenValues,

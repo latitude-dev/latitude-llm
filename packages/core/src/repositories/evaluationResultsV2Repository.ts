@@ -29,7 +29,6 @@ import {
   ISSUE_GENERATION_RECENCY_RATIO,
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
   Span,
-  DEFAULT_PAGINATION_SIZE,
 } from '../constants'
 import { EvaluationResultsV2Search } from '../helpers'
 import { NotFoundError } from '../lib/errors'
@@ -50,6 +49,10 @@ import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import { IssueEvaluationResultsRepository } from './issueEvaluationResultsRepository'
 import Repository from './repositoryV2'
 import { evaluationVersions } from '../schema/models/evaluationVersions'
+import { CommitsRepository } from './commitsRepository'
+import { Commit } from '../schema/models/types/Commit'
+import { Issue } from '../schema/models/types/Issue'
+import { Workspace } from '../schema/models/types/Workspace'
 
 const tt = getTableColumns(evaluationResultsV2)
 
@@ -786,20 +789,36 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
   }
 
-  async listPassedByDocumentUuid(
-    documentUuid: string,
-    commitHistoryIds: number[],
-    options?: { page?: number; pageSize?: number },
-  ) {
-    const page = options?.page ?? 1
-    const pageSize = options?.pageSize ?? DEFAULT_PAGINATION_SIZE
-    const limit = pageSize + 1 // Fetch one extra to determine hasNextPage
+  async fetchPaginatedHITLResultsByIssue({
+    workspace,
+    commit,
+    issue,
+    page,
+    pageSize,
+  }: {
+    workspace: Workspace
+    commit: Commit
+    issue: Issue
+    page: number
+    pageSize: number
+  }) {
+    const commitsRepo = new CommitsRepository(workspace.id, this.db)
+    const commitHistory = await commitsRepo.getCommitsHistory({ commit })
+    const commitIds = commitHistory.map((c) => c.id)
+    const limit = pageSize + 1
     const offset = calculateOffset(page, pageSize)
-
-    const results = await this.db
-      .select(tt)
-      .from(evaluationResultsV2)
-      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+    const evalResults = await this.db
+      .select({
+        id: evaluationResultsV2.id,
+        evaluatedSpanId: evaluationResultsV2.evaluatedSpanId,
+        evaluatedTraceId: evaluationResultsV2.evaluatedTraceId,
+        createdAt: evaluationResultsV2.createdAt,
+      })
+      .from(issueEvaluationResults)
+      .innerJoin(
+        evaluationResultsV2,
+        eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+      )
       .innerJoin(
         evaluationVersions,
         eq(
@@ -807,13 +826,16 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           evaluationVersions.evaluationUuid,
         ),
       )
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .where(
         and(
-          this.scopeFilter,
+          eq(issueEvaluationResults.workspaceId, workspace.id),
+          eq(issueEvaluationResults.issueId, issue.id),
+          eq(evaluationVersions.type, EvaluationType.Human),
+          isNotNull(evaluationResultsV2.evaluatedSpanId),
+          isNotNull(evaluationResultsV2.evaluatedTraceId),
           isNull(commits.deletedAt),
-          eq(evaluationVersions.documentUuid, documentUuid),
-          eq(evaluationResultsV2.hasPassed, true),
-          inArray(evaluationResultsV2.commitId, commitHistoryIds),
+          inArray(evaluationResultsV2.commitId, commitIds),
         ),
       )
       .orderBy(
@@ -823,13 +845,80 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .limit(limit)
       .offset(offset)
 
-    const hasNextPage = results.length > pageSize
-    const paginatedResults = hasNextPage ? results.slice(0, pageSize) : results
+    const hasNextPage = evalResults.length > pageSize
+    const results = hasNextPage ? evalResults.slice(0, pageSize) : evalResults
+    return { results, hasNextPage }
+  }
 
-    return {
-      results: paginatedResults as EvaluationResultV2[],
-      hasNextPage,
-    }
+  async fetchPaginatedHITLResultsByDocument({
+    workspace,
+    commit,
+    documentUuid,
+    excludeIssueId,
+    page,
+    pageSize,
+  }: {
+    workspace: Workspace
+    commit: Commit
+    documentUuid: string
+    excludeIssueId: number
+    page: number
+    pageSize: number
+  }) {
+    const commitsRepo = new CommitsRepository(workspace.id, this.db)
+    const commitHistory = await commitsRepo.getCommitsHistory({ commit })
+    const commitIds = commitHistory.map((c) => c.id)
+    const limit = pageSize + 1
+    const offset = calculateOffset(page, pageSize)
+    const evalResults = await this.db
+      .select({
+        id: evaluationResultsV2.id,
+        evaluatedSpanId: evaluationResultsV2.evaluatedSpanId,
+        evaluatedTraceId: evaluationResultsV2.evaluatedTraceId,
+        createdAt: evaluationResultsV2.createdAt,
+      })
+      .from(evaluationResultsV2)
+      .innerJoin(
+        evaluationVersions,
+        and(
+          eq(
+            evaluationResultsV2.evaluationUuid,
+            evaluationVersions.evaluationUuid,
+          ),
+          eq(evaluationVersions.documentUuid, documentUuid),
+        ),
+      )
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .leftJoin(
+        issueEvaluationResults,
+        and(
+          eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
+          eq(issueEvaluationResults.workspaceId, workspace.id),
+          eq(issueEvaluationResults.issueId, excludeIssueId),
+        ),
+      )
+      .where(
+        and(
+          eq(evaluationResultsV2.workspaceId, workspace.id),
+          eq(evaluationVersions.type, EvaluationType.Human),
+          isNotNull(evaluationResultsV2.evaluatedSpanId),
+          isNotNull(evaluationResultsV2.evaluatedTraceId),
+          isNull(commits.deletedAt),
+          inArray(evaluationResultsV2.commitId, commitIds),
+          // Exclude spans that have evaluation results linked to the specific issue
+          isNull(issueEvaluationResults.id),
+        ),
+      )
+      .orderBy(
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+      )
+      .limit(limit)
+      .offset(offset)
+
+    const hasNextPage = evalResults.length > pageSize
+    const results = hasNextPage ? evalResults.slice(0, pageSize) : evalResults
+    return { results, hasNextPage }
   }
 
   private async getEvaluationsByCommit({

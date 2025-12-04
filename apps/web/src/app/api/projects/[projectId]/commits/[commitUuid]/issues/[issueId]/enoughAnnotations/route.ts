@@ -9,19 +9,18 @@ const paramsSchema = z.object({
   projectId: z.coerce.number(),
   commitUuid: z.string(),
   issueId: z.coerce.number(),
-  documentUuid: z.string(),
 })
 
 export type IssueEvaluationStats = {
   issueId: number
   negativeAnnotationsOfThisIssue: number
-  positiveAndNegativeAnnotationsOfOtherIssues: number
+  passedEvaluationResults: number
 }
 
 export const GET = errorHandler(
   authHandler(
     async (
-      request: NextRequest,
+      _: NextRequest,
       {
         workspace,
         params,
@@ -34,20 +33,17 @@ export const GET = errorHandler(
         }
       },
     ): Promise<NextResponse<IssueEvaluationStats>> => {
-      const { projectId, commitUuid, issueId, documentUuid } =
-        paramsSchema.parse({
-          projectId: params.projectId,
-          commitUuid: params.commitUuid,
-          issueId: params.issueId,
-          documentUuid: request.nextUrl.searchParams.get('documentUuid'),
-        })
+      const { projectId, commitUuid, issueId } = paramsSchema.parse({
+        projectId: params.projectId,
+        commitUuid: params.commitUuid,
+        issueId: params.issueId,
+      })
       const enoughAnnotationNumbers =
         await getEvaluationResultsToGenerateEvaluationForIssue({
           workspace,
           projectId,
           commitUuid,
           issueId,
-          documentUuid,
         })
 
       return NextResponse.json(
@@ -55,8 +51,8 @@ export const GET = errorHandler(
           issueId,
           negativeAnnotationsOfThisIssue:
             enoughAnnotationNumbers.negativeAnnotationsOfThisIssue,
-          positiveAndNegativeAnnotationsOfOtherIssues:
-            enoughAnnotationNumbers.positiveAndNegativeAnnotationsOfOtherIssues,
+          passedEvaluationResults:
+            enoughAnnotationNumbers.passedEvaluationResults,
         },
         { status: 200 },
       )

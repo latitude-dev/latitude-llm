@@ -7,7 +7,6 @@ import {
 import { Result } from '../../lib/Result'
 import { EvaluationResultV2 } from '../../constants'
 import { Issue } from '../../schema/models/types/Issue'
-import { getSpansByIssue } from '../../data-access/issues/getSpansByIssue'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { assembleTrace } from '../../services/tracing/traces/assemble'
 import {
@@ -15,6 +14,7 @@ import {
   findCompletionSpanFromTrace,
 } from '../../services/tracing/spans/findCompletionSpanFromTrace'
 import { UnprocessableEntityError } from '../../lib/errors'
+import { getHITLSpansByIssue } from './getHITLSpansByIssue'
 
 export type SpanMessagesWithEvalResultReason = {
   messages: LegacyMessage[]
@@ -23,6 +23,9 @@ export type SpanMessagesWithEvalResultReason = {
 
 /*
 Gets the conversation (span messages) and reason why the evaluation failed the conversation to feed the copilot.
+
+IMPORTANT:
+- The spans MUST be from HITL evaluation results, as we want to use the user's annotations to calculate the MCC, not from other evaluations results
 */
 export async function getSpanMessagesAndEvaluationResultsByIssue({
   workspace,
@@ -34,7 +37,7 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
   issue: Issue
 }) {
   // Three is enough, as we don't want to overfit or add too many tokens to the prompt
-  const spansResult = await getSpansByIssue({
+  const spansResult = await getHITLSpansByIssue({
     workspace: workspace,
     commit: commit,
     issue: issue,

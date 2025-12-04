@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { EvaluationV2, SpanType } from '@latitude-data/constants'
+import {
+  EvaluationV2,
+  SpanType,
+  EvaluationType,
+  HumanEvaluationMetric,
+} from '@latitude-data/constants'
 import { Result } from '@latitude-data/core/lib/Result'
 import { __test__ as createEvaluationFlowTest } from './createEvaluationFlow'
 import * as factories from '../../../tests/factories'
@@ -58,6 +63,8 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
       workspace,
       document,
       commit,
+      type: EvaluationType.Human,
+      metric: HumanEvaluationMetric.Binary,
     })
 
     // Create 3 spans with issues (positive)
@@ -100,6 +107,18 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
         commitUuid: commit.uuid,
         type: SpanType.Prompt,
       })
+
+      // Create evaluation result for the span (not linked to issue)
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: {
+          ...span,
+          type: SpanType.Prompt,
+        } as unknown as SpanWithDetails<SpanType.Prompt>,
+      })
+
       negativeSpans.push(span)
     }
 
@@ -132,6 +151,8 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
       workspace,
       document,
       commit,
+      type: EvaluationType.Human,
+      metric: HumanEvaluationMetric.Binary,
     })
 
     // Create 5 spans with issues (positive)
@@ -174,6 +195,18 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
         commitUuid: commit.uuid,
         type: SpanType.Prompt,
       })
+
+      // Create evaluation result for the span (not linked to issue)
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: {
+          ...span,
+          type: SpanType.Prompt,
+        } as unknown as SpanWithDetails<SpanType.Prompt>,
+      })
+
       negativeSpans.push(span)
     }
 
@@ -209,6 +242,8 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
       workspace,
       document,
       commit,
+      type: EvaluationType.Human,
+      metric: HumanEvaluationMetric.Binary,
     })
 
     // Create 3 spans with issues (positive)
@@ -251,6 +286,18 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
         commitUuid: commit.uuid,
         type: SpanType.Prompt,
       })
+
+      // Create evaluation result for the span (not linked to issue)
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: {
+          ...span,
+          type: SpanType.Prompt,
+        } as unknown as SpanWithDetails<SpanType.Prompt>,
+      })
+
       negativeSpans.push(span)
     }
 
@@ -303,6 +350,8 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
       workspace,
       document,
       commit,
+      type: EvaluationType.Human,
+      metric: HumanEvaluationMetric.Binary,
     })
 
     // Create 3 spans with issues (positive)
@@ -391,6 +440,8 @@ describe('createValidationFlow', () => {
       workspace,
       document,
       commit,
+      type: EvaluationType.Human,
+      metric: HumanEvaluationMetric.Binary,
     })
 
     // Mock Redis connection
@@ -447,6 +498,18 @@ describe('createValidationFlow', () => {
         commitUuid: commit.uuid,
         type: SpanType.Prompt,
       })
+
+      // Create evaluation result for the span (not linked to issue)
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: {
+          ...span,
+          type: SpanType.Prompt,
+        } as unknown as SpanWithDetails<SpanType.Prompt>,
+      })
+
       negativeSpans.push(span)
     }
 
