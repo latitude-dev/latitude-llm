@@ -23,9 +23,9 @@ export default function OngoingAbTestBanner({
       }
       className='block'
     >
-      <div className='flex flex-col gap-y-1 bg-accent border border-accent-foreground/10 rounded-xl p-4 cursor-pointer hover:bg-yellow-100 transition-colors dark:bg-yellow-950 dark:border-yellow-800 dark:hover:bg-yellow-900'>
-        <Text.H5M color='accentForeground'>A/B test in progress →</Text.H5M>
-        <Text.H5 color='accentForeground'>
+      <div className='flex flex-col gap-y-1 bg-yellow border border-yellow-200 rounded-xl p-4 cursor-pointer'>
+        <Text.H5M color='warningForeground'>A/B test in progress →</Text.H5M>
+        <Text.H5 color='warningForeground'>
           {test.name || 'Unnamed test'} is currently running. Click to view
           results.
         </Text.H5>

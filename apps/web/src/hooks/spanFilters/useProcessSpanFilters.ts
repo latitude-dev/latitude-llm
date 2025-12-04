@@ -67,6 +67,14 @@ export function useProcessSpanFilters({
     )
   }, [filterOptions.experimentUuids])
 
+  const isTestDeploymentsDefault = useMemo(() => {
+    // Default is when no test deployment filter is set (undefined or empty array)
+    return (
+      !filterOptions.testDeploymentIds ||
+      filterOptions.testDeploymentIds.length === 0
+    )
+  }, [filterOptions.testDeploymentIds])
+
   const onSelectCommits = useCallback(
     (selectedCommitUuids: string[] | undefined) => {
       // Remove commitUuids from filter if undefined (all commits selected)
@@ -189,11 +197,42 @@ export function useProcessSpanFilters({
     [onFiltersChanged, setSearchParams, filterOptions],
   )
 
+  const onSelectTestDeployments = useCallback(
+    (selectedTestDeploymentIds: number[] | undefined) => {
+      // Remove testDeploymentIds from filter if undefined (all tests selected)
+      if (!selectedTestDeploymentIds) {
+        const { testDeploymentIds: _, ...restFilters } = filterOptions
+        onFiltersChanged(restFilters)
+
+        // If no filters remain, remove the filters param entirely
+        if (Object.keys(restFilters).length === 0) {
+          setSearchParams('filters', undefined)
+        } else {
+          setSearchParams('filters', JSON.stringify(restFilters))
+        }
+      } else {
+        onFiltersChanged((currentFilters) => ({
+          ...currentFilters,
+          testDeploymentIds: selectedTestDeploymentIds,
+        }))
+
+        const updatedFilters: SpansFilters = {
+          ...filterOptions,
+          testDeploymentIds: selectedTestDeploymentIds,
+        }
+        setSearchParams('filters', JSON.stringify(updatedFilters))
+      }
+    },
+    [onFiltersChanged, setSearchParams, filterOptions],
+  )
+
   return {
     isCommitsDefault,
     isExperimentsDefault,
+    isTestDeploymentsDefault,
     onSelectCommits,
     onSelectExperiments,
+    onSelectTestDeployments,
     onCreatedAtChange,
     onTraceIdChange,
   }

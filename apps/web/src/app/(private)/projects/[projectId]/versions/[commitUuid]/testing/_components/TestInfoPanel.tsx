@@ -39,6 +39,7 @@ export function TestInfoPanel({
   projectId,
 }: TestInfoPanelProps) {
   const { clearSelection } = useTestSelection()
+  // Fetch all commits without status filter to ensure we get both baseline and challenger
   const { data: commits, isLoading: isLoadingCommits } =
     useCommitsFromProject(projectId)
 

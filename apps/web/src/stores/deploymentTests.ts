@@ -70,9 +70,10 @@ export default function useDeploymentTests(
       onSuccess: ({ data: updatedTest }) => {
         mutate(
           (prev) =>
-            prev?.map((test) =>
-              test.uuid === updatedTest.uuid ? updatedTest : test,
+            (prev ?? data)?.map((test) =>
+              test.id === updatedTest.id ? updatedTest : test,
             ) ?? [],
+          { revalidate: false },
         )
         toast({
           title: 'Test paused',
@@ -95,9 +96,10 @@ export default function useDeploymentTests(
       onSuccess: ({ data: updatedTest }) => {
         mutate(
           (prev) =>
-            prev?.map((test) =>
-              test.uuid === updatedTest.uuid ? updatedTest : test,
+            (prev ?? data)?.map((test) =>
+              test.id === updatedTest.id ? updatedTest : test,
             ) ?? [],
+          { revalidate: false },
         )
         toast({
           title: 'Test resumed',
@@ -120,9 +122,10 @@ export default function useDeploymentTests(
       onSuccess: ({ data: updatedTest }) => {
         mutate(
           (prev) =>
-            prev?.map((test) =>
-              test.uuid === updatedTest.uuid ? updatedTest : test,
+            (prev ?? data)?.map((test) =>
+              test.id === updatedTest.id ? updatedTest : test,
             ) ?? [],
+          { revalidate: false },
         )
         toast({
           title: 'Test stopped',

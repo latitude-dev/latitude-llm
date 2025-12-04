@@ -40,11 +40,19 @@ export const deploymentTests = latitudeSchema.table(
       .references(() => commits.id),
 
     // Test Type & Settings
-    testType: varchar('test_type', { length: 20 }).notNull(), // 'shadow' | 'ab'
+    testType: varchar('test_type', {
+      length: 20,
+      enum: ['shadow', 'ab'],
+    }).notNull(),
     trafficPercentage: integer('traffic_percentage').default(50), // For A/B: % of traffic to challenger (0-100)
 
     // Status
-    status: varchar('status', { length: 20 }).notNull().default('pending'), // 'pending' | 'running' | 'paused' | 'completed' | 'cancelled'
+    status: varchar('status', {
+      length: 20,
+      enum: ['pending', 'running', 'paused', 'completed', 'cancelled'],
+    })
+      .notNull()
+      .default('pending'),
     startedAt: timestamp('started_at'),
     endedAt: timestamp('ended_at'),
 

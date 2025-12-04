@@ -95,6 +95,7 @@ export const GET = errorHandler(
             commitsRepo,
           }),
           experimentUuids: filters.experimentUuids,
+          testDeploymentIds: filters.testDeploymentIds,
           createdAt: filters.createdAt,
         })
 

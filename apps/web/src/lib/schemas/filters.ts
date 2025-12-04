@@ -6,6 +6,7 @@ export const spansFiltersSchema = z
     spanId: z.string().optional(),
     commitUuids: z.array(z.string()).optional(),
     experimentUuids: z.array(z.string()).optional(),
+    testDeploymentIds: z.array(z.coerce.number()).optional(),
     createdAt: z
       .object({
         from: z.coerce.date().optional(),

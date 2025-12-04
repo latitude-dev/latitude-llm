@@ -10,21 +10,22 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Badge, BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { formatDistanceToNow } from 'date-fns'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import useDeploymentTests from '$/stores/deploymentTests'
 import { useTestSelection } from './TestSelectionContext'
 import { cn } from '@latitude-data/web-ui/utils'
+import { useCommitsFromProject } from '$/stores/commitsStore'
 
-const STATUS_COLORS: Record<string, string> = {
+const STATUS_COLORS: Record<string, BadgeProps['variant']> = {
   pending: 'yellow',
-  running: 'blue',
+  running: 'outlineAccent',
   paused: 'yellow',
   completed: 'secondary',
-  cancelled: 'red',
+  cancelled: 'destructive',
 }
 
 const TEST_TYPE_LABELS: Record<string, string> = {
@@ -37,11 +38,25 @@ type TestsListProps = {
   projectId: number
 }
 
-export function TestsList({ tests, projectId }: TestsListProps) {
-  const { pause, resume, stop, destroy } = useDeploymentTests({ projectId })
+export function TestsList({ tests: _tests, projectId }: TestsListProps) {
+  const {
+    data: tests,
+    pause,
+    resume,
+    stop,
+    destroy,
+  } = useDeploymentTests({ projectId }, { fallbackData: _tests })
   const { selection, selectTest } = useTestSelection()
   const [selectedTest, setSelectedTest] = useState<DeploymentTest>()
   const [openDeleteModal, setOpenDeleteModal] = useState(false)
+  const { data: commits = [] } = useCommitsFromProject(projectId)
+  const challengerCommitMap = useMemo(() => {
+    const map = new Map<number, string>()
+    commits.forEach((commit) => {
+      map.set(commit.id, commit.title || commit.uuid)
+    })
+    return map
+  }, [commits])
 
   const handlePause = useCallback(
     (test: DeploymentTest) => {
@@ -77,7 +92,8 @@ export function TestsList({ tests, projectId }: TestsListProps) {
 
   const canPause = (status: string) => status === 'running'
   const canResume = (status: string) => status === 'paused'
-  const canStop = (status: string) => status === 'running' || status === 'paused'
+  const canStop = (status: string) =>
+    status === 'running' || status === 'paused'
 
   const getMenuOptions = useCallback(
     (test: DeploymentTest) => {
@@ -132,20 +148,32 @@ export function TestsList({ tests, projectId }: TestsListProps) {
     ],
   )
 
-  return (
-    <>
+  const runningTests = useMemo(
+    () => tests.filter((t) => t.status === 'running' || t.status === 'paused'),
+    [tests],
+  )
+
+  const otherTests = useMemo(
+    () => tests.filter((t) => t.status !== 'running' && t.status !== 'paused'),
+    [tests],
+  )
+
+  const renderTestTable = (tableTests: DeploymentTest[], title?: string) => (
+    <div className='flex flex-col gap-3'>
+      {title && <Text.H5>{title}</Text.H5>}
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Type</TableHead>
+            <TableHead>Challenger Commit</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Created</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {tests.map((test) => {
+          {tableTests.map((test) => {
             const isSelected = selection.testUuid === test.uuid
             return (
               <TableRow
@@ -163,7 +191,12 @@ export function TestsList({ tests, projectId }: TestsListProps) {
                   <Text.H5>{TEST_TYPE_LABELS[test.testType]}</Text.H5>
                 </TableCell>
                 <TableCell>
-                  <Badge color={STATUS_COLORS[test.status] as any}>
+                  <Text.H5>
+                    {challengerCommitMap.get(test.challengerCommitId) || 'N/A'}
+                  </Text.H5>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={STATUS_COLORS[test.status]}>
                     {test.status}
                   </Badge>
                 </TableCell>
@@ -190,6 +223,15 @@ export function TestsList({ tests, projectId }: TestsListProps) {
           })}
         </TableBody>
       </Table>
+    </div>
+  )
+
+  return (
+    <>
+      <div className='flex flex-col gap-6'>
+        {runningTests.length > 0 && renderTestTable(runningTests, 'Running')}
+        {otherTests.length > 0 && renderTestTable(otherTests, 'Completed')}
+      </div>
       {openDeleteModal && selectedTest && (
         <ConfirmModal
           dismissible

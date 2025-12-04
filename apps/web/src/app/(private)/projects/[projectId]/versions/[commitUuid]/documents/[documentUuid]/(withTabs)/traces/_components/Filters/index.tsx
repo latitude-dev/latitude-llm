@@ -6,7 +6,9 @@ import { SpansFilters } from '$/lib/schemas/filters'
 import { useMemo, useCallback } from 'react'
 import { CommitFilterByUuid } from './CommitFilterByUuid'
 import { ExperimentFilterByUuid } from './ExperimentFilterByUuid'
+import { TestDeploymentFilter } from './TestDeploymentFilter'
 import { useExperiments } from '$/stores/experiments'
+import useDeploymentTests from '$/stores/deploymentTests'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 
@@ -23,6 +25,9 @@ export function SpanFilters({
     projectId: project.id,
     documentUuid: document.documentUuid,
   })
+  const { data: deploymentTests = [] } = useDeploymentTests({
+    projectId: project.id,
+  })
 
   const filters = useProcessSpanFilters({
     onFiltersChanged,
@@ -38,6 +43,11 @@ export function SpanFilters({
   const selectedExperimentUuids = useMemo(() => {
     return filterOptions.experimentUuids || []
   }, [filterOptions.experimentUuids])
+
+  // Get selected test deployment IDs - empty array when no filter is set
+  const selectedTestDeploymentIds = useMemo(() => {
+    return filterOptions.testDeploymentIds || []
+  }, [filterOptions.testDeploymentIds])
 
   // Handle commit selection changes
   const handleCommitSelectionChange = useCallback(
@@ -65,6 +75,19 @@ export function SpanFilters({
     [filters],
   )
 
+  // Handle test deployment selection changes
+  const handleTestDeploymentSelectionChange = useCallback(
+    (selectedIds: number[]) => {
+      // If no test deployments are selected, clear the filter (undefined = no filter)
+      if (selectedIds.length === 0) {
+        filters.onSelectTestDeployments(undefined)
+      } else {
+        filters.onSelectTestDeployments(selectedIds)
+      }
+    },
+    [filters],
+  )
+
   return (
     <>
       <DatePickerRange
@@ -82,13 +105,24 @@ export function SpanFilters({
         isDefault={filters.isCommitsDefault}
         reset={() => filters.onSelectCommits(undefined)}
       />
-      <ExperimentFilterByUuid
-        selectedExperimentUuids={selectedExperimentUuids}
-        onSelectExperiments={handleExperimentSelectionChange}
-        isDefault={filters.isExperimentsDefault}
-        reset={() => filters.onSelectExperiments(undefined)}
-        experiments={experiments}
-      />
+      {experiments.length > 0 && (
+        <ExperimentFilterByUuid
+          selectedExperimentUuids={selectedExperimentUuids}
+          onSelectExperiments={handleExperimentSelectionChange}
+          isDefault={filters.isExperimentsDefault}
+          reset={() => filters.onSelectExperiments(undefined)}
+          experiments={experiments}
+        />
+      )}
+      {deploymentTests.length > 0 && (
+        <TestDeploymentFilter
+          selectedTestIds={selectedTestDeploymentIds}
+          onSelectTests={handleTestDeploymentSelectionChange}
+          isDefault={filters.isTestDeploymentsDefault}
+          reset={() => filters.onSelectTestDeployments(undefined)}
+          tests={deploymentTests}
+        />
+      )}
       <div className='max-w-40'>
         <Input
           placeholder='Trace ID'

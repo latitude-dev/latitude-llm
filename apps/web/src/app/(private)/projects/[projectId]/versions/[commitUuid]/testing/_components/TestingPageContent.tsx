@@ -36,8 +36,10 @@ export function TestingPageContent({
       {/* Header */}
       <div className='flex flex-row items-center justify-between'>
         <div className='flex flex-col gap-1'>
-          <Text.H4M>Completed</Text.H4M>
-          <Text.H6 color='foregroundMuted'>Runs already finished</Text.H6>
+          <Text.H4M>Deployment Tests</Text.H4M>
+          <Text.H6 color='foregroundMuted'>
+            Test new versions with production data
+          </Text.H6>
         </div>
         <Button fancy onClick={handleCreateTest}>
           + New Test

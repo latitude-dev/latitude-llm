@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne } from 'drizzle-orm'
+import { and, eq, inArray, isNull, ne } from 'drizzle-orm'
 import { database } from '../../client'
 import { deploymentTests } from '../../schema/models/deploymentTests'
 import { Result, type TypedResult } from '../../lib/Result'
@@ -20,6 +20,7 @@ export async function checkActiveAbTest(
   const query = and(
     eq(deploymentTests.projectId, input.projectId),
     eq(deploymentTests.testType, 'ab'),
+    isNull(deploymentTests.deletedAt),
     inArray(deploymentTests.status, ['pending', 'running', 'paused']),
   )
 

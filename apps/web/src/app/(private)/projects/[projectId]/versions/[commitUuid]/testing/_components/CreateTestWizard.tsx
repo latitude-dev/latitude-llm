@@ -11,8 +11,7 @@ import { StepThree } from './wizard/StepThree'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { createDeploymentTestAction } from '$/actions/deploymentTests/create'
+import useDeploymentTests from '$/stores/deploymentTests'
 
 type TestType = 'shadow' | 'ab'
 
@@ -111,25 +110,16 @@ export function CreateTestWizard({
     )
   }
 
-  const { execute: createTest, isPending: isCreating } = useLatitudeAction(
-    createDeploymentTestAction,
+  const deploymentTests = useDeploymentTests(
+    { projectId },
     {
-      onSuccess: () => {
-        toast({
-          title: 'Success',
-          description: 'Deployment test created successfully',
-        })
+      onSuccessCreate: () => {
         handleClose()
-      },
-      onError: () => {
-        toast({
-          title: 'Error',
-          description: 'Failed to create deployment test',
-          variant: 'destructive',
-        })
       },
     },
   )
+  const createTest = deploymentTests.create.execute
+  const isCreating = deploymentTests.create.isPending
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()

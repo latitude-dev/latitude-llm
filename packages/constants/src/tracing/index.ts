@@ -41,6 +41,8 @@ export const ATTR_LATITUDE_INTERNAL = `${ATTR_LATITUDE}.internal`
 
 export const ATTR_LATITUDE_TYPE = `${ATTR_LATITUDE}.type`
 
+export const ATTR_LATITUDE_TEST_DEPLOYMENT_ID = `${ATTR_LATITUDE}.test_deployment_id`
+
 export const GEN_AI_TOOL_TYPE_VALUE_FUNCTION = 'function'
 export const ATTR_GEN_AI_TOOL_CALL_ARGUMENTS = 'gen_ai.tool.call.arguments'
 export const ATTR_GEN_AI_TOOL_RESULT_VALUE = 'gen_ai.tool.result.value'

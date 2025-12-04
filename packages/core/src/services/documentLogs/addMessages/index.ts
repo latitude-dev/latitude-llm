@@ -28,6 +28,7 @@ type AddMessagesArgs = {
   tools?: Record<string, ToolHandler>
   abortSignal?: AbortSignal
   context?: TelemetryContext
+  testDeploymentId?: number
 }
 
 export async function addMessages({
@@ -38,6 +39,7 @@ export async function addMessages({
   abortSignal,
   tools = {},
   context = BACKGROUND({ workspaceId: workspace.id }),
+  testDeploymentId,
 }: AddMessagesArgs) {
   if (!documentLogUuid) {
     return Result.error(new Error('documentLogUuid is required'))
@@ -52,6 +54,7 @@ export async function addMessages({
 
   const $prompt = telemetry.prompt(context, {
     documentLogUuid,
+    testDeploymentId,
     name: document.path.split('/').at(-1),
     promptUuid: document.documentUuid,
     template: document.content,

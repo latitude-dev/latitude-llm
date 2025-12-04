@@ -25,7 +25,7 @@ import ClientFilesTree from './ClientFilesTree'
 import CommitSelector from './CommitSelector'
 import ProjectSection from './ProjectSection'
 import ProductionBanner from './ProductionBanner'
-import OngoingAbTestBanner from './OngoingAbTestBanner'
+import SidebarBannerWrapper from './SidebarBannerWrapper'
 
 export default async function Sidebar({
   project,
@@ -59,12 +59,20 @@ export default async function Sidebar({
     },
   })
 
-  // Check for active A/B deployment test on the current commit
+  // Check for active A/B deployment test on the current commit or head commit
   const deploymentTestsRepo = new DeploymentTestsRepository(workspace.id)
-  const activeTest: DeploymentTest | null =
+  const activeTestOnCurrentCommit: DeploymentTest | null =
     await deploymentTestsRepo.findActiveForCommit(project.id, commit.id)
+  const activeTestOnHeadCommit: DeploymentTest | null = headCommit
+    ? await deploymentTestsRepo.findActiveForCommit(project.id, headCommit.id)
+    : null
+
+  // Show banner if there's an A/B test on either commit
   const ongoingAbTest =
-    activeTest && activeTest.testType === 'ab' ? activeTest : null
+    (activeTestOnCurrentCommit?.testType === 'ab'
+      ? activeTestOnCurrentCommit
+      : null) ||
+    (activeTestOnHeadCommit?.testType === 'ab' ? activeTestOnHeadCommit : null)
 
   const approximatedCount =
     await getDocumentLogsApproximatedCountByProjectCached(project.id)
@@ -73,15 +81,11 @@ export default async function Sidebar({
   return (
     <DocumentSidebar
       banner={
-        ongoingAbTest ? (
-          <OngoingAbTestBanner
-            projectId={project.id}
-            test={ongoingAbTest}
-            commitUuid={commit.uuid}
-          />
-        ) : (
-          <ProductionBanner project={project} />
-        )
+        <SidebarBannerWrapper
+          project={project}
+          commit={commit}
+          initialTest={ongoingAbTest}
+        />
       }
       header={
         <CommitSelector
