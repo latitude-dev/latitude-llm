@@ -47,7 +47,6 @@ export async function getRunByDocument({
     }
   }
 
-  // Check document-scoped cache for active runs
   const documentKey = ACTIVE_RUNS_BY_DOCUMENT_CACHE_KEY(
     workspaceId,
     projectId,

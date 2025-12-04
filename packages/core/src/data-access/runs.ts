@@ -16,7 +16,6 @@ export async function unsafelyFindActiveRun(runUuid: string) {
   const { workspaceId, projectId, documentUuid } =
     job.data as BackgroundRunJobData
 
-  // Use document-scoped get (with fallback to project-level cache)
   const getting = await getRunByDocument({
     workspaceId,
     projectId,
