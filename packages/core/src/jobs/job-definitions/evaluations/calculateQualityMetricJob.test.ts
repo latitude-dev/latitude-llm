@@ -182,7 +182,15 @@ describe('calculateQualityMetricJob', () => {
     beforeEach(() => {
       jobData = createMockJob(buildJobData())
       mockEvaluateConfiguration.mockResolvedValue(
-        Result.ok(MIN_QUALITY_METRIC_THRESHOLD + 10), // MCC above threshold
+        Result.ok({
+          mcc: MIN_QUALITY_METRIC_THRESHOLD + 10,
+          confusionMatrix: {
+            truePositives: 8,
+            trueNegatives: 8,
+            falsePositives: 2,
+            falseNegatives: 2,
+          },
+        }),
       )
       mockUpdateEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
@@ -206,6 +214,14 @@ describe('calculateQualityMetricJob', () => {
         workspace,
         commit,
         qualityMetric: MIN_QUALITY_METRIC_THRESHOLD + 10,
+        qualityMetricMetadata: {
+          confusionMatrix: {
+            truePositives: 8,
+            trueNegatives: 8,
+            falsePositives: 2,
+            falseNegatives: 2,
+          },
+        },
       })
 
       expect(mockEndActiveEvaluation).toHaveBeenCalledWith({
@@ -299,7 +315,15 @@ describe('calculateQualityMetricJob', () => {
     beforeEach(() => {
       jobData = createMockJob(buildJobData())
       mockEvaluateConfiguration.mockResolvedValue(
-        Result.ok(MIN_QUALITY_METRIC_THRESHOLD - 10), // MCC below threshold
+        Result.ok({
+          mcc: MIN_QUALITY_METRIC_THRESHOLD - 10,
+          confusionMatrix: {
+            truePositives: 2,
+            trueNegatives: 2,
+            falsePositives: 8,
+            falseNegatives: 8,
+          },
+        }),
       )
       mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
     })
@@ -409,7 +433,17 @@ describe('calculateQualityMetricJob', () => {
 
     it('should handle error when updateEvaluationV2 fails', async () => {
       jobData = createMockJob(buildJobData(), 3, 3) // last attempt
-      mockEvaluateConfiguration.mockResolvedValue(Result.ok(70))
+      mockEvaluateConfiguration.mockResolvedValue(
+        Result.ok({
+          mcc: 70,
+          confusionMatrix: {
+            truePositives: 7,
+            trueNegatives: 7,
+            falsePositives: 3,
+            falseNegatives: 3,
+          },
+        }),
+      )
       mockUpdateEvaluationV2.mockResolvedValue(
         Result.error(new Error('Update failed')),
       )
@@ -433,7 +467,15 @@ describe('calculateQualityMetricJob', () => {
     it('should handle MCC exactly at threshold', async () => {
       jobData = createMockJob(buildJobData())
       mockEvaluateConfiguration.mockResolvedValue(
-        Result.ok(MIN_QUALITY_METRIC_THRESHOLD), // Exactly at threshold
+        Result.ok({
+          mcc: MIN_QUALITY_METRIC_THRESHOLD,
+          confusionMatrix: {
+            truePositives: 5,
+            trueNegatives: 5,
+            falsePositives: 5,
+            falseNegatives: 5,
+          },
+        }),
       )
       mockUpdateEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
@@ -443,6 +485,14 @@ describe('calculateQualityMetricJob', () => {
       expect(mockUpdateEvaluationV2).toHaveBeenCalledWith(
         expect.objectContaining({
           qualityMetric: MIN_QUALITY_METRIC_THRESHOLD,
+          qualityMetricMetadata: {
+            confusionMatrix: {
+              truePositives: 5,
+              trueNegatives: 5,
+              falsePositives: 5,
+              falseNegatives: 5,
+            },
+          },
         }),
       )
       expect(mockDeleteEvaluationV2).not.toHaveBeenCalled()
@@ -451,7 +501,15 @@ describe('calculateQualityMetricJob', () => {
     it('should handle MCC just below threshold', async () => {
       jobData = createMockJob(buildJobData())
       mockEvaluateConfiguration.mockResolvedValue(
-        Result.ok(MIN_QUALITY_METRIC_THRESHOLD - 1), // Just below threshold
+        Result.ok({
+          mcc: MIN_QUALITY_METRIC_THRESHOLD - 1,
+          confusionMatrix: {
+            truePositives: 4,
+            trueNegatives: 4,
+            falsePositives: 6,
+            falseNegatives: 6,
+          },
+        }),
       )
       mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
 
@@ -483,7 +541,17 @@ describe('calculateQualityMetricJob', () => {
 
     it('should handle error when endActiveEvaluation fails', async () => {
       jobData = createMockJob(buildJobData())
-      mockEvaluateConfiguration.mockResolvedValue(Result.ok(70))
+      mockEvaluateConfiguration.mockResolvedValue(
+        Result.ok({
+          mcc: 70,
+          confusionMatrix: {
+            truePositives: 7,
+            trueNegatives: 7,
+            falsePositives: 3,
+            falseNegatives: 3,
+          },
+        }),
+      )
       mockUpdateEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
       mockEndActiveEvaluation.mockResolvedValue(
         Result.error(new Error('Failed to end')),

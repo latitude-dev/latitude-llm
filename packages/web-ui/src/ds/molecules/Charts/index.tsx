@@ -19,7 +19,7 @@ export function ChartWrapper({
   className,
 }: {
   label?: string
-  tooltip?: string
+  tooltip?: string | ReactNode
   loading?: boolean
   error?: Error
   children: ReactNode

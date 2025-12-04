@@ -5,6 +5,7 @@ import {
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
+  QualityMetricMetadata,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
@@ -35,6 +36,7 @@ export async function updateEvaluationV2<
     issueId,
     workspace,
     qualityMetric,
+    qualityMetricMetadata,
   }: {
     evaluation: EvaluationV2<T, M>
     commit: Commit
@@ -43,6 +45,7 @@ export async function updateEvaluationV2<
     options?: Partial<EvaluationOptions>
     issueId?: number | null
     qualityMetric?: number
+    qualityMetricMetadata?: QualityMetricMetadata
   },
   transaction = new Transaction(),
 ) {
@@ -115,6 +118,7 @@ export async function updateEvaluationV2<
         commitId: commit.id,
         issueId: issueId !== undefined ? issueId : evaluation.issueId,
         qualityMetric,
+        qualityMetricMetadata,
         ...settings,
         ...options,
         updatedAt: new Date(),
@@ -130,6 +134,7 @@ export async function updateEvaluationV2<
           updatedAt: new Date(),
           issueId: issueId !== undefined ? issueId : evaluation.issueId,
           qualityMetric,
+          qualityMetricMetadata,
         },
       })
       .returning()

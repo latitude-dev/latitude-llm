@@ -1716,6 +1716,13 @@
       "when": 1764752779043,
       "tag": "0245_add_quality_metric_stat",
       "breakpoints": true
+    },
+    {
+      "idx": 246,
+      "version": "7",
+      "when": 1764759929161,
+      "tag": "0246_mature_whistler",
+      "breakpoints": true
     }
   ]
 }
