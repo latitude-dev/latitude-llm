@@ -33,8 +33,6 @@ import { HELP_CENTER } from '@latitude-data/core/constants'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 const MIN_WIDTH_SELECTOR_PX = 380
 const TRIGGER_X_PADDING_PX = 26
 
@@ -121,14 +119,12 @@ export default function CommitSelector({
   currentDocument,
   draftCommits,
   projectId,
-  ongoingAbTest,
 }: {
   headCommit?: Commit | undefined
   currentCommit: Commit
   currentDocument?: DocumentVersion
   draftCommits: Commit[]
   projectId: number
-  ongoingAbTest?: DeploymentTest | null
 }) {
   const [open, setOpen] = useState(false)
   const { ref, maxHeight, calculateMaxHeight } = useCalculateMaxHeight()
@@ -229,22 +225,14 @@ export default function CommitSelector({
         </SelectContent>
       </SelectRoot>
       {isDraftVersion ? (
-        ongoingAbTest ? (
-          <Alert
-            title='A/B test in progress'
-            description={`An A/B test for this version is currently running. You can view the results in the testing section.`}
-            variant='default'
-          />
-        ) : (
-          <Button
-            fancy
-            fullWidth
-            variant='outline'
-            onClick={() => setTestVersionOpen(true)}
-          >
-            Test version
-          </Button>
-        )
+        <Button
+          fancy
+          fullWidth
+          variant='outline'
+          onClick={() => setTestVersionOpen(true)}
+        >
+          Test version
+        </Button>
       ) : null}
       {canPublish ? (
         <Button

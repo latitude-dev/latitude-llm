@@ -25,6 +25,7 @@ import ClientFilesTree from './ClientFilesTree'
 import CommitSelector from './CommitSelector'
 import ProjectSection from './ProjectSection'
 import ProductionBanner from './ProductionBanner'
+import OngoingAbTestBanner from './OngoingAbTestBanner'
 
 export default async function Sidebar({
   project,
@@ -71,7 +72,17 @@ export default async function Sidebar({
 
   return (
     <DocumentSidebar
-      banner={<ProductionBanner project={project} />}
+      banner={
+        ongoingAbTest ? (
+          <OngoingAbTestBanner
+            projectId={project.id}
+            test={ongoingAbTest}
+            commitUuid={commit.uuid}
+          />
+        ) : (
+          <ProductionBanner project={project} />
+        )
+      }
       header={
         <CommitSelector
           headCommit={headCommit}
@@ -79,7 +90,6 @@ export default async function Sidebar({
           currentDocument={currentDocument}
           draftCommits={rows}
           projectId={project.id}
-          ongoingAbTest={ongoingAbTest}
         />
       }
       tree={

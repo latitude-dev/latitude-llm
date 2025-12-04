@@ -13,7 +13,6 @@ import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { useTestSelection } from './TestSelectionContext'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'yellow',

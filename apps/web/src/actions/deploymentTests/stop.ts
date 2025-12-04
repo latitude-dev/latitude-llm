@@ -20,7 +20,7 @@ export const stopDeploymentTestAction = authProcedure
     const test = testResult.unwrap()
 
     const result = await stopDeploymentTest({
-      testId: test.id,
+      test,
     })
 
     return result.unwrap()

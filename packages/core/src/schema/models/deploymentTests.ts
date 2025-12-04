@@ -62,5 +62,10 @@ export const deploymentTests = latitudeSchema.table(
     index('idx_deployment_tests_workspace').on(table.workspaceId),
     index('idx_deployment_tests_project').on(table.projectId),
     index('idx_deployment_tests_status').on(table.status),
+    index('idx_deployment_tests_project_type_status').on(
+      table.projectId,
+      table.testType,
+      table.status,
+    ),
   ],
 )

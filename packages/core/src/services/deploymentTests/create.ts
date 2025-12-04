@@ -6,6 +6,7 @@ import {
 } from '../../schema/models/types/DeploymentTest'
 import { Result, type TypedResult } from '../../lib/Result'
 import { BadRequestError } from '@latitude-data/constants/errors'
+import { checkActiveAbTest } from './checkActiveAbTest'
 
 export type CreateDeploymentTestInput = {
   workspaceId: number
@@ -33,6 +34,18 @@ export async function createDeploymentTest(
       return Result.error(
         new BadRequestError('Traffic percentage must be between 0 and 100'),
       )
+    }
+
+    // Check for existing active A/B tests in this project
+    const abCheckResult = await checkActiveAbTest(
+      {
+        projectId: input.projectId,
+      },
+      db,
+    )
+
+    if (!abCheckResult.ok) {
+      return Result.error(abCheckResult.error!)
     }
   }
 

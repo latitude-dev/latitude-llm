@@ -58,8 +58,7 @@ export const createDeploymentTestAction = withProject
 
     // Start the test
     const startResult = await startDeploymentTest({
-      workspaceId: ctx.workspace.id,
-      testId: deploymentTest.id,
+      test: deploymentTest,
     })
     startResult.unwrap()
 

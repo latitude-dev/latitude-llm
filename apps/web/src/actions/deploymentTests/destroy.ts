@@ -20,7 +20,7 @@ export const destroyDeploymentTestAction = authProcedure
     const test = testResult.unwrap()
 
     const result = await destroyDeploymentTest({
-      testId: test.id,
+      test,
     })
 
     return result.unwrap()

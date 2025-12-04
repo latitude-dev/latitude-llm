@@ -14,14 +14,13 @@ export const resumeDeploymentTestAction = authProcedure
   .action(async ({ ctx, parsedInput }) => {
     const { testUuid } = parsedInput
 
-    // Fetch the test by UUID to get its ID
+    // Fetch the test by UUID
     const repo = new DeploymentTestsRepository(ctx.workspace.id)
     const testResult = await repo.findByUuid(testUuid)
     const test = testResult.unwrap()
 
     const result = await startDeploymentTest({
-      workspaceId: ctx.workspace.id,
-      testId: test.id,
+      test,
     })
 
     return result.unwrap()

@@ -35,8 +35,8 @@ export function TestVersionModal({
     testType: null,
     baselineCommitUuid: headCommit?.uuid ?? null,
     challengerCommitUuid: currentCommit.uuid,
-    name: '',
-    description: '',
+    testName: '',
+    testDescription: '',
     trafficPercentage: 50,
   })
 
@@ -52,10 +52,6 @@ export function TestVersionModal({
     }
   }
 
-  const handleStateChange = (updates: Partial<WizardState>) => {
-    setState((prev) => ({ ...prev, ...updates }))
-  }
-
   const handleClose = () => {
     onOpenChange(false)
     setCurrentStep(1)
@@ -63,8 +59,8 @@ export function TestVersionModal({
       testType: null,
       baselineCommitUuid: headCommit?.uuid ?? null,
       challengerCommitUuid: currentCommit.uuid,
-      name: '',
-      description: '',
+      testName: '',
+      testDescription: '',
       trafficPercentage: 50,
     })
   }
@@ -119,8 +115,8 @@ export function TestVersionModal({
       baselineCommitUuid: state.baselineCommitUuid,
       challengerCommitUuid: state.challengerCommitUuid,
       testType: state.testType,
-      name: state.name,
-      description: state.description,
+      name: state.testName,
+      description: state.testDescription,
       trafficPercentage: state.trafficPercentage,
     })
   }
@@ -174,13 +170,28 @@ export function TestVersionModal({
       <form id='testVersionForm' onSubmit={handleSubmit}>
         <div className='flex-1'>
           {currentStep === 1 && (
-            <StepOne state={state} onStateChange={handleStateChange} />
+            <StepOne
+              testType={state.testType}
+              onTestTypeChange={(testType) =>
+                setState((prev) => ({ ...prev, testType }))
+              }
+            />
           )}
           {currentStep === 2 && (
             <StepThree
-              state={state}
-              onStateChange={handleStateChange}
-              projectId={projectId}
+              testType={state.testType}
+              trafficPercentage={state.trafficPercentage}
+              testName={state.testName}
+              testDescription={state.testDescription}
+              onTrafficPercentageChange={(percentage) =>
+                setState((prev) => ({ ...prev, trafficPercentage: percentage }))
+              }
+              onTestNameChange={(name) =>
+                setState((prev) => ({ ...prev, testName: name }))
+              }
+              onTestDescriptionChange={(description) =>
+                setState((prev) => ({ ...prev, testDescription: description }))
+              }
             />
           )}
         </div>

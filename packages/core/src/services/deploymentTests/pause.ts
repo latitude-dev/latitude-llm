@@ -9,8 +9,7 @@ import { Result, type TypedResult } from '../../lib/Result'
 import { BadRequestError } from '@latitude-data/constants/errors'
 
 export type PauseDeploymentTestInput = {
-  workspaceId: number
-  testId: number
+  test: DeploymentTest
 }
 
 /**
@@ -26,12 +25,12 @@ export async function pauseDeploymentTest(
       status: 'paused' as DeploymentTestStatus,
       updatedAt: new Date(),
     })
-    .where(eq(deploymentTests.id, input.testId))
+    .where(eq(deploymentTests.id, input.test.id))
     .returning()
 
   if (!result[0]) {
     return Result.error(
-      new BadRequestError(`Deployment test with id ${input.testId} not found`),
+      new BadRequestError(`Deployment test with id ${input.test.id} not found`),
     )
   }
 

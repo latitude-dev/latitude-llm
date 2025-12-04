@@ -20,8 +20,7 @@ export const pauseDeploymentTestAction = authProcedure
     const test = testResult.unwrap()
 
     const result = await pauseDeploymentTest({
-      workspaceId: ctx.workspace.id,
-      testId: test.id,
+      test,
     })
 
     return result.unwrap()
