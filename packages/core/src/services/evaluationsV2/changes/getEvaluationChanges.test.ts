@@ -77,7 +77,6 @@ describe('getCommitEvaluationChanges', () => {
         name: evaluation.name,
         type: evaluation.type,
         changeType: ModifiedDocumentType.Created,
-        hasIssues: false,
       })
     })
 
@@ -114,7 +113,6 @@ describe('getCommitEvaluationChanges', () => {
         name: 'Updated evaluation',
         type: evaluation.type,
         changeType: ModifiedDocumentType.Updated,
-        hasIssues: false,
       })
     })
 
@@ -148,7 +146,6 @@ describe('getCommitEvaluationChanges', () => {
         name: evaluation.name,
         type: evaluation.type,
         changeType: ModifiedDocumentType.Deleted,
-        hasIssues: false,
       })
     })
 
@@ -214,7 +211,6 @@ describe('getCommitEvaluationChanges', () => {
         name: 'New Evaluation',
         type: newEval.type,
         changeType: ModifiedDocumentType.Created,
-        hasIssues: false,
       })
 
       const updatedChange = changes.find(
@@ -226,7 +222,6 @@ describe('getCommitEvaluationChanges', () => {
         name: 'Updated Name',
         type: updatedEval.type,
         changeType: ModifiedDocumentType.Updated,
-        hasIssues: false,
       })
 
       const deletedChange = changes.find(
@@ -238,7 +233,6 @@ describe('getCommitEvaluationChanges', () => {
         name: 'Deleted Evaluation',
         type: deletedEval.type,
         changeType: ModifiedDocumentType.Deleted,
-        hasIssues: false,
       })
     })
   })
@@ -282,7 +276,6 @@ describe('getCommitEvaluationChanges', () => {
         name: 'Updated in draft',
         type: evaluation.type,
         changeType: ModifiedDocumentType.Updated,
-        hasIssues: false,
       })
     })
 

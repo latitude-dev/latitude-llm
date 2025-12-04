@@ -1,27 +1,33 @@
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
-import { deleteActiveRun } from './active/delete'
+import { deleteActiveRunByDocument } from './active/byDocument/delete'
 
 export async function endRun({
   workspaceId,
   projectId,
+  documentUuid,
+  commitUuid,
   runUuid,
 }: {
   workspaceId: number
   projectId: number
+  documentUuid: string
+  commitUuid: string
   runUuid: string
 }) {
-  const deleteResult = await deleteActiveRun({
+  const deleteResult = await deleteActiveRunByDocument({
     workspaceId,
     projectId,
+    documentUuid,
     runUuid,
   })
   if (!Result.isOk(deleteResult)) return deleteResult
+
   const run = deleteResult.unwrap()
 
   await publisher.publishLater({
-    type: 'runEnded',
-    data: { projectId, workspaceId, run },
+    type: 'documentRunEnded',
+    data: { projectId, workspaceId, documentUuid, commitUuid, run },
   })
 
   return deleteResult

@@ -1,10 +1,4 @@
-import { formatCount } from '$/lib/formatCount'
-import {
-  LogSources,
-  RUN_SOURCES,
-  RunSourceGroup,
-} from '@latitude-data/constants'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { RunSourceGroup } from '@latitude-data/constants'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import {
   TabSelect,
@@ -44,11 +38,9 @@ const SOURCE_OPTIONS: Record<
 export function RunSourceSelector({
   value,
   setValue,
-  countBySource,
 }: {
   value: RunSourceGroup
   setValue: (value: RunSourceGroup) => void
-  countBySource?: Record<LogSources, number>
 }) {
   const onChange = useCallback(
     (newValue: RunSourceGroup) => {
@@ -62,14 +54,6 @@ export function RunSourceSelector({
     () =>
       Object.entries(SOURCE_OPTIONS).map(
         ([group, { label, icon, backgroundColor, foregroundColor }]) => {
-          const count = Object.entries(countBySource ?? {})
-            .filter(([source]) =>
-              RUN_SOURCES[group as RunSourceGroup].includes(
-                source as LogSources,
-              ),
-            )
-            .reduce((acc, [_, count]) => acc + count, 0)
-
           const selected = value === (group as RunSourceGroup)
 
           return {
@@ -90,24 +74,10 @@ export function RunSourceSelector({
                 />
               </div>
             ),
-            suffix:
-              count > 0 ? (
-                <Badge shape='rounded' variant='noBorderMuted' ellipsis noWrap>
-                  <div className='flex items-center justify-center gap-1'>
-                    <Icon
-                      name='loader'
-                      color='foregroundMuted'
-                      size='small'
-                      className='animate-spin'
-                    />
-                    {formatCount(count)}
-                  </div>
-                </Badge>
-              ) : undefined,
           }
         },
       ),
-    [countBySource, value],
+    [value],
   )
 
   return (

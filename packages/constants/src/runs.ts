@@ -29,13 +29,19 @@ export type Run = {
 export type ActiveRun = Pick<
   Run,
   'uuid' | 'queuedAt' | 'startedAt' | 'caption' | 'source'
->
+> & {
+  documentUuid: string
+  commitUuid: string
+}
 export type CompletedRun = Required<Run>
 
 export const RUN_CAPTION_SIZE = 150
 
-export const ACTIVE_RUNS_CACHE_KEY = (workspaceId: number, projectId: number) =>
-  `runs:active:${workspaceId}:${projectId}`
+export const ACTIVE_RUNS_BY_DOCUMENT_CACHE_KEY = (
+  workspaceId: number,
+  projectId: number,
+  documentUuid: string,
+) => `runs:active:${workspaceId}:${projectId}:${documentUuid}`
 export const ACTIVE_RUN_CACHE_TTL = 1 * 3 * 60 * 60 * 1000 // 3 hours
 export const ACTIVE_RUN_CACHE_TTL_SECONDS = Math.floor(
   ACTIVE_RUN_CACHE_TTL / 1000,

@@ -14,14 +14,23 @@ function fakeRandomId({ uuid }: { uuid?: string } = {}) {
   return FAKE_RANDOM_ID
 }
 
-function nodeToJson(node: Node, includeChangeType?: boolean): object {
+function nodeToJson(
+  node: Node,
+  includeChangeType?: boolean,
+  includeRunning?: boolean,
+): object {
   return {
     id: node.id,
     name: node.name,
     path: node.path,
     depth: node.depth,
-    children: node.children.map((c) => nodeToJson(c, includeChangeType)),
+    children: node.children.map((c) =>
+      nodeToJson(c, includeChangeType, includeRunning),
+    ),
     ...(includeChangeType ? { changeType: node.changeType } : {}),
+    ...(includeRunning
+      ? { isRunning: node.isRunning, runningCount: node.runningCount }
+      : {}),
   }
 }
 
@@ -325,6 +334,152 @@ describe('useTree', () => {
           children: [],
         },
       ],
+    })
+  })
+
+  describe('running documents', () => {
+    it('marks files as running with correct count', () => {
+      const runningDocumentsMap = new Map<string, number>([
+        ['1', 1], // doc1 has 1 run
+        ['3', 2], // doc3 has 2 runs
+      ])
+
+      const { result } = renderHook(() =>
+        useTree({
+          documents: documents,
+          runningDocumentsMap,
+          generateNodeId: fakeRandomId,
+        }),
+      )
+
+      const root = result.current
+      const aThing = root.children.find((c) => c.name === 'a_thing')!
+      const doc1 = aThing.children.find((c) => c.name === 'doc1')!
+      const otherThings = aThing.children.find(
+        (c) => c.name === 'other-things',
+      )!
+      const doc3 = otherThings.children.find((c) => c.name === 'doc3')!
+
+      // Check running files
+      expect(doc1.isRunning).toBe(true)
+      expect(doc1.runningCount).toBe(1)
+      expect(doc3.isRunning).toBe(true)
+      expect(doc3.runningCount).toBe(2)
+
+      // Check non-running files
+      const doc2 = aThing.children.find((c) => c.name === 'doc2')!
+      expect(doc2.isRunning).toBe(false)
+      expect(doc2.runningCount).toBe(0)
+    })
+
+    it('marks top-level folders as running with total count', () => {
+      const runningDocumentsMap = new Map<string, number>([
+        ['1', 1], // a_thing/doc1
+        ['3', 2], // a_thing/other-things/doc3
+      ])
+
+      const { result } = renderHook(() =>
+        useTree({
+          documents: documents,
+          runningDocumentsMap,
+          generateNodeId: fakeRandomId,
+        }),
+      )
+
+      const root = result.current
+      const aThing = root.children.find((c) => c.name === 'a_thing')!
+
+      // Top-level folder should be marked as running with total count
+      expect(aThing.isRunning).toBe(true)
+      expect(aThing.runningCount).toBe(3) // 1 + 2
+
+      // Nested folder should NOT be marked as running (only top-level)
+      const otherThings = aThing.children.find(
+        (c) => c.name === 'other-things',
+      )!
+      expect(otherThings.isRunning).toBe(false)
+      expect(otherThings.runningCount).toBe(2) // Has the count but not marked as running
+    })
+
+    it('does not mark folders as running when no descendants are running', () => {
+      const runningDocumentsMap = new Map<string, number>([
+        ['5', 1], // z_thing/doc5
+      ])
+
+      const { result } = renderHook(() =>
+        useTree({
+          documents: documents,
+          runningDocumentsMap,
+          generateNodeId: fakeRandomId,
+        }),
+      )
+
+      const root = result.current
+      const aThing = root.children.find((c) => c.name === 'a_thing')!
+      const bThing = root.children.find((c) => c.name === 'b_thing')!
+      const zThing = root.children.find((c) => c.name === 'z_thing')!
+
+      // Only z_thing should be running
+      expect(aThing.isRunning).toBe(false)
+      expect(bThing.isRunning).toBe(false)
+      expect(zThing.isRunning).toBe(true)
+      expect(zThing.runningCount).toBe(1)
+    })
+
+    it('handles empty running documents map', () => {
+      const runningDocumentsMap = new Map<string, number>()
+
+      const { result } = renderHook(() =>
+        useTree({
+          documents: documents,
+          runningDocumentsMap,
+          generateNodeId: fakeRandomId,
+        }),
+      )
+
+      const root = result.current
+      root.children.forEach((child) => {
+        expect(child.isRunning).toBe(false)
+        expect(child.runningCount).toBe(0)
+      })
+    })
+
+    it('handles undefined running documents map', () => {
+      const { result } = renderHook(() =>
+        useTree({
+          documents: documents,
+          generateNodeId: fakeRandomId,
+        }),
+      )
+
+      const root = result.current
+      root.children.forEach((child) => {
+        expect(child.isRunning).toBe(false)
+        expect(child.runningCount).toBe(0)
+      })
+    })
+
+    it('correctly sums running counts across nested folders', () => {
+      const runningDocumentsMap = new Map<string, number>([
+        ['1', 2], // a_thing/doc1 - 2 runs
+        ['2', 1], // a_thing/doc2 - 1 run
+        ['3', 3], // a_thing/other-things/doc3 - 3 runs
+      ])
+
+      const { result } = renderHook(() =>
+        useTree({
+          documents: documents,
+          runningDocumentsMap,
+          generateNodeId: fakeRandomId,
+        }),
+      )
+
+      const root = result.current
+      const aThing = root.children.find((c) => c.name === 'a_thing')!
+
+      // Top-level folder should have sum of all descendants
+      expect(aThing.isRunning).toBe(true)
+      expect(aThing.runningCount).toBe(6) // 2 + 1 + 3
     })
   })
 })

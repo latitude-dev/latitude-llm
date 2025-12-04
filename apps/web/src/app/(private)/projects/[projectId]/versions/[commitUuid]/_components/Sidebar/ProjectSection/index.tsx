@@ -1,10 +1,10 @@
 'use client'
 
+import { useMemo } from 'react'
 import { formatCount } from '$/lib/formatCount'
 import { ROUTES } from '$/services/routes'
-import { ActiveRunsCountContext } from '../../ActiveRunsCountProvider'
 
-import { LogSources, RunSourceGroup } from '@latitude-data/constants'
+import { RunSourceGroup } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
@@ -18,12 +18,6 @@ import {
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { use, useMemo } from 'react'
-
-function sumCounts(counts: Record<LogSources, number> | undefined): number {
-  if (!counts) return 0
-  return Object.values(counts).reduce((sum, count) => sum + count, 0)
-}
 
 type ProjectRoute = {
   label: string
@@ -87,20 +81,10 @@ function ProjectSectionItem({ item }: { item: ProjectRoute }) {
 export default function ProjectSection({
   project,
   commit,
-  limitedView,
 }: {
   project: Project
   commit: Commit
-  limitedView?: boolean
 }) {
-  const disableRunsNotifications = !!limitedView
-  const { data: activeCountBySource } = use(ActiveRunsCountContext)
-
-  const activeCount = useMemo(
-    () => sumCounts(activeCountBySource),
-    [activeCountBySource],
-  )
-
   const { value: lastRunTab } = useLocalStorage<RunSourceGroup>({
     key: AppLocalStorage.lastRunTab,
     defaultValue: RunSourceGroup.Playground,
@@ -117,19 +101,12 @@ export default function ProjectSection({
           iconName: 'bot',
         },
         {
-          label: 'Runs',
+          label: 'Annotations',
           route: ROUTES.projects
             .detail({ id: project.id })
             .commits.detail({ uuid: commit.uuid })
             .runs.root({ sourceGroup: lastRunTab }),
-          iconName: 'logs',
-          notifications: {
-            count: disableRunsNotifications ? 0 : activeCount,
-            label: (count: number) =>
-              count <= 1
-                ? 'There is a run in progress'
-                : `There are ${count} runs in progress`,
-          },
+          iconName: 'messageSquareText',
         },
         {
           label: 'Issues',
@@ -146,7 +123,7 @@ export default function ProjectSection({
           iconName: 'history',
         },
       ].filter(Boolean) as ProjectRoute[],
-    [project, commit, activeCount, disableRunsNotifications, lastRunTab],
+    [project, commit, lastRunTab],
   )
 
   return (

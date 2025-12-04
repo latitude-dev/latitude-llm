@@ -21,10 +21,7 @@ const NO_CHANGES = {
     pending: [],
   },
   evaluations: {
-    hasIssues: false,
     all: [],
-    clean: [],
-    withIssues: [],
   },
 } satisfies CommitChanges
 

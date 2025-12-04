@@ -219,6 +219,9 @@ export const API_ROUTES = {
                         : `${documentRoot}/traces/daily-count`
                     },
                   },
+                  runs: {
+                    active: `${documentRoot}/runs/active`,
+                  },
                   tools: {
                     root: `${documentRoot}/tools`,
                   },
@@ -414,7 +417,6 @@ export const API_ROUTES = {
             },
           },
           detail: (uuid: string) => ({
-            root: `${projectRoot}/runs/${uuid}`,
             attach: `${projectRoot}/runs/${uuid}/attach`,
           }),
         },

@@ -2,7 +2,6 @@
 
 import {
   getDocumentLogsApproximatedCountByProjectCached,
-  listActiveRunsCached,
   listCompletedRunsCached,
 } from '$/app/(private)/_data-access'
 import {
@@ -23,7 +22,7 @@ export default async function RunsPage({
   searchParams: Promise<QueryParams>
 }) {
   const { projectId: _projectId } = await params
-  const { activePage, activePageSize, sourceGroup } = await searchParams
+  const { sourceGroup } = await searchParams
 
   const defaultSourceGroup = RunSourceGroup.Production
   const { workspace } = await getCurrentUserOrRedirect()
@@ -33,16 +32,10 @@ export default async function RunsPage({
   ).then((r) => r.unwrap())
 
   const projectId = Number(_projectId)
-  const activeSearch = {
-    page: activePage ? Number(activePage) : undefined,
-    pageSize: activePageSize ? Number(activePageSize) : undefined,
-    sourceGroup: (sourceGroup as RunSourceGroup) ?? defaultSourceGroup,
-  }
   const completedSearch = {
     sourceGroup: (sourceGroup as RunSourceGroup) ?? defaultSourceGroup,
   }
 
-  const activeRuns = await listActiveRunsCached({ projectId, ...activeSearch }) // prettier-ignore
   const completedRuns = await listCompletedRunsCached({ projectId, limit: DEFAULT_PAGINATION_SIZE, ...completedSearch }) // prettier-ignore
 
   let limitedView = undefined
@@ -54,7 +47,6 @@ export default async function RunsPage({
   return (
     <ClientRunsPage
       issuesEnabled={issuesEnabled}
-      active={{ runs: activeRuns, search: activeSearch }}
       completed={{ runs: completedRuns.items }}
       limitedView={limitedView}
       defaultSourceGroup={(sourceGroup as RunSourceGroup) ?? defaultSourceGroup}

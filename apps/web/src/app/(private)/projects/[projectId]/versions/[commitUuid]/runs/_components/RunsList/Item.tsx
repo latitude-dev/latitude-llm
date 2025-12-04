@@ -3,14 +3,12 @@
 import { memo, useMemo } from 'react'
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { relativeTime } from '$/lib/relativeTime'
-import { useActiveRuns } from '$/stores/runs/activeRuns'
 import {
   EvaluationConfiguration,
   EvaluationType,
   HumanEvaluationMetric,
   Run,
 } from '@latitude-data/constants'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon, IconProps } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -23,15 +21,11 @@ export const RunsListItem = memo(
     isSelected,
     setSelectedRunUuid,
     timerNow,
-    stopRun,
-    isStoppingRun,
   }: {
     run: Run
     isSelected: boolean
     setSelectedRunUuid: (uuid?: string) => void
     timerNow?: number
-    stopRun?: ReturnType<typeof useActiveRuns>['stopRun']
-    isStoppingRun?: boolean
   }) => {
     const iconProps = useMemo<IconProps>(() => {
       if (run.span?.status === 'error') {
@@ -151,34 +145,6 @@ export const RunsListItem = memo(
                         false,
                       )}
                 </Text.H5>
-              )}
-              {!!run.startedAt && !run.endedAt && stopRun && (
-                <Button
-                  variant='destructiveMuted'
-                  size='none'
-                  iconProps={
-                    isStoppingRun
-                      ? { name: 'loader', spin: true, placement: 'left' }
-                      : undefined
-                  }
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    if (isStoppingRun) return
-                    stopRun({ runUuid: run.uuid })
-                  }}
-                  isLoading={isStoppingRun}
-                  disabled={isStoppingRun}
-                  className='hidden group-hover:block px-2 py-0.5'
-                >
-                  <Text.H5M
-                    color='destructiveMutedForeground'
-                    userSelect={false}
-                    noWrap
-                    ellipsis
-                  >
-                    {isStoppingRun ? 'Stopping' : 'Stop run'}
-                  </Text.H5M>
-                </Button>
               )}
               <Icon
                 name='arrowRight'

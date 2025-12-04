@@ -101,7 +101,9 @@ describe('getActiveEvaluation', () => {
     const evaluationUuid = 'test-uuid-get-error-123'
     const issueId = 999
     const queuedAt = new Date()
-    const error = new Error('Max attempts to generate evaluation from issue reached')
+    const error = new Error(
+      'Max attempts to generate evaluation from issue reached',
+    )
     error.name = 'CustomError'
 
     // Create evaluation
@@ -181,4 +183,3 @@ describe('getActiveEvaluation', () => {
     expect(evaluation.error).toBeUndefined()
   })
 })
-

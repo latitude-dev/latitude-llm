@@ -2,7 +2,7 @@ import { BackgroundRunJobData } from '../jobs/job-definitions/runs/backgroundRun
 import { queues } from '../jobs/queues'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import { getRun } from '../services/runs/get'
+import { getRunByDocument } from '../services/runs/active/byDocument/get'
 
 export async function unsafelyFindActiveRun(runUuid: string) {
   const { runsQueue } = await queues()
@@ -13,11 +13,14 @@ export async function unsafelyFindActiveRun(runUuid: string) {
     )
   }
 
-  const { workspaceId, projectId } = job.data as BackgroundRunJobData
+  const { workspaceId, projectId, documentUuid } =
+    job.data as BackgroundRunJobData
 
-  const getting = await getRun({
+  // Use document-scoped get (with fallback to project-level cache)
+  const getting = await getRunByDocument({
     workspaceId,
     projectId,
+    documentUuid,
     runUuid,
   })
   if (getting.error) return Result.error(getting.error)
@@ -29,5 +32,5 @@ export async function unsafelyFindActiveRun(runUuid: string) {
     )
   }
 
-  return Result.ok({ ...run, projectId, workspaceId })
+  return Result.ok({ ...run, projectId, workspaceId, documentUuid })
 }

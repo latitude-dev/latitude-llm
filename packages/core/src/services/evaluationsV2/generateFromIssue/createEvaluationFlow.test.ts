@@ -134,16 +134,16 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
     expect(Result.isOk(result)).toBe(true)
     const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
       result.unwrap()
-    expect(examplesThatShouldFailTheEvaluation).toHaveLength(3)
-    expect(examplesThatShouldPassTheEvaluation).toHaveLength(3)
-    // Check that all positive spans (with issues) are present (order may vary)
-    expect(examplesThatShouldFailTheEvaluation.map((s: Span) => s.id).sort()).toEqual(
-      positiveSpans.map((s) => s.id).sort(),
-    )
-    // Check that all negative spans (without issues) are present (order may vary)
-    expect(examplesThatShouldPassTheEvaluation.map((s: Span) => s.id).sort()).toEqual(
-      negativeSpans.map((s) => s.id).sort(),
-    )
+    expect(positiveEvaluationResultsSpans).toHaveLength(3)
+    expect(negativeEvaluationResultsSpans).toHaveLength(3)
+    // Check that all positive spans are present (order may vary)
+    expect(
+      positiveEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+    ).toEqual(positiveSpans.map((s) => s.id).sort())
+    // Check that all negative spans are present (order may vary)
+    expect(
+      negativeEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+    ).toEqual(negativeSpans.map((s) => s.id).sort())
   })
 
   it('returns equal amounts when negative spans are less than positive spans', async () => {
@@ -231,10 +231,10 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
     examplesThatShouldFailTheEvaluation.forEach((span: Span) => {
       expect(positiveSpanIds).toContain(span.id)
     })
-    // Check that all negative spans (without issues) are present (order may vary)
-    expect(examplesThatShouldPassTheEvaluation.map((s: Span) => s.id).sort()).toEqual(
-      negativeSpans.map((s) => s.id).sort(),
-    )
+    // Check that all negative spans are present (order may vary)
+    expect(
+      negativeEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+    ).toEqual(negativeSpans.map((s) => s.id).sort())
   })
 
   it('returns equal amounts when negative spans are more than positive spans', async () => {
@@ -313,13 +313,13 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
     expect(Result.isOk(result)).toBe(true)
     const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
       result.unwrap()
-    expect(examplesThatShouldFailTheEvaluation).toHaveLength(3)
-    expect(examplesThatShouldPassTheEvaluation).toHaveLength(3) // Limited to match positive
-    // Check that all positive spans (with issues) are present (order may vary)
-    expect(examplesThatShouldFailTheEvaluation.map((s: Span) => s.id).sort()).toEqual(
-      positiveSpans.map((s) => s.id).sort(),
-    )
-    // Check that negative spans (without issues) are a subset of all negative spans (order may vary)
+    expect(positiveEvaluationResultsSpans).toHaveLength(3)
+    expect(negativeEvaluationResultsSpans).toHaveLength(3) // Limited to match positive
+    // Check that all positive spans are present (order may vary)
+    expect(
+      positiveEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+    ).toEqual(positiveSpans.map((s) => s.id).sort())
+    // Check that negative spans are a subset of all negative spans (order may vary)
     // The function may return any 3 negative spans, not necessarily the first 3
     expect(examplesThatShouldPassTheEvaluation).toHaveLength(3)
     const negativeSpanIds = negativeSpans.map((s) => s.id)

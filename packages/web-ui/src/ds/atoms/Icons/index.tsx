@@ -162,6 +162,7 @@ import {
   Type,
   Video,
   Volume2,
+  MessageSquareTextIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -255,6 +256,7 @@ const Icons = {
   brush: Brush,
   calendar: CalendarIcon,
   chat: MessageCircleIcon,
+  messageSquareText: MessageSquareTextIcon,
   check: CheckCircle2,
   checkClean: CheckIcon,
   chevronDown: ChevronDown,

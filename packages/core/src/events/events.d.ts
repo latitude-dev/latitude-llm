@@ -19,7 +19,6 @@ import {
   EvaluationV2,
   Message,
 } from '../schema/types'
-import { Run } from '@latitude-data/constants'
 import { ActiveEvaluation } from '@latitude-data/constants/evaluations'
 
 export type Events =
@@ -77,10 +76,10 @@ export type Events =
   | 'documentTriggerEventCreated'
   | 'promocodeClaimed'
   | 'subscriptionUpdated'
-  | 'runQueued'
-  | 'runStarted'
-  | 'runProgress'
-  | 'runEnded'
+  | 'documentRunQueued'
+  | 'documentRunStarted'
+  | 'documentRunProgress'
+  | 'documentRunEnded'
   | 'issueCreated'
   | 'issueUpdated'
   | 'issueDeleted'
@@ -540,6 +539,7 @@ export type SpanCreatedEvent = LatitudeEventGeneric<
     apiKeyId: number
     spanId: string
     traceId: string
+    documentUuid: string | undefined
   }
 >
 
@@ -632,22 +632,36 @@ export type SubscriptionUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
-type RunStatusEventData = {
+type DocumentRunStatusEventData = {
   workspaceId: number
   projectId: number
-  run: Run
+  documentUuid: string
+  commitUuid: string
+  run: ActiveRun
 }
 
-export type RunQueuedEvent = LatitudeEventGeneric<'runQueued', RunStatusEventData> // prettier-ignore
-export type RunStartedEvent = LatitudeEventGeneric<'runStarted', RunStatusEventData> // prettier-ignore
-export type RunProgressEvent = LatitudeEventGeneric<'runProgress', RunStatusEventData> // prettier-ignore
-export type RunEndedEvent = LatitudeEventGeneric<'runEnded', RunStatusEventData>
+export type DocumentRunQueuedEvent = LatitudeEventGeneric<
+  'documentRunQueued',
+  DocumentRunStatusEventData
+>
+export type DocumentRunStartedEvent = LatitudeEventGeneric<
+  'documentRunStarted',
+  DocumentRunStatusEventData
+>
+export type DocumentRunProgressEvent = LatitudeEventGeneric<
+  'documentRunProgress',
+  DocumentRunStatusEventData
+>
+export type DocumentRunEndedEvent = LatitudeEventGeneric<
+  'documentRunEnded',
+  DocumentRunStatusEventData
+>
 
-export type RunStatusEvent =
-  | RunQueuedEvent
-  | RunStartedEvent
-  | RunProgressEvent
-  | RunEndedEvent
+export type DocumentRunStatusEvent =
+  | DocumentRunQueuedEvent
+  | DocumentRunStartedEvent
+  | DocumentRunProgressEvent
+  | DocumentRunEndedEvent
 
 type EvaluationStatusEventData = {
   workspaceId: number
@@ -906,10 +920,10 @@ export type LatitudeEvent =
   | DocumentTriggerEventCreatedEvent
   | PromocodeClaimedEvent
   | SubscriptionUpdatedEvent
-  | RunQueuedEvent
-  | RunStartedEvent
-  | RunProgressEvent
-  | RunEndedEvent
+  | DocumentRunQueuedEvent
+  | DocumentRunStartedEvent
+  | DocumentRunProgressEvent
+  | DocumentRunEndedEvent
   | CommitUpdatedEvent
   | PasteYourPromptOnboardingPageVisited
   | GenerateDatasetOnboardingPageVisited
@@ -990,10 +1004,10 @@ export interface IEventsHandlers {
   documentTriggerEventCreated: EventHandler<DocumentTriggerEventCreatedEvent>[]
   promocodeClaimed: EventHandler<PromocodeClaimedEvent>[]
   subscriptionUpdated: EventHandler<SubscriptionUpdatedEvent>[]
-  runQueued: EventHandler<RunQueuedEvent>[]
-  runStarted: EventHandler<RunStartedEvent>[]
-  runProgress: EventHandler<RunProgressEvent>[]
-  runEnded: EventHandler<RunEndedEvent>[]
+  documentRunQueued: EventHandler<DocumentRunQueuedEvent>[]
+  documentRunStarted: EventHandler<DocumentRunStartedEvent>[]
+  documentRunProgress: EventHandler<DocumentRunProgressEvent>[]
+  documentRunEnded: EventHandler<DocumentRunEndedEvent>[]
   commitUpdated: EventHandler<CommitUpdatedEvent>[]
   pasteYourPromptOnboardingPageVisited: EventHandler<PasteYourPromptOnboardingPageVisited>[]
   generateDatasetOnboardingPageVisited: EventHandler<GenerateDatasetOnboardingPageVisited>[]
