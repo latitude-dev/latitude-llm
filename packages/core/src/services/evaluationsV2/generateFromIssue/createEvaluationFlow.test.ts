@@ -132,17 +132,19 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
-      result.unwrap()
-    expect(positiveEvaluationResultsSpans).toHaveLength(3)
-    expect(negativeEvaluationResultsSpans).toHaveLength(3)
+    const {
+      examplesThatShouldFailTheEvaluation,
+      examplesThatShouldPassTheEvaluation,
+    } = result.unwrap()
+    expect(examplesThatShouldFailTheEvaluation).toHaveLength(3)
+    expect(examplesThatShouldPassTheEvaluation).toHaveLength(3)
     // Check that all positive spans are present (order may vary)
     expect(
-      positiveEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+      examplesThatShouldFailTheEvaluation.map((s: Span) => s.id).sort(),
     ).toEqual(positiveSpans.map((s) => s.id).sort())
     // Check that all negative spans are present (order may vary)
     expect(
-      negativeEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+      examplesThatShouldPassTheEvaluation.map((s: Span) => s.id).sort(),
     ).toEqual(negativeSpans.map((s) => s.id).sort())
   })
 
@@ -220,8 +222,10 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
-      result.unwrap()
+    const {
+      examplesThatShouldFailTheEvaluation,
+      examplesThatShouldPassTheEvaluation,
+    } = result.unwrap()
     // Both should have the same length (minimum of 5 and 2 = 2)
     expect(examplesThatShouldFailTheEvaluation).toHaveLength(2)
     expect(examplesThatShouldPassTheEvaluation).toHaveLength(2)
@@ -233,7 +237,7 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
     })
     // Check that all negative spans are present (order may vary)
     expect(
-      negativeEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+      examplesThatShouldPassTheEvaluation.map((s: Span) => s.id).sort(),
     ).toEqual(negativeSpans.map((s) => s.id).sort())
   })
 
@@ -311,17 +315,18 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
-      result.unwrap()
-    expect(positiveEvaluationResultsSpans).toHaveLength(3)
-    expect(negativeEvaluationResultsSpans).toHaveLength(3) // Limited to match positive
+    const {
+      examplesThatShouldFailTheEvaluation,
+      examplesThatShouldPassTheEvaluation,
+    } = result.unwrap()
+    expect(examplesThatShouldFailTheEvaluation).toHaveLength(3)
+    expect(examplesThatShouldPassTheEvaluation).toHaveLength(3) // Limited to match positive
     // Check that all positive spans are present (order may vary)
     expect(
-      positiveEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+      examplesThatShouldFailTheEvaluation.map((s: Span) => s.id).sort(),
     ).toEqual(positiveSpans.map((s) => s.id).sort())
     // Check that negative spans are a subset of all negative spans (order may vary)
     // The function may return any 3 negative spans, not necessarily the first 3
-    expect(examplesThatShouldPassTheEvaluation).toHaveLength(3)
     const negativeSpanIds = negativeSpans.map((s) => s.id)
     examplesThatShouldPassTheEvaluation.forEach((span: Span) => {
       expect(negativeSpanIds).toContain(span.id)
@@ -339,8 +344,10 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
-      result.unwrap()
+    const {
+      examplesThatShouldFailTheEvaluation,
+      examplesThatShouldPassTheEvaluation,
+    } = result.unwrap()
     expect(examplesThatShouldFailTheEvaluation).toHaveLength(0)
     expect(examplesThatShouldPassTheEvaluation).toHaveLength(0)
   })
@@ -396,8 +403,10 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
-      result.unwrap()
+    const {
+      examplesThatShouldFailTheEvaluation,
+      examplesThatShouldPassTheEvaluation,
+    } = result.unwrap()
     // Both should be empty (minimum of 3 and 0 = 0)
     expect(examplesThatShouldFailTheEvaluation).toHaveLength(0)
     expect(examplesThatShouldPassTheEvaluation).toHaveLength(0)
