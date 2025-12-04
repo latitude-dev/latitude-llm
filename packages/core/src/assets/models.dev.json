@@ -601,16 +601,16 @@
           "output": 8192
         }
       },
-      "gpt-oss:120b-cloud": {
-        "id": "gpt-oss:120b-cloud",
-        "name": "GPT-OSS 120B",
+      "qwen3-coder:480b-cloud": {
+        "id": "qwen3-coder:480b-cloud",
+        "name": "Qwen3 Coder 480B",
         "attachment": false,
-        "reasoning": true,
+        "reasoning": false,
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
-        "release_date": "2025-08-05",
-        "last_updated": "2025-08-05",
+        "release_date": "2025-07-22",
+        "last_updated": "2025-07-22",
         "modalities": {
           "input": [
             "text"
@@ -625,16 +625,16 @@
           "output": 8192
         }
       },
-      "qwen3-coder-480b-cloud": {
-        "id": "qwen3-coder-480b-cloud",
-        "name": "Qwen3 Coder 480B",
+      "gpt-oss:120b-cloud": {
+        "id": "gpt-oss:120b-cloud",
+        "name": "GPT-OSS 120B",
         "attachment": false,
-        "reasoning": false,
+        "reasoning": true,
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
-        "release_date": "2025-07-22",
-        "last_updated": "2025-07-22",
+        "release_date": "2025-08-05",
+        "last_updated": "2025-08-05",
         "modalities": {
           "input": [
             "text"
@@ -10747,6 +10747,34 @@
           "output": 8192
         }
       },
+      "gemini-3-pro-preview": {
+        "id": "gemini-3-pro-preview",
+        "name": "Gemini 3 Pro Preview",
+        "attachment": true,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2024-04",
+        "release_date": "2025-11-18",
+        "last_updated": "2025-11-18",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "cost": {
+          "input": 2.5,
+          "output": 15
+        },
+        "limit": {
+          "context": 202752,
+          "output": 8192
+        }
+      },
       "qwen-2.5-vl": {
         "id": "qwen-2.5-vl",
         "name": "Qwen 2.5 VL 72B",
@@ -10941,6 +10969,34 @@
         },
         "limit": {
           "context": 32768,
+          "output": 8192
+        }
+      },
+      "kimi-k2-thinking": {
+        "id": "kimi-k2-thinking",
+        "name": "Kimi K2 Thinking",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2024-04",
+        "release_date": "2025-09-05",
+        "last_updated": "2025-09-05",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0.75,
+          "output": 3.2
+        },
+        "limit": {
+          "context": 262144,
           "output": 8192
         }
       },
@@ -27355,6 +27411,34 @@
           "output": 163840
         }
       },
+      "deepseek/deepseek-v3.2-speciale": {
+        "id": "deepseek/deepseek-v3.2-speciale",
+        "name": "DeepSeek V3.2 Speciale",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2024-07",
+        "release_date": "2025-12-01",
+        "last_updated": "2025-12-01",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0.27,
+          "output": 0.41
+        },
+        "limit": {
+          "context": 163840,
+          "output": 65536
+        }
+      },
       "deepseek/deepseek-v3-base:free": {
         "id": "deepseek/deepseek-v3-base:free",
         "name": "DeepSeek V3 Base (free)",
@@ -31550,7 +31634,7 @@
       },
       "deepseek-v3": {
         "id": "deepseek-v3",
-        "name": "DeepSeek-V3-671B",
+        "name": "DeepSeek-V3",
         "attachment": false,
         "reasoning": false,
         "tool_call": true,
@@ -31662,7 +31746,7 @@
       },
       "minimax-m2": {
         "id": "minimax-m2",
-        "name": "MiniMax M2",
+        "name": "MiniMax-M2",
         "attachment": false,
         "reasoning": true,
         "tool_call": true,
@@ -31717,9 +31801,37 @@
           "output": 32000
         }
       },
+      "deepseek-v3.2-chat": {
+        "id": "deepseek-v3.2-chat",
+        "name": "DeepSeek-V3.2",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2025-11",
+        "release_date": "2025-12-01",
+        "last_updated": "2025-12-01",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0,
+          "output": 0
+        },
+        "limit": {
+          "context": 128000,
+          "output": 64000
+        }
+      },
       "kimi-k2-0905": {
         "id": "kimi-k2-0905",
-        "name": "Kimi-K2-Instruct-0905",
+        "name": "Kimi-K2-0905",
         "attachment": false,
         "reasoning": false,
         "tool_call": true,
@@ -31742,6 +31854,34 @@
         },
         "limit": {
           "context": 256000,
+          "output": 64000
+        }
+      },
+      "kimi-k2-thinking": {
+        "id": "kimi-k2-thinking",
+        "name": "Kimi-K2-Thinking",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2025-11",
+        "release_date": "2025-11-06",
+        "last_updated": "2025-11-06",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0,
+          "output": 0
+        },
+        "limit": {
+          "context": 128000,
           "output": 64000
         }
       },
@@ -34492,6 +34632,105 @@
         "limit": {
           "context": 262144,
           "output": 65536
+        }
+      }
+    }
+  },
+  "sap-ai-core": {
+    "id": "sap-ai-core",
+    "env": [
+      "SAP_AI_SERVICE_KEY"
+    ],
+    "npm": "@mymediset/sap-ai-provider",
+    "name": "SAP AI Core",
+    "doc": "https://help.sap.com/docs/sap-ai-core",
+    "models": {
+      "gpt-4o": {
+        "id": "gpt-4o",
+        "name": "GPT-4o",
+        "attachment": true,
+        "reasoning": false,
+        "tool_call": true,
+        "temperature": true,
+        "release_date": "2024-05-13",
+        "last_updated": "2024-05-13",
+        "modalities": {
+          "input": [
+            "text",
+            "image"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "cost": {
+          "input": 2.5,
+          "output": 10
+        },
+        "limit": {
+          "context": 128000,
+          "output": 4096
+        }
+      },
+      "claude-3-5-sonnet": {
+        "id": "claude-3-5-sonnet",
+        "name": "Claude Sonnet 3.5",
+        "attachment": true,
+        "reasoning": false,
+        "tool_call": true,
+        "temperature": true,
+        "release_date": "2024-06-20",
+        "last_updated": "2024-06-20",
+        "modalities": {
+          "input": [
+            "text",
+            "image"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "cost": {
+          "input": 3,
+          "output": 15,
+          "cache_read": 0.3,
+          "cache_write": 3.75
+        },
+        "limit": {
+          "context": 200000,
+          "output": 8192
+        }
+      },
+      "gemini-1.5-pro": {
+        "id": "gemini-1.5-pro",
+        "name": "Gemini 1.5 Pro",
+        "attachment": true,
+        "reasoning": false,
+        "tool_call": true,
+        "temperature": true,
+        "release_date": "2024-02-15",
+        "last_updated": "2024-02-15",
+        "modalities": {
+          "input": [
+            "text",
+            "image",
+            "audio",
+            "video"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "cost": {
+          "input": 1.25,
+          "output": 5
+        },
+        "limit": {
+          "context": 2000000,
+          "output": 8192
         }
       }
     }
