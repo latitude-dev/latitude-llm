@@ -9,7 +9,6 @@ export enum IssueStatuses {
   new = 'new',
 }
 
-// TODO(AO): Put merged issues into archived status in all parts of the code
 export const ISSUE_STATUS = {
   active: 'active', // not resolved, nor ignored, nor merged (but regressed yes)
   inactive: 'inactive', // resolved or ignored or merged

@@ -13,11 +13,14 @@ import { issueHistograms } from '../../schema/models/issueHistograms'
 import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
 import { Workspace } from '../../schema/models/types/Workspace'
-import { getIssuesCollection } from '../../weaviate'
+import { captureException } from '../../utils/datadogCapture'
+import {
+  getIssuesCollection,
+  ISSUES_COLLECTION_TENANT_NAME,
+} from '../../weaviate'
 import { bulkLinkIssueEvaluationResults } from '../issueEvaluationResults/addBulk'
 import { embedCentroid, mergeCentroids } from './shared'
 import { updateIssue } from './update'
-import { captureException } from '../../utils/datadogCapture'
 
 type MergeResult = { winner: Issue; mergedIssues: Issue[] }
 
@@ -176,11 +179,8 @@ async function findSimilarIssues({
   if (anchorEmbedding.length === 0) return []
 
   try {
-    const collection = await getIssuesCollection({
-      workspaceId: anchorIssue.workspaceId,
-      projectId: anchorIssue.projectId,
-      documentUuid: anchorIssue.documentUuid,
-    })
+    const tenantName = ISSUES_COLLECTION_TENANT_NAME(anchorIssue.workspaceId, anchorIssue.projectId, anchorIssue.documentUuid) // prettier-ignore
+    const collection = await getIssuesCollection({ tenantName })
 
     const { objects } = await collection.query.nearVector(anchorEmbedding, {
       limit: 100,

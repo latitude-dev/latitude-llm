@@ -1,8 +1,11 @@
 import { env } from '@latitude-data/env'
 import { IssuesRepository } from '../../repositories'
-import { EventHandler, IssueMergedEvent } from '../events'
-import { getIssuesCollection } from '../../weaviate'
 import { Issue } from '../../schema/models/types/Issue'
+import {
+  getIssuesCollection,
+  ISSUES_COLLECTION_TENANT_NAME,
+} from '../../weaviate'
+import { EventHandler, IssueMergedEvent } from '../events'
 
 /**
  * Removes vectors for merged issues from Weaviate collection.
@@ -35,20 +38,22 @@ export const removeMergedIssueVectors: EventHandler<IssueMergedEvent> = async ({
 
   for (const issue of issues) {
     try {
-      const collection = await getIssuesCollection({
-        workspaceId: issue.workspaceId,
-        projectId: issue.projectId,
-        documentUuid: issue.documentUuid,
-      })
+      const tenantName = ISSUES_COLLECTION_TENANT_NAME(issue.workspaceId, issue.projectId, issue.documentUuid) // prettier-ignore
+      const collection = await getIssuesCollection({ tenantName })
 
       const exists = await collection.data.exists(issue.uuid)
-      if (!exists) continue
+      if (!exists) {
+        // Note: if this happens the vector db is out of sync
+        // with the database! Fail silently in this case
+
+        continue
+      }
 
       await collection.data.deleteById(issue.uuid)
 
       const count = await collection.length()
       if (count === 0) {
-        await collection.tenants.remove(String(issue.workspaceId))
+        await collection.tenants.remove(tenantName)
       }
     } catch (_) {
       // Ignore vector cleanup failures to avoid blocking

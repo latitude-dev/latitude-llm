@@ -1,16 +1,16 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import { eq } from 'drizzle-orm'
 import { env } from '@latitude-data/env'
+import { eq } from 'drizzle-orm'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { database } from '../../client'
+import { publisher } from '../../events/publisher'
+import { IssuesRepository } from '../../repositories'
+import { issues } from '../../schema/models/issues'
 import { createIssue } from '../../tests/factories/issues'
 import { createProject } from '../../tests/factories/projects'
 import { createWorkspace } from '../../tests/factories/workspaces'
-import { updateIssue } from './update'
-import { issues } from '../../schema/models/issues'
 import * as weaviate from '../../weaviate'
-import { IssuesRepository } from '../../repositories'
-import { publisher } from '../../events/publisher'
+import { updateIssue } from './update'
 
 describe('updateIssue', () => {
   const originalWeaviateKey = env.WEAVIATE_API_KEY
@@ -589,6 +589,102 @@ describe('updateIssue', () => {
       const retrieved = await repo.find(issue.id).then((r) => r.unwrap())
 
       expect(retrieved.title).toBe('Updated via Service')
+    })
+  })
+
+  describe('Weaviate tenant name operations', () => {
+    it('calls getIssuesCollection with correct tenant name built from workspaceId, projectId, and documentUuid', async () => {
+      const { workspace } = await createWorkspace({ features: ['issues'] })
+      const projectResult = await createProject({
+        workspace,
+        documents: {
+          'test-prompt': 'This is a test prompt',
+        },
+      })
+      const { project, documents } = projectResult
+      const document = documents[0]!
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document,
+        title: 'Original Title',
+        description: 'Original Description',
+      })
+
+      const mockExists = vi.fn().mockResolvedValue(true)
+      const mockUpdate = vi.fn().mockResolvedValue(undefined)
+
+      const mockCollection = {
+        data: {
+          exists: mockExists,
+          update: mockUpdate,
+        },
+      }
+
+      const getIssuesCollectionSpy = vi
+        .spyOn(weaviate, 'getIssuesCollection')
+        .mockResolvedValue(mockCollection as any)
+
+      await updateIssue({
+        issue,
+        title: 'Updated Title',
+        description: 'Updated Description',
+      })
+
+      const expectedTenantName = weaviate.ISSUES_COLLECTION_TENANT_NAME(
+        issue.workspaceId,
+        issue.projectId,
+        issue.documentUuid,
+      )
+      expect(getIssuesCollectionSpy).toHaveBeenCalledWith({
+        tenantName: expectedTenantName,
+      })
+    })
+
+    it('builds tenant name correctly using ISSUES_COLLECTION_TENANT_NAME format', async () => {
+      const { workspace } = await createWorkspace({ features: ['issues'] })
+      const projectResult = await createProject({
+        workspace,
+        documents: {
+          'test-prompt': 'This is a test prompt',
+        },
+      })
+      const { project, documents } = projectResult
+      const document = documents[0]!
+
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document,
+        title: 'Original Title',
+        description: 'Original Description',
+      })
+
+      const mockExists = vi.fn().mockResolvedValue(true)
+      const mockUpdate = vi.fn().mockResolvedValue(undefined)
+
+      const mockCollection = {
+        data: {
+          exists: mockExists,
+          update: mockUpdate,
+        },
+      }
+
+      const getIssuesCollectionSpy = vi
+        .spyOn(weaviate, 'getIssuesCollection')
+        .mockResolvedValue(mockCollection as any)
+
+      await updateIssue({
+        issue,
+        title: 'Updated Title',
+        description: 'Updated Description',
+      })
+
+      const expectedTenantName = `${issue.workspaceId}_${issue.projectId}_${issue.documentUuid}`
+      expect(getIssuesCollectionSpy).toHaveBeenCalledWith({
+        tenantName: expectedTenantName,
+      })
     })
   })
 

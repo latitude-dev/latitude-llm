@@ -95,7 +95,10 @@ describe('enqueueRun', () => {
 
       // Mock createActiveRunByDocument to track when cache entry is created
       const createSpy = vi
-        .spyOn(await import('./active/byDocument/create'), 'createActiveRunByDocument')
+        .spyOn(
+          await import('./active/byDocument/create'),
+          'createActiveRunByDocument',
+        )
         .mockImplementation(async () => {
           callOrder.push('cache-create')
           return { ok: true, value: mockRun } as any
@@ -198,7 +201,10 @@ describe('enqueueRun', () => {
     it('does not create job if cache creation fails', async () => {
       // Force cache creation to fail
       const createSpy = vi
-        .spyOn(await import('./active/byDocument/create'), 'createActiveRunByDocument')
+        .spyOn(
+          await import('./active/byDocument/create'),
+          'createActiveRunByDocument',
+        )
         .mockResolvedValueOnce({
           ok: false,
           error: new Error('Cache error'),
@@ -387,7 +393,10 @@ describe('enqueueRun', () => {
       }
 
       const createSpy = vi
-        .spyOn(await import('./active/byDocument/create'), 'createActiveRunByDocument')
+        .spyOn(
+          await import('./active/byDocument/create'),
+          'createActiveRunByDocument',
+        )
         .mockImplementation(async () => {
           // Simulate slow cache creation
           await new Promise((resolve) => setTimeout(resolve, 50))

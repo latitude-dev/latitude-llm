@@ -1,3 +1,4 @@
+import { env } from '@latitude-data/env'
 import { and, eq } from 'drizzle-orm'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
@@ -6,8 +7,10 @@ import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { issueHistograms } from '../../schema/models/issueHistograms'
 import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
-import { getIssuesCollection } from '../../weaviate'
-import { env } from '@latitude-data/env'
+import {
+  getIssuesCollection,
+  ISSUES_COLLECTION_TENANT_NAME,
+} from '../../weaviate'
 
 export async function deleteIssue(
   {
@@ -89,11 +92,8 @@ async function deleteVector({
   if (!env.WEAVIATE_API_KEY) return Result.nil()
 
   try {
-    const issues = await getIssuesCollection({
-      workspaceId,
-      projectId,
-      documentUuid,
-    })
+    const tenantName = ISSUES_COLLECTION_TENANT_NAME(workspaceId, projectId, documentUuid) // prettier-ignore
+    const issues = await getIssuesCollection({ tenantName })
 
     const exists = await issues.data.exists(uuid)
     if (!exists) {
@@ -107,7 +107,7 @@ async function deleteVector({
 
     const count = await issues.length()
     if (count === 0) {
-      await issues.tenants.remove(String(workspaceId))
+      await issues.tenants.remove(tenantName)
     }
 
     return Result.nil()

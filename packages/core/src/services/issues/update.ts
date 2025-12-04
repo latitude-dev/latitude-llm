@@ -1,3 +1,4 @@
+import { env } from '@latitude-data/env'
 import { and, eq } from 'drizzle-orm'
 import { IssueCentroid } from '../../constants'
 import { publisher } from '../../events/publisher'
@@ -6,9 +7,11 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
-import { getIssuesCollection } from '../../weaviate'
+import {
+  getIssuesCollection,
+  ISSUES_COLLECTION_TENANT_NAME,
+} from '../../weaviate'
 import { embedCentroid } from './shared'
-import { env } from '@latitude-data/env'
 
 export async function updateIssue(
   {
@@ -96,11 +99,8 @@ async function upsertVector({
   const embedding = centroid ? embedCentroid(centroid) : undefined
 
   try {
-    const issues = await getIssuesCollection({
-      workspaceId,
-      projectId,
-      documentUuid,
-    })
+    const tenantName = ISSUES_COLLECTION_TENANT_NAME(workspaceId, projectId, documentUuid) // prettier-ignore
+    const issues = await getIssuesCollection({ tenantName })
 
     const payload: {
       id: string
