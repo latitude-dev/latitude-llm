@@ -80,22 +80,14 @@ export function evaluationChangesPresenter({
   currentCommitEvaluations: EvaluationV2[]
   previousCommitEvaluations: EvaluationV2[]
 }) {
-  const changes = currentCommitEvaluations.map((changedEvaluation) => {
+  return currentCommitEvaluations.map((changedEvaluation) => {
     return {
       evaluationUuid: changedEvaluation.uuid,
       documentUuid: changedEvaluation.documentUuid,
       name: changedEvaluation.name,
       type: changedEvaluation.type,
       changeType: getChangeType(changedEvaluation, previousCommitEvaluations),
-      hasIssues: !!changedEvaluation.issueId,
     } satisfies ChangedEvaluation
-  })
-
-  // Sort by hasIssues (evaluations with issues first)
-  return changes.sort((a, b) => {
-    const aHasIssues = a.hasIssues ? 1 : 0
-    const bHasIssues = b.hasIssues ? 1 : 0
-    return bHasIssues - aHasIssues
   })
 }
 

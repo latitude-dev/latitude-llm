@@ -173,16 +173,9 @@ export async function getCommitChanges(
     )
 
     const allEvaluations = evaluationChangesResult.value
-    const cleanEvaluations = allEvaluations.filter(
-      (evaluation) => !evaluation.hasIssues,
-    )
-    const evaluationsWithIssues = allEvaluations.filter(
-      (evaluation) => evaluation.hasIssues,
-    )
 
     const hasErrors = documentsWithErrors.length > 0
     const hasPending = pendingTriggers.length > 0
-    const hasEvaluationIssues = evaluationsWithIssues.length > 0
 
     const anyChanges =
       allTriggers.length > 0 ||
@@ -192,7 +185,7 @@ export async function getCommitChanges(
 
     return Result.ok({
       anyChanges,
-      hasIssues: hasErrors || hasPending || hasEvaluationIssues,
+      hasIssues: hasErrors || hasPending,
       mainDocumentUuid: mainDocumentChanged
         ? commit.mainDocumentUuid // new main document uuid (or null if it was removed)
         : undefined, // no change
@@ -209,10 +202,7 @@ export async function getCommitChanges(
         pending: pendingTriggers,
       },
       evaluations: {
-        hasIssues: hasEvaluationIssues,
         all: allEvaluations,
-        clean: cleanEvaluations,
-        withIssues: evaluationsWithIssues,
       },
     })
   })

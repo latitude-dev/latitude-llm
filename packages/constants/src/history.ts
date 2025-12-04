@@ -29,7 +29,6 @@ export type ChangedEvaluation = {
   name: string
   type: EvaluationType
   changeType: ModifiedDocumentType
-  hasIssues: boolean
 }
 
 export type CommitChanges = {
@@ -49,9 +48,6 @@ export type CommitChanges = {
     pending: ChangedTrigger[]
   }
   evaluations: {
-    hasIssues: boolean
     all: ChangedEvaluation[]
-    clean: ChangedEvaluation[]
-    withIssues: ChangedEvaluation[]
   }
 }

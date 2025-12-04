@@ -20,14 +20,12 @@ import { createDocumentTrigger } from '../documentTriggers/create'
 import { database } from '../../client'
 import { documentTriggers } from '../../schema/models/documentTriggers'
 import { commits } from '../../schema/models/commits'
-import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import {
   createDocumentVersion,
   createDraft,
   createProject,
   helpers,
   createEvaluationV2,
-  createIssue,
 } from '../../tests/factories'
 import { getCommitChanges, changesPresenter } from './getChanges'
 import { mergeCommit } from './merge'
@@ -506,10 +504,7 @@ describe('getCommitChanges', () => {
         workspace,
       }).then((r) => r.unwrap())
 
-      expect(changes.evaluations.hasIssues).toBe(false)
       expect(changes.evaluations.all).toEqual([])
-      expect(changes.evaluations.clean).toEqual([])
-      expect(changes.evaluations.withIssues).toEqual([])
     })
 
     it('shows created evaluations', async () => {
@@ -548,136 +543,8 @@ describe('getCommitChanges', () => {
           name: 'Test Evaluation',
           type: EvaluationType.Rule,
           changeType: ModifiedDocumentType.Created,
-          hasIssues: false,
         },
       ])
-      expect(changes.evaluations.clean).toEqual(changes.evaluations.all)
-      expect(changes.evaluations.withIssues).toEqual([])
-    })
-
-    it('shows evaluations with issues', async () => {
-      const evaluation = await createEvaluationV2({
-        workspace,
-        document: documents['folder1/doc1']!,
-        commit: draftCommit,
-        name: 'Test Evaluation with Issue',
-        type: EvaluationType.Rule,
-        metric: RuleEvaluationMetric.ExactMatch,
-        configuration: {
-          reverseScale: false,
-          actualOutput: {
-            messageSelection: 'last',
-            parsingFormat: 'string',
-          },
-          expectedOutput: {
-            parsingFormat: 'string',
-          },
-          caseInsensitive: false,
-        },
-      })
-
-      // Create an issue for the evaluation using the factory
-      const { issue } = await createIssue({
-        workspace,
-        project,
-        document: documents['folder1/doc1']!,
-        title: 'Test Issue',
-        description: 'Test Issue Description',
-      })
-
-      // Link the issue to the evaluation
-      await database
-        .update(evaluationVersions)
-        .set({ issueId: issue.id })
-        .where(eq(evaluationVersions.evaluationUuid, evaluation.uuid))
-
-      const changes = await getCommitChanges({
-        commit: draftCommit,
-        workspace,
-      }).then((r) => r.unwrap())
-
-      expect(changes.anyChanges).toBe(true)
-      expect(changes.hasIssues).toBe(true)
-
-      expect(changes.evaluations.hasIssues).toBe(true)
-      expect(changes.evaluations.all).toEqual([
-        {
-          evaluationUuid: evaluation.uuid,
-          documentUuid: documents['folder1/doc1']!.documentUuid,
-          name: 'Test Evaluation with Issue',
-          type: EvaluationType.Rule,
-          changeType: ModifiedDocumentType.Created,
-          hasIssues: true,
-        },
-      ])
-      expect(changes.evaluations.withIssues).toEqual(changes.evaluations.all)
-      expect(changes.evaluations.clean).toEqual([])
-    })
-
-    it('sorts evaluations with issues first', async () => {
-      const eval1 = await createEvaluationV2({
-        workspace,
-        document: documents['folder1/doc1']!,
-        commit: draftCommit,
-        name: 'Clean Evaluation',
-        type: EvaluationType.Rule,
-        metric: RuleEvaluationMetric.ExactMatch,
-        configuration: {
-          reverseScale: false,
-          actualOutput: {
-            messageSelection: 'last',
-            parsingFormat: 'string',
-          },
-          expectedOutput: {
-            parsingFormat: 'string',
-          },
-          caseInsensitive: false,
-        },
-      })
-
-      const eval2 = await createEvaluationV2({
-        workspace,
-        document: documents['doc2']!,
-        commit: draftCommit,
-        name: 'Evaluation with Issue',
-        type: EvaluationType.Rule,
-        metric: RuleEvaluationMetric.ExactMatch,
-        configuration: {
-          reverseScale: false,
-          actualOutput: {
-            messageSelection: 'last',
-            parsingFormat: 'string',
-          },
-          expectedOutput: {
-            parsingFormat: 'string',
-          },
-          caseInsensitive: false,
-        },
-      })
-
-      // Create an issue for eval2
-      const { issue } = await createIssue({
-        workspace,
-        project,
-        document: documents['doc2']!,
-        title: 'Test Issue',
-        description: 'Test Issue Description',
-      })
-
-      await database
-        .update(evaluationVersions)
-        .set({ issueId: issue.id })
-        .where(eq(evaluationVersions.evaluationUuid, eval2.uuid))
-
-      const changes = await getCommitChanges({
-        commit: draftCommit,
-        workspace,
-      }).then((r) => r.unwrap())
-
-      expect(changes.evaluations.all[0]!.hasIssues).toBe(true)
-      expect(changes.evaluations.all[0]!.evaluationUuid).toBe(eval2.uuid)
-      expect(changes.evaluations.all[1]!.hasIssues).toBe(false)
-      expect(changes.evaluations.all[1]!.evaluationUuid).toBe(eval1.uuid)
     })
   })
 
@@ -766,8 +633,8 @@ describe('getCommitChanges', () => {
         .set({ triggerStatus: 'pending' })
         .where(eq(documentTriggers.uuid, trigger.uuid))
 
-      // Add evaluation with issue
-      const evaluation = await createEvaluationV2({
+      // Add evaluation
+      await createEvaluationV2({
         workspace,
         document: documents['folder1/doc1']!,
         commit: draftCommit,
@@ -787,19 +654,6 @@ describe('getCommitChanges', () => {
         },
       })
 
-      const { issue } = await createIssue({
-        workspace,
-        project,
-        document: documents['folder1/doc1']!,
-        title: 'Test Issue',
-        description: 'Test',
-      })
-
-      await database
-        .update(evaluationVersions)
-        .set({ issueId: issue.id })
-        .where(eq(evaluationVersions.evaluationUuid, evaluation.uuid))
-
       const changes = await getCommitChanges({
         commit: draftCommit,
         workspace,
@@ -809,7 +663,6 @@ describe('getCommitChanges', () => {
       expect(changes.hasIssues).toBe(true)
       expect(changes.documents.hasErrors).toBe(true)
       expect(changes.triggers.hasPending).toBe(true)
-      expect(changes.evaluations.hasIssues).toBe(true)
     })
 
     it('correctly identifies anyChanges with multiple types of changes', async () => {

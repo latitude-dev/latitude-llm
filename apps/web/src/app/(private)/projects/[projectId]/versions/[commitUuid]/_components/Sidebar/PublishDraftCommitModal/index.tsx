@@ -49,10 +49,6 @@ function confirmDescription({
     return `There are triggers that needs to be configured before publishing.`
   }
 
-  if (changes.evaluations.hasIssues) {
-    return 'Some evaluations have issues. Please review the evaluations with issues before publishing.'
-  }
-
   return 'Publishing a new version is reversible and doesnt remove previous versions! You can always go back to use previous version if needed.'
 }
 
