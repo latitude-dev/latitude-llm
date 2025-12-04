@@ -6,9 +6,25 @@ import { useRouter } from 'next/navigation'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TestsList } from './TestsList'
 import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
+import { ResizableLayout } from '../../documents/[documentUuid]/(withTabs)/traces/_components/ResizableLayout'
+import { useTestSelection } from './TestSelectionContext'
+import { TestInfoPanel } from './TestInfoPanel'
+import { useMemo } from 'react'
 
-export function TestingPageContent({ tests }: { tests: DeploymentTest[] }) {
+export function TestingPageContent({
+  tests,
+  projectId,
+}: {
+  tests: DeploymentTest[]
+  projectId: number
+}) {
   const router = useRouter()
+  const { selection } = useTestSelection()
+
+  const selectedTest = useMemo(() => {
+    if (!selection.testUuid) return null
+    return tests.find((t) => t.uuid === selection.testUuid) || null
+  }, [selection.testUuid, tests])
 
   const handleCreateTest = () => {
     // Navigate to new test page
@@ -31,7 +47,19 @@ export function TestingPageContent({ tests }: { tests: DeploymentTest[] }) {
       {/* Tests List or Empty State */}
       <div className='flex-grow min-h-0'>
         {tests.length > 0 ? (
-          <TestsList tests={tests} />
+          <ResizableLayout
+            showRightPane={!!selection.testUuid}
+            leftPane={<TestsList tests={tests} projectId={projectId} />}
+            rightPane={
+              selection.testUuid && (
+                <TestInfoPanel
+                  test={selectedTest}
+                  projectId={projectId}
+                  isLoading={false}
+                />
+              )
+            }
+          />
         ) : (
           <BlankSlate>
             <Text.H2>Create your first test</Text.H2>

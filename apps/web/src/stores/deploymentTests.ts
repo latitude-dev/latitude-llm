@@ -5,6 +5,7 @@ import { useCallback, useMemo } from 'react'
 import useFetcher from '$/hooks/useFetcher'
 import { createDeploymentTestAction } from '$/actions/deploymentTests/create'
 import { pauseDeploymentTestAction } from '$/actions/deploymentTests/pause'
+import { resumeDeploymentTestAction } from '$/actions/deploymentTests/resume'
 import { stopDeploymentTestAction } from '$/actions/deploymentTests/stop'
 import { destroyDeploymentTestAction } from '$/actions/deploymentTests/destroy'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
@@ -66,12 +67,17 @@ export default function useDeploymentTests(
   const { execute: executePause, isPending: isPausing } = useLatitudeAction(
     pauseDeploymentTestAction,
     {
-      onSuccess: () => {
+      onSuccess: ({ data: updatedTest }) => {
+        mutate(
+          (prev) =>
+            prev?.map((test) =>
+              test.uuid === updatedTest.uuid ? updatedTest : test,
+            ) ?? [],
+        )
         toast({
           title: 'Test paused',
           description: 'Deployment test has been paused',
         })
-        mutate()
       },
       onError: () => {
         toast({
@@ -83,15 +89,45 @@ export default function useDeploymentTests(
     },
   )
 
+  const { execute: executeResume, isPending: isResuming } = useLatitudeAction(
+    resumeDeploymentTestAction,
+    {
+      onSuccess: ({ data: updatedTest }) => {
+        mutate(
+          (prev) =>
+            prev?.map((test) =>
+              test.uuid === updatedTest.uuid ? updatedTest : test,
+            ) ?? [],
+        )
+        toast({
+          title: 'Test resumed',
+          description: 'Deployment test has been resumed',
+        })
+      },
+      onError: () => {
+        toast({
+          title: 'Error resuming test',
+          description: 'Failed to resume deployment test',
+          variant: 'destructive',
+        })
+      },
+    },
+  )
+
   const { execute: executeStop, isPending: isStopping } = useLatitudeAction(
     stopDeploymentTestAction,
     {
-      onSuccess: () => {
+      onSuccess: ({ data: updatedTest }) => {
+        mutate(
+          (prev) =>
+            prev?.map((test) =>
+              test.uuid === updatedTest.uuid ? updatedTest : test,
+            ) ?? [],
+        )
         toast({
           title: 'Test stopped',
           description: 'Deployment test has been completed',
         })
-        mutate()
       },
       onError: () => {
         toast({
@@ -135,6 +171,13 @@ export default function useDeploymentTests(
     [executePause],
   )
 
+  const resume = useCallback(
+    (testUuid: string) => {
+      return executeResume({ testUuid })
+    },
+    [executeResume],
+  )
+
   const stop = useCallback(
     (testUuid: string) => {
       return executeStop({ testUuid })
@@ -164,6 +207,10 @@ export default function useDeploymentTests(
         execute: pause,
         isPending: isPausing,
       },
+      resume: {
+        execute: resume,
+        isPending: isResuming,
+      },
       stop: {
         execute: stop,
         isPending: isStopping,
@@ -183,6 +230,8 @@ export default function useDeploymentTests(
       isCreating,
       pause,
       isPausing,
+      resume,
+      isResuming,
       stop,
       isStopping,
       destroy,

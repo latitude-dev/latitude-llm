@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -20,8 +20,8 @@ export interface WizardState {
   testType: TestType | null
   baselineCommitUuid: string | null
   challengerCommitUuid: string | null
-  name: string
-  description: string
+  testName: string
+  testDescription: string
   trafficPercentage: number
 }
 
@@ -32,6 +32,21 @@ interface CreateTestWizardProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }
+
+const STEP_CONFIG = {
+  1: {
+    title: 'Deployment test',
+    description: 'Choose the type of deployment test',
+  },
+  2: {
+    title: 'Select Versions',
+    description: 'Choose which versions to test',
+  },
+  3: {
+    title: 'Configure Test',
+    description: 'Set name and description',
+  },
+} as const
 
 export function CreateTestWizard({
   projectId,
@@ -45,10 +60,36 @@ export function CreateTestWizard({
     testType: null,
     baselineCommitUuid: null,
     challengerCommitUuid: null,
-    name: '',
-    description: '',
+    testName: '',
+    testDescription: '',
     trafficPercentage: 50,
   })
+
+  useEffect(() => {
+    const mergedCommits = availableCommits
+      .filter((c) => c.mergedAt !== null)
+      .sort((a, b) => {
+        const aDate = new Date(a.mergedAt!).getTime()
+        const bDate = new Date(b.mergedAt!).getTime()
+        return bDate - aDate
+      })
+    const headCommit = mergedCommits[0]
+
+    if (headCommit && !state.baselineCommitUuid) {
+      setState((prev) => ({
+        ...prev,
+        baselineCommitUuid: headCommit.uuid,
+      }))
+    }
+  }, [availableCommits])
+
+  const handleStateChange = (updates: Partial<WizardState>) => {
+    setState((prev) => ({ ...prev, ...updates }))
+  }
+
+  const isStep2Valid = () => {
+    return !!state.baselineCommitUuid && !!state.challengerCommitUuid
+  }
 
   const handleNext = () => {
     if (currentStep < 3) {
@@ -60,10 +101,6 @@ export function CreateTestWizard({
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     }
-  }
-
-  const handleStateChange = (updates: Partial<WizardState>) => {
-    setState((prev) => ({ ...prev, ...updates }))
   }
 
   const handleClose = () => {
@@ -97,10 +134,14 @@ export function CreateTestWizard({
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
+    if (currentStep !== 3) {
+      return
+    }
+
     if (
+      !state.testType ||
       !state.baselineCommitUuid ||
-      !state.challengerCommitUuid ||
-      !state.testType
+      !state.challengerCommitUuid
     ) {
       toast({
         title: 'Error',
@@ -115,16 +156,20 @@ export function CreateTestWizard({
       baselineCommitUuid: state.baselineCommitUuid,
       challengerCommitUuid: state.challengerCommitUuid,
       testType: state.testType,
-      name: state.name,
-      description: state.description,
+      name: state.testName,
+      description: state.testDescription,
       trafficPercentage: state.trafficPercentage,
     })
   }
+
+  const currentStepConfig = STEP_CONFIG[currentStep as keyof typeof STEP_CONFIG]
 
   return (
     <Modal
       open
       size='large'
+      title={currentStepConfig.title}
+      description={currentStepConfig.description}
       steps={{
         total: 3,
         current: currentStep,
@@ -144,7 +189,12 @@ export function CreateTestWizard({
             Back
           </Button>
           {currentStep < 3 ? (
-            <Button onClick={handleNext}>Next</Button>
+            <Button
+              onClick={handleNext}
+              disabled={currentStep === 2 && !isStep2Valid()}
+            >
+              Next
+            </Button>
           ) : (
             <Button
               form='createTestForm'
@@ -161,21 +211,39 @@ export function CreateTestWizard({
       <form id='createTestForm' onSubmit={handleSubmit}>
         <div className='flex-1'>
           {currentStep === 1 && (
-            <StepOne state={state} onStateChange={handleStateChange} />
+            <StepOne
+              testType={state.testType}
+              onTestTypeChange={(testType) =>
+                setState((prev) => ({ ...prev, testType }))
+              }
+            />
           )}
           {currentStep === 2 && (
             <StepTwo
-              state={state}
-              onStateChange={handleStateChange}
               availableCommits={availableCommits}
-              projectId={projectId}
+              baselineCommitUuid={state.baselineCommitUuid}
+              challengerCommitUuid={state.challengerCommitUuid}
+              onBaselineChange={(uuid) =>
+                handleStateChange({ baselineCommitUuid: uuid || null })
+              }
+              onChallengerChange={(uuid) =>
+                handleStateChange({ challengerCommitUuid: uuid || null })
+              }
             />
           )}
           {currentStep === 3 && (
             <StepThree
-              state={state}
-              onStateChange={handleStateChange}
-              projectId={projectId}
+              testType={state.testType}
+              trafficPercentage={state.trafficPercentage}
+              testName={state.testName}
+              testDescription={state.testDescription}
+              onTrafficPercentageChange={(trafficPercentage) =>
+                handleStateChange({ trafficPercentage })
+              }
+              onTestNameChange={(testName) => handleStateChange({ testName })}
+              onTestDescriptionChange={(testDescription) =>
+                handleStateChange({ testDescription })
+              }
             />
           )}
         </div>

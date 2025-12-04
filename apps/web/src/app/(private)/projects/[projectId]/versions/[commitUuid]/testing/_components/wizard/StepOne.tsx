@@ -2,32 +2,24 @@
 
 import { Card } from '@latitude-data/web-ui/atoms/Card'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { WizardState } from '../CreateTestWizard'
 
 interface StepOneProps {
-  state: WizardState
-  onStateChange: (updates: Partial<WizardState>) => void
+  testType: string | null
+  onTestTypeChange: (testType: 'shadow' | 'ab') => void
 }
 
-export function StepOne({ state, onStateChange }: StepOneProps) {
+export function StepOne({ testType, onTestTypeChange }: StepOneProps) {
   return (
     <div className='flex flex-col gap-6'>
-      <div className='flex flex-col gap-2'>
-        <Text.H4M>Deployment test</Text.H4M>
-        <Text.H5 color='foregroundMuted'>
-          Choose the type of deployment test
-        </Text.H5>
-      </div>
-
       <div className='grid grid-cols-2 gap-6'>
         {/* Shadow Testing Card */}
         <Card
           className={`p-6 cursor-pointer transition-all ${
-            state.testType === 'shadow'
+            testType === 'shadow'
               ? 'border-primary bg-primary/5'
               : 'border-border hover:border-primary/50'
           }`}
-          onClick={() => onStateChange({ testType: 'shadow' })}
+          onClick={() => onTestTypeChange('shadow')}
         >
           <div className='flex flex-col gap-2'>
             <Text.H4>🌑 Shadow Testing</Text.H4>
@@ -41,11 +33,11 @@ export function StepOne({ state, onStateChange }: StepOneProps) {
         {/* A/B Testing Card */}
         <Card
           className={`p-6 cursor-pointer transition-all ${
-            state.testType === 'ab'
+            testType === 'ab'
               ? 'border-primary bg-primary/5'
               : 'border-border hover:border-primary/50'
           }`}
-          onClick={() => onStateChange({ testType: 'ab' })}
+          onClick={() => onTestTypeChange('ab')}
         >
           <div className='flex flex-col gap-2'>
             <Text.H4>🔀 A/B Testing</Text.H4>

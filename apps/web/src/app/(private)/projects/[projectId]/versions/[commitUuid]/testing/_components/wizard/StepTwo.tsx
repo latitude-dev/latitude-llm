@@ -2,46 +2,42 @@
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { WizardState } from '../CreateTestWizard'
 
 interface StepTwoProps {
-  state: WizardState
-  onStateChange: (updates: Partial<WizardState>) => void
   availableCommits: Commit[]
-  projectId: number
+  baselineCommitUuid: string | null
+  challengerCommitUuid: string | null
+  onBaselineChange: (uuid: string | undefined) => void
+  onChallengerChange: (uuid: string | undefined) => void
 }
 
 export function StepTwo({
-  state,
-  onStateChange,
   availableCommits,
+  baselineCommitUuid,
+  challengerCommitUuid,
+  onBaselineChange,
+  onChallengerChange,
 }: StepTwoProps) {
-  const mergedCommits = availableCommits.filter((c) => c.mergedAt !== null)
-  const sortedMergedCommits = [...mergedCommits].sort((a, b) => {
-    const aDate = new Date(a.mergedAt!).getTime()
-    const bDate = new Date(b.mergedAt!).getTime()
-    return bDate - aDate
-  })
-  const headCommit = sortedMergedCommits[0]
-  const challengers = availableCommits.filter(
-    (c) => c.uuid !== headCommit?.uuid,
-  )
+  const mergedCommits = availableCommits
+    .filter((c) => c.mergedAt !== null)
+    .sort((a, b) => {
+      const aDate = new Date(a.mergedAt!).getTime()
+      const bDate = new Date(b.mergedAt!).getTime()
+      return bDate - aDate
+    })
+  const headCommit = mergedCommits[0]
+  const challengers = availableCommits.filter((c) => !c.mergedAt)
 
   return (
     <div className='flex flex-col gap-6'>
-      <div className='flex flex-col gap-2'>
-        <Text.H4M>Select Versions</Text.H4M>
-        <Text.H5 color='foregroundMuted'>Choose which versions to test</Text.H5>
-      </div>
-
       <div className='space-y-4'>
         <Select
           name='baseline'
           disabled
           label='Baseline (Control)'
           description='The current live version'
-          value={headCommit?.uuid}
+          value={baselineCommitUuid || headCommit?.uuid}
+          onChange={onBaselineChange}
           options={
             headCommit
               ? [
@@ -67,10 +63,8 @@ export function StepTwo({
             name='challenger'
             label='Challenger (test)'
             description='The optimized version to test'
-            value={state.challengerCommitUuid}
-            onChange={(value) =>
-              onStateChange({ challengerCommitUuid: value as string })
-            }
+            value={challengerCommitUuid ?? undefined}
+            onChange={onChallengerChange}
             options={challengers.map((commit) => ({
               label: commit.title || `v${commit.id}`,
               value: commit.uuid,

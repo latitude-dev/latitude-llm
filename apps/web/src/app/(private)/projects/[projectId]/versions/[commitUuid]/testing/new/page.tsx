@@ -15,7 +15,7 @@ export default async function CreateTestPage({
 
   // Fetch available commits
   const commitsRepo = new CommitsRepository(workspace.id)
-  const commits = await commitsRepo.getCommits()
+  const commits = await commitsRepo.getCommitsByProject(Number(projectId))
 
   return (
     <CreateTestWizard

@@ -114,6 +114,14 @@ export class CommitsRepository extends RepositoryLegacy<
     return this.db.select().from(this.scope)
   }
 
+  async getCommitsByProject(projectId: number) {
+    return this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.projectId, projectId))
+      .orderBy(desc(this.scope.createdAt))
+  }
+
   async getCommitsByIds(ids: number[]) {
     return this.db.select().from(this.scope).where(inArray(this.scope.id, ids))
   }
