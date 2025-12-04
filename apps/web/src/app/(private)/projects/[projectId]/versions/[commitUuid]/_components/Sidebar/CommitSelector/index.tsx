@@ -25,6 +25,7 @@ import { ArchivedCommitsList } from './ArchivedCommitsList'
 import { BadgeCommit, BadgeType, SimpleUser } from './CommitItem'
 import { CurrentCommitsList } from './CurrentCommitsList'
 import DeleteDraftCommitModal from './DeleteDraftCommitModal'
+import { TestVersionModal } from './TestVersionModal'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
 
@@ -32,6 +33,8 @@ import { HELP_CENTER } from '@latitude-data/core/constants'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 const MIN_WIDTH_SELECTOR_PX = 380
 const TRIGGER_X_PADDING_PX = 26
 
@@ -117,11 +120,15 @@ export default function CommitSelector({
   currentCommit,
   currentDocument,
   draftCommits,
+  projectId,
+  ongoingAbTest,
 }: {
   headCommit?: Commit | undefined
   currentCommit: Commit
   currentDocument?: DocumentVersion
   draftCommits: Commit[]
+  projectId: number
+  ongoingAbTest?: DeploymentTest | null
 }) {
   const [open, setOpen] = useState(false)
   const { ref, maxHeight, calculateMaxHeight } = useCalculateMaxHeight()
@@ -152,8 +159,13 @@ export default function CommitSelector({
 
   const [publishCommit, setPublishCommit] = useState<number | null>(null)
   const [deleteCommit, setDeleteCommit] = useState<number | null>(null)
+  const [testVersionOpen, setTestVersionOpen] = useState(false)
 
   const canPublish = !currentCommit.mergedAt
+  const isDraftVersion =
+    !currentCommit.mergedAt &&
+    currentCommit.id !== headCommit?.id &&
+    !!headCommit
   const [selectedTab, setSelectedTab] = useState<'current' | 'archived'>(
     !currentCommit.mergedAt || currentCommit.id == headCommit?.id
       ? 'current'
@@ -216,6 +228,24 @@ export default function CommitSelector({
           )}
         </SelectContent>
       </SelectRoot>
+      {isDraftVersion ? (
+        ongoingAbTest ? (
+          <Alert
+            title='A/B test in progress'
+            description={`An A/B test for this version is currently running. You can view the results in the testing section.`}
+            variant='default'
+          />
+        ) : (
+          <Button
+            fancy
+            fullWidth
+            variant='outline'
+            onClick={() => setTestVersionOpen(true)}
+          >
+            Test version
+          </Button>
+        )
+      ) : null}
       {canPublish ? (
         <Button
           fancy
@@ -245,6 +275,13 @@ export default function CommitSelector({
           onClose={setPublishCommit}
         />
       ) : null}
+      <TestVersionModal
+        open={testVersionOpen}
+        onOpenChange={setTestVersionOpen}
+        projectId={projectId}
+        currentCommit={currentCommit}
+        headCommit={headCommit}
+      />
     </div>
   )
 }

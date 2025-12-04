@@ -13,10 +13,14 @@ import {
   ULTRA_LARGE_PAGE_SIZE,
 } from '@latitude-data/core/constants'
 import { paginateQuery } from '@latitude-data/core/lib/pagination/paginate'
-import { CommitsRepository } from '@latitude-data/core/repositories/index'
+import {
+  CommitsRepository,
+  DeploymentTestsRepository,
+} from '@latitude-data/core/repositories/index'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
 import ClientFilesTree from './ClientFilesTree'
 import CommitSelector from './CommitSelector'
 import ProjectSection from './ProjectSection'
@@ -54,6 +58,13 @@ export default async function Sidebar({
     },
   })
 
+  // Check for active A/B deployment test on the current commit
+  const deploymentTestsRepo = new DeploymentTestsRepository(workspace.id)
+  const activeTest: DeploymentTest | null =
+    await deploymentTestsRepo.findActiveForCommit(project.id, commit.id)
+  const ongoingAbTest =
+    activeTest && activeTest.testType === 'ab' ? activeTest : null
+
   const approximatedCount =
     await getDocumentLogsApproximatedCountByProjectCached(project.id)
   const limitedView = approximatedCount > LIMITED_VIEW_THRESHOLD
@@ -67,6 +78,8 @@ export default async function Sidebar({
           currentCommit={commit}
           currentDocument={currentDocument}
           draftCommits={rows}
+          projectId={project.id}
+          ongoingAbTest={ongoingAbTest}
         />
       }
       tree={

@@ -1,3 +1,4 @@
+import React from 'react'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import ProjectLayout from '../_components/ProjectLayout'
 

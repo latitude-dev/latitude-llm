@@ -31,7 +31,7 @@ export async function getActiveEvaluation({
       )
     }
     const activeEvaluation = JSON.parse(jsonValue) as ActiveEvaluation
-    
+
     // Reconstruct error object from serialized error
     const error =
       activeEvaluation.error && typeof activeEvaluation.error === 'object'

@@ -118,13 +118,13 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
     expect(positiveEvaluationResultsSpans).toHaveLength(3)
     expect(negativeEvaluationResultsSpans).toHaveLength(3)
     // Check that all positive spans are present (order may vary)
-    expect(positiveEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
-      positiveSpans.map((s) => s.id).sort(),
-    )
+    expect(
+      positiveEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+    ).toEqual(positiveSpans.map((s) => s.id).sort())
     // Check that all negative spans are present (order may vary)
-    expect(negativeEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
-      negativeSpans.map((s) => s.id).sort(),
-    )
+    expect(
+      negativeEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+    ).toEqual(negativeSpans.map((s) => s.id).sort())
   })
 
   it('returns equal amounts when negative spans are less than positive spans', async () => {
@@ -199,9 +199,9 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
       expect(positiveSpanIds).toContain(span.id)
     })
     // Check that all negative spans are present (order may vary)
-    expect(negativeEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
-      negativeSpans.map((s) => s.id).sort(),
-    )
+    expect(
+      negativeEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+    ).toEqual(negativeSpans.map((s) => s.id).sort())
   })
 
   it('returns equal amounts when negative spans are more than positive spans', async () => {
@@ -269,9 +269,9 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
     expect(positiveEvaluationResultsSpans).toHaveLength(3)
     expect(negativeEvaluationResultsSpans).toHaveLength(3) // Limited to match positive
     // Check that all positive spans are present (order may vary)
-    expect(positiveEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
-      positiveSpans.map((s) => s.id).sort(),
-    )
+    expect(
+      positiveEvaluationResultsSpans.map((s: Span) => s.id).sort(),
+    ).toEqual(positiveSpans.map((s) => s.id).sort())
     // Check that negative spans are a subset of all negative spans (order may vary)
     // The function may return any 3 negative spans, not necessarily the first 3
     expect(negativeEvaluationResultsSpans).toHaveLength(3)
