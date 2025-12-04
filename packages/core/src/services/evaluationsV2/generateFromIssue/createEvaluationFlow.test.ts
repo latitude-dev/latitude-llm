@@ -30,7 +30,7 @@ vi.mock(import('../../../redis'), async (importOriginal) => {
   }
 })
 
-describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
+describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
   let workspace: Workspace
   let commit: Commit
   let issue: Issue
@@ -104,7 +104,7 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
     }
 
     const result =
-      await createEvaluationFlowTest.getEqualAmountsOfPositiveAndNegativeEvaluationResults(
+      await createEvaluationFlowTest.getEqualAmountsOfPositiveAndNegativeExamples(
         {
           workspace,
           commit,
@@ -113,16 +113,16 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
+    const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
       result.unwrap()
-    expect(positiveEvaluationResultsSpans).toHaveLength(3)
-    expect(negativeEvaluationResultsSpans).toHaveLength(3)
-    // Check that all positive spans are present (order may vary)
-    expect(positiveEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
+    expect(examplesThatShouldFailTheEvaluation).toHaveLength(3)
+    expect(examplesThatShouldPassTheEvaluation).toHaveLength(3)
+    // Check that all positive spans (with issues) are present (order may vary)
+    expect(examplesThatShouldFailTheEvaluation.map((s: Span) => s.id).sort()).toEqual(
       positiveSpans.map((s) => s.id).sort(),
     )
-    // Check that all negative spans are present (order may vary)
-    expect(negativeEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
+    // Check that all negative spans (without issues) are present (order may vary)
+    expect(examplesThatShouldPassTheEvaluation.map((s: Span) => s.id).sort()).toEqual(
       negativeSpans.map((s) => s.id).sort(),
     )
   })
@@ -178,7 +178,7 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
     }
 
     const result =
-      await createEvaluationFlowTest.getEqualAmountsOfPositiveAndNegativeEvaluationResults(
+      await createEvaluationFlowTest.getEqualAmountsOfPositiveAndNegativeExamples(
         {
           workspace,
           commit,
@@ -187,19 +187,19 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
+    const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
       result.unwrap()
     // Both should have the same length (minimum of 5 and 2 = 2)
-    expect(positiveEvaluationResultsSpans).toHaveLength(2)
-    expect(negativeEvaluationResultsSpans).toHaveLength(2)
-    // Check that positive spans are a subset (first 2 of 5)
-    expect(positiveEvaluationResultsSpans).toHaveLength(2)
+    expect(examplesThatShouldFailTheEvaluation).toHaveLength(2)
+    expect(examplesThatShouldPassTheEvaluation).toHaveLength(2)
+    // Check that positive spans (with issues) are a subset (first 2 of 5)
+    expect(examplesThatShouldFailTheEvaluation).toHaveLength(2)
     const positiveSpanIds = positiveSpans.map((s) => s.id)
-    positiveEvaluationResultsSpans.forEach((span: Span) => {
+    examplesThatShouldFailTheEvaluation.forEach((span: Span) => {
       expect(positiveSpanIds).toContain(span.id)
     })
-    // Check that all negative spans are present (order may vary)
-    expect(negativeEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
+    // Check that all negative spans (without issues) are present (order may vary)
+    expect(examplesThatShouldPassTheEvaluation.map((s: Span) => s.id).sort()).toEqual(
       negativeSpans.map((s) => s.id).sort(),
     )
   })
@@ -255,7 +255,7 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
     }
 
     const result =
-      await createEvaluationFlowTest.getEqualAmountsOfPositiveAndNegativeEvaluationResults(
+      await createEvaluationFlowTest.getEqualAmountsOfPositiveAndNegativeExamples(
         {
           workspace,
           commit,
@@ -264,26 +264,26 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
+    const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
       result.unwrap()
-    expect(positiveEvaluationResultsSpans).toHaveLength(3)
-    expect(negativeEvaluationResultsSpans).toHaveLength(3) // Limited to match positive
-    // Check that all positive spans are present (order may vary)
-    expect(positiveEvaluationResultsSpans.map((s: Span) => s.id).sort()).toEqual(
+    expect(examplesThatShouldFailTheEvaluation).toHaveLength(3)
+    expect(examplesThatShouldPassTheEvaluation).toHaveLength(3) // Limited to match positive
+    // Check that all positive spans (with issues) are present (order may vary)
+    expect(examplesThatShouldFailTheEvaluation.map((s: Span) => s.id).sort()).toEqual(
       positiveSpans.map((s) => s.id).sort(),
     )
-    // Check that negative spans are a subset of all negative spans (order may vary)
+    // Check that negative spans (without issues) are a subset of all negative spans (order may vary)
     // The function may return any 3 negative spans, not necessarily the first 3
-    expect(negativeEvaluationResultsSpans).toHaveLength(3)
+    expect(examplesThatShouldPassTheEvaluation).toHaveLength(3)
     const negativeSpanIds = negativeSpans.map((s) => s.id)
-    negativeEvaluationResultsSpans.forEach((span: Span) => {
+    examplesThatShouldPassTheEvaluation.forEach((span: Span) => {
       expect(negativeSpanIds).toContain(span.id)
     })
   })
 
   it('returns empty arrays when no spans exist', async () => {
     const result =
-      await createEvaluationFlowTest.getEqualAmountsOfPositiveAndNegativeEvaluationResults(
+      await createEvaluationFlowTest.getEqualAmountsOfPositiveAndNegativeExamples(
         {
           workspace,
           commit,
@@ -292,10 +292,10 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
+    const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
       result.unwrap()
-    expect(positiveEvaluationResultsSpans).toHaveLength(0)
-    expect(negativeEvaluationResultsSpans).toHaveLength(0)
+    expect(examplesThatShouldFailTheEvaluation).toHaveLength(0)
+    expect(examplesThatShouldPassTheEvaluation).toHaveLength(0)
   })
 
   it('returns empty arrays when no negative spans exist', async () => {
@@ -338,7 +338,7 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
     // All spans in document have issues, so no negative spans
 
     const result =
-      await createEvaluationFlowTest.getEqualAmountsOfPositiveAndNegativeEvaluationResults(
+      await createEvaluationFlowTest.getEqualAmountsOfPositiveAndNegativeExamples(
         {
           workspace,
           commit,
@@ -347,11 +347,11 @@ describe('getEqualAmountsOfPositiveAndNegativeEvaluationResults', () => {
       )
 
     expect(Result.isOk(result)).toBe(true)
-    const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
+    const { examplesThatShouldFailTheEvaluation, examplesThatShouldPassTheEvaluation } =
       result.unwrap()
     // Both should be empty (minimum of 3 and 0 = 0)
-    expect(positiveEvaluationResultsSpans).toHaveLength(0)
-    expect(negativeEvaluationResultsSpans).toHaveLength(0)
+    expect(examplesThatShouldFailTheEvaluation).toHaveLength(0)
+    expect(examplesThatShouldPassTheEvaluation).toHaveLength(0)
   })
 })
 
@@ -476,10 +476,10 @@ describe('createValidationFlow', () => {
     expect(callArgs.data.evaluationUuid).toBe(evaluation.uuid)
     expect(callArgs.data.documentUuid).toBe(document.documentUuid)
     expect(
-      callArgs.data.spanAndTraceIdPairsOfPositiveEvaluationRuns,
+      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
     ).toHaveLength(2)
     expect(
-      callArgs.data.spanAndTraceIdPairsOfNegativeEvaluationRuns,
+      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     ).toHaveLength(2)
     expect(callArgs.children).toHaveLength(4) // 2 positive + 2 negative spans
     expect(callArgs.children[0]!.name).toBe('runEvaluationV2Job')
@@ -505,10 +505,10 @@ describe('createValidationFlow', () => {
     // Verify FlowProducer was called with empty arrays
     const callArgs = mockFlowProducer.add.mock.calls[0]![0]
     expect(
-      callArgs.data.spanAndTraceIdPairsOfPositiveEvaluationRuns,
+      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
     ).toHaveLength(0)
     expect(
-      callArgs.data.spanAndTraceIdPairsOfNegativeEvaluationRuns,
+      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     ).toHaveLength(0)
     expect(callArgs.children).toHaveLength(0)
   })

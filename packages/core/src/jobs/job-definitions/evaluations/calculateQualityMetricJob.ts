@@ -28,11 +28,11 @@ export type CalculateQualityMetricJobData = {
   issueId: number
   providerName: string
   model: string
-  spanAndTraceIdPairsOfPositiveEvaluationRuns: {
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: {
     spanId: string
     traceId: string
   }[]
-  spanAndTraceIdPairsOfNegativeEvaluationRuns: {
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: {
     spanId: string
     traceId: string
   }[]
@@ -62,8 +62,8 @@ export const calculateQualityMetricJob = async (
     issueId,
     providerName,
     model,
-    spanAndTraceIdPairsOfPositiveEvaluationRuns,
-    spanAndTraceIdPairsOfNegativeEvaluationRuns,
+    spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+    spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
   } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
@@ -111,8 +111,8 @@ export const calculateQualityMetricJob = async (
 
     const { mcc, confusionMatrix } = await evaluateConfiguration({
       childrenValues,
-      spanAndTraceIdPairsOfPositiveEvaluationRuns,
-      spanAndTraceIdPairsOfNegativeEvaluationRuns,
+      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     }).then((r) => r.unwrap())
 
     if (mcc < MIN_QUALITY_METRIC_THRESHOLD) {

@@ -9,7 +9,6 @@ import {
 import { Result } from '@latitude-data/core/lib/Result'
 import { CLOUD_MESSAGES } from '../../../constants'
 import * as copilotModule from '../../copilot'
-import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import {
   __test__,
   generateEvaluationConfigFromIssueWithCopilot,
@@ -133,12 +132,6 @@ describe('generateFromIssue', () => {
     )
 
     mockGetSpanMessagesByIssueDocument.mockResolvedValue(Result.ok(messages))
-
-    // Setup default mocks for repositories
-    vi.spyOn(
-      DocumentVersionsRepository.prototype,
-      'getDocumentAtCommit',
-    ).mockResolvedValue(Result.ok(document))
   })
 
   it('successfully generates an evaluation from issue using copilot', async () => {
@@ -154,13 +147,6 @@ describe('generateFromIssue', () => {
     const evaluation = result.unwrap()
     expect(evaluation).toBeDefined()
 
-    // Verify repository calls
-    expect(
-      DocumentVersionsRepository.prototype.getDocumentAtCommit,
-    ).toHaveBeenCalledWith({
-      commitUuid: commit.uuid,
-      documentUuid: issue.documentUuid,
-    })
     // Verify copilot calls
     expect(mockGetCopilot).toHaveBeenCalled()
     expect(mockRunCopilot).toHaveBeenCalledWith({
@@ -168,7 +154,6 @@ describe('generateFromIssue', () => {
       parameters: {
         issueName: issue.title,
         issueDescription: issue.description,
-        prompt: document.content,
         existingEvaluationNames: [],
         examplesWithIssueAndReasonWhy: [{ messages, reason: 'Test reason' }],
         goodExamplesWithoutIssue: messages,
@@ -229,26 +214,16 @@ describe('generateFromIssue', () => {
   })
 
   it('returns error when document is not found at commit', async () => {
-    vi.spyOn(
-      DocumentVersionsRepository.prototype,
-      'getDocumentAtCommit',
-    ).mockResolvedValue(Result.error(new NotFoundError('Document not found')))
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
+      issue,
+      providerName: provider.name,
+      model: MODEL,
+      workspace,
+      commit,
+    })
 
-    await expect(
-      generateEvaluationConfigFromIssueWithCopilot({
-        issue,
-        providerName: provider.name,
-        model: MODEL,
-        workspace,
-        commit,
-      }),
-    ).rejects.toThrow('Document not found')
-
-    // Verify document repository was called but no further calls
-    expect(
-      DocumentVersionsRepository.prototype.getDocumentAtCommit,
-    ).toHaveBeenCalled()
-    expect(mockGetCopilot).not.toHaveBeenCalled()
+    expect(Result.isOk(result)).toBe(true)
+    expect(mockGetCopilot).toHaveBeenCalled()
   })
 
   it('returns error when getCopilot fails', async () => {
@@ -310,7 +285,6 @@ describe('generateFromIssue', () => {
         issueName: issue.title,
         issueDescription: issue.description,
         existingEvaluationNames: [],
-        prompt: document.content,
         examplesWithIssueAndReasonWhy: [{ messages, reason: 'Test reason' }],
         goodExamplesWithoutIssue: messages,
       },

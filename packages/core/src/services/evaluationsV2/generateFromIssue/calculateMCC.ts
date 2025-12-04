@@ -8,16 +8,16 @@ We've decided we need, at least:
 Like this, we have enough annotations to calculate the true positive (TP), true negative (TN), false positive (FP) and false negative (FN) to calculate the MCC %.
 */
 export function calculateMCC({
-  positiveEvaluationResults,
-  negativeEvaluationResults,
+  examplesThatShouldPassTheEvaluation,
+  examplesThatShouldFailTheEvaluation,
 }: {
-  positiveEvaluationResults: boolean[]
-  negativeEvaluationResults: boolean[]
+  examplesThatShouldPassTheEvaluation: boolean[]
+  examplesThatShouldFailTheEvaluation: boolean[]
 }) {
-  const truePositives = positiveEvaluationResults.filter((r) => r).length
-  const falsePositives = positiveEvaluationResults.filter((r) => !r).length
-  const falseNegatives = negativeEvaluationResults.filter((r) => r).length
-  const trueNegatives = negativeEvaluationResults.filter((r) => !r).length
+  const truePositives = examplesThatShouldPassTheEvaluation.filter((r) => r).length // prettier-ignore
+  const falsePositives = examplesThatShouldPassTheEvaluation.filter((r) => !r).length // prettier-ignore
+  const falseNegatives = examplesThatShouldFailTheEvaluation.filter((r) => r).length // prettier-ignore
+  const trueNegatives = examplesThatShouldFailTheEvaluation.filter((r) => !r).length // prettier-ignore
 
   if (
     truePositives + falsePositives === 0 ||

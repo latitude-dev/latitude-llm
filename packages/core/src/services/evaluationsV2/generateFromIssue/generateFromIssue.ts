@@ -1,9 +1,6 @@
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import {
-  DocumentVersionsRepository,
-  EvaluationsV2Repository,
-} from '@latitude-data/core/repositories'
+import { EvaluationsV2Repository } from '@latitude-data/core/repositories'
 import { Result } from '@latitude-data/core/lib/Result'
 import {
   CLOUD_MESSAGES,
@@ -25,6 +22,7 @@ const llmEvaluationBinarySpecificationWithoutModel =
     .omit({
       model: true,
       provider: true,
+      reverseScale: true,
       actualOutput: true,
     })
     .extend({
@@ -66,14 +64,6 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
   if (!Result.isOk(assertResult)) {
     return assertResult
   }
-
-  const documentRepository = new DocumentVersionsRepository(workspace.id)
-  const document = await documentRepository
-    .getDocumentAtCommit({
-      commitUuid: commit.uuid,
-      documentUuid: issue.documentUuid,
-    })
-    .then((r) => r.unwrap())
 
   const copilotResult = await getCopilot(
     {
@@ -134,7 +124,6 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
     parameters: {
       issueName: issue.title,
       issueDescription: issue.description,
-      prompt: document.content,
       existingEvaluationNames: existingEvaluationNames,
       examplesWithIssueAndReasonWhy: messagesAndReasonWhyFailedForIssue,
       goodExamplesWithoutIssue: goodExampleMessagesFromIssueDocument,
@@ -150,6 +139,7 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
 
   const evaluationConfigWithProviderAndModel = {
     ...evaluationConfig,
+    reverseScale: false,
     provider: providerName,
     model: model,
     actualOutput: {

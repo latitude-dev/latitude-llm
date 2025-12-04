@@ -98,10 +98,10 @@ describe('calculateQualityMetricJob', () => {
       issueId: 1,
       providerName: 'openai',
       model: 'gpt-4o',
-      spanAndTraceIdPairsOfPositiveEvaluationRuns: [
+      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
         { spanId: 'span-1', traceId: 'trace-1' },
       ],
-      spanAndTraceIdPairsOfNegativeEvaluationRuns: [
+      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
         { spanId: 'span-2', traceId: 'trace-2' },
       ],
       ...overrides,
@@ -201,10 +201,10 @@ describe('calculateQualityMetricJob', () => {
 
       expect(mockEvaluateConfiguration).toHaveBeenCalledWith({
         childrenValues: expect.any(Object),
-        spanAndTraceIdPairsOfPositiveEvaluationRuns: [
+        spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
           { spanId: 'span-1', traceId: 'trace-1' },
         ],
-        spanAndTraceIdPairsOfNegativeEvaluationRuns: [
+        spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
           { spanId: 'span-2', traceId: 'trace-2' },
         ],
       })

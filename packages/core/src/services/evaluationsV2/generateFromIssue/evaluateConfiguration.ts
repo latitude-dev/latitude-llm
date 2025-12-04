@@ -1,33 +1,41 @@
 import { calculateMCC } from './calculateMCC'
 import { Result } from '@latitude-data/core/lib/Result'
 
+/*
+  This function evaluates the configuration of an evaluation by calculating the MCC (Matthews Correlation Coefficient) of the evaluation.
+
+  IMPORTANT: The evaluation MUST fail when the issue is present in the span, as this logic is used within the issue discovery and its how we want our end goal to be.
+    We want the evaluations to be like unit tests, where if all of them pass for a given trace of a document, that means that the trace has no issues, that its good!
+*/
 export async function evaluateConfiguration({
   childrenValues,
-  spanAndTraceIdPairsOfPositiveEvaluationRuns,
-  spanAndTraceIdPairsOfNegativeEvaluationRuns,
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
 }: {
   childrenValues: {
     [jobKey: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any -- this is returned by bullmq
   }
-  spanAndTraceIdPairsOfPositiveEvaluationRuns: Array<{
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: Array<{
     spanId: string
     traceId: string
   }>
-  spanAndTraceIdPairsOfNegativeEvaluationRuns: Array<{
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: Array<{
     spanId: string
     traceId: string
   }>
 }) {
-  const { positiveEvaluationResults, negativeEvaluationResults } =
-    sortEvaluationResultsByPositiveAndNegative({
-      spanAndTraceIdPairsOfPositiveEvaluationRuns,
-      spanAndTraceIdPairsOfNegativeEvaluationRuns,
-      evaluationResults: childrenValues,
-    })
+  const {
+    examplesThatShouldPassTheEvaluation,
+    examplesThatShouldFailTheEvaluation,
+  } = sortEvaluationResultsByShouldPassAndShouldFailTheEvaluation({
+    spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+    spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+    evaluationResults: childrenValues,
+  })
 
   const mccResult = calculateMCC({
-    positiveEvaluationResults,
-    negativeEvaluationResults,
+    examplesThatShouldPassTheEvaluation,
+    examplesThatShouldFailTheEvaluation,
   })
   if (!Result.isOk(mccResult)) {
     return mccResult
@@ -37,16 +45,16 @@ export async function evaluateConfiguration({
   return Result.ok({ mcc, confusionMatrix })
 }
 
-function sortEvaluationResultsByPositiveAndNegative({
-  spanAndTraceIdPairsOfPositiveEvaluationRuns,
-  spanAndTraceIdPairsOfNegativeEvaluationRuns,
+function sortEvaluationResultsByShouldPassAndShouldFailTheEvaluation({
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
   evaluationResults,
 }: {
-  spanAndTraceIdPairsOfPositiveEvaluationRuns: Array<{
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: Array<{
     spanId: string
     traceId: string
   }>
-  spanAndTraceIdPairsOfNegativeEvaluationRuns: Array<{
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: Array<{
     spanId: string
     traceId: string
   }>
@@ -54,8 +62,8 @@ function sortEvaluationResultsByPositiveAndNegative({
     [jobKey: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any -- this is returned by bullmq
   }
 }) {
-  const positiveEvaluationResults: boolean[] = []
-  const negativeEvaluationResults: boolean[] = []
+  const examplesThatShouldPassTheEvaluation: boolean[] = []
+  const examplesThatShouldFailTheEvaluation: boolean[] = []
   for (const evaluationResult of Object.values(evaluationResults)) {
     const {
       hasPassed,
@@ -64,21 +72,21 @@ function sortEvaluationResultsByPositiveAndNegative({
     } = evaluationResult
 
     if (
-      spanAndTraceIdPairsOfPositiveEvaluationRuns.some(
+      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation.some(
         (pair) => pair.spanId === spanId && pair.traceId === traceId,
       )
     ) {
-      positiveEvaluationResults.push(hasPassed)
+      examplesThatShouldPassTheEvaluation.push(hasPassed)
     } else if (
-      spanAndTraceIdPairsOfNegativeEvaluationRuns.some(
+      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation.some(
         (pair) => pair.spanId === spanId && pair.traceId === traceId,
       )
     ) {
-      negativeEvaluationResults.push(hasPassed)
+      examplesThatShouldFailTheEvaluation.push(hasPassed)
     }
   }
   return {
-    positiveEvaluationResults,
-    negativeEvaluationResults,
+    examplesThatShouldPassTheEvaluation,
+    examplesThatShouldFailTheEvaluation,
   }
 }

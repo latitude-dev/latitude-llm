@@ -44,35 +44,36 @@ export async function createValidationFlow(
   },
   db = database,
 ) {
-  const spansResult =
-    await getEqualAmountsOfPositiveAndNegativeEvaluationResults(
-      {
-        workspace,
-        commit,
-        issue,
-      },
-      db,
-    )
-  if (!Result.isOk(spansResult)) {
-    return spansResult
+  const examplesResult = await getEqualAmountsOfPositiveAndNegativeExamples(
+    {
+      workspace,
+      commit,
+      issue,
+    },
+    db,
+  )
+  if (!Result.isOk(examplesResult)) {
+    return examplesResult
   }
-  const { positiveEvaluationResultsSpans, negativeEvaluationResultsSpans } =
-    spansResult.unwrap()
+  const {
+    examplesThatShouldFailTheEvaluation,
+    examplesThatShouldPassTheEvaluation,
+  } = examplesResult.unwrap()
 
-  const spanAndTraceIdPairsOfPositiveEvaluationRuns =
-    positiveEvaluationResultsSpans.map((span) => ({
+  const spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation =
+    examplesThatShouldPassTheEvaluation.map((span) => ({
       spanId: span.id,
       traceId: span.traceId,
     }))
-  const spanAndTraceIdPairsOfNegativeEvaluationRuns =
-    negativeEvaluationResultsSpans.map((span) => ({
+  const spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation =
+    examplesThatShouldFailTheEvaluation.map((span) => ({
       spanId: span.id,
       traceId: span.traceId,
     }))
 
   const allSpans = [
-    ...positiveEvaluationResultsSpans,
-    ...negativeEvaluationResultsSpans,
+    ...examplesThatShouldFailTheEvaluation,
+    ...examplesThatShouldPassTheEvaluation,
   ]
 
   const flowProducer = new FlowProducer({
@@ -97,8 +98,8 @@ export async function createValidationFlow(
       issueId: issue.id,
       evaluationUuid: evaluationToEvaluate.uuid,
       documentUuid: issue.documentUuid,
-      spanAndTraceIdPairsOfPositiveEvaluationRuns,
-      spanAndTraceIdPairsOfNegativeEvaluationRuns,
+      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     },
     opts: {
       // Idempotency key
@@ -143,13 +144,16 @@ export async function createValidationFlow(
 }
 /*
 Gets:
-- the spans of the issue (positive evalResults)
-- the spans of the other issues of the same document or the thumbs up evalResults of that document (negative evalResults)
+- the spans of the issue (examples that should fail the evaluation)
+- the spans of the other issues of the same document or the thumbs up evalResults of that document (examples that should pass the evaluation)
+
+IMPORTANT: The evaluation MUST fail when the issue is present in the span, as this logic is used within the issue discovery and its how we want our end goal to be.
+  We want the evaluations to be like unit tests, where if all of them pass for a given trace of a document, that means that the trace has no issues, that its good!
 
 Thumbs up evalResults of the same document or evalResults of other issues of the same document count as negative evalResults because
  they are cases in which the new evaluation should return a negative result, as that span doesnt have that issue
 */
-async function getEqualAmountsOfPositiveAndNegativeEvaluationResults(
+async function getEqualAmountsOfPositiveAndNegativeExamples(
   {
     workspace,
     commit,
@@ -161,7 +165,7 @@ async function getEqualAmountsOfPositiveAndNegativeEvaluationResults(
   },
   db = database,
 ) {
-  const spansResult = await getSpansByIssue(
+  const examplesThatShouldFailTheEvaluationResult = await getSpansByIssue(
     {
       workspace,
       commit,
@@ -171,34 +175,40 @@ async function getEqualAmountsOfPositiveAndNegativeEvaluationResults(
     },
     db,
   )
-  if (!Result.isOk(spansResult)) {
-    return spansResult
+  if (!Result.isOk(examplesThatShouldFailTheEvaluationResult)) {
+    return examplesThatShouldFailTheEvaluationResult
   }
-  const { spans } = spansResult.unwrap()
+  const { spans: examplesThatShouldFailTheEvaluation } =
+    examplesThatShouldFailTheEvaluationResult.unwrap()
 
-  // Getting the same amount of negative evaluation results spans as the positive evaluation results spans
-  const spansWithoutIssuesResult = await getSpansWithoutIssuesByDocumentUuid(
-    {
-      workspace,
-      commit,
-      documentUuid: issue.documentUuid,
-      pageSize: spans.length,
-      page: 1,
-    },
-    db,
+  // Getting the same amount of examples that should pass the evaluation, as we need an equal amount of both to calculate correctly the MCC
+  const examplesThatShouldPassTheEvaluationResult =
+    await getSpansWithoutIssuesByDocumentUuid(
+      {
+        workspace,
+        commit,
+        documentUuid: issue.documentUuid,
+        pageSize: examplesThatShouldFailTheEvaluation.length,
+        page: 1,
+      },
+      db,
+    )
+  if (!Result.isOk(examplesThatShouldPassTheEvaluationResult)) {
+    return examplesThatShouldPassTheEvaluationResult
+  }
+  const { spans: examplesThatShouldPassTheEvaluation } =
+    examplesThatShouldPassTheEvaluationResult.unwrap()
+
+  const targetLength = Math.min(
+    examplesThatShouldFailTheEvaluation.length,
+    examplesThatShouldPassTheEvaluation.length,
   )
-  if (!Result.isOk(spansWithoutIssuesResult)) {
-    return spansWithoutIssuesResult
-  }
-  const { spans: spansWithoutIssues } = spansWithoutIssuesResult.unwrap()
-
-  const targetLength = Math.min(spans.length, spansWithoutIssues.length)
   return Result.ok({
-    positiveEvaluationResultsSpans: spans.slice(0, targetLength),
-    negativeEvaluationResultsSpans: spansWithoutIssues.slice(0, targetLength),
+    examplesThatShouldPassTheEvaluation: examplesThatShouldPassTheEvaluation.slice(0, targetLength), // prettier-ignore
+    examplesThatShouldFailTheEvaluation: examplesThatShouldFailTheEvaluation.slice(0, targetLength), // prettier-ignore
   })
 }
 
 export const __test__ = {
-  getEqualAmountsOfPositiveAndNegativeEvaluationResults,
+  getEqualAmountsOfPositiveAndNegativeExamples,
 }
