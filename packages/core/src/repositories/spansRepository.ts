@@ -47,6 +47,42 @@ export class SpansRepository extends Repository<Span> {
       .$dynamic()
   }
 
+  private buildFilterConditions({
+    type,
+    source,
+    experimentUuids,
+    createdAt,
+  }: {
+    type?: SpanType
+    source?: LogSources[]
+    experimentUuids?: string[]
+    createdAt?: { from?: Date; to?: Date }
+  }): SQL<unknown>[] {
+    const conditions = [
+      this.scopeFilter,
+      type ? eq(spans.type, type) : undefined,
+      source
+        ? or(inArray(spans.source, source), isNull(spans.source))
+        : undefined,
+    ].filter(Boolean) as SQL<unknown>[]
+
+    // Add date range filter if provided
+    if (createdAt?.from && createdAt?.to) {
+      conditions.push(between(spans.startedAt, createdAt.from, createdAt.to))
+    } else if (createdAt?.from) {
+      conditions.push(gte(spans.startedAt, createdAt.from))
+    } else if (createdAt?.to) {
+      conditions.push(lte(spans.startedAt, createdAt.to))
+    }
+
+    // Add experiment filter if provided - filter by experiment UUIDs directly
+    if (experimentUuids && experimentUuids.length > 0) {
+      conditions.push(inArray(spans.experimentUuid, experimentUuids))
+    }
+
+    return conditions
+  }
+
   async get({ spanId, traceId }: { spanId: string; traceId: string }) {
     const result = await this.scope
       .where(
@@ -113,6 +149,7 @@ export class SpansRepository extends Repository<Span> {
     limit = DEFAULT_PAGINATION_SIZE,
     commitUuids,
     experimentUuids,
+    source,
     createdAt,
   }: {
     documentUuid: string
@@ -121,31 +158,17 @@ export class SpansRepository extends Repository<Span> {
     limit?: number
     commitUuids?: string[]
     experimentUuids?: string[]
+    source?: LogSources[]
     createdAt?: { from?: Date; to?: Date }
   }) {
     const conditions = [
-      this.scopeFilter,
+      ...this.buildFilterConditions({ type, source, experimentUuids, createdAt }),
       eq(spans.documentUuid, documentUuid),
-      type ? eq(spans.type, type) : undefined,
-    ].filter(Boolean) as SQL<unknown>[]
-
-    // Add date range filter if provided
-    if (createdAt?.from && createdAt?.to) {
-      conditions.push(between(spans.startedAt, createdAt.from, createdAt.to))
-    } else if (createdAt?.from) {
-      conditions.push(gte(spans.startedAt, createdAt.from))
-    } else if (createdAt?.to) {
-      conditions.push(lte(spans.startedAt, createdAt.to))
-    }
+    ]
 
     // Add commit filter if provided - filter by commit UUIDs directly
     if (commitUuids && commitUuids.length > 0) {
       conditions.push(inArray(spans.commitUuid, commitUuids))
-    }
-
-    // Add experiment filter if provided - filter by experiment UUIDs directly
-    if (experimentUuids && experimentUuids.length > 0) {
-      conditions.push(inArray(spans.experimentUuid, experimentUuids))
     }
 
     // Filter by cursor if provided (same pattern as document logs)
@@ -187,12 +210,16 @@ export class SpansRepository extends Repository<Span> {
     from,
     source,
     limit = DEFAULT_PAGINATION_SIZE,
+    experimentUuids,
+    createdAt,
   }: {
     projectId: number
     type?: SpanType
     from?: { startedAt: string; id: string }
     source?: LogSources[]
     limit?: number
+    experimentUuids?: string[]
+    createdAt?: { from?: Date; to?: Date }
   }) {
     // Fetch commit UUIDs - this should be fast with proper commit indexes
     // FIXME: This is wrong use CommitRepository.getCommitsHistory
@@ -205,11 +232,7 @@ export class SpansRepository extends Repository<Span> {
     if (commitUuids.length === 0) return Result.ok({ items: [], next: null })
 
     const conditions = [
-      this.scopeFilter,
-      type ? eq(spans.type, type) : undefined,
-      source
-        ? or(inArray(spans.source, source), isNull(spans.source))
-        : undefined,
+      ...this.buildFilterConditions({ type, source, experimentUuids, createdAt }),
       from
         ? sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
         : undefined,

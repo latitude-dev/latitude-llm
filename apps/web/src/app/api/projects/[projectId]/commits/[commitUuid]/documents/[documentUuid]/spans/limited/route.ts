@@ -118,24 +118,3 @@ export const GET = errorHandler(
     },
   ),
 )
-
-export function buildCommitFilter({
-  filters = {},
-  currentCommit,
-  commitsRepo,
-}: {
-  filters?: { commitUuids?: string[] }
-  currentCommit: Commit
-  commitsRepo: CommitsRepository
-}) {
-  if (filters.commitUuids) return filters.commitUuids
-
-  const commits = commitsRepo
-    .getCommitsHistory({ commit: currentCommit })
-    .then((commits) => {
-      return commits.map((commit) => commit.uuid)
-    })
-    .catch(() => [])
-
-  return commits
-}

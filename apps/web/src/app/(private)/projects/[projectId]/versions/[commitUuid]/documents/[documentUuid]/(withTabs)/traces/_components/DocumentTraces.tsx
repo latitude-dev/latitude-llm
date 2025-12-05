@@ -1,6 +1,6 @@
 'use client'
 
-import { Ref, use, useCallback } from 'react'
+import { Ref, use } from 'react'
 import {
   Table,
   TableBody,
@@ -15,18 +15,12 @@ import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationF
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import {
-  serializeSpans,
-  useSpansKeysetPaginationStore,
-} from '$/stores/spansKeysetPagination'
+import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
 import { ActiveRun, Span, SpanType } from '@latitude-data/constants'
 import { type SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { useEvaluationResultsV2ByTraces } from '$/stores/evaluationResultsV2'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { useSpanCreatedListener } from './useSpanCreatedListener'
 
 export function DocumentTraces({
   ref,
@@ -43,39 +37,6 @@ export function DocumentTraces({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-
-  // Listen for new spans being created and add them to the list
-  const onSpanCreated = useCallback(
-    (args: EventArgs<'spanCreated'>) => {
-      if (!args) return
-      if (args.documentUuid !== document.documentUuid) return
-
-      // Only add to list if we're on the first page (no cursor)
-      const isFirstPage = !spans.currentCursor
-      if (!isFirstPage) return
-
-      const span = serializeSpans([args.span])[0]
-      spans.mutate(
-        (prev) => {
-          if (!prev) return prev
-
-          // Check if span already exists (avoid duplicates)
-          const exists = prev.items.some((s) => s.traceId === span.traceId)
-          if (exists) return prev
-
-          return {
-            ...prev,
-            items: [span, ...prev.items],
-            count: prev.count ? prev.count + 1 : null,
-          }
-        },
-        { revalidate: false },
-      )
-    },
-    [document.documentUuid, spans.currentCursor, spans.mutate],
-  )
-  useSockets({ event: 'spanCreated', onMessage: onSpanCreated })
-
   const {
     dataByTraceId: evaluationResultsByTraceId,
     isLoading: isEvaluationResultsLoading,
@@ -85,6 +46,9 @@ export function DocumentTraces({
     document,
     traceIds: spans.items.map((span) => span.traceId),
   })
+
+  // Updates span store paginated state with realtime spans
+  useSpanCreatedListener(spans)
 
   return (
     <Table

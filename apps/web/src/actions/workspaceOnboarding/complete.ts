@@ -35,6 +35,7 @@ export const completeOnboardingAction = authProcedure
         .commits.detail({ uuid: commitUuid })
         .runs.root({
           sourceGroup: RunSourceGroup.Playground,
+          realtime: true,
         }),
     )
   })

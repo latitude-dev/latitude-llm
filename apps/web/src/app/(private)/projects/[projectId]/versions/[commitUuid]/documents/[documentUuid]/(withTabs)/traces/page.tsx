@@ -8,7 +8,7 @@ import buildMetatags from '$/app/_lib/buildMetatags'
 import { DocumentTracesPage } from './_components/DocumentTracesPage'
 import { SpanType, Span } from '@latitude-data/constants'
 import { parseSpansFilters, SpansFilters } from '$/lib/schemas/filters'
-import { buildCommitFilter } from '$/app/api/projects/[projectId]/commits/[commitUuid]/documents/[documentUuid]/spans/limited/route'
+import { buildCommitFilter } from '$/app/api/spans/limited/route'
 
 export const metadata: Promise<Metadata> = buildMetatags({
   locationDescription: 'Document Traces Page',
