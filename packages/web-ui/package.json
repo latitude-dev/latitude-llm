@@ -318,7 +318,7 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "use-debounce": "^10.0.5",
-    "zustand": "^4.5.6"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",
