@@ -152,10 +152,10 @@ Gets:
 IMPORTANT: 
 - The evaluation MUST fail when the issue is present in the span, as this logic is used within the issue discovery and its how we want our end goal to be.
   We want the evaluations to be like unit tests, where if all of them pass for a given trace of a document, that means that the trace has no issues, that its good!
-- The spans MUST be from HITL evaluation results, as we want to use the user's annotations to calculate the MCC, not from other evaluations results
+- The spans MUST be from HITL evaluation results only, as we want to use ONLY the user's annotations to calculate the MCC, not from other evaluations results.
 
 Thumbs up evalResults of the same document or evalResults of other issues of the same document count as negative evalResults because
- they are cases in which the new evaluation should return a negative result, as that span doesnt have that issue
+ they are cases in which the new evaluation should return a positive result, as that span doesnt have that issue (its good!).
 */
 async function getEqualAmountsOfPositiveAndNegativeExamples(
   {
