@@ -19,14 +19,17 @@ import {
 import { UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result, TypedResult } from '../../lib/Result'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Project } from '../../schema/models/types/Project'
 import { type ResultWithEvaluationV2 } from '../../schema/types'
 import { voyage as getVoyageClient } from '../../voyage'
-import { getIssuesCollection } from '../../weaviate'
+import {
+  getIssuesCollection,
+  ISSUES_COLLECTION_TENANT_NAME,
+} from '../../weaviate'
 import { getEvaluationMetricSpecification } from '../evaluationsV2/specifications'
 import { validateResultForIssue } from './results/validate'
 import { embedReason, normalizeEmbedding } from './shared'
-import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { type Project } from '../../schema/models/types/Project'
 
 export async function discoverIssue<
   T extends EvaluationType,
@@ -112,11 +115,8 @@ async function findCandidates({
   project: Project
 }) {
   try {
-    const issues = await getIssuesCollection({
-      workspaceId: project.workspaceId,
-      projectId: project.id,
-      documentUuid: document.documentUuid,
-    })
+    const tenantName = ISSUES_COLLECTION_TENANT_NAME(project.workspaceId, project.id, document.documentUuid) // prettier-ignore
+    const issues = await getIssuesCollection({ tenantName })
 
     const { objects } = await issues.query.hybrid(reason, {
       vector: embedding,

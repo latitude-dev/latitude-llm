@@ -1,23 +1,23 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import { and, eq, sql } from 'drizzle-orm'
 import { env } from '@latitude-data/env'
+import { and, eq, sql } from 'drizzle-orm'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { database } from '../../client'
 import { SpanType } from '../../constants'
+import { IssuesRepository } from '../../repositories'
+import { evaluationVersions } from '../../schema/models/evaluationVersions'
+import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
+import { issueHistograms } from '../../schema/models/issueHistograms'
+import { issues } from '../../schema/models/issues'
 import { createEvaluationResultV2 } from '../../tests/factories/evaluationResultsV2'
 import { createEvaluationV2 } from '../../tests/factories/evaluationsV2'
+import { createIssue } from '../../tests/factories/issues'
 import { createProject } from '../../tests/factories/projects'
 import { createSpan } from '../../tests/factories/spans'
 import { createWorkspace } from '../../tests/factories/workspaces'
-import { createIssue } from '../../tests/factories/issues'
-import { mergeIssues } from './merge'
-import { issueHistograms } from '../../schema/models/issueHistograms'
-import { issues } from '../../schema/models/issues'
-import { evaluationVersions } from '../../schema/models/evaluationVersions'
-import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
-import { IssuesRepository } from '../../repositories'
-import { addIssueEvaluationResult } from '../issueEvaluationResults/add'
 import * as weaviate from '../../weaviate'
+import { addIssueEvaluationResult } from '../issueEvaluationResults/add'
+import { mergeIssues } from './merge'
 
 describe('mergeIssues', () => {
   const originalCloud = env.LATITUDE_CLOUD
@@ -605,5 +605,263 @@ describe('mergeIssues', () => {
       // If aggregated, count should be at least 8 (5 + 3)
       expect(histogram20240101.count).toBeGreaterThanOrEqual(8)
     }
+  })
+
+  describe('Weaviate tenant name operations', () => {
+    it('calls getIssuesCollection with correct tenant name built from workspaceId, projectId, and documentUuid', async () => {
+      const mockNearVector = vi.fn()
+      const mockExists = vi.fn()
+      const mockDeleteById = vi.fn()
+      const mockUpdate = vi.fn()
+      const mockLength = vi.fn()
+      const mockRemoveTenant = vi.fn()
+
+      const mockCollection = {
+        query: { nearVector: mockNearVector },
+        data: {
+          exists: mockExists,
+          deleteById: mockDeleteById,
+          update: mockUpdate,
+        },
+        length: mockLength,
+        tenants: { remove: mockRemoveTenant },
+      }
+
+      const getIssuesCollectionSpy = vi
+        .spyOn(weaviate, 'getIssuesCollection')
+        .mockResolvedValue(mockCollection as any)
+
+      const { workspace } = await createWorkspace({ features: ['issues'] })
+      const projectResult = await createProject({
+        workspace,
+        documents: {
+          'test-prompt': 'This is a test prompt',
+        },
+      })
+      const { project, documents } = projectResult
+      const document = documents[0]!
+
+      const anchorResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const anchor = anchorResult.issue
+
+      const otherResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const other = otherResult.issue
+
+      mockNearVector.mockResolvedValue({
+        objects: [
+          {
+            uuid: anchor.uuid,
+            vectors: { default: [1, 0] },
+          },
+          {
+            uuid: other.uuid,
+            vectors: { default: [0.9, 0.1] },
+          },
+        ],
+      })
+      mockExists.mockResolvedValue(true)
+      mockDeleteById.mockResolvedValue(undefined)
+      mockUpdate.mockResolvedValue(undefined)
+      mockLength.mockResolvedValue(1)
+      mockRemoveTenant.mockResolvedValue(undefined)
+
+      await database
+        .update(issues)
+        .set({
+          centroid: { base: [1, 0], weight: 1 },
+          updatedAt: new Date('2024-02-01'),
+        })
+        .where(eq(issues.id, anchor.id))
+
+      const anchorWithCentroid = await database
+        .select()
+        .from(issues)
+        .where(eq(issues.id, anchor.id))
+        .then((r) => r[0]!)
+
+      await mergeIssues({
+        workspace,
+        issue: anchorWithCentroid,
+      })
+
+      const expectedTenantName = weaviate.ISSUES_COLLECTION_TENANT_NAME(
+        anchor.workspaceId,
+        anchor.projectId,
+        anchor.documentUuid,
+      )
+      expect(getIssuesCollectionSpy).toHaveBeenCalledWith({
+        tenantName: expectedTenantName,
+      })
+    })
+
+    it('builds tenant name correctly using ISSUES_COLLECTION_TENANT_NAME format', async () => {
+      const mockNearVector = vi.fn()
+      const mockExists = vi.fn()
+      const mockDeleteById = vi.fn()
+      const mockUpdate = vi.fn()
+      const mockLength = vi.fn()
+      const mockRemoveTenant = vi.fn()
+
+      const mockCollection = {
+        query: { nearVector: mockNearVector },
+        data: {
+          exists: mockExists,
+          deleteById: mockDeleteById,
+          update: mockUpdate,
+        },
+        length: mockLength,
+        tenants: { remove: mockRemoveTenant },
+      }
+
+      const getIssuesCollectionSpy = vi
+        .spyOn(weaviate, 'getIssuesCollection')
+        .mockResolvedValue(mockCollection as any)
+
+      const { workspace } = await createWorkspace({ features: ['issues'] })
+      const projectResult = await createProject({
+        workspace,
+        documents: {
+          'test-prompt': 'This is a test prompt',
+        },
+      })
+      const { project, documents } = projectResult
+      const document = documents[0]!
+
+      const anchorResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const anchor = anchorResult.issue
+
+      mockNearVector.mockResolvedValue({
+        objects: [
+          {
+            uuid: anchor.uuid,
+            vectors: { default: [1, 0] },
+          },
+        ],
+      })
+      mockExists.mockResolvedValue(true)
+      mockDeleteById.mockResolvedValue(undefined)
+      mockUpdate.mockResolvedValue(undefined)
+      mockLength.mockResolvedValue(1)
+      mockRemoveTenant.mockResolvedValue(undefined)
+
+      await database
+        .update(issues)
+        .set({
+          centroid: { base: [1, 0], weight: 1 },
+          updatedAt: new Date('2024-02-01'),
+        })
+        .where(eq(issues.id, anchor.id))
+
+      const anchorWithCentroid = await database
+        .select()
+        .from(issues)
+        .where(eq(issues.id, anchor.id))
+        .then((r) => r[0]!)
+
+      await mergeIssues({
+        workspace,
+        issue: anchorWithCentroid,
+      })
+
+      const expectedTenantName = `${anchor.workspaceId}_${anchor.projectId}_${anchor.documentUuid}`
+      expect(getIssuesCollectionSpy).toHaveBeenCalledWith({
+        tenantName: expectedTenantName,
+      })
+    })
+
+    it('uses nearVector search on the issues collection with anchor embedding', async () => {
+      const mockNearVector = vi.fn()
+      const mockExists = vi.fn()
+      const mockDeleteById = vi.fn()
+      const mockUpdate = vi.fn()
+      const mockLength = vi.fn()
+      const mockRemoveTenant = vi.fn()
+
+      const mockCollection = {
+        query: { nearVector: mockNearVector },
+        data: {
+          exists: mockExists,
+          deleteById: mockDeleteById,
+          update: mockUpdate,
+        },
+        length: mockLength,
+        tenants: { remove: mockRemoveTenant },
+      }
+
+      vi.spyOn(weaviate, 'getIssuesCollection').mockResolvedValue(
+        mockCollection as any,
+      )
+
+      const { workspace } = await createWorkspace({ features: ['issues'] })
+      const projectResult = await createProject({
+        workspace,
+        documents: {
+          'test-prompt': 'This is a test prompt',
+        },
+      })
+      const { project, documents } = projectResult
+      const document = documents[0]!
+
+      const anchorResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const anchor = anchorResult.issue
+
+      mockNearVector.mockResolvedValue({
+        objects: [
+          {
+            uuid: anchor.uuid,
+            vectors: { default: [1, 0] },
+          },
+        ],
+      })
+      mockExists.mockResolvedValue(true)
+      mockDeleteById.mockResolvedValue(undefined)
+      mockUpdate.mockResolvedValue(undefined)
+      mockLength.mockResolvedValue(1)
+      mockRemoveTenant.mockResolvedValue(undefined)
+
+      await database
+        .update(issues)
+        .set({
+          centroid: { base: [1, 0], weight: 1 },
+          updatedAt: new Date('2024-02-01'),
+        })
+        .where(eq(issues.id, anchor.id))
+
+      const anchorWithCentroid = await database
+        .select()
+        .from(issues)
+        .where(eq(issues.id, anchor.id))
+        .then((r) => r[0]!)
+
+      await mergeIssues({
+        workspace,
+        issue: anchorWithCentroid,
+      })
+
+      expect(mockNearVector).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({
+          limit: 100,
+          includeVector: true,
+          returnMetadata: ['distance'],
+        }),
+      )
+    })
   })
 })

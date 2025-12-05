@@ -278,10 +278,9 @@ AnnotationFormWrapper.FailedWithoutReasonWarning =
         <div className='px-3 py-2 bg-background rounded-md flex items-center gap-x-2'>
           <AnnotationsProgressIcon isCompleted />
           <Text.H6 color='foregroundMuted'>
-            Please write what went wrong with this AI interaction. Your
-            feedback helps Latitude identify patterns and create actionable
-            issues, making it easier to improve your prompts over time. Check
-            the{' '}
+            Please write what went wrong with this AI interaction. Your feedback
+            helps Latitude identify patterns and create actionable issues,
+            making it easier to improve your prompts over time. Check the{' '}
             <Link href={issuesDashboardLink} target='_blank'>
               <Text.H6M underline color='foregroundMuted'>
                 issues section

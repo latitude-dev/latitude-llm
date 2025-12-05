@@ -168,8 +168,6 @@ export async function embedReason(reason: string) {
   if (!env.VOYAGE_API_KEY) return Result.ok<number[]>([])
 
   try {
-    if (!env.VOYAGE_API_KEY) return Result.nil()
-
     const cache = await getCache()
     const key = ISSUE_EMBEDDING_CACHE_KEY(hashContent(reason))
 

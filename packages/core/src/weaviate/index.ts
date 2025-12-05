@@ -48,6 +48,12 @@ export enum Collection {
   Issues = 'Issues',
 }
 
+export const ISSUES_COLLECTION_TENANT_NAME = (
+  workspaceId: number,
+  projectId: number,
+  documentUuid: string,
+) => `${workspaceId}_${projectId}_${documentUuid}`
+
 export type IssuesCollection = {
   // id: number // Note: the default object id is the issue id
   title: string
@@ -108,26 +114,20 @@ async function migrateCollections() {
 
 // TODO(AO): BONUS: Deactivate/offload tenants that have not had any activity in the last days
 export async function getIssuesCollection({
-  workspaceId,
-  projectId,
-  documentUuid,
+  tenantName,
 }: {
-  workspaceId: number
-  projectId: number
-  documentUuid: string
+  tenantName: string
 }) {
   // Note: even though the collection is configured with auto-tenant-creation, it seems
   // that for read and search operations it still fails when the tenant is not created yet
 
-  const tenantId = `${workspaceId}_${projectId}_${documentUuid}`
-
   const client = await weaviate()
   const collection = client.collections.use<Collection.Issues, IssuesCollection>(Collection.Issues) // prettier-ignore
 
-  const exists = await collection.tenants.getByName(tenantId)
+  const exists = await collection.tenants.getByName(tenantName)
   if (!exists) {
-    await collection.tenants.create([{ name: tenantId }])
+    await collection.tenants.create([{ name: tenantName }])
   }
 
-  return collection.withTenant(tenantId)
+  return collection.withTenant(tenantName)
 }
