@@ -1,9 +1,6 @@
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import {
-  DocumentVersionsRepository,
-  EvaluationsV2Repository,
-} from '@latitude-data/core/repositories'
+import { EvaluationsV2Repository } from '@latitude-data/core/repositories'
 import { Result } from '@latitude-data/core/lib/Result'
 import {
   CLOUD_MESSAGES,
@@ -25,6 +22,7 @@ const llmEvaluationBinarySpecificationWithoutModel =
     .omit({
       model: true,
       provider: true,
+      reverseScale: true,
       actualOutput: true,
     })
     .extend({
@@ -67,14 +65,6 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
     return assertResult
   }
 
-  const documentRepository = new DocumentVersionsRepository(workspace.id)
-  const document = await documentRepository
-    .getDocumentAtCommit({
-      commitUuid: commit.uuid,
-      documentUuid: issue.documentUuid,
-    })
-    .then((r) => r.unwrap())
-
   const copilotResult = await getCopilot(
     {
       path: env.COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH,
@@ -101,7 +91,7 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
 
   const existingEvaluationNames = existingEvaluationNamesResult.unwrap()
 
-  // Getting negative examples (failed evaluations with the issue attached) to feed the copilot
+  // Getting failed examples (evaluation results with the issue attached) to feed the copilot
   const messagesAndReasonWhyFailedForIssueResult =
     await getSpanMessagesAndEvaluationResultsByIssue({
       workspace: workspace,
@@ -115,29 +105,28 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
   const messagesAndReasonWhyFailedForIssue =
     messagesAndReasonWhyFailedForIssueResult.unwrap()
 
-  // Getting positive examples (passed evaluations without the issue attached) to feed the copilot
-  const goodExampleMessagesFromIssueDocumentResult =
+  // Getting passed examples (passed evaluation results or failed about other issues of the same document) to feed the copilot
+  const passedExampleMessagesFromIssueDocumentResult =
     await getSpanMessagesByIssueDocument({
       workspace: workspace,
       commit: commit,
       issue: issue,
     })
 
-  if (!Result.isOk(goodExampleMessagesFromIssueDocumentResult)) {
-    return goodExampleMessagesFromIssueDocumentResult
+  if (!Result.isOk(passedExampleMessagesFromIssueDocumentResult)) {
+    return passedExampleMessagesFromIssueDocumentResult
   }
-  const goodExampleMessagesFromIssueDocument =
-    goodExampleMessagesFromIssueDocumentResult.unwrap()
+  const passedExampleMessagesFromIssueDocument =
+    passedExampleMessagesFromIssueDocumentResult.unwrap()
 
   const evaluationConfigResult = await runCopilot({
     copilot: copilot,
     parameters: {
       issueName: issue.title,
       issueDescription: issue.description,
-      prompt: document.content,
       existingEvaluationNames: existingEvaluationNames,
       examplesWithIssueAndReasonWhy: messagesAndReasonWhyFailedForIssue,
-      goodExamplesWithoutIssue: goodExampleMessagesFromIssueDocument,
+      goodExamplesWithoutIssue: passedExampleMessagesFromIssueDocument,
     },
     schema: llmEvaluationBinarySpecificationWithoutModel,
   })
@@ -150,6 +139,7 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
 
   const evaluationConfigWithProviderAndModel = {
     ...evaluationConfig,
+    reverseScale: false,
     provider: providerName,
     model: model,
     actualOutput: {

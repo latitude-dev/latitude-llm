@@ -1,15 +1,14 @@
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm'
 import { calculateOffset } from '../../lib/pagination'
 import { Result } from '../../lib/Result'
-import { CommitsRepository } from '../../repositories'
+import { CommitsRepository, SpansRepository } from '../../repositories'
 import { Commit } from '../../schema/models/types/Commit'
 import { Issue } from '../../schema/models/types/Issue'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { commits } from '../../schema/models/commits'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
-import { spans } from '../../schema/models/spans'
-import { Span, SpanType } from '@latitude-data/constants'
+import { Span } from '@latitude-data/constants'
 import { database } from '../../client'
 
 async function fetchPaginatedEvaluationResults(
@@ -116,33 +115,9 @@ export async function getSpansByIssue(
     })
   }
 
-  const spanTraceIdPairs = paginatedResults.map(
-    (result) => sql`(${result.evaluatedSpanId}, ${result.evaluatedTraceId})`,
-  )
-
-  const fetchedSpans = await db
-    .select()
-    .from(spans)
-    .where(
-      and(
-        eq(spans.workspaceId, workspace.id),
-        sql`(${spans.id}, ${spans.traceId}) IN (${sql.join(spanTraceIdPairs, sql`, `)})`,
-        eq(spans.type, SpanType.Prompt),
-      ),
-    )
-
-  const spanMap = new Map<string, Span>()
-  for (const span of fetchedSpans) {
-    const key = `${span.id}:${span.traceId}`
-    spanMap.set(key, span as Span)
-  }
-
-  const orderedSpans = paginatedResults
-    .map((result) => {
-      const key = `${result.evaluatedSpanId}:${result.evaluatedTraceId}`
-      return spanMap.get(key)
-    })
-    .filter((span): span is Span => span !== undefined)
+  const spansRepository = new SpansRepository(workspace.id, db)
+  const orderedSpans =
+    await spansRepository.findByEvaluationResults(paginatedResults)
 
   return Result.ok({
     spans: orderedSpans,

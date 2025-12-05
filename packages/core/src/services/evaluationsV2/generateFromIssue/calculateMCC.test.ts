@@ -4,13 +4,13 @@ import { Result } from '@latitude-data/core/lib/Result'
 
 describe('calculateMCC', () => {
   it('calculates perfect MCC (1.0) when all classifications are correct', () => {
-    const positiveResults = [true, true, true]
+    const examplesThatShouldPassTheEvaluation = [true, true, true]
 
-    const negativeResults = [false, false, false]
+    const examplesThatShouldFailTheEvaluation = [false, false, false]
 
     const mccResult = calculateMCC({
-      positiveEvaluationResults: positiveResults,
-      negativeEvaluationResults: negativeResults,
+      examplesThatShouldPassTheEvaluation,
+      examplesThatShouldFailTheEvaluation,
     })
 
     expect(Result.isOk(mccResult)).toBe(true)
@@ -25,12 +25,12 @@ describe('calculateMCC', () => {
   })
 
   it('calculates worst MCC (-1.0) when all classifications are incorrect', () => {
-    const positiveResults = [false, false]
-    const negativeResults = [true, true]
+    const examplesThatShouldPassTheEvaluation = [false, false]
+    const examplesThatShouldFailTheEvaluation = [true, true]
 
     const mccResult = calculateMCC({
-      positiveEvaluationResults: positiveResults,
-      negativeEvaluationResults: negativeResults,
+      examplesThatShouldPassTheEvaluation,
+      examplesThatShouldFailTheEvaluation,
     })
 
     expect(Result.isOk(mccResult)).toBe(true)
@@ -46,13 +46,13 @@ describe('calculateMCC', () => {
 
   it('returns 0 when all positive results are false positives (no true positives)', () => {
     // Edge case where all positive results are false positives (no true positives)
-    const positiveResults = [false, false]
+    const examplesThatShouldPassTheEvaluation = [false, false]
 
-    const negativeResults = [false]
+    const examplesThatShouldFailTheEvaluation = [false]
 
     const mccResult = calculateMCC({
-      positiveEvaluationResults: positiveResults,
-      negativeEvaluationResults: negativeResults,
+      examplesThatShouldPassTheEvaluation,
+      examplesThatShouldFailTheEvaluation,
     })
 
     expect(Result.isOk(mccResult)).toBe(true)
@@ -67,22 +67,22 @@ describe('calculateMCC', () => {
   })
 
   it('handles empty positive results array', () => {
-    const negativeResults = [false, false]
+    const examplesThatShouldFailTheEvaluation = [false, false]
 
     const mccResult = calculateMCC({
-      positiveEvaluationResults: [],
-      negativeEvaluationResults: negativeResults,
+      examplesThatShouldPassTheEvaluation: [],
+      examplesThatShouldFailTheEvaluation,
     })
 
     expect(Result.isOk(mccResult)).toBe(false)
   })
 
   it('handles empty negative results array', () => {
-    const positiveResults = [true, true]
+    const examplesThatShouldPassTheEvaluation = [true, true]
 
     const mccResult = calculateMCC({
-      positiveEvaluationResults: positiveResults,
-      negativeEvaluationResults: [],
+      examplesThatShouldPassTheEvaluation,
+      examplesThatShouldFailTheEvaluation: [],
     })
 
     expect(Result.isOk(mccResult)).toBe(false)
@@ -90,21 +90,21 @@ describe('calculateMCC', () => {
 
   it('handles both empty arrays', () => {
     const mccResult = calculateMCC({
-      positiveEvaluationResults: [],
-      negativeEvaluationResults: [],
+      examplesThatShouldPassTheEvaluation: [],
+      examplesThatShouldFailTheEvaluation: [],
     })
 
     expect(Result.isOk(mccResult)).toBe(false)
   })
 
   it('calculates MCC correctly with large datasets', () => {
-    const positiveResults = Array.from({ length: 10 }, (_, i) => i < 8)
+    const examplesThatShouldPassTheEvaluation = Array.from({ length: 10 }, (_, i) => i < 8)
 
-    const negativeResults = Array.from({ length: 10 }, (_, i) => i < 2)
+    const examplesThatShouldFailTheEvaluation = Array.from({ length: 10 }, (_, i) => i < 2)
 
     const mccResult = calculateMCC({
-      positiveEvaluationResults: positiveResults,
-      negativeEvaluationResults: negativeResults,
+      examplesThatShouldPassTheEvaluation,
+      examplesThatShouldFailTheEvaluation,
     })
 
     expect(Result.isOk(mccResult)).toBe(true)

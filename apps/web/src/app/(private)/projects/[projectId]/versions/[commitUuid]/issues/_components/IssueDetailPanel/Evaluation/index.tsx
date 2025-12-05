@@ -44,19 +44,18 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     project: project,
     commit: commit,
     issueId: issue.id,
-    documentUuid: issue.documentUuid,
   })
 
   const hasEnoughAnnotations = useMemo(() => {
     return (
       issueEvaluationStats?.negativeAnnotationsOfThisIssue! >=
         MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE &&
-      issueEvaluationStats?.positiveAndNegativeAnnotationsOfOtherIssues! >=
+      issueEvaluationStats?.passedEvaluationResults! >=
         MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES
     )
   }, [
     issueEvaluationStats?.negativeAnnotationsOfThisIssue,
-    issueEvaluationStats?.positiveAndNegativeAnnotationsOfOtherIssues,
+    issueEvaluationStats?.passedEvaluationResults,
   ])
 
   const [endedEvaluation, setEndedEvaluation] = useState<{
@@ -187,7 +186,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
           issueEvaluationStats?.negativeAnnotationsOfThisIssue ?? 0
         }
         positiveAndNegativeAnnotationsOfOtherIssues={
-          issueEvaluationStats?.positiveAndNegativeAnnotationsOfOtherIssues ?? 0
+          issueEvaluationStats?.passedEvaluationResults ?? 0
         }
       />
     )

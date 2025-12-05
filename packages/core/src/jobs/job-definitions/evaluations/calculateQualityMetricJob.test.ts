@@ -98,10 +98,10 @@ describe('calculateQualityMetricJob', () => {
       issueId: 1,
       providerName: 'openai',
       model: 'gpt-4o',
-      spanAndTraceIdPairsOfPositiveEvaluationRuns: [
+      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
         { spanId: 'span-1', traceId: 'trace-1' },
       ],
-      spanAndTraceIdPairsOfNegativeEvaluationRuns: [
+      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
         { spanId: 'span-2', traceId: 'trace-2' },
       ],
       ...overrides,
@@ -201,10 +201,10 @@ describe('calculateQualityMetricJob', () => {
 
       expect(mockEvaluateConfiguration).toHaveBeenCalledWith({
         childrenValues: expect.any(Object),
-        spanAndTraceIdPairsOfPositiveEvaluationRuns: [
+        spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
           { spanId: 'span-1', traceId: 'trace-1' },
         ],
-        spanAndTraceIdPairsOfNegativeEvaluationRuns: [
+        spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
           { spanId: 'span-2', traceId: 'trace-2' },
         ],
       })
@@ -387,12 +387,12 @@ describe('calculateQualityMetricJob', () => {
     })
 
     it('should throw error if too many failed evaluation runs', async () => {
-      jobData = createMockJob(buildJobData(), 3, 3) // last attempt to test error handling
+      jobData = createMockJob(buildJobData(), 1, 3)
       jobData.getDependenciesCount = vi.fn().mockResolvedValue({
-        failed: 5,
-        ignored: 1,
-        processed: 10,
-        unprocessed: 0,
+        failed: 0,
+        ignored: 5, // ignored children are failed children
+        processed: 0,
+        unprocessed: 15,
       })
       // The job will throw before evaluateConfiguration is called
       mockFailActiveEvaluation.mockResolvedValue(
@@ -404,9 +404,11 @@ describe('calculateQualityMetricJob', () => {
       )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
-      await calculateQualityMetricJob(jobData)
+      await expect(calculateQualityMetricJob(jobData)).rejects.toThrow(
+        '0 failed and 5 ignored children. Waiting for 15 unprocessed children to complete',
+      )
 
-      expect(mockDeleteEvaluationV2).toHaveBeenCalled()
+      expect(mockDeleteEvaluationV2).not.toHaveBeenCalled()
       expect(mockFailActiveEvaluation).not.toHaveBeenCalled()
       expect(mockEndActiveEvaluation).not.toHaveBeenCalled()
     })

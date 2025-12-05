@@ -32,29 +32,36 @@ export function InsufficientAnnotations({
       <div className='flex flex-col gap-2'>
         <Text.H6M color='foregroundMuted'>Annotate more to generate</Text.H6M>
         <div className='flex flex-row items-center gap-1'>
-          <div className='flex items-center justify-center bg-success-muted rounded-xl py-0.5 px-1.5 gap-1'>
-            <Icon
-              name='thumbsUp'
-              color='successMutedForeground'
-              size='small'
-              strokeWidth={2.5}
-            />
-            <Text.H6M color='successMutedForeground'>
-              {positiveAndNegativeAnnotationsOfOtherIssuesToReach}
-            </Text.H6M>
-          </div>
-          <Text.H6 color='foregroundMuted'> · </Text.H6>
-          <div className='flex items-center justify-center bg-destructive-muted rounded-xl py-0.5 px-1.5 gap-1'>
-            <Icon
-              name='thumbsDown'
-              color='destructiveMutedForeground'
-              size='small'
-              strokeWidth={2.5}
-            />
-            <Text.H6M color='destructiveMutedForeground'>
-              {negativeAnnotationsOfThisIssueToReach}
-            </Text.H6M>
-          </div>
+          {positiveAndNegativeAnnotationsOfOtherIssuesToReach > 0 && (
+            <div className='flex items-center justify-center bg-success-muted rounded-xl py-0.5 px-1.5 gap-1'>
+              <Icon
+                name='thumbsUp'
+                color='successMutedForeground'
+                size='small'
+                strokeWidth={2.5}
+              />
+              <Text.H6M color='successMutedForeground'>
+                {positiveAndNegativeAnnotationsOfOtherIssuesToReach}
+              </Text.H6M>
+            </div>
+          )}
+          {positiveAndNegativeAnnotationsOfOtherIssuesToReach > 0 &&
+            negativeAnnotationsOfThisIssueToReach > 0 && (
+              <Text.H6 color='foregroundMuted'> · </Text.H6>
+            )}
+          {negativeAnnotationsOfThisIssueToReach > 0 && (
+            <div className='flex items-center justify-center bg-destructive-muted rounded-xl py-0.5 px-1.5 gap-1'>
+              <Icon
+                name='thumbsDown'
+                color='destructiveMutedForeground'
+                size='small'
+                strokeWidth={2.5}
+              />
+              <Text.H6M color='destructiveMutedForeground'>
+                {negativeAnnotationsOfThisIssueToReach}
+              </Text.H6M>
+            </div>
+          )}
         </div>
       </div>
     </div>
