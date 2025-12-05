@@ -14,9 +14,14 @@ import { captureException } from '../../../utils/datadogCapture'
 import { failActiveEvaluation } from '../../../services/evaluationsV2/active/fail'
 import { queues } from '../../queues'
 import { deleteEvaluationV2 } from '../../../services/evaluationsV2/delete'
-import { EvaluationV2 } from '../../../constants'
+import {
+  EvaluationV2,
+  EvaluationType,
+  LlmEvaluationMetric,
+} from '../../../constants'
 import { Commit } from '../../../schema/models/types/Commit'
 import { Workspace } from '../../../schema/models/types/Workspace'
+import { getFalsePositivesAndFalseNegatives } from '../../../services/evaluationsV2/generateFromIssue/getFalseExamples'
 
 export type CalculateAlignmentMetricJobData = {
   workspaceId: number
@@ -77,14 +82,17 @@ export const calculateAlignmentMetricJob = async (
   const commit = commitResult.unwrap()
 
   const evaluationRepository = new EvaluationsV2Repository(workspace.id)
-  const evaluation = await evaluationRepository
+  const evaluation = (await evaluationRepository
     .getAtCommitByDocument({
       projectId: commit.projectId,
       commitUuid: commit.uuid,
       documentUuid,
       evaluationUuid,
     })
-    .then((r) => r.unwrap())
+    .then((r) => r.unwrap())) as EvaluationV2<
+    EvaluationType.Llm,
+    LlmEvaluationMetric.Binary
+  >
 
   try {
     const { failed, ignored, processed, unprocessed } =
@@ -120,6 +128,9 @@ export const calculateAlignmentMetricJob = async (
         model: model,
         workflowUuid: workflowUuid,
         generationAttempt: generationAttempt,
+        spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+        spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+        evaluationResults: childrenValues,
       })
     }
 
@@ -204,8 +215,11 @@ async function deleteEvaluationAndRetryGeneration({
   model,
   workflowUuid,
   generationAttempt,
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+  evaluationResults,
 }: {
-  evaluation: EvaluationV2
+  evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
   commit: Commit
   workspace: Workspace
   issueId: number
@@ -213,6 +227,17 @@ async function deleteEvaluationAndRetryGeneration({
   model: string
   workflowUuid: string
   generationAttempt: number
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: {
+    spanId: string
+    traceId: string
+  }[]
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: {
+    spanId: string
+    traceId: string
+  }[]
+  evaluationResults: {
+    [jobKey: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any -- this is returned by bullmq
+  }
 }) {
   const { generateEvaluationsQueue } = await queues()
   await deleteEvaluationV2({
@@ -220,7 +245,16 @@ async function deleteEvaluationAndRetryGeneration({
     commit: commit,
     workspace: workspace,
   })
-  // TODO(evaluation-generation): add feedback to the generation from what failed
+
+  const {
+    falsePositives: falsePositivesSpanAndTraceIdPairs,
+    falseNegatives: falseNegativesSpanAndTraceIdPairs,
+  } = getFalsePositivesAndFalseNegatives({
+    spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+    spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+    evaluationResults,
+  }).unwrap()
+
   await generateEvaluationsQueue.add(
     'generateEvaluationV2FromIssueJob',
     {
@@ -231,6 +265,15 @@ async function deleteEvaluationAndRetryGeneration({
       model: model,
       workflowUuid: workflowUuid,
       generationAttempt: generationAttempt + 1, // retry generating another configuration
+      falsePositivesSpanAndTraceIdPairs:
+        falsePositivesSpanAndTraceIdPairs.slice(0, 3), // Limit the number to avoid too many tokens when generating the evaluation configuration
+      falseNegativesSpanAndTraceIdPairs:
+        falseNegativesSpanAndTraceIdPairs.slice(0, 3), // Limit the number to avoid too many tokens when generating the evaluation configuration
+      previousEvaluationConfiguration: {
+        criteria: evaluation.configuration.criteria,
+        passDescription: evaluation.configuration.passDescription,
+        failDescription: evaluation.configuration.failDescription,
+      },
     },
     {
       jobId: `generateEvaluationV2FromIssueJob:wf=${workflowUuid}:generationAttempt=${generationAttempt + 1}`,

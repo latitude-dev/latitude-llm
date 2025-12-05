@@ -27,6 +27,7 @@ import {
   EvaluationsV2Repository,
   CommitsRepository,
 } from '../../../repositories'
+import * as getFalseExamplesModule from '../../../services/evaluationsV2/generateFromIssue/getFalseExamples'
 
 // Mock dependencies
 vi.mock(
@@ -60,6 +61,13 @@ vi.mock('../../../utils/datadogCapture', () => ({
   captureException: vi.fn(),
 }))
 
+vi.mock(
+  '../../../services/evaluationsV2/generateFromIssue/getFalseExamples',
+  () => ({
+    getFalsePositivesAndFalseNegatives: vi.fn(),
+  }),
+)
+
 describe('calculateAlignmentMetricJob', () => {
   const mockEvaluateConfiguration = vi.mocked(
     evaluateConfigurationModule.evaluateConfiguration,
@@ -77,6 +85,9 @@ describe('calculateAlignmentMetricJob', () => {
     deleteEvaluationV2Module.deleteEvaluationV2,
   )
   const mockQueues = vi.mocked(queuesModule.queues)
+  const mockGetFalsePositivesAndFalseNegatives = vi.mocked(
+    getFalseExamplesModule.getFalsePositivesAndFalseNegatives,
+  )
 
   let workspace: Workspace
   let commit: Commit
@@ -326,6 +337,12 @@ describe('calculateAlignmentMetricJob', () => {
         }),
       )
       mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
+      mockGetFalsePositivesAndFalseNegatives.mockReturnValue(
+        Result.ok({
+          falsePositives: [{ spanId: 'span-fp-1', traceId: 'trace-fp-1' }],
+          falseNegatives: [{ spanId: 'span-fn-1', traceId: 'trace-fn-1' }],
+        }),
+      )
     })
 
     it('should delete evaluation, queue new generation job, and not fail or end active evaluation', async () => {
@@ -335,6 +352,19 @@ describe('calculateAlignmentMetricJob', () => {
         evaluation: expect.objectContaining({ uuid: evaluation.uuid }),
         commit,
         workspace,
+      })
+
+      expect(mockGetFalsePositivesAndFalseNegatives).toHaveBeenCalledWith({
+        spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
+          { spanId: 'span-1', traceId: 'trace-1' },
+        ],
+        spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
+          { spanId: 'span-2', traceId: 'trace-2' },
+        ],
+        evaluationResults: {
+          'job-1': { hasPassed: true },
+          'job-2': { hasPassed: false },
+        },
       })
 
       const { generateEvaluationsQueue } = await mockQueues()
@@ -348,6 +378,17 @@ describe('calculateAlignmentMetricJob', () => {
           model: 'gpt-4o',
           workflowUuid: WORKFLOW_UUID,
           generationAttempt: 2, // incremented
+          falsePositivesSpanAndTraceIdPairs: [
+            { spanId: 'span-fp-1', traceId: 'trace-fp-1' },
+          ],
+          falseNegativesSpanAndTraceIdPairs: [
+            { spanId: 'span-fn-1', traceId: 'trace-fn-1' },
+          ],
+          previousEvaluationConfiguration: {
+            criteria: evaluation.configuration.criteria,
+            passDescription: evaluation.configuration.passDescription,
+            failDescription: evaluation.configuration.failDescription,
+          },
         },
         {
           jobId: `generateEvaluationV2FromIssueJob:wf=${WORKFLOW_UUID}:generationAttempt=2`,
@@ -514,10 +555,17 @@ describe('calculateAlignmentMetricJob', () => {
         }),
       )
       mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
+      mockGetFalsePositivesAndFalseNegatives.mockReturnValue(
+        Result.ok({
+          falsePositives: [],
+          falseNegatives: [],
+        }),
+      )
 
       await calculateAlignmentMetricJob(jobData)
 
       expect(mockDeleteEvaluationV2).toHaveBeenCalled()
+      expect(mockGetFalsePositivesAndFalseNegatives).toHaveBeenCalled()
       expect(mockUpdateEvaluationV2).not.toHaveBeenCalled()
     })
 

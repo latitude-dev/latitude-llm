@@ -21,6 +21,19 @@ export type GenerateEvaluationV2FromIssueJobData = {
   model: string
   workflowUuid: string
   generationAttempt: number
+  falsePositivesSpanAndTraceIdPairs?: {
+    spanId: string
+    traceId: string
+  }[]
+  falseNegativesSpanAndTraceIdPairs?: {
+    spanId: string
+    traceId: string
+  }[]
+  previousEvaluationConfiguration?: {
+    criteria: string
+    passDescription: string
+    failDescription: string
+  }
 }
 
 /*
@@ -42,6 +55,9 @@ export const generateEvaluationV2FromIssueJob = async (
     model,
     workflowUuid,
     generationAttempt,
+    falsePositivesSpanAndTraceIdPairs,
+    falseNegativesSpanAndTraceIdPairs,
+    previousEvaluationConfiguration,
   } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
@@ -80,6 +96,9 @@ export const generateEvaluationV2FromIssueJob = async (
       model,
       workflowUuid,
       generationAttempt,
+      falsePositivesSpanAndTraceIdPairs,
+      falseNegativesSpanAndTraceIdPairs,
+      previousEvaluationConfiguration,
     }).then((r) => r.unwrap())
   } catch (error) {
     const { attemptsMade: jobRetryAttempts } = job

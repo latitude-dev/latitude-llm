@@ -19,6 +19,9 @@ export async function generateEvaluationFromIssue(
     model,
     workflowUuid,
     generationAttempt,
+    falsePositivesSpanAndTraceIdPairs,
+    falseNegativesSpanAndTraceIdPairs,
+    previousEvaluationConfiguration,
   }: {
     issue: Issue
     workspace: Workspace
@@ -27,6 +30,19 @@ export async function generateEvaluationFromIssue(
     model: string
     workflowUuid: string
     generationAttempt: number
+    falsePositivesSpanAndTraceIdPairs?: {
+      spanId: string
+      traceId: string
+    }[]
+    falseNegativesSpanAndTraceIdPairs?: {
+      spanId: string
+      traceId: string
+    }[]
+    previousEvaluationConfiguration?: {
+      criteria: string
+      passDescription: string
+      failDescription: string
+    }
   },
   transaction = new Transaction(),
 ) {
@@ -37,6 +53,9 @@ export async function generateEvaluationFromIssue(
       workspace,
       providerName,
       model,
+      falsePositivesSpanAndTraceIdPairs,
+      falseNegativesSpanAndTraceIdPairs,
+      previousEvaluationConfiguration,
     })
 
   if (!Result.isOk(evaluationConfigResult)) {
