@@ -14,18 +14,6 @@ export function InsufficientAnnotations({
   negativeAnnotationsOfThisIssue,
   positiveAndNegativeAnnotationsOfOtherIssues,
 }: InsufficientAnnotationsProps) {
-  const negativeAnnotationsOfThisIssueToReach =
-    negativeAnnotationsOfThisIssue < MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE
-      ? MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE -
-        negativeAnnotationsOfThisIssue
-      : 0
-  const positiveAndNegativeAnnotationsOfOtherIssuesToReach =
-    positiveAndNegativeAnnotationsOfOtherIssues <
-    MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES
-      ? MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES -
-        positiveAndNegativeAnnotationsOfOtherIssues
-      : 0
-
   return (
     <div className='grid grid-cols-2 gap-x-4 items-center'>
       <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
@@ -40,7 +28,7 @@ export function InsufficientAnnotations({
               strokeWidth={2.5}
             />
             <Text.H6M color='successMutedForeground'>
-              {positiveAndNegativeAnnotationsOfOtherIssuesToReach} /{' '}
+              {positiveAndNegativeAnnotationsOfOtherIssues} /{' '}
               {MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES}
             </Text.H6M>
           </div>
@@ -53,7 +41,7 @@ export function InsufficientAnnotations({
               strokeWidth={2.5}
             />
             <Text.H6M color='destructiveMutedForeground'>
-              {negativeAnnotationsOfThisIssueToReach} /{' '}
+              {negativeAnnotationsOfThisIssue} /{' '}
               {MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE}
             </Text.H6M>
           </div>
