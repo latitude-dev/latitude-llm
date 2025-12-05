@@ -433,7 +433,7 @@ describe('getSpanMessagesByIssueDocument', () => {
     expect(data[3]!.role).toBe(MessageRole.assistant)
   })
 
-  it('should limit results to 3 passed evaluation results', async () => {
+  it('should limit results to 5 passed evaluation results', async () => {
     // Create 5 passed evaluation results
     for (let i = 0; i < 5; i++) {
       const { promptSpan } = await createPromptSpanWithCompletion({
@@ -455,9 +455,9 @@ describe('getSpanMessagesByIssueDocument', () => {
     if (!result.ok) return
 
     const data = result.value!
-    // Should have messages from at most 3 evaluation results
-    // Each evaluation result has 2 messages (user + assistant), so max 6 messages
-    expect(data.length).toBeLessThanOrEqual(6)
+    // Should have messages from at most 5 evaluation results
+    // Each evaluation result has 2 messages (user + assistant), so max 10 messages
+    expect(data.length).toBeLessThanOrEqual(10)
   })
 
   describe('commit history filtering', () => {

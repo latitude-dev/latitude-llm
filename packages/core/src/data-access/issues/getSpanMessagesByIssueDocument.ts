@@ -35,7 +35,7 @@ export async function getSpanMessagesByIssueDocument({
     documentUuid: issue.documentUuid,
     excludeIssueId: issue.id,
     page: 1,
-    pageSize: 3,
+    pageSize: 5,
   })
 
   if (!Result.isOk(spansResult)) {

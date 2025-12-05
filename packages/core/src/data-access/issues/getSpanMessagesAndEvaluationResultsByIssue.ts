@@ -41,7 +41,7 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
     workspace: workspace,
     commit: commit,
     issue: issue,
-    pageSize: 3,
+    pageSize: 5,
     page: 1,
   })
 
