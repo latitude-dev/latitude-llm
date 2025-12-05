@@ -1,14 +1,14 @@
-import { QualityMetricMetadata } from '@latitude-data/constants'
-import { EVALUATION_QUALITY_EXPLANATION } from '@latitude-data/constants/issues'
+import { AlignmentMetricMetadata } from '@latitude-data/constants'
+import { EVALUATION_ALIGNMENT_EXPLANATION } from '@latitude-data/constants/issues'
 
 export function ConfusionMatrixTooltipContent({
   confusionMatrix,
 }: {
-  confusionMatrix?: QualityMetricMetadata['confusionMatrix']
+  confusionMatrix?: AlignmentMetricMetadata['confusionMatrix']
 }) {
   return (
     <div className='flex flex-col gap-2'>
-      <div>{EVALUATION_QUALITY_EXPLANATION}</div>
+      <div>{EVALUATION_ALIGNMENT_EXPLANATION}</div>
       <ConfusionMatrixTable confusionMatrix={confusionMatrix} />
     </div>
   )
@@ -17,7 +17,7 @@ export function ConfusionMatrixTooltipContent({
 function ConfusionMatrixTable({
   confusionMatrix,
 }: {
-  confusionMatrix?: QualityMetricMetadata['confusionMatrix']
+  confusionMatrix?: AlignmentMetricMetadata['confusionMatrix']
 }) {
   if (!confusionMatrix) {
     return null

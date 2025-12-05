@@ -13,7 +13,7 @@ import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { ConfusionMatrixTooltipContent } from '$/components/ConfusionMatrix'
 
-export default function QualityMetricChart<
+export default function AlignmentMetricChart<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 >({ isLoading }: { isLoading?: boolean }) {
@@ -27,10 +27,10 @@ export default function QualityMetricChart<
     issueId: evaluation.issueId,
   })
 
-  const qualityMetric = evaluation.qualityMetric
-  const confusionMatrix = evaluation.qualityMetricMetadata?.confusionMatrix
+  const alignmentMetric = evaluation.alignmentMetric
+  const confusionMatrix = evaluation.alignmentMetricMetadata?.confusionMatrix
 
-  const qualityMetricLink =
+  const alignmentMetricLink =
     ROUTES.projects
       .detail({ id: project.id })
       .commits.detail({ uuid: commit.uuid }).issues.root +
@@ -38,17 +38,17 @@ export default function QualityMetricChart<
 
   return (
     <ChartWrapper
-      label='Quality'
+      label='Alignment'
       tooltip={
         <ConfusionMatrixTooltipContent confusionMatrix={confusionMatrix} />
       }
       loading={isLoading}
     >
-      {qualityMetric !== undefined && qualityMetric !== null ? (
+      {alignmentMetric !== undefined && alignmentMetric !== null ? (
         <div className='flex flex-row items-center gap-1'>
-          <PanelChart data={`${Math.round(qualityMetric)}%`} />
+          <PanelChart data={`${Math.round(alignmentMetric)}%`} />
 
-          <Link href={qualityMetricLink} target='_blank'>
+          <Link href={alignmentMetricLink} target='_blank'>
             <Icon
               name='externalLink'
               color='foregroundMuted'
@@ -60,7 +60,7 @@ export default function QualityMetricChart<
       ) : !issue ? (
         <ChartBlankSlate>No issue linked to this evaluation</ChartBlankSlate>
       ) : (
-        <ChartBlankSlate>No quality metric available</ChartBlankSlate>
+        <ChartBlankSlate>No alignment metric available</ChartBlankSlate>
       )}
     </ChartWrapper>
   )

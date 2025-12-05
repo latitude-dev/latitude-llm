@@ -2,7 +2,7 @@ import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { cn } from '@latitude-data/web-ui/utils'
 import AverageScoreChart from './charts/AverageScore'
 import DailyOverviewChart from './charts/DailyOverview'
-import QualityMetricChart from './charts/QualityMetric'
+import AlignmentMetricChart from './charts/AlignmentMetric'
 import TotalCostChart from './charts/TotalCost'
 import TotalResultsChart from './charts/TotalResults'
 import VersionOverviewChart from './charts/VersionOverview'
@@ -42,7 +42,7 @@ export function EvaluationStats<
           {evaluation.type === EvaluationType.Llm && (
             <>
               <TotalCostChart stats={stats} isLoading={isLoading} />
-              <QualityMetricChart isLoading={isLoading} />
+              <AlignmentMetricChart isLoading={isLoading} />
             </>
           )}
           {evaluation.type !== EvaluationType.Llm && (

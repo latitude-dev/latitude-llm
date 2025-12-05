@@ -33,7 +33,7 @@ export async function validateEvaluationV2<
     commit,
     workspace,
     issue,
-    qualityMetric,
+    alignmentMetric,
   }: {
     mode: 'create' | 'update'
     evaluation?: EvaluationV2<T, M>
@@ -43,7 +43,7 @@ export async function validateEvaluationV2<
     commit: Commit
     workspace: Workspace
     issue: Issue | null
-    qualityMetric?: number
+    alignmentMetric?: number
   },
   db = database,
 ) {
@@ -186,9 +186,11 @@ export async function validateEvaluationV2<
     )
   }
 
-  if (qualityMetric && (qualityMetric < 0 || qualityMetric > 100)) {
+  if (alignmentMetric && (alignmentMetric < 0 || alignmentMetric > 100)) {
     return Result.error(
-      new BadRequestError(`Quality metric must be a number between 0 and 100`),
+      new BadRequestError(
+        `Alignment metric must be a number between 0 and 100`,
+      ),
     )
   }
 

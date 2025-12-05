@@ -16,7 +16,7 @@ const MAX_COMPARISON_ANNOTATIONS = 100
 
 /*
   This function validates an existing evaluation by calculating its MCC (Matthews Correlation Coefficient),
-    and updating the evaluation with the new quality metric
+    and updating the evaluation with the new alignment metric
 
   To do this, it finds a set of positive and negative evaluation results from the issue and other issues/positive annotations of the same document,
    and runs it against the created evalaluation. 
@@ -86,7 +86,7 @@ export async function createValidationFlow(
   })
 
   const { job: validationFlowJob } = await flowProducer.add({
-    name: `calculateQualityMetricJob`,
+    name: `calculateAlignmentMetricJob`,
     queueName: Queues.generateEvaluationsQueue,
     data: {
       workspaceId: workspace.id,
@@ -103,7 +103,7 @@ export async function createValidationFlow(
     },
     opts: {
       // Idempotency key
-      jobId: `calculateQualityMetricJob-wf=${workflowUuid}-generationAttempt=${generationAttempt}`,
+      jobId: `calculateAlignmentMetricJob-wf=${workflowUuid}-generationAttempt=${generationAttempt}`,
       // FlowProducer does not inherit
       attempts: 3,
       backoff: {
@@ -131,7 +131,7 @@ export async function createValidationFlow(
           type: 'fixed',
           delay: 1000,
         },
-        continueParentOnFailure: true, // If an evaluation run fails, continue the flow to calculate the quality metric
+        continueParentOnFailure: true, // If an evaluation run fails, continue the flow to calculate the alignment metric
       },
     })),
   })

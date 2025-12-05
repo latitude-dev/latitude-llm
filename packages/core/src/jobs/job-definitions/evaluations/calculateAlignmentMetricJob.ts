@@ -3,7 +3,7 @@ import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { NotFoundError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { evaluateConfiguration } from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
-import { MIN_QUALITY_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
+import { MIN_ALIGNMENT_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
 import {
   CommitsRepository,
   EvaluationsV2Repository,
@@ -18,7 +18,7 @@ import { EvaluationV2 } from '../../../constants'
 import { Commit } from '../../../schema/models/types/Commit'
 import { Workspace } from '../../../schema/models/types/Workspace'
 
-export type CalculateQualityMetricJobData = {
+export type CalculateAlignmentMetricJobData = {
   workspaceId: number
   commitId: number
   workflowUuid: string
@@ -39,18 +39,18 @@ export type CalculateQualityMetricJobData = {
 }
 
 /*
-  This job is a parent job of a BullMQ flow which calculates the quality metric of an evaluation when all its runEvaluationV2Job children have finished.
-  The quality metric used at the moment is the MCC (Matthews Correlation Coefficient)
+  This job is a parent job of a BullMQ flow which calculates the alignment metric of an evaluation when all its runEvaluationV2Job children have finished.
+  The alignment metric used at the moment is the MCC (Matthews Correlation Coefficient)
 
   The possible scenarios of this job are:
-  1. The job is successful (no error and not retrying the generation) -> update the evaluation with the quality metric and end the active evaluation
+  1. The job is successful (no error and not retrying the generation) -> update the evaluation with the alignment metric and end the active evaluation
   2. The job failed but not in the last attempt -> let BullMQ retry the job
   3. The job failed in the last attempt -> fail the active evaluation and end the active evaluation
   4. The job is retrying the generation -> delete the evaluation and retry the generation
 */
 
-export const calculateQualityMetricJob = async (
-  job: Job<CalculateQualityMetricJobData>,
+export const calculateAlignmentMetricJob = async (
+  job: Job<CalculateAlignmentMetricJobData>,
 ) => {
   const {
     workspaceId,
@@ -110,7 +110,7 @@ export const calculateQualityMetricJob = async (
       spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     }).then((r) => r.unwrap())
 
-    if (mcc < MIN_QUALITY_METRIC_THRESHOLD) {
+    if (mcc < MIN_ALIGNMENT_METRIC_THRESHOLD) {
       return await deleteEvaluationAndRetryGeneration({
         evaluation: evaluation,
         commit: commit,
@@ -127,8 +127,8 @@ export const calculateQualityMetricJob = async (
       evaluation,
       workspace,
       commit: commit,
-      qualityMetric: mcc,
-      qualityMetricMetadata: {
+      alignmentMetric: mcc,
+      alignmentMetricMetadata: {
         confusionMatrix,
       },
     }).then((r) => r.unwrap())
@@ -141,7 +141,7 @@ export const calculateQualityMetricJob = async (
     if (!Result.isOk(endResult)) {
       captureException(
         new Error(
-          `[CalculateQualityMetricJob] Failed to end active evaluation`,
+          `[CalculateAlignmentMetricJob] Failed to end active evaluation`,
         ),
       )
     }
@@ -151,7 +151,7 @@ export const calculateQualityMetricJob = async (
     // Job attemptsMade starts at 0
     const isLastAttempt = attemptsMade + 1 >= maxAttempts
 
-    // Only failing in last attempt of the job, there are more attempts to retry to calculate the quality metric if not
+    // Only failing in last attempt of the job, there are more attempts to retry to calculate the alignment metric if not
     if (isLastAttempt) {
       await deleteEvaluationV2({
         evaluation: evaluation,
@@ -171,7 +171,7 @@ export const calculateQualityMetricJob = async (
       if (!Result.isOk(failResult)) {
         captureException(
           new Error(
-            `[CalculateQualityMetricJob] Failed to fail active evaluation`,
+            `[CalculateAlignmentMetricJob] Failed to fail active evaluation`,
           ),
         )
       }
@@ -184,7 +184,7 @@ export const calculateQualityMetricJob = async (
       if (!Result.isOk(endResult)) {
         captureException(
           new Error(
-            `[CalculateQualityMetricJob] Failed to end active evaluation`,
+            `[CalculateAlignmentMetricJob] Failed to end active evaluation`,
           ),
         )
       }
