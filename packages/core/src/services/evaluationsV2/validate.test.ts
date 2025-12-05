@@ -533,7 +533,7 @@ describe('validateEvaluationV2', () => {
     )
   })
 
-  it('fails when qualityMetric is less than 0', async () => {
+  it('fails when alignmentMetric is less than 0', async () => {
     await expect(
       validateEvaluationV2({
         mode: 'create',
@@ -543,14 +543,16 @@ describe('validateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
         issue: null,
-        qualityMetric: -1,
+        alignmentMetric: -1,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Quality metric must be a number between 0 and 100'),
+      new BadRequestError(
+        'Alignment metric must be a number between 0 and 100',
+      ),
     )
   })
 
-  it('fails when qualityMetric is greater than 100', async () => {
+  it('fails when alignmentMetric is greater than 100', async () => {
     await expect(
       validateEvaluationV2({
         mode: 'create',
@@ -560,14 +562,16 @@ describe('validateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
         issue: null,
-        qualityMetric: 101,
+        alignmentMetric: 101,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Quality metric must be a number between 0 and 100'),
+      new BadRequestError(
+        'Alignment metric must be a number between 0 and 100',
+      ),
     )
   })
 
-  it('succeeds when qualityMetric is 0', async () => {
+  it('succeeds when alignmentMetric is 0', async () => {
     const { settings: validatedSettings, options: validatedOptions } =
       await validateEvaluationV2({
         mode: 'create',
@@ -577,14 +581,14 @@ describe('validateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
         issue: null,
-        qualityMetric: 0,
+        alignmentMetric: 0,
       }).then((r) => r.unwrap())
 
     expect(validatedSettings).toEqual(settings)
     expect(validatedOptions).toEqual(options)
   })
 
-  it('succeeds when qualityMetric is 100', async () => {
+  it('succeeds when alignmentMetric is 100', async () => {
     const { settings: validatedSettings, options: validatedOptions } =
       await validateEvaluationV2({
         mode: 'create',
@@ -594,14 +598,14 @@ describe('validateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
         issue: null,
-        qualityMetric: 100,
+        alignmentMetric: 100,
       }).then((r) => r.unwrap())
 
     expect(validatedSettings).toEqual(settings)
     expect(validatedOptions).toEqual(options)
   })
 
-  it('succeeds when qualityMetric is a valid value between 0 and 100', async () => {
+  it('succeeds when alignmentMetric is a valid value between 0 and 100', async () => {
     const { settings: validatedSettings, options: validatedOptions } =
       await validateEvaluationV2({
         mode: 'create',
@@ -611,14 +615,14 @@ describe('validateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
         issue: null,
-        qualityMetric: 75,
+        alignmentMetric: 75,
       }).then((r) => r.unwrap())
 
     expect(validatedSettings).toEqual(settings)
     expect(validatedOptions).toEqual(options)
   })
 
-  it('succeeds when qualityMetric is not provided', async () => {
+  it('succeeds when alignmentMetric is not provided', async () => {
     const { settings: validatedSettings, options: validatedOptions } =
       await validateEvaluationV2({
         mode: 'create',

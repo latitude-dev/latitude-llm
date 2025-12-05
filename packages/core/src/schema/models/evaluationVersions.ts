@@ -15,7 +15,7 @@ import {
   EvaluationConfiguration,
   EvaluationMetric,
   EvaluationType,
-  QualityMetricMetadata,
+  AlignmentMetricMetadata,
 } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -48,11 +48,11 @@ export const evaluationVersions = latitudeSchema.table(
     configuration: jsonb('configuration')
       .notNull()
       .$type<EvaluationConfiguration>(),
-    // Currently MCC, but generalizing name to qualityMetric to allow for other metrics in the future
-    qualityMetric: bigint('quality_metric', { mode: 'number' }),
-    qualityMetricMetadata: jsonb(
-      'quality_metric_metadata',
-    ).$type<QualityMetricMetadata>(),
+    // Currently MCC, but generalizing name to alignmentMetric to allow for other metrics in the future
+    alignmentMetric: bigint('alignment_metric', { mode: 'number' }),
+    alignmentMetricMetadata: jsonb(
+      'alignment_metric_metadata',
+    ).$type<AlignmentMetricMetadata>(),
     // Denormalized configuration fields - create indexes if necessary
     evaluateLiveLogs: boolean('evaluate_live_logs'),
     enableSuggestions: boolean('enable_suggestions'),

@@ -1,7 +1,7 @@
 import { Result } from '../../../lib/Result'
 
 /*
-We use the MCC (Matthews Correlation Coefficient) to calculate the quality of the evaluation for a binary classification of the selected issue.
+We use the MCC (Matthews Correlation Coefficient) to calculate the alignment of the evaluation for a binary classification of the selected issue.
 We've decided we need, at least:
 - 5 negative annotations for this issue
 - 5 positive or other negative annotations for other issues of the same document

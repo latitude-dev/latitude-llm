@@ -5,7 +5,7 @@ import {
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
-  QualityMetricMetadata,
+  AlignmentMetricMetadata,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
@@ -35,8 +35,8 @@ export async function updateEvaluationV2<
     options,
     issueId,
     workspace,
-    qualityMetric,
-    qualityMetricMetadata,
+    alignmentMetric,
+    alignmentMetricMetadata,
   }: {
     evaluation: EvaluationV2<T, M>
     commit: Commit
@@ -44,8 +44,8 @@ export async function updateEvaluationV2<
     settings?: Partial<Omit<EvaluationSettings<T, M>, 'type' | 'metric'>>
     options?: Partial<EvaluationOptions>
     issueId?: number | null
-    qualityMetric?: number
-    qualityMetricMetadata?: QualityMetricMetadata
+    alignmentMetric?: number
+    alignmentMetricMetadata?: AlignmentMetricMetadata
   },
   transaction = new Transaction(),
 ) {
@@ -102,7 +102,7 @@ export async function updateEvaluationV2<
         commit: commit,
         workspace: workspace,
         issue: issue,
-        qualityMetric: qualityMetric,
+        alignmentMetric: alignmentMetric,
       },
       tx,
     )
@@ -117,8 +117,8 @@ export async function updateEvaluationV2<
         id: undefined,
         commitId: commit.id,
         issueId: issueId !== undefined ? issueId : evaluation.issueId,
-        qualityMetric,
-        qualityMetricMetadata,
+        alignmentMetric,
+        alignmentMetricMetadata,
         ...settings,
         ...options,
         updatedAt: new Date(),
@@ -133,8 +133,8 @@ export async function updateEvaluationV2<
           ...options,
           updatedAt: new Date(),
           issueId: issueId !== undefined ? issueId : evaluation.issueId,
-          qualityMetric,
-          qualityMetricMetadata,
+          alignmentMetric,
+          alignmentMetricMetadata,
         },
       })
       .returning()

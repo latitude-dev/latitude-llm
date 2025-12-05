@@ -2,7 +2,7 @@ import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Result } from '../../../lib/Result'
 import { NotFoundError } from '../../../lib/errors'
-import { MIN_QUALITY_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
+import { MIN_ALIGNMENT_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
 import {
   EvaluationV2,
   Providers,
@@ -13,9 +13,9 @@ import type { Commit } from '../../../schema/models/types/Commit'
 import type { Workspace } from '../../../schema/models/types/Workspace'
 import type { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import {
-  calculateQualityMetricJob,
-  type CalculateQualityMetricJobData,
-} from './calculateQualityMetricJob'
+  calculateAlignmentMetricJob,
+  type CalculateAlignmentMetricJobData,
+} from './calculateAlignmentMetricJob'
 import * as evaluateConfigurationModule from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
 import * as updateEvaluationV2Module from '../../../services/evaluationsV2/update'
 import * as endActiveEvaluationModule from '../../../services/evaluationsV2/active/end'
@@ -60,7 +60,7 @@ vi.mock('../../../utils/datadogCapture', () => ({
   captureException: vi.fn(),
 }))
 
-describe('calculateQualityMetricJob', () => {
+describe('calculateAlignmentMetricJob', () => {
   const mockEvaluateConfiguration = vi.mocked(
     evaluateConfigurationModule.evaluateConfiguration,
   )
@@ -82,12 +82,12 @@ describe('calculateQualityMetricJob', () => {
   let commit: Commit
   let evaluation: EvaluationV2
   let document: DocumentVersion
-  let jobData: Job<CalculateQualityMetricJobData>
+  let jobData: Job<CalculateAlignmentMetricJobData>
   const WORKFLOW_UUID = 'test-workflow-uuid'
 
   function buildJobData(
-    overrides: Partial<CalculateQualityMetricJobData> = {},
-  ): CalculateQualityMetricJobData {
+    overrides: Partial<CalculateAlignmentMetricJobData> = {},
+  ): CalculateAlignmentMetricJobData {
     return {
       workspaceId: workspace.id,
       commitId: commit.id,
@@ -109,10 +109,10 @@ describe('calculateQualityMetricJob', () => {
   }
 
   function createMockJob(
-    data: CalculateQualityMetricJobData,
+    data: CalculateAlignmentMetricJobData,
     attemptsMade = 0,
     maxAttempts = 3,
-  ): Job<CalculateQualityMetricJobData> {
+  ): Job<CalculateAlignmentMetricJobData> {
     return {
       id: 'test-job-id',
       data,
@@ -128,7 +128,7 @@ describe('calculateQualityMetricJob', () => {
         'job-1': { hasPassed: true },
         'job-2': { hasPassed: false },
       }),
-    } as unknown as Job<CalculateQualityMetricJobData>
+    } as unknown as Job<CalculateAlignmentMetricJobData>
   }
 
   beforeEach(async () => {
@@ -183,7 +183,7 @@ describe('calculateQualityMetricJob', () => {
       jobData = createMockJob(buildJobData())
       mockEvaluateConfiguration.mockResolvedValue(
         Result.ok({
-          mcc: MIN_QUALITY_METRIC_THRESHOLD + 10,
+          mcc: MIN_ALIGNMENT_METRIC_THRESHOLD + 10,
           confusionMatrix: {
             truePositives: 8,
             trueNegatives: 8,
@@ -196,8 +196,8 @@ describe('calculateQualityMetricJob', () => {
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
     })
 
-    it('should update evaluation with quality metric and end active evaluation', async () => {
-      await calculateQualityMetricJob(jobData)
+    it('should update evaluation with alignment metric and end active evaluation', async () => {
+      await calculateAlignmentMetricJob(jobData)
 
       expect(mockEvaluateConfiguration).toHaveBeenCalledWith({
         childrenValues: expect.any(Object),
@@ -213,8 +213,8 @@ describe('calculateQualityMetricJob', () => {
         evaluation: expect.objectContaining({ uuid: evaluation.uuid }),
         workspace,
         commit,
-        qualityMetric: MIN_QUALITY_METRIC_THRESHOLD + 10,
-        qualityMetricMetadata: {
+        alignmentMetric: MIN_ALIGNMENT_METRIC_THRESHOLD + 10,
+        alignmentMetricMetadata: {
           confusionMatrix: {
             truePositives: 8,
             trueNegatives: 8,
@@ -255,7 +255,7 @@ describe('calculateQualityMetricJob', () => {
     it('should throw error but not fail or end active evaluation', async () => {
       // The error should propagate (no return in finally for this case)
       // This allows BullMQ to retry the job without modifying the active evaluation state
-      await expect(calculateQualityMetricJob(jobData)).rejects.toThrow(
+      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
         'Test error',
       )
 
@@ -284,7 +284,7 @@ describe('calculateQualityMetricJob', () => {
     })
 
     it('should fail and end active evaluation on last attempt', async () => {
-      await expect(calculateQualityMetricJob(jobData)).rejects.toThrow(
+      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
         'Test error',
       )
 
@@ -316,7 +316,7 @@ describe('calculateQualityMetricJob', () => {
       jobData = createMockJob(buildJobData())
       mockEvaluateConfiguration.mockResolvedValue(
         Result.ok({
-          mcc: MIN_QUALITY_METRIC_THRESHOLD - 10,
+          mcc: MIN_ALIGNMENT_METRIC_THRESHOLD - 10,
           confusionMatrix: {
             truePositives: 2,
             trueNegatives: 2,
@@ -329,7 +329,7 @@ describe('calculateQualityMetricJob', () => {
     })
 
     it('should delete evaluation, queue new generation job, and not fail or end active evaluation', async () => {
-      await calculateQualityMetricJob(jobData)
+      await calculateAlignmentMetricJob(jobData)
 
       expect(mockDeleteEvaluationV2).toHaveBeenCalledWith({
         evaluation: expect.objectContaining({ uuid: evaluation.uuid }),
@@ -367,10 +367,10 @@ describe('calculateQualityMetricJob', () => {
         workspaceId: 999999,
       })
 
-      await expect(calculateQualityMetricJob(jobData)).rejects.toThrow(
+      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
         NotFoundError,
       )
-      await expect(calculateQualityMetricJob(jobData)).rejects.toThrow(
+      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
         'Workspace not found',
       )
     })
@@ -381,7 +381,7 @@ describe('calculateQualityMetricJob', () => {
         commitId: 999999,
       })
 
-      await expect(calculateQualityMetricJob(jobData)).rejects.toThrow(
+      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
         'Commit not found',
       )
     })
@@ -404,7 +404,7 @@ describe('calculateQualityMetricJob', () => {
       )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
-      await expect(calculateQualityMetricJob(jobData)).rejects.toThrow(
+      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
         '0 failed and 5 ignored children. Waiting for 15 unprocessed children to complete',
       )
 
@@ -427,7 +427,7 @@ describe('calculateQualityMetricJob', () => {
       )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
-      await expect(calculateQualityMetricJob(jobData)).rejects.toThrow()
+      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow()
 
       expect(mockFailActiveEvaluation).toHaveBeenCalled()
       expect(mockEndActiveEvaluation).toHaveBeenCalled()
@@ -458,7 +458,7 @@ describe('calculateQualityMetricJob', () => {
       )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
-      await expect(calculateQualityMetricJob(jobData)).rejects.toThrow()
+      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow()
 
       expect(mockFailActiveEvaluation).toHaveBeenCalled()
       expect(mockEndActiveEvaluation).toHaveBeenCalled()
@@ -470,7 +470,7 @@ describe('calculateQualityMetricJob', () => {
       jobData = createMockJob(buildJobData())
       mockEvaluateConfiguration.mockResolvedValue(
         Result.ok({
-          mcc: MIN_QUALITY_METRIC_THRESHOLD,
+          mcc: MIN_ALIGNMENT_METRIC_THRESHOLD,
           confusionMatrix: {
             truePositives: 5,
             trueNegatives: 5,
@@ -482,12 +482,12 @@ describe('calculateQualityMetricJob', () => {
       mockUpdateEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
-      await calculateQualityMetricJob(jobData)
+      await calculateAlignmentMetricJob(jobData)
 
       expect(mockUpdateEvaluationV2).toHaveBeenCalledWith(
         expect.objectContaining({
-          qualityMetric: MIN_QUALITY_METRIC_THRESHOLD,
-          qualityMetricMetadata: {
+          alignmentMetric: MIN_ALIGNMENT_METRIC_THRESHOLD,
+          alignmentMetricMetadata: {
             confusionMatrix: {
               truePositives: 5,
               trueNegatives: 5,
@@ -504,7 +504,7 @@ describe('calculateQualityMetricJob', () => {
       jobData = createMockJob(buildJobData())
       mockEvaluateConfiguration.mockResolvedValue(
         Result.ok({
-          mcc: MIN_QUALITY_METRIC_THRESHOLD - 1,
+          mcc: MIN_ALIGNMENT_METRIC_THRESHOLD - 1,
           confusionMatrix: {
             truePositives: 4,
             trueNegatives: 4,
@@ -515,7 +515,7 @@ describe('calculateQualityMetricJob', () => {
       )
       mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
 
-      await calculateQualityMetricJob(jobData)
+      await calculateAlignmentMetricJob(jobData)
 
       expect(mockDeleteEvaluationV2).toHaveBeenCalled()
       expect(mockUpdateEvaluationV2).not.toHaveBeenCalled()
@@ -529,14 +529,14 @@ describe('calculateQualityMetricJob', () => {
       )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
-      await expect(calculateQualityMetricJob(jobData)).rejects.toThrow(
+      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
         'Test error',
       )
 
       expect(captureException).toHaveBeenCalledWith(
         expect.objectContaining({
           message:
-            '[CalculateQualityMetricJob] Failed to fail active evaluation',
+            '[CalculateAlignmentMetricJob] Failed to fail active evaluation',
         }),
       )
     })
@@ -559,12 +559,12 @@ describe('calculateQualityMetricJob', () => {
         Result.error(new Error('Failed to end')),
       )
 
-      await calculateQualityMetricJob(jobData)
+      await calculateAlignmentMetricJob(jobData)
 
       expect(captureException).toHaveBeenCalledWith(
         expect.objectContaining({
           message:
-            '[CalculateQualityMetricJob] Failed to end active evaluation',
+            '[CalculateAlignmentMetricJob] Failed to end active evaluation',
         }),
       )
     })

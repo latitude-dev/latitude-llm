@@ -69,7 +69,7 @@ export function EvaluationWithIssue({
       </div>
       <div className='flex flex-row items-center gap-1'>
         <Icon name='cornerDownRight' size='small' color='foregroundMuted' />
-        <Text.H5 color='foregroundMuted'>Quality</Text.H5>
+        <Text.H5 color='foregroundMuted'>Alignment</Text.H5>
         <Tooltip
           align='center'
           side='bottom'
@@ -77,13 +77,13 @@ export function EvaluationWithIssue({
         >
           <ConfusionMatrixTooltipContent
             confusionMatrix={
-              evaluationWithIssue.qualityMetricMetadata?.confusionMatrix
+              evaluationWithIssue.alignmentMetricMetadata?.confusionMatrix
             }
           />
         </Tooltip>
       </div>
       <Text.H5 color='foreground'>
-        {Math.round(evaluationWithIssue.qualityMetric ?? 0)}%
+        {Math.round(evaluationWithIssue.alignmentMetric ?? 0)}%
       </Text.H5>
     </div>
   )

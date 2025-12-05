@@ -260,14 +260,14 @@ describe('updateEvaluationV2', () => {
     })
   })
 
-  it('succeeds when updating qualityMetric', async () => {
+  it('succeeds when updating alignmentMetric', async () => {
     mocks.publisher.mockClear()
 
     const { evaluation: updatedEvaluation } = await updateEvaluationV2({
       evaluation: evaluation,
       commit: commit,
       workspace: workspace,
-      qualityMetric: 85,
+      alignmentMetric: 85,
     }).then((r) => r.unwrap())
 
     const dbEvaluation = await database
@@ -277,7 +277,7 @@ describe('updateEvaluationV2', () => {
       .orderBy(desc(evaluationVersions.updatedAt))
       .then((r) => r[0]!)
 
-    expect(dbEvaluation.qualityMetric).toBe(85)
+    expect(dbEvaluation.alignmentMetric).toBe(85)
     expect(mocks.publisher).toHaveBeenCalledExactlyOnceWith({
       type: 'evaluationV2Updated',
       data: {

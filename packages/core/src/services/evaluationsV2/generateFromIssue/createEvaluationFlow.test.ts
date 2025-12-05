@@ -540,7 +540,7 @@ describe('createValidationFlow', () => {
     // Verify FlowProducer was called correctly
     expect(mockFlowProducer.add).toHaveBeenCalledTimes(1)
     const callArgs = mockFlowProducer.add.mock.calls[0]![0]
-    expect(callArgs.name).toBe('calculateQualityMetricJob')
+    expect(callArgs.name).toBe('calculateAlignmentMetricJob')
     expect(callArgs.data.workspaceId).toBe(workspace.id)
     expect(callArgs.data.commitId).toBe(commit.id)
     expect(callArgs.data.workflowUuid).toBe(TEST_WORKFLOW_UUID)
