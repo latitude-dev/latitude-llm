@@ -14,6 +14,17 @@ export function InsufficientAnnotations({
   negativeAnnotationsOfThisIssue,
   positiveAndNegativeAnnotationsOfOtherIssues,
 }: InsufficientAnnotationsProps) {
+  // We want to avoid showing more annotations than the minimum required
+  const negativeAnnotations =
+    negativeAnnotationsOfThisIssue < MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE
+      ? negativeAnnotationsOfThisIssue
+      : MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE
+  const positiveAnnotations =
+    positiveAndNegativeAnnotationsOfOtherIssues <
+    MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES
+      ? positiveAndNegativeAnnotationsOfOtherIssues
+      : MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES
+
   return (
     <div className='grid grid-cols-2 gap-x-4 items-center'>
       <Text.H5 color='foregroundMuted'>Evaluation</Text.H5>
@@ -28,7 +39,7 @@ export function InsufficientAnnotations({
               strokeWidth={2.5}
             />
             <Text.H6M color='successMutedForeground'>
-              {positiveAndNegativeAnnotationsOfOtherIssues} /{' '}
+              {positiveAnnotations} /{' '}
               {MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES}
             </Text.H6M>
           </div>
@@ -41,7 +52,7 @@ export function InsufficientAnnotations({
               strokeWidth={2.5}
             />
             <Text.H6M color='destructiveMutedForeground'>
-              {negativeAnnotationsOfThisIssue} /{' '}
+              {negativeAnnotations} /{' '}
               {MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE}
             </Text.H6M>
           </div>
