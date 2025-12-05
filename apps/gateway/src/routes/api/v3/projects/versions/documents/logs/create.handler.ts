@@ -249,21 +249,10 @@ async function createSpansFromLogData({
     .then((r) => r.unwrap())
   await cache.del(completionMetadataKey)
 
-  // FIXME: Review why we're publishing 2 events here.
   await publisher.publishLater({
     type: 'spanCreated',
     data: {
       spanId: promptSpanId,
-      traceId,
-      apiKeyId: apiKey.id,
-      workspaceId: workspace.id,
-      documentUuid: document.documentUuid,
-    },
-  })
-  await publisher.publishLater({
-    type: 'spanCreated',
-    data: {
-      spanId: completionSpanId,
       traceId,
       apiKeyId: apiKey.id,
       workspaceId: workspace.id,
