@@ -108,7 +108,7 @@ export async function createValidationFlow(
       attempts: 3,
       backoff: {
         type: 'exponential',
-        delay: 2000,
+        delay: 2000, // Need at least 2s for cases when runEval fails and we wait for the unprocessed children to finish
       },
     },
     children: allSpans.map((span) => ({
@@ -142,7 +142,6 @@ export async function createValidationFlow(
     )
   }
 
-  console.log('validationFlowJob', validationFlowJob.id)
   return Result.ok(validationFlowJob)
 }
 /*
