@@ -1,10 +1,11 @@
-import { and, eq, sql } from 'drizzle-orm'
 import { Result } from '../../lib/Result'
-import { EvaluationResultsV2Repository } from '../../repositories'
+import {
+  EvaluationResultsV2Repository,
+  SpansRepository,
+} from '../../repositories'
 import { Commit } from '../../schema/models/types/Commit'
 import { Workspace } from '../../schema/models/types/Workspace'
-import { spans } from '../../schema/models/spans'
-import { Span, SpanType } from '@latitude-data/constants'
+import { Span } from '@latitude-data/constants'
 import { database } from '../../client'
 
 /**
@@ -61,33 +62,9 @@ export async function getHITLSpansByDocument(
     })
   }
 
-  const spanTraceIdPairs = paginatedResults.map(
-    (result) => sql`(${result.evaluatedSpanId}, ${result.evaluatedTraceId})`,
-  )
-
-  const fetchedSpans = await db
-    .select()
-    .from(spans)
-    .where(
-      and(
-        eq(spans.workspaceId, workspace.id),
-        sql`(${spans.id}, ${spans.traceId}) IN (${sql.join(spanTraceIdPairs, sql`, `)})`,
-        eq(spans.type, SpanType.Prompt),
-      ),
-    )
-
-  const spanMap = new Map<string, Span>()
-  for (const span of fetchedSpans) {
-    const key = `${span.id}:${span.traceId}`
-    spanMap.set(key, span as Span)
-  }
-
-  const orderedSpans = paginatedResults
-    .map((result) => {
-      const key = `${result.evaluatedSpanId}:${result.evaluatedTraceId}`
-      return spanMap.get(key)
-    })
-    .filter((span): span is Span => span !== undefined)
+  const spansRepository = new SpansRepository(workspace.id, db)
+  const orderedSpans =
+    await spansRepository.findByEvaluationResults(paginatedResults)
 
   return Result.ok({
     spans: orderedSpans,

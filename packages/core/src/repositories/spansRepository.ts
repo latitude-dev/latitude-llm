@@ -29,6 +29,7 @@ import { Result } from '../lib/Result'
 import { commits } from '../schema/models/commits'
 import { spans } from '../schema/models/spans'
 import Repository from './repositoryV2'
+import { EvaluationResultV2 } from '@latitude-data/constants'
 
 const tt = getTableColumns(spans)
 
@@ -308,6 +309,43 @@ export class SpansRepository extends Repository<Span> {
     }
 
     return Result.ok<Record<LogSources, number>>(countsBySource)
+  }
+
+  async findByEvaluationResults(
+    evaluationResults: Pick<
+      EvaluationResultV2,
+      'evaluatedSpanId' | 'evaluatedTraceId'
+    >[],
+  ) {
+    const spanTraceIdPairs = evaluationResults.map(
+      (result) => sql`(${result.evaluatedSpanId}, ${result.evaluatedTraceId})`,
+    )
+
+    const fetchedSpans = await this.db
+      .select()
+      .from(spans)
+      .where(
+        and(
+          this.scopeFilter,
+          sql`(${spans.id}, ${spans.traceId}) IN (${sql.join(spanTraceIdPairs, sql`, `)})`,
+          eq(spans.type, SpanType.Prompt),
+        ),
+      )
+
+    const spanMap = new Map<string, Span>()
+    for (const span of fetchedSpans) {
+      const key = `${span.id}:${span.traceId}`
+      spanMap.set(key, span as Span)
+    }
+
+    const orderedSpans = evaluationResults
+      .map((result) => {
+        const key = `${result.evaluatedSpanId}:${result.evaluatedTraceId}`
+        return spanMap.get(key)
+      })
+      .filter((span): span is Span => span !== undefined)
+
+    return orderedSpans
   }
 }
 
