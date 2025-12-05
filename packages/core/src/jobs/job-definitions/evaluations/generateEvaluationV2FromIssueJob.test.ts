@@ -195,6 +195,9 @@ describe('generateEvaluationV2FromIssueJob', () => {
       expect(callArgs.model).toBe(MODEL)
       expect(callArgs.workflowUuid).toBe(WORKFLOW_UUID)
       expect(callArgs.generationAttempt).toBe(1)
+      expect(callArgs.falsePositivesSpanAndTraceIdPairs).toBeUndefined()
+      expect(callArgs.falseNegativesSpanAndTraceIdPairs).toBeUndefined()
+      expect(callArgs.previousEvaluationConfiguration).toBeUndefined()
       expect(mockFailActiveEvaluation).not.toHaveBeenCalled()
       expect(mockEndActiveEvaluation).not.toHaveBeenCalled()
     })
@@ -221,6 +224,9 @@ describe('generateEvaluationV2FromIssueJob', () => {
       expect(callArgs.model).toBe(MODEL)
       expect(callArgs.workflowUuid).toBe(WORKFLOW_UUID)
       expect(callArgs.generationAttempt).toBe(2)
+      expect(callArgs.falsePositivesSpanAndTraceIdPairs).toBeUndefined()
+      expect(callArgs.falseNegativesSpanAndTraceIdPairs).toBeUndefined()
+      expect(callArgs.previousEvaluationConfiguration).toBeUndefined()
       expect(mockFailActiveEvaluation).not.toHaveBeenCalled()
       expect(mockEndActiveEvaluation).not.toHaveBeenCalled()
     })
@@ -418,6 +424,33 @@ describe('generateEvaluationV2FromIssueJob', () => {
 
       expect(mockGenerateEvaluationFromIssue).toHaveBeenCalled()
       expect(mockStartActiveEvaluation).not.toHaveBeenCalled() // generationAttempt > 1
+    })
+
+    it('should pass falsePositivesSpanAndTraceIdPairs, falseNegativesSpanAndTraceIdPairs, and previousEvaluationConfiguration when provided', async () => {
+      const falsePositives = [{ spanId: 'span-1', traceId: 'trace-1' }]
+      const falseNegatives = [{ spanId: 'span-2', traceId: 'trace-2' }]
+      const previousConfig = {
+        criteria: 'test criteria',
+        passDescription: 'test pass',
+        failDescription: 'test fail',
+      }
+
+      jobData = createMockJob(
+        buildJobData({
+          generationAttempt: 2,
+          falsePositivesSpanAndTraceIdPairs: falsePositives,
+          falseNegativesSpanAndTraceIdPairs: falseNegatives,
+          previousEvaluationConfiguration: previousConfig,
+        }),
+      )
+
+      await generateEvaluationV2FromIssueJob(jobData)
+
+      expect(mockGenerateEvaluationFromIssue).toHaveBeenCalled()
+      const callArgs = mockGenerateEvaluationFromIssue.mock.calls[0]![0]
+      expect(callArgs.falsePositivesSpanAndTraceIdPairs).toEqual(falsePositives)
+      expect(callArgs.falseNegativesSpanAndTraceIdPairs).toEqual(falseNegatives)
+      expect(callArgs.previousEvaluationConfiguration).toEqual(previousConfig)
     })
 
     it('should handle generationAttempt just above MAX_ATTEMPTS', async () => {
