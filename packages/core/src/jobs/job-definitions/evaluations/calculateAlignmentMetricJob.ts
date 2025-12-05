@@ -118,7 +118,6 @@ export const calculateAlignmentMetricJob = async (
       spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     }).then((r) => r.unwrap())
 
-    console.log('🤔 mcc', mcc)
     if (mcc < MIN_ALIGNMENT_METRIC_THRESHOLD) {
       return await deleteEvaluationAndRetryGeneration({
         evaluation: evaluation,
