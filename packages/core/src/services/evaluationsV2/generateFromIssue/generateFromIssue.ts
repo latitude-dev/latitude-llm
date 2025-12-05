@@ -91,7 +91,7 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
 
   const existingEvaluationNames = existingEvaluationNamesResult.unwrap()
 
-  // Getting negative examples (failed evaluation results about the issue) to feed the copilot
+  // Getting failed examples (evaluation results with the issue attached) to feed the copilot
   const messagesAndReasonWhyFailedForIssueResult =
     await getSpanMessagesAndEvaluationResultsByIssue({
       workspace: workspace,
@@ -105,19 +105,19 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
   const messagesAndReasonWhyFailedForIssue =
     messagesAndReasonWhyFailedForIssueResult.unwrap()
 
-  // Getting positive examples (passed evaluation results or failed about other issues of the same document) to feed the copilot
-  const positiveExampleMessagesFromIssueDocumentResult =
+  // Getting passed examples (passed evaluation results or failed about other issues of the same document) to feed the copilot
+  const passedExampleMessagesFromIssueDocumentResult =
     await getSpanMessagesByIssueDocument({
       workspace: workspace,
       commit: commit,
       issue: issue,
     })
 
-  if (!Result.isOk(positiveExampleMessagesFromIssueDocumentResult)) {
-    return positiveExampleMessagesFromIssueDocumentResult
+  if (!Result.isOk(passedExampleMessagesFromIssueDocumentResult)) {
+    return passedExampleMessagesFromIssueDocumentResult
   }
-  const positiveExampleMessagesFromIssueDocument =
-    positiveExampleMessagesFromIssueDocumentResult.unwrap()
+  const passedExampleMessagesFromIssueDocument =
+    passedExampleMessagesFromIssueDocumentResult.unwrap()
 
   const evaluationConfigResult = await runCopilot({
     copilot: copilot,
@@ -126,7 +126,7 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
       issueDescription: issue.description,
       existingEvaluationNames: existingEvaluationNames,
       examplesWithIssueAndReasonWhy: messagesAndReasonWhyFailedForIssue,
-      goodExamplesWithoutIssue: positiveExampleMessagesFromIssueDocument,
+      goodExamplesWithoutIssue: passedExampleMessagesFromIssueDocument,
     },
     schema: llmEvaluationBinarySpecificationWithoutModel,
   })
