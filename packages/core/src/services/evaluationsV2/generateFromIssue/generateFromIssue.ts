@@ -1,6 +1,9 @@
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { EvaluationsV2Repository } from '@latitude-data/core/repositories'
+import {
+  EvaluationsV2Repository,
+  SpansRepository,
+} from '@latitude-data/core/repositories'
 import { Result } from '@latitude-data/core/lib/Result'
 import {
   CLOUD_MESSAGES,
@@ -16,6 +19,8 @@ import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { getSpanMessagesAndEvaluationResultsByIssue } from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { database } from '../../../client'
 import { getSpanMessagesByIssueDocument } from '../../../data-access/issues/getSpanMessagesByIssueDocument'
+import { getSpanMessagesBySpans } from '../../../data-access/issues/getSpanMessagesBySpans'
+import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration
@@ -40,12 +45,28 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
     commit,
     providerName,
     model,
+    falsePositivesSpanAndTraceIdPairs,
+    falseNegativesSpanAndTraceIdPairs,
+    previousEvaluationConfiguration,
   }: {
     issue: Issue
     commit: Commit
     workspace: Workspace
     providerName: string
     model: string
+    falsePositivesSpanAndTraceIdPairs?: {
+      spanId: string
+      traceId: string
+    }[]
+    falseNegativesSpanAndTraceIdPairs?: {
+      spanId: string
+      traceId: string
+    }[]
+    previousEvaluationConfiguration?: {
+      criteria: string
+      passDescription: string
+      failDescription: string
+    }
   },
   db = database,
 ) {
@@ -119,6 +140,30 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
   const passedExampleMessagesFromIssueDocument =
     passedExampleMessagesFromIssueDocumentResult.unwrap()
 
+  let falsePositiveExamples: LegacyMessage[] = []
+  if (falsePositivesSpanAndTraceIdPairs) {
+    const falsePositiveExamplesResult = await getSpansFromSpanAndTraceIdPairs({
+      workspace: workspace,
+      spanAndTraceIdPairs: falsePositivesSpanAndTraceIdPairs,
+    })
+    if (!Result.isOk(falsePositiveExamplesResult)) {
+      return falsePositiveExamplesResult
+    }
+    falsePositiveExamples = falsePositiveExamplesResult.unwrap()
+  }
+
+  let falseNegativeExamples: LegacyMessage[] = []
+  if (falseNegativesSpanAndTraceIdPairs) {
+    const falseNegativeExamplesResult = await getSpansFromSpanAndTraceIdPairs({
+      workspace: workspace,
+      spanAndTraceIdPairs: falseNegativesSpanAndTraceIdPairs,
+    })
+    if (!Result.isOk(falseNegativeExamplesResult)) {
+      return falseNegativeExamplesResult
+    }
+    falseNegativeExamples = falseNegativeExamplesResult.unwrap()
+  }
+
   const evaluationConfigResult = await runCopilot({
     copilot: copilot,
     parameters: {
@@ -127,6 +172,9 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
       existingEvaluationNames: existingEvaluationNames,
       examplesWithIssueAndReasonWhy: messagesAndReasonWhyFailedForIssue,
       goodExamplesWithoutIssue: passedExampleMessagesFromIssueDocument,
+      falsePositiveExamples,
+      falseNegativeExamples,
+      previousEvaluationConfiguration,
     },
     schema: llmEvaluationBinarySpecificationWithoutModel,
   })
@@ -173,6 +221,30 @@ async function getExistingEvaluationNames({
     evaluationsFromSameCommitAndDocumentResult.unwrap()
 
   return Result.ok(existingEvaluations.map((e) => e.name))
+}
+
+export async function getSpansFromSpanAndTraceIdPairs({
+  spanAndTraceIdPairs,
+  workspace,
+}: {
+  spanAndTraceIdPairs: {
+    spanId: string
+    traceId: string
+  }[]
+  workspace: Workspace
+}) {
+  const spanRepository = new SpansRepository(workspace.id)
+  const spansResult =
+    await spanRepository.findBySpanAndTraceIds(spanAndTraceIdPairs)
+  if (!Result.isOk(spansResult)) {
+    return spansResult
+  }
+  const spans = spansResult.unwrap()
+
+  return getSpanMessagesBySpans({
+    workspace,
+    spans,
+  })
 }
 
 export const __test__ = {

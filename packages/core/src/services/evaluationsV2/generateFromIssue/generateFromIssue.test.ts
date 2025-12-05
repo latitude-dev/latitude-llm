@@ -22,6 +22,8 @@ import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/Pro
 import * as getSpanMessagesAndEvaluationResultsByIssue from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 import * as getSpanMessagesByIssueDocument from '../../../data-access/issues/getSpanMessagesByIssueDocument'
+import * as getSpanMessagesBySpans from '../../../data-access/issues/getSpanMessagesBySpans'
+import { SpansRepository } from '../../../repositories'
 
 vi.mock('../../copilot', () => ({
   getCopilot: vi.fn(),
@@ -42,6 +44,18 @@ vi.mock(
   }),
 )
 
+vi.mock('../../../data-access/issues/getSpanMessagesBySpans', () => ({
+  getSpanMessagesBySpans: vi.fn(),
+}))
+
+vi.mock('../../../repositories', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../repositories')>()
+  return {
+    ...actual,
+    SpansRepository: vi.fn(),
+  }
+})
+
 const MODEL = 'gpt-4o'
 
 describe('generateFromIssue', () => {
@@ -55,6 +69,12 @@ describe('generateFromIssue', () => {
   const mockGetSpanMessagesByIssueDocument = vi.mocked(
     getSpanMessagesByIssueDocument.getSpanMessagesByIssueDocument,
   )
+
+  const mockGetSpanMessagesBySpans = vi.mocked(
+    getSpanMessagesBySpans.getSpanMessagesBySpans,
+  )
+
+  const mockSpansRepositoryFindBySpanAndTraceIds = vi.fn()
 
   let workspace: Workspace
   let commit: Commit
@@ -132,6 +152,16 @@ describe('generateFromIssue', () => {
     )
 
     mockGetSpanMessagesByIssueDocument.mockResolvedValue(Result.ok(messages))
+
+    mockSpansRepositoryFindBySpanAndTraceIds.mockResolvedValue(
+      Result.ok([] as any),
+    )
+    vi.mocked(SpansRepository).mockImplementation(
+      () =>
+        ({
+          findBySpanAndTraceIds: mockSpansRepositoryFindBySpanAndTraceIds,
+        }) as unknown as SpansRepository,
+    )
   })
 
   it('successfully generates an evaluation from issue using copilot', async () => {
@@ -157,6 +187,9 @@ describe('generateFromIssue', () => {
         existingEvaluationNames: [],
         examplesWithIssueAndReasonWhy: [{ messages, reason: 'Test reason' }],
         goodExamplesWithoutIssue: messages,
+        falsePositiveExamples: [],
+        falseNegativeExamples: [],
+        previousEvaluationConfiguration: undefined,
       },
       schema: __test__.llmEvaluationBinarySpecificationWithoutModel,
     })
@@ -287,8 +320,69 @@ describe('generateFromIssue', () => {
         existingEvaluationNames: [],
         examplesWithIssueAndReasonWhy: [{ messages, reason: 'Test reason' }],
         goodExamplesWithoutIssue: messages,
+        falsePositiveExamples: [],
+        falseNegativeExamples: [],
+        previousEvaluationConfiguration: undefined,
       },
       schema: expect.anything(),
+    })
+  })
+
+  it('passes falsePositivesSpanAndTraceIdPairs, falseNegativesSpanAndTraceIdPairs, and previousEvaluationConfiguration to copilot', async () => {
+    const falsePositives = [{ spanId: 'span-1', traceId: 'trace-1' }]
+    const falseNegatives = [{ spanId: 'span-2', traceId: 'trace-2' }]
+    const previousConfig = {
+      criteria: 'test criteria',
+      passDescription: 'test pass',
+      failDescription: 'test fail',
+    }
+
+    const falsePositiveMessages = [
+      {
+        role: MessageRole.user,
+        content: [{ type: 'text', text: 'False positive message' }],
+      },
+    ] as Message[]
+    const falseNegativeMessages = [
+      {
+        role: MessageRole.assistant,
+        content: [{ type: 'text', text: 'False negative message' }],
+        toolCalls: [],
+      },
+    ] as Message[]
+
+    mockGetSpanMessagesBySpans
+      .mockResolvedValueOnce(Result.ok(falsePositiveMessages))
+      .mockResolvedValueOnce(Result.ok(falseNegativeMessages))
+
+    const result = await generateEvaluationConfigFromIssueWithCopilot({
+      issue,
+      workspace,
+      commit,
+      providerName: provider.name,
+      model: MODEL,
+      falsePositivesSpanAndTraceIdPairs: falsePositives,
+      falseNegativesSpanAndTraceIdPairs: falseNegatives,
+      previousEvaluationConfiguration: previousConfig,
+    })
+
+    expect(Result.isOk(result)).toBe(true)
+    expect(mockSpansRepositoryFindBySpanAndTraceIds).toHaveBeenCalledTimes(2)
+    expect(mockGetSpanMessagesBySpans).toHaveBeenCalledTimes(2)
+
+    expect(mockRunCopilot).toHaveBeenCalledWith({
+      copilot: expect.any(Object),
+      parameters: {
+        issueName: issue.title,
+        issueDescription: issue.description,
+        existingEvaluationNames: [],
+        examplesWithIssueAndReasonWhy: [{ messages, reason: 'Test reason' }],
+        goodExamplesWithoutIssue: messages,
+        falsePositiveExamples: falsePositiveMessages,
+        falseNegativeExamples: falseNegativeMessages,
+        previousEvaluationConfiguration: previousConfig,
+      },
+      schema: __test__.llmEvaluationBinarySpecificationWithoutModel,
     })
   })
 })

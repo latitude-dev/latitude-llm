@@ -42,6 +42,7 @@ export async function evaluateConfiguration({
   if (!Result.isOk(mccResult)) {
     return mccResult
   }
+
   const { mcc, confusionMatrix } = mccResult.unwrap()
 
   return Result.ok({ mcc, confusionMatrix })
