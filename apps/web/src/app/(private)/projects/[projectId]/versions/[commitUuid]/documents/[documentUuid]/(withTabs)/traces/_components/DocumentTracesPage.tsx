@@ -81,6 +81,7 @@ export function DocumentTracesPage({
     onRunEnded: clearSelection,
   })
   const selection = useTraceSelection(activeRuns)
+
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-4 min-w-0'>
       <TableWithHeader

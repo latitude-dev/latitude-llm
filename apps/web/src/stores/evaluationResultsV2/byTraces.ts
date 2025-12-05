@@ -1,7 +1,7 @@
 'use client'
 
 import useFetcher from '$/hooks/useFetcher'
-import { ROUTES } from '$/services/routes'
+import { API_ROUTES } from '$/services/routes/api'
 import { compact, groupBy } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -17,38 +17,35 @@ export default function useEvaluationResultsV2ByTraces(
     commit,
     document,
     traceIds,
+    disabled = false,
   }: {
     project: Pick<Project, 'id'>
     commit: Pick<Commit, 'uuid'>
-    document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
+    document?: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
     traceIds: string[]
+    disabled?: boolean
   },
   opts?: SWRConfiguration,
 ) {
-  const route = ROUTES.api.projects
-    .detail(project.id)
-    .commits.detail(commit.uuid)
-    .documents.detail(document.documentUuid).evaluations.results.traces.root
-
+  const route = API_ROUTES.evaluations.results.traces.root
   const query = useMemo(() => {
-    const query = new URLSearchParams()
-    if (traceIds.length > 0) {
-      query.set('traceIds', [...new Set(traceIds)].join(','))
-    }
-    return query.toString()
-  }, [traceIds])
+    const params = new URLSearchParams()
+    params.set('projectId', project.id.toString())
+    params.set('commitUuid', commit.uuid)
+    if (document?.documentUuid)
+      params.set('documentUuid', document.documentUuid)
+    if (traceIds.length > 0)
+      params.set('traceIds', [...new Set(traceIds)].join(','))
+
+    return params.toString()
+  }, [traceIds, project.id, commit.uuid, document?.documentUuid])
 
   const fetcher = useFetcher<EvaluationResultV2[]>(`${route}?${query}`)
 
   const { data = [], ...rest } = useSWR<EvaluationResultV2[]>(
-    compact([
-      'evaluationResultsV2ByTraces',
-      project.id,
-      commit.uuid,
-      document.commitId,
-      document.documentUuid,
-      query,
-    ]),
+    disabled
+      ? null
+      : compact(['evaluationResultsV2ByTraces', ...traceIds, query]),
     fetcher,
     opts,
   )

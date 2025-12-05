@@ -105,7 +105,7 @@ export default function ProjectSection({
           route: ROUTES.projects
             .detail({ id: project.id })
             .commits.detail({ uuid: commit.uuid })
-            .runs.root({ sourceGroup: lastRunTab }),
+            .annotations.root({ sourceGroup: lastRunTab }),
           iconName: 'messageSquareText',
         },
         {

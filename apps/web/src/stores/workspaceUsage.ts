@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useEffect } from 'react'
 
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useFetcher from '$/hooks/useFetcher'
@@ -6,6 +6,7 @@ import { ROUTES } from '$/services/routes'
 import useUsers from '$/stores/users'
 import useSWR, { SWRConfiguration } from 'swr'
 import { WorkspaceUsage } from '@latitude-data/core/constants'
+import { useDebouncedCallback } from 'use-debounce'
 
 export default function useWorkspaceUsage(opts?: SWRConfiguration) {
   const { data: users } = useUsers()
@@ -20,7 +21,7 @@ export default function useWorkspaceUsage(opts?: SWRConfiguration) {
     error: swrError,
   } = useSWR<WorkspaceUsage | undefined>(['workspaceUsage'], fetcher, opts)
 
-  const onMessage = useCallback(() => {
+  const onMessage = useDebouncedCallback(() => {
     mutate(
       (prevData) => {
         if (!prevData) return prevData
@@ -33,7 +34,7 @@ export default function useWorkspaceUsage(opts?: SWRConfiguration) {
         revalidate: false,
       },
     )
-  }, [mutate])
+  }, 500)
 
   useSockets({ event: 'evaluationResultV2Created', onMessage })
   useSockets({ event: 'documentLogCreated', onMessage })

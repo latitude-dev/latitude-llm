@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
@@ -6,23 +6,17 @@ import { MessageList } from '$/components/ChatWrapper'
 import DebugToggle from '$/components/DebugToggle'
 import { ROUTES } from '$/services/routes'
 import {
-  CompletedRun,
   EvaluationResultV2,
   EvaluationType,
   EvaluationV2,
   HumanEvaluationMetric,
-  Run,
-  RunSourceGroup,
+  Span,
   SpanType,
   SpanWithDetails,
 } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import Link from 'next/link'
 import { useTrace } from '$/stores/traces'
@@ -32,48 +26,22 @@ import {
 } from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { sum } from 'lodash-es'
-import { useCompletedRunsKeysetPaginationStore } from '$/stores/completedRunsKeysetPagination'
 import { useAnnotationBySpan } from '$/hooks/useAnnotationsBySpan'
 import { useAnnotationsProgress } from '$/stores/issues/annotationsProgress'
 import { RunPanelStats } from '$/components/RunPanelStats'
 
 export function RunPanel({
-  run,
-  sourceGroup,
+  span,
+  onAnnotate,
 }: {
-  run: Run
-  sourceGroup: RunSourceGroup
+  span: SpanWithDetails<SpanType.Prompt>
+  onAnnotate: (span: Span) => void
 }) {
-  const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
-    key: AppLocalStorage.chatDebugMode,
-    defaultValue: false,
-  })
-
-  return (
-    <CompletedRunPanel
-      run={run as CompletedRun}
-      debugMode={debugMode}
-      setDebugMode={setDebugMode}
-      sourceGroup={sourceGroup}
-    />
-  )
-}
-
-function CompletedRunPanel({
-  run,
-  debugMode,
-  setDebugMode,
-  sourceGroup,
-}: {
-  run: CompletedRun
-  debugMode: boolean
-  setDebugMode: (debugMode: boolean) => void
-  sourceGroup: RunSourceGroup
-}) {
+  const [debugMode, setDebugMode] = useState(false)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { data: trace, isLoading: isLoadingTrace } = useTrace({
-    traceId: run.span.traceId,
+    traceId: span.traceId,
   })
   const completionSpan = useMemo(
     () => findCompletionSpanFromTrace(trace),
@@ -86,7 +54,7 @@ function CompletedRunPanel({
   const { annotations, isLoading: isLoadingAnnotations } = useAnnotationBySpan({
     project,
     commit,
-    span: run.span,
+    span,
   })
   const toolContentMap = useToolContentMap(conversation as unknown as Message[])
   const sourceMapAvailable = useMemo(() => {
@@ -100,23 +68,23 @@ function CompletedRunPanel({
     ({
       projectId,
       commitUuid,
-      run,
+      span,
     }: {
       projectId: number
       commitUuid: string
-      run: CompletedRun
+      span: Span
     }) => {
       const filters = encodeURIComponent(
         JSON.stringify({
-          spanId: run.span.id,
-          traceId: run.span.traceId,
+          spanId: span.id,
+          traceId: span.traceId,
         }),
       )
       return (
         ROUTES.projects
           .detail({ id: projectId })
           .commits.detail({ uuid: commitUuid })
-          .documents.detail({ uuid: run.span.documentUuid! }).traces.root +
+          .documents.detail({ uuid: span.documentUuid! }).traces.root +
         `?filters=${filters}`
       )
     },
@@ -146,8 +114,8 @@ function CompletedRunPanel({
               sum(Object.values(completionSpan.metadata?.tokens ?? {})) ?? 0
             }
             cost={completionSpan.metadata?.cost ?? 0}
-            duration={run.span.duration ?? 0}
-            error={run.span.status === 'error' ? run.span.message : undefined}
+            duration={span.duration ?? 0}
+            error={span.status === 'error' ? span.message : undefined}
             isWaiting={false}
             isRunning={false}
           />
@@ -157,7 +125,7 @@ function CompletedRunPanel({
             href={buildSelectedSpanUrl({
               projectId: project.id,
               commitUuid: commit.uuid,
-              run,
+              span,
             })}
             target='_blank'
           >
@@ -186,7 +154,7 @@ function CompletedRunPanel({
             </div>
             <MessageList
               messages={conversation as unknown as Message[]}
-              parameters={Object.keys(run.span.metadata?.parameters ?? {})}
+              parameters={Object.keys(span.metadata?.parameters ?? {})}
               debugMode={debugMode}
               toolContentMap={toolContentMap}
             />
@@ -197,7 +165,7 @@ function CompletedRunPanel({
           </Text.H5>
         )}
         <div className='w-full flex flex-col gap-y-4 pt-4'>
-          {run.span.status !== 'error' && annotations.bottom && (
+          {span.status !== 'error' && annotations.bottom && (
             <AnnotationFormWrapper
               key={annotations.bottom.evaluation.uuid}
               evaluation={
@@ -207,8 +175,8 @@ function CompletedRunPanel({
                 >
               }
               result={annotations.bottom.result}
-              span={run.span as SpanWithDetails<SpanType.Prompt>}
-              sourceGroup={sourceGroup}
+              span={span}
+              onAnnotate={onAnnotate}
             />
           )}
         </div>
@@ -221,12 +189,12 @@ function AnnotationFormWrapper({
   evaluation,
   span,
   result,
-  sourceGroup,
+  onAnnotate,
 }: {
   evaluation: EvaluationV2<EvaluationType.Human, HumanEvaluationMetric>
-  span: SpanWithDetails<SpanType.Prompt>
+  span: Span
   result?: EvaluationResultV2<EvaluationType.Human, HumanEvaluationMetric>
-  sourceGroup: RunSourceGroup
+  onAnnotate: (span: Span) => void
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -234,21 +202,17 @@ function AnnotationFormWrapper({
     projectId: project.id,
     commitUuid: commit.uuid,
   })
-  const { mutate } = useCompletedRunsKeysetPaginationStore({
-    projectId: project.id,
-    sourceGroup,
-  })
 
   const handleAnnotate = useCallback(() => {
     refetchProgress()
-    mutate()
-  }, [mutate, refetchProgress])
+    onAnnotate(span)
+  }, [onAnnotate, span, refetchProgress])
 
   return (
     <AnnotationForm
       evaluation={evaluation}
       result={result}
-      span={span}
+      span={span as SpanWithDetails<SpanType.Prompt>}
       onAnnotate={handleAnnotate}
     />
   )

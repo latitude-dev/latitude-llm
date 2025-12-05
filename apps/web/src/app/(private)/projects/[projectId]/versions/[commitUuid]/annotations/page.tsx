@@ -1,18 +1,16 @@
 'use server'
 
 import {
-  getDocumentLogsApproximatedCountByProjectCached,
-  listCompletedRunsCached,
-} from '$/app/(private)/_data-access'
-import {
   DEFAULT_PAGINATION_SIZE,
-  LIMITED_VIEW_THRESHOLD,
   RunSourceGroup,
+  SpanType,
 } from '@latitude-data/core/constants'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { RunsPage as ClientRunsPage } from './_components/RunsPage'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import { mapSourceGroupToLogSources } from '@latitude-data/core/services/runs/mapSourceGroupToLogSources'
+import { SpansRepository } from '@latitude-data/core/repositories'
 
 export default async function RunsPage({
   params,
@@ -32,24 +30,22 @@ export default async function RunsPage({
   ).then((r) => r.unwrap())
 
   const projectId = Number(_projectId)
-  const completedSearch = {
-    sourceGroup: (sourceGroup as RunSourceGroup) ?? defaultSourceGroup,
-  }
-
-  const completedRuns = await listCompletedRunsCached({ projectId, limit: DEFAULT_PAGINATION_SIZE, ...completedSearch }) // prettier-ignore
-
-  let limitedView = undefined
-  const approximatedCount = await getDocumentLogsApproximatedCountByProjectCached(projectId) // prettier-ignore
-  if (approximatedCount > LIMITED_VIEW_THRESHOLD) {
-    limitedView = { totalRuns: approximatedCount }
-  }
+  const logSources = mapSourceGroupToLogSources(sourceGroup as RunSourceGroup)
+  const spansRepo = new SpansRepository(workspace.id)
+  const result = await spansRepo
+    .findByProjectLimited({
+      projectId,
+      type: SpanType.Prompt,
+      source: logSources,
+      limit: DEFAULT_PAGINATION_SIZE,
+    })
+    .then((r) => r.unwrap())
 
   return (
     <ClientRunsPage
-      issuesEnabled={issuesEnabled}
-      completed={{ runs: completedRuns.items }}
-      limitedView={limitedView}
+      initialSpans={result.items}
       defaultSourceGroup={(sourceGroup as RunSourceGroup) ?? defaultSourceGroup}
+      issuesEnabled={issuesEnabled}
     />
   )
 }

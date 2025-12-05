@@ -7,8 +7,8 @@ import ProjectLayout from '../_components/ProjectLayout'
 
 export async function generateMetadata() {
   return buildMetatags({
-    title: 'Runs',
-    locationDescription: 'Project Runs Overview',
+    title: 'Annotations',
+    locationDescription: 'Project Annotations',
   })
 }
 

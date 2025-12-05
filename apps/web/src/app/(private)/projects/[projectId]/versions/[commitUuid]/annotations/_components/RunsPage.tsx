@@ -4,16 +4,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ROUTES } from '$/services/routes'
-import { useCompletedRunsCount } from '$/stores/runs/completedRuns'
-import { useCompletedRunsKeysetPaginationStore } from '$/stores/completedRunsKeysetPagination'
+import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
+import { useEvaluationResultsV2ByTraces } from '$/stores/evaluationResultsV2'
 import {
-  CompletedRun,
-  LogSources,
-  Run,
-  RUN_SOURCES,
   RunSourceGroup,
+  Span,
+  SpanType,
+  SpanWithDetails,
 } from '@latitude-data/constants'
-import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useDebounce } from 'use-debounce'
@@ -23,34 +21,28 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-
-function sumCounts(
-  counts: Record<LogSources, number> | undefined,
-  sourceGroup: RunSourceGroup,
-): number {
-  if (!counts) return 0
-  const sources = RUN_SOURCES[sourceGroup]
-  return sources.reduce((sum, source) => sum + (counts[source] ?? 0), 0)
-}
+import { useSearchParams } from 'next/navigation'
+import { mapSourceGroupToLogSources } from '@latitude-data/core/services/runs/mapSourceGroupToLogSources'
 
 export function RunsPage({
   issuesEnabled,
-  completed: serverCompleted,
-  limitedView,
+  initialSpans,
   defaultSourceGroup,
 }: {
   issuesEnabled: boolean
-  completed: { runs: CompletedRun[] }
-  limitedView?: Pick<ProjectLimitedView, 'totalRuns'>
+  initialSpans: Span[]
   defaultSourceGroup: RunSourceGroup
 }) {
+  const searchParams = useSearchParams()
+  const realtime = searchParams.get('realtime')
+  const [realtimeIsEnabled, setRealtimeIsEnabled] = useState(
+    realtime === 'true' ? true : false,
+  )
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-
   const [sourceGroup, setSourceGroup] =
     useState<RunSourceGroup>(defaultSourceGroup)
   const [debouncedSourceGroup] = useDebounce(sourceGroup, 100)
-
   const { setValue: setLastRunTab } = useLocalStorage<RunSourceGroup>({
     key: AppLocalStorage.lastRunTab,
     defaultValue: RunSourceGroup.Playground,
@@ -64,7 +56,7 @@ export function RunsPage({
     const runsRoute = ROUTES.projects
       .detail({ id: project.id })
       .commits.detail({ uuid: commit.uuid })
-      .runs.root({
+      .annotations.root({
         sourceGroup: debouncedSourceGroup,
       })
 
@@ -74,49 +66,51 @@ export function RunsPage({
     }
   }, [project.id, commit.uuid, debouncedSourceGroup])
 
+  const logSources = mapSourceGroupToLogSources(debouncedSourceGroup)
   const {
-    items: completedRuns,
+    items: spans,
     goToNextPage,
     goToPrevPage,
     hasNext,
     hasPrev,
-    isLoading: isCompletedRunsLoading,
-    reset: resetCompletedPagination,
-  } = useCompletedRunsKeysetPaginationStore(
+    isLoading: isSpansLoading,
+    reset: resetSpansPagination,
+    count: totalSpansCount,
+  } = useSpansKeysetPaginationStore(
     {
-      projectId: project.id,
-      initialItems: serverCompleted.runs,
-      sourceGroup: debouncedSourceGroup,
+      projectId: project.id.toString(),
+      commitUuid: commit.uuid,
+      type: SpanType.Prompt,
+      initialItems: initialSpans,
+      source: logSources,
+      realtime: realtimeIsEnabled,
     },
     { keepPreviousData: true },
   )
 
+  const traceIds = useMemo(() => spans.map((span) => span.traceId), [spans])
+  const { data: annotations = [], mutate: mutateAnnotations } =
+    useEvaluationResultsV2ByTraces(
+      {
+        project: { id: project.id },
+        commit: { uuid: commit.uuid },
+        traceIds,
+        disabled: realtimeIsEnabled,
+      },
+      { keepPreviousData: true },
+    )
+
   // Reset pagination when sourceGroup changes
   useEffect(() => {
-    resetCompletedPagination()
-  }, [debouncedSourceGroup, resetCompletedPagination])
+    resetSpansPagination()
+  }, [debouncedSourceGroup, resetSpansPagination])
 
-  const { data: completedCountBySource, isLoading: isCompletedCountLoading } =
-    useCompletedRunsCount({
-      project,
-      sourceGroup: debouncedSourceGroup,
-      disable: !!limitedView,
-    })
-
-  const completedTotalCount = useMemo(
-    () => sumCounts(completedCountBySource, debouncedSourceGroup),
-    [completedCountBySource, debouncedSourceGroup],
+  // Note: searching the span this way to allow for real time updates
+  const [selectedSpanId, setSelectedSpanId] = useState<string>()
+  const selectedSpan = useMemo(
+    () => spans.find((span) => span.id === selectedSpanId),
+    [spans, selectedSpanId],
   )
-
-  const isCompletedLoading = isCompletedRunsLoading || isCompletedCountLoading
-
-  // Note: searching the run this way to allow for real time updates
-  const [selectedRunUuid, setSelectedRunUuid] = useState<string>()
-  const selectedRun = useMemo(() => {
-    return (
-      completedRuns.find((run) => run.uuid === selectedRunUuid)
-    ) as Run | undefined // prettier-ignore
-  }, [completedRuns, selectedRunUuid])
 
   return (
     <div className='w-full h-full flex items-center justify-center'>
@@ -129,27 +123,26 @@ export function RunsPage({
             issuesEnabled={issuesEnabled}
             sourceGroup={debouncedSourceGroup}
             setSourceGroup={setSourceGroup}
-            completed={{
-              runs: completedRuns,
-              goToNextPage,
-              goToPrevPage,
-              hasNext,
-              hasPrev,
-              countBySource: completedCountBySource,
-              totalCount: completedTotalCount ?? limitedView?.totalRuns,
-              isLoading: isCompletedLoading,
-              limitedView,
-            }}
-            selectedRunUuid={selectedRunUuid}
-            setSelectedRunUuid={setSelectedRunUuid}
+            realtimeIsEnabled={realtimeIsEnabled}
+            toggleRealtime={setRealtimeIsEnabled}
+            spans={spans}
+            annotations={annotations}
+            goToNextPage={goToNextPage}
+            goToPrevPage={goToPrevPage}
+            hasNext={hasNext}
+            hasPrev={hasPrev}
+            totalCount={totalSpansCount}
+            isLoading={isSpansLoading}
+            selectedSpanId={selectedSpanId}
+            setSelectedSpanId={setSelectedSpanId}
           />
         }
         secondPane={
-          selectedRun ? (
+          selectedSpan ? (
             <RunPanel
-              key={selectedRun.uuid}
-              run={selectedRun}
-              sourceGroup={debouncedSourceGroup}
+              key={selectedSpan.id}
+              span={selectedSpan as SpanWithDetails<SpanType.Prompt>}
+              onAnnotate={() => mutateAnnotations()}
             />
           ) : (
             <div className='w-full h-full flex flex-col gap-6 p-6 overflow-hidden relative'>

@@ -31,7 +31,7 @@ function LockedIssuesHeader({
   const runsRoute = ROUTES.projects
     .detail({ id: projectId })
     .commits.detail({ uuid: commitUuid })
-    .runs.root({ sourceGroup: lastRunTab })
+    .annotations.root({ sourceGroup: lastRunTab })
   return (
     <div className='flex flex-col max-w-md justify-center items-center gap-4 mx-auto'>
       <div className='flex flex-col items-center gap-2'>

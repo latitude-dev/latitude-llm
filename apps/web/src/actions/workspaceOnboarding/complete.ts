@@ -33,8 +33,9 @@ export const completeOnboardingAction = authProcedure
       ROUTES.projects
         .detail({ id: projectId })
         .commits.detail({ uuid: commitUuid })
-        .runs.root({
+        .annotations.root({
           sourceGroup: RunSourceGroup.Playground,
+          realtime: true,
         }),
     )
   })
