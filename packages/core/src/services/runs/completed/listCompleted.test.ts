@@ -2,11 +2,11 @@ import { LogSources, RunSourceGroup } from '@latitude-data/constants'
 import { beforeAll, describe, expect, it } from 'vitest'
 import * as factories from '../../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../../tests/factories'
-import { listCompletedRuns } from './listCompleted'
+import { listPromptSpans } from './listCompleted'
 
 let setup: FactoryCreateProjectReturn
 
-describe('listCompletedRuns', () => {
+describe('listPromptSpans', () => {
   beforeAll(async () => {
     setup = await factories.createProject({
       providers: [
@@ -25,7 +25,7 @@ describe('listCompletedRuns', () => {
   })
 
   it('returns empty array when no completed runs exist', async () => {
-    const result = await listCompletedRuns({
+    const result = await listPromptSpans({
       workspaceId: setup.workspace.id,
       projectId: setup.project.id,
     })
@@ -65,7 +65,7 @@ describe('listCompletedRuns', () => {
       source: LogSources.Playground,
     })
 
-    const result = await listCompletedRuns({
+    const result = await listPromptSpans({
       workspaceId: setup.workspace.id,
       projectId: setup.project.id,
     })
@@ -95,7 +95,7 @@ describe('listCompletedRuns', () => {
       source: LogSources.Playground,
     })
 
-    const result = await listCompletedRuns({
+    const result = await listPromptSpans({
       workspaceId: setup.workspace.id,
       projectId: setup.project.id,
     })
@@ -139,7 +139,7 @@ describe('listCompletedRuns', () => {
       source: LogSources.Playground,
     })
 
-    const result = await listCompletedRuns({
+    const result = await listPromptSpans({
       workspaceId: setup.workspace.id,
       projectId: setup.project.id,
       sourceGroup: RunSourceGroup.Playground,
@@ -174,7 +174,7 @@ describe('listCompletedRuns', () => {
       source: LogSources.Playground, // Not production
     })
 
-    const result = await listCompletedRuns({
+    const result = await listPromptSpans({
       workspaceId: setup.workspace.id,
       projectId: setup.project.id,
       sourceGroup: RunSourceGroup.Production,

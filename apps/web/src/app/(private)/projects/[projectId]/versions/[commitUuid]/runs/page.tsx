@@ -1,12 +1,8 @@
 'use server'
 
-import {
-  getDocumentLogsApproximatedCountByProjectCached,
-  listCompletedRunsCached,
-} from '$/app/(private)/_data-access'
+import { listPromptSpansCached } from '$/app/(private)/_data-access'
 import {
   DEFAULT_PAGINATION_SIZE,
-  LIMITED_VIEW_THRESHOLD,
   RunSourceGroup,
 } from '@latitude-data/core/constants'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
@@ -32,24 +28,17 @@ export default async function RunsPage({
   ).then((r) => r.unwrap())
 
   const projectId = Number(_projectId)
-  const completedSearch = {
+  const result = await listPromptSpansCached({
+    projectId,
+    limit: DEFAULT_PAGINATION_SIZE,
     sourceGroup: (sourceGroup as RunSourceGroup) ?? defaultSourceGroup,
-  }
-
-  const completedRuns = await listCompletedRunsCached({ projectId, limit: DEFAULT_PAGINATION_SIZE, ...completedSearch }) // prettier-ignore
-
-  let limitedView = undefined
-  const approximatedCount = await getDocumentLogsApproximatedCountByProjectCached(projectId) // prettier-ignore
-  if (approximatedCount > LIMITED_VIEW_THRESHOLD) {
-    limitedView = { totalRuns: approximatedCount }
-  }
+  })
 
   return (
     <ClientRunsPage
-      issuesEnabled={issuesEnabled}
-      completed={{ runs: completedRuns.items }}
-      limitedView={limitedView}
+      initialSpans={result.items}
       defaultSourceGroup={(sourceGroup as RunSourceGroup) ?? defaultSourceGroup}
+      issuesEnabled={issuesEnabled}
     />
   )
 }

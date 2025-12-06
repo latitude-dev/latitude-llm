@@ -1,0 +1,162 @@
+import { authHandler } from '$/middlewares/authHandler'
+import { errorHandler } from '$/middlewares/errorHandler'
+import {
+  CommitsRepository,
+  SpansRepository,
+} from '@latitude-data/core/repositories'
+import { LogSources, SpanType } from '@latitude-data/constants'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { parseSpansFilters } from '$/lib/schemas/filters'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
+
+const searchParamsSchema = z.object({
+  projectId: z.string(),
+  commitUuid: z.string().optional(),
+  documentUuid: z.string().optional(),
+  from: z.string().optional(),
+  type: z
+    .enum(Object.values(SpanType) as [string, ...string[]])
+    .default(SpanType.Prompt),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(DEFAULT_PAGINATION_SIZE),
+  filters: z.string().optional(), // JSON string containing filters
+  source: z.string().optional(),
+})
+
+export const GET = errorHandler(
+  authHandler(
+    async (request: NextRequest, { workspace }: { workspace: Workspace }) => {
+      const searchParams = request.nextUrl.searchParams
+      const parsedParams = searchParamsSchema.parse({
+        projectId: searchParams.get('projectId') ?? undefined,
+        commitUuid: searchParams.get('commitUuid') ?? undefined,
+        documentUuid: searchParams.get('documentUuid') ?? undefined,
+        from: searchParams.get('from') ?? undefined,
+        type: searchParams.get('type') ?? undefined,
+        limit: searchParams.get('limit') ?? undefined,
+        filters: searchParams.get('filters') ?? undefined,
+        source: searchParams.get('source') ?? undefined,
+      })
+      const { projectId, commitUuid, documentUuid } = parsedParams
+
+      // Parse filters if present
+      const filters =
+        parseSpansFilters(parsedParams.filters, 'spans limited API') || {}
+
+      const commitsRepo = new CommitsRepository(workspace.id)
+      const fromCursor = parsedParams.from
+        ? JSON.parse(parsedParams.from)
+        : null
+
+      let spansResult
+      if (filters.traceId) {
+        // If traceId is present in filters, fetch spans for that specific trace
+        const spansRepository = new SpansRepository(workspace.id)
+        const spans = await spansRepository
+          .list({ traceId: filters.traceId })
+          .then((r) =>
+            r.unwrap().filter((span) => span.type === SpanType.Prompt),
+          )
+        spansResult = {
+          items: spans,
+          count: spans.length,
+          next: null,
+        }
+      } else {
+        // Otherwise, fetch spans directly from the repository
+        const spansRepository = new SpansRepository(workspace.id)
+
+        let result: { items: any[]; next: any } = { items: [], next: null }
+
+        if (documentUuid) {
+          // Document queries require commitUuid
+          if (!commitUuid) {
+            return NextResponse.json(
+              { error: 'commitUuid is required when documentUuid is provided' },
+              { status: 400 },
+            )
+          }
+          const currentCommit = await commitsRepo
+            .getCommitByUuid({ uuid: commitUuid, projectId: Number(projectId) })
+            .then((r) => r.unwrap())
+          result = await spansRepository
+            .findByDocumentAndCommitLimited({
+              documentUuid,
+              type: parsedParams.type as SpanType,
+              from: fromCursor
+                ? { startedAt: fromCursor.value, id: fromCursor.id }
+                : undefined,
+              limit: parsedParams.limit,
+              commitUuids: await buildCommitFilter({
+                filters,
+                currentCommit,
+                commitsRepo,
+              }),
+              experimentUuids: filters.experimentUuids,
+              createdAt: filters.createdAt,
+            })
+            .then((r) => r.unwrap())
+        } else {
+          // Project-level query (commitUuid optional)
+          result = await spansRepository
+            .findByProjectLimited({
+              projectId: Number(projectId),
+              type: parsedParams.type as SpanType,
+              limit: parsedParams.limit,
+              source: parsedParams.source?.split(',') as LogSources[],
+              from: fromCursor
+                ? { startedAt: fromCursor.value, id: fromCursor.id }
+                : undefined,
+              createdAt: filters.createdAt,
+            })
+            .then((r) => r.unwrap())
+        }
+
+        spansResult = {
+          items: result.items,
+          count: null,
+          next: result.next
+            ? { value: result.next.startedAt, id: result.next.id }
+            : null,
+        }
+      }
+
+      return NextResponse.json(
+        {
+          items: spansResult.items,
+          count: spansResult.count,
+          next: spansResult.next ? JSON.stringify(spansResult.next) : null,
+        },
+        { status: 200 },
+      )
+    },
+  ),
+)
+
+export async function buildCommitFilter({
+  filters = {},
+  currentCommit,
+  commitsRepo,
+}: {
+  filters?: { commitUuids?: string[] }
+  currentCommit: Commit
+  commitsRepo: CommitsRepository
+}): Promise<string[]> {
+  if (filters.commitUuids) return filters.commitUuids
+
+  const commits = await commitsRepo
+    .getCommitsHistory({ commit: currentCommit })
+    .then((commits) => {
+      return commits.map((commit) => commit.uuid)
+    })
+    .catch(() => [])
+
+  return commits
+}

@@ -24,10 +24,10 @@ export function RealtimeToggle({
       trigger={
         <Button
           fancy
-          variant='outline'
-          iconProps={{ name: enabled ? 'pause' : 'play' }}
+          variant={enabled ? 'default' : 'outline'}
           className='h-7'
           onClick={toggleRealtime}
+          iconProps={{ name: enabled ? 'pause' : 'play' }}
         />
       }
       align='end'

@@ -1,27 +1,29 @@
 'use client'
 
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCompletedRuns } from '$/stores/runs/completedRuns'
-import { RunSourceGroup } from '@latitude-data/constants'
+import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
+import { RunSourceGroup, SpanType } from '@latitude-data/constants'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { envClient } from '$/envClient'
 import { DocsRoute } from '$/components/Documentation/routes'
+import { mapSourceGroupToLogSources } from '@latitude-data/core/services/runs/mapSourceGroupToLogSources'
 
 export default function ProductionBanner({ project }: { project: Project }) {
-  const { data: completedRuns, isLoading: isLoadingCompletedRuns } =
-    useCompletedRuns({
-      project,
-      search: { limit: 1, sourceGroup: RunSourceGroup.Production },
-    })
-
-  const hasProductionRuns = useMemo(
-    () => completedRuns.items.length > 0,
-    [completedRuns],
+  const { items, isLoading } = useSpansKeysetPaginationStore(
+    {
+      projectId: project.id.toString(),
+      type: SpanType.Prompt,
+      source: mapSourceGroupToLogSources(RunSourceGroup.Production),
+      limit: 1,
+    },
+    { revalidateOnFocus: false },
   )
 
-  if (isLoadingCompletedRuns || hasProductionRuns) return null
+  const hasProductionRuns = useMemo(() => items.length > 0, [items])
+
+  if (isLoading || hasProductionRuns) return null
 
   const docsUrl = `${envClient.NEXT_PUBLIC_DOCS_URL}${DocsRoute.IntegrationOverview}`
 

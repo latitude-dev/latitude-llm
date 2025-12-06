@@ -12,8 +12,9 @@ import {
   ProjectsRepository,
   ProviderApiKeysRepository,
   ProviderLogsRepository,
+  SpansRepository,
 } from '@latitude-data/core/repositories/index'
-import { listCompletedRuns } from '@latitude-data/core/services/runs/completed/listCompleted'
+import { listPromptSpans } from '@latitude-data/core/services/runs/completed/listCompleted'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
 import {
@@ -24,6 +25,7 @@ import {
   PROJECT_STATS_CACHE_KEY,
   LAST_LATTE_THREAD_CACHE_KEY,
   RunSourceGroup,
+  SpanType,
 } from '@latitude-data/core/constants'
 import { DocumentLogsLimitedView } from '@latitude-data/core/schema/models/types/DocumentLog'
 import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
@@ -370,7 +372,7 @@ export const getLastLatteThreadUuidCached = async ({
   return uuid || undefined
 }
 
-export const listCompletedRunsCached = cache(
+export const listPromptSpansCached = cache(
   async ({
     projectId,
     from,
@@ -383,14 +385,12 @@ export const listCompletedRunsCached = cache(
     sourceGroup?: RunSourceGroup
   }) => {
     const { workspace } = await getCurrentUserOrRedirect()
-    const result = await listCompletedRuns({
+    return await listPromptSpans({
       workspaceId: workspace.id,
       projectId,
       from,
       limit,
       sourceGroup,
     }).then((r) => r.unwrap())
-
-    return result
   },
 )

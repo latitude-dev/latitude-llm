@@ -98,6 +98,13 @@ export const API_ROUTES = {
       root: `/api/providerLogs/${providerLogId}`,
     }),
   },
+  evaluations: {
+    results: {
+      traces: {
+        root: '/api/evaluations/results/traces',
+      },
+    },
+  },
   users: {
     root: '/api/users',
     current: '/api/users/current',
@@ -198,13 +205,7 @@ export const API_ROUTES = {
                       spans: {
                         root: `${documentRoot}/evaluations/results/spans`,
                       },
-                      traces: {
-                        root: `${documentRoot}/evaluations/results/traces`,
-                      },
                     },
-                  },
-                  spans: {
-                    limited: `${documentRoot}/spans/limited`,
                   },
                   traces: {
                     aggregations: `${documentRoot}/traces/aggregations`,
@@ -400,22 +401,6 @@ export const API_ROUTES = {
               return `${projectRoot}/runs/active?${params.toString()}`
             },
           },
-          completed: {
-            root: `${projectRoot}/runs/completed`,
-            count: `${projectRoot}/runs/completed/count`,
-            detail: ({
-              limit,
-              sourceGroup,
-            }: {
-              limit?: number
-              sourceGroup?: RunSourceGroup
-            } = {}) => {
-              const params = new URLSearchParams()
-              if (limit) params.set('limit', limit.toString())
-              if (sourceGroup) params.set('sourceGroup', sourceGroup)
-              return `${projectRoot}/runs/completed?${params.toString()}`
-            },
-          },
           detail: (uuid: string) => ({
             attach: `${projectRoot}/runs/${uuid}/attach`,
           }),
@@ -466,6 +451,9 @@ export const API_ROUTES = {
     },
   },
   spans: {
+    limited: {
+      root: '/api/spans/limited',
+    },
     downloadSpans: {
       root: `/api/spans/download-spans`,
     },

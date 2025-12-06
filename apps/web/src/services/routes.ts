@@ -260,6 +260,7 @@ export const ROUTES = {
                   sourceGroup?: string
                   completedPage?: number
                   completedPageSize?: number
+                  realtime?: boolean
                 }) => {
                   const base = `${root}/runs`
                   if (!params) return base
@@ -270,6 +271,7 @@ export const ROUTES = {
                   if (params.sourceGroup !== undefined) searchParams.set('sourceGroup', params.sourceGroup) // prettier-ignore
                   if (params.completedPage !== undefined) searchParams.set('completedPage', String(params.completedPage)) // prettier-ignore
                   if (params.completedPageSize !== undefined) searchParams.set('completedPageSize', String(params.completedPageSize)) // prettier-ignore
+                  if (params.realtime !== undefined) searchParams.set('realtime', String(params.realtime)) // prettier-ignore
 
                   const query = searchParams.toString()
                   return query ? `${base}?${query}` : base

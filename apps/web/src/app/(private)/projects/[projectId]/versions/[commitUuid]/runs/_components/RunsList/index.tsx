@@ -1,41 +1,49 @@
 import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
 import {
-  CompletedRun,
-  LogSources,
+  EvaluationResultV2,
   RunSourceGroup,
+  Span,
 } from '@latitude-data/constants'
-import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { AnnotationProgressPanel } from '$/components/AnnotationProgressPanel'
 import { RunsListItem } from './Item'
 import { RunSourceSelector } from './SourceSelector'
+import { RealtimeToggle } from '$/components/RealtimeToggle'
+import InfiniteScroll from 'react-infinite-scroll-component'
+import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 
-type CompletedRunsProps = {
-  runs: CompletedRun[]
+export function RunsList({
+  annotations,
+  issuesEnabled,
+  spans,
+  goToNextPage,
+  goToPrevPage,
+  hasNext,
+  hasPrev,
+  totalCount,
+  isLoading = false,
+  selectedSpanId,
+  setSelectedSpanId,
+  sourceGroup,
+  setSourceGroup,
+  toggleRealtime,
+  realtimeIsEnabled = false,
+}: {
+  annotations: EvaluationResultV2[]
+  issuesEnabled: boolean
+  spans: Span[]
   goToNextPage: () => void
   goToPrevPage: () => void
   hasNext: boolean
   hasPrev: boolean
+  totalCount?: number | null
   isLoading?: boolean
-  countBySource?: Record<LogSources, number>
-  totalCount?: number
-  limitedView?: Pick<ProjectLimitedView, 'totalRuns'>
-}
-
-export function RunsList({
-  issuesEnabled,
-  completed,
-  selectedRunUuid,
-  setSelectedRunUuid,
-  sourceGroup,
-  setSourceGroup,
-}: {
-  issuesEnabled: boolean
-  completed: CompletedRunsProps
-  selectedRunUuid?: string
-  setSelectedRunUuid: (uuid?: string) => void
+  selectedSpanId?: string
+  setSelectedSpanId: (id?: string) => void
   sourceGroup: RunSourceGroup
   setSourceGroup: (sourceGroup: RunSourceGroup) => void
+  toggleRealtime: (enabled: boolean) => void
+  realtimeIsEnabled?: boolean
 }) {
   return (
     <div className='w-full h-full flex flex-col gap-6 p-6 relative'>
@@ -63,37 +71,80 @@ export function RunsList({
               This is the results of your AI runs. Select a trace to start
             </Text.H6>
           </div>
-          <div>
+          <div className='flex flex-row gap-4'>
+            <RealtimeToggle
+              enabled={realtimeIsEnabled}
+              setEnabled={toggleRealtime}
+            />
             <RunSourceSelector value={sourceGroup} setValue={setSourceGroup} />
           </div>
         </div>
-        {completed.runs.length > 0 ? (
-          <div className='w-full min-h-0 flex flex-col border border-border rounded-xl overflow-hidden'>
-            <div className='w-full flex flex-col divide-border divide-y rounded-t-xl overflow-hidden overflow-y-auto custom-scrollbar relative'>
-              {completed.runs.map((run) => (
-                <RunsListItem
-                  key={run.uuid}
-                  run={run}
-                  isSelected={selectedRunUuid === run.uuid}
-                  setSelectedRunUuid={setSelectedRunUuid}
-                />
-              ))}
-            </div>
-            <div className='w-full h-12 flex flex-shrink-0 justify-end items-center bg-secondary border-t border-border rounded-b-xl pl-4 pr-1 py-1'>
-              <SimpleKeysetTablePaginationFooter
-                setNext={completed.goToNextPage}
-                setPrev={completed.goToPrevPage}
-                hasNext={completed.hasNext}
-                hasPrev={completed.hasPrev}
-                count={
-                  completed.totalCount ??
-                  completed.limitedView?.totalRuns ??
-                  null
-                }
-                countLabel={(count) => `${count} runs`}
-                isLoading={completed.isLoading}
-              />
-            </div>
+        {spans.length > 0 ? (
+          <div className='w-full min-h-0 flex flex-1 flex-col border border-border rounded-xl overflow-hidden'>
+            {realtimeIsEnabled ? (
+              <div
+                id='scrollableDiv'
+                className='w-full flex-1 flex flex-col rounded-xl overflow-hidden overflow-y-auto custom-scrollbar relative'
+              >
+                <InfiniteScroll
+                  dataLength={spans.length}
+                  next={goToNextPage}
+                  hasMore={hasNext}
+                  loader={
+                    <div className='w-full flex items-center justify-center py-4'>
+                      <LoadingText />
+                    </div>
+                  }
+                  scrollableTarget='scrollableDiv'
+                  scrollThreshold={0.8}
+                  className='w-full flex flex-col divide-border divide-y'
+                  style={{ margin: 0, padding: 0, width: '100%' }}
+                >
+                  {spans.map((span) => (
+                    <RunsListItem
+                      key={span.id}
+                      span={span}
+                      isSelected={selectedSpanId === span.id}
+                      setSelectedSpanId={setSelectedSpanId}
+                      annotation={annotations.find(
+                        (a) =>
+                          a.evaluatedSpanId === span.id &&
+                          a.evaluatedTraceId === span.traceId,
+                      )}
+                    />
+                  ))}
+                </InfiniteScroll>
+              </div>
+            ) : (
+              <>
+                <div className='w-full flex-1 flex flex-col divide-border divide-y rounded-t-xl overflow-hidden overflow-y-auto custom-scrollbar relative'>
+                  {spans.map((span) => (
+                    <RunsListItem
+                      key={span.id}
+                      span={span}
+                      isSelected={selectedSpanId === span.id}
+                      setSelectedSpanId={setSelectedSpanId}
+                      annotation={annotations.find(
+                        (a) =>
+                          a.evaluatedSpanId === span.id &&
+                          a.evaluatedTraceId === span.traceId,
+                      )}
+                    />
+                  ))}
+                </div>
+                <div className='w-full h-12 flex flex-shrink-0 justify-end items-center bg-secondary border-t border-border rounded-b-xl pl-4 pr-1 py-1'>
+                  <SimpleKeysetTablePaginationFooter
+                    setNext={goToNextPage}
+                    setPrev={goToPrevPage}
+                    hasNext={hasNext}
+                    hasPrev={hasPrev}
+                    count={totalCount}
+                    countLabel={(count) => `${count} runs`}
+                    isLoading={isLoading}
+                  />
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className='w-full h-full flex items-center justify-center gap-2 py-9 px-4 border border-border border-dashed rounded-xl'>
