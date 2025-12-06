@@ -57,15 +57,15 @@ export function DocumentTracesPage({
     commitUuid: commit.uuid,
     projectId: project.id,
   })
-  const { items: spans, count } = useSpansKeysetPaginationStore({
+  const spans = useSpansKeysetPaginationStore({
     projectId: String(project.id),
     commitUuid: commit.uuid,
     documentUuid: document.documentUuid,
     initialItems: initialSpans,
   })
   const selectableState = useSelectableRows({
-    rowIds: spans.map((span) => span.id),
-    totalRowCount: count ?? spans.length,
+    rowIds: spans.items.map((span) => span.id),
+    totalRowCount: spans.count ?? spans.items.length,
   })
   const {
     data: activeRuns,
@@ -120,7 +120,7 @@ export function DocumentTracesPage({
                 }
                 floatingPanel={
                   <SelectionTracesBanner
-                    spans={spans}
+                    spans={spans.items}
                     selectableState={selectableState}
                   />
                 }

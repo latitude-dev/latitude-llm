@@ -35,7 +35,7 @@ export function DocumentTraces({
   selectableState,
 }: {
   activeRuns: ActiveRun[]
-  spans: Span[]
+  spans: ReturnType<typeof useSpansKeysetPaginationStore>
   selectableState: SelectableRowsHook
   ref?: Ref<HTMLTableElement>
 }) {
@@ -43,20 +43,6 @@ export function DocumentTraces({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-  const {
-    count,
-    goToNextPage,
-    goToPrevPage,
-    hasNext,
-    hasPrev,
-    isLoading,
-    currentCursor,
-    mutate: mutateSpans,
-  } = useSpansKeysetPaginationStore({
-    projectId: String(project.id),
-    commitUuid: commit.uuid,
-    documentUuid: document.documentUuid,
-  })
 
   // Listen for new spans being created and add them to the list
   const onSpanCreated = useCallback(
@@ -65,11 +51,11 @@ export function DocumentTraces({
       if (args.documentUuid !== document.documentUuid) return
 
       // Only add to list if we're on the first page (no cursor)
-      const isFirstPage = !currentCursor
+      const isFirstPage = !spans.currentCursor
       if (!isFirstPage) return
 
       const span = serializeSpans([args.span])[0]
-      mutateSpans(
+      spans.mutate(
         (prev) => {
           if (!prev) return prev
 
@@ -86,7 +72,7 @@ export function DocumentTraces({
         { revalidate: false },
       )
     },
-    [document.documentUuid, currentCursor, mutateSpans],
+    [document.documentUuid, spans.currentCursor, spans.mutate],
   )
   useSockets({ event: 'spanCreated', onMessage: onSpanCreated })
 
@@ -97,7 +83,7 @@ export function DocumentTraces({
     project,
     commit,
     document,
-    traceIds: spans.map((span) => span.traceId),
+    traceIds: spans.items.map((span) => span.traceId),
   })
 
   return (
@@ -106,13 +92,13 @@ export function DocumentTraces({
       className='table-auto'
       externalFooter={
         <SimpleKeysetTablePaginationFooter
-          setNext={goToNextPage}
-          setPrev={goToPrevPage}
-          hasNext={hasNext}
-          hasPrev={hasPrev}
-          count={count}
+          setNext={spans.goToNextPage}
+          setPrev={spans.goToPrevPage}
+          hasNext={spans.hasNext}
+          hasPrev={spans.hasPrev}
+          count={spans.count}
           countLabel={(count) => `${count} traces`}
-          isLoading={isLoading}
+          isLoading={spans.isLoading}
         />
       }
     >
@@ -136,7 +122,7 @@ export function DocumentTraces({
           <ActiveRunRow key={run.uuid} run={run} />
         ))}
 
-        {spans.map((span) => (
+        {spans.items.map((span) => (
           <SpanRow
             key={span.id}
             span={span as Span<SpanType.Prompt>}
