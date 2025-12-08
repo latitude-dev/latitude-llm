@@ -3,6 +3,7 @@
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export function SimpleKeysetTablePaginationFooter({
   hasNext,
@@ -12,6 +13,7 @@ export function SimpleKeysetTablePaginationFooter({
   count,
   countLabel,
   isLoading,
+  disabledTooltip,
 }: {
   setNext: () => void
   setPrev: () => void
@@ -20,6 +22,7 @@ export function SimpleKeysetTablePaginationFooter({
   count?: number | null
   countLabel?: (count: number) => string
   isLoading?: boolean
+  disabledTooltip?: string
 }) {
   return (
     <div className='w-full flex justify-between items-center'>
@@ -28,20 +31,47 @@ export function SimpleKeysetTablePaginationFooter({
       </Text.H5M>
       <div className='flex items-center'>
         {isLoading && <Icon name='loader' spin size='small' className='mr-2' />}
-        <Button
-          size='default'
-          variant='ghost'
-          disabled={!hasPrev || isLoading}
-          iconProps={{ name: 'chevronLeft' }}
-          onClick={setPrev}
-        />
-        <Button
-          size='default'
-          variant='ghost'
-          disabled={!hasNext || isLoading}
-          iconProps={{ name: 'chevronRight' }}
-          onClick={setNext}
-        />
+        {disabledTooltip ? (
+          <Tooltip
+            trigger={
+              <div className='flex items-center'>
+                <Button
+                  size='default'
+                  variant='ghost'
+                  disabled={!hasPrev || isLoading}
+                  iconProps={{ name: 'chevronLeft' }}
+                  onClick={setPrev}
+                />
+                <Button
+                  size='default'
+                  variant='ghost'
+                  disabled={!hasNext || isLoading}
+                  iconProps={{ name: 'chevronRight' }}
+                  onClick={setNext}
+                />
+              </div>
+            }
+          >
+            {disabledTooltip}
+          </Tooltip>
+        ) : (
+          <>
+            <Button
+              size='default'
+              variant='ghost'
+              disabled={!hasPrev || isLoading}
+              iconProps={{ name: 'chevronLeft' }}
+              onClick={setPrev}
+            />
+            <Button
+              size='default'
+              variant='ghost'
+              disabled={!hasNext || isLoading}
+              iconProps={{ name: 'chevronRight' }}
+              onClick={setNext}
+            />
+          </>
+        )}
       </div>
     </div>
   )

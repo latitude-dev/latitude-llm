@@ -13,7 +13,6 @@ import {
   ProviderApiKeysRepository,
   ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
-import { listCompletedRuns } from '@latitude-data/core/services/runs/completed/listCompleted'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
 import {
@@ -23,13 +22,13 @@ import {
   EvaluationV2,
   PROJECT_STATS_CACHE_KEY,
   LAST_LATTE_THREAD_CACHE_KEY,
-  RunSourceGroup,
 } from '@latitude-data/core/constants'
 import { DocumentLogsLimitedView } from '@latitude-data/core/schema/models/types/DocumentLog'
 import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+
 export const getFirstProjectCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
     const projectsScope = new ProjectsRepository(workspaceId)
@@ -369,28 +368,3 @@ export const getLastLatteThreadUuidCached = async ({
   const uuid = await client.get(key)
   return uuid || undefined
 }
-
-export const listCompletedRunsCached = cache(
-  async ({
-    projectId,
-    from,
-    limit,
-    sourceGroup,
-  }: {
-    projectId: number
-    from?: { startedAt: string; id: string }
-    limit?: number
-    sourceGroup?: RunSourceGroup
-  }) => {
-    const { workspace } = await getCurrentUserOrRedirect()
-    const result = await listCompletedRuns({
-      workspaceId: workspace.id,
-      projectId,
-      from,
-      limit,
-      sourceGroup,
-    }).then((r) => r.unwrap())
-
-    return result
-  },
-)

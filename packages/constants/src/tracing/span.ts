@@ -201,6 +201,7 @@ export type Span<T extends SpanType = SpanType> = {
   segmentId?: string
   parentId?: string // Parent span identifier
   workspaceId: number
+  projectId: number
   apiKeyId: number
   name: string
   kind: SpanKind
