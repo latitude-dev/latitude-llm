@@ -98,9 +98,15 @@ describe('calculateMCC', () => {
   })
 
   it('calculates MCC correctly with large datasets', () => {
-    const examplesThatShouldPassTheEvaluation = Array.from({ length: 10 }, (_, i) => i < 8)
+    const examplesThatShouldPassTheEvaluation = Array.from(
+      { length: 10 },
+      (_, i) => i < 8,
+    )
 
-    const examplesThatShouldFailTheEvaluation = Array.from({ length: 10 }, (_, i) => i < 2)
+    const examplesThatShouldFailTheEvaluation = Array.from(
+      { length: 10 },
+      (_, i) => i < 2,
+    )
 
     const mccResult = calculateMCC({
       examplesThatShouldPassTheEvaluation,

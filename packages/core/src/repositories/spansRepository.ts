@@ -162,7 +162,12 @@ export class SpansRepository extends Repository<Span> {
     createdAt?: { from?: Date; to?: Date }
   }) {
     const conditions = [
-      ...this.buildFilterConditions({ type, source, experimentUuids, createdAt }),
+      ...this.buildFilterConditions({
+        type,
+        source,
+        experimentUuids,
+        createdAt,
+      }),
       eq(spans.documentUuid, documentUuid),
     ]
 
@@ -232,7 +237,12 @@ export class SpansRepository extends Repository<Span> {
     if (commitUuids.length === 0) return Result.ok({ items: [], next: null })
 
     const conditions = [
-      ...this.buildFilterConditions({ type, source, experimentUuids, createdAt }),
+      ...this.buildFilterConditions({
+        type,
+        source,
+        experimentUuids,
+        createdAt,
+      }),
       from
         ? sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
         : undefined,

@@ -330,6 +330,7 @@ export const messagesSchema = z.array(messageSchema)
 export const DEFAULT_PAGINATION_SIZE = 25
 
 export type DateRange = { from?: Date; to?: Date }
+export type SureDateRange = { from: Date; to: Date }
 
 // TODO: Review if it's used
 export type CsvData = {
