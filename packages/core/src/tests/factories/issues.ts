@@ -13,7 +13,6 @@ import Transaction from '../../lib/Transaction'
 import { issueHistograms } from '../../schema/models/issueHistograms'
 
 export type IssueHistogramData = {
-  issue: Issue
   commitId: number
   date: Date
   count: number
@@ -25,7 +24,7 @@ async function createIssueHistogramsBulk(
     histograms,
   }: {
     workspace: Workspace
-    histograms: IssueHistogramData[]
+    histograms: (IssueHistogramData & { issue: Issue })[]
   },
   transaction = new Transaction(),
 ) {
