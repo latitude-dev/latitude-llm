@@ -2,8 +2,8 @@ name: Update Models.dev Data
 
 on:
   schedule:
-    # Run daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    # Run weekly on Monday at 2 AM UTC
+    - cron: '0 2 * * 1'
   workflow_dispatch:
 
 jobs:
@@ -59,7 +59,7 @@ jobs:
 
             This PR updates the bundled models.dev JSON data to the latest version from the models.dev API.
 
-            This runs automatically daily to keep the bundled data fresh for client-side usage, reducing API calls and improving performance.
+            This runs automatically weekly to keep the bundled data fresh for client-side usage, reducing API calls and improving performance.
 
             ### Changes
             - Updated `packages/core/src/assets/models.dev.json`
