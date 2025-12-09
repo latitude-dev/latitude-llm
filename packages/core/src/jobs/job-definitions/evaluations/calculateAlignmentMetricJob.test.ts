@@ -1,32 +1,35 @@
+import {
+  ActiveEvaluation,
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetric,
+  Providers,
+} from '@latitude-data/constants'
+import { MIN_ALIGNMENT_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Result } from '../../../lib/Result'
 import { NotFoundError } from '../../../lib/errors'
-import { MIN_ALIGNMENT_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
 import {
-  EvaluationV2,
-  Providers,
-  ActiveEvaluation,
-} from '@latitude-data/constants'
-import * as factories from '../../../tests/factories'
+  CommitsRepository,
+  EvaluationsV2Repository,
+} from '../../../repositories'
 import type { Commit } from '../../../schema/models/types/Commit'
-import type { Workspace } from '../../../schema/models/types/Workspace'
 import type { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import type { Workspace } from '../../../schema/models/types/Workspace'
+import * as endActiveEvaluationModule from '../../../services/evaluationsV2/active/end'
+import * as failActiveEvaluationModule from '../../../services/evaluationsV2/active/fail'
+import * as deleteEvaluationV2Module from '../../../services/evaluationsV2/delete'
+import * as evaluateConfigurationModule from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
+import * as getFalseExamplesModule from '../../../services/evaluationsV2/generateFromIssue/getFalseExamples'
+import * as updateEvaluationV2Module from '../../../services/evaluationsV2/update'
+import * as factories from '../../../tests/factories'
+import { captureException } from '../../../utils/datadogCapture'
+import * as queuesModule from '../../queues'
 import {
   calculateAlignmentMetricJob,
   type CalculateAlignmentMetricJobData,
 } from './calculateAlignmentMetricJob'
-import * as evaluateConfigurationModule from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
-import * as updateEvaluationV2Module from '../../../services/evaluationsV2/update'
-import * as endActiveEvaluationModule from '../../../services/evaluationsV2/active/end'
-import * as failActiveEvaluationModule from '../../../services/evaluationsV2/active/fail'
-import * as deleteEvaluationV2Module from '../../../services/evaluationsV2/delete'
-import * as queuesModule from '../../queues'
-import { captureException } from '../../../utils/datadogCapture'
-import {
-  EvaluationsV2Repository,
-  CommitsRepository,
-} from '../../../repositories'
 
 // Mock dependencies
 vi.mock(
@@ -60,6 +63,13 @@ vi.mock('../../../utils/datadogCapture', () => ({
   captureException: vi.fn(),
 }))
 
+vi.mock(
+  '../../../services/evaluationsV2/generateFromIssue/getFalseExamples',
+  () => ({
+    getFalsePositivesAndFalseNegatives: vi.fn(),
+  }),
+)
+
 describe('calculateAlignmentMetricJob', () => {
   const mockEvaluateConfiguration = vi.mocked(
     evaluateConfigurationModule.evaluateConfiguration,
@@ -77,10 +87,13 @@ describe('calculateAlignmentMetricJob', () => {
     deleteEvaluationV2Module.deleteEvaluationV2,
   )
   const mockQueues = vi.mocked(queuesModule.queues)
+  const mockGetFalsePositivesAndFalseNegatives = vi.mocked(
+    getFalseExamplesModule.getFalsePositivesAndFalseNegatives,
+  )
 
   let workspace: Workspace
   let commit: Commit
-  let evaluation: EvaluationV2
+  let evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
   let document: DocumentVersion
   let jobData: Job<CalculateAlignmentMetricJobData>
   const WORKFLOW_UUID = 'test-workflow-uuid'
@@ -148,6 +161,23 @@ describe('calculateAlignmentMetricJob', () => {
       workspace,
       document,
       commit,
+      type: EvaluationType.Llm,
+      metric: LlmEvaluationMetric.Binary,
+      configuration: {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
+        provider: 'openai',
+        model: 'gpt-5.1',
+        criteria: 'criteria',
+        passDescription: 'pass description',
+        failDescription: 'fail description',
+      },
     })
 
     // Mock repositories
@@ -326,6 +356,12 @@ describe('calculateAlignmentMetricJob', () => {
         }),
       )
       mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
+      mockGetFalsePositivesAndFalseNegatives.mockReturnValue(
+        Result.ok({
+          falsePositives: [{ spanId: 'span-fp-1', traceId: 'trace-fp-1' }],
+          falseNegatives: [{ spanId: 'span-fn-1', traceId: 'trace-fn-1' }],
+        }),
+      )
     })
 
     it('should delete evaluation, queue new generation job, and not fail or end active evaluation', async () => {
@@ -335,6 +371,19 @@ describe('calculateAlignmentMetricJob', () => {
         evaluation: expect.objectContaining({ uuid: evaluation.uuid }),
         commit,
         workspace,
+      })
+
+      expect(mockGetFalsePositivesAndFalseNegatives).toHaveBeenCalledWith({
+        spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
+          { spanId: 'span-1', traceId: 'trace-1' },
+        ],
+        spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
+          { spanId: 'span-2', traceId: 'trace-2' },
+        ],
+        evaluationResults: {
+          'job-1': { hasPassed: true },
+          'job-2': { hasPassed: false },
+        },
       })
 
       const { generateEvaluationsQueue } = await mockQueues()
@@ -348,6 +397,17 @@ describe('calculateAlignmentMetricJob', () => {
           model: 'gpt-4o',
           workflowUuid: WORKFLOW_UUID,
           generationAttempt: 2, // incremented
+          falsePositivesSpanAndTraceIdPairs: [
+            { spanId: 'span-fp-1', traceId: 'trace-fp-1' },
+          ],
+          falseNegativesSpanAndTraceIdPairs: [
+            { spanId: 'span-fn-1', traceId: 'trace-fn-1' },
+          ],
+          previousEvaluationConfiguration: {
+            criteria: evaluation.configuration.criteria,
+            passDescription: evaluation.configuration.passDescription,
+            failDescription: evaluation.configuration.failDescription,
+          },
         },
         {
           jobId: `generateEvaluationV2FromIssueJob:wf=${WORKFLOW_UUID}:generationAttempt=2`,
@@ -514,10 +574,17 @@ describe('calculateAlignmentMetricJob', () => {
         }),
       )
       mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
+      mockGetFalsePositivesAndFalseNegatives.mockReturnValue(
+        Result.ok({
+          falsePositives: [],
+          falseNegatives: [],
+        }),
+      )
 
       await calculateAlignmentMetricJob(jobData)
 
       expect(mockDeleteEvaluationV2).toHaveBeenCalled()
+      expect(mockGetFalsePositivesAndFalseNegatives).toHaveBeenCalled()
       expect(mockUpdateEvaluationV2).not.toHaveBeenCalled()
     })
 

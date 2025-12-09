@@ -159,6 +159,9 @@ describe('generateEvaluationFromIssue', () => {
       workspace,
       providerName: provider.name,
       model: MODEL,
+      falsePositivesSpanAndTraceIdPairs: undefined,
+      falseNegativesSpanAndTraceIdPairs: undefined,
+      previousEvaluationConfiguration: undefined,
     })
 
     // Verify createEvaluationV2 was called with correct parameters
@@ -298,5 +301,92 @@ describe('generateEvaluationFromIssue', () => {
     expect(mockCreateEvaluationV2).toHaveBeenCalled()
     expect(mockUpdateActiveEvaluation).toHaveBeenCalled()
     expect(mockCreateValidationFlow).toHaveBeenCalled()
+  })
+
+  it('passes falsePositivesSpanAndTraceIdPairs, falseNegativesSpanAndTraceIdPairs, and previousEvaluationConfiguration to generateEvaluationConfigFromIssueWithCopilot', async () => {
+    const falsePositives = [{ spanId: 'span-1', traceId: 'trace-1' }]
+    const falseNegatives = [{ spanId: 'span-2', traceId: 'trace-2' }]
+    const previousConfig = {
+      criteria: 'test criteria',
+      passDescription: 'test pass',
+      failDescription: 'test fail',
+    }
+
+    const mockEvaluation = {
+      uuid: 'test-evaluation-uuid',
+      versionId: 1,
+      workspaceId: workspace.id,
+      commitId: commit.id,
+      documentUuid: document.documentUuid,
+      name: 'Test Evaluation',
+      description: 'Test Description',
+      type: EvaluationType.Llm,
+      metric: LlmEvaluationMetric.Binary,
+      configuration: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
+
+    const mockValidationFlowJob = {
+      id: 'test-validation-flow-job-id',
+    } as Job
+
+    mockGenerateEvaluationConfigFromIssueWithCopilot.mockResolvedValue(
+      Result.ok({
+        provider: provider.name,
+        model: MODEL,
+        actualOutput: {
+          messageSelection: 'all',
+          parsingFormat: 'string',
+        },
+        reverseScale: false,
+        criteria: 'Test criteria',
+        passDescription: 'Test pass description',
+        failDescription: 'Test fail description',
+        name: 'Test name',
+        description: 'Test description',
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
+      }),
+    )
+    mockCreateEvaluationV2.mockResolvedValue(
+      Result.ok({ evaluation: mockEvaluation }),
+    )
+    mockUpdateActiveEvaluation.mockResolvedValue(
+      Result.ok({
+        workflowUuid: TEST_WORKFLOW_UUID,
+        issueId: issue.id,
+        queuedAt: new Date(),
+        evaluationUuid: mockEvaluation.uuid,
+      }),
+    )
+    mockCreateValidationFlow.mockResolvedValue(Result.ok(mockValidationFlowJob))
+
+    await generateEvaluationFromIssue({
+      issue,
+      workspace,
+      commit,
+      providerName: provider.name,
+      model: MODEL,
+      workflowUuid: TEST_WORKFLOW_UUID,
+      generationAttempt: 1,
+      falsePositivesSpanAndTraceIdPairs: falsePositives,
+      falseNegativesSpanAndTraceIdPairs: falseNegatives,
+      previousEvaluationConfiguration: previousConfig,
+    })
+
+    expect(
+      mockGenerateEvaluationConfigFromIssueWithCopilot,
+    ).toHaveBeenCalledWith({
+      issue,
+      commit,
+      workspace,
+      providerName: provider.name,
+      model: MODEL,
+      falsePositivesSpanAndTraceIdPairs: falsePositives,
+      falseNegativesSpanAndTraceIdPairs: falseNegatives,
+      previousEvaluationConfiguration: previousConfig,
+    })
   })
 })

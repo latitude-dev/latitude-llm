@@ -3,12 +3,8 @@ import { Workspace } from '../../schema/models/types/Workspace'
 import { Result } from '../../lib/Result'
 import { Issue } from '../../schema/models/types/Issue'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { assembleTrace } from '../../services/tracing/traces/assemble'
-import {
-  adaptCompletionSpanMessagesToLegacy,
-  findCompletionSpanFromTrace,
-} from '../../services/tracing/spans/findCompletionSpanFromTrace'
 import { getHITLSpansByDocument } from './getHITLSpansByDocument'
+import { getSpanMessagesBySpans } from './getSpanMessagesBySpans'
 
 /*
 Gets the conversation (span messages) for the same document as the issue but without an issue attached.
@@ -35,7 +31,7 @@ export async function getSpanMessagesByIssueDocument({
     documentUuid: issue.documentUuid,
     excludeIssueId: issue.id,
     page: 1,
-    pageSize: 5,
+    pageSize: 3,
   })
 
   if (!Result.isOk(spansResult)) {
@@ -48,31 +44,8 @@ export async function getSpanMessagesByIssueDocument({
     return Result.ok([] as LegacyMessage[])
   }
 
-  const messagesAndEvaluationResults: LegacyMessage[] = []
-
-  for (const span of spans) {
-    // Assemble the trace to get the completion span
-    const assembledTrace = await assembleTrace({
-      traceId: span.traceId,
-      workspace: workspace,
-    })
-
-    if (!Result.isOk(assembledTrace)) {
-      continue
-    }
-
-    const completionSpan = findCompletionSpanFromTrace(
-      assembledTrace.value.trace,
-    )
-
-    if (!completionSpan) {
-      continue
-    }
-
-    messagesAndEvaluationResults.push(
-      ...adaptCompletionSpanMessagesToLegacy(completionSpan),
-    )
-  }
-
-  return Result.ok(messagesAndEvaluationResults)
+  return await getSpanMessagesBySpans({
+    workspace,
+    spans,
+  })
 }
