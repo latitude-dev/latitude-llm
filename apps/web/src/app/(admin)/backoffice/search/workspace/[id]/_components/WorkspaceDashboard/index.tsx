@@ -16,6 +16,7 @@ import { DataTable } from '$/app/(admin)/backoffice/search/_components/DataTable
 import { ClearCacheButton } from '../ClearCacheButton'
 import { ChangePlanButton } from '../ChangePlanButton'
 import { ToggleIssuesUnlockedButton } from '../ToggleIssuesUnlockedButton'
+import { BigAccountBanner } from '../BigAccountBanner'
 
 type Props = {
   workspace: WorkspaceWithDetails
@@ -79,6 +80,11 @@ export function WorkspaceDashboard({ workspace }: Props) {
         />
 
         <BasicInfoList items={basicInfo} title='Workspace Information' />
+
+        <BigAccountBanner
+          workspaceId={workspace.id}
+          isBigAccount={workspace.isBigAccount}
+        />
 
         <div className='flex justify-between gap-2'>
           <ToggleIssuesUnlockedButton

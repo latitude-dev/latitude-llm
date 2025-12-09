@@ -30,5 +30,6 @@ export const workspaces = latitudeSchema.table('workspaces', {
     onDelete: 'set null',
   }),
   issuesUnlocked: boolean('issues_unlocked').notNull().default(false),
+  isBigAccount: boolean('is_big_account').notNull().default(false),
   ...timestamps(),
 })

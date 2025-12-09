@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."workspaces" ADD COLUMN "is_big_account" boolean DEFAULT false NOT NULL;
