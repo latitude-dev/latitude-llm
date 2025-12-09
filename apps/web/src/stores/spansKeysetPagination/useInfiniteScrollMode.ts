@@ -114,24 +114,20 @@ export function useInfiniteScrollMode(
     mutate,
     setSize: setInfiniteSize,
     isValidating,
-  } = useSWRInfinite<SpansKeysetPaginationResult>(
-    getKey,
-    infiniteFetcher,
-    {
-      ...opts,
-      revalidateOnFocus: false,
-      fallbackData:
-        params.initialItems && params.initialItems.length > 0
-          ? [
-              {
-                count: null,
-                items: params.initialItems,
-                next: params.initialItems.at(-1)!.startedAt.toISOString(),
-              },
-            ]
-          : undefined,
-    },
-  )
+  } = useSWRInfinite<SpansKeysetPaginationResult>(getKey, infiniteFetcher, {
+    ...opts,
+    revalidateOnFocus: false,
+    fallbackData:
+      params.initialItems && params.initialItems.length > 0
+        ? [
+            {
+              count: null,
+              items: params.initialItems,
+              next: params.initialItems.at(-1)!.startedAt.toISOString(),
+            },
+          ]
+        : undefined,
+  })
 
   const items = useMemo(() => {
     if (!data) return []

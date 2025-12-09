@@ -41,31 +41,32 @@ export function usePaginationMode(
     },
   )
 
-  const { data, error, isLoading, mutate } = useSWR<SpansKeysetPaginationResult>(
-    [
-      'spansKeysetPagination',
-      params.projectId,
-      params.commitUuid,
-      params.documentUuid,
-      params.source,
-      currentCursor,
-      params.type,
-      params.limit,
-    ],
-    fetcher,
-    {
-      ...opts,
-      keepPreviousData: true,
-      fallbackData:
-        params.initialItems && params.initialItems.length > 0
-          ? {
-              count: null,
-              items: params.initialItems,
-              next: params.initialItems.at(-1)!.startedAt.toISOString(),
-            }
-          : undefined,
-    },
-  )
+  const { data, error, isLoading, mutate } =
+    useSWR<SpansKeysetPaginationResult>(
+      [
+        'spansKeysetPagination',
+        params.projectId,
+        params.commitUuid,
+        params.documentUuid,
+        params.source,
+        currentCursor,
+        params.type,
+        params.limit,
+      ],
+      fetcher,
+      {
+        ...opts,
+        keepPreviousData: true,
+        fallbackData:
+          params.initialItems && params.initialItems.length > 0
+            ? {
+                count: null,
+                items: params.initialItems,
+                next: params.initialItems.at(-1)!.startedAt.toISOString(),
+              }
+            : undefined,
+      },
+    )
 
   const goToNextPage = useCallback(() => {
     if (!data?.next || isLoading) return

@@ -64,7 +64,9 @@ export function useSpansKeysetPaginationStore(
   const infinite = useInfiniteScrollMode(
     params,
     filters,
-    realtime ? (opts as SWRInfiniteConfiguration<SpansKeysetPaginationResult>) : undefined,
+    realtime
+      ? (opts as SWRInfiniteConfiguration<SpansKeysetPaginationResult>)
+      : undefined,
   )
 
   const { queueSpan } = useRealtimeBatching(
@@ -85,8 +87,8 @@ export function useSpansKeysetPaginationStore(
 
   return useMemo<UseSpansKeysetPaginationReturn>(
     () => ({
-      items: realtime ? infinite.items : pagination.data?.items ?? [],
-      count: realtime ? infinite.count : pagination.data?.count ?? null,
+      items: realtime ? infinite.items : (pagination.data?.items ?? []),
+      count: realtime ? infinite.count : (pagination.data?.count ?? null),
       hasNext: realtime ? infinite.hasNext : !!pagination.data?.next,
       hasPrev: realtime ? false : pagination.cursorHistoryLength > 0,
       isLoading: realtime ? infinite.isLoading : pagination.isLoading,
