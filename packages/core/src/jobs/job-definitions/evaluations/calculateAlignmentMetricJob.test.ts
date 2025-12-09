@@ -1,33 +1,35 @@
+import {
+  ActiveEvaluation,
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetric,
+  Providers,
+} from '@latitude-data/constants'
+import { MIN_ALIGNMENT_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Result } from '../../../lib/Result'
 import { NotFoundError } from '../../../lib/errors'
-import { MIN_ALIGNMENT_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
 import {
-  EvaluationV2,
-  Providers,
-  ActiveEvaluation,
-} from '@latitude-data/constants'
-import * as factories from '../../../tests/factories'
+  CommitsRepository,
+  EvaluationsV2Repository,
+} from '../../../repositories'
 import type { Commit } from '../../../schema/models/types/Commit'
-import type { Workspace } from '../../../schema/models/types/Workspace'
 import type { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import type { Workspace } from '../../../schema/models/types/Workspace'
+import * as endActiveEvaluationModule from '../../../services/evaluationsV2/active/end'
+import * as failActiveEvaluationModule from '../../../services/evaluationsV2/active/fail'
+import * as deleteEvaluationV2Module from '../../../services/evaluationsV2/delete'
+import * as evaluateConfigurationModule from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
+import * as getFalseExamplesModule from '../../../services/evaluationsV2/generateFromIssue/getFalseExamples'
+import * as updateEvaluationV2Module from '../../../services/evaluationsV2/update'
+import * as factories from '../../../tests/factories'
+import { captureException } from '../../../utils/datadogCapture'
+import * as queuesModule from '../../queues'
 import {
   calculateAlignmentMetricJob,
   type CalculateAlignmentMetricJobData,
 } from './calculateAlignmentMetricJob'
-import * as evaluateConfigurationModule from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
-import * as updateEvaluationV2Module from '../../../services/evaluationsV2/update'
-import * as endActiveEvaluationModule from '../../../services/evaluationsV2/active/end'
-import * as failActiveEvaluationModule from '../../../services/evaluationsV2/active/fail'
-import * as deleteEvaluationV2Module from '../../../services/evaluationsV2/delete'
-import * as queuesModule from '../../queues'
-import { captureException } from '../../../utils/datadogCapture'
-import {
-  EvaluationsV2Repository,
-  CommitsRepository,
-} from '../../../repositories'
-import * as getFalseExamplesModule from '../../../services/evaluationsV2/generateFromIssue/getFalseExamples'
 
 // Mock dependencies
 vi.mock(
@@ -91,7 +93,7 @@ describe('calculateAlignmentMetricJob', () => {
 
   let workspace: Workspace
   let commit: Commit
-  let evaluation: EvaluationV2
+  let evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
   let document: DocumentVersion
   let jobData: Job<CalculateAlignmentMetricJobData>
   const WORKFLOW_UUID = 'test-workflow-uuid'
@@ -159,6 +161,23 @@ describe('calculateAlignmentMetricJob', () => {
       workspace,
       document,
       commit,
+      type: EvaluationType.Llm,
+      metric: LlmEvaluationMetric.Binary,
+      configuration: {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
+        provider: 'openai',
+        model: 'gpt-5.1',
+        criteria: 'criteria',
+        passDescription: 'pass description',
+        failDescription: 'fail description',
+      },
     })
 
     // Mock repositories
