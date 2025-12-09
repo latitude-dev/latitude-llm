@@ -40,7 +40,6 @@ describe('IssuesRepository - Group Filtering', () => {
       createdAt: new Date(),
       histograms: [
         {
-          issue: null as any,
           commitId: commit.id,
           date: new Date(),
           count: 1,
@@ -56,7 +55,6 @@ describe('IssuesRepository - Group Filtering', () => {
       createdAt: new Date(),
       histograms: [
         {
-          issue: null as any,
           commitId: commit.id,
           date: new Date(),
           count: 1,
@@ -77,7 +75,6 @@ describe('IssuesRepository - Group Filtering', () => {
       createdAt: new Date(),
       histograms: [
         {
-          issue: null as any,
           commitId: commit.id,
           date: new Date(),
           count: 1,
@@ -94,7 +91,6 @@ describe('IssuesRepository - Group Filtering', () => {
       createdAt: new Date(),
       histograms: [
         {
-          issue: null as any,
           commitId: commit.id,
           date: new Date(),
           count: 1,
@@ -108,7 +104,6 @@ describe('IssuesRepository - Group Filtering', () => {
       createdAt: new Date(),
       histograms: [
         {
-          issue: null as any,
           commitId: commit.id,
           date: new Date(),
           count: 1,

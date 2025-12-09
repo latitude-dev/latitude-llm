@@ -36,6 +36,7 @@ describe('getLogsData', () => {
         logsCount: 0,
         tokensSpent: 0,
         tokensCost: 0,
+        topProjects: [],
       })
     })
   })
@@ -61,6 +62,7 @@ describe('getLogsData', () => {
         logsCount: 0,
         tokensSpent: 0,
         tokensCost: 0,
+        topProjects: [],
       })
     })
   })
@@ -119,13 +121,13 @@ describe('getLogsData', () => {
       // Call without dateRange - should use default last week range
       const result = await getLogsData({ workspace: freshWorkspace })
 
-      expect(result.usedInProduction).toBe(true)
+      expect(result.usedInProduction).toEqual(true)
       // Should only count the recent trace, not the old one
-      expect(result.logsCount).toBe(1)
+      expect(result.logsCount).toEqual(1)
       // Should only count tokens from recent completion span
-      expect(result.tokensSpent).toBe(300) // 100 + 200
+      expect(result.tokensSpent).toEqual(300) // 100 + 200
       // Should only count cost from recent completion span
-      expect(result.tokensCost).toBe(10) // 1000 / 100
+      expect(result.tokensCost).toEqual(10) // 1000 / 100
     })
   })
 
@@ -175,8 +177,8 @@ describe('getLogsData', () => {
         dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
       })
 
-      expect(result.usedInProduction).toBe(true)
-      expect(result.logsCount).toBe(3) // 3 distinct trace IDs (all sources)
+      expect(result.usedInProduction).toEqual(true)
+      expect(result.logsCount).toEqual(3) // 3 distinct trace IDs (all sources)
     })
 
     it('sums tokens from completion spans only (all sources)', async () => {
@@ -226,9 +228,9 @@ describe('getLogsData', () => {
         dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
       })
 
-      expect(result.usedInProduction).toBe(true)
+      expect(result.usedInProduction).toEqual(true)
       // Total: (100 + 200 + 50 + 25) + (150 + 250 + 75 + 30) = 375 + 505 = 880
-      expect(result.tokensSpent).toBe(880)
+      expect(result.tokensSpent).toEqual(880)
     })
 
     it('sums cost from completion spans only and converts from cents (all sources)', async () => {
@@ -269,9 +271,9 @@ describe('getLogsData', () => {
         dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
       })
 
-      expect(result.usedInProduction).toBe(true)
+      expect(result.usedInProduction).toEqual(true)
       // Total: (1234 + 5678) / 100 = 6912 / 100 = 69.12
-      expect(result.tokensCost).toBe(69.12)
+      expect(result.tokensCost).toEqual(69.12)
     })
 
     it('handles null/undefined token and cost values', async () => {
@@ -305,9 +307,9 @@ describe('getLogsData', () => {
         dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
       })
 
-      expect(result.usedInProduction).toBe(true)
-      expect(result.tokensSpent).toBe(100)
-      expect(result.tokensCost).toBe(5)
+      expect(result.usedInProduction).toEqual(true)
+      expect(result.tokensSpent).toEqual(100)
+      expect(result.tokensCost).toEqual(5)
     })
 
     it('counts all sources for logs/tokens/cost', async () => {
@@ -363,10 +365,10 @@ describe('getLogsData', () => {
         dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
       })
 
-      expect(result.usedInProduction).toBe(true)
-      expect(result.logsCount).toBe(4) // 4 distinct traces: prod-trace-1, shared-trace-id, playground-trace-1, experiment-trace-1
-      expect(result.tokensSpent).toBe(600) // 100 + 500
-      expect(result.tokensCost).toBe(60) // (1000 + 5000) / 100
+      expect(result.usedInProduction).toEqual(true)
+      expect(result.logsCount).toEqual(4) // 4 distinct traces: prod-trace-1, shared-trace-id, playground-trace-1, experiment-trace-1
+      expect(result.tokensSpent).toEqual(600) // 100 + 500
+      expect(result.tokensCost).toEqual(60) // (1000 + 5000) / 100
     })
 
     it('respects custom date range when provided', async () => {
@@ -401,8 +403,8 @@ describe('getLogsData', () => {
         },
       })
 
-      expect(result.usedInProduction).toBe(true)
-      expect(result.logsCount).toBe(1) // Only trace-in-range
+      expect(result.usedInProduction).toEqual(true)
+      expect(result.logsCount).toEqual(1) // Only trace-in-range
     })
 
     it('handles all source types', async () => {
@@ -434,8 +436,8 @@ describe('getLogsData', () => {
         dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
       })
 
-      expect(result.usedInProduction).toBe(true)
-      expect(result.logsCount).toBe(allSources.length)
+      expect(result.usedInProduction).toEqual(true)
+      expect(result.logsCount).toEqual(allSources.length)
     })
   })
 
@@ -456,10 +458,13 @@ describe('getLogsData', () => {
         dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
       })
 
-      expect(result.usedInProduction).toBe(false) // No prompt spans = never used in production
-      expect(result.logsCount).toBe(0)
-      expect(result.tokensSpent).toBe(0)
-      expect(result.tokensCost).toBe(0)
+      expect(result).toEqual({
+        usedInProduction: false,
+        logsCount: 0,
+        tokensSpent: 0,
+        tokensCost: 0,
+        topProjects: [],
+      })
     })
 
     it('handles very large token and cost values', async () => {
@@ -486,9 +491,13 @@ describe('getLogsData', () => {
         dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
       })
 
-      expect(result.usedInProduction).toBe(true)
-      expect(result.tokensSpent).toBe(3_000_000)
-      expect(result.tokensCost).toBe(99_999.99)
+      expect(result).toEqual({
+        usedInProduction: true,
+        logsCount: expect.any(Number),
+        tokensSpent: 3_000_000,
+        tokensCost: 99_999.99,
+        topProjects: expect.any(Array),
+      })
     })
 
     it('handles zero cost and zero tokens', async () => {
@@ -514,9 +523,274 @@ describe('getLogsData', () => {
         dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
       })
 
-      expect(result.usedInProduction).toBe(true)
-      expect(result.tokensSpent).toBe(0)
-      expect(result.tokensCost).toBe(0)
+      expect(result.usedInProduction).toEqual(true)
+      expect(result.tokensSpent).toEqual(0)
+      expect(result.tokensCost).toEqual(0)
+    })
+  })
+
+  describe('top projects', () => {
+    it('returns top 10 projects ordered by logs count', async () => {
+      const { workspace: freshWorkspace } = await createWorkspace()
+      const { createProject } = await import(
+        '../../../tests/factories/projects'
+      )
+
+      // Enable production usage (outside date range to not affect counts)
+      const outsideRange = new Date('2024-01-01T10:00:00Z')
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: outsideRange,
+      })
+
+      // Create 12 projects with different log counts
+      for (let i = 0; i < 12; i++) {
+        const { project } = await createProject({
+          workspace: freshWorkspace,
+          documents: { [`doc-${i}`]: 'content' },
+        })
+
+        const logsCount = 12 - i // Descending counts: 12, 11, 10, ..., 1
+
+        for (let j = 0; j < logsCount; j++) {
+          const traceId = `project-${project.id}-trace-${j}`
+
+          // Create prompt span for the trace
+          await createSpan({
+            workspaceId: freshWorkspace.id,
+            projectId: project.id,
+            traceId,
+            type: SpanType.Prompt,
+            source: LogSources.API,
+            startedAt: STATIC_TEST_DATE,
+          })
+
+          // Create completion span for tokens and cost
+          await createSpan({
+            workspaceId: freshWorkspace.id,
+            projectId: project.id,
+            traceId,
+            type: SpanType.Completion,
+            source: LogSources.API,
+            startedAt: STATIC_TEST_DATE,
+            tokensPrompt: 10,
+            tokensCompletion: 20,
+            cost: 100, // $1.00 per trace
+          })
+        }
+      }
+
+      const result = await getLogsData({
+        workspace: freshWorkspace,
+        dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
+      })
+
+      // Should return only top 10
+      expect(result.topProjects).toHaveLength(10)
+
+      // Should be ordered by logs count descending
+      expect(result.topProjects[0]?.logsCount).toEqual(12)
+      expect(result.topProjects[1]?.logsCount).toEqual(11)
+      expect(result.topProjects[9]?.logsCount).toEqual(3)
+
+      // Check tokens and cost for first project (12 traces)
+      expect(result.topProjects[0]?.tokensSpent).toEqual(12 * 30) // 12 traces * 30 tokens
+      expect(result.topProjects[0]?.tokensCost).toEqual(12 * 1) // 12 traces * $1.00
+
+      // Global count should include all 12 projects
+      const totalLogs = ((12 + 1) * 12) / 2 // Sum from 1 to 12
+      expect(result.logsCount).toEqual(totalLogs)
+    })
+
+    it('includes project name in top projects', async () => {
+      const { workspace: freshWorkspace } = await createWorkspace()
+      const { createProject } = await import(
+        '../../../tests/factories/projects'
+      )
+
+      // Enable production usage (outside date range to not affect counts)
+      const outsideRange = new Date('2024-01-01T10:00:00Z')
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: outsideRange,
+      })
+
+      const { project } = await createProject({
+        workspace: freshWorkspace,
+        name: 'Test Project Name',
+        documents: { doc: 'content' },
+      })
+
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        projectId: project.id,
+        traceId: 'test-trace',
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: STATIC_TEST_DATE,
+      })
+
+      const result = await getLogsData({
+        workspace: freshWorkspace,
+        dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
+      })
+
+      expect(result.topProjects).toHaveLength(1)
+      expect(result.topProjects[0]?.projectId).toEqual(project.id)
+      expect(result.topProjects[0]?.projectName).toEqual('Test Project Name')
+    })
+
+    it('excludes spans without projectId from top projects', async () => {
+      const { workspace: freshWorkspace } = await createWorkspace()
+      const { createProject } = await import(
+        '../../../tests/factories/projects'
+      )
+
+      // Enable production usage (outside date range to not affect counts)
+      const outsideRange = new Date('2024-01-01T10:00:00Z')
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: outsideRange,
+      })
+
+      const { project } = await createProject({
+        workspace: freshWorkspace,
+        documents: { doc: 'content' },
+      })
+
+      // Create spans with projectId
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        projectId: project.id,
+        traceId: 'with-project',
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: STATIC_TEST_DATE,
+      })
+
+      // Create spans without projectId (should not appear in top projects)
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        projectId: undefined,
+        traceId: 'without-project',
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: STATIC_TEST_DATE,
+      })
+
+      const result = await getLogsData({
+        workspace: freshWorkspace,
+        dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
+      })
+
+      // Global count includes both
+      expect(result.logsCount).toEqual(2)
+
+      // Top projects only includes the one with projectId
+      expect(result.topProjects).toHaveLength(1)
+      expect(result.topProjects[0]?.projectId).toEqual(project.id)
+    })
+
+    it('handles projects with no completion spans (zero tokens/cost)', async () => {
+      const { workspace: freshWorkspace } = await createWorkspace()
+      const { createProject } = await import(
+        '../../../tests/factories/projects'
+      )
+
+      // Enable production usage (outside date range to not affect counts)
+      const outsideRange = new Date('2024-01-01T10:00:00Z')
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: outsideRange,
+      })
+
+      const { project } = await createProject({
+        workspace: freshWorkspace,
+        documents: { doc: 'content' },
+      })
+
+      // Create only prompt span (no completion span)
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        projectId: project.id,
+        traceId: 'test-trace',
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: STATIC_TEST_DATE,
+      })
+
+      const result = await getLogsData({
+        workspace: freshWorkspace,
+        dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
+      })
+
+      expect(result.topProjects).toHaveLength(1)
+      expect(result.topProjects[0]?.logsCount).toEqual(1)
+      expect(result.topProjects[0]?.tokensSpent).toEqual(0)
+      expect(result.topProjects[0]?.tokensCost).toEqual(0)
+    })
+
+    it('respects date range for top projects', async () => {
+      const { workspace: freshWorkspace } = await createWorkspace()
+      const { createProject } = await import(
+        '../../../tests/factories/projects'
+      )
+
+      // Enable production usage (outside date range to not affect counts)
+      const enableProductionDate = new Date('2024-01-01T10:00:00Z')
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: enableProductionDate,
+      })
+
+      const { project } = await createProject({
+        workspace: freshWorkspace,
+        documents: { doc: 'content' },
+      })
+
+      const dateInRange = new Date('2024-01-09T10:00:00Z')
+      const dateOutOfRange = new Date('2024-01-15T10:00:00Z')
+
+      // Create span in range
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        projectId: project.id,
+        traceId: 'in-range',
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: dateInRange,
+      })
+
+      // Create span out of range
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        projectId: project.id,
+        traceId: 'out-of-range',
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: dateOutOfRange,
+      })
+
+      const result = await getLogsData({
+        workspace: freshWorkspace,
+        dateRange: {
+          from: new Date('2024-01-08T00:00:00Z'),
+          to: new Date('2024-01-11T00:00:00Z'),
+        },
+      })
+
+      expect(result.topProjects).toHaveLength(1)
+      expect(result.topProjects[0]?.logsCount).toEqual(1) // Only the one in range
     })
   })
 })
