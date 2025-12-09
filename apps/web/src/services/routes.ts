@@ -26,6 +26,7 @@ export enum BackofficeRoutes {
   grants = 'grants',
   promocodes = 'promocodes',
   integrations = 'integrations',
+  weekly = 'weekly',
 }
 
 const BACKOFFICE_ROOT = '/backoffice'
@@ -79,6 +80,11 @@ export const ROUTES = {
     },
     [BackofficeRoutes.integrations]: {
       root: `${BACKOFFICE_ROOT}/integrations`,
+    },
+    [BackofficeRoutes.weekly]: {
+      root: `${BACKOFFICE_ROOT}/weekly`,
+      withWorkspaceId: (workspaceId: number) =>
+        `${BACKOFFICE_ROOT}/weekly?workspaceId=${workspaceId}`,
     },
   },
   noWorkspace: {

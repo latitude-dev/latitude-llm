@@ -179,7 +179,7 @@ const EXAMPLE_ISSUE_TITLE = 'Incorrect JSON formatting'
 IssueEscalatingMail.PreviewProps = {
   issueTitle: EXAMPLE_ISSUE_TITLE,
   link: 'https://example.com',
-  currentWorkspace: { id: 1 },
+  currentWorkspace: { id: 1, name: 'Acme Corp' },
   issue: {
     title: EXAMPLE_ISSUE_TITLE,
     eventsCount: 60,

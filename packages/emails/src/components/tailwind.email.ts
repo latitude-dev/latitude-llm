@@ -23,11 +23,18 @@ export default {
           'dark-1': '#0657AE',
           'dark-2': '#054387',
         },
+        accent: {
+          DEFAULT: '#EFF7FF',
+        },
         secondary: {
           DEFAULT: '#F9FAFB',
         },
         destructive: {
           DEFAULT: '#DC2626',
+        },
+        latte: {
+          DEFAULT: '#FEF0D2',
+          foreground: '#fec51b',
         },
         'destructive-muted': {
           DEFAULT: '#FEE2E2',

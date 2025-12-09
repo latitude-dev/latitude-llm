@@ -23,6 +23,7 @@
     "./runs": "./src/runs.ts",
     "./latitudePromptSchema": "./src/latitudePromptSchema/index.ts",
     "./latte": "./src/latte/index.ts",
+    "./formatCount": "./src/formatCount.ts",
     "./promptl": "./src/promptl.ts",
     "./trigger": "./src/trigger.ts",
     "./issues": "./src/issues/index.ts",

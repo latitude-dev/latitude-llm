@@ -92,6 +92,15 @@ export function WorkspaceDashboard({ workspace }: Props) {
             issuesUnlocked={workspace.issuesUnlocked}
           />
           <div className='flex gap-2'>
+            <Link
+              href={ROUTES.backoffice[BackofficeRoutes.weekly].withWorkspaceId(
+                workspace.id,
+              )}
+            >
+              <Button fancy variant='outline'>
+                <Text.H5B noWrap>See Weekly</Text.H5B>
+              </Button>
+            </Link>
             <ChangePlanButton
               workspaceId={workspace.id}
               currentPlan={workspace.subscription.plan}

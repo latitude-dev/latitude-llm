@@ -66,10 +66,10 @@ function WhyStep() {
     <div className='flex flex-col gap-y-2'>
       <div className='flex items-center gap-2'>
         <AnnotationsProgressIcon isCompleted />
-        <Text.H4B>Why annotate logs?</Text.H4B>
+        <Text.H4B>Why annotate traces?</Text.H4B>
       </div>
       <Text.H5 color='foregroundMuted'>
-        Annotating logs helps improve accuracy by providing valuable feedback.
+        Annotating traces helps improve accuracy by providing valuable feedback.
         Identifying errors helps us refine algorithms and deliver better
         results.
       </Text.H5>

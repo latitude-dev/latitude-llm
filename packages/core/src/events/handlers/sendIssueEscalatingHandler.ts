@@ -3,13 +3,9 @@ import { ESCALATION_EXPIRATION_DAYS } from '@latitude-data/constants/issues'
 import { env } from '@latitude-data/env'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
-import {
-  IssueEscalatingMailer,
-  SendIssueEscalatingMailOptions,
-} from '../../mailers'
+import { IssueEscalatingMailer } from '../../mailer/mailers/issues/IssueEscalatingMailer'
 import { IssuesRepository, IssueHistogramsRepository } from '../../repositories'
 import { updateEscalatingIssue } from '../../services/issues/updateEscalating'
-import { captureException } from '../../utils/datadogCapture'
 import { IssueIncrementedEvent } from '../events'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { users } from '../../schema/models/users'
@@ -21,7 +17,7 @@ const BATCH_SIZE = 100 // Batch size can be up to 1000 in mailgun
 async function findNotificableMembers(workspace: Workspace) {
   return database
     .select({
-      id: users.id,
+      userId: users.id,
       email: users.email,
       name: users.name,
       membershipId: memberships.id,
@@ -37,7 +33,6 @@ async function findNotificableMembers(workspace: Workspace) {
     .orderBy(asc(users.createdAt))
 }
 
-// TODO: Refactor common batching logic with other mailers
 async function sendEmail({
   workspace,
   issue,
@@ -51,15 +46,12 @@ async function sendEmail({
   projectId: number
   batchSize?: number
 }) {
-  if (!workspace) {
-    return
-  }
+  if (!workspace) return
 
   const members = await findNotificableMembers(workspace)
 
   if (members.length === 0) return
 
-  // Fetch histogram data for the issue
   const histogramsRepo = new IssueHistogramsRepository(workspace.id)
   const histogramResult = await histogramsRepo.findHistogramForIssue({
     issueId: issue.id,
@@ -81,52 +73,23 @@ async function sendEmail({
     },
   )
 
-  const addresses = members.map((member) => ({
-    id: member.id,
-    address: member.email,
-    name: member.name || member.email,
-    membershipId: member.membershipId,
-  }))
-
-  const batches: SendIssueEscalatingMailOptions[] = []
-
-  for (let i = 0; i < addresses.length; i += batchSize) {
-    const batchAddresses = addresses.slice(i, i + batchSize)
-    const recipientVariables: Record<string, Record<string, unknown>> = {}
-
-    batchAddresses.forEach((user) => {
-      recipientVariables[user.address] = {
-        name: user.name,
-        id: user.id,
-        membershipId: user.membershipId,
-      }
-    })
-
-    batches.push({
-      to: batchAddresses.map((u) => u.address),
-      recipientVariables,
-      currentWorkspace: workspace,
-      issue: issueData,
-    })
-  }
-
-  await Promise.allSettled(
-    batches.map(async (batch, index) => {
-      const result = await mailer.send(batch)
-
-      if (result.error) {
-        const batchSize = Array.isArray(batch.to) ? batch.to.length : 1
-        captureException(result.error, {
-          issueId: issue.id,
-          issueTitle: issue.title,
-          workspaceId: workspace.id,
-          batchIndex: index,
-          batchSize: batchSize,
-          context: 'issue_escalation_email',
-        })
-      }
-    }),
-  )
+  await mailer.sendInBatches({
+    addressList: members,
+    sendOptions: async (batch) =>
+      mailer.send({
+        to: batch.to,
+        recipientVariables: batch.recipientVariables,
+        currentWorkspace: workspace,
+        issue: issueData,
+      }),
+    context: {
+      mailName: 'issue_escalation_email',
+      issueId: issue.id,
+      issueTitle: issue.title,
+      workspaceId: workspace.id,
+    },
+    batchSize,
+  })
 }
 
 /**

@@ -1,6 +1,6 @@
 import { unsafelyGetUser } from '../../data-access/users'
 import { NotFoundError } from '../../lib/errors'
-import { MagicLinkMailer } from '../../mailers'
+import { MagicLinkMailer } from '../../mailer/mailers/magicLinks/MagicLinkMailer'
 import { MagicLinkTokenCreated } from '../events'
 
 export async function sendMagicLinkJob({

@@ -16,12 +16,14 @@ export async function createWorkspace(
     createdAt,
     source = 'default',
     subscriptionPlan = SubscriptionPlan.HobbyV3,
+    isBigAccount = false,
   }: {
     name: string
     user: User
     source?: string
     createdAt?: Date
     subscriptionPlan?: SubscriptionPlan
+    isBigAccount?: boolean
   },
   transaction = new Transaction(),
 ) {
@@ -29,7 +31,12 @@ export async function createWorkspace(
     async (tx) => {
       const insertedWorkspaces = await tx
         .insert(workspaces)
-        .values({ name, creatorId: user.id, createdAt })
+        .values({
+          name,
+          creatorId: user.id,
+          createdAt,
+          isBigAccount,
+        })
         .returning()
       let workspace = insertedWorkspaces[0]!
 

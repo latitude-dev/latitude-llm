@@ -61,6 +61,11 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               value: BackofficeRoutes.integrations,
               route: ROUTES.backoffice.integrations.root,
             },
+            {
+              label: 'Weekly',
+              value: BackofficeRoutes.weekly,
+              route: ROUTES.backoffice.weekly.root,
+            },
           ]}
           selected={selected}
         />

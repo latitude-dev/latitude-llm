@@ -8,5 +8,5 @@ export type ContainerLayoutProps = {
 }
 
 export type NotificiationsLayoutProps = {
-  currentWorkspace: { id: number }
+  currentWorkspace: { id: number; name: string }
 }

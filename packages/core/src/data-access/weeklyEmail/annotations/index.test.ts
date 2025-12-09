@@ -65,6 +65,7 @@ describe('getAnnotationsData', () => {
         passedPercentage: 0,
         failedPercentage: 0,
         topProjects: [],
+        firstProjectId: project.id,
       })
     })
   })
@@ -109,6 +110,7 @@ describe('getAnnotationsData', () => {
         passedPercentage: 0,
         failedPercentage: 0,
         topProjects: [],
+        firstProjectId: null,
       })
     })
   })
@@ -180,6 +182,7 @@ describe('getAnnotationsData', () => {
             failedPercentage: 40,
           },
         ],
+        firstProjectId: project.id,
       })
     })
 
@@ -232,6 +235,7 @@ describe('getAnnotationsData', () => {
             failedPercentage: 0,
           },
         ],
+        firstProjectId: project.id,
       })
     })
 
@@ -284,6 +288,7 @@ describe('getAnnotationsData', () => {
             failedPercentage: 100,
           },
         ],
+        firstProjectId: project.id,
       })
     })
 
@@ -355,6 +360,7 @@ describe('getAnnotationsData', () => {
             failedPercentage: 0,
           },
         ],
+        firstProjectId: project.id,
       })
     })
 
@@ -428,13 +434,14 @@ describe('getAnnotationsData', () => {
             failedPercentage: 0,
           },
         ],
+        firstProjectId: project.id,
       })
     })
   })
 
   describe('when no date range is provided', () => {
-    it('fetches annotations from previous calendar week by default and ignores older ones', async () => {
-      // Create a fresh workspace for this test to avoid interference
+    it('fetches annotations from last week (Sunday to Sunday) by default', async () => {
+      // Create a fresh workspace to avoid interference from previous tests
       const { workspace: freshWorkspace } = await createWorkspace()
       const {
         project: freshProject,
@@ -454,25 +461,24 @@ describe('getAnnotationsData', () => {
         metric: HumanEvaluationMetric.Binary,
       })
 
-      // Calculate the previous calendar week (Sunday to Sunday)
+      // Calculate last week's date range (Sunday to Sunday)
       const now = new Date()
-      const lastSunday = new Date(
+      const lastWeekEnd = new Date(
         now.getFullYear(),
         now.getMonth(),
         now.getDate() - now.getDay(),
       )
-      const previousSunday = new Date(
-        lastSunday.getFullYear(),
-        lastSunday.getMonth(),
-        lastSunday.getDate() - 7,
+      const lastWeekStart = new Date(
+        lastWeekEnd.getFullYear(),
+        lastWeekEnd.getMonth(),
+        lastWeekEnd.getDate() - 7,
       )
 
-      // Create annotation within previous calendar week (Wednesday of that week)
-      const dateInRange = new Date(
-        previousSunday.getFullYear(),
-        previousSunday.getMonth(),
-        previousSunday.getDate() + 3, // Wednesday
-        12, // noon
+      // Create annotation within last week range (3 days into the week)
+      const dateInLastWeek = new Date(
+        lastWeekStart.getFullYear(),
+        lastWeekStart.getMonth(),
+        lastWeekStart.getDate() + 3,
       )
 
       const span1 = await createSpan({
@@ -486,15 +492,14 @@ describe('getAnnotationsData', () => {
         evaluation,
         span: span1,
         hasPassed: true,
-        createdAt: dateInRange,
+        createdAt: dateInLastWeek,
       })
 
-      // Create annotation older than previous calendar week (2 weeks ago)
-      const dateOutOfRange = new Date(
-        previousSunday.getFullYear(),
-        previousSunday.getMonth(),
-        previousSunday.getDate() - 10, // 10 days before previous Sunday
-        12,
+      // Create annotation outside last week range (2 weeks ago)
+      const twoWeeksAgo = new Date(
+        lastWeekStart.getFullYear(),
+        lastWeekStart.getMonth(),
+        lastWeekStart.getDate() - 10,
       )
 
       const span2 = await createSpan({
@@ -508,15 +513,15 @@ describe('getAnnotationsData', () => {
         evaluation,
         span: span2,
         hasPassed: false,
-        createdAt: dateOutOfRange,
+        createdAt: twoWeeksAgo,
       })
 
-      // Call without dateRange - should use default previous calendar week range
+      // Call without dateRange - should use default last week range
       const result = await getAnnotationsData({ workspace: freshWorkspace })
 
       expect(result).toEqual({
         hasAnnotations: true,
-        annotationsCount: 1, // Only annotation in previous calendar week
+        annotationsCount: 1, // Only the annotation from last week
         passedCount: 1,
         failedCount: 0,
         passedPercentage: 100,
@@ -532,6 +537,7 @@ describe('getAnnotationsData', () => {
             failedPercentage: 0,
           },
         ],
+        firstProjectId: freshProject.id,
       })
     })
   })
@@ -612,6 +618,7 @@ describe('getAnnotationsData', () => {
             failedPercentage: expect.closeTo(66.67, 2),
           },
         ],
+        firstProjectId: project.id,
       })
     })
   })

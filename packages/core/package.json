@@ -118,7 +118,6 @@
     "lint": "eslint src",
     "tc": "tsc --noEmit",
     "test": "pnpm run db:migrate:test && vitest run --pool=forks",
-    "email:dev": "email dev -d ./src/mailers/emails",
     "test:watch": "vitest",
     "scripts:setup": "tsx scripts/setup.ts",
     "backgroundRun:stressTest": "tsx scripts/background-run/stress-test.ts",

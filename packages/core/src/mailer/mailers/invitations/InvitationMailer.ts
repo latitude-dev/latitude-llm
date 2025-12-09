@@ -3,8 +3,8 @@ import InvitationMail from '@latitude-data/emails/InvitationMail'
 import Mail from 'nodemailer/lib/mailer'
 import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
-import { type User } from '../../../../schema/models/types/User'
-import { TypedResult } from '../../../../lib/Result'
+import { type User } from '../../../schema/models/types/User'
+import { TypedResult } from '../../../lib/Result'
 import Mailer from '../../Mailer'
 
 export class InvitationMailer extends Mailer {

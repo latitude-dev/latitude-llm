@@ -9,6 +9,7 @@ import {
   isNotNull,
   sql,
 } from 'drizzle-orm'
+import { LogStats } from '@latitude-data/emails/WeeklyEmailMailTypes'
 import { database } from '../../../client'
 import {
   DateRange,
@@ -150,7 +151,7 @@ export async function getLogsData(
     dateRange?: DateRange
   },
   db = database,
-) {
+): Promise<LogStats> {
   const allTimesProductionSpansCount = await getAllTimesSpansProductionCount(
     { workspace },
     db,

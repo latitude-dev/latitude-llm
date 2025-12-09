@@ -1,6 +1,6 @@
 import { unsafelyGetUser } from '../../data-access/users'
 import { NotFoundError } from '../../lib/errors'
-import { InvitationMailer } from '../../mailers'
+import { InvitationMailer } from '../../mailer/mailers/invitations/InvitationMailer'
 import { MembershipCreatedEvent } from '../events'
 
 export const sendInvitationToUserJob = async ({

@@ -7,6 +7,8 @@ import { projects } from '../../../schema/models/projects'
 import { commits } from '../../../schema/models/commits'
 import { Workspace } from '../../../schema/models/types/Workspace'
 import { getDateRangeOrLastWeekRange } from '../utils'
+import { AnnotationStats } from '@latitude-data/emails/WeeklyEmailMailTypes'
+import { ProjectsRepository } from '../../../repositories'
 
 async function getAllTimesAnnotationsCount(
   { workspace }: { workspace: Workspace },
@@ -123,7 +125,7 @@ export async function getAnnotationsData(
     dateRange?: DateRange
   },
   db = database,
-) {
+): Promise<AnnotationStats> {
   const allTimesAnnotationsCount = await getAllTimesAnnotationsCount(
     { workspace },
     db,
@@ -131,6 +133,9 @@ export async function getAnnotationsData(
   const hasAnnotations = allTimesAnnotationsCount > 0
 
   if (!hasAnnotations) {
+    const projects = new ProjectsRepository(workspace.id, db)
+    const firstProject = await projects.findFirst().then((r) => r.unwrap())
+
     return {
       hasAnnotations: false,
       annotationsCount: 0,
@@ -139,6 +144,7 @@ export async function getAnnotationsData(
       passedPercentage: 0,
       failedPercentage: 0,
       topProjects: [],
+      firstProjectId: firstProject?.id ?? null,
     }
   }
 
@@ -157,5 +163,6 @@ export async function getAnnotationsData(
     passedPercentage: all.passedPercentage,
     failedPercentage: all.failedPercentage,
     topProjects,
+    firstProjectId: topProjects.length > 0 ? topProjects[0].projectId : null,
   }
 }

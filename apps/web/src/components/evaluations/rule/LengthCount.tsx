@@ -1,4 +1,4 @@
-import { formatCount } from '$/lib/formatCount'
+import { formatCount } from '@latitude-data/constants/formatCount'
 import {
   EvaluationType,
   RuleEvaluationLengthCountSpecification,

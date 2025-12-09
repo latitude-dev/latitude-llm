@@ -8,7 +8,7 @@ import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { SuggestionMailer } from '../../mailers'
+import { SuggestionMailer } from '../../mailer/mailers/suggestions/SuggestionMailer'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
