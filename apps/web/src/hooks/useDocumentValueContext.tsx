@@ -101,7 +101,8 @@ export function DocumentValueProvider({
       if (error) {
         toast({
           title: 'Error saving document',
-          description: 'There was an error saving the document.',
+          description:
+            error.message ?? 'There was an error saving the document.',
           variant: 'destructive',
         })
 

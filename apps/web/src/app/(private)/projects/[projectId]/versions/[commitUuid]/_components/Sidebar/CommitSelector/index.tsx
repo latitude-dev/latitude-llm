@@ -22,8 +22,9 @@ import useUsers from '$/stores/users'
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import PublishDraftCommitModal from '../PublishDraftCommitModal'
 import { ArchivedCommitsList } from './ArchivedCommitsList'
+import { ActiveCommitsList, getCommitTestInfo } from './ActiveCommitsList'
 import { BadgeCommit, BadgeType, SimpleUser } from './CommitItem'
-import { CurrentCommitsList } from './CurrentCommitsList'
+import { DraftsCommitsList } from './DraftsCommitsList'
 import DeleteDraftCommitModal from './DeleteDraftCommitModal'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
@@ -32,6 +33,7 @@ import { HELP_CENTER } from '@latitude-data/core/constants'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
 const MIN_WIDTH_SELECTOR_PX = 380
 const TRIGGER_X_PADDING_PX = 26
 
@@ -117,11 +119,15 @@ export default function CommitSelector({
   currentCommit,
   currentDocument,
   draftCommits,
+  commitsInActiveTests,
+  activeTests,
 }: {
   headCommit?: Commit | undefined
   currentCommit: Commit
   currentDocument?: DocumentVersion
   draftCommits: Commit[]
+  commitsInActiveTests: Commit[]
+  activeTests: DeploymentTest[]
 }) {
   const [open, setOpen] = useState(false)
   const { ref, maxHeight, calculateMaxHeight } = useCalculateMaxHeight()
@@ -136,7 +142,6 @@ export default function CommitSelector({
       {} as Record<string, SimpleUser>,
     )
   }, [users])
-
   const selected = useMemo(() => {
     return {
       commit: currentCommit,
@@ -149,16 +154,30 @@ export default function CommitSelector({
             : BadgeType.Draft,
     }
   }, [currentCommit, headCommit])
-
+  const currentCommitTestInfo = useMemo(() => {
+    return getCommitTestInfo(currentCommit.id, headCommit?.id, activeTests)
+  }, [currentCommit.id, headCommit?.id, activeTests])
   const [publishCommit, setPublishCommit] = useState<number | null>(null)
   const [deleteCommit, setDeleteCommit] = useState<number | null>(null)
-
   const canPublish = !currentCommit.mergedAt
-  const [selectedTab, setSelectedTab] = useState<'current' | 'archived'>(
-    !currentCommit.mergedAt || currentCommit.id == headCommit?.id
-      ? 'current'
-      : 'archived',
-  )
+  const getInitialTab = (): 'active' | 'drafts' | 'archived' => {
+    if (currentCommit.mergedAt && currentCommit.id !== headCommit?.id) {
+      return 'archived'
+    }
+    // Check if current commit is head or in active tests
+    const isHead = currentCommit.id === headCommit?.id
+    const isInActiveTest = commitsInActiveTests.some(
+      (c) => c.id === currentCommit.id,
+    )
+    if (isHead || isInActiveTest) {
+      return 'active'
+    }
+    return 'drafts'
+  }
+  const [selectedTab, setSelectedTab] = useState<
+    'active' | 'drafts' | 'archived'
+  >(getInitialTab())
+
   return (
     <div className='flex flex-col gap-y-2'>
       <SelectRoot
@@ -171,6 +190,7 @@ export default function CommitSelector({
               <BadgeCommit
                 commit={currentCommit}
                 isLive={currentCommit.id == headCommit?.id}
+                testInfo={currentCommitTestInfo}
               />
             }
           >
@@ -192,26 +212,36 @@ export default function CommitSelector({
           <CommitSelectorHeader setOpen={setOpen} />
           <TabSelector
             options={[
-              { label: 'Current', value: 'current' },
+              { label: 'Active', value: 'active' },
+              { label: 'Drafts', value: 'drafts' },
               { label: 'Archived', value: 'archived' },
             ]}
             selected={selectedTab}
             onSelect={setSelectedTab}
           />
-          {selectedTab === 'current' ? (
-            <CurrentCommitsList
+          {selectedTab === 'active' ? (
+            <ActiveCommitsList
               currentDocument={currentDocument}
               headCommit={headCommit}
+              commitsInActiveTests={commitsInActiveTests}
+              activeTests={activeTests}
+              onCommitPublish={setPublishCommit}
+              onCommitDelete={setDeleteCommit}
+            />
+          ) : selectedTab === 'drafts' ? (
+            <DraftsCommitsList
+              currentDocument={currentDocument}
+              headCommit={headCommit}
+              draftCommits={draftCommits}
+              commitsInActiveTests={commitsInActiveTests}
               usersById={usersById}
               onCommitPublish={setPublishCommit}
               onCommitDelete={setDeleteCommit}
-              draftCommits={draftCommits}
             />
           ) : (
             <ArchivedCommitsList
               currentDocument={currentDocument}
               headCommit={headCommit}
-              usersById={usersById}
             />
           )}
         </SelectContent>
@@ -243,6 +273,7 @@ export default function CommitSelector({
         <PublishDraftCommitModal
           commitId={publishCommit}
           onClose={setPublishCommit}
+          headCommit={headCommit}
         />
       ) : null}
     </div>

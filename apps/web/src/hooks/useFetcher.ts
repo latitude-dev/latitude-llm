@@ -182,7 +182,7 @@ export default function useFetcher<
   return useCallback(async () => {
     if (!route) return fallback as R
 
-    const response = executeFetch<R, I, Raw>({
+    const response = await executeFetch<R, I, Raw>({
       route,
       searchParams,
       toast,

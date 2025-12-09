@@ -2,16 +2,15 @@ import { LogSources } from '@latitude-data/constants'
 import { LatitudeError } from '../../lib/errors'
 import { BACKGROUND } from '../../telemetry'
 import { buildClientToolHandlersMap } from '../documents/tools/clientTools/handlers'
-import { enqueueShadowTestChallenger } from '../deploymentTests/handlers/handleShadowTestRun'
 import { runDocumentAtCommit } from './runDocumentAtCommit'
 import { ProviderApiKeysRepository } from '../../repositories'
 import type { DeploymentTest } from '../../schema/models/types/DeploymentTest'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import type { Workspace } from '../../schema/models/types/Workspace'
 import type { Commit } from '../../schema/models/types/Commit'
-import { Result, type OkType } from '../../lib/Result'
+import { type OkType } from '../../lib/Result'
 import { Project } from '../../schema/models/types/Project'
-import { captureException } from '../../utils/datadogCapture'
+import { publisher } from '../../events/publisher'
 
 type RunResult = OkType<typeof runDocumentAtCommit>
 
@@ -75,6 +74,29 @@ export async function runForegroundDocument(
     userMessage: userMessage ?? undefined,
   }).then((r) => r.unwrap())
 
+  const runUuid = result.uuid
+  await publisher.publishLater({
+    type: 'documentRunStarted',
+    data: {
+      workspaceId: workspace.id,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      run: {
+        uuid: runUuid,
+        queuedAt: new Date(),
+        source,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+      },
+      activeDeploymentTest,
+      parameters,
+      customIdentifier,
+      tools,
+      userMessage,
+    },
+  })
+
   return {
     stream: result.stream,
     error: result.error,
@@ -85,24 +107,6 @@ export async function runForegroundDocument(
       const response = await result.lastResponse
       if (!response)
         throw new LatitudeError('Stream ended with no error and no content')
-
-      if (activeDeploymentTest?.testType === 'shadow') {
-        const result = await enqueueShadowTestChallenger({
-          workspace,
-          document,
-          activeDeploymentTest: activeDeploymentTest,
-          parameters,
-          customIdentifier,
-          tools,
-          userMessage,
-          commit,
-          project,
-        })
-
-        if (!Result.isOk(result)) {
-          captureException(result.error)
-        }
-      }
 
       const providerScope = new ProviderApiKeysRepository(workspace.id)
       const provider = await providerScope

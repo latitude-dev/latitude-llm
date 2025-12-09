@@ -30,6 +30,7 @@ export type RunDocumentAtCommitArgs = {
   userMessage?: string
   abortSignal?: AbortSignal
   simulationSettings?: SimulationSettings
+  testDeploymentId?: number
 }
 
 export async function runDocumentAtCommit({
@@ -47,6 +48,7 @@ export async function runDocumentAtCommit({
   abortSignal,
   tools = {},
   simulationSettings,
+  testDeploymentId,
 }: RunDocumentAtCommitArgs) {
   errorableUuid = errorableUuid ?? generateUUIDIdentifier()
   const providersMap = await buildProvidersMap({
@@ -62,6 +64,7 @@ export async function runDocumentAtCommit({
   const $prompt = telemetry.prompt(context, {
     documentLogUuid: errorableUuid,
     experimentUuid: experiment?.uuid,
+    testDeploymentId,
     externalId: customIdentifier,
     name: document.path.split('/').at(-1),
     parameters: parameters,

@@ -2,12 +2,10 @@ import { sql } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
-  boolean,
   index,
   integer,
   text,
   timestamp,
-  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -33,32 +31,29 @@ export const deploymentTests = latitudeSchema.table(
     projectId: bigint('project_id', { mode: 'number' })
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    documentUuid: uuid('document_uuid').notNull(),
-
     // Version Configuration
-    baselineCommitId: bigint('baseline_commit_id', { mode: 'number' })
-      .notNull()
-      .references(() => commits.id),
     challengerCommitId: bigint('challenger_commit_id', { mode: 'number' })
       .notNull()
       .references(() => commits.id),
 
     // Test Type & Settings
-    testType: varchar('test_type', { length: 20 }).notNull(), // 'shadow' | 'ab'
-    trafficPercentage: integer('traffic_percentage').default(50), // For A/B: % of traffic to challenger (0-100)
+    testType: varchar('test_type', {
+      length: 20,
+      enum: ['shadow', 'ab'],
+    }).notNull(),
+    trafficPercentage: integer('traffic_percentage').default(50), // For A/B: % of traffic to challenger (0-100). For Shadow: % of traffic to shadow (defaults to 100)
 
     // Status
-    status: varchar('status', { length: 20 }).notNull().default('pending'), // 'pending' | 'running' | 'paused' | 'completed' | 'cancelled'
+    status: varchar('status', {
+      length: 20,
+      enum: ['pending', 'running', 'paused', 'completed', 'cancelled'],
+    })
+      .notNull()
+      .default('pending'),
     startedAt: timestamp('started_at'),
     endedAt: timestamp('ended_at'),
 
-    // Evaluation Configuration
-    evaluationUuids: text('evaluation_uuids').default('{}'), // JSON array of evaluation UUIDs
-    useCompositeEvaluation: boolean('use_composite_evaluation').default(true),
-
     // Metadata
-    name: varchar('name', { length: 256 }),
-    description: text('description'),
     createdByUserId: text('created_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
@@ -70,11 +65,10 @@ export const deploymentTests = latitudeSchema.table(
     index('idx_deployment_tests_workspace').on(table.workspaceId),
     index('idx_deployment_tests_project').on(table.projectId),
     index('idx_deployment_tests_status').on(table.status),
-    index('idx_deployment_tests_document').on(table.documentUuid),
-    uniqueIndex('idx_active_test_per_document')
-      .on(table.projectId, table.documentUuid)
-      .where(
-        sql`status IN ('pending', 'running', 'paused') AND deleted_at IS NULL`,
-      ),
+    index('idx_deployment_tests_project_type_status').on(
+      table.projectId,
+      table.testType,
+      table.status,
+    ),
   ],
 )

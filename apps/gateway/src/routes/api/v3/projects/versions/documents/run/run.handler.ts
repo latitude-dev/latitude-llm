@@ -82,7 +82,6 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   } = await resolveDeploymentTestContext({
     workspaceId: workspace.id,
     projectId: project.id,
-    documentUuid: document.documentUuid,
     commit,
     source,
     customIdentifier,
@@ -300,22 +299,20 @@ async function handleForegroundRun({
 async function resolveDeploymentTestContext({
   workspaceId,
   projectId,
-  documentUuid,
   commit,
   source,
   customIdentifier,
 }: {
   workspaceId: number
   projectId: number
-  documentUuid: string
   commit: any
   source: LogSources
   customIdentifier?: string | null
 }) {
   const deploymentTestsRepo = new DeploymentTestsRepository(workspaceId)
-  const activeDeploymentTest = await deploymentTestsRepo.findActiveForDocument(
+  const activeDeploymentTest = await deploymentTestsRepo.findActiveForCommit(
     projectId,
-    documentUuid,
+    commit.id,
   )
 
   if (!activeDeploymentTest || activeDeploymentTest.testType !== 'ab') {
@@ -329,22 +326,32 @@ async function resolveDeploymentTestContext({
   // Determine which variant to route to
   const routedTo = routeRequest(activeDeploymentTest, customIdentifier)
 
+  // Get the head commit (baseline is always the head commit)
+  const commitsRepo = new CommitsRepository(workspaceId)
+  const headCommit = await commitsRepo.getHeadCommit(projectId)
+
+  if (!headCommit) {
+    // If no head commit, fall back to original commit
+    return {
+      activeDeploymentTest,
+      effectiveCommit: commit,
+      effectiveSource: source,
+    }
+  }
+
   // Determine the commit and log source based on routing
   const commitIdToUse =
     routedTo === 'baseline'
-      ? activeDeploymentTest.baselineCommitId
+      ? headCommit.id
       : activeDeploymentTest.challengerCommitId
 
   const effectiveSource =
-    routedTo === 'baseline'
-      ? LogSources.ABTestBaseline
-      : LogSources.ABTestChallenger
+    routedTo === 'baseline' ? source : LogSources.ABTestChallenger
 
   if (commitIdToUse === commit.id) {
     return { activeDeploymentTest, effectiveCommit: commit, effectiveSource }
   }
 
-  const commitsRepo = new CommitsRepository(workspaceId)
   const effectiveCommit = await commitsRepo
     .getCommitById(commitIdToUse)
     .then((r) => r.unwrap())

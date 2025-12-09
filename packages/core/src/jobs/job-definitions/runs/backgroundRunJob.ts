@@ -30,7 +30,6 @@ import { Result } from '../../../lib/Result'
 import { captureException } from '../../../utils/datadogCapture'
 import { RunEvaluationForExperimentJobData } from '../evaluations/runEvaluationForExperimentJob'
 import { DeploymentTest } from '../../../schema/models/types/DeploymentTest'
-import { enqueueShadowTestChallenger } from '../../../services/deploymentTests/handlers/handleShadowTestRun'
 
 export type BackgroundRunJobData = {
   workspaceId: number
@@ -100,7 +99,7 @@ export const backgroundRunJob = async (
   let experiment: Experiment | undefined = undefined
 
   try {
-    const { workspace, document, commit, project } = await getJobDocumentData({
+    const { workspace, document, commit } = await getJobDocumentData({
       workspaceId,
       projectId,
       documentUuid,
@@ -115,6 +114,11 @@ export const backgroundRunJob = async (
       documentUuid,
       commitUuid,
       runUuid,
+      activeDeploymentTest,
+      parameters,
+      customIdentifier,
+      tools,
+      userMessage,
     }).then((r) => r.unwrap())
 
     publisher.subscribe('cancelJob', cancelJob)
@@ -154,20 +158,6 @@ export const backgroundRunJob = async (
         runUuid,
         conversationUuid: result.uuid,
         datasetRowId,
-      }).then((r) => r.unwrap())
-    }
-
-    if (activeDeploymentTest?.testType === 'shadow') {
-      await enqueueShadowTestChallenger({
-        activeDeploymentTest: activeDeploymentTest,
-        commit,
-        customIdentifier,
-        document,
-        parameters,
-        project,
-        tools,
-        userMessage,
-        workspace,
       }).then((r) => r.unwrap())
     }
   } catch (error) {

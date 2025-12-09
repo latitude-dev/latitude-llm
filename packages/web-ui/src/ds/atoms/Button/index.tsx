@@ -192,6 +192,7 @@ const textColorVariants = ({
 
 type ButtonIconProps = IconProps & {
   placement?: 'left' | 'right'
+  position?: 'left' | 'right'
 }
 export type ButtonStylesProps = VariantProps<typeof buttonVariants> & {
   containerClassName?: string
@@ -311,7 +312,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     throw new Error('Button must have children or iconProps')
   }
 
-  const iconPlacement = iconProps?.placement || 'left'
+  const iconPlacement = iconProps?.position || iconProps?.placement || 'left'
   const fanciness = fancy ? 'fancy' : 'default'
   const buttonStyles = useButtonStyles({
     variant,

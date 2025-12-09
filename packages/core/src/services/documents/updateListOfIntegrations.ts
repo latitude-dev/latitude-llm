@@ -2,7 +2,8 @@ import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSch
 import { and, eq } from 'drizzle-orm'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { IntegrationsRepository } from '../../repositories'
+import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
+import { CommitsRepository, IntegrationsRepository } from '../../repositories'
 import { documentIntegrationReferences } from '../../schema/models/documentIntegrationReferences'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
@@ -63,6 +64,16 @@ export async function updateListOfIntegrations(
   const integrationNames = getIntegrationNames(toolsIds)
 
   return tx.call(async (tx) => {
+    // Get commit to check if it can be edited
+    const commitsRepo = new CommitsRepository(workspace.id, tx)
+    const commitResult = await commitsRepo.getCommitById(
+      documentVersion.commitId,
+    )
+    if (commitResult.ok) {
+      const canEditCheck = await assertCanEditCommit(commitResult.unwrap(), tx)
+      if (canEditCheck.error) return canEditCheck
+    }
+
     // Delete last integrations
     await tx
       .delete(documentIntegrationReferences)

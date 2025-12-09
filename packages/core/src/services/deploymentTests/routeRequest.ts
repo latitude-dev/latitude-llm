@@ -7,12 +7,15 @@ import {
 /**
  * Determines which variant (baseline or challenger) a request should be routed to
  * Uses session stickiness if customIdentifier is provided
+ * For shadow tests: returns 'challenger' if request should be shadowed
+ * For A/B tests: returns 'challenger' if request should go to challenger variant
  */
 export function routeRequest(
   test: DeploymentTest,
   customIdentifier?: string | null,
 ): RoutedTo {
-  const trafficPercentage = test.trafficPercentage ?? 50
+  const trafficPercentage =
+    test.trafficPercentage ?? (test.testType === 'shadow' ? 100 : 50)
 
   // Session stickiness: same user/session gets same variant
   if (customIdentifier) {

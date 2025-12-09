@@ -2,6 +2,7 @@ import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
+import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 import { DocumentVersionsRepository } from '../../repositories'
 import { Commit } from '../../schema/models/types/Commit'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -20,9 +21,8 @@ export async function renameDocumentPaths(
   transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion[], Error>> {
   return await transaction.call(async (tx) => {
-    if (commit.mergedAt !== null) {
-      return Result.error(new BadRequestError('Cannot modify a merged commit'))
-    }
+    const canEditCheck = await assertCanEditCommit(commit, tx)
+    if (canEditCheck.error) return canEditCheck
 
     if (oldPath.endsWith('/') !== newPath.endsWith('/')) {
       return Result.error(

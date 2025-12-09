@@ -12,6 +12,7 @@ import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
 import { type ProviderLog } from '../schema/models/types/ProviderLog'
 import { type User } from '../schema/models/types/User'
 import { type Workspace } from '../schema/models/types/Workspace'
+import { type DeploymentTest } from '../schema/models/types/DeploymentTest'
 import {
   DatasetV2,
   DocumentLog,
@@ -641,6 +642,11 @@ type DocumentRunStatusEventData = {
   documentUuid: string
   commitUuid: string
   run: ActiveRun
+  activeDeploymentTest?: DeploymentTest
+  parameters?: Record<string, unknown>
+  customIdentifier?: string | null
+  tools?: string[]
+  userMessage?: string
 }
 
 export type DocumentRunQueuedEvent = LatitudeEventGeneric<

@@ -8,15 +8,24 @@ export async function startRun({
   documentUuid,
   commitUuid,
   runUuid,
+  activeDeploymentTest,
+  parameters,
+  customIdentifier,
+  tools,
+  userMessage,
 }: {
   workspaceId: number
   projectId: number
   documentUuid: string
   commitUuid: string
   runUuid: string
+  activeDeploymentTest?: import('../../schema/models/types/DeploymentTest').DeploymentTest
+  parameters?: Record<string, unknown>
+  customIdentifier?: string | null
+  tools?: string[]
+  userMessage?: string
 }) {
   const startedAt = new Date()
-
   const updateResult = await updateActiveRunByDocument({
     workspaceId,
     projectId,
@@ -27,10 +36,20 @@ export async function startRun({
   if (!Result.isOk(updateResult)) return updateResult
 
   const run = updateResult.unwrap()
-
   await publisher.publishLater({
     type: 'documentRunStarted',
-    data: { projectId, workspaceId, documentUuid, commitUuid, run },
+    data: {
+      projectId,
+      workspaceId,
+      documentUuid,
+      commitUuid,
+      run,
+      activeDeploymentTest,
+      parameters,
+      customIdentifier,
+      tools,
+      userMessage,
+    },
   })
 
   return updateResult

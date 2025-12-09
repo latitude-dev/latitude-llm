@@ -4,6 +4,7 @@ import { deploymentTests } from '../schema/models/deploymentTests'
 import { DeploymentTest } from '../schema/models/types/DeploymentTest'
 import { Result, type TypedResult } from '../lib/Result'
 import { NotFoundError } from '@latitude-data/constants/errors'
+import { CommitsRepository } from './commitsRepository'
 
 const tt = getTableColumns(deploymentTests)
 
@@ -21,33 +22,6 @@ export class DeploymentTestsRepository extends Repository<DeploymentTest> {
       .from(deploymentTests)
       .where(this.scopeFilter)
       .$dynamic()
-  }
-
-  async findActiveForDocument(
-    projectId: number,
-    documentUuid: string,
-  ): Promise<DeploymentTest | null> {
-    const result = await this.db
-      .select()
-      .from(deploymentTests)
-      .where(
-        and(
-          eq(deploymentTests.projectId, projectId),
-          eq(deploymentTests.documentUuid, documentUuid),
-          eq(deploymentTests.workspaceId, this.workspaceId),
-          // Only get pending, running, or paused tests
-          // Filter will be handled by the calling code
-          isNull(deploymentTests.deletedAt),
-        ),
-      )
-      .limit(1)
-
-    // Filter to only active tests
-    const test = result[0]
-    if (test && ['pending', 'running', 'paused'].includes(test.status)) {
-      return test
-    }
-    return null
   }
 
   async findByUuid(uuid: string): Promise<TypedResult<DeploymentTest>> {
@@ -86,5 +60,81 @@ export class DeploymentTestsRepository extends Repository<DeploymentTest> {
       .orderBy(deploymentTests.createdAt)
 
     return result
+  }
+
+  /**
+   * Find an active deployment test for a given commit
+   * Returns the test if the commit is either the baseline (head commit) or challenger in an active test
+   */
+  async findActiveForCommit(
+    projectId: number,
+    commitId: number,
+  ): Promise<DeploymentTest | null> {
+    // Get the head commit (baseline) for the project
+    const commitsRepo = new CommitsRepository(this.workspaceId, this.db)
+    const headCommit = await commitsRepo.getHeadCommit(projectId)
+    const headCommitId = headCommit?.id
+
+    // If commit is the head commit, it's the baseline for any active test
+    if (headCommitId === commitId) {
+      const result = await this.db
+        .select()
+        .from(deploymentTests)
+        .where(
+          and(
+            eq(deploymentTests.projectId, projectId),
+            eq(deploymentTests.workspaceId, this.workspaceId),
+            isNull(deploymentTests.deletedAt),
+          ),
+        )
+        .limit(1)
+
+      const test = result[0]
+      if (test && ['pending', 'running', 'paused'].includes(test.status)) {
+        return test
+      }
+      return null
+    }
+
+    // Otherwise, check if it's the challenger commit
+    const result = await this.db
+      .select()
+      .from(deploymentTests)
+      .where(
+        and(
+          eq(deploymentTests.projectId, projectId),
+          eq(deploymentTests.workspaceId, this.workspaceId),
+          isNull(deploymentTests.deletedAt),
+          eq(deploymentTests.challengerCommitId, commitId),
+        ),
+      )
+      .limit(1)
+
+    const test = result[0]
+    if (test && ['pending', 'running', 'paused'].includes(test.status)) {
+      return test
+    }
+    return null
+  }
+
+  /**
+   * Find all active deployment tests for a project
+   * Returns tests with status 'pending', 'running', or 'paused'
+   */
+  async findAllActiveForProject(projectId: number): Promise<DeploymentTest[]> {
+    const result = await this.db
+      .select()
+      .from(deploymentTests)
+      .where(
+        and(
+          eq(deploymentTests.projectId, projectId),
+          eq(deploymentTests.workspaceId, this.workspaceId),
+          isNull(deploymentTests.deletedAt),
+        ),
+      )
+
+    return result.filter((test) =>
+      ['pending', 'running', 'paused'].includes(test.status),
+    )
   }
 }
