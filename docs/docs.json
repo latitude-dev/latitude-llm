@@ -24,7 +24,7 @@
     "primary": {
       "type": "button",
       "label": "Get started",
-      "href": "https://github.com/latitude-dev/latitude-llm"
+      "href": "https://app.latitude.so/"
     }
   },
   "footer": {
