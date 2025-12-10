@@ -15,8 +15,8 @@ export function calculateMCC({
   examplesThatShouldFailTheEvaluation: boolean[]
 }) {
   const truePositives = examplesThatShouldPassTheEvaluation.filter((r) => r).length // prettier-ignore
-  const falsePositives = examplesThatShouldPassTheEvaluation.filter((r) => !r).length // prettier-ignore
-  const falseNegatives = examplesThatShouldFailTheEvaluation.filter((r) => r).length // prettier-ignore
+  const falseNegatives = examplesThatShouldPassTheEvaluation.filter((r) => !r).length // prettier-ignore
+  const falsePositives = examplesThatShouldFailTheEvaluation.filter((r) => r).length // prettier-ignore
   const trueNegatives = examplesThatShouldFailTheEvaluation.filter((r) => !r).length // prettier-ignore
 
   if (
