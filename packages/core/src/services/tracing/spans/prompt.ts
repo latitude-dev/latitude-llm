@@ -2,6 +2,7 @@ import { database } from '../../../client'
 import {
   ATTR_GEN_AI_REQUEST_PARAMETERS,
   ATTR_GEN_AI_REQUEST_TEMPLATE,
+  ATTR_LATITUDE_TEST_DEPLOYMENT_ID,
   LogSources,
   SPAN_SPECIFICATIONS,
   SpanType,
@@ -39,6 +40,9 @@ async function process(
     versionUuid: attributes['latitude.commitUuid'] as string,
     documentLogUuid: attributes['latitude.documentLogUuid'] as string,
     projectId: attributes['latitude.projectId'] as number,
+    testDeploymentId: attributes[ATTR_LATITUDE_TEST_DEPLOYMENT_ID] as
+      | number
+      | undefined,
     source: attributes['latitude.source'] as LogSources,
   })
 }

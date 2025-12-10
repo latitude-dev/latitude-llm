@@ -1,12 +1,12 @@
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { destroyOrSoftDeleteDocuments } from '../documents/destroyOrSoftDeleteDocuments'
 import { createNewDocument, updateDocument } from '../documents'
+import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 
 export interface PushChangeDocument {
   path: string
@@ -38,7 +38,7 @@ export async function persistPushChanges(
       .then((r) => r.unwrap())
 
     // Ensure the commit is a draft
-    assertCommitIsDraft(commit).unwrap()
+    await assertCanEditCommit(commit, trx).then((r) => r.unwrap())
 
     // Filter out unchanged documents
     const changeDocuments = changes.filter((doc) => doc.status !== 'unchanged')

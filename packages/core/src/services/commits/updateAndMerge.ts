@@ -1,10 +1,10 @@
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { mergeCommit } from './merge'
 import { updateCommit } from './update'
+import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 
 export async function updateAndMergeCommit(
   {
@@ -21,7 +21,7 @@ export async function updateAndMergeCommit(
   },
   transaction = new Transaction(),
 ): Promise<TypedResult<Commit, Error>> {
-  const assertResult = assertCommitIsDraft(commit)
+  const assertResult = await assertCanEditCommit(commit)
   if (assertResult.error) return assertResult
 
   if (Object.keys(data).length > 0) {

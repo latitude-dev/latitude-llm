@@ -11,6 +11,8 @@ import { BadRequestError } from '@latitude-data/core/lib/errors'
 import type { CreateOrUpdateDocumentRoute } from './createOrUpdate.route'
 import { AppRouteHandler } from '$/openApi/types'
 import { HEAD_COMMIT } from '@latitude-data/constants'
+import { assertCanEditCommit } from '@latitude-data/core/lib/assertCanEditCommit'
+import { Result } from '@latitude-data/core/lib/Result'
 
 // @ts-expect-error: Types are not working as expected
 export const createOrUpdateDocumentHandler: AppRouteHandler<
@@ -34,9 +36,10 @@ export const createOrUpdateDocumentHandler: AppRouteHandler<
       uuid: versionUuid ?? HEAD_COMMIT,
     })
     .then((r) => r.unwrap())
+  const canEditCommit = await assertCanEditCommit(commit)
 
   // Check if this is a merged commit (live commit)
-  if (commit.mergedAt !== null && !force) {
+  if (!Result.isOk(canEditCommit) && !force) {
     throw new BadRequestError(
       'Cannot modify a merged commit. Use force=true to allow modifications to the live commit.',
     )

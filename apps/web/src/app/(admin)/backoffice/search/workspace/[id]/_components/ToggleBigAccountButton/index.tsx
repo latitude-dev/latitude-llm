@@ -4,7 +4,10 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { toggleBigAccountAction } from '$/actions/admin/workspaces/toggleBigAccount'
 
-export function ToggleBigAccountButton({ workspaceId, isBigAccount }: {
+export function ToggleBigAccountButton({
+  workspaceId,
+  isBigAccount,
+}: {
   workspaceId: number
   isBigAccount: boolean
 }) {

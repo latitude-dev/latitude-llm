@@ -10,7 +10,6 @@ import { type Commit } from '../../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { type Workspace } from '../../../schema/models/types/Workspace'
-import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
 import { Result, TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import {
@@ -24,6 +23,7 @@ import { inheritDocumentRelations } from '../inheritRelations'
 import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
 import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
+import { assertCanEditCommit } from '../../../lib/assertCanEditCommit'
 
 async function resolveDocumentChanges({
   originalDocuments,
@@ -217,7 +217,7 @@ export async function recomputeChanges(
   transaction = new Transaction(),
 ): Promise<TypedResult<RecomputedChanges, Error>> {
   return transaction.call(async (tx) => {
-    assertCommitIsDraft(draft).unwrap()
+    await assertCanEditCommit(draft, tx).then((r) => r.unwrap())
 
     const commitsRepository = new CommitsRepository(workspace.id, tx)
     const previousCommit = await commitsRepository.getPreviousCommit(draft)
