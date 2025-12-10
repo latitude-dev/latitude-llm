@@ -433,65 +433,98 @@ describe('getAnnotationsData', () => {
   })
 
   describe('when no date range is provided', () => {
-    it('fetches annotations from last 7 days by default and ignores older ones', async () => {
+    it('fetches annotations from previous calendar week by default and ignores older ones', async () => {
+      // Create a fresh workspace for this test to avoid interference
+      const { workspace: freshWorkspace } = await createWorkspace()
+      const {
+        project: freshProject,
+        documents: freshDocuments,
+        commit: freshCommit,
+      } = await createProject({
+        workspace: freshWorkspace,
+        documents: { 'test-doc': 'test content' },
+      })
+      const freshDocument = freshDocuments[0]!
+
       const evaluation = await createEvaluationV2({
-        workspace: workspace,
-        document: document,
-        commit: commit,
+        workspace: freshWorkspace,
+        document: freshDocument,
+        commit: freshCommit,
         type: EvaluationType.Human,
         metric: HumanEvaluationMetric.Binary,
       })
 
-      // Create annotation within last 7 days (3 days ago)
-      const threeDaysAgo = new Date()
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+      // Calculate the previous calendar week (Sunday to Sunday)
+      const now = new Date()
+      const lastSunday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - now.getDay(),
+      )
+      const previousSunday = new Date(
+        lastSunday.getFullYear(),
+        lastSunday.getMonth(),
+        lastSunday.getDate() - 7,
+      )
+
+      // Create annotation within previous calendar week (Wednesday of that week)
+      const dateInRange = new Date(
+        previousSunday.getFullYear(),
+        previousSunday.getMonth(),
+        previousSunday.getDate() + 3, // Wednesday
+        12, // noon
+      )
 
       const span1 = await createSpan({
-        workspaceId: workspace.id,
-        documentUuid: document.documentUuid,
+        workspaceId: freshWorkspace.id,
+        documentUuid: freshDocument.documentUuid,
         type: SpanType.Prompt,
       })
       await createEvaluationResultV2({
-        workspace: workspace,
-        commit: commit,
+        workspace: freshWorkspace,
+        commit: freshCommit,
         evaluation,
         span: span1,
         hasPassed: true,
-        createdAt: threeDaysAgo,
+        createdAt: dateInRange,
       })
 
-      // Create annotation older than 7 days (10 days ago)
-      const tenDaysAgo = new Date()
-      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10)
+      // Create annotation older than previous calendar week (2 weeks ago)
+      const dateOutOfRange = new Date(
+        previousSunday.getFullYear(),
+        previousSunday.getMonth(),
+        previousSunday.getDate() - 10, // 10 days before previous Sunday
+        12,
+      )
 
       const span2 = await createSpan({
-        workspaceId: workspace.id,
-        documentUuid: document.documentUuid,
+        workspaceId: freshWorkspace.id,
+        documentUuid: freshDocument.documentUuid,
         type: SpanType.Prompt,
       })
       await createEvaluationResultV2({
-        workspace: workspace,
-        commit: commit,
+        workspace: freshWorkspace,
+        commit: freshCommit,
         evaluation,
         span: span2,
         hasPassed: false,
-        createdAt: tenDaysAgo,
+        createdAt: dateOutOfRange,
       })
 
-      // Call without dateRange - should use default last week range
-      const result = await getAnnotationsData({ workspace: workspace })
+      // Call without dateRange - should use default previous calendar week range
+      const result = await getAnnotationsData({ workspace: freshWorkspace })
 
       expect(result).toEqual({
         hasAnnotations: true,
-        annotationsCount: 1, // Only recent annotation
+        annotationsCount: 1, // Only annotation in previous calendar week
         passedCount: 1,
         failedCount: 0,
         passedPercentage: 100,
         failedPercentage: 0,
         topProjects: [
           {
-            projectId: project.id,
-            projectName: project.name,
+            projectId: freshProject.id,
+            projectName: freshProject.name,
             annotationsCount: 1,
             passedCount: 1,
             failedCount: 0,

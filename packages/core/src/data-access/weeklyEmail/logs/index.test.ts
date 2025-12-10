@@ -1,9 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { LogSources, SpanType } from '../../../constants'
 import { createWorkspace } from '../../../tests/factories'
+import { createProject } from '../../../tests/factories/projects'
 import { createSpan } from '../../../tests/factories/spans'
-import { getLogsData } from './index'
 import { Workspace } from '../../../schema/models/types/Workspace'
+import { getLogsData } from './index'
 
 // Static date for testing:
 // Monday, January 8, 2024 at 10:00 AM UTC
@@ -68,20 +69,37 @@ describe('getLogsData', () => {
   })
 
   describe('when no date range is provided', () => {
-    it('fetches logs from last 7 days by default and ignores older logs', async () => {
+    it('fetches logs from previous calendar week by default and ignores older logs', async () => {
       // Create a fresh workspace for this test to avoid interference
       const { workspace: freshWorkspace } = await createWorkspace()
 
-      // Create a span within the last 7 days (3 days ago)
-      const threeDaysAgo = new Date()
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+      // Calculate the previous calendar week (Sunday to Sunday)
+      const now = new Date()
+      const lastSunday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - now.getDay(),
+      )
+      const previousSunday = new Date(
+        lastSunday.getFullYear(),
+        lastSunday.getMonth(),
+        lastSunday.getDate() - 7,
+      )
+
+      // Create a span within previous calendar week (Wednesday of that week)
+      const dateInRange = new Date(
+        previousSunday.getFullYear(),
+        previousSunday.getMonth(),
+        previousSunday.getDate() + 3, // Wednesday
+        12, // noon
+      )
 
       await createSpan({
         workspaceId: freshWorkspace.id,
         traceId: 'recent-trace',
         type: SpanType.Prompt,
         source: LogSources.API,
-        startedAt: threeDaysAgo,
+        startedAt: dateInRange,
       })
 
       await createSpan({
@@ -89,22 +107,26 @@ describe('getLogsData', () => {
         traceId: 'recent-trace', // Same trace ID as the prompt
         type: SpanType.Completion,
         source: LogSources.API,
-        startedAt: threeDaysAgo,
+        startedAt: dateInRange,
         tokensPrompt: 100,
         tokensCompletion: 200,
         cost: 1000,
       })
 
-      // Create a span older than 7 days (10 days ago)
-      const tenDaysAgo = new Date()
-      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10)
+      // Create a span older than previous calendar week (2 weeks ago)
+      const dateOutOfRange = new Date(
+        previousSunday.getFullYear(),
+        previousSunday.getMonth(),
+        previousSunday.getDate() - 10, // 10 days before previous Sunday
+        12,
+      )
 
       await createSpan({
         workspaceId: freshWorkspace.id,
         traceId: 'old-trace',
         type: SpanType.Prompt,
         source: LogSources.API,
-        startedAt: tenDaysAgo,
+        startedAt: dateOutOfRange,
       })
 
       await createSpan({
@@ -112,21 +134,21 @@ describe('getLogsData', () => {
         traceId: 'old-trace', // Same trace ID as the prompt
         type: SpanType.Completion,
         source: LogSources.API,
-        startedAt: tenDaysAgo,
+        startedAt: dateOutOfRange,
         tokensPrompt: 500,
         tokensCompletion: 1000,
         cost: 5000,
       })
 
-      // Call without dateRange - should use default last week range
+      // Call without dateRange - should use default previous calendar week range
       const result = await getLogsData({ workspace: freshWorkspace })
 
       expect(result.usedInProduction).toEqual(true)
-      // Should only count the recent trace, not the old one
+      // Should only count the trace in previous calendar week, not the old one
       expect(result.logsCount).toEqual(1)
-      // Should only count tokens from recent completion span
+      // Should only count tokens from completion span in range
       expect(result.tokensSpent).toEqual(300) // 100 + 200
-      // Should only count cost from recent completion span
+      // Should only count cost from completion span in range
       expect(result.tokensCost).toEqual(10) // 1000 / 100
     })
   })
@@ -532,9 +554,6 @@ describe('getLogsData', () => {
   describe('top projects', () => {
     it('returns top 10 projects ordered by logs count', async () => {
       const { workspace: freshWorkspace } = await createWorkspace()
-      const { createProject } = await import(
-        '../../../tests/factories/projects'
-      )
 
       // Enable production usage (outside date range to not affect counts)
       const outsideRange = new Date('2024-01-01T10:00:00Z')
@@ -606,9 +625,6 @@ describe('getLogsData', () => {
 
     it('includes project name in top projects', async () => {
       const { workspace: freshWorkspace } = await createWorkspace()
-      const { createProject } = await import(
-        '../../../tests/factories/projects'
-      )
 
       // Enable production usage (outside date range to not affect counts)
       const outsideRange = new Date('2024-01-01T10:00:00Z')
@@ -646,9 +662,6 @@ describe('getLogsData', () => {
 
     it('excludes spans without projectId from top projects', async () => {
       const { workspace: freshWorkspace } = await createWorkspace()
-      const { createProject } = await import(
-        '../../../tests/factories/projects'
-      )
 
       // Enable production usage (outside date range to not affect counts)
       const outsideRange = new Date('2024-01-01T10:00:00Z')
@@ -699,9 +712,6 @@ describe('getLogsData', () => {
 
     it('handles projects with no completion spans (zero tokens/cost)', async () => {
       const { workspace: freshWorkspace } = await createWorkspace()
-      const { createProject } = await import(
-        '../../../tests/factories/projects'
-      )
 
       // Enable production usage (outside date range to not affect counts)
       const outsideRange = new Date('2024-01-01T10:00:00Z')
@@ -740,9 +750,6 @@ describe('getLogsData', () => {
 
     it('respects date range for top projects', async () => {
       const { workspace: freshWorkspace } = await createWorkspace()
-      const { createProject } = await import(
-        '../../../tests/factories/projects'
-      )
 
       // Enable production usage (outside date range to not affect counts)
       const enableProductionDate = new Date('2024-01-01T10:00:00Z')
