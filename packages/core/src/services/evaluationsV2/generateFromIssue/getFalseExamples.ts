@@ -38,13 +38,13 @@ export function getFalsePositivesAndFalseNegatives({
         (pair) => pair.spanId === spanId && pair.traceId === traceId,
       )
     ) {
-      if (!hasPassed) falsePositives.push({ spanId, traceId })
+      if (!hasPassed) falseNegatives.push({ spanId, traceId })
     } else if (
       spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation.some(
         (pair) => pair.spanId === spanId && pair.traceId === traceId,
       )
     ) {
-      if (hasPassed) falseNegatives.push({ spanId, traceId })
+      if (hasPassed) falsePositives.push({ spanId, traceId })
     }
   }
   return Result.ok({ falsePositives, falseNegatives }) // prettier-ignore

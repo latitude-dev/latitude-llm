@@ -48,7 +48,7 @@ function ConfusionMatrixTable({
               {confusionMatrix.truePositives} (TP)
             </td>
             <td className='border-t border-border p-2 text-center text-xs'>
-              {confusionMatrix.falseNegatives} (FN)
+              {confusionMatrix.falsePositives} (FP)
             </td>
           </tr>
           <tr>
@@ -56,7 +56,7 @@ function ConfusionMatrixTable({
               Predicted Negative
             </td>
             <td className='border-t border-l border-border p-2 text-center text-xs'>
-              {confusionMatrix.falsePositives} (FP)
+              {confusionMatrix.falseNegatives} (FN)
             </td>
             <td className='border-t border-border p-2 text-center text-xs'>
               {confusionMatrix.trueNegatives} (TN)
