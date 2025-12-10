@@ -12,7 +12,7 @@ import { Result } from '../../lib/Result'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import * as copilot from '../copilot'
 import * as providerApiKeys from '../providerApiKeys/findDefaultProvider'
@@ -26,7 +26,7 @@ describe('generateEvaluationV2', () => {
     runCopilot: MockInstance
   }
 
-  let workspace: Workspace
+  let workspace: WorkspaceDto
   let commit: Commit
   let document: DocumentVersion
   let settings: EvaluationSettings<

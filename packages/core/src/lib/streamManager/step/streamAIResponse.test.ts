@@ -1,13 +1,18 @@
 import { APICallError } from 'ai'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { randomUUID } from 'crypto'
 
 import { Providers } from '@latitude-data/constants'
+import { PaymentRequiredError } from '@latitude-data/constants/errors'
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import * as aiModule from '../../../services/ai'
+import * as processResponseModule from '../../../services/chains/ProviderProcessor'
+import * as createProviderLogModule from '../../../services/providerLogs/create'
+import * as consumeStreamModule from '../ChainStreamConsumer/consumeStream'
 import * as factories from '../../../tests/factories'
+import * as usageModule from '../../../services/workspaces/usage'
 import { streamAIResponse } from './streamAIResponse'
 import * as handleAIErrorModule from './handleAIError'
 
@@ -92,5 +97,230 @@ describe('streamAIResponse', () => {
     })
 
     expect(handleAIErrorSpy).toHaveBeenCalledWith(streamError)
+  })
+
+  describe('usage limit defense', () => {
+    const createMockAIResult = () => ({
+      type: 'text' as const,
+      text: Promise.resolve('test response'),
+      reasoning: Promise.resolve(undefined),
+      usage: Promise.resolve({
+        inputTokens: 10,
+        outputTokens: 20,
+        totalTokens: 30,
+        reasoningTokens: 0,
+        cachedInputTokens: 0,
+      }),
+      toolCalls: Promise.resolve([]),
+      fullStream: new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: 'text-delta', id: '1', text: 'test' })
+          controller.close()
+        },
+      }),
+      providerName: Providers.OpenAI,
+      providerMetadata: Promise.resolve(undefined),
+      finishReason: Promise.resolve('stop' as const),
+      response: Promise.resolve({ messages: [] }),
+    })
+
+    const createMockController = () => {
+      let controller: ReadableStreamDefaultController
+      new ReadableStream({
+        start(ctrl) {
+          controller = ctrl
+        },
+      })
+      return controller!
+    }
+
+    beforeEach(() => {
+      vi.spyOn(aiModule, 'ai').mockResolvedValue(
+        Result.ok(createMockAIResult() as unknown as aiModule.AIReturn<'text'>),
+      )
+      vi.spyOn(processResponseModule, 'processResponse').mockResolvedValue({
+        streamType: 'text',
+        text: 'test response',
+        toolCalls: [],
+        output: [],
+        reasoning: undefined,
+        usage: {
+          inputTokens: 10,
+          outputTokens: 20,
+          promptTokens: 10,
+          completionTokens: 20,
+          totalTokens: 30,
+          cachedInputTokens: 0,
+          reasoningTokens: 0,
+        },
+        documentLogUuid: randomUUID(),
+      })
+      vi.spyOn(createProviderLogModule, 'createProviderLog').mockResolvedValue(
+        Result.ok({
+          id: 1,
+          uuid: randomUUID(),
+          workspaceId: 1,
+          providerId: 1,
+          providerType: Providers.OpenAI,
+          model: 'gpt-4',
+          config: { model: 'gpt-4' },
+          messages: [],
+          responseText: 'test response',
+          responseObject: null,
+          responseReasoning: null,
+          toolCalls: [],
+          usage: {
+            inputTokens: 10,
+            outputTokens: 20,
+            promptTokens: 10,
+            completionTokens: 20,
+            totalTokens: 30,
+            cachedInputTokens: 0,
+            reasoningTokens: 0,
+          },
+          duration: 100,
+          source: LogSources.API,
+          costInMillicents: 0,
+          documentLogUuid: null,
+          finishReason: 'stop',
+          output: null,
+          generatedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as any),
+      )
+      vi.spyOn(consumeStreamModule, 'consumeStream').mockResolvedValue({
+        error: undefined,
+      } as any)
+    })
+
+    it('throws PaymentRequiredError when usage exceeds plan limits', async () => {
+      const { workspace } = await factories.createWorkspace()
+      const context = factories.createTelemetryContext({ workspace })
+      const provider = await factories.createProviderApiKey({
+        workspace,
+        type: Providers.OpenAI,
+        name: 'test-provider',
+        user: await factories.createUser(),
+      })
+
+      const paymentRequiredError = new PaymentRequiredError(
+        'You have reached the maximum number of runs allowed for your Latitude plan. Upgrade now.',
+      )
+
+      vi.spyOn(usageModule, 'assertUsageWithinPlanLimits').mockResolvedValue(
+        Result.error(paymentRequiredError),
+      )
+
+      const controller = createMockController()
+
+      await expect(
+        streamAIResponse({
+          context,
+          controller,
+          workspace,
+          provider,
+          messages: [
+            {
+              role: MessageRole.user,
+              content: [{ type: 'text', text: 'Hello' }],
+            },
+          ],
+          config: {
+            model: 'gpt-4',
+            provider: provider.name,
+          },
+          source: LogSources.API,
+          documentLogUuid: randomUUID(),
+        }),
+      ).rejects.toThrow(paymentRequiredError)
+
+      expect(usageModule.assertUsageWithinPlanLimits).toHaveBeenCalledWith(
+        workspace,
+      )
+      expect(aiModule.ai).not.toHaveBeenCalled()
+    })
+
+    it('proceeds when usage is within plan limits', async () => {
+      const { workspace } = await factories.createWorkspace()
+      const context = factories.createTelemetryContext({ workspace })
+      const provider = await factories.createProviderApiKey({
+        workspace,
+        type: Providers.OpenAI,
+        name: 'test-provider',
+        user: await factories.createUser(),
+      })
+
+      vi.spyOn(usageModule, 'assertUsageWithinPlanLimits').mockResolvedValue(
+        Result.ok(undefined),
+      )
+
+      const controller = createMockController()
+
+      await streamAIResponse({
+        context,
+        controller,
+        workspace,
+        provider,
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: 'text', text: 'Hello' }],
+          },
+        ],
+        config: {
+          model: 'gpt-4',
+          provider: provider.name,
+        },
+        source: LogSources.API,
+        documentLogUuid: randomUUID(),
+      })
+
+      expect(usageModule.assertUsageWithinPlanLimits).toHaveBeenCalledWith(
+        workspace,
+      )
+      expect(aiModule.ai).toHaveBeenCalled()
+    })
+
+    it('proceeds when usage check returns nil (unlimited plan)', async () => {
+      const { workspace } = await factories.createWorkspace()
+      const context = factories.createTelemetryContext({ workspace })
+      const provider = await factories.createProviderApiKey({
+        workspace,
+        type: Providers.OpenAI,
+        name: 'test-provider',
+        user: await factories.createUser(),
+      })
+
+      vi.spyOn(usageModule, 'assertUsageWithinPlanLimits').mockResolvedValue(
+        Result.nil(),
+      )
+
+      const controller = createMockController()
+
+      await streamAIResponse({
+        context,
+        controller,
+        workspace,
+        provider,
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: 'text', text: 'Hello' }],
+          },
+        ],
+        config: {
+          model: 'gpt-4',
+          provider: provider.name,
+        },
+        source: LogSources.API,
+        documentLogUuid: randomUUID(),
+      })
+
+      expect(usageModule.assertUsageWithinPlanLimits).toHaveBeenCalledWith(
+        workspace,
+      )
+      expect(aiModule.ai).toHaveBeenCalled()
+    })
   })
 })

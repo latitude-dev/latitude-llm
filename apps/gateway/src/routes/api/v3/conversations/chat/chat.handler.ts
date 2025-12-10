@@ -24,7 +24,6 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
     __internal,
   } = c.req.valid('json')
   const workspace = c.get('workspace')
-
   if (tools.length > 0 && !useSSE) {
     throw new BadRequestError('You must enable Stream to use custom tools')
   }

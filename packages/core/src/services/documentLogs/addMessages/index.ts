@@ -13,7 +13,7 @@ import {
   DocumentVersionsRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
-import { type Workspace } from '../../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { BACKGROUND, telemetry, TelemetryContext } from '../../../telemetry'
 import { getInputSchema, getOutputType } from '../../chains/ChainValidator'
 import { scanDocumentContent } from '../../documents'
@@ -21,7 +21,7 @@ import { isErrorRetryable } from '../../evaluationsV2/run'
 import serializeProviderLog from '../../providerLogs/serialize'
 
 type AddMessagesArgs = {
-  workspace: Workspace
+  workspace: WorkspaceDto
   documentLogUuid: string | undefined
   messages: Message[]
   source: LogSources
@@ -123,7 +123,7 @@ async function retrieveData({
   workspace,
   documentLogUuid,
 }: {
-  workspace: Workspace
+  workspace: WorkspaceDto
   documentLogUuid: string | undefined
 }) {
   const logsRepo = new DocumentLogsRepository(workspace.id)

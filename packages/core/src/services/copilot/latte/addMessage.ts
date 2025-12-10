@@ -8,9 +8,8 @@ import {
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type User } from '../../../schema/models/types/User'
-import { type Workspace } from '../../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { type Project } from '../../../schema/models/types/Project'
-
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { BACKGROUND, TelemetryContext } from '../../../telemetry'
@@ -42,10 +41,10 @@ export async function runNewLatte({
   abortSignal,
   debugVersionUuid,
 }: {
-  copilotWorkspace: Workspace
+  copilotWorkspace: WorkspaceDto
   copilotCommit: Commit
   copilotDocument: DocumentVersion
-  clientWorkspace: Workspace
+  clientWorkspace: WorkspaceDto
   clientProject: Project
   user: User
   threadUuid: string
@@ -82,10 +81,10 @@ export async function addMessageToExistingLatte({
   abortSignal,
   debugVersionUuid,
 }: {
-  copilotWorkspace: Workspace
+  copilotWorkspace: WorkspaceDto
   copilotCommit: Commit
   copilotDocument: DocumentVersion
-  clientWorkspace: Workspace
+  clientWorkspace: WorkspaceDto
   clientProject: Project
   user: User
   threadUuid: string
@@ -125,10 +124,10 @@ export async function addMessageToExistingLatte({
 
 type GenerateLatteResponseArgs = {
   context: TelemetryContext
-  copilotWorkspace: Workspace
+  copilotWorkspace: WorkspaceDto
   copilotCommit: Commit
   copilotDocument: DocumentVersion
-  clientWorkspace: Workspace
+  clientWorkspace: WorkspaceDto
   clientProject: Project
   threadUuid: string
   initialParameters?: { message: string; context: string } // for the first "new" request

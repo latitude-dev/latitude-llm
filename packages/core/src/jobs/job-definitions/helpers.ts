@@ -1,9 +1,5 @@
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
-import { PromisedResult } from '../../lib/Transaction'
-import { Commit } from '../../schema/models/types/Commit'
-import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { Workspace } from '../../schema/models/types/Workspace'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -20,11 +16,7 @@ export async function getJobDocumentData({
   projectId: number
   commitUuid: string
   documentUuid: string
-}): PromisedResult<{
-  workspace: Workspace
-  commit: Commit
-  document: DocumentVersion
-}> {
+}) {
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError('Workspace not found')
 

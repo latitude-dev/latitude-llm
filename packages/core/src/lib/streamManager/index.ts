@@ -17,7 +17,7 @@ import { FinishReason } from 'ai'
 import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants/ai'
 import { omit } from 'lodash-es'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { IntegrationDto } from '../../schema/models/types/Integration'
 import { LogSources, PromptSource } from '../../constants'
 import { ValidatedChainStep } from '../../services/chains/ChainValidator'
@@ -61,7 +61,7 @@ export const incrementTokens = ({
 }
 
 export type StreamManagerProps = {
-  workspace: Workspace
+  workspace: WorkspaceDto
   promptSource: PromptSource
   source: LogSources
   context: TelemetryContext
@@ -87,7 +87,7 @@ export abstract class StreamManager {
   public stream: ReadableStream<ChainEvent>
   public tools: Record<string, ToolHandler>
   public uuid: string
-  public workspace: Workspace
+  public workspace: WorkspaceDto
   public abortSignal?: AbortSignal
   public readonly simulationSettings?: SimulationSettings
 

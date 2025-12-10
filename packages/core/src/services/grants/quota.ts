@@ -20,7 +20,6 @@ export async function computeQuota(
     return Result.error(getting.error)
   }
   const subscription = getting.value
-
   const repository = new GrantsRepository(workspace.id)
   const counting = await repository.quotaSinceDate(
     type,

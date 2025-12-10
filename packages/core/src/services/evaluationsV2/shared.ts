@@ -21,7 +21,10 @@ import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Experiment } from '../../schema/models/types/Experiment'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import {
+  WorkspaceDto,
+  type Workspace,
+} from '../../schema/models/types/Workspace'
 import { ResultWithEvaluationV2 } from '../../schema/types'
 
 export type EvaluationMetricValidateArgs<
@@ -55,7 +58,7 @@ export type EvaluationMetricRunArgs<
   providers?: Map<string, ProviderApiKey>
   results?: ResultWithEvaluationV2[]
   commit: Commit
-  workspace: Workspace
+  workspace: WorkspaceDto
   dry?: boolean
 }
 

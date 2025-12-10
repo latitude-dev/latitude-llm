@@ -15,7 +15,10 @@ import {
 } from './generateFromIssue'
 import * as factories from '../../../tests/factories'
 import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import type {
+  Workspace,
+  WorkspaceDto,
+} from '@latitude-data/core/schema/models/types/Workspace'
 import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
@@ -122,7 +125,7 @@ describe('generateFromIssue', () => {
 
     // Setup default mocks for copilot functions
     const mockCopilot = {
-      workspace: {} as Workspace,
+      workspace: {} as WorkspaceDto,
       commit: {} as Commit,
       document: {} as DocumentVersion,
     }

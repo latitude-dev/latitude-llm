@@ -60,8 +60,7 @@ async function buildData({ doc1Content }: { doc1Content: string }) {
       },
     })
 
-  const context = await createTelemetryContext({ workspace })
-
+  const context = createTelemetryContext({ workspace })
   return {
     context,
     workspace,

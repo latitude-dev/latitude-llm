@@ -23,7 +23,7 @@ import {
 } from '../../constants'
 import * as consumeStreamModule from '../../lib/streamManager/ChainStreamConsumer/consumeStream'
 import * as createFakeProviderLogModule from '../../lib/streamManager/utils/createFakeProviderLog'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import * as aiModule from '../ai'
@@ -67,7 +67,7 @@ describe('runChain', () => {
   }
 
   let context: TelemetryContext
-  let workspace: Workspace
+  let workspace: WorkspaceDto
   let promptSource: PromptSource
 
   beforeEach(async () => {
@@ -88,7 +88,7 @@ describe('runChain', () => {
     providersMap = new Map(providers.map((p) => [p.name, p]))
     workspace = w
     promptSource = { document: documents[0]!, commit }
-    context = await factories.createTelemetryContext({ workspace })
+    context = factories.createTelemetryContext({ workspace })
   })
 
   it('handles multiple steps in a chain', async () => {

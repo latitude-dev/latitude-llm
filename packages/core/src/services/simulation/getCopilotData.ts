@@ -1,7 +1,7 @@
 import { env } from '@latitude-data/env'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { unsafelyGetApiKeyByToken } from '../../data-access/apiKeys'
 import { Result } from '../../lib/Result'
@@ -35,7 +35,7 @@ function buildError({ data }: { data: string }) {
 }
 
 export type ToolSimulationPrompt = {
-  workspace: Workspace
+  workspace: WorkspaceDto
   commit: Commit
   document: DocumentVersion
 }

@@ -17,7 +17,7 @@ import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Experiment } from '../../schema/models/types/Experiment'
 import { type User } from '../../schema/models/types/User'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { getColumnData } from '../datasets/utils'
 import * as outputs from './outputs/extract'
@@ -32,7 +32,7 @@ describe('runEvaluationV2', () => {
 
   let apiKeys: any[]
   let span: SpanWithDetails<SpanType.Prompt>
-  let workspace: Workspace
+  let workspace: WorkspaceDto
   let user: User
   let commit: Commit
   let document: DocumentVersion

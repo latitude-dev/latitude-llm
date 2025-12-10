@@ -1,7 +1,7 @@
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Experiment } from '../../schema/models/types/Experiment'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { LogSources } from '../../constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
@@ -17,7 +17,7 @@ import { ToolHandler } from '../documents/tools/clientTools/handlers'
 
 export type RunDocumentAtCommitArgs = {
   context: TelemetryContext
-  workspace: Workspace
+  workspace: WorkspaceDto
   commit: Commit
   document: DocumentVersion
   parameters: Record<string, unknown>

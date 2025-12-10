@@ -26,7 +26,7 @@ import { type Commit } from '../../schema/models/types/Commit'
 import { type Dataset } from '../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { type Experiment } from '../../schema/models/types/Experiment'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { extractActualOutput, extractExpectedOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
@@ -56,7 +56,7 @@ export async function runEvaluationV2<
     datasetLabel?: string
     datasetRow?: DatasetRow
     commit: Commit
-    workspace: Workspace
+    workspace: WorkspaceDto
     dry?: boolean
   },
   transaction = new Transaction(),

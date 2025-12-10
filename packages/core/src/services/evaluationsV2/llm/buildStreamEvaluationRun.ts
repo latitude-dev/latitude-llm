@@ -7,7 +7,7 @@ import {
 } from '../../../constants'
 import { Result, TypedResult } from '../../../lib/Result'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
-import { type Workspace } from '../../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { BACKGROUND, telemetry } from '../../../telemetry'
 import { runChain } from '../../chains/run'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
@@ -71,7 +71,7 @@ export async function buildStreamEvaluationRun({
   evaluation,
   parameters,
 }: {
-  workspace: Workspace
+  workspace: WorkspaceDto
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
   parameters: Record<string, unknown>
 }): Promise<TypedResult<{ streamHandler: StreamHandler }, Error>> {
@@ -94,7 +94,6 @@ export async function buildStreamEvaluationRun({
   if (result.error) return result
 
   const { runArgs } = result.unwrap()
-
   const $prompt = telemetry.prompt(BACKGROUND({ workspaceId: workspace.id }), {
     documentLogUuid: resultUuid,
     promptUuid: evaluation.uuid,

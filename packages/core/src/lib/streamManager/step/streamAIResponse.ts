@@ -4,18 +4,16 @@ import {
   VercelConfig,
   LegacyVercelSDKVersion4Usage as LanguageModelUsage,
 } from '@latitude-data/constants'
-import {
-  Conversation,
-  Message as LegacyMessage,
-} from '@latitude-data/constants/legacyCompiler'
+import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { JSONSchema7 } from 'json-schema'
 import { LogSources } from '../../../constants'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
-import { type Workspace } from '../../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { ai, AIReturn } from '../../../services/ai'
 import { processResponse } from '../../../services/chains/ProviderProcessor'
 import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
 import { createProviderLog } from '../../../services/providerLogs/create'
+import { assertUsageWithinPlanLimits } from '../../../services/workspaces/usage'
 import { TelemetryContext } from '../../../telemetry'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
@@ -23,19 +21,6 @@ import { isAbortError } from '../../isAbortError'
 import { createFakeProviderLog } from '../utils/createFakeProviderLog'
 import { handleAIError } from './handleAIError'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
-
-export type ExecuteStepArgs = {
-  controller: ReadableStreamDefaultController
-  workspace: Workspace
-  provider: ProviderApiKey
-  conversation: Conversation
-  source: LogSources
-  documentLogUuid: string
-  schema?: JSONSchema7
-  output?: 'object' | 'array' | 'no-schema'
-  injectFakeAgentStartTool?: boolean
-  injectAgentFinishTool?: boolean
-}
 
 export type Output = 'object' | 'array' | 'no-schema'
 
@@ -55,7 +40,7 @@ export async function streamAIResponse({
 }: {
   context: TelemetryContext
   controller: ReadableStreamDefaultController
-  workspace: Workspace
+  workspace: WorkspaceDto
   provider: ProviderApiKey
   messages: LegacyMessage[]
   config: VercelConfig
@@ -71,6 +56,8 @@ export async function streamAIResponse({
   tokenUsage: Awaited<LanguageModelUsage>
   finishReason: Awaited<AIReturn<StreamType>['finishReason']> | undefined
 }> {
+  await assertUsageWithinPlanLimits(workspace).then((r) => r.unwrap())
+
   const startTime = Date.now()
   const aiResult = await ai({
     context,

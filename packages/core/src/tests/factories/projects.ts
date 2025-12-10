@@ -72,12 +72,12 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
   const skipMerge = projectData.skipMerge ?? false
   const workspaceData = projectData.workspace ?? {}
   let user: User
-  let workspace: Workspace
+  let workspace: WorkspaceDto
   let apiKeys: ApiKey[] = []
 
   if ('id' in workspaceData) {
     user = (await unsafelyGetUser(workspaceData.creatorId!)) as User
-    workspace = workspaceData as Workspace
+    workspace = workspaceData as WorkspaceDto
   } else {
     const newWorkspace = await createWorkspace(workspaceData)
     workspace = newWorkspace.workspace

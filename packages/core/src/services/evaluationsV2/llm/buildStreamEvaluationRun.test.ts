@@ -5,7 +5,7 @@ import {
   EvaluationV2,
   LlmEvaluationMetric,
 } from '../../../constants'
-import { type Workspace } from '../../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import * as factories from '../../../tests/factories'
 import * as chains from '../../chains/run'
@@ -18,7 +18,7 @@ describe('buildStreamEvaluationRun', () => {
     buildProvidersMap: MockInstance
   }
 
-  let workspace: Workspace
+  let workspace: WorkspaceDto
   let provider: ProviderApiKey
   let evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Custom>
 
