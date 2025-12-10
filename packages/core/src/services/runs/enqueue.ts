@@ -16,7 +16,7 @@ import { SimulationSettings } from '../../../../constants/src/simulation'
 import { cache as redis, Cache } from '../../cache'
 import { DeploymentTest } from '../../schema/models/types/DeploymentTest'
 
-type EnqueueRunProps = {
+export type EnqueueRunProps = {
   activeDeploymentTest?: DeploymentTest
   cache?: Cache
   commit: Commit

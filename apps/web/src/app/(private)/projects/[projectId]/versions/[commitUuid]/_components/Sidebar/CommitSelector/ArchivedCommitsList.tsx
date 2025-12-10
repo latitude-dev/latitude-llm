@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCommits } from '$/stores/commitsStore'
 
-import { CommitItem, CommitItemSkeleton, SimpleUser } from './CommitItem'
+import { CommitItem, CommitItemSkeleton } from './CommitItem'
 import { CommitItemsWrapper } from './CommitItemsWrapper'
 
 import { CommitStatus } from '@latitude-data/core/constants'
@@ -14,11 +14,9 @@ import { DocumentVersion } from '@latitude-data/core/schema/models/types/Documen
 export function ArchivedCommitsList({
   currentDocument,
   headCommit,
-  usersById,
 }: {
   currentDocument?: DocumentVersion
   headCommit?: Commit
-  usersById: Record<string, SimpleUser>
 }) {
   const { data, isLoading } = useCommits({
     commitStatus: CommitStatus.Merged,
@@ -51,11 +49,7 @@ export function ArchivedCommitsList({
     <CommitItemsWrapper>
       {commits.map((commit) => (
         <li key={commit.id}>
-          <CommitItem
-            commit={commit}
-            currentDocument={currentDocument}
-            user={usersById[commit.userId]}
-          />
+          <CommitItem commit={commit} currentDocument={currentDocument} />
         </li>
       ))}
     </CommitItemsWrapper>

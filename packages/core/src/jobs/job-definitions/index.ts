@@ -33,6 +33,7 @@ export * from '../../events/handlers/removeMergedIssueVectors'
 export * from '../../events/handlers/generateDetailsForMergedIssue'
 export * from '../../events/handlers/notifyClientOfCommitUpdated'
 export * from '../../events/handlers/unlockIssuesDashboardOnAnnotation'
+export * from '../../events/handlers/stopDeploymentTestsForCommitHandler'
 
 // Jobs
 export * from './actions/generateProjectNameJob'

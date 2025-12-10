@@ -33,6 +33,7 @@ import { generateDetailsForMergedIssue } from './generateDetailsForMergedIssue'
 import { unlockIssuesDashboardOnAnnotation } from './unlockIssuesDashboardOnAnnotation'
 import { notifyClientOfRunStatusByDocument } from './notifyClientOfRunStatusByDocument'
 import { enqueueShadowTestChallengerHandler } from './enqueueShadowTestChallenger'
+import { stopDeploymentTestsForCommitHandler } from './stopDeploymentTestsForCommitHandler'
 
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
@@ -95,7 +96,8 @@ export const EventHandlers: IEventsHandlers = {
   documentTriggerEventCreated: [notifyClientOfDocumentTriggerEventCreated],
   promocodeClaimed: [],
   subscriptionUpdated: [],
-  commitMerged: [],
+  commitMerged: [stopDeploymentTestsForCommitHandler],
+  commitDeleted: [stopDeploymentTestsForCommitHandler],
   documentRunQueued: [notifyClientOfRunStatusByDocument],
   documentRunStarted: [
     notifyClientOfRunStatusByDocument,
@@ -127,4 +129,5 @@ export const EventHandlers: IEventsHandlers = {
   weeklyEmailPreferenceUpdated: [],
   escalatingIssuesEmailPreferenceUpdated: [],
   workspaceIssuesDashboardUnlocked: [],
+  deploymentTestCreated: [],
 }

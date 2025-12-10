@@ -96,6 +96,7 @@ type Props = ToogleProps &
     defaultChecked?: boolean
     fullWidth?: boolean
     innerClassName?: string
+    inverted?: boolean
   }
 function SwitchInput({
   className,
@@ -107,6 +108,7 @@ function SwitchInput({
   defaultChecked,
   fullWidth = true,
   innerClassName,
+  inverted = false,
   ...rest
 }: Props) {
   const error = errors?.[0]
@@ -133,6 +135,14 @@ function SwitchInput({
       aria-invalid={!!error}
     >
       <div className='flex flex-row items-center gap-x-2 w-full'>
+        {inverted && label ? (
+          <Label
+            variant={error ? 'destructive' : 'default'}
+            htmlFor={formItemId}
+          >
+            {label}
+          </Label>
+        ) : null}
         <FormControl
           error={error}
           formItemId={formItemId}
@@ -154,7 +164,7 @@ function SwitchInput({
             />
           </div>
         </FormControl>
-        {label ? (
+        {!inverted && label ? (
           <Label
             variant={error ? 'destructive' : 'default'}
             htmlFor={formItemId}

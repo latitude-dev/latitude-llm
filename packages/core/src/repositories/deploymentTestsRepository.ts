@@ -1,12 +1,15 @@
-import { and, eq, getTableColumns, isNull } from 'drizzle-orm'
+import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm'
 import Repository from './repositoryV2'
 import { deploymentTests } from '../schema/models/deploymentTests'
-import { DeploymentTest } from '../schema/models/types/DeploymentTest'
+import {
+  ACTIVE_DEPLOYMENT_STATUSES,
+  DeploymentTest,
+  DeploymentTestStatus,
+} from '../schema/models/types/DeploymentTest'
 import { Result, type TypedResult } from '../lib/Result'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { CommitsRepository } from './commitsRepository'
 
-const ACTIVE_DEPLOYMENT_STATUSES = ['pending', 'running']
 const tt = getTableColumns(deploymentTests)
 
 export class DeploymentTestsRepository extends Repository<DeploymentTest> {
@@ -137,5 +140,37 @@ export class DeploymentTestsRepository extends Repository<DeploymentTest> {
     return result.filter((test) =>
       ACTIVE_DEPLOYMENT_STATUSES.includes(test.status),
     )
+  }
+
+  /**
+   * Filter deployment tests by project, commit, and status
+   */
+  async filterByProjectAndCommitAndStatus(
+    projectId: number,
+    commitId?: number,
+    statuses?: string[],
+  ): Promise<DeploymentTest[]> {
+    const conditions = [
+      eq(deploymentTests.projectId, projectId),
+      this.scopeFilter,
+    ]
+
+    if (commitId) {
+      conditions.push(eq(deploymentTests.challengerCommitId, commitId))
+    }
+
+    if (statuses && statuses.length > 0) {
+      conditions.push(
+        inArray(deploymentTests.status, statuses as DeploymentTestStatus[]),
+      )
+    }
+
+    const result = await this.db
+      .select()
+      .from(deploymentTests)
+      .where(and(...conditions))
+      .orderBy(deploymentTests.createdAt)
+
+    return result
   }
 }

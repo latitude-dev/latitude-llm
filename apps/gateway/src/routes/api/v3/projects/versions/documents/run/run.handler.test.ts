@@ -13,6 +13,7 @@ import {
   createProject,
   createTelemetryTrace,
   helpers,
+  updateDocumentVersion,
 } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
@@ -28,6 +29,7 @@ import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
 import { Providers } from '@latitude-data/constants'
@@ -40,6 +42,10 @@ const mocks = vi.hoisted(() => ({
   captureExceptionMock: vi.fn(),
   enqueueRun: vi.fn(),
   isFeatureEnabledByName: vi.fn(),
+  findActiveForCommit: vi.fn(),
+  getCommitById: vi.fn(),
+  getHeadCommit: vi.fn(),
+  routeRequest: vi.fn(),
   queues: {
     defaultQueue: {
       jobs: {
@@ -86,6 +92,35 @@ vi.mock(
   }),
 )
 
+vi.mock('@latitude-data/core/repositories/deploymentTestsRepository', () => ({
+  DeploymentTestsRepository: vi.fn().mockImplementation(() => ({
+    findActiveForCommit: mocks.findActiveForCommit,
+  })),
+}))
+
+vi.mock('@latitude-data/core/repositories', async (importOriginal) => {
+  const actual: any = await importOriginal()
+  const OriginalCommitsRepository = actual.CommitsRepository
+
+  const MockedClass = class MockedCommitsRepository extends OriginalCommitsRepository {
+    getHeadCommit(projectId: number) {
+      return mocks.getHeadCommit(projectId)
+    }
+    getCommitById(id: number) {
+      return mocks.getCommitById(id)
+    }
+  }
+
+  return {
+    ...actual,
+    CommitsRepository: MockedClass,
+  } as any
+})
+
+vi.mock('@latitude-data/core/services/deploymentTests/routeRequest', () => ({
+  routeRequest: mocks.routeRequest,
+}))
+
 let route: string
 let body: string
 let token: string
@@ -94,6 +129,8 @@ let project: Project
 let workspace: Workspace
 let commit: Commit
 let provider: ProviderApiKey
+let user: any
+let document: DocumentVersion
 
 describe('POST /run', () => {
   describe('unauthorized', () => {
@@ -1207,6 +1244,498 @@ describe('POST /run', () => {
       })
       expect(mocks.runDocumentAtCommit).toHaveBeenCalled()
       expect(mocks.enqueueRun).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('deployment test routing', () => {
+    beforeEach(async () => {
+      const {
+        workspace: wsp,
+        user: usr,
+        project: prj,
+        providers,
+      } = await createProject()
+      project = prj
+      workspace = wsp
+      user = usr
+      provider = providers[0]!
+
+      // Reset and set default mock implementations BEFORE creating commits/documents
+      mocks.findActiveForCommit.mockReset()
+      mocks.findActiveForCommit.mockResolvedValue(undefined)
+
+      const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: workspace.id,
+      }).then((r) => r.unwrap())
+      token = apikey?.token!
+      const path = 'path/to/document'
+      const { commit: cmt } = await createDraft({
+        project,
+        user,
+      })
+      const doc = await createDocumentVersion({
+        workspace,
+        user,
+        commit: cmt,
+        path,
+        content: helpers.createPrompt({ provider: providers[0]! }),
+      })
+      document = doc.documentVersion
+
+      commit = await mergeCommit(cmt).then((r) => r.unwrap())
+
+      route = `/api/v3/projects/${project!.id}/versions/${commit!.uuid}/documents/run`
+      body = JSON.stringify({
+        path: document.path,
+        parameters: {},
+      })
+      headers = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Latitude-SDK-Version': '5.0.0',
+      }
+
+      // Reset other mocks
+      mocks.runDocumentAtCommit.mockClear()
+      mocks.enqueueRun.mockClear()
+      mocks.getCommitById.mockClear()
+      mocks.getHeadCommit.mockClear()
+      mocks.routeRequest.mockClear()
+
+      // Mock getHeadCommit to return the baseline commit
+      mocks.getHeadCommit.mockResolvedValue(commit)
+
+      // Set default mocks
+      mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
+        if (featureName === 'api-background-runs') {
+          return Promise.resolve(Result.ok(false))
+        }
+        return Promise.resolve(Result.ok(false))
+      })
+
+      mocks.findActiveForCommit.mockResolvedValue(undefined)
+    })
+
+    describe('with shadow test', () => {
+      it('should execute baseline run with shadow test context', async () => {
+        const shadowTest = {
+          id: 1,
+          uuid: 'test-uuid',
+          workspaceId: workspace.id,
+          projectId: project.id,
+          documentUuid: 'doc-uuid',
+          challengerCommitId: 999,
+          testType: 'shadow',
+          trafficPercentage: 100,
+          status: 'running',
+        }
+
+        mocks.findActiveForCommit.mockResolvedValue(shadowTest)
+
+        const documentLogUuid = generateUUIDIdentifier()
+        const usage = {
+          promptTokens: 4,
+          completionTokens: 6,
+          totalTokens: 10,
+          inputTokens: 4,
+          outputTokens: 6,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
+        }
+
+        await createProviderLog({
+          documentLogUuid,
+          workspace,
+          providerId: provider.id,
+          providerType: provider.provider,
+          model: MODEL,
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
+          tokens: usage.totalTokens,
+        })
+
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.close()
+          },
+        })
+
+        mocks.runDocumentAtCommit.mockReturnValue(
+          Promise.resolve(
+            Result.ok({
+              stream,
+              lastResponse: Promise.resolve({
+                streamType: 'text',
+                text: 'Hello',
+                usage,
+                documentLogUuid,
+                providerLog: {
+                  providerId: provider.id,
+                  model: MODEL,
+                  messages: [
+                    {
+                      role: MessageRole.assistant,
+                      content: 'Hello',
+                      toolCalls: [],
+                    },
+                  ],
+                },
+              }),
+            }),
+          ),
+        )
+
+        const res = await app.request(route, {
+          method: 'POST',
+          body,
+          headers,
+        })
+
+        expect(res.status).toBe(200)
+        expect(mocks.runDocumentAtCommit).toHaveBeenCalled()
+        // Should use original commit for baseline
+        expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            commit: expect.objectContaining({ id: commit.id }),
+          }),
+        )
+      })
+    })
+
+    describe('with A/B test', () => {
+      let challengerCommit: Commit
+
+      beforeEach(async () => {
+        const { commit: newCommit } = await createDraft({
+          project,
+          user,
+        })
+        await updateDocumentVersion({
+          document,
+          commit: newCommit,
+          content: helpers.createPrompt({ provider }),
+        })
+        challengerCommit = await mergeCommit(newCommit).then((r) => r.unwrap())
+      })
+
+      it('should route to baseline when routeRequest returns baseline', async () => {
+        const abTest = {
+          id: 1,
+          uuid: 'test-uuid',
+          workspaceId: workspace.id,
+          projectId: project.id,
+          documentUuid: 'doc-uuid',
+          challengerCommitId: challengerCommit.id,
+          testType: 'ab',
+          trafficPercentage: 50,
+          status: 'running',
+        }
+
+        mocks.findActiveForCommit.mockResolvedValue(abTest)
+        mocks.getHeadCommit.mockResolvedValue(commit)
+        mocks.routeRequest.mockReturnValue('baseline')
+        mocks.getCommitById.mockResolvedValue(Result.ok(commit))
+
+        const documentLogUuid = generateUUIDIdentifier()
+        const usage = {
+          promptTokens: 4,
+          completionTokens: 6,
+          totalTokens: 10,
+          inputTokens: 4,
+          outputTokens: 6,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
+        }
+
+        await createProviderLog({
+          documentLogUuid,
+          workspace,
+          providerId: provider.id,
+          providerType: provider.provider,
+          model: MODEL,
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
+          tokens: usage.totalTokens,
+        })
+
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.close()
+          },
+        })
+
+        mocks.runDocumentAtCommit.mockReturnValue(
+          Promise.resolve(
+            Result.ok({
+              stream,
+              lastResponse: Promise.resolve({
+                streamType: 'text',
+                text: 'Hello',
+                usage,
+                documentLogUuid,
+                providerLog: {
+                  providerId: provider.id,
+                  model: MODEL,
+                  messages: [
+                    {
+                      role: MessageRole.assistant,
+                      content: 'Hello',
+                      toolCalls: [],
+                    },
+                  ],
+                },
+              }),
+            }),
+          ),
+        )
+
+        const res = await app.request(route, {
+          method: 'POST',
+          body: JSON.stringify({
+            path: 'path/to/document',
+            parameters: {},
+            customIdentifier: 'user-123',
+          }),
+          headers,
+        })
+
+        expect(res.status).toBe(200)
+        expect(mocks.findActiveForCommit).toHaveBeenCalled()
+        expect(mocks.routeRequest).toHaveBeenCalledWith(abTest, 'user-123')
+        // When routing to baseline, getHeadCommit should be called to get the head commit
+        expect(mocks.getHeadCommit).toHaveBeenCalledWith(project.id)
+        expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            source: LogSources.API,
+            commit: expect.objectContaining({ id: commit.id }),
+          }),
+        )
+      })
+
+      it('should route to challenger when routeRequest returns challenger', async () => {
+        const abTest = {
+          id: 1,
+          uuid: 'test-uuid',
+          workspaceId: workspace.id,
+          projectId: project.id,
+          documentUuid: 'doc-uuid',
+          challengerCommitId: challengerCommit.id,
+          testType: 'ab',
+          trafficPercentage: 50,
+          status: 'running',
+        }
+
+        mocks.findActiveForCommit.mockResolvedValue(abTest)
+        mocks.getHeadCommit.mockResolvedValue(commit)
+        mocks.routeRequest.mockReturnValue('challenger')
+        mocks.getCommitById.mockResolvedValue(Result.ok(challengerCommit))
+
+        const documentLogUuid = generateUUIDIdentifier()
+        const usage = {
+          promptTokens: 4,
+          completionTokens: 6,
+          totalTokens: 10,
+          inputTokens: 4,
+          outputTokens: 6,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
+        }
+
+        await createProviderLog({
+          documentLogUuid,
+          workspace,
+          providerId: provider.id,
+          providerType: provider.provider,
+          model: MODEL,
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
+          tokens: usage.totalTokens,
+        })
+
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.close()
+          },
+        })
+
+        mocks.runDocumentAtCommit.mockReturnValue(
+          Promise.resolve(
+            Result.ok({
+              stream,
+              lastResponse: Promise.resolve({
+                streamType: 'text',
+                text: 'Hello',
+                usage,
+                documentLogUuid,
+                providerLog: {
+                  providerId: provider.id,
+                  model: MODEL,
+                  messages: [
+                    {
+                      role: MessageRole.assistant,
+                      content: 'Hello',
+                      toolCalls: [],
+                    },
+                  ],
+                },
+              }),
+            }),
+          ),
+        )
+
+        const res = await app.request(route, {
+          method: 'POST',
+          body: JSON.stringify({
+            path: 'path/to/document',
+            parameters: {},
+            customIdentifier: 'user-456',
+          }),
+          headers,
+        })
+
+        expect(res.status).toBe(200)
+        expect(mocks.routeRequest).toHaveBeenCalledWith(abTest, 'user-456')
+        expect(mocks.getCommitById).toHaveBeenCalledWith(challengerCommit.id)
+        expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            source: LogSources.ABTestChallenger,
+            commit: expect.objectContaining({ id: challengerCommit.id }),
+          }),
+        )
+      })
+
+      it('should work without custom identifier for A/B test', async () => {
+        const abTest = {
+          id: 1,
+          uuid: 'test-uuid',
+          workspaceId: workspace.id,
+          projectId: project.id,
+          documentUuid: 'doc-uuid',
+          challengerCommitId: challengerCommit.id,
+          testType: 'ab',
+          trafficPercentage: 50,
+          status: 'running',
+        }
+
+        mocks.findActiveForCommit.mockResolvedValue(abTest)
+        mocks.getHeadCommit.mockResolvedValue(commit)
+        mocks.routeRequest.mockReturnValue('baseline')
+
+        const documentLogUuid = generateUUIDIdentifier()
+        const usage = {
+          promptTokens: 4,
+          completionTokens: 6,
+          totalTokens: 10,
+          inputTokens: 4,
+          outputTokens: 6,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
+        }
+
+        await createProviderLog({
+          documentLogUuid,
+          workspace,
+          providerId: provider.id,
+          providerType: provider.provider,
+          model: MODEL,
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
+          tokens: usage.totalTokens,
+        })
+
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.close()
+          },
+        })
+
+        mocks.runDocumentAtCommit.mockReturnValue(
+          Promise.resolve(
+            Result.ok({
+              stream,
+              lastResponse: Promise.resolve({
+                streamType: 'text',
+                text: 'Hello',
+                usage,
+                documentLogUuid,
+                providerLog: {
+                  providerId: provider.id,
+                  model: MODEL,
+                  messages: [
+                    {
+                      role: MessageRole.assistant,
+                      content: 'Hello',
+                      toolCalls: [],
+                    },
+                  ],
+                },
+              }),
+            }),
+          ),
+        )
+
+        const res = await app.request(route, {
+          method: 'POST',
+          body: JSON.stringify({
+            path: 'path/to/document',
+            parameters: {},
+          }),
+          headers,
+        })
+
+        expect(res.status).toBe(200)
+        expect(mocks.routeRequest).toHaveBeenCalledWith(abTest, undefined)
+      })
+    })
+
+    describe('with background runs and deployment tests', () => {
+      it('should enqueue background run with shadow test context', async () => {
+        const shadowTest = {
+          id: 1,
+          uuid: 'test-uuid',
+          workspaceId: workspace.id,
+          projectId: project.id,
+          documentUuid: 'doc-uuid',
+          challengerCommitId: 999,
+          testType: 'shadow',
+          trafficPercentage: 100,
+          status: 'running',
+        }
+
+        mocks.findActiveForCommit.mockResolvedValue(shadowTest)
+        mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
+          if (featureName === 'api-background-runs') {
+            return Promise.resolve(Result.ok(true))
+          }
+          return Promise.resolve(Result.ok(false))
+        })
+
+        mocks.enqueueRun.mockReturnValue(
+          Promise.resolve(
+            Result.ok({
+              run: { uuid: 'test-run-uuid' },
+            }),
+          ),
+        )
+
+        const res = await app.request(route, {
+          method: 'POST',
+          body,
+          headers,
+        })
+
+        expect(res.status).toBe(200)
+        expect(await res.json()).toEqual({ uuid: 'test-run-uuid' })
+        expect(mocks.enqueueRun).toHaveBeenCalledWith(
+          expect.objectContaining({
+            activeDeploymentTest: shadowTest,
+          }),
+        )
+      })
     })
   })
 })

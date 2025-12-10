@@ -50,6 +50,7 @@ const eventHandlersJobMappings = {
   generateDetailsForMergedIssue: jobs.generateDetailsForMergedIssue,
   notifyClientOfCommitUpdated: jobs.notifyClientOfCommitUpdated,
   unlockIssuesDashboardOnAnnotation: jobs.unlockIssuesDashboardOnAnnotation,
+  stopDeploymentTestsForCommitHandler: jobs.stopDeploymentTestsForCommitHandler,
 }
 
 export function startEventsWorker() {

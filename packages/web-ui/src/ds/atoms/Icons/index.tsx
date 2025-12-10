@@ -163,6 +163,7 @@ import {
   Video,
   Volume2,
   MessageSquareTextIcon,
+  Split,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -436,6 +437,7 @@ const Icons = {
   sigma: SigmaIcon,
   wandSparkles: WandSparkles,
   cornerDownRight: CornerDownRightIcon,
+  split: Split,
 }
 
 export type IconName = keyof typeof Icons

@@ -45,6 +45,7 @@ export type Events =
   | 'commitCreated'
   | 'commitPublished'
   | 'commitMerged'
+  | 'commitDeleted'
   | 'documentCreated'
   | 'documentRunRequested'
   | 'publicDocumentRunRequested'
@@ -95,6 +96,7 @@ export type Events =
   | 'weeklyEmailPreferenceUpdated'
   | 'escalatingIssuesEmailPreferenceUpdated'
   | 'workspaceIssuesDashboardUnlocked'
+  | 'deploymentTestCreated'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -304,6 +306,14 @@ export type CommitMergedEvent = LatitudeEventGeneric<
   {
     commit: Commit
     userEmail: string
+    workspaceId: number
+  }
+>
+
+export type CommitDeletedEvent = LatitudeEventGeneric<
+  'commitDeleted',
+  {
+    commit: Commit
     workspaceId: number
   }
 >
@@ -871,6 +881,15 @@ export type WorkspaceIssuesDashboardUnlockedEvent = LatitudeEventGeneric<
   }
 >
 
+export type DeploymentTestCreatedEvent = LatitudeEventGeneric<
+  'deploymentTestCreated',
+  {
+    deploymentTestId: number
+    workspaceId: number
+    userEmail: string | null
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -894,6 +913,7 @@ export type LatitudeEvent =
   | CommitCreatedEvent
   | CommitPublishedEvent
   | CommitMergedEvent
+  | CommitDeletedEvent
   | DocumentCreatedEvent
   | DocumentRunRequestedEvent
   | PublicDocumentRunRequestedEvent
@@ -954,6 +974,7 @@ export type LatitudeEvent =
   | WeeklyEmailPreferenceUpdatedEvent
   | EscalatingIssuesEmailPreferenceUpdatedEvent
   | WorkspaceIssuesDashboardUnlockedEvent
+  | DeploymentTestCreatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -978,6 +999,7 @@ export interface IEventsHandlers {
   commitCreated: EventHandler<CommitCreatedEvent>[]
   commitPublished: EventHandler<CommitPublishedEvent>[]
   commitMerged: EventHandler<CommitMergedEvent>[]
+  commitDeleted: EventHandler<CommitDeletedEvent>[]
   documentCreated: EventHandler<DocumentCreatedEvent>[]
   documentRunRequested: EventHandler<DocumentRunRequestedEvent>[]
   publicDocumentRunRequested: EventHandler<PublicDocumentRunRequestedEvent>[]
@@ -1038,4 +1060,5 @@ export interface IEventsHandlers {
   weeklyEmailPreferenceUpdated: EventHandler<WeeklyEmailPreferenceUpdatedEvent>[]
   escalatingIssuesEmailPreferenceUpdated: EventHandler<EscalatingIssuesEmailPreferenceUpdatedEvent>[]
   workspaceIssuesDashboardUnlocked: EventHandler<WorkspaceIssuesDashboardUnlockedEvent>[]
+  deploymentTestCreated: EventHandler<DeploymentTestCreatedEvent>[]
 }
