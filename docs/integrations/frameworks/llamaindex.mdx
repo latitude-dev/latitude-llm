@@ -83,8 +83,10 @@ Before you start, make sure you have:
 
     export async function answerQuestion(input: string) {
       const $prompt = telemetry.prompt(BACKGROUND(), {
+        documentLogUuid: crypto.randomUUID(),
         promptUuid: 'your-prompt-uuid',
         versionUuid: 'your-version-uuid',
+        template: 'Your prompt template here',
       })
 
       await context

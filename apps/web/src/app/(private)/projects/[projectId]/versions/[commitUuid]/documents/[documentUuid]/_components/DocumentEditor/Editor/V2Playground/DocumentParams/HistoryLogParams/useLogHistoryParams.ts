@@ -18,10 +18,10 @@ export function useLogHistoryParams({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const spanId = searchParams.get('spanId')
-  const traceId = searchParams.get('traceId')
+  const documentLogUuid = searchParams.get('documentLogUuid')
   const { data: urlSpan, isLoading: isLoadingUrlSpan } = useSpan({
     spanId,
-    traceId,
+    documentLogUuid,
   })
 
   const {
@@ -40,7 +40,7 @@ export function useLogHistoryParams({
   const { data: selectedSpan, isLoading: isLoadingSelectedSpan } = useSpan(
     {
       spanId: spans?.[0]?.id,
-      traceId: spans?.[0]?.traceId,
+      documentLogUuid: spans?.[0]?.documentLogUuid,
     },
     {},
   )
@@ -48,7 +48,7 @@ export function useLogHistoryParams({
   const clearUrlSelection = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString())
     params.delete('spanId')
-    params.delete('traceId')
+    params.delete('documentLogUuid')
     router.push(`${pathname}?${params.toString()}`)
   }, [pathname, searchParams, router])
 

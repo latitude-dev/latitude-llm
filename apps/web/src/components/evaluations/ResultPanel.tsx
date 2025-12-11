@@ -41,7 +41,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
-import { useSpan } from '$/stores/spans'
+import { useSpanByTraceId } from '$/stores/spans'
 import { MetadataInfoTabs } from '$/components/MetadataInfoTabs'
 import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SpanParameters'
 
@@ -145,7 +145,7 @@ export function ResultPanelMetadata<
   ...rest
 }: ResultPanelProps<T, M>) {
   const [openDatasetModal, setOpenDatasetModal] = useState(false)
-  const { data: span } = useSpan({
+  const { data: span } = useSpanByTraceId({
     traceId: evaluatedTraceId,
     spanId: evaluatedSpanId,
   })

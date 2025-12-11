@@ -98,6 +98,10 @@ export function extractSpanType(
       return Result.ok(SpanType.Http)
     case SpanType.Prompt:
       return Result.ok(SpanType.Prompt)
+    case SpanType.Chat:
+      return Result.ok(SpanType.Chat)
+    case SpanType.External:
+      return Result.ok(SpanType.External)
     case SpanType.Step:
       return Result.ok(SpanType.Step)
     case SpanType.Unknown:

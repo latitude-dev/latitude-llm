@@ -1,13 +1,26 @@
 import { AssembledSpan, AssembledTrace, SpanType } from '../../../constants'
-import { findFirstSpanOfType } from './findFirstSpanOfType'
 import { adaptPromptlMessageToLegacy } from '../../../utils/promptlAdapter'
+
+const MAIN_SPAN_TYPES = new Set([
+  SpanType.Prompt,
+  SpanType.Chat,
+  SpanType.External,
+])
+
+function findRootSpans(trace: AssembledTrace): AssembledSpan[] {
+  return trace.children
+    .filter(
+      (span) => MAIN_SPAN_TYPES.has(span.type as SpanType) && !span.parentId,
+    )
+    .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
+}
 
 /**
  * Finds the completion span containing the full conversation from a trace.
  *
  * There can be many completion spans in a trace, but only one contains the
  * full conversation. This method finds that span by searching the last
- * completion span in the prompt span's immediate children.
+ * completion span in the main span's (Prompt, Chat, or External) immediate children.
  *
  * @param trace - The assembled trace to search, or undefined
  * @returns The completion span containing the full conversation, or undefined if not found
@@ -15,13 +28,22 @@ import { adaptPromptlMessageToLegacy } from '../../../utils/promptlAdapter'
 export function findCompletionSpanFromTrace(trace: AssembledTrace | undefined) {
   if (!trace) return undefined
 
-  const promptSpan = findFirstSpanOfType(trace.children, SpanType.Prompt)
-  if (!promptSpan) return undefined
+  const rootSpans = findRootSpans(trace)
+  const lastSibling = rootSpans.at(-1)
+  if (!lastSibling) return undefined
 
-  return promptSpan.children?.reduce(
-    (last, span) => (span.type === SpanType.Completion ? span : last),
-    undefined as ReturnType<typeof findFirstSpanOfType>,
-  ) as AssembledSpan<SpanType.Completion> | undefined
+  return lastSibling.children?.reduce<
+    AssembledSpan<SpanType.Completion> | undefined
+  >(
+    (
+      last: AssembledSpan<SpanType.Completion> | undefined,
+      span: AssembledSpan,
+    ) =>
+      span.type === SpanType.Completion
+        ? (span as AssembledSpan<SpanType.Completion>)
+        : last,
+    undefined,
+  )
 }
 
 export function adaptCompletionSpanMessagesToLegacy(

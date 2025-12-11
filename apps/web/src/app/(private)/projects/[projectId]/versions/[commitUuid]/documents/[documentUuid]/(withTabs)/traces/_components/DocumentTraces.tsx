@@ -16,7 +16,7 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
-import { ActiveRun, Span, SpanType } from '@latitude-data/constants'
+import { ActiveRun, PromptSpan } from '@latitude-data/constants'
 import { type SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { useEvaluationResultsV2ByTraces } from '$/stores/evaluationResultsV2'
@@ -89,10 +89,13 @@ export function DocumentTraces({
         {spans.items.map((span) => (
           <SpanRow
             key={span.id}
-            span={span as Span<SpanType.Prompt>}
+            span={span as PromptSpan}
             toggleRow={selectableState.toggleRow}
             isSelected={selectableState.isSelected}
-            isExpanded={selection.traceId === span.traceId}
+            isExpanded={
+              selection.documentLogUuid !== null &&
+              selection.documentLogUuid === span.documentLogUuid
+            }
             evaluationResults={evaluationResultsByTraceId[span.traceId] || []}
             isEvaluationResultsLoading={isEvaluationResultsLoading}
           />

@@ -144,7 +144,7 @@ export function DocumentTracesPage({
                         ) : selection.trace ? (
                           <TraceInfoPanel
                             ref={ref}
-                            traceId={selection.trace.traceId}
+                            documentLogUuid={selection.trace.documentLogUuid}
                             spanId={selection.trace.spanId}
                             documentUuid={document.documentUuid}
                           />

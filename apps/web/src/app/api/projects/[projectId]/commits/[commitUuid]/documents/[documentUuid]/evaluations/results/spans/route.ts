@@ -22,11 +22,12 @@ export const GET = errorHandler(
     ) => {
       const { projectId, documentUuid } = params
       const spanId = request.nextUrl.searchParams.get('spanId')
-      const traceId = request.nextUrl.searchParams.get('traceId')
+      const documentLogUuid =
+        request.nextUrl.searchParams.get('documentLogUuid')
 
-      if (!spanId || !traceId) {
+      if (!spanId || !documentLogUuid) {
         return NextResponse.json(
-          { error: 'spanId and traceId are required' },
+          { error: 'spanId and documentLogUuid are required' },
           { status: 400 },
         )
       }
@@ -34,11 +35,11 @@ export const GET = errorHandler(
       const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
 
       const results = await resultsRepository
-        .listBySpanTrace({
+        .listBySpanAndDocumentLogUuid({
           projectId: projectId,
           documentUuid: documentUuid,
           spanId: spanId,
-          traceId: traceId,
+          documentLogUuid: documentLogUuid,
         })
         .then((r) => r.unwrap())
 

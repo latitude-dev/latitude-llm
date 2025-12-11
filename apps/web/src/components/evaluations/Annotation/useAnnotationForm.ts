@@ -53,7 +53,7 @@ export function useAnnotationForm<
       documentUuid: span.documentUuid!,
     },
     spanId: span.id,
-    traceId: span.traceId,
+    documentLogUuid: span.documentLogUuid,
   })
   const onSubmit = useCallback(
     async ({ score, resultMetadata }: OnSubmitProps<T, M>) => {

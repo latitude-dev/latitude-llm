@@ -29,11 +29,11 @@ function useAnnotationData({
 }: {
   documentLogUuid: string | undefined
 }) {
-  const { data, isLoading } = useConversation(
+  const { traces, isLoading } = useConversation(
     { conversationId: documentLogUuid },
     { refreshInterval: documentLogUuid ? 5_000 : undefined },
   )
-  const trace = data?.trace
+  const trace = traces[0]
   const span = findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt)
   const isReady = !isLoading && !!span
 

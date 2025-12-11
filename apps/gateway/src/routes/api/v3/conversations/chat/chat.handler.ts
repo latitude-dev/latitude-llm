@@ -7,7 +7,7 @@ import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { buildClientToolHandlersMap } from '@latitude-data/core/services/documents/tools/clientTools/handlers'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessages } from '@latitude-data/core/services/documentLogs/addMessages/index'
-import { BACKGROUND, telemetry } from '@latitude-data/core/telemetry'
+import { telemetry } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import { LogSources } from '@latitude-data/core/constants'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
@@ -31,9 +31,9 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
 
   const result = (
     await addMessages({
-      context: trace
-        ? telemetry.resume(trace)
-        : BACKGROUND({ workspaceId: workspace.id }),
+      // Only pass context if client explicitly provides trace
+      // Otherwise let addMessages resume from previous span
+      ...(trace && { context: telemetry.resume(trace) }),
       workspace,
       tools: buildClientToolHandlersMap(tools),
       documentLogUuid: conversationUuid,

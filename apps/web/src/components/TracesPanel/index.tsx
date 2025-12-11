@@ -1,10 +1,14 @@
 import { Ref, useMemo } from 'react'
 import { DetailsPanel } from '$/components/tracing/spans/DetailsPanel'
-import { useTrace } from '$/stores/traces'
-import { SpanType, SpanWithDetails } from '@latitude-data/constants'
+import { useLastTrace } from '$/stores/conversations'
+import {
+  AssembledSpan,
+  AssembledTrace,
+  SpanType,
+  SpanWithDetails,
+} from '@latitude-data/constants'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 import { MessageList } from '$/components/ChatWrapper'
-import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
@@ -18,6 +22,21 @@ import {
   findCompletionSpanFromTrace,
 } from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
 
+const MAIN_SPAN_TYPES = new Set([
+  SpanType.Prompt,
+  SpanType.Chat,
+  SpanType.External,
+])
+
+function findMainSpan(
+  trace: AssembledTrace | undefined,
+): AssembledSpan | undefined {
+  if (!trace) return undefined
+  return trace.children.find((span) =>
+    MAIN_SPAN_TYPES.has(span.type as SpanType),
+  )
+}
+
 export const DEFAULT_TABS = [
   { label: 'Metadata', value: 'metadata' },
   { label: 'Messages', value: 'messages' },
@@ -26,13 +45,13 @@ export const DEFAULT_TABS = [
 export function TraceInfoPanel({
   ref,
   spanId,
-  traceId,
+  documentLogUuid,
   documentUuid,
   insideOtherPanel = false,
   mergedToIssueId,
 }: {
   spanId: string
-  traceId: string
+  documentLogUuid: string
   documentUuid: string
   insideOtherPanel?: boolean
   mergedToIssueId?: number
@@ -46,14 +65,14 @@ export function TraceInfoPanel({
   const { project } = useCurrentProject()
   const { data: span, isLoading } = useSpan({
     spanId,
-    traceId,
+    documentLogUuid,
   })
   const { data: results } = useEvaluationResultsV2BySpans({
     project,
     commit,
     document,
     spanId,
-    traceId,
+    documentLogUuid,
   })
 
   const tabs =
@@ -71,7 +90,9 @@ export function TraceInfoPanel({
               mergedToIssueId={mergedToIssueId}
             />
           )}
-          {selectedTab === 'messages' && <TraceMessages traceId={traceId} />}
+          {selectedTab === 'messages' && (
+            <TraceMessages documentLogUuid={documentLogUuid} />
+          )}
           {selectedTab === 'evaluations' && (
             <TraceEvaluations
               documentUuid={documentUuid}
@@ -110,12 +131,22 @@ function TraceMetadata({
   )
 }
 
-function TraceMessages({ traceId }: { traceId: string | null }) {
-  const { data: trace } = useTrace({ traceId })
-  const promptSpan = findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt)
-  const promptMetadata = promptSpan?.metadata
-  const completionSpan = findCompletionSpanFromTrace(trace)
+function TraceMessages({
+  documentLogUuid,
+}: {
+  documentLogUuid: string | null
+}) {
+  const { trace, isLoading } = useLastTrace({ documentLogUuid })
+
+  const mainSpan = findMainSpan(trace ?? undefined)
+  const mainMetadata = mainSpan?.metadata
+  const completionSpan = findCompletionSpanFromTrace(trace ?? undefined)
   const messages = adaptCompletionSpanMessagesToLegacy(completionSpan)
+
+  if (isLoading) {
+    return <LoadingText alignX='center' />
+  }
+
   if (!messages.length) {
     return (
       <div className='flex flex-row items-center justify-center w-full'>
@@ -124,15 +155,10 @@ function TraceMessages({ traceId }: { traceId: string | null }) {
     )
   }
 
-  return (
-    <MessageList
-      debugMode
-      messages={messages}
-      parameters={
-        promptMetadata?.parameters
-          ? Object.keys(promptMetadata.parameters)
-          : undefined
-      }
-    />
-  )
+  const parameters =
+    mainMetadata && 'parameters' in mainMetadata
+      ? Object.keys(mainMetadata.parameters as Record<string, unknown>)
+      : undefined
+
+  return <MessageList debugMode messages={messages} parameters={parameters} />
 }

@@ -9,6 +9,38 @@ import { SpanWithDetails } from '@latitude-data/core/constants'
 
 export function useSpan(
   {
+    documentLogUuid,
+    spanId,
+  }: {
+    documentLogUuid?: string | null
+    spanId?: string | null
+  },
+  opts?: SWRConfiguration,
+) {
+  const route =
+    spanId && documentLogUuid
+      ? ROUTES.api.conversations.detail(documentLogUuid).spans.detail(spanId)
+          .root
+      : undefined
+  const fetcher = useFetcher<
+    SpanWithDetails | undefined,
+    SpanWithDetails | undefined
+  >(route, {
+    fallback: null,
+    serializer: (span) => serializeSpan(span),
+  })
+
+  const {
+    data = undefined,
+    mutate,
+    isLoading,
+  } = useSWR<SpanWithDetails | undefined>(compact(route), fetcher, opts)
+
+  return useMemo(() => ({ data, mutate, isLoading }), [data, mutate, isLoading])
+}
+
+export function useSpanByTraceId(
+  {
     traceId,
     spanId,
   }: {

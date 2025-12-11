@@ -79,13 +79,14 @@ Before you start, make sure you have:
     // Import your existing AI Platform client here
 
     export async function generateSupportReply(input: string) {
-      const $prompt = telemetry.prompt(BACKGROUND(), {
+      const $external = telemetry.external(BACKGROUND(), {
+        documentLogUuid: crypto.randomUUID(),
         promptUuid: 'your-prompt-uuid',
         versionUuid: 'your-version-uuid',
       })
 
       await context
-        .with($prompt.context, async () => {
+        .with($external.context, async () => {
           // Example: use your existing AI Platform client
           // const response = await aiPlatformClient.predict({
           //   endpoint: 'projects/.../locations/.../endpoints/...',
@@ -94,8 +95,8 @@ Before you start, make sure you have:
 
           // Use response here...
         })
-        .then(() => $prompt.end())
-        .catch((error) => $prompt.fail(error as Error))
+        .then(() => $external.end())
+        .catch((error) => $external.fail(error as Error))
         .finally(() => telemetry.flush())
     }
     ```

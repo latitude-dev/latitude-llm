@@ -92,10 +92,7 @@ async function assembleSpan({
       }),
     ),
   )
-  // TODO:(tracing): N+1 to disk storage. Ok since N is small but not a good idea. Needed
-  // because we need to perform aggregations over multiple spans of a single
-  // trace. A better approach is to denormalize all the aggregable attributes
-  // into columns in the span table.
+
   const repo = new SpanMetadatasRepository(workspace.id)
   const metadata = await repo
     .get({ spanId: span.id, traceId: span.traceId })

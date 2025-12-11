@@ -13,6 +13,7 @@ export enum LogSources {
   ScheduledTrigger = 'scheduled_trigger',
   SharedPrompt = 'shared_prompt',
   User = 'user',
+  External = 'external',
 }
 
 type Commit = {

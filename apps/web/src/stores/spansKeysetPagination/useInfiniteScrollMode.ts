@@ -33,7 +33,7 @@ export function useInfiniteScrollMode(
           params.commitUuid,
           params.documentUuid,
           params.source,
-          params.type,
+          params.types,
           params.limit,
           null,
         ] as const
@@ -49,7 +49,7 @@ export function useInfiniteScrollMode(
         params.commitUuid,
         params.documentUuid,
         params.source,
-        params.type,
+        params.types,
         params.limit,
         previousPageData.next,
       ] as const
@@ -59,7 +59,7 @@ export function useInfiniteScrollMode(
       params.commitUuid,
       params.documentUuid,
       params.source,
-      params.type,
+      params.types,
       params.limit,
     ],
   )
@@ -74,7 +74,7 @@ export function useInfiniteScrollMode(
           commitUuid: params.commitUuid ?? undefined,
           documentUuid: params.documentUuid,
           from: cursor ?? undefined,
-          type: params.type,
+          types: params.types?.join(','),
           limit: params.limit?.toString(),
           source: params.source?.join(','),
           ...filters,
@@ -97,7 +97,7 @@ export function useInfiniteScrollMode(
       params.projectId,
       params.commitUuid,
       params.documentUuid,
-      params.type,
+      params.types,
       params.limit,
       params.source,
       filters,
@@ -131,7 +131,7 @@ export function useInfiniteScrollMode(
 
   const items = useMemo(() => {
     if (!data) return []
-    return data.flatMap((page) => page.items)
+    return data.flatMap((page) => page?.items ?? [])
   }, [data])
 
   const hasNext = useMemo(() => {

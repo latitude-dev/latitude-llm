@@ -32,7 +32,7 @@ export function NewIssueModal({ onClose }: { onClose: () => void }) {
       documentUuid: span.documentUuid ?? '',
     },
     spanId: span.id,
-    traceId: span.traceId,
+    documentLogUuid: span.documentLogUuid,
   })
   const { createIssue, isCreatingIssue, isGeneratingIssue, generateIssue } =
     useIssue({
