@@ -8,6 +8,7 @@ import type * as latitude from '@latitude-data/sdk'
 import * as otel from '@opentelemetry/api'
 import { context } from '@opentelemetry/api'
 import type * as promptl from 'promptl-ai'
+import { v4 as uuid } from 'uuid'
 
 export type LatitudeInstrumentationOptions = {
   module: typeof latitude.Latitude
@@ -64,6 +65,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     const { prompt, parameters } = args[0]
 
     const $prompt = this.telemetry.prompt(context.active(), {
+      documentLogUuid: uuid(),
       versionUuid: prompt.versionUuid,
       promptUuid: prompt.uuid,
       template: prompt.content,

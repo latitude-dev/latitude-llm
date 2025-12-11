@@ -35,7 +35,7 @@ export function IssuesSelector({
       documentUuid: span.documentUuid ?? '',
     },
     spanId: span.id,
-    traceId: span.traceId,
+    documentLogUuid: span.documentLogUuid,
   })
   const {
     data: resultIssue,

@@ -12,6 +12,7 @@ import {
   DocumentLogsRepository,
   DocumentVersionsRepository,
   ProviderLogsRepository,
+  SpansRepository,
 } from '../../../repositories'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import {
@@ -45,7 +46,6 @@ export async function addMessages(
     abortSignal,
     tools = {},
     context = BACKGROUND({ workspaceId: workspace.id }),
-    testDeploymentId,
   }: AddMessagesArgs,
   telemetry: LatitudeTelemetry = realTelemetry,
 ) {
@@ -58,23 +58,23 @@ export async function addMessages(
     documentLogUuid,
   })
   if (dataResult.error) return dataResult
-  const { document, commit, providerLog, globalConfig } = dataResult.unwrap()
+  const { document, commit, providerLog, globalConfig, previousSpan } =
+    dataResult.unwrap()
 
-  const $prompt = telemetry.prompt(context, {
+  const effectiveContext = context ?? BACKGROUND({ workspaceId: workspace.id })
+
+  const $chat = telemetry.chat(effectiveContext, {
     documentLogUuid,
-    testDeploymentId,
+    previousTraceId: previousSpan?.traceId ?? '',
     name: document.path.split('/').at(-1),
-    promptUuid: document.documentUuid,
-    template: document.content,
-    versionUuid: commit.uuid,
-    projectId: commit.projectId,
+    source,
   })
 
   if (!providerLog.providerId) {
     const error = new NotFoundError(
       'Cannot add messages to a conversation that has no associated provider',
     )
-    $prompt.fail(error)
+    $chat.fail(error)
     return Result.error(error)
   }
 
@@ -83,7 +83,7 @@ export async function addMessages(
     const error = new NotFoundError(
       `Could not find provider API key with id ${providerLog.providerId}`,
     )
-    $prompt.fail(error)
+    $chat.fail(error)
     return Result.error(error)
   }
 
@@ -96,7 +96,7 @@ export async function addMessages(
   }
 
   const streamManager = new DefaultStreamManager({
-    context: $prompt.context,
+    context: $chat.context,
     uuid: providerLog.documentLogUuid!,
     config: conversation.config,
     provider,
@@ -120,11 +120,11 @@ export async function addMessages(
   streamResult.response.then(async (response) => {
     const error = await streamResult.error
     if (error) {
-      $prompt.fail(error)
+      $chat.fail(error)
 
       if (isErrorRetryable(error)) return response
     } else {
-      $prompt.end()
+      $chat.end()
     }
   })
 
@@ -169,5 +169,17 @@ async function retrieveData({
   if (metadataResult.error) return metadataResult
   const globalConfig = metadataResult.value.config as LatitudePromptConfig
 
-  return Result.ok({ commit, document, documentLog, providerLog, globalConfig })
+  const spansRepo = new SpansRepository(workspace.id)
+  const previousSpan = documentLogUuid
+    ? await spansRepo.findLastMainSpanByDocumentLogUuid(documentLogUuid)
+    : undefined
+
+  return Result.ok({
+    commit,
+    document,
+    documentLog,
+    providerLog,
+    globalConfig,
+    previousSpan,
+  })
 }

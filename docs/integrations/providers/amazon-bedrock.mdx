@@ -83,13 +83,14 @@ Before you start, make sure you have:
     import { telemetry } from './telemetry'
 
     export async function generateSupportReply(input: string) {
-      const $prompt = telemetry.prompt(BACKGROUND(), {
+      const $span = telemetry.external(BACKGROUND(), {
+        documentLogUuid: crypto.randomUUID(),
         promptUuid: 'your-prompt-uuid',
-        versionUuid: 'your-version-uuid',
+        versionUuid: 'your-version-uuid', // or "live", depending on your setup
       })
 
       await context
-        .with($prompt.context, async () => {
+        .with($span.context, async () => {
           const client = new BedrockRuntimeClient({ region: 'us-east-1' })
 
           const response = await client.send(
@@ -105,8 +106,8 @@ Before you start, make sure you have:
 
           // Use response here...
         })
-        .then(() => $prompt.end())
-        .catch((error) => $prompt.fail(error as Error))
+        .then(() => $span.end())
+        .catch((error) => $span.fail(error as Error))
         .finally(() => telemetry.flush())
     }
     ```

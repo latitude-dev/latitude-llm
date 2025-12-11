@@ -48,19 +48,19 @@ export class SpansRepository extends Repository<Span> {
   }
 
   private buildFilterConditions({
-    type,
+    types,
     source,
     experimentUuids,
     createdAt,
   }: {
-    type?: SpanType
+    types?: SpanType[]
     source?: LogSources[]
     experimentUuids?: string[]
     createdAt?: { from?: Date; to?: Date }
   }): SQL<unknown>[] {
     const conditions = [
       this.scopeFilter,
-      type ? eq(spans.type, type) : undefined,
+      types ? inArray(spans.type, types) : undefined,
       source
         ? or(inArray(spans.source, source), isNull(spans.source))
         : undefined,
@@ -87,6 +87,32 @@ export class SpansRepository extends Repository<Span> {
     const result = await this.scope
       .where(
         and(this.scopeFilter, eq(spans.traceId, traceId), eq(spans.id, spanId)),
+      )
+      .limit(1)
+      .then((r) => r[0])
+
+    if (!result) return Result.nil()
+    return Result.ok<Span>(result as Span)
+  }
+
+  async getByDocumentLogUuidAndSpanId({
+    documentLogUuid,
+    spanId,
+  }: {
+    documentLogUuid: string
+    spanId: string
+  }) {
+    const traceIds = await this.listTraceIdsByLogUuid(documentLogUuid)
+
+    if (traceIds.length === 0) return Result.nil()
+
+    const result = await this.scope
+      .where(
+        and(
+          this.scopeFilter,
+          inArray(spans.traceId, traceIds),
+          eq(spans.id, spanId),
+        ),
       )
       .limit(1)
       .then((r) => r[0])
@@ -142,9 +168,40 @@ export class SpansRepository extends Repository<Span> {
     return result as Span | undefined
   }
 
+  async listByDocumentLogUuid(documentLogUuid: string) {
+    return this.db
+      .select()
+      .from(spans)
+      .where(and(this.scopeFilter, eq(spans.documentLogUuid, documentLogUuid)))
+      .orderBy(asc(spans.startedAt), asc(spans.id))
+      .then((r) => r as Span[])
+  }
+
+  async findLastMainSpanByDocumentLogUuid(documentLogUuid: string) {
+    const result = await this.db
+      .select()
+      .from(spans)
+      .where(
+        and(
+          this.scopeFilter,
+          eq(spans.documentLogUuid, documentLogUuid),
+          or(
+            eq(spans.type, SpanType.Prompt),
+            eq(spans.type, SpanType.Chat),
+            eq(spans.type, SpanType.External),
+          ),
+        ),
+      )
+      .orderBy(desc(spans.startedAt))
+      .limit(1)
+      .then((r) => r[0])
+
+    return result as Span | undefined
+  }
+
   async findByDocumentAndCommitLimited({
     documentUuid,
-    type,
+    types,
     from,
     limit = DEFAULT_PAGINATION_SIZE,
     commitUuids,
@@ -154,7 +211,7 @@ export class SpansRepository extends Repository<Span> {
     createdAt,
   }: {
     documentUuid: string
-    type?: SpanType
+    types?: SpanType[]
     from?: { startedAt: string; id: string }
     limit?: number
     commitUuids?: string[]
@@ -165,7 +222,7 @@ export class SpansRepository extends Repository<Span> {
   }) {
     const conditions = [
       ...this.buildFilterConditions({
-        type,
+        types,
         source,
         experimentUuids,
         createdAt,
@@ -223,7 +280,7 @@ export class SpansRepository extends Repository<Span> {
 
   async findByProjectLimited({
     projectId,
-    type,
+    types,
     from,
     source,
     limit = DEFAULT_PAGINATION_SIZE,
@@ -231,7 +288,7 @@ export class SpansRepository extends Repository<Span> {
     createdAt,
   }: {
     projectId: number
-    type?: SpanType
+    types?: SpanType[]
     from?: { startedAt: string; id: string }
     source?: LogSources[]
     limit?: number
@@ -250,7 +307,7 @@ export class SpansRepository extends Repository<Span> {
 
     const conditions = [
       ...this.buildFilterConditions({
-        type,
+        types,
         source,
         experimentUuids,
         createdAt,

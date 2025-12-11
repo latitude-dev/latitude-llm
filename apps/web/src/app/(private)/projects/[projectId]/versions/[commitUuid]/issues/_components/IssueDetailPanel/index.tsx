@@ -140,7 +140,7 @@ export function IssuesDetailPanel({
                   <TraceInfoPanel
                     insideOtherPanel
                     spanId={selectedSpan.id}
-                    traceId={selectedSpan.traceId}
+                    documentLogUuid={selectedSpan.documentLogUuid!}
                     documentUuid={issue.documentUuid}
                     mergedToIssueId={issue.mergedToIssueId ?? undefined}
                   />

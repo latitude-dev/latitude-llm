@@ -2,6 +2,13 @@ import { database } from '../../../client'
 import {
   ATTR_GEN_AI_REQUEST_PARAMETERS,
   ATTR_GEN_AI_REQUEST_TEMPLATE,
+  ATTR_LATITUDE_COMMIT_UUID,
+  ATTR_LATITUDE_DOCUMENT_LOG_UUID,
+  ATTR_LATITUDE_DOCUMENT_UUID,
+  ATTR_LATITUDE_EXPERIMENT_UUID,
+  ATTR_LATITUDE_EXTERNAL_ID,
+  ATTR_LATITUDE_PROJECT_ID,
+  ATTR_LATITUDE_SOURCE,
   ATTR_LATITUDE_TEST_DEPLOYMENT_ID,
   LogSources,
   SPAN_SPECIFICATIONS,
@@ -32,17 +39,17 @@ async function process(
   return Result.ok({
     parameters,
     template: attributes[ATTR_GEN_AI_REQUEST_TEMPLATE] as string,
-    externalId: attributes['latitude.externalId'] as string,
+    externalId: attributes[ATTR_LATITUDE_EXTERNAL_ID] as string,
 
     // References
-    experimentUuid: attributes['latitude.experimentUuid'] as string,
-    promptUuid: attributes['latitude.documentUuid'] as string,
-    versionUuid: attributes['latitude.commitUuid'] as string,
-    documentLogUuid: attributes['latitude.documentLogUuid'] as string,
-    projectId: attributes['latitude.projectId'] as number,
+    experimentUuid: attributes[ATTR_LATITUDE_EXPERIMENT_UUID] as string,
+    promptUuid: attributes[ATTR_LATITUDE_DOCUMENT_UUID] as string,
+    versionUuid: attributes[ATTR_LATITUDE_COMMIT_UUID] as string,
+    documentLogUuid: attributes[ATTR_LATITUDE_DOCUMENT_LOG_UUID] as string,
+    projectId: attributes[ATTR_LATITUDE_PROJECT_ID] as number,
     testDeploymentId: attributes[ATTR_LATITUDE_TEST_DEPLOYMENT_ID] as
       | number
       | undefined,
-    source: attributes['latitude.source'] as LogSources,
+    source: attributes[ATTR_LATITUDE_SOURCE] as LogSources,
   })
 }

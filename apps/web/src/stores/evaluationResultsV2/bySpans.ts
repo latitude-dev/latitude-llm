@@ -17,13 +17,13 @@ export default function useEvaluationResultsV2BySpans(
     commit,
     document,
     spanId,
-    traceId,
+    documentLogUuid,
   }: {
     project: Pick<Project, 'id'>
     commit: Pick<Commit, 'uuid'>
     document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
     spanId?: string
-    traceId?: string
+    documentLogUuid?: string
   },
   opts?: SWRConfiguration,
 ) {
@@ -34,12 +34,12 @@ export default function useEvaluationResultsV2BySpans(
   const fetcher = useFetcher<ResultWithEvaluationV2[]>(route, {
     searchParams: compactObject({
       spanId: spanId ?? undefined,
-      traceId: traceId ?? undefined,
+      documentLogUuid: documentLogUuid ?? undefined,
     }) as Record<string, string>,
   })
 
   const { data = [], ...rest } = useSWR<ResultWithEvaluationV2[]>(
-    spanId && traceId
+    spanId && documentLogUuid
       ? compact([
           'evaluationResultsV2BySpans',
           project.id,
@@ -47,7 +47,7 @@ export default function useEvaluationResultsV2BySpans(
           document.commitId,
           document.documentUuid,
           spanId,
-          traceId,
+          documentLogUuid,
         ])
       : undefined,
     fetcher,

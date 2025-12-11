@@ -166,16 +166,14 @@ export function useProcessSpanFilters({
     [onFiltersChanged, setSearchParams, filterOptions],
   )
 
-  const onTraceIdChange = useCallback(
+  const onDocumentLogUuidChange = useCallback(
     (value: string) => {
       value = value?.trim()
 
-      // Remove traceId from filter if empty
       if (!value) {
-        const { traceId: _, ...restFilters } = filterOptions
+        const { documentLogUuid: _, ...restFilters } = filterOptions
         onFiltersChanged(restFilters)
 
-        // If no filters remain, remove the filters param entirely
         if (Object.keys(restFilters).length === 0) {
           setSearchParams('filters', undefined)
         } else {
@@ -184,12 +182,12 @@ export function useProcessSpanFilters({
       } else {
         onFiltersChanged((currentFilters) => ({
           ...currentFilters,
-          traceId: value,
+          documentLogUuid: value,
         }))
 
         const updatedFilters: SpansFilters = {
           ...filterOptions,
-          traceId: value,
+          documentLogUuid: value,
         }
         setSearchParams('filters', JSON.stringify(updatedFilters))
       }
@@ -234,6 +232,6 @@ export function useProcessSpanFilters({
     onSelectExperiments,
     onSelectTestDeployments,
     onCreatedAtChange,
-    onTraceIdChange,
+    onDocumentLogUuidChange,
   }
 }

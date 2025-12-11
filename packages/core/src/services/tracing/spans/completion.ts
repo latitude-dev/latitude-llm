@@ -1,4 +1,9 @@
-import { Providers } from '@latitude-data/constants'
+import {
+  ATTR_LATITUDE_COMMIT_UUID,
+  ATTR_LATITUDE_DOCUMENT_UUID,
+  ATTR_LATITUDE_EXPERIMENT_UUID,
+  Providers,
+} from '@latitude-data/constants'
 import {
   ATTR_GEN_AI_RESPONSE_FINISH_REASONS,
   ATTR_GEN_AI_RESPONSE_MODEL,
@@ -163,9 +168,9 @@ async function process(
     finishReason: finishReason,
 
     // References
-    promptUuid: attributes['latitude.documentUuid'] as string,
-    versionUuid: attributes['latitude.commitUuid'] as string,
-    experimentUuid: attributes['latitude.experimentUuid'] as string,
+    promptUuid: attributes[ATTR_LATITUDE_DOCUMENT_UUID] as string,
+    versionUuid: attributes[ATTR_LATITUDE_COMMIT_UUID] as string,
+    experimentUuid: attributes[ATTR_LATITUDE_EXPERIMENT_UUID] as string,
   })
 }
 

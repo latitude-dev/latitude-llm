@@ -39,9 +39,17 @@ const ATTR_LATITUDE = 'latitude'
 
 export const ATTR_LATITUDE_INTERNAL = `${ATTR_LATITUDE}.internal`
 
+export const ATTR_LATITUDE_NAME = `${ATTR_LATITUDE}.name`
 export const ATTR_LATITUDE_TYPE = `${ATTR_LATITUDE}.type`
-
+export const ATTR_LATITUDE_DOCUMENT_UUID = `${ATTR_LATITUDE}.document_uuid`
+export const ATTR_LATITUDE_COMMIT_UUID = `${ATTR_LATITUDE}.commit_uuid`
+export const ATTR_LATITUDE_DOCUMENT_LOG_UUID = `${ATTR_LATITUDE}.document_log_uuid`
+export const ATTR_LATITUDE_PROJECT_ID = `${ATTR_LATITUDE}.project_id`
+export const ATTR_LATITUDE_EXPERIMENT_UUID = `${ATTR_LATITUDE}.experiment_uuid`
+export const ATTR_LATITUDE_SOURCE = `${ATTR_LATITUDE}.source`
+export const ATTR_LATITUDE_EXTERNAL_ID = `${ATTR_LATITUDE}.external_id`
 export const ATTR_LATITUDE_TEST_DEPLOYMENT_ID = `${ATTR_LATITUDE}.test_deployment_id`
+export const ATTR_LATITUDE_PREVIOUS_TRACE_ID = `${ATTR_LATITUDE}.previous_trace_id`
 
 export const GEN_AI_TOOL_TYPE_VALUE_FUNCTION = 'function'
 export const ATTR_GEN_AI_TOOL_CALL_ARGUMENTS = 'gen_ai.tool.call.arguments'

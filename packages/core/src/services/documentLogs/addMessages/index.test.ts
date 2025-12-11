@@ -49,19 +49,18 @@ describe('addMessages', () => {
   })
 
   it('calls telemetry.prompt with projectId and all required parameters', async () => {
-    const { workspace, project, documents, commit, providers } =
-      await createProject({
-        providers: [{ type: Providers.OpenAI, name: 'openai' }],
-        documents: {
-          doc1: `
+    const { workspace, documents, commit, providers } = await createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        doc1: `
 ---
 provider: openai
 model: gpt-4o
 ---
 Hello world
 `,
-        },
-      })
+      },
+    })
 
     const document = documents[0]!
     const provider = providers[0]!
@@ -81,9 +80,15 @@ Hello world
     const mockPrompt = vi
       .fn()
       .mockImplementation(realTelemetry.prompt.bind(realTelemetry))
+
+    const mockChat = vi
+      .fn()
+      .mockImplementation(realTelemetry.chat.bind(realTelemetry))
+
     const mockTelemetry = {
       ...realTelemetry,
       prompt: mockPrompt,
+      chat: mockChat,
     } as unknown as LatitudeTelemetry
 
     const result = await addMessages(
@@ -103,15 +108,15 @@ Hello world
 
     expect(result.ok).toBe(true)
 
-    expect(mockPrompt).toHaveBeenCalledWith(
+    expect(mockPrompt).toHaveBeenCalledTimes(0)
+
+    expect(mockChat).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         documentLogUuid: documentLog.uuid,
         name: document.path.split('/').at(-1),
-        promptUuid: document.documentUuid,
-        template: document.content,
-        versionUuid: commit.uuid,
-        projectId: project.id,
+        source: LogSources.API,
+        previousTraceId: expect.any(String),
       }),
     )
   })

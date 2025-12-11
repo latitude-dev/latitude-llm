@@ -17,9 +17,9 @@ const searchParamsSchema = z.object({
   commitUuid: z.string().optional(),
   documentUuid: z.string().optional(),
   from: z.string().optional(),
-  type: z
-    .enum(Object.values(SpanType) as [string, ...string[]])
-    .default(SpanType.Prompt),
+  types: z
+    .array(z.enum(Object.values(SpanType) as [string, ...string[]]))
+    .default([SpanType.Prompt, SpanType.External]),
   limit: z.coerce
     .number()
     .int()
@@ -39,7 +39,7 @@ export const GET = errorHandler(
         commitUuid: searchParams.get('commitUuid') ?? undefined,
         documentUuid: searchParams.get('documentUuid') ?? undefined,
         from: searchParams.get('from') ?? undefined,
-        type: searchParams.get('type') ?? undefined,
+        types: searchParams.get('types') ?? undefined,
         limit: searchParams.get('limit') ?? undefined,
         filters: searchParams.get('filters') ?? undefined,
         source: searchParams.get('source') ?? undefined,
@@ -58,14 +58,13 @@ export const GET = errorHandler(
       let spansResult
       const spansRepository = new SpansRepository(workspace.id)
 
-      if (filters.traceId) {
-        const spans = await spansRepository
-          .list({ traceId: filters.traceId })
-          .then((r) =>
-            r.unwrap().filter((span) => span.type === SpanType.Prompt),
-          )
+      if (filters.documentLogUuid) {
+        const spansRepository = new SpansRepository(workspace.id)
+        const spans = await spansRepository.listByDocumentLogUuid(
+          filters.documentLogUuid,
+        )
         spansResult = {
-          items: spans,
+          items: spans.filter((span) => span.type === SpanType.Prompt),
           count: spans.length,
           next: null,
         }
@@ -85,7 +84,7 @@ export const GET = errorHandler(
           result = await spansRepository
             .findByDocumentAndCommitLimited({
               documentUuid,
-              type: parsedParams.type as SpanType,
+              types: parsedParams.types as SpanType[],
               from: fromCursor
                 ? { startedAt: fromCursor.value, id: fromCursor.id }
                 : undefined,
@@ -104,7 +103,7 @@ export const GET = errorHandler(
           result = await spansRepository
             .findByProjectLimited({
               projectId: Number(projectId),
-              type: parsedParams.type as SpanType,
+              types: parsedParams.types as SpanType[],
               limit: parsedParams.limit,
               source: parsedParams.source?.split(',') as LogSources[],
               from: fromCursor

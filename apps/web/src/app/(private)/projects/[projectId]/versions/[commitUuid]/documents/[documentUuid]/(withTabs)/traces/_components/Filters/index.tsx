@@ -125,9 +125,9 @@ export function SpanFilters({
       )}
       <div className='max-w-40'>
         <Input
-          placeholder='Trace ID'
-          value={filterOptions.traceId ?? ''}
-          onChange={(e) => filters.onTraceIdChange(e.target.value)}
+          placeholder='Conversation ID'
+          value={filterOptions.documentLogUuid ?? ''}
+          onChange={(e) => filters.onDocumentLogUuidChange(e.target.value)}
         />
       </div>
     </>

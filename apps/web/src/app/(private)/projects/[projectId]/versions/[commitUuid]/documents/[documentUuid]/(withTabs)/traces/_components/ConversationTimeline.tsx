@@ -1,73 +1,93 @@
+'use client'
+
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { use, useCallback, useEffect, useRef, useState } from 'react'
-import { TimelineGraph } from '$/components/tracing/traces/Timeline/Graph'
-import { TimelineScale } from '$/components/tracing/traces/Timeline/Scale'
-import { TimelineTree } from '$/components/tracing/traces/Timeline/Tree'
-import { useTrace } from '$/stores/traces'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { AssembledSpan, AssembledTrace } from '@latitude-data/core/constants'
+import { useConversation } from '$/stores/conversations'
+import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { TimelineScale } from '$/components/tracing/traces/Timeline/Scale'
 import { TraceSpanSelectionContext } from './TraceSpanSelectionContext'
+import { ConversationTree } from './ConversationTree'
+import { ConversationGraph } from './ConversationGraph'
 
-export function Trace({ traceId }: { traceId: string }) {
-  const { data: trace, isLoading } = useTrace({ traceId })
+const TREE_MIN_WIDTH = 125
+const GRAPH_MIN_WIDTH = 450
+
+export function ConversationTimeline({
+  documentLogUuid,
+}: {
+  documentLogUuid: string
+}) {
+  const { traces, isLoading } = useConversation({
+    conversationId: documentLogUuid,
+  })
 
   if (isLoading) {
     return (
       <div className='w-full h-full flex items-center justify-center gap-2 p-4 bg-secondary'>
         <Icon name='loader' color='foregroundMuted' className='animate-spin' />
-        <Text.H5 color='foregroundMuted'>Assembling trace</Text.H5>
+        <Text.H5 color='foregroundMuted'>Assembling traces</Text.H5>
       </div>
     )
   }
 
-  if (!trace || trace.children.length < 1) {
+  if (traces.length === 0) {
     return (
       <div className='w-full h-full flex items-center justify-center gap-2 p-4 bg-secondary'>
-        <Text.H5 color='foregroundMuted'>No events found so far</Text.H5>
+        <Text.H5 color='foregroundMuted'>No traces found</Text.H5>
       </div>
     )
   }
 
-  return (
-    <div className='w-full h-full max-h-96 overflow-y-auto custom-scrollbar'>
-      <Timeline trace={trace} />
-    </div>
-  )
+  return <UnifiedTimeline traces={traces} />
 }
 
-const TREE_MIN_WIDTH = 125 // 125px
-const GRAPH_MIN_WIDTH = 450 // 450px
+export type TraceSection = {
+  trace: AssembledTrace
+  index: number
+  cumulativeOffset: number
+}
 
-function findSpanByIdBFS(
-  trace: AssembledTrace,
+function getTraceSections(traces: AssembledTrace[]): TraceSection[] {
+  let cumulativeOffset = 0
+  return traces.map((trace, index) => {
+    const section = { trace, index, cumulativeOffset }
+    cumulativeOffset += trace.duration
+    return section
+  })
+}
+
+function findSpanByIdInTraces(
+  traces: AssembledTrace[],
   spanId?: string | null,
 ): AssembledSpan | null {
-  const queue: AssembledSpan[] = [...trace.children]
   if (!spanId) return null
 
-  while (queue.length > 0) {
-    const currentSpan = queue.shift()!
-
-    if (currentSpan.id === spanId) {
-      return currentSpan
-    }
-
-    if (currentSpan.children && currentSpan.children.length > 0) {
-      queue.push(...currentSpan.children)
+  for (const trace of traces) {
+    const queue: AssembledSpan[] = [...trace.children]
+    while (queue.length > 0) {
+      const currentSpan = queue.shift()!
+      if (currentSpan.id === spanId) {
+        return currentSpan
+      }
+      if (currentSpan.children && currentSpan.children.length > 0) {
+        queue.push(...currentSpan.children)
+      }
     }
   }
 
   return null
 }
 
-function Timeline({ trace }: { trace: AssembledTrace }) {
+function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
   const { selection, selectSpan } = use(TraceSpanSelectionContext)
-  const selectedSpan = findSpanByIdBFS(trace, selection.spanId)
+  const selectedSpan = findSpanByIdInTraces(traces, selection.spanId)
   const treeRef = useRef<HTMLDivElement>(null)
   const [treeWidth, setTreeWidth] = useState(0)
   const graphRef = useRef<HTMLDivElement>(null)
   const [graphWidth, setGraphWidth] = useState(0)
+
   const updateWidth = useCallback(() => {
     if (!treeRef.current || !graphRef.current) return
     const treeRect = treeRef.current.getBoundingClientRect()
@@ -75,6 +95,7 @@ function Timeline({ trace }: { trace: AssembledTrace }) {
     setTreeWidth(Math.max(treeRect.width, TREE_MIN_WIDTH) - 0.5)
     setGraphWidth(Math.max(graphRect.width, GRAPH_MIN_WIDTH) + 0.5)
   }, [setTreeWidth, setGraphWidth])
+
   useEffect(() => {
     if (!treeRef.current || !graphRef.current) return
     const resizeObserver = new ResizeObserver(updateWidth)
@@ -95,14 +116,28 @@ function Timeline({ trace }: { trace: AssembledTrace }) {
     [setCollapsedSpans],
   )
 
-  if (trace.children.length < 1) {
+  const sections = useMemo(() => getTraceSections(traces), [traces])
+  const totalDuration = useMemo(
+    () => traces.reduce((sum, t) => sum + t.duration, 0),
+    [traces],
+  )
+
+  const totalSpans = traces.reduce((sum, t) => sum + t.children.length, 0)
+  if (totalSpans < 1) {
     return (
       <div className='w-full h-full flex items-center justify-center gap-2 p-4'>
         <Text.H5 color='foregroundMuted'>No events found so far</Text.H5>
       </div>
     )
   }
-  if (!selectedSpan) return null
+
+  if (!selectedSpan) {
+    const firstSpan = traces[0]?.children[0]
+    if (firstSpan) {
+      selectSpan(firstSpan)
+    }
+    return null
+  }
 
   return (
     <div className='w-full h-full flex flex-col items-center justify-center relative'>
@@ -112,8 +147,8 @@ function Timeline({ trace }: { trace: AssembledTrace }) {
         minSize={TREE_MIN_WIDTH}
         firstPane={
           <div ref={treeRef} className='w-full h-full overflow-hidden'>
-            <TimelineTree
-              trace={trace}
+            <ConversationTree
+              sections={sections}
               width={treeWidth}
               minWidth={TREE_MIN_WIDTH}
               selectedSpan={selectedSpan}
@@ -125,8 +160,9 @@ function Timeline({ trace }: { trace: AssembledTrace }) {
         }
         secondPane={
           <div ref={graphRef} className='w-full h-full overflow-hidden'>
-            <TimelineGraph
-              trace={trace}
+            <ConversationGraph
+              sections={sections}
+              totalDuration={totalDuration}
               width={graphWidth}
               minWidth={GRAPH_MIN_WIDTH}
               selectedSpan={selectedSpan}
@@ -140,15 +176,13 @@ function Timeline({ trace }: { trace: AssembledTrace }) {
         <div
           className='w-full h-full bg-transparent'
           style={{ width: treeWidth }}
-        >
-          {/* Empty space matching the tree pane */}
-        </div>
+        />
         <div
           className='w-full h-full bg-secondary border-t border-l border-border pb-2'
           style={{ width: graphWidth }}
         >
           <TimelineScale
-            duration={trace.duration}
+            duration={totalDuration}
             width={graphWidth}
             minWidth={GRAPH_MIN_WIDTH}
           />
