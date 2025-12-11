@@ -2,7 +2,7 @@ import {
   unsafelyFindUserByEmail,
   unsafelyGetUser,
 } from '../../data-access/users'
-import { ReferralMailer } from '../../mailers'
+import { ReferralMailer } from '../../mailer/mailers/invitations/ReferralMailer'
 import { SendReferralInvitationEvent } from '../events'
 import { NotFoundError } from '@latitude-data/constants/errors'
 

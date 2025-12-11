@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { formatCount } from '$/lib/formatCount'
+import { formatCount } from '@latitude-data/constants/formatCount'
 import { ROUTES } from '$/services/routes'
 
 import { RunSourceGroup } from '@latitude-data/constants'

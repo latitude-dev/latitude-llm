@@ -3,8 +3,14 @@ import { SentMessageInfo, Transporter } from 'nodemailer'
 import Mail, { Address } from 'nodemailer/lib/mailer'
 import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, TypedResult } from '../lib/Result'
+import { captureException } from '../utils/datadogCapture'
 import { createAdapter } from './adapters'
+import {
+  AddressItem,
+  buildBatchRecipients,
+  RecipientBatch,
+} from './buildBatchRecipients'
 
 /**
  * Batch sending options for Mailgun.
@@ -34,7 +40,7 @@ export default abstract class Mailer {
     return `Latitude <${env.FROM_MAILER_EMAIL}>`
   }
 
-  constructor(options: Mail.Options, adapter = createAdapter()) {
+  constructor(options: Mail.Options = {}, adapter = createAdapter()) {
     this.options = options
     this.adapter = adapter
   }
@@ -105,5 +111,47 @@ export default abstract class Mailer {
     if (!address) return ''
 
     return typeof address === 'string' ? address : address.address
+  }
+
+  /**
+   * Send emails in batches to multiple recipients.
+   * Mailgun supports up to 1000 recipients per batch.
+   *
+   * @param addresses - Array of recipient objects with userId, email and name
+   * @param sendOptions - Function that returns the mail options for each batch
+   * @param context - Context for error tracking (mailName and additional metadata)
+   * @param batchSize - Number of recipients per batch (default: 100)
+   * @returns Array of results for each batch
+   */
+  async sendInBatches({
+    addressList,
+    sendOptions,
+    context,
+    batchSize = 100,
+  }: {
+    addressList: AddressItem[]
+    sendOptions: (
+      batch: RecipientBatch,
+    ) => Promise<TypedResult<SMTPTransport.SentMessageInfo, Error>>
+    context: {
+      mailName: string
+      [key: string]: unknown
+    }
+    batchSize?: number
+  }) {
+    const batches = buildBatchRecipients({ addressList, batchSize })
+    const results = await Promise.all(
+      batches.map((batch, _i) => sendOptions(batch)),
+    )
+    return results.map((result, index) => {
+      const batchSize = batches[index]!.to.length
+      if (Result.isOk(result)) return
+
+      captureException(result.error, {
+        ...context,
+        batchIndex: index,
+        batchSize,
+      })
+    })
   }
 }

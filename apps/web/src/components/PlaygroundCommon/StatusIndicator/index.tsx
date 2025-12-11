@@ -1,6 +1,6 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { formatCount } from '$/lib/formatCount'
+import { formatCount } from '@latitude-data/constants/formatCount'
 import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'

@@ -1,9 +1,13 @@
 const units = ['', 'K', 'M', 'B', 'T']
 const unitSize = 1000
 
-export function formatCount(count: number): string {
+export function formatCount(
+  count: number,
+  opts: { decimalPlaces?: number } = { decimalPlaces: 1 },
+): string {
   if (count < 0) return '-' + formatCount(-count)
-  if (count < unitSize) return count.toString()
+  if (count < unitSize)
+    return count.toFixed(opts.decimalPlaces).replace(/\.0+$/, '')
 
   let unitIndex = 0
 
@@ -18,7 +22,11 @@ export function formatCount(count: number): string {
     unitIndex++
   }
 
-  const decimalPlaces = count < 10 ? 1 : 0
+  const decimalPlaces = opts.decimalPlaces
+    ? opts.decimalPlaces
+    : count < 10
+      ? 1
+      : 0
 
   return count.toFixed(decimalPlaces).replace(/\.0$/, '') + units[unitIndex]
 }

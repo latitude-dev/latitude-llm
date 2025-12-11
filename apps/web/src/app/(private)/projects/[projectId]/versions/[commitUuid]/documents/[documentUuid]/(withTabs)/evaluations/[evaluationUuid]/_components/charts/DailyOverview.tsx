@@ -1,7 +1,7 @@
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
-import { formatCount } from '$/lib/formatCount'
+import { formatCount } from '@latitude-data/constants/formatCount'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { AreaChart, ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'

@@ -17,6 +17,7 @@ export type ICreateWorkspace = {
   source?: string
   onboarding?: boolean
   features?: string[]
+  isBigAccount?: boolean
 }
 export async function createWorkspace(
   workspaceData: Partial<ICreateWorkspace> = {},
@@ -33,6 +34,7 @@ export async function createWorkspace(
     user: userData,
     subscriptionPlan: workspaceData.subscriptionPlan,
     createdAt: workspaceData.createdAt,
+    isBigAccount: workspaceData.isBigAccount,
   })
   const workspace = result.unwrap()
   await createMembership({ workspace, user: userData }).then((r) => r.unwrap())

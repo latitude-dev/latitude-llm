@@ -19,6 +19,7 @@ export type ScheduleWorkspaceCleanupJobsData = Record<string, never>
 export const scheduleWorkspaceCleanupJobs = async (
   _: Job<ScheduleWorkspaceCleanupJobsData>,
 ) => {
+  const { maintenanceQueue } = await queues()
   // Find all workspaces with free plans
   const freeWorkspaces = await database
     .select({
@@ -36,7 +37,6 @@ export const scheduleWorkspaceCleanupJobs = async (
 
   // Enqueue individual cleanup job for each free workspace
   for (const workspace of freeWorkspaces) {
-    const { maintenanceQueue } = await queues()
     await maintenanceQueue.add(
       'cleanupWorkspaceOldLogsJob',
       { workspaceId: workspace.id },

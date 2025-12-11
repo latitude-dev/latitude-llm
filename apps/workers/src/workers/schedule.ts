@@ -58,4 +58,11 @@ export async function setupSchedules() {
     { pattern: '0 0 1 * * *' },
     { opts: { attempts: 1 } },
   )
+
+  // Every Monday at 1:00:00 AM - Schedule weekly email reports
+  await maintenanceQueue.upsertJobScheduler(
+    'scheduleWeeklyEmailJobs',
+    { pattern: '0 0 1 * * 1' },
+    { opts: { attempts: 1 } },
+  )
 }

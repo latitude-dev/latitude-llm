@@ -1,6 +1,0 @@
-export * from './invitations/InvitationMailer'
-export * from './invitations/ReferralMailer'
-export * from './magicLinks/MagicLinkMailer'
-export * from './suggestions/SuggestionMailer'
-export * from './documentEmailTrigger/DocumentTriggerMailer'
-export * from './issues/IssueEscalatingMailer'

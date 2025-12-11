@@ -2,7 +2,6 @@ import { eq } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { createWorkspace } from '../../../tests/factories'
 import { Workspace } from '../../../schema/models/types/Workspace'
-import { getIssuesData } from './index'
 import { createProject } from '../../../tests/factories/projects'
 import { Project } from '../../../schema/models/types/Project'
 import { createIssue } from '../../../tests/factories/issues'
@@ -10,6 +9,7 @@ import { Commit } from '../../../schema/models/types/Commit'
 import { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { issues } from '../../../schema/models/issues'
 import { database } from '../../../client'
+import { getIssuesData } from './index'
 
 // Static date for testing: Monday, January 8, 2024 at 10:00 AM UTC
 const STATIC_TEST_DATE = new Date('2024-01-08T10:00:00Z')
@@ -54,6 +54,7 @@ describe('getIssuesData', () => {
         hasIssues: false,
         issuesCount: 0,
         newIssuesCount: 0,
+        newIssuesList: [],
         escalatedIssuesCount: 0,
         resolvedIssuesCount: 0,
         ignoredIssuesCount: 0,
@@ -96,6 +97,7 @@ describe('getIssuesData', () => {
         hasIssues: true,
         issuesCount: 0,
         newIssuesCount: 0,
+        newIssuesList: [],
         escalatedIssuesCount: 0,
         resolvedIssuesCount: 0,
         ignoredIssuesCount: 0,

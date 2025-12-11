@@ -8,7 +8,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo } from 'react'
 import { REWARD_VALUES, RewardType } from '@latitude-data/core/constants'
-import { formatCount } from '$/lib/formatCount'
+import { formatCount } from '@latitude-data/constants/formatCount'
 
 export function RewardItem({
   description,

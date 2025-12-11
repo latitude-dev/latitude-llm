@@ -56,9 +56,9 @@ export const GET = errorHandler(
         : null
 
       let spansResult
+      const spansRepository = new SpansRepository(workspace.id)
+
       if (filters.traceId) {
-        // If traceId is present in filters, fetch spans for that specific trace
-        const spansRepository = new SpansRepository(workspace.id)
         const spans = await spansRepository
           .list({ traceId: filters.traceId })
           .then((r) =>
@@ -70,13 +70,9 @@ export const GET = errorHandler(
           next: null,
         }
       } else {
-        // Otherwise, fetch spans directly from the repository
-        const spansRepository = new SpansRepository(workspace.id)
-
         let result: { items: any[]; next: any } = { items: [], next: null }
 
         if (documentUuid) {
-          // Document queries require commitUuid
           if (!commitUuid) {
             return NextResponse.json(
               { error: 'commitUuid is required when documentUuid is provided' },

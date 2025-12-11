@@ -1,7 +1,7 @@
 'use client'
 
 import { usePaywallModal } from '$/app/(private)/providers/PaywallModalProvider'
-import { formatCount } from '$/lib/formatCount'
+import { formatCount } from '@latitude-data/constants/formatCount'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -110,25 +110,12 @@ export function LatteUsageInfo({
                   <b>{formatCount(usage.billable)}</b>
                   <span className='mx-0.5'>/</span>
                   {formatCount(usage.limit)} available credits
-                  {/* TODO(credits): Uncomment this when clients are informed about */}
-                  {/* {!!usage.unbillable &&
-                    ` (+${formatCount(usage.unbillable)} bonus)`} */}
                 </Text.H6>
               )}
               <UsageBar incurring={incurring} unbillable={usage.unbillable} />
             </div>
             <Text.H6 color='foregroundMuted' noWrap ellipsis>
               Resets {format(usage.resetsAt, 'MMMM d, yyyy')}
-              {/* TODO(credits): Uncomment this when clients are informed about */}
-              {/* {incurring > 100 &&
-                usage.limit !== 'unlimited' &&
-                !FREE_PLANS.includes(plan) && (
-                  <Text.H6 color='foregroundMuted' noWrap ellipsis>
-                    <br />
-                    You will be billed{' '}
-                    {formatCount(usage.billable - usage.limit)} extra credits
-                  </Text.H6>
-                )} */}
             </Text.H6>
           </div>
         </Popover.Content>
@@ -146,12 +133,6 @@ function UsageBar({
   const incurring = useMemo(() => {
     return Math.max(0, Math.min(100, incurringMaybeOverflowing))
   }, [incurringMaybeOverflowing])
-
-  // TODO(credits): Uncomment this when clients are informed about
-  // const bonus = useMemo(() => {
-  //   return Math.max(0, Math.min(100, unbillable * 3))
-  // }, [unbillable])
-
   return (
     <div className='max-w-[300px] flex items-center justify-start gap-1 overflow-hidden rounded-full shrink-0'>
       <div className='w-[200px] max-w-[200px] flex items-center justify-start gap-1 overflow-hidden rounded-full'>

@@ -1,5 +1,5 @@
 import { use, useCallback, useMemo } from 'react'
-import { formatCount } from '$/lib/formatCount'
+import { formatCount } from '@latitude-data/constants/formatCount'
 import {
   EvaluationType,
   EvaluationV2,

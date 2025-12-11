@@ -1,11 +1,12 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { subDays } from 'date-fns'
+import Mail from 'nodemailer/lib/mailer'
 import { ESCALATION_EXPIRATION_DAYS } from '@latitude-data/constants/issues'
 import { Result } from '../../lib/Result'
 import { createIssue, createProject } from '../../tests/factories'
 import { IssueIncrementedEvent } from '../events'
 import { sendIssueEscalatingHandler } from './sendIssueEscalatingHandler'
-import { IssueEscalatingMailer } from '../../mailers'
+import { IssueEscalatingMailer } from '../../mailer/mailers/issues/IssueEscalatingMailer'
 import * as datadogCapture from '../../utils/datadogCapture'
 import * as checkEscalationModule from '../../services/issues/histograms/checkEscalation'
 import type { Workspace } from '../../schema/models/types/Workspace'
@@ -14,21 +15,43 @@ import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import type { User } from '../../schema/models/types/User'
 import type { Commit } from '../../schema/models/types/Commit'
 
-// Mock the mailer
-vi.mock('../../mailers', () => ({
-  IssueEscalatingMailer: vi.fn().mockImplementation(() => ({
-    send: vi
-      .fn()
-      .mockResolvedValue(Result.ok({ messageId: 'test-message-id' })),
-  })),
-}))
+// Mock sendMail to prevent actual email sending
+const mockSendMail = vi.fn().mockResolvedValue(
+  Result.ok({
+    messageId: 'test-message-id',
+    accepted: ['test@example.com'],
+    rejected: [],
+    pending: [],
+    envelope: { from: 'test@example.com', to: ['test@example.com'] },
+    response: 'OK',
+  }),
+)
 
-// Mock datadog capture
+vi.mock('../../mailer/mailers/issues/IssueEscalatingMailer', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../mailer/mailers/issues/IssueEscalatingMailer')
+  >('../../mailer/mailers/issues/IssueEscalatingMailer')
+  const OriginalMailer = actual.IssueEscalatingMailer
+  return {
+    IssueEscalatingMailer: vi
+      .fn()
+      .mockImplementation(
+        (
+          options: Mail.Options,
+          { issueTitle, link }: { issueTitle: string; link: string },
+        ) => {
+          const instance = new OriginalMailer(options, { issueTitle, link })
+          instance['sendMail'] = mockSendMail
+          return instance
+        },
+      ),
+  }
+})
+
 vi.mock('../../utils/datadogCapture', () => ({
   captureException: vi.fn(),
 }))
 
-// Mock checkEscalation (already tested in isolation)
 vi.mock('../../services/issues/histograms/checkEscalation', () => ({
   checkEscalation: vi.fn(),
 }))
@@ -133,24 +156,14 @@ describe('sendIssueEscalatingHandler', () => {
         },
       )
 
-      // Verify send was called
-      const mailerInstance = vi.mocked(IssueEscalatingMailer).mock.results[0]
-        ?.value
-      expect(mailerInstance.send).toHaveBeenCalled()
+      // Verify email was sent through the adapter
+      expect(mockSendMail).toHaveBeenCalled()
 
-      // Verify issue data includes histogram
-      const sendCall = mailerInstance.send.mock.calls[0][0]
-      expect(sendCall.issue).toBeDefined()
-      expect(sendCall.issue.title).toBe(issue.title)
-      expect(sendCall.issue.eventsCount).toBeGreaterThanOrEqual(0)
-      expect(sendCall.issue.histogram).toBeInstanceOf(Array)
-      expect(sendCall.issue.histogram.length).toBeGreaterThan(0)
-      expect(sendCall.issue.histogram[0]).toHaveProperty('date')
-      expect(sendCall.issue.histogram[0]).toHaveProperty('count')
-
-      // Verify currentWorkspace is passed
-      expect(sendCall.currentWorkspace).toBeDefined()
-      expect(sendCall.currentWorkspace.id).toBe(workspace.id)
+      // Verify email options passed to adapter
+      const emailOptions = mockSendMail.mock.calls[0][0]
+      expect(emailOptions.to).toBeInstanceOf(Array)
+      expect(emailOptions.to.length).toBeGreaterThan(0)
+      expect(emailOptions.to).toContain(user.email)
     })
 
     it('should send emails in batches when there are many users', async () => {
@@ -180,17 +193,6 @@ describe('sendIssueEscalatingHandler', () => {
         isEscalating: true,
       })
 
-      // Mock mailer to track batch calls
-      const mockSend = vi
-        .fn()
-        .mockResolvedValue(Result.ok({ messageId: 'test' }))
-      vi.mocked(IssueEscalatingMailer).mockImplementation(
-        () =>
-          ({
-            send: mockSend,
-          }) as unknown as IssueEscalatingMailer,
-      )
-
       const event: IssueIncrementedEvent = {
         type: 'issueIncremented',
         data: {
@@ -205,23 +207,20 @@ describe('sendIssueEscalatingHandler', () => {
       // Pass batchSize: 2 to test batching (3 users = 2 batches: [2, 1])
       await sendIssueEscalatingHandler({ data: event, batchSize: 2 })
 
-      // With 3 users and batch size of 2, should send 2 batches
-      expect(mockSend).toHaveBeenCalledTimes(2)
+      // With 3 users and batch size of 2, should send 2 batches (real sendInBatches handles this)
+      expect(mockSendMail).toHaveBeenCalledTimes(2)
 
-      // Verify first batch has 2 users
-      const firstBatch = mockSend.mock.calls[0][0]
-      expect(firstBatch.to).toHaveLength(2)
-      expect(firstBatch.recipientVariables).toBeDefined()
-      expect(Object.keys(firstBatch.recipientVariables)).toHaveLength(2)
+      // Verify batches were sent with proper email options
+      const firstCall = mockSendMail.mock.calls[0][0]
+      const secondCall = mockSendMail.mock.calls[1][0]
 
-      // Verify second batch has 1 user
-      const secondBatch = mockSend.mock.calls[1][0]
-      expect(secondBatch.to).toHaveLength(1)
-      expect(secondBatch.recipientVariables).toBeDefined()
-      expect(Object.keys(secondBatch.recipientVariables)).toHaveLength(1)
+      // First batch should have 2 recipients
+      expect(firstCall.to).toHaveLength(2)
+      // Second batch should have 1 recipient
+      expect(secondCall.to).toHaveLength(1)
 
       // Verify all 3 users were sent emails
-      const allRecipients = [...firstBatch.to, ...secondBatch.to]
+      const allRecipients = [...firstCall.to, ...secondCall.to]
       expect(allRecipients).toHaveLength(3)
       expect(allRecipients).toEqual(
         expect.arrayContaining([user.email, user2.email, user3.email]),
@@ -297,7 +296,6 @@ describe('sendIssueEscalatingHandler', () => {
 
       await sendIssueEscalatingHandler({ data: event })
 
-      // Verify mailer was NOT called (still in same escalation period)
       expect(IssueEscalatingMailer).not.toHaveBeenCalled()
     })
   })
@@ -318,14 +316,9 @@ describe('sendIssueEscalatingHandler', () => {
         isEscalating: true,
       })
 
-      // Mock mailer to return error
+      // Mock sendMail to return error
       const sendError = new Error('Email provider failed')
-      vi.mocked(IssueEscalatingMailer).mockImplementationOnce(
-        () =>
-          ({
-            send: vi.fn().mockResolvedValue(Result.error(sendError)),
-          }) as unknown as IssueEscalatingMailer,
-      )
+      mockSendMail.mockResolvedValueOnce(Result.error(sendError))
 
       const event: IssueIncrementedEvent = {
         type: 'issueIncremented',
@@ -347,7 +340,7 @@ describe('sendIssueEscalatingHandler', () => {
           issueId: issue.id,
           issueTitle: issue.title,
           workspaceId: workspace.id,
-          context: 'issue_escalation_email',
+          mailName: 'issue_escalation_email',
         }),
       )
     })
@@ -368,12 +361,7 @@ describe('sendIssueEscalatingHandler', () => {
       })
 
       const sendError = new Error('Batch 0 failed')
-      vi.mocked(IssueEscalatingMailer).mockImplementationOnce(
-        () =>
-          ({
-            send: vi.fn().mockResolvedValue(Result.error(sendError)),
-          }) as unknown as IssueEscalatingMailer,
-      )
+      mockSendMail.mockResolvedValueOnce(Result.error(sendError))
 
       const event: IssueIncrementedEvent = {
         type: 'issueIncremented',
@@ -428,34 +416,26 @@ describe('sendIssueEscalatingHandler', () => {
 
       await sendIssueEscalatingHandler({ data: event })
 
-      // Verify mailer was instantiated
-      expect(IssueEscalatingMailer).toHaveBeenCalled()
+      // Verify email was sent
+      expect(mockSendMail).toHaveBeenCalled()
 
-      const mailerInstance = vi.mocked(IssueEscalatingMailer).mock.results[0]
-        ?.value
-
-      // Verify send was called with proper format
-      const sendCall = mailerInstance?.send.mock.calls[0][0]
+      // Verify email options passed to adapter
+      const emailOptions = mockSendMail.mock.calls[0][0]
 
       // Verify recipients
-      expect(sendCall.to).toBeInstanceOf(Array)
-      expect(sendCall.to.length).toBeGreaterThan(0)
+      expect(emailOptions.to).toBeInstanceOf(Array)
+      expect(emailOptions.to.length).toBeGreaterThan(0)
+      expect(emailOptions.to).toContain(user.email)
 
-      // Verify recipient variables
-      expect(sendCall.recipientVariables).toBeDefined()
-      expect(sendCall.recipientVariables[user.email]).toBeDefined()
-      expect(sendCall.recipientVariables[user.email].name).toBeDefined()
-      expect(sendCall.recipientVariables[user.email].id).toBeDefined()
-
-      // Verify workspace
-      expect(sendCall.currentWorkspace).toBeDefined()
-      expect(sendCall.currentWorkspace.id).toBe(workspace.id)
-
-      // Verify issue data
-      expect(sendCall.issue).toBeDefined()
-      expect(sendCall.issue.title).toBe(issue.title)
-      expect(sendCall.issue.eventsCount).toBeGreaterThanOrEqual(0)
-      expect(sendCall.issue.histogram).toBeInstanceOf(Array)
+      // Verify recipient variables are properly formatted
+      expect(emailOptions['recipient-variables']).toBeDefined()
+      const recipientVars =
+        typeof emailOptions['recipient-variables'] === 'string'
+          ? JSON.parse(emailOptions['recipient-variables'])
+          : emailOptions['recipient-variables']
+      expect(recipientVars[user.email]).toBeDefined()
+      expect(recipientVars[user.email].name).toBeDefined()
+      expect(recipientVars[user.email].userId).toBeDefined()
     })
   })
 
@@ -498,17 +478,6 @@ describe('sendIssueEscalatingHandler', () => {
         isEscalating: true,
       })
 
-      // Mock mailer to track recipients
-      const mockSend = vi
-        .fn()
-        .mockResolvedValue(Result.ok({ messageId: 'test' }))
-      vi.mocked(IssueEscalatingMailer).mockImplementation(
-        () =>
-          ({
-            send: mockSend,
-          }) as unknown as IssueEscalatingMailer,
-      )
-
       const event: IssueIncrementedEvent = {
         type: 'issueIncremented',
         data: {
@@ -522,11 +491,13 @@ describe('sendIssueEscalatingHandler', () => {
 
       await sendIssueEscalatingHandler({ data: event })
 
-      // Verify mailer was called
-      expect(mockSend).toHaveBeenCalled()
+      // Verify emails were sent
+      expect(mockSendMail).toHaveBeenCalled()
 
       // Get all recipients from all batches
-      const allRecipients = mockSend.mock.calls.flatMap((call) => call[0].to)
+      const allRecipients = mockSendMail.mock.calls.flatMap(
+        (call) => call[0].to,
+      )
 
       // Should only include user (default opted-in) and user2 (explicitly opted-in)
       // Should NOT include user3 (opted-out)

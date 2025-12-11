@@ -3,10 +3,10 @@ import DatasetUpdateMail from '@latitude-data/emails/DatasetUpdateMail'
 import Mail from 'nodemailer/lib/mailer'
 import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
-import { TypedResult } from '../../../../lib/Result'
+import { TypedResult } from '../../../lib/Result'
 import Mailer from '../../Mailer'
-import { type Dataset } from '../../../../schema/models/types/Dataset'
-import { type User } from '../../../../schema/models/types/User'
+import { type Dataset } from '../../../schema/models/types/Dataset'
+import { type User } from '../../../schema/models/types/User'
 
 export class DatasetUpdateMailer extends Mailer {
   dataset: Dataset

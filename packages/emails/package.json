@@ -36,6 +36,12 @@
     },
     "./SuggestionMail": {
       "import": "./src/templates/suggestions/SuggestionMail.tsx"
+    },
+    "./WeeklyEmailMail": {
+      "import": "./src/templates/weeklyEmail/WeeklyEmailMail.tsx"
+    },
+    "./WeeklyEmailMailTypes": {
+      "import": "./src/templates/weeklyEmail/types.ts"
     }
   },
   "dependencies": {
