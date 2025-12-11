@@ -150,7 +150,7 @@ function LogsSection({ logs }: { logs: LogStats }) {
                       .commits.details().issues.root
                   }
                 >
-                  <Text.H5 display='block' color='foregroundMuted'>
+                  <Text.H5 display='block' color='primary'>
                     {project.projectName}
                   </Text.H5>
                 </Link>
