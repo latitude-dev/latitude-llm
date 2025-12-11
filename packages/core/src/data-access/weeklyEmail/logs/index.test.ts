@@ -149,7 +149,7 @@ describe('getLogsData', () => {
       // Should only count tokens from completion span in range
       expect(result.tokensSpent).toEqual(300) // 100 + 200
       // Should only count cost from completion span in range
-      expect(result.tokensCost).toEqual(10) // 1000 / 100
+      expect(result.tokensCost).toEqual(0.01) // 1000 / 100000
     })
   })
 
@@ -255,7 +255,7 @@ describe('getLogsData', () => {
       expect(result.tokensSpent).toEqual(880)
     })
 
-    it('sums cost from completion spans only and converts from cents (all sources)', async () => {
+    it('sums cost from completion spans only and converts from millicents (all sources)', async () => {
       await createSpan({
         workspaceId: workspace.id,
         type: SpanType.Prompt,
@@ -268,7 +268,7 @@ describe('getLogsData', () => {
         type: SpanType.Prompt,
         source: LogSources.API,
         startedAt: STATIC_TEST_DATE,
-        cost: 5000, // $50.00 in cents
+        cost: 5000000, // $50.00 in millicents
       })
 
       await createSpan({
@@ -276,7 +276,7 @@ describe('getLogsData', () => {
         type: SpanType.Completion,
         source: LogSources.API,
         startedAt: STATIC_TEST_DATE,
-        cost: 1234, // $12.34 in cents
+        cost: 1234000, // $12.34 in millicents
       })
 
       // Create completion spans from playground (should ALSO be counted)
@@ -285,7 +285,7 @@ describe('getLogsData', () => {
         type: SpanType.Completion,
         source: LogSources.Playground,
         startedAt: STATIC_TEST_DATE,
-        cost: 5678, // $56.78 in cents
+        cost: 5678000, // $56.78 in millicents
       })
 
       const result = await getLogsData({
@@ -294,7 +294,7 @@ describe('getLogsData', () => {
       })
 
       expect(result.usedInProduction).toEqual(true)
-      // Total: (1234 + 5678) / 100 = 6912 / 100 = 69.12
+      // Total: (1234000 + 5678000) / 100000 = 6912000 / 100000 = 69.12
       expect(result.tokensCost).toEqual(69.12)
     })
 
@@ -331,7 +331,7 @@ describe('getLogsData', () => {
 
       expect(result.usedInProduction).toEqual(true)
       expect(result.tokensSpent).toEqual(100)
-      expect(result.tokensCost).toEqual(5)
+      expect(result.tokensCost).toEqual(0.005)
     })
 
     it('counts all sources for logs/tokens/cost', async () => {
@@ -390,7 +390,7 @@ describe('getLogsData', () => {
       expect(result.usedInProduction).toEqual(true)
       expect(result.logsCount).toEqual(4) // 4 distinct traces: prod-trace-1, shared-trace-id, playground-trace-1, experiment-trace-1
       expect(result.tokensSpent).toEqual(600) // 100 + 500
-      expect(result.tokensCost).toEqual(60) // (1000 + 5000) / 100
+      expect(result.tokensCost).toEqual(0.06) // (1000 + 5000) / 100000
     })
 
     it('respects custom date range when provided', async () => {
@@ -505,7 +505,7 @@ describe('getLogsData', () => {
         startedAt: STATIC_TEST_DATE,
         tokensPrompt: 1_000_000,
         tokensCompletion: 2_000_000,
-        cost: 9_999_999, // $99,999.99 in cents
+        cost: 999_999_900, // $9,999.999 in millicents (within integer range)
       })
 
       const result = await getLogsData({
@@ -517,7 +517,7 @@ describe('getLogsData', () => {
         usedInProduction: true,
         logsCount: expect.any(Number),
         tokensSpent: 3_000_000,
-        tokensCost: 99_999.99,
+        tokensCost: 9_999.999,
         topProjects: expect.any(Array),
       })
     })
@@ -596,7 +596,7 @@ describe('getLogsData', () => {
             startedAt: STATIC_TEST_DATE,
             tokensPrompt: 10,
             tokensCompletion: 20,
-            cost: 100, // $1.00 per trace
+            cost: 100000, // $1.00 per trace in millicents
           })
         }
       }
