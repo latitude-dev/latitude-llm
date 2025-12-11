@@ -26,6 +26,8 @@ import { DraftsCommitsList } from './DraftsCommitsList'
 import DeleteDraftCommitModal from './DeleteDraftCommitModal'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import useDeploymentTests from '$/stores/deploymentTests'
 
 import { HELP_CENTER } from '@latitude-data/core/constants'
 
@@ -118,7 +120,7 @@ export default function CommitSelector({
   currentDocument,
   draftCommits,
   commitsInActiveTests,
-  activeTests,
+  activeTests: serverActiveTests,
 }: {
   headCommit?: Commit | undefined
   currentCommit: Commit
@@ -127,6 +129,15 @@ export default function CommitSelector({
   commitsInActiveTests: Commit[]
   activeTests: DeploymentTest[]
 }) {
+  const { project } = useCurrentProject()
+  const { data: storeActiveTests } = useDeploymentTests(
+    { projectId: project.id, activeOnly: true },
+    { fallbackData: serverActiveTests },
+  )
+
+  // Use store data (it will be the same as serverActiveTests initially, but updates when store changes)
+  const activeTests = storeActiveTests
+
   const [open, setOpen] = useState(false)
   const { ref, maxHeight, calculateMaxHeight } = useCalculateMaxHeight()
   const width = useObserveSelectWidth(ref)
@@ -222,6 +233,7 @@ export default function CommitSelector({
               headCommit={headCommit}
               draftCommits={draftCommits}
               commitsInActiveTests={commitsInActiveTests}
+              activeTests={activeTests}
               onCommitPublish={setPublishCommit}
               onCommitDelete={setDeleteCommit}
             />
@@ -229,6 +241,7 @@ export default function CommitSelector({
             <ArchivedCommitsList
               currentDocument={currentDocument}
               headCommit={headCommit}
+              activeTests={activeTests}
             />
           )}
         </SelectContent>

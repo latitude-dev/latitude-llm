@@ -5,19 +5,24 @@ import { useMemo } from 'react'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCommits } from '$/stores/commitsStore'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import useDeploymentTests from '$/stores/deploymentTests'
 
 import { CommitItem, CommitItemSkeleton } from './CommitItem'
 import { CommitItemsWrapper } from './CommitItemsWrapper'
+import { getCommitTestInfo } from './ActiveCommitsList'
 import { CommitStatus } from '@latitude-data/core/constants'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
 
 export function DraftsCommitsList({
   currentDocument,
   headCommit,
   draftCommits,
   commitsInActiveTests,
+  activeTests: serverActiveTests,
   onCommitPublish,
   onCommitDelete,
 }: {
@@ -25,9 +30,19 @@ export function DraftsCommitsList({
   headCommit?: Commit
   draftCommits: Commit[]
   commitsInActiveTests: Commit[]
+  activeTests: DeploymentTest[]
   onCommitPublish: ReactStateDispatch<number | null>
   onCommitDelete: ReactStateDispatch<number | null>
 }) {
+  const { project } = useCurrentProject()
+  const { data: storeActiveTests } = useDeploymentTests(
+    { projectId: project.id, activeOnly: true },
+    { fallbackData: serverActiveTests },
+  )
+
+  // Use store data (it will be the same as serverActiveTests initially, but updates when store changes)
+  const activeTests = storeActiveTests
+
   const { data: drafts, isLoading } = useCommits({
     fallbackData: draftCommits,
     commitStatus: CommitStatus.Draft,
@@ -66,17 +81,25 @@ export function DraftsCommitsList({
 
   return (
     <CommitItemsWrapper>
-      {filteredDrafts.map((commit) => (
-        <li key={commit.id}>
-          <CommitItem
-            commit={commit}
-            currentDocument={currentDocument}
-            headCommitId={headCommit?.id}
-            onCommitPublish={onCommitPublish}
-            onCommitDelete={onCommitDelete}
-          />
-        </li>
-      ))}
+      {filteredDrafts.map((commit) => {
+        const testInfo = getCommitTestInfo(
+          commit.id,
+          headCommit?.id,
+          activeTests,
+        )
+        return (
+          <li key={commit.id}>
+            <CommitItem
+              commit={commit}
+              currentDocument={currentDocument}
+              headCommitId={headCommit?.id}
+              testInfo={testInfo}
+              onCommitPublish={onCommitPublish}
+              onCommitDelete={onCommitDelete}
+            />
+          </li>
+        )
+      })}
     </CommitItemsWrapper>
   )
 }

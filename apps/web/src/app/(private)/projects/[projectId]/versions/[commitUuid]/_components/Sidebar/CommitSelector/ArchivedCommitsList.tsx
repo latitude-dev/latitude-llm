@@ -3,21 +3,36 @@
 import { useMemo } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCommits } from '$/stores/commitsStore'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import useDeploymentTests from '$/stores/deploymentTests'
 
 import { CommitItem, CommitItemSkeleton } from './CommitItem'
 import { CommitItemsWrapper } from './CommitItemsWrapper'
+import { getCommitTestInfo } from './ActiveCommitsList'
 
 import { CommitStatus } from '@latitude-data/core/constants'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
 export function ArchivedCommitsList({
   currentDocument,
   headCommit,
+  activeTests: serverActiveTests,
 }: {
   currentDocument?: DocumentVersion
   headCommit?: Commit
+  activeTests: DeploymentTest[]
 }) {
+  const { project } = useCurrentProject()
+  const { data: storeActiveTests } = useDeploymentTests(
+    { projectId: project.id, activeOnly: true },
+    { fallbackData: serverActiveTests },
+  )
+
+  // Use store data (it will be the same as serverActiveTests initially, but updates when store changes)
+  const activeTests = storeActiveTests
+
   const { data, isLoading } = useCommits({
     commitStatus: CommitStatus.Merged,
   })
@@ -47,11 +62,23 @@ export function ArchivedCommitsList({
 
   return (
     <CommitItemsWrapper>
-      {commits.map((commit) => (
-        <li key={commit.id}>
-          <CommitItem commit={commit} currentDocument={currentDocument} />
-        </li>
-      ))}
+      {commits.map((commit) => {
+        const testInfo = getCommitTestInfo(
+          commit.id,
+          headCommit?.id,
+          activeTests,
+        )
+        return (
+          <li key={commit.id}>
+            <CommitItem
+              commit={commit}
+              currentDocument={currentDocument}
+              headCommitId={headCommit?.id}
+              testInfo={testInfo}
+            />
+          </li>
+        )
+      })}
     </CommitItemsWrapper>
   )
 }
