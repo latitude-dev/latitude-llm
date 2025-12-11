@@ -38,6 +38,7 @@ export default async function TracesPage({
     spanId: validatedFilters?.spanId,
     commitUuids: validatedFilters?.commitUuids,
     experimentUuids: validatedFilters?.experimentUuids,
+    testDeploymentIds: validatedFilters?.testDeploymentIds,
     createdAt: validatedFilters?.createdAt,
   }
   const commit = await commitsRepo

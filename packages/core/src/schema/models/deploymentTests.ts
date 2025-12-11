@@ -16,7 +16,10 @@ import { workspaces } from './workspaces'
 import { projects } from './projects'
 import { commits } from './commits'
 import { timestamps } from '../schemaHelpers'
-import { DeploymentTestStatus } from './types/DeploymentTest'
+import {
+  DeploymentTestStatus,
+  DeploymentTestType,
+} from './types/DeploymentTest'
 
 export const deploymentTests = latitudeSchema.table(
   'deployment_tests',
@@ -37,8 +40,9 @@ export const deploymentTests = latitudeSchema.table(
       .references(() => commits.id),
     testType: varchar('test_type', {
       length: 20,
-      enum: ['shadow', 'ab'],
-    }).notNull(),
+    })
+      .$type<DeploymentTestType>()
+      .notNull(),
     trafficPercentage: integer('traffic_percentage').default(50),
     status: varchar('status', { length: 20 })
       .$type<DeploymentTestStatus>()

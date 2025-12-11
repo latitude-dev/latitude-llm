@@ -1,27 +1,30 @@
 'use client'
 
 import { compact } from 'lodash-es'
+import { useMemo } from 'react'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCommits } from '$/stores/commitsStore'
 
-import { CommitItem, CommitItemSkeleton, SimpleUser } from './CommitItem'
+import { CommitItem, CommitItemSkeleton } from './CommitItem'
 import { CommitItemsWrapper } from './CommitItemsWrapper'
 import { CommitStatus } from '@latitude-data/core/constants'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-export function CurrentCommitsList({
+
+export function DraftsCommitsList({
   currentDocument,
   headCommit,
   draftCommits,
-  usersById,
+  commitsInActiveTests,
   onCommitPublish,
   onCommitDelete,
 }: {
   currentDocument?: DocumentVersion
   headCommit?: Commit
   draftCommits: Commit[]
-  usersById: Record<string, SimpleUser>
+  commitsInActiveTests: Commit[]
   onCommitPublish: ReactStateDispatch<number | null>
   onCommitDelete: ReactStateDispatch<number | null>
 }) {
@@ -29,6 +32,19 @@ export function CurrentCommitsList({
     fallbackData: draftCommits,
     commitStatus: CommitStatus.Draft,
   })
+
+  // Filter out commits that are in the active tab (head commit or in active tests)
+  const filteredDrafts = useMemo(() => {
+    const activeCommitIds = new Set<number>()
+    if (headCommit) {
+      activeCommitIds.add(headCommit.id)
+    }
+    commitsInActiveTests.forEach((commit) => {
+      activeCommitIds.add(commit.id)
+    })
+
+    return compact(drafts).filter((commit) => !activeCommitIds.has(commit.id))
+  }, [drafts, headCommit, commitsInActiveTests])
 
   if (isLoading) {
     return (
@@ -40,25 +56,22 @@ export function CurrentCommitsList({
     )
   }
 
+  if (filteredDrafts.length === 0) {
+    return (
+      <Text.H6 color='foregroundMuted'>
+        There are no draft versions on this project yet.
+      </Text.H6>
+    )
+  }
+
   return (
     <CommitItemsWrapper>
-      {headCommit && (
-        <CommitItem
-          commit={headCommit}
-          currentDocument={currentDocument}
-          headCommitId={headCommit.id}
-          user={usersById[headCommit.userId]}
-          onCommitPublish={onCommitPublish}
-          onCommitDelete={onCommitDelete}
-        />
-      )}
-      {compact(drafts).map((commit) => (
+      {filteredDrafts.map((commit) => (
         <li key={commit.id}>
           <CommitItem
             commit={commit}
             currentDocument={currentDocument}
             headCommitId={headCommit?.id}
-            user={usersById[commit.userId]}
             onCommitPublish={onCommitPublish}
             onCommitDelete={onCommitDelete}
           />

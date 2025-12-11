@@ -5,20 +5,28 @@ import {
 import { captureException } from '$/common/tracer'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
-import { LogSources } from '@latitude-data/core/constants'
+import { LogSources } from '@latitude-data/constants'
 import { BadRequestError, LatitudeError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
-import { buildClientToolHandlersMap } from '@latitude-data/core/services/documents/tools/clientTools/handlers'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
-import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
-import { enqueueRun } from '@latitude-data/core/services/runs/enqueue'
+import { runForegroundDocument } from '@latitude-data/core/services/commits/foregroundRun'
+import {
+  enqueueRun,
+  EnqueueRunProps,
+} from '@latitude-data/core/services/runs/enqueue'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
-import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import type { Context } from 'hono'
 import { RunRoute } from './run.route'
-import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
+import { CommitsRepository } from '@latitude-data/core/repositories'
+import { routeRequest } from '@latitude-data/core/services/deploymentTests/routeRequest'
+import { DeploymentTestsRepository } from '@latitude-data/core/repositories/deploymentTestsRepository'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
 
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
@@ -67,6 +75,18 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     })
   }
 
+  const {
+    activeDeploymentTest: activeTest,
+    effectiveCommit,
+    effectiveSource,
+  } = await resolveDeploymentTestContext({
+    workspaceId: workspace.id,
+    projectId: project.id,
+    commit,
+    source,
+    customIdentifier,
+  })
+
   // Check if background execution should happen:
   // 1. If background prop is explicitly set, use that value
   // 2. Otherwise, check if the feature flag is enabled for the workspace
@@ -83,13 +103,14 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       c,
       workspace,
       document,
-      commit,
+      commit: effectiveCommit,
       project,
       parameters,
       customIdentifier,
       tools,
       userMessage,
-      source,
+      source: effectiveSource,
+      activeDeploymentTest: activeTest || undefined,
     })
   }
 
@@ -97,13 +118,15 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     c,
     workspace,
     document,
-    commit,
+    commit: effectiveCommit,
+    project,
     parameters,
     customIdentifier,
-    source: __internal?.source ?? LogSources.API,
+    source: effectiveSource,
     useSSE,
     tools,
-    userMessage,
+    userMessage: userMessage || undefined,
+    activeDeploymentTest: activeTest || undefined,
   })
 }
 
@@ -118,18 +141,8 @@ async function handleBackgroundRun({
   tools,
   userMessage,
   source,
-}: {
-  c: Context
-  workspace: any
-  document: any
-  commit: any
-  project: any
-  parameters: any
-  customIdentifier: any
-  tools: any
-  userMessage: any
-  source: any
-}) {
+  activeDeploymentTest,
+}: EnqueueRunProps & { c: Context }) {
   const { run } = await enqueueRun({
     document,
     commit,
@@ -140,6 +153,7 @@ async function handleBackgroundRun({
     tools,
     userMessage,
     source,
+    activeDeploymentTest,
   }).then((r) => r.unwrap())
 
   return c.json({ uuid: run.uuid })
@@ -150,25 +164,33 @@ async function handleForegroundRun({
   workspace,
   document,
   commit,
+  project,
   parameters,
   customIdentifier,
   source,
   useSSE,
   tools,
   userMessage,
+  activeDeploymentTest,
 }: {
   c: Context
-  workspace: any
-  document: any
-  commit: any
-  parameters: any
-  customIdentifier: any
-  source: any
+  workspace: Workspace
+  document: DocumentVersion
+  commit: Commit
+  project: Project
+  parameters: Record<string, unknown>
+  customIdentifier?: string
+  source: LogSources
   useSSE: boolean
-  tools: any
-  userMessage: any
+  tools: string[]
+  userMessage?: string
+  activeDeploymentTest?: DeploymentTest
 }) {
-  const result = await runDocumentAtCommit({
+  const {
+    stream: runStream,
+    getFinalResponse,
+    error,
+  } = await runForegroundDocument({
     workspace,
     document,
     commit,
@@ -176,10 +198,11 @@ async function handleForegroundRun({
     customIdentifier,
     source,
     abortSignal: c.req.raw.signal, // FIXME: This does not seem to work
-    context: BACKGROUND({ workspaceId: workspace.id }),
-    tools: buildClientToolHandlersMap(tools ?? []),
+    project,
+    tools,
     userMessage,
-  }).then((r) => r.unwrap())
+    activeDeploymentTest,
+  })
 
   if (useSSE) {
     return streamSSE(
@@ -198,7 +221,7 @@ async function handleForegroundRun({
 
         try {
           for await (const event of streamToGenerator(
-            result.stream,
+            runStream,
             c.req.raw.signal,
           )) {
             const data = event.data
@@ -237,22 +260,101 @@ async function handleForegroundRun({
     )
   }
 
-  const error = await result.error
-  if (error) throw error
+  const finalResponse = await getFinalResponse().catch(async (e) => {
+    // Ensure pending error promises are awaited to propagate upstream
+    const pendingError = await error
+    if (pendingError) throw pendingError
+    throw e
+  })
 
-  const response = await result.lastResponse
-  if (!response)
+  if (!finalResponse.response)
     throw new LatitudeError('Stream ended with no error and no content')
 
-  const providerScope = new ProviderApiKeysRepository(workspace.id)
-  const providerUsed = await providerScope
-    .find(response.providerLog?.providerId)
-    .then((r) => r.unwrap())
-
   const body = runPresenter({
-    response,
-    provider: providerUsed,
+    response: finalResponse.response,
+    provider: finalResponse.provider,
   }).unwrap()
 
   return c.json(body)
+}
+
+/**
+ * Resolves the deployment test context for a document run request.
+ *
+ * Determines the effective commit and log source based on active deployment tests.
+ * For A/B tests, routes the request to either the baseline or challenger variant
+ * based on the custom identifier (using consistent hashing).
+ *
+ * @param params - The deployment test context parameters
+ * @param params.workspaceId - The workspace ID
+ * @param params.projectId - The project ID
+ * @param params.documentUuid - The document UUID to check for active tests
+ * @param params.commit - The original commit from the request
+ * @param params.source - The original log source from the request
+ * @param params.customIdentifier - Optional custom identifier for A/B test routing
+ * @returns Object containing the active deployment test (if any), effective commit
+ *          (may differ from original for A/B tests), and effective log source
+ *          (updated to reflect baseline/challenger for A/B tests)
+ */
+async function resolveDeploymentTestContext({
+  workspaceId,
+  projectId,
+  commit,
+  source,
+  customIdentifier,
+}: {
+  workspaceId: number
+  projectId: number
+  commit: any
+  source: LogSources
+  customIdentifier?: string | null
+}) {
+  const deploymentTestsRepo = new DeploymentTestsRepository(workspaceId)
+  const activeDeploymentTest = await deploymentTestsRepo.findActiveForCommit(
+    projectId,
+    commit.id,
+  )
+
+  if (!activeDeploymentTest || activeDeploymentTest.testType !== 'ab') {
+    return {
+      activeDeploymentTest,
+      effectiveCommit: commit,
+      effectiveSource: source,
+    }
+  }
+
+  // Determine which variant to route to
+  const routedTo = routeRequest(activeDeploymentTest, customIdentifier)
+
+  // Get the head commit (baseline is always the head commit)
+  const commitsRepo = new CommitsRepository(workspaceId)
+  const headCommit = await commitsRepo.getHeadCommit(projectId)
+
+  if (!headCommit) {
+    // If no head commit, fall back to original commit
+    return {
+      activeDeploymentTest,
+      effectiveCommit: commit,
+      effectiveSource: source,
+    }
+  }
+
+  // Determine the commit and log source based on routing
+  const commitIdToUse =
+    routedTo === 'baseline'
+      ? headCommit.id
+      : activeDeploymentTest.challengerCommitId
+
+  const effectiveSource =
+    routedTo === 'baseline' ? source : LogSources.ABTestChallenger
+
+  if (commitIdToUse === commit.id) {
+    return { activeDeploymentTest, effectiveCommit: commit, effectiveSource }
+  }
+
+  const effectiveCommit = await commitsRepo
+    .getCommitById(commitIdToUse)
+    .then((r) => r.unwrap())
+
+  return { activeDeploymentTest, effectiveCommit, effectiveSource }
 }

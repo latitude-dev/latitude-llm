@@ -25,6 +25,7 @@ export function TracePanel({
   const ref = useRef<HTMLDivElement>(null)
   const scrollableArea = usePanelDomRef({ selfRef: ref.current })
   const beacon = panelRef?.current
+
   useStickyNested({
     scrollableArea,
     beacon,
@@ -32,6 +33,7 @@ export function TracePanel({
     targetContainer: panelContainerRef?.current,
     offset: DETAILS_OFFSET,
   })
+
   return (
     <div ref={panelContainerRef} className='h-full'>
       {children({ ref })}

@@ -9,6 +9,9 @@ import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { checkActiveAbTest } from './checkActiveAbTest'
 import { checkActiveShadowTest } from './checkActiveShadowTest'
 import { CommitsRepository } from '../../repositories'
+import Transaction from '../../lib/Transaction'
+import { publisher } from '../../events/publisher'
+import { findUser } from '../users/data-access/find'
 
 export type CreateDeploymentTestInput = {
   workspaceId: number
@@ -25,30 +28,49 @@ export type CreateDeploymentTestInput = {
  */
 export async function createDeploymentTest(
   input: CreateDeploymentTestInput,
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<DeploymentTest>> {
-  const baselineValidation = await validateBaselineCommit(
-    input.workspaceId,
-    input.projectId,
-    input.challengerCommitId,
-    db,
+  return await transaction.call(
+    async (tx) => {
+      await validateBaselineCommit(
+        input.workspaceId,
+        input.projectId,
+        input.challengerCommitId,
+        tx,
+      ).then((r) => r.unwrap())
+      await testTypeValidators[input.testType](input, tx).then((r) =>
+        r.unwrap(),
+      )
+
+      const result = await tx
+        .insert(deploymentTests)
+        .values({
+          ...input,
+          trafficPercentage:
+            input.trafficPercentage ?? (input.testType === 'shadow' ? 100 : 50),
+          status: 'pending',
+        })
+        .returning()
+
+      return Result.ok(result[0]!)
+    },
+    async (deploymentTest) => {
+      let userEmail: string | null = null
+      if (input.createdByUserId) {
+        const user = await findUser(input.createdByUserId)
+        userEmail = user?.email ?? null
+      }
+
+      await publisher.publishLater({
+        type: 'deploymentTestCreated',
+        data: {
+          deploymentTestId: deploymentTest.id,
+          workspaceId: input.workspaceId,
+          userEmail,
+        },
+      })
+    },
   )
-  if (!Result.isOk(baselineValidation)) return baselineValidation
-
-  const testTypeValidation = await testTypeValidators[input.testType](input, db)
-  if (!Result.isOk(testTypeValidation)) return testTypeValidation
-
-  const result = await db
-    .insert(deploymentTests)
-    .values({
-      ...input,
-      trafficPercentage:
-        input.trafficPercentage ?? (input.testType === 'shadow' ? 100 : 50),
-      status: 'pending',
-    })
-    .returning()
-
-  return Result.ok(result[0]!)
 }
 
 async function validateBaselineCommit(
