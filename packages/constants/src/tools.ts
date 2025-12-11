@@ -7,7 +7,7 @@ import {
   MessageRole,
   ToolMessage,
 } from './legacyCompiler'
-import { ToolCallContent as ToolRequest } from 'promptl-ai'
+import type { ToolCallContent as ToolRequest } from 'promptl-ai'
 import { StreamType, ToolCallResponse, VercelProviderTool } from './index'
 import { ToolSource, ToolSourceData } from './toolSources'
 import type { Tool } from 'ai'

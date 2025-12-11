@@ -41,6 +41,8 @@ export const ATTR_LATITUDE_INTERNAL = `${ATTR_LATITUDE}.internal`
 
 export const ATTR_LATITUDE_TYPE = `${ATTR_LATITUDE}.type`
 
+export const ATTR_LATITUDE_PROMPT_PATH = `${ATTR_LATITUDE}.promptPath`
+
 export const GEN_AI_TOOL_TYPE_VALUE_FUNCTION = 'function'
 export const ATTR_GEN_AI_TOOL_CALL_ARGUMENTS = 'gen_ai.tool.call.arguments'
 export const ATTR_GEN_AI_TOOL_RESULT_VALUE = 'gen_ai.tool.result.value'
@@ -139,9 +141,13 @@ export const ATTR_LLM_RESPONSE_STOP_REASON = 'llm.response.stop_reason'
 export const ATTR_AI_OPERATION_ID = 'ai.operationId'
 export const AI_OPERATION_ID_VALUE_TOOL = 'ai.toolCall'
 export const AI_OPERATION_ID_VALUE_GENERATE_TEXT = 'ai.generateText'
+export const AI_OPERATION_ID_VALUE_GENERATE_TEXT_DO_GENERATE = 'ai.generateText.doGenerate' // prettier-ignore
 export const AI_OPERATION_ID_VALUE_STREAM_TEXT = 'ai.streamText'
+export const AI_OPERATION_ID_VALUE_STREAM_TEXT_DO_STREAM = 'ai.streamText.doStream' // prettier-ignore
 export const AI_OPERATION_ID_VALUE_GENERATE_OBJECT = 'ai.generateObject'
+export const AI_OPERATION_ID_VALUE_GENERATE_OBJECT_DO_GENERATE = 'ai.generateObject.doGenerate' // prettier-ignore
 export const AI_OPERATION_ID_VALUE_STREAM_OBJECT = 'ai.streamObject'
+export const AI_OPERATION_ID_VALUE_STREAM_OBJECT_DO_STREAM = 'ai.streamObject.doStream' // prettier-ignore
 
 export const ATTR_AI_TOOL_CALL_NAME = 'ai.toolCall.name'
 export const ATTR_AI_TOOL_CALL_ID = 'ai.toolCall.id'
