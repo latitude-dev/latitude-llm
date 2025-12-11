@@ -30,6 +30,7 @@ import {
   ATTR_HTTP_REQUEST_URL,
   ATTR_HTTP_RESPONSE_BODY,
   ATTR_HTTP_RESPONSE_HEADER,
+  ATTR_LATITUDE_TEST_DEPLOYMENT_ID,
   ATTR_LATITUDE_TYPE,
   GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
   HEAD_COMMIT,
@@ -128,6 +129,7 @@ export type PromptSpanOptions = StartSpanOptions & {
   promptUuid: string // Alias for documentUuid
   projectId?: string
   experimentUuid?: string
+  testDeploymentId?: number
   externalId?: string
   template: string
   parameters?: Record<string, unknown>
@@ -723,6 +725,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       promptUuid,
       projectId,
       experimentUuid,
+      testDeploymentId,
       externalId,
       template,
       parameters,
@@ -746,6 +749,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
       ['latitude.projectId']: projectId,
       ...(documentLogUuid && { ['latitude.documentLogUuid']: documentLogUuid }),
       ...(experimentUuid && { ['latitude.experimentUuid']: experimentUuid }),
+      ...(testDeploymentId && {
+        [ATTR_LATITUDE_TEST_DEPLOYMENT_ID]: testDeploymentId,
+      }),
       ...(externalId && { ['latitude.externalId']: externalId }),
       ...(source && { ['latitude.source']: source }),
       ...(rest.attributes || {}),

@@ -1,4 +1,4 @@
-import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
+import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -20,8 +20,8 @@ export async function destroyFolder(
   transaction = new Transaction(),
 ) {
   return transaction.call(async (tx) => {
-    const assertResult = assertCommitIsDraft(commit)
-    assertResult.unwrap()
+    const canEditCheck = await assertCanEditCommit(commit, tx)
+    if (canEditCheck.error) return canEditCheck
 
     const docsScope = new DocumentVersionsRepository(workspace.id, tx)
     const allDocuments = (await docsScope.getDocumentsAtCommit(commit)).unwrap()

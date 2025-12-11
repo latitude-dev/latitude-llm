@@ -32,6 +32,7 @@ import { removeMergedIssueVectors } from './removeMergedIssueVectors'
 import { generateDetailsForMergedIssue } from './generateDetailsForMergedIssue'
 import { unlockIssuesDashboardOnAnnotation } from './unlockIssuesDashboardOnAnnotation'
 import { notifyClientOfRunStatusByDocument } from './notifyClientOfRunStatusByDocument'
+import { enqueueShadowTestChallengerHandler } from './enqueueShadowTestChallenger'
 
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
@@ -96,7 +97,10 @@ export const EventHandlers: IEventsHandlers = {
   subscriptionUpdated: [],
   commitMerged: [],
   documentRunQueued: [notifyClientOfRunStatusByDocument],
-  documentRunStarted: [notifyClientOfRunStatusByDocument],
+  documentRunStarted: [
+    notifyClientOfRunStatusByDocument,
+    enqueueShadowTestChallengerHandler,
+  ],
   documentRunProgress: [notifyClientOfRunStatusByDocument],
   documentRunEnded: [notifyClientOfRunStatusByDocument],
   commitUpdated: [],

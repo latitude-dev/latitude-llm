@@ -4,21 +4,21 @@ const { DatabaseError } = pg
 
 import { type Commit } from '../../schema/models/types/Commit'
 import { unsafelyFindCommitsByProjectId } from '../../data-access/commits'
-import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { commits } from '../../schema/models/commits'
 import { pingProjectUpdate } from '../projects'
+import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 
 export async function deleteCommitDraft(
   commit: Commit,
   transaction = new Transaction(),
 ) {
-  const assertionResult = assertCommitIsDraft(commit)
-  if (assertionResult.error) return assertionResult
-
   return transaction.call<Commit>(async (tx) => {
+    const assertionResult = await assertCanEditCommit(commit, tx)
+    if (assertionResult.error) return assertionResult
+
     try {
       const projectCommits = await unsafelyFindCommitsByProjectId(
         commit.projectId,

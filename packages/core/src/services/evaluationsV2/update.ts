@@ -8,7 +8,6 @@ import {
   AlignmentMetricMetadata,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { compactObject } from '../../lib/compactObject'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -23,6 +22,7 @@ import { type Workspace } from '../../schema/models/types/Workspace'
 import { validateEvaluationV2 } from './validate'
 import { Issue } from '../../schema/models/types/Issue'
 import { BadRequestError } from '../../lib/errors'
+import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 
 export async function updateEvaluationV2<
   T extends EvaluationType,
@@ -58,7 +58,9 @@ export async function updateEvaluationV2<
         break
       }
     }
-    if (settingsChanged) assertCommitIsDraft(commit).unwrap()
+    if (settingsChanged) {
+      await assertCanEditCommit(commit, tx).then((r) => r.unwrap())
+    }
 
     const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
     const document = await documentsRepository

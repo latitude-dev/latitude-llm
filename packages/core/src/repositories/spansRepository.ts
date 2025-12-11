@@ -150,6 +150,7 @@ export class SpansRepository extends Repository<Span> {
     commitUuids,
     experimentUuids,
     source,
+    testDeploymentIds,
     createdAt,
   }: {
     documentUuid: string
@@ -159,6 +160,7 @@ export class SpansRepository extends Repository<Span> {
     commitUuids?: string[]
     experimentUuids?: string[]
     source?: LogSources[]
+    testDeploymentIds?: number[]
     createdAt?: { from?: Date; to?: Date }
   }) {
     const conditions = [
@@ -174,6 +176,16 @@ export class SpansRepository extends Repository<Span> {
     // Add commit filter if provided - filter by commit UUIDs directly
     if (commitUuids && commitUuids.length > 0) {
       conditions.push(inArray(spans.commitUuid, commitUuids))
+    }
+
+    // Add experiment filter if provided - filter by experiment UUIDs directly
+    if (experimentUuids && experimentUuids.length > 0) {
+      conditions.push(inArray(spans.experimentUuid, experimentUuids))
+    }
+
+    // Add test deployment filter if provided - filter by test deployment IDs directly
+    if (testDeploymentIds && testDeploymentIds.length > 0) {
+      conditions.push(inArray(spans.testDeploymentId, testDeploymentIds))
     }
 
     // Filter by cursor if provided (same pattern as document logs)

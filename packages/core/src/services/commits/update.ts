@@ -2,12 +2,12 @@ import { eq } from 'drizzle-orm'
 
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { commits } from '../../schema/models/commits'
 import { publisher } from '../../events/publisher'
+import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 
 export async function updateCommit(
   {
@@ -26,7 +26,7 @@ export async function updateCommit(
   transaction = new Transaction(),
 ): Promise<TypedResult<Commit, Error>> {
   return transaction.call<Commit>(async (tx) => {
-    const assertResult = assertCommitIsDraft(commit)
+    const assertResult = await assertCanEditCommit(commit, tx)
     if (assertResult.error) return assertResult
 
     if (Object.keys(data).length === 0) {

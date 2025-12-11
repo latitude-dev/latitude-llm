@@ -29,6 +29,7 @@ import { isFeatureEnabledByName } from '../../../services/workspaceFeatures/isFe
 import { Result } from '../../../lib/Result'
 import { captureException } from '../../../utils/datadogCapture'
 import { RunEvaluationForExperimentJobData } from '../evaluations/runEvaluationForExperimentJob'
+import { DeploymentTest } from '../../../schema/models/types/DeploymentTest'
 
 export type BackgroundRunJobData = {
   workspaceId: number
@@ -44,6 +45,7 @@ export type BackgroundRunJobData = {
   userMessage?: string
   source?: LogSources
   simulationSettings?: SimulationSettings
+  activeDeploymentTest?: DeploymentTest
 }
 
 export type BackgroundRunJobResult = {
@@ -82,6 +84,7 @@ export const backgroundRunJob = async (
     userMessage,
     source = LogSources.API,
     simulationSettings,
+    activeDeploymentTest,
   } = job.data
   const writeStream = new RedisStream({
     key: ACTIVE_RUN_STREAM_KEY(runUuid),
@@ -111,6 +114,11 @@ export const backgroundRunJob = async (
       documentUuid,
       commitUuid,
       runUuid,
+      activeDeploymentTest,
+      parameters,
+      customIdentifier,
+      tools,
+      userMessage,
     }).then((r) => r.unwrap())
 
     publisher.subscribe('cancelJob', cancelJob)
@@ -143,51 +151,14 @@ export const backgroundRunJob = async (
     })
 
     if (experiment) {
-      // Mark document as finished (success)
-      await updateExperimentStatus(
-        {
-          workspaceId,
-          experiment,
-        },
-        (progressTracker) => progressTracker.documentRunFinished(runUuid, true),
-      )
-
-      // TODO(): This is temporary while we think of a more long lasting solution to ban/rate limit users
-      const evaluationsDisabledResult = await isFeatureEnabledByName(
-        workspace.id,
-        'evaluationsDisabled',
-      )
-      if (!Result.isOk(evaluationsDisabledResult)) {
-        return evaluationsDisabledResult
-      }
-
-      const evaluationsDisabled = evaluationsDisabledResult.unwrap()
-      if (evaluationsDisabled) {
-        // Evaluations are disabled for this workspace, skip enqueueing
-        return
-      }
-
-      const { evaluationsQueue } = await queues()
-      const parametersSource = experiment.metadata.parametersSource
-      const datasetLabels =
-        parametersSource.source === 'dataset'
-          ? parametersSource.datasetLabels
-          : {}
-
-      experiment.evaluationUuids.forEach((evaluationUuid) => {
-        const payload: RunEvaluationForExperimentJobData = {
-          workspaceId,
-          datasetRowId,
-          evaluationUuid,
-          conversationUuid: result.uuid,
-          experimentUuid: experiment!.uuid,
-          commitId: experiment!.commitId,
-          datasetId: experiment!.datasetId ?? undefined,
-          datasetLabel: datasetLabels[evaluationUuid],
-        }
-
-        evaluationsQueue.add('runEvaluationForExperimentJob', payload)
-      })
+      await handleExperimentSuccess({
+        experiment,
+        workspaceId,
+        workspace,
+        runUuid,
+        conversationUuid: result.uuid,
+        datasetRowId,
+      }).then((r) => r.unwrap())
     }
   } catch (error) {
     writeStream.write({ type: ChainEventTypes.ChainError, data: error })
@@ -203,6 +174,8 @@ export const backgroundRunJob = async (
           progressTracker.documentRunFinished(runUuid, false),
       )
     }
+
+    captureException(error as Error)
   } finally {
     // CRITICAL: Close Redis connection before cleanup to prevent connection leaks
     await writeStream.close().catch(() => {
@@ -323,4 +296,68 @@ async function forwardRunCaption({
     runUuid,
     caption,
   })
+}
+
+async function handleExperimentSuccess({
+  experiment,
+  workspaceId,
+  workspace,
+  runUuid,
+  conversationUuid,
+  datasetRowId,
+}: {
+  experiment: Experiment
+  workspaceId: number
+  workspace: { id: number }
+  runUuid: string
+  conversationUuid: string
+  datasetRowId?: number
+}) {
+  // Mark document as finished (success)
+  await updateExperimentStatus(
+    {
+      workspaceId,
+      experiment,
+    },
+    (progressTracker) => progressTracker.documentRunFinished(runUuid, true),
+  )
+
+  // TODO(): This is temporary while we think of a more long lasting solution to ban/rate limit users
+  const evaluationsDisabledResult = await isFeatureEnabledByName(
+    workspace.id,
+    'evaluationsDisabled',
+  )
+
+  const evaluationsDisabled = evaluationsDisabledResult.unwrap()
+  if (evaluationsDisabled) {
+    // Evaluations are disabled for this workspace, skip enqueueing
+    return Result.nil()
+  }
+
+  const { evaluationsQueue } = await queues()
+  const parametersSource = experiment.metadata.parametersSource
+  const datasetLabels =
+    parametersSource.source === 'dataset' ? parametersSource.datasetLabels : {}
+
+  try {
+    const results = await Promise.all(
+      experiment.evaluationUuids.map((evaluationUuid) => {
+        const payload: RunEvaluationForExperimentJobData = {
+          workspaceId,
+          datasetRowId,
+          evaluationUuid,
+          conversationUuid,
+          experimentUuid: experiment.uuid,
+          commitId: experiment.commitId,
+          datasetId: experiment.datasetId ?? undefined,
+          datasetLabel: datasetLabels[evaluationUuid],
+        }
+
+        return evaluationsQueue.add('runEvaluationForExperimentJob', payload)
+      }),
+    )
+    return Result.ok(results)
+  } catch (err) {
+    return Result.error(err as Error)
+  }
 }
