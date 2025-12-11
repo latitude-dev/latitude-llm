@@ -1,20 +1,19 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { compact } from 'lodash-es'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-
 import { CommitItem } from './CommitItem'
 import { CommitItemsWrapper } from './CommitItemsWrapper'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useDeploymentTests from '$/stores/deploymentTests'
-
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import {
   DeploymentTest,
   DeploymentTestStatus,
 } from '@latitude-data/core/schema/models/types/DeploymentTest'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 export type CommitTestInfo =
   | {
@@ -89,8 +88,8 @@ export function ActiveCommitsList({
   headCommit?: Commit
   commitsInActiveTests: Commit[]
   activeTests: DeploymentTest[]
-  onCommitPublish: React.Dispatch<React.SetStateAction<number | null>>
-  onCommitDelete: React.Dispatch<React.SetStateAction<number | null>>
+  onCommitPublish: ReactStateDispatch<number | null>
+  onCommitDelete: ReactStateDispatch<number | null>
 }) {
   const { project } = useCurrentProject()
   const { data: storeActiveTests } = useDeploymentTests(
@@ -98,26 +97,42 @@ export function ActiveCommitsList({
     { fallbackData: serverActiveTests },
   )
 
-  // Use store data (it will be the same as serverActiveTests initially, but updates when store changes)
   const activeTests = storeActiveTests
 
   const activeCommits = useMemo(() => {
     const commits = new Map<number, Commit>()
 
-    // Add head commit if it exists
-    if (headCommit) {
-      commits.set(headCommit.id, headCommit)
+    // Create a map of commits by ID for quick lookup
+    const commitsMap = new Map<number, Commit>()
+    commitsInActiveTests.forEach((commit) => {
+      commitsMap.set(commit.id, commit)
+    })
+
+    // Determine which commits should be in the active list based on store's active tests
+    const activeCommitIds = new Set<number>()
+
+    // Add head commit if there are any active tests
+    if (headCommit && activeTests.length > 0) {
+      activeCommitIds.add(headCommit.id)
     }
 
-    // Add commits in active test deployments (includes paused tests)
-    // The server-side commitsInActiveTests should include all commits in active tests,
-    // including paused ones, since findAllActiveForProject includes paused status
-    commitsInActiveTests.forEach((commit) => {
-      commits.set(commit.id, commit)
+    // Add challenger commits from active tests
+    activeTests.forEach((test) => {
+      activeCommitIds.add(test.challengerCommitId)
+    })
+
+    // Add commits that are in the active list (from commitsInActiveTests as source of truth for commit objects)
+    activeCommitIds.forEach((commitId) => {
+      const commit =
+        commitsMap.get(commitId) ||
+        (headCommit?.id === commitId ? headCommit : undefined)
+      if (commit) {
+        commits.set(commit.id, commit)
+      }
     })
 
     return Array.from(commits.values())
-  }, [headCommit, commitsInActiveTests])
+  }, [headCommit, commitsInActiveTests, activeTests])
 
   if (activeCommits.length === 0) {
     return (

@@ -22,7 +22,7 @@ import { RunRoute } from './run.route'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { routeRequest } from '@latitude-data/core/services/deploymentTests/routeRequest'
 import { DeploymentTestsRepository } from '@latitude-data/core/repositories/deploymentTestsRepository'
-import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
@@ -174,7 +174,7 @@ async function handleForegroundRun({
   activeDeploymentTest,
 }: {
   c: Context
-  workspace: Workspace
+  workspace: WorkspaceDto
   document: DocumentVersion
   commit: Commit
   project: Project

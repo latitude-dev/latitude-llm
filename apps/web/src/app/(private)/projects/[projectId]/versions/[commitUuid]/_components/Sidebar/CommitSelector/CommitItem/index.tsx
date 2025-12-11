@@ -139,10 +139,28 @@ export function CommitItem({
     testInfo?.status && ACTIVE_DEPLOYMENT_STATUSES.includes(testInfo.status)
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
 
-  const { stop } = useDeploymentTests(
+  const { pause, resume, stop } = useDeploymentTests(
     { projectId: project.id, activeOnly: true },
     { revalidateOnMount: false },
   )
+
+  const isPaused = testInfo?.status === 'paused'
+
+  const handlePauseTest = (e: MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (testInfo?.testUuid) {
+      pause.execute(testInfo.testUuid)
+    }
+  }
+
+  const handleResumeTest = (e: MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (testInfo?.testUuid) {
+      resume.execute(testInfo.testUuid)
+    }
+  }
 
   const handleStopTest = (e: MouseEvent) => {
     e.stopPropagation()
@@ -196,12 +214,44 @@ export function CommitItem({
                 >
                   Configure test
                 </Tooltip>
-                {!isActiveTest && (
+                {isPaused ? (
                   <Tooltip
                     asChild
                     trigger={
                       <Button
-                        iconProps={{ name: 'trash', color: 'foregroundMuted' }}
+                        iconProps={{ name: 'play', color: 'foregroundMuted' }}
+                        variant='nope'
+                        onClick={handleResumeTest}
+                        disabled={resume.isPending}
+                      />
+                    }
+                  >
+                    Resume test
+                  </Tooltip>
+                ) : (
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <Button
+                        iconProps={{ name: 'pause', color: 'foregroundMuted' }}
+                        variant='nope'
+                        onClick={handlePauseTest}
+                        disabled={pause.isPending}
+                      />
+                    }
+                  >
+                    Pause test
+                  </Tooltip>
+                )}
+                {isActiveTest && (
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <Button
+                        iconProps={{
+                          name: 'circleStop',
+                          color: 'foregroundMuted',
+                        }}
                         variant='nope'
                         onClick={handleStopTest}
                         disabled={stop.isPending}

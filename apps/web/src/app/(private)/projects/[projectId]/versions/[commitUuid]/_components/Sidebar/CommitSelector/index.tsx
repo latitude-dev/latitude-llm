@@ -1,4 +1,5 @@
 'use client'
+
 import {
   RefObject,
   useCallback,
@@ -232,7 +233,6 @@ export default function CommitSelector({
               currentDocument={currentDocument}
               headCommit={headCommit}
               draftCommits={draftCommits}
-              commitsInActiveTests={commitsInActiveTests}
               activeTests={activeTests}
               onCommitPublish={setPublishCommit}
               onCommitDelete={setDeleteCommit}
