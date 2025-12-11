@@ -12,6 +12,8 @@ export enum LogSources {
   Playground = 'playground',
   ScheduledTrigger = 'scheduled_trigger',
   SharedPrompt = 'shared_prompt',
+  ShadowTest = 'shadow_test',
+  ABTestChallenger = 'ab_test_challenger',
   User = 'user',
 }
 

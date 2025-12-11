@@ -43,6 +43,8 @@ export const spans = latitudeSchema.table(
 
     source: varchar('source', { length: 32 }).$type<LogSources>(),
 
+    testDeploymentId: bigint('test_deployment_id', { mode: 'number' }),
+
     tokensPrompt: integer('tokens_prompt'),
     tokensCached: integer('tokens_cached'),
     tokensReasoning: integer('tokens_reasoning'),
@@ -71,6 +73,7 @@ export const spans = latitudeSchema.table(
     index('spans_document_uuid_idx').on(table.documentUuid),
     index('spans_commit_uuid_idx').on(table.commitUuid),
     index('spans_experiment_uuid_idx').on(table.experimentUuid),
+    index('spans_test_deployment_id_idx').on(table.testDeploymentId),
     // Composite index for efficient project-scoped queries with pagination
     // Covers: workspace_id + commit_uuid + started_at DESC + id DESC
     index('spans_workspace_commit_started_at_id_idx').on(

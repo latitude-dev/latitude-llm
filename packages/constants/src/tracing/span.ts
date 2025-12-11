@@ -142,6 +142,7 @@ export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
   versionUuid: string
   source: LogSources
   projectId: number
+  testDeploymentId?: number
 }
 
 export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
@@ -217,6 +218,7 @@ export type Span<T extends SpanType = SpanType> = {
   documentUuid?: string
   commitUuid?: string
   experimentUuid?: string
+  testDeploymentId?: number
 
   source?: LogSources
 
