@@ -249,6 +249,7 @@ async function getNewIssuesList(
       id: issues.id,
       title: issues.title,
       projectId: issues.projectId,
+      projectName: projects.name,
       commitUuid: commits.uuid,
     })
     .from(issues)
@@ -260,6 +261,7 @@ async function getNewIssuesList(
       ),
     )
     .innerJoin(commits, eq(latestHistogramSubquery.commitId, commits.id))
+    .innerJoin(projects, eq(issues.projectId, projects.id))
     .where(inArray(issues.id, newIssueIds))
     .orderBy(desc(issues.createdAt))
     .limit(10)

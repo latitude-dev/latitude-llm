@@ -367,4 +367,71 @@ describe('getIssuesData', () => {
       expect(result.issuesCount).toBe(totalIssues)
     })
   })
+
+  describe('new issues list', () => {
+    it('returns new issues with project name and commit uuid', async () => {
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document,
+        createdAt: STATIC_TEST_DATE,
+        histograms: [
+          {
+            commitId: commit.id,
+            date: STATIC_TEST_DATE,
+            count: 5,
+          },
+        ],
+      })
+
+      const result = await getIssuesData({
+        workspace,
+        dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
+      })
+
+      expect(result.newIssuesList).toHaveLength(1)
+      expect(result.newIssuesList[0]).toEqual({
+        id: issue.id,
+        title: issue.title,
+        projectId: project.id,
+        projectName: project.name,
+        commitUuid: commit.uuid,
+      })
+    })
+
+    it('returns up to 10 new issues ordered by creation date descending', async () => {
+      for (let i = 0; i < 15; i++) {
+        const createdAt = new Date(STATIC_TEST_DATE)
+        createdAt.setMinutes(createdAt.getMinutes() + i)
+
+        await createIssue({
+          workspace,
+          project,
+          document,
+          createdAt,
+          histograms: [
+            {
+              commitId: commit.id,
+              date: createdAt,
+              count: 1,
+            },
+          ],
+        })
+      }
+
+      const result = await getIssuesData({
+        workspace,
+        dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
+      })
+
+      expect(result.newIssuesList).toHaveLength(10)
+      expect(result.newIssuesCount).toBe(15)
+
+      // Verify all items have projectName
+      result.newIssuesList.forEach((issue) => {
+        expect(issue.projectName).toBe(project.name)
+        expect(issue.commitUuid).toBe(commit.uuid)
+      })
+    })
+  })
 })

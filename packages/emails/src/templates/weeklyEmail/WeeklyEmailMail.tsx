@@ -7,11 +7,11 @@ import NotificationsFooter from '../../components/NotificationsFooter'
 import { Text } from '../../components/Text'
 import { Button } from '../../components/Button'
 import {
-  // fullActivityProfile,
+  fullActivityProfile,
   // logsOnlyProfile,
   // someActivityProfile,
   // issuesWithoutNewProfile,
-  zeroActivityProfile,
+  // zeroActivityProfile,
   // highVolumeProfile,
 } from './previewData'
 import {
@@ -150,7 +150,7 @@ function LogsSection({ logs }: { logs: LogStats }) {
                       .commits.details().issues.root
                   }
                 >
-                  <Text.H5 display='block' color='primary'>
+                  <Text.H5 display='block' color='foregroundMuted'>
                     {project.projectName}
                   </Text.H5>
                 </Link>
@@ -194,21 +194,21 @@ function IssuesSection({ issues }: { issues: IssueStats }) {
             <td width='25%' className='pr-2'>
               <StatCard
                 showSubtitleSpace
-                title='Total'
+                title='Ongoing'
                 value={issues.issuesCount.toLocaleString()}
               />
             </td>
             <td width='25%' className='px-1'>
               <StatCard
                 showSubtitleSpace
-                title='New Issues'
+                title='New'
                 value={issues.newIssuesCount.toLocaleString()}
               />
             </td>
             <td width='25%' className='px-1'>
               <StatCard
                 showSubtitleSpace
-                title='Escalated'
+                title='Escalating'
                 value={issues.escalatedIssuesCount.toLocaleString()}
               />
             </td>
@@ -313,6 +313,7 @@ function IssuesSection({ issues }: { issues: IssueStats }) {
                   <Text.H5 display='block' color='primary'>
                     {issue.title}
                   </Text.H5>
+                  <Text.H6>{issue.projectName}</Text.H6>
                 </Link>
               </Column>
             </Row>
@@ -459,9 +460,9 @@ export default function WeeklyEmailMail({
 // cd packages/emails && pnpm email:dev for checking the UI
 // To swap between different profiles, comment/uncomment the desired profile below:
 
-// WeeklyEmailMail.PreviewProps = fullActivityProfile
+WeeklyEmailMail.PreviewProps = fullActivityProfile
 // WeeklyEmailMail.PreviewProps = issuesWithoutNewProfile
 // WeeklyEmailMail.PreviewProps = logsOnlyProfile
 // WeeklyEmailMail.PreviewProps = someActivityProfile
-WeeklyEmailMail.PreviewProps = zeroActivityProfile
+// WeeklyEmailMail.PreviewProps = zeroActivityProfile
 // WeeklyEmailMail.PreviewProps = highVolumeProfile

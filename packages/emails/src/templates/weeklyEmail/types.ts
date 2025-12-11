@@ -51,6 +51,7 @@ export type NewIssue = {
   id: number
   title: string
   projectId: number
+  projectName: string
   commitUuid: string
 }
 export type IssueStats = {
