@@ -90,7 +90,8 @@ export function isEncodedImage(src: unknown): boolean {
 export function isSafeUrl(url: unknown): url is string | URL {
   const isUrl =
     url instanceof URL ||
-    (typeof url === 'string' && (url.startsWith('/') || URL.canParse(url)))
+    (typeof url === 'string' &&
+      ((url.startsWith('/') && !isEncodedImage(url)) || URL.canParse(url)))
   if (!isUrl) return false
 
   if (url.toString().startsWith('/')) return true
