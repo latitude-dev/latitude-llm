@@ -271,10 +271,12 @@ export default function PublishDraftCommitModal({
               onTrafficPercentageChange={setTrafficPercentage}
             />
           )}
-          <div className='flex flex-col gap-4'>
+          <div className='flex flex-col gap-4 min-h-0 flex-1 overflow-hidden'>
             <Text.H5M>Changes</Text.H5M>
             {commit && changes.mainDocumentUuid !== undefined && (
-              <MainDocumentChange commit={commit!} />
+              <div className='flex-shrink-0'>
+                <MainDocumentChange commit={commit!} />
+              </div>
             )}
             <ChangesList
               anyChanges={anyChanges}

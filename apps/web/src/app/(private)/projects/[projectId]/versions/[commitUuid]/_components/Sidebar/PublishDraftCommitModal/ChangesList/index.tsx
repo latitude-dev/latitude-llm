@@ -240,7 +240,7 @@ export function ChangesList({
   }
 
   return (
-    <ul className='flex flex-col gap-2'>
+    <ul className='flex flex-col gap-2 overflow-y-auto custom-scrollbar scrollable-indicator'>
       {documentsList.map((d) => (
         <DocumentChangeList
           key={d.documentUuid}

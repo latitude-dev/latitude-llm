@@ -104,7 +104,7 @@ export function ListItem({
         icon
       )}
       <div className='flex-grow truncate'>
-        <Text.H5 color={foregroundColor} ellipsis noWrap underline={hasIssues}>
+        <Text.H5 color={foregroundColor} ellipsis noWrap>
           {label}
         </Text.H5>
       </div>
