@@ -79,7 +79,7 @@ async function getGlobalLogsStats(
   return {
     logsCount: logsCountResult,
     tokensSpent: Number(completionStatsResult.totalTokens),
-    tokensCost: Number(completionStatsResult.totalCost) / 100, // Cost is stored in cents
+    tokensCost: Number(completionStatsResult.totalCost) / 100000, // Cost is stored in millicents
   }
 }
 
@@ -138,7 +138,7 @@ async function getTopProjectsLogsStats(
     projectName: project.projectName,
     logsCount: Number(project.logsCount),
     tokensSpent: Number(project.totalTokens),
-    tokensCost: Number(project.totalCost) / 100, // Cost is stored in cents
+    tokensCost: Number(project.totalCost) / 100000, // Cost is stored in millicents
   }))
 }
 
