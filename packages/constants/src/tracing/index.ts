@@ -12,7 +12,7 @@ export enum InstrumentationScope {
   Latitude = 'latitude',
   OpenAI = 'openai',
   Anthropic = 'anthropic',
-  AzureOpenAI = 'azure',
+  AzureOpenAI = 'azure', // Only python — js uses OpenAI instrumentation
   VercelAI = 'vercelai',
   VertexAI = 'vertexai',
   AIPlatform = 'aiplatform',

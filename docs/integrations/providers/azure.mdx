@@ -1,0 +1,123 @@
+---
+title: Azure
+description: Connect your Azure-powered application to Latitude Telemetry for feature-level observability and evaluations.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses the official **Azure OpenAI SDK**.
+
+After completing these steps:
+
+- Every Azure call (e.g. `chat.completions.create`) can be captured as a log in Latitude.
+- Logs are attached to a specific **prompt** and **version** in Latitude.
+- You can annotate, evaluate, and debug your Azure-powered features from the Latitude dashboard.
+
+> You’ll keep calling Azure directly — Telemetry simply observes and enriches those calls.
+
+---
+
+## Requirements
+
+Before you start, make sure you have:
+
+- A **Latitude account** and **API key**.
+- At least one **prompt** created in Latitude (so you have a `promptUuid` and `versionUuid` to associate logs with).
+- A Node.js-based project that uses the Azure OpenAI SDK.
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install requirements">
+    Add the Latitude Telemetry package to your project:
+
+    <CodeGroup>
+      ```bash npm
+      npm add @latitude-data/telemetry @opentelemetry/api
+      ```
+
+      ```bash pnpm
+      pnpm add @latitude-data/telemetry @opentelemetry/api
+      ```
+
+      ```bash yarn
+      yarn add @latitude-data/telemetry @opentelemetry/api
+      ```
+
+      ```bash bun
+      bun add @latitude-data/telemetry @opentelemetry/api
+      ```
+    </CodeGroup>
+
+  </Step>
+
+  <Step title="Initialize Latitude Telemetry with Azure">
+    Create a <code>LatitudeTelemetry</code> instance and pass the OpenAI SDK as an instrumentation.
+
+    ```ts
+    import { LatitudeTelemetry } from '@latitude-data/telemetry'
+    import OpenAI from 'openai'
+
+    export const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, {
+      instrumentations: {
+        openai: OpenAI, // This enables automatic tracing for the Azure OpenAI SDK
+      },
+    })
+    ```
+
+    Import <code>telemetry</code> (and optionally <code>openai</code>) wherever you need to run prompts.
+
+  </Step>
+
+  <Step title="Wrap your OpenAI-powered feature">
+    Wrap the code that calls OpenAI with a Telemetry prompt span, and execute your OpenAI call inside that span.
+
+    ```ts
+    import { context } from '@opentelemetry/api'
+    import { BACKGROUND } from '@latitude-data/telemetry'
+    import { AzureOpenAI } from "openai";
+
+    export async function generateSupportReply(input: string) {
+
+      const $prompt = telemetry.prompt(BACKGROUND(), {
+        promptUuid: 'your-prompt-uuid',
+        versionUuid: 'your-version-uuid', // or "live", depending on your setup
+      })
+
+      await context
+        .with($prompt.context, async () => {
+          // Your LLM-powered feature code here:
+          const response = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [
+              { role: 'system', content: 'You are a helpful support assistant.' },
+              { role: 'user', content: input },
+            ],
+          })
+
+          // ...
+        })
+        .then(() => $prompt.end())
+        .catch((error) => $prompt.fail(error as Error))
+        .finally(() => telemetry.flush())
+    }
+    ```
+
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing your logs in Latitude
+
+Once you've wrapped your OpenAI-powered feature, you can see your logs in Latitude.
+
+1. Go to the **Traces** section of your prompt in Latitude.
+2. You should see new entries every time your code is executed, including:
+   - Input/output messages
+   - Model name
+   - Latency and error information

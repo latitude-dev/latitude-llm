@@ -40,7 +40,6 @@ import {
 } from '@opentelemetry/sdk-trace-node'
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
 import { AnthropicInstrumentation } from '@traceloop/instrumentation-anthropic'
-import { AzureOpenAIInstrumentation } from '@traceloop/instrumentation-azure'
 import { BedrockInstrumentation } from '@traceloop/instrumentation-bedrock'
 import { CohereInstrumentation } from '@traceloop/instrumentation-cohere'
 import { LangChainInstrumentation } from '@traceloop/instrumentation-langchain'
@@ -51,20 +50,7 @@ import {
   AIPlatformInstrumentation,
   VertexAIInstrumentation,
 } from '@traceloop/instrumentation-vertexai'
-
-import type * as anthropic from '@anthropic-ai/sdk'
-import type * as bedrock from '@aws-sdk/client-bedrock-runtime'
-import type * as azure from '@azure/openai'
-import type * as vertexai from '@google-cloud/vertexai'
-import type * as langchain_runnables from '@langchain/core/runnables'
-import type * as langchain_vectorstores from '@langchain/core/vectorstores'
 import type * as latitude from '@latitude-data/sdk'
-import type * as cohere from 'cohere-ai'
-import type * as langchain_agents from 'langchain/agents'
-import type * as langchain_chains from 'langchain/chains'
-import type * as langchain_tools from 'langchain/tools'
-import type * as openai from 'openai'
-import type * as togetherai from 'together-ai'
 
 const TRACES_URL = `${env.GATEWAY_BASE_URL}/api/v3/traces`
 const SERVICE_NAME = process.env.npm_package_name || 'unknown'
@@ -101,47 +87,43 @@ export const DEFAULT_SPAN_EXPORTER = (apiKey: string) =>
 
 // Note: Only exporting typescript instrumentations
 export enum Instrumentation {
-  Latitude = InstrumentationScope.Latitude,
-  OpenAI = InstrumentationScope.OpenAI,
   Anthropic = InstrumentationScope.Anthropic,
-  AzureOpenAI = InstrumentationScope.AzureOpenAI,
-  VercelAI = InstrumentationScope.VercelAI,
-  VertexAI = InstrumentationScope.VertexAI,
   AIPlatform = InstrumentationScope.AIPlatform,
   Bedrock = InstrumentationScope.Bedrock,
-  TogetherAI = InstrumentationScope.TogetherAI,
   Cohere = InstrumentationScope.Cohere,
   Langchain = InstrumentationScope.Langchain,
+  Latitude = InstrumentationScope.Latitude,
   LlamaIndex = InstrumentationScope.LlamaIndex,
+  OpenAI = InstrumentationScope.OpenAI,
+  TogetherAI = InstrumentationScope.TogetherAI,
+  VertexAI = InstrumentationScope.VertexAI,
 }
 
 export type TelemetryOptions = {
-  instrumentations?: {
-    [Instrumentation.Latitude]?:
-      | typeof latitude.Latitude
-      | LatitudeInstrumentationOptions
-    [Instrumentation.OpenAI]?: typeof openai.OpenAI
-    [Instrumentation.Anthropic]?: typeof anthropic
-    [Instrumentation.AzureOpenAI]?: typeof azure
-    [Instrumentation.VercelAI]?: 'manual'
-    [Instrumentation.VertexAI]?: typeof vertexai
-    [Instrumentation.AIPlatform]?: any // Note: Any because this type is huge
-    [Instrumentation.Bedrock]?: typeof bedrock
-    [Instrumentation.TogetherAI]?: typeof togetherai.Together
-    [Instrumentation.Cohere]?: typeof cohere
-    [Instrumentation.Langchain]?: {
-      chainsModule: typeof langchain_chains
-      agentsModule: typeof langchain_agents
-      toolsModule: typeof langchain_tools
-      vectorStoreModule: typeof langchain_vectorstores
-      runnablesModule: typeof langchain_runnables
-    }
-    [Instrumentation.LlamaIndex]?: any // Note: Any because this type is huge
-  }
   disableBatch?: boolean
   exporter?: SpanExporter
   processors?: SpanProcessor[]
   propagators?: TextMapPropagator[]
+  instrumentations?: {
+    [Instrumentation.Latitude]?:
+      | typeof latitude.Latitude
+      | LatitudeInstrumentationOptions
+
+    // Note: These are all typed as 'any' because using the actual expected types will cause
+    // type errors when the version installed in the package is even slightly different than
+    // the version used in the project.
+    [Instrumentation.AIPlatform]?: any
+    [Instrumentation.Anthropic]?: any
+    [Instrumentation.Bedrock]?: any
+    [Instrumentation.Cohere]?: any
+    [Instrumentation.OpenAI]?: any
+    [Instrumentation.LlamaIndex]?: any
+    [Instrumentation.TogetherAI]?: any
+    [Instrumentation.VertexAI]?: any
+    [Instrumentation.Langchain]?: {
+      callbackManagerModule?: any
+    }
+  }
 }
 
 export class LatitudeTelemetry {
@@ -250,12 +232,29 @@ export class LatitudeTelemetry {
       this.instrumentations.push(instrumentation)
     }
 
-    const openai = this.options.instrumentations?.openai
-    if (openai) {
-      const provider = this.tracerProvider(Instrumentation.OpenAI)
-      const instrumentation = new OpenAIInstrumentation({ enrichTokens: true })
+    type InstrumentationClass =
+      | typeof AnthropicInstrumentation
+      | typeof AIPlatformInstrumentation
+      | typeof BedrockInstrumentation
+      | typeof CohereInstrumentation
+      | typeof LangChainInstrumentation
+      | typeof LlamaIndexInstrumentation
+      | typeof OpenAIInstrumentation
+      | typeof TogetherInstrumentation
+      | typeof VertexAIInstrumentation
+
+    const configureInstrumentation = (
+      instrumentationType: Instrumentation,
+      InstrumentationConstructor: InstrumentationClass,
+      instrumentationOptions?: { enrichTokens?: boolean },
+    ) => {
+      const providerPkg = this.options.instrumentations?.[instrumentationType]
+      const provider = this.tracerProvider(instrumentationType)
+      const instrumentation = new InstrumentationConstructor(instrumentationOptions) // prettier-ignore
       instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(openai)
+      if (providerPkg) {
+        instrumentation.manuallyInstrument(providerPkg)
+      }
       registerInstrumentations({
         instrumentations: [instrumentation],
         tracerProvider: provider,
@@ -263,124 +262,15 @@ export class LatitudeTelemetry {
       this.instrumentations.push(instrumentation)
     }
 
-    const anthropic = this.options.instrumentations?.anthropic
-    if (anthropic) {
-      const provider = this.tracerProvider(Instrumentation.Anthropic)
-      const instrumentation = new AnthropicInstrumentation()
-      instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(anthropic)
-      registerInstrumentations({
-        instrumentations: [instrumentation],
-        tracerProvider: provider,
-      })
-      this.instrumentations.push(instrumentation)
-    }
-
-    const azure = this.options.instrumentations?.azure
-    if (azure) {
-      const provider = this.tracerProvider(Instrumentation.AzureOpenAI)
-      const instrumentation = new AzureOpenAIInstrumentation()
-      instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(azure)
-      registerInstrumentations({
-        instrumentations: [instrumentation],
-        tracerProvider: provider,
-      })
-      this.instrumentations.push(instrumentation)
-    }
-
-    const vertexai = this.options.instrumentations?.vertexai
-    if (vertexai) {
-      const provider = this.tracerProvider(Instrumentation.VertexAI)
-      const instrumentation = new VertexAIInstrumentation()
-      instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(vertexai)
-      registerInstrumentations({
-        instrumentations: [instrumentation],
-        tracerProvider: provider,
-      })
-      this.instrumentations.push(instrumentation)
-    }
-
-    const aiplatform = this.options.instrumentations?.aiplatform
-    if (aiplatform) {
-      const provider = this.tracerProvider(Instrumentation.AIPlatform)
-      const instrumentation = new AIPlatformInstrumentation()
-      instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(aiplatform)
-      registerInstrumentations({
-        instrumentations: [instrumentation],
-        tracerProvider: provider,
-      })
-      this.instrumentations.push(instrumentation)
-    }
-
-    const bedrock = this.options.instrumentations?.bedrock
-    if (bedrock) {
-      const provider = this.tracerProvider(Instrumentation.Bedrock)
-      const instrumentation = new BedrockInstrumentation()
-      instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(bedrock)
-      registerInstrumentations({
-        instrumentations: [instrumentation],
-        tracerProvider: provider,
-      })
-      this.instrumentations.push(instrumentation)
-    }
-
-    const togetherai = this.options.instrumentations?.togetherai
-    if (togetherai) {
-      const provider = this.tracerProvider(Instrumentation.TogetherAI)
-      const instrumentation = new TogetherInstrumentation({
-        enrichTokens: true,
-      })
-      instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(togetherai)
-      registerInstrumentations({
-        instrumentations: [instrumentation],
-        tracerProvider: provider,
-      })
-      this.instrumentations.push(instrumentation)
-    }
-
-    const cohere = this.options.instrumentations?.cohere
-    if (cohere) {
-      const provider = this.tracerProvider(Instrumentation.Cohere)
-      const instrumentation = new CohereInstrumentation()
-      instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(cohere)
-      registerInstrumentations({
-        instrumentations: [instrumentation],
-        tracerProvider: provider,
-      })
-      this.instrumentations.push(instrumentation)
-    }
-
-    const langchain = this.options.instrumentations?.langchain
-    if (langchain) {
-      const provider = this.tracerProvider(Instrumentation.Langchain)
-      const instrumentation = new LangChainInstrumentation()
-      instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(langchain)
-      registerInstrumentations({
-        instrumentations: [instrumentation],
-        tracerProvider: provider,
-      })
-      this.instrumentations.push(instrumentation)
-    }
-
-    const llamaindex = this.options.instrumentations?.llamaindex
-    if (llamaindex) {
-      const provider = this.tracerProvider(Instrumentation.LlamaIndex)
-      const instrumentation = new LlamaIndexInstrumentation()
-      instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(llamaindex)
-      registerInstrumentations({
-        instrumentations: [instrumentation],
-        tracerProvider: provider,
-      })
-      this.instrumentations.push(instrumentation)
-    }
+    configureInstrumentation(Instrumentation.Anthropic, AnthropicInstrumentation) // prettier-ignore
+    configureInstrumentation(Instrumentation.AIPlatform, AIPlatformInstrumentation) // prettier-ignore
+    configureInstrumentation(Instrumentation.Bedrock, BedrockInstrumentation) // prettier-ignore
+    configureInstrumentation(Instrumentation.Cohere, CohereInstrumentation) // prettier-ignore
+    configureInstrumentation(Instrumentation.Langchain, LangChainInstrumentation) // prettier-ignore
+    configureInstrumentation(Instrumentation.LlamaIndex, LlamaIndexInstrumentation) // prettier-ignore
+    configureInstrumentation(Instrumentation.OpenAI, OpenAIInstrumentation, { enrichTokens: true }) // prettier-ignore
+    configureInstrumentation(Instrumentation.TogetherAI, TogetherInstrumentation, { enrichTokens: true }) // prettier-ignore
+    configureInstrumentation(Instrumentation.VertexAI, VertexAIInstrumentation) // prettier-ignore
   }
 
   instrument() {
