@@ -129,12 +129,10 @@ export function CommitItem({
     )
   }, [project.id, commit, isHead, currentDocument, selectedSegment])
 
-  if (!commit || !commitPath) return null
-
   const hasDraftButtons = isDraft && onCommitPublish && onCommitDelete
-  const isCurrentCommit = currentCommit.uuid === commit.uuid
+  const isCurrentCommit = currentCommit.uuid === commit?.uuid
   const isHeadBaseline =
-    commit.id === headCommitId &&
+    commit?.id === headCommitId &&
     testInfo?.type === 'ab' &&
     testInfo?.isBaseline
   const hasTest = !!testInfo && !isHeadBaseline
@@ -154,6 +152,8 @@ export function CommitItem({
       stop.execute(testInfo.testUuid)
     }
   }
+
+  if (!commit || !commitPath) return null
 
   const content = (
     <div className='flex flex-row items-center justify-between gap-4'>

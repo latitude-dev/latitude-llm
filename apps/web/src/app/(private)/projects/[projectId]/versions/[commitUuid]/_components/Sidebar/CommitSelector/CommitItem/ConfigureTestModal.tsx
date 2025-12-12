@@ -50,11 +50,9 @@ export function ConfigureTestModal({
       })
   }, [testInfo, trafficPercentage, update, onOpenChange])
 
-  if (!testInfo) return null
-
-  const isAbTest = testInfo.type === 'ab'
-  const isBaseline = testInfo.type === 'ab' && testInfo.isBaseline
-  const isPaused = testInfo.status === 'paused'
+  const isAbTest = testInfo?.type === 'ab'
+  const isBaseline = testInfo?.type === 'ab' && testInfo?.isBaseline
+  const isPaused = testInfo?.status === 'paused'
 
   const handlePauseTest = useCallback(() => {
     if (testInfo?.testUuid) {
@@ -73,6 +71,8 @@ export function ConfigureTestModal({
       stop.execute(testInfo.testUuid)
     }
   }, [testInfo, stop])
+
+  if (!testInfo) return null
 
   return (
     <Modal
