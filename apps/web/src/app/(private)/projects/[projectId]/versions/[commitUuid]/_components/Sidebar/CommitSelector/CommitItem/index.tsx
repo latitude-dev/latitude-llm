@@ -1,7 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-
+import { MouseEvent, useMemo, useState } from 'react'
 import { ROUTES } from '$/services/routes'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -145,7 +144,7 @@ export function CommitItem({
     { revalidateOnMount: false },
   )
 
-  const handleStopTest = (e: React.MouseEvent) => {
+  const handleStopTest = (e: MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
     if (testInfo?.testUuid) {

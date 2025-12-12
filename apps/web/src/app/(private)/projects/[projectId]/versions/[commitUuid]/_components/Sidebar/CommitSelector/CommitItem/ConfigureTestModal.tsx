@@ -58,13 +58,13 @@ export function ConfigureTestModal({
     if (testInfo?.testUuid) {
       pause.execute(testInfo.testUuid)
     }
-  }, [testInfo, pause, onOpenChange])
+  }, [testInfo, pause])
 
   const handleResumeTest = useCallback(() => {
     if (testInfo?.testUuid) {
       resume.execute(testInfo.testUuid)
     }
-  }, [testInfo, resume, onOpenChange])
+  }, [testInfo, resume])
 
   const handleStopTest = useCallback(() => {
     if (testInfo?.testUuid) {
