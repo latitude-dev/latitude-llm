@@ -6,7 +6,7 @@ import { runDocumentAtCommit } from './runDocumentAtCommit'
 import { ProviderApiKeysRepository } from '../../repositories'
 import type { DeploymentTest } from '../../schema/models/types/DeploymentTest'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import type { Workspace } from '../../schema/models/types/Workspace'
+import type { WorkspaceDto } from '../../schema/models/types/Workspace'
 import type { Commit } from '../../schema/models/types/Commit'
 import { type OkType } from '../../lib/Result'
 import { Project } from '../../schema/models/types/Project'
@@ -15,7 +15,7 @@ import { publisher } from '../../events/publisher'
 type RunResult = OkType<typeof runDocumentAtCommit>
 
 export type RunForegroundDocumentParams = {
-  workspace: Workspace
+  workspace: WorkspaceDto
   document: DocumentVersion
   commit: Commit
   project: Project
