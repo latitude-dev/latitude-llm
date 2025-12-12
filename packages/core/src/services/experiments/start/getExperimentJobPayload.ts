@@ -154,12 +154,11 @@ export async function getExperimentJobPayload(
   const document = documentResult.unwrap()
 
   const evaluationScope = new EvaluationsV2Repository(workspace.id, db)
-  const documentEvaluationsResult =
-    await evaluationScope.listAtCommitByDocument({
-      projectId: commit.projectId,
-      commitUuid: commit.uuid,
-      documentUuid: experiment.documentUuid,
-    })
+  const documentEvaluationsResult = await evaluationScope.list({
+    projectId: commit.projectId,
+    commitUuid: commit.uuid,
+    documentUuid: experiment.documentUuid,
+  })
   if (documentEvaluationsResult.error) {
     return Result.error(documentEvaluationsResult.error as Error)
   }

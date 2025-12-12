@@ -62,7 +62,7 @@ export async function spanToRun({
   const repository = new EvaluationResultsV2Repository(workspaceId)
   const results = await repository.listBySpans([span]).then((r) => r.value)
   const evaluations = await evalsRepo
-    .listAtCommitByDocument({
+    .list({
       commitUuid: span.commitUuid!,
       documentUuid: span.documentUuid!,
     })

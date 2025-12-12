@@ -7,6 +7,8 @@ import { ROUTES } from '$/services/routes'
 import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
 import { useEvaluationResultsV2ByTraces } from '$/stores/evaluationResultsV2'
 import {
+  EvaluationType,
+  EvaluationV2,
   RunSourceGroup,
   Span,
   SpanType,
@@ -23,6 +25,7 @@ import {
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useSearchParams } from 'next/navigation'
 import { mapSourceGroupToLogSources } from '@latitude-data/core/services/runs/mapSourceGroupToLogSources'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 
 export function RunsPage({
   issuesEnabled,
@@ -89,6 +92,7 @@ export function RunsPage({
   )
 
   const traceIds = useMemo(() => spans.map((span) => span.traceId), [spans])
+  const { data: evaluations } = useEvaluationsV2({ project, commit })
   const { data: annotations = [], mutate: mutateAnnotations } =
     useEvaluationResultsV2ByTraces(
       {
@@ -99,6 +103,18 @@ export function RunsPage({
       },
       { keepPreviousData: true },
     )
+  const hitlAnnotations = useMemo(() => {
+    return annotations.filter((a) => {
+      const evaluation = evaluations.find((ev) => ev.uuid === a.evaluationUuid)
+      if (!evaluation) return false
+
+      return (
+        evaluation.type === EvaluationType.Human &&
+        (evaluation as EvaluationV2<EvaluationType.Human>).configuration
+          .enableControls
+      )
+    })
+  }, [annotations, evaluations])
 
   // Reset pagination when sourceGroup changes
   useEffect(() => {
@@ -126,7 +142,7 @@ export function RunsPage({
             realtimeIsEnabled={realtimeIsEnabled}
             toggleRealtime={setRealtimeIsEnabled}
             spans={spans}
-            annotations={annotations}
+            annotations={hitlAnnotations}
             goToNextPage={goToNextPage}
             goToPrevPage={goToPrevPage}
             hasNext={hasNext}

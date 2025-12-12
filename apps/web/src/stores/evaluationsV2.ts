@@ -42,31 +42,30 @@ export function useEvaluationsV2(
   }: {
     project: Pick<Project, 'id'>
     commit: Pick<Commit, 'uuid'>
-    document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
+    document?: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
     notifyUpdate?: boolean
   },
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
-
-  const fetcher = useFetcher<EvaluationV2[]>(
-    ROUTES.api.projects
-      .detail(project.id)
-      .commits.detail(commit.uuid)
-      .documents.detail(document.documentUuid).evaluations.root,
-  )
-
+  const fetcher = useFetcher<EvaluationV2[]>(ROUTES.api.evaluations.root, {
+    searchParams: {
+      projectId: project.id.toString(),
+      commitUuid: commit.uuid,
+      ...(document && { documentUuid: document.documentUuid }),
+    },
+  })
   const {
     data = [],
+    isLoading,
     mutate,
-    ...rest
   } = useSWR<EvaluationV2[]>(
     compact([
       'evaluationsV2',
       project.id,
       commit.uuid,
-      document.commitId,
-      document.documentUuid,
+      document?.commitId,
+      document?.documentUuid,
     ]),
     fetcher,
     opts,
@@ -95,10 +94,12 @@ export function useEvaluationsV2(
   })
   const createEvaluation = useCallback(
     async ({
+      documentUuid,
       settings,
       options,
       issueId,
     }: {
+      documentUuid: string
       settings: EvaluationSettings
       options?: Partial<EvaluationOptions>
       issueId?: number | null
@@ -106,13 +107,13 @@ export function useEvaluationsV2(
       return await executeCreateEvaluationV2({
         projectId: project.id,
         commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
+        documentUuid,
         settings: settings,
         options: options,
         issueId: issueId,
       })
     },
-    [project, commit, document, executeCreateEvaluationV2],
+    [project, commit, executeCreateEvaluationV2],
   )
 
   const {
@@ -147,11 +148,13 @@ export function useEvaluationsV2(
   const updateEvaluation = useCallback(
     async ({
       evaluationUuid,
+      documentUuid,
       settings,
       options,
       issueId,
     }: {
       evaluationUuid: string
+      documentUuid: string
       settings?: Partial<Omit<EvaluationSettings, 'type' | 'metric'>>
       options?: Partial<EvaluationOptions>
       issueId?: number | null
@@ -159,14 +162,14 @@ export function useEvaluationsV2(
       return await executeUpdateEvaluationV2({
         projectId: project.id,
         commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
+        documentUuid,
         evaluationUuid: evaluationUuid,
         settings: settings,
         options: options,
         issueId: issueId,
       })
     },
-    [project, commit, document, executeUpdateEvaluationV2],
+    [project, commit, executeUpdateEvaluationV2],
   )
 
   const {
@@ -191,15 +194,21 @@ export function useEvaluationsV2(
     },
   })
   const deleteEvaluation = useCallback(
-    async ({ evaluationUuid }: { evaluationUuid: string }) => {
+    async ({
+      evaluationUuid,
+      documentUuid,
+    }: {
+      evaluationUuid: string
+      documentUuid: string
+    }) => {
       return await executeDeleteEvaluationV2({
         projectId: project.id,
         commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
+        documentUuid,
         evaluationUuid: evaluationUuid,
       })
     },
-    [project, commit, document, executeDeleteEvaluationV2],
+    [project, commit, executeDeleteEvaluationV2],
   )
 
   const {
@@ -224,15 +233,21 @@ export function useEvaluationsV2(
   })
 
   const generateEvaluation = useCallback(
-    async ({ instructions }: { instructions?: string }) => {
+    async ({
+      documentUuid,
+      instructions,
+    }: {
+      documentUuid: string
+      instructions?: string
+    }) => {
       return await executeGenerateEvaluationV2({
         projectId: project.id,
         commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
+        documentUuid,
         instructions: instructions,
       })
     },
-    [project, commit, document, executeGenerateEvaluationV2],
+    [project, commit, executeGenerateEvaluationV2],
   )
 
   const { execute: executeCloneEvaluationV2, isPending: isCloningEvaluation } =
@@ -256,15 +271,21 @@ export function useEvaluationsV2(
     })
 
   const cloneEvaluation = useCallback(
-    async ({ evaluationUuid }: { evaluationUuid: string }) => {
+    async ({
+      evaluationUuid,
+      documentUuid,
+    }: {
+      evaluationUuid: string
+      documentUuid: string
+    }) => {
       return await executeCloneEvaluationV2({
         projectId: project.id,
         commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
+        documentUuid,
         evaluationUuid: evaluationUuid,
       })
     },
-    [project, commit, document, executeCloneEvaluationV2],
+    [project, commit, executeCloneEvaluationV2],
   )
 
   const {
@@ -288,12 +309,14 @@ export function useEvaluationsV2(
   const annotateEvaluation = useCallback(
     async ({
       evaluationUuid,
+      documentUuid,
       resultScore,
       resultMetadata,
       spanId,
       traceId,
     }: {
       evaluationUuid: string
+      documentUuid: string
       resultScore: number
       spanId: string
       traceId: string
@@ -302,7 +325,7 @@ export function useEvaluationsV2(
       return await executeAnnotateEvaluationV2({
         projectId: project.id,
         commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
+        documentUuid,
         evaluationUuid: evaluationUuid,
         resultScore: resultScore,
         resultMetadata: resultMetadata,
@@ -310,7 +333,7 @@ export function useEvaluationsV2(
         traceId,
       })
     },
-    [project, commit, document, executeAnnotateEvaluationV2],
+    [project, commit, executeAnnotateEvaluationV2],
   )
 
   const {
@@ -333,10 +356,12 @@ export function useEvaluationsV2(
 
   const generateEvaluationFromIssue = useCallback(
     async ({
+      documentUuid,
       issueId,
       providerName,
       model,
     }: {
+      documentUuid: string
       issueId: number
       providerName: string
       model: string
@@ -344,19 +369,20 @@ export function useEvaluationsV2(
       return await executeGenerateEvaluationV2FromIssue({
         projectId: project.id,
         commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
+        documentUuid,
         issueId: issueId,
         providerName: providerName,
         model: model,
       })
     },
-    [project, commit, document, executeGenerateEvaluationV2FromIssue],
+    [project, commit, executeGenerateEvaluationV2FromIssue],
   )
 
   return useMemo(
     () => ({
       data,
       mutate,
+      isLoading,
       createEvaluation,
       isCreatingEvaluation,
       updateEvaluation,
@@ -371,11 +397,11 @@ export function useEvaluationsV2(
       isAnnotatingEvaluation,
       generateEvaluationFromIssue,
       isGeneratingEvaluationFromIssue,
-      ...rest,
     }),
     [
       data,
       mutate,
+      isLoading,
       createEvaluation,
       isCreatingEvaluation,
       updateEvaluation,
@@ -390,7 +416,6 @@ export function useEvaluationsV2(
       isAnnotatingEvaluation,
       generateEvaluationFromIssue,
       isGeneratingEvaluationFromIssue,
-      rest,
     ],
   )
 }
@@ -437,7 +462,11 @@ export function useEvaluationV2Stats<
     },
   )
 
-  const { data = undefined, ...rest } = useSWR<EvaluationV2Stats | undefined>(
+  const {
+    data = undefined,
+    mutate,
+    isLoading,
+  } = useSWR<EvaluationV2Stats | undefined>(
     compact([
       'evaluationV2Stats',
       project.id,
@@ -451,8 +480,12 @@ export function useEvaluationV2Stats<
     opts,
   )
 
-  return {
-    data,
-    ...rest,
-  }
+  return useMemo(
+    () => ({
+      data,
+      mutate,
+      isLoading,
+    }),
+    [data, mutate, isLoading],
+  )
 }

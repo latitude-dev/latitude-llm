@@ -946,7 +946,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
             [
               commitUuid,
               await evaluationsRepository
-                .listAtCommitByDocument({
+                .list({
                   projectId,
                   commitUuid,
                   documentUuid,

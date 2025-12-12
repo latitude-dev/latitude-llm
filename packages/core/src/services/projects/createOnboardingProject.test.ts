@@ -55,7 +55,7 @@ describe('createOnboardingProject', () => {
     // creates a demo evaluation associated with the document
     const evaluationsRepo = new EvaluationsV2Repository(workspace.id)
     const evaluations = await evaluationsRepo
-      .listAtCommitByDocument({
+      .list({
         commitUuid: commit.uuid,
         documentUuid: documents[0]!.documentUuid,
         projectId: commit.projectId,

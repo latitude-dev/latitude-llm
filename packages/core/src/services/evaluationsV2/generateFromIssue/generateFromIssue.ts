@@ -209,7 +209,7 @@ async function getExistingEvaluationNames({
 }) {
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
   const evaluationsFromSameCommitAndDocumentResult =
-    await evaluationsRepository.listAtCommitByDocument({
+    await evaluationsRepository.list({
       projectId: commit.projectId,
       commitUuid: commit.uuid,
       documentUuid: issue.documentUuid,

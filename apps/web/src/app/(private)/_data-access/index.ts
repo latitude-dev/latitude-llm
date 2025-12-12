@@ -309,7 +309,7 @@ export const listEvaluationsV2AtCommitByDocumentCached = cache(
     const { workspace } = await getCurrentUserOrRedirect()
     const repository = new EvaluationsV2Repository(workspace.id)
     const evaluations = await repository
-      .listAtCommitByDocument({
+      .list({
         projectId: projectId,
         commitUuid: commitUuid,
         documentUuid: documentUuid,

@@ -138,6 +138,7 @@ function EditPrompt<M extends LlmEvaluationMetric>({
   const onClone = useCallback(async () => {
     if (isCloningEvaluation) return
     const [result, errors] = await cloneEvaluation({
+      documentUuid: document.documentUuid,
       evaluationUuid: evaluation.uuid,
     })
     if (errors) return
@@ -155,6 +156,7 @@ function EditPrompt<M extends LlmEvaluationMetric>({
     navigate,
     baseEvaluationRoute,
     cloneModal,
+    document.documentUuid,
   ])
 
   return (
@@ -208,6 +210,7 @@ function EditEvaluation<
   updateEvaluation: ReturnType<typeof useEvaluationsV2>['updateEvaluation']
   isUpdatingEvaluation: boolean
 }) {
+  const { document } = useCurrentDocument()
   const [openUpdateModal, setOpenUpdateModal] = useState(false)
   const [settings, setSettings] = useState<EvaluationSettings<T, M>>(evaluation)
   const [issueId, setIssueId] = useState<number | null>(
@@ -222,6 +225,7 @@ function EditEvaluation<
   const onUpdate = useCallback(async () => {
     if (isUpdatingEvaluation) return
     const [_, errors] = await updateEvaluation({
+      documentUuid: document.documentUuid,
       evaluationUuid: evaluation.uuid,
       settings: settings,
       issueId: issueId,
@@ -242,6 +246,7 @@ function EditEvaluation<
     updateEvaluation,
     setErrors,
     setOpenUpdateModal,
+    document.documentUuid,
   ])
 
   return (

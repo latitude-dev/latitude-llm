@@ -73,6 +73,8 @@ export function useSpansKeysetPaginationStore(
     realtime,
     infinite.isLoading,
     infinite.mutate,
+    params,
+    filters,
   )
 
   const onSpanCreated = useCallback(
