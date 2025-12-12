@@ -8,10 +8,13 @@ import {
   CompositeEvaluationSpecification,
   EvaluationType,
 } from '@latitude-data/constants'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
+import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { MultiSelectInput } from '@latitude-data/web-ui/molecules/MultiSelectInput'
 import { useMemo } from 'react'
@@ -79,11 +82,30 @@ function ConfigurationSimpleForm<M extends CompositeEvaluationMetric>({
         icon: specification.icon,
         value: evaluation.uuid,
         label: evaluation.name,
+        linked: !!evaluation.issueId,
       })
     }
 
     return options
   }, [uuid, evaluations])
+
+  const missingLinkedEvaluations = useMemo(() => {
+    if (!configuration.defaultTarget) return []
+
+    const missing = []
+    const linked = evaluationOptions.filter((e) => e.linked)
+    for (const { value: uuid } of linked) {
+      if (!configuration.evaluationUuids.includes(uuid)) {
+        missing.push(uuid)
+      }
+    }
+
+    return missing
+  }, [
+    configuration.defaultTarget,
+    evaluationOptions,
+    configuration.evaluationUuids,
+  ])
 
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
@@ -105,6 +127,30 @@ function ConfigurationSimpleForm<M extends CompositeEvaluationMetric>({
         disabled={disabled || isLoadingEvaluations}
         required
       />
+      {missingLinkedEvaluations.length > 0 && (
+        <Alert
+          centered
+          spacing='xsmall'
+          variant='warning'
+          description='This composite score is missing some evaluations that are tracking and monitoring issues'
+          cta={
+            <Button
+              variant='outline'
+              onClick={() =>
+                setConfiguration({
+                  ...configuration,
+                  evaluationUuids: [
+                    ...configuration.evaluationUuids,
+                    ...missingLinkedEvaluations,
+                  ],
+                })
+              }
+            >
+              Add missing evaluations
+            </Button>
+          }
+        />
+      )}
       {!!metricSpecification.ConfigurationSimpleForm && (
         <metricSpecification.ConfigurationSimpleForm
           uuid={uuid}
@@ -150,6 +196,18 @@ function ConfigurationSimpleForm<M extends CompositeEvaluationMetric>({
           required
         />
       </FormFieldGroup>
+      <SwitchInput
+        checked={configuration.defaultTarget ?? false}
+        name='defaultTarget'
+        label='Set as default for Optimizations and Distillations'
+        description='Optimize and distill more efficient versions of your prompt using this evaluation'
+        onCheckedChange={(value) =>
+          setConfiguration({ ...configuration, defaultTarget: value })
+        }
+        errors={errors?.['defaultTarget']}
+        disabled={disabled}
+        required
+      />
     </>
   )
 }

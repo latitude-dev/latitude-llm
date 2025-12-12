@@ -40,7 +40,7 @@ export async function createDemoEvaluation(
         commit,
         settings: {
           name: 'Human Annotation',
-          description: `Evaluates how well the expected behavior is followed.`,
+          description: `Evaluates how well the expected behavior is followed`,
           type: EvaluationType.Human,
           metric: HumanEvaluationMetric.Binary,
           configuration: {

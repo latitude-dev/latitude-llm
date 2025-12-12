@@ -65,7 +65,7 @@ async function validate<M extends HumanEvaluationMetric>(
           {
             code: 'custom',
             path: ['enableControls'],
-            message: `${existing.name} evaluation already has annotation controls enabled`,
+            message: `${existing.name} evaluation is already being used for annotations`,
           },
         ]),
       )

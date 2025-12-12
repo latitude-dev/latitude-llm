@@ -1,18 +1,19 @@
 import {
+  CompositeEvaluationMetric,
   HumanEvaluationMetric,
   LlmEvaluationMetric,
   Providers,
 } from '@latitude-data/constants'
+import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ZodError } from 'zod'
-import { eq } from 'drizzle-orm'
+import { database } from '../../client'
 import {
   EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   RuleEvaluationMetric,
 } from '../../constants'
-import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { issues } from '../../schema/models/issues'
 import { type Commit } from '../../schema/models/types/Commit'
@@ -372,6 +373,45 @@ describe('validateEvaluationV2', () => {
     expect(validatedOptions).toEqual(options)
   })
 
+  it('fails when linking issue to composite evaluation', async () => {
+    const { issue } = await factories.createIssue({
+      document: document,
+      workspace: workspace,
+    })
+
+    const compositeSettings = {
+      name: 'name',
+      description: 'description',
+      type: EvaluationType.Composite,
+      metric: CompositeEvaluationMetric.Average,
+      configuration: {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        evaluationUuids: [],
+      },
+    } as EvaluationSettings<
+      EvaluationType.Composite,
+      CompositeEvaluationMetric.Average
+    >
+
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: compositeSettings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: issue,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Cannot link an issue to a composite evaluation'),
+    )
+  })
+
   it('fails when has issue and expected output is required', async () => {
     const { issue } = await factories.createIssue({
       document: document,
@@ -390,7 +430,7 @@ describe('validateEvaluationV2', () => {
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new BadRequestError(
-        'Cannot link an evaluation to an issue with expected output',
+        'Cannot link an issue to an evaluation that requires expected output',
       ),
     )
   })
@@ -432,7 +472,7 @@ describe('validateEvaluationV2', () => {
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new BadRequestError(
-        `Cannot link an evaluation to an issue that doesn't support live evaluation`,
+        `Cannot link an issue to an evaluation that doesn't support live evaluation`,
       ),
     )
   })
@@ -465,7 +505,7 @@ describe('validateEvaluationV2', () => {
         issue: updatedIssue,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Cannot use an issue that has been merged'),
+      new BadRequestError('Cannot link an issue that has been merged'),
     )
   })
 
@@ -497,7 +537,7 @@ describe('validateEvaluationV2', () => {
         issue: updatedIssue,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Cannot use an issue that has been resolved'),
+      new BadRequestError('Cannot link an issue that has been resolved'),
     )
   })
 
@@ -529,7 +569,7 @@ describe('validateEvaluationV2', () => {
         issue: updatedIssue,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Cannot use an issue that has been ignored'),
+      new BadRequestError('Cannot link an issue that has been ignored'),
     )
   })
 

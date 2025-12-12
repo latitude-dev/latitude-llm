@@ -10,6 +10,7 @@ const compositeEvaluationConfiguration = baseEvaluationConfiguration.extend({
   evaluationUuids: z.array(z.string()),
   minThreshold: z.number().optional(), // Threshold percentage
   maxThreshold: z.number().optional(), // Threshold percentage
+  defaultTarget: z.boolean().optional(), // Default for optimizations and distillations // TODO(opts): Should this configuration be here?
 })
 const compositeEvaluationResultMetadata = baseEvaluationResultMetadata.extend({
   results: z.record(

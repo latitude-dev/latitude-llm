@@ -91,12 +91,14 @@ function ConfigurationSimpleForm({
           configuration.evaluationUuids.map((uuid) => (
             <FormFieldGroup key={uuid} layout='horizontal' centered>
               <Label
-                variant='default'
-                icon={evaluationOptions[uuid].icon as IconName}
+                variant={evaluationOptions[uuid] ? 'default' : 'destructive'}
+                icon={
+                  (evaluationOptions[uuid]?.icon as IconName) ?? 'alertTriangle'
+                }
                 className='w-auto flex-shrink-0 pr-1.5'
                 htmlFor={`weights[${uuid}]`}
               >
-                {evaluationOptions[uuid].label}
+                {evaluationOptions[uuid]?.label ?? 'Unknown'}
               </Label>
               <NumberInput
                 defaultValue={configuration.weights?.[uuid] ?? undefined}

@@ -15,7 +15,7 @@ type Props = {
   title?: string | ReactNode
   description?: string | ReactNode
   direction?: 'row' | 'column'
-  spacing?: 'small' | 'medium'
+  spacing?: 'xsmall' | 'small' | 'medium'
   cta?: ReactNode
   showIcon?: boolean
   centered?: boolean
@@ -56,6 +56,7 @@ export function Alert({
           'items-center justify-center': centered,
           'gap-4 lg:gap-8': spacing === 'medium',
           'gap-2.5 lg:gap-5': spacing === 'small',
+          'gap-1.5 lg:gap-3.5': spacing === 'xsmall',
         })}
       >
         <div

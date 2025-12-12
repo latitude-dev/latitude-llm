@@ -1,28 +1,32 @@
 import { isEqual } from 'lodash-es'
 import {
+  AlignmentMetricMetadata,
+  CompositeEvaluationMetric,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
-  AlignmentMetricMetadata,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
+import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 import { compactObject } from '../../lib/compactObject'
+import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import {
   DocumentVersionsRepository,
+  EvaluationsV2Repository,
   IssuesRepository,
   ProjectsRepository,
 } from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
-import { type Workspace } from '../../schema/models/types/Workspace'
-import { validateEvaluationV2 } from './validate'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Issue } from '../../schema/models/types/Issue'
-import { BadRequestError } from '../../lib/errors'
-import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { createEvaluationV2 } from './create'
+import { validateEvaluationV2 } from './validate'
 
 export async function updateEvaluationV2<
   T extends EvaluationType,
@@ -142,6 +146,16 @@ export async function updateEvaluationV2<
       .returning()
       .then((r) => r[0]!)
 
+    if (issueId !== undefined) {
+      const creating = await createDefaultCompositeTarget(
+        { evaluation, issue, document, commit, workspace }, // prettier-ignore
+        transaction,
+      )
+      if (creating.error) {
+        return Result.error(creating.error)
+      }
+    }
+
     evaluation = {
       ...result,
       uuid: result.evaluationUuid,
@@ -157,5 +171,86 @@ export async function updateEvaluationV2<
     })
 
     return Result.ok({ evaluation })
+  })
+}
+
+// TODO(perfeval): create default composite target if it doesn't exist and show a toast notification to the user
+// TODO(perfeval): if the default composite target exists show a toast notification to the user to go to the eval and update it
+async function createDefaultCompositeTarget<
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>(
+  {
+    evaluation,
+    issue,
+    document,
+    commit,
+    workspace,
+  }: {
+    evaluation: EvaluationV2<T, M>
+    issue: Issue | null
+    document: DocumentVersion
+    commit: Commit
+    workspace: Workspace
+  },
+  transaction = new Transaction(),
+) {
+  return await transaction.call(async (tx) => {
+    const repository = new EvaluationsV2Repository(workspace.id, tx)
+    let target = await repository
+      .getDefaultCompositeTarget({
+        projectId: commit.projectId,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+      })
+      .then((r) => r.unwrap())
+
+    if (!target && !issue) {
+      return Result.nil()
+    }
+
+    if (!target && issue) {
+      const creating = await createEvaluationV2(
+        {
+          document,
+          commit,
+          settings: {
+            name: 'Performance',
+            description: 'Measures the overall performance',
+            type: EvaluationType.Composite,
+            metric: CompositeEvaluationMetric.Weighted,
+            configuration: {
+              reverseScale: false,
+              actualOutput: {
+                messageSelection: 'last',
+                parsingFormat: 'string',
+              },
+              expectedOutput: {
+                parsingFormat: 'string',
+              },
+              evaluationUuids: [evaluation.uuid],
+              weights: { [evaluation.uuid]: 100 },
+              minThreshold: 75,
+              maxThreshold: 0,
+              defaultTarget: true,
+            },
+          },
+          options: {
+            evaluateLiveLogs: false,
+            enableSuggestions: false,
+            autoApplySuggestions: false,
+          },
+          workspace,
+        },
+        transaction,
+      )
+      if (creating.error) {
+        return Result.error(creating.error)
+      }
+
+      target = creating.value.evaluation
+    }
+
+    return Result.ok(target)
   })
 }

@@ -152,38 +152,46 @@ export async function validateEvaluationV2<
   }
 
   // ISSUE VALIDATIONS
-  if (metricSpecification.requiresExpectedOutput && issue) {
-    return Result.error(
-      new BadRequestError(
-        'Cannot link an evaluation to an issue with expected output',
-      ),
-    )
-  }
+  if (issue) {
+    if (settings.type === EvaluationType.Composite) {
+      return Result.error(
+        new BadRequestError('Cannot link an issue to a composite evaluation'),
+      )
+    }
 
-  if (!metricSpecification.supportsLiveEvaluation && issue) {
-    return Result.error(
-      new BadRequestError(
-        `Cannot link an evaluation to an issue that doesn't support live evaluation`,
-      ),
-    )
-  }
+    if (metricSpecification.requiresExpectedOutput) {
+      return Result.error(
+        new BadRequestError(
+          'Cannot link an issue to an evaluation that requires expected output',
+        ),
+      )
+    }
 
-  if (issue && issue.mergedAt) {
-    return Result.error(
-      new BadRequestError('Cannot use an issue that has been merged'),
-    )
-  }
+    if (!metricSpecification.supportsLiveEvaluation) {
+      return Result.error(
+        new BadRequestError(
+          `Cannot link an issue to an evaluation that doesn't support live evaluation`,
+        ),
+      )
+    }
 
-  if (issue && issue.resolvedAt) {
-    return Result.error(
-      new BadRequestError('Cannot use an issue that has been resolved'),
-    )
-  }
+    if (issue.mergedAt) {
+      return Result.error(
+        new BadRequestError('Cannot link an issue that has been merged'),
+      )
+    }
 
-  if (issue && issue.ignoredAt) {
-    return Result.error(
-      new BadRequestError('Cannot use an issue that has been ignored'),
-    )
+    if (issue.resolvedAt) {
+      return Result.error(
+        new BadRequestError('Cannot link an issue that has been resolved'),
+      )
+    }
+
+    if (issue.ignoredAt) {
+      return Result.error(
+        new BadRequestError('Cannot link an issue that has been ignored'),
+      )
+    }
   }
 
   if (alignmentMetric && (alignmentMetric < 0 || alignmentMetric > 100)) {

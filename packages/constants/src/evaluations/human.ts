@@ -7,7 +7,7 @@ import {
 } from './shared'
 
 const humanEvaluationConfiguration = baseEvaluationConfiguration.extend({
-  enableControls: z.boolean().optional(),
+  enableControls: z.boolean().optional(), // UI annotation controls
   criteria: z.string().optional(),
 })
 const humanEvaluationResultMetadata = baseEvaluationResultMetadata.extend({
