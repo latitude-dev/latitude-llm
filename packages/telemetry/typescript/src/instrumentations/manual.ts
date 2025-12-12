@@ -127,7 +127,7 @@ export type PromptSpanOptions = StartSpanOptions & {
   documentLogUuid?: string // TODO(tracing): temporal related log, remove when observability is ready
   versionUuid?: string // Alias for commitUuid
   promptUuid: string // Alias for documentUuid
-  projectId?: string
+  projectId?: number
   experimentUuid?: string
   testDeploymentId?: number
   externalId?: string

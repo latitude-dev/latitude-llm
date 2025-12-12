@@ -4,7 +4,7 @@ import { Result } from '../../lib/Result'
 import { createProject, helpers } from '../../tests/factories'
 import { Providers } from '@latitude-data/constants'
 import { DeploymentTest } from '../../schema/models/types/DeploymentTest'
-import type { Workspace } from '../../schema/models/types/Workspace'
+import type { WorkspaceDto } from '../../schema/models/types/Workspace'
 import type { Project } from '../../schema/models/types/Project'
 import type { Commit } from '../../schema/models/types/Commit'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -18,7 +18,7 @@ vi.spyOn(publisherModule.publisher, 'publishLater')
 vi.spyOn(ProviderApiKeysRepository.prototype, 'find')
 
 describe('runForegroundDocument', () => {
-  let workspace: Workspace
+  let workspace: WorkspaceDto
   let project: Project
   let commit: Commit
   let document: DocumentVersion

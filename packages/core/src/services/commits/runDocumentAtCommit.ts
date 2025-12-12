@@ -5,7 +5,11 @@ import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { LogSources } from '../../constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
-import { telemetry, TelemetryContext } from '../../telemetry'
+import {
+  type LatitudeTelemetry,
+  telemetry as realTelemetry,
+  TelemetryContext,
+} from '../../telemetry'
 import { runChain } from '../chains/run'
 import { createDocumentLog } from '../documentLogs/create'
 import { getResolvedContent } from '../documents'
@@ -33,23 +37,26 @@ export type RunDocumentAtCommitArgs = {
   testDeploymentId?: number
 }
 
-export async function runDocumentAtCommit({
-  context,
-  workspace,
-  document,
-  parameters,
-  commit,
-  customIdentifier,
-  source,
-  customPrompt,
-  experiment,
-  errorableUuid,
-  userMessage,
-  abortSignal,
-  tools = {},
-  simulationSettings,
-  testDeploymentId,
-}: RunDocumentAtCommitArgs) {
+export async function runDocumentAtCommit(
+  {
+    context,
+    workspace,
+    document,
+    parameters,
+    commit,
+    customIdentifier,
+    source,
+    customPrompt,
+    experiment,
+    errorableUuid,
+    userMessage,
+    abortSignal,
+    tools = {},
+    simulationSettings,
+    testDeploymentId,
+  }: RunDocumentAtCommitArgs,
+  telemetry: LatitudeTelemetry = realTelemetry,
+) {
   errorableUuid = errorableUuid ?? generateUUIDIdentifier()
   const providersMap = await buildProvidersMap({
     workspaceId: workspace.id,
@@ -71,6 +78,7 @@ export async function runDocumentAtCommit({
     promptUuid: document.documentUuid,
     template: result.value,
     versionUuid: commit.uuid,
+    projectId: commit.projectId,
     source,
   })
 

@@ -21,7 +21,11 @@ import { ProviderLogsRepository } from '../../../repositories'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
-import { BACKGROUND, telemetry } from '../../../telemetry'
+import {
+  BACKGROUND,
+  type LatitudeTelemetry,
+  telemetry as realTelemetry,
+} from '../../../telemetry'
 import { runChain } from '../../chains/run'
 import { parsePrompt } from '../../documents/parse'
 
@@ -168,6 +172,7 @@ export async function runPrompt<
     providers,
     commit,
     workspace,
+    telemetry = realTelemetry,
   }: {
     prompt: string
     parameters?: Record<string, unknown>
@@ -177,6 +182,7 @@ export async function runPrompt<
     providers: Map<string, ProviderApiKey>
     commit: Commit
     workspace: WorkspaceDto
+    telemetry?: LatitudeTelemetry
   },
   db = database,
 ) {
@@ -194,6 +200,7 @@ export async function runPrompt<
     documentLogUuid: resultUuid,
     versionUuid: commit.uuid,
     promptUuid: evaluation.uuid,
+    projectId: commit.projectId,
     template: prompt,
     parameters: parameters,
     source: LogSources.Evaluation,

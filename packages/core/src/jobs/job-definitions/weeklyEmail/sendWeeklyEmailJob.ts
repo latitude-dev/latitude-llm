@@ -10,10 +10,15 @@ import { WeeklyEmailMailer } from '../../../mailer/mailers/weeklyEmail/WeeklyEma
 import { memberships } from '../../../schema/models/memberships'
 import { users } from '../../../schema/models/users'
 import { Workspace } from '../../../schema/models/types/Workspace'
+import { DateRange } from '../../../constants'
 
 export type SendWeeklyEmailJobData = {
   workspaceId: number
   emails?: string[]
+  dateRange?: {
+    from?: string
+    to?: string
+  }
 }
 
 const BATCH_SIZE = 100 // Batch size can be up to 1000 in mailgun
@@ -63,7 +68,7 @@ async function getAddressListMembers({
  * 3. Sends emails in batches using the WeeklyEmailMailer
  */
 export async function sendWeeklyEmailJob(job: Job<SendWeeklyEmailJobData>) {
-  const { workspaceId, emails } = job.data
+  const { workspaceId, emails, dateRange: dateRangeRaw } = job.data
   const workspace = await unsafelyFindWorkspace(workspaceId)
 
   if (!workspace) {
@@ -74,10 +79,17 @@ export async function sendWeeklyEmailJob(job: Job<SendWeeklyEmailJobData>) {
 
   if (members.length === 0) return
 
+  const dateRange: DateRange | undefined = dateRangeRaw
+    ? {
+        from: dateRangeRaw.from ? new Date(dateRangeRaw.from) : undefined,
+        to: dateRangeRaw.to ? new Date(dateRangeRaw.to) : undefined,
+      }
+    : undefined
+
   const [logs, issues, annotations] = await Promise.all([
-    getLogsData({ workspace }),
-    getIssuesData({ workspace }),
-    getAnnotationsData({ workspace }),
+    getLogsData({ workspace, dateRange }),
+    getIssuesData({ workspace, dateRange }),
+    getAnnotationsData({ workspace, dateRange }),
   ])
 
   const mailer = new WeeklyEmailMailer()
