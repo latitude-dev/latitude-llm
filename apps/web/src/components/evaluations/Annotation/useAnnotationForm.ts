@@ -61,6 +61,7 @@ export function useAnnotationForm<
 
       startTransition(async () => {
         const [result, errors] = await annotateEvaluation({
+          documentUuid: span.documentUuid!,
           evaluationUuid: evaluation.uuid,
           spanId: span.id,
           traceId: span.traceId,

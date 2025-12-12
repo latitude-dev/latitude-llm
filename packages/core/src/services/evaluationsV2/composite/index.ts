@@ -218,7 +218,7 @@ async function run<M extends CompositeEvaluationMetric>(
 
   const repository = new EvaluationsV2Repository(workspace.id, db)
   let evaluations = await repository
-    .listAtCommitByDocument({
+    .list({
       commitUuid: commit.uuid,
       documentUuid: document.documentUuid,
     })

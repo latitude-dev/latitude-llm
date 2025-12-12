@@ -111,6 +111,7 @@ function EvaluationEditorContent({
   const debouncedSave = useDebouncedCallback(
     async (val: string) => {
       await updateEvaluation({
+        documentUuid: evaluation.documentUuid,
         evaluationUuid: evaluation.uuid,
         settings: {
           configuration: {

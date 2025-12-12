@@ -82,12 +82,18 @@ export function EvaluationsTable({
     async (evaluation: EvaluationV2) => {
       if (isDeletingEvaluation) return
       const [_, errors] = await deleteEvaluation({
+        documentUuid: document.documentUuid,
         evaluationUuid: evaluation.uuid,
       })
       if (errors) return
       setOpenDeleteModal(false)
     },
-    [isDeletingEvaluation, deleteEvaluation, setOpenDeleteModal],
+    [
+      isDeletingEvaluation,
+      deleteEvaluation,
+      setOpenDeleteModal,
+      document.documentUuid,
+    ],
   )
 
   const groupedEvaluations = useMemo(

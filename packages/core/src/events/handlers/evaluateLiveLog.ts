@@ -57,7 +57,7 @@ export const evaluateLiveLogJob = async ({
 
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
   let evaluations = await evaluationsRepository
-    .listAtCommitByDocument({
+    .list({
       commitUuid: commit.uuid,
       documentUuid: promptSpanMetadata.promptUuid,
     })

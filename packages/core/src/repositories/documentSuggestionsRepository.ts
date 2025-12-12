@@ -98,7 +98,7 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
       this.db,
     )
     const evaluations = await evaluationsV2Repository
-      .listAtCommitByDocument({
+      .list({
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
       })

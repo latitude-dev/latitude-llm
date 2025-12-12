@@ -43,11 +43,9 @@ export function EvaluationsGenerator({
   isGeneratingEvaluation: boolean
 }) {
   const navigate = useNavigate()
-
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-
   const [instructions, setInstructions] = useState<string>()
   const [settings, setSettings] = useState<EvaluationSettings>()
   const [options, setOptions] = useState<Partial<EvaluationOptions>>(
@@ -57,7 +55,10 @@ export function EvaluationsGenerator({
 
   const onGenerate = useCallback(async () => {
     if (isGeneratingEvaluation) return
-    const [result, errors] = await generateEvaluation({ instructions })
+    const [result, errors] = await generateEvaluation({
+      documentUuid: document.documentUuid,
+      instructions,
+    })
     if (errors) return
     setInstructions(undefined)
     setSettings(result.settings)
@@ -71,11 +72,16 @@ export function EvaluationsGenerator({
     setSettings,
     setOptions,
     setErrors,
+    document.documentUuid,
   ])
 
   const onCreate = useCallback(async () => {
     if (isCreatingEvaluation || !settings) return
-    const [result, errors] = await createEvaluation({ settings, options })
+    const [result, errors] = await createEvaluation({
+      documentUuid: document.documentUuid,
+      settings,
+      options,
+    })
     if (errors) {
       setErrors(errors)
     } else if (result?.evaluation) {

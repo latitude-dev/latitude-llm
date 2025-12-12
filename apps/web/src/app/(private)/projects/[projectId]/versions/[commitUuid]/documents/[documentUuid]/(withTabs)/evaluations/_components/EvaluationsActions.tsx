@@ -185,6 +185,7 @@ function AddEvaluation({
   const onCreate = useCallback(async () => {
     if (isCreatingEvaluation) return
     const [result, errors] = await createEvaluation({
+      documentUuid: document.documentUuid,
       settings,
       options,
       issueId,
@@ -289,7 +290,11 @@ function CombineEvaluations({
 
   const onCreate = useCallback(async () => {
     if (isCreatingEvaluation) return
-    const [result, errors] = await createEvaluation({ settings, options })
+    const [result, errors] = await createEvaluation({
+      settings,
+      options,
+      documentUuid: document.documentUuid,
+    })
 
     if (errors) {
       setErrors(errors)

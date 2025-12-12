@@ -61,7 +61,7 @@ export async function cloneEvaluationV2<
 
     const evaluationsRepository = new EvaluationsV2Repository(workspace.id, db)
     const evaluations = await evaluationsRepository
-      .listAtCommitByDocument({
+      .list({
         commitUuid: commit.uuid,
         documentUuid: evaluation.documentUuid,
       })

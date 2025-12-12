@@ -147,7 +147,7 @@ export async function destroyOrSoftDeleteDocuments(
     await Promise.all(
       documents.map(async (document) => {
         const evaluations = await repository
-          .listAtCommitByDocument({
+          .list({
             commitUuid: commit.uuid,
             documentUuid: document.documentUuid,
           })

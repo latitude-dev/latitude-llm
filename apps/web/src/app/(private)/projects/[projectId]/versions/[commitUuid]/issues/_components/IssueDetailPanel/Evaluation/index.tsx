@@ -132,6 +132,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       // If a new evaluation is selected, attach it to the issue
       if (newEvaluationUuid) {
         updateEvaluation({
+          documentUuid: issue.documentUuid,
           evaluationUuid: newEvaluationUuid,
           issueId: issue.id,
         })
@@ -139,12 +140,13 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       // If the issue already had an eval attached, remove it
       if (evaluationWithIssue) {
         updateEvaluation({
+          documentUuid: issue.documentUuid,
           evaluationUuid: evaluationWithIssue.uuid,
           issueId: null,
         })
       }
     },
-    [evaluationWithIssue, issue.id, updateEvaluation],
+    [evaluationWithIssue, issue.id, issue.documentUuid, updateEvaluation],
   )
 
   const evaluationIsGenerating = useMemo(() => {
@@ -210,6 +212,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     <GenerateEvaluationButton
       generateEvaluationFromIssue={(providerName, model) =>
         generateEvaluationFromIssue({
+          documentUuid: issue.documentUuid,
           issueId: issue.id,
           providerName,
           model,

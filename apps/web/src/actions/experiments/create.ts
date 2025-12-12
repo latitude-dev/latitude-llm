@@ -36,7 +36,7 @@ export const createExperimentAction = withDocument
 
     const evaluationsScope = new EvaluationsV2Repository(ctx.workspace.id)
     const docEvaluations = await evaluationsScope
-      .listAtCommitByDocument({
+      .list({
         projectId: ctx.commit.projectId,
         commitUuid: ctx.currentCommitUuid,
         documentUuid: ctx.document.documentUuid,

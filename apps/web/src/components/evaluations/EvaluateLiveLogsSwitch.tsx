@@ -44,11 +44,12 @@ export default function EvaluateLiveLogsSwitch<
     async (value: boolean) => {
       if (isDisabled) return
       await updateEvaluation({
+        documentUuid: document.documentUuid,
         evaluationUuid: evaluation.uuid,
         options: { evaluateLiveLogs: value },
       })
     },
-    [isDisabled, evaluation, updateEvaluation],
+    [isDisabled, evaluation, updateEvaluation, document.documentUuid],
   )
 
   if (!metricSpecification?.supportsLiveEvaluation) {
