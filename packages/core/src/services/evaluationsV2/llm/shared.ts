@@ -20,7 +20,7 @@ import { updatePromptMetadata } from '../../../lib/updatePromptMetadata'
 import { ProviderLogsRepository } from '../../../repositories'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
-import { type Workspace } from '../../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { BACKGROUND, telemetry } from '../../../telemetry'
 import { runChain } from '../../chains/run'
 import { parsePrompt } from '../../documents/parse'
@@ -92,7 +92,7 @@ export async function buildLlmEvaluationRunFunction<
   schema,
 }: {
   resultUuid: string
-  workspace: Workspace
+  workspace: WorkspaceDto
   providers: Map<string, ProviderApiKey>
   evaluation: EvaluationV2<EvaluationType.Llm, M>
   prompt: string
@@ -176,7 +176,7 @@ export async function runPrompt<
     evaluation: EvaluationV2<EvaluationType.Llm, M>
     providers: Map<string, ProviderApiKey>
     commit: Commit
-    workspace: Workspace
+    workspace: WorkspaceDto
   },
   db = database,
 ) {

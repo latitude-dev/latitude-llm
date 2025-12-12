@@ -13,7 +13,7 @@ import {
 } from '@latitude-data/constants'
 import { EvaluationsV2Repository } from '@latitude-data/core/repositories'
 import { buildStreamEvaluationRun } from '@latitude-data/core/services/evaluationsV2/llm/buildStreamEvaluationRun'
-import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
 import {
   NotFoundError,
   UnprocessableEntityError,
@@ -101,7 +101,7 @@ export const POST = errorHandler(
           documentUuid: string
           evaluationUuid: string
         }
-        workspace: Workspace
+        workspace: WorkspaceDto
       },
     ) => {
       const { projectId, commitUuid, documentUuid, evaluationUuid } = params

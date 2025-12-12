@@ -2,12 +2,15 @@ import { and, count, eq, gte } from 'drizzle-orm'
 import Redis from 'ioredis'
 import { QuotaType, SpanType, WorkspaceUsage } from '../../constants'
 import { type Subscription } from '../../schema/models/types/Subscription'
-import { type Workspace } from '../../schema/models/types/Workspace'
-import { SubscriptionPlan } from '../../plans'
-import { cache } from '../../cache'
+import {
+  WorkspaceDto,
+  type Workspace,
+} from '../../schema/models/types/Workspace'
+import { FREE_PLANS, SubscriptionPlan } from '../../plans'
+import { cache, getOrSet } from '../../cache'
 import { database } from '../../client'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
-import { BadRequestError } from '../../lib/errors'
+import { BadRequestError, PaymentRequiredError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
 import {
@@ -119,4 +122,40 @@ export async function computeWorkspaceUsage(
   }
 
   return Result.ok(usageResult)
+}
+
+export async function assertUsageWithinPlanLimits(
+  workspace: WorkspaceDto,
+  db = database,
+): PromisedResult<void, Error> {
+  if (!FREE_PLANS.includes(workspace.currentSubscription.plan)) {
+    return Result.nil() // Paid plans do not get enforced limits because we charge runs with credit packages
+  }
+
+  const cacheClient = await cache()
+  const cacheKey = `workspace-usage-${workspace.id}`
+  const usage = await getUsageFromCache(cacheClient, cacheKey)
+  if (usage === null) return Result.ok(undefined)
+
+  const quotaCacheKey = `workspace-quota-runs-${workspace.id}`
+  const runs = await getOrSet(
+    quotaCacheKey,
+    async () => {
+      return await computeQuota({ type: QuotaType.Runs, workspace }, db).then(
+        (r) => r.unwrap(),
+      )
+    },
+    3600, // 1 hour
+  )
+  runs.resetsAt = new Date(runs.resetsAt)
+  if (runs.limit === 'unlimited') return Result.nil()
+  if (usage >= runs.limit) {
+    return Result.error(
+      new PaymentRequiredError(
+        'You have reached the maximum number of runs allowed for your Latitude plan. Upgrade now.',
+      ),
+    )
+  }
+
+  return Result.nil()
 }

@@ -12,7 +12,7 @@ import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { type ProviderLog } from '../../../schema/models/types/ProviderLog'
-import { type Workspace } from '../../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import * as factories from '../../../tests/factories'
 import * as chains from '../../chains/run'
 import { buildPrompt, promptSchema } from './binary'
@@ -23,7 +23,7 @@ describe('runPrompt', () => {
     runChain: MockInstance
   }
 
-  let workspace: Workspace
+  let workspace: WorkspaceDto
   let commit: Commit
   let provider: ProviderApiKey
   let evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>

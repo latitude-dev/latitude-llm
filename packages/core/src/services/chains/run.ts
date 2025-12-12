@@ -7,7 +7,7 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { Chain as PromptlChain } from 'promptl-ai'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import {
   ChainStepResponse,
   LogSources,
@@ -30,7 +30,7 @@ export type ChainResponse<T extends StreamType> = TypedResult<
   ChainError<RunErrorCodes>
 >
 type CommonArgs<C extends PromptlChain = PromptlChain> = {
-  workspace: Workspace
+  workspace: WorkspaceDto
   providersMap: CachedApiKeys
   source: LogSources
   chain: C

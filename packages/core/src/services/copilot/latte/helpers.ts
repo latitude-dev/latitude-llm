@@ -6,7 +6,10 @@ import {
   NotImplementedError,
 } from '../../../lib/errors'
 import { type Project } from '../../../schema/models/types/Project'
-import { type Workspace } from '../../../schema/models/types/Workspace'
+import {
+  WorkspaceDto,
+  type Workspace,
+} from '../../../schema/models/types/Workspace'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { LatteThreadUpdateArgs } from '../../../websockets/constants'
@@ -89,7 +92,7 @@ export async function getCopilotDocument(
   debugVersionUuid?: string,
 ): PromisedResult<
   {
-    workspace: Workspace
+    workspace: WorkspaceDto
     project: Project
     commit: Commit
     document: DocumentVersion
