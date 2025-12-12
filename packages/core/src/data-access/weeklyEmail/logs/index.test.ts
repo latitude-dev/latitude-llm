@@ -552,7 +552,7 @@ describe('getLogsData', () => {
   })
 
   describe('top projects', () => {
-    it('returns top 10 projects ordered by logs count', async () => {
+    it('returns top projects ordered by logs count respecting limit', async () => {
       const { workspace: freshWorkspace } = await createWorkspace()
 
       // Enable production usage (outside date range to not affect counts)
@@ -564,63 +564,78 @@ describe('getLogsData', () => {
         startedAt: outsideRange,
       })
 
-      // Create 12 projects with different log counts
-      for (let i = 0; i < 12; i++) {
-        const { project } = await createProject({
-          workspace: freshWorkspace,
-          documents: { [`doc-${i}`]: 'content' },
+      // Create 2 projects with different log counts
+      const { project: project1 } = await createProject({
+        workspace: freshWorkspace,
+        documents: { doc1: 'content' },
+      })
+      const { project: project2 } = await createProject({
+        workspace: freshWorkspace,
+        documents: { doc2: 'content' },
+      })
+
+      // Project 1: 2 logs
+      for (let j = 0; j < 2; j++) {
+        const traceId = `project-${project1.id}-trace-${j}`
+        await createSpan({
+          workspaceId: freshWorkspace.id,
+          projectId: project1.id,
+          traceId,
+          type: SpanType.Prompt,
+          source: LogSources.API,
+          startedAt: STATIC_TEST_DATE,
         })
-
-        const logsCount = 12 - i // Descending counts: 12, 11, 10, ..., 1
-
-        for (let j = 0; j < logsCount; j++) {
-          const traceId = `project-${project.id}-trace-${j}`
-
-          // Create prompt span for the trace
-          await createSpan({
-            workspaceId: freshWorkspace.id,
-            projectId: project.id,
-            traceId,
-            type: SpanType.Prompt,
-            source: LogSources.API,
-            startedAt: STATIC_TEST_DATE,
-          })
-
-          // Create completion span for tokens and cost
-          await createSpan({
-            workspaceId: freshWorkspace.id,
-            projectId: project.id,
-            traceId,
-            type: SpanType.Completion,
-            source: LogSources.API,
-            startedAt: STATIC_TEST_DATE,
-            tokensPrompt: 10,
-            tokensCompletion: 20,
-            cost: 100000, // $1.00 per trace in millicents
-          })
-        }
+        await createSpan({
+          workspaceId: freshWorkspace.id,
+          projectId: project1.id,
+          traceId,
+          type: SpanType.Completion,
+          source: LogSources.API,
+          startedAt: STATIC_TEST_DATE,
+          tokensPrompt: 10,
+          tokensCompletion: 20,
+          cost: 100000, // $1.00 per trace
+        })
       }
+
+      // Project 2: 1 log
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        projectId: project2.id,
+        traceId: `project-${project2.id}-trace-0`,
+        type: SpanType.Prompt,
+        source: LogSources.API,
+        startedAt: STATIC_TEST_DATE,
+      })
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        projectId: project2.id,
+        traceId: `project-${project2.id}-trace-0`,
+        type: SpanType.Completion,
+        source: LogSources.API,
+        startedAt: STATIC_TEST_DATE,
+        tokensPrompt: 10,
+        tokensCompletion: 20,
+        cost: 100000,
+      })
 
       const result = await getLogsData({
         workspace: freshWorkspace,
         dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
+        projectsLimit: 1,
       })
 
-      // Should return only top 10
-      expect(result.topProjects).toHaveLength(10)
+      // Should return only top 1 (respecting projectsLimit)
+      expect(result.topProjects).toHaveLength(1)
 
-      // Should be ordered by logs count descending
-      expect(result.topProjects[0]?.logsCount).toEqual(12)
-      expect(result.topProjects[1]?.logsCount).toEqual(11)
-      expect(result.topProjects[9]?.logsCount).toEqual(3)
+      // Should be the project with most logs (project1 with 2 logs)
+      expect(result.topProjects[0]?.projectId).toEqual(project1.id)
+      expect(result.topProjects[0]?.logsCount).toEqual(2)
+      expect(result.topProjects[0]?.tokensSpent).toEqual(2 * 30) // 2 traces * 30 tokens
+      expect(result.topProjects[0]?.tokensCost).toEqual(2 * 1) // 2 traces * $1.00
 
-      // Check tokens and cost for first project (12 traces)
-      expect(result.topProjects[0]?.tokensSpent).toEqual(12 * 30) // 12 traces * 30 tokens
-      expect(result.topProjects[0]?.tokensCost).toEqual(12 * 1) // 12 traces * $1.00
-
-      // Global count should include all 12 projects
-      const totalLogs = ((12 + 1) * 12) / 2 // Sum from 1 to 12
-      expect(result.logsCount).toEqual(totalLogs)
+      // Global count should include all 3 logs (2 from project1 + 1 from project2)
+      expect(result.logsCount).toEqual(3)
     })
 
     it('includes project name in top projects', async () => {

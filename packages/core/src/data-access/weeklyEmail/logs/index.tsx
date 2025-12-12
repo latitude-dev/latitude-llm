@@ -87,9 +87,11 @@ async function getTopProjectsLogsStats(
   {
     workspace,
     range,
+    projectsLimit,
   }: {
     workspace: Workspace
     range: SureDateRange
+    projectsLimit: number
   },
   db = database,
 ) {
@@ -131,7 +133,7 @@ async function getTopProjectsLogsStats(
     .where(eq(projects.workspaceId, workspace.id))
     .groupBy(projects.id, projects.name)
     .orderBy(desc(sql`COUNT(DISTINCT ${spansInRangeSubquery.traceId})`))
-    .limit(10)
+    .limit(projectsLimit)
 
   return projectStats.map((project) => ({
     projectId: project.projectId,
@@ -146,9 +148,11 @@ export async function getLogsData(
   {
     workspace,
     dateRange,
+    projectsLimit = 10,
   }: {
     workspace: Workspace
     dateRange?: DateRange
+    projectsLimit?: number
   },
   db = database,
 ): Promise<LogStats> {
@@ -171,7 +175,10 @@ export async function getLogsData(
   const range = getDateRangeOrLastWeekRange(dateRange)
 
   const globalStats = await getGlobalLogsStats({ workspace, range }, db)
-  const topProjects = await getTopProjectsLogsStats({ workspace, range }, db)
+  const topProjects = await getTopProjectsLogsStats(
+    { workspace, range, projectsLimit },
+    db,
+  )
 
   return {
     usedInProduction: true,

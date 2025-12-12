@@ -19,9 +19,7 @@ export async function updateDeploymentTest(
 ): Promise<TypedResult<DeploymentTest>> {
   if (input.trafficPercentage < 0 || input.trafficPercentage > 100) {
     return Result.error(
-      new BadRequestError(
-        'Traffic percentage must be between 0 and 100',
-      ),
+      new BadRequestError('Traffic percentage must be between 0 and 100'),
     )
   }
 
