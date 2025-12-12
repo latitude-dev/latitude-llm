@@ -126,23 +126,6 @@ describe('DeploymentTestsRepository', () => {
       expect(result?.testType).toBe('ab')
     })
 
-    it('returns null for paused test', async () => {
-      await database.insert(deploymentTests).values({
-        uuid: randomUUID(),
-        workspaceId: workspace.id,
-        projectId: project.id,
-        challengerCommitId: challengerCommit.id,
-        testType: 'shadow',
-        status: 'paused',
-      })
-
-      const result = await repo.findActiveForCommit(
-        project.id,
-        baselineCommit.id,
-      )
-      expect(result).toBeNull()
-    })
-
     it('returns null for completed test', async () => {
       await database.insert(deploymentTests).values({
         uuid: randomUUID(),

@@ -6,19 +6,29 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { CommitItem } from './CommitItem'
 import { CommitItemsWrapper } from './CommitItemsWrapper'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import useDeploymentTests from '$/stores/deploymentTests'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
+import {
+  DeploymentTest,
+  DeploymentTestStatus,
+} from '@latitude-data/core/schema/models/types/DeploymentTest'
 
 export type CommitTestInfo =
   | {
       type: 'ab'
       isBaseline: boolean
       trafficPercentage: number
+      testUuid: string
+      status: DeploymentTestStatus
     }
   | {
       type: 'shadow'
+      trafficPercentage: number
+      testUuid: string
+      status: DeploymentTestStatus
     }
   | null
 
@@ -35,14 +45,15 @@ export function getCommitTestInfo(
     if (test.testType === 'ab') {
       const isChallenger = test.challengerCommitId === commitId
       if (isBaseline || isChallenger) {
-        // Baseline gets remaining traffic (100 - challenger %), challenger gets its assigned %
-        const trafficPercentage = isBaseline
-          ? 100 - (test.trafficPercentage ?? 50)
-          : (test.trafficPercentage ?? 50)
+        // Store challenger's percentage for both baseline and challenger
+        // Baseline will calculate its percentage as (100 - challenger %) in BadgeCommit
+        const trafficPercentage = test.trafficPercentage ?? 50
         return {
           type: 'ab',
           isBaseline,
           trafficPercentage,
+          testUuid: test.uuid,
+          status: test.status,
         }
       }
     }
@@ -53,7 +64,12 @@ export function getCommitTestInfo(
     if (test.testType === 'shadow') {
       const isChallenger = test.challengerCommitId === commitId
       if (isBaseline || isChallenger) {
-        return { type: 'shadow' }
+        return {
+          type: 'shadow',
+          trafficPercentage: test.trafficPercentage ?? 100,
+          testUuid: test.uuid,
+          status: test.status,
+        }
       }
     }
   }
@@ -65,7 +81,7 @@ export function ActiveCommitsList({
   currentDocument,
   headCommit,
   commitsInActiveTests,
-  activeTests,
+  activeTests: serverActiveTests,
   onCommitPublish,
   onCommitDelete,
 }: {
@@ -76,6 +92,15 @@ export function ActiveCommitsList({
   onCommitPublish: React.Dispatch<React.SetStateAction<number | null>>
   onCommitDelete: React.Dispatch<React.SetStateAction<number | null>>
 }) {
+  const { project } = useCurrentProject()
+  const { data: storeActiveTests } = useDeploymentTests(
+    { projectId: project.id, activeOnly: true },
+    { fallbackData: serverActiveTests },
+  )
+
+  // Use store data (it will be the same as serverActiveTests initially, but updates when store changes)
+  const activeTests = storeActiveTests
+
   const activeCommits = useMemo(() => {
     const commits = new Map<number, Commit>()
 
@@ -84,7 +109,9 @@ export function ActiveCommitsList({
       commits.set(headCommit.id, headCommit)
     }
 
-    // Add commits in active test deployments
+    // Add commits in active test deployments (includes paused tests)
+    // The server-side commitsInActiveTests should include all commits in active tests,
+    // including paused ones, since findAllActiveForProject includes paused status
     commitsInActiveTests.forEach((commit) => {
       commits.set(commit.id, commit)
     })

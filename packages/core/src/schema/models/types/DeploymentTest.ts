@@ -10,4 +10,4 @@ export type DeploymentTestStatus =
   | 'cancelled'
 export type DeploymentTestType = 'shadow' | 'ab'
 export type RoutedTo = 'baseline' | 'challenger'
-export const ACTIVE_DEPLOYMENT_STATUSES = ['pending', 'running']
+export const ACTIVE_DEPLOYMENT_STATUSES = ['pending', 'running', 'paused']

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 import { ROUTES } from '$/services/routes'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
@@ -14,11 +14,14 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useSelectedLayoutSegment } from 'next/navigation'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
+import useDeploymentTests from '$/stores/deploymentTests'
+import { ACTIVE_DEPLOYMENT_STATUSES } from '@latitude-data/core/schema/models/types/DeploymentTest'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import type { CommitTestInfo } from '../ActiveCommitsList'
+import { ConfigureTestModal } from './ConfigureTestModal'
 export type SimpleUser = Omit<User, 'encryptedPassword'>
 
 export enum BadgeType {
@@ -36,8 +39,16 @@ export function BadgeCommit({
   isLive: boolean
   testInfo?: CommitTestInfo | null
 }) {
-  // Head commit always shows "Live" label regardless of tests
+  // Head commit shows "Live" or "live: <traffic percentage>" if there's an A/B test
   if (isLive) {
+    if (testInfo?.type === 'ab' && testInfo.status !== 'paused') {
+      const baselineTrafficPercentage = 100 - testInfo.trafficPercentage
+      return (
+        <Badge variant='accent' className='min-w-0 flex-shrink-0'>
+          live: {baselineTrafficPercentage}%
+        </Badge>
+      )
+    }
     return (
       <Badge variant='accent' className='min-w-0 flex-shrink-0'>
         Live
@@ -47,10 +58,11 @@ export function BadgeCommit({
 
   // If there's test info for non-head commits, show test badge
   if (testInfo) {
+    const isPaused = testInfo.status === 'paused'
     if (testInfo.type === 'shadow') {
       return (
         <Badge variant='purple' className='flex-shrink-0'>
-          Shadow test
+          Shadow test: {isPaused ? 'Paused' : `${testInfo.trafficPercentage}%`}
         </Badge>
       )
     }
@@ -59,7 +71,7 @@ export function BadgeCommit({
       const variant = 'warningMuted'
       return (
         <Badge variant={variant} className='flex-shrink-0'>
-          A/B test: {testInfo.trafficPercentage}%
+          A/B test: {isPaused ? 'Paused' : `${testInfo.trafficPercentage}%`}
         </Badge>
       )
     }
@@ -119,81 +131,168 @@ export function CommitItem({
 
   if (!commit || !commitPath) return null
 
-  const hasViewButton = currentCommit.uuid !== commit.uuid
   const hasDraftButtons = isDraft && onCommitPublish && onCommitDelete
-  const hasAnyButton = hasViewButton || hasDraftButtons
+  const isCurrentCommit = currentCommit.uuid === commit.uuid
+  const isHeadBaseline =
+    commit.id === headCommitId &&
+    testInfo?.type === 'ab' &&
+    testInfo?.isBaseline
+  const hasTest = !!testInfo && !isHeadBaseline
+  const isActiveTest =
+    testInfo?.status && ACTIVE_DEPLOYMENT_STATUSES.includes(testInfo.status)
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
 
-  return (
-    <div
-      className={cn('flex flex-col p-4 gap-y-2', {
-        'bg-accent/50': commit.id === currentCommit.id,
-      })}
-    >
-      <div className='flex flex-row items-center justify-between'>
-        <div className='flex flex-col gap-2'>
-          <Text.H5>{commit.title}</Text.H5>
-          <div>
-            <BadgeCommit
-              commit={commit}
-              isLive={commit.id === headCommitId}
-              testInfo={testInfo}
-            />
-          </div>
+  const { stop } = useDeploymentTests(
+    { projectId: project.id, activeOnly: true },
+    { revalidateOnMount: false },
+  )
+
+  const handleStopTest = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (testInfo?.testUuid) {
+      stop.execute(testInfo.testUuid)
+    }
+  }
+
+  const content = (
+    <div className='flex flex-row items-center justify-between gap-4'>
+      <div className='flex flex-col gap-2 min-w-0 flex-1'>
+        <Text.H5 ellipsis>{commit.title}</Text.H5>
+        <div>
+          <BadgeCommit
+            commit={commit}
+            isLive={commit.id === headCommitId}
+            testInfo={testInfo}
+          />
         </div>
-        {hasAnyButton && (
-          <div className='flex flex-row items-center gap-x-4'>
-            <div className='flex flex-row items-center gap-4 px-2 py-0 border rounded-xl'>
-              {hasViewButton && (
+      </div>
+      {(hasDraftButtons || hasTest) && (
+        <div
+          className='flex flex-row items-center gap-x-4'
+          onClick={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation()
+          }}
+        >
+          <div className='flex flex-row items-center gap-4 px-2 py-0 border rounded-xl'>
+            {hasTest && (
+              <>
                 <Tooltip
                   asChild
                   trigger={
-                    <Link href={commitPath}>
-                      <Button
-                        iconProps={{
-                          name: 'arrowRight',
-                          color: 'foregroundMuted',
-                        }}
-                        variant='nope'
-                      />
-                    </Link>
+                    <Button
+                      iconProps={{ name: 'settings', color: 'foregroundMuted' }}
+                      variant='nope'
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        setIsConfigModalOpen(true)
+                      }}
+                    />
                   }
                 >
-                  View version
+                  Configure test
                 </Tooltip>
-              )}
-              {hasDraftButtons && (
-                <>
-                  <Tooltip
-                    asChild
-                    trigger={
-                      <Button
-                        iconProps={{ name: 'split', color: 'foregroundMuted' }}
-                        variant='nope'
-                        onClick={() => onCommitPublish(commit.id)}
-                      />
-                    }
-                  >
-                    Deploy version
-                  </Tooltip>
+                {!isActiveTest && (
                   <Tooltip
                     asChild
                     trigger={
                       <Button
                         iconProps={{ name: 'trash', color: 'foregroundMuted' }}
                         variant='nope'
-                        onClick={() => onCommitDelete(commit.id)}
+                        onClick={handleStopTest}
+                        disabled={stop.isPending}
                       />
                     }
                   >
-                    Delete version
+                    Stop test
                   </Tooltip>
-                </>
-              )}
-            </div>
+                )}
+              </>
+            )}
+            {hasDraftButtons && !hasTest && (
+              <>
+                <Tooltip
+                  asChild
+                  trigger={
+                    <Button
+                      iconProps={{ name: 'split', color: 'foregroundMuted' }}
+                      variant='nope'
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        onCommitPublish?.(commit.id)
+                      }}
+                    />
+                  }
+                >
+                  Deploy version
+                </Tooltip>
+                <Tooltip
+                  asChild
+                  trigger={
+                    <Button
+                      iconProps={{ name: 'trash', color: 'foregroundMuted' }}
+                      variant='nope'
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        onCommitDelete?.(commit.id)
+                      }}
+                    />
+                  }
+                >
+                  Delete version
+                </Tooltip>
+              </>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
+  )
+
+  const className = cn('flex flex-col p-4 gap-y-2', {
+    'bg-accent/50': isCurrentCommit,
+  })
+
+  const linkClassName = cn(className, 'hover:bg-muted/50 transition-colors')
+
+  return (
+    <>
+      {isCurrentCommit ? (
+        <div className={className}>{content}</div>
+      ) : (
+        <Link
+          href={commitPath}
+          className={linkClassName}
+          onClick={(e) => {
+            // Prevent navigation if clicking on buttons or their container
+            const target = e.target as HTMLElement
+            if (
+              target.closest('button') ||
+              target.closest('[role="button"]') ||
+              target.closest('.flex.flex-row.items-center.gap-x-4')
+            ) {
+              e.preventDefault()
+            }
+          }}
+        >
+          {content}
+        </Link>
+      )}
+      {hasTest && testInfo && (
+        <ConfigureTestModal
+          testInfo={testInfo}
+          isOpen={isConfigModalOpen}
+          onOpenChange={setIsConfigModalOpen}
+        />
+      )}
+    </>
   )
 }
 
