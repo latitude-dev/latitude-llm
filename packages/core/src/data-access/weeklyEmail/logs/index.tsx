@@ -162,16 +162,6 @@ export async function getLogsData(
   )
   const usedInProduction = allTimesProductionSpansCount > 0
 
-  if (!usedInProduction) {
-    return {
-      usedInProduction: false,
-      logsCount: 0,
-      tokensSpent: 0,
-      tokensCost: 0,
-      topProjects: [],
-    }
-  }
-
   const range = getDateRangeOrLastWeekRange(dateRange)
 
   const globalStats = await getGlobalLogsStats({ workspace, range }, db)
@@ -181,7 +171,7 @@ export async function getLogsData(
   )
 
   return {
-    usedInProduction: true,
+    usedInProduction,
     ...globalStats,
     topProjects,
   }

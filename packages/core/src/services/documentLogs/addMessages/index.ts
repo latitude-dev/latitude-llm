@@ -14,7 +14,12 @@ import {
   ProviderLogsRepository,
 } from '../../../repositories'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
-import { BACKGROUND, telemetry, TelemetryContext } from '../../../telemetry'
+import {
+  BACKGROUND,
+  type LatitudeTelemetry,
+  telemetry as realTelemetry,
+  TelemetryContext,
+} from '../../../telemetry'
 import { getInputSchema, getOutputType } from '../../chains/ChainValidator'
 import { scanDocumentContent } from '../../documents'
 import { isErrorRetryable } from '../../evaluationsV2/run'
@@ -31,16 +36,19 @@ type AddMessagesArgs = {
   testDeploymentId?: number
 }
 
-export async function addMessages({
-  workspace,
-  documentLogUuid,
-  messages,
-  source,
-  abortSignal,
-  tools = {},
-  context = BACKGROUND({ workspaceId: workspace.id }),
-  testDeploymentId,
-}: AddMessagesArgs) {
+export async function addMessages(
+  {
+    workspace,
+    documentLogUuid,
+    messages,
+    source,
+    abortSignal,
+    tools = {},
+    context = BACKGROUND({ workspaceId: workspace.id }),
+    testDeploymentId,
+  }: AddMessagesArgs,
+  telemetry: LatitudeTelemetry = realTelemetry,
+) {
   if (!documentLogUuid) {
     return Result.error(new Error('documentLogUuid is required'))
   }
@@ -59,6 +67,7 @@ export async function addMessages({
     promptUuid: document.documentUuid,
     template: document.content,
     versionUuid: commit.uuid,
+    projectId: commit.projectId,
   })
 
   if (!providerLog.providerId) {

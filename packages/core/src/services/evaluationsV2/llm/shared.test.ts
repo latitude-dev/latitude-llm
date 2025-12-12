@@ -14,6 +14,10 @@ import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey
 import { type ProviderLog } from '../../../schema/models/types/ProviderLog'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import * as factories from '../../../tests/factories'
+import {
+  telemetry as realTelemetry,
+  type LatitudeTelemetry,
+} from '../../../telemetry'
 import * as chains from '../../chains/run'
 import { buildPrompt, promptSchema } from './binary'
 import { runPrompt } from './shared'
@@ -330,5 +334,40 @@ describe('runPrompt', () => {
     expect(mocks.runChain).toHaveBeenCalledOnce()
     const runChainArgs = mocks.runChain.mock.calls[0][0]
     expect(runChainArgs.source).toBe(LogSources.Evaluation)
+  })
+
+  it('calls telemetry.prompt with projectId and all required parameters', async () => {
+    const mockPrompt = vi
+      .fn()
+      .mockImplementation(realTelemetry.prompt.bind(realTelemetry))
+    const mockTelemetry = {
+      ...realTelemetry,
+      prompt: mockPrompt,
+    } as unknown as LatitudeTelemetry
+
+    await runPrompt({
+      prompt: prompt,
+      parameters: parameters,
+      schema: promptSchema,
+      resultUuid: resultUuid,
+      evaluation: evaluation,
+      providers: new Map([[provider.name, provider]]),
+      commit: commit,
+      workspace: workspace,
+      telemetry: mockTelemetry,
+    })
+
+    expect(mockPrompt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        documentLogUuid: resultUuid,
+        versionUuid: commit.uuid,
+        promptUuid: evaluation.uuid,
+        projectId: commit.projectId,
+        template: prompt,
+        parameters: parameters,
+        source: LogSources.Evaluation,
+      }),
+    )
   })
 })

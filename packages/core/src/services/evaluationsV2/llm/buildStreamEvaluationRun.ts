@@ -8,7 +8,11 @@ import {
 import { Result, TypedResult } from '../../../lib/Result'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
-import { BACKGROUND, telemetry } from '../../../telemetry'
+import {
+  BACKGROUND,
+  type LatitudeTelemetry,
+  telemetry as realTelemetry,
+} from '../../../telemetry'
 import { runChain } from '../../chains/run'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { buildLlmEvaluationRunFunction } from './shared'
@@ -16,7 +20,7 @@ import { buildLlmEvaluationRunFunction } from './shared'
 const buildStreamHandler =
   (
     stream: ReadableStream<ChainEvent>,
-    $span: ReturnType<typeof telemetry.prompt>,
+    $span: ReturnType<typeof realTelemetry.prompt>,
   ) =>
   async ({
     signal,
@@ -70,10 +74,12 @@ export async function buildStreamEvaluationRun({
   workspace,
   evaluation,
   parameters,
+  telemetry = realTelemetry,
 }: {
   workspace: WorkspaceDto
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
   parameters: Record<string, unknown>
+  telemetry?: LatitudeTelemetry
 }): Promise<TypedResult<{ streamHandler: StreamHandler }, Error>> {
   const resultUuid = generateUUIDIdentifier()
   const result = await buildLlmEvaluationRunFunction({

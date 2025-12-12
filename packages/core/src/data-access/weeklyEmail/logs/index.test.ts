@@ -24,19 +24,47 @@ describe('getLogsData', () => {
   })
 
   describe('when workspace has never used production', () => {
-    it('returns usedInProduction: false with zero counts', async () => {
+    it('returns usedInProduction: false but shows non-production stats', async () => {
+      const { workspace: freshWorkspace } = await createWorkspace()
+
+      // Create playground spans (non-production)
       await createSpan({
-        workspaceId: workspace.id,
+        workspaceId: freshWorkspace.id,
+        traceId: 'playground-trace-1',
         type: SpanType.Prompt,
         source: LogSources.Playground,
-        startedAt: new Date(),
+        startedAt: STATIC_TEST_DATE,
       })
-      const result = await getLogsData({ workspace })
+
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        traceId: 'playground-trace-1',
+        type: SpanType.Completion,
+        source: LogSources.Playground,
+        startedAt: STATIC_TEST_DATE,
+        tokensPrompt: 100,
+        tokensCompletion: 200,
+        cost: 5000, // $0.05 in millicents
+      })
+
+      await createSpan({
+        workspaceId: freshWorkspace.id,
+        traceId: 'experiment-trace-1',
+        type: SpanType.Prompt,
+        source: LogSources.Experiment,
+        startedAt: STATIC_TEST_DATE,
+      })
+
+      const result = await getLogsData({
+        workspace: freshWorkspace,
+        dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
+      })
+
       expect(result).toEqual({
         usedInProduction: false,
-        logsCount: 0,
-        tokensSpent: 0,
-        tokensCost: 0,
+        logsCount: 2, // 2 distinct traces
+        tokensSpent: 300, // 100 + 200
+        tokensCost: 0.05, // 5000 / 100000
         topProjects: [],
       })
     })
@@ -468,6 +496,7 @@ describe('getLogsData', () => {
       // Create only completion spans
       await createSpan({
         workspaceId: workspace.id,
+        traceId: 'completion-only-trace',
         type: SpanType.Completion,
         source: LogSources.API,
         startedAt: STATIC_TEST_DATE,
@@ -480,11 +509,13 @@ describe('getLogsData', () => {
         dateRange: { from: LAST_WEEK_START, to: LAST_WEEK_END },
       })
 
+      // Even without prompt spans, completion spans still count for tokens/cost
+      // But usedInProduction is false since there are no production prompt spans
       expect(result).toEqual({
         usedInProduction: false,
-        logsCount: 0,
-        tokensSpent: 0,
-        tokensCost: 0,
+        logsCount: 1, // Completion span has a trace ID
+        tokensSpent: 100,
+        tokensCost: 0.01, // 1000 / 100000
         topProjects: [],
       })
     })

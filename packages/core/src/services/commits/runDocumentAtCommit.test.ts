@@ -10,6 +10,10 @@ import { createProject, createTelemetryContext } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { Ok, Result } from './../../lib/Result'
 import { runDocumentAtCommit } from './index'
+import {
+  telemetry as realTelemetry,
+  type LatitudeTelemetry,
+} from '../../telemetry'
 
 const mocks = {
   publish: vi.fn(),
@@ -287,6 +291,58 @@ model: gpt-4o
       ).toEqual('custom-identifier')
     })
 
+    it('calls telemetry.prompt with all required parameters', async () => {
+      const { context, workspace, document, commit, project } = await buildData(
+        {
+          doc1Content: dummyDoc1Content,
+        },
+      )
+
+      const mockPrompt = vi
+        .fn()
+        .mockImplementation(realTelemetry.prompt.bind(realTelemetry))
+      const mockTelemetry = {
+        ...realTelemetry,
+        prompt: mockPrompt,
+      } as unknown as LatitudeTelemetry
+
+      const parameters = { testParam: 'testValue' }
+      const customIdentifier = 'test-custom-id'
+      const testDeploymentId = 456
+
+      const { lastResponse } = await runDocumentAtCommit(
+        {
+          context,
+          workspace,
+          document,
+          commit,
+          parameters,
+          customIdentifier,
+          testDeploymentId,
+          source: LogSources.API,
+        },
+        mockTelemetry,
+      ).then((r) => r.unwrap())
+
+      await lastResponse
+
+      expect(mockPrompt).toHaveBeenCalledWith(
+        context,
+        expect.objectContaining({
+          documentLogUuid: expect.any(String),
+          name: document.path.split('/').at(-1),
+          parameters,
+          promptUuid: document.documentUuid,
+          template: expect.any(String),
+          versionUuid: commit.uuid,
+          projectId: project.id,
+          source: LogSources.API,
+          externalId: customIdentifier,
+          testDeploymentId,
+        }),
+      )
+    })
+
     it('Does not create a document log when rate limited', async () => {
       const streamAIResponseSpy = vi.spyOn(
         await import('../../lib/streamManager/step/streamAIResponse'),
@@ -357,9 +413,10 @@ model: gpt-4o
         const userMessages = messages.filter((msg: any) => msg.role === 'user')
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         userMessages.forEach((msg: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             msg.content.some(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (content: any) =>
                 content.text &&
                 content.text.includes('Please answer in French'),
@@ -404,9 +461,10 @@ model: gpt-4o
         const userMessages = messages.filter((msg: any) => msg.role === 'user')
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         userMessages.forEach((msg: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             msg.content.some(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (content: any) =>
                 content.text &&
                 (content.text.includes('Please answer in French') ||

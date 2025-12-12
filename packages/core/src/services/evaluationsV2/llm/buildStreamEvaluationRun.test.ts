@@ -8,6 +8,10 @@ import {
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import * as factories from '../../../tests/factories'
+import {
+  telemetry as realTelemetry,
+  type LatitudeTelemetry,
+} from '../../../telemetry'
 import * as chains from '../../chains/run'
 import * as providerApiKeysMap from '../../providerApiKeys/buildMap'
 import { buildStreamEvaluationRun } from './buildStreamEvaluationRun'
@@ -134,5 +138,37 @@ Evaluate the response: {{ actualOutput }}`,
     expect(result.ok).toBe(true)
     expect(result.value).toHaveProperty('streamHandler')
     expect(typeof result.value!.streamHandler).toBe('function')
+  })
+
+  it('calls telemetry.prompt with all required parameters', async () => {
+    const mockPrompt = vi
+      .fn()
+      .mockImplementation(realTelemetry.prompt.bind(realTelemetry))
+    const mockTelemetry = {
+      ...realTelemetry,
+      prompt: mockPrompt,
+    } as unknown as LatitudeTelemetry
+
+    const parameters = {
+      actualOutput: 'test output',
+      conversation: 'test conversation',
+    }
+
+    await buildStreamEvaluationRun({
+      workspace: workspace,
+      evaluation: evaluation,
+      parameters: parameters,
+      telemetry: mockTelemetry,
+    })
+
+    expect(mockPrompt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        promptUuid: evaluation.uuid,
+        template: evaluation.configuration.prompt,
+        parameters: parameters,
+        source: LogSources.Evaluation,
+      }),
+    )
   })
 })
