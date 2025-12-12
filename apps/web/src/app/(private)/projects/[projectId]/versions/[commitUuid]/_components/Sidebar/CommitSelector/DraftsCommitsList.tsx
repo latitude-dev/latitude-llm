@@ -21,7 +21,6 @@ export function DraftsCommitsList({
   currentDocument,
   headCommit,
   draftCommits,
-  commitsInActiveTests,
   activeTests: serverActiveTests,
   onCommitPublish,
   onCommitDelete,
@@ -29,7 +28,6 @@ export function DraftsCommitsList({
   currentDocument?: DocumentVersion
   headCommit?: Commit
   draftCommits: Commit[]
-  commitsInActiveTests: Commit[]
   activeTests: DeploymentTest[]
   onCommitPublish: ReactStateDispatch<number | null>
   onCommitDelete: ReactStateDispatch<number | null>
@@ -40,7 +38,6 @@ export function DraftsCommitsList({
     { fallbackData: serverActiveTests },
   )
 
-  // Use store data (it will be the same as serverActiveTests initially, but updates when store changes)
   const activeTests = storeActiveTests
 
   const { data: drafts, isLoading } = useCommits({
@@ -49,17 +46,22 @@ export function DraftsCommitsList({
   })
 
   // Filter out commits that are in the active tab (head commit or in active tests)
+  // Use store's activeTests to determine which commits are active, so the list updates when tests are stopped
   const filteredDrafts = useMemo(() => {
     const activeCommitIds = new Set<number>()
-    if (headCommit) {
+
+    // Add head commit if there are any active tests
+    if (headCommit && activeTests.length > 0) {
       activeCommitIds.add(headCommit.id)
     }
-    commitsInActiveTests.forEach((commit) => {
-      activeCommitIds.add(commit.id)
+
+    // Add challenger commits from active tests
+    activeTests.forEach((test) => {
+      activeCommitIds.add(test.challengerCommitId)
     })
 
     return compact(drafts).filter((commit) => !activeCommitIds.has(commit.id))
-  }, [drafts, headCommit, commitsInActiveTests])
+  }, [drafts, headCommit, activeTests])
 
   if (isLoading) {
     return (

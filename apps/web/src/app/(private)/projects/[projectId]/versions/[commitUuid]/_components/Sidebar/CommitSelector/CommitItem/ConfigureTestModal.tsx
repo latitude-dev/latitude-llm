@@ -9,7 +9,6 @@ import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useDeploymentTests from '$/stores/deploymentTests'
 import type { CommitTestInfo } from '../ActiveCommitsList'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export function ConfigureTestModal({
   testInfo,
@@ -21,7 +20,7 @@ export function ConfigureTestModal({
   onOpenChange: (open: boolean) => void
 }) {
   const { project } = useCurrentProject()
-  const { update, pause, resume, stop } = useDeploymentTests({
+  const { update } = useDeploymentTests({
     projectId: project.id,
   })
   const [trafficPercentage, setTrafficPercentage] = useState(() => {
@@ -52,25 +51,6 @@ export function ConfigureTestModal({
 
   const isAbTest = testInfo?.type === 'ab'
   const isBaseline = testInfo?.type === 'ab' && testInfo?.isBaseline
-  const isPaused = testInfo?.status === 'paused'
-
-  const handlePauseTest = useCallback(() => {
-    if (testInfo?.testUuid) {
-      pause.execute(testInfo.testUuid)
-    }
-  }, [testInfo, pause])
-
-  const handleResumeTest = useCallback(() => {
-    if (testInfo?.testUuid) {
-      resume.execute(testInfo.testUuid)
-    }
-  }, [testInfo, resume])
-
-  const handleStopTest = useCallback(() => {
-    if (testInfo?.testUuid) {
-      stop.execute(testInfo.testUuid)
-    }
-  }, [testInfo, stop])
 
   if (!testInfo) return null
 
@@ -91,61 +71,14 @@ export function ConfigureTestModal({
       footer={
         <div className='flex flex-row items-center justify-between w-full'>
           <CloseTrigger />
-          <div className='flex flex-row items-center gap-2'>
-            {isPaused ? (
-              <Tooltip
-                asChild
-                trigger={
-                  <Button
-                    fancy
-                    iconProps={{ name: 'play', color: 'foregroundMuted' }}
-                    variant='outline'
-                    onClick={handleResumeTest}
-                    disabled={resume.isPending}
-                  />
-                }
-              >
-                Resume test
-              </Tooltip>
-            ) : (
-              <Tooltip
-                asChild
-                trigger={
-                  <Button
-                    fancy
-                    iconProps={{ name: 'pause', color: 'foregroundMuted' }}
-                    variant='outline'
-                    onClick={handlePauseTest}
-                    disabled={pause.isPending}
-                  />
-                }
-              >
-                Pause test
-              </Tooltip>
-            )}
-            <Tooltip
-              asChild
-              trigger={
-                <Button
-                  fancy
-                  iconProps={{ name: 'circleStop' }}
-                  variant='destructive'
-                  onClick={handleStopTest}
-                  disabled={stop.isPending}
-                />
-              }
-            >
-              Stop test
-            </Tooltip>
-            <Button
-              fancy
-              variant='default'
-              onClick={handleSubmit}
-              isLoading={update.isPending}
-            >
-              Save Changes
-            </Button>
-          </div>
+          <Button
+            fancy
+            variant='default'
+            onClick={handleSubmit}
+            isLoading={update.isPending}
+          >
+            Save Changes
+          </Button>
         </div>
       }
     >

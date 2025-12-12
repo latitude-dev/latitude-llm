@@ -30,7 +30,6 @@ export function ArchivedCommitsList({
     { fallbackData: serverActiveTests },
   )
 
-  // Use store data (it will be the same as serverActiveTests initially, but updates when store changes)
   const activeTests = storeActiveTests
 
   const { data, isLoading } = useCommits({
