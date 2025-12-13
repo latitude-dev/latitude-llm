@@ -111,8 +111,8 @@ export function ActiveCommitsList({
     // Determine which commits should be in the active list based on store's active tests
     const activeCommitIds = new Set<number>()
 
-    // Add head commit if there are any active tests
-    if (headCommit && activeTests.length > 0) {
+    // Add head commit (it's always active as it's the live/deployed version)
+    if (headCommit) {
       activeCommitIds.add(headCommit.id)
     }
 
