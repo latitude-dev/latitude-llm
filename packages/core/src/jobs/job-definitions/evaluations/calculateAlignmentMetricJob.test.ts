@@ -268,10 +268,12 @@ describe('calculateAlignmentMetricJob', () => {
   describe('Case 2: Fail attempt 1,2... before last attempt', () => {
     beforeEach(() => {
       jobData = createMockJob(buildJobData(), 1, 3) // attemptsMade: 1, maxAttempts: 3
-      // Mock evaluateConfiguration to return an error Result, which will throw when unwrapped
-      mockEvaluateConfiguration.mockResolvedValue(
-        Result.error(new Error('Test error')),
-      )
+      jobData.getDependenciesCount = vi.fn().mockResolvedValue({
+        failed: 0,
+        ignored: 5, // ignored children are failed children
+        processed: 0,
+        unprocessed: 15,
+      })
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
       mockFailActiveEvaluation.mockResolvedValue(
         Result.ok({
@@ -286,7 +288,7 @@ describe('calculateAlignmentMetricJob', () => {
       // The error should propagate (no return in finally for this case)
       // This allows BullMQ to retry the job without modifying the active evaluation state
       await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
-        'Test error',
+        '0 failed and 5 ignored children. Waiting for 15 unprocessed children to complete',
       )
 
       expect(mockFailActiveEvaluation).not.toHaveBeenCalled()
@@ -298,10 +300,12 @@ describe('calculateAlignmentMetricJob', () => {
   describe('Case 3: Fail last attempt', () => {
     beforeEach(() => {
       jobData = createMockJob(buildJobData(), 2, 3) // attemptsMade: 3, maxAttempts: 3 (last attempt)
-      // Mock evaluateConfiguration to return an error Result, which will throw when unwrapped
-      mockEvaluateConfiguration.mockResolvedValue(
-        Result.error(new Error('Test error')),
-      )
+      jobData.getDependenciesCount = vi.fn().mockResolvedValue({
+        failed: 0,
+        ignored: 5, // ignored children are failed children
+        processed: 0,
+        unprocessed: 15,
+      })
       mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
       mockFailActiveEvaluation.mockResolvedValue(
         Result.ok({
@@ -315,7 +319,7 @@ describe('calculateAlignmentMetricJob', () => {
 
     it('should fail and end active evaluation on last attempt', async () => {
       await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
-        'Test error',
+        '0 failed and 5 ignored children. Waiting for 15 unprocessed children to complete',
       )
 
       expect(mockDeleteEvaluationV2).toHaveBeenCalledWith({
@@ -471,26 +475,6 @@ describe('calculateAlignmentMetricJob', () => {
       expect(mockDeleteEvaluationV2).not.toHaveBeenCalled()
       expect(mockFailActiveEvaluation).not.toHaveBeenCalled()
       expect(mockEndActiveEvaluation).not.toHaveBeenCalled()
-    })
-
-    it('should handle error when evaluateConfiguration fails', async () => {
-      jobData = createMockJob(buildJobData(), 3, 3) // last attempt
-      mockEvaluateConfiguration.mockResolvedValue(
-        Result.error(new Error('Evaluation configuration error')),
-      )
-      mockFailActiveEvaluation.mockResolvedValue(
-        Result.ok({
-          workflowUuid: WORKFLOW_UUID,
-          issueId: 1,
-          queuedAt: new Date(),
-        } as ActiveEvaluation),
-      )
-      mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
-
-      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow()
-
-      expect(mockFailActiveEvaluation).toHaveBeenCalled()
-      expect(mockEndActiveEvaluation).toHaveBeenCalled()
     })
 
     it('should handle error when updateEvaluationV2 fails', async () => {

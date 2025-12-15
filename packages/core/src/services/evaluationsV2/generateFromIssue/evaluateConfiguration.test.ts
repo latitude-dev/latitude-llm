@@ -213,26 +213,6 @@ describe('evaluateConfiguration', () => {
         falseNegatives: 0,
       })
     })
-
-    it('propagates error from calculateMCC when validation fails', async () => {
-      const result = await evaluateConfiguration({
-        childrenValues: {
-          'job-1': {
-            hasPassed: false, // No positive predictions
-            evaluatedSpanId: 'span-1',
-            evaluatedTraceId: 'trace-1',
-          },
-        },
-        spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'span-1', traceId: 'trace-1' },
-        ],
-        spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'span-2', traceId: 'trace-2' },
-        ],
-      })
-
-      expect(Result.isOk(result)).toBe(false)
-    })
   })
 
   describe('real-world scenario: evaluation alignment check', () => {

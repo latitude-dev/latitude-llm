@@ -12,7 +12,7 @@ type GeneratingEvaluationProps = {
 const GENERATION_DESCRIPTIONS = [
   'Thinking of a good configuration...',
   'Running validation tests...',
-  'Evaluating accuracy...',
+  'Evaluating alignment...',
   'Processing results...',
   'Optimizing further...',
 ]
