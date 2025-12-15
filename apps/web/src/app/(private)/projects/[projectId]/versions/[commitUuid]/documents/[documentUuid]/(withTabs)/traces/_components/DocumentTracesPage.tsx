@@ -1,6 +1,7 @@
 'use client'
 
-import { use, useRef, useState } from 'react'
+import { use, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { Span } from '@latitude-data/constants'
@@ -9,7 +10,7 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useDocumentTracesAggregations from '$/stores/documentTracesAggregations'
 import useDocumentTracesDailyCount from '$/stores/documentTracesDailyCount'
-import { SpansFilters } from '$/lib/schemas/filters'
+import { SpansFilters, parseSpansFilters } from '$/lib/schemas/filters'
 import { TraceInfoPanel } from '$/components/TracesPanel'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { TableResizableLayout } from '$/components/TableResizableLayout'
@@ -57,11 +58,15 @@ export function DocumentTracesPage({
     commitUuid: commit.uuid,
     projectId: project.id,
   })
+  const searchParams = useSearchParams()
+  const filtersParam = searchParams.get('filters')
+  const filters = parseSpansFilters(filtersParam, 'DocumentTracesPage') ?? {}
   const spans = useSpansKeysetPaginationStore({
     projectId: String(project.id),
     commitUuid: commit.uuid,
     documentUuid: document.documentUuid,
     initialItems: initialSpans,
+    filters,
   })
   const selectableState = useSelectableRows({
     rowIds: spans.items.map((span) => span.id),

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { API_ROUTES } from '$/services/routes/api'
@@ -16,6 +16,12 @@ export function usePaginationMode(
 ) {
   const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([])
   const [currentCursor, setCurrentCursor] = useState<string | null>(null)
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters])
+
+  const filtersParam = useMemo(() => {
+    const hasFilters = Object.keys(filters).length > 0
+    return hasFilters ? JSON.stringify(filters) : undefined
+  }, [filtersKey])
 
   const fetcher = useFetcher<SpansKeysetPaginationResult>(
     API_ROUTES.spans.limited.root,
@@ -36,7 +42,7 @@ export function usePaginationMode(
         type: params.type,
         limit: params.limit?.toString(),
         source: params.source?.join(','),
-        ...filters,
+        filters: filtersParam,
       }) as Record<string, string>,
     },
   )
@@ -52,6 +58,7 @@ export function usePaginationMode(
         currentCursor,
         params.type,
         params.limit,
+        filtersKey,
       ],
       fetcher,
       {
@@ -93,7 +100,7 @@ export function usePaginationMode(
       setCursorHistory([])
       setCurrentCursor(null)
     }
-  }, [params.realtime])
+  }, [params.realtime, filtersKey])
 
   return {
     data,

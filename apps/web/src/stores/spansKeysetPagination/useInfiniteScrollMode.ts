@@ -20,6 +20,7 @@ export function useInfiniteScrollMode(
   const { toast } = useToast()
   const navigate = useNavigate()
   const currentUrl = useCurrentUrl()
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters])
 
   const getKey = useCallback(
     (
@@ -35,6 +36,7 @@ export function useInfiniteScrollMode(
           params.source,
           params.type,
           params.limit,
+          filtersKey,
           null,
         ] as const
       }
@@ -51,6 +53,7 @@ export function useInfiniteScrollMode(
         params.source,
         params.type,
         params.limit,
+        filtersKey,
         previousPageData.next,
       ] as const
     },
@@ -61,12 +64,18 @@ export function useInfiniteScrollMode(
       params.source,
       params.type,
       params.limit,
+      filtersKey,
     ],
   )
 
+  const filtersParam = useMemo(() => {
+    const hasFilters = Object.keys(filters).length > 0
+    return hasFilters ? JSON.stringify(filters) : undefined
+  }, [filtersKey])
+
   const infiniteFetcher = useCallback(
     async (key: readonly unknown[]) => {
-      const cursor = key[7] as string | null | undefined
+      const cursor = key[8] as string | null | undefined
       const result = await executeFetch<SpansKeysetPaginationResult>({
         route: API_ROUTES.spans.limited.root,
         searchParams: compactObject({
@@ -77,7 +86,7 @@ export function useInfiniteScrollMode(
           type: params.type,
           limit: params.limit?.toString(),
           source: params.source?.join(','),
-          ...filters,
+          filters: filtersParam,
         }) as Record<string, string>,
         serializer: (data: unknown) => {
           const result = data as SpansKeysetPaginationResult
@@ -100,7 +109,7 @@ export function useInfiniteScrollMode(
       params.type,
       params.limit,
       params.source,
-      filters,
+      filtersParam,
       toast,
       navigate,
       currentUrl,
@@ -154,7 +163,7 @@ export function useInfiniteScrollMode(
 
   useEffect(() => {
     setInfiniteSize(1)
-  }, [params.realtime, setInfiniteSize])
+  }, [params.realtime, filtersKey, setInfiniteSize])
 
   return {
     data,

@@ -53,7 +53,6 @@ export function useProcessSpanFilters({
   filterOptions: SpansFilters
 }) {
   const setSearchParams = useEditableSearchParams()
-
   const isCommitsDefault = useMemo(() => {
     // Default is when no commit filter is set (undefined or empty array)
     return !filterOptions.commitUuids || filterOptions.commitUuids.length === 0

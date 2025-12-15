@@ -1,8 +1,6 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { parseSpansFilters } from '$/lib/schemas/filters'
 import {
   EventArgs,
   useSockets,
@@ -10,6 +8,7 @@ import {
 import { LogSources, Span, SpanType } from '@latitude-data/constants'
 import { SWRConfiguration } from 'swr'
 import { SWRInfiniteConfiguration } from 'swr/infinite'
+import { SpansFilters } from '$/lib/schemas/filters'
 import { usePaginationMode } from './usePaginationMode'
 import { useInfiniteScrollMode } from './useInfiniteScrollMode'
 import { useRealtimeBatching } from './useRealtimeBatching'
@@ -29,6 +28,7 @@ export function useSpansKeysetPaginationStore(
     initialItems = [],
     limit,
     realtime = false,
+    filters,
   }: {
     projectId: string
     commitUuid?: string
@@ -38,13 +38,11 @@ export function useSpansKeysetPaginationStore(
     limit?: number
     source?: LogSources[]
     realtime?: boolean
+    filters?: SpansFilters
   },
   opts?: SWRConfiguration<SpansKeysetPaginationResult>,
 ) {
-  const searchParams = useSearchParams()
-  const filtersParam = searchParams.get('filters')
-  const filters = parseSpansFilters(filtersParam, 'spansKeysetPagination') ?? {}
-
+  const normalizedFilters = filters ?? {}
   const params: UseSpansKeysetPaginationParams = {
     projectId,
     commitUuid,
@@ -58,12 +56,12 @@ export function useSpansKeysetPaginationStore(
 
   const pagination = usePaginationMode(
     params,
-    filters,
+    normalizedFilters,
     realtime ? undefined : opts,
   )
   const infinite = useInfiniteScrollMode(
     params,
-    filters,
+    normalizedFilters,
     realtime
       ? (opts as SWRInfiniteConfiguration<SpansKeysetPaginationResult>)
       : undefined,
@@ -74,7 +72,7 @@ export function useSpansKeysetPaginationStore(
     infinite.isLoading,
     infinite.mutate,
     params,
-    filters,
+    normalizedFilters,
   )
 
   const onSpanCreated = useCallback(
