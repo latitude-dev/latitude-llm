@@ -3,7 +3,6 @@ import { LogSources } from '@latitude-data/constants'
 import { Result } from '../../lib/Result'
 import { createProject, helpers } from '../../tests/factories'
 import { Providers } from '@latitude-data/constants'
-import { DeploymentTest } from '../../schema/models/types/DeploymentTest'
 import type { WorkspaceDto } from '../../schema/models/types/Workspace'
 import type { Project } from '../../schema/models/types/Project'
 import type { Commit } from '../../schema/models/types/Commit'
@@ -133,24 +132,7 @@ describe('runForegroundDocument', () => {
   })
 
   describe('event publishing', () => {
-    it('should publish documentRunStarted event with activeDeploymentTest', async () => {
-      const shadowTest: DeploymentTest = {
-        id: 1,
-        uuid: 'test-uuid',
-        workspaceId: workspace.id,
-        projectId: project.id,
-        challengerCommitId: 999,
-        testType: 'shadow',
-        trafficPercentage: 50,
-        status: 'running',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
-        startedAt: null,
-        endedAt: null,
-        createdByUserId: null,
-      }
-
+    it('should publish documentRunStarted event', async () => {
       await runForegroundDocument({
         workspace,
         document,
@@ -163,27 +145,34 @@ describe('runForegroundDocument', () => {
         userMessage: 'test message',
       })
 
-      expect(
-        vi.mocked(publisherModule.publisher.publishLater),
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'documentRunStarted',
-          data: expect.objectContaining({
-            workspaceId: workspace.id,
-            projectId: project.id,
+      const calls = vi.mocked(publisherModule.publisher.publishLater).mock.calls
+      const documentRunStartedCall = calls.find(
+        (call) => call[0]?.type === 'documentRunStarted',
+      )
+
+      expect(documentRunStartedCall).toBeDefined()
+      expect(documentRunStartedCall![0]).toMatchObject({
+        type: 'documentRunStarted',
+        data: expect.objectContaining({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          documentUuid: document.documentUuid,
+          commitUuid: commit.uuid,
+          parameters: { key: 'value' },
+          customIdentifier: 'test-id',
+          tools: ['tool1'],
+          userMessage: 'test message',
+          run: expect.objectContaining({
+            uuid: 'run-uuid-123',
+            source: LogSources.API,
             documentUuid: document.documentUuid,
             commitUuid: commit.uuid,
-            activeDeploymentTest: shadowTest,
-            parameters: { key: 'value' },
-            customIdentifier: 'test-id',
-            tools: ['tool1'],
-            userMessage: 'test message',
           }),
         }),
-      )
+      })
     })
 
-    it('should publish documentRunStarted event without activeDeploymentTest', async () => {
+    it('should publish documentRunStarted event with minimal parameters', async () => {
       await runForegroundDocument({
         workspace,
         document,
@@ -194,17 +183,23 @@ describe('runForegroundDocument', () => {
         tools: [],
       })
 
-      expect(
-        vi.mocked(publisherModule.publisher.publishLater),
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'documentRunStarted',
-          data: expect.objectContaining({
-            workspaceId: workspace.id,
-            activeDeploymentTest: undefined,
-          }),
-        }),
+      const calls = vi.mocked(publisherModule.publisher.publishLater).mock.calls
+      const documentRunStartedCall = calls.find(
+        (call) => call[0]?.type === 'documentRunStarted',
       )
+
+      expect(documentRunStartedCall).toBeDefined()
+      expect(documentRunStartedCall![0]).toMatchObject({
+        type: 'documentRunStarted',
+        data: expect.objectContaining({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          documentUuid: document.documentUuid,
+          commitUuid: commit.uuid,
+          parameters: {},
+          tools: [],
+        }),
+      })
     })
   })
 

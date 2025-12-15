@@ -11,7 +11,6 @@ import {
   createDocumentVersion,
   createDraft,
   createProject,
-  createTelemetryTrace,
   helpers,
   updateDocumentVersion,
 } from '@latitude-data/core/factories'
@@ -38,14 +37,11 @@ import { createProviderLog } from '@latitude-data/core/factories'
 const MODEL = 'gpt-4o'
 
 const mocks = vi.hoisted(() => ({
-  runDocumentAtCommit: vi.fn(),
+  runForegroundDocument: vi.fn(),
   captureExceptionMock: vi.fn(),
   enqueueRun: vi.fn(),
   isFeatureEnabledByName: vi.fn(),
-  findActiveForCommit: vi.fn(),
-  getCommitById: vi.fn(),
-  getHeadCommit: vi.fn(),
-  routeRequest: vi.fn(),
+  resolveAbTestRouting: vi.fn(),
   queues: {
     defaultQueue: {
       jobs: {
@@ -66,13 +62,13 @@ vi.mock('$/common/tracer', async (importOriginal) => {
 })
 
 vi.mock(
-  '@latitude-data/core/services/commits/runDocumentAtCommit',
+  '@latitude-data/core/services/commits/foregroundRun',
   async (importOriginal) => {
     const original = (await importOriginal()) as typeof importOriginal
 
     return {
       ...original,
-      runDocumentAtCommit: mocks.runDocumentAtCommit,
+      runForegroundDocument: mocks.runForegroundDocument,
     }
   },
 )
@@ -92,34 +88,12 @@ vi.mock(
   }),
 )
 
-vi.mock('@latitude-data/core/repositories/deploymentTestsRepository', () => ({
-  DeploymentTestsRepository: vi.fn().mockImplementation(() => ({
-    findActiveForCommit: mocks.findActiveForCommit,
-  })),
-}))
-
-vi.mock('@latitude-data/core/repositories', async (importOriginal) => {
-  const actual: any = await importOriginal()
-  const OriginalCommitsRepository = actual.CommitsRepository
-
-  const MockedClass = class MockedCommitsRepository extends OriginalCommitsRepository {
-    getHeadCommit(projectId: number) {
-      return mocks.getHeadCommit(projectId)
-    }
-    getCommitById(id: number) {
-      return mocks.getCommitById(id)
-    }
-  }
-
-  return {
-    ...actual,
-    CommitsRepository: MockedClass,
-  } as any
-})
-
-vi.mock('@latitude-data/core/services/deploymentTests/routeRequest', () => ({
-  routeRequest: mocks.routeRequest,
-}))
+vi.mock(
+  '@latitude-data/core/services/deploymentTests/resolveAbTestRouting',
+  () => ({
+    resolveAbTestRouting: mocks.resolveAbTestRouting,
+  }),
+)
 
 let route: string
 let body: string
@@ -218,20 +192,20 @@ describe('POST /run', () => {
         },
       })
 
-      const response = new Promise((resolve) => {
-        resolve({ text: 'Hello', usage: {} })
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.Playground,
       })
-      const trace = createTelemetryTrace({})
 
-      mocks.runDocumentAtCommit.mockReturnValue(
-        new Promise((resolve) => {
-          resolve(
-            Result.ok({
-              stream,
-              response,
-              trace,
-            }),
-          )
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: { text: 'Hello', usage: {} },
+            provider: provider,
+          }),
         }),
       )
 
@@ -248,17 +222,20 @@ describe('POST /run', () => {
 
       await testConsumeStream(res.body as ReadableStream)
 
-      expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith({
-        context: expect.anything(),
-        workspace,
-        document: expect.anything(),
-        commit,
-        parameters: {},
-        tools: {},
-        source: LogSources.Playground,
-        abortSignal: expect.anything(),
-        userMessage: undefined,
-      })
+      expect(mocks.runForegroundDocument).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspace: expect.objectContaining({ id: workspace.id }),
+          document: expect.anything(),
+          commit: expect.objectContaining({ id: commit.id }),
+          project: expect.objectContaining({ id: project.id }),
+          parameters: {},
+          tools: [],
+          source: LogSources.Playground,
+          abortSignal: expect.anything(),
+          userMessage: undefined,
+          customIdentifier: undefined,
+        }),
+      )
     })
 
     it('stream succeeds', async () => {
@@ -285,17 +262,20 @@ describe('POST /run', () => {
         },
       })
 
-      const trace = createTelemetryTrace({})
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
+      })
 
-      mocks.runDocumentAtCommit.mockReturnValue(
-        new Promise((resolve) => {
-          resolve(
-            Result.ok({
-              stream,
-              lastResponse: Promise.resolve({ text: 'Hello', usage: {} }),
-              trace,
-            }),
-          )
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: { text: 'Hello', usage: {} },
+            provider: provider,
+          }),
         }),
       )
 
@@ -400,19 +380,20 @@ describe('POST /run', () => {
         },
       })
 
-      const lastResponse = Promise.resolve({})
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
+      })
 
-      const trace = createTelemetryTrace({})
-
-      mocks.runDocumentAtCommit.mockReturnValue(
-        new Promise((resolve) => {
-          resolve(
-            Result.ok({
-              stream,
-              lastResponse,
-              trace,
-            }),
-          )
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: {},
+            provider: provider,
+          }),
         }),
       )
 
@@ -507,21 +488,20 @@ describe('POST /run', () => {
         },
       })
 
-      const lastResponse = new Promise((resolve) => {
-        resolve({ text: 'Hello', usage: {} })
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.Playground,
       })
 
-      const trace = createTelemetryTrace({})
-
-      mocks.runDocumentAtCommit.mockReturnValue(
-        new Promise((resolve) => {
-          resolve(
-            Result.ok({
-              stream,
-              lastResponse,
-              trace,
-            }),
-          )
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: { text: 'Hello', usage: {} },
+            provider: provider,
+          }),
         }),
       )
 
@@ -535,17 +515,20 @@ describe('POST /run', () => {
         headers,
       })
 
-      expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith({
-        context: expect.anything(),
-        workspace,
-        document: expect.anything(),
-        commit,
-        parameters: {},
-        tools: {},
-        source: LogSources.Playground,
-        abortSignal: expect.anything(),
-        userMessage: undefined,
-      })
+      expect(mocks.runForegroundDocument).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspace: expect.objectContaining({ id: workspace.id }),
+          document: expect.anything(),
+          commit: expect.objectContaining({ id: commit.id }),
+          project: expect.objectContaining({ id: project.id }),
+          parameters: {},
+          tools: [],
+          source: LogSources.Playground,
+          abortSignal: expect.anything(),
+          userMessage: undefined,
+          customIdentifier: undefined,
+        }),
+      )
     })
 
     it('returns response', async () => {
@@ -599,36 +582,37 @@ describe('POST /run', () => {
         },
       })
 
-      const lastResponse = Promise.resolve({
-        streamType: 'object',
-        object: { something: { else: 'here' } },
-        text: 'Hello',
-        usage,
-        documentLogUuid,
-        providerLog: {
-          providerId: provider.id,
-          model: MODEL,
-          messages: [
-            {
-              role: MessageRole.assistant,
-              toolCalls: [],
-              content: 'Hello',
-            },
-          ],
-        },
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
       })
 
-      const trace = createTelemetryTrace({})
-
-      mocks.runDocumentAtCommit.mockReturnValue(
-        new Promise((resolve) => {
-          resolve(
-            Result.ok({
-              stream,
-              lastResponse,
-              trace,
-            }),
-          )
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: {
+              streamType: 'object',
+              object: { something: { else: 'here' } },
+              text: 'Hello',
+              usage,
+              documentLogUuid,
+              providerLog: {
+                providerId: provider.id,
+                model: MODEL,
+                messages: [
+                  {
+                    role: MessageRole.assistant,
+                    toolCalls: [],
+                    content: 'Hello',
+                  },
+                ],
+              },
+            },
+            provider: provider,
+          }),
         }),
       )
 
@@ -665,8 +649,7 @@ describe('POST /run', () => {
       })
     })
 
-    it('returns error when runDocumentAtCommit has an error', async () => {
-      const lastResponse = Promise.resolve(undefined)
+    it('returns error when runForegroundDocument has an error', async () => {
       const error = Promise.resolve(
         new ChainError({
           code: RunErrorCodes.ChainCompileError,
@@ -674,17 +657,21 @@ describe('POST /run', () => {
         }),
       )
 
-      const trace = createTelemetryTrace({})
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
+      })
 
-      mocks.runDocumentAtCommit.mockReturnValue(
-        Promise.resolve(
-          Result.ok({
-            stream: new ReadableStream(),
-            lastResponse,
-            error,
-            trace,
-          }),
-        ),
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream: new ReadableStream(),
+          error,
+          getFinalResponse: async () => {
+            const err = await error
+            throw err
+          },
+        }),
       )
 
       const res = await app.request(route, {
@@ -704,35 +691,38 @@ describe('POST /run', () => {
       })
     })
 
-    it('returns error if runDocumentAtCommit has not documentLogUuid', async () => {
-      const lastResponse = Promise.resolve({
-        streamType: 'object',
-        object: { something: { else: 'here' } },
-        text: 'Hello',
-        usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
-        providerLog: {
-          providerId: provider.id,
-          model: MODEL,
-          messages: [
-            {
-              role: MessageRole.assistant,
-              toolCalls: [],
-              content: 'Hello',
-            },
-          ],
-        },
+    it('returns error if runForegroundDocument has not documentLogUuid', async () => {
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
       })
 
-      const trace = createTelemetryTrace({})
-
-      mocks.runDocumentAtCommit.mockReturnValue(
-        Promise.resolve(
-          Result.ok({
-            stream: new ReadableStream(),
-            lastResponse,
-            trace,
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream: new ReadableStream(),
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: {
+              streamType: 'object',
+              object: { something: { else: 'here' } },
+              text: 'Hello',
+              usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+              providerLog: {
+                providerId: provider.id,
+                model: MODEL,
+                messages: [
+                  {
+                    role: MessageRole.assistant,
+                    toolCalls: [],
+                    content: 'Hello',
+                  },
+                ],
+              },
+            },
+            provider: provider,
           }),
-        ),
+        }),
       )
 
       const res = await app.request(route, {
@@ -753,30 +743,33 @@ describe('POST /run', () => {
       )
     })
 
-    it('returns error if runDocumentAtCommit has not providerLog', async () => {
-      const lastResponse = Promise.resolve({
-        streamType: 'object',
-        object: { something: { else: 'here' } },
-        text: 'Hello',
-        usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
-        documentLogUuid: 'fake-document-log-uuid',
-        providerLog: {
-          providerId: provider.id,
-          model: MODEL,
-          messages: undefined,
-        },
+    it('returns error if runForegroundDocument has not providerLog', async () => {
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
       })
 
-      const trace = createTelemetryTrace({})
-
-      mocks.runDocumentAtCommit.mockReturnValue(
-        Promise.resolve(
-          Result.ok({
-            stream: new ReadableStream(),
-            lastResponse,
-            trace,
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream: new ReadableStream(),
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: {
+              streamType: 'object',
+              object: { something: { else: 'here' } },
+              text: 'Hello',
+              usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+              documentLogUuid: 'fake-document-log-uuid',
+              providerLog: {
+                providerId: provider.id,
+                model: MODEL,
+                messages: undefined,
+              },
+            },
+            provider: provider,
           }),
-        ),
+        }),
       )
 
       const res = await app.request(route, {
@@ -836,7 +829,8 @@ describe('POST /run', () => {
       }
 
       // Reset mocks
-      mocks.runDocumentAtCommit.mockClear()
+      mocks.runForegroundDocument.mockClear()
+      mocks.resolveAbTestRouting.mockClear()
 
       // Set default mocks for feature flags
       mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
@@ -844,6 +838,12 @@ describe('POST /run', () => {
           return Promise.resolve(Result.ok(false))
         }
         return Promise.resolve(Result.ok(false))
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
       })
     })
 
@@ -854,17 +854,15 @@ describe('POST /run', () => {
         },
       })
 
-      const lastResponse = Promise.resolve({ text: 'Hello', usage: {} })
-      const trace = createTelemetryTrace({})
-
-      mocks.runDocumentAtCommit.mockReturnValue(
-        Promise.resolve(
-          Result.ok({
-            stream,
-            lastResponse,
-            trace,
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: { text: 'Hello', usage: {} },
+            provider: provider,
           }),
-        ),
+        }),
       )
 
       await app.request(route, {
@@ -876,17 +874,20 @@ describe('POST /run', () => {
         },
       })
 
-      expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith({
-        context: expect.anything(),
-        workspace,
-        document: expect.anything(),
-        commit,
-        parameters: {},
-        tools: {},
-        userMessage: undefined,
-        source: LogSources.API,
-        abortSignal: expect.anything(),
-      })
+      expect(mocks.runForegroundDocument).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspace: expect.objectContaining({ id: workspace.id }),
+          document: expect.anything(),
+          commit: expect.objectContaining({ id: commit.id }),
+          project: expect.objectContaining({ id: project.id }),
+          parameters: {},
+          tools: [],
+          userMessage: undefined,
+          source: LogSources.API,
+          abortSignal: expect.anything(),
+          customIdentifier: undefined,
+        }),
+      )
     })
 
     it('uses new method when no SDK version header (defaults to latest)', async () => {
@@ -896,17 +897,15 @@ describe('POST /run', () => {
         },
       })
 
-      const lastResponse = Promise.resolve({ text: 'Hello', usage: {} })
-      const trace = createTelemetryTrace({})
-
-      mocks.runDocumentAtCommit.mockReturnValue(
-        Promise.resolve(
-          Result.ok({
-            stream,
-            lastResponse,
-            trace,
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: { text: 'Hello', usage: {} },
+            provider: provider,
           }),
-        ),
+        }),
       )
 
       await app.request(route, {
@@ -915,17 +914,20 @@ describe('POST /run', () => {
         headers,
       })
 
-      expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith({
-        context: expect.anything(),
-        workspace,
-        document: expect.anything(),
-        commit,
-        parameters: {},
-        userMessage: undefined,
-        tools: {},
-        source: LogSources.API,
-        abortSignal: expect.anything(),
-      })
+      expect(mocks.runForegroundDocument).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspace: expect.objectContaining({ id: workspace.id }),
+          document: expect.anything(),
+          commit: expect.objectContaining({ id: commit.id }),
+          project: expect.objectContaining({ id: project.id }),
+          parameters: {},
+          userMessage: undefined,
+          tools: [],
+          source: LogSources.API,
+          abortSignal: expect.anything(),
+          customIdentifier: undefined,
+        }),
+      )
     })
   })
 
@@ -979,9 +981,16 @@ describe('POST /run', () => {
       }
 
       // Reset mocks
-      mocks.runDocumentAtCommit.mockClear()
+      mocks.runForegroundDocument.mockClear()
       mocks.enqueueRun.mockClear()
       mocks.isFeatureEnabledByName.mockClear()
+      mocks.resolveAbTestRouting.mockClear()
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
+      })
     })
 
     it('runs in background when background=true is explicitly set', async () => {
@@ -991,6 +1000,12 @@ describe('POST /run', () => {
           return Promise.resolve(Result.ok(false))
         }
         return Promise.resolve(Result.ok(false))
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
       })
 
       mocks.enqueueRun.mockReturnValue(
@@ -1014,7 +1029,7 @@ describe('POST /run', () => {
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({ uuid: 'test-run-uuid' })
       expect(mocks.enqueueRun).toHaveBeenCalled()
-      expect(mocks.runDocumentAtCommit).not.toHaveBeenCalled()
+      expect(mocks.runForegroundDocument).not.toHaveBeenCalled()
     })
 
     it('runs in foreground when background=false is explicitly set, even with feature flag enabled', async () => {
@@ -1068,16 +1083,22 @@ describe('POST /run', () => {
           ],
         },
       })
-      const trace = createTelemetryTrace({})
 
-      mocks.runDocumentAtCommit.mockReturnValue(
-        Promise.resolve(
-          Result.ok({
-            stream,
-            lastResponse,
-            trace,
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
+      })
+
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: await lastResponse,
+            provider: provider,
           }),
-        ),
+        }),
       )
 
       const expectedCost = estimateCost({
@@ -1109,13 +1130,13 @@ describe('POST /run', () => {
           cost: expectedCost,
         },
       })
-      expect(mocks.runDocumentAtCommit).toHaveBeenCalled()
+      expect(mocks.runForegroundDocument).toHaveBeenCalled()
       expect(mocks.enqueueRun).not.toHaveBeenCalled()
     })
 
     it('runs in background when feature flag is enabled and background param is undefined', async () => {
       // Clear previous mocks and set up new ones
-      mocks.runDocumentAtCommit.mockClear()
+      mocks.runForegroundDocument.mockClear()
       mocks.enqueueRun.mockClear()
 
       // Mock feature flag: api-background-runs enabled, background not specified
@@ -1124,6 +1145,12 @@ describe('POST /run', () => {
           return Promise.resolve(Result.ok(true))
         }
         return Promise.resolve(Result.ok(false))
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
       })
 
       mocks.enqueueRun.mockImplementation(() => {
@@ -1147,7 +1174,7 @@ describe('POST /run', () => {
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({ uuid: 'test-run-uuid' })
       expect(mocks.enqueueRun).toHaveBeenCalled()
-      expect(mocks.runDocumentAtCommit).not.toHaveBeenCalled()
+      expect(mocks.runForegroundDocument).not.toHaveBeenCalled()
     })
 
     it('runs in foreground when feature flag is disabled and background param is undefined', async () => {
@@ -1157,6 +1184,12 @@ describe('POST /run', () => {
           return Promise.resolve(Result.ok(false))
         }
         return Promise.resolve(Result.ok(false))
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
       })
 
       const documentLogUuid = generateUUIDIdentifier()
@@ -1201,16 +1234,15 @@ describe('POST /run', () => {
           ],
         },
       })
-      const trace = createTelemetryTrace({})
-
-      mocks.runDocumentAtCommit.mockReturnValue(
-        Promise.resolve(
-          Result.ok({
-            stream,
-            lastResponse,
-            trace,
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: await lastResponse,
+            provider: provider,
           }),
-        ),
+        }),
       )
 
       const expectedCost = estimateCost({
@@ -1242,7 +1274,7 @@ describe('POST /run', () => {
           cost: expectedCost,
         },
       })
-      expect(mocks.runDocumentAtCommit).toHaveBeenCalled()
+      expect(mocks.runForegroundDocument).toHaveBeenCalled()
       expect(mocks.enqueueRun).not.toHaveBeenCalled()
     })
   })
@@ -1259,10 +1291,6 @@ describe('POST /run', () => {
       workspace = wsp
       user = usr
       provider = providers[0]!
-
-      // Reset and set default mock implementations BEFORE creating commits/documents
-      mocks.findActiveForCommit.mockReset()
-      mocks.findActiveForCommit.mockResolvedValue(undefined)
 
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
@@ -1296,14 +1324,9 @@ describe('POST /run', () => {
       }
 
       // Reset other mocks
-      mocks.runDocumentAtCommit.mockClear()
+      mocks.runForegroundDocument.mockClear()
       mocks.enqueueRun.mockClear()
-      mocks.getCommitById.mockClear()
-      mocks.getHeadCommit.mockClear()
-      mocks.routeRequest.mockClear()
-
-      // Mock getHeadCommit to return the baseline commit
-      mocks.getHeadCommit.mockResolvedValue(commit)
+      mocks.resolveAbTestRouting.mockClear()
 
       // Set default mocks
       mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
@@ -1313,7 +1336,11 @@ describe('POST /run', () => {
         return Promise.resolve(Result.ok(false))
       })
 
-      mocks.findActiveForCommit.mockResolvedValue(undefined)
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
+      })
     })
 
     describe('with shadow test', () => {
@@ -1330,7 +1357,11 @@ describe('POST /run', () => {
           status: 'running',
         }
 
-        mocks.findActiveForCommit.mockResolvedValue(shadowTest)
+        mocks.resolveAbTestRouting.mockResolvedValue({
+          abTest: shadowTest,
+          effectiveCommit: commit,
+          effectiveSource: LogSources.API,
+        })
 
         const documentLogUuid = generateUUIDIdentifier()
         const usage = {
@@ -1361,11 +1392,12 @@ describe('POST /run', () => {
           },
         })
 
-        mocks.runDocumentAtCommit.mockReturnValue(
-          Promise.resolve(
-            Result.ok({
-              stream,
-              lastResponse: Promise.resolve({
+        mocks.runForegroundDocument.mockReturnValue(
+          Promise.resolve({
+            stream,
+            error: Promise.resolve(undefined),
+            getFinalResponse: async () => ({
+              response: {
                 streamType: 'text',
                 text: 'Hello',
                 usage,
@@ -1381,9 +1413,10 @@ describe('POST /run', () => {
                     },
                   ],
                 },
-              }),
+              },
+              provider: provider,
             }),
-          ),
+          }),
         )
 
         const res = await app.request(route, {
@@ -1393,9 +1426,9 @@ describe('POST /run', () => {
         })
 
         expect(res.status).toBe(200)
-        expect(mocks.runDocumentAtCommit).toHaveBeenCalled()
+        expect(mocks.runForegroundDocument).toHaveBeenCalled()
         // Should use original commit for baseline
-        expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith(
+        expect(mocks.runForegroundDocument).toHaveBeenCalledWith(
           expect.objectContaining({
             commit: expect.objectContaining({ id: commit.id }),
           }),
@@ -1432,10 +1465,11 @@ describe('POST /run', () => {
           status: 'running',
         }
 
-        mocks.findActiveForCommit.mockResolvedValue(abTest)
-        mocks.getHeadCommit.mockResolvedValue(commit)
-        mocks.routeRequest.mockReturnValue('baseline')
-        mocks.getCommitById.mockResolvedValue(Result.ok(commit))
+        mocks.resolveAbTestRouting.mockResolvedValue({
+          abTest,
+          effectiveCommit: commit,
+          effectiveSource: LogSources.API,
+        })
 
         const documentLogUuid = generateUUIDIdentifier()
         const usage = {
@@ -1466,11 +1500,12 @@ describe('POST /run', () => {
           },
         })
 
-        mocks.runDocumentAtCommit.mockReturnValue(
-          Promise.resolve(
-            Result.ok({
-              stream,
-              lastResponse: Promise.resolve({
+        mocks.runForegroundDocument.mockReturnValue(
+          Promise.resolve({
+            stream,
+            error: Promise.resolve(undefined),
+            getFinalResponse: async () => ({
+              response: {
                 streamType: 'text',
                 text: 'Hello',
                 usage,
@@ -1486,9 +1521,10 @@ describe('POST /run', () => {
                     },
                   ],
                 },
-              }),
+              },
+              provider: provider,
             }),
-          ),
+          }),
         )
 
         const res = await app.request(route, {
@@ -1502,11 +1538,14 @@ describe('POST /run', () => {
         })
 
         expect(res.status).toBe(200)
-        expect(mocks.findActiveForCommit).toHaveBeenCalled()
-        expect(mocks.routeRequest).toHaveBeenCalledWith(abTest, 'user-123')
-        // When routing to baseline, getHeadCommit should be called to get the head commit
-        expect(mocks.getHeadCommit).toHaveBeenCalledWith(project.id)
-        expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith(
+        expect(mocks.resolveAbTestRouting).toHaveBeenCalledWith({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          commit,
+          source: LogSources.API,
+          customIdentifier: 'user-123',
+        })
+        expect(mocks.runForegroundDocument).toHaveBeenCalledWith(
           expect.objectContaining({
             source: LogSources.API,
             commit: expect.objectContaining({ id: commit.id }),
@@ -1527,10 +1566,11 @@ describe('POST /run', () => {
           status: 'running',
         }
 
-        mocks.findActiveForCommit.mockResolvedValue(abTest)
-        mocks.getHeadCommit.mockResolvedValue(commit)
-        mocks.routeRequest.mockReturnValue('challenger')
-        mocks.getCommitById.mockResolvedValue(Result.ok(challengerCommit))
+        mocks.resolveAbTestRouting.mockResolvedValue({
+          abTest,
+          effectiveCommit: challengerCommit,
+          effectiveSource: LogSources.ABTestChallenger,
+        })
 
         const documentLogUuid = generateUUIDIdentifier()
         const usage = {
@@ -1561,11 +1601,12 @@ describe('POST /run', () => {
           },
         })
 
-        mocks.runDocumentAtCommit.mockReturnValue(
-          Promise.resolve(
-            Result.ok({
-              stream,
-              lastResponse: Promise.resolve({
+        mocks.runForegroundDocument.mockReturnValue(
+          Promise.resolve({
+            stream,
+            error: Promise.resolve(undefined),
+            getFinalResponse: async () => ({
+              response: {
                 streamType: 'text',
                 text: 'Hello',
                 usage,
@@ -1581,9 +1622,10 @@ describe('POST /run', () => {
                     },
                   ],
                 },
-              }),
+              },
+              provider: provider,
             }),
-          ),
+          }),
         )
 
         const res = await app.request(route, {
@@ -1597,9 +1639,14 @@ describe('POST /run', () => {
         })
 
         expect(res.status).toBe(200)
-        expect(mocks.routeRequest).toHaveBeenCalledWith(abTest, 'user-456')
-        expect(mocks.getCommitById).toHaveBeenCalledWith(challengerCommit.id)
-        expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith(
+        expect(mocks.resolveAbTestRouting).toHaveBeenCalledWith({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          commit,
+          source: LogSources.API,
+          customIdentifier: 'user-456',
+        })
+        expect(mocks.runForegroundDocument).toHaveBeenCalledWith(
           expect.objectContaining({
             source: LogSources.ABTestChallenger,
             commit: expect.objectContaining({ id: challengerCommit.id }),
@@ -1620,9 +1667,11 @@ describe('POST /run', () => {
           status: 'running',
         }
 
-        mocks.findActiveForCommit.mockResolvedValue(abTest)
-        mocks.getHeadCommit.mockResolvedValue(commit)
-        mocks.routeRequest.mockReturnValue('baseline')
+        mocks.resolveAbTestRouting.mockResolvedValue({
+          abTest,
+          effectiveCommit: commit,
+          effectiveSource: LogSources.API,
+        })
 
         const documentLogUuid = generateUUIDIdentifier()
         const usage = {
@@ -1653,11 +1702,12 @@ describe('POST /run', () => {
           },
         })
 
-        mocks.runDocumentAtCommit.mockReturnValue(
-          Promise.resolve(
-            Result.ok({
-              stream,
-              lastResponse: Promise.resolve({
+        mocks.runForegroundDocument.mockReturnValue(
+          Promise.resolve({
+            stream,
+            error: Promise.resolve(undefined),
+            getFinalResponse: async () => ({
+              response: {
                 streamType: 'text',
                 text: 'Hello',
                 usage,
@@ -1673,9 +1723,10 @@ describe('POST /run', () => {
                     },
                   ],
                 },
-              }),
+              },
+              provider: provider,
             }),
-          ),
+          }),
         )
 
         const res = await app.request(route, {
@@ -1688,7 +1739,13 @@ describe('POST /run', () => {
         })
 
         expect(res.status).toBe(200)
-        expect(mocks.routeRequest).toHaveBeenCalledWith(abTest, undefined)
+        expect(mocks.resolveAbTestRouting).toHaveBeenCalledWith({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          commit,
+          source: LogSources.API,
+          customIdentifier: undefined,
+        })
       })
     })
 
@@ -1706,7 +1763,12 @@ describe('POST /run', () => {
           status: 'running',
         }
 
-        mocks.findActiveForCommit.mockResolvedValue(shadowTest)
+        mocks.resolveAbTestRouting.mockResolvedValue({
+          abTest: shadowTest,
+          effectiveCommit: commit,
+          effectiveSource: LogSources.API,
+        })
+
         mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
           if (featureName === 'api-background-runs') {
             return Promise.resolve(Result.ok(true))
