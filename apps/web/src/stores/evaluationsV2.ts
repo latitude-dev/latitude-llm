@@ -14,7 +14,7 @@ import { ROUTES } from '$/services/routes'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact, isEmpty } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { SWRConfiguration, useSWRConfig } from 'swr'
 import { EvaluationV2Stats } from '@latitude-data/core/schema/types'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
@@ -48,6 +48,7 @@ export function useEvaluationsV2(
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
+  const { mutate: globalMutate } = useSWRConfig()
   const fetcher = useFetcher<EvaluationV2[]>(ROUTES.api.evaluations.root, {
     searchParams: {
       projectId: project.id.toString(),
@@ -128,6 +129,7 @@ export function useEvaluationsV2(
             return evaluation
           }) ?? [],
       )
+      globalMutate((key) => Array.isArray(key) && key[0] === 'issueEvaluations')
       if (!notifyUpdate) return
       toast({
         title: 'Evaluation updated successfully',
