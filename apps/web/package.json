@@ -54,7 +54,7 @@
     "diff-match-patch": "1.0.5",
     "drizzle-orm": "catalog:",
     "eventsource-parser": "2.0.1",
-    "ioredis": "5.6.0",
+    "ioredis": "catalog:",
     "ip": "2.0.1",
     "js-cookie": "3.0.5",
     "katex": "^0.16.23",
