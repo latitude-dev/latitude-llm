@@ -15,8 +15,8 @@
     "datadog:sourcemaps": "datadog-ci sourcemaps upload dist --service=latitude-llm-workers --minified-path-prefix=/app/apps/workers/dist --release-version=${RELEASE_VERSION:-unknown}"
   },
   "dependencies": {
-    "@bull-board/api": "6.10.1",
-    "@bull-board/express": "6.10.1",
+    "@bull-board/api": "6.15.0",
+    "@bull-board/express": "6.15.0",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/telemetry": "workspace:*",
