@@ -9,12 +9,7 @@ export class CloudCollector extends DataCollector<'cloud'> {
   collect(args: CollectorInput): CollectorOutput<'cloud'> | undefined {
     const { email, workspace, event, analyticsEnv } = args
 
-    if (analyticsEnv.nodeEnv === 'development') {
-      debug('Analytics event captured:', event.type)
-      return
-    }
-
-    return {
+    const data = {
       distinctId: email,
       event: event.type,
       disableGeoip: true,
@@ -25,6 +20,13 @@ export class CloudCollector extends DataCollector<'cloud'> {
         workspaceUuid: workspace?.uuid,
         data: event.data,
       },
+    } satisfies CollectorOutput<'cloud'>
+
+    if (analyticsEnv.nodeEnv === 'development') {
+      debug('Analytics event captured:', JSON.stringify(data, null, 2))
+      return
     }
+
+    return data
   }
 }

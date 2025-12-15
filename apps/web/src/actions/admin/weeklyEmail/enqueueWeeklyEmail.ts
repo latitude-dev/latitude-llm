@@ -31,8 +31,8 @@ export const enqueueWeeklyEmailAction = withAdmin
     from.setDate(from.getDate() - 7)
     from.setHours(0, 0, 0, 0) // Start of 7 days ago
 
-    const { maintenanceQueue } = await queues()
-    await maintenanceQueue.add(
+    const { notificationsQueue } = await queues()
+    await notificationsQueue.add(
       'sendWeeklyEmailJob',
       {
         workspaceId,

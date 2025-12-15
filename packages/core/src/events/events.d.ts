@@ -97,6 +97,8 @@ export type Events =
   | 'escalatingIssuesEmailPreferenceUpdated'
   | 'workspaceIssuesDashboardUnlocked'
   | 'deploymentTestCreated'
+  | 'weeklyWorkspacesNotifiedTotal'
+  | 'weeklyWorkspaceNotified'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -890,6 +892,44 @@ export type DeploymentTestCreatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type WeeklyWorkspacesNotifiedTotalEvent = LatitudeEventGeneric<
+  'weeklyWorkspacesNotifiedTotal',
+  {
+    userEmail: string
+    numberOfWorkspaces: number
+  }
+>
+
+export type WeeklyWorkspaceNotifiedEvent = LatitudeEventGeneric<
+  'weeklyWorkspaceNotified',
+  {
+    userEmail: string
+    workspaceId: number
+    numberOfEmails: number
+    logs: {
+      logsCount: number
+      tokensSpent: number
+      tokensCost: number
+      usedInProduction: boolean
+    }
+    issues: {
+      hasIssues: boolean
+      issuesCount: number
+      newIssuesCount: number
+      escalatedIssuesCount: number
+      resolvedIssuesCount: number
+      ignoredIssuesCount: number
+      regressedIssuesCount: number
+    }
+    annotations: {
+      hasAnnotations: boolean
+      annotationsCount: number
+      passedCount: number
+      failedCount: number
+    }
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -975,6 +1015,8 @@ export type LatitudeEvent =
   | EscalatingIssuesEmailPreferenceUpdatedEvent
   | WorkspaceIssuesDashboardUnlockedEvent
   | DeploymentTestCreatedEvent
+  | WeeklyWorkspacesNotifiedTotalEvent
+  | WeeklyWorkspaceNotifiedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -1061,4 +1103,6 @@ export interface IEventsHandlers {
   escalatingIssuesEmailPreferenceUpdated: EventHandler<EscalatingIssuesEmailPreferenceUpdatedEvent>[]
   workspaceIssuesDashboardUnlocked: EventHandler<WorkspaceIssuesDashboardUnlockedEvent>[]
   deploymentTestCreated: EventHandler<DeploymentTestCreatedEvent>[]
+  weeklyWorkspacesNotifiedTotal: EventHandler<WeeklyWorkspacesNotifiedTotalEvent>[]
+  weeklyWorkspaceNotified: EventHandler<WeeklyWorkspaceNotifiedEvent>[]
 }
