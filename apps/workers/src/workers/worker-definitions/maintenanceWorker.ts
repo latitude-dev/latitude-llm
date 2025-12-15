@@ -16,7 +16,6 @@ const jobMappings = {
   scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
   updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
   scheduleWeeklyEmailJobs: jobs.scheduleWeeklyEmailJobs,
-  sendWeeklyEmailJob: jobs.sendWeeklyEmailJob,
 }
 
 export function startMaintenanceWorker() {

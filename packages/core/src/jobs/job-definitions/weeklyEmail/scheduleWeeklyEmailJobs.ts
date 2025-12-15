@@ -11,15 +11,16 @@ export type ScheduleWeeklyEmailJobsData = Record<string, never>
  * 1. Finds all workspaces with prompt span activity in the last 4 weeks
  * 2. Excludes workspaces marked as big accounts (isBigAccount = true)
  * 3. Enqueues individual sendWeeklyEmailJob for each active workspace
+ *    on the notifications queue (rate-limited to 90/minute for Mailgun)
  */
 export const scheduleWeeklyEmailJobs = async (
   _: Job<ScheduleWeeklyEmailJobsData>,
 ) => {
-  const { maintenanceQueue } = await queues()
+  const { notificationsQueue } = await queues()
   const activeWorkspaces = await getActiveWorkspacesForWeeklyEmail()
 
   for (const workspace of activeWorkspaces) {
-    await maintenanceQueue.add(
+    await notificationsQueue.add(
       'sendWeeklyEmailJob',
       { workspaceId: workspace.id },
       { attempts: 3 },

@@ -5,6 +5,7 @@ export enum Queues {
   eventHandlersQueue = 'eventHandlers',
   eventsQueue = 'events',
   maintenanceQueue = 'maintenance',
+  notificationsQueue = 'notifications',
   webhooksQueue = 'webhooks',
   documentsQueue = 'documentsQueue',
   documentSuggestionsQueue = 'documentSuggestionsQueue',
