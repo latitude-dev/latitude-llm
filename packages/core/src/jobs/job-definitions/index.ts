@@ -34,6 +34,7 @@ export * from '../../events/handlers/generateDetailsForMergedIssue'
 export * from '../../events/handlers/notifyClientOfCommitUpdated'
 export * from '../../events/handlers/unlockIssuesDashboardOnAnnotation'
 export * from '../../events/handlers/stopDeploymentTestsForCommitHandler'
+export * from '../../events/handlers/enqueueShadowTestChallenger'
 
 // Jobs
 export * from './actions/generateProjectNameJob'

@@ -4,7 +4,6 @@ import { BACKGROUND } from '../../telemetry'
 import { buildClientToolHandlersMap } from '../documents/tools/clientTools/handlers'
 import { runDocumentAtCommit } from './runDocumentAtCommit'
 import { ProviderApiKeysRepository } from '../../repositories'
-import type { DeploymentTest } from '../../schema/models/types/DeploymentTest'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import type { WorkspaceDto } from '../../schema/models/types/Workspace'
 import type { Commit } from '../../schema/models/types/Commit'
@@ -24,7 +23,6 @@ export type RunForegroundDocumentParams = {
   source: LogSources
   tools: string[]
   userMessage?: string
-  activeDeploymentTest?: DeploymentTest
   abortSignal?: AbortSignal
 }
 
@@ -57,7 +55,6 @@ export async function runForegroundDocument(
     abortSignal,
     tools,
     userMessage,
-    activeDeploymentTest,
     project,
   } = params
 
@@ -89,7 +86,6 @@ export async function runForegroundDocument(
         documentUuid: document.documentUuid,
         commitUuid: commit.uuid,
       },
-      activeDeploymentTest,
       parameters,
       customIdentifier,
       tools,

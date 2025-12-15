@@ -3,6 +3,7 @@ import { routeRequest } from '../../services/deploymentTests/routeRequest'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
+  DeploymentTestsRepository,
 } from '../../repositories'
 import { ProjectsRepository } from '../../repositories'
 import { Result } from '../../lib/Result'
@@ -21,36 +22,57 @@ export async function enqueueShadowTestChallengerHandler({
     projectId,
     documentUuid,
     commitUuid,
-    activeDeploymentTest,
     parameters,
     customIdentifier,
     tools,
     userMessage,
   } = event.data
 
-  if (!activeDeploymentTest || activeDeploymentTest.testType !== 'shadow') {
+  // Prevent infinite recursion: don't trigger shadow test runs from shadow test runs
+  if (event.data.run.source === LogSources.ShadowTest) {
     return
   }
 
-  // Check if this request should be shadowed based on traffic percentage
-  const routedTo = routeRequest(
-    activeDeploymentTest,
-    customIdentifier ?? undefined,
-  )
-  if (routedTo !== 'challenger') {
+  // Find active shadow test for this project
+  const deploymentTestsRepo = new DeploymentTestsRepository(workspaceId)
+  const allActiveTests =
+    await deploymentTestsRepo.findAllActiveForProject(projectId)
+  const shadowTest = allActiveTests.find((test) => test.testType === 'shadow')
+  if (!shadowTest) return
+
+  // Get the commit to check if it's relevant to this shadow test
+  const commitsRepo = new CommitsRepository(workspaceId)
+  const headCommit = await commitsRepo.getHeadCommit(projectId)
+  const commitResult = await commitsRepo.getCommitByUuid({
+    uuid: commitUuid,
+    projectId,
+  })
+
+  if (!Result.isOk(commitResult)) {
+    captureException(commitResult.error)
     return
   }
+
+  const commit = commitResult.unwrap()
+  const isHeadCommit = headCommit?.id === commit.id
+  const isChallengerCommit = shadowTest.challengerCommitId === commit.id
+
+  // Shadow test is only relevant if commit is head (baseline) or challenger
+  if (!isHeadCommit && !isChallengerCommit) return
+
+  // Check if this request should be shadowed based on traffic percentage
+  const routedTo = routeRequest(shadowTest, customIdentifier ?? undefined)
+  if (routedTo !== 'challenger') return
 
   // Fetch necessary data
   const workspace = await unsafelyFindWorkspace(workspaceId)
-  const commitsRepo = new CommitsRepository(workspaceId)
   const projectsRepo = new ProjectsRepository(workspaceId)
   const documentsRepo = new DocumentVersionsRepository(workspaceId)
 
   // Fetch challenger commit, project, and document for shadow test
   const [challengerCommitResult, projectResult, documentResult] =
     await Promise.all([
-      commitsRepo.getCommitById(activeDeploymentTest.challengerCommitId),
+      commitsRepo.getCommitById(shadowTest.challengerCommitId),
       projectsRepo.getProjectById(projectId),
       documentsRepo.getDocumentByUuid({ commitUuid, documentUuid }),
     ])
@@ -71,7 +93,6 @@ export async function enqueueShadowTestChallengerHandler({
   const challengerCommit = challengerCommitResult.unwrap()
   const project = projectResult.unwrap()
   const document = documentResult.unwrap()
-
   const result = await enqueueRun({
     workspace,
     document,
@@ -83,7 +104,7 @@ export async function enqueueShadowTestChallengerHandler({
     userMessage,
     source: LogSources.ShadowTest,
     simulationSettings: { simulateToolResponses: true },
-    activeDeploymentTest,
+    activeDeploymentTest: shadowTest,
   })
 
   if (!Result.isOk(result)) {
