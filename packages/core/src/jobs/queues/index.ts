@@ -12,6 +12,7 @@ let _queues:
       eventHandlersQueue: Queue
       eventsQueue: Queue
       maintenanceQueue: Queue
+      notificationsQueue: Queue
       tracingQueue: Queue
       webhooksQueue: Queue
       latteQueue: Queue
@@ -59,6 +60,7 @@ export async function queues() {
     eventHandlersQueue: new Queue(Queues.eventHandlersQueue, options),
     eventsQueue: new Queue(Queues.eventsQueue, options),
     maintenanceQueue: new Queue(Queues.maintenanceQueue, options),
+    notificationsQueue: new Queue(Queues.notificationsQueue, options),
     tracingQueue: new Queue(Queues.tracingQueue, options),
     webhooksQueue: new Queue(Queues.webhooksQueue, options),
     latteQueue: new Queue(Queues.latteQueue, options),

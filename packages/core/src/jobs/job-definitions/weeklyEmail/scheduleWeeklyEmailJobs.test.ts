@@ -12,7 +12,7 @@ describe('scheduleWeeklyEmailJobs', () => {
   beforeEach(() => {
     mockAdd = vi.fn()
     vi.spyOn(queuesModule, 'queues').mockResolvedValue({
-      maintenanceQueue: { add: mockAdd },
+      notificationsQueue: { add: mockAdd },
       eventsQueue: { add: vi.fn() },
       webhooksQueue: { add: vi.fn() },
     } as any)
