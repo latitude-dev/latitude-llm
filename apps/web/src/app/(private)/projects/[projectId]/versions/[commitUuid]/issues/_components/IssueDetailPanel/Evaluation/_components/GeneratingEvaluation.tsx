@@ -11,10 +11,10 @@ type GeneratingEvaluationProps = {
 
 const GENERATION_DESCRIPTIONS = [
   'Thinking of a good configuration...',
-  'Validating its effectiveness...',
-  'Trying a different approach...',
-  'Validating the new approach...',
-  'Found it! Creating the evaluation...',
+  'Running validation tests...',
+  'Evaluating alignment...',
+  'Processing results...',
+  'Optimizing further...',
 ]
 
 export function GeneratingEvaluation({

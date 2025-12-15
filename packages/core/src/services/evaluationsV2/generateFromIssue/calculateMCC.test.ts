@@ -14,15 +14,15 @@ import { calculateMCC } from './calculateMCC'
  * - examplesThatShouldFailTheEvaluation: array of hasPassed booleans for spans that actually have ISSUES
  *
  * Confusion Matrix:
- *                          | Actually Positive  | Actually Negative
- *                          | (should pass)      | (should fail)
- * -------------------------+--------------------+-------------------
- * Predicted Positive       | True Positive (TP) | False Positive (FP)
- * (hasPassed = true)       | Correct!           | Wrong! Said good but has issue
- * -------------------------+--------------------+-------------------
- * Predicted Negative       | False Negative (FN)| True Negative (TN)
- * (hasPassed = false)      | Wrong! Said bad    | Correct!
- *                          | but was good       |
+ *                          | Actually Positive    | Actually Negative
+ *                          | (should pass)        | (should fail)
+ * -------------------------+----------------------+-------------------
+ * Predicted Positive       | True Positive (TP)   | False Positive (FP)
+ * (hasPassed = true)       | Correct!             | Wrong! Predicted good but has issue
+ * -------------------------+----------------------+-------------------
+ * Predicted Negative       | False Negative (FN)  | True Negative (TN)
+ * (hasPassed = false)      | Wrong! Predicted bad | Correct!
+ *                          | but was good         |
  *
  * Calculation from inputs:
  * - TP = examplesThatShouldPassTheEvaluation.filter(r => r === true).length
@@ -181,7 +181,9 @@ describe('calculateMCC', () => {
       })
 
       // TP + FP = 0, so we can't calculate MCC (no positive predictions to evaluate)
-      expect(Result.isOk(mccResult)).toBe(false)
+      expect(Result.isOk(mccResult)).toBe(true)
+      const { mcc } = mccResult.unwrap()
+      expect(mcc).toBe(0)
     })
 
     it('returns error when no negative predictions exist (TN + FN = 0, all predictions are positive)', () => {
@@ -191,7 +193,9 @@ describe('calculateMCC', () => {
       })
 
       // TN + FN = 0, so we can't calculate MCC (no negative predictions to evaluate)
-      expect(Result.isOk(mccResult)).toBe(false)
+      expect(Result.isOk(mccResult)).toBe(true)
+      const { mcc } = mccResult.unwrap()
+      expect(mcc).toBe(0)
     })
 
     it('returns 0 MCC when denominator is 0 (degenerate case)', () => {
@@ -215,7 +219,9 @@ describe('calculateMCC', () => {
         examplesThatShouldFailTheEvaluation: [false, false],
       })
 
-      expect(Result.isOk(mccResult)).toBe(false)
+      expect(Result.isOk(mccResult)).toBe(true)
+      const { mcc } = mccResult.unwrap()
+      expect(mcc).toBe(0)
     })
 
     it('returns error with empty shouldFail array', () => {
@@ -224,7 +230,9 @@ describe('calculateMCC', () => {
         examplesThatShouldFailTheEvaluation: [],
       })
 
-      expect(Result.isOk(mccResult)).toBe(false)
+      expect(Result.isOk(mccResult)).toBe(true)
+      const { mcc } = mccResult.unwrap()
+      expect(mcc).toBe(0)
     })
 
     it('returns error with both empty arrays', () => {
@@ -233,7 +241,9 @@ describe('calculateMCC', () => {
         examplesThatShouldFailTheEvaluation: [],
       })
 
-      expect(Result.isOk(mccResult)).toBe(false)
+      expect(Result.isOk(mccResult)).toBe(true)
+      const { mcc } = mccResult.unwrap()
+      expect(mcc).toBe(0)
     })
   })
 

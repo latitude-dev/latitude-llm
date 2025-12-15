@@ -94,7 +94,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
         })
       }
     },
-    [issue.id, setEndedEvaluation, mutateEvaluations],
+    [issue.id, mutateEvaluations],
   )
 
   const { data: activeEvaluations, isLoading: isLoadingActiveEvaluations } =
@@ -161,18 +161,26 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     isLoadingActiveEvaluations,
   ])
 
-  const evaluationGenerationIsLoading = useMemo(() => {
-    return isLoadingEvaluations || !issueEvaluationStats
-  }, [isLoadingEvaluations, issueEvaluationStats])
+  const evaluationGenerationIsLoading =
+    isLoadingEvaluations || !issueEvaluationStats
+
+  const evaluationWithIssueIsReady = useMemo(() => {
+    return (
+      evaluationWithIssue &&
+      evaluationWithIssue.alignmentMetric !== null &&
+      evaluationWithIssue.alignmentMetric !== undefined &&
+      evaluationWithIssue.alignmentMetric !== 0
+    )
+  }, [evaluationWithIssue])
 
   if (evaluationGenerationIsLoading) {
     return <LoadingEvaluationGeneration />
   }
 
-  if (evaluationWithIssue) {
+  if (evaluationWithIssueIsReady) {
     return (
       <EvaluationWithIssue
-        evaluationWithIssue={evaluationWithIssue}
+        evaluationWithIssue={evaluationWithIssue!}
         evaluations={evaluations}
         issue={issue}
         isUpdatingEvaluation={isUpdatingEvaluation}
