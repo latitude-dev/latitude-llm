@@ -46,8 +46,8 @@ catalogs:
       specifier: 5.0.44
       version: 5.0.44
     bullmq:
-      specifier: 5.63.0
-      version: 5.63.0
+      specifier: 5.66.0
+      version: 5.66.0
     dd-trace:
       specifier: 5.69.0
       version: 5.69.0
@@ -314,7 +314,7 @@ importers:
         version: 0.44.0
       bullmq:
         specifier: 'catalog:'
-        version: 5.63.0
+        version: 5.66.0
       date-fns:
         specifier: 3.6.0
         version: 3.6.0
@@ -595,7 +595,7 @@ importers:
         version: 0.13.8(typescript@5.9.3)(zod@4.1.8)
       bullmq:
         specifier: 'catalog:'
-        version: 5.63.0
+        version: 5.66.0
       dd-trace:
         specifier: 'catalog:'
         version: 5.69.0
@@ -842,7 +842,7 @@ importers:
         version: 0.44.0
       bullmq:
         specifier: 'catalog:'
-        version: 5.63.0
+        version: 5.66.0
       compute-cosine-similarity:
         specifier: 1.1.0
         version: 1.1.0
@@ -7276,8 +7276,8 @@ packages:
     resolution: {integrity: sha512-zhaCDicdLuWN5UbN5IMnFqNMhNfo919sH85y2/ea+5Yg9TsTkeZxpL+JLbp6cgYFS4sRLp3YV4S6yDuqVWHYOw==}
     engines: {node: '>=6'}
 
-  bullmq@5.63.0:
-    resolution: {integrity: sha512-HT1iM3Jt4bZeg3Ru/MxrOy2iIItxcl1Pz5Ync1Vrot70jBpVguMxFEiSaDU57BwYwR4iwnObDnzct2lirKkX5A==}
+  bullmq@5.66.0:
+    resolution: {integrity: sha512-LSe8yEiVTllOOq97Q0C/EhczKS5Yd0AUJleGJCIh0cyJE5nWUqEpGC/uZQuuAYniBSoMT8LqwrxE7N5MZVrLoQ==}
 
   bundle-name@4.1.0:
     resolution: {integrity: sha512-tjwM5exMg6BGRI+kNmTntNsvdZS1X8BFYS6tnJ2hdH0kVxM6/eVZ2xy+FqStSWvYmtfFMDLIxurorHwDKfDz5Q==}
@@ -9672,6 +9672,10 @@ packages:
 
   ioredis@5.6.0:
     resolution: {integrity: sha512-tBZlIIWbndeWBWCXWZiqtOF/yxf6yZX3tAlTJ7nfo5jhd6dctNxF7QnYlZLZ1a0o0pDoen7CgZqO+zjNaFbJAg==}
+    engines: {node: '>=12.22.0'}
+
+  ioredis@5.8.2:
+    resolution: {integrity: sha512-C6uC+kleiIMmjViJINWk80sOQw5lEzse1ZmvD+S/s8p8CWapftSaC+kocGTx6xrbrJ4WmYQGC08ffHLr6ToR6Q==}
     engines: {node: '>=12.22.0'}
 
   ip-address@10.0.1:
@@ -22057,10 +22061,10 @@ snapshots:
 
   builtin-modules@3.3.0: {}
 
-  bullmq@5.63.0:
+  bullmq@5.66.0:
     dependencies:
       cron-parser: 4.9.0
-      ioredis: 5.6.0
+      ioredis: 5.8.2
       msgpackr: 1.11.5
       node-abort-controller: 3.1.1
       semver: 7.7.2
@@ -24831,6 +24835,20 @@ snapshots:
   internmap@2.0.3: {}
 
   ioredis@5.6.0:
+    dependencies:
+      '@ioredis/commands': 1.4.0
+      cluster-key-slot: 1.1.2
+      debug: 4.4.3
+      denque: 2.1.0
+      lodash.defaults: 4.2.0
+      lodash.isarguments: 3.1.0
+      redis-errors: 1.2.0
+      redis-parser: 3.0.0
+      standard-as-callback: 2.1.0
+    transitivePeerDependencies:
+      - supports-color
+
+  ioredis@5.8.2:
     dependencies:
       '@ioredis/commands': 1.4.0
       cluster-key-slot: 1.1.2
