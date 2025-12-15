@@ -94,9 +94,8 @@ export class DeploymentTestsRepository extends Repository<DeploymentTest> {
         .limit(1)
 
       const test = result[0]
-      if (test && ACTIVE_DEPLOYMENT_STATUSES.includes(test.status)) {
-        return test
-      }
+      if (test && ACTIVE_DEPLOYMENT_STATUSES.includes(test.status)) return test
+
       return null
     }
 

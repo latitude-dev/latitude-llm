@@ -161,7 +161,6 @@ describe('runForegroundDocument', () => {
         source: LogSources.API,
         tools: ['tool1'],
         userMessage: 'test message',
-        activeDeploymentTest: shadowTest,
       })
 
       expect(

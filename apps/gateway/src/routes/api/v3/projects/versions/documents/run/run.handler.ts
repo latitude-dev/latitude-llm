@@ -11,22 +11,16 @@ import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runForegroundDocument } from '@latitude-data/core/services/commits/foregroundRun'
-import {
-  enqueueRun,
-  EnqueueRunProps,
-} from '@latitude-data/core/services/runs/enqueue'
+import { enqueueRun } from '@latitude-data/core/services/runs/enqueue'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { streamSSE } from 'hono/streaming'
 import type { Context } from 'hono'
 import { RunRoute } from './run.route'
-import { CommitsRepository } from '@latitude-data/core/repositories'
-import { routeRequest } from '@latitude-data/core/services/deploymentTests/routeRequest'
-import { DeploymentTestsRepository } from '@latitude-data/core/repositories/deploymentTestsRepository'
+import { resolveAbTestRouting } from '@latitude-data/core/services/deploymentTests/resolveAbTestRouting'
 import { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
-import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
 
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
@@ -75,42 +69,23 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     })
   }
 
-  const {
-    activeDeploymentTest: activeTest,
-    effectiveCommit,
-    effectiveSource,
-  } = await resolveDeploymentTestContext({
+  const shouldRunInBackground = await shouldRunInBackgroundMode({
     workspaceId: workspace.id,
-    projectId: project.id,
-    commit,
-    source,
-    customIdentifier,
+    explicitBackground: background,
   })
-
-  // Check if background execution should happen:
-  // 1. If background prop is explicitly set, use that value
-  // 2. Otherwise, check if the feature flag is enabled for the workspace
-  const backgroundRunsFeatureEnabled = await isFeatureEnabledByName(
-    workspace.id,
-    'api-background-runs',
-  ).then((r) => r.unwrap())
-
-  const shouldRunInBackground =
-    background !== undefined ? background : backgroundRunsFeatureEnabled
 
   if (shouldRunInBackground) {
     return await handleBackgroundRun({
       c,
       workspace,
       document,
-      commit: effectiveCommit,
+      commit,
       project,
       parameters,
       customIdentifier,
       tools,
       userMessage,
-      source: effectiveSource,
-      activeDeploymentTest: activeTest || undefined,
+      source,
     })
   }
 
@@ -118,15 +93,14 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     c,
     workspace,
     document,
-    commit: effectiveCommit,
+    commit,
     project,
     parameters,
     customIdentifier,
-    source: effectiveSource,
+    source,
     useSSE,
     tools,
     userMessage: userMessage || undefined,
-    activeDeploymentTest: activeTest || undefined,
   })
 }
 
@@ -141,19 +115,39 @@ async function handleBackgroundRun({
   tools,
   userMessage,
   source,
-  activeDeploymentTest,
-}: EnqueueRunProps & { c: Context }) {
+}: {
+  c: Context
+  workspace: WorkspaceDto
+  document: DocumentVersion
+  commit: Commit
+  project: Project
+  parameters: Record<string, unknown>
+  customIdentifier?: string
+  tools: string[]
+  userMessage?: string
+  source: LogSources
+}) {
+  // Find active AB test and route accordingly
+  const { effectiveCommit, effectiveSource, abTest } =
+    await resolveAbTestRouting({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      commit,
+      source,
+      customIdentifier,
+    })
+
   const { run } = await enqueueRun({
     document,
-    commit,
+    commit: effectiveCommit,
     project,
     workspace,
     parameters,
     customIdentifier,
     tools,
     userMessage,
-    source,
-    activeDeploymentTest,
+    source: effectiveSource,
+    activeDeploymentTest: abTest || undefined,
   }).then((r) => r.unwrap())
 
   return c.json({ uuid: run.uuid })
@@ -171,7 +165,6 @@ async function handleForegroundRun({
   useSSE,
   tools,
   userMessage,
-  activeDeploymentTest,
 }: {
   c: Context
   workspace: WorkspaceDto
@@ -184,8 +177,16 @@ async function handleForegroundRun({
   useSSE: boolean
   tools: string[]
   userMessage?: string
-  activeDeploymentTest?: DeploymentTest
 }) {
+  // Find active AB test and route accordingly
+  const { effectiveCommit, effectiveSource } = await resolveAbTestRouting({
+    workspaceId: workspace.id,
+    projectId: project.id,
+    commit,
+    source,
+    customIdentifier,
+  })
+
   const {
     stream: runStream,
     getFinalResponse,
@@ -193,15 +194,14 @@ async function handleForegroundRun({
   } = await runForegroundDocument({
     workspace,
     document,
-    commit,
+    commit: effectiveCommit,
     parameters,
     customIdentifier,
-    source,
+    source: effectiveSource,
     abortSignal: c.req.raw.signal, // FIXME: This does not seem to work
     project,
     tools,
     userMessage,
-    activeDeploymentTest,
   })
 
   if (useSSE) {
@@ -279,82 +279,32 @@ async function handleForegroundRun({
 }
 
 /**
- * Resolves the deployment test context for a document run request.
+ * Determines if a document run should execute in background mode.
  *
- * Determines the effective commit and log source based on active deployment tests.
- * For A/B tests, routes the request to either the baseline or challenger variant
- * based on the custom identifier (using consistent hashing).
+ * Priority:
+ * 1. If explicitBackground is set, use that value
+ * 2. Otherwise, check if the 'api-background-runs' feature flag is enabled for the workspace
  *
- * @param params - The deployment test context parameters
+ * @param params - The background mode determination parameters
  * @param params.workspaceId - The workspace ID
- * @param params.projectId - The project ID
- * @param params.documentUuid - The document UUID to check for active tests
- * @param params.commit - The original commit from the request
- * @param params.source - The original log source from the request
- * @param params.customIdentifier - Optional custom identifier for A/B test routing
- * @returns Object containing the active deployment test (if any), effective commit
- *          (may differ from original for A/B tests), and effective log source
- *          (updated to reflect baseline/challenger for A/B tests)
+ * @param params.explicitBackground - Optional explicit background flag from the request
+ * @returns Whether the run should execute in background mode
  */
-async function resolveDeploymentTestContext({
+async function shouldRunInBackgroundMode({
   workspaceId,
-  projectId,
-  commit,
-  source,
-  customIdentifier,
+  explicitBackground,
 }: {
   workspaceId: number
-  projectId: number
-  commit: any
-  source: LogSources
-  customIdentifier?: string | null
-}) {
-  const deploymentTestsRepo = new DeploymentTestsRepository(workspaceId)
-  const activeDeploymentTest = await deploymentTestsRepo.findActiveForCommit(
-    projectId,
-    commit.id,
-  )
-
-  if (!activeDeploymentTest || activeDeploymentTest.testType !== 'ab') {
-    return {
-      activeDeploymentTest,
-      effectiveCommit: commit,
-      effectiveSource: source,
-    }
+  explicitBackground?: boolean
+}): Promise<boolean> {
+  if (explicitBackground !== undefined) {
+    return explicitBackground
   }
 
-  // Determine which variant to route to
-  const routedTo = routeRequest(activeDeploymentTest, customIdentifier)
+  const backgroundRunsFeatureEnabled = await isFeatureEnabledByName(
+    workspaceId,
+    'api-background-runs',
+  ).then((r) => r.unwrap())
 
-  // Get the head commit (baseline is always the head commit)
-  const commitsRepo = new CommitsRepository(workspaceId)
-  const headCommit = await commitsRepo.getHeadCommit(projectId)
-
-  if (!headCommit) {
-    // If no head commit, fall back to original commit
-    return {
-      activeDeploymentTest,
-      effectiveCommit: commit,
-      effectiveSource: source,
-    }
-  }
-
-  // Determine the commit and log source based on routing
-  const commitIdToUse =
-    routedTo === 'baseline'
-      ? headCommit.id
-      : activeDeploymentTest.challengerCommitId
-
-  const effectiveSource =
-    routedTo === 'baseline' ? source : LogSources.ABTestChallenger
-
-  if (commitIdToUse === commit.id) {
-    return { activeDeploymentTest, effectiveCommit: commit, effectiveSource }
-  }
-
-  const effectiveCommit = await commitsRepo
-    .getCommitById(commitIdToUse)
-    .then((r) => r.unwrap())
-
-  return { activeDeploymentTest, effectiveCommit, effectiveSource }
+  return backgroundRunsFeatureEnabled
 }

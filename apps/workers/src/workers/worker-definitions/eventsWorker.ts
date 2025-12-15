@@ -51,6 +51,7 @@ const eventHandlersJobMappings = {
   notifyClientOfCommitUpdated: jobs.notifyClientOfCommitUpdated,
   unlockIssuesDashboardOnAnnotation: jobs.unlockIssuesDashboardOnAnnotation,
   stopDeploymentTestsForCommitHandler: jobs.stopDeploymentTestsForCommitHandler,
+  enqueueShadowTestChallengerHandler: jobs.enqueueShadowTestChallengerHandler,
 }
 
 export function startEventsWorker() {
