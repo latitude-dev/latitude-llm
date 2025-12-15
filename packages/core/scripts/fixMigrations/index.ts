@@ -1,76 +1,70 @@
-#!/usr/bin/env tsx
+// Suppress blessed terminal capability errors by using simpler terminal type
+// This must be set before importing blessed (via ui modules)
+if (process.env['TERM']?.includes('256color')) {
+  process.env['TERM'] = 'xterm'
+}
 
-import { database } from '../../src/client'
-import { sql } from 'drizzle-orm'
-import { log } from './logger'
-import { loadJournal, getUnappliedMigrations } from './journal'
-import { promptAndRunOne } from './menu'
-import type { AppliedMigrationRow } from './types'
+import chalk from 'chalk'
+
+import type { MainMenuAction, Migration } from './types'
+import { getMigrations } from './data'
+import { showBrowserScreen, showMainMenuScreen } from './ui'
+import { applyAllMigrations } from './actions'
 
 /**
- * Script to check for unapplied migrations by comparing the journal.json
- * with the actual migrations applied in the database.
- *
- * Usage: tsx scripts/fixMigrations/index.ts
+ * Handle the selected menu action
  */
-async function main(): Promise<number> {
-  log.info('🔍 Checking for unapplied migrations...\n')
+async function handleMenuAction(
+  action: MainMenuAction,
+  migrations: Migration[],
+): Promise<void> {
+  switch (action) {
+    case 'apply':
+      await applyAllMigrations(migrations)
+      break
 
-  try {
-    const journal = loadJournal()
+    case 'browse_all':
+      showBrowserScreen(migrations, false, createRefreshCallback(false))
+      break
 
-    const appliedMigrationsResult = await database.execute(
-      sql`SELECT id, hash, created_at FROM drizzle.__drizzle_migrations ORDER BY created_at ASC`,
+    case 'browse_unapplied':
+      showBrowserScreen(migrations, true, createRefreshCallback(true))
+      break
+
+    case 'exit':
+      process.exit(0)
+  }
+}
+
+/**
+ * Create a refresh callback for the browser screens
+ */
+function createRefreshCallback(showOnlyUnapplied: boolean) {
+  return async () => {
+    const newMigrations = await getMigrations()
+    showBrowserScreen(
+      newMigrations,
+      showOnlyUnapplied,
+      createRefreshCallback(showOnlyUnapplied),
     )
-    const appliedMigrations =
-      appliedMigrationsResult.rows as AppliedMigrationRow[]
+  }
+}
 
-    let { unapplied: unappliedMigrations, maxCreatedAt } =
-      getUnappliedMigrations(journal, appliedMigrations)
+/**
+ * Main entry point
+ */
+async function main(): Promise<void> {
+  try {
+    const migrations = await getMigrations()
 
-    if (unappliedMigrations.length === 0) {
-      log.success('✅ All migrations are correctly applied!')
-      return 0
-    }
-
-    while (true) {
-      const result = await promptAndRunOne(unappliedMigrations, maxCreatedAt)
-
-      if (result.type === 'exit') {
-        return result.code
-      }
-
-      if (result.type === 'back') {
-        // This shouldn't happen at the top level, but handle it gracefully
-        continue
-      }
-
-      const freshAppliedResult = await database.execute(
-        sql`SELECT id, hash, created_at FROM drizzle.__drizzle_migrations ORDER BY created_at ASC`,
-      )
-      const freshApplied = freshAppliedResult.rows as AppliedMigrationRow[]
-      const refreshed = getUnappliedMigrations(journal, freshApplied)
-
-      unappliedMigrations = refreshed.unapplied
-      maxCreatedAt = refreshed.maxCreatedAt
-
-      if (unappliedMigrations.length === 0) {
-        log.success('✅ All migrations are now applied!')
-        return 0
-      }
-
-      console.log('\n')
-    }
+    // Show the blessed-based main menu
+    showMainMenuScreen(migrations, (action) => {
+      handleMenuAction(action, migrations)
+    })
   } catch (error) {
-    log.error('❌ Error checking migrations:')
-    console.error(error)
-    return 1
+    console.error(chalk.red('Error:'), error)
+    process.exit(1)
   }
 }
 
 main()
-  .then((code) => process.exit(code))
-  .catch((error) => {
-    console.error('❌ Unexpected error:', error)
-    process.exit(1)
-  })
