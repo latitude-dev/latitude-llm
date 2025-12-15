@@ -19,15 +19,6 @@ export function calculateMCC({
   const falsePositives = examplesThatShouldFailTheEvaluation.filter((r) => r).length // prettier-ignore
   const trueNegatives = examplesThatShouldFailTheEvaluation.filter((r) => !r).length // prettier-ignore
 
-  if (
-    truePositives + falsePositives === 0 ||
-    trueNegatives + falseNegatives === 0
-  ) {
-    return Result.error(
-      new Error('No positive or negative results to calculate MCC'),
-    )
-  }
-
   const mcc =
     (truePositives * trueNegatives - falsePositives * falseNegatives) /
     Math.sqrt(
@@ -37,8 +28,8 @@ export function calculateMCC({
         (trueNegatives + falseNegatives),
     )
 
-  // There can be a case where the denominator is 0 (i.e. all results are false positives or false negatives), so we return 0 instead of NaN
-  if (Number.isNaN(mcc)) {
+  // There can be a case where the denominator is 0 (i.e. all results are false positives or false negatives), so we return 0 instead of NaN or Infinity
+  if (Number.isNaN(mcc) || !Number.isFinite(mcc)) {
     return Result.ok({
       mcc: 0,
       confusionMatrix: {

@@ -43,15 +43,6 @@ export async function queues() {
     },
   }
 
-  const generateEvaluationsOptions: QueueOptions = {
-    ...options,
-    defaultJobOptions: {
-      ...options.defaultJobOptions,
-      removeOnFail: false,
-      removeOnComplete: false,
-    },
-  }
-
   _queues = {
     defaultQueue: new Queue(Queues.defaultQueue, options),
     documentSuggestionsQueue: new Queue(Queues.documentSuggestionsQueue, options), // prettier-ignore
@@ -66,7 +57,7 @@ export async function queues() {
     latteQueue: new Queue(Queues.latteQueue, options),
     runsQueue: new Queue(Queues.runsQueue, options),
     issuesQueue: new Queue(Queues.issuesQueue, options),
-    generateEvaluationsQueue: new Queue(Queues.generateEvaluationsQueue, generateEvaluationsOptions), // prettier-ignore
+    generateEvaluationsQueue: new Queue(Queues.generateEvaluationsQueue, options), // prettier-ignore
   }
 
   return _queues
