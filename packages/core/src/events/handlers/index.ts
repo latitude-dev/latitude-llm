@@ -130,4 +130,6 @@ export const EventHandlers: IEventsHandlers = {
   escalatingIssuesEmailPreferenceUpdated: [],
   workspaceIssuesDashboardUnlocked: [],
   deploymentTestCreated: [],
+  weeklyWorkspacesNotifiedTotal: [],
+  weeklyWorkspaceNotified: [],
 }

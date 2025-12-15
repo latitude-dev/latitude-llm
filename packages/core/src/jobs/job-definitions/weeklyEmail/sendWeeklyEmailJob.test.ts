@@ -8,10 +8,17 @@ import * as logsModule from '../../../data-access/weeklyEmail/logs'
 import * as issuesModule from '../../../data-access/weeklyEmail/issues'
 import * as annotationsModule from '../../../data-access/weeklyEmail/annotations'
 import * as WeeklyEmailMailerModule from '../../../mailer/mailers/weeklyEmail/WeeklyEmailMailer'
+import * as publisherModule from '../../../events/publisher'
 import { database } from '../../../client'
 import { memberships } from '../../../schema/models/memberships'
 import { sendWeeklyEmailJob } from './sendWeeklyEmailJob'
 import { AddressItem } from '../../../mailer/buildBatchRecipients'
+
+vi.mock('../../../events/publisher', () => ({
+  publisher: {
+    publishLater: vi.fn(),
+  },
+}))
 
 describe('sendWeeklyEmailJob', () => {
   let mockGetLogsData: ReturnType<typeof vi.fn>
@@ -51,6 +58,7 @@ describe('sendWeeklyEmailJob', () => {
   }
 
   beforeEach(() => {
+    vi.clearAllMocks()
     mockGetLogsData = vi.fn().mockResolvedValue(mockLogsData)
     mockGetIssuesData = vi.fn().mockResolvedValue(mockIssuesData)
     mockGetAnnotationsData = vi.fn().mockResolvedValue(mockAnnotationsData)
@@ -309,6 +317,209 @@ describe('sendWeeklyEmailJob', () => {
       expect(member).toHaveProperty('name')
       expect(member).toHaveProperty('userId')
       expect(member).toHaveProperty('membershipId')
+    })
+  })
+
+  describe('weeklyWorkspaceNotified event', () => {
+    it('publishes event with correct data after sending emails', async () => {
+      const { workspace, userData: creator } = await createWorkspace()
+
+      await database
+        .update(memberships)
+        .set({ wantToReceiveWeeklyEmail: true })
+        .where(eq(memberships.workspaceId, workspace.id))
+
+      const job = {
+        data: { workspaceId: workspace.id },
+      } as Job
+
+      await sendWeeklyEmailJob(job)
+
+      expect(publisherModule.publisher.publishLater).toHaveBeenCalledWith({
+        type: 'weeklyWorkspaceNotified',
+        data: {
+          userEmail: creator.email,
+          workspaceId: workspace.id,
+          numberOfEmails: 1,
+          logs: {
+            logsCount: mockLogsData.logsCount,
+            tokensSpent: mockLogsData.tokensSpent,
+            tokensCost: mockLogsData.tokensCost,
+            usedInProduction: mockLogsData.usedInProduction,
+          },
+          issues: {
+            hasIssues: mockIssuesData.hasIssues,
+            issuesCount: mockIssuesData.issuesCount,
+            newIssuesCount: mockIssuesData.newIssuesCount,
+            escalatedIssuesCount: mockIssuesData.escalatedIssuesCount,
+            resolvedIssuesCount: mockIssuesData.resolvedIssuesCount,
+            ignoredIssuesCount: mockIssuesData.ignoredIssuesCount,
+            regressedIssuesCount: mockIssuesData.regressedIssuesCount,
+          },
+          annotations: {
+            hasAnnotations: mockAnnotationsData.hasAnnotations,
+            annotationsCount: mockAnnotationsData.annotationsCount,
+            passedCount: mockAnnotationsData.passedCount,
+            failedCount: mockAnnotationsData.failedCount,
+          },
+        },
+      })
+    })
+
+    it('uses first member email (ordered by createdAt)', async () => {
+      const olderUser = await createUser({
+        createdAt: new Date('2020-01-01'),
+      })
+      const newerUser = await createUser({
+        createdAt: new Date('2024-01-01'),
+      })
+
+      const { workspace } = await createWorkspace({ creator: newerUser })
+
+      await createMembership({ user: olderUser, workspace, author: newerUser })
+
+      await database
+        .update(memberships)
+        .set({ wantToReceiveWeeklyEmail: true })
+        .where(eq(memberships.workspaceId, workspace.id))
+
+      const job = {
+        data: { workspaceId: workspace.id },
+      } as Job
+
+      await sendWeeklyEmailJob(job)
+
+      expect(publisherModule.publisher.publishLater).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'weeklyWorkspaceNotified',
+          data: expect.objectContaining({
+            userEmail: olderUser.email,
+            numberOfEmails: 2,
+          }),
+        }),
+      )
+    })
+
+    it('includes correct member count in numberOfEmails', async () => {
+      const { workspace, userData: creator } = await createWorkspace()
+      const user1 = await createUser()
+      const user2 = await createUser()
+
+      await createMembership({ user: user1, workspace, author: creator })
+      await createMembership({ user: user2, workspace, author: creator })
+
+      await database
+        .update(memberships)
+        .set({ wantToReceiveWeeklyEmail: true })
+        .where(eq(memberships.workspaceId, workspace.id))
+
+      const job = {
+        data: { workspaceId: workspace.id },
+      } as Job
+
+      await sendWeeklyEmailJob(job)
+
+      expect(publisherModule.publisher.publishLater).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            numberOfEmails: 3,
+          }),
+        }),
+      )
+    })
+
+    it('does not publish event when no members want to receive emails', async () => {
+      const { workspace } = await createWorkspace()
+
+      await database
+        .update(memberships)
+        .set({ wantToReceiveWeeklyEmail: false })
+        .where(eq(memberships.workspaceId, workspace.id))
+
+      const job = {
+        data: { workspaceId: workspace.id },
+      } as Job
+
+      await sendWeeklyEmailJob(job)
+
+      expect(publisherModule.publisher.publishLater).not.toHaveBeenCalled()
+    })
+
+    it('includes stats from fetched data', async () => {
+      const customLogsData = {
+        usedInProduction: false,
+        logsCount: 50,
+        tokensSpent: 1000,
+        tokensCost: 5.25,
+        topProjects: [],
+      }
+
+      const customIssuesData = {
+        hasIssues: false,
+        issuesCount: 0,
+        newIssuesCount: 0,
+        escalatedIssuesCount: 0,
+        resolvedIssuesCount: 0,
+        ignoredIssuesCount: 0,
+        regressedIssuesCount: 0,
+        topProjects: [],
+        newIssuesList: [],
+      }
+
+      const customAnnotationsData = {
+        hasAnnotations: false,
+        annotationsCount: 0,
+        passedCount: 0,
+        failedCount: 0,
+        passedPercentage: 0,
+        failedPercentage: 0,
+        topProjects: [],
+      }
+
+      mockGetLogsData.mockResolvedValue(customLogsData)
+      mockGetIssuesData.mockResolvedValue(customIssuesData)
+      mockGetAnnotationsData.mockResolvedValue(customAnnotationsData)
+
+      const { workspace } = await createWorkspace()
+
+      await database
+        .update(memberships)
+        .set({ wantToReceiveWeeklyEmail: true })
+        .where(eq(memberships.workspaceId, workspace.id))
+
+      const job = {
+        data: { workspaceId: workspace.id },
+      } as Job
+
+      await sendWeeklyEmailJob(job)
+
+      expect(publisherModule.publisher.publishLater).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            logs: {
+              logsCount: 50,
+              tokensSpent: 1000,
+              tokensCost: 5.25,
+              usedInProduction: false,
+            },
+            issues: {
+              hasIssues: false,
+              issuesCount: 0,
+              newIssuesCount: 0,
+              escalatedIssuesCount: 0,
+              resolvedIssuesCount: 0,
+              ignoredIssuesCount: 0,
+              regressedIssuesCount: 0,
+            },
+            annotations: {
+              hasAnnotations: false,
+              annotationsCount: 0,
+              passedCount: 0,
+              failedCount: 0,
+            },
+          }),
+        }),
+      )
     })
   })
 })
