@@ -70,7 +70,7 @@ export const DEFAULT_REDACT_SPAN_PROCESSOR = () =>
     attributes: [
       /^.*auth.*$/i,
       /^.*authorization.*$/i,
-      /^(?!ai\.).*usage.*$/i,
+      /^(?!gen_ai\.).*usage.*$/i,
       /^(?!gen_ai\.).*token.*$/i,
       /^.*secret.*$/i,
       /^.*key.*$/i,
