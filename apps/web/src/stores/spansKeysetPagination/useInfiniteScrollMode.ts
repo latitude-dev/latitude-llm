@@ -71,6 +71,7 @@ export function useInfiniteScrollMode(
   const filtersParam = useMemo(() => {
     const hasFilters = Object.keys(filters).length > 0
     return hasFilters ? JSON.stringify(filters) : undefined
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtersKey])
 
   const infiniteFetcher = useCallback(
