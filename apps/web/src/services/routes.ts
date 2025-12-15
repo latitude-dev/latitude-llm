@@ -199,9 +199,6 @@ export const ROUTES = {
               overview: {
                 root: `${root}/overview`,
               },
-              analytics: {
-                root: `${root}/analytics`,
-              },
               history: {
                 root: `${root}/history`,
                 detail: ({ uuid }: { uuid: string }) => ({

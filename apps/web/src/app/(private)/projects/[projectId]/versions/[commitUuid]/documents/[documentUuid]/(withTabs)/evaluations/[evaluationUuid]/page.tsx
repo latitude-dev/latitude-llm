@@ -86,8 +86,6 @@ export default async function EvaluationPage({
     (r) => r.uuid === search.pagination.resultUuid,
   )
 
-  // Note: stats are lazily loaded in the client
-
   return (
     <ClientEvaluationPage
       refinementEnabled={env.LATITUDE_CLOUD}

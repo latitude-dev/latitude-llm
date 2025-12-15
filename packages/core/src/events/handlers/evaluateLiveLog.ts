@@ -1,5 +1,6 @@
 import {
   ExternalSpanMetadata,
+  LIVE_EVALUABLE_SPAN_TYPES,
   LogSources,
   PromptSpanMetadata,
   SpanType,
@@ -22,12 +23,6 @@ import { SpanCreatedEvent } from '../events'
 const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
   (source) => source !== 'evaluation' && source !== 'experiment',
 ) as LogSources[]
-
-const LIVE_EVALUABLE_SPAN_TYPES = [
-  SpanType.Prompt,
-  SpanType.External,
-  SpanType.Chat,
-]
 
 export const evaluateLiveLogJob = async ({
   data: event,

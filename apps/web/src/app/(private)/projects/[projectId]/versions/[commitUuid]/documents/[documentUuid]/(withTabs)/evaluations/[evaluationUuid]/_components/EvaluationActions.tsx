@@ -271,6 +271,7 @@ function EditEvaluation<
         Settings
       </TableWithHeader.Button>
       <ConfirmModal
+        dismissible
         size='medium'
         open={openUpdateModal}
         icon={metricSpecification.icon}

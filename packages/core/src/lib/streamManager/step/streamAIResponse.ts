@@ -24,6 +24,15 @@ import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 
 export type Output = 'object' | 'array' | 'no-schema'
 
+/**
+ * TODO(LegacyProviderLogs) BIG BEAUTIFUL REFACTOR NEEDED
+ *
+ * We migrated from documentLogs and providerLogs
+ * long time ago. But we're still using it for doing chat
+ *
+ * I guess this is related with the async nature of traces.
+ * We need to address this at some point.
+ */
 export async function streamAIResponse({
   context,
   controller,

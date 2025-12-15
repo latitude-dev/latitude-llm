@@ -10,7 +10,7 @@ import {
   TabSelect,
   TabSelectOption,
 } from '@latitude-data/web-ui/molecules/TabSelect'
-import { LogsSelector } from './LogsSelector'
+import { TracesSelector } from './TracesSelector'
 
 export function ParametersPopulationSettings(payload: ExperimentFormPayload) {
   const {
@@ -84,7 +84,7 @@ export function ParametersPopulationSettings(payload: ExperimentFormPayload) {
         </>
       )}
 
-      {selectedParametersSource === 'logs' && <LogsSelector {...payload} />}
+      {selectedParametersSource === 'logs' && <TracesSelector {...payload} />}
     </div>
   )
 }

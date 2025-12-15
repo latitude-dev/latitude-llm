@@ -1,3 +1,4 @@
+import { Metadata } from 'next'
 import {
   findCommitCached,
   getDocumentByUuidCached,
@@ -19,7 +20,7 @@ import {
   LlmEvaluationMetric,
 } from '@latitude-data/core/constants'
 
-export const metadata = buildMetatags({
+export const metadata: Promise<Metadata> = buildMetatags({
   locationDescription: 'Prompt Evaluation Editor',
 })
 

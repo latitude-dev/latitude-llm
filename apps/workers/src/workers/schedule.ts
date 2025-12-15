@@ -31,20 +31,6 @@ export async function setupSchedules() {
     { opts: { attempts: 1 } },
   )
 
-  // Every day at 3 AM
-  await maintenanceQueue.upsertJobScheduler(
-    'refreshProjectsStatsCacheJob',
-    { pattern: '0 0 3 * * *' },
-    { opts: { attempts: 1 } },
-  )
-
-  // Every day at 4 AM
-  await maintenanceQueue.upsertJobScheduler(
-    'refreshDocumentsStatsCacheJob',
-    { pattern: '0 0 4 * * *' },
-    { opts: { attempts: 1 } },
-  )
-
   // Every day at 1 AM - Removes logs older than 30 days from free plan accounts
   await maintenanceQueue.upsertJobScheduler(
     'scheduleWorkspaceCleanupJobs',

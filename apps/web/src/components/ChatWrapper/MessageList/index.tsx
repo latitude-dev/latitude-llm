@@ -59,7 +59,7 @@ export const MessageList = memo(
     )
 
     return (
-      <div className='flex flex-col'>
+      <div className='flex flex-col min-w-0'>
         {displayableMessages.map((message, index) => {
           return (
             <Message

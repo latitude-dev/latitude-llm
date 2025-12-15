@@ -5,7 +5,7 @@ import {
   DatasetRowsRepository,
   DatasetsRepository,
 } from '@latitude-data/core/repositories'
-import { parsePage } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
+import { parsePage } from '@latitude-data/core/data-access/experiments/parseApiExperimentsFilterParams'
 import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
 
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'

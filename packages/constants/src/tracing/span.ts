@@ -34,6 +34,17 @@ export type SpanSpecification<T extends SpanType = SpanType> = {
   _type?: T // TODO(tracing): required for type inference, remove this when something in the specification uses the type
 }
 
+export const LIVE_EVALUABLE_SPAN_TYPES = [
+  SpanType.Prompt,
+  SpanType.External,
+  SpanType.Chat,
+]
+
+export type EvaluableSpanType =
+  | SpanType.Prompt
+  | SpanType.External
+  | SpanType.Chat
+
 export const SPAN_SPECIFICATIONS = {
   [SpanType.Tool]: {
     name: 'Tool',
