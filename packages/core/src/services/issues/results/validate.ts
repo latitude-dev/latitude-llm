@@ -1,15 +1,11 @@
 import { database } from '../../../client'
-import {
-  EvaluationMetric,
-  EvaluationResultSuccessValue,
-  EvaluationType,
-} from '../../../constants'
+import { EvaluationMetric, EvaluationType } from '../../../constants'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { IssueEvaluationResultsRepository } from '../../../repositories'
 import { type Issue } from '../../../schema/models/types/Issue'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
-import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
+import { getOrSetEnrichedReason } from './getOrSetEnrichedReason'
 
 export async function validateResultForIssue<
   T extends EvaluationType,
@@ -75,10 +71,10 @@ export async function validateResultForIssue<
     )
   }
 
-  const specification = getEvaluationMetricSpecification(evaluation)
-  const reason = specification.resultReason(
-    result as EvaluationResultSuccessValue<T, M>,
-  )
+  const reasoning = await getOrSetEnrichedReason({ result, evaluation })
+  if (!Result.isOk(reasoning)) return reasoning
+  const reason = reasoning.value
+
   if (!reason && !skipReasonCheck) {
     return Result.error(
       new UnprocessableEntityError('Cannot use a result that has no reasoning'),

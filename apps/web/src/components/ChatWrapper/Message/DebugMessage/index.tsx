@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useState } from 'react'
 import { MessageProps } from '../types'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
@@ -35,17 +35,9 @@ export const DebugMessage = memo(
     parameters = [],
     toolContentMap,
     isGeneratingToolCall = false,
+    messageIndex,
   }: Omit<MessageProps, 'debugMode'>) => {
     const [collapsedMessage, setCollapseMessage] = useState(false)
-    const contentsAsString = useMemo(() => {
-      if (typeof content === 'string') return content
-      return content
-        .map((c) => {
-          if (c.type === 'text') return c.text
-          return `[${c.type}]`
-        })
-        .join(' ')
-    }, [content])
 
     return (
       <div
@@ -68,7 +60,7 @@ export const DebugMessage = memo(
                 onClick={() => setCollapseMessage(false)}
               >
                 <Text.H6 color='foregroundMuted' lineClamp={3}>
-                  {contentsAsString}
+                  ...
                 </Text.H6>
               </button>
             ) : (
@@ -80,6 +72,7 @@ export const DebugMessage = memo(
                 parameters={parameters}
                 toolContentMap={toolContentMap}
                 markdownSize='sm'
+                messageIndex={messageIndex}
               />
             )}
             {isGeneratingToolCall && <ToolCardSkeleton />}

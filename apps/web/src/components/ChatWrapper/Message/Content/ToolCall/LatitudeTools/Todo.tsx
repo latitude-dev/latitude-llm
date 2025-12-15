@@ -34,14 +34,21 @@ function TodoItem({ item }: { item: TodoListItem }) {
 
 export function TodoLatitudeToolCard({
   toolRequest,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const args = toolRequest.args as TodoToolArgs
 
   return (
-    <ToolCardWrapper>
+    <ToolCardWrapper
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
+    >
       <ToolCardHeader
         icon={<ToolCardIcon name='listTodo' />}
         label={

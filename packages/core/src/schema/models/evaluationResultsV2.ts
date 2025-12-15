@@ -6,7 +6,6 @@ import {
   boolean,
   index,
   jsonb,
-  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -86,9 +85,6 @@ export const evaluationResultsV2 = latitudeSchema.table(
       table.commitId,
       table.evaluationUuid,
     ),
-    uniqueIndex(
-      'evaluation_results_v2_unique_evaluated_log_id_evaluation_uuid_idx',
-    ).on(table.evaluatedLogId, table.evaluationUuid),
     index('evaluation_results_v2_issue_id_idx').on(table.issueId),
     index('evaluation_results_v2_created_at_brin_idx')
       .using('brin', sql`${table.createdAt}`)
@@ -98,8 +94,5 @@ export const evaluationResultsV2 = latitudeSchema.table(
       table.evaluatedSpanId,
       table.evaluatedTraceId,
     ),
-    uniqueIndex(
-      'evaluation_results_v2_unique_evaluated_span_id_evaluation_uuid_idx',
-    ).on(table.evaluatedSpanId, table.evaluatedTraceId, table.evaluationUuid),
   ],
 )

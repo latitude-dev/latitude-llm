@@ -18,15 +18,15 @@ export function AnnotationForms({
     commit,
     span,
   })
-  if (!annotations.bottom) return null
+  if (!annotations[0]) return null
 
   return (
     <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
       <AnnotationForm
-        key={annotations.bottom.evaluation.uuid}
-        evaluation={annotations.bottom.evaluation}
+        key={annotations[0].evaluation.uuid}
+        evaluation={annotations[0].evaluation}
         span={span}
-        result={annotations.bottom.result}
+        result={annotations[0].result}
         mergedToIssueId={mergedToIssueId}
       />
     </div>

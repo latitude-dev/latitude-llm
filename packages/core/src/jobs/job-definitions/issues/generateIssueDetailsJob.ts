@@ -50,7 +50,6 @@ export const generateIssueDetailsJob = async (
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
 
   const evaluations: Record<string, EvaluationV2[]> = {}
-
   const selected = []
   for (const result of results) {
     if (!evaluations[result.commitId]) {

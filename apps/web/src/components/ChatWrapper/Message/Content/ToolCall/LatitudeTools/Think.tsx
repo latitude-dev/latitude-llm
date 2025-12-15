@@ -16,14 +16,21 @@ function uppercaseFirst(str: string) {
 
 export function ThinkLatitudeToolCard({
   toolRequest,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const args = toolRequest.args as ThinkToolArgs
 
   return (
-    <ToolCardWrapper>
+    <ToolCardWrapper
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
+    >
       <ToolCardHeader
         icon={<ToolCardIcon name='brain' />}
         label={

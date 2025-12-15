@@ -1,4 +1,4 @@
-import { use, useState } from 'react'
+import { use, useCallback, useState } from 'react'
 import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
@@ -6,7 +6,7 @@ import { AnnotationContext, AnnotationProvider } from '../FormWrapper'
 import { AnnotationFormWrapper as AForm } from '../FormWrapper'
 import { EVALUATION_SPECIFICATIONS } from '../../index'
 import { FormProps } from '../types'
-import { useAnnotationForm } from '../useAnnotationForm'
+import { OnSubmitProps, useAnnotationForm } from '../useAnnotationForm'
 import { IssuesSelector } from './IssuesSelector'
 import { useHasPassed } from '../../hooks/useHasPassed'
 
@@ -90,6 +90,8 @@ export function AnnotationForm<
   result,
   onAnnotate,
   mergedToIssueId,
+  initialExpanded,
+  selectedContext,
 }: FormProps<T, M> & { mergedToIssueId?: number }) {
   const spec = EVALUATION_SPECIFICATIONS[evaluation.type]
   const { commit } = useCurrentCommit()
@@ -97,10 +99,22 @@ export function AnnotationForm<
     evaluation,
     span,
     onAnnotate,
+    result,
   })
 
-  // Start expanded if there's already a result
-  const [isExpanded, setIsExpanded] = useState(!!result)
+  const [isExpanded, setIsExpanded] = useState(initialExpanded ?? !!result)
+  const wrappedOnSubmit = useCallback(
+    async ({ score, resultMetadata }: OnSubmitProps<T, M>) => {
+      await onSubmit({
+        score,
+        resultMetadata: {
+          ...resultMetadata,
+          selectedContexts: selectedContext ? [selectedContext] : [],
+        },
+      })
+    },
+    [onSubmit, selectedContext],
+  )
 
   if (!spec.AnnotationForm) return null
 
@@ -111,7 +125,7 @@ export function AnnotationForm<
       evaluation={evaluation}
       documentUuid={span.documentUuid ?? ''}
       result={result}
-      onSubmit={onSubmit}
+      onSubmit={wrappedOnSubmit}
       isSubmitting={isSubmitting}
       isExpanded={isExpanded}
       setIsExpanded={setIsExpanded}

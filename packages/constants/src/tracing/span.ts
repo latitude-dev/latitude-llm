@@ -42,8 +42,8 @@ export const LIVE_EVALUABLE_SPAN_TYPES = [
 
 export type EvaluableSpanType =
   | SpanType.Prompt
-  | SpanType.External
   | SpanType.Chat
+  | SpanType.External
 
 export const SPAN_SPECIFICATIONS = {
   [SpanType.Tool]: {
@@ -169,12 +169,12 @@ export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
   experimentUuid: string
   externalId: string
   parameters: Record<string, unknown>
-  promptUuid: string
-  template: string
-  versionUuid: string
-  source: LogSources
   projectId: number
+  promptUuid: string
+  source: LogSources
+  template: string
   testDeploymentId?: number
+  versionUuid: string
 }
 
 export type ChatSpanMetadata = BaseSpanMetadata<SpanType.Chat> & {

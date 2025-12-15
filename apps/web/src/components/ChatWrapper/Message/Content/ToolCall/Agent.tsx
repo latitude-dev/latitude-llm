@@ -13,11 +13,15 @@ export function AgentToolCard({
   toolResponse,
   status,
   sourceData,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
   status: 'pending' | 'success' | 'error'
   sourceData: ToolSourceData<ToolSource.Agent>
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   return (
     <ToolCard
@@ -25,6 +29,8 @@ export function AgentToolCard({
       toolResponse={toolResponse}
       headerIcon={<ToolCardIcon status={status} name='bot' />}
       headerLabel={<ToolCardText>{sourceData.agentPath}</ToolCardText>}
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
     />
   )
 }

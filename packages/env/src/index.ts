@@ -177,6 +177,7 @@ export const env = createEnv({
     LATITUDE_CLOUD_PAYMENT_URL: z.url().optional(),
 
     // Copilot
+    COPILOT_PROMPT_ANNOTATION_GENERALIZER_PATH: z.string().optional(),
     COPILOT_PROMPT_EDITOR_COPILOT_PATH: z.string().optional(),
     COPILOT_PROMPT_DATASET_GENERATOR_PATH: z.string().optional(),
     COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH: z.string().optional(),

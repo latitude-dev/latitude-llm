@@ -25,7 +25,7 @@ export const discardLatteChangesActions = authProcedure
       accepted: false,
     })
 
-    const uuid = rezult.value?.result.uuid
+    const uuid = rezult.value?.uuid
 
     return { evaluationUuid: uuid, checkpoints }
   })

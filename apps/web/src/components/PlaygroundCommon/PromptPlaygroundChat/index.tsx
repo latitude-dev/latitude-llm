@@ -110,7 +110,7 @@ function AnnotationSpanForm({
     span,
   })
 
-  const manualAnnotation = uiAnnotations.annotations.bottom
+  const manualAnnotation = uiAnnotations.annotations[0]
 
   if (!manualAnnotation || uiAnnotations.isLoading) return null
 

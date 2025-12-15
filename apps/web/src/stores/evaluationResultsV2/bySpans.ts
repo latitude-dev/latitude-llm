@@ -21,16 +21,18 @@ export default function useEvaluationResultsV2BySpans(
   }: {
     project: Pick<Project, 'id'>
     commit: Pick<Commit, 'uuid'>
-    document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
+    document?: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
     spanId?: string
-    documentLogUuid?: string
+    documentLogUuid?: string | null
   },
   opts?: SWRConfiguration,
 ) {
-  const route = ROUTES.api.projects
-    .detail(project.id)
-    .commits.detail(commit.uuid)
-    .documents.detail(document.documentUuid).evaluations.results.spans.root
+  const route = document
+    ? ROUTES.api.projects
+        .detail(project.id)
+        .commits.detail(commit.uuid)
+        .documents.detail(document.documentUuid).evaluations.results.spans.root
+    : undefined
   const fetcher = useFetcher<ResultWithEvaluationV2[]>(route, {
     searchParams: compactObject({
       spanId: spanId ?? undefined,
@@ -39,7 +41,7 @@ export default function useEvaluationResultsV2BySpans(
   })
 
   const { data = [], ...rest } = useSWR<ResultWithEvaluationV2[]>(
-    spanId && documentLogUuid
+    spanId && documentLogUuid && document
       ? compact([
           'evaluationResultsV2BySpans',
           project.id,
