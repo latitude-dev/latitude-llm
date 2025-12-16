@@ -73,7 +73,7 @@ export const SubscriptionPlans = {
     retention_period: 1825, // days
     rate_limit: 166, // per second
     latte_credits: 300,
-    stripePriceId: 'price_1S5XcmAMdFMjIC4fco75QEuP',
+    stripePriceId: 'price_1Seuy8AMdFMjIC4fIsnzPTN1',
   },
   [SubscriptionPlan.EnterpriseV1]: {
     name: 'Enterprise',
