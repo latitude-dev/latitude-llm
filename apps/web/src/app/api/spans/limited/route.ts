@@ -17,9 +17,7 @@ const searchParamsSchema = z.object({
   commitUuid: z.string().optional(),
   documentUuid: z.string().optional(),
   from: z.string().optional(),
-  types: z
-    .array(z.enum(Object.values(SpanType) as [string, ...string[]]))
-    .default([SpanType.Prompt, SpanType.External]),
+  types: z.string().optional(), // Comma-separated list of span types
   limit: z.coerce
     .number()
     .int()
@@ -45,6 +43,11 @@ export const GET = errorHandler(
         source: searchParams.get('source') ?? undefined,
       })
       const { projectId, commitUuid, documentUuid } = parsedParams
+
+      const types = (parsedParams.types?.split(',') as SpanType[]) ?? [
+        SpanType.Prompt,
+        SpanType.External,
+      ]
 
       // Parse filters if present
       const filters =
@@ -84,7 +87,7 @@ export const GET = errorHandler(
           result = await spansRepository
             .findByDocumentAndCommitLimited({
               documentUuid,
-              types: parsedParams.types as SpanType[],
+              types,
               from: fromCursor
                 ? { startedAt: fromCursor.value, id: fromCursor.id }
                 : undefined,
@@ -103,7 +106,7 @@ export const GET = errorHandler(
           result = await spansRepository
             .findByProjectLimited({
               projectId: Number(projectId),
-              types: parsedParams.types as SpanType[],
+              types,
               limit: parsedParams.limit,
               source: parsedParams.source?.split(',') as LogSources[],
               from: fromCursor
