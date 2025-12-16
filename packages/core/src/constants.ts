@@ -235,8 +235,6 @@ export const DELIMITERS_KEYS = [
 export const MAX_SIZE = 25
 export const MAX_UPLOAD_SIZE_IN_MB = MAX_SIZE * 1024 * 1024
 
-export const DOCUMENT_PATH_REGEXP = /^([\w-]+\/)*([\w-.])+$/
-
 export const toolCallSchema = z.object({
   id: z.string(),
   name: z.string(),

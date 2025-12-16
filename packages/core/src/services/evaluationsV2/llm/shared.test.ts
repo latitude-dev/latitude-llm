@@ -336,13 +336,16 @@ describe('runPrompt', () => {
     expect(runChainArgs.source).toBe(LogSources.Evaluation)
   })
 
-  it('calls telemetry.prompt with projectId and all required parameters', async () => {
+  it('calls telemetry.span.prompt with projectId and all required parameters', async () => {
     const mockPrompt = vi
       .fn()
-      .mockImplementation(realTelemetry.prompt.bind(realTelemetry))
+      .mockImplementation(realTelemetry.span.prompt.bind(realTelemetry.span))
     const mockTelemetry = {
       ...realTelemetry,
-      prompt: mockPrompt,
+      span: {
+        ...realTelemetry.span,
+        prompt: mockPrompt,
+      },
     } as unknown as LatitudeTelemetry
 
     await runPrompt({
@@ -358,7 +361,6 @@ describe('runPrompt', () => {
     })
 
     expect(mockPrompt).toHaveBeenCalledWith(
-      expect.anything(),
       expect.objectContaining({
         documentLogUuid: resultUuid,
         versionUuid: commit.uuid,
@@ -368,6 +370,7 @@ describe('runPrompt', () => {
         parameters: parameters,
         source: LogSources.Evaluation,
       }),
+      expect.anything(),
     )
   })
 })

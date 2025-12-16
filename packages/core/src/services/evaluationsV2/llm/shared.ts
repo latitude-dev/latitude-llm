@@ -196,15 +196,18 @@ export async function runPrompt<
     schema,
   }).then((r) => r.unwrap())
 
-  const $prompt = telemetry.prompt(BACKGROUND({ workspaceId: workspace.id }), {
-    documentLogUuid: resultUuid,
-    versionUuid: commit.uuid,
-    promptUuid: evaluation.uuid,
-    projectId: commit.projectId,
-    template: prompt,
-    parameters: parameters,
-    source: LogSources.Evaluation,
-  })
+  const $prompt = telemetry.span.prompt(
+    {
+      documentLogUuid: resultUuid,
+      versionUuid: commit.uuid,
+      promptUuid: evaluation.uuid,
+      projectId: commit.projectId,
+      template: prompt,
+      parameters: parameters,
+      source: LogSources.Evaluation,
+    },
+    BACKGROUND({ workspaceId: workspace.id }),
+  )
 
   let response
   try {

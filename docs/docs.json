@@ -204,7 +204,6 @@
       },
       {
         "tab": "Integrations",
-        "hidden": true,
         "groups": [
           {
             "group": "Overview",
@@ -220,7 +219,8 @@
               "integrations/providers/amazon-bedrock",
               "integrations/providers/cohere",
               "integrations/providers/together-ai",
-              "integrations/providers/vertex-ai"
+              "integrations/providers/vertex-ai",
+              "integrations/providers/gemini"
             ]
           },
           {

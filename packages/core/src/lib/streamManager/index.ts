@@ -92,7 +92,7 @@ export abstract class StreamManager {
   public readonly simulationSettings?: SimulationSettings
 
   public $context: TelemetryContext
-  public $completion: ReturnType<typeof telemetry.completion> | undefined
+  public $completion: ReturnType<typeof telemetry.span.completion> | undefined
 
   protected messages: LegacyMessage[]
   protected error: ChainError<RunErrorCodes> | undefined
@@ -277,21 +277,24 @@ export abstract class StreamManager {
     messages: LegacyMessage[]
     provider: ProviderApiKey
   }) {
-    this.$completion = telemetry.completion(this.$context, {
-      configuration: config,
-      input: messages,
-      model: config.model,
-      provider: provider.provider,
-      // TODO: add experiment uuid
-      promptUuid:
-        'document' in this.promptSource
-          ? this.promptSource.document.documentUuid
-          : undefined,
-      versionUuid:
-        'commit' in this.promptSource
-          ? this.promptSource.commit.uuid
-          : undefined,
-    })
+    this.$completion = telemetry.span.completion(
+      {
+        configuration: config,
+        input: messages,
+        model: config.model,
+        provider: provider.provider,
+        // TODO: add experiment uuid
+        promptUuid:
+          'document' in this.promptSource
+            ? this.promptSource.document.documentUuid
+            : undefined,
+        versionUuid:
+          'commit' in this.promptSource
+            ? this.promptSource.commit.uuid
+            : undefined,
+      },
+      this.$context,
+    )
 
     this.sendEvent({ type: ChainEventTypes.ProviderStarted, config })
   }

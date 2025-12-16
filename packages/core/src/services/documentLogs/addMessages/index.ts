@@ -63,12 +63,15 @@ export async function addMessages(
 
   const effectiveContext = context ?? BACKGROUND({ workspaceId: workspace.id })
 
-  const $chat = telemetry.chat(effectiveContext, {
-    documentLogUuid,
-    previousTraceId: previousSpan?.traceId ?? '',
-    name: document.path.split('/').at(-1),
-    source,
-  })
+  const $chat = telemetry.span.chat(
+    {
+      documentLogUuid,
+      previousTraceId: previousSpan?.traceId ?? '',
+      name: document.path.split('/').at(-1),
+      source,
+    },
+    effectiveContext,
+  )
 
   if (!providerLog.providerId) {
     const error = new NotFoundError(

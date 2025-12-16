@@ -22,6 +22,7 @@ export enum SpanType {
   Prompt = 'prompt',
   Chat = 'chat', // Continuing a conversation (adding messages)
   External = 'external', // Wrapping external generation code
+  UnresolvedExternal = 'unresolved_external', // External span that needs path & potential version resolution
   Step = 'step',
 }
 
@@ -93,6 +94,12 @@ export const SPAN_SPECIFICATIONS = {
     description: 'An external capture span',
     isGenAI: false,
     isHidden: false,
+  },
+  [SpanType.UnresolvedExternal]: {
+    name: 'Unresolved External',
+    description: 'An external span that needs path resolution before storage',
+    isGenAI: false,
+    isHidden: true,
   },
   [SpanType.Step]: {
     name: 'Step',
@@ -174,6 +181,15 @@ export type ExternalSpanMetadata = BaseSpanMetadata<SpanType.External> & {
   name?: string
 }
 
+export type UnresolvedExternalSpanMetadata =
+  BaseSpanMetadata<SpanType.UnresolvedExternal> & {
+    promptPath: string
+    projectId: number
+    versionUuid?: string
+    externalId?: string
+    name?: string
+  }
+
 export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   provider: string
   model: string
@@ -212,6 +228,7 @@ export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.Prompt ? PromptSpanMetadata :
   T extends SpanType.Chat ? ChatSpanMetadata :
   T extends SpanType.External ? ExternalSpanMetadata :
+  T extends SpanType.UnresolvedExternal ? UnresolvedExternalSpanMetadata :
   T extends SpanType.Completion ? CompletionSpanMetadata :
   T extends SpanType.Embedding ? BaseSpanMetadata<T> :
   T extends SpanType.Retrieval ? BaseSpanMetadata<T> :

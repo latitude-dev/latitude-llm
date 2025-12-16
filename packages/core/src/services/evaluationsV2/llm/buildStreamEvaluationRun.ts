@@ -20,7 +20,7 @@ import { buildLlmEvaluationRunFunction } from './shared'
 const buildStreamHandler =
   (
     stream: ReadableStream<ChainEvent>,
-    $span: ReturnType<typeof realTelemetry.prompt>,
+    $span: ReturnType<typeof realTelemetry.span.prompt>,
   ) =>
   async ({
     signal,
@@ -100,13 +100,16 @@ export async function buildStreamEvaluationRun({
   if (result.error) return result
 
   const { runArgs } = result.unwrap()
-  const $prompt = telemetry.prompt(BACKGROUND({ workspaceId: workspace.id }), {
-    documentLogUuid: resultUuid,
-    promptUuid: evaluation.uuid,
-    template: evaluation.configuration.prompt,
-    parameters: parameters,
-    source: LogSources.Evaluation,
-  })
+  const $prompt = telemetry.span.prompt(
+    {
+      documentLogUuid: resultUuid,
+      promptUuid: evaluation.uuid,
+      template: evaluation.configuration.prompt,
+      parameters: parameters,
+      source: LogSources.Evaluation,
+    },
+    BACKGROUND({ workspaceId: workspace.id }),
+  )
   const { stream } = runChain({ context: $prompt.context, ...runArgs })
   const streamHandler = buildStreamHandler(stream, $prompt)
 

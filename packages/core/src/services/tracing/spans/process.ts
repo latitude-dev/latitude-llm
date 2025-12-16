@@ -102,6 +102,8 @@ export function extractSpanType(
       return Result.ok(SpanType.Chat)
     case SpanType.External:
       return Result.ok(SpanType.External)
+    case SpanType.UnresolvedExternal:
+      return Result.ok(SpanType.UnresolvedExternal)
     case SpanType.Step:
       return Result.ok(SpanType.Step)
     case SpanType.Unknown:

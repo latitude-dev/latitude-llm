@@ -140,13 +140,16 @@ Evaluate the response: {{ actualOutput }}`,
     expect(typeof result.value!.streamHandler).toBe('function')
   })
 
-  it('calls telemetry.prompt with all required parameters', async () => {
+  it('calls telemetry.span.prompt with all required parameters', async () => {
     const mockPrompt = vi
       .fn()
-      .mockImplementation(realTelemetry.prompt.bind(realTelemetry))
+      .mockImplementation(realTelemetry.span.prompt.bind(realTelemetry.span))
     const mockTelemetry = {
       ...realTelemetry,
-      prompt: mockPrompt,
+      span: {
+        ...realTelemetry.span,
+        prompt: mockPrompt,
+      },
     } as unknown as LatitudeTelemetry
 
     const parameters = {
@@ -162,13 +165,13 @@ Evaluate the response: {{ actualOutput }}`,
     })
 
     expect(mockPrompt).toHaveBeenCalledWith(
-      expect.anything(),
       expect.objectContaining({
         promptUuid: evaluation.uuid,
         template: evaluation.configuration.prompt,
         parameters: parameters,
         source: LogSources.Evaluation,
       }),
+      expect.anything(),
     )
   })
 })

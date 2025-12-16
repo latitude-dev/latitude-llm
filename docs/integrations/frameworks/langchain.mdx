@@ -5,15 +5,18 @@ description: Connect your LangChain-based application to Latitude Telemetry to o
 
 ## Overview
 
-This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses **LangChain**.
+This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses the official **LangChain SDK**.
 
 After completing these steps:
 
-- Each LangChain run can be captured as a log in Latitude.
-- Logs are attached to a specific **prompt** and **version** in Latitude.
-- You can annotate, evaluate, and debug your chains from the Latitude dashboard.
+- Every LangChain call (e.g. `invoke`) can be captured as a log in Latitude.
+- Logs are grouped under a **prompt**, identified by a `path`, inside a Latitude **project**.
+- You can inspect inputs/outputs, measure latency, and debug LangChain-powered features from the Latitude dashboard.
 
-> You keep using LangChain as usual — Telemetry observes runs via the LangChain callback system.
+<Check>
+  You’ll keep calling LangChain exactly as you do today — Telemetry simply
+  observes and enriches those calls.
+</Check>
 
 ---
 
@@ -21,9 +24,11 @@ After completing these steps:
 
 Before you start, make sure you have:
 
-- A **Latitude account** and **API key**.
-- At least one **prompt** created in Latitude.
-- A Node.js-based project that uses LangChain.
+- A **Latitude account** and **API key**
+- A **Latitude project ID**
+- A Node.js-based project that uses the **LangChain SDK**
+
+That’s it — prompts do **not** need to be created ahead of time.
 
 ---
 
@@ -36,76 +41,84 @@ Before you start, make sure you have:
 
     <CodeGroup>
       ```bash npm
-      npm add @latitude-data/telemetry @opentelemetry/api
+      npm add @latitude-data/telemetry
       ```
 
       ```bash pnpm
-      pnpm add @latitude-data/telemetry @opentelemetry/api
+      pnpm add @latitude-data/telemetry
       ```
 
       ```bash yarn
-      yarn add @latitude-data/telemetry @opentelemetry/api
+      yarn add @latitude-data/telemetry
       ```
 
       ```bash bun
-      bun add @latitude-data/telemetry @opentelemetry/api
+      bun add @latitude-data/telemetry
       ```
     </CodeGroup>
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry with LangChain">
-    Create a <code>LatitudeTelemetry</code> instance and pass the LangChain callback manager module as an instrumentation.
+  <Step title="Initialize Latitude Telemetry">
+    Create a single <code>LatitudeTelemetry</code> instance when your app starts
 
-    ```ts
+    You must pass the **LangChain SDK** so Telemetry can instrument it.
+
+    ```ts telemetry.ts
     import { LatitudeTelemetry } from '@latitude-data/telemetry'
     import * as LangchainCallbacks from '@langchain/core/callbacks/manager'
 
-    export const telemetry = new LatitudeTelemetry('your-latitude-api-key', {
-      instrumentations: {
-        langchain: {
-          callbackManagerModule: LangchainCallbacks, // Enables tracing via LangChain callbacks
+    export const telemetry = new LatitudeTelemetry(
+      process.env.LATITUDE_API_KEY,
+      {
+        instrumentations: {
+          langchain: {
+            callbackManagerModule: LangchainCallbacks, // This enables automatic tracing for the LangChain SDK
+          },
         },
-      },
-    })
+      }
+    )
     ```
+
+    <Info>
+      The Telemetry instance should only be created once. Any LangChain client
+      instantiated after this will be automatically traced.
+    </Info>
 
   </Step>
 
   <Step title="Wrap your LangChain-powered feature">
-    Wrap the code that runs your LangChain chain with a Telemetry prompt span, and execute the chain inside that span.
+    Wrap the code that calls LangChain using <code>telemetry.capture</code>.
 
     ```ts
-    import { context } from '@opentelemetry/api'
-    import { BACKGROUND } from '@latitude-data/telemetry'
+    import { telemetry } from './telemetry'
     import { createAgent } from "langchain";
 
     export async function generateSupportReply(input: string) {
-      const $span = telemetry.external(BACKGROUND(), {
-        documentLogUuid: crypto.randomUUID(),
-        promptUuid: 'your-prompt-uuid',
-        versionUuid: 'your-version-uuid', // or "live", depending on your setup
-      })
+      return telemetry.capture(
+        {
+          projectId: 123, // The ID of your project in Latitude
+          path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
+        },
+        async () => {
 
-      await context
-        .with($span.context, async () => {
+          // Your regular LLM-powered feature code here
           const agent = createAgent({ model: 'claude-sonnet-4-5' });
-          const result = await agent.invoke({
-            messages: [
-                {
-                    role: "user",
-                    content: prompt,
-                },
-            ],
-        });
+          const result = await agent.invoke(...);
 
-          // Use result here...
-        })
-        .then(() => $span.end())
-        .catch((error) => $span.fail(error as Error))
-        .finally(() => telemetry.flush())
+          // You can return anything you want — the value is passed through unchanged
+          return result;
+        }
+      )
     }
     ```
+
+    <Info>
+    The `path`:
+    - Identifies the prompt in Latitude
+    - Can be new or existing
+    - Should not contain spaces or special characters (use letters, numbers, `- _ / .`)
+    </Info>
 
   </Step>
 
@@ -115,10 +128,20 @@ Before you start, make sure you have:
 
 ## Seeing your logs in Latitude
 
-Once you've wrapped your LangChain-powered feature, you can see your logs in Latitude.
+Once your feature is wrapped, logs will appear automatically.
 
-1. Go to the **Traces** section of your prompt in Latitude.
-2. You should see new entries every time your chain is executed, including:
-   - Chain input/output
-   - Provider calls made within the chain (when instrumented)
-   - Latency and error information
+1. Open the **prompt** in your Latitude dashboard (identified by `path`)
+2. Go to the **Traces** section
+3. Each execution will show:
+   - Input and output messages
+   - Model and token usage
+   - Latency and errors
+   - One trace per feature invocation
+
+Each LangChain call appears as a child span under the captured prompt execution, giving you a full, end-to-end view of what happened.
+
+---
+
+## That’s it
+
+No changes to your LangChain calls, no special return values, and no extra plumbing — just wrap the feature you want to observe.

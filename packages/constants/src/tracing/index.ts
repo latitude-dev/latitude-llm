@@ -42,6 +42,7 @@ export const ATTR_LATITUDE_INTERNAL = `${ATTR_LATITUDE}.internal`
 export const ATTR_LATITUDE_NAME = `${ATTR_LATITUDE}.name`
 export const ATTR_LATITUDE_TYPE = `${ATTR_LATITUDE}.type`
 export const ATTR_LATITUDE_DOCUMENT_UUID = `${ATTR_LATITUDE}.document_uuid`
+export const ATTR_LATITUDE_PROMPT_PATH = `${ATTR_LATITUDE}.prompt_path`
 export const ATTR_LATITUDE_COMMIT_UUID = `${ATTR_LATITUDE}.commit_uuid`
 export const ATTR_LATITUDE_DOCUMENT_LOG_UUID = `${ATTR_LATITUDE}.document_log_uuid`
 export const ATTR_LATITUDE_PROJECT_ID = `${ATTR_LATITUDE}.project_id`

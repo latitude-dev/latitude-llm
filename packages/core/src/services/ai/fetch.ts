@@ -7,9 +7,12 @@ export function instrumentedFetch({
   context: TelemetryContext
 }): FetchFunction {
   return async function (input, init) {
-    const $http = telemetry.http(context, {
-      request: await getRequest(input, init),
-    })
+    const $http = telemetry.span.http(
+      {
+        request: await getRequest(input, init),
+      },
+      context,
+    )
 
     const result = fetch(input, init)
 

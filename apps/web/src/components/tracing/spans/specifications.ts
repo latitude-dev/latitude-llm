@@ -21,6 +21,8 @@ export const SPAN_SPECIFICATIONS: {
   [SpanType.Prompt]: PromptSpanSpecification,
   [SpanType.Chat]: ChatSpanSpecification,
   [SpanType.External]: ExternalSpanSpecification,
+  //@ts-expect-error - Not really possible to display in the UI, as this type is never stored
+  [SpanType.UnresolvedExternal]: ExternalSpanSpecification,
   [SpanType.Reranking]: RerankingSpanSpecification,
   [SpanType.Retrieval]: RetrievalSpanSpecification,
   [SpanType.Step]: UnknownSpanSpecification,

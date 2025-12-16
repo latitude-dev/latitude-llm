@@ -1,7 +1,7 @@
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 import { scan } from 'promptl-ai'
-import { DOCUMENT_PATH_REGEXP } from '../../constants'
+import { DOCUMENT_PATH_REGEXP } from '@latitude-data/constants'
 import { findFirstModelForProvider } from '../ai/providers/models'
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
