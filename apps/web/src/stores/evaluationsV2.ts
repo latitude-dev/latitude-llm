@@ -8,17 +8,11 @@ import {
   generateEvaluationV2Action,
   updateEvaluationV2Action,
 } from '$/actions/evaluationsV2'
+import { generateEvaluationV2FromIssueAction } from '$/actions/evaluationsV2/generateFromIssue'
+import { useCompositeTargetToast } from '$/hooks/useCompositeTargetToast'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { compact, isEmpty } from 'lodash-es'
-import { useCallback, useMemo } from 'react'
-import useSWR, { SWRConfiguration, useSWRConfig } from 'swr'
-import { EvaluationV2Stats } from '@latitude-data/core/schema/types'
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-import { Project } from '@latitude-data/core/schema/models/types/Project'
 import {
   EvaluationMetric,
   EvaluationOptions,
@@ -31,7 +25,14 @@ import {
   EvaluationResultsV2Search,
   evaluationResultsV2SearchToQueryParams,
 } from '@latitude-data/core/helpers'
-import { generateEvaluationV2FromIssueAction } from '$/actions/evaluationsV2/generateFromIssue'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { EvaluationV2Stats } from '@latitude-data/core/schema/types'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { compact, isEmpty } from 'lodash-es'
+import { useCallback, useMemo } from 'react'
+import useSWR, { SWRConfiguration, useSWRConfig } from 'swr'
 
 export function useEvaluationsV2(
   {
@@ -48,6 +49,7 @@ export function useEvaluationsV2(
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
+  const targetToast = useCompositeTargetToast({ project, commit })
   const { mutate: globalMutate } = useSWRConfig()
   const fetcher = useFetcher<EvaluationV2[]>(ROUTES.api.evaluations.root, {
     searchParams: {
@@ -76,7 +78,7 @@ export function useEvaluationsV2(
     execute: executeCreateEvaluationV2,
     isPending: isCreatingEvaluation,
   } = useLatitudeAction(createEvaluationV2Action, {
-    onSuccess: async ({ data: { evaluation } }) => {
+    onSuccess: async ({ data: { evaluation, target } }) => {
       mutate((prev) => [evaluation, ...(prev ?? [])])
       globalMutate(
         (key) =>
@@ -85,10 +87,15 @@ export function useEvaluationsV2(
           key[1] === project.id &&
           key[2] === commit.uuid,
       )
-      toast({
-        title: 'Evaluation created successfully',
-        description: `Evaluation ${evaluation.name} created successfully`,
-      })
+
+      if (target) {
+        targetToast({ evaluation, target })
+      } else {
+        toast({
+          title: 'Evaluation created successfully',
+          description: `Evaluation ${evaluation.name} created successfully`,
+        })
+      }
     },
     onError: async (error) => {
       if (error.code === 'ERROR') {
@@ -128,7 +135,7 @@ export function useEvaluationsV2(
     execute: executeUpdateEvaluationV2,
     isPending: isUpdatingEvaluation,
   } = useLatitudeAction(updateEvaluationV2Action, {
-    onSuccess: async ({ data: { evaluation } }) => {
+    onSuccess: async ({ data: { evaluation, target } }) => {
       mutate(
         (prev) =>
           prev?.map((e) => {
@@ -143,11 +150,17 @@ export function useEvaluationsV2(
           key[1] === project.id &&
           key[2] === commit.uuid,
       )
+
       if (!notifyUpdate) return
-      toast({
-        title: 'Evaluation updated successfully',
-        description: `Evaluation ${evaluation.name} updated successfully`,
-      })
+
+      if (target) {
+        targetToast({ evaluation, target })
+      } else {
+        toast({
+          title: 'Evaluation updated successfully',
+          description: `Evaluation ${evaluation.name} updated successfully`,
+        })
+      }
     },
     onError: async (error) => {
       if (!notifyUpdate) return
@@ -191,12 +204,24 @@ export function useEvaluationsV2(
     execute: executeDeleteEvaluationV2,
     isPending: isDeletingEvaluation,
   } = useLatitudeAction(deleteEvaluationV2Action, {
-    onSuccess: async ({ data: { evaluation } }) => {
+    onSuccess: async ({ data: { evaluation, target } }) => {
       mutate((prev) => prev?.filter((e) => e.uuid !== evaluation.uuid) ?? [])
-      toast({
-        title: 'Evaluation deleted successfully',
-        description: `Evaluation ${evaluation.name} deleted successfully`,
-      })
+      globalMutate(
+        (key) =>
+          Array.isArray(key) &&
+          key[0] === 'issueEvaluations' &&
+          key[1] === project.id &&
+          key[2] === commit.uuid,
+      )
+
+      if (target) {
+        targetToast({ evaluation, target })
+      } else {
+        toast({
+          title: 'Evaluation deleted successfully',
+          description: `Evaluation ${evaluation.name} deleted successfully`,
+        })
+      }
     },
     onError: async (error) => {
       if (error.code === 'ERROR') {

@@ -1,18 +1,19 @@
 import {
+  CompositeEvaluationMetric,
   HumanEvaluationMetric,
   LlmEvaluationMetric,
   Providers,
 } from '@latitude-data/constants'
+import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ZodError } from 'zod'
-import { eq } from 'drizzle-orm'
+import { database } from '../../client'
 import {
   EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   RuleEvaluationMetric,
 } from '../../constants'
-import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { issues } from '../../schema/models/issues'
 import { type Commit } from '../../schema/models/types/Commit'
@@ -372,7 +373,71 @@ describe('validateEvaluationV2', () => {
     expect(validatedOptions).toEqual(options)
   })
 
-  it('fails when has issue and expected output is required', async () => {
+  it('fails when linking issue to composite evaluation', async () => {
+    const { issue } = await factories.createIssue({
+      document: document,
+      workspace: workspace,
+    })
+
+    const compositeSettings = {
+      name: 'name',
+      description: 'description',
+      type: EvaluationType.Composite,
+      metric: CompositeEvaluationMetric.Average,
+      configuration: {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
+        evaluationUuids: [
+          (
+            await factories.createEvaluationV2({
+              document: document,
+              commit: commit,
+              workspace: workspace,
+              type: EvaluationType.Rule,
+              metric: RuleEvaluationMetric.LengthCount,
+              configuration: {
+                reverseScale: false,
+                actualOutput: {
+                  messageSelection: 'last',
+                  parsingFormat: 'string',
+                },
+                expectedOutput: {
+                  parsingFormat: 'string',
+                },
+
+                algorithm: 'word',
+              },
+            })
+          ).uuid,
+        ],
+      },
+    } as EvaluationSettings<
+      EvaluationType.Composite,
+      CompositeEvaluationMetric.Average
+    >
+
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: compositeSettings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: issue,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Cannot link an issue to a composite evaluation'),
+    )
+  })
+
+  it('fails when linking issue to an evaluation that requires expected output', async () => {
     const { issue } = await factories.createIssue({
       document: document,
       workspace: workspace,
@@ -390,12 +455,12 @@ describe('validateEvaluationV2', () => {
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new BadRequestError(
-        'Cannot link an evaluation to an issue with expected output',
+        'Cannot link an issue to an evaluation that requires expected output',
       ),
     )
   })
 
-  it('fails when has issue and live evaluation is not supported', async () => {
+  it('fails when linking issue to an evaluation that does not support live evaluation', async () => {
     const { issue } = await factories.createIssue({
       document: document,
       workspace: workspace,
@@ -432,12 +497,12 @@ describe('validateEvaluationV2', () => {
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new BadRequestError(
-        `Cannot link an evaluation to an issue that doesn't support live evaluation`,
+        `Cannot link an issue to an evaluation that doesn't support live evaluation`,
       ),
     )
   })
 
-  it('fails when issue is merged', async () => {
+  it('fails when linking issue to an evaluation that has been merged', async () => {
     const { issue } = await factories.createIssue({
       document: document,
       workspace: workspace,
@@ -465,11 +530,11 @@ describe('validateEvaluationV2', () => {
         issue: updatedIssue,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Cannot use an issue that has been merged'),
+      new BadRequestError('Cannot link an issue that has been merged'),
     )
   })
 
-  it('fails when issue is resolved', async () => {
+  it('fails when linking issue to an evaluation that has been resolved', async () => {
     const { issue } = await factories.createIssue({
       document: document,
       workspace: workspace,
@@ -497,11 +562,11 @@ describe('validateEvaluationV2', () => {
         issue: updatedIssue,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Cannot use an issue that has been resolved'),
+      new BadRequestError('Cannot link an issue that has been resolved'),
     )
   })
 
-  it('fails when issue is ignored', async () => {
+  it('fails when linking issue to an evaluation that has been ignored', async () => {
     const { issue } = await factories.createIssue({
       document: document,
       workspace: workspace,
@@ -529,11 +594,11 @@ describe('validateEvaluationV2', () => {
         issue: updatedIssue,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Cannot use an issue that has been ignored'),
+      new BadRequestError('Cannot link an issue that has been ignored'),
     )
   })
 
-  it('fails when alignmentMetric is less than 0', async () => {
+  it('fails when alignment metric is less than 0', async () => {
     await expect(
       validateEvaluationV2({
         mode: 'create',
@@ -552,7 +617,7 @@ describe('validateEvaluationV2', () => {
     )
   })
 
-  it('fails when alignmentMetric is greater than 100', async () => {
+  it('fails when alignment metric is greater than 100', async () => {
     await expect(
       validateEvaluationV2({
         mode: 'create',
@@ -571,7 +636,7 @@ describe('validateEvaluationV2', () => {
     )
   })
 
-  it('succeeds when alignmentMetric is 0', async () => {
+  it('succeeds when alignment metric is 0', async () => {
     const { settings: validatedSettings, options: validatedOptions } =
       await validateEvaluationV2({
         mode: 'create',
@@ -588,7 +653,7 @@ describe('validateEvaluationV2', () => {
     expect(validatedOptions).toEqual(options)
   })
 
-  it('succeeds when alignmentMetric is 100', async () => {
+  it('succeeds when alignment metric is 100', async () => {
     const { settings: validatedSettings, options: validatedOptions } =
       await validateEvaluationV2({
         mode: 'create',
@@ -605,7 +670,7 @@ describe('validateEvaluationV2', () => {
     expect(validatedOptions).toEqual(options)
   })
 
-  it('succeeds when alignmentMetric is a valid value between 0 and 100', async () => {
+  it('succeeds when alignment metric is a valid value between 0 and 100', async () => {
     const { settings: validatedSettings, options: validatedOptions } =
       await validateEvaluationV2({
         mode: 'create',
@@ -622,7 +687,7 @@ describe('validateEvaluationV2', () => {
     expect(validatedOptions).toEqual(options)
   })
 
-  it('succeeds when alignmentMetric is not provided', async () => {
+  it('succeeds when alignment metric is not provided', async () => {
     const { settings: validatedSettings, options: validatedOptions } =
       await validateEvaluationV2({
         mode: 'create',

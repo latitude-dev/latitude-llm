@@ -57,7 +57,7 @@ const NumberInput = forwardRef<HTMLInputElement, Props>(function NumberInput(
         <Input
           type='number'
           ref={ni.internalRef}
-          value={ni.value}
+          value={ni.value ?? ''}
           onChange={ni.onChange}
           onBlur={ni.onBlur}
           onFocus={ni.onFocus}

@@ -38,6 +38,7 @@ async function validate(
     evaluationUuids: configuration.evaluationUuids,
     minThreshold: configuration.minThreshold,
     maxThreshold: configuration.maxThreshold,
+    defaultTarget: configuration.defaultTarget,
   })
 }
 

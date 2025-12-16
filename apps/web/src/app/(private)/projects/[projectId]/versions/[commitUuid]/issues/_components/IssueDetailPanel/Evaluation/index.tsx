@@ -2,24 +2,30 @@
 
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import React, { useCallback, useMemo, useState } from 'react'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import { useCompositeTargetToast } from '$/hooks/useCompositeTargetToast'
+import { ROUTES } from '$/services/routes'
 import { useActiveEvaluations } from '$/stores/activeEvaluations'
-import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { useEnoughAnnotationsForIssue } from '$/stores/issues/enoughAnnotationsForIssue'
+import {
+  ActiveEvaluation,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/constants/evaluations'
 import {
   MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE,
   MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES,
 } from '@latitude-data/constants/issues'
-import { LoadingEvaluationGeneration } from './_components/LoadingEvaluationGeneration'
-import { EvaluationWithIssue } from './_components/EvaluationWithIssue'
-import { InsufficientAnnotations } from './_components/InsufficientAnnotations'
-import { GeneratingEvaluation } from './_components/GeneratingEvaluation'
+import { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import { toast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
+import { useCallback, useMemo, useState } from 'react'
 import { EvaluationGenerationError } from './_components/EvaluationGenerationError'
+import { EvaluationWithIssue } from './_components/EvaluationWithIssue'
 import { GenerateEvaluationButton } from './_components/GenerateEvaluationButton'
-import { ActiveEvaluation } from '@latitude-data/constants/evaluations'
+import { GeneratingEvaluation } from './_components/GeneratingEvaluation'
+import { InsufficientAnnotations } from './_components/InsufficientAnnotations'
+import { LoadingEvaluationGeneration } from './_components/LoadingEvaluationGeneration'
 
 export function IssueEvaluation({ issue }: { issue: Issue }) {
   const { project } = useCurrentProject()
@@ -39,6 +45,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       documentUuid: issue.documentUuid,
     },
   })
+  const targetToast = useCompositeTargetToast({ project, commit })
 
   const { data: issueEvaluationStats } = useEnoughAnnotationsForIssue({
     project: project,
@@ -82,10 +89,36 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
           setEndedEvaluation(null)
         }, 10000) // 10 seconds
       } else {
-        toast({
-          title: 'Evaluation generated successfully',
-          description: 'Let the magic begin!',
-        })
+        const target = evaluations.find(
+          (e) => e.uuid === evaluation.targetUuid,
+        ) as EvaluationV2<EvaluationType.Composite> | undefined
+        if (target) {
+          targetToast({
+            evaluation: { name: evaluation.evaluationName! },
+            target: { ...target, action: evaluation.targetAction! },
+          })
+        }
+        // Note: this is an edge case that only happens here because we cannot
+        // access the performance evaluation that has been just created (race)
+        else if (evaluation.targetAction === 'create') {
+          toast({
+            title: `A new Performance score has been created`,
+            description: `from ${evaluation.evaluationName!} evaluation`,
+            href:
+              ROUTES.projects
+                .detail({ id: project.id })
+                .commits.detail({ uuid: commit.uuid })
+                .documents.detail({ uuid: issue.documentUuid })
+                .evaluations.detail({ uuid: evaluation.targetUuid! }).root +
+              '?action=editSettings',
+          })
+        } else {
+          toast({
+            title: `Evaluation ${evaluation.evaluationName!} generated successfully`,
+            description: 'Let the magic begin!',
+          })
+        }
+
         // For success, mutate evaluations to get the new, generated one and wait for it to appear
         mutateEvaluations().then(() => {
           setTimeout(() => {
@@ -94,7 +127,15 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
         })
       }
     },
-    [issue.id, mutateEvaluations],
+    [
+      evaluations,
+      project,
+      commit,
+      issue,
+      setEndedEvaluation,
+      mutateEvaluations,
+      targetToast,
+    ],
   )
 
   const { data: activeEvaluations, isLoading: isLoadingActiveEvaluations } =

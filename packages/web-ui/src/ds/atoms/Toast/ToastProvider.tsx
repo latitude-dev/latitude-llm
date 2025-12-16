@@ -1,5 +1,6 @@
 'use client'
 
+import { cn } from '../../../lib/utils'
 import {
   Toast,
   ToastClose,
@@ -9,19 +10,40 @@ import {
   ToastViewport,
   useToast,
 } from './index'
+import { ToastHref } from './ToastHref'
 
 export function ToastProvider({ duration }: { duration: number }) {
   const { toasts } = useToast()
 
   return (
     <ToastProviderPrimitive duration={duration}>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      {toasts.map(function ({
+        id,
+        title,
+        description,
+        href,
+        action,
+        variant,
+        ...props
+      }) {
         return (
-          <Toast key={id} {...props}>
+          <Toast key={id} variant={variant} {...props}>
             <div className='grid gap-1'>
-              {title && <ToastTitle>{title}</ToastTitle>}
+              {title && (
+                <ToastTitle className={cn(href && 'font-normal')}>
+                  {title}
+                </ToastTitle>
+              )}
               {description && (
-                <ToastDescription>{description}</ToastDescription>
+                <ToastDescription>
+                  {href ? (
+                    <ToastHref href={href} variant={variant}>
+                      {description}
+                    </ToastHref>
+                  ) : (
+                    description
+                  )}
+                </ToastDescription>
               )}
             </div>
             {action}

@@ -222,7 +222,9 @@ describe('calculateAlignmentMetricJob', () => {
           },
         }),
       )
-      mockUpdateEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
+      mockUpdateEvaluationV2.mockResolvedValue(
+        Result.ok({ evaluation, target: undefined }),
+      )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
     })
 
@@ -306,7 +308,9 @@ describe('calculateAlignmentMetricJob', () => {
         processed: 0,
         unprocessed: 15,
       })
-      mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
+      mockDeleteEvaluationV2.mockResolvedValue(
+        Result.ok({ evaluation, target: undefined }),
+      )
       mockFailActiveEvaluation.mockResolvedValue(
         Result.ok({
           workflowUuid: WORKFLOW_UUID,
@@ -359,7 +363,9 @@ describe('calculateAlignmentMetricJob', () => {
           },
         }),
       )
-      mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
+      mockDeleteEvaluationV2.mockResolvedValue(
+        Result.ok({ evaluation, target: undefined }),
+      )
       mockGetFalsePositivesAndFalseNegatives.mockReturnValue(
         Result.ok({
           falsePositives: [{ spanId: 'span-fp-1', traceId: 'trace-fp-1' }],
@@ -523,7 +529,9 @@ describe('calculateAlignmentMetricJob', () => {
           },
         }),
       )
-      mockUpdateEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
+      mockUpdateEvaluationV2.mockResolvedValue(
+        Result.ok({ evaluation, target: undefined }),
+      )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
       await calculateAlignmentMetricJob(jobData)
@@ -557,7 +565,9 @@ describe('calculateAlignmentMetricJob', () => {
           },
         }),
       )
-      mockDeleteEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
+      mockDeleteEvaluationV2.mockResolvedValue(
+        Result.ok({ evaluation, target: undefined }),
+      )
       mockGetFalsePositivesAndFalseNegatives.mockReturnValue(
         Result.ok({
           falsePositives: [],
@@ -605,7 +615,9 @@ describe('calculateAlignmentMetricJob', () => {
           },
         }),
       )
-      mockUpdateEvaluationV2.mockResolvedValue(Result.ok({ evaluation }))
+      mockUpdateEvaluationV2.mockResolvedValue(
+        Result.ok({ evaluation, target: undefined }),
+      )
       mockEndActiveEvaluation.mockResolvedValue(
         Result.error(new Error('Failed to end')),
       )

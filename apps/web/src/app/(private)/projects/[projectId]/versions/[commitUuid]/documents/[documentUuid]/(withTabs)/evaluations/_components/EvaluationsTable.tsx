@@ -1,11 +1,22 @@
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import {
+  EVALUATION_SPECIFICATIONS,
+  getEvaluationMetricSpecification,
+} from '$/components/evaluations'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { EvaluationType, EvaluationV2 } from '@latitude-data/core/constants'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import {
+  DropdownMenu,
+  MenuOption,
+} from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
@@ -17,15 +28,14 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import {
   BlankSlateStep,
   BlankSlateWithSteps,
 } from '@latitude-data/web-ui/molecules/BlankSlateWithSteps'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import Link from 'next/link'
 import { useCallback, useMemo, useState } from 'react'
 import { EvaluationsGenerator } from './EvaluationsGenerator'
-import { EvaluationV2, EvaluationType } from '@latitude-data/core/constants'
 
 function groupEvaluationsByType(evaluations: EvaluationV2[]) {
   const grouped = evaluations
@@ -43,31 +53,28 @@ function groupEvaluationsByType(evaluations: EvaluationV2[]) {
   return grouped
 }
 
-const EVALUATION_TYPE_LABELS: Record<EvaluationType, string> = {
-  [EvaluationType.Rule]: 'Rule-based Evaluations',
-  [EvaluationType.Llm]: 'LLM Evaluations',
-  [EvaluationType.Human]: 'Human Evaluations',
-  [EvaluationType.Composite]: 'Composite Evaluations',
-}
-
 export function EvaluationsTable({
   evaluations,
   createEvaluation,
+  updateEvaluation,
   deleteEvaluation,
   generateEvaluation,
   generatorEnabled,
   isLoading,
   isCreatingEvaluation,
+  isUpdatingEvaluation,
   isDeletingEvaluation,
   isGeneratingEvaluation,
 }: {
   evaluations: EvaluationV2[]
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
+  updateEvaluation: ReturnType<typeof useEvaluationsV2>['updateEvaluation']
   deleteEvaluation: ReturnType<typeof useEvaluationsV2>['deleteEvaluation']
   generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
   isLoading?: boolean
   isCreatingEvaluation: boolean
+  isUpdatingEvaluation: boolean
   isDeletingEvaluation: boolean
   isGeneratingEvaluation: boolean
 }) {
@@ -76,7 +83,49 @@ export function EvaluationsTable({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
+
   const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationV2>()
+  const annotationsEvaluation = useMemo(() => {
+    return evaluations.find(
+      (e) =>
+        e.type === EvaluationType.Human &&
+        !!(e as EvaluationV2<EvaluationType.Human>).configuration
+          .enableControls,
+    ) as EvaluationV2<EvaluationType.Human> | undefined
+  }, [evaluations])
+  const optimizationsEvaluation = useMemo(() => {
+    return evaluations.find(
+      (e) =>
+        e.type === EvaluationType.Composite &&
+        !!(e as EvaluationV2<EvaluationType.Composite>).configuration
+          .defaultTarget,
+    ) as EvaluationV2<EvaluationType.Composite> | undefined
+  }, [evaluations])
+
+  const isTargetSynced = useMemo(() => {
+    if (!optimizationsEvaluation) return true
+
+    const linkedUuids = evaluations
+      .filter(
+        (e) =>
+          e.uuid !== optimizationsEvaluation.uuid && !e.deletedAt && e.issueId,
+      )
+      .map((e) => e.uuid)
+
+    const linkedSet = new Set(linkedUuids)
+    const currentSet = new Set(
+      optimizationsEvaluation.configuration.evaluationUuids,
+    )
+
+    if (linkedSet.size !== currentSet.size) return false
+
+    for (const uuid of linkedSet) {
+      if (!currentSet.has(uuid)) return false
+    }
+
+    return true
+  }, [evaluations, optimizationsEvaluation])
+
   const [openDeleteModal, setOpenDeleteModal] = useState(false)
   const onDelete = useCallback(
     async (evaluation: EvaluationV2) => {
@@ -96,34 +145,176 @@ export function EvaluationsTable({
     ],
   )
 
+  const onUnuseAnnotations = useCallback(
+    async (evaluation: EvaluationV2<EvaluationType.Human>) => {
+      if (evaluation.uuid !== annotationsEvaluation?.uuid) return
+      if (isUpdatingEvaluation) return
+      return await updateEvaluation({
+        documentUuid: document.documentUuid,
+        evaluationUuid: evaluation.uuid,
+        settings: {
+          configuration: { ...evaluation.configuration, enableControls: false },
+        },
+      })
+    },
+    [document, isUpdatingEvaluation, updateEvaluation, annotationsEvaluation],
+  )
+
+  const onUseAnnotations = useCallback(
+    async (evaluation: EvaluationV2<EvaluationType.Human>) => {
+      if (evaluation.uuid === annotationsEvaluation?.uuid) return
+      if (isUpdatingEvaluation) return
+      if (annotationsEvaluation) {
+        await onUnuseAnnotations(annotationsEvaluation)
+      }
+      return await updateEvaluation({
+        documentUuid: document.documentUuid,
+        evaluationUuid: evaluation.uuid,
+        settings: {
+          configuration: { ...evaluation.configuration, enableControls: true },
+        },
+      })
+    },
+    [
+      document,
+      isUpdatingEvaluation,
+      updateEvaluation,
+      annotationsEvaluation,
+      onUnuseAnnotations,
+    ],
+  )
+
+  const onUnuseOptimizations = useCallback(
+    async (evaluation: EvaluationV2<EvaluationType.Composite>) => {
+      if (evaluation.uuid !== optimizationsEvaluation?.uuid) return
+      if (isUpdatingEvaluation) return
+      return await updateEvaluation({
+        documentUuid: document.documentUuid,
+        evaluationUuid: evaluation.uuid,
+        settings: {
+          configuration: { ...evaluation.configuration, defaultTarget: false },
+        },
+      })
+    },
+    [document, isUpdatingEvaluation, updateEvaluation, optimizationsEvaluation],
+  )
+
+  const onUseOptimizations = useCallback(
+    async (evaluation: EvaluationV2<EvaluationType.Composite>) => {
+      if (evaluation.uuid === optimizationsEvaluation?.uuid) return
+      if (isUpdatingEvaluation) return
+      if (optimizationsEvaluation) {
+        await onUnuseOptimizations(optimizationsEvaluation)
+      }
+      return await updateEvaluation({
+        documentUuid: document.documentUuid,
+        evaluationUuid: evaluation.uuid,
+        settings: {
+          configuration: { ...evaluation.configuration, defaultTarget: true },
+        },
+      })
+    },
+    [
+      document,
+      isUpdatingEvaluation,
+      updateEvaluation,
+      optimizationsEvaluation,
+      onUnuseOptimizations,
+    ],
+  )
+
+  const onToggleLiveEvaluation = useCallback(
+    async (evaluation: EvaluationV2) => {
+      if (isUpdatingEvaluation) return
+      return await updateEvaluation({
+        documentUuid: document.documentUuid,
+        evaluationUuid: evaluation.uuid,
+        options: { evaluateLiveLogs: !evaluation.evaluateLiveLogs },
+      })
+    },
+    [document, isUpdatingEvaluation, updateEvaluation],
+  )
+
   const groupedEvaluations = useMemo(
     () => groupEvaluationsByType(evaluations),
     [evaluations],
   )
 
   const evaluationTypes = useMemo(
-    () => Object.keys(groupedEvaluations) as EvaluationType[],
+    () =>
+      Object.keys(groupedEvaluations).sort((a, b) =>
+        a.localeCompare(b, 'en'),
+      ) as EvaluationType[],
     [groupedEvaluations],
   )
 
   return (
     <div className='flex flex-col gap-4'>
       {evaluations.length > 0 ? (
-        <div className='flex flex-col gap-6'>
+        <div className='flex flex-col gap-8'>
           {evaluationTypes.map((type) => {
             const typeEvaluations = groupedEvaluations[type]
             if (!typeEvaluations || typeEvaluations.length === 0) return null
 
             return (
               <div key={type} className='flex flex-col gap-2'>
-                <Text.H5M>{EVALUATION_TYPE_LABELS[type]}</Text.H5M>
-                <Table className='table-auto'>
+                <span className='flex items-center gap-2'>
+                  <Icon
+                    name={EVALUATION_SPECIFICATIONS[type].icon}
+                    color='foreground'
+                    size='normal'
+                    className='shrink-0'
+                  />
+                  <Text.H5M>{EVALUATION_SPECIFICATIONS[type].name}</Text.H5M>
+                </span>
+                {type === EvaluationType.Composite &&
+                  optimizationsEvaluation &&
+                  !isTargetSynced && (
+                    <Alert
+                      spacing='xsmall'
+                      variant='warning'
+                      direction='column'
+                      description={`${optimizationsEvaluation.name} score is unsynced from evaluations that are tracking and monitoring active issues`}
+                      cta={
+                        <Link
+                          href={
+                            ROUTES.projects
+                              .detail({ id: project.id })
+                              .commits.detail({ uuid: commit.uuid })
+                              .documents.detail({
+                                uuid: document.documentUuid,
+                              })
+                              .evaluations.detail({
+                                uuid: optimizationsEvaluation.uuid,
+                              }).root + '?action=editSettings'
+                          }
+                          className='leading-none'
+                        >
+                          <Button
+                            variant='link'
+                            size='none'
+                            textColor='warningMutedForeground'
+                            iconProps={{
+                              name: 'arrowRight',
+                              color: 'warningMutedForeground',
+                              size: 'normal',
+                              placement: 'right',
+                              strokeWidth: 2.5,
+                            }}
+                          >
+                            Sync score
+                          </Button>
+                        </Link>
+                      }
+                    />
+                  )}
+                <Table className='table-fixed'>
                   <TableHeader className='isolate sticky top-0 z-10'>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Metric</TableHead>
-                      <TableHead />
+                      <TableHead className='w-[25%]'>Name</TableHead>
+                      <TableHead className='w-[40%]'>Description</TableHead>
+                      <TableHead className='w-[25%]'>Metric</TableHead>
+                      <TableHead className='w-[10%]' />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -140,67 +331,187 @@ export function EvaluationsTable({
                         </TableRow>
                       ))}
                     {!isLoading &&
-                      typeEvaluations.map((evaluation) => (
-                        <TableRow
-                          key={evaluation.uuid}
-                          className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors'
-                          onClick={() =>
-                            navigate.push(
-                              ROUTES.projects
-                                .detail({ id: project.id })
-                                .commits.detail({ uuid: commit.uuid })
-                                .documents.detail({
-                                  uuid: document.documentUuid,
-                                })
-                                .evaluations.detail({ uuid: evaluation.uuid })
-                                .root,
-                            )
-                          }
-                        >
-                          <TableCell>
-                            <div className='flex items-center justify-between gap-2 truncate'>
-                              <Text.H5 noWrap ellipsis>
-                                {evaluation.name}
+                      typeEvaluations.map((evaluation) => {
+                        const specification =
+                          getEvaluationMetricSpecification(evaluation)
+                        return (
+                          <TableRow
+                            key={evaluation.uuid}
+                            className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors'
+                            onClick={() =>
+                              navigate.push(
+                                ROUTES.projects
+                                  .detail({ id: project.id })
+                                  .commits.detail({ uuid: commit.uuid })
+                                  .documents.detail({
+                                    uuid: document.documentUuid,
+                                  })
+                                  .evaluations.detail({ uuid: evaluation.uuid })
+                                  .root,
+                              )
+                            }
+                          >
+                            <TableCell>
+                              <div className='flex items-center justify-between gap-2 truncate'>
+                                <Text.H5 noWrap ellipsis>
+                                  {evaluation.name}
+                                </Text.H5>
+                                {evaluation.uuid ===
+                                  annotationsEvaluation?.uuid && (
+                                  <Tooltip
+                                    asChild
+                                    trigger={
+                                      <Badge variant='accent'>
+                                        Annotations
+                                      </Badge>
+                                    }
+                                    align='center'
+                                    side='top'
+                                  >
+                                    This evaluation is used for annotations
+                                  </Tooltip>
+                                )}
+                                {evaluation.uuid ===
+                                  optimizationsEvaluation?.uuid && (
+                                  <Tooltip
+                                    asChild
+                                    trigger={
+                                      <Badge variant='accent'>
+                                        Optimizations
+                                      </Badge>
+                                    }
+                                    maxWidth='none'
+                                    align='center'
+                                    side='top'
+                                  >
+                                    This evaluation is the default for
+                                    optimizations and distillations
+                                  </Tooltip>
+                                )}
+                                {!!evaluation.evaluateLiveLogs && (
+                                  <Tooltip
+                                    asChild
+                                    trigger={
+                                      <Badge variant='accent'>Live</Badge>
+                                    }
+                                    align='center'
+                                    side='top'
+                                  >
+                                    This evaluation is running on live logs
+                                  </Tooltip>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Text.H5>{evaluation.description || '-'}</Text.H5>
+                            </TableCell>
+                            <TableCell>
+                              <Text.H5>
+                                <span className='flex items-center gap-2'>
+                                  <Icon
+                                    name={specification.icon}
+                                    color='foreground'
+                                    size='normal'
+                                    className='shrink-0'
+                                  />
+                                  <Text.H5 noWrap ellipsis>
+                                    {specification.name}
+                                  </Text.H5>
+                                </span>
                               </Text.H5>
-                              {!!evaluation.evaluateLiveLogs && (
-                                <Badge variant='accent'>Live</Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Text.H5>{evaluation.description || '-'}</Text.H5>
-                          </TableCell>
-                          <TableCell>
-                            <Text.H5>
-                              {
-                                getEvaluationMetricSpecification(evaluation)
-                                  .name
-                              }
-                            </Text.H5>
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu
-                              options={[
-                                {
-                                  label: 'Remove',
-                                  onElementClick: (e) => e.stopPropagation(),
-                                  onClick: () => {
-                                    setSelectedEvaluation(evaluation)
-                                    setOpenDeleteModal(true)
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu
+                                options={[
+                                  ...(evaluation.type === EvaluationType.Human
+                                    ? ([
+                                        evaluation.uuid ===
+                                        annotationsEvaluation?.uuid
+                                          ? {
+                                              label: 'Unuse for annotations',
+                                              onElementClick: (e) =>
+                                                e.stopPropagation(),
+                                              onClick: () =>
+                                                onUnuseAnnotations(
+                                                  evaluation as EvaluationV2<EvaluationType.Human>,
+                                                ),
+                                              disabled: isUpdatingEvaluation,
+                                            }
+                                          : {
+                                              label: 'Use for annotations',
+                                              onElementClick: (e) =>
+                                                e.stopPropagation(),
+                                              onClick: () =>
+                                                onUseAnnotations(
+                                                  evaluation as EvaluationV2<EvaluationType.Human>,
+                                                ),
+                                              disabled: isUpdatingEvaluation,
+                                            },
+                                      ] as MenuOption[])
+                                    : []),
+                                  ...(evaluation.type ===
+                                  EvaluationType.Composite
+                                    ? ([
+                                        evaluation.uuid ===
+                                        optimizationsEvaluation?.uuid
+                                          ? {
+                                              label: 'Unuse for optimizations',
+                                              onElementClick: (e) =>
+                                                e.stopPropagation(),
+                                              onClick: () =>
+                                                onUnuseOptimizations(
+                                                  evaluation as EvaluationV2<EvaluationType.Composite>,
+                                                ),
+                                              disabled: isUpdatingEvaluation,
+                                            }
+                                          : {
+                                              label: 'Use for optimizations',
+                                              onElementClick: (e) =>
+                                                e.stopPropagation(),
+                                              onClick: () =>
+                                                onUseOptimizations(
+                                                  evaluation as EvaluationV2<EvaluationType.Composite>,
+                                                ),
+                                              disabled: isUpdatingEvaluation,
+                                            },
+                                      ] as MenuOption[])
+                                    : []),
+                                  ...(specification.supportsLiveEvaluation
+                                    ? ([
+                                        {
+                                          label: evaluation.evaluateLiveLogs
+                                            ? 'Disable live evaluation'
+                                            : 'Enable live evaluation',
+                                          onElementClick: (e) =>
+                                            e.stopPropagation(),
+                                          onClick: () =>
+                                            onToggleLiveEvaluation(evaluation),
+                                          disabled: isUpdatingEvaluation,
+                                        },
+                                      ] as MenuOption[])
+                                    : []),
+                                  {
+                                    label: 'Remove',
+                                    onElementClick: (e) => e.stopPropagation(),
+                                    onClick: () => {
+                                      setSelectedEvaluation(evaluation)
+                                      setOpenDeleteModal(true)
+                                    },
+                                    disabled: isDeletingEvaluation,
+                                    type: 'destructive',
                                   },
-                                  type: 'destructive',
-                                },
-                              ]}
-                              side='bottom'
-                              align='end'
-                              triggerButtonProps={{
-                                className:
-                                  'border-none justify-end cursor-pointer',
-                              }}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                                ]}
+                                side='bottom'
+                                align='end'
+                                triggerButtonProps={{
+                                  className:
+                                    'border-none justify-end cursor-pointer',
+                                }}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
                   </TableBody>
                 </Table>
               </div>

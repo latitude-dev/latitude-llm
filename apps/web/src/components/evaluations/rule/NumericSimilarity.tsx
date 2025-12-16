@@ -46,7 +46,7 @@ function ConfigurationSimpleForm({
         description='The minimum and maximum percentage of similarity of the response'
       >
         <NumberInput
-          defaultValue={configuration.minSimilarity ?? undefined}
+          value={configuration.minSimilarity ?? undefined}
           name='minSimilarity'
           label='Minimum similarity'
           placeholder='No minimum'
@@ -61,7 +61,7 @@ function ConfigurationSimpleForm({
           required
         />
         <NumberInput
-          defaultValue={configuration.maxSimilarity ?? undefined}
+          value={configuration.maxSimilarity ?? undefined}
           name='maxSimilarity'
           label='Maximum similarity'
           placeholder='No maximum'

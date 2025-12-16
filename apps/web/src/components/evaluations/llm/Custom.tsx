@@ -1,10 +1,10 @@
-import { formatCount } from '@latitude-data/constants/formatCount'
 import {
   EvaluationType,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationCustomSpecification,
   LlmEvaluationMetric,
 } from '@latitude-data/constants'
+import { formatCount } from '@latitude-data/constants/formatCount'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { FormField } from '@latitude-data/web-ui/atoms/FormField'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
@@ -126,7 +126,7 @@ ${
         description='The minimum and maximum score of the response'
       >
         <NumberInput
-          defaultValue={configuration.minScore ?? undefined}
+          value={configuration.minScore ?? undefined}
           name='minScore'
           label='Minimum score'
           placeholder='0'
@@ -140,7 +140,7 @@ ${
           required
         />
         <NumberInput
-          defaultValue={configuration.maxScore ?? undefined}
+          value={configuration.maxScore ?? undefined}
           name='maxScore'
           label='Maximum score'
           placeholder='5'
@@ -171,7 +171,7 @@ function ConfigurationAdvancedForm({
         description='The minimum and maximum score threshold of the response'
       >
         <NumberInput
-          defaultValue={configuration.minThreshold ?? undefined}
+          value={configuration.minThreshold ?? undefined}
           name='minThreshold'
           label='Minimum threshold'
           placeholder='No minimum'
@@ -186,7 +186,7 @@ function ConfigurationAdvancedForm({
           required
         />
         <NumberInput
-          defaultValue={configuration.maxThreshold ?? undefined}
+          value={configuration.maxThreshold ?? undefined}
           name='maxThreshold'
           label='Maximum threshold'
           placeholder='No maximum'

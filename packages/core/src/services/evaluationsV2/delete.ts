@@ -3,10 +3,14 @@ import { EvaluationMetric, EvaluationType, EvaluationV2 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { EvaluationsV2Repository } from '../../repositories'
+import {
+  DocumentVersionsRepository,
+  EvaluationsV2Repository,
+} from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
+import { syncDefaultCompositeTarget } from './create'
 
 export async function deleteEvaluationV2<
   T extends EvaluationType = EvaluationType,
@@ -64,6 +68,29 @@ export async function deleteEvaluationV2<
       evaluation.deletedAt = new Date()
     }
 
+    let target = undefined
+    if (evaluation.issueId) {
+      const documentsRepository = new DocumentVersionsRepository(
+        workspace.id,
+        tx,
+      )
+      const document = await documentsRepository
+        .getDocumentAtCommit({
+          commitUuid: commit.uuid,
+          documentUuid: evaluation.documentUuid,
+        })
+        .then((r) => r.unwrap())
+
+      // Note: if the deleted evaluation had an issue linked,
+      // we treat it as if the issue was being unlinked
+      const syncing = await syncDefaultCompositeTarget(
+        { evaluation, issue: null, document, commit, workspace }, // prettier-ignore
+        transaction,
+      )
+      // Note: failing silently
+      target = syncing.value
+    }
+
     await publisher.publishLater({
       type: 'evaluationV2Deleted',
       data: {
@@ -72,6 +99,6 @@ export async function deleteEvaluationV2<
       },
     })
 
-    return Result.ok({ evaluation })
+    return Result.ok({ evaluation, target })
   })
 }

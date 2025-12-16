@@ -1,14 +1,14 @@
 'use client'
 
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { EvaluationV2 } from '@latitude-data/core/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { EvaluationsActions } from './EvaluationsActions'
 import { EvaluationsTable } from './EvaluationsTable'
-import { EvaluationV2 } from '@latitude-data/core/constants'
 
 export function EvaluationsPage({
   evaluations: serverEvaluations,
@@ -24,9 +24,11 @@ export function EvaluationsPage({
   const {
     data: evaluations,
     createEvaluation,
+    updateEvaluation,
     deleteEvaluation,
     generateEvaluation,
     isCreatingEvaluation,
+    isUpdatingEvaluation,
     isDeletingEvaluation,
     isGeneratingEvaluation,
   } = useEvaluationsV2(
@@ -55,10 +57,12 @@ export function EvaluationsPage({
       <EvaluationsTable
         evaluations={evaluations}
         createEvaluation={createEvaluation}
+        updateEvaluation={updateEvaluation}
         deleteEvaluation={deleteEvaluation}
         generateEvaluation={generateEvaluation}
         generatorEnabled={generatorEnabled}
         isCreatingEvaluation={isCreatingEvaluation}
+        isUpdatingEvaluation={isUpdatingEvaluation}
         isDeletingEvaluation={isDeletingEvaluation}
         isGeneratingEvaluation={isGeneratingEvaluation}
       />

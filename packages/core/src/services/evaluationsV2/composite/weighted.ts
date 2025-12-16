@@ -73,6 +73,7 @@ async function validate(
     weights: configuration.weights,
     minThreshold: configuration.minThreshold,
     maxThreshold: configuration.maxThreshold,
+    defaultTarget: configuration.defaultTarget,
   })
 }
 

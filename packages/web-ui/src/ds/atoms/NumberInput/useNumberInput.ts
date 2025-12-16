@@ -1,13 +1,13 @@
 import {
-  useState,
-  useEffect,
-  useRef,
-  useImperativeHandle,
-  useCallback,
+  ChangeEvent,
   Ref,
   KeyboardEvent as SyntheticKeyboardEvent,
-  ChangeEvent,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
   useMemo,
+  useRef,
+  useState,
 } from 'react'
 import { InputProps } from '../Input'
 
@@ -35,7 +35,11 @@ export function useNumberInput({
   min = -Infinity,
   max = Infinity,
 }: NumberInputProps & { ref?: Ref<HTMLInputElement> }) {
-  const isControlled = controlledValue !== undefined
+  const isControlledRef = useRef(controlledValue !== undefined)
+  if (controlledValue !== undefined) {
+    isControlledRef.current = true
+  }
+  const isControlled = isControlledRef.current
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue)
   const currentValue = isControlled ? controlledValue : uncontrolledValue
 

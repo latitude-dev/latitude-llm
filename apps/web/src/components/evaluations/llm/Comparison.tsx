@@ -99,7 +99,7 @@ function ConfigurationAdvancedForm({
         description='The minimum and maximum percentage of criteria met of the response'
       >
         <NumberInput
-          defaultValue={configuration.minThreshold ?? undefined}
+          value={configuration.minThreshold ?? undefined}
           name='minThreshold'
           label='Minimum threshold'
           placeholder='No minimum'
@@ -114,7 +114,7 @@ function ConfigurationAdvancedForm({
           required
         />
         <NumberInput
-          defaultValue={configuration.maxThreshold ?? undefined}
+          value={configuration.maxThreshold ?? undefined}
           name='maxThreshold'
           label='Maximum threshold'
           placeholder='No maximum'
