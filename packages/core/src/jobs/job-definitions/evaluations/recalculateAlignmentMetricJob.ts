@@ -1,0 +1,131 @@
+import { Job } from 'bullmq'
+import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
+import { NotFoundError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
+import { evaluateConfiguration } from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
+import {
+  CommitsRepository,
+  EvaluationsV2Repository,
+} from '../../../repositories'
+import { updateEvaluationV2 } from '../../../services/evaluationsV2/update'
+import { captureException } from '../../../utils/datadogCapture'
+import {
+  EvaluationV2,
+  EvaluationType,
+  LlmEvaluationMetric,
+} from '../../../constants'
+import { generateConfigurationHash } from '../../../services/evaluationsV2/generateConfigurationHash'
+
+export type RecalculateAlignmentMetricJobData = {
+  workspaceId: number
+  commitId: number
+  evaluationUuid: string
+  documentUuid: string
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: {
+    spanId: string
+    traceId: string
+  }[]
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: {
+    spanId: string
+    traceId: string
+  }[]
+  hasEvaluationConfigurationChanged: boolean
+}
+
+/*
+  This job is a parent job of a BullMQ flow which recalculates the alignment metric of an evaluation when all its runEvaluationV2Job children have finished.
+  
+  The alignment metric used at the moment is the MCC (Matthews Correlation Coefficient)
+*/
+export const recalculateAlignmentMetricJob = async (
+  job: Job<RecalculateAlignmentMetricJobData>,
+) => {
+  const {
+    workspaceId,
+    commitId,
+    evaluationUuid,
+    documentUuid,
+    spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+    spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+    hasEvaluationConfigurationChanged,
+  } = job.data
+
+  const workspace = await unsafelyFindWorkspace(workspaceId)
+  if (!workspace) throw new NotFoundError('Workspace not found')
+
+  const commitRepository = new CommitsRepository(workspace.id)
+  const commitResult = await commitRepository.find(commitId)
+  if (!Result.isOk(commitResult)) {
+    throw new Error(`Commit not found`)
+  }
+  const commit = commitResult.unwrap()
+
+  const evaluationRepository = new EvaluationsV2Repository(workspace.id)
+  const evaluation = (await evaluationRepository
+    .getAtCommitByDocument({
+      projectId: commit.projectId,
+      commitUuid: commit.uuid,
+      documentUuid,
+      evaluationUuid,
+    })
+    .then((r) => r.unwrap())) as EvaluationV2<
+    EvaluationType.Llm,
+    LlmEvaluationMetric.Binary
+  >
+
+  try {
+    const { failed, ignored, processed, unprocessed } =
+      await job.getDependenciesCount()
+
+    // When a runEvalJob fails, it will automatically run the parent and not wait for the other children to finish (the rest will be unprocessed)
+    //  so in this scenario, we throw an error and retry the job after the exponential delay
+    const tooManyFailedEvaluationRuns =
+      (failed ?? 0) + (ignored ?? 0) + (unprocessed ?? 0) >
+      (processed ?? 0) % 10
+
+    if (tooManyFailedEvaluationRuns) {
+      throw new Error(
+        `${failed ?? 0} failed and ${ignored ?? 0} ignored children. Waiting for ${unprocessed ?? 0} unprocessed children to complete`,
+      )
+    }
+
+    const childrenValues = await job.getChildrenValues()
+
+    let alreadyCalculatedAlignmentMetricMetadata = undefined
+    if (!hasEvaluationConfigurationChanged) {
+      alreadyCalculatedAlignmentMetricMetadata = evaluation.alignmentMetricMetadata ?? undefined // prettier-ignore
+    }
+
+    const { confusionMatrix } = await evaluateConfiguration({
+      childrenValues,
+      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+      alreadyCalculatedAlignmentMetricMetadata,
+    }).then((r) => r.unwrap())
+
+    const alignmentHash = generateConfigurationHash(evaluation)
+
+    await updateEvaluationV2({
+      evaluation,
+      workspace,
+      commit: commit,
+      alignmentMetricMetadata: {
+        confusionMatrix,
+        alignmentHash,
+      },
+    }).then((r) => r.unwrap())
+  } catch (error) {
+    const { attemptsMade, opts } = job
+    const maxAttempts = opts.attempts ?? 1
+    // Job attemptsMade starts at 0
+    const isLastAttempt = attemptsMade + 1 >= maxAttempts
+
+    // Only failing in last attempt of the job, there are more attempts to retry to calculate the alignment metric if not
+    if (isLastAttempt) {
+      captureException(error as Error)
+    }
+
+    // Throwing the error here will propagate the error to BullMQ, which will retry the job
+    throw error
+  }
+}

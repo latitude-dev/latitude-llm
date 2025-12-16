@@ -260,33 +260,6 @@ describe('updateEvaluationV2', () => {
     })
   })
 
-  it('succeeds when updating alignmentMetric', async () => {
-    mocks.publisher.mockClear()
-
-    const { evaluation: updatedEvaluation } = await updateEvaluationV2({
-      evaluation: evaluation,
-      commit: commit,
-      workspace: workspace,
-      alignmentMetric: 85,
-    }).then((r) => r.unwrap())
-
-    const dbEvaluation = await database
-      .select()
-      .from(evaluationVersions)
-      .where(eq(evaluationVersions.evaluationUuid, evaluation.uuid))
-      .orderBy(desc(evaluationVersions.updatedAt))
-      .then((r) => r[0]!)
-
-    expect(dbEvaluation.alignmentMetric).toBe(85)
-    expect(mocks.publisher).toHaveBeenCalledExactlyOnceWith({
-      type: 'evaluationV2Updated',
-      data: {
-        evaluation: updatedEvaluation,
-        workspaceId: workspace.id,
-      },
-    })
-  })
-
   it('preserves existing issueId when not provided', async () => {
     const { issue } = await factories.createIssue({
       document: document,
