@@ -8,7 +8,7 @@ import {
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useCallback } from 'react'
-import useSWR from 'swr'
+import useSWR, { useSWRConfig } from 'swr'
 
 export function useActiveEvaluations(
   {
@@ -23,6 +23,7 @@ export function useActiveEvaluations(
   const fetcher = useFetcher<ActiveEvaluation[]>(
     ROUTES.api.projects.detail(project.id).activeEvaluations.root,
   )
+  const { mutate: globalMutate } = useSWRConfig()
   const {
     data = [],
     mutate,
@@ -44,6 +45,14 @@ export function useActiveEvaluations(
           if (args.event === 'evaluationEnded') {
             if (opts?.onEvaluationEnded) {
               opts.onEvaluationEnded(args.evaluation)
+              if (!args.evaluation?.error) {
+                globalMutate(
+                  (key) =>
+                    Array.isArray(key) &&
+                    key[0] === 'issueEvaluations' &&
+                    key[1] === project.id,
+                )
+              }
             }
             return prev.filter(
               (evaluation) =>
@@ -70,7 +79,7 @@ export function useActiveEvaluations(
         { revalidate: false },
       )
     },
-    [mutate, opts],
+    [mutate, opts, globalMutate, project.id],
   )
   useSockets({ event: 'evaluationStatus', onMessage })
   return { data, isLoading }

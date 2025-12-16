@@ -14,7 +14,7 @@ import { ROUTES } from '$/services/routes'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact, isEmpty } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { SWRConfiguration, useSWRConfig } from 'swr'
 import { EvaluationV2Stats } from '@latitude-data/core/schema/types'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
@@ -48,6 +48,7 @@ export function useEvaluationsV2(
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
+  const { mutate: globalMutate } = useSWRConfig()
   const fetcher = useFetcher<EvaluationV2[]>(ROUTES.api.evaluations.root, {
     searchParams: {
       projectId: project.id.toString(),
@@ -77,6 +78,13 @@ export function useEvaluationsV2(
   } = useLatitudeAction(createEvaluationV2Action, {
     onSuccess: async ({ data: { evaluation } }) => {
       mutate((prev) => [evaluation, ...(prev ?? [])])
+      globalMutate(
+        (key) =>
+          Array.isArray(key) &&
+          key[0] === 'issueEvaluations' &&
+          key[1] === project.id &&
+          key[2] === commit.uuid,
+      )
       toast({
         title: 'Evaluation created successfully',
         description: `Evaluation ${evaluation.name} created successfully`,
@@ -127,6 +135,13 @@ export function useEvaluationsV2(
             if (e.uuid !== evaluation.uuid) return e
             return evaluation
           }) ?? [],
+      )
+      globalMutate(
+        (key) =>
+          Array.isArray(key) &&
+          key[0] === 'issueEvaluations' &&
+          key[1] === project.id &&
+          key[2] === commit.uuid,
       )
       if (!notifyUpdate) return
       toast({
