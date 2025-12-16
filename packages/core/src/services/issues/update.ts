@@ -113,27 +113,34 @@ async function upsertVector({
     if (title && description) {
       payload.properties = { title, description }
     }
-    if (!payload.vectors && !payload.properties) {
-      if (!payload.vectors) {
-        return Result.error(
-          new BadRequestError(
-            'Received update issue operation without vectors',
-          ),
-        )
-      }
-      if (!payload.properties) {
-        return Result.error(
-          new BadRequestError(
-            'Received update issue operation without vectors, title and description',
-          ),
-        )
-      }
+
+    // Check for partial property updates (only title or only description)
+    // This is not allowed - you need both title AND description to update properties
+    if ((title && !description) || (!title && description)) {
+      return Result.error(
+        new BadRequestError(
+          'Received update issue operation without vectors, title and description',
+        ),
+      )
     }
 
     const exists = await issues.data.exists(uuid)
     if (!exists) {
+      // For new vectors, we require either vectors or properties
+      if (!payload.vectors && !payload.properties) {
+        return Result.error(
+          new BadRequestError(
+            'Received create issue operation without vectors or properties',
+          ),
+        )
+      }
       await issues.data.insert(payload)
     } else {
+      // For existing vectors, if there's nothing to update, skip the Weaviate update
+      // but allow the database update to proceed (e.g., for updatedAt timestamp)
+      if (!payload.vectors && !payload.properties) {
+        return Result.nil()
+      }
       await issues.data.update(payload)
     }
 

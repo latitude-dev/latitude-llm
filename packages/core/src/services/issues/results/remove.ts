@@ -118,7 +118,7 @@ export async function removeResultFromIssue<
         return Result.error(validating.error)
       }
 
-      let centroid: IssueCentroid | undefined
+      let centroid: IssueCentroid | undefined = issue.centroid
       if (canUpdateCentroid && embedding) {
         centroid = updateCentroid(
           { ...issue.centroid, updatedAt: issue.updatedAt },
