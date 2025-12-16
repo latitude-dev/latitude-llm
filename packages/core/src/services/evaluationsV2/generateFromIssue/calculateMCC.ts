@@ -1,3 +1,4 @@
+import { AlignmentMetricMetadata } from '@latitude-data/constants/evaluations'
 import { Result } from '../../../lib/Result'
 
 /*
@@ -10,14 +11,23 @@ Like this, we have enough annotations to calculate the true positive (TP), true 
 export function calculateMCC({
   examplesThatShouldPassTheEvaluation,
   examplesThatShouldFailTheEvaluation,
+  alreadyCalculatedAlignmentMetricMetadata,
 }: {
   examplesThatShouldPassTheEvaluation: boolean[]
   examplesThatShouldFailTheEvaluation: boolean[]
+  alreadyCalculatedAlignmentMetricMetadata?: AlignmentMetricMetadata
 }) {
-  const truePositives = examplesThatShouldPassTheEvaluation.filter((r) => r).length // prettier-ignore
-  const falseNegatives = examplesThatShouldPassTheEvaluation.filter((r) => !r).length // prettier-ignore
-  const falsePositives = examplesThatShouldFailTheEvaluation.filter((r) => r).length // prettier-ignore
-  const trueNegatives = examplesThatShouldFailTheEvaluation.filter((r) => !r).length // prettier-ignore
+  let truePositives = examplesThatShouldPassTheEvaluation.filter((r) => r).length // prettier-ignore
+  let falseNegatives = examplesThatShouldPassTheEvaluation.filter((r) => !r).length // prettier-ignore
+  let falsePositives = examplesThatShouldFailTheEvaluation.filter((r) => r).length // prettier-ignore
+  let trueNegatives = examplesThatShouldFailTheEvaluation.filter((r) => !r).length // prettier-ignore
+
+  if (alreadyCalculatedAlignmentMetricMetadata) {
+    truePositives += alreadyCalculatedAlignmentMetricMetadata.confusionMatrix.truePositives // prettier-ignore
+    trueNegatives += alreadyCalculatedAlignmentMetricMetadata.confusionMatrix.trueNegatives // prettier-ignore
+    falsePositives += alreadyCalculatedAlignmentMetricMetadata.confusionMatrix.falsePositives // prettier-ignore
+    falseNegatives += alreadyCalculatedAlignmentMetricMetadata.confusionMatrix.falseNegatives // prettier-ignore
+  }
 
   const mcc =
     (truePositives * trueNegatives - falsePositives * falseNegatives) /

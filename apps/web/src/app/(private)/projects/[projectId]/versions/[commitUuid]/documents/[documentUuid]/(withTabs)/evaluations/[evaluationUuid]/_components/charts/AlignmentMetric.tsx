@@ -12,6 +12,7 @@ import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { ConfusionMatrixTooltipContent } from '$/components/ConfusionMatrix'
+import { calculateMCC } from '$/helpers/evaluation-generation/calculateMCC'
 
 export default function AlignmentMetricChart<
   T extends EvaluationType = EvaluationType,
@@ -27,8 +28,10 @@ export default function AlignmentMetricChart<
     issueId: evaluation.issueId,
   })
 
-  const alignmentMetric = evaluation.alignmentMetric
   const confusionMatrix = evaluation.alignmentMetricMetadata?.confusionMatrix
+  const alignmentMetric = confusionMatrix
+    ? calculateMCC({ confusionMatrix })
+    : undefined
 
   const alignmentMetricLink =
     ROUTES.projects
@@ -44,7 +47,7 @@ export default function AlignmentMetricChart<
       }
       loading={isLoading}
     >
-      {alignmentMetric !== undefined && alignmentMetric !== null ? (
+      {alignmentMetric !== undefined ? (
         <div className='flex flex-row items-center gap-1'>
           <PanelChart data={`${Math.round(alignmentMetric)}%`} />
 

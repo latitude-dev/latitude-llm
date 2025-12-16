@@ -314,4 +314,31 @@ describe('calculateMCC', () => {
       expect(mcc).toBe(100)
     })
   })
+
+  describe('with alreadyCalculatedAlignmentMetricMetadata', () => {
+    it('adds existing confusion matrix values to new calculations', () => {
+      const mccResult = calculateMCC({
+        examplesThatShouldPassTheEvaluation: [true, true, false], // 2 TP, 1 FN
+        examplesThatShouldFailTheEvaluation: [false, false, true], // 1 FP, 2 TN
+        alreadyCalculatedAlignmentMetricMetadata: {
+          alignmentHash: 'test-alignment-hash',
+          confusionMatrix: {
+            truePositives: 3,
+            trueNegatives: 3,
+            falsePositives: 1,
+            falseNegatives: 1,
+          },
+        },
+      })
+
+      expect(Result.isOk(mccResult)).toBe(true)
+      const { confusionMatrix } = mccResult.unwrap()
+      expect(confusionMatrix).toEqual({
+        truePositives: 5, // 2 + 3
+        trueNegatives: 5, // 2 + 3
+        falsePositives: 2, // 0 + 1
+        falseNegatives: 2, // 0 + 1
+      })
+    })
+  })
 })

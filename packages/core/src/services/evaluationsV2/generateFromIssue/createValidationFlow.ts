@@ -8,11 +8,8 @@ import { Queues } from '../../../jobs/queues/types'
 import { Result } from '@latitude-data/core/lib/Result'
 import { EvaluationV2 } from '@latitude-data/constants'
 import { Issue } from '../../../schema/models/types/Issue'
-import { getHITLSpansByIssue } from '../../../data-access/issues/getHITLSpansByIssue'
-import { getHITLSpansByDocument } from '../../../data-access/issues/getHITLSpansByDocument'
 import { database } from '../../../client'
-
-const MAX_COMPARISON_ANNOTATIONS = 100
+import { getEqualAmountsOfPositiveAndNegativeExamples } from './getEqualAmountsOfPositiveAndNegativeExamples'
 
 /*
   This function validates an existing evaluation by calculating its MCC (Matthews Correlation Coefficient),
@@ -21,7 +18,6 @@ const MAX_COMPARISON_ANNOTATIONS = 100
   To do this, it finds a set of positive and negative evaluation results from the issue and other issues/positive annotations of the same document,
    and runs it against the created evalaluation. 
 */
-// TODO(evaluation-generation): Add new argument if its in the generation flow or if its just to get the current MCC (when we calculate it daily)
 export async function createValidationFlow(
   {
     workspace,
@@ -56,24 +52,24 @@ export async function createValidationFlow(
     return examplesResult
   }
   const {
-    examplesThatShouldFailTheEvaluation,
-    examplesThatShouldPassTheEvaluation,
+    examplesThatShouldPassTheEvaluationSliced,
+    examplesThatShouldFailTheEvaluationSliced,
   } = examplesResult.unwrap()
 
   const spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation =
-    examplesThatShouldPassTheEvaluation.map((span) => ({
+    examplesThatShouldPassTheEvaluationSliced.map((span) => ({
       spanId: span.id,
       traceId: span.traceId,
     }))
   const spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation =
-    examplesThatShouldFailTheEvaluation.map((span) => ({
+    examplesThatShouldFailTheEvaluationSliced.map((span) => ({
       spanId: span.id,
       traceId: span.traceId,
     }))
 
   const allSpans = [
-    ...examplesThatShouldFailTheEvaluation,
-    ...examplesThatShouldPassTheEvaluation,
+    ...examplesThatShouldFailTheEvaluationSliced,
+    ...examplesThatShouldPassTheEvaluationSliced,
   ]
 
   const flowProducer = new FlowProducer({
@@ -86,7 +82,7 @@ export async function createValidationFlow(
   })
 
   const { job: validationFlowJob } = await flowProducer.add({
-    name: `calculateAlignmentMetricJob`,
+    name: `validateGeneratedEvaluationJob`,
     queueName: Queues.generateEvaluationsQueue,
     data: {
       workspaceId: workspace.id,
@@ -103,7 +99,7 @@ export async function createValidationFlow(
     },
     opts: {
       // Idempotency key
-      jobId: `calculateAlignmentMetricJob-wf=${workflowUuid}-generationAttempt=${generationAttempt}`,
+      jobId: `validateGeneratedEvaluationJob-wf=${workflowUuid}-generationAttempt=${generationAttempt}`,
       // FlowProducer does not inherit
       attempts: 3,
       backoff: {
@@ -143,77 +139,4 @@ export async function createValidationFlow(
   }
 
   return Result.ok(validationFlowJob)
-}
-/*
-Gets:
-- the spans of the issue that were annotated by the user (HITL evaluation results) (examples that should fail the evaluation)
-- the spans of the other issues of the same document or the thumbs up evalResults of that document that were annotated by the user (HITL evaluation results) (examples that should pass the evaluation)
-
-IMPORTANT: 
-- The evaluation MUST fail when the issue is present in the span, as this logic is used within the issue discovery and its how we want our end goal to be.
-  We want the evaluations to be like unit tests, where if all of them pass for a given trace of a document, that means that the trace has no issues, that its good!
-- The spans MUST be from HITL evaluation results only, as we want to use ONLY the user's annotations to calculate the MCC, not from other evaluations results.
-
-Thumbs up evalResults of the same document or evalResults of other issues of the same document count as negative evalResults because
- they are cases in which the new evaluation should return a positive result, as that span doesnt have that issue (its good!).
-*/
-async function getEqualAmountsOfPositiveAndNegativeExamples(
-  {
-    workspace,
-    commit,
-    issue,
-  }: {
-    workspace: Workspace
-    commit: Commit
-    issue: Issue
-  },
-  db = database,
-) {
-  const examplesThatShouldFailTheEvaluationResult = await getHITLSpansByIssue(
-    {
-      workspace,
-      commit,
-      issue,
-      pageSize: MAX_COMPARISON_ANNOTATIONS,
-      page: 1,
-    },
-    db,
-  )
-  if (!Result.isOk(examplesThatShouldFailTheEvaluationResult)) {
-    return examplesThatShouldFailTheEvaluationResult
-  }
-  const { spans: examplesThatShouldFailTheEvaluation } =
-    examplesThatShouldFailTheEvaluationResult.unwrap()
-
-  // Getting the same amount of examples that should pass the evaluation, as we need an equal amount of both to calculate correctly the MCC
-  const examplesThatShouldPassTheEvaluationResult =
-    await getHITLSpansByDocument(
-      {
-        workspace,
-        commit,
-        documentUuid: issue.documentUuid,
-        pageSize: examplesThatShouldFailTheEvaluation.length,
-        excludeIssueId: issue.id,
-        page: 1,
-      },
-      db,
-    )
-  if (!Result.isOk(examplesThatShouldPassTheEvaluationResult)) {
-    return examplesThatShouldPassTheEvaluationResult
-  }
-  const { spans: examplesThatShouldPassTheEvaluation } =
-    examplesThatShouldPassTheEvaluationResult.unwrap()
-
-  const targetLength = Math.min(
-    examplesThatShouldFailTheEvaluation.length,
-    examplesThatShouldPassTheEvaluation.length,
-  )
-  return Result.ok({
-    examplesThatShouldPassTheEvaluation: examplesThatShouldPassTheEvaluation.slice(0, targetLength), // prettier-ignore
-    examplesThatShouldFailTheEvaluation: examplesThatShouldFailTheEvaluation.slice(0, targetLength), // prettier-ignore
-  })
-}
-
-export const __test__ = {
-  getEqualAmountsOfPositiveAndNegativeExamples,
 }

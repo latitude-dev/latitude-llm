@@ -33,7 +33,6 @@ export async function validateEvaluationV2<
     commit,
     workspace,
     issue,
-    alignmentMetric,
   }: {
     mode: 'create' | 'update'
     evaluation?: EvaluationV2<T, M>
@@ -43,7 +42,6 @@ export async function validateEvaluationV2<
     commit: Commit
     workspace: Workspace
     issue: Issue | null
-    alignmentMetric?: number
   },
   db = database,
 ) {
@@ -192,14 +190,6 @@ export async function validateEvaluationV2<
         new BadRequestError('Cannot link an issue that has been ignored'),
       )
     }
-  }
-
-  if (alignmentMetric && (alignmentMetric < 0 || alignmentMetric > 100)) {
-    return Result.error(
-      new BadRequestError(
-        `Alignment metric must be a number between 0 and 100`,
-      ),
-    )
   }
 
   // Note: all settings and options are explicitly returned to ensure we don't
