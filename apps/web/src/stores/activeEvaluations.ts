@@ -47,7 +47,10 @@ export function useActiveEvaluations(
               opts.onEvaluationEnded(args.evaluation)
               if (!args.evaluation?.error) {
                 globalMutate(
-                  (key) => Array.isArray(key) && key[0] === 'issueEvaluations',
+                  (key) =>
+                    Array.isArray(key) &&
+                    key[0] === 'issueEvaluations' &&
+                    key[1] === project.id,
                 )
               }
             }
@@ -76,7 +79,7 @@ export function useActiveEvaluations(
         { revalidate: false },
       )
     },
-    [mutate, opts, globalMutate],
+    [mutate, opts, globalMutate, project.id],
   )
   useSockets({ event: 'evaluationStatus', onMessage })
   return { data, isLoading }

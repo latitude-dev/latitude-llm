@@ -78,6 +78,13 @@ export function useEvaluationsV2(
   } = useLatitudeAction(createEvaluationV2Action, {
     onSuccess: async ({ data: { evaluation } }) => {
       mutate((prev) => [evaluation, ...(prev ?? [])])
+      globalMutate(
+        (key) =>
+          Array.isArray(key) &&
+          key[0] === 'issueEvaluations' &&
+          key[1] === project.id &&
+          key[2] === commit.uuid,
+      )
       toast({
         title: 'Evaluation created successfully',
         description: `Evaluation ${evaluation.name} created successfully`,
@@ -129,7 +136,13 @@ export function useEvaluationsV2(
             return evaluation
           }) ?? [],
       )
-      globalMutate((key) => Array.isArray(key) && key[0] === 'issueEvaluations')
+      globalMutate(
+        (key) =>
+          Array.isArray(key) &&
+          key[0] === 'issueEvaluations' &&
+          key[1] === project.id &&
+          key[2] === commit.uuid,
+      )
       if (!notifyUpdate) return
       toast({
         title: 'Evaluation updated successfully',
