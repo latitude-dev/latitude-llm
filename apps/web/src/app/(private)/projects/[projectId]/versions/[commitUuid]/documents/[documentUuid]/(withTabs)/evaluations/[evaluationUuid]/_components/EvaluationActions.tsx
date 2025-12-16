@@ -36,12 +36,17 @@ import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { useCallback, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { RefObject, useCallback, useState } from 'react'
 
 export function EvaluationActions<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
->() {
+>({
+  openSettingsRef,
+}: {
+  openSettingsRef?: RefObject<(() => void) | undefined>
+}) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
@@ -78,6 +83,7 @@ export function EvaluationActions<
         evaluation={evaluation}
         updateEvaluation={updateEvaluation}
         isUpdatingEvaluation={isUpdatingEvaluation}
+        openSettingsRef={openSettingsRef}
       />
       {metricSpecification.supportsBatchEvaluation && (
         <RunExperiment
@@ -202,6 +208,7 @@ function EditEvaluation<
   evaluation,
   updateEvaluation,
   isUpdatingEvaluation,
+  openSettingsRef,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
@@ -209,9 +216,15 @@ function EditEvaluation<
   evaluation: EvaluationV2<T, M>
   updateEvaluation: ReturnType<typeof useEvaluationsV2>['updateEvaluation']
   isUpdatingEvaluation: boolean
+  openSettingsRef?: RefObject<(() => void) | undefined>
 }) {
   const { document } = useCurrentDocument()
-  const [openUpdateModal, setOpenUpdateModal] = useState(false)
+
+  const [openUpdateModal, setOpenUpdateModal] = useState(
+    useSearchParams().has('action', 'editSettings'),
+  )
+  if (openSettingsRef) openSettingsRef.current = () => setOpenUpdateModal(true)
+
   const [settings, setSettings] = useState<EvaluationSettings<T, M>>(evaluation)
   const [issueId, setIssueId] = useState<number | null>(
     evaluation.issueId ?? null,

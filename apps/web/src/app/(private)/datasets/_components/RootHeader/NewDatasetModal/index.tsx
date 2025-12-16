@@ -88,6 +88,7 @@ export function NewDatasetModalComponent({
             delimiterErrors={errors?.csvDelimiter}
             customDelimiterInputName='csvCustomDelimiter'
             customDelimiterValue={''}
+            delimiterDefaultValue='comma'
             customDelimiterErrors={errors?.csvCustomDelimiter}
           />
           <DropzoneInput

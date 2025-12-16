@@ -1,7 +1,6 @@
 'use client'
 import { useCallback, useRef, useState } from 'react'
 
-import { cn } from '@latitude-data/web-ui/utils'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
@@ -71,15 +70,17 @@ export default function DelimiterSelector({
         defaultValue={delimiterDefaultValue}
         onChange={onSelectChange}
         errors={delimiterErrors}
+        width='full'
       />
-      <Input
-        ref={inputRef}
-        name={customDelimiterInputName}
-        className={cn({ hidden: !isCustom })}
-        defaultValue={customDelimiterValue}
-        errors={customDelimiterErrors}
-        placeholder='Your custom delimiter'
-      />
+      {isCustom && (
+        <Input
+          ref={inputRef}
+          name={customDelimiterInputName}
+          defaultValue={customDelimiterValue}
+          errors={customDelimiterErrors}
+          placeholder='Your custom delimiter'
+        />
+      )}
     </FormFieldGroup>
   )
 }

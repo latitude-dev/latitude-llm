@@ -11,6 +11,7 @@ import {
   EvaluationType,
 } from '@latitude-data/constants'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Label } from '@latitude-data/web-ui/atoms/Label'
@@ -19,7 +20,7 @@ import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
@@ -70,11 +71,51 @@ function ConfigurationSimpleForm({
     return options
   }, [evaluations])
 
+  const balanceWeights = useCallback(() => {
+    const count = configuration.evaluationUuids.length
+    if (count === 0) return
+
+    const baseWeight = Math.floor(100 / count)
+    const remainder = 100 % count
+
+    setConfiguration({
+      ...configuration,
+      weights: Object.fromEntries(
+        configuration.evaluationUuids.map((uuid, index) => [
+          uuid,
+          baseWeight + (index < remainder ? 1 : 0),
+        ]),
+      ),
+    })
+  }, [configuration, setConfiguration])
+
   return (
     <>
       <FormFieldGroup
         name='weights'
-        label='Score weights'
+        label={
+          <span className='w-full flex justify-between items-center gap-2'>
+            Score weights
+            {configuration.evaluationUuids.length > 0 && !isLoading && (
+              <Button
+                variant='link'
+                size='none'
+                iconProps={{
+                  name: 'equalApproximately',
+                  widthClass: 'w-4',
+                  heightClass: 'h-4',
+                  placement: 'right',
+                }}
+                onClick={(event) => {
+                  event.preventDefault()
+                  balanceWeights()
+                }}
+              >
+                Balance out
+              </Button>
+            )}
+          </span>
+        }
         description='The custom weight percentage for each sub-evaluation. The sum of all weights must add up to 100%'
         layout='vertical'
         errors={errors?.['weights']}
@@ -91,15 +132,17 @@ function ConfigurationSimpleForm({
           configuration.evaluationUuids.map((uuid) => (
             <FormFieldGroup key={uuid} layout='horizontal' centered>
               <Label
-                variant='default'
-                icon={evaluationOptions[uuid].icon as IconName}
+                variant={evaluationOptions[uuid] ? 'default' : 'destructive'}
+                icon={
+                  (evaluationOptions[uuid]?.icon as IconName) ?? 'alertTriangle'
+                }
                 className='w-auto flex-shrink-0 pr-1.5'
                 htmlFor={`weights[${uuid}]`}
               >
-                {evaluationOptions[uuid].label}
+                {evaluationOptions[uuid]?.label ?? 'Unknown'}
               </Label>
               <NumberInput
-                defaultValue={configuration.weights?.[uuid] ?? undefined}
+                value={configuration.weights?.[uuid] ?? undefined}
                 name={`weights[${uuid}]`}
                 placeholder='25%'
                 min={0}

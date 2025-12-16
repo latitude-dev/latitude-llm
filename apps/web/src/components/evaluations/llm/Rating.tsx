@@ -1,9 +1,9 @@
-import { formatCount } from '@latitude-data/constants/formatCount'
 import {
   EvaluationType,
   LlmEvaluationMetric,
   LlmEvaluationRatingSpecification,
 } from '@latitude-data/constants'
+import { formatCount } from '@latitude-data/constants/formatCount'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -55,7 +55,7 @@ function ConfigurationSimpleForm({
         description='Additional guidelines describing when the response should be rated low'
       >
         <NumberInput
-          defaultValue={configuration.minRating ?? undefined}
+          value={configuration.minRating ?? undefined}
           name='minRating'
           placeholder='0'
           onChange={(value) => {
@@ -90,7 +90,7 @@ function ConfigurationSimpleForm({
         description='Additional guidelines describing when the response should be rated high'
       >
         <NumberInput
-          defaultValue={configuration.maxRating ?? undefined}
+          value={configuration.maxRating ?? undefined}
           name='maxRating'
           placeholder='5'
           onChange={(value) => {
@@ -136,7 +136,7 @@ function ConfigurationAdvancedForm({
         description='The minimum and maximum rating threshold of the response'
       >
         <NumberInput
-          defaultValue={configuration.minThreshold ?? undefined}
+          value={configuration.minThreshold ?? undefined}
           name='minThreshold'
           label='Minimum threshold'
           placeholder='No minimum'
@@ -151,7 +151,7 @@ function ConfigurationAdvancedForm({
           required
         />
         <NumberInput
-          defaultValue={configuration.maxThreshold ?? undefined}
+          value={configuration.maxThreshold ?? undefined}
           name='maxThreshold'
           label='Maximum threshold'
           placeholder='No maximum'

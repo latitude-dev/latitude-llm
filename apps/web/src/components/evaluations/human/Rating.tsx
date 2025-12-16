@@ -1,17 +1,18 @@
-import { use, useCallback, useMemo } from 'react'
-import { formatCount } from '@latitude-data/constants/formatCount'
 import {
   EvaluationType,
   EvaluationV2,
   HumanEvaluationMetric,
   HumanEvaluationRatingSpecification,
 } from '@latitude-data/constants'
+import { formatCount } from '@latitude-data/constants/formatCount'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { StepperNumberInput } from '@latitude-data/web-ui/atoms/StepperNumberInput'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { use, useCallback, useMemo } from 'react'
 import { CriteriaDescription as CriteriaWrapper } from '../Annotation/CriteriaDescription'
 import {
   AnnotationFormWrapper as AForm,
@@ -23,7 +24,6 @@ import {
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 const specification = HumanEvaluationRatingSpecification
 export default {
@@ -50,7 +50,7 @@ function ConfigurationSimpleForm({
         description='Additional guidelines describing when the response should be rated low'
       >
         <NumberInput
-          defaultValue={configuration.minRating ?? undefined}
+          value={configuration.minRating ?? undefined}
           name='minRating'
           placeholder='0'
           onChange={(value) => {
@@ -85,7 +85,7 @@ function ConfigurationSimpleForm({
         description='Additional guidelines describing when the response should be rated high'
       >
         <NumberInput
-          defaultValue={configuration.maxRating ?? undefined}
+          value={configuration.maxRating ?? undefined}
           name='maxRating'
           placeholder='5'
           onChange={(value) => {
@@ -131,7 +131,7 @@ function ConfigurationAdvancedForm({
         description='The minimum and maximum rating threshold of the response'
       >
         <NumberInput
-          defaultValue={configuration.minThreshold ?? undefined}
+          value={configuration.minThreshold ?? undefined}
           name='minThreshold'
           label='Minimum threshold'
           placeholder='No minimum'
@@ -146,7 +146,7 @@ function ConfigurationAdvancedForm({
           required
         />
         <NumberInput
-          defaultValue={configuration.maxThreshold ?? undefined}
+          value={configuration.maxThreshold ?? undefined}
           name='maxThreshold'
           label='Maximum threshold'
           placeholder='No maximum'

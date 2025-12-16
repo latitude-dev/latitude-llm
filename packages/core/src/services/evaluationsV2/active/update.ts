@@ -3,7 +3,7 @@ import {
   ACTIVE_EVALUATIONS_CACHE_TTL_SECONDS,
   ActiveEvaluation,
 } from '@latitude-data/constants/evaluations'
-import { cache as redis, Cache } from '../../../cache'
+import { Cache, cache as redis } from '../../../cache'
 import { NotFoundError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
@@ -12,6 +12,9 @@ export async function updateActiveEvaluation({
   workspaceId,
   projectId,
   evaluationUuid,
+  evaluationName,
+  targetUuid,
+  targetAction,
   workflowUuid,
   startedAt,
   endedAt,
@@ -22,6 +25,9 @@ export async function updateActiveEvaluation({
   projectId: number
   workflowUuid: string
   evaluationUuid?: string
+  evaluationName?: string
+  targetUuid?: string
+  targetAction?: string
   startedAt?: Date
   endedAt?: Date
   error?: Error
@@ -54,6 +60,9 @@ export async function updateActiveEvaluation({
     const updatedEvaluation: ActiveEvaluation = {
       ...existingEvaluation,
       evaluationUuid: evaluationUuid ?? existingEvaluation.evaluationUuid,
+      evaluationName: evaluationName ?? existingEvaluation.evaluationName,
+      targetUuid: targetUuid ?? existingEvaluation.targetUuid,
+      targetAction: targetAction ?? existingEvaluation.targetAction,
       queuedAt: new Date(existingEvaluation.queuedAt),
       startedAt:
         startedAt ??

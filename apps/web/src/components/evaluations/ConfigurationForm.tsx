@@ -4,12 +4,14 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 import { ROUTES } from '$/services/routes'
+import { useIssue } from '$/stores/issues/issue'
+import { useSearchIssues } from '$/stores/issues/selectorIssues'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
   ActualOutputConfiguration,
+  baseEvaluationConfiguration,
   EvaluationMetric,
   EvaluationType,
-  baseEvaluationConfiguration,
   ISSUE_GROUP,
 } from '@latitude-data/core/constants'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
@@ -26,8 +28,6 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useDebounce, useDebouncedCallback } from 'use-debounce'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
-import { useSearchIssues } from '$/stores/issues/selectorIssues'
-import { useIssue } from '$/stores/issues/issue'
 
 const MESSAGE_SELECTION_OPTIONS =
   baseEvaluationConfiguration.shape.actualOutput.shape.messageSelection.options.map(
@@ -160,9 +160,6 @@ export function ConfigurationAdvancedForm<
 
   const metricSpecification = typeSpecification.metrics[metric]
   if (!metricSpecification) return null
-
-  const doesntRequireExpectedOutput =
-    !metricSpecification.requiresExpectedOutput
 
   return (
     <>
@@ -326,28 +323,30 @@ export function ConfigurationAdvancedForm<
           <ActualOutputTest configuration={testConfiguration} />
         </div>
       )}
-      {doesntRequireExpectedOutput && (
-        <FormFieldGroup
-          label='Link issue'
-          description='Link the evaluation to an issue in your agent logs'
-          layout='horizontal'
-        >
-          <Select
-            searchable
-            removable
-            value={selectedIssue?.id}
-            name='issueId'
-            placeholder='Select an existing issue'
-            searchPlaceholder='Search existing issues...'
-            loading={isLoadingIssues || isLoadingSelectedIssue}
-            disabled={disabled || isLoadingIssues || isLoadingSelectedIssue}
-            options={options}
-            onSearch={onSearch}
-            onChange={setIssueId}
-            errors={errors?.['issueId']}
-          />
-        </FormFieldGroup>
-      )}
+      {type !== EvaluationType.Composite &&
+        !metricSpecification.requiresExpectedOutput &&
+        metricSpecification.supportsLiveEvaluation && (
+          <FormFieldGroup
+            label='Linked issue'
+            description='Track and monitor an issue using failing results from this evaluation'
+            layout='horizontal'
+          >
+            <Select
+              searchable
+              removable
+              value={selectedIssue?.id}
+              name='issueId'
+              placeholder='Select an issue'
+              searchPlaceholder='Search issues...'
+              loading={isLoadingIssues || isLoadingSelectedIssue}
+              disabled={disabled || isLoadingIssues || isLoadingSelectedIssue}
+              options={options}
+              onSearch={onSearch}
+              onChange={(value) => setIssueId?.(value ?? null)}
+              errors={errors?.['issueId']}
+            />
+          </FormFieldGroup>
+        )}
     </>
   )
 }

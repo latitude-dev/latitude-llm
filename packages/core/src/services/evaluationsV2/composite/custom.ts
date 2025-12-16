@@ -53,6 +53,7 @@ async function validate(
     formula: configuration.formula,
     minThreshold: configuration.minThreshold,
     maxThreshold: configuration.maxThreshold,
+    defaultTarget: configuration.defaultTarget,
   })
 }
 

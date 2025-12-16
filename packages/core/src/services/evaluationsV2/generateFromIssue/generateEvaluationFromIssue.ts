@@ -1,14 +1,14 @@
+import { Result } from '@latitude-data/core/lib/Result'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { createValidationFlow } from './createEvaluationFlow'
-import { Result } from '@latitude-data/core/lib/Result'
-import { generateEvaluationConfigFromIssueWithCopilot } from './generateFromIssue'
-import Transaction from '../../../lib/Transaction'
-import { updateActiveEvaluation } from '../active/update'
 import { EvaluationType, LlmEvaluationMetric } from '../../../constants'
-import { createEvaluationV2 } from '../create'
+import Transaction from '../../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../../repositories'
+import { updateActiveEvaluation } from '../active/update'
+import { createEvaluationV2 } from '../create'
+import { createValidationFlow } from './createEvaluationFlow'
+import { generateEvaluationConfigFromIssueWithCopilot } from './generateFromIssue'
 
 export async function generateEvaluationFromIssue(
   {
@@ -83,6 +83,11 @@ export async function generateEvaluationFromIssue(
           metric: LlmEvaluationMetric.Binary,
           configuration: evaluationConfig,
         },
+        options: {
+          evaluateLiveLogs: true,
+          enableSuggestions: true,
+          autoApplySuggestions: true,
+        },
         issueId: issue.id,
         document: document,
         workspace: workspace,
@@ -95,7 +100,7 @@ export async function generateEvaluationFromIssue(
       return evaluationResult
     }
 
-    const { evaluation } = evaluationResult.unwrap()
+    const { evaluation, target } = evaluationResult.unwrap()
 
     // Adding generated evaluation uuid to the active evaluation
     await updateActiveEvaluation({
@@ -103,6 +108,9 @@ export async function generateEvaluationFromIssue(
       projectId: commit.projectId,
       workflowUuid,
       evaluationUuid: evaluation.uuid,
+      evaluationName: evaluation.name,
+      targetUuid: target?.uuid,
+      targetAction: target?.action,
     })
 
     return await createValidationFlow(

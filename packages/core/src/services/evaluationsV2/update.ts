@@ -1,14 +1,16 @@
 import { isEqual } from 'lodash-es'
 import {
+  AlignmentMetricMetadata,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
-  AlignmentMetricMetadata,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
+import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 import { compactObject } from '../../lib/compactObject'
+import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import {
@@ -18,11 +20,10 @@ import {
 } from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
-import { type Workspace } from '../../schema/models/types/Workspace'
-import { validateEvaluationV2 } from './validate'
 import { Issue } from '../../schema/models/types/Issue'
-import { BadRequestError } from '../../lib/errors'
-import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { syncDefaultCompositeTarget } from './create'
+import { validateEvaluationV2 } from './validate'
 
 export async function updateEvaluationV2<
   T extends EvaluationType,
@@ -77,7 +78,7 @@ export async function updateEvaluationV2<
     options = compactObject(options)
 
     let issue: Issue | null = null
-    if (issueId !== undefined && issueId !== null) {
+    if (issueId) {
       const issuesRepository = new IssuesRepository(workspace.id, tx)
       const projectRepository = new ProjectsRepository(workspace.id, tx)
       const projectResult = await projectRepository.find(commit.projectId)
@@ -148,6 +149,16 @@ export async function updateEvaluationV2<
       versionId: result.id,
     } as unknown as EvaluationV2<T, M>
 
+    let target = undefined
+    if (issueId !== undefined) {
+      const syncing = await syncDefaultCompositeTarget(
+        { evaluation, issue, document, commit, workspace }, // prettier-ignore
+        transaction,
+      )
+      // Note: failing silently
+      target = syncing.value
+    }
+
     publisher.publishLater({
       type: 'evaluationV2Updated',
       data: {
@@ -156,6 +167,6 @@ export async function updateEvaluationV2<
       },
     })
 
-    return Result.ok({ evaluation })
+    return Result.ok({ evaluation, target })
   })
 }

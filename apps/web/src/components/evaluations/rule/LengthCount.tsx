@@ -1,9 +1,9 @@
-import { formatCount } from '@latitude-data/constants/formatCount'
 import {
   EvaluationType,
   RuleEvaluationLengthCountSpecification,
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
+import { formatCount } from '@latitude-data/constants/formatCount'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
@@ -59,7 +59,7 @@ function ConfigurationSimpleForm({
         description='The minimum and maximum length of the response'
       >
         <NumberInput
-          defaultValue={configuration.minLength ?? undefined}
+          value={configuration.minLength ?? undefined}
           name='minLength'
           label='Minimum length'
           placeholder='No minimum'
@@ -73,7 +73,7 @@ function ConfigurationSimpleForm({
           required
         />
         <NumberInput
-          defaultValue={configuration.maxLength ?? undefined}
+          value={configuration.maxLength ?? undefined}
           name='maxLength'
           label='Maximum length'
           placeholder='No maximum'

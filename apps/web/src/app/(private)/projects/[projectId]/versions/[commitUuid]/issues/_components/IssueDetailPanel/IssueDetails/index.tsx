@@ -1,11 +1,11 @@
 import { SerializedIssue } from '$/stores/issues'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import Link from 'next/link'
 import { HistogramCell } from '../../HistogramCell'
 import { StatusBadges } from '../../IssueStatusBadge'
 import { LastSeenCell } from '../../LastSeenCell'
-import Link from 'next/link'
 
 export function IssueDetails({ issue }: { issue: SerializedIssue }) {
   const mergedToIssue = issue.mergedToIssue as
@@ -37,7 +37,7 @@ export function IssueDetails({ issue }: { issue: SerializedIssue }) {
           spacing='small'
         />
       ) : null}
-      <div className='grid grid-cols-2 gap-x-4 gap-y-4 items-center'>
+      <div className='grid grid-cols-2 gap-y-4 items-center'>
         <Text.H5 color='foregroundMuted'>Status</Text.H5>
         <div>
           <StatusBadges issue={issue} />

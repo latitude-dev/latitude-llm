@@ -1,26 +1,16 @@
 'use client'
 
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { useEvaluationResultsV2 } from '$/stores/evaluationResultsV2'
-import { useEvaluationV2Stats } from '$/stores/evaluationsV2'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCallback, useEffect, useState } from 'react'
-import { useDebounce, useDebouncedCallback } from 'use-debounce'
-import { EvaluationTitle } from '../../_components/EvaluationTitle'
-import { EvaluationActions } from './EvaluationActions'
-import { EvaluationFilters } from './EvaluationFilters'
-import { EvaluationResultsTable } from './EvaluationResults/Table'
-import { EvaluationStats } from './EvaluationStats'
+import { useEvaluationsV2, useEvaluationV2Stats } from '$/stores/evaluationsV2'
 import {
   EvaluationMetric,
   EvaluationType,
@@ -28,6 +18,18 @@ import {
 } from '@latitude-data/core/constants'
 import { EvaluationResultsV2Search } from '@latitude-data/core/helpers'
 import { EvaluationResultV2WithDetails } from '@latitude-data/core/schema/types'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useDebounce, useDebouncedCallback } from 'use-debounce'
+import { EvaluationTitle } from '../../_components/EvaluationTitle'
+import { EvaluationActions } from './EvaluationActions'
+import { EvaluationFilters } from './EvaluationFilters'
+import { EvaluationResultsTable } from './EvaluationResults/Table'
+import { EvaluationStats } from './EvaluationStats'
 
 const useEvaluationResultsV2Socket = <
   T extends EvaluationType = EvaluationType,
@@ -175,12 +177,70 @@ export function EvaluationPage<
 
   useEffect(() => setSearch(serverSearch), [serverSearch])
 
+  const openSettingsRef = useRef<() => void>(undefined)
+  const { data: evaluations, isLoading: isLoadingEvaluations } =
+    useEvaluationsV2({ project, commit, document })
+  const isTargetSynced = useMemo(() => {
+    if (isLoadingEvaluations) return true
+    if (evaluation.type !== EvaluationType.Composite) return true
+    if (
+      !(evaluation as EvaluationV2<EvaluationType.Composite>).configuration
+        .defaultTarget
+    ) {
+      return true
+    }
+
+    const linkedUuids = evaluations
+      .filter((e) => e.uuid !== evaluation.uuid && !e.deletedAt && e.issueId)
+      .map((e) => e.uuid)
+
+    const linkedSet = new Set(linkedUuids)
+    const currentSet = new Set(
+      (
+        evaluation as EvaluationV2<EvaluationType.Composite>
+      ).configuration.evaluationUuids,
+    )
+
+    if (linkedSet.size !== currentSet.size) return false
+
+    for (const uuid of linkedSet) {
+      if (!currentSet.has(uuid)) return false
+    }
+
+    return true
+  }, [isLoadingEvaluations, evaluation, evaluations])
+
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full gap-4 p-6'>
+      {evaluation.type === EvaluationType.Composite && !isTargetSynced && (
+        <Alert
+          spacing='xsmall'
+          variant='warning'
+          direction='column'
+          description='This composite score is unsynced from evaluations that are tracking and monitoring active issues'
+          cta={
+            <Button
+              variant='link'
+              size='none'
+              textColor='warningMutedForeground'
+              iconProps={{
+                name: 'arrowRight',
+                color: 'warningMutedForeground',
+                size: 'normal',
+                placement: 'right',
+                strokeWidth: 2.5,
+              }}
+              onClick={() => openSettingsRef.current?.()}
+            >
+              Sync score
+            </Button>
+          }
+        />
+      )}
       <TableWithHeader
         verticalAligment='bottom'
         title={<EvaluationTitle evaluation={evaluation} />}
-        actions={<EvaluationActions />}
+        actions={<EvaluationActions openSettingsRef={openSettingsRef} />}
       />
       <div className='w-full flex items-end justify-between gap-x-2'>
         <EvaluationScaleInfo evaluation={evaluation} />

@@ -1,23 +1,23 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import {
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetric,
+  Providers,
+} from '@latitude-data/constants'
 import { Result } from '@latitude-data/core/lib/Result'
+import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import type { Job } from 'bullmq'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import * as factories from '../../../tests/factories'
+import * as updateActiveEvaluationModule from '../active/update'
+import * as createEvaluationV2Module from '../create'
+import * as createValidationFlowModule from './createEvaluationFlow'
 import { generateEvaluationFromIssue } from './generateEvaluationFromIssue'
 import * as generateFromIssueModule from './generateFromIssue'
-import * as createValidationFlowModule from './createEvaluationFlow'
-import * as createEvaluationV2Module from '../create'
-import * as updateActiveEvaluationModule from '../active/update'
-import * as factories from '../../../tests/factories'
-import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
-import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
-import {
-  Providers,
-  EvaluationType,
-  LlmEvaluationMetric,
-  EvaluationV2,
-} from '@latitude-data/constants'
-import type { Job } from 'bullmq'
 
 vi.mock('./generateFromIssue', () => ({
   generateEvaluationConfigFromIssueWithCopilot: vi.fn(),
@@ -123,7 +123,7 @@ describe('generateEvaluationFromIssue', () => {
       }),
     )
     mockCreateEvaluationV2.mockResolvedValue(
-      Result.ok({ evaluation: mockEvaluation }),
+      Result.ok({ evaluation: mockEvaluation, target: undefined }),
     )
     mockUpdateActiveEvaluation.mockResolvedValue(
       Result.ok({
@@ -193,6 +193,9 @@ describe('generateEvaluationFromIssue', () => {
       projectId: commit.projectId,
       workflowUuid: TEST_WORKFLOW_UUID,
       evaluationUuid: mockEvaluation.uuid,
+      evaluationName: mockEvaluation.name,
+      targetUuid: undefined,
+      targetAction: undefined,
     })
 
     // Verify createValidationFlow was called with correct parameters
@@ -271,7 +274,7 @@ describe('generateEvaluationFromIssue', () => {
       }),
     )
     mockCreateEvaluationV2.mockResolvedValue(
-      Result.ok({ evaluation: mockEvaluation }),
+      Result.ok({ evaluation: mockEvaluation, target: undefined }),
     )
     mockUpdateActiveEvaluation.mockResolvedValue(
       Result.ok({
@@ -351,7 +354,7 @@ describe('generateEvaluationFromIssue', () => {
       }),
     )
     mockCreateEvaluationV2.mockResolvedValue(
-      Result.ok({ evaluation: mockEvaluation }),
+      Result.ok({ evaluation: mockEvaluation, target: undefined }),
     )
     mockUpdateActiveEvaluation.mockResolvedValue(
       Result.ok({

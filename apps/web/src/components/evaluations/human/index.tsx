@@ -1,11 +1,17 @@
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationType,
+  EvaluationV2,
   HumanEvaluationMetric,
   HumanEvaluationSpecification,
 } from '@latitude-data/constants'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { useEffect, useMemo } from 'react'
 import {
   AnnotationFormProps,
   ChartConfigurationArgs,
@@ -56,6 +62,8 @@ function ConfigurationSimpleForm<M extends HumanEvaluationMetric>({
 
 function ConfigurationAdvancedForm<M extends HumanEvaluationMetric>({
   metric,
+  mode,
+  uuid,
   configuration,
   setConfiguration,
   errors,
@@ -64,6 +72,36 @@ function ConfigurationAdvancedForm<M extends HumanEvaluationMetric>({
 }: ConfigurationFormProps<EvaluationType.Human, M> & {
   metric: M
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+
+  const { data: evaluations, isLoading: isLoadingEvaluations } =
+    useEvaluationsV2({ project, commit, document })
+  const defaultControls = useMemo(
+    () =>
+      !isLoadingEvaluations &&
+      evaluations
+        .filter((e) => e.uuid !== uuid && e.type === EvaluationType.Human)
+        .every(
+          (e) =>
+            !(e as EvaluationV2<EvaluationType.Human>).configuration
+              .enableControls,
+        ),
+    [isLoadingEvaluations, uuid, evaluations],
+  )
+
+  useEffect(() => {
+    if (mode !== 'create') return
+    if (isLoadingEvaluations) return
+    // FIXME: use proper callback setState so that you don't depend on options
+    // in the useEffect hook
+    setConfiguration(
+      Object.assign(configuration, { enableControls: defaultControls }),
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, isLoadingEvaluations, defaultControls])
+
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
@@ -73,7 +111,7 @@ function ConfigurationAdvancedForm<M extends HumanEvaluationMetric>({
         checked={configuration.enableControls ?? false}
         name='enableControls'
         label='Annotation controls'
-        description='Enable controls to annotate responses directly in the runs/logs dashboard'
+        description='Annotate responses directly in the dashboard using this evaluation'
         onCheckedChange={(value) =>
           setConfiguration({ ...configuration, enableControls: value })
         }
@@ -99,6 +137,8 @@ function ConfigurationAdvancedForm<M extends HumanEvaluationMetric>({
       />
       {!!metricSpecification.ConfigurationAdvancedForm && (
         <metricSpecification.ConfigurationAdvancedForm
+          mode={mode}
+          uuid={uuid}
           configuration={configuration}
           setConfiguration={setConfiguration}
           errors={errors}

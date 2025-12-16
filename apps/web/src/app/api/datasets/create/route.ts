@@ -34,10 +34,13 @@ const createDatasetSchema = (workspaceId: number) =>
               'This name was already used, please use something different',
           },
         ),
-      csvDelimiter: z.enum(DELIMITERS_KEYS, {
-        message: 'Choose a valid delimiter option',
-      }),
-      csvCustomDelimiter: z.string(),
+      csvDelimiter: z
+        .enum(DELIMITERS_KEYS, {
+          message: 'Choose a valid delimiter option',
+        })
+        .nullable()
+        .default('comma'),
+      csvCustomDelimiter: z.string().nullable().default(''),
       dataset_file: z
         .instanceof(File)
         .refine(async (file) => {
@@ -51,7 +54,7 @@ const createDatasetSchema = (workspaceId: number) =>
     .refine(
       async (schema) => {
         if (schema.csvDelimiter !== 'custom') return true
-        return schema.csvCustomDelimiter.length > 0
+        return (schema.csvCustomDelimiter?.length ?? 0) > 0
       },
       {
         message: 'Custom delimiter is required',
@@ -137,7 +140,7 @@ export const POST = errorHandler(
         data: {
           name,
           file: dataset_file,
-          csvDelimiter: delimiter,
+          csvDelimiter: delimiter ?? '',
         },
       }).then((r) => r.unwrap())
 
