@@ -1,4 +1,9 @@
-import { LogSources, PromptSpanMetadata, SpanType } from '../../constants'
+import {
+  ExternalSpanMetadata,
+  LogSources,
+  PromptSpanMetadata,
+  SpanType,
+} from '../../constants'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
 import { queues } from '../../jobs/queues'
@@ -18,6 +23,12 @@ const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
   (source) => source !== 'evaluation' && source !== 'experiment',
 ) as LogSources[]
 
+const LIVE_EVALUABLE_SPAN_TYPES = [
+  SpanType.Prompt,
+  SpanType.External,
+  SpanType.Chat,
+]
+
 export const evaluateLiveLogJob = async ({
   data: event,
 }: {
@@ -28,12 +39,15 @@ export const evaluateLiveLogJob = async ({
   const metadataRepo = new SpanMetadatasRepository(workspaceId)
   const span = await repo.get({ spanId, traceId }).then((r) => r.value)
   if (!span) return
-  if (span.type !== SpanType.Prompt) return
+  if (!LIVE_EVALUABLE_SPAN_TYPES.includes(span.type)) return
 
-  const promptSpanMetadata = (await metadataRepo
+  const spanMetadata = (await metadataRepo
     .get({ spanId, traceId })
-    .then((r) => r.value)) as PromptSpanMetadata | undefined
-  if (!promptSpanMetadata) return
+    .then((r) => r.value)) as
+    | PromptSpanMetadata
+    | ExternalSpanMetadata
+    | undefined
+  if (!spanMetadata) return
 
   const workspace = await unsafelyFindWorkspace(span.workspaceId)
   if (!workspace) {
@@ -42,24 +56,29 @@ export const evaluateLiveLogJob = async ({
     )
   }
 
-  if (
-    !LIVE_EVALUABLE_LOG_SOURCES.includes(
-      promptSpanMetadata.source ?? LogSources.API,
-    )
-  ) {
+  const source = 'source' in spanMetadata ? spanMetadata.source : undefined
+  if (!LIVE_EVALUABLE_LOG_SOURCES.includes(source ?? LogSources.API)) {
     return
   }
 
+  const versionUuid =
+    spanMetadata.type === SpanType.Prompt
+      ? spanMetadata.versionUuid
+      : spanMetadata.versionUuid
+  const promptUuid = spanMetadata.promptUuid
+
+  if (!versionUuid || !promptUuid) return
+
   const commitsRepository = new CommitsRepository(workspace.id)
   const commit = await commitsRepository
-    .getCommitByUuid({ uuid: promptSpanMetadata.versionUuid })
+    .getCommitByUuid({ uuid: versionUuid })
     .then((r) => r.unwrap())
 
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
   let evaluations = await evaluationsRepository
     .list({
       commitUuid: commit.uuid,
-      documentUuid: promptSpanMetadata.promptUuid,
+      documentUuid: promptUuid,
     })
     .then((r) => r.unwrap())
 

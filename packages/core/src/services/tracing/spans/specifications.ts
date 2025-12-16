@@ -1,6 +1,8 @@
 import { Span, SpanType } from '../../../constants'
+import { ChatSpanSpecification } from './chat'
 import { CompletionSpanSpecification } from './completion'
 import { EmbeddingSpanSpecification } from './embedding'
+import { ExternalSpanSpecification } from './external'
 import { HttpSpanSpecification } from './http'
 import { PromptSpanSpecification } from './prompt'
 import { RerankingSpanSpecification } from './reranking'
@@ -21,6 +23,8 @@ export const SPAN_SPECIFICATIONS: {
   [SpanType.Reranking]: RerankingSpanSpecification,
   [SpanType.Http]: HttpSpanSpecification,
   [SpanType.Prompt]: PromptSpanSpecification,
+  [SpanType.Chat]: ChatSpanSpecification,
+  [SpanType.External]: ExternalSpanSpecification,
   [SpanType.Step]: StepSpanSpecification,
   [SpanType.Unknown]: UnknownSpanSpecification,
 }

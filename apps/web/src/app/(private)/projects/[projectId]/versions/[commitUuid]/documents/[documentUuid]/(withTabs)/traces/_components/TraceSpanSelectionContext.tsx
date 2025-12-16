@@ -7,14 +7,14 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { AssembledSpan } from '@latitude-data/constants'
 
 type SelectionState = {
-  traceId: string | null
+  documentLogUuid: string | null
   spanId: string | null
   activeRunUuid: string | null
 }
 
 type RowType = 'trace' | 'activeRun'
 type OnClickTraceRowParams<T extends RowType> = T extends 'trace'
-  ? { data: { traceId: string; spanId: string }; type: T }
+  ? { data: { documentLogUuid: string; spanId: string }; type: T }
   : { data: { runUuid: string }; type: T }
 type OnClickTraceRowFunction = <T extends RowType>(
   params: OnClickTraceRowParams<T>,
@@ -29,7 +29,7 @@ type TraceSpanSelectionContextType = {
 
 export const TraceSpanSelectionContext =
   createContext<TraceSpanSelectionContextType>({
-    selection: { traceId: null, spanId: null, activeRunUuid: null },
+    selection: { documentLogUuid: null, spanId: null, activeRunUuid: null },
     onClickTraceRow:
       <T extends RowType>(_args: OnClickTraceRowParams<T>) =>
       () => {},
@@ -42,23 +42,23 @@ function initialSelectionState({
 }: {
   params: ReadonlyURLSearchParams
 }): SelectionState {
-  const directTraceId = params.get('traceId')
+  const directDocumentLogUuid = params.get('documentLogUuid')
   const directSpanId = params.get('spanId')
   const directActiveRunUuid = params.get('activeRunUuid')
-  let initialTraceId = directTraceId
+  let initialDocumentLogUuid = directDocumentLogUuid
   let initialSpanId = directSpanId
 
-  // If not found in direct params, check filters
-  if (!initialTraceId || !initialSpanId) {
+  if (!initialDocumentLogUuid || !initialSpanId) {
     const filtersParam = params.get('filters')
     const filters = parseSpansFilters(filtersParam, 'TraceSpanSelectionContext')
     if (filters) {
-      initialTraceId = initialTraceId || filters.traceId || null
+      initialDocumentLogUuid =
+        initialDocumentLogUuid || filters.documentLogUuid || null
       initialSpanId = initialSpanId || filters.spanId || null
     }
   }
   return {
-    traceId: initialTraceId,
+    documentLogUuid: initialDocumentLogUuid,
     spanId: initialSpanId,
     activeRunUuid: directActiveRunUuid,
   }
@@ -75,9 +75,9 @@ export function TraceSpanSelectionProvider({
     initialSelectionState({ params }),
   )
   const clearSelection = useCallback(() => {
-    setSelection({ traceId: null, spanId: null, activeRunUuid: null })
+    setSelection({ documentLogUuid: null, spanId: null, activeRunUuid: null })
     const newParams = new URLSearchParams(params.toString())
-    newParams.delete('traceId')
+    newParams.delete('documentLogUuid')
     newParams.delete('spanId')
     newParams.delete('activeRunUuid')
     router.replace(`?${newParams.toString()}`)
@@ -89,17 +89,17 @@ export function TraceSpanSelectionProvider({
         const newParams = new URLSearchParams(params.toString())
         if (type === 'trace') {
           const isSelected =
-            data.traceId === selection.traceId &&
+            data.documentLogUuid === selection.documentLogUuid &&
             data.spanId === selection.spanId
           if (isSelected) {
             clearSelection()
             return
           }
-          newParams.set('traceId', data.traceId)
+          newParams.set('documentLogUuid', data.documentLogUuid)
           newParams.set('spanId', data.spanId)
           newParams.delete('activeRunUuid')
           setSelection({
-            traceId: data.traceId,
+            documentLogUuid: data.documentLogUuid,
             spanId: data.spanId,
             activeRunUuid: null,
           })
@@ -110,10 +110,10 @@ export function TraceSpanSelectionProvider({
             return
           }
           newParams.set('activeRunUuid', data.runUuid)
-          newParams.delete('traceId')
+          newParams.delete('documentLogUuid')
           newParams.delete('spanId')
           setSelection({
-            traceId: null,
+            documentLogUuid: null,
             spanId: null,
             activeRunUuid: data.runUuid,
           })
@@ -125,13 +125,13 @@ export function TraceSpanSelectionProvider({
 
   const selectSpan = useCallback(
     (span?: AssembledSpan) => {
-      const traceId = selection.traceId
-      if (!traceId) return
-
       const spanId = span?.id
       if (!spanId) return
 
-      onClickTraceRow({ type: 'trace', data: { traceId, spanId } })()
+      const documentLogUuid = span.documentLogUuid ?? selection.documentLogUuid
+      if (!documentLogUuid) return
+
+      onClickTraceRow({ type: 'trace', data: { documentLogUuid, spanId } })()
     },
     [selection, onClickTraceRow],
   )

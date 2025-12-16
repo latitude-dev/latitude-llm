@@ -1,6 +1,8 @@
 import { env } from '$telemetry/env'
 import {
   BaseInstrumentation,
+  ChatSpanOptions,
+  ExternalSpanOptions,
   LatitudeInstrumentation,
   LatitudeInstrumentationOptions,
   ManualInstrumentation,
@@ -320,14 +322,24 @@ export class LatitudeTelemetry {
   step(ctx: otel.Context, options?: StartSpanOptions) {
     return this.telemetry.step(ctx, options)
   }
+
+  chat(ctx: otel.Context, options: ChatSpanOptions) {
+    return this.telemetry.chat(ctx, options)
+  }
+
+  external(ctx: otel.Context, options: ExternalSpanOptions) {
+    return this.telemetry.external(ctx, options)
+  }
 }
 
 export type {
+  ChatSpanOptions,
   EndCompletionSpanOptions,
   EndHttpSpanOptions,
   EndSpanOptions,
   EndToolSpanOptions,
   ErrorOptions,
+  ExternalSpanOptions,
   PromptSpanOptions as PromptSegmentOptions,
   StartCompletionSpanOptions,
   StartHttpSpanOptions,

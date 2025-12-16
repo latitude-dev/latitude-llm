@@ -43,10 +43,10 @@ export function useLogHistoryParams({
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
-  const { data, isLoading: isLoadingUrlSpan } = useConversation({
+  const { traces, isLoading: isLoadingUrlSpan } = useConversation({
     conversationId: selectedTraceId,
   })
-  const { trace } = data || {}
+  const trace = traces[0]
   const urlPromptSpan = findFirstSpanOfType(
     trace?.children ?? [],
     SpanType.Prompt,
@@ -66,12 +66,11 @@ export function useLogHistoryParams({
     commitUuid: commitVersionUuid,
     limit: 1,
   })
-  const {
-    data: { trace: selectedTrace } = {},
-    isLoading: isLoadingSelectedSpan,
-  } = useConversation({
-    conversationId: spans?.[0]?.documentLogUuid,
-  })
+  const { traces: selectedTraces, isLoading: isLoadingSelectedSpan } =
+    useConversation({
+      conversationId: spans?.[0]?.documentLogUuid,
+    })
+  const selectedTrace = selectedTraces[0]
   const promptSpan = findFirstSpanOfType(
     selectedTrace?.children ?? [],
     SpanType.Prompt,

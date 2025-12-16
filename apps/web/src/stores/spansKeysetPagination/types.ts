@@ -11,7 +11,7 @@ export interface UseSpansKeysetPaginationParams {
   projectId: string
   commitUuid?: string
   documentUuid?: string
-  type?: SpanType
+  types?: SpanType[]
   initialItems?: Span[]
   limit?: number
   source?: LogSources[]

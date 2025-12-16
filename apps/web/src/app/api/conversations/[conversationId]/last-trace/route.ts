@@ -6,8 +6,8 @@ import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { assembleTrace } from '@latitude-data/core/services/tracing/traces/assemble'
 import { NextRequest, NextResponse } from 'next/server'
 
-export type ConversationTracesResponse = {
-  traces: AssembledTrace[]
+export type LastTraceResponse = {
+  trace: AssembledTrace | null
 }
 
 export const GET = errorHandler(
@@ -27,24 +27,23 @@ export const GET = errorHandler(
       const { conversationId } = params
 
       const repository = new SpansRepository(workspace.id)
-      const traceIds = await repository.listTraceIdsByLogUuid(conversationId)
+      const lastMainSpan =
+        await repository.findLastMainSpanByDocumentLogUuid(conversationId)
 
-      if (traceIds.length === 0) {
-        return NextResponse.json({ traces: [] }, { status: 200 })
+      if (!lastMainSpan) {
+        return NextResponse.json({ trace: null }, { status: 200 })
       }
 
-      const traces: AssembledTrace[] = []
-      for (const traceId of traceIds) {
-        const result = await assembleTrace({ traceId, workspace })
-        if (result.ok && result.value) {
-          traces.push(result.value.trace)
-        }
+      const result = await assembleTrace({
+        traceId: lastMainSpan.traceId,
+        workspace,
+      })
+
+      if (!result.ok || !result.value) {
+        return NextResponse.json({ trace: null }, { status: 200 })
       }
 
-      // Sort by startedAt
-      traces.sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
-
-      return NextResponse.json({ traces }, { status: 200 })
+      return NextResponse.json({ trace: result.value.trace }, { status: 200 })
     },
   ),
 )

@@ -59,7 +59,7 @@ export function useAnnotationBySpan({
         documentUuid: span.documentUuid!,
       },
       spanId: span.id,
-      traceId: span.traceId,
+      documentLogUuid: span.documentLogUuid,
     })
   const manualEvaluations = useMemo(
     () =>

@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const spansFiltersSchema = z
   .object({
-    traceId: z.string().optional(),
+    documentLogUuid: z.string().optional(),
     spanId: z.string().optional(),
     commitUuids: z.array(z.string()).optional(),
     experimentUuids: z.array(z.string()).optional(),

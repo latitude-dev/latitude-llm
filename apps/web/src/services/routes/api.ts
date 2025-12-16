@@ -501,6 +501,14 @@ export const API_ROUTES = {
         traceIds: {
           root: `${conversationRoot}/trace-ids`,
         },
+        lastTrace: {
+          root: `${conversationRoot}/last-trace`,
+        },
+        spans: {
+          detail: (spanId: string) => ({
+            root: `${conversationRoot}/spans/${spanId}`,
+          }),
+        },
       }
     },
   },

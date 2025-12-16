@@ -24,7 +24,7 @@ export function useSpansKeysetPaginationStore(
     commitUuid,
     documentUuid,
     source,
-    type = SpanType.Prompt,
+    types = [SpanType.Prompt, SpanType.External],
     initialItems = [],
     limit,
     realtime = false,
@@ -33,7 +33,7 @@ export function useSpansKeysetPaginationStore(
     projectId: string
     commitUuid?: string
     documentUuid?: string
-    type?: SpanType
+    types?: SpanType[]
     initialItems?: Span[]
     limit?: number
     source?: LogSources[]
@@ -48,7 +48,7 @@ export function useSpansKeysetPaginationStore(
     commitUuid,
     documentUuid,
     source,
-    type,
+    types,
     initialItems,
     limit,
     realtime,

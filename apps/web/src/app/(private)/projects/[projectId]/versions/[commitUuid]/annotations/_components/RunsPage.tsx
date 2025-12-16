@@ -83,7 +83,7 @@ export function RunsPage({
     {
       projectId: project.id.toString(),
       commitUuid: commit.uuid,
-      type: SpanType.Prompt,
+      types: [SpanType.Prompt, SpanType.External],
       initialItems: initialSpans,
       source: logSources,
       realtime: realtimeIsEnabled,

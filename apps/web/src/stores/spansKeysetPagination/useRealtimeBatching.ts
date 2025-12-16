@@ -111,7 +111,7 @@ function shouldIncludeSpan(
     return false
   }
 
-  if (params.type && span.type !== params.type) {
+  if (params.types && !params.types.includes(span.type)) {
     return false
   }
 

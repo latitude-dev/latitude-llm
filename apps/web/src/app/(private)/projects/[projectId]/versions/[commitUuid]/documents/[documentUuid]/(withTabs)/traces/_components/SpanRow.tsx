@@ -2,13 +2,13 @@
 
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { relativeTime } from '$/lib/relativeTime'
-import { EvaluationResultV2, Span, SpanType } from '@latitude-data/constants'
+import { EvaluationResultV2, PromptSpan } from '@latitude-data/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Fragment, use, useMemo } from 'react'
-import { Trace } from './Trace'
+import { ConversationTimeline } from './ConversationTimeline'
 import { TraceSpanSelectionContext } from './TraceSpanSelectionContext'
 import { useCommits } from '$/stores/commitsStore'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
@@ -21,7 +21,7 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 
 type SpanRowProps = {
-  span: Span<SpanType.Prompt>
+  span: PromptSpan
   toggleRow: ReturnType<typeof useSelectableRows>['toggleRow']
   isSelected: ReturnType<typeof useSelectableRows>['isSelected']
   isExpanded: boolean
@@ -114,7 +114,7 @@ export function SpanRow({
       <TableRow
         onClick={onClickTraceRow({
           type: 'trace',
-          data: { traceId: span.traceId, spanId: span.id },
+          data: { documentLogUuid: span.documentLogUuid, spanId: span.id },
         })}
         className={cn(
           'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
@@ -180,7 +180,7 @@ export function SpanRow({
             className='max-w-full w-full h-full !p-0'
             innerClassName='w-full h-full flex !justify-center !items-center'
           >
-            <Trace traceId={span.traceId} />
+            <ConversationTimeline documentLogUuid={span.documentLogUuid} />
           </TableCell>
         </TableRow>
       )}

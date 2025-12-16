@@ -21,6 +21,7 @@ export const spans = latitudeSchema.table(
     traceId: varchar('trace_id', { length: 32 }).notNull(),
     documentLogUuid: uuid('document_log_uuid'),
     parentId: varchar('parent_id', { length: 16 }),
+    previousTraceId: varchar('previous_trace_id', { length: 32 }),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -82,5 +83,6 @@ export const spans = latitudeSchema.table(
       table.startedAt,
       table.id,
     ),
+    index('spans_previous_trace_id_idx').on(table.previousTraceId),
   ],
 )

@@ -7,7 +7,6 @@ import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { buildClientToolHandlersMap } from '@latitude-data/core/services/documents/tools/clientTools/handlers'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessages } from '@latitude-data/core/services/documentLogs/addMessages/index'
-import { BACKGROUND, telemetry } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import { LogSources } from '@latitude-data/core/constants'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
@@ -16,13 +15,7 @@ import { BadRequestError } from '@latitude-data/constants/errors'
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const { conversationUuid } = c.req.valid('param')
-  const {
-    messages,
-    tools,
-    stream: useSSE,
-    trace,
-    __internal,
-  } = c.req.valid('json')
+  const { messages, tools, stream: useSSE, __internal } = c.req.valid('json')
   const workspace = c.get('workspace')
   if (tools.length > 0 && !useSSE) {
     throw new BadRequestError('You must enable Stream to use custom tools')
@@ -30,9 +23,6 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
 
   const result = (
     await addMessages({
-      context: trace
-        ? telemetry.resume(trace)
-        : BACKGROUND({ workspaceId: workspace.id }),
       workspace,
       tools: buildClientToolHandlersMap(tools),
       documentLogUuid: conversationUuid,

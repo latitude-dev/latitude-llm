@@ -1,5 +1,7 @@
+import ChatSpanSpecification from './Chat'
 import CompletionSpanSpecification from './Completion'
 import EmbeddingSpanSpecification from './Embedding'
+import ExternalSpanSpecification from './External'
 import HttpSpanSpecification from './Http'
 import RerankingSpanSpecification from './Reranking'
 import RetrievalSpanSpecification from './Retrieval'
@@ -17,6 +19,8 @@ export const SPAN_SPECIFICATIONS: {
   [SpanType.Embedding]: EmbeddingSpanSpecification,
   [SpanType.Http]: HttpSpanSpecification,
   [SpanType.Prompt]: PromptSpanSpecification,
+  [SpanType.Chat]: ChatSpanSpecification,
+  [SpanType.External]: ExternalSpanSpecification,
   [SpanType.Reranking]: RerankingSpanSpecification,
   [SpanType.Retrieval]: RetrievalSpanSpecification,
   [SpanType.Step]: UnknownSpanSpecification,

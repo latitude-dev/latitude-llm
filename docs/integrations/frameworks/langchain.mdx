@@ -81,13 +81,14 @@ Before you start, make sure you have:
     import { createAgent } from "langchain";
 
     export async function generateSupportReply(input: string) {
-      const $prompt = telemetry.prompt(BACKGROUND(), {
+      const $span = telemetry.external(BACKGROUND(), {
+        documentLogUuid: crypto.randomUUID(),
         promptUuid: 'your-prompt-uuid',
-        versionUuid: 'your-version-uuid',
+        versionUuid: 'your-version-uuid', // or "live", depending on your setup
       })
 
       await context
-        .with($prompt.context, async () => {
+        .with($span.context, async () => {
           const agent = createAgent({ model: 'claude-sonnet-4-5' });
           const result = await agent.invoke({
             messages: [
@@ -100,8 +101,8 @@ Before you start, make sure you have:
 
           // Use result here...
         })
-        .then(() => $prompt.end())
-        .catch((error) => $prompt.fail(error as Error))
+        .then(() => $span.end())
+        .catch((error) => $span.fail(error as Error))
         .finally(() => telemetry.flush())
     }
     ```

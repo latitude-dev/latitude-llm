@@ -15,17 +15,16 @@ import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { findLastSpanOfType } from '@latitude-data/core/services/tracing/spans/findLastSpanOfType'
 import { MessageList } from '$/components/ChatWrapper'
 import { adaptPromptlMessageToLegacy } from '@latitude-data/core/utils/promptlAdapter'
-import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SpanParameters'
 
-const specification = SPAN_SPECIFICATIONS[SpanType.Prompt]
+const specification = SPAN_SPECIFICATIONS[SpanType.External]
 export default {
   ...specification,
-  icon: 'bot' as IconName,
-  color: SPAN_COLORS.gray,
+  icon: 'externalLink' as IconName,
+  color: SPAN_COLORS.purple,
   DetailsPanel: DetailsPanel,
 }
 
-function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
+function DetailsPanel({ span }: DetailsPanelProps<SpanType.External>) {
   const { data: trace } = useTrace({ traceId: span.traceId })
   const completionSpan = useMemo(
     () => findLastSpanOfType(trace?.children ?? [], SpanType.Completion),
@@ -81,29 +80,27 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
     <>
       {!!span.metadata && (
         <>
-          <MetadataItem label='Version UUID'>
-            <ClickToCopy copyValue={span.metadata.versionUuid as string}>
+          <MetadataItem label='Prompt UUID'>
+            <ClickToCopy copyValue={span.metadata.promptUuid}>
               <Text.H5 align='right' color='foregroundMuted'>
-                {(span.metadata.versionUuid as string).slice(0, 8)}
+                {span.metadata.promptUuid.slice(0, 8)}
               </Text.H5>
             </ClickToCopy>
           </MetadataItem>
-          {span.metadata.promptUuid && (
-            <MetadataItem label='Prompt UUID'>
-              <ClickToCopy copyValue={span.metadata.promptUuid as string}>
+          {span.metadata.versionUuid && (
+            <MetadataItem label='Version UUID'>
+              <ClickToCopy copyValue={span.metadata.versionUuid}>
                 <Text.H5 align='right' color='foregroundMuted'>
-                  {(span.metadata.promptUuid as string).slice(0, 8)}
+                  {span.metadata.versionUuid.slice(0, 8)}
                 </Text.H5>
               </ClickToCopy>
             </MetadataItem>
           )}
-          {span.metadata.experimentUuid && (
-            <MetadataItem label='Experiment UUID'>
-              <ClickToCopy copyValue={span.metadata.experimentUuid as string}>
-                <Text.H5 align='right' color='foregroundMuted'>
-                  {(span.metadata.experimentUuid as string).slice(0, 8)}
-                </Text.H5>
-              </ClickToCopy>
+          {span.metadata.name && (
+            <MetadataItem label='Name'>
+              <Text.H5 align='right' color='foregroundMuted'>
+                {span.metadata.name}
+              </Text.H5>
             </MetadataItem>
           )}
           {span.metadata.externalId && (
@@ -145,19 +142,19 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
                         {aggregatedMetadata.tokens!.prompt}
                       </Text.H6>
                     </div>
-                    <div className='w-full flex flex-r!ow justify-between items-center gap-4'>
+                    <div className='w-full flex flex-row justify-between items-center gap-4'>
                       <Text.H6B color='background'>Cached</Text.H6B>
                       <Text.H6 color='background'>
                         {aggregatedMetadata.tokens!.cached}
                       </Text.H6>
                     </div>
-                    <div className='w-full flex flex-r!ow justify-between items-center gap-4'>
+                    <div className='w-full flex flex-row justify-between items-center gap-4'>
                       <Text.H6B color='background'>Reasoning</Text.H6B>
                       <Text.H6 color='background'>
                         {aggregatedMetadata.tokens!.reasoning}
                       </Text.H6>
                     </div>
-                    <div className='w-full flex flex-r!ow justify-between items-center gap-4'>
+                    <div className='w-full flex flex-row justify-between items-center gap-4'>
                       <Text.H6B color='background'>Completion</Text.H6B>
                       <Text.H6 color='background'>
                         {aggregatedMetadata.tokens!.completion}
@@ -168,7 +165,6 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
               />
             </>
           )}
-          <SpanParameters span={span} />
           {completionSpanMetadata?.output && (
             <div className='flex flex-col gap-y-1'>
               <Text.H5M color='foreground'>Last output</Text.H5M>

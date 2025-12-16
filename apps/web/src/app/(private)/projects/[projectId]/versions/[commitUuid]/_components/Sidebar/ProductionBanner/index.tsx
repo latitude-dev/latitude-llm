@@ -14,7 +14,7 @@ export default function ProductionBanner({ project }: { project: Project }) {
   const { items, isLoading } = useSpansKeysetPaginationStore(
     {
       projectId: project.id.toString(),
-      type: SpanType.Prompt,
+      types: [SpanType.Prompt, SpanType.External],
       source: mapSourceGroupToLogSources(RunSourceGroup.Production),
       limit: 1,
     },

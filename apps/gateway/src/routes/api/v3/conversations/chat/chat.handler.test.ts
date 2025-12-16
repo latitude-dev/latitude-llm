@@ -253,7 +253,6 @@ describe('POST /chat', () => {
       })
 
       expect(mocks.addMessages).toHaveBeenCalledWith({
-        context: expect.anything(),
         workspace,
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
@@ -307,7 +306,6 @@ describe('POST /chat', () => {
       })
 
       expect(mocks.addMessages).toHaveBeenCalledWith({
-        context: expect.anything(),
         workspace,
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
@@ -360,7 +358,6 @@ describe('POST /chat', () => {
       })
 
       expect(mocks.addMessages).toHaveBeenCalledWith({
-        context: expect.anything(),
         workspace,
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
@@ -556,7 +553,6 @@ describe('POST /chat', () => {
       })
 
       expect(mocks.addMessages).toHaveBeenCalledWith({
-        context: expect.anything(),
         workspace,
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
@@ -593,7 +589,6 @@ describe('POST /chat', () => {
       })
 
       expect(mocks.addMessages).toHaveBeenCalledWith({
-        context: expect.anything(),
         workspace,
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,

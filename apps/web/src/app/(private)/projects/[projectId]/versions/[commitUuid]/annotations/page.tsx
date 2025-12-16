@@ -35,7 +35,7 @@ export default async function RunsPage({
   const result = await spansRepo
     .findByProjectLimited({
       projectId,
-      type: SpanType.Prompt,
+      types: [SpanType.Prompt, SpanType.External],
       source: logSources,
       limit: DEFAULT_PAGINATION_SIZE,
     })

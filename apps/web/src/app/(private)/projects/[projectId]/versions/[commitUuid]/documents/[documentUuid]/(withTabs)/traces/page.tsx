@@ -29,12 +29,12 @@ export default async function TracesPage({
   const { projectId, commitUuid, documentUuid } = await params
   const { filters: filtersParam } = await searchParams
   const validatedFilters = parseSpansFilters(filtersParam, 'traces page')
-  const traceId = validatedFilters?.traceId
+  const documentLogUuid = validatedFilters?.documentLogUuid
 
   const commitsRepo = new CommitsRepository(workspace.id)
   const spansRepository = new SpansRepository(workspace.id)
   const spanFilterOptions: SpansFilters = {
-    traceId: validatedFilters?.traceId,
+    documentLogUuid: validatedFilters?.documentLogUuid,
     spanId: validatedFilters?.spanId,
     commitUuids: validatedFilters?.commitUuids,
     experimentUuids: validatedFilters?.experimentUuids,
@@ -44,10 +44,8 @@ export default async function TracesPage({
   const commit = await commitsRepo
     .getCommitByUuid({ uuid: commitUuid, projectId: Number(projectId) })
     .then((r) => r.unwrap())
-  const initialSpans: Span[] = traceId
-    ? await spansRepository
-        .list({ traceId })
-        .then((r) => r.unwrap().filter((span) => span.type === SpanType.Prompt))
+  const initialSpans: Span[] = documentLogUuid
+    ? await spansRepository.listByDocumentLogUuid(documentLogUuid)
     : await spansRepository
         .findByDocumentAndCommitLimited({
           documentUuid,
@@ -56,7 +54,7 @@ export default async function TracesPage({
             currentCommit: commit,
             commitsRepo,
           }),
-          type: SpanType.Prompt,
+          types: [SpanType.Prompt, SpanType.External],
         })
         .then((r) => r.unwrap().items)
 

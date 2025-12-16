@@ -30,6 +30,14 @@ import {
   ATTR_HTTP_REQUEST_URL,
   ATTR_HTTP_RESPONSE_BODY,
   ATTR_HTTP_RESPONSE_HEADER,
+  ATTR_LATITUDE_COMMIT_UUID,
+  ATTR_LATITUDE_DOCUMENT_LOG_UUID,
+  ATTR_LATITUDE_DOCUMENT_UUID,
+  ATTR_LATITUDE_EXPERIMENT_UUID,
+  ATTR_LATITUDE_EXTERNAL_ID,
+  ATTR_LATITUDE_PREVIOUS_TRACE_ID,
+  ATTR_LATITUDE_PROJECT_ID,
+  ATTR_LATITUDE_SOURCE,
   ATTR_LATITUDE_TEST_DEPLOYMENT_ID,
   ATTR_LATITUDE_TYPE,
   GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
@@ -124,7 +132,7 @@ export type EndHttpSpanOptions = EndSpanOptions & {
 }
 
 export type PromptSpanOptions = StartSpanOptions & {
-  documentLogUuid?: string // TODO(tracing): temporal related log, remove when observability is ready
+  documentLogUuid: string
   versionUuid?: string // Alias for commitUuid
   promptUuid: string // Alias for documentUuid
   projectId?: number
@@ -134,6 +142,20 @@ export type PromptSpanOptions = StartSpanOptions & {
   template: string
   parameters?: Record<string, unknown>
   source?: LogSources
+}
+
+export type ChatSpanOptions = StartSpanOptions & {
+  documentLogUuid: string
+  previousTraceId: string
+  source?: LogSources
+}
+
+export type ExternalSpanOptions = StartSpanOptions & {
+  promptUuid: string // Alias for documentUuid
+  documentLogUuid: string
+  source?: LogSources // Defaults to LogSources.API
+  versionUuid?: string // Alias for commitUuid
+  externalId?: string
 }
 
 export class ManualInstrumentation implements BaseInstrumentation {
@@ -157,8 +179,39 @@ export class ManualInstrumentation implements BaseInstrumentation {
     this.enabled = false
   }
 
-  resume(ctx: TraceContext) {
-    return propagation.extract(otel.ROOT_CONTEXT, ctx)
+  resume(ctx: TraceContext): otel.Context {
+    const parts = ctx.traceparent.split('-')
+    if (parts.length !== 4) {
+      return otel.ROOT_CONTEXT
+    }
+
+    const [, traceId, spanId, flags] = parts
+    if (!traceId || !spanId) {
+      return otel.ROOT_CONTEXT
+    }
+
+    const spanContext: otel.SpanContext = {
+      traceId,
+      spanId,
+      traceFlags: parseInt(flags ?? '01', 16),
+      isRemote: true,
+    }
+
+    let context = trace.setSpanContext(otel.ROOT_CONTEXT, spanContext)
+
+    if (ctx.baggage) {
+      const baggageEntries: Record<string, otel.BaggageEntry> = {}
+      for (const pair of ctx.baggage.split(',')) {
+        const [key, value] = pair.split('=')
+        if (key && value) {
+          baggageEntries[key] = { value: decodeURIComponent(value) }
+        }
+      }
+      const baggage = propagation.createBaggage(baggageEntries)
+      context = propagation.setBaggage(context, baggage)
+    }
+
+    return context
   }
 
   private capitalize(str: string) {
@@ -557,9 +610,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
           [ATTR_GEN_AI_REQUEST_MESSAGES]: jsonInput,
           ...attrInput,
           ...(start.attributes || {}),
-          ['latitude.commitUuid']: start.versionUuid,
-          ['latitude.documentUuid']: start.promptUuid,
-          ['latitude.experimentUuid']: start.experimentUuid,
+          [ATTR_LATITUDE_COMMIT_UUID]: start.versionUuid,
+          [ATTR_LATITUDE_DOCUMENT_UUID]: start.promptUuid,
+          [ATTR_LATITUDE_EXPERIMENT_UUID]: start.experimentUuid,
         },
       },
     )
@@ -744,16 +797,18 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const attributes = {
       [ATTR_GEN_AI_REQUEST_TEMPLATE]: template,
       [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
-      ['latitude.commitUuid']: versionUuid || HEAD_COMMIT,
-      ['latitude.documentUuid']: promptUuid,
-      ['latitude.projectId']: projectId,
-      ...(documentLogUuid && { ['latitude.documentLogUuid']: documentLogUuid }),
-      ...(experimentUuid && { ['latitude.experimentUuid']: experimentUuid }),
+      [ATTR_LATITUDE_COMMIT_UUID]: versionUuid || HEAD_COMMIT,
+      [ATTR_LATITUDE_DOCUMENT_UUID]: promptUuid,
+      [ATTR_LATITUDE_PROJECT_ID]: projectId,
+      [ATTR_LATITUDE_DOCUMENT_LOG_UUID]: documentLogUuid,
+      ...(experimentUuid && {
+        [ATTR_LATITUDE_EXPERIMENT_UUID]: experimentUuid,
+      }),
       ...(testDeploymentId && {
         [ATTR_LATITUDE_TEST_DEPLOYMENT_ID]: testDeploymentId,
       }),
-      ...(externalId && { ['latitude.externalId']: externalId }),
-      ...(source && { ['latitude.source']: source }),
+      ...(externalId && { [ATTR_LATITUDE_EXTERNAL_ID]: externalId }),
+      ...(source && { [ATTR_LATITUDE_SOURCE]: source }),
       ...(rest.attributes || {}),
     }
 
@@ -764,5 +819,51 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
   step(ctx: otel.Context, options?: StartSpanOptions) {
     return this.span(ctx, 'step', SpanType.Step, options)
+  }
+
+  chat(
+    ctx: otel.Context,
+    {
+      documentLogUuid,
+      previousTraceId,
+      source,
+      name,
+      ...rest
+    }: ChatSpanOptions,
+  ) {
+    const attributes = {
+      [ATTR_LATITUDE_DOCUMENT_LOG_UUID]: documentLogUuid,
+      [ATTR_LATITUDE_PREVIOUS_TRACE_ID]: previousTraceId,
+      ...(source && { [ATTR_LATITUDE_SOURCE]: source }),
+      ...(rest.attributes || {}),
+    }
+
+    return this.span(ctx, name || 'chat', SpanType.Chat, { attributes })
+  }
+
+  external(
+    ctx: otel.Context,
+    {
+      promptUuid,
+      documentLogUuid,
+      source,
+      versionUuid,
+      externalId,
+      name,
+      ...rest
+    }: ExternalSpanOptions,
+  ) {
+    const attributes = {
+      [ATTR_LATITUDE_DOCUMENT_UUID]: promptUuid,
+      [ATTR_LATITUDE_DOCUMENT_LOG_UUID]: documentLogUuid,
+      [ATTR_LATITUDE_SOURCE]: source ?? LogSources.API,
+      ...(versionUuid && { [ATTR_LATITUDE_COMMIT_UUID]: versionUuid }),
+      ...(externalId && { [ATTR_LATITUDE_EXTERNAL_ID]: externalId }),
+      ...(rest.attributes || {}),
+    }
+
+    return this.span(ctx, name || `external-${promptUuid}`, SpanType.External, {
+      attributes,
+    })
   }
 }

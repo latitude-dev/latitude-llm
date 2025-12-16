@@ -20,6 +20,8 @@ export enum SpanType {
   Http = 'http', // Note: raw HTTP requests and responses
   Unknown = 'unknown', // Other spans we don't care about
   Prompt = 'prompt',
+  Chat = 'chat', // Continuing a conversation (adding messages)
+  External = 'external', // Wrapping external generation code
   Step = 'step',
 }
 
@@ -77,6 +79,18 @@ export const SPAN_SPECIFICATIONS = {
   [SpanType.Prompt]: {
     name: 'Prompt',
     description: 'A prompt span',
+    isGenAI: false,
+    isHidden: false,
+  },
+  [SpanType.Chat]: {
+    name: 'Chat',
+    description: 'A chat continuation span',
+    isGenAI: false,
+    isHidden: false,
+  },
+  [SpanType.External]: {
+    name: 'External',
+    description: 'An external capture span',
     isGenAI: false,
     isHidden: false,
   },
@@ -145,6 +159,21 @@ export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
   testDeploymentId?: number
 }
 
+export type ChatSpanMetadata = BaseSpanMetadata<SpanType.Chat> & {
+  documentLogUuid: string
+  previousTraceId: string
+  source: LogSources
+}
+
+export type ExternalSpanMetadata = BaseSpanMetadata<SpanType.External> & {
+  promptUuid: string
+  documentLogUuid: string
+  source: LogSources
+  versionUuid?: string
+  externalId?: string
+  name?: string
+}
+
 export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   provider: string
   model: string
@@ -181,12 +210,15 @@ export type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
 export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.Tool ? ToolSpanMetadata :
   T extends SpanType.Prompt ? PromptSpanMetadata :
+  T extends SpanType.Chat ? ChatSpanMetadata :
+  T extends SpanType.External ? ExternalSpanMetadata :
   T extends SpanType.Completion ? CompletionSpanMetadata :
   T extends SpanType.Embedding ? BaseSpanMetadata<T> :
   T extends SpanType.Retrieval ? BaseSpanMetadata<T> :
   T extends SpanType.Reranking ? BaseSpanMetadata<T> :
   T extends SpanType.Http ? HttpSpanMetadata :
   T extends SpanType.Unknown ? BaseSpanMetadata<T> :
+  T extends SpanType.Step ? BaseSpanMetadata<T> :
   never;
 
 export const SPAN_METADATA_STORAGE_KEY = (
@@ -219,6 +251,7 @@ export type Span<T extends SpanType = SpanType> = {
   commitUuid?: string
   experimentUuid?: string
   testDeploymentId?: number
+  previousTraceId?: string
 
   source?: LogSources
 
@@ -229,6 +262,18 @@ export type Span<T extends SpanType = SpanType> = {
 
   model?: string
   cost?: number
+}
+
+export type PromptSpan = Omit<Span<SpanType.Prompt>, 'documentLogUuid'> & {
+  documentLogUuid: string
+}
+
+export type ChatSpan = Omit<Span<SpanType.Chat>, 'documentLogUuid'> & {
+  documentLogUuid: string
+}
+
+export type ExternalSpan = Omit<Span<SpanType.External>, 'documentLogUuid'> & {
+  documentLogUuid: string
 }
 
 export type SpanWithDetails<T extends SpanType = SpanType> = Span<T> & {
