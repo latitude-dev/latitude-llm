@@ -38,19 +38,6 @@ export async function evaluateConfiguration({
     evaluationResults: childrenValues,
   })
 
-  console.log(
-    'examplesThatShouldPassTheEvaluation',
-    examplesThatShouldPassTheEvaluation,
-  )
-  console.log(
-    'examplesThatShouldFailTheEvaluation',
-    examplesThatShouldFailTheEvaluation,
-  )
-  console.log(
-    'alreadyCalculatedAlignmentMetricMetadata',
-    alreadyCalculatedAlignmentMetricMetadata,
-  )
-
   const mccResult = calculateMCC({
     examplesThatShouldPassTheEvaluation,
     examplesThatShouldFailTheEvaluation,
@@ -61,9 +48,6 @@ export async function evaluateConfiguration({
   }
 
   const { mcc, confusionMatrix } = mccResult.unwrap()
-
-  console.log('mcc', mcc)
-  console.log('confusionMatrix', confusionMatrix)
 
   return Result.ok({ mcc, confusionMatrix })
 }
