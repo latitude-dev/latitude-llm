@@ -15,7 +15,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as factories from '../../../tests/factories'
 import * as updateActiveEvaluationModule from '../active/update'
 import * as createEvaluationV2Module from '../create'
-import * as createValidationFlowModule from './createEvaluationFlow'
+import * as createValidationFlowModule from './createValidationFlow'
 import { generateEvaluationFromIssue } from './generateEvaluationFromIssue'
 import * as generateFromIssueModule from './generateFromIssue'
 
@@ -23,7 +23,7 @@ vi.mock('./generateFromIssue', () => ({
   generateEvaluationConfigFromIssueWithCopilot: vi.fn(),
 }))
 
-vi.mock('./createEvaluationFlow', () => ({
+vi.mock('./createValidationFlow', () => ({
   createValidationFlow: vi.fn(),
 }))
 
