@@ -17,7 +17,7 @@ import {
   createIssueEvaluationResult,
   createSpan,
 } from '../../../tests/factories'
-import { SpanWithDetails } from '@latitude-data/constants'
+import { Span, SpanWithDetails } from '@latitude-data/constants'
 
 vi.mock('bullmq', () => ({
   FlowProducer: vi.fn(),
@@ -126,26 +126,18 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
 
     expect(Result.isOk(result)).toBe(true)
     const {
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      examplesThatShouldFailTheEvaluationSliced,
+      examplesThatShouldPassTheEvaluationSliced,
     } = result.unwrap()
-    expect(
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-    ).toHaveLength(3)
-    expect(
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
-    ).toHaveLength(3)
+    expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(3)
+    expect(examplesThatShouldPassTheEvaluationSliced).toHaveLength(3)
     // Check that all positive spans are present (order may vary)
     expect(
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation
-        .map((s: { spanId: string; traceId: string }) => s.spanId)
-        .sort(),
+      examplesThatShouldFailTheEvaluationSliced.map((s: Span) => s.id).sort(),
     ).toEqual(positiveSpans.map((s) => s.id).sort())
     // Check that all negative spans are present (order may vary)
     expect(
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation
-        .map((s: { spanId: string; traceId: string }) => s.spanId)
-        .sort(),
+      examplesThatShouldPassTheEvaluationSliced.map((s: Span) => s.id).sort(),
     ).toEqual(negativeSpans.map((s) => s.id).sort())
   })
 
@@ -221,31 +213,21 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
 
     expect(Result.isOk(result)).toBe(true)
     const {
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      examplesThatShouldFailTheEvaluationSliced,
+      examplesThatShouldPassTheEvaluationSliced,
     } = result.unwrap()
     // Both should have the same length (minimum of 5 and 2 = 2)
-    expect(
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-    ).toHaveLength(2)
-    expect(
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
-    ).toHaveLength(2)
+    expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(2)
+    expect(examplesThatShouldPassTheEvaluationSliced).toHaveLength(2)
     // Check that positive spans (with issues) are a subset (first 2 of 5)
-    expect(
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-    ).toHaveLength(2)
+    expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(2)
     const positiveSpanIds = positiveSpans.map((s) => s.id)
-    spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation.forEach(
-      (span: { spanId: string; traceId: string }) => {
-        expect(positiveSpanIds).toContain(span.spanId)
-      },
-    )
+    examplesThatShouldFailTheEvaluationSliced.forEach((span: Span) => {
+      expect(positiveSpanIds).toContain(span.id)
+    })
     // Check that all negative spans are present (order may vary)
     expect(
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation
-        .map((s: { spanId: string; traceId: string }) => s.spanId)
-        .sort(),
+      examplesThatShouldPassTheEvaluationSliced.map((s: Span) => s.id).sort(),
     ).toEqual(negativeSpans.map((s) => s.id).sort())
   })
 
@@ -321,29 +303,21 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
 
     expect(Result.isOk(result)).toBe(true)
     const {
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      examplesThatShouldFailTheEvaluationSliced,
+      examplesThatShouldPassTheEvaluationSliced,
     } = result.unwrap()
-    expect(
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-    ).toHaveLength(3)
-    expect(
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
-    ).toHaveLength(3) // Limited to match positive
+    expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(3)
+    expect(examplesThatShouldPassTheEvaluationSliced).toHaveLength(3) // Limited to match positive
     // Check that all positive spans are present (order may vary)
     expect(
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation
-        .map((s: { spanId: string; traceId: string }) => s.spanId)
-        .sort(),
+      examplesThatShouldFailTheEvaluationSliced.map((s: Span) => s.id).sort(),
     ).toEqual(positiveSpans.map((s) => s.id).sort())
     // Check that negative spans are a subset of all negative spans (order may vary)
     // The function may return any 3 negative spans, not necessarily the first 3
     const negativeSpanIds = negativeSpans.map((s) => s.id)
-    spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation.forEach(
-      (span: { spanId: string; traceId: string }) => {
-        expect(negativeSpanIds).toContain(span.spanId)
-      },
-    )
+    examplesThatShouldPassTheEvaluationSliced.forEach((span: Span) => {
+      expect(negativeSpanIds).toContain(span.id)
+    })
   })
 
   it('returns empty arrays when no spans exist', async () => {
@@ -355,15 +329,11 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
 
     expect(Result.isOk(result)).toBe(true)
     const {
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      examplesThatShouldFailTheEvaluationSliced,
+      examplesThatShouldPassTheEvaluationSliced,
     } = result.unwrap()
-    expect(
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-    ).toHaveLength(0)
-    expect(
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
-    ).toHaveLength(0)
+    expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(0)
+    expect(examplesThatShouldPassTheEvaluationSliced).toHaveLength(0)
   })
 
   it('returns empty arrays when no negative spans exist', async () => {
@@ -415,15 +385,11 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
 
     expect(Result.isOk(result)).toBe(true)
     const {
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      examplesThatShouldFailTheEvaluationSliced,
+      examplesThatShouldPassTheEvaluationSliced,
     } = result.unwrap()
     // Both should be empty (minimum of 3 and 0 = 0)
-    expect(
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-    ).toHaveLength(0)
-    expect(
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
-    ).toHaveLength(0)
+    expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(0)
+    expect(examplesThatShouldPassTheEvaluationSliced).toHaveLength(0)
   })
 })
