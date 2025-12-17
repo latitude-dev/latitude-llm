@@ -15,6 +15,7 @@ import type { Commit } from '../../../schema/models/types/Commit'
 import type { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import type { Issue } from '../../../schema/models/types/Issue'
 import type { EvaluationV2 } from '../../../constants'
+import type { Project } from '../../../schema/models/types/Project'
 import { database } from '../../../client'
 import { evaluationVersions } from '../../../schema/models/evaluationVersions'
 import { eq } from 'drizzle-orm'
@@ -25,8 +26,6 @@ import {
   createSpan,
 } from '../../../tests/factories'
 import { SpanWithDetails } from '@latitude-data/constants'
-import { Result } from '../../../lib/Result'
-import { NotFoundError } from '../../../lib/errors'
 
 const mockMaintenanceQueueAdd = vi.fn()
 
@@ -61,15 +60,19 @@ describe('dailyAlignmentMetricUpdateJob', () => {
   let workspace: Workspace
   let commit: Commit
   let document: DocumentVersion
+  let project: Project
   let issue: Issue
   let hitlEvaluation: EvaluationV2
 
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  yesterday.setHours(12, 0, 0, 0)
-
-  const threeDaysAgo = new Date()
-  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+  const linkEvaluationToIssue = async (
+    evaluation: EvaluationV2,
+    issueToLink: Issue,
+  ) => {
+    await database
+      .update(evaluationVersions)
+      .set({ issueId: issueToLink.id })
+      .where(eq(evaluationVersions.id, evaluation.versionId))
+  }
 
   const createSpanWithHITLResult = async (
     doc: DocumentVersion,
@@ -78,7 +81,6 @@ describe('dailyAlignmentMetricUpdateJob', () => {
     hitlEval: EvaluationV2,
     iss: Issue,
     traceId: string,
-    createdAt: Date,
   ) => {
     const span = await createSpan({
       workspaceId: ws.id,
@@ -86,7 +88,6 @@ describe('dailyAlignmentMetricUpdateJob', () => {
       documentUuid: doc.documentUuid,
       commitUuid: com.uuid,
       type: SpanType.Prompt,
-      createdAt,
     })
 
     const evalResult = await createEvaluationResultV2({
@@ -108,16 +109,6 @@ describe('dailyAlignmentMetricUpdateJob', () => {
     return span
   }
 
-  const linkEvaluationToIssue = async (
-    evaluation: EvaluationV2,
-    issueToLink: Issue,
-  ) => {
-    await database
-      .update(evaluationVersions)
-      .set({ issueId: issueToLink.id })
-      .where(eq(evaluationVersions.id, evaluation.versionId))
-  }
-
   beforeEach(async () => {
     vi.clearAllMocks()
 
@@ -130,10 +121,12 @@ describe('dailyAlignmentMetricUpdateJob', () => {
     workspace = projectData.workspace
     commit = projectData.commit
     document = projectData.documents[0]!
+    project = projectData.project
 
     const issueData = await factories.createIssue({
       document,
       workspace,
+      project,
     })
     issue = issueData.issue
 
@@ -154,7 +147,7 @@ describe('dailyAlignmentMetricUpdateJob', () => {
     expect(mockMaintenanceQueueAdd).not.toHaveBeenCalled()
   })
 
-  it('queues update for LLM Binary evaluation with issue when document has spans from yesterday', async () => {
+  it('queues update for LLM Binary evaluation with issue when there are unprocessed spans', async () => {
     const ruleEvalWithIssue = await createEvaluationV2({
       workspace,
       document,
@@ -183,20 +176,21 @@ describe('dailyAlignmentMetricUpdateJob', () => {
       configuration: getLlmBinaryConfiguration('Another criteria'),
     })
 
+    // Create HITL span linked to issue (unprocessed negative span)
     await createSpanWithHITLResult(
       document,
       commit,
       workspace,
       hitlEvaluation,
       issue,
-      'trace-yesterday-1',
-      yesterday,
+      'trace-1',
     )
 
     const mockJob = {} as Job
 
     await dailyAlignmentMetricUpdateJob(mockJob)
 
+    // Should only queue LLM Binary evaluations with issues that have unprocessed spans
     expect(mockMaintenanceQueueAdd).toHaveBeenCalledTimes(1)
     expect(mockMaintenanceQueueAdd).toHaveBeenCalledWith(
       'updateEvaluationAlignmentJob',
@@ -211,14 +205,35 @@ describe('dailyAlignmentMetricUpdateJob', () => {
     )
 
     const calledEvaluationUuids = mockMaintenanceQueueAdd.mock.calls.map(
-      (call: any) => call[1].evaluationUuid,
+      (call) => call[1].evaluationUuid,
     )
     expect(calledEvaluationUuids).toContain(llmBinaryEvalWithIssue.uuid)
     expect(calledEvaluationUuids).not.toContain(ruleEvalWithIssue.uuid)
     expect(calledEvaluationUuids).not.toContain(llmBinaryEvalWithoutIssue.uuid)
   })
 
-  it('only queues evaluations from documents with spans from yesterday', async () => {
+  it('does not queue evaluation when there are no unprocessed spans', async () => {
+    const llmBinaryEvalWithIssue = await createEvaluationV2({
+      workspace,
+      document,
+      commit,
+      type: EvaluationType.Llm,
+      metric: LlmEvaluationMetric.Binary,
+      configuration: getLlmBinaryConfiguration('Test criteria'),
+    })
+    await linkEvaluationToIssue(llmBinaryEvalWithIssue, issue)
+
+    // No HITL spans created - nothing to process
+
+    const mockJob = {} as Job
+
+    await dailyAlignmentMetricUpdateJob(mockJob)
+
+    // Should not queue because there are no unprocessed spans
+    expect(mockMaintenanceQueueAdd).not.toHaveBeenCalled()
+  })
+
+  it('only queues evaluations that have unprocessed spans', async () => {
     const projectData2 = await factories.createProject({
       workspace,
       documents: {
@@ -227,20 +242,14 @@ describe('dailyAlignmentMetricUpdateJob', () => {
     })
     const document2 = projectData2.documents[0]!
     const commit2 = projectData2.commit
+    const project2 = projectData2.project
 
     const issueData2 = await factories.createIssue({
       document: document2,
       workspace,
+      project: project2,
     })
     const issue2 = issueData2.issue
-
-    const hitlEvaluation2 = await createEvaluationV2({
-      workspace,
-      document: document2,
-      commit: commit2,
-      type: EvaluationType.Human,
-      metric: HumanEvaluationMetric.Binary,
-    })
 
     const evalDoc1 = await createEvaluationV2({
       workspace,
@@ -262,61 +271,29 @@ describe('dailyAlignmentMetricUpdateJob', () => {
     })
     await linkEvaluationToIssue(evalDoc2, issue2)
 
+    // Create unprocessed span for doc1 only
     await createSpanWithHITLResult(
       document,
       commit,
       workspace,
       hitlEvaluation,
       issue,
-      'trace-doc1-yesterday',
-      yesterday,
+      'trace-doc1',
     )
 
-    await createSpanWithHITLResult(
-      document2,
-      commit2,
-      workspace,
-      hitlEvaluation2,
-      issue2,
-      'trace-doc2-old',
-      threeDaysAgo,
-    )
+    // No spans for doc2 - should not be queued
 
     const mockJob = {} as Job
 
     await dailyAlignmentMetricUpdateJob(mockJob)
 
+    // Should only queue evalDoc1 because it has unprocessed spans
     expect(mockMaintenanceQueueAdd).toHaveBeenCalledTimes(1)
 
     const calledEvaluationUuids = mockMaintenanceQueueAdd.mock.calls.map(
-      (call: any) => call[1].evaluationUuid,
+      (call) => call[1].evaluationUuid,
     )
     expect(calledEvaluationUuids).toContain(evalDoc1.uuid)
     expect(calledEvaluationUuids).not.toContain(evalDoc2.uuid)
-  })
-
-  it('throws NotFoundError when commit is not found', async () => {
-    const llmBinaryEval = await createEvaluationV2({
-      workspace,
-      document,
-      commit,
-      type: EvaluationType.Llm,
-      metric: LlmEvaluationMetric.Binary,
-      configuration: getLlmBinaryConfiguration('Test criteria'),
-    })
-    await linkEvaluationToIssue(llmBinaryEval, issue)
-
-    const { CommitsRepository } = await import(
-      '../../../repositories/commitsRepository'
-    )
-    vi.spyOn(CommitsRepository.prototype, 'getCommitById').mockResolvedValue(
-      Result.error(new NotFoundError('Commit not found')),
-    )
-
-    const mockJob = {} as Job
-
-    await expect(dailyAlignmentMetricUpdateJob(mockJob)).rejects.toThrow(
-      'Commit not found',
-    )
   })
 })

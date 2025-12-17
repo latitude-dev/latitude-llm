@@ -174,6 +174,15 @@ describe('createValidationFlow', () => {
     expect(
       callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     ).toHaveLength(2)
+    // Verify span/trace pairs include createdAt for rebalancing in the job
+    expect(
+      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation[0]
+        .createdAt,
+    ).toBeDefined()
+    expect(
+      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation[0]
+        .createdAt,
+    ).toBeDefined()
     expect(callArgs.children).toHaveLength(4) // 2 positive + 2 negative spans
     expect(callArgs.children[0]!.name).toBe('runEvaluationV2Job')
     expect(callArgs.children[0]!.data.dry).toBe(true)
@@ -203,6 +212,8 @@ describe('createValidationFlow', () => {
     expect(
       callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     ).toHaveLength(0)
+    expect(callArgs.data.latestPositiveSpanDate).toBeUndefined()
+    expect(callArgs.data.latestNegativeSpanDate).toBeUndefined()
     expect(callArgs.children).toHaveLength(0)
   })
 

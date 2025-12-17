@@ -46,7 +46,7 @@ describe('getFalsePositivesAndFalseNegatives', () => {
     it('returns FN when span should pass but evaluation did not pass', () => {
       const result = getFalsePositivesAndFalseNegatives({
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'span-1', traceId: 'trace-1' },
+          { id: 'span-1', traceId: 'trace-1' },
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [],
         evaluationResults: {
@@ -63,7 +63,7 @@ describe('getFalsePositivesAndFalseNegatives', () => {
     it('does not return FN when span should pass and evaluation did pass', () => {
       const result = getFalsePositivesAndFalseNegatives({
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'span-1', traceId: 'trace-1' },
+          { id: 'span-1', traceId: 'trace-1' },
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [],
         evaluationResults: {
@@ -83,7 +83,7 @@ describe('getFalsePositivesAndFalseNegatives', () => {
       const result = getFalsePositivesAndFalseNegatives({
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'span-2', traceId: 'trace-2' },
+          { id: 'span-2', traceId: 'trace-2' },
         ],
         evaluationResults: {
           'job-1': makeEvaluationResult('span-2', 'trace-2', true), // Should fail but passed
@@ -100,7 +100,7 @@ describe('getFalsePositivesAndFalseNegatives', () => {
       const result = getFalsePositivesAndFalseNegatives({
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'span-2', traceId: 'trace-2' },
+          { id: 'span-2', traceId: 'trace-2' },
         ],
         evaluationResults: {
           'job-1': makeEvaluationResult('span-2', 'trace-2', false), // Correct: should fail and did fail (TN)
@@ -118,14 +118,14 @@ describe('getFalsePositivesAndFalseNegatives', () => {
     it('correctly categorizes multiple results with both FP and FN', () => {
       const result = getFalsePositivesAndFalseNegatives({
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'good-1', traceId: 'trace-good-1' },
-          { spanId: 'good-2', traceId: 'trace-good-2' },
-          { spanId: 'good-3', traceId: 'trace-good-3' },
+          { id: 'good-1', traceId: 'trace-good-1' },
+          { id: 'good-2', traceId: 'trace-good-2' },
+          { id: 'good-3', traceId: 'trace-good-3' },
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'bad-1', traceId: 'trace-bad-1' },
-          { spanId: 'bad-2', traceId: 'trace-bad-2' },
-          { spanId: 'bad-3', traceId: 'trace-bad-3' },
+          { id: 'bad-1', traceId: 'trace-bad-1' },
+          { id: 'bad-2', traceId: 'trace-bad-2' },
+          { id: 'bad-3', traceId: 'trace-bad-3' },
         ],
         evaluationResults: {
           'job-good-1': makeEvaluationResult('good-1', 'trace-good-1', true), // TP - correct
@@ -152,12 +152,12 @@ describe('getFalsePositivesAndFalseNegatives', () => {
     it('returns empty arrays when all predictions are correct', () => {
       const result = getFalsePositivesAndFalseNegatives({
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'good-1', traceId: 'trace-1' },
-          { spanId: 'good-2', traceId: 'trace-2' },
+          { id: 'good-1', traceId: 'trace-1' },
+          { id: 'good-2', traceId: 'trace-2' },
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'bad-1', traceId: 'trace-3' },
-          { spanId: 'bad-2', traceId: 'trace-4' },
+          { id: 'bad-1', traceId: 'trace-3' },
+          { id: 'bad-2', traceId: 'trace-4' },
         ],
         evaluationResults: {
           'job-1': makeEvaluationResult('good-1', 'trace-1', true), // TP
@@ -176,10 +176,10 @@ describe('getFalsePositivesAndFalseNegatives', () => {
     it('returns all as errors when all predictions are wrong', () => {
       const result = getFalsePositivesAndFalseNegatives({
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'good-1', traceId: 'trace-1' },
+          { id: 'good-1', traceId: 'trace-1' },
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'bad-1', traceId: 'trace-2' },
+          { id: 'bad-1', traceId: 'trace-2' },
         ],
         evaluationResults: {
           'job-1': makeEvaluationResult('good-1', 'trace-1', false), // FN - should pass but didn't
@@ -211,10 +211,10 @@ describe('getFalsePositivesAndFalseNegatives', () => {
     it('ignores evaluation results that do not match any ground truth pair', () => {
       const result = getFalsePositivesAndFalseNegatives({
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'span-1', traceId: 'trace-1' },
+          { id: 'span-1', traceId: 'trace-1' },
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'span-2', traceId: 'trace-2' },
+          { id: 'span-2', traceId: 'trace-2' },
         ],
         evaluationResults: {
           'job-1': makeEvaluationResult('unknown-span', 'unknown-trace', false),
@@ -227,14 +227,14 @@ describe('getFalsePositivesAndFalseNegatives', () => {
       expect(falseNegatives).toEqual([])
     })
 
-    it('matches by both spanId AND traceId', () => {
+    it('matches by both id AND traceId', () => {
       const result = getFalsePositivesAndFalseNegatives({
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'span-1', traceId: 'trace-A' },
+          { id: 'span-1', traceId: 'trace-A' },
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [],
         evaluationResults: {
-          'job-1': makeEvaluationResult('span-1', 'trace-B', false), // Same spanId but different traceId
+          'job-1': makeEvaluationResult('span-1', 'trace-B', false), // Same id but different traceId
         },
       })
 

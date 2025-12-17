@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."evaluation_versions" DROP COLUMN "alignment_metric";

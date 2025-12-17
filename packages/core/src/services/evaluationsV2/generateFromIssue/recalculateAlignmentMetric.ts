@@ -10,13 +10,12 @@ import {
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetric,
+  Span,
 } from '@latitude-data/constants'
 import { Issue } from '../../../schema/models/types/Issue'
 import { database } from '../../../client'
 import { getEqualAmountsOfPositiveAndNegativeExamples } from './getEqualAmountsOfPositiveAndNegativeExamples'
 import { generateConfigurationHash } from '../generateConfigurationHash'
-import { Span } from '@latitude-data/constants/tracing'
-import { getYesterdayCutoff } from '../../../lib/getYesterdayCutoff'
 
 /*
   This function creates a BullMQ flow to recalculate the alignment metric of an evaluation.
@@ -41,66 +40,58 @@ export async function recalculateAlignmentMetric(
   },
   db = database,
 ) {
+  const evaluationHash = generateConfigurationHash(evaluationToEvaluate)
+  const hasEvaluationConfigurationChanged =
+    evaluationHash !==
+    evaluationToEvaluate.alignmentMetricMetadata?.alignmentHash
+
+  // If config is unchanged, we don't need to recalculate the alignment metric, we can just append the new results from the new spans to the existing confusion matrix
+  const positiveSpanCutoffDate = hasEvaluationConfigurationChanged
+    ? undefined
+    : evaluationToEvaluate.alignmentMetricMetadata
+        ?.lastProcessedPositiveSpanDate
+  const negativeSpanCutoffDate = hasEvaluationConfigurationChanged
+    ? undefined
+    : evaluationToEvaluate.alignmentMetricMetadata
+        ?.lastProcessedNegativeSpanDate
+
   const examplesResult = await getEqualAmountsOfPositiveAndNegativeExamples(
     {
       workspace,
       commit,
       issue,
+      positiveSpanCutoffDate,
+      negativeSpanCutoffDate,
     },
     db,
   )
   if (!Result.isOk(examplesResult)) {
     return examplesResult
   }
-  const { examplesThatShouldPassTheEvaluationSliced, examplesThatShouldFailTheEvaluationSliced } = examplesResult.unwrap() // prettier-ignore
 
-  let spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation =
+  const {
+    examplesThatShouldPassTheEvaluationSliced,
+    examplesThatShouldFailTheEvaluationSliced,
+  } = examplesResult.unwrap()
+
+  const spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation =
     examplesThatShouldPassTheEvaluationSliced.map((span) => ({
       spanId: span.id,
       traceId: span.traceId,
+      createdAt: new Date(span.createdAt).toISOString(),
     }))
-  let spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation =
+
+  const spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation =
     examplesThatShouldFailTheEvaluationSliced.map((span) => ({
       spanId: span.id,
       traceId: span.traceId,
+      createdAt: new Date(span.createdAt).toISOString(),
     }))
 
-  let allSpans = [...examplesThatShouldFailTheEvaluationSliced, ...examplesThatShouldPassTheEvaluationSliced] // prettier-ignore
-
-  const evaluationHash = generateConfigurationHash(evaluationToEvaluate)
-  const hasEvaluationConfigurationChanged = evaluationHash !== evaluationToEvaluate.alignmentMetricMetadata?.alignmentHash // prettier-ignore
-
-  // If the evaluation configuration hasn't changed, we don't have to recalculate the entire aligment metric, we can aggregate the new span results to the existing confusion matrix and avoid extra evalRuns
-  if (!hasEvaluationConfigurationChanged) {
-    // Only process spans from yesterday (since job runs at 1AM daily)
-    const cutoff = getYesterdayCutoff()
-    const isFromYesterday = (span: Span) => new Date(span.createdAt) >= cutoff
-
-    const passSpansFromYesterday = examplesThatShouldPassTheEvaluationSliced.filter(isFromYesterday) // prettier-ignore
-    const failSpansFromYesterday = examplesThatShouldFailTheEvaluationSliced.filter(isFromYesterday) // prettier-ignore
-
-    // Re-balance to have equal amounts
-    const targetLength = Math.min(passSpansFromYesterday.length, failSpansFromYesterday.length) // prettier-ignore
-
-    console.log('targetLength', targetLength)
-
-    const passSpansFromYesterdaySliced = passSpansFromYesterday.slice(0, targetLength) // prettier-ignore
-    const failSpansFromYesterdaySliced = failSpansFromYesterday.slice(0, targetLength) // prettier-ignore
-
-    allSpans = [...failSpansFromYesterdaySliced, ...passSpansFromYesterdaySliced] // prettier-ignore
-
-    spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation =
-      passSpansFromYesterdaySliced.map((span) => ({
-        spanId: span.id,
-        traceId: span.traceId,
-      }))
-
-    spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation =
-      failSpansFromYesterdaySliced.map((span) => ({
-        spanId: span.id,
-        traceId: span.traceId,
-      }))
-  }
+  const allSpans = [
+    ...examplesThatShouldFailTheEvaluationSliced,
+    ...examplesThatShouldPassTheEvaluationSliced,
+  ]
 
   const flowProducer = new FlowProducer({
     prefix: REDIS_KEY_PREFIX,
@@ -156,7 +147,7 @@ export async function recalculateAlignmentMetric(
           type: 'fixed',
           delay: 1000,
         },
-        continueParentOnFailure: true, // If an evaluation run fails, continue the flow to calculate the alignment metric
+        continueParentOnFailure: true,
       },
     })),
   })

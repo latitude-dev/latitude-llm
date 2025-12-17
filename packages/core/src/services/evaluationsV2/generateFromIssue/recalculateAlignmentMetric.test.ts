@@ -13,6 +13,7 @@ import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import type { Project } from '@latitude-data/core/schema/models/types/Project'
 import {
   createEvaluationResultV2,
   createEvaluationV2,
@@ -44,6 +45,7 @@ describe('recalculateAlignmentMetric', () => {
   let commit: Commit
   let issue: Issue
   let document: DocumentVersion
+  let project: Project
   let hitlEvaluation: EvaluationV2
   let evaluationToEvaluate: EvaluationV2<
     EvaluationType.Llm,
@@ -73,6 +75,7 @@ describe('recalculateAlignmentMetric', () => {
         ...span,
         type: SpanType.Prompt,
       } as unknown as SpanWithDetails<SpanType.Prompt>,
+      createdAt,
     })
 
     await createIssueEvaluationResult({
@@ -105,6 +108,7 @@ describe('recalculateAlignmentMetric', () => {
         ...span,
         type: SpanType.Prompt,
       } as unknown as SpanWithDetails<SpanType.Prompt>,
+      createdAt,
     })
 
     return span
@@ -122,10 +126,12 @@ describe('recalculateAlignmentMetric', () => {
     workspace = projectData.workspace
     commit = projectData.commit
     document = projectData.documents[0]!
+    project = projectData.project
 
     const issueData = await factories.createIssue({
       document,
       workspace,
+      project,
     })
     issue = issueData.issue
 
@@ -233,7 +239,7 @@ describe('recalculateAlignmentMetric', () => {
     })
   })
 
-  it('only includes spans from yesterday when hasEvaluationConfigurationChanged is false', async () => {
+  it('only includes spans after cutoff dates when hasEvaluationConfigurationChanged is false', async () => {
     vi.spyOn(
       generateConfigurationHashModule,
       'generateConfigurationHash',
@@ -245,6 +251,22 @@ describe('recalculateAlignmentMetric', () => {
 
     const threeDaysAgo = new Date()
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+
+    const twoDaysAgo = new Date()
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
+
+    // Set cutoffs in evaluationToEvaluate to 2 days ago
+    evaluationToEvaluate.alignmentMetricMetadata = {
+      alignmentHash: 'existing-hash',
+      confusionMatrix: {
+        truePositives: 0,
+        trueNegatives: 0,
+        falsePositives: 0,
+        falseNegatives: 0,
+      },
+      lastProcessedPositiveSpanDate: twoDaysAgo.toISOString(),
+      lastProcessedNegativeSpanDate: twoDaysAgo.toISOString(),
+    }
 
     const oldPositiveSpans = await Promise.all([
       createSpanWithIssue('trace-old-positive-0', threeDaysAgo),
@@ -288,6 +310,16 @@ describe('recalculateAlignmentMetric', () => {
       callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     ).toHaveLength(2)
     expect(callArgs.children).toHaveLength(4)
+
+    // Verify span/trace pairs include createdAt for rebalancing
+    expect(
+      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation[0]
+        .createdAt,
+    ).toBeDefined()
+    expect(
+      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation[0]
+        .createdAt,
+    ).toBeDefined()
 
     const childSpanIds = callArgs.children.map(
       (child: { data: { spanId: string } }) => child.data.spanId,

@@ -26,6 +26,7 @@ Gets the conversation (span messages) and reason why the evaluation failed the c
 
 IMPORTANT:
 - The spans MUST be from HITL evaluation results, as we want to use the user's annotations to calculate the MCC, not from other evaluations results
+- Using desc order direction to get the latest spans first for generating the most up-to-date config
 */
 export async function getSpanMessagesAndEvaluationResultsByIssue({
   workspace,
@@ -43,6 +44,7 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
     issue: issue,
     pageSize: 3,
     page: 1,
+    orderDirection: 'desc',
   })
 
   if (!Result.isOk(spansResult)) {

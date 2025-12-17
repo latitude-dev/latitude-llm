@@ -112,10 +112,18 @@ describe('validateGeneratedEvaluationJob', () => {
       providerName: 'openai',
       model: 'gpt-4o',
       spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-        { spanId: 'span-1', traceId: 'trace-1' },
+        {
+          id: 'span-1',
+          traceId: 'trace-1',
+          createdAt: new Date('2024-01-15T10:00:00.000Z'),
+        },
       ],
       spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-        { spanId: 'span-2', traceId: 'trace-2' },
+        {
+          id: 'span-2',
+          traceId: 'trace-2',
+          createdAt: new Date('2024-01-15T11:00:00.000Z'),
+        },
       ],
       ...overrides,
     }
@@ -220,6 +228,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 2,
             falseNegatives: 2,
           },
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockUpdateEvaluationV2.mockResolvedValue(
@@ -234,10 +244,18 @@ describe('validateGeneratedEvaluationJob', () => {
       expect(mockEvaluateConfiguration).toHaveBeenCalledWith({
         childrenValues: expect.any(Object),
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'span-1', traceId: 'trace-1' },
+          {
+            id: 'span-1',
+            traceId: 'trace-1',
+            createdAt: new Date('2024-01-15T10:00:00.000Z'),
+          },
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'span-2', traceId: 'trace-2' },
+          {
+            id: 'span-2',
+            traceId: 'trace-2',
+            createdAt: new Date('2024-01-15T11:00:00.000Z'),
+          },
         ],
       })
 
@@ -253,6 +271,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falseNegatives: 2,
           },
           alignmentHash: expect.any(String),
+          lastProcessedPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          lastProcessedNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         },
       })
 
@@ -361,6 +381,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 8,
             falseNegatives: 8,
           },
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockDeleteEvaluationV2.mockResolvedValue(
@@ -385,10 +407,18 @@ describe('validateGeneratedEvaluationJob', () => {
 
       expect(mockGetFalsePositivesAndFalseNegatives).toHaveBeenCalledWith({
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'span-1', traceId: 'trace-1' },
+          {
+            id: 'span-1',
+            traceId: 'trace-1',
+            createdAt: new Date('2024-01-15T10:00:00.000Z'),
+          },
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'span-2', traceId: 'trace-2' },
+          {
+            id: 'span-2',
+            traceId: 'trace-2',
+            createdAt: new Date('2024-01-15T11:00:00.000Z'),
+          },
         ],
         evaluationResults: {
           'job-1': { hasPassed: true },
@@ -494,6 +524,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 3,
             falseNegatives: 3,
           },
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockUpdateEvaluationV2.mockResolvedValue(
@@ -527,6 +559,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 5,
             falseNegatives: 5,
           },
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockUpdateEvaluationV2.mockResolvedValue(
@@ -538,9 +572,6 @@ describe('validateGeneratedEvaluationJob', () => {
 
       expect(mockUpdateEvaluationV2).toHaveBeenCalledWith(
         expect.objectContaining({
-          evaluation,
-          workspace,
-          commit,
           alignmentMetricMetadata: {
             alignmentHash: expect.any(String),
             confusionMatrix: {
@@ -549,6 +580,8 @@ describe('validateGeneratedEvaluationJob', () => {
               falsePositives: 5,
               falseNegatives: 5,
             },
+            lastProcessedPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+            lastProcessedNegativeSpanDate: '2024-01-15T11:00:00.000Z',
           },
         }),
       )
@@ -566,6 +599,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 6,
             falseNegatives: 6,
           },
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockDeleteEvaluationV2.mockResolvedValue(
@@ -616,6 +651,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 3,
             falseNegatives: 3,
           },
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockUpdateEvaluationV2.mockResolvedValue(
