@@ -233,7 +233,7 @@ describe('recalculateAlignmentMetric', () => {
     })
   })
 
-  it('only includes spans from yesterday when hasEvaluationConfigurationChanged is false', async () => {
+  it('only includes spans after cutoff dates when hasEvaluationConfigurationChanged is false', async () => {
     vi.spyOn(
       generateConfigurationHashModule,
       'generateConfigurationHash',
@@ -245,6 +245,22 @@ describe('recalculateAlignmentMetric', () => {
 
     const threeDaysAgo = new Date()
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+
+    const twoDaysAgo = new Date()
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
+
+    // Set cutoffs in evaluationToEvaluate to 2 days ago
+    evaluationToEvaluate.alignmentMetricMetadata = {
+      alignmentHash: 'existing-hash',
+      confusionMatrix: {
+        truePositives: 0,
+        trueNegatives: 0,
+        falsePositives: 0,
+        falseNegatives: 0,
+      },
+      lastProcessedPositiveSpanDate: twoDaysAgo.toISOString(),
+      lastProcessedNegativeSpanDate: twoDaysAgo.toISOString(),
+    }
 
     const oldPositiveSpans = await Promise.all([
       createSpanWithIssue('trace-old-positive-0', threeDaysAgo),
@@ -288,6 +304,10 @@ describe('recalculateAlignmentMetric', () => {
       callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     ).toHaveLength(2)
     expect(callArgs.children).toHaveLength(4)
+
+    // Verify cutoff dates are passed to the job
+    expect(callArgs.data.latestPositiveSpanDate).toBeDefined()
+    expect(callArgs.data.latestNegativeSpanDate).toBeDefined()
 
     const childSpanIds = callArgs.children.map(
       (child: { data: { spanId: string } }) => child.data.spanId,

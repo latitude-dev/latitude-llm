@@ -42,6 +42,8 @@ export type ValidateGeneratedEvaluationJobData = {
     spanId: string
     traceId: string
   }[]
+  latestPositiveSpanDate?: string
+  latestNegativeSpanDate?: string
 }
 
 /*
@@ -70,6 +72,8 @@ export const validateGeneratedEvaluationJob = async (
     model,
     spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
     spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+    latestPositiveSpanDate,
+    latestNegativeSpanDate,
   } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
@@ -144,6 +148,8 @@ export const validateGeneratedEvaluationJob = async (
       alignmentMetricMetadata: {
         confusionMatrix,
         alignmentHash,
+        lastProcessedPositiveSpanDate: latestPositiveSpanDate,
+        lastProcessedNegativeSpanDate: latestNegativeSpanDate,
       },
     }).then((r) => r.unwrap())
 
