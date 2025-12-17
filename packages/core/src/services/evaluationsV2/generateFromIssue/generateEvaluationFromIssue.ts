@@ -7,7 +7,7 @@ import Transaction from '../../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../../repositories'
 import { updateActiveEvaluation } from '../active/update'
 import { createEvaluationV2 } from '../create'
-import { createValidationFlow } from './createEvaluationFlow'
+import { createValidationFlow } from './createValidationFlow'
 import { generateEvaluationConfigFromIssueWithCopilot } from './generateFromIssue'
 
 export async function generateEvaluationFromIssue(

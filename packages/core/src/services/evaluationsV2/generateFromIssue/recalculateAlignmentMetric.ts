@@ -16,6 +16,7 @@ import { database } from '../../../client'
 import { getEqualAmountsOfPositiveAndNegativeExamples } from './getEqualAmountsOfPositiveAndNegativeExamples'
 import { generateConfigurationHash } from '../generateConfigurationHash'
 import { Span } from '@latitude-data/constants/tracing'
+import { getYesterdayCutoff } from '../../../lib/getYesterdayCutoff'
 
 /*
   This function creates a BullMQ flow to recalculate the alignment metric of an evaluation.
@@ -68,6 +69,10 @@ export async function recalculateAlignmentMetric(
 
   const evaluationHash = generateConfigurationHash(evaluationToEvaluate)
   const hasEvaluationConfigurationChanged = evaluationHash !== evaluationToEvaluate.alignmentMetricMetadata?.alignmentHash // prettier-ignore
+  console.log(
+    'hasEvaluationConfigurationChanged',
+    hasEvaluationConfigurationChanged,
+  )
 
   // If the evaluation configuration hasn't changed, we don't have to recalculate the entire aligment metric, we can aggregate the new span results to the existing confusion matrix and avoid extra evalRuns
   if (!hasEvaluationConfigurationChanged) {
@@ -75,16 +80,26 @@ export async function recalculateAlignmentMetric(
     const cutoff = getYesterdayCutoff()
     const isFromYesterday = (span: Span) => new Date(span.createdAt) >= cutoff
 
-    const passSpansFromYesterday =
-      examplesThatShouldPassTheEvaluationSliced.filter(isFromYesterday)
-    const failSpansFromYesterday =
-      examplesThatShouldFailTheEvaluationSliced.filter(isFromYesterday)
+    const passSpansFromYesterday = examplesThatShouldPassTheEvaluationSliced.filter(isFromYesterday) // prettier-ignore
+    const failSpansFromYesterday = examplesThatShouldFailTheEvaluationSliced.filter(isFromYesterday) // prettier-ignore
+
+    console.log('passSpansFromYesterday', passSpansFromYesterday.length)
+    console.log('failSpansFromYesterday', failSpansFromYesterday.length)
 
     // Re-balance to have equal amounts
     const targetLength = Math.min(passSpansFromYesterday.length, failSpansFromYesterday.length) // prettier-ignore
 
     const passSpansFromYesterdaySliced = passSpansFromYesterday.slice(0, targetLength) // prettier-ignore
     const failSpansFromYesterdaySliced = failSpansFromYesterday.slice(0, targetLength) // prettier-ignore
+
+    console.log(
+      'passSpansFromYesterdaySliced',
+      passSpansFromYesterdaySliced.length,
+    )
+    console.log(
+      'failSpansFromYesterdaySliced',
+      failSpansFromYesterdaySliced.length,
+    )
 
     allSpans = [...failSpansFromYesterdaySliced, ...passSpansFromYesterdaySliced] // prettier-ignore
 
@@ -109,6 +124,15 @@ export async function recalculateAlignmentMetric(
       password: env.QUEUE_PASSWORD,
     }),
   })
+
+  console.log(
+    'spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation',
+    spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+  )
+  console.log(
+    'spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation',
+    spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+  )
 
   const { job: validationFlowJob } = await flowProducer.add({
     name: `recalculateAlignmentMetricJob`,
@@ -164,11 +188,4 @@ export async function recalculateAlignmentMetric(
   }
 
   return Result.ok(validationFlowJob)
-}
-
-const getYesterdayCutoff = () => {
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - 1)
-  cutoff.setHours(0, 0, 0, 0) // Start of yesterday
-  return cutoff
 }

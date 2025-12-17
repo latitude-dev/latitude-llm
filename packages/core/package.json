@@ -121,6 +121,7 @@
     "test:watch": "vitest",
     "scripts:setup": "tsx scripts/setup.ts",
     "backgroundRun:stressTest": "tsx scripts/background-run/stress-test.ts",
+    "maintenance:testDailyAlignment": "tsx scripts/maintenance/test-daily-alignment-job.ts",
     "update:models-dev": "tsx scripts/updateModelsDevData.ts"
   },
   "dependencies": {

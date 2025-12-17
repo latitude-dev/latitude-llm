@@ -6,6 +6,7 @@ import { createWorker } from '../utils/createWorker'
 const jobMappings = {
   validateGeneratedEvaluationJob: jobs.validateGeneratedEvaluationJob,
   generateEvaluationV2FromIssueJob: jobs.generateEvaluationV2FromIssueJob,
+  recalculateAlignmentMetricJob: jobs.recalculateAlignmentMetricJob,
 }
 
 export function startGenerateEvaluationWorker() {
