@@ -4,6 +4,7 @@ import { EvaluationsV2Repository } from '@latitude-data/core/repositories'
 import { NextRequest, NextResponse } from 'next/server'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { z } from 'zod'
+import { HEAD_COMMIT } from '@latitude-data/constants'
 
 const searchParamsSchema = z.object({
   projectId: z.string().optional(),
@@ -29,7 +30,7 @@ export const GET = errorHandler(
       const evaluations = await evaluationsRepository
         .list({
           projectId: projectIdParam ? Number(projectIdParam) : undefined,
-          commitUuid,
+          commitUuid: commitUuid || HEAD_COMMIT,
           documentUuid,
         })
         .then((r) => r.unwrap())
