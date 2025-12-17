@@ -1,18 +1,21 @@
-import { useState } from 'react'
+import { SerializedIssue } from '$/stores/issues'
+import { EvaluationV2 } from '@latitude-data/core/constants'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { EvaluationV2 } from '@latitude-data/core/constants'
+import { useState } from 'react'
 
 export function ResolveConfirmModal({
   open,
   onOpenChange,
   onConfirm,
+  issue,
   evaluations,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onConfirm: (ignoreEvaluations: boolean) => void
+  issue: SerializedIssue
   evaluations: EvaluationV2[]
 }) {
   const [ignoreEvaluations, setIgnoreEvaluations] = useState(true)
@@ -23,7 +26,7 @@ export function ResolveConfirmModal({
       open={open}
       onOpenChange={onOpenChange}
       dismissible
-      title='Resolve issue'
+      title={`Resolve "${issue.title}"`}
       description='Are you sure you want to resolve this issue?'
       confirm={{
         label: 'Resolve',
@@ -34,11 +37,11 @@ export function ResolveConfirmModal({
       {hasEvaluations && (
         <div className='flex flex-col gap-y-4'>
           <div className='flex flex-col gap-y-2'>
-            <Text.H5>Associated evaluations</Text.H5>
+            <Text.H5>Linked evaluations</Text.H5>
             <Text.H6 color='foregroundMuted'>
-              The following {evaluations.length}{' '}
+              The following{' '}
               {evaluations.length === 1 ? 'evaluation is' : 'evaluations are'}{' '}
-              linked to this issue:
+              tracking this issue:
             </Text.H6>
             <ul className='list-disc list-inside pl-2'>
               {evaluations.map((evaluation) => (
@@ -51,8 +54,8 @@ export function ResolveConfirmModal({
           <SwitchInput
             checked={ignoreEvaluations}
             onCheckedChange={setIgnoreEvaluations}
-            label='Stop live evaluation for associated evaluations'
-            description='Evaluations linked to this issue will stop running automatically on new logs and will dissapear from evaluation lists. If you unresolve the issue later they will be reactivated.'
+            label='Deactivate linked evaluations'
+            description='Evaluations will be hidden from the project and will stop tracking and monitoring this issue on new traces. They will be reactivated if you unresolve the issue later.'
           />
         </div>
       )}

@@ -320,6 +320,7 @@ export function IssueItemActions({
         open={showResolveModal}
         onOpenChange={setShowResolveModal}
         onConfirm={handleResolveConfirm}
+        issue={issue}
         evaluations={issueEvaluations}
       />
     </>
