@@ -6,7 +6,7 @@ import {
   useState,
 } from 'react'
 import { useOnClickOutside } from '@latitude-data/web-ui/hooks/useOnClickOutside'
-import { DOCUMENT_PATH_REGEXP } from '@latitude-data/core/constants'
+import { DOCUMENT_PATH_REGEXP } from '@latitude-data/constants'
 
 const INVALID_MSG =
   "Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'"

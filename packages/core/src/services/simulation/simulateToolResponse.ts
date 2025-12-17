@@ -27,13 +27,16 @@ export function simulatedToolDefinition({
       args: Record<string, unknown>,
       toolCall: ToolExecutionOptions,
     ) => {
-      const $tool = telemetry.tool(context, {
-        name: toolName,
-        call: {
-          id: toolCall.toolCallId,
-          arguments: args,
+      const $tool = telemetry.span.tool(
+        {
+          name: toolName,
+          call: {
+            id: toolCall.toolCallId,
+            arguments: args,
+          },
         },
-      })
+        context,
+      )
 
       try {
         const simulationPrompt = await getToolSimulationPrompt().then((r) =>

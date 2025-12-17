@@ -68,19 +68,22 @@ export async function runDocumentAtCommit(
   })
   if (result.error) return result
 
-  const $prompt = telemetry.prompt(context, {
-    documentLogUuid: errorableUuid,
-    experimentUuid: experiment?.uuid,
-    testDeploymentId,
-    externalId: customIdentifier,
-    name: document.path.split('/').at(-1),
-    parameters: parameters,
-    promptUuid: document.documentUuid,
-    template: result.value,
-    versionUuid: commit.uuid,
-    projectId: commit.projectId,
-    source,
-  })
+  const $prompt = telemetry.span.prompt(
+    {
+      documentLogUuid: errorableUuid,
+      experimentUuid: experiment?.uuid,
+      testDeploymentId,
+      externalId: customIdentifier,
+      name: document.path.split('/').at(-1),
+      parameters: parameters,
+      promptUuid: document.documentUuid,
+      template: result.value,
+      versionUuid: commit.uuid,
+      projectId: commit.projectId,
+      source,
+    },
+    context,
+  )
 
   const checker = new RunDocumentChecker({
     document,

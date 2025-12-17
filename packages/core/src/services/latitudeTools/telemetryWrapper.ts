@@ -42,13 +42,16 @@ export async function withTelemetryWrapper<
     }
   }
 
-  const $tool = telemetry.tool(context, {
-    name: toolName,
-    call: {
-      id: toolCall.toolCallId,
-      arguments: args,
+  const $tool = telemetry.span.tool(
+    {
+      name: toolName,
+      call: {
+        id: toolCall.toolCallId,
+        arguments: args,
+      },
     },
-  })
+    context,
+  )
 
   try {
     const value = await executeFn(args, toolCall).then((r) => r.unwrap())

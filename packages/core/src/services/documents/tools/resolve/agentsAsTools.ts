@@ -71,13 +71,16 @@ export async function resolveAgentAsToolDefinition({
   return Result.ok({
     ...toolManifest.definition,
     execute: async (args: Record<string, unknown>, toolCall) => {
-      const $tool = telemetry.tool(context, {
-        name: toolName,
-        call: {
-          id: toolCall.toolCallId,
-          arguments: args,
+      const $tool = telemetry.span.tool(
+        {
+          name: toolName,
+          call: {
+            id: toolCall.toolCallId,
+            arguments: args,
+          },
         },
-      })
+        context,
+      )
 
       try {
         // prettier-ignore

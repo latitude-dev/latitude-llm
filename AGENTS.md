@@ -386,7 +386,7 @@ The main orchestration service that:
 
 1. **Builds provider map**: Fetches all configured provider API keys for the workspace
 2. **Resolves content**: Processes the prompt template, handling includes and references via `getResolvedContent()`
-3. **Creates telemetry context**: Initializes a prompt span via `telemetry.prompt()` for tracing
+3. **Creates telemetry context**: Initializes a prompt span via `telemetry.span.prompt()` for tracing
 4. **Validates the chain**: Uses `RunDocumentChecker` to:
    - Parse the prompt using PromptL
    - Handle `userMessage` parameter (adds `<user>{{LATITUDE_USER_MESSAGE}}</user>` if needed)

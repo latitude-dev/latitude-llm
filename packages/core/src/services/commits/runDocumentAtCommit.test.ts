@@ -291,7 +291,7 @@ model: gpt-4o
       ).toEqual('custom-identifier')
     })
 
-    it('calls telemetry.prompt with all required parameters', async () => {
+    it('calls telemetry.span.prompt with all required parameters', async () => {
       const { context, workspace, document, commit, project } = await buildData(
         {
           doc1Content: dummyDoc1Content,
@@ -300,10 +300,13 @@ model: gpt-4o
 
       const mockPrompt = vi
         .fn()
-        .mockImplementation(realTelemetry.prompt.bind(realTelemetry))
+        .mockImplementation(realTelemetry.span.prompt.bind(realTelemetry.span))
       const mockTelemetry = {
         ...realTelemetry,
-        prompt: mockPrompt,
+        span: {
+          ...realTelemetry.span,
+          prompt: mockPrompt,
+        },
       } as unknown as LatitudeTelemetry
 
       const parameters = { testParam: 'testValue' }
@@ -327,7 +330,6 @@ model: gpt-4o
       await lastResponse
 
       expect(mockPrompt).toHaveBeenCalledWith(
-        context,
         expect.objectContaining({
           documentLogUuid: expect.any(String),
           name: document.path.split('/').at(-1),
@@ -340,6 +342,7 @@ model: gpt-4o
           externalId: customIdentifier,
           testDeploymentId,
         }),
+        context,
       )
     })
 

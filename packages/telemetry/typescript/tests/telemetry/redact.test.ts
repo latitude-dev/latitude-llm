@@ -1,5 +1,5 @@
 import { LatitudeTelemetry, RedactSpanProcessor } from '$telemetry/index'
-import { context, trace } from '@opentelemetry/api'
+import { trace } from '@opentelemetry/api'
 import { setupServer } from 'msw/node'
 import {
   afterAll,
@@ -51,7 +51,7 @@ describe('redact', () => {
         processors: [processor],
       })
 
-      const completion = sdk.completion(context.active(), {
+      const completion = sdk.span.completion({
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },

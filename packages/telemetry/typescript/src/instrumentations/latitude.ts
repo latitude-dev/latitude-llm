@@ -17,24 +17,24 @@ export type LatitudeInstrumentationOptions = {
 
 export class LatitudeInstrumentation implements BaseInstrumentation {
   private readonly options: LatitudeInstrumentationOptions
-  private readonly telemetry: ManualInstrumentation
+  private readonly manualTelemetry: ManualInstrumentation
 
   constructor(tracer: otel.Tracer, options: LatitudeInstrumentationOptions) {
-    this.telemetry = new ManualInstrumentation(tracer)
+    this.manualTelemetry = new ManualInstrumentation(tracer)
     this.options = options
   }
 
   isEnabled() {
-    return this.telemetry.isEnabled()
+    return this.manualTelemetry.isEnabled()
   }
 
   enable() {
     this.options.module.instrument(this)
-    this.telemetry.enable()
+    this.manualTelemetry.enable()
   }
 
   disable() {
-    this.telemetry.disable()
+    this.manualTelemetry.disable()
     this.options.module.uninstrument()
   }
 
@@ -64,7 +64,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   ): Promise<Awaited<ReturnType<F>>> {
     const { prompt, parameters } = args[0]
 
-    const $prompt = this.telemetry.prompt(context.active(), {
+    const $prompt = this.manualTelemetry.prompt(context.active(), {
       documentLogUuid: uuid(),
       versionUuid: prompt.versionUuid,
       promptUuid: prompt.uuid,
@@ -92,7 +92,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     fn: F,
     ...args: Parameters<F>
   ): Promise<Awaited<ReturnType<F>>> {
-    const $step = this.telemetry.step(context.active())
+    const $step = this.manualTelemetry.step(context.active())
 
     let result
     try {
@@ -121,7 +121,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     const { provider, config, messages } = args[0]
     const model = (config.model as string) || 'unknown'
 
-    const $completion = this.telemetry.completion(context.active(), {
+    const $completion = this.manualTelemetry.completion(context.active(), {
       name: `${provider} / ${model}`,
       provider: provider,
       model: model,
@@ -167,7 +167,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   ): Promise<Awaited<ReturnType<F>>> {
     const { toolRequest } = args[0]
 
-    const $tool = this.telemetry.tool(context.active(), {
+    const $tool = this.manualTelemetry.tool(context.active(), {
       name: toolRequest.toolName,
       call: {
         id: toolRequest.toolCallId,

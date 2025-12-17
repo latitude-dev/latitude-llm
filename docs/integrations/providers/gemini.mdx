@@ -1,0 +1,176 @@
+---
+title: Gemini
+description: Connect your Gemini-powered application to Latitude Telemetry for feature-level observability and evaluations.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses the official **Gemini SDK**.
+
+After completing these steps:
+
+- Every Gemini generation (e.g. `generateContent`) can be captured as a log in Latitude.
+- Logs are grouped under a **prompt**, identified by a `path`, inside a Latitude **project**.
+- You can inspect inputs/outputs, measure latency, and debug your Gemini-powered features from the Latitude dashboard.
+
+<Check>
+  You’ll keep calling Gemini exactly as you do today — Telemetry simply observes
+  and enriches those calls.
+</Check>
+
+---
+
+## Requirements
+
+Before you start, make sure you have:
+
+- A **Latitude account** and **API key**
+- A **Latitude project ID**
+- A Node.js-based project that uses the **Gemini SDK**
+
+That’s it — prompts do **not** need to be created ahead of time.
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install requirements">
+    Add the Latitude Telemetry package to your project:
+
+    <CodeGroup>
+      ```bash npm
+      npm add @latitude-data/telemetry
+      ```
+
+      ```bash pnpm
+      pnpm add @latitude-data/telemetry
+      ```
+
+      ```bash yarn
+      yarn add @latitude-data/telemetry
+      ```
+
+      ```bash bun
+      bun add @latitude-data/telemetry
+      ```
+    </CodeGroup>
+
+  </Step>
+
+  <Step title="Initialize Latitude Telemetry">
+    Create a single <code>LatitudeTelemetry</code> instance when your app starts.
+
+    ```ts telemetry.ts
+    import { LatitudeTelemetry } from '@latitude-data/telemetry'
+
+    export const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY)
+    ```
+
+    <Info>
+      The Telemetry instance should only be created once.
+    </Info>
+
+  </Step>
+
+  <Step title="Wrap your Gemini-powered feature">
+    Wrap the feature you want to observe using <code>telemetry.capture</code>.
+
+    ```ts
+    import { telemetry } from './telemetry'
+
+    export async function getSupportReply(input: string) {
+      return telemetry.capture(
+        {
+          projectId: 123, // Your Latitude project ID
+          path: 'get-support-reply', // Prompt identifier (created automatically if missing)
+        },
+        async () => {
+
+          // Your regular LLM-powered feature code here
+          const response = await generateGeminiResponse(input)
+
+          // You can return anything you want — the value is passed through unchanged
+          return response
+        }
+      )
+    }
+    ```
+
+    <Info>
+      The <code>path</code>:
+      - Identifies the prompt in Latitude
+      - Can be new or existing
+      - Should not contain spaces or special characters (use letters, numbers, <code>- _ / .</code>)
+    </Info>
+
+  </Step>
+
+  <Step title="Define the completion span">
+    Inside your generation function, create a completion span before calling Gemini,
+    then end it after the response returns.
+
+    ```ts
+    import { telemetry } from './telemetry'
+    import { GoogleGenAI } from '@google/genai'
+
+    export async function generateGeminiResponse(prompt: string) {
+      const model = 'gemini-2.0-flash'
+
+      // 1) Start the completion span
+      const span = telemetry.span.completion({
+        model,
+        input: [{ role: 'user', content: prompt }],
+      })
+
+      try {
+        // 2) Call Gemini as usual
+        const google = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+        const response = await google.models.generateContent( ... )
+        const text = response.text ?? ''
+
+        // 3) End the span (attach output + useful metadata)
+        span.end({
+          output: [{ role: 'assistant', content: text }],
+        })
+
+        return text
+      } catch (error) {
+
+        // Make sure to close the span even on errors
+        span.fail(error)
+        throw error
+      }
+    }
+    ```
+
+    <Note>
+      Although the `input` and `output` attributes are required for defining the span initialization and completion,
+      you should include as much metadata as possible, to improve observability. Adding information such as the model,
+      configuration, output tokens and finish reason will help you debug, analyze and evaluate your traces.
+    </Note>
+
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing your logs in Latitude
+
+Once your feature is wrapped, logs will appear automatically.
+
+1. Open the **prompt** in your Latitude dashboard (identified by `path`)
+2. Go to the **Traces** section
+3. Each execution will show:
+   - Input and output messages
+   - Model and token usage (when provided)
+   - Latency and errors
+   - One trace per feature invocation
+
+---
+
+## That’s it
+
+No changes to how you call Gemini — just wrap the feature and define the completion span around the generation.

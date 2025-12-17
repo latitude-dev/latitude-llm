@@ -10,6 +10,7 @@ import {
   not,
   or,
   lte,
+  asc,
 } from 'drizzle-orm'
 
 import { type Commit } from '../../schema/models/types/Commit'
@@ -59,14 +60,17 @@ export class CommitsRepository extends RepositoryLegacy<
    * Get a commit by its UUID or otherwise the head commit of the project
    * @param uuid The commit UUID
    * @param projectId The project ID (optional)
+   * @param includeInitialDraft When a project does not have any merged commits, whether to include
    * @returns A Commit object
    */
   async getCommitByUuid({
     uuid,
     projectId,
+    includeInitialDraft = false,
   }: {
     projectId?: number
     uuid: string
+    includeInitialDraft?: boolean
   }) {
     if (uuid === HEAD_COMMIT) {
       if (!projectId) {
@@ -74,25 +78,44 @@ export class CommitsRepository extends RepositoryLegacy<
       }
 
       const headCommit = await this.getHeadCommit(projectId)
-      if (!headCommit)
-        return Result.error(new NotFoundError('Head commit not found'))
+      if (headCommit) return Result.ok(headCommit)
 
-      return Result.ok(headCommit)
+      if (includeInitialDraft) {
+        try {
+          // Get the first draft from the project if there is no head commit
+          const [initialDraft] = await this.db
+            .select()
+            .from(this.scope)
+            .where(eq(this.scope.projectId, projectId))
+            .limit(1)
+            .orderBy(asc(this.scope.createdAt))
+
+          if (!initialDraft) {
+            // Not a single commit has been found in the project
+            // This can only mean the project does not exist (or is not accessible from this scope)
+            return Result.error(new NotFoundError('Project not found'))
+          }
+          return Result.ok(initialDraft)
+        } catch (error) {
+          return Result.error(error as Error)
+        }
+      }
+
+      return Result.error(new NotFoundError('Head commit not found'))
     }
 
     try {
-      const result = await this.db
+      const [commit] = await this.db
         .select()
         .from(this.scope)
         .where(eq(this.scope.uuid, uuid))
         .limit(1)
-      const commit = result[0]
-      if (!commit)
-        return Result.error(
-          new NotFoundError(`Commit with uuid ${uuid} not found`),
-        )
 
-      return Result.ok(commit)
+      if (commit) return Result.ok(commit)
+
+      return Result.error(
+        new NotFoundError(`Commit with uuid ${uuid} not found`),
+      )
     } catch (error) {
       return Result.error(error as Error)
     }

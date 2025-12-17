@@ -1,5 +1,4 @@
 import { LatitudeTelemetry } from '$telemetry/index'
-import { context } from '@opentelemetry/api'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { setupServer } from 'msw/node'
 import {
@@ -46,7 +45,7 @@ describe('telemetry', () => {
 
       const sdk = new LatitudeTelemetry('fake-api-key')
 
-      const completion = sdk.completion(context.active(), {
+      const completion = sdk.span.completion({
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
@@ -94,7 +93,7 @@ describe('telemetry', () => {
         }),
       })
 
-      const completion = sdk.completion(context.active(), {
+      const completion = sdk.span.completion({
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
@@ -133,7 +132,7 @@ describe('telemetry', () => {
 
       const sdk = new LatitudeTelemetry('fake-api-key')
 
-      const http = sdk.http(context.active(), {
+      const http = sdk.span.http({
         request: {
           method: 'POST',
           url: 'https://api.openai.com/v1/responses',
@@ -246,7 +245,7 @@ describe('telemetry', () => {
         processors: [processorMock],
       })
 
-      const completion = sdk.completion(context.active(), {
+      const completion = sdk.span.completion({
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },

@@ -31,13 +31,16 @@ export async function resolveIntegrationToolDefinition({
   return Result.ok({
     ...toolManifest.definition,
     execute: async (args, toolCall) => {
-      const $tool = telemetry.tool(streamManager.$completion!.context, {
-        name: toolName,
-        call: {
-          id: toolCall.toolCallId,
-          arguments: args,
+      const $tool = telemetry.span.tool(
+        {
+          name: toolName,
+          call: {
+            id: toolCall.toolCallId,
+            arguments: args,
+          },
         },
-      })
+        streamManager.$completion!.context,
+      )
 
       publisher.publishLater({
         type: 'toolExecuted',

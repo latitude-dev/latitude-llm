@@ -48,7 +48,7 @@ describe('addMessages', () => {
     aiSpy.mockImplementation(mocks.runAi)
   })
 
-  it('calls telemetry.prompt with projectId and all required parameters', async () => {
+  it('calls telemetry.span.prompt with projectId and all required parameters', async () => {
     const { workspace, documents, commit, providers } = await createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
@@ -79,16 +79,19 @@ Hello world
 
     const mockPrompt = vi
       .fn()
-      .mockImplementation(realTelemetry.prompt.bind(realTelemetry))
+      .mockImplementation(realTelemetry.span.prompt.bind(realTelemetry.span))
 
     const mockChat = vi
       .fn()
-      .mockImplementation(realTelemetry.chat.bind(realTelemetry))
+      .mockImplementation(realTelemetry.span.chat.bind(realTelemetry.span))
 
     const mockTelemetry = {
       ...realTelemetry,
-      prompt: mockPrompt,
-      chat: mockChat,
+      span: {
+        ...realTelemetry.span,
+        prompt: mockPrompt,
+        chat: mockChat,
+      },
     } as unknown as LatitudeTelemetry
 
     const result = await addMessages(
@@ -111,13 +114,13 @@ Hello world
     expect(mockPrompt).toHaveBeenCalledTimes(0)
 
     expect(mockChat).toHaveBeenCalledWith(
-      expect.anything(),
       expect.objectContaining({
         documentLogUuid: documentLog.uuid,
         name: document.path.split('/').at(-1),
         source: LogSources.API,
         previousTraceId: expect.any(String),
       }),
+      expect.anything(),
     )
   })
 })

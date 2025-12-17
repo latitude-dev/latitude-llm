@@ -37,6 +37,7 @@ import {
   ATTR_LATITUDE_EXTERNAL_ID,
   ATTR_LATITUDE_PREVIOUS_TRACE_ID,
   ATTR_LATITUDE_PROJECT_ID,
+  ATTR_LATITUDE_PROMPT_PATH,
   ATTR_LATITUDE_SOURCE,
   ATTR_LATITUDE_TEST_DEPLOYMENT_ID,
   ATTR_LATITUDE_TYPE,
@@ -96,22 +97,22 @@ export type EndToolSpanOptions = EndSpanOptions & {
 export type StartCompletionSpanOptions = StartSpanOptions & {
   provider: string
   model: string
-  configuration: Record<string, unknown>
-  input: Record<string, unknown>[]
+  configuration?: Record<string, unknown>
+  input?: Record<string, unknown>[]
   versionUuid?: string
   promptUuid?: string
   experimentUuid?: string
 }
 
 export type EndCompletionSpanOptions = EndSpanOptions & {
-  output: Record<string, unknown>[]
-  tokens: {
-    prompt: number
-    cached: number
-    reasoning: number
-    completion: number
+  output?: Record<string, unknown>[]
+  tokens?: {
+    prompt?: number
+    cached?: number
+    reasoning?: number
+    completion?: number
   }
-  finishReason: string
+  finishReason?: string
 }
 
 export type StartHttpSpanOptions = StartSpanOptions & {
@@ -156,6 +157,13 @@ export type ExternalSpanOptions = StartSpanOptions & {
   source?: LogSources // Defaults to LogSources.API
   versionUuid?: string // Alias for commitUuid
   externalId?: string
+}
+
+export type CaptureOptions = StartSpanOptions & {
+  path: string // The document path
+  projectId: number
+  versionUuid?: string // Optional, defaults to HEAD commit
+  conversationUuid?: string // Optional, if provided, will be used as the documentLogUuid
 }
 
 export class ManualInstrumentation implements BaseInstrumentation {
@@ -577,7 +585,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const start = options
 
     const configuration = {
-      ...start.configuration,
+      ...(start.configuration ?? {}),
       model: start.model,
     }
     let jsonConfiguration = ''
@@ -591,13 +599,14 @@ export class ManualInstrumentation implements BaseInstrumentation {
       configuration,
     )
 
+    const input = start.input ?? []
     let jsonInput = ''
     try {
-      jsonInput = JSON.stringify(start.input)
+      jsonInput = JSON.stringify(input)
     } catch (error) {
       jsonInput = '[]'
     }
-    const attrInput = this.attribifyMessages('input', start.input)
+    const attrInput = this.attribifyMessages('input', input)
     const span = this.span(
       ctx,
       start.name || `${start.provider} / ${start.model}`,
@@ -619,32 +628,40 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     return {
       context: span.context,
-      end: (options: EndCompletionSpanOptions) => {
-        const end = options
+      end: (options?: EndCompletionSpanOptions) => {
+        const end = options ?? {}
 
+        const output = end.output ?? []
         let jsonOutput = ''
         try {
-          jsonOutput = JSON.stringify(end.output)
+          jsonOutput = JSON.stringify(output)
         } catch (error) {
           jsonOutput = '[]'
         }
-        const attrOutput = this.attribifyMessages('output', end.output)
+        const attrOutput = this.attribifyMessages('output', output)
 
-        const inputTokens = end.tokens.prompt + end.tokens.cached
-        const outputTokens = end.tokens.reasoning + end.tokens.completion
+        const tokens = {
+          prompt: end.tokens?.prompt ?? 0,
+          cached: end.tokens?.cached ?? 0,
+          reasoning: end.tokens?.reasoning ?? 0,
+          completion: end.tokens?.completion ?? 0,
+        }
+        const inputTokens = tokens.prompt + tokens.cached
+        const outputTokens = tokens.reasoning + tokens.completion
+        const finishReason = end.finishReason ?? ''
 
         span.end({
           attributes: {
             [ATTR_GEN_AI_RESPONSE_MESSAGES]: jsonOutput,
             ...attrOutput,
             [ATTR_GEN_AI_USAGE_INPUT_TOKENS]: inputTokens,
-            [ATTR_GEN_AI_USAGE_PROMPT_TOKENS]: end.tokens.prompt,
-            [ATTR_GEN_AI_USAGE_CACHED_TOKENS]: end.tokens.cached,
-            [ATTR_GEN_AI_USAGE_REASONING_TOKENS]: end.tokens.reasoning,
-            [ATTR_GEN_AI_USAGE_COMPLETION_TOKENS]: end.tokens.completion,
+            [ATTR_GEN_AI_USAGE_PROMPT_TOKENS]: tokens.prompt,
+            [ATTR_GEN_AI_USAGE_CACHED_TOKENS]: tokens.cached,
+            [ATTR_GEN_AI_USAGE_REASONING_TOKENS]: tokens.reasoning,
+            [ATTR_GEN_AI_USAGE_COMPLETION_TOKENS]: tokens.completion,
             [ATTR_GEN_AI_USAGE_OUTPUT_TOKENS]: outputTokens,
             [ATTR_GEN_AI_RESPONSE_MODEL]: start.model,
-            [ATTR_GEN_AI_RESPONSE_FINISH_REASONS]: [end.finishReason],
+            [ATTR_GEN_AI_RESPONSE_FINISH_REASONS]: [finishReason],
             ...(end.attributes || {}),
           },
         })
@@ -865,5 +882,34 @@ export class ManualInstrumentation implements BaseInstrumentation {
     return this.span(ctx, name || `external-${promptUuid}`, SpanType.External, {
       attributes,
     })
+  }
+
+  unresolvedExternal(
+    ctx: otel.Context,
+    {
+      path,
+      projectId,
+      versionUuid,
+      conversationUuid,
+      name,
+      ...rest
+    }: CaptureOptions,
+  ) {
+    const attributes = {
+      [ATTR_LATITUDE_PROMPT_PATH]: path,
+      [ATTR_LATITUDE_PROJECT_ID]: projectId,
+      ...(versionUuid && { [ATTR_LATITUDE_COMMIT_UUID]: versionUuid }),
+      ...(conversationUuid && {
+        [ATTR_LATITUDE_DOCUMENT_LOG_UUID]: conversationUuid,
+      }),
+      ...(rest.attributes || {}),
+    }
+
+    return this.span(
+      ctx,
+      name || `capture-${path}`,
+      SpanType.UnresolvedExternal,
+      { attributes },
+    )
   }
 }

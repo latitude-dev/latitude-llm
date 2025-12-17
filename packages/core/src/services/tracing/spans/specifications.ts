@@ -11,6 +11,7 @@ import { SpanBackendSpecification } from './shared'
 import { StepSpanSpecification } from './step'
 import { ToolSpanSpecification } from './tool'
 import { UnknownSpanSpecification } from './unknown'
+import { UnresolvedExternalSpanSpecification } from './unresolvedExternal'
 
 // prettier-ignore
 export const SPAN_SPECIFICATIONS: {
@@ -25,6 +26,7 @@ export const SPAN_SPECIFICATIONS: {
   [SpanType.Prompt]: PromptSpanSpecification,
   [SpanType.Chat]: ChatSpanSpecification,
   [SpanType.External]: ExternalSpanSpecification,
+  [SpanType.UnresolvedExternal]: UnresolvedExternalSpanSpecification,
   [SpanType.Step]: StepSpanSpecification,
   [SpanType.Unknown]: UnknownSpanSpecification,
 }

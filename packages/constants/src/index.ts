@@ -72,3 +72,5 @@ export type TodoListItem = {
 }
 
 export type TodoList = TodoListItem[]
+
+export const DOCUMENT_PATH_REGEXP = /^([\w-]+\/)*([\w-.])+$/

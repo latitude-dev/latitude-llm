@@ -279,6 +279,12 @@ export async function processSpansBulk(
     }
     metadata = { ...metadata, ...processing.value }
 
+    // Transform UnresolvedExternal to External after resolution
+    let finalType = type
+    if (type === SpanType.UnresolvedExternal) {
+      finalType = SpanType.External
+    }
+
     processedSpans.push({
       original: spanData,
       id,
@@ -286,7 +292,7 @@ export async function processSpansBulk(
       parentId,
       name,
       kind,
-      type,
+      type: finalType,
       status,
       message,
       duration,
@@ -548,6 +554,8 @@ export function extractSpanType(
       return Result.ok(SpanType.Chat)
     case SpanType.External:
       return Result.ok(SpanType.External)
+    case SpanType.UnresolvedExternal:
+      return Result.ok(SpanType.UnresolvedExternal)
     case SpanType.Step:
       return Result.ok(SpanType.Step)
     case SpanType.Unknown:
