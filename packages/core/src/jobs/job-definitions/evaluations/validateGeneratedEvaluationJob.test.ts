@@ -245,7 +245,6 @@ describe('validateGeneratedEvaluationJob', () => {
         evaluation: expect.objectContaining({ uuid: evaluation.uuid }),
         workspace,
         commit,
-        alignmentMetric: MIN_ALIGNMENT_METRIC_THRESHOLD + 10,
         alignmentMetricMetadata: {
           confusionMatrix: {
             truePositives: 8,
@@ -253,6 +252,7 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 2,
             falseNegatives: 2,
           },
+          alignmentHash: expect.any(String),
         },
       })
 
@@ -538,8 +538,11 @@ describe('validateGeneratedEvaluationJob', () => {
 
       expect(mockUpdateEvaluationV2).toHaveBeenCalledWith(
         expect.objectContaining({
-          alignmentMetric: MIN_ALIGNMENT_METRIC_THRESHOLD,
+          evaluation,
+          workspace,
+          commit,
           alignmentMetricMetadata: {
+            alignmentHash: expect.any(String),
             confusionMatrix: {
               truePositives: 5,
               trueNegatives: 5,
