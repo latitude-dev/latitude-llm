@@ -69,10 +69,6 @@ export async function recalculateAlignmentMetric(
 
   const evaluationHash = generateConfigurationHash(evaluationToEvaluate)
   const hasEvaluationConfigurationChanged = evaluationHash !== evaluationToEvaluate.alignmentMetricMetadata?.alignmentHash // prettier-ignore
-  console.log(
-    'hasEvaluationConfigurationChanged',
-    hasEvaluationConfigurationChanged,
-  )
 
   // If the evaluation configuration hasn't changed, we don't have to recalculate the entire aligment metric, we can aggregate the new span results to the existing confusion matrix and avoid extra evalRuns
   if (!hasEvaluationConfigurationChanged) {
@@ -83,23 +79,11 @@ export async function recalculateAlignmentMetric(
     const passSpansFromYesterday = examplesThatShouldPassTheEvaluationSliced.filter(isFromYesterday) // prettier-ignore
     const failSpansFromYesterday = examplesThatShouldFailTheEvaluationSliced.filter(isFromYesterday) // prettier-ignore
 
-    console.log('passSpansFromYesterday', passSpansFromYesterday.length)
-    console.log('failSpansFromYesterday', failSpansFromYesterday.length)
-
     // Re-balance to have equal amounts
     const targetLength = Math.min(passSpansFromYesterday.length, failSpansFromYesterday.length) // prettier-ignore
 
     const passSpansFromYesterdaySliced = passSpansFromYesterday.slice(0, targetLength) // prettier-ignore
     const failSpansFromYesterdaySliced = failSpansFromYesterday.slice(0, targetLength) // prettier-ignore
-
-    console.log(
-      'passSpansFromYesterdaySliced',
-      passSpansFromYesterdaySliced.length,
-    )
-    console.log(
-      'failSpansFromYesterdaySliced',
-      failSpansFromYesterdaySliced.length,
-    )
 
     allSpans = [...failSpansFromYesterdaySliced, ...passSpansFromYesterdaySliced] // prettier-ignore
 
@@ -125,15 +109,6 @@ export async function recalculateAlignmentMetric(
     }),
   })
 
-  console.log(
-    'spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation',
-    spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
-  )
-  console.log(
-    'spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation',
-    spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-  )
-
   const { job: validationFlowJob } = await flowProducer.add({
     name: `recalculateAlignmentMetricJob`,
     queueName: Queues.generateEvaluationsQueue,
@@ -147,8 +122,8 @@ export async function recalculateAlignmentMetric(
       hasEvaluationConfigurationChanged,
     },
     opts: {
-      // Idempotency key
-      jobId: `recalculateAlignmentMetricJob-evaluationUuid=${evaluationToEvaluate.uuid}`,
+      // Idempotency key - TODO change this its stopping!!!
+      jobId: `recalculateAlignmentMetricJob-evaluationUuid=${evaluationToEvaluate.uuid}-day=${new Date().toISOString().split('T')[0]}`,
       // FlowProducer does not inherit
       attempts: 3,
       backoff: {
@@ -169,7 +144,7 @@ export async function recalculateAlignmentMetric(
       },
       opts: {
         // Idempotency key
-        jobId: `runEvaluationV2Job-evaluationUuid=${evaluationToEvaluate.uuid}-spanId=${span.id}-traceId=${span.traceId}`,
+        jobId: `runEvaluationV2Job-evaluationUuid=${evaluationToEvaluate.uuid}-spanId=${span.id}-traceId=${span.traceId}-day=${new Date().toISOString().split('T')[0]}`,
         // Overriding eval queue options for faster retry policy to avoid user waiting too long for the evaluation to be generated
         attempts: 2,
         backoff: {

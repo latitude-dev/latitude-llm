@@ -50,8 +50,6 @@ export const recalculateAlignmentMetricJob = async (
     hasEvaluationConfigurationChanged,
   } = job.data
 
-  console.log('helloooo')
-
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError('Workspace not found')
 

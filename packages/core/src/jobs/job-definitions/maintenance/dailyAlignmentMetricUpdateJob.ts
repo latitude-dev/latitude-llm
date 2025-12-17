@@ -45,8 +45,6 @@ export async function dailyAlignmentMetricUpdateJob(
     LlmEvaluationMetric.Binary
   >[]
 
-  console.log('evaluationsWithIssues', evaluationsWithIssues.length)
-
   const evaluationsGroupedByDocument = evaluationsWithIssues.reduce(
     (acc, evaluation) => {
       acc[evaluation.documentUuid] = [
@@ -60,8 +58,6 @@ export async function dailyAlignmentMetricUpdateJob(
       EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>[]
     >,
   )
-
-  console.log('evaluationsGroupedByDocument', evaluationsGroupedByDocument)
 
   for (const [documentUuid, evaluations] of Object.entries(
     evaluationsGroupedByDocument,
@@ -101,17 +97,10 @@ export async function dailyAlignmentMetricUpdateJob(
       (span) => new Date(span.createdAt) >= yesterdayCutoff,
     )
 
-    console.log('hasSpansFromYesterday', hasSpansFromYesterday)
-
     // We only will update the alignment metric of evaluations which have new HITL annotations added yesterday (since we update the alignment metric daily)
     if (!hasSpansFromYesterday) continue
 
     for (const evaluation of evaluations) {
-      console.log(
-        'evaluation to update',
-        evaluation.uuid,
-        evaluation.documentUuid,
-      )
       await maintenanceQueue.add(
         'updateEvaluationAlignmentJob',
         {
