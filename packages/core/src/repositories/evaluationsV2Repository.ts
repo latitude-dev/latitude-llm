@@ -4,7 +4,6 @@ import {
   desc,
   eq,
   getTableColumns,
-  inArray,
   isNotNull,
   isNull,
   lt,
@@ -44,24 +43,24 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
       .$dynamic()
   }
 
-  private async getCommitByUuid({
+  private async listAtHistory({
     projectId,
     commitUuid,
+    documentUuid,
   }: {
     projectId?: number
     commitUuid: string
+    documentUuid?: string
   }) {
     const commitsRepository = new CommitsRepository(this.workspaceId, this.db)
-    return commitsRepository
+    const commit = await commitsRepository
       .getCommitByUuid({
-        projectId,
+        projectId: projectId,
         uuid: commitUuid,
       })
       .then((r) => r.unwrap())
-  }
 
-  private createHistoryCTE(commit: Commit) {
-    return this.db.$with('history').as(
+    const history = this.db.$with('history').as(
       this.db
         .select({
           id: commits.id,
@@ -80,51 +79,34 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
           ),
         ),
     )
-  }
 
-  private async getHistoryVersions(
-    history: ReturnType<typeof this.createHistoryCTE>,
-    documentUuid?: string,
-  ) {
-    const historyWhereConditions = [
-      eq(evaluationVersions.workspaceId, this.workspaceId),
-      isNull(evaluationVersions.deletedAt),
-    ]
-    if (documentUuid) {
-      historyWhereConditions.push(
-        eq(evaluationVersions.documentUuid, documentUuid),
-      )
-    }
-
-    return this.db
+    const historyVersions = await this.db
       .with(history)
       .selectDistinctOn([evaluationVersions.evaluationUuid], tt)
       .from(evaluationVersions)
       .innerJoin(history, eq(history.id, evaluationVersions.commitId))
-      .where(and(...historyWhereConditions))
-      .orderBy(desc(evaluationVersions.evaluationUuid), desc(history.mergedAt))
-  }
-
-  private async getCurrentVersions(commit: Commit, documentUuid?: string) {
-    const currentWhereConditions = [eq(evaluationVersions.commitId, commit.id)]
-    if (documentUuid) {
-      currentWhereConditions.push(
-        eq(evaluationVersions.documentUuid, documentUuid),
+      .where(
+        and(
+          eq(evaluationVersions.workspaceId, this.workspaceId),
+          ...(documentUuid ? [eq(evaluationVersions.documentUuid, documentUuid)] : []), // prettier-ignore
+        ),
       )
-    }
+      .orderBy(desc(evaluationVersions.evaluationUuid), desc(history.mergedAt))
 
-    return this.scope.where(and(...currentWhereConditions))
-  }
+    const currentVersions = await this.scope.where(
+      and(
+        eq(evaluationVersions.workspaceId, this.workspaceId),
+        eq(evaluationVersions.commitId, commit.id),
+        ...(documentUuid ? [eq(evaluationVersions.documentUuid, documentUuid)] : []), // prettier-ignore
+      ),
+    )
 
-  private mergeAndSortEvaluations(
-    currentVersions: EvaluationV2[],
-    historyVersions: EvaluationV2[],
-  ) {
     let evaluations = currentVersions.concat(
       historyVersions.filter(
         (oldVersion) =>
           !currentVersions.find(
-            (newVersion) => newVersion.uuid === oldVersion.uuid,
+            (newVersion) =>
+              newVersion.evaluationUuid === oldVersion.evaluationUuid,
           ),
       ),
     )
@@ -133,7 +115,7 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
       differenceInMilliseconds(b.createdAt, a.createdAt),
     )
 
-    return evaluations
+    return Result.ok<EvaluationV2[]>(evaluations)
   }
 
   async getAtCommitByDocument({
@@ -147,7 +129,7 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
     documentUuid: string
     evaluationUuid: string
   }) {
-    const evaluations = await this.list({
+    const evaluations = await this.listAtCommitByDocument({
       projectId: projectId,
       commitUuid: commitUuid,
       documentUuid: documentUuid,
@@ -159,6 +141,35 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
     }
 
     return Result.ok<EvaluationV2>(evaluation)
+  }
+
+  async listAtCommitByDocument({
+    projectId,
+    commitUuid,
+    documentUuid,
+  }: {
+    projectId?: number
+    commitUuid: string
+    documentUuid: string
+  }) {
+    return this.listAtHistory({
+      projectId: projectId,
+      commitUuid: commitUuid,
+      documentUuid: documentUuid,
+    })
+  }
+
+  async listAtCommit({
+    projectId,
+    commitUuid,
+  }: {
+    projectId?: number
+    commitUuid: string
+  }) {
+    return this.listAtHistory({
+      projectId: projectId,
+      commitUuid: commitUuid,
+    })
   }
 
   async existsAnotherVersion({
@@ -202,7 +213,8 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
   }
 
   async getByIssue(issueId: number) {
-    return await this.db
+    // FIXME: is this wrong? this is potentially returning the same evaluation at different commits!!
+    const result = await this.db
       .select(tt)
       .from(evaluationVersions)
       .where(
@@ -211,75 +223,10 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
           eq(evaluationVersions.issueId, issueId),
         ),
       )
-  }
+      .orderBy(desc(evaluationVersions.createdAt), desc(evaluationVersions.id))
 
-  async list({
-    projectId,
-    commitUuid,
-    documentUuid,
-  }: {
-    projectId?: number
-    commitUuid?: string
-    documentUuid?: string
-  }) {
-    // If commitUuid is provided, use history merging logic
-    if (commitUuid && projectId) {
-      const commit = await this.getCommitByUuid({ projectId, commitUuid })
-      const history = this.createHistoryCTE(commit)
-      const historyVersions = await this.getHistoryVersions(
-        history,
-        documentUuid,
-      )
-      const currentVersions = await this.getCurrentVersions(
-        commit,
-        documentUuid,
-      )
-      const evaluations = this.mergeAndSortEvaluations(
-        currentVersions,
-        historyVersions,
-      )
-
-      return Result.ok<EvaluationV2[]>(evaluations)
-    }
-
-    // Fallback to simple filtering when commitUuid is not provided
-    const additionalFilters = []
-
-    if (projectId) {
-      const projectCommits = await this.db
-        .select({ id: commits.id })
-        .from(commits)
-        .innerJoin(projects, eq(projects.id, commits.projectId))
-        .where(
-          and(
-            eq(projects.workspaceId, this.workspaceId),
-            eq(projects.id, projectId),
-            isNull(projects.deletedAt),
-            isNull(commits.deletedAt),
-          ),
-        )
-
-      const commitIds = projectCommits.map((c) => c.id)
-      if (commitIds.length === 0) {
-        return Result.ok<EvaluationV2[]>([])
-      }
-      additionalFilters.push(inArray(evaluationVersions.commitId, commitIds))
-    }
-
-    if (documentUuid) {
-      additionalFilters.push(eq(evaluationVersions.documentUuid, documentUuid))
-    }
-
-    if (additionalFilters.length === 0) {
-      const evaluations = await this.scope.then((r) => r)
-      return Result.ok<EvaluationV2[]>(evaluations)
-    }
-
-    const combinedFilter = and(this.scopeFilter, ...additionalFilters)
-
-    const evaluations = await this.scope.where(combinedFilter).then((r) => r)
-
-    return Result.ok<EvaluationV2[]>(evaluations)
+    // TODO: This should return a Result<EvaluationV2[]> no?
+    return result
   }
 
   async getDefaultCompositeTarget({
@@ -291,7 +238,7 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
     commitUuid: string
     documentUuid: string
   }) {
-    const evaluations = await this.list({
+    const evaluations = await this.listAtCommitByDocument({
       projectId: projectId,
       commitUuid: commitUuid,
       documentUuid: documentUuid,

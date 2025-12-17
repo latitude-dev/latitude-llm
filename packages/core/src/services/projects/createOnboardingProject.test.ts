@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Providers } from '@latitude-data/constants'
-import { type User } from '../../schema/models/types/User'
-import { type Workspace } from '../../schema/models/types/Workspace'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { CommitsRepository, EvaluationsV2Repository } from '../../repositories'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { createOnboardingProject } from './createOnboardingProject'
 
@@ -55,7 +55,7 @@ describe('createOnboardingProject', () => {
     // creates a demo evaluation associated with the document
     const evaluationsRepo = new EvaluationsV2Repository(workspace.id)
     const evaluations = await evaluationsRepo
-      .list({
+      .listAtCommitByDocument({
         commitUuid: commit.uuid,
         documentUuid: documents[0]!.documentUuid,
         projectId: commit.projectId,

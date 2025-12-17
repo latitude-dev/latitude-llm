@@ -1,8 +1,8 @@
-import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
 import type {
-  RunSourceGroup,
   DocumentLogFilterOptions,
+  RunSourceGroup,
 } from '@latitude-data/core/constants'
+import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
 
 type PaginationParameters = { page: number; pageSize: number }
 
@@ -176,6 +176,7 @@ export const API_ROUTES = {
                     root: `${documentRoot}/updateDocumentContent`,
                   },
                   evaluations: {
+                    root: `${documentRoot}/evaluations`,
                     detail: (evaluationUuid: string) => {
                       const evaluationRoot = `${documentRoot}/evaluations/${evaluationUuid}`
                       return {

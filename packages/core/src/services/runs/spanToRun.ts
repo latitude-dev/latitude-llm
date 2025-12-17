@@ -1,3 +1,4 @@
+import { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   CompletedRun,
   CompletionSpanMetadata,
@@ -9,7 +10,6 @@ import {
   Span,
   SpanType,
 } from '../../constants'
-import { Message } from '@latitude-data/constants/legacyCompiler'
 import { formatMessage } from '../../helpers'
 import {
   EvaluationResultsV2Repository,
@@ -62,7 +62,7 @@ export async function spanToRun({
   const repository = new EvaluationResultsV2Repository(workspaceId)
   const results = await repository.listBySpans([span]).then((r) => r.value)
   const evaluations = await evalsRepo
-    .list({
+    .listAtCommitByDocument({
       commitUuid: span.commitUuid!,
       documentUuid: span.documentUuid!,
     })

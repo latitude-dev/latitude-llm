@@ -1,26 +1,25 @@
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import { getSpanMessagesAndEvaluationResultsByIssue } from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
+import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { Result } from '@latitude-data/core/lib/Result'
 import {
   EvaluationsV2Repository,
   SpansRepository,
 } from '@latitude-data/core/repositories'
-import { Result } from '@latitude-data/core/lib/Result'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { assertCopilotIsSupported } from '@latitude-data/core/services/copilot/assertItsSupported'
+import { env } from '@latitude-data/env'
+import z from 'zod'
+import { database } from '../../../client'
 import {
   CLOUD_MESSAGES,
   LlmEvaluationBinarySpecification,
 } from '../../../constants'
-import { env } from '@latitude-data/env'
-import { getCopilot } from '../../copilot'
-import { runCopilot } from '../../copilot'
-import { Issue } from '@latitude-data/core/schema/models/types/Issue'
-import { assertCopilotIsSupported } from '@latitude-data/core/services/copilot/assertItsSupported'
-import z from 'zod'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
-import { getSpanMessagesAndEvaluationResultsByIssue } from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
-import { database } from '../../../client'
 import { getSpanMessagesByIssueDocument } from '../../../data-access/issues/getSpanMessagesByIssueDocument'
 import { getSpanMessagesBySpans } from '../../../data-access/issues/getSpanMessagesBySpans'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import { getCopilot, runCopilot } from '../../copilot'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration
@@ -209,7 +208,7 @@ async function getExistingEvaluationNames({
 }) {
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
   const evaluationsFromSameCommitAndDocumentResult =
-    await evaluationsRepository.list({
+    await evaluationsRepository.listAtCommitByDocument({
       projectId: commit.projectId,
       commitUuid: commit.uuid,
       documentUuid: issue.documentUuid,

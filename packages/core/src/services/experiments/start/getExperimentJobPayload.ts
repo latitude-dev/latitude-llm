@@ -1,23 +1,3 @@
-import { database } from '../../../client'
-import { EvaluationV2, LogSources } from '../../../constants'
-import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
-import { NotFoundError } from '../../../lib/errors'
-import {
-  CommitsRepository,
-  DatasetsRepository,
-  DocumentVersionsRepository,
-  EvaluationsV2Repository,
-  ProjectsRepository,
-} from '../../../repositories'
-import { type Commit } from '../../../schema/models/types/Commit'
-import { type Dataset } from '../../../schema/models/types/Dataset'
-import { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
-import { type Experiment } from '../../../schema/models/types/Experiment'
-import { Project } from '../../../schema/models/types/Project'
-import { type Workspace } from '../../../schema/models/types/Workspace'
-import { getRowsFromRange } from '../../datasetRows/getRowsFromRange'
-import { assertEvaluationRequirements } from '../assertRequirements'
 import {
   and,
   desc,
@@ -27,9 +7,29 @@ import {
   lt,
   notInArray,
 } from 'drizzle-orm'
-import { documentLogs } from '../../../schema/models/documentLogs'
-import { commits } from '../../../schema/models/commits'
+import { database } from '../../../client'
+import { EvaluationV2, LogSources } from '../../../constants'
+import { Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
+import { NotFoundError } from '../../../lib/errors'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import {
+  CommitsRepository,
+  DatasetsRepository,
+  DocumentVersionsRepository,
+  EvaluationsV2Repository,
+  ProjectsRepository,
+} from '../../../repositories'
+import { commits } from '../../../schema/models/commits'
+import { documentLogs } from '../../../schema/models/documentLogs'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type Dataset } from '../../../schema/models/types/Dataset'
+import { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type Experiment } from '../../../schema/models/types/Experiment'
+import { Project } from '../../../schema/models/types/Project'
+import { type Workspace } from '../../../schema/models/types/Workspace'
+import { getRowsFromRange } from '../../datasetRows/getRowsFromRange'
+import { assertEvaluationRequirements } from '../assertRequirements'
 
 export type ExperimentRow = {
   uuid: string
@@ -154,11 +154,12 @@ export async function getExperimentJobPayload(
   const document = documentResult.unwrap()
 
   const evaluationScope = new EvaluationsV2Repository(workspace.id, db)
-  const documentEvaluationsResult = await evaluationScope.list({
-    projectId: commit.projectId,
-    commitUuid: commit.uuid,
-    documentUuid: experiment.documentUuid,
-  })
+  const documentEvaluationsResult =
+    await evaluationScope.listAtCommitByDocument({
+      projectId: commit.projectId,
+      commitUuid: commit.uuid,
+      documentUuid: experiment.documentUuid,
+    })
   if (documentEvaluationsResult.error) {
     return Result.error(documentEvaluationsResult.error as Error)
   }
