@@ -39,7 +39,7 @@ export async function queues() {
         delay: 1000,
       },
       removeOnFail: 100,
-      removeOnComplete: true,
+      removeOnComplete: false,
     },
   }
 

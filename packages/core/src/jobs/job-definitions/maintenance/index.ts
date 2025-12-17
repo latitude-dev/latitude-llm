@@ -1,2 +1,4 @@
 export * from './scheduleWorkspaceCleanupJobs'
 export * from './cleanupWorkspaceOldLogsJob'
+export * from './dailyAlignmentMetricUpdateJob'
+export * from './updateEvaluationAlignmentJob'
