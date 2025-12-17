@@ -1,17 +1,17 @@
 'use server'
 
-import { withDocument, withDocumentSchema } from '../procedures'
-import { createExperimentVariants } from '@latitude-data/core/services/experiments/createVariants'
-import { startExperiment } from '@latitude-data/core/services/experiments/start/index'
+import {
+  experimentParametersSourceSchema,
+  experimentVariantSchema,
+} from '@latitude-data/constants/experiments'
 import {
   DatasetsRepository,
   EvaluationsV2Repository,
 } from '@latitude-data/core/repositories'
-import {
-  experimentVariantSchema,
-  experimentParametersSourceSchema,
-} from '@latitude-data/constants/experiments'
+import { createExperimentVariants } from '@latitude-data/core/services/experiments/createVariants'
+import { startExperiment } from '@latitude-data/core/services/experiments/start/index'
 import { z } from 'zod'
+import { withDocument, withDocumentSchema } from '../procedures'
 
 export const createExperimentAction = withDocument
   .inputSchema(
@@ -36,7 +36,7 @@ export const createExperimentAction = withDocument
 
     const evaluationsScope = new EvaluationsV2Repository(ctx.workspace.id)
     const docEvaluations = await evaluationsScope
-      .list({
+      .listAtCommitByDocument({
         projectId: ctx.commit.projectId,
         commitUuid: ctx.currentCommitUuid,
         documentUuid: ctx.document.documentUuid,

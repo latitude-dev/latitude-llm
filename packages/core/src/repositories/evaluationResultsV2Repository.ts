@@ -38,22 +38,22 @@ import { commits } from '../schema/models/commits'
 import { datasetRows } from '../schema/models/datasetRows'
 import { datasets } from '../schema/models/datasets'
 import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
+import { evaluationVersions } from '../schema/models/evaluationVersions'
 import { issueEvaluationResults } from '../schema/models/issueEvaluationResults'
 import { providerLogs } from '../schema/models/providerLogs'
+import { Commit } from '../schema/models/types/Commit'
+import { Issue } from '../schema/models/types/Issue'
+import { Workspace } from '../schema/models/types/Workspace'
 import {
   EvaluationResultV2WithDetails,
   EvaluationV2Stats,
   ResultWithEvaluationV2,
 } from '../schema/types'
+import { CommitsRepository } from './commitsRepository'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import { IssueEvaluationResultsRepository } from './issueEvaluationResultsRepository'
 import Repository from './repositoryV2'
 import { SpansRepository } from './spansRepository'
-import { evaluationVersions } from '../schema/models/evaluationVersions'
-import { CommitsRepository } from './commitsRepository'
-import { Commit } from '../schema/models/types/Commit'
-import { Issue } from '../schema/models/types/Issue'
-import { Workspace } from '../schema/models/types/Workspace'
 
 const tt = getTableColumns(evaluationResultsV2)
 
@@ -1025,7 +1025,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
             [
               commitUuid,
               await evaluationsRepository
-                .list({
+                .listAtCommitByDocument({
                   projectId,
                   commitUuid,
                   documentUuid,

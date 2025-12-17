@@ -1,12 +1,14 @@
 import { subDays } from 'date-fns'
 import { and, count, desc, eq, getTableColumns, gte } from 'drizzle-orm'
-import { type Commit } from '../schema/models/types/Commit'
-import { type DocumentSuggestion } from '../schema/models/types/DocumentSuggestion'
-import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
-import { DocumentSuggestionWithDetails } from '../schema/models/types/DocumentSuggestion'
 import { DOCUMENT_SUGGESTION_EXPIRATION_DAYS } from '../constants'
 import { Result } from '../lib/Result'
 import { documentSuggestions } from '../schema/models/documentSuggestions'
+import { type Commit } from '../schema/models/types/Commit'
+import {
+  DocumentSuggestionWithDetails,
+  type DocumentSuggestion,
+} from '../schema/models/types/DocumentSuggestion'
+import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
 
@@ -98,7 +100,7 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
       this.db,
     )
     const evaluations = await evaluationsV2Repository
-      .list({
+      .listAtCommitByDocument({
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
       })

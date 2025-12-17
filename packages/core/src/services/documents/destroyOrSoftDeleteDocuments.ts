@@ -2,18 +2,18 @@ import { omit } from 'lodash-es'
 
 import { and, eq, inArray, ne } from 'drizzle-orm'
 
-import { type Commit } from '../../schema/models/types/Commit'
-import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { type Workspace } from '../../schema/models/types/Workspace'
 import { database } from '../../client'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { EvaluationsV2Repository } from '../../repositories'
 import { documentVersions } from '../../schema/models/documentVersions'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { updateCommit } from '../commits'
+import { deleteDocumentTriggersFromDocuments } from '../documentTriggers/deleteDocumentTriggersFromDocuments'
 import { deleteEvaluationV2 } from '../evaluationsV2/delete'
 import { pingProjectUpdate } from '../projects'
-import { deleteDocumentTriggersFromDocuments } from '../documentTriggers/deleteDocumentTriggersFromDocuments'
-import { updateCommit } from '../commits'
 
 async function findUuidsInOtherCommits({
   tx,
@@ -147,7 +147,7 @@ export async function destroyOrSoftDeleteDocuments(
     await Promise.all(
       documents.map(async (document) => {
         const evaluations = await repository
-          .list({
+          .listAtCommitByDocument({
             commitUuid: commit.uuid,
             documentUuid: document.documentUuid,
           })

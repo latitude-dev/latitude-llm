@@ -42,7 +42,7 @@ export const GET = errorHandler(
       let evaluations: EvaluationV2[] = []
       for (const documentUuid of documentUuids) {
         const evaluationsForDocument = await evaluationsRepository
-          .list({
+          .listAtCommitByDocument({
             projectId,
             commitUuid,
             documentUuid,

@@ -59,7 +59,7 @@ export const generateIssueDetailsJob = async (
         .then((r) => r.unwrap())
 
       evaluations[result.commitId] = await evaluationsRepository
-        .list({
+        .listAtCommitByDocument({
           commitUuid: commit.uuid,
           documentUuid: issue.documentUuid,
         })

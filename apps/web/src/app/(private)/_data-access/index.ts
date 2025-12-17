@@ -2,6 +2,14 @@ import { cache } from 'react'
 
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { cache as redis } from '@latitude-data/core/cache'
+import {
+  DOCUMENT_STATS_CACHE_KEY,
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+  LAST_LATTE_THREAD_CACHE_KEY,
+  PROJECT_STATS_CACHE_KEY,
+} from '@latitude-data/core/constants'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
 import {
@@ -13,18 +21,10 @@ import {
   ProviderApiKeysRepository,
   ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
-import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
-import { notFound } from 'next/navigation'
-import {
-  DOCUMENT_STATS_CACHE_KEY,
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2,
-  PROJECT_STATS_CACHE_KEY,
-  LAST_LATTE_THREAD_CACHE_KEY,
-} from '@latitude-data/core/constants'
 import { DocumentLogsLimitedView } from '@latitude-data/core/schema/models/types/DocumentLog'
 import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
+import { notFound } from 'next/navigation'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
@@ -309,7 +309,7 @@ export const listEvaluationsV2AtCommitByDocumentCached = cache(
     const { workspace } = await getCurrentUserOrRedirect()
     const repository = new EvaluationsV2Repository(workspace.id)
     const evaluations = await repository
-      .list({
+      .listAtCommitByDocument({
         projectId: projectId,
         commitUuid: commitUuid,
         documentUuid: documentUuid,

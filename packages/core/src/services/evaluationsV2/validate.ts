@@ -48,7 +48,7 @@ export async function validateEvaluationV2<
   db = database,
 ) {
   const repository = new EvaluationsV2Repository(workspace.id, db)
-  const listing = await repository.list({
+  const listing = await repository.listAtCommitByDocument({
     commitUuid: commit.uuid,
     documentUuid: document.documentUuid,
   })

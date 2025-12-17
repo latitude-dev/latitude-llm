@@ -1,8 +1,8 @@
-import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
 import type {
-  RunSourceGroup,
   DocumentLogFilterOptions,
+  RunSourceGroup,
 } from '@latitude-data/core/constants'
+import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
 
 type PaginationParameters = { page: number; pageSize: number }
 
