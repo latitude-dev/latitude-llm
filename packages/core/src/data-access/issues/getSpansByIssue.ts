@@ -1,43 +1,71 @@
-import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm'
-import { calculateOffset } from '../../lib/pagination'
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNotNull,
+  isNull,
+  max,
+  sql,
+} from 'drizzle-orm'
 import { Result } from '../../lib/Result'
-import { CommitsRepository, SpansRepository } from '../../repositories'
+import { CommitsRepository } from '../../repositories'
 import { Commit } from '../../schema/models/types/Commit'
 import { Issue } from '../../schema/models/types/Issue'
 import { Workspace } from '../../schema/models/types/Workspace'
+import { Cursor } from '../../schema/types'
 import { commits } from '../../schema/models/commits'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
+import { spans } from '../../schema/models/spans'
 import { Span } from '@latitude-data/constants'
 import { database } from '../../client'
 
-async function fetchPaginatedEvaluationResults(
+/**
+ * Fetches spans associated with an issue through evaluation results,
+ * filtered by specific commits.
+ */
+export async function getSpansByIssue(
   {
     workspace,
     commit,
     issue,
-    page,
-    pageSize,
+    cursor,
+    limit = 25,
   }: {
     workspace: Workspace
     commit: Commit
     issue: Issue
-    page: number
-    pageSize: number
+    cursor: Cursor<Date, number> | null
+    limit?: number
   },
   db = database,
 ) {
+  // Get the commit history starting from the specified commit
+  // This includes the commit itself and all its ancestors
   const commitsRepo = new CommitsRepository(workspace.id, db)
   const commitHistory = await commitsRepo.getCommitsHistory({ commit })
   const commitIds = commitHistory.map((c) => c.id)
-  const limit = pageSize + 1
-  const offset = calculateOffset(page, pageSize)
-  const evalResults = await db
+
+  // Early return if no commits found (shouldn't happen, but defensive check)
+  if (commitIds.length === 0) {
+    return Result.ok({
+      spans: [] as Span[],
+      next: null,
+    })
+  }
+
+  // CTE to get row number for each deduped eval result for cursor-based pagination
+  // First, collect all deduped results ordered by latest eval date
+  const rankedEvalResults = db
     .select({
-      id: evaluationResultsV2.id,
-      evaluatedSpanId: evaluationResultsV2.evaluatedSpanId,
-      evaluatedTraceId: evaluationResultsV2.evaluatedTraceId,
-      createdAt: evaluationResultsV2.createdAt,
+      spanId: evaluationResultsV2.evaluatedSpanId,
+      traceId: evaluationResultsV2.evaluatedTraceId,
+      latestEvaluatedAt: max(evaluationResultsV2.createdAt).as(
+        'latestEvaluatedAt',
+      ),
+      latestEvalId: max(evaluationResultsV2.id).as('latestEvalId'),
     })
     .from(issueEvaluationResults)
     .innerJoin(
@@ -55,72 +83,57 @@ async function fetchPaginatedEvaluationResults(
         inArray(evaluationResultsV2.commitId, commitIds),
       ),
     )
-    .orderBy(desc(evaluationResultsV2.createdAt), desc(evaluationResultsV2.id))
-    .limit(limit)
-    .offset(offset)
-
-  const hasNextPage = evalResults.length > pageSize
-  const results = hasNextPage ? evalResults.slice(0, pageSize) : evalResults
-  return { results, hasNextPage }
-}
-
-/**
- * Fetches spans associated with an issue through evaluation results,
- * filtered by specific commits.
- *
- * Relationship: Issue → issueEvaluationResults → evaluationResultsV2 → commits → spans
- *
- * Why paginate by evaluation results when returning spans?
- * - There's a 1:1 relationship between evaluation results and spans
- *   (each evaluationResultV2 has exactly one evaluatedSpanId + evaluatedTraceId)
- * - Paginating 25 evaluation results = getting exactly 25 spans
- * - The UI displays spans ordered by when they were evaluated (evaluationResultsV2.createdAt)
- * - This approach lets us paginate on smaller tables (evaluation results) before
- *   touching the huge spans table, then fetch only the specific spans we need
- *
- * This ensures the query planner can apply LIMIT before scanning the spans table.
- */
-export async function getSpansByIssue(
-  {
-    workspace,
-    commit,
-    issue,
-    page,
-    pageSize,
-  }: {
-    workspace: Workspace
-    commit: Commit
-    issue: Issue
-    page: number
-    pageSize: number
-  },
-  db = database,
-) {
-  const { results: paginatedResults, hasNextPage } =
-    await fetchPaginatedEvaluationResults(
-      {
-        workspace,
-        commit,
-        issue,
-        page,
-        pageSize,
-      },
-      db,
+    .groupBy(
+      evaluationResultsV2.evaluatedSpanId,
+      evaluationResultsV2.evaluatedTraceId,
     )
+    .orderBy(
+      desc(max(evaluationResultsV2.createdAt)),
+      desc(max(evaluationResultsV2.id)),
+    )
+    .as('rankedEvalResults')
 
-  if (paginatedResults.length === 0) {
-    return Result.ok({
-      spans: [] as Span[],
-      hasNextPage: false,
+  // Apply cursor filter to the ranked results
+  const cursorConditions = cursor
+    ? sql`(${rankedEvalResults.latestEvaluatedAt}, ${rankedEvalResults.latestEvalId}) < (${cursor.value}, ${cursor.id})`
+    : undefined
+
+  // Second query: Join with span data and apply pagination
+  const spansColumns = getTableColumns(spans)
+  const rows = await db
+    .select({
+      span: spansColumns,
+      latestEvaluatedAt: rankedEvalResults.latestEvaluatedAt,
+      latestEvalId: rankedEvalResults.latestEvalId,
     })
-  }
+    .from(rankedEvalResults)
+    .innerJoin(
+      spans,
+      and(
+        eq(spans.id, rankedEvalResults.spanId),
+        eq(spans.traceId, rankedEvalResults.traceId),
+      ),
+    )
+    .where(and(eq(spans.workspaceId, workspace.id), cursorConditions))
+    .limit(limit + 1)
 
-  const spansRepository = new SpansRepository(workspace.id, db)
-  const orderedSpans =
-    await spansRepository.findByEvaluationResults(paginatedResults)
+  // Check if there's a next page by fetching one extra row
+  const hasMore = rows.length > limit
+  const paginatedSpans = hasMore ? rows.slice(0, limit) : rows
+
+  // Generate cursor for next page from the last item
+  const lastItem =
+    paginatedSpans.length > 0 ? paginatedSpans[paginatedSpans.length - 1] : null
+  const next: Cursor<Date, number> | null =
+    hasMore && lastItem && lastItem.latestEvaluatedAt && lastItem.latestEvalId
+      ? {
+          value: lastItem.latestEvaluatedAt,
+          id: lastItem.latestEvalId,
+        }
+      : null
 
   return Result.ok({
-    spans: orderedSpans,
-    hasNextPage,
+    spans: paginatedSpans.map((row) => row.span as Span),
+    next,
   })
 }

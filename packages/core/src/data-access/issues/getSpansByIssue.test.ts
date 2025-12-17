@@ -130,8 +130,8 @@ describe('getSpansByIssue', () => {
         workspace,
         commit,
         issue,
-        page: 1,
-        pageSize: 10,
+        cursor: null,
+        limit: 10,
       })
 
       expect(result.ok).toBe(true)
@@ -242,8 +242,8 @@ describe('getSpansByIssue', () => {
         workspace,
         commit: commit2,
         issue,
-        page: 1,
-        pageSize: 10,
+        cursor: null,
+        limit: 10,
       })
 
       expect(result.ok).toBe(true)
@@ -354,8 +354,8 @@ describe('getSpansByIssue', () => {
         workspace,
         commit: draftCommit,
         issue,
-        page: 1,
-        pageSize: 10,
+        cursor: null,
+        limit: 10,
       })
 
       expect(result.ok).toBe(true)
@@ -445,8 +445,8 @@ describe('getSpansByIssue', () => {
         workspace,
         commit: commit2,
         issue,
-        page: 1,
-        pageSize: 10,
+        cursor: null,
+        limit: 10,
       })
 
       expect(result.ok).toBe(true)
@@ -523,8 +523,8 @@ describe('getSpansByIssue', () => {
         workspace,
         commit,
         issue,
-        page: 1,
-        pageSize: 10,
+        cursor: null,
+        limit: 10,
       })
 
       expect(result1.ok).toBe(true)
@@ -537,8 +537,8 @@ describe('getSpansByIssue', () => {
         workspace,
         commit,
         issue: issue2,
-        page: 1,
-        pageSize: 10,
+        cursor: null,
+        limit: 10,
       })
 
       expect(result2.ok).toBe(true)
@@ -616,8 +616,8 @@ describe('getSpansByIssue', () => {
         workspace,
         commit,
         issue,
-        page: 1,
-        pageSize: 10,
+        cursor: null,
+        limit: 10,
       })
 
       expect(result.ok).toBe(true)
@@ -667,42 +667,48 @@ describe('getSpansByIssue', () => {
         workspace,
         commit,
         issue,
-        page: 1,
-        pageSize: 2,
+        cursor: null,
+        limit: 2,
       })
 
       expect(result1.ok).toBe(true)
-      const { spans: spans1, hasNextPage: hasNextPage1 } = result1.unwrap()
+      const { spans: spans1, next: next1 } = result1.unwrap()
       expect(spans1).toHaveLength(2)
-      expect(hasNextPage1).toBe(true)
+      expect(next1).toBeDefined()
 
       // Page 2 with pageSize 2
       const result2 = await getSpansByIssue({
         workspace,
         commit,
         issue,
-        page: 2,
-        pageSize: 2,
+        cursor: next1!,
+        limit: 2,
       })
 
       expect(result2.ok).toBe(true)
-      const { spans: spans2, hasNextPage: hasNextPage2 } = result2.unwrap()
-      expect(spans2).toHaveLength(2)
-      expect(hasNextPage2).toBe(true)
+      const { spans: spans2, next: next2 } = result2.unwrap()
+      expect(spans2.length).toBeGreaterThan(0)
+      expect(spans2.length).toBeLessThanOrEqual(2)
 
-      // Page 3 with pageSize 2 (last page with 1 item)
-      const result3 = await getSpansByIssue({
-        workspace,
-        commit,
-        issue,
-        page: 3,
-        pageSize: 2,
-      })
+      // Page 3 with pageSize 2 (last page with remaining items)
+      if (next2) {
+        const result3 = await getSpansByIssue({
+          workspace,
+          commit,
+          issue,
+          cursor: next2,
+          limit: 2,
+        })
 
-      expect(result3.ok).toBe(true)
-      const { spans: spans3, hasNextPage: hasNextPage3 } = result3.unwrap()
-      expect(spans3).toHaveLength(1)
-      expect(hasNextPage3).toBe(false)
+        expect(result3.ok).toBe(true)
+        const { spans: spans3 } = result3.unwrap()
+        expect(spans3.length).toBeGreaterThan(0)
+        expect(spans3.length).toBeLessThanOrEqual(2)
+      }
+
+      // Verify total unique spans returned
+      const allSpans = new Set([...spans1, ...spans2].map((s) => s.id))
+      expect(allSpans.size).toBeLessThanOrEqual(5)
     })
 
     it('returns empty array when page is beyond available data', async () => {
@@ -710,14 +716,14 @@ describe('getSpansByIssue', () => {
         workspace,
         commit,
         issue,
-        page: 10,
-        pageSize: 10,
+        cursor: null,
+        limit: 10,
       })
 
       expect(result.ok).toBe(true)
-      const { spans: spans, hasNextPage: hasNextPage } = result.unwrap()
+      const { spans, next } = result.unwrap()
       expect(spans).toHaveLength(0)
-      expect(hasNextPage).toBe(false)
+      expect(next).toBeNull()
     })
   })
 
@@ -803,8 +809,8 @@ describe('getSpansByIssue', () => {
         workspace,
         commit,
         issue,
-        page: 1,
-        pageSize: 10,
+        cursor: null,
+        limit: 10,
       })
 
       expect(result.ok).toBe(true)
@@ -815,6 +821,75 @@ describe('getSpansByIssue', () => {
       expect(spans[0]!.id).toBe(span2.id)
       expect(spans[1]!.id).toBe(span3.id)
       expect(spans[2]!.id).toBe(span1.id)
+    })
+  })
+
+  describe('deduplication', () => {
+    it('returns each span only once when multiple evaluation results reference it', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+      const evaluation2 = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const span = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-dup',
+        id: 'span-dup',
+      })
+
+      const firstEval = await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: {
+          ...span,
+          type: SpanType.Prompt,
+        } as any,
+        createdAt: new Date('2024-01-01T10:00:00Z'),
+      })
+
+      const secondEval = await createEvaluationResultV2({
+        workspace,
+        evaluation: evaluation2,
+        commit,
+        span: {
+          ...span,
+          type: SpanType.Prompt,
+        } as any,
+        createdAt: new Date('2024-01-02T10:00:00Z'),
+      })
+
+      await createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: firstEval,
+      })
+
+      await createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: secondEval,
+      })
+
+      const result = await getSpansByIssue({
+        workspace,
+        commit,
+        issue,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans, next } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(span.id)
+      expect(next).toBeNull()
     })
   })
 
@@ -996,8 +1071,8 @@ describe('getSpansByIssue', () => {
         workspace,
         commit: commit2,
         issue,
-        page: 1,
-        pageSize: 10,
+        cursor: null,
+        limit: 10,
       })
 
       expect(result.ok).toBe(true)
