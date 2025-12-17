@@ -176,7 +176,6 @@ export const API_ROUTES = {
                     root: `${documentRoot}/updateDocumentContent`,
                   },
                   evaluations: {
-                    root: `${documentRoot}/evaluations`,
                     detail: (evaluationUuid: string) => {
                       const evaluationRoot = `${documentRoot}/evaluations/${evaluationUuid}`
                       return {
