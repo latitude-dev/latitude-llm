@@ -30,6 +30,8 @@ export type RecalculateAlignmentMetricJobData = {
     traceId: string
   }[]
   hasEvaluationConfigurationChanged: boolean
+  latestPositiveSpanDate?: string
+  latestNegativeSpanDate?: string
 }
 
 /*
@@ -48,6 +50,8 @@ export const recalculateAlignmentMetricJob = async (
     spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
     spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     hasEvaluationConfigurationChanged,
+    latestPositiveSpanDate,
+    latestNegativeSpanDate,
   } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
@@ -105,6 +109,14 @@ export const recalculateAlignmentMetricJob = async (
 
     const alignmentHash = generateConfigurationHash(evaluation)
 
+    // Update cutoffs: use new dates if we processed spans, otherwise keep existing
+    const newPositiveCutoff =
+      latestPositiveSpanDate ??
+      evaluation.alignmentMetricMetadata?.lastProcessedPositiveSpanDate
+    const newNegativeCutoff =
+      latestNegativeSpanDate ??
+      evaluation.alignmentMetricMetadata?.lastProcessedNegativeSpanDate
+
     await updateEvaluationV2({
       evaluation,
       workspace,
@@ -112,6 +124,8 @@ export const recalculateAlignmentMetricJob = async (
       alignmentMetricMetadata: {
         confusionMatrix,
         alignmentHash,
+        lastProcessedPositiveSpanDate: newPositiveCutoff,
+        lastProcessedNegativeSpanDate: newNegativeCutoff,
       },
     }).then((r) => r.unwrap())
   } catch (error) {

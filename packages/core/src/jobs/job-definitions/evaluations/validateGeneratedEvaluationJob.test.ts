@@ -117,6 +117,8 @@ describe('validateGeneratedEvaluationJob', () => {
       spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
         { spanId: 'span-2', traceId: 'trace-2' },
       ],
+      latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+      latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
       ...overrides,
     }
   }
@@ -253,6 +255,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falseNegatives: 2,
           },
           alignmentHash: expect.any(String),
+          lastProcessedPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          lastProcessedNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         },
       })
 
@@ -538,9 +542,6 @@ describe('validateGeneratedEvaluationJob', () => {
 
       expect(mockUpdateEvaluationV2).toHaveBeenCalledWith(
         expect.objectContaining({
-          evaluation,
-          workspace,
-          commit,
           alignmentMetricMetadata: {
             alignmentHash: expect.any(String),
             confusionMatrix: {
@@ -549,6 +550,8 @@ describe('validateGeneratedEvaluationJob', () => {
               falsePositives: 5,
               falseNegatives: 5,
             },
+            lastProcessedPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+            lastProcessedNegativeSpanDate: '2024-01-15T11:00:00.000Z',
           },
         }),
       )

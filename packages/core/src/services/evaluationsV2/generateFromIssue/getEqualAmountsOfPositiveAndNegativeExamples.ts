@@ -26,10 +26,14 @@ export async function getEqualAmountsOfPositiveAndNegativeExamples(
     workspace,
     commit,
     issue,
+    positiveSpanCutoffDate,
+    negativeSpanCutoffDate,
   }: {
     workspace: Workspace
     commit: Commit
     issue: Issue
+    positiveSpanCutoffDate?: string
+    negativeSpanCutoffDate?: string
   },
   db = database,
 ) {
@@ -40,6 +44,7 @@ export async function getEqualAmountsOfPositiveAndNegativeExamples(
       issue,
       pageSize: MAX_COMPARISON_ANNOTATIONS,
       page: 1,
+      afterDate: negativeSpanCutoffDate,
     },
     db,
   )
@@ -56,9 +61,10 @@ export async function getEqualAmountsOfPositiveAndNegativeExamples(
         workspace,
         commit,
         documentUuid: issue.documentUuid,
-        pageSize: examplesThatShouldFailTheEvaluation.length,
+        pageSize: MAX_COMPARISON_ANNOTATIONS,
         excludeIssueId: issue.id,
         page: 1,
+        afterDate: positiveSpanCutoffDate,
       },
       db,
     )
@@ -73,10 +79,28 @@ export async function getEqualAmountsOfPositiveAndNegativeExamples(
     examplesThatShouldPassTheEvaluation.length,
   )
 
+  const examplesThatShouldPassTheEvaluationSliced =
+    examplesThatShouldPassTheEvaluation.slice(0, targetLength)
+  const examplesThatShouldFailTheEvaluationSliced =
+    examplesThatShouldFailTheEvaluation.slice(0, targetLength)
+
+  const getLatestDate = (spans: typeof examplesThatShouldPassTheEvaluation) => {
+    if (spans.length === 0) return undefined
+    return spans
+      .reduce((latest, span) => {
+        const spanDate = new Date(span.createdAt)
+        return spanDate > latest ? spanDate : latest
+      }, new Date(spans[0]!.createdAt))
+      .toISOString()
+  }
   return Result.ok({
-    examplesThatShouldPassTheEvaluationSliced:
-      examplesThatShouldPassTheEvaluation.slice(0, targetLength),
-    examplesThatShouldFailTheEvaluationSliced:
-      examplesThatShouldFailTheEvaluation.slice(0, targetLength),
+    examplesThatShouldPassTheEvaluationSliced,
+    examplesThatShouldFailTheEvaluationSliced,
+    latestPositiveSpanDate: getLatestDate(
+      examplesThatShouldPassTheEvaluationSliced,
+    ),
+    latestNegativeSpanDate: getLatestDate(
+      examplesThatShouldFailTheEvaluationSliced,
+    ),
   })
 }

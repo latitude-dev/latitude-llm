@@ -32,12 +32,14 @@ export async function getHITLSpansByIssue(
     issue,
     page,
     pageSize,
+    afterDate,
   }: {
     workspace: Workspace
     commit: Commit
     issue: Issue
     page: number
     pageSize: number
+    afterDate?: string
   },
   db = database,
 ) {
@@ -49,6 +51,7 @@ export async function getHITLSpansByIssue(
       issue,
       page,
       pageSize,
+      afterDate,
     })
 
   if (paginatedResults.length === 0) {

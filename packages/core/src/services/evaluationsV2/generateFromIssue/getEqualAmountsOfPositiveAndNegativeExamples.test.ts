@@ -215,8 +215,12 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
     const {
       examplesThatShouldFailTheEvaluationSliced,
       examplesThatShouldPassTheEvaluationSliced,
+      examplesThatShouldFailTheEvaluationSliced,
+      examplesThatShouldPassTheEvaluationSliced,
     } = result.unwrap()
     // Both should have the same length (minimum of 5 and 2 = 2)
+    expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(2)
+    expect(examplesThatShouldPassTheEvaluationSliced).toHaveLength(2)
     expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(2)
     expect(examplesThatShouldPassTheEvaluationSliced).toHaveLength(2)
     // Check that positive spans (with issues) are a subset (first 2 of 5)
@@ -305,7 +309,11 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
     const {
       examplesThatShouldFailTheEvaluationSliced,
       examplesThatShouldPassTheEvaluationSliced,
+      examplesThatShouldFailTheEvaluationSliced,
+      examplesThatShouldPassTheEvaluationSliced,
     } = result.unwrap()
+    expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(3)
+    expect(examplesThatShouldPassTheEvaluationSliced).toHaveLength(3) // Limited to match positive
     expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(3)
     expect(examplesThatShouldPassTheEvaluationSliced).toHaveLength(3) // Limited to match positive
     // Check that all positive spans are present (order may vary)
@@ -331,7 +339,11 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
     const {
       examplesThatShouldFailTheEvaluationSliced,
       examplesThatShouldPassTheEvaluationSliced,
+      examplesThatShouldFailTheEvaluationSliced,
+      examplesThatShouldPassTheEvaluationSliced,
     } = result.unwrap()
+    expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(0)
+    expect(examplesThatShouldPassTheEvaluationSliced).toHaveLength(0)
     expect(examplesThatShouldFailTheEvaluationSliced).toHaveLength(0)
     expect(examplesThatShouldPassTheEvaluationSliced).toHaveLength(0)
   })
@@ -385,6 +397,8 @@ describe('getEqualAmountsOfPositiveAndNegativeExamples', () => {
 
     expect(Result.isOk(result)).toBe(true)
     const {
+      examplesThatShouldFailTheEvaluationSliced,
+      examplesThatShouldPassTheEvaluationSliced,
       examplesThatShouldFailTheEvaluationSliced,
       examplesThatShouldPassTheEvaluationSliced,
     } = result.unwrap()

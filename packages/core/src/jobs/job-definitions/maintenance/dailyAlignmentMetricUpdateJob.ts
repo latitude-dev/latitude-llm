@@ -9,11 +9,13 @@ import {
   LlmEvaluationMetric,
 } from '../../../constants'
 import { Result } from '../../../lib/Result'
-import { NotFoundError } from '../../../lib/errors'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { CommitsRepository } from '../../../repositories/commitsRepository'
-import { getHITLSpansByDocument } from '../../../data-access/issues/getHITLSpansByDocument'
-import { getYesterdayCutoff } from '../../../lib/getYesterdayCutoff'
+import {
+  CommitsRepository,
+  IssuesRepository,
+  ProjectsRepository,
+} from '../../../repositories'
+import { hasUnprocessedSpans } from '../../../data-access/issues/hasUnprocessedSpans'
 import { captureException } from '../../../utils/datadogCapture'
 
 export type DailyAlignmentMetricUpdateJobData = Record<string, never>
@@ -45,62 +47,44 @@ export async function dailyAlignmentMetricUpdateJob(
     LlmEvaluationMetric.Binary
   >[]
 
-  const evaluationsGroupedByDocument = evaluationsWithIssues.reduce(
-    (acc, evaluation) => {
-      acc[evaluation.documentUuid] = [
-        ...(acc[evaluation.documentUuid] || []),
-        evaluation,
-      ]
-      return acc
-    },
-    {} as Record<
-      string,
-      EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>[]
-    >,
-  )
+  for (const evaluation of evaluationsWithIssues) {
+    try {
+      const workspace = await unsafelyFindWorkspace(evaluation.workspaceId)
+      if (!workspace) continue
 
-  for (const [documentUuid, evaluations] of Object.entries(
-    evaluationsGroupedByDocument,
-  )) {
-    const workspace = await unsafelyFindWorkspace(evaluations[0].workspaceId)
-    if (!workspace) throw new NotFoundError('Workspace not found')
-
-    const commitRepository = new CommitsRepository(workspace.id)
-    const commitResult = await commitRepository.getCommitById(
-      evaluations[0].commitId,
-    )
-    if (!Result.isOk(commitResult)) throw new NotFoundError('Commit not found')
-    const commit = commitResult.unwrap()
-
-    const spansResult = await getHITLSpansByDocument({
-      workspace,
-      commit,
-      documentUuid,
-      excludeIssueId: -1, // We want to get all spans, not just the ones that are not linked to any issue
-      page: 1,
-      pageSize: 1,
-    })
-
-    if (!Result.isOk(spansResult)) {
-      captureException(
-        new Error(`Error getting spans for document in dailyAlignmentMetricUpdateJob`), // prettier-ignore
-        { documentUuid, workspaceId: workspace.id, commitId: commit.id },
+      const commitRepository = new CommitsRepository(workspace.id)
+      const commitResult = await commitRepository.getCommitById(
+        evaluation.commitId,
       )
-      continue
-    }
+      if (!Result.isOk(commitResult)) continue
+      const commit = commitResult.unwrap()
 
-    const { spans } = spansResult.unwrap()
-    if (spans.length === 0) continue
+      const projectRepository = new ProjectsRepository(workspace.id)
+      const projectResult = await projectRepository.find(commit.projectId)
+      if (!Result.isOk(projectResult)) continue
+      const project = projectResult.unwrap()
 
-    const yesterdayCutoff = getYesterdayCutoff()
-    const hasSpansFromYesterday = spans.some(
-      (span) => new Date(span.createdAt) >= yesterdayCutoff,
-    )
+      const issueRepository = new IssuesRepository(workspace.id)
+      const issue = await issueRepository.findById({
+        project,
+        issueId: evaluation.issueId!,
+      })
+      if (!issue) continue
 
-    // We only will update the alignment metric of evaluations which have new HITL annotations added yesterday (since we update the alignment metric daily)
-    if (!hasSpansFromYesterday) continue
+      const hasNewSpansResult = await hasUnprocessedSpans({
+        workspace,
+        commit,
+        issue,
+        positiveSpanCutoffDate:
+          evaluation.alignmentMetricMetadata?.lastProcessedPositiveSpanDate,
+        negativeSpanCutoffDate:
+          evaluation.alignmentMetricMetadata?.lastProcessedNegativeSpanDate,
+      })
 
-    for (const evaluation of evaluations) {
+      if (!Result.isOk(hasNewSpansResult) || !hasNewSpansResult.unwrap()) {
+        continue
+      }
+
       await maintenanceQueue.add(
         'updateEvaluationAlignmentJob',
         {
@@ -112,6 +96,11 @@ export async function dailyAlignmentMetricUpdateJob(
         },
         { attempts: 1 },
       )
+    } catch (error) {
+      captureException(error as Error, {
+        evaluationUuid: evaluation.uuid,
+        workspaceId: evaluation.workspaceId,
+      })
     }
   }
 }

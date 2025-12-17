@@ -54,6 +54,8 @@ export async function createValidationFlow(
   const {
     examplesThatShouldPassTheEvaluationSliced,
     examplesThatShouldFailTheEvaluationSliced,
+    latestPositiveSpanDate,
+    latestNegativeSpanDate,
   } = examplesResult.unwrap()
 
   const spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation =
@@ -96,6 +98,8 @@ export async function createValidationFlow(
       documentUuid: issue.documentUuid,
       spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
       spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+      latestPositiveSpanDate,
+      latestNegativeSpanDate,
     },
     opts: {
       // Idempotency key
