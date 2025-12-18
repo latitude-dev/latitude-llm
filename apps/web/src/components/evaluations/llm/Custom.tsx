@@ -130,10 +130,13 @@ ${
           name='minScore'
           label='Minimum score'
           placeholder='0'
-          onChange={(value) => {
-            if (value === undefined) return
-            setConfiguration({ ...configuration, minScore: value })
-          }}
+          max={configuration.maxScore}
+          onChange={(value) =>
+            setConfiguration({
+              ...configuration,
+              minScore: value as number,
+            })
+          }
           errors={errors?.['minScore']}
           className='w-full'
           disabled={disabled}
@@ -144,10 +147,13 @@ ${
           name='maxScore'
           label='Maximum score'
           placeholder='5'
-          onChange={(value) => {
-            if (value === undefined) return
-            setConfiguration({ ...configuration, maxScore: value })
-          }}
+          min={configuration.minScore}
+          onChange={(value) =>
+            setConfiguration({
+              ...configuration,
+              maxScore: value as number,
+            })
+          }
           errors={errors?.['maxScore']}
           className='w-full'
           disabled={disabled}
