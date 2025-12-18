@@ -16,8 +16,7 @@ import {
   normalizeScore,
 } from '../shared'
 import { buildEvaluationParameters, runPrompt } from './shared'
-import { assembleTrace } from '../../tracing/traces/assemble'
-import { findCompletionSpanFromTrace } from '../../tracing/spans/findCompletionSpanFromTrace'
+import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
 
 export const LlmEvaluationCustomSpecification = {
   ...specification,
@@ -205,14 +204,14 @@ async function run(
     }),
   )
 
-  let completionSpan
-  const assembledtrace = await assembleTrace(
+  const assembledTraceResult = await assembleTraceWithMessages(
     { traceId: span.traceId, workspace },
     db,
-  ).then((r) => r.value)
-  if (assembledtrace) {
-    completionSpan = findCompletionSpanFromTrace(assembledtrace.trace)
+  )
+  if (!Result.isOk(assembledTraceResult)) {
+    return Result.error(new BadRequestError('Could not assemble trace'))
   }
+  const { completionSpan } = assembledTraceResult.unwrap()
 
   let result
   try {

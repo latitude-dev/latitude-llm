@@ -8,11 +8,8 @@ import { Result } from '../../lib/Result'
 import { EvaluationResultV2 } from '../../constants'
 import { Issue } from '../../schema/models/types/Issue'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { assembleTrace } from '../../services/tracing/traces/assemble'
-import {
-  adaptCompletionSpanMessagesToLegacy,
-  findCompletionSpanFromTrace,
-} from '../../services/tracing/spans/findCompletionSpanFromTrace'
+import { assembleTraceWithMessages } from '../../services/tracing/traces/assemble'
+import { adaptCompletionSpanMessagesToLegacy } from '../../services/tracing/spans/findCompletionSpanFromTrace'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { getHITLSpansByIssue } from './getHITLSpansByIssue'
 
@@ -66,16 +63,13 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
 
   const messagesAndEvaluationResults: SpanMessagesWithEvalResultReason[] = []
   for (const span of spans.spans) {
-    const assembledTrace = await assembleTrace({
+    const assembledTraceResult = await assembleTraceWithMessages({
       traceId: span.traceId,
       workspace: workspace,
     })
-    if (!Result.isOk(assembledTrace)) {
-      return assembledTrace
-    }
-    const completionSpan = findCompletionSpanFromTrace(
-      assembledTrace.value.trace,
-    )
+    if (!Result.isOk(assembledTraceResult)) return assembledTraceResult
+
+    const { completionSpan } = assembledTraceResult.unwrap()
     if (!completionSpan) {
       return Result.error(
         new UnprocessableEntityError('Could not find completion span'),

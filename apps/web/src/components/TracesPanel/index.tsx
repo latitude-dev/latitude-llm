@@ -1,12 +1,7 @@
 import { Ref, useMemo } from 'react'
 import { DetailsPanel } from '$/components/tracing/spans/DetailsPanel'
 import { useLastTrace } from '$/stores/conversations'
-import {
-  AssembledSpan,
-  AssembledTrace,
-  SpanType,
-  SpanWithDetails,
-} from '@latitude-data/constants'
+import { SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 import { MessageList } from '$/components/ChatWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -17,25 +12,7 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { AnnotationForms } from './AnnotationForms'
 import { TraceEvaluations } from './TraceEvaluations'
 import { MetadataInfoTabs } from '../MetadataInfoTabs'
-import {
-  adaptCompletionSpanMessagesToLegacy,
-  findCompletionSpanFromTrace,
-} from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
-
-const MAIN_SPAN_TYPES = new Set([
-  SpanType.Prompt,
-  SpanType.Chat,
-  SpanType.External,
-])
-
-function findMainSpan(
-  trace: AssembledTrace | undefined,
-): AssembledSpan | undefined {
-  if (!trace) return undefined
-  return trace.children.find((span) =>
-    MAIN_SPAN_TYPES.has(span.type as SpanType),
-  )
-}
+import { adaptCompletionSpanMessagesToLegacy } from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
 
 export const DEFAULT_TABS = [
   { label: 'Metadata', value: 'metadata' },
@@ -136,12 +113,10 @@ function TraceMessages({
 }: {
   documentLogUuid: string | null
 }) {
-  const { trace, isLoading } = useLastTrace({ documentLogUuid })
-
-  const mainSpan = findMainSpan(trace ?? undefined)
-  const mainMetadata = mainSpan?.metadata
-  const completionSpan = findCompletionSpanFromTrace(trace ?? undefined)
-  const messages = adaptCompletionSpanMessagesToLegacy(completionSpan)
+  const { completionSpan, isLoading } = useLastTrace({ documentLogUuid })
+  const messages = adaptCompletionSpanMessagesToLegacy(
+    completionSpan ?? undefined,
+  )
 
   if (isLoading) {
     return <LoadingText alignX='center' />
@@ -155,10 +130,5 @@ function TraceMessages({
     )
   }
 
-  const parameters =
-    mainMetadata && 'parameters' in mainMetadata
-      ? Object.keys(mainMetadata.parameters as Record<string, unknown>)
-      : undefined
-
-  return <MessageList debugMode messages={messages} parameters={parameters} />
+  return <MessageList debugMode messages={messages} />
 }

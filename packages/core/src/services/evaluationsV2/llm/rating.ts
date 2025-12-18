@@ -18,8 +18,7 @@ import {
   normalizeScore,
 } from '../shared'
 import { buildEvaluationParameters, promptTask, runPrompt } from './shared'
-import { assembleTrace } from '../../tracing/traces/assemble'
-import { findCompletionSpanFromTrace } from '../../tracing/spans/findCompletionSpanFromTrace'
+import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
 
 export const LlmEvaluationRatingSpecification = {
   ...specification,
@@ -217,14 +216,14 @@ async function run(
     throw new BadRequestError('Provider is required')
   }
 
-  let completionSpan
-  const assembledtrace = await assembleTrace(
+  const assembledTraceResult = await assembleTraceWithMessages(
     { traceId: span.traceId, workspace },
     db,
-  ).then((r) => r.value)
-  if (assembledtrace) {
-    completionSpan = findCompletionSpanFromTrace(assembledtrace.trace)
+  )
+  if (!Result.isOk(assembledTraceResult)) {
+    return Result.error(new BadRequestError('Could not assemble trace'))
   }
+  const { completionSpan } = assembledTraceResult.unwrap()
 
   const promptSchema = z.object({
     rating: z

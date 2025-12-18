@@ -6,8 +6,7 @@ import {
 import { extractActualOutput } from '../../services/evaluationsV2/outputs/extract'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { LegacyMessage } from '../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
-import { findCompletionSpanFromTrace } from '../../services/tracing/spans/findCompletionSpanFromTrace'
-import { assembleTrace } from '../../services/tracing/traces/assemble'
+import { assembleTraceWithMessages } from '../../services/tracing/traces/assemble'
 import { Result, TypedResult } from '../../lib/Result'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { Message } from 'promptl-ai'
@@ -15,7 +14,6 @@ import { Message } from 'promptl-ai'
 function isValidConfiguration(
   configuration: object,
 ): configuration is ActualOutputConfiguration {
-
   if (typeof configuration !== 'object' || configuration === null) {
     return false
   }
@@ -66,17 +64,16 @@ export async function buildEvaluatedSpan({
   if (!Result.isOk(configurationResult)) return configurationResult
 
   const configuration = configurationResult.value
-  const assembledtrace = await assembleTrace({
+  const assembledTraceResult = await assembleTraceWithMessages({
     traceId: span.traceId,
     workspace,
-  }).then((r) => r.value)
+  })
 
-  if (!assembledtrace) {
+  if (!Result.isOk(assembledTraceResult)) {
     return Result.error(new BadRequestError('Could not assemble trace'))
   }
 
-  const completionSpan = findCompletionSpanFromTrace(assembledtrace.trace)
-
+  const { completionSpan } = assembledTraceResult.unwrap()
   if (!completionSpan) {
     return Result.error(new BadRequestError('Could not find completion span'))
   }

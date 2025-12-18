@@ -54,7 +54,12 @@ export function useLastTrace(
   } = useSWR<LastTraceResponse>(route, fetcher, opts)
 
   return useMemo(
-    () => ({ trace: data?.trace ?? null, mutate, isLoading }),
+    () => ({
+      trace: data?.trace ?? null,
+      completionSpan: data?.completionSpan ?? null,
+      mutate,
+      isLoading,
+    }),
     [data, mutate, isLoading],
   )
 }
