@@ -4,7 +4,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 import { HistogramCell } from '../../HistogramCell'
-import { StatusBadges } from '../../IssueStatusBadge'
+import { StatusBadges, useIssueStatuses } from '../../IssueStatusBadge'
 import { LastSeenCell } from '../../LastSeenCell'
 
 export function IssueDetails({ issue }: { issue: SerializedIssue }) {
@@ -14,6 +14,7 @@ export function IssueDetails({ issue }: { issue: SerializedIssue }) {
     | undefined
 
   const isMerged = issue.mergedAt && mergedToIssue
+  const statuses = useIssueStatuses({ issue })
 
   return (
     <div className='flex flex-col gap-y-6'>
@@ -38,10 +39,14 @@ export function IssueDetails({ issue }: { issue: SerializedIssue }) {
         />
       ) : null}
       <div className='grid grid-cols-2 gap-y-4 items-center'>
-        <Text.H5 color='foregroundMuted'>Status</Text.H5>
-        <div>
-          <StatusBadges issue={issue} />
-        </div>
+        {statuses.length > 0 ? (
+          <>
+            <Text.H5 color='foregroundMuted'>Status</Text.H5>
+            <div>
+              <StatusBadges statuses={statuses} />
+            </div>
+          </>
+        ) : null}
 
         <Text.H5 color='foregroundMuted'>Last occurrence</Text.H5>
         <div>

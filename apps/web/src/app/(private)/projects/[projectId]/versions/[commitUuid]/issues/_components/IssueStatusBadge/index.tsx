@@ -27,8 +27,8 @@ function StatusTrigger({ label, dotProps, badgeVariant }: StatusTriggerProps) {
   )
 }
 
-export function StatusBadges({ issue }: { issue: SerializedIssue }) {
-  const statuses = useMemo<StatusTriggerProps[]>(() => {
+export function useIssueStatuses({ issue }: { issue: SerializedIssue }) {
+  return useMemo<StatusTriggerProps[]>(() => {
     const result: StatusTriggerProps[] = []
 
     // If is regressed we dont show resolved even if both are true
@@ -87,8 +87,10 @@ export function StatusBadges({ issue }: { issue: SerializedIssue }) {
 
     return result
   }, [issue])
+}
 
-  if (statuses.length === 0) return null
+export function StatusBadges({ statuses }: { statuses: StatusTriggerProps[] }) {
+  if (!statuses.length) return null
 
   return (
     <div className='flex flex-row gap-x-2'>

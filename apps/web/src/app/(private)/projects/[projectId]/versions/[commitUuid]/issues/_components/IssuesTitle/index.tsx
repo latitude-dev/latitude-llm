@@ -3,7 +3,7 @@ import { SerializedIssue } from '$/stores/issues'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { StatusBadges } from '../IssueStatusBadge'
+import { StatusBadges, useIssueStatuses } from '../IssueStatusBadge'
 import { EvaluationV2 } from '@latitude-data/core/constants'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { getEvaluationTypeSpecification } from '$/components/evaluations'
@@ -48,6 +48,7 @@ export function IssuesTitle({
   issue: SerializedIssue
   evaluations: EvaluationV2[]
 }) {
+  const statuses = useIssueStatuses({ issue })
   const evaluation = useMemo(
     () => evaluations.find((e) => e.issueId === issue.id),
     [evaluations, issue.id],
@@ -75,7 +76,7 @@ export function IssuesTitle({
         ) : null}
       </div>
       <div className='flex items-center gap-x-2'>
-        <StatusBadges issue={issue} />
+        <StatusBadges statuses={statuses} />
         <DocumentPath issue={issue} />
       </div>
     </div>
