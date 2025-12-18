@@ -24,13 +24,13 @@ export const unAssignIssueAction = withEvaluation
       .then((r) => r.unwrap())
 
     const response = await unassignEvaluationResultV2FromIssue({
-      result: result,
       evaluation: ctx.evaluation,
-      issue: issue,
       workspace: ctx.workspace,
+      result,
+      issue,
     }).then((r) => r.unwrap())
     issue = response.issue
     result = response.result
 
-    return result
+    return { ...result, issueId: null }
   })

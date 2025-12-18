@@ -5,8 +5,8 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MessageList } from '$/components/ChatWrapper'
 import DebugToggle from '$/components/DebugToggle'
 import { ROUTES } from '$/services/routes'
+import { EvaluationResultV2WithIssue } from '@latitude-data/core/schema/types'
 import {
-  EvaluationResultV2,
   EvaluationType,
   EvaluationV2,
   HumanEvaluationMetric,
@@ -193,7 +193,7 @@ function AnnotationFormWrapper({
 }: {
   evaluation: EvaluationV2<EvaluationType.Human, HumanEvaluationMetric>
   span: Span
-  result?: EvaluationResultV2<EvaluationType.Human, HumanEvaluationMetric>
+  result?: EvaluationResultV2WithIssue<EvaluationType.Human, HumanEvaluationMetric>
   onAnnotate: (span: Span) => void
 }) {
   const { project } = useCurrentProject()

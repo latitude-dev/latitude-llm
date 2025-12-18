@@ -42,6 +42,18 @@ export type ResultWithEvaluationV2<
   evaluation: EvaluationV2<T, M>
 }
 
+export type EvaluationResultV2WithIssue<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> = EvaluationResultV2<T, M> & { issueId: number | null }
+
+export type ResultWithEvaluationV2AndIssue<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> = ResultWithEvaluationV2<T, M> & {
+  result: EvaluationResultV2WithIssue<T, M>
+}
+
 export type EvaluationResultV2WithDetails<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,

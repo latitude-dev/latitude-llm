@@ -5,8 +5,8 @@ import { unAssignIssueAction } from '$/actions/evaluationsV2/results/issues/unAs
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { EvaluationResultV2 } from '@latitude-data/constants'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import { EvaluationResultV2WithIssue } from '@latitude-data/core/schema/types'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
@@ -25,10 +25,10 @@ export function useIssue(
     onIssueAssigned?: (_args: {
       data: {
         issue: Issue
-        evaluationResult: EvaluationResultV2
+        evaluationResult: EvaluationResultV2WithIssue
       }
     }) => void
-    onIssueUnAssigned?: (_args: { data: EvaluationResultV2 }) => void
+    onIssueUnAssigned?: (_args: { data: EvaluationResultV2WithIssue }) => void
     onIssueGenerated?: (_args: {
       data: {
         title: string

@@ -4,12 +4,12 @@ import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import { compact } from 'lodash-es'
 import useSWR, { SWRConfiguration } from 'swr'
-import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { ResultSpanResponse } from '$/app/api/projects/[projectId]/commits/[commitUuid]/documents/[documentUuid]/evaluations/results/spans/route'
 
 export default function useEvaluationResultsV2BySpans(
   {
@@ -31,14 +31,14 @@ export default function useEvaluationResultsV2BySpans(
     .detail(project.id)
     .commits.detail(commit.uuid)
     .documents.detail(document.documentUuid).evaluations.results.spans.root
-  const fetcher = useFetcher<ResultWithEvaluationV2[]>(route, {
+  const fetcher = useFetcher<ResultSpanResponse>(route, {
     searchParams: compactObject({
       spanId: spanId ?? undefined,
       documentLogUuid: documentLogUuid ?? undefined,
     }) as Record<string, string>,
   })
 
-  const { data = [], ...rest } = useSWR<ResultWithEvaluationV2[]>(
+  const { data = [], ...rest } = useSWR<ResultSpanResponse>(
     spanId && documentLogUuid
       ? compact([
           'evaluationResultsV2BySpans',

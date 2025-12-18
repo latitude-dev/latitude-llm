@@ -16,7 +16,6 @@ import { cn } from '@latitude-data/web-ui/utils'
 import {
   EvaluationType,
   EvaluationMetric,
-  EvaluationResultV2,
   EvaluationV2,
   SpanWithDetails,
   SpanType,
@@ -30,6 +29,7 @@ import { AnnotationsProgressIcon } from '$/components/AnnotationProgressPanel/An
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ROUTES } from '$/services/routes'
+import { EvaluationResultV2WithIssue } from '@latitude-data/core/schema/types'
 
 type IAnnotationForm<
   T extends EvaluationType,
@@ -40,7 +40,7 @@ type IAnnotationForm<
   disabled: boolean
   documentUuid: string
   commit: Commit
-  result: EvaluationResultV2<T, M> | undefined
+  result: EvaluationResultV2WithIssue<T, M> | undefined
   evaluation: EvaluationV2<T, M>
   span: SpanWithDetails<SpanType.Prompt>
   setDisabled: ReactStateDispatch<boolean>
@@ -88,7 +88,7 @@ export const AnnotationProvider = <
   commit: Commit
   span: SpanWithDetails<SpanType.Prompt>
   evaluation: EvaluationV2<T, M>
-  result: EvaluationResultV2<T, M> | undefined
+  result: EvaluationResultV2WithIssue<T, M> | undefined
   documentUuid: string
   isExpanded: boolean
   setIsExpanded: ReactStateDispatch<boolean>

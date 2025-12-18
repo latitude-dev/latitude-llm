@@ -19,6 +19,7 @@ import CompositeEvaluationSpecification from './composite'
 import HumanEvaluationSpecification from './human'
 import LlmEvaluationSpecification from './llm'
 import RuleEvaluationSpecification from './rule'
+import { EvaluationResultV2WithIssue } from '@latitude-data/core/schema/types'
 
 export type ConfigurationFormProps<
   T extends EvaluationType = EvaluationType,
@@ -82,7 +83,7 @@ export type AnnotationFormProps<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   evaluation: EvaluationV2<T, M>
-  result?: EvaluationResultV2<T, M>
+  result?: EvaluationResultV2WithIssue<T, M>
   onAnnotate?: (result: EvaluationResultV2<T, M>) => void
 }
 

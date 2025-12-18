@@ -35,5 +35,5 @@ export const createIssueAction = withEvaluation
     const issue = response.issue
     result = response.result
 
-    return { issue, evaluationResult: result }
+    return { issue, evaluationResult: { ...result, issueId: issue.id } }
   })

@@ -46,8 +46,10 @@ import { Issue } from '../schema/models/types/Issue'
 import { Workspace } from '../schema/models/types/Workspace'
 import {
   EvaluationResultV2WithDetails,
+  EvaluationResultV2WithIssue,
   EvaluationV2Stats,
   ResultWithEvaluationV2,
+  ResultWithEvaluationV2AndIssue,
 } from '../schema/types'
 import { CommitsRepository } from './commitsRepository'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
@@ -649,7 +651,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       this.db,
     )
 
-    const resultsWithEvaluations: ResultWithEvaluationV2[] = []
+    const resultsWithEvaluations: ResultWithEvaluationV2AndIssue[] = []
     for (const result of results) {
       const evaluation = evaluationsByCommit[result.commitUuid]!.find(
         (e) => e.uuid === result.evaluationUuid,
@@ -666,15 +668,15 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       const resultWithIssue = {
         ...result,
         issueId: activeAssignment?.issueId ?? null,
-      } as EvaluationResultV2
+      } as EvaluationResultV2WithIssue
 
       resultsWithEvaluations.push({
         result: resultWithIssue,
         evaluation,
-      } as ResultWithEvaluationV2)
+      } as ResultWithEvaluationV2AndIssue)
     }
 
-    return Result.ok<ResultWithEvaluationV2[]>(resultsWithEvaluations)
+    return Result.ok<ResultWithEvaluationV2AndIssue[]>(resultsWithEvaluations)
   }
 
   async listBySpanAndDocumentLogUuid({
@@ -693,7 +695,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       await spansRepository.listTraceIdsByLogUuid(documentLogUuid)
 
     if (traceIds.length === 0) {
-      return Result.ok<ResultWithEvaluationV2[]>([])
+      return Result.ok<ResultWithEvaluationV2AndIssue[]>([])
     }
 
     const results = await this.db
@@ -729,7 +731,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       this.db,
     )
 
-    const resultsWithEvaluations: ResultWithEvaluationV2[] = []
+    const resultsWithEvaluations: ResultWithEvaluationV2AndIssue[] = []
     for (const result of results) {
       const evaluation = evaluationsByCommit[result.commitUuid]!.find(
         (e) => e.uuid === result.evaluationUuid,
@@ -744,15 +746,15 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       const resultWithIssue = {
         ...result,
         issueId: activeAssignment?.issueId ?? null,
-      } as EvaluationResultV2
+      } as EvaluationResultV2WithIssue
 
       resultsWithEvaluations.push({
         result: resultWithIssue,
         evaluation,
-      } as ResultWithEvaluationV2)
+      } as ResultWithEvaluationV2AndIssue)
     }
 
-    return Result.ok<ResultWithEvaluationV2[]>(resultsWithEvaluations)
+    return Result.ok<ResultWithEvaluationV2AndIssue[]>(resultsWithEvaluations)
   }
 
   async countSinceDate(since: Date) {

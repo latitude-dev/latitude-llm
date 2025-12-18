@@ -5,13 +5,13 @@ import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { useMemo } from 'react'
 import {
   EvaluationConfiguration,
-  EvaluationResultV2,
   EvaluationType,
   HumanEvaluationMetric,
   SpanWithDetails,
   SpanType,
 } from '@latitude-data/constants'
 import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
+import { EvaluationResultV2WithIssue } from '@latitude-data/core/schema/types'
 
 export type UseAnnotationBySpanProps = {
   project: Project
@@ -86,7 +86,7 @@ export function useAnnotationBySpan({
           r.result.evaluatedSpanId === span.id &&
           r.result.evaluatedTraceId === span.traceId,
       )
-      .reduce<Record<string, EvaluationResultV2>>((acc, r) => {
+      .reduce<Record<string, EvaluationResultV2WithIssue>>((acc, r) => {
         const e = manualEvaluations.find((e) => r.evaluation.uuid === e.uuid)
         if (e) acc[r.evaluation.uuid] = r.result
 

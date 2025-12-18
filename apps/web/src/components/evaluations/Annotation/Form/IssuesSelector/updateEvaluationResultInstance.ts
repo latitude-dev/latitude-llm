@@ -1,4 +1,4 @@
-import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
+import { ResultWithEvaluationV2AndIssue } from '@latitude-data/core/schema/types'
 
 /**
  * Updates an evaluation result instance in a local collection of evaluation results
@@ -9,9 +9,9 @@ export function updateEvaluationResultInstance({
   prev,
   updatedResultWithEvaluation,
 }: {
-  prev: ResultWithEvaluationV2[] | undefined
-  updatedResultWithEvaluation: ResultWithEvaluationV2
-}): ResultWithEvaluationV2[] {
+  prev: ResultWithEvaluationV2AndIssue[] | undefined
+  updatedResultWithEvaluation: ResultWithEvaluationV2AndIssue
+}): ResultWithEvaluationV2AndIssue[] {
   const existingResults = prev ?? []
   const { evaluatedSpanId, evaluatedTraceId } =
     updatedResultWithEvaluation.result

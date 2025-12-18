@@ -15,7 +15,6 @@ import { Message } from 'promptl-ai'
 function isValidConfiguration(
   configuration: object,
 ): configuration is ActualOutputConfiguration {
-
   if (typeof configuration !== 'object' || configuration === null) {
     return false
   }
