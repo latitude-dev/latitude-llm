@@ -35,42 +35,37 @@ export function useNumberInput({
   min = -Infinity,
   max = Infinity,
 }: NumberInputProps & { ref?: Ref<HTMLInputElement> }) {
-  const isControlledRef = useRef(controlledValue !== undefined)
-  if (controlledValue !== undefined) {
-    isControlledRef.current = true
-  }
-  const isControlled = isControlledRef.current
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue)
-  const currentValue = isControlled ? controlledValue : uncontrolledValue
+  const rawValue =
+    controlledValue !== undefined ? controlledValue : uncontrolledValue
+  const currentValue = buildValue(rawValue, min, max)
 
   const onChangeRef = useRef(onChange)
-  useEffect(() => {
-    onChangeRef.current = onChange
-  }, [onChange])
+  onChangeRef.current = onChange
+
+  const minRef = useRef(min)
+  const maxRef = useRef(max)
+  minRef.current = min
+  maxRef.current = max
 
   const internalRef = useRef<HTMLInputElement>(null)
   const [focused, setFocused] = useState(false)
 
-  const updateValue = useCallback(
-    (next: number | undefined) => {
-      const bounded = buildValue(next, min, max)
-      if (!isControlled) {
-        setUncontrolledValue(bounded)
-      }
-      onChangeRef.current?.(bounded)
-    },
-    [isControlled, min, max],
-  )
+  const updateValue = useCallback((next: number | undefined) => {
+    const bounded = buildValue(next, minRef.current, maxRef.current)
+    setUncontrolledValue(bounded)
+    onChangeRef.current?.(bounded)
+  }, [])
 
   const increment = useCallback(() => {
-    const next = Math.min((currentValue ?? 0) + 1, max)
+    const next = Math.min((currentValue ?? 0) + 1, maxRef.current)
     updateValue(next)
-  }, [currentValue, max, updateValue])
+  }, [currentValue, updateValue])
 
   const decrement = useCallback(() => {
-    const next = Math.max((currentValue ?? 0) - 1, min)
+    const next = Math.max((currentValue ?? 0) - 1, minRef.current)
     updateValue(next)
-  }, [currentValue, min, updateValue])
+  }, [currentValue, updateValue])
 
   const onFocus = useCallback(() => setFocused(true), [])
   const onBlur = useCallback(() => {
