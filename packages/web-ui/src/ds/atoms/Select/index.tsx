@@ -23,6 +23,7 @@ export type SelectOption<V extends unknown = unknown> = {
   label: string
   value: V
   icon?: ReactNode | IconName
+  hoverDescription?: string
 }
 
 export type SelectOptionGroup<V extends unknown = unknown> = {
@@ -59,6 +60,7 @@ export type SelectProps<V extends unknown = unknown> = Omit<
     searchable?: boolean
     searchPlaceholder?: string
     searchableEmptyMessage?: string
+    searchLoading?: boolean
     onSearch?: (search: string) => void
     open?: boolean
     onOpenChange?: (open: boolean) => void
@@ -96,6 +98,7 @@ export function Select<V extends unknown = unknown>({
   removable = false,
   searchable = false,
   searchableEmptyMessage,
+  searchLoading = false,
   onSearch,
   searchPlaceholder,
   open: controlledOpen,
@@ -190,6 +193,7 @@ export function Select<V extends unknown = unknown>({
             >
               {searchable ? (
                 <SearchableSelectList<V>
+                  loading={searchLoading}
                   options={options}
                   onChange={_onChange}
                   onSearchChange={onSearch}

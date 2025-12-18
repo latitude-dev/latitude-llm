@@ -45,11 +45,12 @@ type CommandInputProps = ComponentPropsWithoutRef<
   typeof CommandPrimitive.Input
 > & {
   searchIcon?: IconName | null
+  loading?: boolean
 }
 const CommandInput = forwardRef<
   ElementRef<typeof CommandPrimitive.Input>,
   CommandInputProps
->(({ className, searchIcon = 'search', ...props }, ref) => (
+>(({ className, searchIcon = 'search', loading = false, ...props }, ref) => (
   <div
     className='flex items-center border-b px-1 gap-x-1'
     cmdk-input-wrapper=''
@@ -65,6 +66,9 @@ const CommandInput = forwardRef<
       )}
       {...props}
     />
+    {loading && (
+      <Icon name='loader' spin className='h-4 w-4 shrink-0 opacity-50' />
+    )}
   </div>
 ))
 

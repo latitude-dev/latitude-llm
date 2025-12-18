@@ -161,7 +161,10 @@ describe('GET handler for evaluatedSpans', () => {
       ...params,
       spanType: SpanType.Prompt,
     })
-    return { promptSpan: result.evaluableSpan, completionSpan: result.completionSpan }
+    return {
+      promptSpan: result.evaluableSpan,
+      completionSpan: result.completionSpan,
+    }
   }
 
   describe('unauthorized', () => {

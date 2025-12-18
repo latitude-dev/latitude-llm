@@ -68,7 +68,7 @@ export function useSearchIssues(
       group,
     }),
     fetcher,
-    swrConfig,
+    { keepPreviousData: true, ...swrConfig },
   )
 
   return useMemo(() => ({ data, isLoading }), [data, isLoading])
