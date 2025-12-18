@@ -210,6 +210,7 @@ export class IssuesRepository extends Repository<Issue> {
       .select({
         id: issues.id,
         title: issues.title,
+        description: issues.description,
         documentUuid: issues.documentUuid,
       })
       .from(issues)

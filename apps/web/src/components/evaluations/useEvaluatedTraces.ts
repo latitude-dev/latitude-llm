@@ -22,7 +22,10 @@ export function useEvaluatedTraces(
 ) {
   const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([])
   const [currentCursor, setCurrentCursor] = useState<string | null>(null)
-  const configString = useMemo(() => JSON.stringify(configuration), [configuration])
+  const configString = useMemo(
+    () => JSON.stringify(configuration),
+    [configuration],
+  )
   const fetcher = useFetcher<EvaluatedSpansResponse>(
     API_ROUTES.evaluatedSpans.root,
     {
@@ -37,7 +40,14 @@ export function useEvaluatedTraces(
   )
 
   const { data, error, isLoading } = useSWR<EvaluatedSpansResponse>(
-    ['evaluatedSpans', projectId, commitUuid, documentUuid, currentCursor, configString],
+    [
+      'evaluatedSpans',
+      projectId,
+      commitUuid,
+      documentUuid,
+      currentCursor,
+      configString,
+    ],
     fetcher,
     {
       ...opts,

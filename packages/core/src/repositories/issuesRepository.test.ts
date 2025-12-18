@@ -215,6 +215,8 @@ describe('IssuesRepository - Group Filtering', () => {
       // All issues should not be ignored or merged
       issues.forEach((issue) => {
         expect(issue.documentUuid).toBe(document.documentUuid)
+        expect(issue.title).toBeDefined()
+        expect(issue.description).toBeDefined()
       })
     })
   })

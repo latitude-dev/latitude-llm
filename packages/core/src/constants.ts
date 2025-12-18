@@ -370,7 +370,6 @@ export type DocumentLogFilterOptions = z.infer<
 
 export const SUPPORTED_IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
 
-
 export type DiffValue = {
   newValue?: string
   oldValue?: string

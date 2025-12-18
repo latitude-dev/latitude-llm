@@ -122,6 +122,7 @@ export function ConfigurationAdvancedForm<
   const options = useMemo(() => {
     const list = issues.map((issue) => ({
       label: issue.title,
+      hoverDescription: issue.description,
       value: issue.id,
     }))
 
@@ -130,6 +131,7 @@ export function ConfigurationAdvancedForm<
       if (!exists) {
         list.unshift({
           label: selectedIssue.title,
+          hoverDescription: selectedIssue.description,
           value: selectedIssue.id,
         })
       }
@@ -341,8 +343,9 @@ export function ConfigurationAdvancedForm<
             name='issueId'
             placeholder='Select an issue'
             searchPlaceholder='Search issues...'
-            loading={isLoadingIssues || isLoadingSelectedIssue}
-            disabled={disabled || isLoadingIssues || isLoadingSelectedIssue}
+            loading={isLoadingSelectedIssue}
+            searchLoading={isLoadingIssues}
+            disabled={disabled || isLoadingSelectedIssue}
             options={options}
             onSearch={onSearch}
             onChange={(value) => setIssueId?.(value ?? null)}

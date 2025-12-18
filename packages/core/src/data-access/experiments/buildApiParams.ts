@@ -1,8 +1,6 @@
 import { z } from 'zod'
 import { formatISO } from 'date-fns'
-import {
-  LogSources,
-} from '../../constants'
+import { LogSources } from '../../constants'
 import { paramsToString } from '../../lib/pagination/buildPaginatedUrl'
 
 const EXPERIMENTS_ENCODED_PARAMS = ['customIdentifier']
@@ -17,9 +15,7 @@ const experimentsFiltersSchema = z.object({
   experimentId: z.number().optional(),
 })
 
-type ExperimentsFilters = z.infer<
-  typeof experimentsFiltersSchema
->
+type ExperimentsFilters = z.infer<typeof experimentsFiltersSchema>
 type CreatedAt = ExperimentsFilters['createdAt']
 
 function formatCreatedAtParam(value: CreatedAt) {
@@ -56,8 +52,7 @@ function processFilterOptions(filterOptions?: ExperimentsFilters) {
   return paramsToString({
     params: {
       ...filterOptions,
-      createdAt: formatCreatedAtParam(filterOptions.createdAt)
-        ?.formattedValue,
+      createdAt: formatCreatedAtParam(filterOptions.createdAt)?.formattedValue,
     },
     paramsToEncode: EXPERIMENTS_ENCODED_PARAMS,
   })

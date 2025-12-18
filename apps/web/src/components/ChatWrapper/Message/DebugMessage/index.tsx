@@ -63,7 +63,10 @@ export const DebugMessage = memo(
           />
           <div className='flex flex-col gap-1 min-w-0'>
             {collapsedMessage ? (
-              <button className='block min-w-0' onClick={() => setCollapseMessage(false)}>
+              <button
+                className='block min-w-0'
+                onClick={() => setCollapseMessage(false)}
+              >
                 <Text.H6 color='foregroundMuted' lineClamp={3}>
                   {contentsAsString}
                 </Text.H6>
