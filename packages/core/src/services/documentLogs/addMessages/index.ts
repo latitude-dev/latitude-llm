@@ -37,6 +37,18 @@ type AddMessagesArgs = {
   testDeploymentId?: number
 }
 
+/**
+ * TODO(LegacyProviderLogs) BIG BEAUTIFUL REFACTOR NEEDED
+ *
+ * We migrated from documentLogs and providerLogs
+ * long time ago. But we're still using it for doing chat
+ *
+ * I guess this is related with the async nature of traces.
+ * We need to address this at some point.
+ *
+ * Look for other related todos. The main AI streaming is still
+ * creating `providerLogs`.
+ */
 export async function addMessages(
   {
     workspace,

@@ -6,7 +6,7 @@ const actualOutputConfiguration = z.object({
     .enum(['text', 'reasoning', 'image', 'file', 'tool_call'])
     .optional(),
   parsingFormat: z.enum(['string', 'json']),
-  fieldAccessor: z.string().optional(), // Field accessor to get the output from if it's a key-value format
+  fieldAccessor: z.string().optional(),
 })
 export type ActualOutputConfiguration = z.infer<
   typeof actualOutputConfiguration

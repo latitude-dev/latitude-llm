@@ -1,4 +1,4 @@
-import { useSerializedLogs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/evaluations/[evaluationUuid]/editor/_components/EvaluationEditor/Playground/EvaluationParams/HistoryLogParams/useSerializedLogs'
+import { useEffect, useMemo, useState } from 'react'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
@@ -24,10 +24,10 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwitch'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
-import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
 import { useDebounce, useDebouncedCallback } from 'use-debounce'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
+import { useNavigate } from '$/hooks/useNavigate'
+import { useEvaluatedTraces } from './useEvaluatedTraces'
 
 const MESSAGE_SELECTION_OPTIONS =
   baseEvaluationConfiguration.shape.actualOutput.shape.messageSelection.options.map(
@@ -160,6 +160,11 @@ export function ConfigurationAdvancedForm<
 
   const metricSpecification = typeSpecification.metrics[metric]
   if (!metricSpecification) return null
+
+  const canAssignIssue =
+    type !== EvaluationType.Composite &&
+    !metricSpecification.requiresExpectedOutput &&
+    metricSpecification.supportsLiveEvaluation
 
   return (
     <>
@@ -323,30 +328,28 @@ export function ConfigurationAdvancedForm<
           <ActualOutputTest configuration={testConfiguration} />
         </div>
       )}
-      {type !== EvaluationType.Composite &&
-        !metricSpecification.requiresExpectedOutput &&
-        metricSpecification.supportsLiveEvaluation && (
-          <FormFieldGroup
-            label='Linked issue'
-            description='Track and monitor an issue using failing results from this evaluation'
-            layout='horizontal'
-          >
-            <Select
-              searchable
-              removable
-              value={selectedIssue?.id}
-              name='issueId'
-              placeholder='Select an issue'
-              searchPlaceholder='Search issues...'
-              loading={isLoadingIssues || isLoadingSelectedIssue}
-              disabled={disabled || isLoadingIssues || isLoadingSelectedIssue}
-              options={options}
-              onSearch={onSearch}
-              onChange={(value) => setIssueId?.(value ?? null)}
-              errors={errors?.['issueId']}
-            />
-          </FormFieldGroup>
-        )}
+      {canAssignIssue && (
+        <FormFieldGroup
+          label='Linked issue'
+          description='Track and monitor an issue using failing results from this evaluation'
+          layout='horizontal'
+        >
+          <Select
+            searchable
+            removable
+            value={selectedIssue?.id}
+            name='issueId'
+            placeholder='Select an issue'
+            searchPlaceholder='Search issues...'
+            loading={isLoadingIssues || isLoadingSelectedIssue}
+            disabled={disabled || isLoadingIssues || isLoadingSelectedIssue}
+            options={options}
+            onSearch={onSearch}
+            onChange={(value) => setIssueId?.(value ?? null)}
+            errors={errors?.['issueId']}
+          />
+        </FormFieldGroup>
+      )}
     </>
   )
 }
@@ -356,24 +359,23 @@ function ActualOutputTest({
 }: {
   configuration: ActualOutputConfiguration
 }) {
+  const router = useNavigate()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-
-  const router = useRouter()
-
   const {
-    selectedLog: log,
-    isLoadingLog: isLoadingLog,
-    isLoading: isLoadingCount,
-    position: logPosition,
-    count: totalLogs,
-    onNextPage: nextLog,
-    onPrevPage: prevLog,
-    error: error,
-  } = useSerializedLogs({ document, configuration })
-
-  const isLoading = isLoadingLog || isLoadingCount
+    selectedTrace,
+    isLoading,
+    onNextPage,
+    hasNextPage,
+    onPrevPage,
+    hasPrevPage,
+  } = useEvaluatedTraces({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+    configuration,
+  })
 
   if (isLoading) {
     return (
@@ -416,7 +418,7 @@ function ActualOutputTest({
     )
   }
 
-  if (!totalLogs) {
+  if (!isLoading && !selectedTrace) {
     return (
       <Alert
         variant='warning'
@@ -454,69 +456,16 @@ function ActualOutputTest({
     )
   }
 
-  if (logPosition === undefined || totalLogs === undefined) {
-    return (
-      <Alert variant='destructive' description='Error while fetching logs' />
-    )
-  }
-
-  if (log === undefined) {
-    return (
-      <>
-        <div className='w-full flex justify-between items-center gap-4'>
-          <span className='flex items-center gap-2'>
-            <Text.H6B color='foregroundMuted'>
-              Log {logPosition} of {totalLogs}
-            </Text.H6B>
-          </span>
-          <div className='flex items-center gap-2'>
-            <Button
-              variant='outline'
-              size='icon'
-              iconProps={{
-                name: 'arrowLeft',
-                widthClass: 'w-4',
-                heightClass: 'h-4',
-              }}
-              onClick={(event) => {
-                event.preventDefault()
-                prevLog(logPosition!)
-              }}
-              disabled={logPosition! <= 1}
-            />
-            <Button
-              variant='outline'
-              size='icon'
-              iconProps={{
-                name: 'arrowRight',
-                widthClass: 'w-4',
-                heightClass: 'h-4',
-              }}
-              onClick={(event) => {
-                event.preventDefault()
-                nextLog(logPosition!)
-              }}
-              disabled={logPosition! >= totalLogs}
-            />
-          </div>
-        </div>
-        <Alert
-          variant='destructive'
-          description={error || 'Error while fetching logs'}
-        />
-      </>
-    )
-  }
+  const trace = selectedTrace!
 
   return (
     <>
       <div className='w-full flex justify-between items-center gap-4'>
-        <span className='flex items-center gap-2'>
-          <Text.H6B color='foregroundMuted'>
-            Log {logPosition} of {totalLogs}
-          </Text.H6B>
-          <ClickToCopyUuid uuid={log.uuid} />
-        </span>
+        {trace.documentLogUuid ? (
+          <span className='flex items-center gap-2'>
+            <ClickToCopyUuid uuid={trace.documentLogUuid} />
+          </span>
+        ) : null}
         <div className='flex items-center gap-2'>
           <Button
             variant='outline'
@@ -528,9 +477,9 @@ function ActualOutputTest({
             }}
             onClick={(event) => {
               event.preventDefault()
-              prevLog(logPosition!)
+              onPrevPage()
             }}
-            disabled={logPosition! <= 1}
+            disabled={!hasPrevPage}
           />
           <Button
             variant='outline'
@@ -542,15 +491,15 @@ function ActualOutputTest({
             }}
             onClick={(event) => {
               event.preventDefault()
-              nextLog(logPosition!)
+              onNextPage()
             }}
-            disabled={logPosition! >= totalLogs}
+            disabled={!hasNextPage}
           />
         </div>
       </div>
-      <div className='w-full flex flex-col gap-2'>
-        <div className='w-full max-h-60 custom-scrollbar scrollable-indicator'>
-          <MessageList messages={log.messages.all} debugMode />
+      <div className='min-w-0 flex flex-col gap-2'>
+        <div className='flex min-w-0 max-h-60 custom-scrollbar scrollable-indicator'>
+          <MessageList messages={trace.messages} debugMode />
         </div>
         <LineSeparator text='Actual output' />
         <div className='w-full max-h-60 custom-scrollbar scrollable-indicator'>
@@ -561,7 +510,7 @@ function ActualOutputTest({
               whiteSpace='preWrap'
               wordBreak='breakAll'
             >
-              {log.actualOutput}
+              {trace.actualOutput}
             </Text.H5>
           </div>
         </div>

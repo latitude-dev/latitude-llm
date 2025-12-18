@@ -1,8 +1,5 @@
-import type {
-  DocumentLogFilterOptions,
-  RunSourceGroup,
-} from '@latitude-data/core/constants'
-import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
+import { buildExperimentsApiParams } from '@latitude-data/core/data-access/experiments/buildApiParams'
+import type { RunSourceGroup } from '@latitude-data/core/constants'
 
 type PaginationParameters = { page: number; pageSize: number }
 
@@ -16,6 +13,9 @@ export const API_ROUTES = {
         }),
       },
     }),
+    countByDocument: {
+      root: '/api/traces/count-by-document',
+    },
   },
   workspaces: {
     current: '/api/workspaces/current',
@@ -121,6 +121,9 @@ export const API_ROUTES = {
       run: `/api/documents/${documentUuid}/run`,
     }),
   },
+  evaluatedSpans: {
+    root: '/api/evaluatedSpans',
+  },
   projects: {
     root: '/api/projects',
     detail: (id: number) => {
@@ -128,9 +131,6 @@ export const API_ROUTES = {
       return {
         forImport: {
           root: `${projectRoot}/documents-for-import`,
-        },
-        stats: {
-          root: `${projectRoot}/stats`,
         },
         commits: {
           root: `${projectRoot}/commits`,
@@ -254,125 +254,13 @@ export const API_ROUTES = {
               experiments: {
                 root: `${documentRoot}/experiments`,
                 paginated: (pagination: Partial<PaginationParameters>) =>
-                  generateDocumentLogsApiRouteWithParams({
+                  buildExperimentsApiParams({
                     path: `${documentRoot}/experiments`,
                     params: pagination,
                   }),
                 count: `${documentRoot}/experiments/count`,
                 comparison: (experimentUuids: string[]) =>
                   `${documentRoot}/experiments/comparison?uuids=${experimentUuids.join(',')}`,
-              },
-              evaluatedLogs: {
-                root: ({
-                  page,
-                  pageSize,
-                  filterOptions,
-                  configuration,
-                }: Partial<PaginationParameters> & {
-                  filterOptions: DocumentLogFilterOptions
-                  configuration?: string
-                }) =>
-                  generateDocumentLogsApiRouteWithParams({
-                    path: `${documentRoot}/evaluatedSpans`,
-                    params: {
-                      page,
-                      pageSize,
-                      filterOptions,
-                      configuration,
-                    },
-                    paramsToEncode: ['configuration'],
-                  }),
-              },
-              logs: {
-                root: ({
-                  page,
-                  pageSize,
-                  filterOptions,
-                  excludeErrors,
-                }: Partial<PaginationParameters> & {
-                  excludeErrors?: boolean
-                  filterOptions: DocumentLogFilterOptions
-                }) =>
-                  generateDocumentLogsApiRouteWithParams({
-                    path: `${documentRoot}/logs`,
-                    params: {
-                      page,
-                      pageSize,
-                      excludeErrors,
-                      filterOptions,
-                    },
-                  }),
-                pagination: ({
-                  page,
-                  pageSize,
-                  commitUuid,
-                  excludeErrors,
-                  filterOptions,
-                }: PaginationParameters & {
-                  commitUuid: string
-                  excludeErrors?: boolean
-                  filterOptions: DocumentLogFilterOptions
-                }) =>
-                  generateDocumentLogsApiRouteWithParams({
-                    path: `${documentRoot}/logs/pagination`,
-                    params: {
-                      page,
-                      pageSize,
-                      commitUuid,
-                      excludeErrors,
-                      filterOptions,
-                    },
-                  }),
-                aggregations: (filterOptions: DocumentLogFilterOptions) =>
-                  generateDocumentLogsApiRouteWithParams({
-                    path: `${documentRoot}/logs/aggregations`,
-                    params: {
-                      filterOptions,
-                    },
-                  }),
-                dailyCount: ({
-                  filterOptions,
-                  days,
-                }: {
-                  filterOptions: DocumentLogFilterOptions
-                  days?: number
-                }) =>
-                  generateDocumentLogsApiRouteWithParams({
-                    path: `${documentRoot}/logs/daily-count`,
-                    params: {
-                      days,
-                      filterOptions,
-                    },
-                  }),
-                limited: ({
-                  from,
-                  filters,
-                }: {
-                  from: string | null
-                  filters: DocumentLogFilterOptions
-                }) =>
-                  generateDocumentLogsApiRouteWithParams({
-                    path: `${documentRoot}/logs/limited`,
-                    params: { from, filterOptions: filters },
-                  }),
-                detail: (documentLogUuid: string) => {
-                  return {
-                    position: ({
-                      excludeErrors,
-                      filterOptions,
-                    }: {
-                      excludeErrors?: boolean
-                      filterOptions: DocumentLogFilterOptions
-                    }) =>
-                      generateDocumentLogsApiRouteWithParams({
-                        path: `${documentRoot}/logs/${documentLogUuid}/position`,
-                        params: {
-                          excludeErrors,
-                          filterOptions,
-                        },
-                      }),
-                  }
-                },
               },
               issues: {
                 search: `${documentRoot}/issues/search`,
@@ -415,9 +303,6 @@ export const API_ROUTES = {
     root: '/api/datasets',
     create: '/api/datasets/create',
     detail: (id: number) => ({ root: `/api/datasets/${id}` }),
-    previewLogs: {
-      root: '/api/datasets/preview-logs',
-    },
     previewSpans: {
       root: '/api/datasets/preview-spans',
     },
@@ -429,25 +314,6 @@ export const API_ROUTES = {
       return {
         root: `/api/dataset-rows/${id}/position`,
       }
-    },
-  },
-  documentLogs: {
-    detail: ({ id }: { id: number }) => ({
-      root: `/api/documentLogs/${id}`,
-    }),
-    uuids: {
-      detail: ({ uuid }: { uuid: string }) => {
-        const root = `/api/documentLogs/uuids/${uuid}`
-        return {
-          root,
-        }
-      },
-    },
-    evaluationResults: {
-      root: `/api/documentLogs/evaluation-results`,
-    },
-    downloadLogs: {
-      root: `/api/documentLogs/download-logs`,
     },
   },
   spans: {

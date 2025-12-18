@@ -13,30 +13,6 @@ import Transaction from '../../lib/Transaction'
 import { documentLogs } from '../../schema/models/documentLogs'
 import { createProviderLog } from '../providerLogs/create'
 
-export type CreateDocumentLogProps = {
-  commit: Commit
-  data: {
-    uuid: string
-    documentUuid: string
-    parameters: Record<string, unknown>
-    resolvedContent: string
-    duration?: number
-    source: LogSources
-    customIdentifier?: string
-    createdAt?: Date
-    providerLog?: {
-      messages: Message[]
-      model?: string
-      responseText?: string
-      toolCalls?: ToolCall[]
-      duration?: number
-      usage?: LanguageModelUsage
-      costInMillicents?: number
-    }
-    experimentId?: number
-  }
-}
-
 export async function createDocumentLog(
   {
     data: {
@@ -52,7 +28,29 @@ export async function createDocumentLog(
       experimentId,
     },
     commit,
-  }: CreateDocumentLogProps,
+  }: {
+    commit: Commit
+    data: {
+      uuid: string
+      documentUuid: string
+      parameters: Record<string, unknown>
+      resolvedContent: string
+      duration?: number
+      source: LogSources
+      customIdentifier?: string
+      createdAt?: Date
+      providerLog?: {
+        messages: Message[]
+        model?: string
+        responseText?: string
+        toolCalls?: ToolCall[]
+        duration?: number
+        usage?: LanguageModelUsage
+        costInMillicents?: number
+      }
+      experimentId?: number
+    }
+  },
   transaction = new Transaction(),
 ) {
   const workspace = await findWorkspaceFromCommit(commit)

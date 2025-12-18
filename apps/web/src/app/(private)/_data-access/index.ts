@@ -2,14 +2,6 @@ import { cache } from 'react'
 
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { cache as redis } from '@latitude-data/core/cache'
-import {
-  DOCUMENT_STATS_CACHE_KEY,
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2,
-  LAST_LATTE_THREAD_CACHE_KEY,
-  PROJECT_STATS_CACHE_KEY,
-} from '@latitude-data/core/constants'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
 import {
@@ -21,10 +13,14 @@ import {
   ProviderApiKeysRepository,
   ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
-import { DocumentLogsLimitedView } from '@latitude-data/core/schema/models/types/DocumentLog'
-import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
+import {
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+  LAST_LATTE_THREAD_CACHE_KEY,
+} from '@latitude-data/core/constants'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
@@ -199,22 +195,6 @@ export const getDocumentsFromMergedCommitsCache = cache(
     return documents
   },
 )
-
-export const getDocumentStatsCached = cache(async (documentUuid: string) => {
-  const { workspace } = await getCurrentUserOrRedirect()
-  const cache = await redis()
-  const key = DOCUMENT_STATS_CACHE_KEY(workspace.id, documentUuid)
-  const stats = await cache.get(key)
-  return (stats ? JSON.parse(stats) : null) as DocumentLogsLimitedView | null
-})
-
-export const getProjectStatsCached = cache(async (projectId: number) => {
-  const { workspace } = await getCurrentUserOrRedirect()
-  const cache = await redis()
-  const key = PROJECT_STATS_CACHE_KEY(workspace.id, projectId)
-  const stats = await cache.get(key)
-  return (stats ? JSON.parse(stats) : null) as ProjectLimitedView | null
-})
 
 export const getDocumentLogsApproximatedCountCached = cache(
   async (documentUuid: string) => {

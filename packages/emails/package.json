@@ -13,9 +13,6 @@
     "./render": {
       "import": "./src/react-email/render.ts"
     },
-    "./DatasetUpdateMail": {
-      "import": "./src/templates/datasets/DatasetUpdateMail.tsx"
-    },
     "./DocumentTriggerResponseMail": {
       "import": "./src/templates/documentTrigger/DocumentTriggerResponseMail.tsx"
     },

@@ -370,7 +370,6 @@ export type DocumentLogFilterOptions = z.infer<
 
 export const SUPPORTED_IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
 
-export const LOG_FILTERS_ENCODED_PARAMS = ['customIdentifier']
 
 export type DiffValue = {
   newValue?: string
@@ -443,10 +442,6 @@ export type ProviderApiKeyUsage = {
 
 export const LIMITED_VIEW_THRESHOLD = 120_000 // Approximated logs
 export const STATS_CACHING_THRESHOLD = 5_000 // Actual logs
-export const DOCUMENT_STATS_CACHE_KEY = (
-  workspaceId: number,
-  documentUuid: string,
-) => `document_stats:${workspaceId}:${documentUuid}`
 export const PROJECT_STATS_CACHE_KEY = (
   workspaceId: number,
   projectId: number,
