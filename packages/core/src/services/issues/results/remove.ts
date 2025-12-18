@@ -29,7 +29,6 @@ import { containsResultsFromOtherCommits } from './add'
 import { validateResultForIssue } from './validate'
 import { removeIssueEvaluationResult } from '../../issueEvaluationResults/remove'
 
-// TODO(AO): Add tests
 export async function removeResultFromIssue<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,

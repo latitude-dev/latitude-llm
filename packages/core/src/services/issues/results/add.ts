@@ -27,8 +27,6 @@ import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import { issueEvaluationResults } from '../../../schema/models/issueEvaluationResults'
 import { addIssueEvaluationResult } from '../../issueEvaluationResults/add'
 
-// TODO(AO): Add tests
-
 /**
  * No need to check for existing associations,
  * You need to make sure the result is not already assigned

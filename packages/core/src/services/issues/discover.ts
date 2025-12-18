@@ -63,10 +63,6 @@ export async function discoverIssue<
     result as EvaluationResultSuccessValue<T, M>,
   )!
 
-  // TODO(AO): BONUS: Translate annotation to english (vector and keyword search work best in english)
-
-  // TODO(AO): BONUS: Perform contextual augmentation (tries to generate better matches by context)
-
   const embedying = await embedReason(reason)
   if (embedying.error) {
     return Result.error(embedying.error)
@@ -97,8 +93,6 @@ export async function discoverIssue<
   if (candidates.length === 0) {
     return Result.ok({ embedding })
   }
-
-  // TODO(AO): BONUS: Discern topN via LLM judge (tries to discern a better match by context)
 
   return Result.ok({ embedding, issue: candidates[0] })
 }

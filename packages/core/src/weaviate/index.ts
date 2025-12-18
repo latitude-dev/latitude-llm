@@ -112,7 +112,6 @@ async function migrateCollections() {
   }
 }
 
-// TODO(AO): BONUS: Deactivate/offload tenants that have not had any activity in the last days
 export async function getIssuesCollection({
   tenantName,
 }: {
