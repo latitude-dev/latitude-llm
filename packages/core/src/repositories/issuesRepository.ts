@@ -21,6 +21,7 @@ import {
   sql,
   SQL,
 } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import {
   databaseErrorCodes,
   NotFoundError,
@@ -33,9 +34,9 @@ import { DocumentVersion } from '../schema/models/types/DocumentVersion'
 import { type Issue } from '../schema/models/types/Issue'
 import { type Project } from '../schema/models/types/Project'
 import { CommitsRepository } from './commitsRepository'
+import { IssueEvaluationResultsRepository } from './issueEvaluationResultsRepository'
 import { IssueHistogramsRepository } from './issueHistogramsRepository'
 import Repository from './repositoryV2'
-import { alias } from 'drizzle-orm/pg-core'
 
 const tt = getTableColumns(issues)
 
@@ -145,7 +146,7 @@ export class IssuesRepository extends Repository<Issue> {
     project,
     issueId,
   }: {
-    project: Project
+    project?: Project
     issueId?: number | null
   }) {
     if (!issueId) return null
@@ -156,7 +157,7 @@ export class IssuesRepository extends Repository<Issue> {
       .where(
         and(
           this.scopeFilter,
-          eq(issues.projectId, project.id),
+          ...(project ? [eq(issues.projectId, project.id)] : []),
           eq(issues.id, issueId),
         ),
       )
@@ -179,6 +180,30 @@ export class IssuesRepository extends Repository<Issue> {
     }
 
     return Result.ok(result)
+  }
+
+  async findByResultId(resultId: number) {
+    const membership = await new IssueEvaluationResultsRepository(
+      this.workspaceId,
+    ).findLastActiveAssignedIssue({ result: { id: resultId } })
+    if (!membership) {
+      return Result.error(
+        new NotFoundError(
+          `Record with resultId ${resultId} not found in ${this.scope._.tableName}`,
+        ),
+      )
+    }
+
+    const issue = await this.findById({ issueId: membership.issueId })
+    if (!issue) {
+      return Result.error(
+        new NotFoundError(
+          `Record with issueId ${membership.issueId} not found in ${this.scope._.tableName}`,
+        ),
+      )
+    }
+
+    return Result.ok(issue)
   }
 
   async findByTitleAndStatuses({
