@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { API_ROUTES } from '$/services/routes/api'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { useCursorPagination } from '$/stores/useCursorPagination'
 import { serializeSpans } from './utils'
 import type {
   SpansKeysetPaginationResult,
@@ -14,10 +15,15 @@ export function usePaginationMode(
   filters: Record<string, unknown>,
   opts?: SWRConfiguration<SpansKeysetPaginationResult>,
 ) {
-  const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([])
-  const [currentCursor, setCurrentCursor] = useState<string | null>(null)
-  const filtersKey = useMemo(() => JSON.stringify(filters), [filters])
+  const {
+    currentCursor,
+    goToNextPage,
+    goToPrevPage,
+    reset,
+    cursorHistoryLength,
+  } = useCursorPagination()
 
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters])
   const filtersParam = useMemo(() => {
     const hasFilters = Object.keys(filters).length > 0
     return hasFilters ? JSON.stringify(filters) : undefined
@@ -76,42 +82,38 @@ export function usePaginationMode(
       },
     )
 
-  const goToNextPage = useCallback(() => {
-    if (!data?.next || isLoading) return
-    setCursorHistory((prev) => [...prev, currentCursor])
-    setCurrentCursor(data.next)
-  }, [data?.next, isLoading, currentCursor])
-
-  const goToPrevPage = useCallback(() => {
-    if (cursorHistory.length === 0 || isLoading) return
-    const previousCursor = cursorHistory[cursorHistory.length - 1]
-    if (previousCursor !== undefined) {
-      setCursorHistory((prev) => prev.slice(0, -1))
-      setCurrentCursor(previousCursor)
+  const handleGoToNextPage = useCallback(() => {
+    if (data?.next && !isLoading) {
+      goToNextPage(data.next)
     }
-  }, [cursorHistory, isLoading])
-
-  const reset = useCallback(() => {
-    setCursorHistory([])
-    setCurrentCursor(null)
-  }, [])
+  }, [goToNextPage, data?.next, isLoading])
 
   useEffect(() => {
-    if (!params.realtime) {
-      setCursorHistory([])
-      setCurrentCursor(null)
-    }
-  }, [params.realtime, filtersKey])
+    if (!params.realtime) reset()
+  }, [params.realtime, reset])
 
-  return {
-    data,
-    error,
-    isLoading,
-    mutate,
-    goToNextPage,
-    goToPrevPage,
-    reset,
-    currentCursor,
-    cursorHistoryLength: cursorHistory.length,
-  }
+  return useMemo(
+    () => ({
+      data,
+      error,
+      isLoading,
+      mutate,
+      goToNextPage: handleGoToNextPage,
+      goToPrevPage,
+      reset,
+      currentCursor,
+      cursorHistoryLength,
+    }),
+    [
+      data,
+      error,
+      isLoading,
+      mutate,
+      handleGoToNextPage,
+      goToPrevPage,
+      reset,
+      currentCursor,
+      cursorHistoryLength,
+    ],
+  )
 }

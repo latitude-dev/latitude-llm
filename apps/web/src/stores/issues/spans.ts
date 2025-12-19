@@ -1,52 +1,105 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { compact } from 'lodash-es'
 import useSWR, { SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { Span as EMPTY_SPANS, SpanType } from '@latitude-data/constants'
-import { IssueSpansResponse } from '$/app/api/projects/[projectId]/commits/[commitUuid]/issues/[issueId]/spans/route'
+import type { Span, SpanType } from '@latitude-data/constants'
+import type { IssueSpansResponse } from '$/app/api/projects/[projectId]/commits/[commitUuid]/issues/[issueId]/spans/route'
+import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { useCursorPagination } from '$/stores/useCursorPagination'
+import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
 
-const EMPTY: EMPTY_SPANS<SpanType.Prompt>[] = []
+const EMPTY: Span<SpanType.Prompt>[] = []
 
 export function useIssueSpans(
   {
     projectId,
     commitUuid,
     issueId,
-    page = 1,
-    pageSize = 25,
+    limit = DEFAULT_PAGINATION_SIZE,
   }: {
     projectId: number
     commitUuid: string
     issueId: number
-    page?: number
-    pageSize?: number
+    limit?: number
   },
   opts?: SWRConfiguration,
 ) {
+  const {
+    currentCursor,
+    goToNextPage,
+    goToPrevPage,
+    reset,
+    hasPrev,
+    cursorHistoryLength,
+  } = useCursorPagination()
+
   const route = ROUTES.api.projects
     .detail(projectId)
     .commits.detail(commitUuid)
     .issues.detail(issueId).spans.root
 
   const fetcher = useFetcher<IssueSpansResponse>(route, {
-    searchParams: { page: page.toString(), pageSize: pageSize.toString() },
+    serializer: (data: unknown) => {
+      const result = data as IssueSpansResponse
+      return {
+        spans: result.spans,
+        next: result.next,
+      }
+    },
+    searchParams: compactObject({
+      cursor: currentCursor ?? undefined,
+      limit: limit?.toString(),
+    }) as Record<string, string>,
   })
 
-  const { data, isLoading } = useSWR<IssueSpansResponse>(
-    compact(['issueSpans', projectId, commitUuid, issueId, page, pageSize]),
+  const { data, isLoading, mutate } = useSWR<IssueSpansResponse>(
+    compact([
+      'issueSpans',
+      projectId,
+      commitUuid,
+      issueId,
+      currentCursor,
+      limit,
+    ]),
     fetcher,
-    opts,
+    {
+      ...opts,
+      keepPreviousData: true,
+    },
   )
+
+  const handleGoToNextPage = useCallback(() => {
+    if (data?.next && !isLoading) {
+      goToNextPage(data.next)
+    }
+  }, [data?.next, isLoading, goToNextPage])
 
   return useMemo(
     () => ({
       data: data?.spans ?? EMPTY,
-      hasNextPage: data?.hasNextPage ?? false,
+      hasNext: !!data?.next,
+      hasPrev,
       isLoading,
+      goToNextPage: handleGoToNextPage,
+      goToPrevPage,
+      reset,
+      mutate,
+      currentCursor,
+      cursorHistoryLength,
     }),
-    [data, isLoading],
+    [
+      data,
+      hasPrev,
+      isLoading,
+      handleGoToNextPage,
+      goToPrevPage,
+      reset,
+      mutate,
+      currentCursor,
+      cursorHistoryLength,
+    ],
   )
 }

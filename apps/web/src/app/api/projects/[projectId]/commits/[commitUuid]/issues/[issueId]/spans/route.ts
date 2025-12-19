@@ -8,10 +8,14 @@ import {
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
-import { OkType } from '@latitude-data/core/lib/Result'
+import { Cursor } from '@latitude-data/core/schema/types'
 import { getSpansByIssue } from '@latitude-data/core/data-access/issues/getSpansByIssue'
+import { Span } from 'dd-trace'
 
-export type IssueSpansResponse = OkType<typeof getSpansByIssue>
+export type IssueSpansResponse = {
+  spans: Span[]
+  next: string | null
+}
 
 const paramsSchema = z.object({
   projectId: z.coerce.number(),
@@ -20,8 +24,8 @@ const paramsSchema = z.object({
 })
 
 const querySchema = z.object({
-  page: z.coerce.number().default(1),
-  pageSize: z.coerce.number().default(25),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 })
 
 export const GET = errorHandler(
@@ -47,9 +51,20 @@ export const GET = errorHandler(
       })
 
       const query = querySchema.parse({
-        page: request.nextUrl.searchParams.get('page') ?? '1',
-        pageSize: request.nextUrl.searchParams.get('pageSize') ?? '25',
+        cursor: request.nextUrl.searchParams.get('cursor') ?? undefined,
+        limit: request.nextUrl.searchParams.get('limit') ?? undefined,
       })
+
+      // Parse cursor from JSON string if provided (same pattern as spans/limited route)
+      // Cursor format: { value: ISO date string, id: number }
+      const parsedCursor = query.cursor ? JSON.parse(query.cursor) : null
+      const cursor: Cursor<Date, number> | null = parsedCursor
+        ? {
+            value: new Date(parsedCursor.value),
+            id: parsedCursor.id,
+          }
+        : null
+
       const projectsRepo = new ProjectsRepository(workspace.id)
       const project = await projectsRepo.find(projectId).then((r) => r.unwrap())
       const commitsRepo = new CommitsRepository(workspace.id)
@@ -76,11 +91,23 @@ export const GET = errorHandler(
         workspace,
         commit,
         issue,
-        page: query.page,
-        pageSize: query.pageSize,
+        cursor,
+        limit: query.limit,
       }).then((r) => r.unwrap())
 
-      return NextResponse.json(data, { status: 200 })
+      // Serialize cursor for response (same pattern as spans/limited route)
+      return NextResponse.json(
+        {
+          spans: data.spans,
+          next: data.next
+            ? JSON.stringify({
+                value: data.next.value.toISOString(),
+                id: data.next.id,
+              })
+            : null,
+        },
+        { status: 200 },
+      )
     },
   ),
 )

@@ -434,20 +434,33 @@ export class SpansRepository extends Repository<Span> {
         ),
       )
 
+    return this.orderSpansByEvaluationResults(
+      evaluationResults,
+      fetchedSpans as Span[],
+    )
+  }
+
+  private orderSpansByEvaluationResults(
+    evaluationResults: Pick<
+      EvaluationResultV2,
+      'evaluatedSpanId' | 'evaluatedTraceId'
+    >[],
+    spansList: Span[],
+  ) {
     const spanMap = new Map<string, Span>()
-    for (const span of fetchedSpans) {
-      const key = `${span.id}:${span.traceId}`
-      spanMap.set(key, span as Span)
+    for (const span of spansList) {
+      spanMap.set(this.buildSpanKey(span.id, span.traceId), span)
     }
 
-    const orderedSpans = evaluationResults
-      .map((result) => {
-        const key = `${result.evaluatedSpanId}:${result.evaluatedTraceId}`
-        return spanMap.get(key)
-      })
+    return evaluationResults
+      .map(({ evaluatedSpanId, evaluatedTraceId }) =>
+        spanMap.get(this.buildSpanKey(evaluatedSpanId!, evaluatedTraceId!)),
+      )
       .filter((span): span is Span => span !== undefined)
+  }
 
-    return orderedSpans
+  private buildSpanKey(spanId: string, traceId: string) {
+    return `${spanId}:${traceId}`
   }
 }
 
