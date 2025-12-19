@@ -5,6 +5,7 @@ import { use, useMemo } from 'react'
 import DestroyModal from '$/components/modals/DestroyModal'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
 import useIntegrations from '$/stores/integrations'
 import useIntegrationReferences from '$/stores/integrationReferences'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -47,8 +48,10 @@ function IntegrationReferences({
     return referencedCommits?.[0]
   }, [commits, referenceGroup.commitIds])
 
-  const { data: document } = useDocumentVersion(referenceGroup.documentUuid, {
-    commitUuid: commit?.uuid,
+  const { data: document } = useDocumentVersion({
+    projectId: referenceGroup.projectId,
+    documentUuid: referenceGroup.documentUuid,
+    commitUuid: commit?.uuid ?? HEAD_COMMIT,
   })
 
   return (

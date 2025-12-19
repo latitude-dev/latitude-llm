@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
 import { useDocumentActions } from './documentActions'
 import useDocumentVersions from '$/stores/documentVersions'
-import { ReactNode, useMemo } from 'react'
+import { ReactNode, useCallback, useMemo } from 'react'
 import {
   ChangedDocument,
   ChangedEvaluation,
@@ -20,6 +20,7 @@ import {
 
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
@@ -29,6 +30,7 @@ import { TriggerChangeItem } from '../../../_components/Sidebar/PublishDraftComm
 import { EvaluationChangeItem } from '../../../_components/Sidebar/PublishDraftCommitModal/ChangesList/EvaluationItem'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { ListItem } from '../../../_components/Sidebar/PublishDraftCommitModal/ChangesList/ListItem'
+
 function useCanRevert({
   commit,
   change,
@@ -125,6 +127,7 @@ function useCanReset({
 }
 
 function Change({
+  project,
   commit,
   change,
   isSelected,
@@ -132,6 +135,7 @@ function Change({
   isDimmed,
   isCurrentDraft,
 }: {
+  project: Project
   commit: Commit
   change: ChangedDocument
   isSelected: boolean
@@ -146,29 +150,32 @@ function Change({
     change,
   })
 
-  const goToDocument = () => {
+  const goToDocument = useCallback(() => {
     router.push(
       ROUTES.projects
         .detail({ id: commit.projectId })
         .commits.detail({ uuid: commit.uuid })
         .documents.detail({ uuid: change.documentUuid }).root,
     )
-  }
+  }, [router, commit.projectId, commit.uuid, change.documentUuid])
 
-  const filterDocument = () => {
+  const filterDocument = useCallback(() => {
     router.push(
       ROUTES.projects
         .detail({ id: commit.projectId })
         .commits.detail({ uuid: currentCommit.uuid })
         .history.detail({ uuid: change.documentUuid }).root,
     )
-  }
+  }, [router, commit.projectId, currentCommit.uuid, change.documentUuid])
 
-  const { data: prevDocument } = useDocumentVersion(
-    change.changeType === ModifiedDocumentType.UpdatedPath
-      ? change.documentUuid
-      : null,
-  )
+  const { data: prevDocument } = useDocumentVersion({
+    projectId: project.id,
+    commitUuid: HEAD_COMMIT,
+    documentUuid:
+      change.changeType === ModifiedDocumentType.UpdatedPath
+        ? change.documentUuid
+        : null,
+  })
 
   const canRevert = useCanRevert({
     commit,
@@ -315,17 +322,19 @@ function TriggerChangeList({
 }
 
 function DocumentChangeList({
+  project,
+  commit,
   document,
   changes,
-  commit,
   selectedDocumentUuid,
   selectDocumentUuid,
   currentDocumentUuid,
   isCurrentDraft,
 }: {
+  project: Project
+  commit: Commit
   document: DocumentVersion
   changes: CommitChanges
-  commit: Commit
   selectedDocumentUuid?: string
   selectDocumentUuid: (documentUuid: string) => void
   currentDocumentUuid?: string
@@ -359,6 +368,7 @@ function DocumentChangeList({
     <div className='flex flex-col gap-1'>
       {change ? (
         <Change
+          project={project}
           commit={commit}
           change={change}
           isSelected={selectedDocumentUuid === change.documentUuid}
@@ -470,6 +480,7 @@ export function CommitChangesList({
               <DocumentChangeList
                 document={d}
                 changes={changes}
+                project={project}
                 commit={commit}
                 selectedDocumentUuid={selectedDocumentUuid}
                 selectDocumentUuid={selectDocumentUuid}

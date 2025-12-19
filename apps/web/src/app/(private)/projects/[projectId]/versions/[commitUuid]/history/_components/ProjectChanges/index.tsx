@@ -25,8 +25,10 @@ function DocumentFilterBanner({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { data: document } = useDocumentVersion(documentUuid, {
+  const { data: document } = useDocumentVersion({
+    projectId: project.id,
     commitUuid: commit.uuid,
+    documentUuid,
   })
 
   return (

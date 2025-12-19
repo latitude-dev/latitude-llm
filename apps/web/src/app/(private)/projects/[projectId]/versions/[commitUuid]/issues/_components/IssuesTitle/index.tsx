@@ -7,6 +7,8 @@ import { StatusBadges, useIssueStatuses } from '../IssueStatusBadge'
 import { EvaluationV2 } from '@latitude-data/core/constants'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { getEvaluationTypeSpecification } from '$/components/evaluations'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 export function formatDocumentPath(path: string): string {
   const cleanPath = path.replace(/\.promptl$/, '')
@@ -24,8 +26,20 @@ export function formatDocumentPath(path: string): string {
   return `${firstFolder}/.../${filename}`
 }
 
-function DocumentPath({ issue }: { issue: SerializedIssue }) {
-  const { data: document } = useDocumentVersion(issue.documentUuid)
+function DocumentPath({
+  project,
+  commit,
+  issue,
+}: {
+  project: Project
+  commit: Commit
+  issue: SerializedIssue
+}) {
+  const { data: document } = useDocumentVersion({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuid: issue.documentUuid,
+  })
   const path = useMemo(
     () => (document ? formatDocumentPath(document.path) : null),
     [document],
@@ -42,9 +56,13 @@ function DocumentPath({ issue }: { issue: SerializedIssue }) {
 }
 
 export function IssuesTitle({
+  project,
+  commit,
   issue,
   evaluations,
 }: {
+  project: Project
+  commit: Commit
   issue: SerializedIssue
   evaluations: EvaluationV2[]
 }) {
@@ -77,7 +95,7 @@ export function IssuesTitle({
       </div>
       <div className='flex items-center gap-x-2'>
         <StatusBadges statuses={statuses} />
-        <DocumentPath issue={issue} />
+        <DocumentPath project={project} commit={commit} issue={issue} />
       </div>
     </div>
   )

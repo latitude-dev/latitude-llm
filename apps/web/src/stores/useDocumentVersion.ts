@@ -1,27 +1,34 @@
 'use client'
+import useSWR, { SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
 import { DocumentVersionDto } from '@latitude-data/core/constants'
 
 export default function useDocumentVersion(
-  documentUuid?: string | null,
-  { commitUuid }: { commitUuid?: string } = {},
+  {
+    projectId,
+    documentUuid,
+    commitUuid,
+  }: {
+    projectId: number
+    commitUuid: string
+    documentUuid: string | null
+  },
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher<DocumentVersionDto>(
-    documentUuid
-      ? `${ROUTES.api.documents.detail(documentUuid).root}${
-          commitUuid ? `?commitUuid=${commitUuid}` : ''
-        }`
-      : undefined,
+    documentUuid ? ROUTES.api.documents.detail(documentUuid).root : undefined,
     {
+      searchParams: {
+        projectId: projectId.toString(),
+        commitUuid,
+      },
       fallback: null,
     },
   )
 
   return useSWR<DocumentVersionDto>(
-    ['commits', commitUuid, 'documents', documentUuid],
+    ['commits', projectId, commitUuid, 'documents', documentUuid],
     fetcher,
     opts,
   )

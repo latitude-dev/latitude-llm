@@ -14,8 +14,10 @@ import Link from 'next/link'
 function ChangeListItem({ checkpoint }: { checkpoint: LatteThreadCheckpoint }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { data: document } = useDocumentVersion(checkpoint.documentUuid, {
+  const { data: document } = useDocumentVersion({
+    projectId: project.id,
     commitUuid: commit.uuid,
+    documentUuid: checkpoint.documentUuid,
   })
   const current = document
   const previous = checkpoint.data
