@@ -25,7 +25,7 @@ import { deleteIssue } from '../delete'
 import { decrementIssueHistogram } from '../histograms/decrement'
 import { embedReason, updateCentroid } from '../shared'
 import { updateIssue } from '../update'
-import { containsResultsFromOtherCommits } from './add'
+import { canUpdateCentroid } from './canUpdateCentroid'
 import { validateResultForIssue } from './validate'
 import { removeIssueEvaluationResult } from '../../issueEvaluationResults/remove'
 
@@ -79,16 +79,12 @@ export async function removeResultFromIssue<
     embedding = embedying.value
   }
 
-  // Issue centroids' are only updated when the annotation is from a live
-  // commit, it's a new issue, or the issue has only received annotations from
-  // the same commit. This ensures the centroid is only updated when it makes
-  // sense to do it.
-  const canUpdateCentroid = commit.mergedAt
-    ? true
-    : !(await containsResultsFromOtherCommits({
-        issue,
-        commitId: result.commitId,
-      }))
+  const shouldUpdateCentroid = await canUpdateCentroid({
+    result,
+    commit,
+    issue,
+    embedding,
+  })
 
   return await transaction.call(
     async (tx) => {
@@ -118,10 +114,14 @@ export async function removeResultFromIssue<
       }
 
       let centroid: IssueCentroid | undefined = issue.centroid
-      if (canUpdateCentroid && embedding) {
+      if (shouldUpdateCentroid) {
         centroid = updateCentroid(
           { ...issue.centroid, updatedAt: issue.updatedAt },
-          { embedding, type: evaluation.type, createdAt: result.createdAt },
+          {
+            embedding: embedding!,
+            type: evaluation.type,
+            createdAt: result.createdAt,
+          },
           'remove',
           timestamp,
         )

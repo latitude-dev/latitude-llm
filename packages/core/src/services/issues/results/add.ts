@@ -1,4 +1,3 @@
-import { and, eq, ne } from 'drizzle-orm'
 import { isEqual } from 'date-fns'
 import {
   EvaluationMetric,
@@ -22,10 +21,8 @@ import { incrementIssueHistogram } from '../histograms/increment'
 import { embedReason, updateCentroid } from '../shared'
 import { updateIssue } from '../update'
 import { validateResultForIssue } from './validate'
-import { database } from '../../../client'
-import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
-import { issueEvaluationResults } from '../../../schema/models/issueEvaluationResults'
 import { addIssueEvaluationResult } from '../../issueEvaluationResults/add'
+import { canUpdateCentroid } from './canUpdateCentroid'
 
 /**
  * No need to check for existing associations,
@@ -69,17 +66,13 @@ export async function addResultToIssue<
     embedding = embedying.unwrap()
   }
 
-  // Issue centroids' are only updated when the incoming annotation is from a
-  // live commit, it's a new issue, or the issue has only received annotations
-  // from the same commit. This ensures the centroid is only updated when it
-  // makes sense to do it.
-  const canUpdateCentroid =
-    commit.mergedAt || issueWasNew
-      ? true
-      : !(await containsResultsFromOtherCommits({
-          issue,
-          commitId: result.commitId,
-        }))
+  const shouldUpdateCentroid = await canUpdateCentroid({
+    result,
+    commit,
+    issue,
+    embedding,
+    issueWasNew,
+  })
 
   return await transaction.call(
     async (tx) => {
@@ -103,10 +96,14 @@ export async function addResultToIssue<
       if (!Result.isOk(validating)) return validating
 
       let centroid = issue.centroid
-      if (canUpdateCentroid && embedding) {
+      if (shouldUpdateCentroid) {
         centroid = updateCentroid(
           { ...issue.centroid, updatedAt: issue.updatedAt },
-          { embedding, type: evaluation.type, createdAt: result.createdAt },
+          {
+            embedding: embedding!,
+            type: evaluation.type,
+            createdAt: result.createdAt,
+          },
           'add',
           timestamp,
         )
@@ -170,33 +167,4 @@ export async function addResultToIssue<
       })
     },
   )
-}
-
-export async function containsResultsFromOtherCommits(
-  {
-    issue,
-    commitId,
-  }: {
-    issue: Issue
-    commitId: number
-  },
-  db = database,
-) {
-  const commitIds = await db
-    .selectDistinct({ commitId: evaluationResultsV2.commitId })
-    .from(issueEvaluationResults)
-    .innerJoin(
-      evaluationResultsV2,
-      eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
-    )
-    .where(
-      and(
-        eq(issueEvaluationResults.workspaceId, issue.workspaceId),
-        eq(issueEvaluationResults.issueId, issue.id),
-        ne(evaluationResultsV2.commitId, commitId),
-      ),
-    )
-    .limit(1)
-
-  return commitIds.length > 0
 }
