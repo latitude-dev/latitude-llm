@@ -203,32 +203,32 @@
         ]
       },
       {
-        "tab": "Integrations",
+        "tab": "Developers",
         "groups": [
           {
             "group": "Overview",
-            "pages": ["integrations/overview"]
+            "pages": ["developers/overview"]
           },
           {
             "group": "Providers",
             "pages": [
-              "integrations/providers/openai",
-              "integrations/providers/anthropic",
-              "integrations/providers/azure",
-              "integrations/providers/google-ai-platform",
-              "integrations/providers/amazon-bedrock",
-              "integrations/providers/cohere",
-              "integrations/providers/together-ai",
-              "integrations/providers/vertex-ai",
-              "integrations/providers/gemini"
+              "developers/providers/openai",
+              "developers/providers/anthropic",
+              "developers/providers/azure",
+              "developers/providers/google-ai-platform",
+              "developers/providers/amazon-bedrock",
+              "developers/providers/cohere",
+              "developers/providers/together-ai",
+              "developers/providers/vertex-ai",
+              "developers/providers/gemini"
             ]
           },
           {
             "group": "Frameworks",
             "pages": [
-              "integrations/frameworks/langchain",
-              "integrations/frameworks/llamaindex",
-              "integrations/frameworks/vercel-ai-sdk"
+              "developers/frameworks/langchain",
+              "developers/frameworks/llamaindex",
+              "developers/frameworks/vercel-ai-sdk"
             ]
           }
         ]
