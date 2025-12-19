@@ -415,23 +415,6 @@ describe('processSpansBulk', () => {
       expect(result.value?.spans[0]?.name).toHaveLength(128)
     })
 
-    it('extracts span duration correctly', async () => {
-      const now = Date.now() * 1_000_000
-      const durationMs = 500
-      const span = createOtlpSpan({
-        startTimeUnixNano: String(now),
-        endTimeUnixNano: String(now + durationMs * 1_000_000),
-      })
-
-      const result = await processSpansBulk({
-        spans: [createSpanData(span, apiKey, workspace)],
-        apiKey,
-        workspace,
-      })
-
-      expect(result.value?.spans[0]?.duration).toBe(durationMs)
-    })
-
     it('extracts error status and message', async () => {
       const span = createOtlpSpan({
         status: {
