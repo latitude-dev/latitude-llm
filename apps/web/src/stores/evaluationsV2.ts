@@ -410,9 +410,9 @@ export function useEvaluationsV2(
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid,
-        issueId: issueId,
-        providerName: providerName,
-        model: model,
+        issueId,
+        providerName,
+        model,
       })
     },
     [project, commit, executeGenerateEvaluationV2FromIssue],

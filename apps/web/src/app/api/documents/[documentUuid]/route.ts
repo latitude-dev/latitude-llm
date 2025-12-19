@@ -1,16 +1,18 @@
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '@latitude-data/core/repositories'
+import { z } from 'zod'
+import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
+import { flattenErrors } from '@latitude-data/core/lib/zodUtils'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { documentVersionPresenter } from '@latitude-data/core/services/providerLogs/documentVersionPresenter'
-import { findCommitById } from '@latitude-data/core/data-access/commits'
-import { BadRequestError, NotFoundError } from '@latitude-data/core/lib/errors'
+import { UnprocessableEntityError } from '@latitude-data/constants/errors'
 
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+
+const paramsSchema = z.object({
+  projectId: z.number().int().positive(),
+  commitUuid: z.string(),
+})
+
 export const GET = errorHandler(
   authHandler(
     async (
@@ -26,40 +28,33 @@ export const GET = errorHandler(
       },
     ) => {
       const { documentUuid } = params
-      if (!documentUuid) {
-        throw new BadRequestError('Document UUID is required')
-      }
-      const commitUuid = req.nextUrl.searchParams.get('commitUuid')
+      const searchParams = req.nextUrl.searchParams
+      const parseResult = paramsSchema.safeParse({
+        projectId: Number(searchParams.get('projectId')),
+        commitUuid: searchParams.get('commitUuid') ?? undefined,
+      })
 
-      let commit: Commit | undefined
-      if (commitUuid) {
-        const commitsScope = new CommitsRepository(workspace.id)
-        commit = await commitsScope
-          .getCommitByUuid({ uuid: commitUuid })
-          .then((r) => r.unwrap())
+      if (!parseResult.success) {
+        throw new UnprocessableEntityError(
+          'Invalid query parameters',
+          flattenErrors(parseResult),
+        )
       }
 
       const docsScope = new DocumentVersionsRepository(workspace.id)
       const documentVersion = await docsScope
-        .getDocumentByUuid({
+        .getDocumentAtCommit({
+          projectId: parseResult.data.projectId,
+          commitUuid: parseResult.data.commitUuid,
           documentUuid,
-          commitUuid: commit?.uuid ?? undefined,
         })
         .then((r) => r.unwrap())
 
-      if (!commit) {
-        commit = await findCommitById(documentVersion.commitId)
-        if (!commit) {
-          throw new NotFoundError('Commit not found')
-        }
-      }
-
-      return NextResponse.json(
-        documentVersionPresenter({
-          documentVersion,
-          commit,
-        }),
-      )
+      return NextResponse.json({
+        ...documentVersion,
+        projectId: parseResult.data.projectId,
+        commitUuid: parseResult.data.commitUuid,
+      })
     },
   ),
 )

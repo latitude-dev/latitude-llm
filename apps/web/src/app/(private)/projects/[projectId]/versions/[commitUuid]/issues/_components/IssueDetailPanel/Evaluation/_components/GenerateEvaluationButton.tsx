@@ -6,6 +6,7 @@ import { scan } from 'promptl-ai'
 import { useCallback, useState } from 'react'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 
 type GenerateEvaluationButtonProps = {
   generateEvaluationFromIssue: (providerName: string, model: string) => void
@@ -18,8 +19,11 @@ export function GenerateEvaluationButton({
   issueDocumentUuid,
   commitUuid,
 }: GenerateEvaluationButtonProps) {
-  const { data: document } = useDocumentVersion(issueDocumentUuid, {
+  const { project } = useCurrentProject()
+  const { data: document } = useDocumentVersion({
+    projectId: project.id,
     commitUuid,
+    documentUuid: issueDocumentUuid,
   })
   const { data: providers } = useProviderApiKeys()
 

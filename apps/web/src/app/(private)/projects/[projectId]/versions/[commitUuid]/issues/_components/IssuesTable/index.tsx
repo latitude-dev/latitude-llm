@@ -181,6 +181,8 @@ export function IssuesTable({
                 >
                   <TableCell fullWidth>
                     <IssuesTitle
+                      project={project}
+                      commit={commit}
                       issue={issue}
                       evaluations={evaluations ?? []}
                     />
