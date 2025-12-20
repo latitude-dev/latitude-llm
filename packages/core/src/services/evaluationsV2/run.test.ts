@@ -132,12 +132,11 @@ value1,value2,value3
       },
     } as any)
 
-    // Also mock the assembleTrace function to return a Result with the trace
     vi.spyOn(
       await import('../tracing/traces/assemble'),
-      'assembleTrace',
-    ).mockResolvedValue({
-      unwrap: () => ({
+      'assembleTraceWithMessages',
+    ).mockResolvedValue(
+      Result.ok({
         trace: {
           id: span.traceId,
           children: [
@@ -166,8 +165,17 @@ value1,value2,value3
           startedAt: new Date(),
           endedAt: new Date(),
         },
-      }),
-    } as any)
+        completionSpan: {
+          id: 'completion-span-id',
+          traceId: span.traceId,
+          type: SpanType.Completion,
+          metadata: {
+            input: [{ role: 'user', content: 'test input' }],
+            output: [{ role: 'assistant', content: 'test output' }],
+          },
+        },
+      }) as any,
+    )
   })
 
   it('fails when evaluating a log that is already evaluated for this evaluation', async () => {

@@ -106,41 +106,37 @@ describe('annotateEvaluationV2', () => {
       extractActualOutput: vi.mocked(extractActualOutput),
     }
 
-    // Mock the same functions we mocked in run.test.ts
     vi.spyOn(
       await import('../tracing/traces/assemble'),
-      'assembleTrace',
+      'assembleTraceWithMessages',
     ).mockResolvedValue(
       Result.ok({
         trace: {
           id: 'trace-id',
-          spans: [],
+          children: [],
+          spans: 0,
           duration: 1000,
           startedAt: new Date(),
           endedAt: new Date(),
         },
-      } as any),
-    )
-
-    vi.spyOn(
-      await import('../tracing/spans/findCompletionSpanFromTrace'),
-      'findCompletionSpanFromTrace',
-    ).mockReturnValue({
-      id: 'completion-span-id',
-      traceId: 'trace-id',
-      type: SpanType.Completion,
-      metadata: {
-        input: [
-          { role: 'user', content: [{ type: 'text', text: 'test input' }] },
-        ],
-        output: [
-          {
-            role: 'assistant',
-            content: [{ type: 'text', text: 'actual output' }],
+        completionSpan: {
+          id: 'completion-span-id',
+          traceId: 'trace-id',
+          type: SpanType.Completion,
+          metadata: {
+            input: [
+              { role: 'user', content: [{ type: 'text', text: 'test input' }] },
+            ],
+            output: [
+              {
+                role: 'assistant',
+                content: [{ type: 'text', text: 'actual output' }],
+              },
+            ],
           },
-        ],
-      },
-    } as any)
+        },
+      }) as any,
+    )
   })
 
   it('fails when annotating is not supported for the evaluation', async () => {
@@ -168,23 +164,38 @@ describe('annotateEvaluationV2', () => {
   })
 
   it('fails when evaluating a log that does not end with an assistant message', async () => {
-    // Mock the span to return a conversation that doesn't end with assistant message
+    // Mock the trace to return a completion span with conversation that doesn't end with assistant message
     vi.spyOn(
-      await import('../tracing/spans/findCompletionSpanFromTrace'),
-      'findCompletionSpanFromTrace',
-    ).mockReturnValue({
-      id: 'completion-span-id',
-      traceId: 'trace-id',
-      type: SpanType.Completion,
-      metadata: {
-        input: [
-          { role: 'user', content: [{ type: 'text', text: 'test input' }] },
-        ],
-        output: [
-          { role: 'user', content: [{ type: 'text', text: 'user message' }] },
-        ], // Not assistant message
-      },
-    } as any)
+      await import('../tracing/traces/assemble'),
+      'assembleTraceWithMessages',
+    ).mockResolvedValue(
+      Result.ok({
+        trace: {
+          id: 'trace-id',
+          children: [],
+          spans: 0,
+          duration: 1000,
+          startedAt: new Date(),
+          endedAt: new Date(),
+        },
+        completionSpan: {
+          id: 'completion-span-id',
+          traceId: 'trace-id',
+          type: SpanType.Completion,
+          metadata: {
+            input: [
+              { role: 'user', content: [{ type: 'text', text: 'test input' }] },
+            ],
+            output: [
+              {
+                role: 'user',
+                content: [{ type: 'text', text: 'user message' }],
+              },
+            ], // Not assistant message
+          },
+        },
+      }) as any,
+    )
     mocks.publisher.mockClear()
 
     const { result } = await annotateEvaluationV2({

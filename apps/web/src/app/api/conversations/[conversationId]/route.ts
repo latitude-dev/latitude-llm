@@ -3,7 +3,7 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { AssembledTrace } from '@latitude-data/core/constants'
 import { SpansRepository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { assembleTrace } from '@latitude-data/core/services/tracing/traces/assemble'
+import { assembleTraceStructure } from '@latitude-data/core/services/tracing/traces/assemble'
 import { NextRequest, NextResponse } from 'next/server'
 
 export type ConversationTracesResponse = {
@@ -35,7 +35,7 @@ export const GET = errorHandler(
 
       const traces: AssembledTrace[] = []
       for (const traceId of traceIds) {
-        const result = await assembleTrace({ traceId, workspace })
+        const result = await assembleTraceStructure({ traceId, workspace })
         if (result.ok && result.value) {
           traces.push(result.value.trace)
         }

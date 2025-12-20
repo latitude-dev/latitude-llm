@@ -1,11 +1,23 @@
 import { database } from '../../../client'
-import { AssembledSpan, AssembledTrace, Span } from '../../../constants'
+import {
+  AssembledSpan,
+  AssembledTrace,
+  CompletionSpanMetadata,
+  Span,
+  SpanType,
+} from '../../../constants'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
 import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
 import { type Workspace } from '../../../schema/models/types/Workspace'
+import { findCompletionSpanFromTrace } from '../spans/findCompletionSpanFromTrace'
 
-export async function assembleTrace(
+/**
+ * Assembles a trace structure without fetching span metadata.
+ * Use this for timeline/graph visualization where metadata is not needed.
+ */
+export async function assembleTraceStructure(
   {
     traceId,
     workspace,
@@ -45,10 +57,8 @@ export async function assembleTrace(
     .filter((span) => !span.parentId)
     .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
 
-  const assembledSpans = await Promise.all(
-    roots.map((span) =>
-      assembleSpan({ span, depth: 0, startedAt, childrens, workspace }),
-    ),
+  const assembledSpans = roots.map((span) =>
+    assembleSpanStructure({ span, depth: 0, startedAt, childrens }),
   )
 
   const trace: AssembledTrace = {
@@ -63,44 +73,82 @@ export async function assembleTrace(
   return Result.ok({ trace })
 }
 
-async function assembleSpan({
+/**
+ * Assembles a trace structure and fetches only the completion span's metadata.
+ * Use this when you need the trace structure plus the conversation messages.
+ * The metadata is attached to both the returned completionSpan AND to the
+ * completion span within the trace tree for backward compatibility.
+ */
+export async function assembleTraceWithMessages(
+  {
+    traceId,
+    workspace,
+  }: {
+    traceId: string
+    workspace: Workspace
+  },
+  db = database,
+): PromisedResult<{
+  trace: AssembledTrace
+  completionSpan?: AssembledSpan<SpanType.Completion>
+}> {
+  const structureResult = await assembleTraceStructure(
+    { traceId, workspace },
+    db,
+  )
+  if (!Result.isOk(structureResult)) return structureResult
+
+  const { trace } = structureResult.unwrap()
+  const completionSpan = findCompletionSpanFromTrace(trace)
+
+  if (!completionSpan) {
+    return Result.ok({ trace, completionSpan: undefined })
+  }
+
+  const metadataRepo = new SpanMetadatasRepository(workspace.id)
+  const metadataResult = await metadataRepo.get({
+    spanId: completionSpan.id,
+    traceId: completionSpan.traceId,
+  })
+  if (!Result.isOk(metadataResult)) return metadataResult
+
+  // Attach metadata to the completion span in the tree for backward compatibility
+  // This mutates the span in place so findCompletionSpanFromTrace(trace) returns
+  // a span with metadata attached
+  completionSpan.metadata = metadataResult.unwrap() as
+    | CompletionSpanMetadata
+    | undefined
+
+  return Result.ok({ trace, completionSpan })
+}
+
+function assembleSpanStructure({
   span,
   depth,
   startedAt,
   childrens,
-  workspace,
 }: {
   span: Span
   depth: number
   startedAt: Date
   childrens: Map<string, Span[]>
-  workspace: Workspace
-}): Promise<AssembledSpan> {
+}): AssembledSpan {
   const children = childrens.get(span.id) || []
 
   const startOffset = span.startedAt.getTime() - startedAt.getTime()
   const endOffset = span.endedAt.getTime() - startedAt.getTime()
 
-  const assembledSpans = await Promise.all(
-    children.map((child) =>
-      assembleSpan({
-        span: child,
-        depth: depth + 1,
-        startedAt,
-        childrens,
-        workspace,
-      }),
-    ),
+  const assembledSpans = children.map((child) =>
+    assembleSpanStructure({
+      span: child,
+      depth: depth + 1,
+      startedAt,
+      childrens,
+    }),
   )
-
-  const repo = new SpanMetadatasRepository(workspace.id)
-  const metadata = await repo
-    .get({ spanId: span.id, traceId: span.traceId })
-    .then((r) => r.value)
 
   return {
     ...span,
-    metadata,
     children: assembledSpans,
     depth: depth,
     startOffset: startOffset,
