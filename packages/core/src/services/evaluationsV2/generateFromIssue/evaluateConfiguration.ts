@@ -1,3 +1,4 @@
+import { AlignmentMetricMetadata } from '@latitude-data/constants/evaluations'
 import { calculateMCC } from './calculateMCC'
 import { Result } from '@latitude-data/core/lib/Result'
 
@@ -13,6 +14,7 @@ export async function evaluateConfiguration({
   childrenValues,
   spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
   spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+  alreadyCalculatedAlignmentMetricMetadata,
 }: {
   childrenValues: {
     [jobKey: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any -- this is returned by bullmq
@@ -25,6 +27,7 @@ export async function evaluateConfiguration({
     spanId: string
     traceId: string
   }>
+  alreadyCalculatedAlignmentMetricMetadata?: AlignmentMetricMetadata
 }) {
   const {
     examplesThatShouldPassTheEvaluation,
@@ -38,6 +41,7 @@ export async function evaluateConfiguration({
   const mccResult = calculateMCC({
     examplesThatShouldPassTheEvaluation,
     examplesThatShouldFailTheEvaluation,
+    alreadyCalculatedAlignmentMetricMetadata,
   })
   if (!Result.isOk(mccResult)) {
     return mccResult
