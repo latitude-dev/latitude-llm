@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ATTRIBUTES, Otlp, SpanStatus, SpanType } from '../../../constants'
 import {
-  Otlp,
-  SpanStatus,
-  SpanType,
-  ATTR_LATITUDE_TYPE,
-} from '../../../constants'
-import {
-  ATTR_GEN_AI_OPERATION_NAME,
   GEN_AI_OPERATION_NAME_VALUE_CHAT,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
 } from '@opentelemetry/semantic-conventions/incubating'
@@ -57,9 +51,18 @@ function createOtlpSpan(overrides: Partial<Otlp.Span> = {}): Otlp.Span {
     endTimeUnixNano: String(now + 1_000_000_000),
     status: { code: Otlp.StatusCode.Ok },
     attributes: [
-      { key: ATTR_LATITUDE_TYPE, value: { stringValue: SpanType.Completion } },
-      { key: 'gen_ai.system', value: { stringValue: 'openai' } },
-      { key: 'gen_ai.response.model', value: { stringValue: 'gpt-4o' } },
+      {
+        key: ATTRIBUTES.LATITUDE.type,
+        value: { stringValue: SpanType.Completion },
+      },
+      {
+        key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.system,
+        value: { stringValue: 'openai' },
+      },
+      {
+        key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.response.model,
+        value: { stringValue: 'gpt-4o' },
+      },
     ],
     events: [],
     links: [],
@@ -325,11 +328,17 @@ describe('processSpansBulk', () => {
       const span = createOtlpSpan({
         attributes: [
           {
-            key: ATTR_LATITUDE_TYPE,
+            key: ATTRIBUTES.LATITUDE.type,
             value: { stringValue: SpanType.Completion },
           },
-          { key: 'gen_ai.system', value: { stringValue: 'openai' } },
-          { key: 'gen_ai.response.model', value: { stringValue: 'gpt-4o' } },
+          {
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.system,
+            value: { stringValue: 'openai' },
+          },
+          {
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.response.model,
+            value: { stringValue: 'gpt-4o' },
+          },
         ],
       })
 
@@ -346,11 +355,17 @@ describe('processSpansBulk', () => {
       const span = createOtlpSpan({
         attributes: [
           {
-            key: ATTR_GEN_AI_OPERATION_NAME,
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.operationName,
             value: { stringValue: GEN_AI_OPERATION_NAME_VALUE_CHAT },
           },
-          { key: 'gen_ai.system', value: { stringValue: 'openai' } },
-          { key: 'gen_ai.response.model', value: { stringValue: 'gpt-4o' } },
+          {
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.system,
+            value: { stringValue: 'openai' },
+          },
+          {
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.response.model,
+            value: { stringValue: 'gpt-4o' },
+          },
         ],
       })
 
@@ -366,9 +381,15 @@ describe('processSpansBulk', () => {
     it('processes spans from Vercel AI SDK format', async () => {
       const span = createOtlpSpan({
         attributes: [
-          { key: 'ai.operationId', value: { stringValue: 'ai.generateText' } },
-          { key: 'ai.model.provider', value: { stringValue: 'openai' } },
-          { key: 'ai.model.id', value: { stringValue: 'gpt-4o' } },
+          {
+            key: ATTRIBUTES.AI_SDK.operationId,
+            value: { stringValue: 'ai.generateText' },
+          },
+          {
+            key: ATTRIBUTES.AI_SDK.model.provider,
+            value: { stringValue: 'openai' },
+          },
+          { key: ATTRIBUTES.AI_SDK.model.id, value: { stringValue: 'gpt-4o' } },
         ],
       })
 
@@ -385,7 +406,7 @@ describe('processSpansBulk', () => {
       const span = createOtlpSpan({
         attributes: [
           {
-            key: ATTR_GEN_AI_OPERATION_NAME,
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.operationName,
             value: { stringValue: GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS },
           },
         ],
@@ -501,7 +522,7 @@ describe('convertSpanAttributes', () => {
 describe('extractSpanType', () => {
   it('classifies LLM completion operations', () => {
     const attributes = {
-      [ATTR_LATITUDE_TYPE]: SpanType.Completion,
+      [ATTRIBUTES.LATITUDE.type]: SpanType.Completion,
     }
 
     const result = extractSpanType(attributes)
@@ -511,7 +532,7 @@ describe('extractSpanType', () => {
 
   it('classifies tool/function operations', () => {
     const attributes = {
-      [ATTR_LATITUDE_TYPE]: SpanType.Tool,
+      [ATTRIBUTES.LATITUDE.type]: SpanType.Tool,
     }
 
     const result = extractSpanType(attributes)
@@ -521,7 +542,7 @@ describe('extractSpanType', () => {
 
   it('classifies embedding operations', () => {
     const attributes = {
-      [ATTR_LATITUDE_TYPE]: SpanType.Embedding,
+      [ATTRIBUTES.LATITUDE.type]: SpanType.Embedding,
     }
 
     const result = extractSpanType(attributes)
@@ -531,7 +552,7 @@ describe('extractSpanType', () => {
 
   it('classifies prompt operations', () => {
     const attributes = {
-      [ATTR_LATITUDE_TYPE]: SpanType.Prompt,
+      [ATTRIBUTES.LATITUDE.type]: SpanType.Prompt,
     }
 
     const result = extractSpanType(attributes)
@@ -549,7 +570,8 @@ describe('extractSpanType', () => {
 
   it('uses gen_ai.operation.name when latitude.type is missing', () => {
     const attributes = {
-      [ATTR_GEN_AI_OPERATION_NAME]: GEN_AI_OPERATION_NAME_VALUE_CHAT,
+      [ATTRIBUTES.OPENTELEMETRY.GEN_AI.operationName]:
+        GEN_AI_OPERATION_NAME_VALUE_CHAT,
     }
 
     const result = extractSpanType(attributes)

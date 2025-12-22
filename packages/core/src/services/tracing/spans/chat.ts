@@ -1,11 +1,9 @@
 import { database } from '../../../client'
 import {
-  ATTR_LATITUDE_DOCUMENT_LOG_UUID,
-  ATTR_LATITUDE_PREVIOUS_TRACE_ID,
-  ATTR_LATITUDE_SOURCE,
   LogSources,
   SPAN_SPECIFICATIONS,
   SpanType,
+  ATTRIBUTES,
 } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import { SpanProcessArgs } from './shared'
@@ -21,8 +19,8 @@ async function process(
   _ = database,
 ) {
   return Result.ok({
-    documentLogUuid: attributes[ATTR_LATITUDE_DOCUMENT_LOG_UUID] as string,
-    previousTraceId: attributes[ATTR_LATITUDE_PREVIOUS_TRACE_ID] as string,
-    source: attributes[ATTR_LATITUDE_SOURCE] as LogSources,
+    documentLogUuid: attributes[ATTRIBUTES.LATITUDE.documentLogUuid] as string,
+    previousTraceId: attributes[ATTRIBUTES.LATITUDE.previousTraceId] as string,
+    source: attributes[ATTRIBUTES.LATITUDE.source] as LogSources,
   })
 }

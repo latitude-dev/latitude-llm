@@ -1,46 +1,6 @@
 import { BaseInstrumentation } from '$telemetry/instrumentations/base'
 import {
-  ATTR_GEN_AI_COMPLETIONS,
-  ATTR_GEN_AI_MESSAGE_CONTENT,
-  ATTR_GEN_AI_MESSAGE_ROLE,
-  ATTR_GEN_AI_MESSAGE_TOOL_CALL_ID,
-  ATTR_GEN_AI_MESSAGE_TOOL_CALLS,
-  ATTR_GEN_AI_MESSAGE_TOOL_CALLS_ARGUMENTS,
-  ATTR_GEN_AI_MESSAGE_TOOL_CALLS_ID,
-  ATTR_GEN_AI_MESSAGE_TOOL_CALLS_NAME,
-  ATTR_GEN_AI_MESSAGE_TOOL_NAME,
-  ATTR_GEN_AI_MESSAGE_TOOL_RESULT_IS_ERROR,
-  ATTR_GEN_AI_PROMPTS,
-  ATTR_GEN_AI_REQUEST,
-  ATTR_GEN_AI_REQUEST_CONFIGURATION,
-  ATTR_GEN_AI_REQUEST_MESSAGES,
-  ATTR_GEN_AI_REQUEST_PARAMETERS,
-  ATTR_GEN_AI_REQUEST_TEMPLATE,
-  ATTR_GEN_AI_RESPONSE,
-  ATTR_GEN_AI_RESPONSE_MESSAGES,
-  ATTR_GEN_AI_TOOL_CALL_ARGUMENTS,
-  ATTR_GEN_AI_TOOL_RESULT_IS_ERROR,
-  ATTR_GEN_AI_TOOL_RESULT_VALUE,
-  ATTR_GEN_AI_USAGE_CACHED_TOKENS,
-  ATTR_GEN_AI_USAGE_COMPLETION_TOKENS,
-  ATTR_GEN_AI_USAGE_PROMPT_TOKENS,
-  ATTR_GEN_AI_USAGE_REASONING_TOKENS,
-  ATTR_HTTP_REQUEST_BODY,
-  ATTR_HTTP_REQUEST_HEADER,
-  ATTR_HTTP_REQUEST_URL,
-  ATTR_HTTP_RESPONSE_BODY,
-  ATTR_HTTP_RESPONSE_HEADER,
-  ATTR_LATITUDE_COMMIT_UUID,
-  ATTR_LATITUDE_DOCUMENT_LOG_UUID,
-  ATTR_LATITUDE_DOCUMENT_UUID,
-  ATTR_LATITUDE_EXPERIMENT_UUID,
-  ATTR_LATITUDE_EXTERNAL_ID,
-  ATTR_LATITUDE_PREVIOUS_TRACE_ID,
-  ATTR_LATITUDE_PROJECT_ID,
-  ATTR_LATITUDE_PROMPT_PATH,
-  ATTR_LATITUDE_SOURCE,
-  ATTR_LATITUDE_TEST_DEPLOYMENT_ID,
-  ATTR_LATITUDE_TYPE,
+  ATTRIBUTES,
   GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
   HEAD_COMMIT,
   LogSources,
@@ -50,21 +10,6 @@ import {
 } from '@latitude-data/constants'
 import * as otel from '@opentelemetry/api'
 import { propagation, trace } from '@opentelemetry/api'
-import {
-  ATTR_HTTP_REQUEST_METHOD,
-  ATTR_HTTP_RESPONSE_STATUS_CODE,
-} from '@opentelemetry/semantic-conventions'
-import {
-  ATTR_GEN_AI_OPERATION_NAME,
-  ATTR_GEN_AI_RESPONSE_FINISH_REASONS,
-  ATTR_GEN_AI_RESPONSE_MODEL,
-  ATTR_GEN_AI_SYSTEM,
-  ATTR_GEN_AI_TOOL_CALL_ID,
-  ATTR_GEN_AI_TOOL_NAME,
-  ATTR_GEN_AI_TOOL_TYPE,
-  ATTR_GEN_AI_USAGE_INPUT_TOKENS,
-  ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
-} from '@opentelemetry/semantic-conventions/incubating'
 
 export type StartSpanOptions = {
   name?: string
@@ -165,6 +110,12 @@ export type CaptureOptions = StartSpanOptions & {
   versionUuid?: string // Optional, defaults to HEAD commit
   conversationUuid?: string // Optional, if provided, will be used as the documentLogUuid
 }
+
+type OtelGenAiField =
+  | typeof ATTRIBUTES.OPENTELEMETRY.GEN_AI.prompt
+  | typeof ATTRIBUTES.OPENTELEMETRY.GEN_AI.completion
+
+type OtelGenAiMessageField = ReturnType<OtelGenAiField['index']>
 
 export class ManualInstrumentation implements BaseInstrumentation {
   private enabled: boolean
@@ -292,9 +243,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
       name,
       {
         attributes: {
-          [ATTR_LATITUDE_TYPE]: type,
+          [ATTRIBUTES.LATITUDE.type]: type,
           ...(operation && {
-            [ATTR_GEN_AI_OPERATION_NAME]: operation,
+            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.operationName]: operation,
           }),
           ...(start.attributes || {}),
         },
@@ -332,10 +283,11 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     const span = this.span(ctx, start.name, SpanType.Tool, {
       attributes: {
-        [ATTR_GEN_AI_TOOL_NAME]: start.name,
-        [ATTR_GEN_AI_TOOL_TYPE]: GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
-        [ATTR_GEN_AI_TOOL_CALL_ID]: start.call.id,
-        [ATTR_GEN_AI_TOOL_CALL_ARGUMENTS]: jsonArguments,
+        [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.name]: start.name,
+        [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.type]:
+          GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
+        [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.call.id]: start.call.id,
+        [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.call.arguments]: jsonArguments,
         ...(start.attributes || {}),
       },
     })
@@ -358,8 +310,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
         span.end({
           attributes: {
-            [ATTR_GEN_AI_TOOL_RESULT_VALUE]: stringResult,
-            [ATTR_GEN_AI_TOOL_RESULT_IS_ERROR]: end.result.isError,
+            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.result.value]: stringResult,
+            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.result.isError]:
+              end.result.isError,
             ...(end.attributes || {}),
           },
         })
@@ -369,7 +322,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
   }
 
   private attribifyMessageToolCalls(
-    prefix: string,
+    otelMessageField: OtelGenAiMessageField,
     toolCalls: Record<string, unknown>[],
   ) {
     const attributes: otel.Attributes = {}
@@ -385,18 +338,14 @@ export class ManualInstrumentation implements BaseInstrumentation {
           case 'toolCallId':
           case 'toolUseId': {
             if (typeof value !== 'string') continue
-            attributes[
-              `${prefix}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS_ID}`
-            ] = value
+            attributes[otelMessageField.toolCalls(i).id] = value
             break
           }
 
           case 'name':
           case 'toolName': {
             if (typeof value !== 'string') continue
-            attributes[
-              `${prefix}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS_NAME}`
-            ] = value
+            attributes[otelMessageField.toolCalls(i).name] = value
             break
           }
 
@@ -404,18 +353,13 @@ export class ManualInstrumentation implements BaseInstrumentation {
           case 'toolArguments':
           case 'input': {
             if (typeof value === 'string') {
-              attributes[
-                `${prefix}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS_ARGUMENTS}`
-              ] = value
+              attributes[otelMessageField.toolCalls(i).arguments] = value
             } else {
               try {
-                attributes[
-                  `${prefix}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS_ARGUMENTS}`
-                ] = JSON.stringify(value)
+                attributes[otelMessageField.toolCalls(i).arguments] =
+                  JSON.stringify(value)
               } catch (error) {
-                attributes[
-                  `${prefix}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS_ARGUMENTS}`
-                ] = '{}'
+                attributes[otelMessageField.toolCalls(i).arguments] = '{}'
               }
             }
             break
@@ -428,12 +372,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
             if (typeof value.name !== 'string') continue
             if (!('arguments' in value)) continue
             if (typeof value.arguments !== 'string') continue
-            attributes[
-              `${prefix}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS_NAME}`
-            ] = value.name
-            attributes[
-              `${prefix}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS_ARGUMENTS}`
-            ] = value.arguments
+            attributes[otelMessageField.toolCalls(i).name] = value.name
+            attributes[otelMessageField.toolCalls(i).arguments] =
+              value.arguments
             break
           }
         }
@@ -443,19 +384,21 @@ export class ManualInstrumentation implements BaseInstrumentation {
     return attributes
   }
 
-  private attribifyMessageContent(prefix: string, content: unknown) {
+  private attribifyMessageContent(
+    otelMessageField: OtelGenAiMessageField,
+    content: unknown,
+  ) {
     let attributes: otel.Attributes = {}
 
     if (typeof content === 'string') {
-      attributes[`${prefix}.${ATTR_GEN_AI_MESSAGE_CONTENT}`] = content
+      attributes[otelMessageField.content]
       return attributes
     }
 
     try {
-      attributes[`${prefix}.${ATTR_GEN_AI_MESSAGE_CONTENT}`] =
-        JSON.stringify(content)
+      attributes[otelMessageField.content] = JSON.stringify(content)
     } catch (error) {
-      attributes[`${prefix}.${ATTR_GEN_AI_MESSAGE_CONTENT}`] = '[]'
+      attributes[otelMessageField.content] = '[]'
     }
 
     if (!Array.isArray(content)) return attributes
@@ -474,7 +417,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     if (toolCalls.length > 0) {
       attributes = {
         ...attributes,
-        ...this.attribifyMessageToolCalls(prefix, toolCalls),
+        ...this.attribifyMessageToolCalls(otelMessageField, toolCalls),
       }
     }
 
@@ -485,8 +428,10 @@ export class ManualInstrumentation implements BaseInstrumentation {
     direction: 'input' | 'output',
     messages: Record<string, unknown>[],
   ) {
-    const prefix =
-      direction === 'input' ? ATTR_GEN_AI_PROMPTS : ATTR_GEN_AI_COMPLETIONS
+    const otelField =
+      direction === 'input'
+        ? ATTRIBUTES.OPENTELEMETRY.GEN_AI.prompt
+        : ATTRIBUTES.OPENTELEMETRY.GEN_AI.completion
 
     let attributes: otel.Attributes = {}
     for (let i = 0; i < messages.length; i++) {
@@ -498,7 +443,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         switch (field) {
           case 'role': {
             if (typeof value !== 'string') continue
-            attributes[`${prefix}.${i}.${ATTR_GEN_AI_MESSAGE_ROLE}`] = value
+            attributes[otelField.index(i).role] = value
             break
           }
 
@@ -506,7 +451,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
           case 'content': {
             attributes = {
               ...attributes,
-              ...this.attribifyMessageContent(`${prefix}.${i}`, value),
+              ...this.attribifyMessageContent(otelField.index(i), value),
             }
             break
           }
@@ -516,7 +461,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
             if (!Array.isArray(value)) continue
             attributes = {
               ...attributes,
-              ...this.attribifyMessageToolCalls(`${prefix}.${i}`, value),
+              ...this.attribifyMessageToolCalls(otelField.index(i), value),
             }
             break
           }
@@ -527,15 +472,13 @@ export class ManualInstrumentation implements BaseInstrumentation {
           case 'toolId':
           case 'toolUseId': {
             if (typeof value !== 'string') continue
-            attributes[`${prefix}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALL_ID}`] =
-              value
+            attributes[otelField.index(i).tool.callId] = value
             break
           }
 
           case 'toolName': {
             if (typeof value !== 'string') continue
-            attributes[`${prefix}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_NAME}`] =
-              value
+            attributes[otelField.index(i).tool.toolName] = value
             break
           }
 
@@ -543,9 +486,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
           case 'isError': {
             if (typeof value !== 'boolean') continue
-            attributes[
-              `${prefix}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_RESULT_IS_ERROR}`
-            ] = value
+            attributes[otelField.index(i).tool.isError] = value
             break
           }
         }
@@ -560,7 +501,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
     configuration: Record<string, unknown>,
   ) {
     const prefix =
-      direction === 'input' ? ATTR_GEN_AI_REQUEST : ATTR_GEN_AI_RESPONSE
+      direction === 'input'
+        ? ATTRIBUTES.LATITUDE.request._root
+        : ATTRIBUTES.LATITUDE.response._root
 
     const attributes: otel.Attributes = {}
     for (const key in configuration) {
@@ -613,15 +556,15 @@ export class ManualInstrumentation implements BaseInstrumentation {
       SpanType.Completion,
       {
         attributes: {
-          [ATTR_GEN_AI_SYSTEM]: start.provider,
-          [ATTR_GEN_AI_REQUEST_CONFIGURATION]: jsonConfiguration,
+          [ATTRIBUTES.OPENTELEMETRY.GEN_AI.system]: start.provider,
+          [ATTRIBUTES.LATITUDE.request.configuration]: jsonConfiguration,
           ...attrConfiguration,
-          [ATTR_GEN_AI_REQUEST_MESSAGES]: jsonInput,
+          [ATTRIBUTES.LATITUDE.request.messages]: jsonInput,
           ...attrInput,
           ...(start.attributes || {}),
-          [ATTR_LATITUDE_COMMIT_UUID]: start.versionUuid,
-          [ATTR_LATITUDE_DOCUMENT_UUID]: start.promptUuid,
-          [ATTR_LATITUDE_EXPERIMENT_UUID]: start.experimentUuid,
+          [ATTRIBUTES.LATITUDE.commitUuid]: start.versionUuid,
+          [ATTRIBUTES.LATITUDE.documentUuid]: start.promptUuid,
+          [ATTRIBUTES.LATITUDE.experimentUuid]: start.experimentUuid,
         },
       },
     )
@@ -652,16 +595,18 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
         span.end({
           attributes: {
-            [ATTR_GEN_AI_RESPONSE_MESSAGES]: jsonOutput,
+            [ATTRIBUTES.LATITUDE.response.messages]: jsonOutput,
             ...attrOutput,
-            [ATTR_GEN_AI_USAGE_INPUT_TOKENS]: inputTokens,
-            [ATTR_GEN_AI_USAGE_PROMPT_TOKENS]: tokens.prompt,
-            [ATTR_GEN_AI_USAGE_CACHED_TOKENS]: tokens.cached,
-            [ATTR_GEN_AI_USAGE_REASONING_TOKENS]: tokens.reasoning,
-            [ATTR_GEN_AI_USAGE_COMPLETION_TOKENS]: tokens.completion,
-            [ATTR_GEN_AI_USAGE_OUTPUT_TOKENS]: outputTokens,
-            [ATTR_GEN_AI_RESPONSE_MODEL]: start.model,
-            [ATTR_GEN_AI_RESPONSE_FINISH_REASONS]: [finishReason],
+            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.usage.inputTokens]: inputTokens,
+            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.usage.outputTokens]: outputTokens,
+            [ATTRIBUTES.LATITUDE.usage.promptTokens]: tokens.prompt,
+            [ATTRIBUTES.LATITUDE.usage.cachedTokens]: tokens.cached,
+            [ATTRIBUTES.LATITUDE.usage.reasoningTokens]: tokens.reasoning,
+            [ATTRIBUTES.LATITUDE.usage.completionTokens]: tokens.completion,
+            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.response.model]: start.model,
+            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.response.finishReasons]: [
+              finishReason,
+            ],
             ...(end.attributes || {}),
           },
         })
@@ -703,8 +648,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
   ) {
     const prefix =
       direction === 'request'
-        ? ATTR_HTTP_REQUEST_HEADER
-        : ATTR_HTTP_RESPONSE_HEADER
+        ? ATTRIBUTES.OPENTELEMETRY.HTTP.request.header
+        : ATTRIBUTES.OPENTELEMETRY.HTTP.response.header
 
     const attributes: otel.Attributes = {}
     for (const key in headers) {
@@ -743,10 +688,10 @@ export class ManualInstrumentation implements BaseInstrumentation {
       SpanType.Http,
       {
         attributes: {
-          [ATTR_HTTP_REQUEST_METHOD]: method,
-          [ATTR_HTTP_REQUEST_URL]: start.request.url,
+          [ATTRIBUTES.OPENTELEMETRY.HTTP.request.method]: method,
+          [ATTRIBUTES.OPENTELEMETRY.HTTP.request.url]: start.request.url,
           ...attrHeaders,
-          [ATTR_HTTP_REQUEST_BODY]: finalBody,
+          [ATTRIBUTES.OPENTELEMETRY.HTTP.request.body]: finalBody,
           ...(start.attributes || {}),
         },
       },
@@ -776,9 +721,10 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
         span.end({
           attributes: {
-            [ATTR_HTTP_RESPONSE_STATUS_CODE]: end.response.status,
+            [ATTRIBUTES.OPENTELEMETRY.HTTP.response.statusCode]:
+              end.response.status,
             ...attrHeaders,
-            [ATTR_HTTP_RESPONSE_BODY]: finalBody,
+            [ATTRIBUTES.OPENTELEMETRY.HTTP.response.body]: finalBody,
             ...(end.attributes || {}),
           },
         })
@@ -812,20 +758,21 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
 
     const attributes = {
-      [ATTR_GEN_AI_REQUEST_TEMPLATE]: template,
-      [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
-      [ATTR_LATITUDE_COMMIT_UUID]: versionUuid || HEAD_COMMIT,
-      [ATTR_LATITUDE_DOCUMENT_UUID]: promptUuid,
-      [ATTR_LATITUDE_PROJECT_ID]: projectId,
-      [ATTR_LATITUDE_DOCUMENT_LOG_UUID]: documentLogUuid,
+      [ATTRIBUTES.LATITUDE.request.template]: template,
+      [ATTRIBUTES.LATITUDE.request.parameters]: jsonParameters,
+
+      [ATTRIBUTES.LATITUDE.commitUuid]: versionUuid || HEAD_COMMIT,
+      [ATTRIBUTES.LATITUDE.documentUuid]: promptUuid,
+      [ATTRIBUTES.LATITUDE.projectId]: projectId,
+      [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
       ...(experimentUuid && {
-        [ATTR_LATITUDE_EXPERIMENT_UUID]: experimentUuid,
+        [ATTRIBUTES.LATITUDE.experimentUuid]: experimentUuid,
       }),
       ...(testDeploymentId && {
-        [ATTR_LATITUDE_TEST_DEPLOYMENT_ID]: testDeploymentId,
+        [ATTRIBUTES.LATITUDE.testDeploymentId]: testDeploymentId,
       }),
-      ...(externalId && { [ATTR_LATITUDE_EXTERNAL_ID]: externalId }),
-      ...(source && { [ATTR_LATITUDE_SOURCE]: source }),
+      ...(externalId && { [ATTRIBUTES.LATITUDE.externalId]: externalId }),
+      ...(source && { [ATTRIBUTES.LATITUDE.source]: source }),
       ...(rest.attributes || {}),
     }
 
@@ -849,9 +796,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }: ChatSpanOptions,
   ) {
     const attributes = {
-      [ATTR_LATITUDE_DOCUMENT_LOG_UUID]: documentLogUuid,
-      [ATTR_LATITUDE_PREVIOUS_TRACE_ID]: previousTraceId,
-      ...(source && { [ATTR_LATITUDE_SOURCE]: source }),
+      [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
+      [ATTRIBUTES.LATITUDE.previousTraceId]: previousTraceId,
+      ...(source && { [ATTRIBUTES.LATITUDE.source]: source }),
       ...(rest.attributes || {}),
     }
 
@@ -871,11 +818,11 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }: ExternalSpanOptions,
   ) {
     const attributes = {
-      [ATTR_LATITUDE_DOCUMENT_UUID]: promptUuid,
-      [ATTR_LATITUDE_DOCUMENT_LOG_UUID]: documentLogUuid,
-      [ATTR_LATITUDE_SOURCE]: source ?? LogSources.API,
-      ...(versionUuid && { [ATTR_LATITUDE_COMMIT_UUID]: versionUuid }),
-      ...(externalId && { [ATTR_LATITUDE_EXTERNAL_ID]: externalId }),
+      [ATTRIBUTES.LATITUDE.documentUuid]: promptUuid,
+      [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
+      [ATTRIBUTES.LATITUDE.source]: source ?? LogSources.API,
+      ...(versionUuid && { [ATTRIBUTES.LATITUDE.commitUuid]: versionUuid }),
+      ...(externalId && { [ATTRIBUTES.LATITUDE.externalId]: externalId }),
       ...(rest.attributes || {}),
     }
 
@@ -896,11 +843,11 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }: CaptureOptions,
   ) {
     const attributes = {
-      [ATTR_LATITUDE_PROMPT_PATH]: path,
-      [ATTR_LATITUDE_PROJECT_ID]: projectId,
-      ...(versionUuid && { [ATTR_LATITUDE_COMMIT_UUID]: versionUuid }),
+      [ATTRIBUTES.LATITUDE.promptPath]: path,
+      [ATTRIBUTES.LATITUDE.projectId]: projectId,
+      ...(versionUuid && { [ATTRIBUTES.LATITUDE.commitUuid]: versionUuid }),
       ...(conversationUuid && {
-        [ATTR_LATITUDE_DOCUMENT_LOG_UUID]: conversationUuid,
+        [ATTRIBUTES.LATITUDE.documentLogUuid]: conversationUuid,
       }),
       ...(rest.attributes || {}),
     }

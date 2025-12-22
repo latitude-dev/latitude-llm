@@ -1,15 +1,6 @@
 import { database } from '../../../client'
 import {
-  ATTR_GEN_AI_REQUEST_PARAMETERS,
-  ATTR_GEN_AI_REQUEST_TEMPLATE,
-  ATTR_LATITUDE_COMMIT_UUID,
-  ATTR_LATITUDE_DOCUMENT_LOG_UUID,
-  ATTR_LATITUDE_DOCUMENT_UUID,
-  ATTR_LATITUDE_EXPERIMENT_UUID,
-  ATTR_LATITUDE_EXTERNAL_ID,
-  ATTR_LATITUDE_PROJECT_ID,
-  ATTR_LATITUDE_SOURCE,
-  ATTR_LATITUDE_TEST_DEPLOYMENT_ID,
+  ATTRIBUTES,
   LogSources,
   SPAN_SPECIFICATIONS,
   SpanType,
@@ -30,7 +21,7 @@ async function process(
   let parameters: Record<string, unknown>
   try {
     parameters = JSON.parse(
-      attributes[ATTR_GEN_AI_REQUEST_PARAMETERS] as string,
+      attributes[ATTRIBUTES.LATITUDE.request.parameters] as string,
     )
   } catch (error) {
     parameters = {}
@@ -38,18 +29,18 @@ async function process(
 
   return Result.ok({
     parameters,
-    template: attributes[ATTR_GEN_AI_REQUEST_TEMPLATE] as string,
-    externalId: attributes[ATTR_LATITUDE_EXTERNAL_ID] as string,
+    template: attributes[ATTRIBUTES.LATITUDE.request.template] as string,
+    externalId: attributes[ATTRIBUTES.LATITUDE.externalId] as string,
 
     // References
-    experimentUuid: attributes[ATTR_LATITUDE_EXPERIMENT_UUID] as string,
-    promptUuid: attributes[ATTR_LATITUDE_DOCUMENT_UUID] as string,
-    versionUuid: attributes[ATTR_LATITUDE_COMMIT_UUID] as string,
-    documentLogUuid: attributes[ATTR_LATITUDE_DOCUMENT_LOG_UUID] as string,
-    projectId: attributes[ATTR_LATITUDE_PROJECT_ID] as number,
-    testDeploymentId: attributes[ATTR_LATITUDE_TEST_DEPLOYMENT_ID] as
+    experimentUuid: attributes[ATTRIBUTES.LATITUDE.experimentUuid] as string,
+    promptUuid: attributes[ATTRIBUTES.LATITUDE.documentUuid] as string,
+    versionUuid: attributes[ATTRIBUTES.LATITUDE.commitUuid] as string,
+    documentLogUuid: attributes[ATTRIBUTES.LATITUDE.documentLogUuid] as string,
+    projectId: attributes[ATTRIBUTES.LATITUDE.projectId] as number,
+    testDeploymentId: attributes[ATTRIBUTES.LATITUDE.testDeploymentId] as
       | number
       | undefined,
-    source: attributes[ATTR_LATITUDE_SOURCE] as LogSources,
+    source: attributes[ATTRIBUTES.LATITUDE.source] as LogSources,
   })
 }
