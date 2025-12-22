@@ -6,7 +6,7 @@ import {
 import { extractActualOutput } from '../../services/evaluationsV2/outputs/extract'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { LegacyMessage } from '../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
-import { findCompletionSpanFromTrace } from '../../services/tracing/spans/findCompletionSpanFromTrace'
+import { findCompletionSpanFromTrace } from '../../services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { assembleTrace } from '../../services/tracing/traces/assemble'
 import { Result, TypedResult } from '../../lib/Result'
 import { Workspace } from '../../schema/models/types/Workspace'

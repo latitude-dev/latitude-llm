@@ -14,7 +14,7 @@ import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-node'
 import { captureException } from '../utils/datadogCapture'
 import { z } from 'zod'
 import { ATTRIBUTES, Otlp } from '../constants'
-import { enqueueSpans } from '../services/tracing/spans/enqueue'
+import { enqueueSpans } from '../services/tracing/spans/ingestion/enqueue'
 
 export type * from '@latitude-data/telemetry'
 

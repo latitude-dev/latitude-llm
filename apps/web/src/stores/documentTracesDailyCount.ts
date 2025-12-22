@@ -1,6 +1,6 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { DailyCount } from '@latitude-data/core/services/tracing/spans/computeDocumentTracesDailyCount'
+import { DailyCount } from '@latitude-data/core/services/tracing/spans/fetching/computeDocumentTracesDailyCount'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useDocumentTracesDailyCount(

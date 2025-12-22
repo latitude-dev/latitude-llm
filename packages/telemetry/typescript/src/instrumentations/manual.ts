@@ -1,12 +1,12 @@
 import { BaseInstrumentation } from '$telemetry/instrumentations/base'
 import {
   ATTRIBUTES,
-  GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
   HEAD_COMMIT,
   LogSources,
   SPAN_SPECIFICATIONS,
   SpanType,
   TraceContext,
+  VALUES,
 } from '@latitude-data/constants'
 import * as otel from '@opentelemetry/api'
 import { propagation, trace } from '@opentelemetry/api'
@@ -112,8 +112,8 @@ export type CaptureOptions = StartSpanOptions & {
 }
 
 type OtelGenAiField =
-  | typeof ATTRIBUTES.OPENTELEMETRY.GEN_AI.prompt
-  | typeof ATTRIBUTES.OPENTELEMETRY.GEN_AI.completion
+  | typeof ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.prompt
+  | typeof ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.completion
 
 type OtelGenAiMessageField = ReturnType<OtelGenAiField['index']>
 
@@ -245,7 +245,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         attributes: {
           [ATTRIBUTES.LATITUDE.type]: type,
           ...(operation && {
-            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.operationName]: operation,
+            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.operation]: operation,
           }),
           ...(start.attributes || {}),
         },
@@ -283,9 +283,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     const span = this.span(ctx, start.name, SpanType.Tool, {
       attributes: {
-        [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.name]: start.name,
-        [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.type]:
-          GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
+        [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.name]: start.name,
+        [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.type]:
+          VALUES.OPENTELEMETRY.GEN_AI.tool.type.function,
         [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.call.id]: start.call.id,
         [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.call.arguments]: jsonArguments,
         ...(start.attributes || {}),
@@ -310,8 +310,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
         span.end({
           attributes: {
-            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.result.value]: stringResult,
-            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.result.isError]:
+            [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.result.value]:
+              stringResult,
+            [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.result.isError]:
               end.result.isError,
             ...(end.attributes || {}),
           },
@@ -430,8 +431,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
   ) {
     const otelField =
       direction === 'input'
-        ? ATTRIBUTES.OPENTELEMETRY.GEN_AI.prompt
-        : ATTRIBUTES.OPENTELEMETRY.GEN_AI.completion
+        ? ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.prompt
+        : ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.completion
 
     let attributes: otel.Attributes = {}
     for (let i = 0; i < messages.length; i++) {
@@ -556,7 +557,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       SpanType.Completion,
       {
         attributes: {
-          [ATTRIBUTES.OPENTELEMETRY.GEN_AI.system]: start.provider,
+          [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system]: start.provider,
           [ATTRIBUTES.LATITUDE.request.configuration]: jsonConfiguration,
           ...attrConfiguration,
           [ATTRIBUTES.LATITUDE.request.messages]: jsonInput,
@@ -620,24 +621,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
       ctx,
       options?.name || SPAN_SPECIFICATIONS[SpanType.Embedding].name,
       SpanType.Embedding,
-      options,
-    )
-  }
-
-  retrieval(ctx: otel.Context, options?: StartSpanOptions) {
-    return this.span(
-      ctx,
-      options?.name || SPAN_SPECIFICATIONS[SpanType.Retrieval].name,
-      SpanType.Retrieval,
-      options,
-    )
-  }
-
-  reranking(ctx: otel.Context, options?: StartSpanOptions) {
-    return this.span(
-      ctx,
-      options?.name || SPAN_SPECIFICATIONS[SpanType.Reranking].name,
-      SpanType.Reranking,
       options,
     )
   }
@@ -779,10 +762,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
     return this.span(ctx, name || `prompt-${promptUuid}`, SpanType.Prompt, {
       attributes,
     })
-  }
-
-  step(ctx: otel.Context, options?: StartSpanOptions) {
-    return this.span(ctx, 'step', SpanType.Step, options)
   }
 
   chat(

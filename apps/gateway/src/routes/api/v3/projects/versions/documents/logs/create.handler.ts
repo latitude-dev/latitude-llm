@@ -142,6 +142,7 @@ async function createSpansFromLogData({
     traceId,
     spanId: promptSpanId,
     type: SpanType.Prompt,
+    documentLogUuid,
     attributes: {
       [ATTRIBUTES.LATITUDE.type]: SpanType.Prompt,
       [ATTRIBUTES.LATITUDE.request.template]: document.content,

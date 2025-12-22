@@ -19,7 +19,7 @@ import {
 } from '../shared'
 import { buildEvaluationParameters, promptTask, runPrompt } from './shared'
 import { assembleTrace } from '../../tracing/traces/assemble'
-import { findCompletionSpanFromTrace } from '../../tracing/spans/findCompletionSpanFromTrace'
+import { findCompletionSpanFromTrace } from '../../tracing/spans/fetching/findCompletionSpanFromTrace'
 
 export const LlmEvaluationRatingSpecification = {
   ...specification,

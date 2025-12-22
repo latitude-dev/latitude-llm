@@ -32,7 +32,7 @@ import { createEvaluationResultV2 } from './results/create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 import { assembleTrace } from '../tracing/traces/assemble'
 import { LegacyMessage } from '../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
-import { findCompletionSpanFromTrace } from '../tracing/spans/findCompletionSpanFromTrace'
+import { findCompletionSpanFromTrace } from '../tracing/spans/fetching/findCompletionSpanFromTrace'
 
 export async function runEvaluationV2<
   T extends EvaluationType,

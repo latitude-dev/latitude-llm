@@ -22,7 +22,7 @@ import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'
 import { useConversation } from '$/stores/conversations'
-import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
+import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findFirstSpanOfType'
 
 function useAnnotationData({
   documentLogUuid,

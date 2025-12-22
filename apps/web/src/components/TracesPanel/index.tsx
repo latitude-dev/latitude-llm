@@ -20,7 +20,7 @@ import { MetadataInfoTabs } from '../MetadataInfoTabs'
 import {
   adaptCompletionSpanMessagesToLegacy,
   findCompletionSpanFromTrace,
-} from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
+} from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
 
 const MAIN_SPAN_TYPES = new Set([
   SpanType.Prompt,
