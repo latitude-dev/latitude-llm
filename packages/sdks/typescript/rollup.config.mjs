@@ -30,6 +30,8 @@ const EXTERNALS = [
   'promptl-ai',
   'stream',
   'zod',
+  '@opentelemetry/semantic-conventions',
+  '@opentelemetry/semantic-conventions/incubating',
 ]
 const config = [
   {

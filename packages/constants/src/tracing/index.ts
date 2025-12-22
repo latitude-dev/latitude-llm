@@ -33,40 +33,6 @@ export enum InstrumentationScope {
   AlephAlpha = 'alephalpha', // Only python
 }
 
-/* Note: non-standard OpenTelemetry semantic conventions used in Latitude */
-
-export const GEN_AI_TOOL_TYPE_VALUE_FUNCTION = 'function'
-
-export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP = 'stop'
-export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_LENGTH = 'length'
-export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_CONTENT_FILTER = 'content_filter' // prettier-ignore
-export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS = 'tool_calls'
-export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_ERROR = 'error'
-export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_OTHER = 'other'
-export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_UNKNOWN = 'unknown'
-
-/* Note: non-standard OpenTelemetry semantic conventions used in other systems */
-
-// https://github.com/Arize-ai/openinference/blob/main/python/openinference-semantic-conventions/src/openinference/semconv/trace/__init__.py
-export const GEN_AI_OPERATION_NAME_VALUE_TOOL = 'tool'
-export const GEN_AI_OPERATION_NAME_VALUE_COMPLETION = 'completion'
-export const GEN_AI_OPERATION_NAME_VALUE_EMBEDDING = 'embedding'
-export const GEN_AI_OPERATION_NAME_VALUE_RETRIEVAL = 'retrieval'
-export const GEN_AI_OPERATION_NAME_VALUE_RERANKING = 'reranking'
-
-// https://github.com/traceloop/openllmetry/blob/main/packages/opentelemetry-semantic-conventions-ai/opentelemetry/semconv_ai/__init__.py
-export const LLM_REQUEST_TYPE_VALUE_COMPLETION = 'completion'
-export const LLM_REQUEST_TYPE_VALUE_CHAT = 'chat'
-export const LLM_REQUEST_TYPE_VALUE_EMBEDDING = 'embedding'
-export const LLM_REQUEST_TYPE_VALUE_RERANK = 'rerank'
-
-// https://ai-sdk.dev/docs/ai-sdk-core/telemetry#span-details
-export const AI_OPERATION_ID_VALUE_TOOL = 'ai.toolCall'
-export const AI_OPERATION_ID_VALUE_GENERATE_TEXT = 'ai.generateText'
-export const AI_OPERATION_ID_VALUE_STREAM_TEXT = 'ai.streamText'
-export const AI_OPERATION_ID_VALUE_GENERATE_OBJECT = 'ai.generateObject'
-export const AI_OPERATION_ID_VALUE_STREAM_OBJECT = 'ai.streamObject'
-
 /* Note: Schemas for span ingestion following OpenTelemetry service request specification */
 
 export namespace Otlp {
@@ -197,4 +163,4 @@ export const TRACING_JOBS_MAX_ATTEMPTS = 3
 export const TRACING_JOBS_DELAY_BETWEEN_CONFLICTS = () =>
   (Math.floor(Math.random() * 10) + 1) * 1000 // 1-10 random seconds in order to serialize conflicts (best effort)
 
-export { ATTRIBUTES } from './attributes'
+export { ATTRIBUTES, VALUES } from './attributes'

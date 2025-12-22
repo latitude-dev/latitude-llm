@@ -12,7 +12,7 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { AnnotationForms } from './AnnotationForms'
 import { TraceEvaluations } from './TraceEvaluations'
 import { MetadataInfoTabs } from '../MetadataInfoTabs'
-import { adaptCompletionSpanMessagesToLegacy } from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
+import { adaptCompletionSpanMessagesToLegacy } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
 
 export const DEFAULT_TABS = [
   { label: 'Metadata', value: 'metadata' },

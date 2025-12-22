@@ -82,7 +82,7 @@ describe('getActiveWorkspacesForWeeklyEmail', () => {
       // Create step span (not prompt)
       await createSpan({
         workspaceId: nonPromptWorkspace.id,
-        type: SpanType.Step,
+        type: SpanType.Tool,
         startedAt: threeDaysAgo,
       })
 

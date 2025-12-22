@@ -334,7 +334,7 @@ describe('assembleTraceStructure - deep nesting', () => {
       workspaceId: workspace.id,
       traceId: 'trace-deep',
       parentId: root.id,
-      type: SpanType.Step,
+      type: SpanType.Tool,
       name: 'level1',
       startedAt: new Date(startTime.getTime() + 100),
       duration: 4000,

@@ -3,8 +3,6 @@ import CompletionSpanSpecification from './Completion'
 import EmbeddingSpanSpecification from './Embedding'
 import ExternalSpanSpecification from './External'
 import HttpSpanSpecification from './Http'
-import RerankingSpanSpecification from './Reranking'
-import RetrievalSpanSpecification from './Retrieval'
 import ToolSpanSpecification from './Tool'
 import PromptSpanSpecification from './Prompt'
 import UnknownSpanSpecification from './Unknown'
@@ -15,18 +13,17 @@ import { Span, SpanType } from '@latitude-data/core/constants'
 export const SPAN_SPECIFICATIONS: {
   [T in SpanType]: SpanFrontendSpecification<T>
 } = {
-  [SpanType.Completion]: CompletionSpanSpecification,
-  [SpanType.Embedding]: EmbeddingSpanSpecification,
-  [SpanType.Http]: HttpSpanSpecification,
   [SpanType.Prompt]: PromptSpanSpecification,
   [SpanType.Chat]: ChatSpanSpecification,
   [SpanType.External]: ExternalSpanSpecification,
-  //@ts-expect-error - Not really possible to display in the UI, as this type is never stored
-  [SpanType.UnresolvedExternal]: ExternalSpanSpecification,
-  [SpanType.Reranking]: RerankingSpanSpecification,
-  [SpanType.Retrieval]: RetrievalSpanSpecification,
-  [SpanType.Step]: UnknownSpanSpecification,
+  [SpanType.UnresolvedExternal]: UnknownSpanSpecification,
+
+  [SpanType.Completion]: CompletionSpanSpecification,
+  [SpanType.Embedding]: EmbeddingSpanSpecification,
   [SpanType.Tool]: ToolSpanSpecification,
+
+  [SpanType.Http]: HttpSpanSpecification,
+  
   [SpanType.Unknown]: UnknownSpanSpecification,
 }
 

@@ -23,7 +23,7 @@ import { useTrace } from '$/stores/traces'
 import {
   findCompletionSpanFromTrace,
   adaptCompletionSpanMessagesToLegacy,
-} from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
+} from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { sum } from 'lodash-es'
 import { useAnnotationBySpan } from '$/hooks/useAnnotationsBySpan'

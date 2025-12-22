@@ -1128,6 +1128,12 @@ importers:
 
   packages/sdks/typescript:
     dependencies:
+      '@latitude-data/constants':
+        specifier: workspace:*
+        version: link:../../constants
+      '@opentelemetry/semantic-conventions':
+        specifier: 'catalog:'
+        version: 1.34.0
       eventsource-parser:
         specifier: ^2.0.1
         version: 2.0.1
@@ -1144,9 +1150,6 @@ importers:
         specifier: 'catalog:'
         version: 4.1.8
     devDependencies:
-      '@latitude-data/constants':
-        specifier: workspace:*
-        version: link:../../constants
       '@latitude-data/eslint-config':
         specifier: workspace:*
         version: link:../../../tools/eslint

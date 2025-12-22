@@ -8,6 +8,19 @@ import {
   ATTR_GEN_AI_TOOL_NAME,
   ATTR_GEN_AI_TOOL_CALL_ID,
   ATTR_GEN_AI_TOOL_TYPE,
+  ATTR_GEN_AI_RESPONSE_ID,
+  GEN_AI_OPERATION_NAME_VALUE_CHAT,
+  GEN_AI_OPERATION_NAME_VALUE_CREATE_AGENT,
+  GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
+  GEN_AI_OPERATION_NAME_VALUE_EXECUTE_TOOL,
+  GEN_AI_OPERATION_NAME_VALUE_GENERATE_CONTENT,
+  GEN_AI_OPERATION_NAME_VALUE_INVOKE_AGENT,
+  GEN_AI_OPERATION_NAME_VALUE_TEXT_COMPLETION,
+  GEN_AI_OUTPUT_TYPE_VALUE_IMAGE,
+  GEN_AI_OUTPUT_TYPE_VALUE_JSON,
+  GEN_AI_OUTPUT_TYPE_VALUE_SPEECH,
+  GEN_AI_OUTPUT_TYPE_VALUE_TEXT,
+  ATTR_GEN_AI_TOOL_DESCRIPTION,
 } from '@opentelemetry/semantic-conventions/incubating'
 
 import {
@@ -106,9 +119,14 @@ export const ATTRIBUTES = {
     // GenAI semantic conventions
     // https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
     GEN_AI: {
-      operationName: ATTR_GEN_AI_OPERATION_NAME,
-      system: ATTR_GEN_AI_SYSTEM,
+      conversationId: 'gen_ai.conversation.id',
+      operation: ATTR_GEN_AI_OPERATION_NAME,
+      provider: 'gen_ai.provider.name', // openai; gcp.gen_ai; gcp.vertex_ai
+      request: {
+        _root: 'gen_ai.request', // Contains prompt configuration settings (temperature, model, max_tokens, etc.)
+      },
       response: {
+        id: ATTR_GEN_AI_RESPONSE_ID,
         model: ATTR_GEN_AI_RESPONSE_MODEL,
         finishReasons: ATTR_GEN_AI_RESPONSE_FINISH_REASONS,
       },
@@ -116,58 +134,83 @@ export const ATTRIBUTES = {
         inputTokens: ATTR_GEN_AI_USAGE_INPUT_TOKENS,
         outputTokens: ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
       },
+      systemInstructions: 'gen_ai.system.instructions', // Contains the PARTS of the "system message"
       tool: {
-        name: ATTR_GEN_AI_TOOL_NAME,
-        type: ATTR_GEN_AI_TOOL_TYPE,
+        definitions: 'gen_ai.tool.definitions',
         call: {
           id: ATTR_GEN_AI_TOOL_CALL_ID,
           arguments: 'gen_ai.tool.call.arguments',
+          result: 'gen_ai.tool.call.result',
         },
-        result: {
-          value: 'gen_ai.tool.result.value',
-          isError: 'gen_ai.tool.result.is_error',
+        name: ATTR_GEN_AI_TOOL_NAME,
+        description: ATTR_GEN_AI_TOOL_DESCRIPTION,
+        type: ATTR_GEN_AI_TOOL_TYPE,
+      },
+      input: {
+        messages: 'gen_ai.input.messages',
+      },
+      output: {
+        messages: 'gen_ai.output.messages',
+      },
+      _deprecated: {
+        system: ATTR_GEN_AI_SYSTEM,
+        tool: {
+          name: ATTR_GEN_AI_TOOL_NAME,
+          type: ATTR_GEN_AI_TOOL_TYPE,
+          call: {
+            name: 'gen_ai.tool.call.name',
+            description: 'gen_ai.tool.call.description',
+            type: 'gen_ai.tool.call.type',
+          },
+          result: {
+            value: 'gen_ai.tool.result.value',
+            isError: 'gen_ai.tool.result.is_error',
+          },
         },
-      },
-      prompt: {
-        _root: 'gen_ai.prompt',
-        index: (promptIndex: number) => ({
-          role: `gen_ai.prompt.${promptIndex}.role`,
-          content: `gen_ai.prompt.${promptIndex}.content`, // string or object
-          toolCalls: (toolCallIndex: number) => ({
-            id: `gen_ai.prompt.${promptIndex}.tool_calls.${toolCallIndex}.id`,
-            name: `gen_ai.prompt.${promptIndex}.tool_calls.${toolCallIndex}.name`,
-            arguments: `gen_ai.prompt.${promptIndex}.tool_calls.${toolCallIndex}.arguments`,
+        prompt: {
+          _root: 'gen_ai.prompt',
+          index: (promptIndex: number) => ({
+            role: `gen_ai.prompt.${promptIndex}.role`,
+            content: `gen_ai.prompt.${promptIndex}.content`, // string or object
+            toolCalls: (toolCallIndex: number) => ({
+              id: `gen_ai.prompt.${promptIndex}.tool_calls.${toolCallIndex}.id`,
+              name: `gen_ai.prompt.${promptIndex}.tool_calls.${toolCallIndex}.name`,
+              arguments: `gen_ai.prompt.${promptIndex}.tool_calls.${toolCallIndex}.arguments`,
+            }),
+            tool: {
+              callId: `gen_ai.prompt.${promptIndex}.tool_call_id`,
+              toolName: `gen_ai.prompt.${promptIndex}.tool_name`,
+              isError: `gen_ai.prompt.${promptIndex}.is_error`,
+            },
           }),
-          tool: {
-            callId: `gen_ai.prompt.${promptIndex}.tool_call_id`,
-            toolName: `gen_ai.prompt.${promptIndex}.tool_name`,
-            isError: `gen_ai.prompt.${promptIndex}.is_error`,
-          },
-        }),
-      },
-      completion: {
-        _root: 'gen_ai.completion',
-        index: (completionIndex: number) => ({
-          role: `gen_ai.completion.${completionIndex}.role`,
-          content: `gen_ai.completion.${completionIndex}.content`, // string or object
-          toolCalls: (toolCallIndex: number) => ({
-            id: `gen_ai.completion.${completionIndex}.tool_calls.${toolCallIndex}.id`,
-            name: `gen_ai.completion.${completionIndex}.tool_calls.${toolCallIndex}.name`,
-            arguments: `gen_ai.completion.${completionIndex}.tool_calls.${toolCallIndex}.arguments`,
+        },
+        completion: {
+          _root: 'gen_ai.completion',
+          index: (completionIndex: number) => ({
+            role: `gen_ai.completion.${completionIndex}.role`,
+            content: `gen_ai.completion.${completionIndex}.content`, // string or object
+            toolCalls: (toolCallIndex: number) => ({
+              id: `gen_ai.completion.${completionIndex}.tool_calls.${toolCallIndex}.id`,
+              name: `gen_ai.completion.${completionIndex}.tool_calls.${toolCallIndex}.name`,
+              arguments: `gen_ai.completion.${completionIndex}.tool_calls.${toolCallIndex}.arguments`,
+            }),
+            tool: {
+              callId: `gen_ai.prompt.${completionIndex}.tool_call_id`,
+              toolName: `gen_ai.prompt.${completionIndex}.tool_name`,
+              isError: `gen_ai.prompt.${completionIndex}.is_error`,
+            },
           }),
-          tool: {
-            callId: `gen_ai.prompt.${completionIndex}.tool_call_id`,
-            toolName: `gen_ai.prompt.${completionIndex}.tool_name`,
-            isError: `gen_ai.prompt.${completionIndex}.is_error`,
-          },
-        }),
+        },
+        usage: {
+          promptTokens: 'gen_ai.usage.prompt_tokens',
+          completionTokens: 'gen_ai.usage.completion_tokens',
+        },
       },
     },
   },
 
   // OpenInference (Arize/Phoenix)
   // https://arize-ai.github.io/openinference/spec/semantic_conventions.html
-  // https://github.com/Arize-ai/openinference/blob/main/python/openinference-semantic-conventions/src/openinference/semconv/trace/__init__.py
   OPENINFERENCE: {
     tool: {
       name: 'tool.name',
@@ -181,8 +224,14 @@ export const ATTRIBUTES = {
     },
     llm: {
       provider: 'llm.provider',
-      system: 'llm.system',
-      modelName: 'llm.model_name',
+      system: 'llm.system', // Represents the provider!
+      model: 'llm.model_name',
+      inputMessages: 'llm.input_messages',
+      outputMessages: 'llm.output_messages',
+      invocationParameters: 'llm.invocation_parameters',
+      prompts: 'llm.prompts', // llm.prompts.{index}.{role/content/...},
+      completions: 'llm.completions', // llm.completions.{index}.{role/content/...},
+      tools: 'llm.tools', // llm.tools.{index}.{name/arguments/result/...},
       tokenCount: {
         prompt: 'llm.token_count.prompt',
         promptDetails: {
@@ -195,11 +244,11 @@ export const ATTRIBUTES = {
         },
         completion: 'llm.token_count.completion',
       },
-      invocationParameters: 'llm.invocation_parameters',
-      inputMessages: 'llm.input_messages',
-      outputMessages: 'llm.output_messages',
-      prompts: 'llm.prompts', // llm.prompts.{index}.{role/content/...},
-      completions: 'llm.completions', // llm.completions.{index}.{role/content/...},
+      cost: {
+        prompt: 'llm.cost.prompt',
+        completion: 'llm.cost.completion',
+        total: 'llm.cost.total',
+      },
     },
   },
 
@@ -227,8 +276,21 @@ export const ATTRIBUTES = {
   AI_SDK: {
     operationId: 'ai.operationId',
     model: {
-      provider: 'ai.model.provider',
       id: 'ai.model.id',
+      provider: 'ai.model.provider',
+    },
+    request: {
+      headers: {
+        _root: 'ai.request.headers',
+      },
+    },
+    response: {
+      id: 'ai.response.id',
+      model: 'ai.response.model',
+      finishReason: 'ai.response.finishReason',
+      text: 'ai.response.text',
+      object: 'ai.response.object',
+      toolCalls: 'ai.response.toolCalls',
     },
     toolCall: {
       name: 'ai.toolCall.name',
@@ -236,16 +298,9 @@ export const ATTRIBUTES = {
       args: 'ai.toolCall.args',
       result: 'ai.toolCall.result',
     },
-    response: {
-      model: 'ai.response.model',
-      finishReason: 'ai.response.finishReason',
-      text: 'ai.response.text',
-      object: 'ai.response.object',
-      toolCalls: 'ai.response.toolCalls',
-    },
     usage: {
-      promptTokens: 'ai.usage.promptTokens',
       completionTokens: 'ai.usage.completionTokens',
+      promptTokens: 'ai.usage.promptTokens',
     },
     settings: 'ai.settings',
     prompt: {
@@ -253,6 +308,95 @@ export const ATTRIBUTES = {
     },
   },
 } as const
+
+export const VALUES = {
+  LATITUDE: {},
+  OPENTELEMETRY: {
+    GEN_AI: {
+      operation: {
+        chat: GEN_AI_OPERATION_NAME_VALUE_CHAT,
+        createAgent: GEN_AI_OPERATION_NAME_VALUE_CREATE_AGENT,
+        embeddings: GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
+        executeTool: GEN_AI_OPERATION_NAME_VALUE_EXECUTE_TOOL,
+        generateContent: GEN_AI_OPERATION_NAME_VALUE_GENERATE_CONTENT,
+        invokeAgent: GEN_AI_OPERATION_NAME_VALUE_INVOKE_AGENT,
+        textCompletion: GEN_AI_OPERATION_NAME_VALUE_TEXT_COMPLETION,
+      },
+      response: {
+        finishReasons: {
+          stop: 'stop',
+          length: 'length',
+          contentFilter: 'content_filter',
+          toolCalls: 'tool_calls',
+          error: 'error',
+          other: 'other',
+          unknown: 'unknown',
+        },
+      },
+      output: {
+        type: {
+          image: GEN_AI_OUTPUT_TYPE_VALUE_IMAGE,
+          json: GEN_AI_OUTPUT_TYPE_VALUE_JSON,
+          speech: GEN_AI_OUTPUT_TYPE_VALUE_SPEECH,
+          text: GEN_AI_OUTPUT_TYPE_VALUE_TEXT,
+        },
+      },
+      tool: {
+        type: {
+          function: 'function',
+        },
+      },
+      _deprecated: {
+        operation: {
+          tool: 'tool',
+          completion: 'completion',
+          embedding: 'embedding',
+          retrieval: 'retrieval',
+          reranking: 'reranking',
+        },
+      },
+    },
+  },
+  OPENLLMETRY: {
+    llm: {
+      request: {
+        // https://github.com/traceloop/openllmetry/blob/0fc734017197e48e988eaf54e20feaab8761f757/packages/opentelemetry-semantic-conventions-ai/opentelemetry/semconv_ai/__init__.py#L277
+        type: {
+          completion: 'completion',
+          chat: 'chat',
+          rerank: 'rerank',
+          embedding: 'embedding',
+          unknown: 'unknown',
+        },
+      },
+    },
+  },
+  AI_SDK: {
+    // https://ai-sdk.dev/docs/ai-sdk-core/telemetry#span-details
+    operationId: {
+      // Vercel Wrappers (all contain at least one of the "Completion" operations)
+      generateText: 'ai.generateText',
+      streamText: 'ai.streamText',
+      generateObject: 'ai.generateObject',
+      streamObject: 'ai.streamObject',
+
+      // Completions
+      generateTextDoGenerate: 'ai.generateText.doGenerate',
+      streamTextDoStream: 'ai.streamText.doStream',
+      generateObjectDoGenerate: 'ai.generateObject.doGenerate',
+      streamObjectDoStream: 'ai.streamObject.doStream',
+
+      // Embeddings
+      embed: 'ai.embed',
+      embedDoEmbed: 'ai.embed.doEmbed',
+      embedMany: 'ai.embed.embedMany',
+      embedManyDoEmbed: 'ai.embed.embedMany.doEmbed',
+
+      // Tool calling
+      toolCall: 'ai.toolCall',
+    },
+  },
+}
 
 /**
  * Returns the first value found in the attributes object with one of the given keys.

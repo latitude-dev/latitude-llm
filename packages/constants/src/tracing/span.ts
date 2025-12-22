@@ -12,18 +12,21 @@ export enum SpanKind {
 
 // Note: loosely based on OpenTelemetry GenAI semantic conventions
 export enum SpanType {
-  Tool = 'tool', // Note: asynchronous tools such as agents are conversation segments
-  Completion = 'completion',
-  Embedding = 'embedding',
-  Retrieval = 'retrieval',
-  Reranking = 'reranking',
-  Http = 'http', // Note: raw HTTP requests and responses
-  Unknown = 'unknown', // Other spans we don't care about
-  Prompt = 'prompt',
+  // Latitude wrappers
+  Prompt = 'prompt', // Running a prompt
   Chat = 'chat', // Continuing a conversation (adding messages)
   External = 'external', // Wrapping external generation code
   UnresolvedExternal = 'unresolved_external', // External span that needs path & potential version resolution
-  Step = 'step',
+
+  // Added a HTTP span to capture raw HTTP requests and responses when running from Latitude
+  Http = 'http', // Note: raw HTTP requests and responses
+
+  // Any known span from supported specifications will be grouped into one of these types
+  Completion = 'completion',
+  Tool = 'tool', // Note: asynchronous tools such as agents are conversation segments
+  Embedding = 'embedding',
+
+  Unknown = 'unknown', // Other spans we don't care about
 }
 
 export type SpanSpecification<T extends SpanType = SpanType> = {
@@ -46,48 +49,6 @@ export type EvaluableSpanType =
   | SpanType.Chat
 
 export const SPAN_SPECIFICATIONS = {
-  [SpanType.Tool]: {
-    name: 'Tool',
-    description: 'A tool call',
-    isGenAI: true,
-    isHidden: false,
-  },
-  [SpanType.Completion]: {
-    name: 'Completion',
-    description: 'A completion call',
-    isGenAI: true,
-    isHidden: false,
-  },
-  [SpanType.Embedding]: {
-    name: 'Embedding',
-    description: 'An embedding call',
-    isGenAI: true,
-    isHidden: false,
-  },
-  [SpanType.Retrieval]: {
-    name: 'Retrieval',
-    description: 'A retrieval call',
-    isGenAI: true,
-    isHidden: false,
-  },
-  [SpanType.Reranking]: {
-    name: 'Reranking',
-    description: 'A reranking call',
-    isGenAI: true,
-    isHidden: false,
-  },
-  [SpanType.Http]: {
-    name: 'HTTP',
-    description: 'An HTTP request',
-    isGenAI: false,
-    isHidden: true,
-  },
-  [SpanType.Unknown]: {
-    name: 'Unknown',
-    description: 'An unknown span',
-    isGenAI: false,
-    isHidden: true,
-  },
   [SpanType.Prompt]: {
     name: 'Prompt',
     description: 'A prompt span',
@@ -112,11 +73,35 @@ export const SPAN_SPECIFICATIONS = {
     isGenAI: false,
     isHidden: true,
   },
-  [SpanType.Step]: {
-    name: 'Step',
-    description: 'A step span',
-    isGenAI: false,
+  [SpanType.Completion]: {
+    name: 'Completion',
+    description: 'A completion call',
+    isGenAI: true,
     isHidden: false,
+  },
+  [SpanType.Embedding]: {
+    name: 'Embedding',
+    description: 'An embedding call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Tool]: {
+    name: 'Tool',
+    description: 'A tool call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Http]: {
+    name: 'HTTP',
+    description: 'An HTTP request',
+    isGenAI: false,
+    isHidden: true,
+  },
+  [SpanType.Unknown]: {
+    name: 'Unknown',
+    description: 'An unknown span',
+    isGenAI: false,
+    isHidden: true,
   },
 } as const satisfies {
   [T in SpanType]: SpanSpecification<T>
@@ -166,12 +151,13 @@ export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
 }
 
 export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
+  documentLogUuid: string
+  versionUuid: string
+  template: string
   experimentUuid: string
   externalId: string
   parameters: Record<string, unknown>
   promptUuid: string
-  template: string
-  versionUuid: string
   source: LogSources
   projectId: number
   testDeploymentId?: number
@@ -242,11 +228,8 @@ export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.UnresolvedExternal ? UnresolvedExternalSpanMetadata :
   T extends SpanType.Completion ? CompletionSpanMetadata :
   T extends SpanType.Embedding ? BaseSpanMetadata<T> :
-  T extends SpanType.Retrieval ? BaseSpanMetadata<T> :
-  T extends SpanType.Reranking ? BaseSpanMetadata<T> :
   T extends SpanType.Http ? HttpSpanMetadata :
   T extends SpanType.Unknown ? BaseSpanMetadata<T> :
-  T extends SpanType.Step ? BaseSpanMetadata<T> :
   never;
 
 export const SPAN_METADATA_STORAGE_KEY = (
