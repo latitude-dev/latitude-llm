@@ -11,10 +11,9 @@ import {
 } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
 import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-node'
-import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
 import { captureException } from '../utils/datadogCapture'
 import { z } from 'zod'
-import { ATTR_LATITUDE_INTERNAL, Otlp } from '../constants'
+import { ATTRIBUTES, Otlp } from '../constants'
 import { enqueueSpans } from '../services/tracing/spans/enqueue'
 
 export type * from '@latitude-data/telemetry'
@@ -29,7 +28,7 @@ export const BACKGROUND = (baggage: InternalBaggage) =>
   propagation.setBaggage(
     ROOT(),
     propagation.createBaggage({
-      [ATTR_LATITUDE_INTERNAL]: { value: JSON.stringify(baggage) },
+      [ATTRIBUTES.LATITUDE.internal]: { value: JSON.stringify(baggage) },
     }),
   )
 
@@ -38,7 +37,8 @@ class InternalExporter implements SpanExporter {
 
   constructor() {
     this.resource = new Resource({
-      [ATTR_SERVICE_NAME]: process.env.npm_package_name || 'unknown',
+      [ATTRIBUTES.OPENTELEMETRY.SERVICE.name]:
+        process.env.npm_package_name || 'unknown',
     })
   }
 

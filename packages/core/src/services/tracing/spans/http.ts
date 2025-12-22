@@ -1,16 +1,6 @@
-import {
-  ATTR_HTTP_REQUEST_METHOD,
-  ATTR_HTTP_RESPONSE_STATUS_CODE,
-} from '@opentelemetry/semantic-conventions'
 import { database } from '../../../client'
 import {
-  ATTR_HTTP_REQUEST_BODY,
-  ATTR_HTTP_REQUEST_HEADER,
-  ATTR_HTTP_REQUEST_HEADERS,
-  ATTR_HTTP_REQUEST_URL,
-  ATTR_HTTP_RESPONSE_BODY,
-  ATTR_HTTP_RESPONSE_HEADER,
-  ATTR_HTTP_RESPONSE_HEADERS,
+  ATTRIBUTES,
   HttpSpanMetadata,
   SPAN_SPECIFICATIONS,
   SpanAttribute,
@@ -20,6 +10,8 @@ import {
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import { SpanProcessArgs, toCamelCase } from './shared'
+
+const HTTP = ATTRIBUTES.OPENTELEMETRY.HTTP
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Http]
 export const HttpSpanSpecification = {
@@ -88,7 +80,7 @@ async function process(
 function extractRequestMethod(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<HttpSpanMetadata['request']['method']> {
-  const method = String(attributes[ATTR_HTTP_REQUEST_METHOD] ?? '')
+  const method = String(attributes[HTTP.request.method] ?? '')
   if (method) return Result.ok(method.toUpperCase())
 
   return Result.error(
@@ -99,7 +91,7 @@ function extractRequestMethod(
 function extractRequestUrl(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<HttpSpanMetadata['request']['url']> {
-  const url = String(attributes[ATTR_HTTP_REQUEST_URL] ?? '')
+  const url = String(attributes[HTTP.request.url] ?? '')
   if (url) return Result.ok(url)
 
   return Result.error(new UnprocessableEntityError('Request URL is required'))
@@ -108,7 +100,7 @@ function extractRequestUrl(
 function extractRequestHeaders(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<HttpSpanMetadata['request']['headers']> {
-  const attribute = String(attributes[ATTR_HTTP_REQUEST_HEADERS] ?? '')
+  const attribute = String(attributes[HTTP.request.headers] ?? '')
   if (attribute) {
     try {
       return Result.ok(
@@ -123,9 +115,9 @@ function extractRequestHeaders(
 
   const headers: Record<string, string> = {}
   for (const key in attributes) {
-    if (!key.startsWith(ATTR_HTTP_REQUEST_HEADER)) continue
+    if (!key.startsWith(HTTP.request.header)) continue
     const attribute = String(attributes[key] ?? '')
-    const header = key.replace(ATTR_HTTP_REQUEST_HEADER + '.', '')
+    const header = key.replace(HTTP.request.header + '.', '')
     headers[header] = attribute
   }
 
@@ -135,7 +127,7 @@ function extractRequestHeaders(
 function extractRequestBody(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<HttpSpanMetadata['request']['body']> {
-  const attribute = String(attributes[ATTR_HTTP_REQUEST_BODY] ?? '')
+  const attribute = String(attributes[HTTP.request.body] ?? '')
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))
@@ -150,7 +142,7 @@ function extractRequestBody(
 function extractResponseStatus(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<HttpSpanMetadata>['response']['status']> {
-  const status = Number(attributes[ATTR_HTTP_RESPONSE_STATUS_CODE] ?? NaN)
+  const status = Number(attributes[HTTP.response.statusCode] ?? NaN)
   if (!isNaN(status)) return Result.ok(status)
 
   return Result.error(
@@ -161,7 +153,7 @@ function extractResponseStatus(
 function extractResponseHeaders(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<HttpSpanMetadata>['response']['headers']> {
-  const attribute = String(attributes[ATTR_HTTP_RESPONSE_HEADERS] ?? '')
+  const attribute = String(attributes[HTTP.response.headers] ?? '')
   if (attribute) {
     try {
       return Result.ok(
@@ -176,9 +168,9 @@ function extractResponseHeaders(
 
   const headers: Record<string, string> = {}
   for (const key in attributes) {
-    if (!key.startsWith(ATTR_HTTP_RESPONSE_HEADER)) continue
+    if (!key.startsWith(HTTP.response.header)) continue
     const attribute = String(attributes[key] ?? '')
-    const header = key.replace(ATTR_HTTP_RESPONSE_HEADER + '.', '')
+    const header = key.replace(HTTP.response.header + '.', '')
     headers[header] = attribute
   }
 
@@ -188,7 +180,7 @@ function extractResponseHeaders(
 function extractResponseBody(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<HttpSpanMetadata>['response']['body']> {
-  const attribute = String(attributes[ATTR_HTTP_RESPONSE_BODY] ?? '')
+  const attribute = String(attributes[HTTP.response.body] ?? '')
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))

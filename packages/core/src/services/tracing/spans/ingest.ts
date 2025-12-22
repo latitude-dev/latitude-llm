@@ -1,16 +1,5 @@
-import {
-  ATTR_OTEL_SCOPE_NAME,
-  ATTR_OTEL_SCOPE_VERSION,
-  ATTR_OTEL_STATUS_CODE,
-  ATTR_OTEL_STATUS_DESCRIPTION,
-} from '@opentelemetry/semantic-conventions'
 import { database } from '../../../client'
-import {
-  ATTR_LATITUDE_INTERNAL,
-  Otlp,
-  SpanStatus,
-  SpanType,
-} from '../../../constants'
+import { ATTRIBUTES, Otlp, SpanStatus, SpanType } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import { type ApiKey } from '../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../schema/models/types/Workspace'
@@ -84,7 +73,7 @@ export async function ingestSpans(
           continue
         }
         span.attributes = enriching.value.filter(
-          ({ key }) => key !== ATTR_LATITUDE_INTERNAL,
+          ({ key }) => key !== ATTRIBUTES.LATITUDE.internal,
         )
 
         processedSpans.push({ span, scope, resource, apiKey, workspace })
@@ -145,13 +134,13 @@ function enrichAttributes({
   attributes.push(...(span.attributes || []))
 
   attributes.push({
-    key: ATTR_OTEL_SCOPE_NAME,
+    key: ATTRIBUTES.OPENTELEMETRY.OTEL.scope.name,
     value: { stringValue: scope.name },
   })
 
   if (scope.version) {
     attributes.push({
-      key: ATTR_OTEL_SCOPE_VERSION,
+      key: ATTRIBUTES.OPENTELEMETRY.OTEL.scope.version,
       value: { stringValue: scope.version },
     })
   }
@@ -159,13 +148,13 @@ function enrichAttributes({
   const converting = convertSpanStatus(span.status || { code: 0 })
   const status = converting.value ?? SpanStatus.Unset
   attributes.push({
-    key: ATTR_OTEL_STATUS_CODE,
+    key: ATTRIBUTES.OPENTELEMETRY.OTEL.status.code,
     value: { stringValue: status.toUpperCase() },
   })
 
   if (span.status?.message) {
     attributes.push({
-      key: ATTR_OTEL_STATUS_DESCRIPTION,
+      key: ATTRIBUTES.OPENTELEMETRY.OTEL.status.description,
       value: { stringValue: span.status.message },
     })
   }

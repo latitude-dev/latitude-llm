@@ -6,12 +6,7 @@ import {
   SpanType,
   BaseSpanMetadata,
   HEAD_COMMIT,
-  ATTR_LATITUDE_PROJECT_ID,
-  ATTR_LATITUDE_PROMPT_PATH,
-  ATTR_LATITUDE_COMMIT_UUID,
-  ATTR_LATITUDE_DOCUMENT_UUID,
-  ATTR_LATITUDE_DOCUMENT_LOG_UUID,
-  ATTR_LATITUDE_SOURCE,
+  ATTRIBUTES,
 } from '../../../constants'
 import { Result, TypedResult } from '../../../lib/Result'
 import {
@@ -133,9 +128,9 @@ async function process(
   }: SpanProcessArgs<SpanType.UnresolvedExternal>,
   db = database,
 ): Promise<ExternalMetadataResult> {
-  const promptPath = attributes[ATTR_LATITUDE_PROMPT_PATH] as string
-  const projectId = attributes[ATTR_LATITUDE_PROJECT_ID] as number
-  const versionUuid = attributes[ATTR_LATITUDE_COMMIT_UUID] as
+  const promptPath = attributes[ATTRIBUTES.LATITUDE.promptPath] as string
+  const projectId = attributes[ATTRIBUTES.LATITUDE.projectId] as number
+  const versionUuid = attributes[ATTRIBUTES.LATITUDE.commitUuid] as
     | string
     | undefined
 
@@ -157,20 +152,20 @@ async function process(
   const { documentVersion, commit } = result.unwrap()
 
   const existingDocumentLogUuid = attributes[
-    ATTR_LATITUDE_DOCUMENT_LOG_UUID
+    ATTRIBUTES.LATITUDE.documentLogUuid
   ] as string | undefined
 
   const resolvedAttributes = {
     ...omit(attributes, [
-      ATTR_LATITUDE_PROMPT_PATH,
-      ATTR_LATITUDE_PROJECT_ID,
-      ATTR_LATITUDE_COMMIT_UUID,
+      ATTRIBUTES.LATITUDE.promptPath,
+      ATTRIBUTES.LATITUDE.projectId,
+      ATTRIBUTES.LATITUDE.commitUuid,
     ]),
-    [ATTR_LATITUDE_DOCUMENT_UUID]: documentVersion.documentUuid,
-    [ATTR_LATITUDE_DOCUMENT_LOG_UUID]:
+    [ATTRIBUTES.LATITUDE.documentUuid]: documentVersion.documentUuid,
+    [ATTRIBUTES.LATITUDE.documentLogUuid]:
       existingDocumentLogUuid ?? generateUUIDIdentifier(),
-    [ATTR_LATITUDE_COMMIT_UUID]: commit.uuid,
-    [ATTR_LATITUDE_SOURCE]: LogSources.API, // API by default. There is no way to obtain External spans from any other source rn.
+    [ATTRIBUTES.LATITUDE.commitUuid]: commit.uuid,
+    [ATTRIBUTES.LATITUDE.source]: LogSources.API, // API by default. There is no way to obtain External spans from any other source rn.
   }
 
   return ExternalSpanSpecification.process(

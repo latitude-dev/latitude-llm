@@ -1,22 +1,18 @@
+import { database } from '../../../client'
 import {
-  ATTR_GEN_AI_OPERATION_NAME,
   GEN_AI_OPERATION_NAME_VALUE_CHAT,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
   GEN_AI_OPERATION_NAME_VALUE_EXECUTE_TOOL,
   GEN_AI_OPERATION_NAME_VALUE_GENERATE_CONTENT,
   GEN_AI_OPERATION_NAME_VALUE_TEXT_COMPLETION,
 } from '@opentelemetry/semantic-conventions/incubating'
-import { database } from '../../../client'
 import {
   AI_OPERATION_ID_VALUE_GENERATE_OBJECT,
   AI_OPERATION_ID_VALUE_GENERATE_TEXT,
   AI_OPERATION_ID_VALUE_STREAM_OBJECT,
   AI_OPERATION_ID_VALUE_STREAM_TEXT,
   AI_OPERATION_ID_VALUE_TOOL,
-  ATTR_AI_OPERATION_ID,
-  ATTR_LATITUDE_INTERNAL,
-  ATTR_LATITUDE_TYPE,
-  ATTR_LLM_REQUEST_TYPE,
+  ATTRIBUTES,
   GEN_AI_OPERATION_NAME_VALUE_COMPLETION,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDING,
   GEN_AI_OPERATION_NAME_VALUE_RERANKING,
@@ -82,7 +78,7 @@ export function convertSpanAttributes(
 export function extractSpanType(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<SpanType> {
-  const type = String(attributes[ATTR_LATITUDE_TYPE] ?? '')
+  const type = String(attributes[ATTRIBUTES.LATITUDE.type] ?? '')
   switch (type) {
     case SpanType.Tool:
       return Result.ok(SpanType.Tool)
@@ -110,7 +106,9 @@ export function extractSpanType(
       return Result.ok(SpanType.Unknown)
   }
 
-  let operation = String(attributes[ATTR_GEN_AI_OPERATION_NAME] ?? '')
+  let operation = String(
+    attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI.operationName] ?? '',
+  )
   switch (operation) {
     case GEN_AI_OPERATION_NAME_VALUE_TOOL:
     case GEN_AI_OPERATION_NAME_VALUE_EXECUTE_TOOL:
@@ -129,7 +127,9 @@ export function extractSpanType(
       return Result.ok(SpanType.Reranking)
   }
 
-  const request = String(attributes[ATTR_LLM_REQUEST_TYPE] ?? '')
+  const request = String(
+    attributes[ATTRIBUTES.OPENLLMETRY.llm.request.type] ?? '',
+  )
   switch (request) {
     case LLM_REQUEST_TYPE_VALUE_COMPLETION:
     case LLM_REQUEST_TYPE_VALUE_CHAT:
@@ -140,7 +140,7 @@ export function extractSpanType(
       return Result.ok(SpanType.Reranking)
   }
 
-  operation = String(attributes[ATTR_AI_OPERATION_ID] ?? '')
+  operation = String(attributes[ATTRIBUTES.AI_SDK.operationId] ?? '')
   switch (operation) {
     case AI_OPERATION_ID_VALUE_TOOL:
       return Result.ok(SpanType.Tool)
@@ -204,7 +204,7 @@ export async function extractApiKeyAndWorkspace(
 }
 
 function extractInternal(attributes: Record<string, SpanAttribute>) {
-  const attribute = String(attributes[ATTR_LATITUDE_INTERNAL] ?? '')
+  const attribute = String(attributes[ATTRIBUTES.LATITUDE.internal] ?? '')
   if (!attribute) {
     return Result.error(
       new UnprocessableEntityError('Internal baggage is required'),

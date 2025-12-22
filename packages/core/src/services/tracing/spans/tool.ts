@@ -1,20 +1,7 @@
-import {
-  ATTR_GEN_AI_TOOL_CALL_ID,
-  ATTR_GEN_AI_TOOL_NAME,
-} from '@opentelemetry/semantic-conventions/incubating'
+import { extractAttribute } from '../../../../../constants/src/tracing/attributes'
 import { database } from '../../../client'
 import {
-  ATTR_AI_TOOL_CALL_ARGS,
-  ATTR_AI_TOOL_CALL_ID,
-  ATTR_AI_TOOL_CALL_NAME,
-  ATTR_AI_TOOL_CALL_RESULT,
-  ATTR_GEN_AI_TOOL_CALL_ARGUMENTS,
-  ATTR_GEN_AI_TOOL_RESULT_IS_ERROR,
-  ATTR_GEN_AI_TOOL_RESULT_VALUE,
-  ATTR_TOOL_CALL_FUNCTION_ARGUMENTS,
-  ATTR_TOOL_CALL_FUNCTION_RESULT,
-  ATTR_TOOL_CALL_ID,
-  ATTR_TOOL_NAME,
+  ATTRIBUTES,
   SPAN_SPECIFICATIONS,
   SpanAttribute,
   SpanStatus,
@@ -81,69 +68,90 @@ async function process(
 function extractToolName(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<ToolSpanMetadata['name']> {
-  let name = String(attributes[ATTR_GEN_AI_TOOL_NAME] ?? '')
-  if (!name) name = String(attributes[ATTR_TOOL_NAME] ?? '')
-  if (!name) name = String(attributes[ATTR_AI_TOOL_CALL_NAME] ?? '')
-  if (name) return Result.ok(name)
+  const toolName = extractAttribute({
+    attributes,
+    keys: [
+      ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.name,
+      ATTRIBUTES.OPENINFERENCE.tool.name,
+      ATTRIBUTES.AI_SDK.toolCall.name,
+    ],
+  })
 
+  if (toolName) return Result.ok(toolName)
   return Result.error(new UnprocessableEntityError('Tool name is required'))
 }
 
 function extractToolCallId(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<ToolSpanMetadata['call']['id']> {
-  let id = String(attributes[ATTR_GEN_AI_TOOL_CALL_ID] ?? '')
-  if (!id) id = String(attributes[ATTR_TOOL_CALL_ID] ?? '')
-  if (!id) id = String(attributes[ATTR_AI_TOOL_CALL_ID] ?? '')
-  if (id) return Result.ok(id)
+  const toolCallId = extractAttribute({
+    attributes,
+    keys: [
+      ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.call.id,
+      ATTRIBUTES.OPENINFERENCE.toolCall.id,
+      ATTRIBUTES.AI_SDK.toolCall.id,
+    ],
+  })
 
+  if (toolCallId) return Result.ok(toolCallId)
   return Result.error(new UnprocessableEntityError('Tool call id is required'))
 }
 
 function extractToolCallArguments(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<ToolSpanMetadata['call']['arguments']> {
-  let attribute = String(attributes[ATTR_GEN_AI_TOOL_CALL_ARGUMENTS] ?? '')
-  if (!attribute) {
-    attribute = String(attributes[ATTR_TOOL_CALL_FUNCTION_ARGUMENTS] ?? '')
-  }
-  if (!attribute) attribute = String(attributes[ATTR_AI_TOOL_CALL_ARGS] ?? '')
-  if (attribute) {
-    try {
-      return Result.ok(JSON.parse(attribute))
-    } catch (error) {
-      return Result.error(
-        new UnprocessableEntityError('Invalid tool call arguments'),
-      )
-    }
-  }
+  const toolCallArguments = extractAttribute({
+    attributes,
+    keys: [
+      ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.call.arguments,
+      ATTRIBUTES.OPENINFERENCE.toolCall.function.arguments,
+      ATTRIBUTES.AI_SDK.toolCall.args,
+    ],
+    serializer: (value) => {
+      try {
+        return JSON.parse(String(value)) as Record<string, unknown>
+      } catch (error) {
+        return undefined
+      }
+    },
+    validation: (value) => value !== undefined,
+  })
 
+  if (toolCallArguments) return Result.ok(toolCallArguments)
   return Result.ok({})
 }
 
 function extractToolResultValue(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<ToolSpanMetadata>['result']['value']> {
-  let attribute = String(attributes[ATTR_GEN_AI_TOOL_RESULT_VALUE] ?? '')
-  if (!attribute) {
-    attribute = String(attributes[ATTR_TOOL_CALL_FUNCTION_RESULT] ?? '')
-  }
-  if (!attribute) attribute = String(attributes[ATTR_AI_TOOL_CALL_RESULT] ?? '')
-  if (attribute) {
-    try {
-      return Result.ok(JSON.parse(attribute))
-    } catch (error) {
-      return Result.ok(attribute ?? '')
-    }
-  }
+  const toolResultValue = extractAttribute({
+    attributes,
+    keys: [
+      ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.result.value,
+      ATTRIBUTES.OPENINFERENCE.toolCall.function.result,
+      ATTRIBUTES.AI_SDK.toolCall.result,
+    ],
+    serializer: (value) => {
+      try {
+        return JSON.parse(String(value)) as Record<string, unknown>
+      } catch (error) {
+        return String(value)
+      }
+    },
+  })
 
+  if (toolResultValue) return Result.ok(toolResultValue)
   return Result.ok('')
 }
 
 function extractToolResultIsError(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<ToolSpanMetadata>['result']['isError']> {
-  const isError = Boolean(attributes[ATTR_GEN_AI_TOOL_RESULT_IS_ERROR] ?? false)
+  const isError = extractAttribute({
+    attributes,
+    keys: [ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.result.isError],
+    serializer: Boolean,
+  })
 
-  return Result.ok(isError)
+  return Result.ok(isError ?? false)
 }

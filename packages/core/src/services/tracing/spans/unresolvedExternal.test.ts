@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { faker } from '@faker-js/faker'
 import {
-  ATTR_LATITUDE_COMMIT_UUID,
-  ATTR_LATITUDE_PROJECT_ID,
-  ATTR_LATITUDE_PROMPT_PATH,
-  ATTR_LATITUDE_TYPE,
+  ATTRIBUTES,
   BaseSpanMetadata,
   ExternalSpanMetadata,
   HEAD_COMMIT,
@@ -60,11 +57,11 @@ describe('UnresolvedExternalSpanSpecification', () => {
   }) {
     return {
       attributes: {
-        [ATTR_LATITUDE_TYPE]: SpanType.UnresolvedExternal,
-        [ATTR_LATITUDE_PROMPT_PATH]: overrides.promptPath,
-        [ATTR_LATITUDE_PROJECT_ID]: overrides.projectId,
+        [ATTRIBUTES.LATITUDE.type]: SpanType.UnresolvedExternal,
+        [ATTRIBUTES.LATITUDE.promptPath]: overrides.promptPath,
+        [ATTRIBUTES.LATITUDE.projectId]: overrides.projectId,
         ...(overrides.versionUuid && {
-          [ATTR_LATITUDE_COMMIT_UUID]: overrides.versionUuid,
+          [ATTRIBUTES.LATITUDE.commitUuid]: overrides.versionUuid,
         }),
       },
       status: SpanStatus.Ok,

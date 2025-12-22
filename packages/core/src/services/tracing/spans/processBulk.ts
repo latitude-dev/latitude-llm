@@ -1,10 +1,4 @@
 import {
-  ATTR_ERROR_TYPE,
-  ATTR_EXCEPTION_MESSAGE,
-  ATTR_EXCEPTION_TYPE,
-} from '@opentelemetry/semantic-conventions'
-import {
-  ATTR_GEN_AI_OPERATION_NAME,
   GEN_AI_OPERATION_NAME_VALUE_CHAT,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
   GEN_AI_OPERATION_NAME_VALUE_EXECUTE_TOOL,
@@ -20,9 +14,7 @@ import {
   AI_OPERATION_ID_VALUE_STREAM_OBJECT,
   AI_OPERATION_ID_VALUE_STREAM_TEXT,
   AI_OPERATION_ID_VALUE_TOOL,
-  ATTR_AI_OPERATION_ID,
-  ATTR_LATITUDE_TYPE,
-  ATTR_LLM_REQUEST_TYPE,
+  ATTRIBUTES,
   BaseSpanMetadata,
   CompletionSpanMetadata,
   GEN_AI_OPERATION_NAME_VALUE_COMPLETION,
@@ -534,7 +526,7 @@ export function convertSpanAttributes(
 export function extractSpanType(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<SpanType> {
-  const type = String(attributes[ATTR_LATITUDE_TYPE] ?? '')
+  const type = String(attributes[ATTRIBUTES.LATITUDE.type] ?? '')
   switch (type) {
     case SpanType.Tool:
       return Result.ok(SpanType.Tool)
@@ -562,7 +554,9 @@ export function extractSpanType(
       return Result.ok(SpanType.Unknown)
   }
 
-  let operation = String(attributes[ATTR_GEN_AI_OPERATION_NAME] ?? '')
+  let operation = String(
+    attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI.operationName] ?? '',
+  )
   switch (operation) {
     case GEN_AI_OPERATION_NAME_VALUE_TOOL:
     case GEN_AI_OPERATION_NAME_VALUE_EXECUTE_TOOL:
@@ -581,7 +575,9 @@ export function extractSpanType(
       return Result.ok(SpanType.Reranking)
   }
 
-  const request = String(attributes[ATTR_LLM_REQUEST_TYPE] ?? '')
+  const request = String(
+    attributes[ATTRIBUTES.OPENLLMETRY.llm.request.type] ?? '',
+  )
   switch (request) {
     case LLM_REQUEST_TYPE_VALUE_COMPLETION:
     case LLM_REQUEST_TYPE_VALUE_CHAT:
@@ -592,7 +588,7 @@ export function extractSpanType(
       return Result.ok(SpanType.Reranking)
   }
 
-  operation = String(attributes[ATTR_AI_OPERATION_ID] ?? '')
+  operation = String(attributes[ATTRIBUTES.AI_SDK.operationId] ?? '')
   switch (operation) {
     case AI_OPERATION_ID_VALUE_TOOL:
       return Result.ok(SpanType.Tool)
@@ -623,19 +619,23 @@ function extractSpanError(
   attributes: Record<string, SpanAttribute>,
   events: SpanEvent[],
 ): TypedResult<string | null | undefined> {
-  let error = String(attributes[ATTR_EXCEPTION_TYPE] ?? '')
-  let message = String(attributes[ATTR_EXCEPTION_MESSAGE] ?? '')
+  let error = String(attributes[ATTRIBUTES.OPENTELEMETRY.EXCEPTION.type] ?? '')
+  let message = String(
+    attributes[ATTRIBUTES.OPENTELEMETRY.EXCEPTION.message] ?? '',
+  )
   if (error || message) return Result.ok(message || error || null)
 
-  error = String(attributes[ATTR_ERROR_TYPE] ?? '')
+  error = String(attributes[ATTRIBUTES.OPENTELEMETRY.ERROR.type] ?? '')
   if (error) return Result.ok(error || null)
 
   for (const { name, attributes } of events) {
-    error = String(attributes[ATTR_EXCEPTION_TYPE] ?? '')
-    message = String(attributes[ATTR_EXCEPTION_MESSAGE] ?? '')
+    error = String(attributes[ATTRIBUTES.OPENTELEMETRY.EXCEPTION.type] ?? '')
+    message = String(
+      attributes[ATTRIBUTES.OPENTELEMETRY.EXCEPTION.message] ?? '',
+    )
     if (error || message) return Result.ok(message || error || null)
 
-    error = String(attributes[ATTR_ERROR_TYPE] ?? '')
+    error = String(attributes[ATTRIBUTES.OPENTELEMETRY.ERROR.type] ?? '')
     if (error) return Result.ok(error || null)
 
     if (name === 'exception' || name === 'error') {
