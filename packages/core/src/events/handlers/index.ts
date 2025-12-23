@@ -4,7 +4,9 @@ import { clearProviderApiKeysCache } from './clearProviderApiKeysCache'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
 import { createLoopsContact } from './createLoopsContact'
+import { enqueueShadowTestChallengerHandler } from './enqueueShadowTestChallenger'
 import { evaluateLiveLogJob } from './evaluateLiveLog'
+import { generateDetailsForMergedIssue } from './generateDetailsForMergedIssue'
 import { handleEvaluationResultV2Updated } from './handleEvaluationResultV2Updated'
 import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
 import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTriggerCreated'
@@ -15,26 +17,25 @@ import { notifyClientOfEvaluationStatus } from './notifyClientOfEvaluationStatus
 import { notifyClientOfEvaluationV2AlignmentUpdated } from './notifyClientOfEvaluationV2AlignmentUpdated'
 import { notifyClientOfExportReady } from './notifyClientOfExportReady'
 import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
+import { notifyClientOfOptimizationStatus } from './notifyClientOfOptimizationStatus'
+import { notifyClientOfRunStatusByDocument } from './notifyClientOfRunStatusByDocument'
 import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
 import { notifyClientOfSpanCreated } from './notifyClientOfSpanCreated'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { pingProjectUpdateJob } from './pingProjectUpdateJob'
+import { removeMergedIssueVectors } from './removeMergedIssueVectors'
 import { requestDocumentSuggestionJobV2 } from './requestDocumentSuggestionJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendIssueEscalatingHandler } from './sendIssueEscalatingHandler'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
+import { stopDeploymentTestsForCommitHandler } from './stopDeploymentTestsForCommitHandler'
 import { touchApiKeyJob } from './touchApiKeyJob'
 import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
 import { undeployDocumentTriggerJob } from './undeployDocumentTriggerJob'
-import { updateWebhookLastTriggeredAt } from './webhooks'
-import { removeMergedIssueVectors } from './removeMergedIssueVectors'
-import { generateDetailsForMergedIssue } from './generateDetailsForMergedIssue'
 import { unlockIssuesDashboardOnAnnotation } from './unlockIssuesDashboardOnAnnotation'
-import { notifyClientOfRunStatusByDocument } from './notifyClientOfRunStatusByDocument'
-import { enqueueShadowTestChallengerHandler } from './enqueueShadowTestChallenger'
-import { stopDeploymentTestsForCommitHandler } from './stopDeploymentTestsForCommitHandler'
+import { updateWebhookLastTriggeredAt } from './webhooks'
 
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
@@ -134,4 +135,9 @@ export const EventHandlers: IEventsHandlers = {
   deploymentTestCreated: [],
   weeklyWorkspacesNotifiedTotal: [],
   weeklyWorkspaceNotified: [],
+  optimizationStarted: [notifyClientOfOptimizationStatus],
+  optimizationPrepared: [notifyClientOfOptimizationStatus],
+  optimizationExecuted: [notifyClientOfOptimizationStatus],
+  optimizationValidated: [notifyClientOfOptimizationStatus],
+  optimizationEnded: [notifyClientOfOptimizationStatus],
 }

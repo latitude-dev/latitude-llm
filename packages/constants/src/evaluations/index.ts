@@ -28,12 +28,12 @@ import {
   RuleEvaluationSpecification,
 } from './rule'
 
+export * from './active'
 export * from './composite'
 export * from './human'
 export * from './llm'
 export * from './rule'
 export * from './shared'
-export * from './active'
 
 export enum EvaluationType {
   Rule = 'rule',
@@ -241,7 +241,6 @@ export type EvaluationResultV2<
   evaluatedLogId?: number | null
   evaluatedSpanId?: string | null
   evaluatedTraceId?: string | null
-  issueId?: number | null
   usedForSuggestion?: boolean | null
   createdAt: Date
   updatedAt: Date

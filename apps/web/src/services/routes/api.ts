@@ -1,5 +1,5 @@
-import { buildExperimentsApiParams } from '@latitude-data/core/data-access/experiments/buildApiParams'
 import type { RunSourceGroup } from '@latitude-data/core/constants'
+import { buildExperimentsApiParams } from '@latitude-data/core/data-access/experiments/buildApiParams'
 
 type PaginationParameters = { page: number; pageSize: number }
 
@@ -267,6 +267,10 @@ export const API_ROUTES = {
               },
               issues: {
                 search: `${documentRoot}/issues/search`,
+              },
+              optimizations: {
+                root: `${documentRoot}/optimizations`,
+                count: `${documentRoot}/optimizations/count`,
               },
             }
           },

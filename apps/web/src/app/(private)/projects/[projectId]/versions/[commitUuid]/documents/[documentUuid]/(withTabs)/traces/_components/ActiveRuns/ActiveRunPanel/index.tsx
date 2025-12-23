@@ -10,7 +10,7 @@ import {
 import { ActiveRun } from '@latitude-data/constants'
 import PromptPlaygroundChat from '$/components/PlaygroundCommon/PromptPlaygroundChat'
 import { RunPanelStats } from '$/components/RunPanelStats'
-import { DetailsPanel } from '$/components/DetailsPannel'
+import { DetailsPanel } from '$/components/DetailsPanel'
 import { useOnce } from '$/hooks/useMount'
 
 type InfoProps = {

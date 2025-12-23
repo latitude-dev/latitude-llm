@@ -22,7 +22,7 @@ export const issueEvaluationResults = latitudeSchema.table(
       .references((): AnyPgColumn => issues.id, { onDelete: 'cascade' }),
     evaluationResultId: bigint('evaluation_result_id', {
       mode: 'number',
-    }).notNull(),
+    }).notNull(), // TODO(AO): FIX add evaluation results table reference
     ...timestamps(),
   },
   (table) => [

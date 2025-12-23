@@ -1,13 +1,13 @@
-import { type Experiment } from '../../schema/models/types/Experiment'
+import { publisher } from '../../events/publisher'
+import { queues } from '../../jobs/queues'
+import { ProgressTracker } from '../../jobs/utils/progressTracker'
 import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
-import { completeExperiment } from './complete'
-import { ProgressTracker } from '../../jobs/utils/progressTracker'
+import { type Experiment } from '../../schema/models/types/Experiment'
 import { WebsocketClient } from '../../websockets/workers'
-import { queues } from '../../jobs/queues'
-import { publisher } from '../../events/publisher'
 import { JOB_FINISHED_STATES } from '../runs/shared'
+import { completeExperiment } from './complete'
 
 async function cancelExperimentJobs(runUuids: string[]) {
   const { runsQueue } = await queues()
@@ -48,7 +48,10 @@ export async function stopExperiment({
     return Result.ok(experiment)
   }
 
-  const completeResult = await completeExperiment(experiment)
+  const completeResult = await completeExperiment({
+    experiment,
+    cancelled: true,
+  })
   if (completeResult.error) {
     return Result.error(completeResult.error as LatitudeError)
   }

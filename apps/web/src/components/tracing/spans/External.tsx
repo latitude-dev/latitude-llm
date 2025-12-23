@@ -80,7 +80,7 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.External>) {
     <>
       {!!span.metadata && (
         <>
-          <MetadataItem label='Prompt UUID'>
+          <MetadataItem label='Prompt id'>
             <ClickToCopy copyValue={span.metadata.promptUuid}>
               <Text.H5 align='right' color='foregroundMuted'>
                 {span.metadata.promptUuid.slice(0, 8)}
@@ -88,7 +88,7 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.External>) {
             </ClickToCopy>
           </MetadataItem>
           {span.metadata.versionUuid && (
-            <MetadataItem label='Version UUID'>
+            <MetadataItem label='Version id'>
               <ClickToCopy copyValue={span.metadata.versionUuid}>
                 <Text.H5 align='right' color='foregroundMuted'>
                   {span.metadata.versionUuid.slice(0, 8)}

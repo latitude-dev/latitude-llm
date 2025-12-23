@@ -3,7 +3,8 @@
 import {
   experimentParametersSourceSchema,
   experimentVariantSchema,
-} from '@latitude-data/constants/experiments'
+  SimulationSettingsSchema,
+} from '@latitude-data/constants'
 import {
   DatasetsRepository,
   EvaluationsV2Repository,
@@ -19,11 +20,7 @@ export const createExperimentAction = withDocument
       variants: z.array(experimentVariantSchema),
       evaluationUuids: z.array(z.string()),
       parametersPopulation: experimentParametersSourceSchema,
-      simulationSettings: z.object({
-        simulateToolResponses: z.boolean().optional(),
-        simulatedTools: z.array(z.string()).optional(),
-        toolSimulationInstructions: z.string().optional(),
-      }),
+      simulationSettings: SimulationSettingsSchema,
     }),
   )
   .action(async ({ ctx, parsedInput }) => {

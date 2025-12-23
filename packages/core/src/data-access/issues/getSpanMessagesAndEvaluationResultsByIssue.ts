@@ -94,6 +94,7 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
   return Result.ok(messagesAndEvaluationResults)
 }
 
+// FIXME(manu): This is wrong, the specification resultReason method should be used to get the reason!!
 // We need an efficient way of extracting reasons directly from metadata without fetching evaluations
 function getReasonFromEvaluationResult(result: EvaluationResultV2) {
   if (result.error || !result.metadata) {

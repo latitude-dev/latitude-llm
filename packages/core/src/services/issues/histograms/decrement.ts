@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, toDate } from 'date-fns'
 import { and, eq, sql } from 'drizzle-orm'
 import { EvaluationResultV2 } from '../../../constants'
 import { publisher } from '../../../events/publisher'
@@ -27,6 +27,7 @@ export async function decrementIssueHistogram(
 ) {
   const updatedAt = new Date()
   const date = format(result.createdAt, 'yyyy-MM-dd')
+  const occurredAt = toDate(result.createdAt)
 
   return await transaction.call(
     async (tx) => {
@@ -40,7 +41,7 @@ export async function decrementIssueHistogram(
           commitId: commit.id,
           date: date,
           count: 0,
-          occurredAt: result.createdAt,
+          occurredAt: occurredAt,
           createdAt: updatedAt,
           updatedAt: updatedAt,
         })
@@ -52,7 +53,7 @@ export async function decrementIssueHistogram(
           ],
           set: {
             count: sql<number>`GREATEST(${issueHistograms.count} - 1, 0)`,
-            occurredAt: sql<Date>`GREATEST(${issueHistograms.occurredAt}, ${result.createdAt})`,
+            occurredAt: sql<Date>`GREATEST(${issueHistograms.occurredAt}, ${occurredAt})`,
             updatedAt: updatedAt,
           },
         })

@@ -2,7 +2,7 @@ import { forwardRef, ReactNode, useState } from 'react'
 
 import { TabSelector } from '$/components/TabSelector'
 import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
-import { DetailsPanel } from '$/components/DetailsPannel'
+import { DetailsPanel } from '$/components/DetailsPanel'
 
 export const DEFAULT_TABS = [
   { label: 'Metadata', value: 'metadata' },

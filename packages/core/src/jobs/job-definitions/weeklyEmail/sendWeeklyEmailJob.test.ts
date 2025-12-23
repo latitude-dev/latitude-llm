@@ -20,6 +20,8 @@ vi.mock('../../../events/publisher', () => ({
   },
 }))
 
+// FIXME(andres): this test is flaky!
+
 describe('sendWeeklyEmailJob', () => {
   let mockGetLogsData: ReturnType<typeof vi.fn>
   let mockGetIssuesData: ReturnType<typeof vi.fn>

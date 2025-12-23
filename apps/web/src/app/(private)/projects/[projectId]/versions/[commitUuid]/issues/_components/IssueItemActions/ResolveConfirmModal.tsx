@@ -18,7 +18,7 @@ export function ResolveConfirmModal({
   issue: SerializedIssue
   evaluations: EvaluationV2[]
 }) {
-  const [ignoreEvaluations, setIgnoreEvaluations] = useState(true)
+  const [ignoreEvaluations, setIgnoreEvaluations] = useState(false)
   const hasEvaluations = evaluations.length > 0
 
   return (

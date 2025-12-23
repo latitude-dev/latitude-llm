@@ -20,9 +20,9 @@ import { commits } from './commits'
 import { datasetRows } from './datasetRows'
 import { datasets } from './datasets'
 import { experiments } from './experiments'
+import { issues } from './issues'
 import { providerLogs } from './providerLogs'
 import { workspaces } from './workspaces'
-import { issues } from './issues'
 
 export const evaluationResultsV2 = latitudeSchema.table(
   'evaluation_results_v2',
@@ -54,8 +54,7 @@ export const evaluationResultsV2 = latitudeSchema.table(
     ),
     evaluatedSpanId: varchar('evaluated_span_id', { length: 16 }),
     evaluatedTraceId: varchar('evaluated_trace_id', { length: 32 }),
-    // TODO: Remove `issueId` after we've backfilled
-    // existing data into issueEvaluationResults
+    // TODO(AO): Remove `issueId` from result in favor of issue_evaluation_results table
     issueId: bigint('issue_id', { mode: 'number' }).references(
       (): AnyPgColumn => issues.id,
       { onDelete: 'set null' },
@@ -89,6 +88,7 @@ export const evaluationResultsV2 = latitudeSchema.table(
     uniqueIndex(
       'evaluation_results_v2_unique_evaluated_log_id_evaluation_uuid_idx',
     ).on(table.evaluatedLogId, table.evaluationUuid),
+    // TODO(AO): Remove `issueId` from result
     index('evaluation_results_v2_issue_id_idx').on(table.issueId),
     index('evaluation_results_v2_created_at_brin_idx')
       .using('brin', sql`${table.createdAt}`)
