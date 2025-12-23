@@ -1,12 +1,14 @@
 import { DocumentRoutes, ROUTES } from '$/services/routes'
+import { useCommits } from '$/stores/commitsStore'
 import { DocumentVersion } from '@latitude-data/constants'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import Link from 'next/link'
-import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
+import { useMemo } from 'react'
 
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { Project } from '@latitude-data/core/schema/models/types/Project'
 function InnerApplyButton({ disabled }: { disabled?: boolean }) {
   return (
     <Button variant='outline' fullWidth disabled={disabled} fancy>
@@ -75,6 +77,12 @@ export function ActionButtons({
   document: DocumentVersion
   experiment: ExperimentWithScores
 }) {
+  const { data: commits } = useCommits()
+
+  const experimentCommit = useMemo(() => {
+    return commits?.find((c) => c.id === experiment.commitId)
+  }, [commits, experiment.commitId])
+
   return (
     <div className='flex flex-row justify-center w-full gap-2'>
       <ApplyButton
@@ -87,7 +95,7 @@ export function ActionButtons({
         href={
           ROUTES.projects
             .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid })
+            .commits.detail({ uuid: experimentCommit?.uuid ?? commit.uuid })
             .documents.detail({ uuid: document.documentUuid })[
             DocumentRoutes.traces
           ].root +

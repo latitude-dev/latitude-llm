@@ -56,6 +56,7 @@ export const evaluateLiveLogJob = async ({
     return
   }
 
+  // FIXME(sans): This ternary is doing nothing
   const versionUuid =
     spanMetadata.type === SpanType.Prompt
       ? spanMetadata.versionUuid

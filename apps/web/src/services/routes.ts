@@ -1,6 +1,7 @@
-import { API_ROUTES } from './routes/api'
 import { PUBLIC_ROOT_PATHS } from '$/services/auth/constants'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
+import { Pagination } from '@latitude-data/core/helpers'
+import { API_ROUTES } from './routes/api'
 
 export type IDatasetSettingsModal = 'new' | 'generate'
 
@@ -10,6 +11,7 @@ export enum DocumentRoutes {
   evaluations = 'evaluations',
   experiments = 'experiments',
   traces = 'traces',
+  optimizations = 'optimizations',
 }
 
 export enum EvaluationRoutes {
@@ -211,6 +213,7 @@ export const ROUTES = {
                   const root = `${rootDocuments}/${uuid}`
                   const rootEvaluations = `${root}/evaluations`
                   const experimentsRoot = `${root}/experiments`
+                  const rootOptimizations = `${root}/optimizations`
                   return {
                     root,
                     [DocumentRoutes.editor]: {
@@ -251,6 +254,31 @@ export const ROUTES = {
                       withSelected: (uuids: string[]) => {
                         if (!uuids.length) return experimentsRoot
                         return `${experimentsRoot}?selected=${uuids.join(',')}`
+                      },
+                    },
+                    [DocumentRoutes.optimizations]: {
+                      root: (params: Partial<Pagination> = {}) => {
+                        const searchParams = new URLSearchParams()
+                        for (const [key, value] of Object.entries(params)) {
+                          searchParams.set(key, String(value))
+                        }
+                        if (!searchParams.size) return rootOptimizations
+                        return `${rootOptimizations}?${searchParams.toString()}`
+                      },
+                      detail: ({
+                        uuid,
+                        ...params
+                      }: Partial<Pagination> & {
+                        uuid: string
+                      }) => {
+                        const searchParams = new URLSearchParams()
+                        for (const [key, value] of Object.entries(params)) {
+                          searchParams.set(key, String(value))
+                        }
+                        searchParams.set('optimizationUuid', uuid)
+                        return {
+                          root: `${rootOptimizations}?${searchParams.toString()}`,
+                        }
                       },
                     },
                   }

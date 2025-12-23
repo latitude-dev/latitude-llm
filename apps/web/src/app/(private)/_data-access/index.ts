@@ -2,6 +2,12 @@ import { cache } from 'react'
 
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { cache as redis } from '@latitude-data/core/cache'
+import {
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+  LAST_LATTE_THREAD_CACHE_KEY,
+} from '@latitude-data/core/constants'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
 import {
@@ -9,18 +15,13 @@ import {
   DocumentLogsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
+  OptimizationsRepository,
   ProjectsRepository,
   ProviderApiKeysRepository,
   ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
-import {
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2,
-  LAST_LATTE_THREAD_CACHE_KEY,
-} from '@latitude-data/core/constants'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
@@ -297,6 +298,46 @@ export const listEvaluationsV2AtCommitByDocumentCached = cache(
       .then((r) => r.unwrap())
 
     return evaluations
+  },
+)
+
+export const listOptimizationsByDocumentCached = cache(
+  async ({
+    documentUuid,
+    page,
+    pageSize,
+  }: {
+    documentUuid: string
+    page?: number
+    pageSize?: number
+  }) => {
+    const { workspace } = await getCurrentUserOrRedirect()
+    const repository = new OptimizationsRepository(workspace.id)
+    const optimizations = await repository
+      .listByDocumentWithDetails({ documentUuid, page, pageSize })
+      .then((r) => r.unwrap())
+
+    return optimizations
+  },
+)
+
+export const positionOptimizationByDocumentCached = cache(
+  async ({
+    optimizationUuid,
+    documentUuid,
+    pageSize,
+  }: {
+    optimizationUuid: string
+    documentUuid: string
+    pageSize?: number
+  }) => {
+    const { workspace } = await getCurrentUserOrRedirect()
+    const repository = new OptimizationsRepository(workspace.id)
+    const position = await repository
+      .positionByDocument({ optimizationUuid, documentUuid, pageSize })
+      .then((r) => r.unwrap())
+
+    return position
   },
 )
 

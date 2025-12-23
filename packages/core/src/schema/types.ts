@@ -4,12 +4,15 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '../constants'
-import { type User } from './models/types/User'
-import { type Session as BaseSession } from './models/types/Session'
 import { Commit } from './models/types/Commit'
-import { ProviderLog } from './models/types/ProviderLog'
 import { Dataset } from './models/types/Dataset'
 import { DatasetRow } from './models/types/DatasetRow'
+import { type DocumentVersion } from './models/types/DocumentVersion'
+import { ExperimentDto } from './models/types/Experiment'
+import { Optimization } from './models/types/Optimization'
+import { ProviderLog } from './models/types/ProviderLog'
+import { type Session as BaseSession } from './models/types/Session'
+import { type User } from './models/types/User'
 
 export type Session = BaseSession & {
   user: User
@@ -66,4 +69,15 @@ export type EvaluationV2Stats = EvaluationV2BaseStats & {
   versionOverview: (EvaluationV2BaseStats & {
     version: Commit
   })[]
+}
+
+export type OptimizationWithDetails = Optimization & {
+  document?: DocumentVersion // Note: optional because it could have been deleted
+  evaluation?: EvaluationV2 // Note: optional because it could have been deleted
+  trainset?: Dataset
+  testset?: Dataset
+  baselineCommit?: Commit // Note: optional because it could have been deleted
+  baselineExperiment?: ExperimentDto
+  optimizedCommit?: Commit
+  optimizedExperiment?: ExperimentDto
 }

@@ -585,7 +585,7 @@ function EvaluationsTableBlankSlate({
       <BlankSlateStep
         number={2}
         title='Generate an evaluation'
-        description='Our AI can craft an evaluation just for this specific prompt. Try it out!'
+        description='Our AI can craft an evaluation just for this specific prompt, try it out!'
         className='animate-in fade-in duration-300 max-h-[360px] over overflow-y-auto'
       >
         <div className='relative bg-secondary px-4 py-2 rounded-lg border max-h-[272px] overflow-hidden'>
@@ -595,7 +595,7 @@ function EvaluationsTableBlankSlate({
                 ? `
 ---
   provider: OpenAI
-  model: gpt-4o
+  model: gpt-5.2
 ---
 This is just a placeholder for the evaluation prompt because generating it takes a bit longer than we'd like. Click the button to actually generate the evaluation, it's free as this one is on us.
 
@@ -604,7 +604,7 @@ Don't rawdog your prompts!
                 : `
 ---
   provider: OpenAI
-  model: gpt-4o
+  model: gpt-5.2
 ---
 This is just a placeholder for the evaluation prompt because the evaluation generator is disabled. If it were enabled, you could click the button to actually generate the evaluation.
 

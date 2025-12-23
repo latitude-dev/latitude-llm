@@ -1,5 +1,6 @@
 import {
   EvaluationV2,
+  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
   LatitudeTool,
   LatitudeToolInternalName,
   LogSources,
@@ -14,14 +15,13 @@ import type {
   UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { TelemetryContext } from '@latitude-data/telemetry'
-import type { App as PipedreamApp, Component } from '@pipedream/sdk'
+import type { Component, App as PipedreamApp } from '@pipedream/sdk'
 import {
   ConfigurableProp,
   ConfigurePropResponse,
   PropOption,
 } from '@pipedream/sdk'
 import { FinishReason, Tool, ToolResultPart } from 'ai'
-import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
 import { z } from 'zod'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
@@ -50,10 +50,11 @@ export {
 export * from '@latitude-data/constants/actions'
 export * from '@latitude-data/constants/evaluations'
 export * from '@latitude-data/constants/grants'
+export * from '@latitude-data/constants/issues'
 export * from '@latitude-data/constants/latte'
+export * from '@latitude-data/constants/optimizations'
 export * from '@latitude-data/constants/runs'
 export * from '@latitude-data/constants/tracing'
-export * from '@latitude-data/constants/issues'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
@@ -393,6 +394,7 @@ export const CLOUD_MESSAGES = {
   documentSuggestions: `Document suggestions are only available on Latitude Cloud. ${CLOUD_INFO}`,
   generateAgentDetails: `Agent details generator is only available on Latitude Cloud. ${CLOUD_INFO}`,
   issueDiscovery: `Issue discovery is only available on Latitude Cloud. ${CLOUD_INFO}`,
+  promptOptimization: `Prompt optimization is only available on Latitude Cloud. ${CLOUD_INFO}`,
 }
 
 export const LATITUDE_TOOLS_CONFIG_NAME = 'latitudeTools'

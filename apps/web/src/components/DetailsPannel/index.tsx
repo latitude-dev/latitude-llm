@@ -17,7 +17,7 @@ const DetailsPanel = ({
       ref={ref}
       className={cn(
         'flex flex-col gap-y-6 flex-grow min-h-0 bg-background overflow-x-auto',
-        'rounded-lg items-center relative',
+        'rounded-xl items-center relative',
         className,
         { 'border border-border': bordered },
       )}
@@ -77,7 +77,7 @@ DetailsPanel.Footer = function DetailsPanelFooter({
 }) {
   return (
     <div
-      className={cn('w-full bg-card rounded-b-lg mt-auto', {
+      className={cn('w-full bg-card rounded-b-xl mt-auto', {
         'p-4': space === 'normal',
       })}
     >

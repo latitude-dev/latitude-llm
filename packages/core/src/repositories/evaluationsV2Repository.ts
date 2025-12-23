@@ -12,7 +12,7 @@ import {
 } from 'drizzle-orm'
 import { EvaluationType, EvaluationV2 } from '../constants'
 import { NotFoundError } from '../lib/errors'
-import { Result } from '../lib/Result'
+import { Result, TypedResult } from '../lib/Result'
 import { commits } from '../schema/models/commits'
 import { evaluationVersions } from '../schema/models/evaluationVersions'
 import { projects } from '../schema/models/projects'
@@ -45,20 +45,23 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
 
   private async listAtHistory({
     projectId,
+    commitId,
     commitUuid,
     documentUuid,
   }: {
     projectId?: number
-    commitUuid: string
+    commitId?: number
+    commitUuid?: string
     documentUuid?: string
   }) {
     const commitsRepository = new CommitsRepository(this.workspaceId, this.db)
-    const commit = await commitsRepository
-      .getCommitByUuid({
-        projectId: projectId,
-        uuid: commitUuid,
-      })
-      .then((r) => r.unwrap())
+    const getting = await (commitId
+      ? commitsRepository.getCommitById(commitId)
+      : commitsRepository.getCommitByUuid({ projectId, uuid: commitUuid! }))
+    if (getting.error) {
+      return Result.error(getting.error)
+    }
+    const commit = getting.value
 
     const history = this.db.$with('history').as(
       this.db
@@ -118,22 +121,40 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
     return Result.ok<EvaluationV2[]>(evaluations)
   }
 
+  async getAtCommitByDocument(params: {
+    projectId?: number
+    commitUuid: string
+    documentUuid: string
+    evaluationUuid: string
+  }): Promise<TypedResult<EvaluationV2>>
+  async getAtCommitByDocument(params: {
+    commitId: number
+    documentUuid: string
+    evaluationUuid: string
+  }): Promise<TypedResult<EvaluationV2>>
   async getAtCommitByDocument({
     projectId,
+    commitId,
     commitUuid,
     documentUuid,
     evaluationUuid,
   }: {
     projectId?: number
-    commitUuid: string
+    commitId?: number
+    commitUuid?: string
     documentUuid: string
     evaluationUuid: string
   }) {
-    const evaluations = await this.listAtCommitByDocument({
+    const listing = await this.listAtHistory({
       projectId: projectId,
+      commitId: commitId,
       commitUuid: commitUuid,
       documentUuid: documentUuid,
-    }).then((r) => r.unwrap())
+    })
+    if (listing.error) {
+      return Result.error(listing.error)
+    }
+    const evaluations = listing.value
 
     const evaluation = evaluations.find((e) => e.uuid === evaluationUuid)
     if (!evaluation) {
@@ -143,17 +164,29 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
     return Result.ok<EvaluationV2>(evaluation)
   }
 
+  async listAtCommitByDocument(params: {
+    projectId?: number
+    commitUuid: string
+    documentUuid: string
+  }): Promise<TypedResult<EvaluationV2[]>>
+  async listAtCommitByDocument(params: {
+    commitId: number
+    documentUuid: string
+  }): Promise<TypedResult<EvaluationV2[]>>
   async listAtCommitByDocument({
     projectId,
+    commitId,
     commitUuid,
     documentUuid,
   }: {
     projectId?: number
-    commitUuid: string
+    commitId?: number
+    commitUuid?: string
     documentUuid: string
   }) {
     return this.listAtHistory({
       projectId: projectId,
+      commitId: commitId,
       commitUuid: commitUuid,
       documentUuid: documentUuid,
     })

@@ -1,21 +1,21 @@
+import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { ROUTES } from '$/services/routes'
+import useDatasetRows from '$/stores/datasetRows'
+import useDatasetRowsCount from '$/stores/datasetRowsCount'
+import useDatasets from '$/stores/datasets'
+import { INPUT_SOURCE } from '@latitude-data/core/lib/documentPersistedInputs'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import Link from 'next/link'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { INPUT_SOURCE } from '@latitude-data/core/lib/documentPersistedInputs'
 import { useDocumentParameterValues } from '../DocumentParametersContext'
 import { NoInputsMessage } from '../NoInputsMessage'
-import useDatasetsV2 from '$/stores/datasets'
-import useDatasetRows from '$/stores/datasetRows'
-import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import { useDatasetRowPosition } from './useRowPosition'
-import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 function BlankSlate() {
   return (
@@ -43,7 +43,9 @@ export function DatasetParams({
 
   // Dataset selection
   const [selectedDataset, setSelectedDataset] = useState<Dataset | undefined>()
-  const { data: datasets, isLoading: isLoadingDatasets } = useDatasetsV2({
+  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
+    page: '1',
+    pageSize: '10000', // No pagination
     onFetched: (data) => {
       const selectedDs = data.find((ds) => ds.id === document.datasetV2Id)
       if (selectedDs) {
@@ -182,11 +184,13 @@ export function DatasetParams({
         <Select
           width='auto'
           name='datasetId'
-          placeholder={isLoadingDatasets ? 'Loading...' : 'Select dataset'}
+          placeholder='Select dataset'
+          loading={isLoadingDatasets}
           disabled={isLoadingDatasets || !datasetOptions.length}
           options={datasetOptions}
           onChange={onSelectDataset}
           value={selectedId}
+          searchable
         />
         <div className='min-w-0'>
           {isLoading ? (

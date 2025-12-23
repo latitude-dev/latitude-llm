@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { withDocument, withDocumentSchema } from '../procedures'
 import { queues } from '@latitude-data/core/queues'
 import { findOrCreateDataset } from '@latitude-data/core/services/datasets/findOrCreate'
-import { updateDatasetFromSpans } from '@latitude-data/core/services/datasets/createFromSpans'
+import { updateDatasetFromSpans } from '@latitude-data/core/services/datasets/updateFromSpans'
 
 const MAX_SYNC_SPANS_BATCH_SIZE = 25
 

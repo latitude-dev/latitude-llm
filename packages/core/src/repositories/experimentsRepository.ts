@@ -1,21 +1,22 @@
 import {
-  eq,
   and,
-  getTableColumns,
-  sql,
   count,
   desc,
-  sum,
-  isNull,
+  eq,
+  getTableColumns,
+  inArray,
   isNotNull,
+  isNull,
+  sql,
+  sum,
 } from 'drizzle-orm'
 
+import { ExperimentScores } from '@latitude-data/constants'
+import { omit } from 'lodash-es'
 import { ErrorableEntity } from '../constants'
-import { type Experiment } from '../schema/models/types/Experiment'
-import {
-  ExperimentDto,
-  ExperimentLogsMetadata,
-} from '../schema/models/types/Experiment'
+import { LatitudeError, NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
+import { PromisedResult } from '../lib/Transaction'
 import { commits } from '../schema/models/commits'
 import { documentLogs } from '../schema/models/documentLogs'
 import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
@@ -23,12 +24,12 @@ import { experiments } from '../schema/models/experiments'
 import { projects } from '../schema/models/projects'
 import { providerLogs } from '../schema/models/providerLogs'
 import { runErrors } from '../schema/models/runErrors'
+import {
+  ExperimentDto,
+  ExperimentLogsMetadata,
+  type Experiment,
+} from '../schema/models/types/Experiment'
 import Repository from './repositoryV2'
-import { omit } from 'lodash-es'
-import { PromisedResult } from '../lib/Transaction'
-import { LatitudeError, NotFoundError } from '../lib/errors'
-import { Result } from '../lib/Result'
-import { ExperimentScores } from '@latitude-data/constants'
 
 export class ExperimentsRepository extends Repository<Experiment> {
   get scopeFilter() {
@@ -45,8 +46,9 @@ export class ExperimentsRepository extends Repository<Experiment> {
 
   private async aggregatedResultsSubquery(
     params:
-      | { documentUuid: string; experimentUuid?: never }
-      | { documentUuid?: never; experimentUuid: string },
+      | { documentUuid: string; experimentUuid?: never; ids?: never }
+      | { documentUuid?: never; experimentUuid: string; ids?: never }
+      | { documentUuid?: never; experimentUuid?: never; ids: number[] },
   ) {
     const experiment = params.experimentUuid
       ? await this.db
@@ -71,7 +73,9 @@ export class ExperimentsRepository extends Repository<Experiment> {
       ? eq(experiments.documentUuid, params.documentUuid)
       : experiment
         ? eq(experiments.uuid, experiment.uuid)
-        : undefined
+        : params.ids?.length
+          ? inArray(experiments.id, params.ids)
+          : undefined
 
     if (!condition) {
       return Result.error(
@@ -112,7 +116,9 @@ export class ExperimentsRepository extends Repository<Experiment> {
       ? eq(documentLogs.documentUuid, params.documentUuid)
       : experiment
         ? eq(documentLogs.experimentId, experiment.id)
-        : undefined
+        : params.ids?.length
+          ? inArray(documentLogs.experimentId, params.ids)
+          : undefined
 
     if (!logsCondition) {
       return Result.error(
@@ -248,6 +254,31 @@ export class ExperimentsRepository extends Repository<Experiment> {
     }
 
     return Result.ok(this.experimentDtoPresenter(results[0]!))
+  }
+
+  async findByIds(ids: number[]): Promise<ExperimentDto[]> {
+    if (!ids.length) return []
+
+    const aggregatedResults = await this.aggregatedResultsSubquery({
+      ids,
+    }).then((r) => r.unwrap())
+
+    const results = await this.db
+      .with(aggregatedResults)
+      .select({
+        ...getTableColumns(experiments),
+        passedEvals: aggregatedResults.passedEvals,
+        failedEvals: aggregatedResults.failedEvals,
+        evalErrors: aggregatedResults.evalErrors,
+        logErrors: aggregatedResults.logErrors,
+        totalScore: aggregatedResults.totalScore,
+      })
+      .from(experiments)
+      .leftJoin(aggregatedResults, eq(aggregatedResults.id, experiments.id))
+      .where(and(this.scopeFilter, inArray(experiments.id, ids)))
+      .orderBy(desc(experiments.createdAt))
+
+    return results.map(this.experimentDtoPresenter)
   }
 
   async getScores(

@@ -1,12 +1,12 @@
 'use server'
 
+import { withEvaluation, withEvaluationSchema } from '$/actions/procedures'
 import {
   EvaluationResultsV2Repository,
   IssuesRepository,
 } from '@latitude-data/core/repositories'
 import { unassignEvaluationResultV2FromIssue } from '@latitude-data/core/services/evaluationsV2/results/unassign'
 import { z } from 'zod'
-import { withEvaluation, withEvaluationSchema } from '$/actions/procedures'
 
 export const unAssignIssueAction = withEvaluation
   .inputSchema(
@@ -20,7 +20,7 @@ export const unAssignIssueAction = withEvaluation
       .then((r) => r.unwrap())
 
     let issue = await new IssuesRepository(ctx.workspace.id)
-      .find(result.issueId)
+      .findByResultId(result.id)
       .then((r) => r.unwrap())
 
     const response = await unassignEvaluationResultV2FromIssue({

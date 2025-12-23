@@ -1,19 +1,19 @@
-import { z } from 'zod'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import {
-  ProjectsRepository,
-  IssuesRepository,
-} from '@latitude-data/core/repositories'
-import { CommitsRepository } from '@latitude-data/core/repositories'
-import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { NextRequest, NextResponse } from 'next/server'
-import { Cursor } from '@latitude-data/core/schema/types'
+import { Span, SpanType } from '@latitude-data/constants'
 import { getSpansByIssue } from '@latitude-data/core/data-access/issues/getSpansByIssue'
-import { Span } from 'dd-trace'
+import {
+  CommitsRepository,
+  IssuesRepository,
+  ProjectsRepository,
+} from '@latitude-data/core/repositories'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { Cursor } from '@latitude-data/core/schema/types'
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
 export type IssueSpansResponse = {
-  spans: Span[]
+  spans: Span<SpanType.Prompt>[]
   next: string | null
 }
 

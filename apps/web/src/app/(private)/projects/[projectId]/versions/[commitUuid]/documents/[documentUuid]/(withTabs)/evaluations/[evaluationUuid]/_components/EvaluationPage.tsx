@@ -16,7 +16,10 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/core/constants'
-import { EvaluationResultsV2Search } from '@latitude-data/core/helpers'
+import {
+  EvaluationResultsV2Search,
+  evaluationResultsV2SearchToQueryParams,
+} from '@latitude-data/core/helpers'
 import { EvaluationResultV2WithDetails } from '@latitude-data/core/schema/types'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -131,34 +134,24 @@ export function EvaluationPage<
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { evaluation } = useCurrentEvaluationV2<T, M>()
+
   const [search, setSearch] = useState(serverSearch)
+  useEffect(() => setSearch(serverSearch), [serverSearch])
   const [debouncedSearch] = useDebounce(search, 250)
+
+  useEffect(() => {
+    const currentUrl = window.location.origin + window.location.pathname
+    const queryParams = evaluationResultsV2SearchToQueryParams(debouncedSearch)
+    const targetUrl = `${currentUrl}?${queryParams}`
+    if (targetUrl !== window.location.href) {
+      window.history.replaceState(null, '', targetUrl)
+    }
+  }, [debouncedSearch])
+
   const { data: results, mutate } = useEvaluationResultsV2<T, M>(
     { project, commit, document, evaluation, search: debouncedSearch },
     { fallbackData: serverResults, keepPreviousData: true },
   )
-  const [selectedResult, setSelectedResult] = useState(serverSelectedResult)
-  const {
-    data: stats,
-    mutate: mutateStats,
-    isLoading: isLoadingStats,
-  } = useEvaluationV2Stats<T, M>({
-    project: project,
-    commit: commit,
-    document: document,
-    evaluation: evaluation,
-    search: debouncedSearch,
-  })
-  const refetchStats = useDebouncedCallback(mutateStats, 1000)
-  const [realtimeEnabled, setRealtimeEnabled] = useState(true)
-
-  useEvaluationResultsV2Socket({
-    evaluation: evaluation,
-    search: search,
-    mutate: mutate,
-    refetchStats: refetchStats,
-    realtimeEnabled: realtimeEnabled,
-  })
 
   // Note: prefetch next results
   useEvaluationResultsV2<T, M>({
@@ -175,7 +168,30 @@ export function EvaluationPage<
     },
   })
 
-  useEffect(() => setSearch(serverSearch), [serverSearch])
+  const [selectedResult, setSelectedResult] = useState(serverSelectedResult)
+
+  const {
+    data: stats,
+    mutate: mutateStats,
+    isLoading: isLoadingStats,
+  } = useEvaluationV2Stats<T, M>({
+    project: project,
+    commit: commit,
+    document: document,
+    evaluation: evaluation,
+    search: debouncedSearch,
+  })
+  const refetchStats = useDebouncedCallback(mutateStats, 1000)
+
+  const [realtimeEnabled, setRealtimeEnabled] = useState(true)
+
+  useEvaluationResultsV2Socket({
+    evaluation: evaluation,
+    search: search,
+    mutate: mutate,
+    refetchStats: refetchStats,
+    realtimeEnabled: realtimeEnabled,
+  })
 
   const openSettingsRef = useRef<() => void>(undefined)
   const { data: evaluations, isLoading: isLoadingEvaluations } =

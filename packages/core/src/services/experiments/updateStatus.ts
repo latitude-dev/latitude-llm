@@ -1,10 +1,10 @@
-import { type Experiment } from '../../schema/models/types/Experiment'
+import { ProgressTracker } from '../../jobs/utils/progressTracker'
 import { LatitudeError } from '../../lib/errors'
 import { ErrorResult, Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
-import { completeExperiment } from './complete'
+import { type Experiment } from '../../schema/models/types/Experiment'
 import { WebsocketClient } from '../../websockets/workers'
-import { ProgressTracker } from '../../jobs/utils/progressTracker'
+import { completeExperiment } from './complete'
 
 type UpdateExperimentStatusData = {
   workspaceId: number
@@ -26,7 +26,7 @@ export async function updateExperimentStatus(
         // Silently ignore cleanup errors to not mask the original error
       })
 
-      const completeResult = await completeExperiment(experiment)
+      const completeResult = await completeExperiment({ experiment })
       if (!Result.isOk(completeResult)) {
         return completeResult as ErrorResult<LatitudeError>
       }

@@ -2,8 +2,9 @@
 
 import { GoToPageInput } from '$/components/TablePaginationFooter/GoToPageInput'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useMemo } from 'react'
 
 export function LogicTablePaginationFooter({
@@ -28,13 +29,21 @@ export function LogicTablePaginationFooter({
 
   return (
     <div className='w-full flex justify-between items-center'>
-      <Text.H5M color='foregroundMuted'>
-        {countLabel?.(count) ?? count}
-      </Text.H5M>
+      {isLoading ? (
+        <Skeleton className='w-20 my-2' height='h4' />
+      ) : (
+        <Text.H5M color='foregroundMuted'>
+          {countLabel?.(count) ?? count}
+        </Text.H5M>
+      )}
 
       <div className='flex items-center'>
         {isLoading && (
-          <Icon name='loader' className='h-4 w-4 animate-spin mr-2' />
+          <Icon
+            name='loader'
+            color='foregroundMuted'
+            className='h-4 w-4 animate-spin mr-2'
+          />
         )}
         <Button
           size='default'

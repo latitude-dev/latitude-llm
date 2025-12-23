@@ -1,9 +1,10 @@
 'use client'
 
-import { DocumentRoutes, ROUTES } from '$/services/routes'
 import { TabSelector } from '$/components/TabSelector'
+import { DocumentRoutes, ROUTES } from '$/services/routes'
+import useFeature from '$/stores/useFeature'
 import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
-import { useSelectedLayoutSegment, useSearchParams } from 'next/navigation'
+import { useSearchParams, useSelectedLayoutSegment } from 'next/navigation'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 
 export type TabValue = DocumentRoutes | 'preview'
@@ -65,6 +66,8 @@ export const DocumentTabSelector = memo(
         .documents.detail({ uuid: documentUuid })
     }, [projectId, commitUuid, documentUuid])
 
+    const { isEnabled: optimizationsEnabled } = useFeature('optimizations')
+
     // --- Tabs definition ---
     const data = useMemo(() => {
       const tabs = {
@@ -98,6 +101,11 @@ export const DocumentTabSelector = memo(
           value: DocumentRoutes.traces,
           route: baseRoute.traces.root,
         },
+        [DocumentRoutes.optimizations]: {
+          label: 'Optimizations',
+          value: DocumentRoutes.optimizations,
+          route: baseRoute.optimizations.root(),
+        },
       } satisfies Record<TabValue, TabSelectorOption<TabValue>>
 
       return {
@@ -107,9 +115,10 @@ export const DocumentTabSelector = memo(
           tabs[DocumentRoutes.evaluations],
           tabs[DocumentRoutes.experiments],
           tabs[DocumentRoutes.traces],
+          ...(optimizationsEnabled ? [tabs[DocumentRoutes.optimizations]] : []),
         ],
       }
-    }, [baseRoute])
+    }, [baseRoute, optimizationsEnabled])
 
     const setPreviewState = useCallback(
       (showPreview: boolean) => {

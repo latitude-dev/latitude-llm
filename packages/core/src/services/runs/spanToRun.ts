@@ -66,7 +66,7 @@ export async function spanToRun({
       commitUuid: span.commitUuid!,
       documentUuid: span.documentUuid!,
     })
-    .then((r) => r.value)
+    .then((r) => r.unwrap())
   const annotations = results
     .map((result) => {
       const evaluation = evaluations.find(

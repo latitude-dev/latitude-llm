@@ -662,6 +662,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           result: result as EvaluationResultV2,
         })
 
+      // TODO(AO): Remove issueId from result
       // Add issueId to result for backward compatibility
       const resultWithIssue = {
         ...result,
@@ -898,6 +899,9 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         evaluationResultsV2,
         eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
       )
+      // FIXME(manu): this is wrong, joins with evaluation versions are forbidden!
+      // There can be multiple versions for the same evaluation and thus this join
+      // is duplicating the results!
       .innerJoin(
         evaluationVersions,
         eq(
@@ -957,6 +961,9 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         createdAt: evaluationResultsV2.createdAt,
       })
       .from(evaluationResultsV2)
+      // FIXME(manu): this is wrong, joins with evaluation versions are forbidden!
+      // There can be multiple versions for the same evaluation and thus this join
+      // is duplicating the results!
       .innerJoin(
         evaluationVersions,
         and(

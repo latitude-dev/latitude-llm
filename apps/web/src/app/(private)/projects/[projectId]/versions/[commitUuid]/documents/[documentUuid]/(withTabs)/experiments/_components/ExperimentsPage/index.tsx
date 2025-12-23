@@ -1,18 +1,18 @@
 'use client'
 
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { MetadataProvider } from '$/components/MetadataProvider'
+import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { useExperiments } from '$/stores/experiments'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { ExperimentsTable } from '../ExperimentsTable'
-import { RunExperimentModal } from '$/components/RunExperimentModal'
+import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { ExperimentComparison } from '../ExperimentsComparison'
+import { ExperimentsTable } from '../ExperimentsTable'
 import { EmptyPage } from './EmptyPage'
-import { useSearchParams } from 'next/navigation'
-import { MetadataProvider } from '$/components/MetadataProvider'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
@@ -88,7 +88,7 @@ export function ExperimentsPageContent({
     <MetadataProvider>
       <div className='w-full p-6 flex flex-col gap-4'>
         <div className='w-full items-center justify-between flex gap-2'>
-          <Text.H4B>Experiment history</Text.H4B>
+          <Text.H4M>Experiments</Text.H4M>
           <Button
             isLoading={isCreatingExperiment}
             variant='default'

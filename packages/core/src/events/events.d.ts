@@ -1,7 +1,9 @@
+import { ActiveEvaluation } from '@latitude-data/constants/evaluations'
 import { ExperimentVariant } from '@latitude-data/constants/experiments'
 import { type Commit } from '../schema/models/types/Commit'
 import { type Dataset } from '../schema/models/types/Dataset'
 import { type DatasetRow } from '../schema/models/types/DatasetRow'
+import { type DeploymentTest } from '../schema/models/types/DeploymentTest'
 import { type DocumentSuggestion } from '../schema/models/types/DocumentSuggestion'
 import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
 import { type Experiment } from '../schema/models/types/Experiment'
@@ -12,7 +14,6 @@ import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
 import { type ProviderLog } from '../schema/models/types/ProviderLog'
 import { type User } from '../schema/models/types/User'
 import { type Workspace } from '../schema/models/types/Workspace'
-import { type DeploymentTest } from '../schema/models/types/DeploymentTest'
 import {
   DatasetV2,
   DocumentLog,
@@ -20,7 +21,6 @@ import {
   EvaluationV2,
   Message,
 } from '../schema/types'
-import { ActiveEvaluation } from '@latitude-data/constants/evaluations'
 
 export type Events =
   | 'magicLinkTokenCreated'
@@ -99,6 +99,11 @@ export type Events =
   | 'deploymentTestCreated'
   | 'weeklyWorkspacesNotifiedTotal'
   | 'weeklyWorkspaceNotified'
+  | 'optimizationStarted'
+  | 'optimizationPrepared'
+  | 'optimizationExecuted'
+  | 'optimizationValidated'
+  | 'optimizationEnded'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -930,6 +935,53 @@ export type WeeklyWorkspaceNotifiedEvent = LatitudeEventGeneric<
   }
 >
 
+export type OptimizationStartedEvent = LatitudeEventGeneric<
+  'optimizationStarted',
+  {
+    workspaceId: number
+    optimizationId: number
+  }
+>
+
+export type OptimizationPreparedEvent = LatitudeEventGeneric<
+  'optimizationPrepared',
+  {
+    workspaceId: number
+    optimizationId: number
+  }
+>
+
+export type OptimizationExecutedEvent = LatitudeEventGeneric<
+  'optimizationExecuted',
+  {
+    workspaceId: number
+    optimizationId: number
+  }
+>
+
+export type OptimizationValidatedEvent = LatitudeEventGeneric<
+  'optimizationValidated',
+  {
+    workspaceId: number
+    optimizationId: number
+  }
+>
+
+export type OptimizationEndedEvent = LatitudeEventGeneric<
+  'optimizationEnded',
+  {
+    workspaceId: number
+    optimizationId: number
+  }
+>
+
+export type OptimizationStatusEvent =
+  | OptimizationStartedEvent
+  | OptimizationPreparedEvent
+  | OptimizationExecutedEvent
+  | OptimizationValidatedEvent
+  | OptimizationEndedEvent
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -1017,6 +1069,11 @@ export type LatitudeEvent =
   | DeploymentTestCreatedEvent
   | WeeklyWorkspacesNotifiedTotalEvent
   | WeeklyWorkspaceNotifiedEvent
+  | OptimizationStartedEvent
+  | OptimizationPreparedEvent
+  | OptimizationExecutedEvent
+  | OptimizationValidatedEvent
+  | OptimizationEndedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -1105,4 +1162,9 @@ export interface IEventsHandlers {
   deploymentTestCreated: EventHandler<DeploymentTestCreatedEvent>[]
   weeklyWorkspacesNotifiedTotal: EventHandler<WeeklyWorkspacesNotifiedTotalEvent>[]
   weeklyWorkspaceNotified: EventHandler<WeeklyWorkspaceNotifiedEvent>[]
+  optimizationStarted: EventHandler<OptimizationStartedEvent>[]
+  optimizationPrepared: EventHandler<OptimizationPreparedEvent>[]
+  optimizationExecuted: EventHandler<OptimizationExecutedEvent>[]
+  optimizationValidated: EventHandler<OptimizationValidatedEvent>[]
+  optimizationEnded: EventHandler<OptimizationEndedEvent>[]
 }
