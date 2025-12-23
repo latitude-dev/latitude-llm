@@ -11,10 +11,10 @@ import {
 import { useOnce } from '$/hooks/useMount'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useConversation } from '$/stores/conversations'
-import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/findFirstSpanOfType'
+import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findFirstSpanOfType'
 import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { findCompletionSpanFromTrace } from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
+import { findCompletionSpanFromTrace } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
 
 /**
  * `selectedDocumentLogUuid` is the log that comes from

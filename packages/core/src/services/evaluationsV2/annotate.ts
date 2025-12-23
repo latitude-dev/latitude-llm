@@ -26,7 +26,7 @@ import { extractActualOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { updateEvaluationResultV2 } from './results/update'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
-import { findCompletionSpanFromTrace } from '../tracing/spans/findCompletionSpanFromTrace'
+import { findCompletionSpanFromTrace } from '../tracing/spans/fetching/findCompletionSpanFromTrace'
 
 export async function annotateEvaluationV2<
   T extends EvaluationType,

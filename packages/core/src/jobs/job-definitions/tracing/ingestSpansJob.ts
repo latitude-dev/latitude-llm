@@ -5,7 +5,7 @@ import {
 } from '../../../constants'
 import { diskFactory } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
-import { ingestSpans } from '../../../services/tracing/spans/ingest'
+import { ingestSpans } from '../../../services/tracing/spans/ingestion/ingest'
 import { captureException } from '../../../utils/datadogCapture'
 
 export type IngestSpansJobData = {

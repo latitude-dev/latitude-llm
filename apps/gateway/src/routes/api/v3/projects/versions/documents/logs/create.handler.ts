@@ -1,11 +1,6 @@
 import { randomBytes } from 'crypto'
 import { database } from '@latitude-data/core/client'
 import {
-  ATTR_GEN_AI_REQUEST_MESSAGES,
-  ATTR_GEN_AI_REQUEST_PARAMETERS,
-  ATTR_GEN_AI_REQUEST_TEMPLATE,
-  ATTR_GEN_AI_RESPONSE_MESSAGES,
-  ATTR_LATITUDE_TYPE,
   LogSources,
   PromptSpanMetadata,
   CompletionSpanMetadata,
@@ -13,10 +8,7 @@ import {
   SpanKind,
   SpanStatus,
   SpanType,
-  ATTR_LATITUDE_DOCUMENT_UUID,
-  ATTR_LATITUDE_COMMIT_UUID,
-  ATTR_LATITUDE_DOCUMENT_LOG_UUID,
-  ATTR_LATITUDE_SOURCE,
+  ATTRIBUTES,
 } from '@latitude-data/core/constants'
 import { cache as redis } from '@latitude-data/core/cache'
 import { diskFactory } from '@latitude-data/core/lib/disk'
@@ -150,14 +142,15 @@ async function createSpansFromLogData({
     traceId,
     spanId: promptSpanId,
     type: SpanType.Prompt,
+    documentLogUuid,
     attributes: {
-      [ATTR_LATITUDE_TYPE]: SpanType.Prompt,
-      [ATTR_GEN_AI_REQUEST_TEMPLATE]: document.content,
-      [ATTR_GEN_AI_REQUEST_PARAMETERS]: JSON.stringify({}),
-      [ATTR_LATITUDE_DOCUMENT_UUID]: document.documentUuid,
-      [ATTR_LATITUDE_COMMIT_UUID]: commit.uuid,
-      [ATTR_LATITUDE_DOCUMENT_LOG_UUID]: documentLogUuid,
-      [ATTR_LATITUDE_SOURCE]: LogSources.API,
+      [ATTRIBUTES.LATITUDE.type]: SpanType.Prompt,
+      [ATTRIBUTES.LATITUDE.request.template]: document.content,
+      [ATTRIBUTES.LATITUDE.request.parameters]: JSON.stringify({}),
+      [ATTRIBUTES.LATITUDE.documentUuid]: document.documentUuid,
+      [ATTRIBUTES.LATITUDE.commitUuid]: commit.uuid,
+      [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
+      [ATTRIBUTES.LATITUDE.source]: LogSources.API,
     },
     events: [],
     links: [],
@@ -193,9 +186,9 @@ async function createSpansFromLogData({
     spanId: completionSpanId,
     type: SpanType.Completion,
     attributes: {
-      [ATTR_LATITUDE_TYPE]: SpanType.Completion,
-      [ATTR_GEN_AI_REQUEST_MESSAGES]: JSON.stringify(messages),
-      [ATTR_GEN_AI_RESPONSE_MESSAGES]: JSON.stringify([
+      [ATTRIBUTES.LATITUDE.type]: SpanType.Completion,
+      [ATTRIBUTES.LATITUDE.request.messages]: JSON.stringify(messages),
+      [ATTRIBUTES.LATITUDE.response.messages]: JSON.stringify([
         {
           role: 'assistant',
           content:
@@ -204,8 +197,8 @@ async function createSpansFromLogData({
               : JSON.stringify(responseText),
         },
       ]),
-      [ATTR_LATITUDE_DOCUMENT_UUID]: document.documentUuid,
-      [ATTR_LATITUDE_COMMIT_UUID]: commit.uuid,
+      [ATTRIBUTES.LATITUDE.documentUuid]: document.documentUuid,
+      [ATTRIBUTES.LATITUDE.commitUuid]: commit.uuid,
     },
     events: [],
     links: [],

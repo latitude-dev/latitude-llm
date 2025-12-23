@@ -12,7 +12,7 @@ import { assembleTrace } from '../../services/tracing/traces/assemble'
 import {
   adaptCompletionSpanMessagesToLegacy,
   findCompletionSpanFromTrace,
-} from '../../services/tracing/spans/findCompletionSpanFromTrace'
+} from '../../services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { getHITLSpansByIssue } from './getHITLSpansByIssue'
 

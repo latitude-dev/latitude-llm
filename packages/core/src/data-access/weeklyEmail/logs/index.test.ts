@@ -199,7 +199,7 @@ describe('getLogsData', () => {
       await createSpan({
         workspaceId: workspace.id,
         traceId: traceId1,
-        type: SpanType.Step,
+        type: SpanType.Tool,
         source: LogSources.API,
         startedAt: STATIC_TEST_DATE,
       })

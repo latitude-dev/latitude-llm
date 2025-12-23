@@ -1,7 +1,7 @@
 'use client'
 import { useMemo } from 'react'
 
-import { DailyCount } from '@latitude-data/core/services/tracing/spans/computeDocumentTracesDailyCount'
+import { DailyCount } from '@latitude-data/core/services/tracing/spans/fetching/computeDocumentTracesDailyCount'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { BarChart, ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'

@@ -4,7 +4,7 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
-import { computeDocumentTracesAggregations } from '@latitude-data/core/services/tracing/spans/computeDocumentTracesAggregations'
+import { computeDocumentTracesAggregations } from '@latitude-data/core/services/tracing/spans/fetching/computeDocumentTracesAggregations'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 

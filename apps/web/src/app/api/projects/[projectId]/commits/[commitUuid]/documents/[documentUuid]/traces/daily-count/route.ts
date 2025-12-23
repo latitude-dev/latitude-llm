@@ -4,7 +4,7 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
-import { computeDocumentTracesDailyCount } from '@latitude-data/core/services/tracing/spans/computeDocumentTracesDailyCount'
+import { computeDocumentTracesDailyCount } from '@latitude-data/core/services/tracing/spans/fetching/computeDocumentTracesDailyCount'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 

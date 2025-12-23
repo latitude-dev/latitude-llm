@@ -12,10 +12,10 @@ import {
   SpanFrontendSpecification,
 } from './shared'
 import { useTrace } from '$/stores/traces'
-import { findAllSpansOfType } from '@latitude-data/core/services/tracing/spans/findAllSpansOfType'
+import { findAllSpansOfType } from '@latitude-data/core/services/tracing/spans/fetching/findAllSpansOfType'
+import { findLastSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findLastSpanOfType'
 import { useMemo } from 'react'
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
-import { findLastSpanOfType } from '@latitude-data/core/services/tracing/spans/findLastSpanOfType'
 import { MessageList } from '$/components/ChatWrapper'
 import { adaptPromptlMessageToLegacy } from '@latitude-data/core/utils/promptlAdapter'
 

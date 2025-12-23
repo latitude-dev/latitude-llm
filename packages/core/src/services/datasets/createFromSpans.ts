@@ -3,7 +3,7 @@ import { type Workspace } from '../../schema/models/types/Workspace'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
-import { buildSpanDatasetRows } from '../tracing/spans/buildSpanDatasetRows'
+import { buildSpanDatasetRows } from '../tracing/spans/export'
 import { updateDataset } from './update'
 import { HashAlgorithmFn } from './utils'
 

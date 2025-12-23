@@ -505,7 +505,6 @@ tools:
         expect.any(Object),
       )
       expect(instrumentation.wrapRenderChain).toHaveBeenCalledTimes(1)
-      expect(instrumentation.wrapRenderStep).toHaveBeenCalledTimes(2)
       expect(instrumentation.wrapRenderCompletion).toHaveBeenCalledTimes(2)
       expect(instrumentation.wrapRenderTool).toHaveBeenCalledTimes(1)
     })

@@ -268,12 +268,6 @@ class Latitude {
       return Latitude.instrumentation.wrapRenderChain(_renderChain, ...args)
     }) as typeof _renderChain
 
-    const _renderStep = this.renderStep.bind(this)
-    this.renderStep = ((...args: Parameters<typeof _renderStep>) => {
-      if (!Latitude.instrumentation) return _renderStep(...args)
-      return Latitude.instrumentation.wrapRenderStep(_renderStep, ...args)
-    }) as typeof _renderStep
-
     const _renderCompletion = this.renderCompletion.bind(this)
     this.renderCompletion = ((
       ...args: Parameters<typeof _renderCompletion>
@@ -983,10 +977,6 @@ export type {
 
 export interface Instrumentation {
   wrapRenderChain<F extends Latitude['renderChain']>(
-    fn: F,
-    ...args: Parameters<F>
-  ): Promise<Awaited<ReturnType<F>>>
-  wrapRenderStep<F extends Latitude['renderStep']>(
     fn: F,
     ...args: Parameters<F>
   ): Promise<Awaited<ReturnType<F>>>
