@@ -86,6 +86,7 @@ export class DocumentIntegrationReferencesRepository extends Repository<Document
         and(
           isNull(commits.mergedAt),
           eq(documentIntegrationReferences.workspaceId, this.workspaceId),
+          isNull(commits.deletedAt),
         ),
       )
 
