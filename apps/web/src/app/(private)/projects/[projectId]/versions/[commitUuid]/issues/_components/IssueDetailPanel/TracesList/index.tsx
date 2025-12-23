@@ -1,13 +1,13 @@
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
-import { Issue } from '@latitude-data/core/schema/models/types/Issue'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
 import { useIssueSpans } from '$/stores/issues/spans'
-import { IssueSpansTable } from '../../IssueSpansTable'
-import { Span, SpanType } from '@latitude-data/constants'
-import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { Span } from '@latitude-data/constants'
+import { Issue } from '@latitude-data/core/schema/models/types/Issue'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { IssueSpansTable } from '../../IssueSpansTable'
 
 export function TracesList({
   issue,
@@ -37,7 +37,7 @@ export function TracesList({
         <TableSkeleton rows={8} cols={3} maxHeight={320} />
       ) : spans.length > 0 ? (
         <IssueSpansTable
-          spans={spans as Span<SpanType.Prompt>[]}
+          spans={spans}
           showPagination
           onView={onView}
           PaginationFooter={

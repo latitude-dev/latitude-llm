@@ -1,4 +1,7 @@
-import { FrameworkDefinition, UnsupportedFrameworkDefinition } from '../frameworks'
+import {
+  FrameworkDefinition,
+  UnsupportedFrameworkDefinition,
+} from '../frameworks'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { InstallationStep } from './InstallationStep'
@@ -183,4 +186,3 @@ LATITUDE_PROJECT_ID=${projectId}
     </>
   )
 }
-

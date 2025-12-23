@@ -56,10 +56,7 @@ export default function OnboardingInstallPage() {
 
   return (
     <div className='flex flex-col h-screen'>
-      <InviteMembersModal
-        open={inviteModalOpen}
-        setOpen={setInviteModalOpen}
-      />
+      <InviteMembersModal open={inviteModalOpen} setOpen={setInviteModalOpen} />
       <InstallationModal
         framework={selectedFramework}
         setFramework={setSelectedFramework}

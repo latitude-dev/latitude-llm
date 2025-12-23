@@ -14,4 +14,5 @@ export enum Queues {
   runsQueue = 'runsQueue',
   issuesQueue = 'issuesQueue',
   generateEvaluationsQueue = 'generateEvaluationsQueue',
+  optimizationsQueue = 'optimizationsQueue',
 }

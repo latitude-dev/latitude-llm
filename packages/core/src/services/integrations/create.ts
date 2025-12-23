@@ -116,7 +116,8 @@ export async function createIntegration<p extends IntegrationType>(
         workspaceId: workspace.id,
         name,
         type,
-        configuration: finalConfiguration as ExternalMcpIntegrationConfiguration,
+        configuration:
+          finalConfiguration as ExternalMcpIntegrationConfiguration,
         authorId: author.id,
         ...componentsResult.unwrap(),
       })

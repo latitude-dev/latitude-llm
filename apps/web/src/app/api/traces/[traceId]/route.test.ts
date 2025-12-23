@@ -1,13 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import {
-  createSpan,
-  createWorkspace,
-} from '@latitude-data/core/factories'
-import {
-  CompletionSpanMetadata,
-  SpanType,
-} from '@latitude-data/constants'
+import { createSpan, createWorkspace } from '@latitude-data/core/factories'
+import { CompletionSpanMetadata, SpanType } from '@latitude-data/constants'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { SpanMetadatasRepository } from '@latitude-data/core/repositories'

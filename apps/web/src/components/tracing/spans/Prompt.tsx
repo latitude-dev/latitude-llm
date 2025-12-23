@@ -81,7 +81,7 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
     <>
       {!!span.metadata && (
         <>
-          <MetadataItem label='Version UUID'>
+          <MetadataItem label='Version id'>
             <ClickToCopy copyValue={span.metadata.versionUuid as string}>
               <Text.H5 align='right' color='foregroundMuted'>
                 {(span.metadata.versionUuid as string).slice(0, 8)}

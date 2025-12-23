@@ -29,12 +29,11 @@ export enum SpanType {
   Unknown = 'unknown', // Other spans we don't care about
 }
 
-export type SpanSpecification<T extends SpanType = SpanType> = {
+export type SpanSpecification<_T extends SpanType = SpanType> = {
   name: string
   description: string
   isGenAI: boolean
   isHidden: boolean
-  _type?: T // TODO(tracing): required for type inference, remove this when something in the specification uses the type
 }
 
 export const LIVE_EVALUABLE_SPAN_TYPES = [

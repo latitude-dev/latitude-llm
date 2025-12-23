@@ -11,18 +11,18 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { type Commit } from '../../schema/models/types/Commit'
-import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { database } from '../../client'
 import {
   databaseErrorCodes,
   NotFoundError,
   UnprocessableEntityError,
 } from '../../lib/errors'
-import { Result } from '../../lib/Result'
+import { Result, TypedResult } from '../../lib/Result'
 import { commits } from '../../schema/models/commits'
 import { documentVersions } from '../../schema/models/documentVersions'
 import { projects } from '../../schema/models/projects'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { CommitsRepository } from '../commitsRepository'
 import RepositoryLegacy from '../repository'
 
@@ -48,6 +48,11 @@ type DocumentVersionsRepositoryOptions = {
   includeDeleted?: boolean
 }
 
+type DocumentVersionDto = DocumentVersion & {
+  mergedAt: Date | null
+  projectId: number
+}
+
 const tt = {
   ...getTableColumns(documentVersions),
   mergedAt: commits.mergedAt,
@@ -62,7 +67,7 @@ const tt = {
 
 export class DocumentVersionsRepository extends RepositoryLegacy<
   typeof tt,
-  DocumentVersion & { mergedAt: Date | null; projectId: number }
+  DocumentVersionDto
 > {
   private opts: DocumentVersionsRepositoryOptions
 
@@ -281,18 +286,80 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     return Result.ok(result.value.filter((d) => d.deletedAt === null))
   }
 
+  async listDocumentsAtCommit(params: {
+    projectId?: number
+    commitUuid: string
+  }): Promise<TypedResult<DocumentVersionDto[]>>
+  async listDocumentsAtCommit(params: {
+    commitId: number
+  }): Promise<TypedResult<DocumentVersionDto[]>>
+  async listDocumentsAtCommit({
+    projectId,
+    commitId,
+    commitUuid,
+  }: {
+    projectId?: number
+    commitId?: number
+    commitUuid?: string
+  }) {
+    const commitsScope = new CommitsRepository(this.workspaceId, this.db)
+
+    let commit
+    if (commitId) {
+      const commitResult = await commitsScope.getCommitById(commitId)
+      if (commitResult.error) return commitResult
+      commit = commitResult.unwrap()
+    } else {
+      const commitResult = await commitsScope.getCommitByUuid({
+        projectId,
+        uuid: commitUuid!,
+      })
+      if (commitResult.error) return commitResult
+      commit = commitResult.unwrap()
+    }
+
+    const documentsResult = await this.getDocumentsAtCommit(commit)
+    if (documentsResult.error) return documentsResult
+    const documents = documentsResult.unwrap()
+
+    return Result.ok(documents)
+  }
+
+  async getDocumentAtCommit(params: {
+    projectId?: number
+    commitUuid: string
+    documentUuid: string
+  }): Promise<TypedResult<DocumentVersionDto>>
+  async getDocumentAtCommit(params: {
+    commitId: number
+    documentUuid: string
+  }): Promise<TypedResult<DocumentVersionDto>>
   async getDocumentAtCommit({
     projectId,
+    commitId,
     commitUuid,
     documentUuid,
-  }: GetDocumentAtCommitProps) {
+  }: {
+    projectId?: number
+    commitId?: number
+    commitUuid?: string
+    documentUuid: string
+  }) {
     const commitsScope = new CommitsRepository(this.workspaceId, this.db)
-    const commitResult = await commitsScope.getCommitByUuid({
-      projectId,
-      uuid: commitUuid,
-    })
-    if (commitResult.error) return commitResult
-    const commit = commitResult.unwrap()
+
+    let commit
+    if (commitId) {
+      const commitResult = await commitsScope.getCommitById(commitId)
+      if (commitResult.error) return commitResult
+      commit = commitResult.unwrap()
+    } else {
+      const commitResult = await commitsScope.getCommitByUuid({
+        projectId,
+        uuid: commitUuid!,
+      })
+      if (commitResult.error) return commitResult
+      commit = commitResult.unwrap()
+    }
 
     const documentInCommit = await this.db
       .select()

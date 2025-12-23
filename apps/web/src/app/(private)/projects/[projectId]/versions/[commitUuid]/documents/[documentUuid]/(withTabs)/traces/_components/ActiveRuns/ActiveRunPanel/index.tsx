@@ -1,17 +1,17 @@
-import { Ref, useCallback } from 'react'
+import { DetailsPanel } from '$/components/DetailsPanel'
+import PromptPlaygroundChat from '$/components/PlaygroundCommon/PromptPlaygroundChat'
+import { RunPanelStats } from '$/components/RunPanelStats'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { useOnce } from '$/hooks/useMount'
 import { ActiveDocumentStore } from '$/stores/runs/activeRunsByDocument'
+import { ActiveRun } from '@latitude-data/constants'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  useLocalStorage,
   AppLocalStorage,
+  useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { ActiveRun } from '@latitude-data/constants'
-import PromptPlaygroundChat from '$/components/PlaygroundCommon/PromptPlaygroundChat'
-import { RunPanelStats } from '$/components/RunPanelStats'
-import { DetailsPanel } from '$/components/DetailsPannel'
-import { useOnce } from '$/hooks/useMount'
+import { Ref, useCallback } from 'react'
 
 type InfoProps = {
   run: ActiveRun
@@ -47,9 +47,10 @@ function RunPanelInfo({
   const canAbortRun = isAttaching && playground.isLoading
   const runAborted = !!playground.error
 
-  // TODO(runs): add all token types
   const tokens =
     (playground.usage.totalTokens ||
+      playground.usage.inputTokens ||
+      playground.usage.outputTokens ||
       playground.usage.promptTokens ||
       playground.usage.completionTokens) ??
     0

@@ -1,30 +1,31 @@
 'use client'
 
-import { use, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
-import { Span } from '@latitude-data/constants'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import useDocumentTracesAggregations from '$/stores/documentTracesAggregations'
-import useDocumentTracesDailyCount from '$/stores/documentTracesDailyCount'
-import { SpansFilters, parseSpansFilters } from '$/lib/schemas/filters'
+import { TableResizableLayout } from '$/components/TableResizableLayout'
 import { TraceInfoPanel } from '$/components/TracesPanel'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
-import { TableResizableLayout } from '$/components/TableResizableLayout'
+import { SpansFilters, parseSpansFilters } from '$/lib/schemas/filters'
+import useDocumentTracesAggregations from '$/stores/documentTracesAggregations'
+import useDocumentTracesDailyCount from '$/stores/documentTracesDailyCount'
+import { useActiveRunsByDocument } from '$/stores/runs/activeRunsByDocument'
 import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
-import { DocumentTraces } from './DocumentTraces'
-import { TracesOverTime } from './TracesOverTime'
+import { Span } from '@latitude-data/constants'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { useSearchParams } from 'next/navigation'
+import { use, useRef, useState } from 'react'
+import { ActiveRunPanel } from './ActiveRuns/ActiveRunPanel'
 import { AggregationPanels } from './AggregationPanels'
+import { DocumentTraces } from './DocumentTraces'
 import { SpanFilters } from './Filters'
 import { SelectionTracesBanner } from './SelectionTracesBanner'
-import { ActiveRunPanel } from './ActiveRuns/ActiveRunPanel'
 import { TracePanel } from './TracePanel'
-import { useTraceSelection } from './useTraceSelection'
-import { useActiveRunsByDocument } from '$/stores/runs/activeRunsByDocument'
+import { TracesOverTime } from './TracesOverTime'
 import { TraceSpanSelectionContext } from './TraceSpanSelectionContext'
+import { useTraceSelection } from './useTraceSelection'
 
 export function DocumentTracesPage({
   initialSpans,
@@ -90,7 +91,11 @@ export function DocumentTracesPage({
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-4 min-w-0'>
       <TableWithHeader
-        title='Traces'
+        title={
+          <Text.H4M noWrap ellipsis>
+            Traces
+          </Text.H4M>
+        }
         actions={
           <SpanFilters
             filterOptions={spanFilterOptions}

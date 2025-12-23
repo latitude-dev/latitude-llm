@@ -3,7 +3,10 @@ import type { IntegrationDto } from '../../schema/models/types/Integration'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import { initiateOAuthRegistration } from './McpClient/oauthRegistration'
-import { ExternalMcpIntegrationConfiguration, OAuthStatus } from './helpers/schema'
+import {
+  ExternalMcpIntegrationConfiguration,
+  OAuthStatus,
+} from './helpers/schema'
 import { database } from '../../client'
 import { integrations } from '../../schema/models/integrations'
 import { eq } from 'drizzle-orm'
@@ -31,7 +34,8 @@ export async function reauthorizeIntegration(
     )
   }
 
-  const config = integration.configuration as ExternalMcpIntegrationConfiguration
+  const config =
+    integration.configuration as ExternalMcpIntegrationConfiguration
   if (!config.useOAuth) {
     return Result.error(
       new BadRequestError('This integration does not use OAuth'),
@@ -63,4 +67,3 @@ export async function reauthorizeIntegration(
 
   return Result.ok(oauthResult.value!)
 }
-

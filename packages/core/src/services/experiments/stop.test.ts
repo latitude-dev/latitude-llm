@@ -1,16 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Providers } from '@latitude-data/constants'
-import { stopExperiment } from './stop'
-import { createExperiment, createProject, helpers } from '../../tests/factories'
-import { completeExperiment } from './complete'
-import type { Commit } from '../../schema/models/types/Commit'
-import type { Workspace } from '../../schema/models/types/Workspace'
-import type { User } from '../../schema/models/types/User'
-import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { ProgressTracker } from '../../jobs/utils/progressTracker'
-import { queues } from '../../jobs/queues'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { publisher } from '../../events/publisher'
+import { queues } from '../../jobs/queues'
+import { ProgressTracker } from '../../jobs/utils/progressTracker'
+import type { Commit } from '../../schema/models/types/Commit'
+import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import type { User } from '../../schema/models/types/User'
+import type { Workspace } from '../../schema/models/types/Workspace'
+import { createExperiment, createProject, helpers } from '../../tests/factories'
 import { WebsocketClient } from '../../websockets/workers'
+import { completeExperiment } from './complete'
+import { stopExperiment } from './stop'
 
 vi.mock('../../jobs/queues')
 vi.mock('../../events/publisher')
@@ -91,7 +91,7 @@ describe('stopExperiment', () => {
       workspace,
     })
 
-    await completeExperiment(experiment)
+    await completeExperiment({ experiment })
 
     const finishedExperiment = { ...experiment, finishedAt: new Date() }
     const result = await stopExperiment({

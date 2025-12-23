@@ -93,8 +93,9 @@ export function latitudePromptConfigSchema({
       .record(
         z.string(),
         z.object({
-          type: z.enum(PARAMETER_TYPES),
+          type: z.enum(PARAMETER_TYPES).optional(),
           description: z.string().optional(),
+          isPii: z.boolean().optional(),
         }),
       )
       .optional(),
@@ -118,8 +119,8 @@ export type { AzureConfig } from './providers/azure'
 export {
   ComputerCallSchema,
   FileSearchToolSchema,
-  openAIToolsListSchema,
   openAIToolSchema,
+  openAIToolsListSchema,
   WebSearchToolSchema,
   type OpenAIFilesSearchTool,
   type OpenAIWebSearchTool,

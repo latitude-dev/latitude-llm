@@ -1,8 +1,20 @@
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import {
+  EventArgs,
+  useSockets,
+} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { relativeTime } from '$/lib/relativeTime'
+import { DocumentRoutes, ROUTES } from '$/services/routes'
 import { useCommitsFromProject } from '$/stores/commitsStore'
 import useDatasets from '$/stores/datasets'
 import { useExperiments } from '$/stores/experiments'
+import { formatCount } from '@latitude-data/constants/formatCount'
+import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
   Table,
@@ -13,28 +25,16 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { DurationCell } from './DurationCell'
-import { ScoreCell } from './ScoreCell'
-import { cn } from '@latitude-data/web-ui/utils'
-import { formatCount } from '@latitude-data/constants/formatCount'
-import { useSearchParams } from 'next/navigation'
-import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
-import { DocumentRoutes, ROUTES } from '$/services/routes'
-import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { DatasetCell } from './DatasetCell'
-import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
-import { EvaluationsCell } from './EvaluationsCell'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import { relativeTime } from '$/lib/relativeTime'
-import { ResultsCell } from './ResultsCell'
-import { getStatus } from './shared'
+import { cn } from '@latitude-data/web-ui/utils'
+import { useSearchParams } from 'next/navigation'
+import { DatasetCell } from './DatasetCell'
+import { DurationCell } from './DurationCell'
+import { EvaluationsCell } from './EvaluationsCell'
 import { ExperimentStatus } from './ExperimentStatus'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { ResultsCell } from './ResultsCell'
+import { ScoreCell } from './ScoreCell'
+import { getStatus } from './shared'
 
 const countLabel = (count: number): string => {
   return `${count} experiments`
@@ -57,7 +57,10 @@ export function ExperimentsTable({
   const page = Number(searchParams.get('page') ?? '1')
   const pageSize = Number(searchParams.get('pageSize') ?? '25')
 
-  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
+  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
+    page: '1',
+    pageSize: '10000', // No pagination
+  })
 
   const {
     mutate,

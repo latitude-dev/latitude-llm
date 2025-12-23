@@ -1,19 +1,23 @@
-import { ChainError, RunErrorCodes } from '../../../lib/errors'
-import { Job } from 'bullmq'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { type Commit } from '../../../schema/models/types/Commit'
-import { type Dataset } from '../../../schema/models/types/Dataset'
-import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
-import { type Experiment } from '../../../schema/models/types/Experiment'
-import { type Workspace } from '../../../schema/models/types/Workspace'
 import {
   EvaluationV2,
   Providers,
   Span,
   SpanType,
 } from '@latitude-data/constants'
+import { Job } from 'bullmq'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Result } from '../../../lib/Result'
-import { UnprocessableEntityError } from '../../../lib/errors'
+import {
+  ChainError,
+  RunErrorCodes,
+  UnprocessableEntityError,
+} from '../../../lib/errors'
+import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type Dataset } from '../../../schema/models/types/Dataset'
+import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
+import { type Experiment } from '../../../schema/models/types/Experiment'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import * as evaluationsV2 from '../../../services/evaluationsV2/run'
 import { completeExperiment } from '../../../services/experiments/complete'
 import * as factories from '../../../tests/factories'
@@ -23,7 +27,6 @@ import {
   runEvaluationV2Job,
   type RunEvaluationV2JobData,
 } from './runEvaluationV2Job'
-import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 
 vi.mock(import('../../../redis'), async (importOriginal) => {
   const actual = await importOriginal()
@@ -260,7 +263,7 @@ describe('runEvaluationV2Job', () => {
     })
 
     it('does not run evaluation if experiment is finished', async () => {
-      await completeExperiment(experiment).then((r) => r.unwrap())
+      await completeExperiment({ experiment }).then((r) => r.unwrap())
       runEvaluationV2Spy.mockResolvedValueOnce(
         // @ts-expect-error - mock
         Result.ok({

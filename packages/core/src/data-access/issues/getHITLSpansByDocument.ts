@@ -1,3 +1,5 @@
+import { Span, SpanType } from '@latitude-data/constants'
+import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import {
   EvaluationResultsV2Repository,
@@ -5,8 +7,6 @@ import {
 } from '../../repositories'
 import { Commit } from '../../schema/models/types/Commit'
 import { Workspace } from '../../schema/models/types/Workspace'
-import { Span } from '@latitude-data/constants'
-import { database } from '../../client'
 
 /**
  * Fetches spans associated with a document UUID that are NOT linked to any issues,
@@ -73,7 +73,7 @@ export async function getHITLSpansByDocument(
     await spansRepository.findByEvaluationResults(paginatedResults)
 
   return Result.ok({
-    spans: orderedSpans,
+    spans: orderedSpans as Span<SpanType.Prompt>[],
     hasNextPage,
   })
 }

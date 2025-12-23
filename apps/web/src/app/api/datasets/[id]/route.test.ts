@@ -1,7 +1,7 @@
+import { createDataset, createWorkspace } from '@latitude-data/core/factories'
+import { destroyDataset } from '@latitude-data/core/services/datasets/destroy'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createWorkspace, createDataset } from '@latitude-data/core/factories'
-import { destroyDataset } from '@latitude-data/core/services/datasets/destroy'
 
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { GET } from './route'
@@ -80,7 +80,7 @@ describe('GET handler for datasets/[id]', () => {
       })
     })
 
-    it('should return a deleted dataset when a valid id is provided', async () => {
+    it('should return an error when a deleted dataset is provided', async () => {
       // Create a dataset
       const { dataset } = await createDataset({
         workspace: mockWorkspace,
@@ -97,12 +97,10 @@ describe('GET handler for datasets/[id]', () => {
         workspace: mockWorkspace,
       })
 
-      expect(response.status).toBe(200)
+      expect(response.status).toBe(404)
       const responseData = await response.json()
       expect(responseData).toMatchObject({
-        id: dataset.id,
-        name: dataset.name,
-        deletedAt: expect.any(String), // The deletedAt field should be present and be a string
+        message: expect.stringContaining('not found'),
       })
     })
 
