@@ -33,7 +33,8 @@
     "./simulation": "./src/simulation.ts",
     "./tools": "./src/tools.ts",
     "./relativeDates": "./src/relativeDates.ts",
-    "./commonTypes": "./src/commonTypes.ts"
+    "./commonTypes": "./src/commonTypes.ts",
+    "./optimizations": "./src/optimizations.ts"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",

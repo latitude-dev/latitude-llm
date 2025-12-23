@@ -662,6 +662,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           result: result as EvaluationResultV2,
         })
 
+      // TODO(AO): Remove issueId from result
       // Add issueId to result for backward compatibility
       const resultWithIssue = {
         ...result,

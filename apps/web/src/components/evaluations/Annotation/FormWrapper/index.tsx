@@ -1,3 +1,25 @@
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { AnnotationsProgressIcon } from '$/components/AnnotationProgressPanel/AnntationsProgressIcon'
+import { ROUTES } from '$/services/routes'
+import {
+  EvaluationMetric,
+  EvaluationResultV2,
+  EvaluationType,
+  EvaluationV2,
+  SpanType,
+  SpanWithDetails,
+} from '@latitude-data/constants'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextArea as TextAreaAtom } from '@latitude-data/web-ui/atoms/TextArea'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { font } from '@latitude-data/web-ui/tokens'
+import { cn } from '@latitude-data/web-ui/utils'
+import Link from 'next/link'
 import {
   ChangeEvent,
   createContext,
@@ -7,29 +29,13 @@ import {
   useCallback,
   useState,
 } from 'react'
-import Link from 'next/link'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TextArea as TextAreaAtom } from '@latitude-data/web-ui/atoms/TextArea'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { font } from '@latitude-data/web-ui/tokens'
-import { cn } from '@latitude-data/web-ui/utils'
-import {
-  EvaluationType,
-  EvaluationMetric,
-  EvaluationResultV2,
-  EvaluationV2,
-  SpanWithDetails,
-  SpanType,
-} from '@latitude-data/constants'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { OnSubmitProps } from '../useAnnotationForm'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { AnnotationsProgressIcon } from '$/components/AnnotationProgressPanel/AnntationsProgressIcon'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { ROUTES } from '$/services/routes'
+
+// TODO(AO): Remove issueId from result
+type EvaluationResultV2WithIssue<
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+> = EvaluationResultV2<T, M> & { issueId?: number | null }
 
 type IAnnotationForm<
   T extends EvaluationType,
@@ -40,7 +46,7 @@ type IAnnotationForm<
   disabled: boolean
   documentUuid: string
   commit: Commit
-  result: EvaluationResultV2<T, M> | undefined
+  result: EvaluationResultV2WithIssue<T, M> | undefined
   evaluation: EvaluationV2<T, M>
   span: SpanWithDetails<SpanType.Prompt>
   setDisabled: ReactStateDispatch<boolean>
@@ -88,7 +94,7 @@ export const AnnotationProvider = <
   commit: Commit
   span: SpanWithDetails<SpanType.Prompt>
   evaluation: EvaluationV2<T, M>
-  result: EvaluationResultV2<T, M> | undefined
+  result: EvaluationResultV2WithIssue<T, M> | undefined
   documentUuid: string
   isExpanded: boolean
   setIsExpanded: ReactStateDispatch<boolean>

@@ -1,6 +1,6 @@
-import { API_ROUTES } from './routes/api'
 import { PUBLIC_ROOT_PATHS } from '$/services/auth/constants'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
+import { API_ROUTES } from './routes/api'
 
 export type IDatasetSettingsModal = 'new' | 'generate'
 
@@ -10,6 +10,7 @@ export enum DocumentRoutes {
   evaluations = 'evaluations',
   experiments = 'experiments',
   traces = 'traces',
+  optimizations = 'optimizations',
 }
 
 export enum EvaluationRoutes {
@@ -211,6 +212,7 @@ export const ROUTES = {
                   const root = `${rootDocuments}/${uuid}`
                   const rootEvaluations = `${root}/evaluations`
                   const experimentsRoot = `${root}/experiments`
+                  const rootOptimizations = `${root}/optimizations`
                   return {
                     root,
                     [DocumentRoutes.editor]: {
@@ -252,6 +254,9 @@ export const ROUTES = {
                         if (!uuids.length) return experimentsRoot
                         return `${experimentsRoot}?selected=${uuids.join(',')}`
                       },
+                    },
+                    [DocumentRoutes.optimizations]: {
+                      root: rootOptimizations,
                     },
                   }
                 },

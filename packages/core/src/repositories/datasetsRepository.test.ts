@@ -1,22 +1,27 @@
+import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
-
+import { database } from '../client'
+import { datasets } from '../schema/models/datasets'
+import { type Project } from '../schema/models/types/Project'
 import { type User } from '../schema/models/types/User'
 import { type Workspace } from '../schema/models/types/Workspace'
 import * as factories from '../tests/factories'
 import { DatasetsRepository } from './datasetsRepository'
-import { database } from '../client'
-import { datasets } from '../schema/models/datasets'
-import { eq } from 'drizzle-orm'
 
 describe('DatasetsRepository', () => {
   let workspace: Workspace
+  let project: Project
   let user: User
   let datasetsRepository: DatasetsRepository
 
   beforeEach(async () => {
-    const { workspace: createdWorkspace, user: createdUser } =
-      await factories.createProject()
+    const {
+      workspace: createdWorkspace,
+      project: createdProject,
+      user: createdUser,
+    } = await factories.createProject()
     workspace = createdWorkspace
+    project = createdProject
     user = createdUser
     datasetsRepository = new DatasetsRepository(workspace.id)
   })
@@ -48,6 +53,58 @@ describe('DatasetsRepository', () => {
       expect(result.length).toBe(1)
       expect(result[0]?.id).toBe(dataset.id)
       expect(result.find((d) => d.id === deletedDataset.id)).toBeUndefined()
+    })
+
+    it('does not return training and testing datasets', async () => {
+      const { commit } = await factories.createDraft({
+        project: project,
+        user: user,
+      })
+
+      // Create a document
+      const { documentVersion: document } =
+        await factories.createDocumentVersion({
+          path: 'prompt',
+          content: 'prompt',
+          commit: commit,
+          user: user,
+          workspace: workspace,
+        })
+
+      // Create other dataset
+      const { dataset } = await factories.createDataset({
+        workspace,
+        author: user,
+      })
+
+      // Create a trainset and a testset
+      const { dataset: trainset } = await factories.createDataset({
+        workspace,
+        author: user,
+      })
+      const { dataset: testset } = await factories.createDataset({
+        workspace,
+        author: user,
+      })
+
+      // Create an optimization
+      await factories.createOptimization({
+        baseline: { commit: commit },
+        trainset: trainset,
+        testset: testset,
+        document: document,
+        project: project,
+        workspace: workspace,
+      })
+
+      // Fetch datasets
+      const result = await datasetsRepository.findAllPaginated({})
+
+      // Verify only the non-deleted dataset is returned
+      expect(result.length).toBe(1)
+      expect(result[0]?.id).toBe(dataset.id)
+      expect(result.find((d) => d.id === trainset.id)).toBeUndefined()
+      expect(result.find((d) => d.id === testset.id)).toBeUndefined()
     })
   })
 
