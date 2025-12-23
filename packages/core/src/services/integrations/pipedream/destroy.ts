@@ -22,10 +22,28 @@ export async function destroyPipedreamAccountFromIntegration(
   }
   const pipedream = pipedreamResult.unwrap()
 
+  const externalUserId = integration.configuration.externalUserId
+  const accountId = integration.configuration.connectionId
+
   try {
-    await pipedream.users.deleteExternalUser(
-      integration.configuration.externalUserId,
-    )
+    // List all integrations from the external user
+    const currentIntegrations = await pipedream.accounts.list({
+      externalUserId,
+    })
+
+    // If there is only THE ONE integration, we can delete the external user
+    if (
+      currentIntegrations.data.length === 1 &&
+      currentIntegrations.data[0]!.id === accountId
+    ) {
+      await pipedream.users.deleteExternalUser(
+        integration.configuration.externalUserId,
+      )
+      return Result.nil()
+    }
+
+    // Otherwise, remove only the account from the user
+    await pipedream.accounts.delete(accountId)
     return Result.nil()
   } catch (error) {
     return Result.error(error as Error)
