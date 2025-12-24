@@ -31,6 +31,26 @@ import { getEvaluationMetricSpecification } from '../evaluationsV2/specification
 import { validateResultForIssue } from './results/validate'
 import { embedReason, normalizeEmbedding } from './shared'
 
+/**
+ * Discovers potential issues by analyzing evaluation results and searching for similar issues.
+ *
+ * This function performs issue discovery by:
+ * 1. Validating the evaluation result is suitable for issue discovery
+ * 2. Extracting the reason from the evaluation specification
+ * 3. Generating an embedding for the reason
+ * 4. Finding candidate issues using hybrid search (vector + keyword)
+ * 5. Reranking candidates to find the most relevant match
+ *
+ * @template T - The evaluation type
+ * @template M - The evaluation metric type
+ * @param params - The parameters object
+ * @param params.result - The evaluation result containing the result and evaluation metadata
+ * @param params.document - The document version associated with the evaluation
+ * @param params.project - The project containing the document
+ * @param db - Optional database instance (defaults to the global database)
+ * @returns A Result containing the embedding vector and optionally a matched issue candidate
+ * @throws Returns an error if not running in cloud environment or if validation/processing fails
+ */
 export async function discoverIssue<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,

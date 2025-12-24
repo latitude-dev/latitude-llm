@@ -106,11 +106,11 @@ export const discoverResultIssueJob = async (
       throw discovering.error
     }
   }
-  const { embedding, issue: selected } = discovering.value
+  const { embedding, issue: candidate } = discovering.value
 
   let newIssue
   let existingIssue
-  if (!selected) {
+  if (!candidate) {
     const generating = await generateIssue({
       results: [{ result, evaluation }],
     })
@@ -125,7 +125,7 @@ export const discoverResultIssueJob = async (
   } else {
     const issuesRepository = new IssuesRepository(workspace.id)
     existingIssue = await issuesRepository
-      .findByUuid(selected.uuid)
+      .findByUuid(candidate.uuid)
       .then((r) => r.unwrap())
   }
 
