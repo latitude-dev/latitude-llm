@@ -9,6 +9,11 @@ import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
+import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
+import {
+  AnnotatedTextRange,
+  useAnnotations,
+} from '$/components/ChatWrapper/AnnotationsContext'
 
 const statusColor = (
   status: 'pending' | 'success' | 'error' | undefined,
@@ -52,10 +57,33 @@ export function ToolCardText({
 export function ToolCardWrapper({
   children,
   className,
+  messageIndex,
+  contentBlockIndex,
 }: {
   children: ReactNode
   className?: string
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
+  const { getAnnotationsForBlock, evaluations = [], span } = useAnnotations()
+
+  // Get annotations for this specific block
+  const blockAnnotations = useMemo(() => {
+    if (
+      messageIndex === undefined ||
+      contentBlockIndex === undefined ||
+      !getAnnotationsForBlock ||
+      !span
+    ) {
+      return []
+    }
+    return getAnnotationsForBlock(messageIndex, contentBlockIndex).filter(
+      (ann: AnnotatedTextRange) => ann.context.contentType === 'tool-call',
+    )
+  }, [messageIndex, contentBlockIndex, getAnnotationsForBlock, span])
+
+  const evaluation = evaluations[0]
+
   return (
     <div
       className={cn(
@@ -64,6 +92,34 @@ export function ToolCardWrapper({
       )}
     >
       {children}
+      {(blockAnnotations.length > 0 || evaluation) && span && (
+        <div className='flex flex-col gap-y-4 border-t pt-4 px-4 pb-4'>
+          {blockAnnotations.map((annotation: AnnotatedTextRange) => (
+            <AnnotationForm
+              key={`${annotation.result.uuid}-${annotation.evaluation.uuid}`}
+              evaluation={annotation.evaluation}
+              span={span}
+              result={annotation.result}
+              initialExpanded={false}
+            />
+          ))}
+          {!blockAnnotations.length &&
+            evaluation &&
+            messageIndex &&
+            contentBlockIndex && (
+              <AnnotationForm
+                evaluation={evaluation}
+                span={span}
+                initialExpanded={false}
+                selectedContext={{
+                  messageIndex,
+                  contentBlockIndex,
+                  contentType: 'tool-call',
+                }}
+              />
+            )}
+        </div>
+      )}
     </div>
   )
 }
@@ -73,11 +129,15 @@ export function ToolCard({
   toolResponse,
   headerIcon,
   headerLabel,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
   headerIcon: ReactNode
   headerLabel: ReactNode
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -88,7 +148,10 @@ export function ToolCard({
   }, [toolResponse])
 
   return (
-    <ToolCardWrapper>
+    <ToolCardWrapper
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
+    >
       <ToolCardHeader
         icon={headerIcon}
         label={headerLabel}

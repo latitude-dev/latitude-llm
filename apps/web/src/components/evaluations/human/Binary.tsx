@@ -149,9 +149,9 @@ function AnnotationForm({
     isExpanded,
     setIsExpanded,
     localReason,
-    setLocalReason,
     localScore,
     setLocalScore,
+    setLocalReason,
   } = use(AnnotationContext)
 
   const [thumbsUp, setThumbsUp] = useState<boolean | null>(() =>
@@ -214,7 +214,10 @@ function AnnotationForm({
         />
         {isExpanded && (
           <div className='animate-in fade-in duration-300 flex items-center gap-x-2'>
-            <AForm.SaveButton onClick={handleSave} />
+            <AForm.SaveButton
+              onClick={handleSave}
+              disabled={!localReason || localScore === undefined}
+            />
             <AForm.AnnotationTooltipInfo
               tooltip={
                 criteria ? <CriteriaDescription {...criteria} /> : undefined

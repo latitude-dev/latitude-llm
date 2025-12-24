@@ -17,6 +17,7 @@ export function Content<M extends MarkdownSize | 'none'>({
   content,
   debugMode,
   limitVerticalPadding = false,
+  messageIndex,
   ...rest
 }: {
   index?: number
@@ -28,6 +29,7 @@ export function Content<M extends MarkdownSize | 'none'>({
   toolContentMap?: Record<string, ToolContent>
   markdownSize: M
   limitVerticalPadding?: boolean
+  messageIndex?: number
 }) {
   const contentArr = useMemo<MessageContent[]>(() => {
     if (typeof content === 'string') {
@@ -60,6 +62,8 @@ export function Content<M extends MarkdownSize | 'none'>({
     return (
       <div
         key={idx}
+        data-content-block-index={idx}
+        data-content-type={c.type}
         className={cn('flex flex-col w-full', {
           'pt-4': topPadding,
           'pb-4': bottomPadding,
@@ -70,6 +74,8 @@ export function Content<M extends MarkdownSize | 'none'>({
           index={idx}
           debugMode={debugMode}
           value={c}
+          messageIndex={messageIndex}
+          contentBlockIndex={idx}
           {...rest}
         />
       </div>
@@ -86,6 +92,8 @@ function ContentItem<M extends MarkdownSize | 'none'>({
   parameters = [],
   toolContentMap,
   markdownSize,
+  messageIndex,
+  contentBlockIndex,
 }: {
   index?: number
   color: M extends 'none' ? TextColor : Extract<TextColor, ProseColor>
@@ -95,6 +103,8 @@ function ContentItem<M extends MarkdownSize | 'none'>({
   debugMode?: boolean
   toolContentMap?: Record<string, ToolContent>
   markdownSize: M
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   if (value.type === 'text') {
     return (
@@ -107,6 +117,8 @@ function ContentItem<M extends MarkdownSize | 'none'>({
         parameters={parameters}
         sourceMap={value._promptlSourceMap}
         debugMode={debugMode}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
@@ -129,6 +141,8 @@ function ContentItem<M extends MarkdownSize | 'none'>({
         image={value.image}
         parameters={parameters}
         sourceMap={value._promptlSourceMap}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
@@ -142,6 +156,8 @@ function ContentItem<M extends MarkdownSize | 'none'>({
         file={value.file}
         parameters={parameters}
         sourceMap={value._promptlSourceMap}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
@@ -152,6 +168,8 @@ function ContentItem<M extends MarkdownSize | 'none'>({
         toolRequest={value}
         toolContentMap={toolContentMap}
         debugMode={debugMode}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }

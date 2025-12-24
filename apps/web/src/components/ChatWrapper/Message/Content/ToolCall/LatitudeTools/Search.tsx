@@ -180,16 +180,23 @@ export function WebSearchLatitudeToolCard({
   toolRequest,
   toolResponse,
   status,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
   status: 'pending' | 'success' | 'error'
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const args = toolRequest.args as SearchToolArgs
 
   return (
-    <ToolCardWrapper>
+    <ToolCardWrapper
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
+    >
       <ToolCardHeader
         icon={<ToolCardIcon status={status} name='search' />}
         label={

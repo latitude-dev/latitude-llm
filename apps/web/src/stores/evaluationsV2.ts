@@ -354,6 +354,7 @@ export function useEvaluationsV2(
       resultMetadata,
       spanId,
       traceId,
+      resultUuid,
     }: {
       evaluationUuid: string
       documentUuid: string
@@ -361,6 +362,7 @@ export function useEvaluationsV2(
       spanId: string
       traceId: string
       resultMetadata?: Partial<EvaluationResultMetadata>
+      resultUuid?: string
     }) => {
       return await executeAnnotateEvaluationV2({
         projectId: project.id,
@@ -371,6 +373,7 @@ export function useEvaluationsV2(
         resultMetadata: resultMetadata,
         spanId,
         traceId,
+        resultUuid,
       })
     },
     [project, commit, executeAnnotateEvaluationV2],

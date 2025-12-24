@@ -8,7 +8,7 @@ import { Icon, IconProps } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 
-export const RunsListItem = memo(
+export const AnnotationsListItem = memo(
   ({
     span,
     isSelected,

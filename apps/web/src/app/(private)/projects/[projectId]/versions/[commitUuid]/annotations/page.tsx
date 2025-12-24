@@ -6,13 +6,13 @@ import {
   SpanType,
 } from '@latitude-data/core/constants'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
-import { RunsPage as ClientRunsPage } from './_components/RunsPage'
+import { AnnotationsPage as ClientAnnotationsPage } from './_components/AnnotationsPage'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { mapSourceGroupToLogSources } from '@latitude-data/core/services/runs/mapSourceGroupToLogSources'
 import { SpansRepository } from '@latitude-data/core/repositories'
 
-export default async function RunsPage({
+export default async function AnnotationsPage({
   params,
   searchParams,
 }: {
@@ -42,7 +42,7 @@ export default async function RunsPage({
     .then((r) => r.unwrap())
 
   return (
-    <ClientRunsPage
+    <ClientAnnotationsPage
       initialSpans={result.items}
       defaultSourceGroup={(sourceGroup as RunSourceGroup) ?? defaultSourceGroup}
       issuesEnabled={issuesEnabled}

@@ -1,41 +1,31 @@
 import { Ref, useMemo } from 'react'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { MetadataInfoTabs } from '../MetadataInfoTabs'
 import { DetailsPanel } from '$/components/tracing/spans/DetailsPanel'
-import { useLastTrace } from '$/stores/conversations'
+import { AnnotationsProvider, MessageList } from '$/components/ChatWrapper'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 import {
   AssembledSpan,
   AssembledTrace,
   SpanType,
   SpanWithDetails,
 } from '@latitude-data/constants'
-import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
-import { MessageList } from '$/components/ChatWrapper'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useSpan } from '$/stores/spans'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { AnnotationForms } from './AnnotationForms'
-import { TraceEvaluations } from './TraceEvaluations'
-import { MetadataInfoTabs } from '../MetadataInfoTabs'
 import {
   adaptCompletionSpanMessagesToLegacy,
   findCompletionSpanFromTrace,
 } from '@latitude-data/core/services/tracing/spans/findCompletionSpanFromTrace'
+import { TraceEvaluations } from './TraceEvaluations'
+import { useLastTrace } from '$/stores/conversations'
 
 const MAIN_SPAN_TYPES = new Set([
   SpanType.Prompt,
   SpanType.Chat,
   SpanType.External,
 ])
-
-function findMainSpan(
-  trace: AssembledTrace | undefined,
-): AssembledSpan | undefined {
-  if (!trace) return undefined
-  return trace.children.find((span) =>
-    MAIN_SPAN_TYPES.has(span.type as SpanType),
-  )
-}
 
 export const DEFAULT_TABS = [
   { label: 'Metadata', value: 'metadata' },
@@ -48,13 +38,11 @@ export function TraceInfoPanel({
   documentLogUuid,
   documentUuid,
   insideOtherPanel = false,
-  mergedToIssueId,
 }: {
   spanId: string
   documentLogUuid: string
   documentUuid: string
   insideOtherPanel?: boolean
-  mergedToIssueId?: number
   ref?: Ref<HTMLDivElement>
 }) {
   const { commit } = useCurrentCommit()
@@ -84,14 +72,13 @@ export function TraceInfoPanel({
       {({ selectedTab }) => (
         <>
           {selectedTab === 'metadata' && (
-            <TraceMetadata
-              isLoading={isLoading}
-              span={span}
-              mergedToIssueId={mergedToIssueId}
-            />
+            <TraceMetadata isLoading={isLoading} span={span} />
           )}
           {selectedTab === 'messages' && (
-            <TraceMessages documentLogUuid={documentLogUuid} />
+            <TraceMessages
+              span={span as SpanWithDetails<SpanType.Prompt>}
+              documentLogUuid={documentLogUuid}
+            />
           )}
           {selectedTab === 'evaluations' && (
             <TraceEvaluations
@@ -109,11 +96,9 @@ export function TraceInfoPanel({
 function TraceMetadata({
   span,
   isLoading,
-  mergedToIssueId,
 }: {
   span?: SpanWithDetails<SpanType> | null
   isLoading: boolean
-  mergedToIssueId?: number
 }) {
   if (isLoading) return <LoadingText alignX='center' />
   if (!span) return null
@@ -121,27 +106,31 @@ function TraceMetadata({
   return (
     <div className='flex flex-col gap-4'>
       <DetailsPanel span={span} />
-      {span.type === SpanType.Prompt && (
-        <AnnotationForms
-          span={span as SpanWithDetails<SpanType.Prompt>}
-          mergedToIssueId={mergedToIssueId}
-        />
-      )}
     </div>
   )
 }
 
 function TraceMessages({
+  span,
   documentLogUuid,
 }: {
+  span?: SpanWithDetails<SpanType.Prompt>
   documentLogUuid: string | null
 }) {
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
   const { trace, isLoading } = useLastTrace({ documentLogUuid })
-
   const mainSpan = findMainSpan(trace ?? undefined)
   const mainMetadata = mainSpan?.metadata
   const completionSpan = findCompletionSpanFromTrace(trace ?? undefined)
   const messages = adaptCompletionSpanMessagesToLegacy(completionSpan)
+  const parameters = useMemo(
+    () =>
+      mainMetadata && 'parameters' in mainMetadata
+        ? Object.keys(mainMetadata.parameters as Record<string, unknown>)
+        : undefined,
+    [mainMetadata],
+  )
 
   if (isLoading) {
     return <LoadingText alignX='center' />
@@ -155,10 +144,27 @@ function TraceMessages({
     )
   }
 
-  const parameters =
-    mainMetadata && 'parameters' in mainMetadata
-      ? Object.keys(mainMetadata.parameters as Record<string, unknown>)
-      : undefined
+  return (
+    <AnnotationsProvider
+      project={project}
+      commit={commit}
+      span={span}
+      messages={messages}
+    >
+      <MessageList
+        debugMode
+        messages={messages}
+        parameters={parameters ? Object.keys(parameters) : undefined}
+      />
+    </AnnotationsProvider>
+  )
+}
 
-  return <MessageList debugMode messages={messages} parameters={parameters} />
+function findMainSpan(
+  trace: AssembledTrace | undefined,
+): AssembledSpan | undefined {
+  if (!trace) return undefined
+  return trace.children.find((span) =>
+    MAIN_SPAN_TYPES.has(span.type as SpanType),
+  )
 }

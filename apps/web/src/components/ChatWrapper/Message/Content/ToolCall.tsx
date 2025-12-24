@@ -17,10 +17,14 @@ export function ToolCallMessageContent({
   toolRequest,
   toolContentMap,
   debugMode,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
   toolContentMap?: Record<string, ToolContent>
   debugMode?: boolean
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   const toolResponse = useMemo(
     () => toolContentMap?.[toolRequest.toolCallId],
@@ -41,6 +45,8 @@ export function ToolCallMessageContent({
         status={status}
         sourceData={sourceData}
         debugMode={debugMode}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
@@ -51,6 +57,8 @@ export function ToolCallMessageContent({
         toolResponse={toolResponse}
         status={status}
         sourceData={sourceData}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
@@ -61,6 +69,8 @@ export function ToolCallMessageContent({
         toolResponse={toolResponse}
         status={status}
         sourceData={sourceData}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
@@ -71,6 +81,8 @@ export function ToolCallMessageContent({
         toolResponse={toolResponse}
         status={status}
         sourceData={sourceData}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
@@ -80,6 +92,8 @@ export function ToolCallMessageContent({
         toolRequest={toolRequest}
         toolResponse={toolResponse}
         status={status}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
@@ -89,6 +103,8 @@ export function ToolCallMessageContent({
       toolRequest={toolRequest}
       toolResponse={toolResponse}
       status={status}
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
     />
   )
 }

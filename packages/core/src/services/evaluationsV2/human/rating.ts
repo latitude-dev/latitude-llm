@@ -138,6 +138,7 @@ async function annotate(
     configuration: evaluation.configuration,
     actualOutput: actualOutput.value ?? '',
     reason: resultMetadata?.reason,
+    selectedContexts: resultMetadata?.selectedContexts,
   } as HumanEvaluationRatingResultMetadata
 
   if (actualOutput.error) {

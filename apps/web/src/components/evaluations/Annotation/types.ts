@@ -3,6 +3,7 @@ import {
   EvaluationMetric,
   SpanWithDetails,
   SpanType,
+  SelectedContext,
 } from '@latitude-data/constants'
 import { AnnotationFormProps } from '../index'
 
@@ -11,4 +12,6 @@ export type FormProps<
   M extends EvaluationMetric<T>,
 > = AnnotationFormProps<T, M> & {
   span: SpanWithDetails<SpanType.Prompt>
+  initialExpanded?: boolean
+  selectedContext?: SelectedContext
 }

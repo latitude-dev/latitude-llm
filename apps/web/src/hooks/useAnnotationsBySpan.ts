@@ -16,7 +16,7 @@ import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
 export type UseAnnotationBySpanProps = {
   project: Project
   commit: Commit
-  span: SpanWithDetails<SpanType.Prompt>
+  span?: SpanWithDetails<SpanType.Prompt>
 }
 
 /**
@@ -31,9 +31,7 @@ export type UseAnnotationBySpanProps = {
  * @param props.commit - The commit containing the span
  * @param props.span - The span to fetch annotations for (must be a Prompt span)
  * @returns Object containing:
- *   - `annotations.bottom` - Bottom annotation data if available (evaluation, result, and span)
- *   - `evaluationResults` - All evaluation results for the span
- *   - `mutateResults` - Function to mutate/update evaluation results
+ *   - `annotations` - Array of annotation data (evaluation, result, and span)
  *   - `isLoading` - Whether evaluations or results are currently loading
  */
 export function useAnnotationBySpan({
@@ -45,28 +43,31 @@ export function useAnnotationBySpan({
     useEvaluationsV2({
       project,
       commit,
-      document: {
-        commitId: commit.id,
-        documentUuid: span.documentUuid!,
-      },
+      document: span
+        ? {
+            commitId: commit.id,
+            documentUuid: span.documentUuid!,
+          }
+        : undefined,
     })
   const { data: results, isLoading: isLoadingResults } =
     useEvaluationResultsV2BySpans({
       project,
       commit,
-      document: {
-        commitId: commit.id,
-        documentUuid: span.documentUuid!,
-      },
-      spanId: span.id,
-      documentLogUuid: span.documentLogUuid,
+      document: span
+        ? {
+            commitId: commit.id,
+            documentUuid: span.documentUuid!,
+          }
+        : undefined,
+      spanId: span?.id,
+      documentLogUuid: span?.documentLogUuid,
     })
   const manualEvaluations = useMemo(
     () =>
       evaluations.filter((e) => {
         const supportManual =
           getEvaluationMetricSpecification(e).supportsManualEvaluation
-
         if (!supportManual) return false
 
         const config = e.configuration as EvaluationConfiguration<
@@ -78,37 +79,41 @@ export function useAnnotationBySpan({
     [evaluations],
   )
 
-  const manualEvaluation = manualEvaluations[0]
-  const manualResult = useMemo(() => {
+  const annotations = useMemo(() => {
+    if (isLoadingEvaluations || isLoadingResults || !span) return []
+
     return results
       .filter(
         (r) =>
           r.result.evaluatedSpanId === span.id &&
           r.result.evaluatedTraceId === span.traceId,
       )
-      .reduce<Record<string, EvaluationResultV2>>((acc, r) => {
-        const e = manualEvaluations.find((e) => r.evaluation.uuid === e.uuid)
-        if (e) acc[r.evaluation.uuid] = r.result
+      .map((r) => {
+        const evaluation = manualEvaluations.find(
+          (e) => r.evaluation.uuid === e.uuid,
+        )
+        if (!evaluation) return null
 
-        return acc
-      }, {})
-  }, [results, span.id, span.traceId, manualEvaluations])
+        return {
+          evaluation,
+          result: r.result,
+          span,
+        }
+      })
+      .filter((a) => a !== null) as Array<{
+      evaluation: ReturnType<typeof useEvaluationsV2>['data'][number]
+      result: EvaluationResultV2
+      span: typeof span
+    }>
+  }, [results, span, manualEvaluations, isLoadingEvaluations, isLoadingResults])
 
   const isLoading = isLoadingEvaluations || isLoadingResults
   return useMemo(
     () => ({
-      annotations: {
-        bottom:
-          !isLoading && span && manualEvaluation && manualResult
-            ? {
-                evaluation: manualEvaluation,
-                result: manualResult[manualEvaluation?.uuid],
-                span,
-              }
-            : undefined,
-      },
+      evaluations: manualEvaluations,
+      annotations,
       isLoading,
     }),
-    [manualEvaluation, manualResult, span, isLoading],
+    [annotations, manualEvaluations, isLoading],
   )
 }

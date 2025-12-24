@@ -6,13 +6,13 @@ import {
 } from '@latitude-data/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { AnnotationProgressPanel } from '$/components/AnnotationProgressPanel'
-import { RunsListItem } from './Item'
+import { AnnotationsListItem } from './Item'
 import { RunSourceSelector } from './SourceSelector'
 import { RealtimeToggle } from '$/components/RealtimeToggle'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 
-export function RunsList({
+export function AnnotationsList({
   annotations,
   issuesEnabled,
   spans,
@@ -52,8 +52,8 @@ export function RunsList({
           <div className='flex flex-col gap-1'>
             <Text.H3>Annotations</Text.H3>
             <Text.H6 color='foregroundMuted'>
-              Annotate the traces that <strong>your AI generated</strong>. It
-              will help Latitude improve the evaluation quality.
+              Annotate the traces that your AI generated. It will help Latitude
+              improve the evaluation quality.
             </Text.H6>
           </div>
         </div>
@@ -101,7 +101,7 @@ export function RunsList({
                   style={{ margin: 0, padding: 0, width: '100%' }}
                 >
                   {spans.map((span) => (
-                    <RunsListItem
+                    <AnnotationsListItem
                       key={span.id}
                       span={span}
                       isSelected={selectedSpanId === span.id}
@@ -119,7 +119,7 @@ export function RunsList({
               <>
                 <div className='w-full flex-1 flex flex-col divide-border divide-y rounded-t-xl overflow-hidden overflow-y-auto custom-scrollbar relative'>
                   {spans.map((span) => (
-                    <RunsListItem
+                    <AnnotationsListItem
                       key={span.id}
                       span={span}
                       isSelected={selectedSpanId === span.id}

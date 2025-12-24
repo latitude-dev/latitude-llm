@@ -179,8 +179,10 @@ AnnotationFormWrapper.Footer = function Footer({
 
 AnnotationFormWrapper.SaveButton = function SaveButton({
   onClick,
+  disabled: externallyDisabled = false,
 }: {
   onClick: () => void
+  disabled?: boolean
 }) {
   const { isSubmitting, hasChanges } = use(AnnotationContext)
 
@@ -193,7 +195,7 @@ AnnotationFormWrapper.SaveButton = function SaveButton({
       variant='default'
       {...(isSubmitting ? { iconProps: { name: 'loader', spin: true } } : {})}
       onClick={onClick}
-      disabled={isSubmitting}
+      disabled={isSubmitting || externallyDisabled}
     >
       {isSubmitting ? 'Saving...' : 'Save annotation'}
     </Button>

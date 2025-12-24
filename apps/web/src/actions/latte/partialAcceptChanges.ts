@@ -28,7 +28,7 @@ export const partialAcceptLatteChangesAction = authProcedure
       accepted: true, // Mark as accepted since we're accepting specific changes
     })
 
-    const evaluationUuid = result.value?.result.uuid
+    const evaluationUuid = result.value?.uuid
 
     return { evaluationUuid, checkpoints }
   })

@@ -68,12 +68,6 @@ const DEFAULT_RATE_LIMIT_DURATION = 60
 export const errorHandlingProcedure = createSafeActionClient({
   defaultValidationErrorsShape: 'flattened',
   handleServerError: async (error) => {
-    if (error instanceof UnprocessableEntityError) {
-      return `${error.message}: ${JSON.stringify(error.details)}`
-    }
-
-    if (error instanceof LatitudeError) return error.message
-
     try {
       const data = await getCurrentUserOrRedirect()
       captureException(error as Error, {
@@ -84,6 +78,14 @@ export const errorHandlingProcedure = createSafeActionClient({
       })
     } catch {
       captureException(error as Error, { component: 'serverAction' })
+    }
+
+    if (error instanceof UnprocessableEntityError) {
+      return `${error.message}: ${JSON.stringify(error.details)}`
+    }
+
+    if (error instanceof LatitudeError) {
+      return error.message
     }
 
     return DEFAULT_SERVER_ERROR_MESSAGE
