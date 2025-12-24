@@ -61,11 +61,12 @@ export async function validateResultForIssue<
     }
   }
 
-  if (result.experimentId) {
-    return Result.error(
-      new UnprocessableEntityError('Cannot use a result from an experiment'),
-    )
-  }
+  // TODO(AO): Review why do we want to allow results from experiments to be added to issues?
+  // if (result.experimentId) {
+  //   return Result.error(
+  //     new UnprocessableEntityError('Cannot use a result from an experiment'),
+  //   )
+  // }
 
   if (evaluation.type === EvaluationType.Composite) {
     return Result.error(
