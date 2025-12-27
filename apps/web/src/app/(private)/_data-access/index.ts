@@ -314,7 +314,7 @@ export const listOptimizationsByDocumentCached = cache(
     const { workspace } = await getCurrentUserOrRedirect()
     const repository = new OptimizationsRepository(workspace.id)
     const optimizations = await repository
-      .listByDocument({ documentUuid, page, pageSize })
+      .listByDocumentWithDetails({ documentUuid, page, pageSize })
       .then((r) => r.unwrap())
 
     return optimizations

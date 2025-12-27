@@ -7,7 +7,6 @@ import {
 import { Commit } from './models/types/Commit'
 import { Dataset } from './models/types/Dataset'
 import { DatasetRow } from './models/types/DatasetRow'
-import { DocumentVersion } from './models/types/DocumentVersion'
 import { ExperimentDto } from './models/types/Experiment'
 import { Optimization } from './models/types/Optimization'
 import { ProviderLog } from './models/types/ProviderLog'
@@ -72,12 +71,11 @@ export type EvaluationV2Stats = EvaluationV2BaseStats & {
 }
 
 export type OptimizationWithDetails = Optimization & {
-  document: DocumentVersion
-  baselineCommit: Commit
-  evaluation: EvaluationV2
+  evaluation?: EvaluationV2 // Note: optional because it could have been deleted
   trainset?: Dataset
   testset?: Dataset
-  optimizedCommit?: Commit
+  baselineCommit: Commit
   baselineExperiment?: ExperimentDto
+  optimizedCommit?: Commit
   optimizedExperiment?: ExperimentDto
 }
