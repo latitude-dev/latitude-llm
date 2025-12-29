@@ -8,7 +8,9 @@
   "type": "module",
   "scripts": {
     "lint": "eslint src",
-    "tc": "tsc --noEmit"
+    "tc": "tsc --noEmit",
+    "test": "vitest run --pool=forks",
+    "test:watch": "vitest"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -38,7 +40,8 @@
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
-    "@types/json-schema": "^7.0.15"
+    "@types/json-schema": "^7.0.15",
+    "vitest": "^3.1.4"
   },
   "dependencies": {
     "ai": "catalog:",
