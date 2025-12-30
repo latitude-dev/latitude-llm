@@ -4,8 +4,9 @@ import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
-  calculateAlignmentMetricJob: jobs.calculateAlignmentMetricJob,
+  validateGeneratedEvaluationJob: jobs.validateGeneratedEvaluationJob,
   generateEvaluationV2FromIssueJob: jobs.generateEvaluationV2FromIssueJob,
+  recalculateAlignmentMetricJob: jobs.recalculateAlignmentMetricJob,
 }
 
 export function startGenerateEvaluationWorker() {

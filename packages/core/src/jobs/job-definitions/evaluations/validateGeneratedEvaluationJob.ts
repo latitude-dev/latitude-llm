@@ -22,8 +22,9 @@ import {
 import { Commit } from '../../../schema/models/types/Commit'
 import { Workspace } from '../../../schema/models/types/Workspace'
 import { getFalsePositivesAndFalseNegatives } from '../../../services/evaluationsV2/generateFromIssue/getFalseExamples'
+import { generateConfigurationHash } from '../../../services/evaluationsV2/generateConfigurationHash'
 
-export type CalculateAlignmentMetricJobData = {
+export type ValidateGeneratedEvaluationJobData = {
   workspaceId: number
   commitId: number
   workflowUuid: string
@@ -54,8 +55,8 @@ export type CalculateAlignmentMetricJobData = {
   4. The job is retrying the generation -> delete the evaluation and retry the generation
 */
 
-export const calculateAlignmentMetricJob = async (
-  job: Job<CalculateAlignmentMetricJobData>,
+export const validateGeneratedEvaluationJob = async (
+  job: Job<ValidateGeneratedEvaluationJobData>,
 ) => {
   const {
     workspaceId,
@@ -134,13 +135,15 @@ export const calculateAlignmentMetricJob = async (
       })
     }
 
+    const alignmentHash = generateConfigurationHash(evaluation)
+
     await updateEvaluationV2({
       evaluation,
       workspace,
       commit: commit,
-      alignmentMetric: mcc,
       alignmentMetricMetadata: {
         confusionMatrix,
+        alignmentHash,
       },
     }).then((r) => r.unwrap())
 
@@ -152,7 +155,7 @@ export const calculateAlignmentMetricJob = async (
     if (!Result.isOk(endResult)) {
       captureException(
         new Error(
-          `[CalculateAlignmentMetricJob] Failed to end active evaluation`,
+          `[ValidateGeneratedEvaluationJob] Failed to end active evaluation`,
         ),
       )
     }
@@ -182,7 +185,7 @@ export const calculateAlignmentMetricJob = async (
       if (!Result.isOk(failResult)) {
         captureException(
           new Error(
-            `[CalculateAlignmentMetricJob] Failed to fail active evaluation`,
+            `[ValidateGeneratedEvaluationJob] Failed to fail active evaluation`,
           ),
         )
       }
@@ -195,7 +198,7 @@ export const calculateAlignmentMetricJob = async (
       if (!Result.isOk(endResult)) {
         captureException(
           new Error(
-            `[CalculateAlignmentMetricJob] Failed to end active evaluation`,
+            `[ValidateGeneratedEvaluationJob] Failed to end active evaluation`,
           ),
         )
       }

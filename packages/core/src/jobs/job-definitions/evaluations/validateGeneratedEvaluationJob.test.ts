@@ -27,9 +27,9 @@ import * as factories from '../../../tests/factories'
 import { captureException } from '../../../utils/datadogCapture'
 import * as queuesModule from '../../queues'
 import {
-  calculateAlignmentMetricJob,
-  type CalculateAlignmentMetricJobData,
-} from './calculateAlignmentMetricJob'
+  validateGeneratedEvaluationJob,
+  type ValidateGeneratedEvaluationJobData,
+} from './validateGeneratedEvaluationJob'
 
 // Mock dependencies
 vi.mock(
@@ -70,7 +70,7 @@ vi.mock(
   }),
 )
 
-describe('calculateAlignmentMetricJob', () => {
+describe('validateGeneratedEvaluationJob', () => {
   const mockEvaluateConfiguration = vi.mocked(
     evaluateConfigurationModule.evaluateConfiguration,
   )
@@ -95,12 +95,12 @@ describe('calculateAlignmentMetricJob', () => {
   let commit: Commit
   let evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
   let document: DocumentVersion
-  let jobData: Job<CalculateAlignmentMetricJobData>
+  let jobData: Job<ValidateGeneratedEvaluationJobData>
   const WORKFLOW_UUID = 'test-workflow-uuid'
 
   function buildJobData(
-    overrides: Partial<CalculateAlignmentMetricJobData> = {},
-  ): CalculateAlignmentMetricJobData {
+    overrides: Partial<ValidateGeneratedEvaluationJobData> = {},
+  ): ValidateGeneratedEvaluationJobData {
     return {
       workspaceId: workspace.id,
       commitId: commit.id,
@@ -122,10 +122,10 @@ describe('calculateAlignmentMetricJob', () => {
   }
 
   function createMockJob(
-    data: CalculateAlignmentMetricJobData,
+    data: ValidateGeneratedEvaluationJobData,
     attemptsMade = 0,
     maxAttempts = 3,
-  ): Job<CalculateAlignmentMetricJobData> {
+  ): Job<ValidateGeneratedEvaluationJobData> {
     return {
       id: 'test-job-id',
       data,
@@ -141,7 +141,7 @@ describe('calculateAlignmentMetricJob', () => {
         'job-1': { hasPassed: true },
         'job-2': { hasPassed: false },
       }),
-    } as unknown as Job<CalculateAlignmentMetricJobData>
+    } as unknown as Job<ValidateGeneratedEvaluationJobData>
   }
 
   beforeEach(async () => {
@@ -229,7 +229,7 @@ describe('calculateAlignmentMetricJob', () => {
     })
 
     it('should update evaluation with alignment metric and end active evaluation', async () => {
-      await calculateAlignmentMetricJob(jobData)
+      await validateGeneratedEvaluationJob(jobData)
 
       expect(mockEvaluateConfiguration).toHaveBeenCalledWith({
         childrenValues: expect.any(Object),
@@ -245,7 +245,6 @@ describe('calculateAlignmentMetricJob', () => {
         evaluation: expect.objectContaining({ uuid: evaluation.uuid }),
         workspace,
         commit,
-        alignmentMetric: MIN_ALIGNMENT_METRIC_THRESHOLD + 10,
         alignmentMetricMetadata: {
           confusionMatrix: {
             truePositives: 8,
@@ -253,6 +252,7 @@ describe('calculateAlignmentMetricJob', () => {
             falsePositives: 2,
             falseNegatives: 2,
           },
+          alignmentHash: expect.any(String),
         },
       })
 
@@ -289,7 +289,7 @@ describe('calculateAlignmentMetricJob', () => {
     it('should throw error but not fail or end active evaluation', async () => {
       // The error should propagate (no return in finally for this case)
       // This allows BullMQ to retry the job without modifying the active evaluation state
-      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
+      await expect(validateGeneratedEvaluationJob(jobData)).rejects.toThrow(
         '0 failed and 5 ignored children. Waiting for 15 unprocessed children to complete',
       )
 
@@ -322,7 +322,7 @@ describe('calculateAlignmentMetricJob', () => {
     })
 
     it('should fail and end active evaluation on last attempt', async () => {
-      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
+      await expect(validateGeneratedEvaluationJob(jobData)).rejects.toThrow(
         '0 failed and 5 ignored children. Waiting for 15 unprocessed children to complete',
       )
 
@@ -375,7 +375,7 @@ describe('calculateAlignmentMetricJob', () => {
     })
 
     it('should delete evaluation, queue new generation job, and not fail or end active evaluation', async () => {
-      await calculateAlignmentMetricJob(jobData)
+      await validateGeneratedEvaluationJob(jobData)
 
       expect(mockDeleteEvaluationV2).toHaveBeenCalledWith({
         evaluation: expect.objectContaining({ uuid: evaluation.uuid }),
@@ -437,10 +437,10 @@ describe('calculateAlignmentMetricJob', () => {
         workspaceId: 999999,
       })
 
-      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
+      await expect(validateGeneratedEvaluationJob(jobData)).rejects.toThrow(
         NotFoundError,
       )
-      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
+      await expect(validateGeneratedEvaluationJob(jobData)).rejects.toThrow(
         'Workspace not found',
       )
     })
@@ -451,7 +451,7 @@ describe('calculateAlignmentMetricJob', () => {
         commitId: 999999,
       })
 
-      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
+      await expect(validateGeneratedEvaluationJob(jobData)).rejects.toThrow(
         'Commit not found',
       )
     })
@@ -474,7 +474,7 @@ describe('calculateAlignmentMetricJob', () => {
       )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
-      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
+      await expect(validateGeneratedEvaluationJob(jobData)).rejects.toThrow(
         '0 failed and 5 ignored children. Waiting for 15 unprocessed children to complete',
       )
 
@@ -508,7 +508,7 @@ describe('calculateAlignmentMetricJob', () => {
       )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
-      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow()
+      await expect(validateGeneratedEvaluationJob(jobData)).rejects.toThrow()
 
       expect(mockFailActiveEvaluation).toHaveBeenCalled()
       expect(mockEndActiveEvaluation).toHaveBeenCalled()
@@ -534,12 +534,15 @@ describe('calculateAlignmentMetricJob', () => {
       )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
-      await calculateAlignmentMetricJob(jobData)
+      await validateGeneratedEvaluationJob(jobData)
 
       expect(mockUpdateEvaluationV2).toHaveBeenCalledWith(
         expect.objectContaining({
-          alignmentMetric: MIN_ALIGNMENT_METRIC_THRESHOLD,
+          evaluation,
+          workspace,
+          commit,
           alignmentMetricMetadata: {
+            alignmentHash: expect.any(String),
             confusionMatrix: {
               truePositives: 5,
               trueNegatives: 5,
@@ -575,7 +578,7 @@ describe('calculateAlignmentMetricJob', () => {
         }),
       )
 
-      await calculateAlignmentMetricJob(jobData)
+      await validateGeneratedEvaluationJob(jobData)
 
       expect(mockDeleteEvaluationV2).toHaveBeenCalled()
       expect(mockGetFalsePositivesAndFalseNegatives).toHaveBeenCalled()
@@ -590,14 +593,14 @@ describe('calculateAlignmentMetricJob', () => {
       )
       mockEndActiveEvaluation.mockResolvedValue(Result.ok(true))
 
-      await expect(calculateAlignmentMetricJob(jobData)).rejects.toThrow(
+      await expect(validateGeneratedEvaluationJob(jobData)).rejects.toThrow(
         'Test error',
       )
 
       expect(captureException).toHaveBeenCalledWith(
         expect.objectContaining({
           message:
-            '[CalculateAlignmentMetricJob] Failed to fail active evaluation',
+            '[ValidateGeneratedEvaluationJob] Failed to fail active evaluation',
         }),
       )
     })
@@ -622,12 +625,12 @@ describe('calculateAlignmentMetricJob', () => {
         Result.error(new Error('Failed to end')),
       )
 
-      await calculateAlignmentMetricJob(jobData)
+      await validateGeneratedEvaluationJob(jobData)
 
       expect(captureException).toHaveBeenCalledWith(
         expect.objectContaining({
           message:
-            '[CalculateAlignmentMetricJob] Failed to end active evaluation',
+            '[ValidateGeneratedEvaluationJob] Failed to end active evaluation',
         }),
       )
     })

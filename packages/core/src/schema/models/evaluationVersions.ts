@@ -49,7 +49,6 @@ export const evaluationVersions = latitudeSchema.table(
       .notNull()
       .$type<EvaluationConfiguration>(),
     // Currently MCC, but generalizing name to alignmentMetric to allow for other metrics in the future
-    alignmentMetric: bigint('alignment_metric', { mode: 'number' }),
     alignmentMetricMetadata: jsonb(
       'alignment_metric_metadata',
     ).$type<AlignmentMetricMetadata>(),

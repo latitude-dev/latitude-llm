@@ -159,6 +159,8 @@ export type ManualEvaluationMetric<T extends EvaluationType = EvaluationType> =
   EvaluationMetricSpecificationFilter<'supportsManualEvaluation', T>
 
 export type AlignmentMetricMetadata = {
+  // Hash used to identify the current configuration of the evaluation, used to detect if we can aggregate to the aligment metric or we have to re-calculate it
+  alignmentHash: string
   confusionMatrix: {
     truePositives: number
     trueNegatives: number
@@ -181,7 +183,6 @@ export type EvaluationV2<
   description: string
   type: T
   metric: M
-  alignmentMetric?: number | null
   alignmentMetricMetadata?: AlignmentMetricMetadata | null
   configuration: EvaluationConfiguration<T, M>
   evaluateLiveLogs?: boolean | null

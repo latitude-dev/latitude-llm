@@ -36,7 +36,6 @@ export async function updateEvaluationV2<
     options,
     issueId,
     workspace,
-    alignmentMetric,
     alignmentMetricMetadata,
   }: {
     evaluation: EvaluationV2<T, M>
@@ -45,7 +44,6 @@ export async function updateEvaluationV2<
     settings?: Partial<Omit<EvaluationSettings<T, M>, 'type' | 'metric'>>
     options?: Partial<EvaluationOptions>
     issueId?: number | null
-    alignmentMetric?: number
     alignmentMetricMetadata?: AlignmentMetricMetadata
   },
   transaction = new Transaction(),
@@ -105,7 +103,6 @@ export async function updateEvaluationV2<
         commit: commit,
         workspace: workspace,
         issue: issue,
-        alignmentMetric: alignmentMetric,
       },
       tx,
     )
@@ -120,7 +117,6 @@ export async function updateEvaluationV2<
         id: undefined,
         commitId: commit.id,
         issueId: issueId !== undefined ? issueId : evaluation.issueId,
-        alignmentMetric,
         alignmentMetricMetadata,
         ...settings,
         ...options,
@@ -136,7 +132,6 @@ export async function updateEvaluationV2<
           ...options,
           updatedAt: new Date(),
           issueId: issueId !== undefined ? issueId : evaluation.issueId,
-          alignmentMetric,
           alignmentMetricMetadata,
         },
       })

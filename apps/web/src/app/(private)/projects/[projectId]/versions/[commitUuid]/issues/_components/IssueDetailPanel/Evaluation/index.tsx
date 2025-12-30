@@ -208,9 +208,9 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
   const evaluationWithIssueIsReady = useMemo(() => {
     return (
       evaluationWithIssue &&
-      evaluationWithIssue.alignmentMetric !== null &&
-      evaluationWithIssue.alignmentMetric !== undefined &&
-      evaluationWithIssue.alignmentMetric !== 0
+      evaluationWithIssue.alignmentMetricMetadata !== null &&
+      evaluationWithIssue.alignmentMetricMetadata !== undefined &&
+      Object.keys(evaluationWithIssue.alignmentMetricMetadata).length > 0
     )
   }, [evaluationWithIssue])
 

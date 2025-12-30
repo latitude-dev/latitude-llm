@@ -51,4 +51,11 @@ export async function setupSchedules() {
     { pattern: '0 0 1 * * 1' },
     { opts: { attempts: 1 } },
   )
+
+  // Every day at 1 AM - Updates the alignment metric of evaluations
+  await maintenanceQueue.upsertJobScheduler(
+    'dailyAlignmentMetricUpdateJob',
+    { pattern: '0 0 1 * * *' },
+    { opts: { attempts: 1 } },
+  )
 }

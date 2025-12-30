@@ -10,6 +10,8 @@ import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ConfusionMatrixTooltipContent } from '$/components/ConfusionMatrix'
+import { calculateMCC } from '$/helpers/evaluation-generation/calculateMCC'
+import { useMemo } from 'react'
 
 type EvaluationWithIssueProps = {
   evaluationWithIssue: EvaluationV2
@@ -28,6 +30,12 @@ export function EvaluationWithIssue({
 }: EvaluationWithIssueProps) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
+  const confusionMatrix =
+    evaluationWithIssue.alignmentMetricMetadata?.confusionMatrix
+  const alignmentMetric = useMemo(
+    () => (confusionMatrix ? calculateMCC({ confusionMatrix }) : 0),
+    [confusionMatrix],
+  )
 
   return (
     <div className='grid grid-cols-2 gap-x-4 gap-y-4 items-center'>
@@ -82,9 +90,7 @@ export function EvaluationWithIssue({
           />
         </Tooltip>
       </div>
-      <Text.H5 color='foreground'>
-        {Math.round(evaluationWithIssue.alignmentMetric ?? 0)}%
-      </Text.H5>
+      <Text.H5 color='foreground'>{alignmentMetric}%</Text.H5>
     </div>
   )
 }
