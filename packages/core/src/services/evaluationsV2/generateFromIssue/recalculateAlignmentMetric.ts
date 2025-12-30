@@ -82,6 +82,8 @@ export async function recalculateAlignmentMetric(
     // Re-balance to have equal amounts
     const targetLength = Math.min(passSpansFromYesterday.length, failSpansFromYesterday.length) // prettier-ignore
 
+    console.log('targetLength', targetLength)
+
     const passSpansFromYesterdaySliced = passSpansFromYesterday.slice(0, targetLength) // prettier-ignore
     const failSpansFromYesterdaySliced = failSpansFromYesterday.slice(0, targetLength) // prettier-ignore
 
@@ -109,6 +111,11 @@ export async function recalculateAlignmentMetric(
     }),
   })
 
+  // Idempotency keys to avoid recalculating the alignment metric multiple times (if error occured or if trying more than once a day)
+  const recalculateAligmentIdempotencyKey = `recalculateAlignmentMetricJob-evaluationUuid=${evaluationToEvaluate.uuid}-day=${new Date().toISOString().split('T')[0]}` // prettier-ignore
+  const runEvaluationV2JobIdempotencyKey = (span: Span) =>
+    `runEvaluationV2Job-evaluationUuid=${evaluationToEvaluate.uuid}-spanId=${span.id}-traceId=${span.traceId}-day=${new Date().toISOString().split('T')[0]}` // prettier-ignore
+
   const { job: validationFlowJob } = await flowProducer.add({
     name: `recalculateAlignmentMetricJob`,
     queueName: Queues.generateEvaluationsQueue,
@@ -122,8 +129,7 @@ export async function recalculateAlignmentMetric(
       hasEvaluationConfigurationChanged,
     },
     opts: {
-      // Idempotency key - TODO change this its stopping!!!
-      jobId: `recalculateAlignmentMetricJob-evaluationUuid=${evaluationToEvaluate.uuid}-day=${new Date().toISOString().split('T')[0]}`,
+      jobId: recalculateAligmentIdempotencyKey,
       // FlowProducer does not inherit
       attempts: 3,
       backoff: {
@@ -143,8 +149,7 @@ export async function recalculateAlignmentMetric(
         dry: true,
       },
       opts: {
-        // Idempotency key
-        jobId: `runEvaluationV2Job-evaluationUuid=${evaluationToEvaluate.uuid}-spanId=${span.id}-traceId=${span.traceId}-day=${new Date().toISOString().split('T')[0]}`,
+        jobId: runEvaluationV2JobIdempotencyKey(span),
         // Overriding eval queue options for faster retry policy to avoid user waiting too long for the evaluation to be generated
         attempts: 2,
         backoff: {
