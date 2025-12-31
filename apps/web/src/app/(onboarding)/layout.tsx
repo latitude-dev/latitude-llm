@@ -4,9 +4,8 @@ import { CSPostHogProvider, IdentifyUser } from '$/app/providers'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ReactNode } from 'react'
 import { WorkspaceProvider } from '../providers/WorkspaceProvider'
-import { ROUTES } from '$/services/routes'
-import { redirect } from 'next/navigation'
 import { isOnboardingCompleted } from '$/data-access'
+import OnboardingGuard from './_lib/OnboardingGuard'
 
 export default async function OnboardingLayout({
   children,
@@ -15,9 +14,6 @@ export default async function OnboardingLayout({
 }) {
   const { workspace, user, subscriptionPlan } = await getCurrentUserOrRedirect()
   const isCompleted = await isOnboardingCompleted()
-  if (isCompleted) {
-    redirect(ROUTES.dashboard.root)
-  }
 
   return (
     <CSPostHogProvider>
@@ -26,7 +22,11 @@ export default async function OnboardingLayout({
         workspace={workspace}
         subscription={subscriptionPlan}
       >
-        <WorkspaceProvider workspace={workspace}>{children}</WorkspaceProvider>
+        <WorkspaceProvider workspace={workspace}>
+          <OnboardingGuard isOnboardingCompleted={isCompleted}>
+            {children}
+          </OnboardingGuard>
+        </WorkspaceProvider>
       </IdentifyUser>
     </CSPostHogProvider>
   )

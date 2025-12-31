@@ -12,6 +12,10 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { getUserInfoFromSession } from '$/lib/getUserInfo'
+import {
+  useLocalStorage,
+  AppLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
 
 type DropdownItemProps = {
   label: string
@@ -47,6 +51,11 @@ export default function AvatarDropdown({
   isCloud: boolean
 }) {
   const router = useRouter()
+  const { setValue: setReplayOnboarding } = useLocalStorage<boolean>({
+    key: AppLocalStorage.replayOnboarding,
+    defaultValue: false,
+  })
+
   const onClickBackoffice = useCallback(() => {
     router.push(ROUTES.backoffice.root)
   }, [router])
@@ -54,6 +63,11 @@ export default function AvatarDropdown({
   const onClickNotifications = useCallback(() => {
     router.push(ROUTES.notifications.root)
   }, [router])
+
+  const onClickReplayOnboarding = useCallback(() => {
+    setReplayOnboarding(true)
+    router.push(ROUTES.onboarding.choice)
+  }, [setReplayOnboarding, router])
 
   const onClickLogout = useCallback(async () => {
     await logoutAction()
@@ -67,7 +81,13 @@ export default function AvatarDropdown({
         },
         {
           label: 'Notifications',
+          icon: 'bell',
           onClick: onClickNotifications,
+        },
+        isCloud && {
+          label: 'Replay Onboarding',
+          icon: 'graduationCap',
+          onClick: onClickReplayOnboarding,
         },
         currentUser?.admin &&
           isCloud && {
@@ -87,6 +107,7 @@ export default function AvatarDropdown({
       isCloud,
       onClickBackoffice,
       onClickNotifications,
+      onClickReplayOnboarding,
       onClickLogout,
     ],
   )

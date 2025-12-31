@@ -164,6 +164,10 @@ import {
   Volume2,
   MessageSquareTextIcon,
   Split,
+  Coffee,
+  UserRoundPlus,
+  GraduationCap,
+  Bell,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -250,6 +254,7 @@ const Icons = {
   bookMarked: BookMarked,
   bot: Bot,
   cpu: CpuIcon,
+  bell: Bell,
   braces: Braces,
   brain: Brain,
   brave: Brave,
@@ -285,6 +290,7 @@ const Icons = {
   close: XIcon,
   code2: Code2,
   code: Code,
+  coffee: Coffee,
   database: Database,
   deletion: SquareMinus,
   discord: Discord,
@@ -310,6 +316,7 @@ const Icons = {
   gitlab: Gitlab,
   globe: Globe,
   googleWorkspace: Google,
+  graduationCap: GraduationCap,
   gridVertical: GridVertical,
   headset: Headset,
   history: History,
@@ -395,6 +402,7 @@ const Icons = {
   undo: Undo,
   unplug: Unplug,
   userRound: UserRound,
+  userRoundPlus: UserRoundPlus,
   video: Video,
   wholeWord: WholeWord,
   wordpress: Wordpress,

@@ -21,6 +21,8 @@ export enum AppLocalStorage {
   latteThread = 'latteThread',
   latteSidebarWidth = 'latteSidebarWidth',
   promptEngineeringOnboardingState = 'promptEngineeringOnboardingState',
+  onboardingChoice = 'onboardingChoice',
+  replayOnboarding = 'replayOnboarding',
   lastRunTab = 'lastRunTab',
 }
 

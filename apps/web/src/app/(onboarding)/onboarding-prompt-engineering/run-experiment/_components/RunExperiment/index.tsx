@@ -20,6 +20,10 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { publishEventAction } from '$/actions/events/publishEventAction'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import {
+  useLocalStorage,
+  AppLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
 
 const EXPERIMENT_VARIANT = [
   {
@@ -45,6 +49,10 @@ export default function RunExperimentBody({
   const { data: datasets, generateOnboardingIsLoading } = useDatasets()
   const { initialValue, documentParameters, latestDatasetName } =
     usePromptEngineeringOnboarding()
+  const { setValue: setReplayOnboarding } = useLocalStorage<boolean>({
+    key: AppLocalStorage.replayOnboarding,
+    defaultValue: false,
+  })
 
   // Get the latest dataset, as the user might have gone back and forth between steps, creating multiple datasets
   const latestDataset = datasets.find((ds) => ds.name === latestDatasetName)
@@ -68,6 +76,7 @@ export default function RunExperimentBody({
     },
     {
       onCreate: async () => {
+        setReplayOnboarding(false)
         executeCompleteOnboarding({
           projectId: project.id,
           commitUuid: commit.uuid,

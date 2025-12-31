@@ -60,9 +60,7 @@ export const setupAction = errorHandlingProcedure
     if (!parsedInput.returnTo || !isCloneActionUrl(parsedInput.returnTo)) {
       const isCloud = !!env.LATITUDE_CLOUD
       if (isCloud) {
-        return frontendRedirect(
-          ROUTES.onboarding.promptEngineering.pasteYourPrompt,
-        )
+        return frontendRedirect(ROUTES.onboarding.choice)
       }
       // If user is self-hosted and they're in the new prompt engineering onboarding, we complete the onboarding and redirect to the dashboard as they cannot generate the dataset with copilot
       const onboarding = await getWorkspaceOnboarding({
