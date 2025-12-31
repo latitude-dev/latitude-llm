@@ -79,24 +79,12 @@ class SpanFactory {
     return this.telemetry.embedding(ctx ?? context.active(), options)
   }
 
-  retrieval(options?: StartSpanOptions, ctx?: TelemetryContext) {
-    return this.telemetry.retrieval(ctx ?? context.active(), options)
-  }
-
-  reranking(options?: StartSpanOptions, ctx?: TelemetryContext) {
-    return this.telemetry.reranking(ctx ?? context.active(), options)
-  }
-
   http(options: StartHttpSpanOptions, ctx?: TelemetryContext) {
     return this.telemetry.http(ctx ?? context.active(), options)
   }
 
   prompt(options: PromptSpanOptions, ctx?: TelemetryContext) {
     return this.telemetry.prompt(ctx ?? context.active(), options)
-  }
-
-  step(options?: StartSpanOptions, ctx?: TelemetryContext) {
-    return this.telemetry.step(ctx ?? context.active(), options)
   }
 
   chat(options: ChatSpanOptions, ctx?: TelemetryContext) {

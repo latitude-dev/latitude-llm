@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.2.3] - 2025-12-29
+
+- Removed deprecated span types from internal telemetry.
+
 ## [5.2.2] - 2025-11-13
 
 - Fixed `prompts.chat()` method was not including custom tools in the request

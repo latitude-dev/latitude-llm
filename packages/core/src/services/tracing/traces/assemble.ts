@@ -11,7 +11,7 @@ import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
 import { type Workspace } from '../../../schema/models/types/Workspace'
-import { findCompletionSpanFromTrace } from '../spans/findCompletionSpanFromTrace'
+import { findCompletionSpanFromTrace } from '../spans/fetching/findCompletionSpanFromTrace'
 
 /**
  * Assembles a trace structure without fetching span metadata.

@@ -120,7 +120,7 @@ value1,value2,value3
 
     // Mock findCompletionSpanFromTrace to return a completion span by default
     vi.spyOn(
-      await import('../tracing/spans/findCompletionSpanFromTrace'),
+      await import('../tracing/spans/fetching/findCompletionSpanFromTrace'),
       'findCompletionSpanFromTrace',
     ).mockReturnValue({
       id: 'completion-span-id',
@@ -332,7 +332,7 @@ value1,value2,value3
 
   it('fails when type and metric run fails and error is retryable', async () => {
     // Mock findCompletionSpanFromTrace to return a completion span
-    vi.doMock('../tracing/spans/findCompletionSpanFromTrace', () => ({
+    vi.doMock('../tracing/spans/fetching/findCompletionSpanFromTrace', () => ({
       findCompletionSpanFromTrace: vi.fn().mockReturnValue({
         id: 'completion-span-id',
         traceId: span.traceId,

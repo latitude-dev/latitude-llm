@@ -9,7 +9,7 @@ import { EvaluationResultV2 } from '../../constants'
 import { Issue } from '../../schema/models/types/Issue'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { assembleTraceWithMessages } from '../../services/tracing/traces/assemble'
-import { adaptCompletionSpanMessagesToLegacy } from '../../services/tracing/spans/findCompletionSpanFromTrace'
+import { adaptCompletionSpanMessagesToLegacy } from '../../services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { getHITLSpansByIssue } from './getHITLSpansByIssue'
 

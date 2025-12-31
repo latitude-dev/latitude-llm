@@ -1,9 +1,6 @@
 import { BaseInstrumentation } from '$telemetry/instrumentations/base'
 import { ManualInstrumentation } from '$telemetry/instrumentations/manual'
-import {
-  GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
-  GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS,
-} from '@latitude-data/constants'
+import { VALUES } from '@latitude-data/constants'
 import type * as latitude from '@latitude-data/sdk'
 import * as otel from '@opentelemetry/api'
 import { context } from '@opentelemetry/api'
@@ -88,28 +85,6 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     return result
   }
 
-  async wrapRenderStep<F extends latitude.Latitude['renderStep']>(
-    fn: F,
-    ...args: Parameters<F>
-  ): Promise<Awaited<ReturnType<F>>> {
-    const $step = this.manualTelemetry.step(context.active())
-
-    let result
-    try {
-      result = await context.with(
-        $step.context,
-        async () => await ((fn as any)(...args) as ReturnType<F>),
-      )
-    } catch (error) {
-      $step.fail(error as Error)
-      throw error
-    }
-
-    $step.end()
-
-    return result
-  }
-
   async wrapRenderCompletion<F extends latitude.Latitude['renderCompletion']>(
     fn: F,
     ...args: Parameters<F>
@@ -154,8 +129,8 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
       },
       finishReason:
         result.toolRequests.length > 0
-          ? GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS
-          : GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
+          ? VALUES.OPENTELEMETRY.GEN_AI.response.finishReasons.toolCalls
+          : VALUES.OPENTELEMETRY.GEN_AI.response.finishReasons.stop,
     })
 
     return result

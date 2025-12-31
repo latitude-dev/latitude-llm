@@ -2,7 +2,7 @@ import { Workspace } from '../../schema/models/types/Workspace'
 import { Span } from '../../constants'
 import { Result } from '../../lib/Result'
 import { assembleTraceWithMessages } from '../../services/tracing/traces/assemble'
-import { adaptCompletionSpanMessagesToLegacy } from '../../services/tracing/spans/findCompletionSpanFromTrace'
+import { adaptCompletionSpanMessagesToLegacy } from '../../services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 
 export async function getSpanMessagesBySpans({

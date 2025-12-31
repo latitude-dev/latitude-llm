@@ -1,7 +1,7 @@
 import { Result } from '../../lib/Result'
 import { type Dataset } from '../../schema/models/types/Dataset'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { buildSpanDatasetRows } from '../tracing/spans/buildSpanDatasetRows'
+import { buildSpanDatasetRows } from '../tracing/spans/export'
 import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 

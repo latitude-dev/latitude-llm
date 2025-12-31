@@ -1,7 +1,7 @@
 import { stringify } from 'csv-stringify/sync'
 import { Result } from '../../lib/Result'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { buildSpanDatasetRows } from '../tracing/spans/buildSpanDatasetRows'
+import { buildSpanDatasetRows } from '../tracing/spans/export'
 import { nanoidHashAlgorithm } from './utils'
 import { Column } from '../../schema/models/datasets'
 import { DatasetRowData } from '../../schema/models/datasetRows'

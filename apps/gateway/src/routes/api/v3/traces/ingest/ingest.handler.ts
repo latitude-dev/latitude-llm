@@ -1,5 +1,5 @@
 import { AppRouteHandler } from '$/openApi/types'
-import { enqueueSpans } from '@latitude-data/core/services/tracing/spans/enqueue'
+import { enqueueSpans } from '@latitude-data/core/services/tracing/spans/ingestion/enqueue'
 import { IngestRoute } from './ingest.route'
 
 export const ingestHandler: AppRouteHandler<IngestRoute> = async (ctx) => {
