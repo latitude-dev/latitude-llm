@@ -16,18 +16,19 @@ import {
   helpers,
 } from '@latitude-data/core/factories'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
+import { Result } from '@latitude-data/core/lib/Result'
 import { ApiKey } from '@latitude-data/core/schema/models/types/ApiKey'
 import { describe, expect, it, vi } from 'vitest'
 
 // Mock SpanMetadatasRepository
-const mockGet = vi.fn().mockResolvedValue({ value: null })
+const mockGet = vi.fn().mockResolvedValue(Result.ok(null))
 vi.mock('@latitude-data/core/repositories', async () => {
   const actual = await vi.importActual('@latitude-data/core/repositories')
   return {
     ...actual,
     SpanMetadatasRepository: vi.fn().mockImplementation(() => ({
       get: mockGet,
-      invalidate: vi.fn().mockResolvedValue({ value: null }),
+      invalidate: vi.fn().mockResolvedValue(Result.ok(null)),
     })),
   }
 })
@@ -171,7 +172,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
     // Mock the get method to return different metadata based on spanId
     mockGet.mockImplementation(({ spanId: requestedSpanId }) => {
       if (requestedSpanId === spanId) {
-        return Promise.resolve({ value: mockPromptSpanMetadata })
+        return Promise.resolve(Result.ok(mockPromptSpanMetadata))
       }
       // For completion spans, return completion metadata
       const mockCompletionSpanMetadata = {
@@ -203,7 +204,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
           completion: 15,
         },
       }
-      return Promise.resolve({ value: mockCompletionSpanMetadata })
+      return Promise.resolve(Result.ok(mockCompletionSpanMetadata))
     })
   }
 

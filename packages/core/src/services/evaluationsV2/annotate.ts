@@ -21,12 +21,11 @@ import {
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { type User } from '../../schema/models/types/User'
-import { assembleTrace } from '../tracing/traces/assemble'
+import { assembleTraceWithMessages } from '../tracing/traces/assemble'
 import { extractActualOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { updateEvaluationResultV2 } from './results/update'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
-import { findCompletionSpanFromTrace } from '../tracing/spans/findCompletionSpanFromTrace'
 
 export async function annotateEvaluationV2<
   T extends EvaluationType,
@@ -78,25 +77,23 @@ export async function annotateEvaluationV2<
     return Result.error(new BadRequestError('Invalid evaluation metric'))
   }
 
-  let conversation
-  const assembledtrace = await assembleTrace({
+  const assembledTraceResult = await assembleTraceWithMessages({
     traceId: span.traceId,
     workspace,
-  }).then((r) => r.value)
-  if (assembledtrace) {
-    const completionSpan = findCompletionSpanFromTrace(assembledtrace.trace)
-    if (!completionSpan) {
-      return Result.error(new BadRequestError('Could not find completion span'))
-    }
+  })
+  if (!Result.isOk(assembledTraceResult)) {
+    return Result.error(new BadRequestError('Could not assemble trace'))
+  }
 
-    conversation = [
-      ...(completionSpan.metadata?.input ?? []),
-      ...(completionSpan.metadata?.output ?? []),
-    ] as unknown as LegacyMessage[]
+  const { completionSpan } = assembledTraceResult.unwrap()
+  if (!completionSpan) {
+    return Result.error(new BadRequestError('Could not find completion span'))
   }
-  if (!conversation) {
-    return Result.error(new BadRequestError('Could not find conversation'))
-  }
+
+  const conversation = [
+    ...(completionSpan.metadata?.input ?? []),
+    ...(completionSpan.metadata?.output ?? []),
+  ] as unknown as LegacyMessage[]
 
   let value
   try {

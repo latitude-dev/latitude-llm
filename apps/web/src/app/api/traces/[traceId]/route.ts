@@ -1,6 +1,6 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { assembleTrace } from '@latitude-data/core/services/tracing/traces/assemble'
+import { assembleTraceStructure } from '@latitude-data/core/services/tracing/traces/assemble'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -19,7 +19,7 @@ export const GET = errorHandler(
       },
     ) => {
       const { traceId } = params
-      const { trace } = await assembleTrace({
+      const { trace } = await assembleTraceStructure({
         traceId: traceId,
         workspace: workspace,
       }).then((r) => r.unwrap())

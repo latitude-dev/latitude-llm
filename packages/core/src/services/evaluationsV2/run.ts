@@ -30,9 +30,8 @@ import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { extractActualOutput, extractExpectedOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
-import { assembleTrace } from '../tracing/traces/assemble'
+import { assembleTraceWithMessages } from '../tracing/traces/assemble'
 import { LegacyMessage } from '../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
-import { findCompletionSpanFromTrace } from '../tracing/spans/findCompletionSpanFromTrace'
 
 export async function runEvaluationV2<
   T extends EvaluationType,
@@ -121,14 +120,15 @@ export async function runEvaluationV2<
     )
   }
 
-  const assembledTrace = await assembleTrace({
+  const assembledTraceResult = await assembleTraceWithMessages({
     traceId: span.traceId,
     workspace,
-  }).then((r) => r.unwrap())
-  if (!assembledTrace) {
+  })
+  if (!Result.isOk(assembledTraceResult)) {
     return Result.error(new UnprocessableEntityError('Cannot assemble trace'))
   }
-  const completionSpan = findCompletionSpanFromTrace(assembledTrace.trace)
+
+  const { completionSpan } = assembledTraceResult.unwrap()
   if (!completionSpan) {
     return Result.error(
       new UnprocessableEntityError('Cannot find completion span'),
