@@ -42,5 +42,4 @@ export {
   webhooks,
 } from '@latitude-data/core/schema/models/webhooks'
 export { workspaceFeatures } from '@latitude-data/core/schema/models/workspaceFeatures'
-export { workspaceOnboarding } from '@latitude-data/core/schema/models/workspaceOnboarding'
 export { workspaces } from '@latitude-data/core/schema/models/workspaces'

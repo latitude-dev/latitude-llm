@@ -110,6 +110,8 @@ export const EventHandlers: IEventsHandlers = {
   generateDatasetOnboardingPageVisited: [],
   runExperimentOnboardingPageVisited: [],
   pasteYourPromptOnboardingCompleted: [],
+  installOnboardingPageVisited: [],
+  onboardingUserInvited: [],
   issueCreated: [],
   issueUpdated: [],
   issueDeleted: [],

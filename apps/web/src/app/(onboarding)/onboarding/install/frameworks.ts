@@ -51,7 +51,7 @@ const completion = await client.chat.completions.create({ ... });
   },
   {
     name: 'Anthropic',
-    icon: 'code',
+    icon: 'anthropic',
     autoInstrumentation: {
       import: "import * as Anthropic from '@anthropic-ai/sdk'",
       line: 'anthropic: Anthropic, // This enables automatic tracing for the Anthropic SDK',
@@ -67,7 +67,7 @@ const response = await client.messages.create({ ... });
   },
   {
     name: 'Azure OpenAI',
-    icon: 'code',
+    icon: 'openai',
     autoInstrumentation: {
       import: "import OpenAI from 'openai'",
       line: 'openai: OpenAI, // This enables automatic tracing for the Azure OpenAI SDK',
@@ -99,7 +99,7 @@ const response = await client.generate({ ... });
   },
   {
     name: 'Amazon Bedrock',
-    icon: 'code',
+    icon: 'amazonBedrock',
     autoInstrumentation: {
       import: "import * as Bedrock from '@aws-sdk/client-bedrock-runtime'",
       line: 'bedrock: Bedrock, // This enables automatic tracing for the Amazon Bedrock SDK',
@@ -134,7 +134,7 @@ const response = await client.generate({ ... });
   },
   {
     name: 'Vertex AI',
-    icon: 'code',
+    icon: 'googleVertex',
     autoInstrumentation: {
       import: "import * as VertexAI from '@google-cloud/vertexai'",
       line: 'vertexai: VertexAI, // This enables automatic tracing for the Google Vertex AI SDK',
@@ -151,7 +151,7 @@ const result = await model.generateContent({ ... });
   },
   {
     name: 'Google AI Platform',
-    icon: 'code',
+    icon: 'googleVertex',
     autoInstrumentation: {
       import: "import * as AIPlatform from '@google-cloud/aiplatform'",
       line: 'aiplatform: AIPlatform, // This enables automatic tracing for the Google AI Platform SDK',
@@ -225,7 +225,7 @@ const { text } = await generateText({
   },
   {
     name: 'Gemini',
-    icon: 'sparkles',
+    icon: 'googleGemini',
     manualInstrumentation: {
       completion: {
         imports: ["import { GoogleGenAI } from '@google/genai'"],

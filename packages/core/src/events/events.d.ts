@@ -757,6 +757,23 @@ export type PasteYourPromptOnboardingCompleted = LatitudeEventGeneric<
   }
 >
 
+export type InstallOnboardingPageVisited = LatitudeEventGeneric<
+  'installOnboardingPageVisited',
+  {
+    workspaceId: number
+    userEmail: string
+  }
+>
+
+export type OnboardingUserInvited = LatitudeEventGeneric<
+  'onboardingUserInvited',
+  {
+    workspaceId: number
+    userEmail: string
+    invitedEmail: string
+  }
+>
+
 export type IssueCreatedEvent = LatitudeEventGeneric<
   'issueCreated',
   {
@@ -995,6 +1012,8 @@ export type LatitudeEvent =
   | GenerateDatasetOnboardingPageVisited
   | RunExperimentOnboardingPageVisited
   | PasteYourPromptOnboardingCompleted
+  | InstallOnboardingPageVisited
+  | OnboardingUserInvited
   | IssueCreatedEvent
   | IssueUpdatedEvent
   | IssueDeletedEvent
@@ -1083,6 +1102,8 @@ export interface IEventsHandlers {
   generateDatasetOnboardingPageVisited: EventHandler<GenerateDatasetOnboardingPageVisited>[]
   runExperimentOnboardingPageVisited: EventHandler<RunExperimentOnboardingPageVisited>[]
   pasteYourPromptOnboardingCompleted: EventHandler<PasteYourPromptOnboardingCompleted>[]
+  installOnboardingPageVisited: EventHandler<InstallOnboardingPageVisited>[]
+  onboardingUserInvited: EventHandler<OnboardingUserInvited>[]
   issueCreated: EventHandler<IssueCreatedEvent>[]
   issueUpdated: EventHandler<IssueUpdatedEvent>[]
   issueDeleted: EventHandler<IssueDeletedEvent>[]

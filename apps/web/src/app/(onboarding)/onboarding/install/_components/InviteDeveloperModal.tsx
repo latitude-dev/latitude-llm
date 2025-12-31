@@ -15,6 +15,8 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import useUsers from '$/stores/users'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { publishEventAction } from '$/actions/events/publishEventAction'
 import { useCallback, useState } from 'react'
 
 function NewUserRow({
@@ -75,10 +77,17 @@ export default function InviteDeveloperModal({
 }) {
   const { data: workspace } = useCurrentWorkspace()
   const { data: users, isLoading, invite } = useUsers()
+  const { execute: publishEvent } = useLatitudeAction(publishEventAction)
 
   const onInviteUser = useCallback(
-    (name: string, email: string) => invite({ name, email }),
-    [invite],
+    (name: string, email: string) => {
+      invite({ name, email })
+      publishEvent({
+        eventType: 'onboardingUserInvited',
+        payload: { invitedEmail: email },
+      })
+    },
+    [invite, publishEvent],
   )
 
   return (

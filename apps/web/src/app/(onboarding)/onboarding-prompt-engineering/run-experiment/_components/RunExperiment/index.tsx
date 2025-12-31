@@ -15,9 +15,9 @@ import { useExperiments } from '$/stores/experiments'
 import useDatasets from '$/stores/datasets'
 import { envClient } from '$/envClient'
 import { usePromptEngineeringOnboarding } from '$/app/(onboarding)/onboarding-prompt-engineering/usePromptEngineeringOnboarding'
-import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { publishEventAction } from '$/actions/events/publishEventAction'
+import { completeOnboardingAction } from '$/actions/onboarding/complete'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import {
@@ -41,7 +41,7 @@ export default function RunExperimentBody({
   user: User
   workspace: Workspace
 }) {
-  const { executeCompleteOnboarding } = useWorkspaceOnboarding()
+  const { execute: completeOnboarding } = useLatitudeAction(completeOnboardingAction)
   const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -77,7 +77,7 @@ export default function RunExperimentBody({
     {
       onCreate: async () => {
         setReplayOnboarding(false)
-        executeCompleteOnboarding({
+        completeOnboarding({
           projectId: project.id,
           commitUuid: commit.uuid,
         })

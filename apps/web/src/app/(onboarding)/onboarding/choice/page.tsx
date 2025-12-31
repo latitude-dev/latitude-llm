@@ -12,7 +12,7 @@ import { ROUTES } from '$/services/routes'
 import { useHover } from '@latitude-data/web-ui/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 
-type OnboardingChoice = 'scratch' | 'existing' | null
+type OnboardingChoice = 'product_engineer' | 'developer' | null
 
 function ChoiceCard({
   icon,
@@ -66,12 +66,12 @@ export default function OnboardingChoicePage() {
   })
 
   const handleStartFromScratch = useCallback(() => {
-    setOnboardingChoice('scratch')
+    setOnboardingChoice('product_engineer')
     router.push(ROUTES.onboarding.promptEngineering.pasteYourPrompt)
   }, [setOnboardingChoice, router])
 
   const handleExistingProject = useCallback(() => {
-    setOnboardingChoice('existing')
+    setOnboardingChoice('developer')
     router.push(ROUTES.onboarding.install)
   }, [setOnboardingChoice, router])
 

@@ -11,8 +11,7 @@ import { errorHandlingProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
 import { UserTitle } from '@latitude-data/constants/users'
 import { env } from '@latitude-data/env'
-import { markWorkspaceOnboardingComplete } from '@latitude-data/core/services/workspaceOnboarding/update'
-import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
+import { markUserOnboardingComplete } from '@latitude-data/core/services/users/completeOnboarding'
 
 export const setupAction = errorHandlingProcedure
   .inputSchema(
@@ -62,14 +61,9 @@ export const setupAction = errorHandlingProcedure
       if (isCloud) {
         return frontendRedirect(ROUTES.onboarding.choice)
       }
-      // If user is self-hosted and they're in the new prompt engineering onboarding, we complete the onboarding and redirect to the dashboard as they cannot generate the dataset with copilot
-      const onboarding = await getWorkspaceOnboarding({
-        workspace,
-      }).then((r) => r.unwrap())
-
-      await markWorkspaceOnboardingComplete({
-        onboarding,
-      }).then((r) => r.unwrap())
+      // If user is self-hosted, complete the onboarding and redirect to the dashboard
+      // as they cannot generate the dataset with copilot
+      await markUserOnboardingComplete({ user }).then((r) => r.unwrap())
 
       return frontendRedirect(ROUTES.dashboard.root)
     }

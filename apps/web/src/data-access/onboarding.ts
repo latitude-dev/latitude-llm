@@ -1,4 +1,3 @@
-import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { getOrCreateOnboardingDocument } from '@latitude-data/core/services/documents/getOrCreateOnboardingDocument'
 import { notFound } from 'next/navigation'
@@ -6,42 +5,11 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { findOnboardingDataset } from '@latitude-data/core/services/datasets/findOnboardingDataset'
 
 /**
- * Get the current workspace onboarding status
- * If the onboarding status doesn't exist, it creates a new one
- */
-export async function getWorkspaceOnboardingStatus() {
-  const { workspace } = await getCurrentUserOrRedirect()
-  if (!workspace) {
-    throw new Error('No workspace found')
-  }
-
-  const result = await getWorkspaceOnboarding({
-    workspace,
-  })
-
-  // If onboarding record doesn't exist, return a mock onboarding status with completed set to true
-  if (result.error) {
-    return {
-      id: 'mock',
-      workspaceId: workspace,
-      completedAt: new Date(),
-    }
-  }
-
-  const onboarding = result.value
-  return {
-    id: onboarding.id,
-    workspaceId: onboarding.workspaceId,
-    completedAt: onboarding.completedAt,
-  }
-}
-
-/**
- * Check if onboarding is completed
+ * Check if onboarding is completed for the current user
  */
 export async function isOnboardingCompleted() {
-  const onboarding = await getWorkspaceOnboardingStatus()
-  return !!onboarding.completedAt
+  const { user } = await getCurrentUserOrRedirect()
+  return !!user.onboardingCompletedAt
 }
 
 /**
@@ -80,3 +48,4 @@ export async function getOnboardingDataset() {
   }
   return datasetResult.unwrap()
 }
+

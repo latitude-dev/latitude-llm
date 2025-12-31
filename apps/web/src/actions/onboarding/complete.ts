@@ -1,16 +1,12 @@
 'use server'
 
-import { markWorkspaceOnboardingComplete } from '@latitude-data/core/services/workspaceOnboarding/update'
-import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
+import { markUserOnboardingComplete } from '@latitude-data/core/services/users/completeOnboarding'
 import { authProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
 import { ROUTES } from '$/services/routes'
 import { z } from 'zod'
 import { RunSourceGroup } from '@latitude-data/constants'
 
-/**
- * Mark onboarding as complete
- */
 export const completeOnboardingAction = authProcedure
   .inputSchema(
     z.object({
@@ -20,15 +16,11 @@ export const completeOnboardingAction = authProcedure
   )
   .action(async ({ parsedInput, ctx }) => {
     const { projectId, commitUuid } = parsedInput
-    const onboarding = await getWorkspaceOnboarding({
-      workspace: ctx.workspace,
+
+    await markUserOnboardingComplete({
+      user: ctx.user,
     }).then((r) => r.unwrap())
 
-    await markWorkspaceOnboardingComplete({
-      onboarding,
-    }).then((r) => r.unwrap())
-
-    // Default redirect to the project's runs page
     return frontendRedirect(
       ROUTES.projects
         .detail({ id: projectId })
@@ -39,3 +31,4 @@ export const completeOnboardingAction = authProcedure
         }),
     )
   })
+

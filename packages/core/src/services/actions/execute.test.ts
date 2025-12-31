@@ -6,8 +6,6 @@ import { BadRequestError } from '../../lib/errors'
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
-import { getWorkspaceOnboarding } from '../workspaceOnboarding/get'
-import * as onboardingServices from '../workspaceOnboarding/update'
 import { executeAction } from './execute'
 
 describe('executeAction', () => {
@@ -24,7 +22,6 @@ describe('executeAction', () => {
     vi.restoreAllMocks()
 
     const { workspace: w, userData: u } = await factories.createWorkspace({
-      onboarding: true,
       features: ['latte'],
     })
     workspace = w
@@ -53,8 +50,6 @@ describe('executeAction', () => {
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(new BadRequestError('Invalid action type'))
 
-    const onboarding = await getWorkspaceOnboarding({ workspace })
-    expect(onboarding.value?.completedAt).toBeFalsy()
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
@@ -68,8 +63,6 @@ describe('executeAction', () => {
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(new BadRequestError('Invalid action parameters'))
 
-    const onboarding = await getWorkspaceOnboarding({ workspace })
-    expect(onboarding.value?.completedAt).toBeFalsy()
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
@@ -85,16 +78,10 @@ describe('executeAction', () => {
       new BadRequestError('Prompt must be between 1 and 2500 characters'),
     )
 
-    const onboarding = await getWorkspaceOnboarding({ workspace })
-    expect(onboarding.value?.completedAt).toBeFalsy()
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
-  it('succeeds when onboarding was already completed', async () => {
-    await onboardingServices.markWorkspaceOnboardingComplete({
-      onboarding: await getWorkspaceOnboarding({ workspace }).then((r) =>r.unwrap()), // prettier-ignore
-    })
-
+  it('succeeds and publishes event', async () => {
     const result = await executeAction({
       type: ActionType.CreateAgent,
       parameters: { prompt: 'Create a dancing agent!' },
@@ -107,8 +94,6 @@ describe('executeAction', () => {
       projectId: expect.any(Number),
       commitUuid: expect.any(String),
     })
-    const onboarding = await getWorkspaceOnboarding({ workspace })
-    expect(onboarding.value?.completedAt).toBeTruthy()
     expect(mocks.publisher).toHaveBeenLastCalledWith({
       type: 'actionExecuted',
       data: {

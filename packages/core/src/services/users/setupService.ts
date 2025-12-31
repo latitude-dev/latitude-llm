@@ -5,7 +5,6 @@ import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { createApiKey } from '../apiKeys'
-import { createWorkspaceOnboarding } from '../workspaceOnboarding'
 import { createMembership } from '../memberships/create'
 import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
@@ -71,10 +70,6 @@ export default async function setupService(
       transaction,
     ).then((r) => r.unwrap())
     await createApiKey({ workspace }, transaction).then((r) => r.unwrap())
-
-    await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
-      r.unwrap(),
-    )
 
     await createDatasetOnboarding({ workspace, user }, transaction).then((r) =>
       r.unwrap(),
