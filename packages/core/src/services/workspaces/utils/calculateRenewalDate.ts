@@ -33,5 +33,10 @@ export function getLatestRenewalDate(firstRenewalDate: Date, targetDate: Date) {
   const adjustedMonth =
     (targetMonth - (targetDay < renewalDay ? 1 : 0) + 12) % 12
 
-  return new Date(adjustedYear, adjustedMonth, renewalDay)
+  // Clamp renewalDay to the last valid day of the adjusted month
+  // This handles edge cases like Jan 31 -> Feb (which only has 28/29 days)
+  const lastDayOfMonth = new Date(adjustedYear, adjustedMonth + 1, 0).getDate()
+  const clampedDay = Math.min(renewalDay, lastDayOfMonth)
+
+  return new Date(adjustedYear, adjustedMonth, clampedDay)
 }

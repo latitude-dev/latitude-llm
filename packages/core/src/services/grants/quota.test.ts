@@ -1,6 +1,6 @@
 import { addMonths, startOfDay, subMonths } from 'date-fns'
 import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { database } from '../../client'
 import { GrantSource, QuotaType } from '../../constants'
 import * as plans from '../../plans'
@@ -20,14 +20,16 @@ const SubscriptionPlansMock = {
   },
 }
 
+const MOCK_DATE = new Date('2025-01-15T12:00:00Z')
+
 describe('computeQuota', () => {
   let now: Date
   let workspace: Workspace
 
   beforeEach(async () => {
-    vi.resetAllMocks()
-    vi.clearAllMocks()
-    vi.restoreAllMocks()
+    // Set the system time to a fixed date for consistent testing (avoids date issues with subMonths)
+    vi.useFakeTimers()
+    vi.setSystemTime(MOCK_DATE)
 
     vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
       SubscriptionPlansMock as any,
@@ -102,6 +104,10 @@ describe('computeQuota', () => {
       workspace: workspace,
       expiresAt: subMonths(now, 2),
     })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('succeeds when no grants', async () => {
