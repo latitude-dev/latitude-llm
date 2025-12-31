@@ -1,6 +1,6 @@
 {
-  "id": "8fb76cd6-2f48-431d-b1ff-4032ebb83907",
-  "prevId": "0f7c0368-fae6-45f6-82a3-a21100da0e10",
+  "id": "480025e5-90d4-4b46-8a4e-b5308f9158db",
+  "prevId": "8fb76cd6-2f48-431d-b1ff-4032ebb83907",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2913,12 +2913,6 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
-        },
-        "alignment_metric": {
-          "name": "alignment_metric",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
         },
         "alignment_metric_metadata": {
           "name": "alignment_metric_metadata",
@@ -8666,8 +8660,7 @@
         "shared_prompt",
         "shadow_test",
         "ab_test_challenger",
-        "user",
-        "external"
+        "user"
       ]
     },
     "latitude.run_error_code_enum": {
