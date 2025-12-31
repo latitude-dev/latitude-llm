@@ -1,9 +1,6 @@
 'use server'
 
-import {
-  getOnboardingResources,
-  isOnboardingCompleted,
-} from '$/data-access/workspaceOnboarding'
+import { getOnboardingResources } from '$/data-access/workspaceOnboarding'
 import { redirect } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
 import { ProjectProvider } from '$/app/providers/ProjectProvider'
@@ -20,18 +17,13 @@ export default async function OnboardingDatasetLayout({
 }: {
   children: ReactNode
 }) {
-  const completed = await isOnboardingCompleted()
-  if (completed) {
-    redirect(ROUTES.dashboard.root)
-  }
-
   const { project, commit, documents } = await getOnboardingResources()
   if (project === null || commit === null) {
-    return redirect(ROUTES.auth.login)
+    return redirect(ROUTES.onboarding.choice)
   }
   const document = documents.find((d) => d.path === ONBOARDING_DOCUMENT_PATH)
   if (!document) {
-    return redirect(ROUTES.auth.login)
+    return redirect(ROUTES.onboarding.choice)
   }
 
   return (
