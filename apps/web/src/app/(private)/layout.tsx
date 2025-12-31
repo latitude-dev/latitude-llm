@@ -8,7 +8,7 @@ import {
   LatitudeWebsocketsProvider,
   SocketIOProvider,
 } from '$/components/Providers/WebsocketsProvider'
-import { isOnboardingCompleted } from '$/data-access/workspaceOnboarding'
+import { isOnboardingCompleted } from '$/data-access/onboarding'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { env } from '@latitude-data/env'

@@ -1,13 +1,5 @@
 import { addMonths, startOfDay, subMonths } from 'date-fns'
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  MockInstance,
-  vi,
-} from 'vitest'
+import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { type LatteThread } from '../../../../schema/models/types/LatteThread'
 import { type Project } from '../../../../schema/models/types/Project'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
@@ -25,8 +17,6 @@ const SubscriptionPlansMock = {
   },
 }
 
-const MOCK_DATE = new Date('2025-01-15T12:00:00Z')
-
 describe('usageLatteCredits', () => {
   let mocks: {
     cache: {
@@ -41,9 +31,9 @@ describe('usageLatteCredits', () => {
   let thread: LatteThread
 
   beforeEach(async () => {
-    // Set the system time to a fixed date for consistent testing (avoids date issues with subMonths)
-    vi.useFakeTimers()
-    vi.setSystemTime(MOCK_DATE)
+    vi.resetAllMocks()
+    vi.clearAllMocks()
+    vi.restoreAllMocks()
 
     vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
       SubscriptionPlansMock as any,
@@ -131,10 +121,6 @@ describe('usageLatteCredits', () => {
         set: setCacheMock,
       },
     }
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
   })
 
   it('succeeds when no requests', async () => {

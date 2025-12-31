@@ -1,6 +1,6 @@
 'use server'
 
-import { getOnboardingResources } from '$/data-access/workspaceOnboarding'
+import { getOnboardingResources } from '$/data-access/onboarding'
 import { redirect } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
 import { ProjectProvider } from '$/app/providers/ProjectProvider'

@@ -14,7 +14,6 @@ import {
   DocumentVersionsRepository,
 } from '../../repositories'
 import { forkDocument } from '../documents/fork'
-import { getWorkspaceOnboarding } from '../workspaceOnboarding'
 import { ActionExecuteArgs } from './shared'
 
 export const CloneAgentActionSpecification = {
@@ -58,16 +57,10 @@ async function execute(
   }
   const cloned = forking.unwrap()
 
-  const workspaceOnboarding = await getWorkspaceOnboarding({ workspace }, db)
-  if (!Result.isOk(workspaceOnboarding)) {
-    return workspaceOnboarding
-  }
-  const onboarding = workspaceOnboarding.unwrap()
-
   return Result.ok({
     projectId: cloned.project.id,
     commitUuid: cloned.commit.uuid,
-    hasCompletedOnboarding: !!onboarding?.completedAt,
+    hasCompletedOnboarding: !!user.onboardingCompletedAt,
   })
 }
 

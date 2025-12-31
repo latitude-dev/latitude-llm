@@ -5,7 +5,6 @@ import { apiKeys } from '@latitude-data/core/schema/models/apiKeys'
 import { memberships } from '@latitude-data/core/schema/models/memberships'
 import { providerApiKeys } from '@latitude-data/core/schema/models/providerApiKeys'
 import { users } from '@latitude-data/core/schema/models/users'
-import { workspaceOnboarding } from '@latitude-data/core/schema/models/workspaceOnboarding'
 import { workspaces } from '@latitude-data/core/schema/models/workspaces'
 import setupServiceGlobal from './setupService'
 
@@ -89,15 +88,6 @@ describe('setupService', () => {
       .then((r) => r[0])
     expect(createdProviderApiKey).toBeDefined()
     expect(createdProviderApiKey?.authorId).toBe(user.id)
-
-    // Check onboarding creation
-    const createdOnboarding = await database
-      .select()
-      .from(workspaceOnboarding)
-      .where(utils.eq(workspaceOnboarding.workspaceId, workspace.id))
-      .then((r) => r[0])
-    expect(createdOnboarding).toBeDefined()
-    expect(createdOnboarding?.completedAt).toBeNull()
   })
 
   it('publishes userCreated event', async () => {

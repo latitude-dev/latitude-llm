@@ -17,6 +17,7 @@ export const users = latitudeSchema.table(
     lastSuggestionNotifiedAt: timestamp('last_suggestion_notified_at'),
     devMode: boolean('dev_mode'),
     title: varchar('title', { length: 128 }).$type<UserTitle>(), // can be null as signup with google bypasses the title selection
+    onboardingCompletedAt: timestamp('onboarding_completed_at'),
     ...timestamps(),
   },
   (table) => [index('users_title_idx').on(table.title)],

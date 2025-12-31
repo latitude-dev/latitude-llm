@@ -1,10 +1,10 @@
 'use server'
 
 import { ReactNode } from 'react'
-import { getOnboardingResources } from '$/data-access/workspaceOnboarding'
+import { getOnboardingResources } from '$/data-access/onboarding'
 import { redirect } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
-import { OnboardingInstallProvider } from './_lib/OnboardingInstallProvider'
+import { ProjectProvider } from '$/app/providers/ProjectProvider'
 
 export default async function OnboardingInstallLayout({
   children,
@@ -16,9 +16,5 @@ export default async function OnboardingInstallLayout({
     return redirect(ROUTES.onboarding.choice)
   }
 
-  return (
-    <OnboardingInstallProvider project={project}>
-      {children}
-    </OnboardingInstallProvider>
-  )
+  return <ProjectProvider project={project}>{children}</ProjectProvider>
 }
