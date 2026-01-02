@@ -16,6 +16,7 @@ export type IssueHistogramData = {
   commitId: number
   date: Date
   count: number
+  occurredAt?: Date
 }
 
 async function createIssueHistogramsBulk(
@@ -29,15 +30,18 @@ async function createIssueHistogramsBulk(
   transaction = new Transaction(),
 ) {
   return transaction.call(async (tx) => {
-    const values = histograms.map(({ issue, commitId, date, count }) => ({
-      workspaceId: workspace.id,
-      projectId: issue.projectId,
-      documentUuid: issue.documentUuid,
-      issueId: issue.id,
-      commitId,
-      date: format(date, 'yyyy-MM-dd'),
-      count,
-    }))
+    const values = histograms.map(
+      ({ issue, commitId, date, count, occurredAt }) => ({
+        workspaceId: workspace.id,
+        projectId: issue.projectId,
+        documentUuid: issue.documentUuid,
+        issueId: issue.id,
+        commitId,
+        date: format(date, 'yyyy-MM-dd'),
+        count,
+        ...(occurredAt && { occurredAt }),
+      }),
+    )
 
     const results = await tx.insert(issueHistograms).values(values).returning()
 
