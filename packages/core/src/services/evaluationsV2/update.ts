@@ -6,10 +6,8 @@ import {
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
-  LlmEvaluationMetric,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { queues } from '../../jobs/queues'
 import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 import { compactObject } from '../../lib/compactObject'
 import { BadRequestError } from '../../lib/errors'
@@ -24,10 +22,8 @@ import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { Issue } from '../../schema/models/types/Issue'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { database } from '../../client'
-import { and, eq } from 'drizzle-orm'
 import { syncDefaultCompositeTarget } from './create'
-import { generateConfigurationHash } from './generateConfigurationHash'
+import { maybeEnqueueAlignmentRecalculation } from './enqueueAlignmentRecalculation'
 import { validateEvaluationV2 } from './validate'
 
 export async function updateEvaluationV2<
@@ -182,97 +178,4 @@ export async function updateEvaluationV2<
       })
     },
   )
-}
-
-async function maybeEnqueueAlignmentRecalculation<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({
-  oldEvaluation,
-  newEvaluation,
-  commit,
-}: {
-  oldEvaluation: EvaluationV2<T, M>
-  newEvaluation: EvaluationV2<T, M>
-  commit: Commit
-}) {
-  const effectiveIssueId = newEvaluation.issueId ?? oldEvaluation.issueId
-  if (!effectiveIssueId) return
-
-  if (
-    newEvaluation.type !== EvaluationType.Llm ||
-    newEvaluation.metric !== LlmEvaluationMetric.Binary
-  ) {
-    return
-  }
-
-  const typedOldEvaluation = oldEvaluation as unknown as EvaluationV2<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.Binary
-  >
-  const typedNewEvaluation = newEvaluation as unknown as EvaluationV2<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.Binary
-  >
-
-  const oldHash = generateConfigurationHash(typedOldEvaluation)
-  const newHash = generateConfigurationHash(typedNewEvaluation)
-
-  if (oldHash === newHash) return
-
-  const updatedAlignmentMetricMetadata: AlignmentMetricMetadata = {
-    alignmentHash:
-      typedNewEvaluation.alignmentMetricMetadata?.alignmentHash ?? '',
-    confusionMatrix: typedNewEvaluation.alignmentMetricMetadata
-      ?.confusionMatrix ?? {
-      truePositives: 0,
-      trueNegatives: 0,
-      falsePositives: 0,
-      falseNegatives: 0,
-    },
-    lastProcessedPositiveSpanDate:
-      typedNewEvaluation.alignmentMetricMetadata?.lastProcessedPositiveSpanDate,
-    lastProcessedNegativeSpanDate:
-      typedNewEvaluation.alignmentMetricMetadata?.lastProcessedNegativeSpanDate,
-    recalculatingAt: Date.now().toString(),
-  }
-
-  publisher.publishLater({
-    type: 'evaluationV2AlignmentUpdated',
-    data: {
-      workspaceId: newEvaluation.workspaceId,
-      evaluationUuid: newEvaluation.uuid,
-      alignmentMetricMetadata: updatedAlignmentMetricMetadata,
-    },
-  })
-
-  console.log('updatedAlignmentMetricMetadata', updatedAlignmentMetricMetadata)
-
-  await database
-    .update(evaluationVersions)
-    .set({
-      alignmentMetricMetadata: updatedAlignmentMetricMetadata,
-    })
-    .where(
-      and(
-        eq(evaluationVersions.commitId, commit.id),
-        eq(evaluationVersions.evaluationUuid, newEvaluation.uuid),
-      ),
-    )
-
-  const { maintenanceQueue } = await queues()
-  await maintenanceQueue.add(
-    'updateEvaluationAlignmentJob',
-    {
-      workspaceId: newEvaluation.workspaceId,
-      commitId: commit.id,
-      evaluationUuid: newEvaluation.uuid,
-      documentUuid: newEvaluation.documentUuid,
-      issueId: effectiveIssueId,
-      source: 'configChange' as const,
-    },
-    { attempts: 1 },
-  )
-
-  return
 }
