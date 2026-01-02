@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleOAuthCallback } from '@latitude-data/core/services/integrations/McpClient/oauthCallback'
 import { ROUTES } from '$/services/routes'
+import { errorHandler } from '$/middlewares/errorHandler'
 
 /**
  * OAuth callback handler for MCP server authentication.
  * This endpoint receives the authorization code from the OAuth provider
  * and exchanges it for access tokens.
  */
-export async function GET(request: NextRequest) {
+export const GET = errorHandler(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get('code')
   const state = searchParams.get('state')
@@ -50,4 +51,4 @@ export async function GET(request: NextRequest) {
       request.url,
     ),
   )
-}
+})

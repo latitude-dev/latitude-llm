@@ -10,7 +10,7 @@ import { IntegrationDto } from '../../../schema/models/types/Integration'
 import { IntegrationType } from '@latitude-data/constants'
 import { database } from '../../../client'
 import { mcpOAuthCredentials } from '../../../schema/models/mcpOAuthCredentials'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { encrypt, decrypt } from '../../../lib/encryption'
 
 type OAuthTokensStore = {
@@ -125,6 +125,7 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
     await database
       .insert(mcpOAuthCredentials)
       .values({
+        workspaceId: this._workspaceId,
         integrationId: this._integrationId,
         clientId: clientInformation.client_id,
         clientSecret: encryptIfPresent(clientInformation.client_secret),
@@ -163,6 +164,7 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
     await database
       .insert(mcpOAuthCredentials)
       .values({
+        workspaceId: this._workspaceId,
         integrationId: this._integrationId,
         accessToken: encryptIfPresent(tokens.access_token),
         refreshToken: encryptIfPresent(tokens.refresh_token),
@@ -190,6 +192,7 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
     await database
       .insert(mcpOAuthCredentials)
       .values({
+        workspaceId: this._workspaceId,
         integrationId: this._integrationId,
         codeVerifier: encryptIfPresent(codeVerifier),
       })
@@ -220,12 +223,18 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
  * Retrieves OAuth credentials for an integration from the database.
  */
 export async function getMcpOAuthCredentials(
+  workspaceId: number,
   integrationId: number,
 ): Promise<McpOAuthCredentials | null> {
   const result = await database
     .select()
     .from(mcpOAuthCredentials)
-    .where(eq(mcpOAuthCredentials.integrationId, integrationId))
+    .where(
+      and(
+        eq(mcpOAuthCredentials.workspaceId, workspaceId),
+        eq(mcpOAuthCredentials.integrationId, integrationId),
+      ),
+    )
     .limit(1)
   return result[0] ?? null
 }

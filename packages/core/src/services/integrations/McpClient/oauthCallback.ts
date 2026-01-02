@@ -10,6 +10,7 @@ import {
   NotFoundError,
 } from '../../../lib/errors'
 import { env } from '@latitude-data/env'
+import { API_ROUTES } from '../../../constants'
 
 type OAuthCallbackParams = {
   code: string
@@ -52,9 +53,9 @@ export async function handleOAuthCallback(
     )
   }
 
-  const credentials = await getMcpOAuthCredentials(integrationId)
+  const credentials = await getMcpOAuthCredentials(workspaceId, integrationId)
 
-  const redirectUrl = `${env.APP_URL}/api/integrations/oauth/callback`
+  const redirectUrl = `${env.APP_URL}${API_ROUTES.integrations.oauth.callback}`
   const oauthProvider = new McpOAuthProvider({
     redirectUrl,
     integration,

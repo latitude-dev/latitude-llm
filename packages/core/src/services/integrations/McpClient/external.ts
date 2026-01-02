@@ -11,6 +11,7 @@ import { TypedResult } from '../../../lib/Result'
 import { IntegrationType } from '@latitude-data/constants'
 import { McpOAuthProvider, getMcpOAuthCredentials } from './oauthProvider'
 import { env } from '@latitude-data/env'
+import { API_ROUTES } from '../../../constants'
 
 type OAuthCallbacks = {
   onRedirectToAuthorization?: (authorizationUrl: URL) => void
@@ -32,8 +33,11 @@ export async function createAndConnectExternalMcpClient(
   let oauthProvider: McpOAuthProvider | undefined
 
   if (useOAuth) {
-    const credentials = await getMcpOAuthCredentials(integration.id)
-    const redirectUrl = `${env.APP_URL}/api/integrations/oauth/callback`
+    const credentials = await getMcpOAuthCredentials(
+      integration.workspaceId,
+      integration.id,
+    )
+    const redirectUrl = `${env.APP_URL}${API_ROUTES.integrations.oauth.callback}`
     oauthProvider = new McpOAuthProvider({
       redirectUrl,
       integration,
