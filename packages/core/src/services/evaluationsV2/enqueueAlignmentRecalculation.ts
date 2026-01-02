@@ -24,11 +24,41 @@ type EnqueueAlignmentRecalculationResult = {
   alignmentMetricMetadata?: AlignmentMetricMetadata
 }
 
-/**
- * Checks if the evaluation configuration has changed and enqueues a recalculation job if needed.
- * This is called after updating an evaluation to trigger alignment metric recalculation
- * when the criteria or other configuration that affects the alignment has changed.
- */
+export async function maybeEnqueueAlignmentRecalculation<
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>({
+  oldEvaluation,
+  newEvaluation,
+  commit,
+}: {
+  oldEvaluation: EvaluationV2<T, M>
+  newEvaluation: EvaluationV2<T, M>
+  commit: Commit
+}): Promise<EnqueueAlignmentRecalculationResult> {
+  if (
+    newEvaluation.type !== EvaluationType.Llm ||
+    newEvaluation.metric !== LlmEvaluationMetric.Binary
+  ) {
+    return { enqueued: false }
+  }
+
+  const typedOldEvaluation = oldEvaluation as unknown as EvaluationV2<
+    EvaluationType.Llm,
+    LlmEvaluationMetric.Binary
+  >
+  const typedNewEvaluation = newEvaluation as unknown as EvaluationV2<
+    EvaluationType.Llm,
+    LlmEvaluationMetric.Binary
+  >
+
+  return enqueueAlignmentRecalculation({
+    oldEvaluation: typedOldEvaluation,
+    newEvaluation: typedNewEvaluation,
+    commit,
+  })
+}
+
 export async function enqueueAlignmentRecalculation(
   { oldEvaluation, newEvaluation, commit }: EnqueueAlignmentRecalculationParams,
   db: Database = database,
@@ -99,43 +129,4 @@ export async function enqueueAlignmentRecalculation(
     enqueued: true,
     alignmentMetricMetadata: updatedAlignmentMetricMetadata,
   }
-}
-
-/**
- * Wrapper function that handles the type checking for evaluations.
- * Only enqueues recalculation for LLM Binary evaluations.
- */
-export async function maybeEnqueueAlignmentRecalculation<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({
-  oldEvaluation,
-  newEvaluation,
-  commit,
-}: {
-  oldEvaluation: EvaluationV2<T, M>
-  newEvaluation: EvaluationV2<T, M>
-  commit: Commit
-}): Promise<EnqueueAlignmentRecalculationResult> {
-  if (
-    newEvaluation.type !== EvaluationType.Llm ||
-    newEvaluation.metric !== LlmEvaluationMetric.Binary
-  ) {
-    return { enqueued: false }
-  }
-
-  const typedOldEvaluation = oldEvaluation as unknown as EvaluationV2<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.Binary
-  >
-  const typedNewEvaluation = newEvaluation as unknown as EvaluationV2<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.Binary
-  >
-
-  return enqueueAlignmentRecalculation({
-    oldEvaluation: typedOldEvaluation,
-    newEvaluation: typedNewEvaluation,
-    commit,
-  })
 }
