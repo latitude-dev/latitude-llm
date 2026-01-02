@@ -264,8 +264,8 @@ describe('recalculateAlignmentMetric', () => {
         falsePositives: 0,
         falseNegatives: 0,
       },
-      lastProcessedPositiveSpanDate: twoDaysAgo,
-      lastProcessedNegativeSpanDate: twoDaysAgo,
+      lastProcessedPositiveSpanDate: twoDaysAgo.toISOString(),
+      lastProcessedNegativeSpanDate: twoDaysAgo.toISOString(),
     }
 
     const oldPositiveSpans = await Promise.all([

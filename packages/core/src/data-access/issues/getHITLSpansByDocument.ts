@@ -44,7 +44,7 @@ export async function getHITLSpansByDocument(
     page: number
     pageSize: number
     orderDirection?: 'asc' | 'desc'
-    afterDate?: Date
+    afterDate?: string
   },
   db = database,
 ) {

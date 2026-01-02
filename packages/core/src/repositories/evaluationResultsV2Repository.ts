@@ -884,7 +884,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     page: number
     pageSize: number
     orderDirection?: 'asc' | 'desc'
-    afterDate?: Date
+    afterDate?: string
   }) {
     const commitsRepo = new CommitsRepository(workspace.id, this.db)
     const commitHistory = await commitsRepo.getCommitsHistory({ commit })
@@ -903,7 +903,9 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     ]
 
     if (afterDate) {
-      whereConditions.push(gt(evaluationResultsV2.createdAt, afterDate))
+      whereConditions.push(
+        gt(evaluationResultsV2.createdAt, new Date(afterDate)),
+      )
     }
 
     const orderDirectionFn = orderDirection === 'asc' ? asc : desc
@@ -958,7 +960,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     page: number
     pageSize: number
     orderDirection?: 'asc' | 'desc'
-    afterDate?: Date
+    afterDate?: string
   }) {
     const commitsRepo = new CommitsRepository(workspace.id, this.db)
     const commitHistory = await commitsRepo.getCommitsHistory({ commit })
@@ -978,7 +980,9 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     ]
 
     if (afterDate) {
-      whereConditions.push(gt(evaluationResultsV2.createdAt, afterDate))
+      whereConditions.push(
+        gt(evaluationResultsV2.createdAt, new Date(afterDate)),
+      )
     }
 
     const orderDirectionFn = orderDirection === 'asc' ? asc : desc

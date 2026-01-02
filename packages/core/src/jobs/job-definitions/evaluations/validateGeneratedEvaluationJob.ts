@@ -23,11 +23,7 @@ import { Commit } from '../../../schema/models/types/Commit'
 import { Workspace } from '../../../schema/models/types/Workspace'
 import { getFalsePositivesAndFalseNegatives } from '../../../services/evaluationsV2/generateFromIssue/getFalseExamples'
 import { generateConfigurationHash } from '../../../services/evaluationsV2/generateConfigurationHash'
-export type SerializedSpanPair = {
-  id: string
-  traceId: string
-  createdAt: string
-}
+import { Span } from '@latitude-data/constants/tracing'
 
 export type ValidateGeneratedEvaluationJobData = {
   workspaceId: number
@@ -39,8 +35,8 @@ export type ValidateGeneratedEvaluationJobData = {
   issueId: number
   providerName: string
   model: string
-  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: SerializedSpanPair[]
-  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: SerializedSpanPair[]
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: Pick<Span, 'id' | 'traceId' | 'createdAt'>[] // prettier-ignore
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: Pick<Span, 'id' | 'traceId' | 'createdAt'>[] // prettier-ignore
 }
 
 /*
@@ -236,8 +232,8 @@ async function deleteEvaluationAndRetryGeneration({
   model: string
   workflowUuid: string
   generationAttempt: number
-  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: SerializedSpanPair[]
-  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: SerializedSpanPair[]
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: Pick<Span, 'id' | 'traceId' | 'createdAt'>[] // prettier-ignore
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: Pick<Span, 'id' | 'traceId' | 'createdAt'>[] // prettier-ignore
   evaluationResults: {
     [jobKey: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any -- this is returned by bullmq
   }

@@ -1,7 +1,7 @@
 import { AlignmentMetricMetadata } from '@latitude-data/constants/evaluations'
+import { Span } from '@latitude-data/constants/tracing'
 import { calculateMCC } from './calculateMCC'
 import { Result } from '@latitude-data/core/lib/Result'
-import { SerializedSpanPair } from '../../../jobs/job-definitions/evaluations/validateGeneratedEvaluationJob'
 
 /*
   This function evaluates the configuration of an evaluation by calculating the MCC (Matthews Correlation Coefficient) of the evaluation.
@@ -20,8 +20,8 @@ export async function evaluateConfiguration({
   childrenValues: {
     [jobKey: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any -- this is returned by bullmq
   }
-  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: SerializedSpanPair[]
-  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: SerializedSpanPair[]
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: Pick<Span, 'id' | 'traceId' | 'createdAt'>[] // prettier-ignore
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: Pick<Span, 'id' | 'traceId' | 'createdAt'>[] // prettier-ignore
   alreadyCalculatedAlignmentMetricMetadata?: AlignmentMetricMetadata
 }) {
   const {
@@ -71,12 +71,16 @@ export async function evaluateConfiguration({
   })
 }
 
-function getLatestDate(pairs: SerializedSpanPair[]): Date | undefined {
+function getLatestDate(
+  pairs: Pick<Span, 'id' | 'traceId' | 'createdAt'>[],
+): string | undefined {
   if (pairs.length === 0) return undefined
-  const latestString = pairs.reduce((latest, pair) => {
-    return pair.createdAt > latest ? pair.createdAt : latest
-  }, pairs[0]!.createdAt)
-  return new Date(latestString)
+  return pairs
+    .reduce((latest, pair) => {
+      const pairDate = new Date(pair.createdAt)
+      return pairDate > latest ? pairDate : latest
+    }, new Date(pairs[0]!.createdAt))
+    .toISOString()
 }
 
 function rebalanceResults({
@@ -87,8 +91,8 @@ function rebalanceResults({
 }: {
   examplesThatShouldPassTheEvaluation: boolean[]
   examplesThatShouldFailTheEvaluation: boolean[]
-  processedPositivePairs: SerializedSpanPair[]
-  processedNegativePairs: SerializedSpanPair[]
+  processedPositivePairs: Pick<Span, 'id' | 'traceId' | 'createdAt'>[]
+  processedNegativePairs: Pick<Span, 'id' | 'traceId' | 'createdAt'>[]
 }) {
   const targetLength = Math.min(
     examplesThatShouldPassTheEvaluation.length,
@@ -108,16 +112,16 @@ function sortEvaluationResultsByShouldPassAndShouldFailTheEvaluation({
   spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
   evaluationResults,
 }: {
-  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: SerializedSpanPair[]
-  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: SerializedSpanPair[]
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: Pick< Span, 'id' | 'traceId' | 'createdAt'>[] // prettier-ignore
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: Pick< Span, 'id' | 'traceId' | 'createdAt'>[] // prettier-ignore
   evaluationResults: {
     [jobKey: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any -- this is returned by bullmq
   }
 }) {
   const examplesThatShouldPassTheEvaluation: boolean[] = []
   const examplesThatShouldFailTheEvaluation: boolean[] = []
-  const processedPositivePairs: SerializedSpanPair[] = []
-  const processedNegativePairs: SerializedSpanPair[] = []
+  const processedPositivePairs: Pick<Span, 'id' | 'traceId' | 'createdAt'>[] = [] // prettier-ignore
+  const processedNegativePairs: Pick<Span, 'id' | 'traceId' | 'createdAt'>[] = [] // prettier-ignore
 
   for (const evaluationResult of Object.values(evaluationResults)) {
     const {

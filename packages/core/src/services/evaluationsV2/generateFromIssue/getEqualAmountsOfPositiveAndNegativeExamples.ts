@@ -32,8 +32,8 @@ export async function getEqualAmountsOfPositiveAndNegativeExamples(
     workspace: Workspace
     commit: Commit
     issue: Issue
-    positiveSpanCutoffDate?: Date
-    negativeSpanCutoffDate?: Date
+    positiveSpanCutoffDate?: string
+    negativeSpanCutoffDate?: string
   },
   db = database,
 ) {

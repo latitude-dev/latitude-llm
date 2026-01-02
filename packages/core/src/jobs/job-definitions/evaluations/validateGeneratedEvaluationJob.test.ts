@@ -115,14 +115,14 @@ describe('validateGeneratedEvaluationJob', () => {
         {
           id: 'span-1',
           traceId: 'trace-1',
-          createdAt: '2024-01-15T10:00:00.000Z',
+          createdAt: new Date('2024-01-15T10:00:00.000Z'),
         },
       ],
       spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
         {
           id: 'span-2',
           traceId: 'trace-2',
-          createdAt: '2024-01-15T11:00:00.000Z',
+          createdAt: new Date('2024-01-15T11:00:00.000Z'),
         },
       ],
       ...overrides,
@@ -228,8 +228,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 2,
             falseNegatives: 2,
           },
-          latestPositiveSpanDate: new Date('2024-01-15T10:00:00.000Z'),
-          latestNegativeSpanDate: new Date('2024-01-15T11:00:00.000Z'),
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockUpdateEvaluationV2.mockResolvedValue(
@@ -271,8 +271,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falseNegatives: 2,
           },
           alignmentHash: expect.any(String),
-          lastProcessedPositiveSpanDate: new Date('2024-01-15T10:00:00.000Z'),
-          lastProcessedNegativeSpanDate: new Date('2024-01-15T11:00:00.000Z'),
+          lastProcessedPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          lastProcessedNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         },
       })
 
@@ -381,8 +381,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 8,
             falseNegatives: 8,
           },
-          latestPositiveSpanDate: new Date('2024-01-15T10:00:00.000Z'),
-          latestNegativeSpanDate: new Date('2024-01-15T11:00:00.000Z'),
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockDeleteEvaluationV2.mockResolvedValue(
@@ -524,8 +524,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 3,
             falseNegatives: 3,
           },
-          latestPositiveSpanDate: new Date('2024-01-15T10:00:00.000Z'),
-          latestNegativeSpanDate: new Date('2024-01-15T11:00:00.000Z'),
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockUpdateEvaluationV2.mockResolvedValue(
@@ -559,8 +559,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 5,
             falseNegatives: 5,
           },
-          latestPositiveSpanDate: new Date('2024-01-15T10:00:00.000Z'),
-          latestNegativeSpanDate: new Date('2024-01-15T11:00:00.000Z'),
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockUpdateEvaluationV2.mockResolvedValue(
@@ -580,8 +580,8 @@ describe('validateGeneratedEvaluationJob', () => {
               falsePositives: 5,
               falseNegatives: 5,
             },
-            lastProcessedPositiveSpanDate: new Date('2024-01-15T10:00:00.000Z'),
-            lastProcessedNegativeSpanDate: new Date('2024-01-15T11:00:00.000Z'),
+            lastProcessedPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+            lastProcessedNegativeSpanDate: '2024-01-15T11:00:00.000Z',
           },
         }),
       )
@@ -599,8 +599,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 6,
             falseNegatives: 6,
           },
-          latestPositiveSpanDate: new Date('2024-01-15T10:00:00.000Z'),
-          latestNegativeSpanDate: new Date('2024-01-15T11:00:00.000Z'),
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockDeleteEvaluationV2.mockResolvedValue(
@@ -651,8 +651,8 @@ describe('validateGeneratedEvaluationJob', () => {
             falsePositives: 3,
             falseNegatives: 3,
           },
-          latestPositiveSpanDate: new Date('2024-01-15T10:00:00.000Z'),
-          latestNegativeSpanDate: new Date('2024-01-15T11:00:00.000Z'),
+          latestPositiveSpanDate: '2024-01-15T10:00:00.000Z',
+          latestNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         }),
       )
       mockUpdateEvaluationV2.mockResolvedValue(
