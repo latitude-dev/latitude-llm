@@ -29,12 +29,13 @@ import { LastSeenCell } from '../LastSeenCell'
 import { useIssueEvaluations } from '$/stores/issues/evaluations'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { CommitVersionCell } from '$/components/CommitVersionCell'
 
 const FAKE_ROWS = Array.from({ length: 20 })
 const DETAILS_OFFSET = { top: 12, bottom: 12 }
 
 function IssuesTableLoader() {
-  const headerCells = useMemo(() => Array.from({ length: 5 }), [])
+  const headerCells = useMemo(() => Array.from({ length: 6 }), [])
   return (
     <>
       {FAKE_ROWS.map((_, index) => (
@@ -154,6 +155,7 @@ export function IssuesTable({
             <TableRow>
               <TableHead>Issues</TableHead>
               <TableHead align='right'>Last occurrence</TableHead>
+              <TableHead>Last version</TableHead>
               <TableHead align='right'>Events</TableHead>
               <TableHead>
                 <div className='w-full flex flex-row items-center justify-between gap-x-1'>
@@ -189,6 +191,9 @@ export function IssuesTable({
                   </TableCell>
                   <TableCell align='right'>
                     <LastSeenCell issue={issue} />
+                  </TableCell>
+                  <TableCell>
+                    <CommitVersionCell commit={issue.lastCommit} />
                   </TableCell>
                   <TableCell align='right'>
                     <Text.H5>{issue.totalCount}</Text.H5>

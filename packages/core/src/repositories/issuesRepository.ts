@@ -27,6 +27,7 @@ import {
   UnprocessableEntityError,
 } from '../lib/errors'
 import { Result } from '../lib/Result'
+import { commits } from '../schema/models/commits'
 import { issues } from '../schema/models/issues'
 import { type Commit } from '../schema/models/types/Commit'
 import { DocumentVersion } from '../schema/models/types/DocumentVersion'
@@ -88,13 +89,18 @@ export class IssuesRepository extends Repository<Issue> {
           ${issues.id} = ${id}
         ) LIMIT 1 FOR NO KEY UPDATE ${sql.raw(!shouldWait ? 'NOWAIT' : '')};
           `)
-    } catch (error: any) {
-      if (error?.code === databaseErrorCodes.lockNotAvailable) {
+    } catch (err) {
+      const error = err as Error
+
+      if (
+        'code' in error &&
+        error.code === databaseErrorCodes.lockNotAvailable
+      ) {
         return Result.error(
           new UnprocessableEntityError('Cannot obtain lock on issue'),
         )
       }
-      return Result.error(error as Error)
+      return Result.error(error)
     }
 
     return Result.nil()
@@ -116,6 +122,7 @@ export class IssuesRepository extends Repository<Issue> {
       issueId,
     })
     const mergedIssues = alias(issues, 'mergedIssues')
+    const lastCommit = alias(commits, 'lastCommit')
     const result = await this.db
       .select({
         ...tt,
@@ -125,10 +132,16 @@ export class IssuesRepository extends Repository<Issue> {
           title: mergedIssues.title,
           uuid: mergedIssues.uuid,
         },
+        lastCommit: {
+          uuid: lastCommit.uuid,
+          title: lastCommit.title,
+          version: lastCommit.version,
+        },
       })
       .from(issues)
       .innerJoin(subquery, eq(subquery.issueId, issues.id))
       .leftJoin(mergedIssues, eq(issues.mergedToIssueId, mergedIssues.id))
+      .innerJoin(lastCommit, eq(subquery.lastCommitId, lastCommit.id))
       .where(
         and(
           this.scopeFilter,
@@ -291,6 +304,7 @@ export class IssuesRepository extends Repository<Issue> {
     })
 
     const mergedIssues = alias(issues, 'mergedIssues')
+    const lastCommit = alias(commits, 'lastCommit')
     const query = this.db
       .select({
         ...tt,
@@ -300,10 +314,16 @@ export class IssuesRepository extends Repository<Issue> {
           title: mergedIssues.title,
           uuid: mergedIssues.uuid,
         },
+        lastCommit: {
+          uuid: lastCommit.uuid,
+          title: lastCommit.title,
+          version: lastCommit.version,
+        },
       })
       .from(issues)
       .innerJoin(subquery, eq(subquery.issueId, issues.id))
       .leftJoin(mergedIssues, eq(issues.mergedToIssueId, mergedIssues.id))
+      .innerJoin(lastCommit, eq(subquery.lastCommitId, lastCommit.id))
       .where(and(...where))
       .orderBy(...orderBy)
       .limit(limit)
