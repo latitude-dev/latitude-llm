@@ -73,14 +73,15 @@ export const ExternalIntegrationConfiguration = forwardRef<
         onCheckedChange={(checked) => setUseOAuth(checked === true)}
         name='useOAuth'
         label='Use OAuth authentication'
-        description='Enable if the MCP server requires OAuth authentication.'
+        description='Enable if the MCP server requires OAuth authentication. Connection will be validated during the OAuth flow.'
       />
       {useOAuth && (
         <div className='flex flex-col gap-4 pl-6 border-l-2 border-muted'>
           <Text.H5 color='foregroundMuted'>
-            OAuth credentials are optional for servers that support dynamic
-            client registration. Provide them if your server requires
-            pre-registered clients.
+            When OAuth is enabled, the connection will be authenticated during
+            your first use of the integration. OAuth credentials are optional
+            for servers that support dynamic client registration. Provide them
+            if your server requires pre-registered clients.
           </Text.H5>
           <Input
             name='oauthClientId'

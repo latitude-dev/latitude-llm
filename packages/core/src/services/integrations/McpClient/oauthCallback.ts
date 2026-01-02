@@ -73,8 +73,11 @@ export async function handleOAuthCallback(
 
     return Result.ok(undefined)
   } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : 'OAuth token exchange failed'
+    const baseMessage =
+      err instanceof Error
+        ? err.message
+        : 'Unknown error during OAuth token exchange'
+    const errorMessage = `Failed to complete OAuth authentication for MCP server at ${urlObject.host}: ${baseMessage}`
     return Result.error(new LatitudeError(errorMessage))
   }
 }

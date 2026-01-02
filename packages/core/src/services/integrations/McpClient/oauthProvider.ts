@@ -11,11 +11,26 @@ import { IntegrationType } from '@latitude-data/constants'
 import { database } from '../../../client'
 import { mcpOAuthCredentials } from '../../../schema/models/mcpOAuthCredentials'
 import { eq } from 'drizzle-orm'
+import { encrypt, decrypt } from '../../../lib/encryption'
 
 type OAuthTokensStore = {
   accessToken?: string
   refreshToken?: string
   expiresAt?: Date | null
+}
+
+function encryptIfPresent(value: string | undefined | null): string | null {
+  if (!value) return null
+  return encrypt(value)
+}
+
+function decryptIfPresent(value: string | undefined | null): string | undefined {
+  if (!value) return undefined
+  try {
+    return decrypt(value)
+  } catch {
+    return value
+  }
 }
 
 /**
@@ -61,18 +76,18 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
       if (options.credentials.clientId) {
         this._clientInformation = {
           client_id: options.credentials.clientId,
-          client_secret: options.credentials.clientSecret ?? undefined,
+          client_secret: decryptIfPresent(options.credentials.clientSecret),
         }
       }
       if (options.credentials.accessToken) {
         this._tokens = {
-          accessToken: options.credentials.accessToken,
-          refreshToken: options.credentials.refreshToken ?? undefined,
+          accessToken: decryptIfPresent(options.credentials.accessToken),
+          refreshToken: decryptIfPresent(options.credentials.refreshToken),
           expiresAt: options.credentials.tokenExpiresAt,
         }
       }
       if (options.credentials.codeVerifier) {
-        this._codeVerifier = options.credentials.codeVerifier
+        this._codeVerifier = decryptIfPresent(options.credentials.codeVerifier)
       }
     }
   }
@@ -110,13 +125,13 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
       .values({
         integrationId: this._integrationId,
         clientId: clientInformation.client_id,
-        clientSecret: clientInformation.client_secret,
+        clientSecret: encryptIfPresent(clientInformation.client_secret),
       })
       .onConflictDoUpdate({
         target: mcpOAuthCredentials.integrationId,
         set: {
           clientId: clientInformation.client_id,
-          clientSecret: clientInformation.client_secret,
+          clientSecret: encryptIfPresent(clientInformation.client_secret),
           updatedAt: new Date(),
         },
       })
@@ -149,15 +164,15 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
       .insert(mcpOAuthCredentials)
       .values({
         integrationId: this._integrationId,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        accessToken: encryptIfPresent(tokens.access_token),
+        refreshToken: encryptIfPresent(tokens.refresh_token),
         tokenExpiresAt: expiresAt,
       })
       .onConflictDoUpdate({
         target: mcpOAuthCredentials.integrationId,
         set: {
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
+          accessToken: encryptIfPresent(tokens.access_token),
+          refreshToken: encryptIfPresent(tokens.refresh_token),
           tokenExpiresAt: expiresAt,
           updatedAt: new Date(),
         },
@@ -176,12 +191,12 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
       .insert(mcpOAuthCredentials)
       .values({
         integrationId: this._integrationId,
-        codeVerifier,
+        codeVerifier: encryptIfPresent(codeVerifier),
       })
       .onConflictDoUpdate({
         target: mcpOAuthCredentials.integrationId,
         set: {
-          codeVerifier,
+          codeVerifier: encryptIfPresent(codeVerifier),
           updatedAt: new Date(),
         },
       })
@@ -189,7 +204,9 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
 
   codeVerifier(): string {
     if (!this._codeVerifier) {
-      throw new Error('No code verifier saved')
+      throw new Error(
+        'No code verifier saved. This may indicate the OAuth flow was interrupted or the authorization was started from a different session.',
+      )
     }
     return this._codeVerifier
   }
