@@ -34,6 +34,8 @@ export async function getHITLSpansByDocument(
     excludeIssueId,
     page,
     pageSize,
+    afterDate,
+    orderDirection = 'asc',
   }: {
     workspace: Workspace
     commit: Commit
@@ -41,6 +43,8 @@ export async function getHITLSpansByDocument(
     excludeIssueId: number
     page: number
     pageSize: number
+    orderDirection?: 'asc' | 'desc'
+    afterDate?: string
   },
   db = database,
 ) {
@@ -53,6 +57,8 @@ export async function getHITLSpansByDocument(
       excludeIssueId,
       page,
       pageSize,
+      afterDate,
+      orderDirection,
     })
 
   if (paginatedResults.length === 0) {

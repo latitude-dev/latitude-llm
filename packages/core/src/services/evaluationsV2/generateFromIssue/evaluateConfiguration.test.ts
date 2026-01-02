@@ -2,6 +2,17 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { describe, expect, it, vi } from 'vitest'
 import * as calculateMCCModule from './calculateMCC'
 import { evaluateConfiguration } from './evaluateConfiguration'
+import { SerializedSpanPair } from '@latitude-data/constants/tracing'
+
+const createPair = (
+  spanId: string,
+  traceId: string,
+  createdAt?: string,
+): SerializedSpanPair => ({
+  id: spanId,
+  traceId,
+  createdAt: createdAt ?? new Date().toISOString(),
+})
 
 /**
  * evaluateConfiguration takes evaluation results and ground truth pairs,
@@ -53,18 +64,19 @@ describe('evaluateConfiguration', () => {
           },
         },
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'good-1', traceId: 'trace-good-1' },
-          { spanId: 'good-2', traceId: 'trace-good-2' },
+          createPair('good-1', 'trace-good-1'),
+          createPair('good-2', 'trace-good-2'),
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'bad-1', traceId: 'trace-bad-1' },
-          { spanId: 'bad-2', traceId: 'trace-bad-2' },
+          createPair('bad-1', 'trace-bad-1'),
+          createPair('bad-2', 'trace-bad-2'),
         ],
       })
 
       expect(calculateMCCSpy).toHaveBeenCalledWith({
         examplesThatShouldPassTheEvaluation: [true, false], // good-1: true, good-2: false
         examplesThatShouldFailTheEvaluation: [false, true], // bad-1: false, bad-2: true
+        alreadyCalculatedAlignmentMetricMetadata: undefined,
       })
 
       calculateMCCSpy.mockRestore()
@@ -103,16 +115,17 @@ describe('evaluateConfiguration', () => {
           },
         },
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'good', traceId: 'trace-good' },
+          createPair('good', 'trace-good'),
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'bad', traceId: 'trace-bad' },
+          createPair('bad', 'trace-bad'),
         ],
       })
 
       expect(calculateMCCSpy).toHaveBeenCalledWith({
         examplesThatShouldPassTheEvaluation: [true], // Only 'good' matched
         examplesThatShouldFailTheEvaluation: [false], // Only 'bad' matched
+        alreadyCalculatedAlignmentMetricMetadata: undefined,
       })
 
       calculateMCCSpy.mockRestore()
@@ -151,17 +164,19 @@ describe('evaluateConfiguration', () => {
           },
         },
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'span-1', traceId: 'trace-1' }, // Won't match partial matches
-          { spanId: 'span-exact', traceId: 'trace-exact' }, // Will match
+          createPair('span-1', 'trace-1'), // Won't match partial matches
+          createPair('span-exact', 'trace-exact'), // Will match
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'bad', traceId: 'trace-bad' },
+          createPair('bad', 'trace-bad'),
         ],
       })
 
+      // Rebalancing: 1 positive matched, 0 negative matched -> both sliced to 0
       expect(calculateMCCSpy).toHaveBeenCalledWith({
-        examplesThatShouldPassTheEvaluation: [true], // Only exact match
+        examplesThatShouldPassTheEvaluation: [], // Sliced to match negative count (0)
         examplesThatShouldFailTheEvaluation: [],
+        alreadyCalculatedAlignmentMetricMetadata: undefined,
       })
 
       calculateMCCSpy.mockRestore()
@@ -194,17 +209,24 @@ describe('evaluateConfiguration', () => {
           },
         },
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'good-1', traceId: 'trace-1' },
-          { spanId: 'good-2', traceId: 'trace-2' },
+          createPair('good-1', 'trace-1'),
+          createPair('good-2', 'trace-2'),
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'bad-1', traceId: 'trace-3' },
-          { spanId: 'bad-2', traceId: 'trace-4' },
+          createPair('bad-1', 'trace-3'),
+          createPair('bad-2', 'trace-4'),
         ],
       })
 
       expect(Result.isOk(result)).toBe(true)
-      const { mcc, confusionMatrix } = result.unwrap()
+      const {
+        mcc,
+        confusionMatrix,
+        latestPositiveSpanDate,
+        latestNegativeSpanDate,
+      } = result.unwrap()
+      expect(latestPositiveSpanDate).toBeDefined()
+      expect(latestNegativeSpanDate).toBeDefined()
       expect(mcc).toBe(100)
       expect(confusionMatrix).toEqual({
         truePositives: 2,
@@ -212,6 +234,77 @@ describe('evaluateConfiguration', () => {
         falsePositives: 0,
         falseNegatives: 0,
       })
+    })
+  })
+
+  describe('incremental updates with existing metadata', () => {
+    it('combines new results with existing confusion matrix when alreadyCalculatedAlignmentMetricMetadata is provided', async () => {
+      const calculateMCCSpy = vi.spyOn(calculateMCCModule, 'calculateMCC')
+      calculateMCCSpy.mockReturnValue(
+        Result.ok({
+          mcc: 80,
+          confusionMatrix: {
+            truePositives: 5, // 2 new + 3 existing
+            trueNegatives: 5, // 2 new + 3 existing
+            falsePositives: 1, // 0 new + 1 existing
+            falseNegatives: 1, // 0 new + 1 existing
+          },
+        }),
+      )
+
+      const existingMetadata = {
+        confusionMatrix: {
+          truePositives: 3,
+          trueNegatives: 3,
+          falsePositives: 1,
+          falseNegatives: 1,
+        },
+        alignmentHash: 'existing-hash-123',
+        lastProcessedPositiveSpanDate: '2024-01-01T00:00:00.000Z',
+        lastProcessedNegativeSpanDate: '2024-01-01T00:00:00.000Z',
+      }
+
+      await evaluateConfiguration({
+        childrenValues: {
+          'job-good-1': {
+            hasPassed: true,
+            evaluatedSpanId: 'good-1',
+            evaluatedTraceId: 'trace-good-1',
+          },
+          'job-good-2': {
+            hasPassed: true,
+            evaluatedSpanId: 'good-2',
+            evaluatedTraceId: 'trace-good-2',
+          },
+          'job-bad-1': {
+            hasPassed: false,
+            evaluatedSpanId: 'bad-1',
+            evaluatedTraceId: 'trace-bad-1',
+          },
+          'job-bad-2': {
+            hasPassed: false,
+            evaluatedSpanId: 'bad-2',
+            evaluatedTraceId: 'trace-bad-2',
+          },
+        },
+        spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
+          createPair('good-1', 'trace-good-1', '2024-06-01T12:00:00.000Z'),
+          createPair('good-2', 'trace-good-2', '2024-06-02T12:00:00.000Z'),
+        ],
+        spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
+          createPair('bad-1', 'trace-bad-1', '2024-06-01T14:00:00.000Z'),
+          createPair('bad-2', 'trace-bad-2', '2024-06-02T14:00:00.000Z'),
+        ],
+        alreadyCalculatedAlignmentMetricMetadata: existingMetadata,
+      })
+
+      expect(calculateMCCSpy).toHaveBeenCalledWith({
+        examplesThatShouldPassTheEvaluation: [true, true],
+        examplesThatShouldFailTheEvaluation: [false, false],
+        alreadyCalculatedAlignmentMetricMetadata: existingMetadata,
+      })
+
+      calculateMCCSpy.mockRestore()
     })
   })
 
@@ -261,16 +354,16 @@ describe('evaluateConfiguration', () => {
           }, // FP - disagreement
         },
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          { spanId: 'g1', traceId: 't1' },
-          { spanId: 'g2', traceId: 't2' },
-          { spanId: 'g3', traceId: 't3' },
-          { spanId: 'g4', traceId: 't4' },
+          createPair('g1', 't1'),
+          createPair('g2', 't2'),
+          createPair('g3', 't3'),
+          createPair('g4', 't4'),
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          { spanId: 'b1', traceId: 't5' },
-          { spanId: 'b2', traceId: 't6' },
-          { spanId: 'b3', traceId: 't7' },
-          { spanId: 'b4', traceId: 't8' },
+          createPair('b1', 't5'),
+          createPair('b2', 't6'),
+          createPair('b3', 't7'),
+          createPair('b4', 't8'),
         ],
       })
 

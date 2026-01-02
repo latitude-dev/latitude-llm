@@ -23,6 +23,7 @@ import { Commit } from '../../../schema/models/types/Commit'
 import { Workspace } from '../../../schema/models/types/Workspace'
 import { getFalsePositivesAndFalseNegatives } from '../../../services/evaluationsV2/generateFromIssue/getFalseExamples'
 import { generateConfigurationHash } from '../../../services/evaluationsV2/generateConfigurationHash'
+import { SerializedSpanPair } from '@latitude-data/constants/tracing'
 
 export type ValidateGeneratedEvaluationJobData = {
   workspaceId: number
@@ -34,14 +35,8 @@ export type ValidateGeneratedEvaluationJobData = {
   issueId: number
   providerName: string
   model: string
-  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: {
-    spanId: string
-    traceId: string
-  }[]
-  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: {
-    spanId: string
-    traceId: string
-  }[]
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: SerializedSpanPair[]
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: SerializedSpanPair[]
 }
 
 /*
@@ -113,7 +108,12 @@ export const validateGeneratedEvaluationJob = async (
 
     const childrenValues = await job.getChildrenValues()
 
-    const { mcc, confusionMatrix } = await evaluateConfiguration({
+    const {
+      mcc,
+      confusionMatrix,
+      latestPositiveSpanDate,
+      latestNegativeSpanDate,
+    } = await evaluateConfiguration({
       childrenValues,
       spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
       spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
@@ -144,6 +144,8 @@ export const validateGeneratedEvaluationJob = async (
       alignmentMetricMetadata: {
         confusionMatrix,
         alignmentHash,
+        lastProcessedPositiveSpanDate: latestPositiveSpanDate,
+        lastProcessedNegativeSpanDate: latestNegativeSpanDate,
       },
     }).then((r) => r.unwrap())
 
@@ -230,14 +232,8 @@ async function deleteEvaluationAndRetryGeneration({
   model: string
   workflowUuid: string
   generationAttempt: number
-  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: {
-    spanId: string
-    traceId: string
-  }[]
-  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: {
-    spanId: string
-    traceId: string
-  }[]
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: SerializedSpanPair[]
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: SerializedSpanPair[]
   evaluationResults: {
     [jobKey: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any -- this is returned by bullmq
   }

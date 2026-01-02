@@ -26,10 +26,14 @@ export async function getEqualAmountsOfPositiveAndNegativeExamples(
     workspace,
     commit,
     issue,
+    positiveSpanCutoffDate,
+    negativeSpanCutoffDate,
   }: {
     workspace: Workspace
     commit: Commit
     issue: Issue
+    positiveSpanCutoffDate?: string
+    negativeSpanCutoffDate?: string
   },
   db = database,
 ) {
@@ -40,6 +44,7 @@ export async function getEqualAmountsOfPositiveAndNegativeExamples(
       issue,
       pageSize: MAX_COMPARISON_ANNOTATIONS,
       page: 1,
+      afterDate: negativeSpanCutoffDate,
     },
     db,
   )
@@ -49,7 +54,7 @@ export async function getEqualAmountsOfPositiveAndNegativeExamples(
   const { spans: examplesThatShouldFailTheEvaluation } =
     examplesThatShouldFailTheEvaluationResult.unwrap()
 
-  // Getting the same amount of examples that should pass the evaluation, as we need an equal amount of both to calculate correctly the MCC
+  // Adding length of examples that should fail to optimize the query and avoid getting extra that we would slice later
   const examplesThatShouldPassTheEvaluationResult =
     await getHITLSpansByDocument(
       {
@@ -59,6 +64,7 @@ export async function getEqualAmountsOfPositiveAndNegativeExamples(
         pageSize: examplesThatShouldFailTheEvaluation.length,
         excludeIssueId: issue.id,
         page: 1,
+        afterDate: positiveSpanCutoffDate,
       },
       db,
     )
@@ -68,15 +74,19 @@ export async function getEqualAmountsOfPositiveAndNegativeExamples(
   const { spans: examplesThatShouldPassTheEvaluation } =
     examplesThatShouldPassTheEvaluationResult.unwrap()
 
+  // Getting the same amount of examples that should and shouldnt pass the evaluation, as we need an equal amount of both to calculate correctly the MCC
   const targetLength = Math.min(
     examplesThatShouldFailTheEvaluation.length,
     examplesThatShouldPassTheEvaluation.length,
   )
 
+  const examplesThatShouldPassTheEvaluationSliced =
+    examplesThatShouldPassTheEvaluation.slice(0, targetLength)
+  const examplesThatShouldFailTheEvaluationSliced =
+    examplesThatShouldFailTheEvaluation.slice(0, targetLength)
+
   return Result.ok({
-    examplesThatShouldPassTheEvaluationSliced:
-      examplesThatShouldPassTheEvaluation.slice(0, targetLength),
-    examplesThatShouldFailTheEvaluationSliced:
-      examplesThatShouldFailTheEvaluation.slice(0, targetLength),
+    examplesThatShouldPassTheEvaluationSliced,
+    examplesThatShouldFailTheEvaluationSliced,
   })
 }

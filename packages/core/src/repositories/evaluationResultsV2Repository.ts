@@ -13,6 +13,7 @@ import {
   desc,
   eq,
   getTableColumns,
+  gt,
   gte,
   inArray,
   isNotNull,
@@ -874,18 +875,41 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     issue,
     page,
     pageSize,
+    afterDate,
+    orderDirection = 'asc',
   }: {
     workspace: Workspace
     commit: Commit
     issue: Issue
     page: number
     pageSize: number
+    orderDirection?: 'asc' | 'desc'
+    afterDate?: string
   }) {
     const commitsRepo = new CommitsRepository(workspace.id, this.db)
     const commitHistory = await commitsRepo.getCommitsHistory({ commit })
     const commitIds = commitHistory.map((c) => c.id)
     const limit = pageSize + 1
     const offset = calculateOffset(page, pageSize)
+
+    const whereConditions = [
+      eq(issueEvaluationResults.workspaceId, workspace.id),
+      eq(issueEvaluationResults.issueId, issue.id),
+      eq(evaluationVersions.type, EvaluationType.Human),
+      isNotNull(evaluationResultsV2.evaluatedSpanId),
+      isNotNull(evaluationResultsV2.evaluatedTraceId),
+      isNull(commits.deletedAt),
+      inArray(evaluationResultsV2.commitId, commitIds),
+    ]
+
+    if (afterDate) {
+      whereConditions.push(
+        gt(evaluationResultsV2.createdAt, new Date(afterDate)),
+      )
+    }
+
+    const orderDirectionFn = orderDirection === 'asc' ? asc : desc
+
     const evalResults = await this.db
       .select({
         id: evaluationResultsV2.id,
@@ -906,20 +930,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         ),
       )
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
-      .where(
-        and(
-          eq(issueEvaluationResults.workspaceId, workspace.id),
-          eq(issueEvaluationResults.issueId, issue.id),
-          eq(evaluationVersions.type, EvaluationType.Human),
-          isNotNull(evaluationResultsV2.evaluatedSpanId),
-          isNotNull(evaluationResultsV2.evaluatedTraceId),
-          isNull(commits.deletedAt),
-          inArray(evaluationResultsV2.commitId, commitIds),
-        ),
-      )
+      .where(and(...whereConditions))
       .orderBy(
-        desc(evaluationResultsV2.createdAt),
-        desc(evaluationResultsV2.id),
+        orderDirectionFn(evaluationResultsV2.createdAt),
+        orderDirectionFn(evaluationResultsV2.id),
       )
       .limit(limit)
       .offset(offset)
@@ -936,6 +950,8 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     excludeIssueId,
     page,
     pageSize,
+    afterDate,
+    orderDirection = 'asc',
   }: {
     workspace: Workspace
     commit: Commit
@@ -943,12 +959,34 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     excludeIssueId: number
     page: number
     pageSize: number
+    orderDirection?: 'asc' | 'desc'
+    afterDate?: string
   }) {
     const commitsRepo = new CommitsRepository(workspace.id, this.db)
     const commitHistory = await commitsRepo.getCommitsHistory({ commit })
     const commitIds = commitHistory.map((c) => c.id)
     const limit = pageSize + 1
     const offset = calculateOffset(page, pageSize)
+
+    const whereConditions = [
+      eq(evaluationResultsV2.workspaceId, workspace.id),
+      eq(evaluationVersions.type, EvaluationType.Human),
+      isNotNull(evaluationResultsV2.evaluatedSpanId),
+      isNotNull(evaluationResultsV2.evaluatedTraceId),
+      isNull(commits.deletedAt),
+      inArray(evaluationResultsV2.commitId, commitIds),
+      // Exclude spans that have evaluation results linked to the specific issue
+      isNull(issueEvaluationResults.id),
+    ]
+
+    if (afterDate) {
+      whereConditions.push(
+        gt(evaluationResultsV2.createdAt, new Date(afterDate)),
+      )
+    }
+
+    const orderDirectionFn = orderDirection === 'asc' ? asc : desc
+
     const evalResults = await this.db
       .select({
         id: evaluationResultsV2.id,
@@ -976,21 +1014,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           eq(issueEvaluationResults.issueId, excludeIssueId),
         ),
       )
-      .where(
-        and(
-          eq(evaluationResultsV2.workspaceId, workspace.id),
-          eq(evaluationVersions.type, EvaluationType.Human),
-          isNotNull(evaluationResultsV2.evaluatedSpanId),
-          isNotNull(evaluationResultsV2.evaluatedTraceId),
-          isNull(commits.deletedAt),
-          inArray(evaluationResultsV2.commitId, commitIds),
-          // Exclude spans that have evaluation results linked to the specific issue
-          isNull(issueEvaluationResults.id),
-        ),
-      )
+      .where(and(...whereConditions))
       .orderBy(
-        desc(evaluationResultsV2.createdAt),
-        desc(evaluationResultsV2.id),
+        orderDirectionFn(evaluationResultsV2.createdAt),
+        orderDirectionFn(evaluationResultsV2.id),
       )
       .limit(limit)
       .offset(offset)

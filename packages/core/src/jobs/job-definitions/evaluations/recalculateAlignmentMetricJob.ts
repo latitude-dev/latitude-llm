@@ -15,20 +15,15 @@ import {
   LlmEvaluationMetric,
 } from '../../../constants'
 import { generateConfigurationHash } from '../../../services/evaluationsV2/generateConfigurationHash'
+import { SerializedSpanPair } from '@latitude-data/constants/tracing'
 
 export type RecalculateAlignmentMetricJobData = {
   workspaceId: number
   commitId: number
   evaluationUuid: string
   documentUuid: string
-  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: {
-    spanId: string
-    traceId: string
-  }[]
-  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: {
-    spanId: string
-    traceId: string
-  }[]
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: SerializedSpanPair[]
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: SerializedSpanPair[]
   hasEvaluationConfigurationChanged: boolean
 }
 
@@ -96,14 +91,23 @@ export const recalculateAlignmentMetricJob = async (
       alreadyCalculatedAlignmentMetricMetadata = evaluation.alignmentMetricMetadata ?? undefined // prettier-ignore
     }
 
-    const { confusionMatrix } = await evaluateConfiguration({
-      childrenValues,
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-      alreadyCalculatedAlignmentMetricMetadata,
-    }).then((r) => r.unwrap())
+    const { confusionMatrix, latestPositiveSpanDate, latestNegativeSpanDate } =
+      await evaluateConfiguration({
+        childrenValues,
+        spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+        spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+        alreadyCalculatedAlignmentMetricMetadata,
+      }).then((r) => r.unwrap())
 
     const alignmentHash = generateConfigurationHash(evaluation)
+
+    // Update cutoffs: use new dates from rebalanced results, otherwise keep existing
+    const newPositiveCutoff =
+      latestPositiveSpanDate ??
+      evaluation.alignmentMetricMetadata?.lastProcessedPositiveSpanDate
+    const newNegativeCutoff =
+      latestNegativeSpanDate ??
+      evaluation.alignmentMetricMetadata?.lastProcessedNegativeSpanDate
 
     await updateEvaluationV2({
       evaluation,
@@ -112,6 +116,8 @@ export const recalculateAlignmentMetricJob = async (
       alignmentMetricMetadata: {
         confusionMatrix,
         alignmentHash,
+        lastProcessedPositiveSpanDate: newPositiveCutoff,
+        lastProcessedNegativeSpanDate: newNegativeCutoff,
       },
     }).then((r) => r.unwrap())
   } catch (error) {

@@ -58,13 +58,15 @@ export async function createValidationFlow(
 
   const spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation =
     examplesThatShouldPassTheEvaluationSliced.map((span) => ({
-      spanId: span.id,
+      id: span.id,
       traceId: span.traceId,
+      createdAt: new Date(span.createdAt).toISOString(),
     }))
   const spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation =
     examplesThatShouldFailTheEvaluationSliced.map((span) => ({
-      spanId: span.id,
+      id: span.id,
       traceId: span.traceId,
+      createdAt: new Date(span.createdAt).toISOString(),
     }))
 
   const allSpans = [

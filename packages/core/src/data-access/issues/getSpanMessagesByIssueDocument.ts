@@ -14,6 +14,7 @@ We're not getting the reason why the evaluation passed, as the user rarely write
 
 IMPORTANT:
 - The evaluation results MUST be from HITL evaluation results, as we want to use the user's annotations to calculate the MCC, not from other evaluations results
+- The spans MUST be ordered by the createdAt date in descending order to get the latest spans first for generating the most up-to-date config
 */
 export async function getSpanMessagesByIssueDocument({
   workspace,
@@ -32,6 +33,7 @@ export async function getSpanMessagesByIssueDocument({
     excludeIssueId: issue.id,
     page: 1,
     pageSize: 3,
+    orderDirection: 'desc',
   })
 
   if (!Result.isOk(spansResult)) {

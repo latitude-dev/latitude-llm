@@ -1,4 +1,5 @@
 import { AlignmentMetricMetadata } from '@latitude-data/constants/evaluations'
+import { SerializedSpanPair } from '@latitude-data/constants/tracing'
 import { calculateMCC } from './calculateMCC'
 import { Result } from '@latitude-data/core/lib/Result'
 
@@ -19,28 +20,41 @@ export async function evaluateConfiguration({
   childrenValues: {
     [jobKey: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any -- this is returned by bullmq
   }
-  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: Array<{
-    spanId: string
-    traceId: string
-  }>
-  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: Array<{
-    spanId: string
-    traceId: string
-  }>
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: SerializedSpanPair[]
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: SerializedSpanPair[]
   alreadyCalculatedAlignmentMetricMetadata?: AlignmentMetricMetadata
 }) {
   const {
     examplesThatShouldPassTheEvaluation,
     examplesThatShouldFailTheEvaluation,
+    processedPositivePairs,
+    processedNegativePairs,
   } = sortEvaluationResultsByShouldPassAndShouldFailTheEvaluation({
     spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
     spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     evaluationResults: childrenValues,
   })
 
-  const mccResult = calculateMCC({
+  // Rebalance if there's a mismatch (some child jobs may have failed)
+  const {
+    balancedPassResults,
+    balancedFailResults,
+    balancedPositivePairs,
+    balancedNegativePairs,
+  } = rebalanceResults({
     examplesThatShouldPassTheEvaluation,
     examplesThatShouldFailTheEvaluation,
+    processedPositivePairs,
+    processedNegativePairs,
+  })
+
+  // Calculate the latest cutoff dates from the balanced pairs
+  const latestPositiveSpanDate = getLatestDate(balancedPositivePairs)
+  const latestNegativeSpanDate = getLatestDate(balancedNegativePairs)
+
+  const mccResult = calculateMCC({
+    examplesThatShouldPassTheEvaluation: balancedPassResults,
+    examplesThatShouldFailTheEvaluation: balancedFailResults,
     alreadyCalculatedAlignmentMetricMetadata,
   })
   if (!Result.isOk(mccResult)) {
@@ -49,7 +63,43 @@ export async function evaluateConfiguration({
 
   const { mcc, confusionMatrix } = mccResult.unwrap()
 
-  return Result.ok({ mcc, confusionMatrix })
+  return Result.ok({
+    mcc,
+    confusionMatrix,
+    latestPositiveSpanDate,
+    latestNegativeSpanDate,
+  })
+}
+
+function getLatestDate(pairs: SerializedSpanPair[]): string | undefined {
+  if (pairs.length === 0) return undefined
+  return pairs.reduce((latest, pair) => {
+    return pair.createdAt > latest ? pair.createdAt : latest
+  }, pairs[0]!.createdAt)
+}
+
+function rebalanceResults({
+  examplesThatShouldPassTheEvaluation,
+  examplesThatShouldFailTheEvaluation,
+  processedPositivePairs,
+  processedNegativePairs,
+}: {
+  examplesThatShouldPassTheEvaluation: boolean[]
+  examplesThatShouldFailTheEvaluation: boolean[]
+  processedPositivePairs: SerializedSpanPair[]
+  processedNegativePairs: SerializedSpanPair[]
+}) {
+  const targetLength = Math.min(
+    examplesThatShouldPassTheEvaluation.length,
+    examplesThatShouldFailTheEvaluation.length,
+  )
+
+  return {
+    balancedPassResults: examplesThatShouldPassTheEvaluation.slice(0, targetLength), // prettier-ignore
+    balancedFailResults: examplesThatShouldFailTheEvaluation.slice(0, targetLength), // prettier-ignore
+    balancedPositivePairs: processedPositivePairs.slice(0, targetLength), // prettier-ignore
+    balancedNegativePairs: processedNegativePairs.slice(0, targetLength), // prettier-ignore
+  }
 }
 
 function sortEvaluationResultsByShouldPassAndShouldFailTheEvaluation({
@@ -57,20 +107,17 @@ function sortEvaluationResultsByShouldPassAndShouldFailTheEvaluation({
   spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
   evaluationResults,
 }: {
-  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: Array<{
-    spanId: string
-    traceId: string
-  }>
-  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: Array<{
-    spanId: string
-    traceId: string
-  }>
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: SerializedSpanPair[]
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: SerializedSpanPair[]
   evaluationResults: {
     [jobKey: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any -- this is returned by bullmq
   }
 }) {
   const examplesThatShouldPassTheEvaluation: boolean[] = []
   const examplesThatShouldFailTheEvaluation: boolean[] = []
+  const processedPositivePairs: SerializedSpanPair[] = []
+  const processedNegativePairs: SerializedSpanPair[] = []
+
   for (const evaluationResult of Object.values(evaluationResults)) {
     const {
       hasPassed,
@@ -78,22 +125,28 @@ function sortEvaluationResultsByShouldPassAndShouldFailTheEvaluation({
       evaluatedTraceId: traceId,
     } = evaluationResult
 
-    if (
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation.some(
-        (pair) => pair.spanId === spanId && pair.traceId === traceId,
+    const positivePair =
+      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation.find(
+        (pair) => pair.id === spanId && pair.traceId === traceId,
       )
-    ) {
+    if (positivePair) {
       examplesThatShouldPassTheEvaluation.push(hasPassed)
-    } else if (
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation.some(
-        (pair) => pair.spanId === spanId && pair.traceId === traceId,
-      )
-    ) {
-      examplesThatShouldFailTheEvaluation.push(hasPassed)
+      processedPositivePairs.push(positivePair)
+    } else {
+      const negativePair =
+        spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation.find(
+          (pair) => pair.id === spanId && pair.traceId === traceId,
+        )
+      if (negativePair) {
+        examplesThatShouldFailTheEvaluation.push(hasPassed)
+        processedNegativePairs.push(negativePair)
+      }
     }
   }
   return {
     examplesThatShouldPassTheEvaluation,
     examplesThatShouldFailTheEvaluation,
+    processedPositivePairs,
+    processedNegativePairs,
   }
 }
