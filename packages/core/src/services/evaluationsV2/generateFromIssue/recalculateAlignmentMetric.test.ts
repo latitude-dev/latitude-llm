@@ -205,6 +205,7 @@ describe('recalculateAlignmentMetric', () => {
       commit,
       evaluationToEvaluate,
       issue,
+      source: 'daily',
     })
 
     expect(Result.isOk(result)).toBe(true)
@@ -293,6 +294,7 @@ describe('recalculateAlignmentMetric', () => {
       commit,
       evaluationToEvaluate,
       issue,
+      source: 'daily',
     })
 
     expect(Result.isOk(result)).toBe(true)
@@ -365,6 +367,7 @@ describe('recalculateAlignmentMetric', () => {
       commit,
       evaluationToEvaluate,
       issue,
+      source: 'daily',
     })
 
     expect(Result.isOk(result)).toBe(true)
@@ -390,6 +393,7 @@ describe('recalculateAlignmentMetric', () => {
       commit,
       evaluationToEvaluate,
       issue,
+      source: 'daily',
     })
 
     expect(Result.isOk(result)).toBe(false)
@@ -415,6 +419,7 @@ describe('recalculateAlignmentMetric', () => {
       commit,
       evaluationToEvaluate,
       issue,
+      source: 'daily',
     })
 
     expect(Result.isOk(result)).toBe(false)

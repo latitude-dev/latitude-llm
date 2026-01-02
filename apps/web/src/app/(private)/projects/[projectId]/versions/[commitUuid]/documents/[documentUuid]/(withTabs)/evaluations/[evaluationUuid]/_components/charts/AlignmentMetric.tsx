@@ -1,6 +1,10 @@
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import {
+  EventArgs,
+  useSockets,
+} from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useIssue } from '$/stores/issues/issue'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -8,11 +12,16 @@ import {
   ChartWrapper,
   PanelChart,
 } from '@latitude-data/web-ui/molecules/Charts'
-import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
+import {
+  AlignmentMetricMetadata,
+  EvaluationMetric,
+  EvaluationType,
+} from '@latitude-data/core/constants'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { ConfusionMatrixTooltipContent } from '$/components/ConfusionMatrix'
 import { calculateMCC } from '$/helpers/evaluation-generation/calculateMCC'
+import { useCallback, useState } from 'react'
 
 export default function AlignmentMetricChart<
   T extends EvaluationType = EvaluationType,
@@ -28,10 +37,27 @@ export default function AlignmentMetricChart<
     issueId: evaluation.issueId,
   })
 
-  const confusionMatrix = evaluation.alignmentMetricMetadata?.confusionMatrix
+  const [alignmentMetricMetadata, setAlignmentMetricMetadata] = useState<
+    AlignmentMetricMetadata | undefined
+  >(evaluation.alignmentMetricMetadata ?? undefined)
+
+  const confusionMatrix = alignmentMetricMetadata?.confusionMatrix
   const alignmentMetric = confusionMatrix
     ? calculateMCC({ confusionMatrix })
     : undefined
+  const isRecalculating = !!alignmentMetricMetadata?.recalculatingAt
+
+  const onAlignmentMetricUpdated = useCallback(
+    (args: EventArgs<'evaluationV2AlignmentMetricUpdated'>) => {
+      if (!args || args.evaluationUuid !== evaluation.uuid) return
+      setAlignmentMetricMetadata(args.alignmentMetricMetadata)
+    },
+    [evaluation.uuid],
+  )
+  useSockets({
+    event: 'evaluationV2AlignmentMetricUpdated',
+    onMessage: onAlignmentMetricUpdated,
+  })
 
   const alignmentMetricLink =
     ROUTES.projects
@@ -47,7 +73,12 @@ export default function AlignmentMetricChart<
       }
       loading={isLoading}
     >
-      {alignmentMetric !== undefined ? (
+      {isRecalculating ? (
+        <div className='flex flex-row items-center gap-2'>
+          <Icon name='loader' spin color='foregroundMuted' size='normal' />
+          <ChartBlankSlate>Recalculating...</ChartBlankSlate>
+        </div>
+      ) : alignmentMetric !== undefined ? (
         <div className='flex flex-row items-center gap-1'>
           <PanelChart data={`${Math.round(alignmentMetric)}%`} />
 

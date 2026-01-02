@@ -17,18 +17,24 @@ import { database } from '../../../client'
 import { getEqualAmountsOfPositiveAndNegativeExamples } from './getEqualAmountsOfPositiveAndNegativeExamples'
 import { generateConfigurationHash } from '../generateConfigurationHash'
 
-/*
-  This function creates a BullMQ flow to recalculate the alignment metric of an evaluation.
+export type RecalculationSource = 'daily' | 'configChange'
 
-  To do this, it finds a set of positive and negative evaluation results from the issue and other issues/positive annotations of the same document,
-   and runs it against the created evalaluation. 
-*/
+/**
+ * Creates a BullMQ flow to recalculate the alignment metric of an evaluation.
+ *
+ * To do this, it finds a set of positive and negative evaluation results from the issue
+ * and other issues/positive annotations of the same document, and runs it against the created evaluation.
+ *
+ * @param source - 'daily' uses day-based idempotency (prevents duplicate daily runs),
+ *                 'configChange' uses timestamp-based idempotency (allows immediate re-runs)
+ */
 export async function recalculateAlignmentMetric(
   {
     workspace,
     commit,
     evaluationToEvaluate,
     issue,
+    source,
   }: {
     workspace: Workspace
     commit: Commit
@@ -37,6 +43,7 @@ export async function recalculateAlignmentMetric(
       LlmEvaluationMetric.Binary
     >
     issue: Issue
+    source: RecalculationSource
   },
   db = database,
 ) {
@@ -76,14 +83,14 @@ export async function recalculateAlignmentMetric(
 
   const spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation =
     examplesThatShouldPassTheEvaluationSliced.map((span) => ({
-      spanId: span.id,
+      id: span.id,
       traceId: span.traceId,
       createdAt: new Date(span.createdAt).toISOString(),
     }))
 
   const spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation =
     examplesThatShouldFailTheEvaluationSliced.map((span) => ({
-      spanId: span.id,
+      id: span.id,
       traceId: span.traceId,
       createdAt: new Date(span.createdAt).toISOString(),
     }))
@@ -102,10 +109,14 @@ export async function recalculateAlignmentMetric(
     }),
   })
 
-  // Idempotency keys to avoid recalculating the alignment metric multiple times (if error occured or if trying more than once a day)
-  const recalculateAligmentIdempotencyKey = `recalculateAlignmentMetricJob-evaluationUuid=${evaluationToEvaluate.uuid}-day=${new Date().toISOString().split('T')[0]}` // prettier-ignore
+  const idempotencySuffix =
+    source === 'daily'
+      ? `day=${new Date().toISOString().split('T')[0]}`
+      : `ts=${Date.now()}`
+
+  const recalculateAlignmentIdempotencyKey = `recalculateAlignmentMetricJob-evaluationUuid=${evaluationToEvaluate.uuid}-${idempotencySuffix}` // prettier-ignore
   const runEvaluationV2JobIdempotencyKey = (span: Span) =>
-    `runEvaluationV2Job-evaluationUuid=${evaluationToEvaluate.uuid}-spanId=${span.id}-traceId=${span.traceId}-day=${new Date().toISOString().split('T')[0]}` // prettier-ignore
+    `runEvaluationV2Job-evaluationUuid=${evaluationToEvaluate.uuid}-spanId=${span.id}-traceId=${span.traceId}-${idempotencySuffix}` // prettier-ignore
 
   const { job: validationFlowJob } = await flowProducer.add({
     name: `recalculateAlignmentMetricJob`,
@@ -120,7 +131,7 @@ export async function recalculateAlignmentMetric(
       hasEvaluationConfigurationChanged,
     },
     opts: {
-      jobId: recalculateAligmentIdempotencyKey,
+      jobId: recalculateAlignmentIdempotencyKey,
       // FlowProducer does not inherit
       attempts: 3,
       backoff: {

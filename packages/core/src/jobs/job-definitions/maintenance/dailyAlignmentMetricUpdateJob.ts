@@ -93,6 +93,7 @@ export async function dailyAlignmentMetricUpdateJob(
           evaluationUuid: evaluation.uuid,
           documentUuid: evaluation.documentUuid,
           issueId: evaluation.issueId,
+          source: 'daily' as const,
         },
         { attempts: 1 },
       )

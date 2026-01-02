@@ -6,6 +6,7 @@
 import {
   ActiveEvaluation,
   ActiveRun,
+  AlignmentMetricMetadata,
   DocumentLogWithMetadataAndError,
   EvaluationResultV2,
   EvaluationV2,
@@ -190,8 +191,16 @@ type SpanCreatedArgs = {
   span: Span
 }
 
+type EvaluationV2AlignmentMetricUpdatedArgs = {
+  evaluationUuid: string
+  alignmentMetricMetadata: AlignmentMetricMetadata | undefined
+}
+
 export type WebServerToClientEvents = {
   evaluationStatus: (args: EvaluationStatusArgs) => void
+  evaluationV2AlignmentMetricUpdated: (
+    args: EvaluationV2AlignmentMetricUpdatedArgs,
+  ) => void
   experimentStatus: (args: ExperimentStatusArgs) => void
   datasetRowsCreated: (args: DatasetRowsCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
@@ -230,6 +239,10 @@ export type WorkersClientToServerEvents = {
   evaluationResultV2Created: (args: {
     workspaceId: number
     data: EvaluationResultV2CreatedArgs
+  }) => void
+  evaluationV2AlignmentMetricUpdated: (args: {
+    workspaceId: number
+    data: EvaluationV2AlignmentMetricUpdatedArgs
   }) => void
   experimentStatus: (args: {
     workspaceId: number

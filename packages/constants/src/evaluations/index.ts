@@ -170,6 +170,8 @@ export type AlignmentMetricMetadata = {
   // Cutoff dates for incremental processing - ISO date strings
   lastProcessedPositiveSpanDate?: string
   lastProcessedNegativeSpanDate?: string
+  // ISO date string indicating recalculation is in progress
+  recalculatingAt?: string
 }
 
 export type EvaluationV2<

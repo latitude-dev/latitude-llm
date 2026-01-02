@@ -1,5 +1,6 @@
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
+import { publisher } from '../../../events/publisher'
 import { NotFoundError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { evaluateConfiguration } from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
@@ -109,17 +110,29 @@ export const recalculateAlignmentMetricJob = async (
       latestNegativeSpanDate ??
       evaluation.alignmentMetricMetadata?.lastProcessedNegativeSpanDate
 
+    const updatedAlignmentMetricMetadata = {
+      confusionMatrix,
+      alignmentHash,
+      lastProcessedPositiveSpanDate: newPositiveCutoff,
+      lastProcessedNegativeSpanDate: newNegativeCutoff,
+      recalculatingAt: undefined,
+    }
+
     await updateEvaluationV2({
       evaluation,
       workspace,
       commit: commit,
-      alignmentMetricMetadata: {
-        confusionMatrix,
-        alignmentHash,
-        lastProcessedPositiveSpanDate: newPositiveCutoff,
-        lastProcessedNegativeSpanDate: newNegativeCutoff,
-      },
+      alignmentMetricMetadata: updatedAlignmentMetricMetadata,
     }).then((r) => r.unwrap())
+
+    publisher.publishLater({
+      type: 'evaluationV2AlignmentUpdated',
+      data: {
+        workspaceId,
+        evaluationUuid,
+        alignmentMetricMetadata: updatedAlignmentMetricMetadata,
+      },
+    })
   } catch (error) {
     const { attemptsMade, opts } = job
     const maxAttempts = opts.attempts ?? 1
@@ -129,6 +142,40 @@ export const recalculateAlignmentMetricJob = async (
     // Only failing in last attempt of the job, there are more attempts to retry to calculate the alignment metric if not
     if (isLastAttempt) {
       captureException(error as Error)
+
+      const failedAlignmentMetricMetadata = {
+        alignmentHash: evaluation.alignmentMetricMetadata?.alignmentHash ?? '',
+        confusionMatrix: evaluation.alignmentMetricMetadata
+          ?.confusionMatrix ?? {
+          truePositives: 0,
+          trueNegatives: 0,
+          falsePositives: 0,
+          falseNegatives: 0,
+        },
+        lastProcessedNegativeSpanDate:
+          evaluation.alignmentMetricMetadata?.lastProcessedNegativeSpanDate ??
+          undefined,
+        lastProcessedPositiveSpanDate:
+          evaluation.alignmentMetricMetadata?.lastProcessedPositiveSpanDate ??
+          undefined,
+        recalculatingAt: undefined,
+      }
+
+      await updateEvaluationV2({
+        evaluation,
+        workspace,
+        commit: commit,
+        alignmentMetricMetadata: failedAlignmentMetricMetadata,
+      }).catch(() => {})
+
+      publisher.publishLater({
+        type: 'evaluationV2AlignmentUpdated',
+        data: {
+          workspaceId,
+          evaluationUuid,
+          alignmentMetricMetadata: failedAlignmentMetricMetadata,
+        },
+      })
     }
 
     // Throwing the error here will propagate the error to BullMQ, which will retry the job
