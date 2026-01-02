@@ -28,7 +28,7 @@ const createIntegrationLatte = defineLatteTool(
     })
 
     if (!Result.isOk(result)) return result
-    const integration = result.unwrap()
+    const { integration } = result.unwrap()
     return Result.ok(integrationPresenter(integration))
   },
   z.object({

@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createIntegrationAction } from '$/actions/integrations/create'
 import { destroyIntegrationAction } from '$/actions/integrations/destroy'
+import { reauthorizeIntegrationAction } from '$/actions/integrations/reauthorize'
 import { scaleDownMcpServerAction } from '$/actions/integrations/scaleDown'
 import { scaleUpMcpServerAction } from '$/actions/integrations/scaleUp'
 import useFetcher from '$/hooks/useFetcher'
@@ -147,6 +148,17 @@ export default function useIntegrations({
     },
   )
 
+  const { execute: reauthorize, isPending: isReauthorizing } =
+    useLatitudeAction(reauthorizeIntegrationAction, {
+      onSuccess: async ({ data: result }) => {
+        toast({
+          title: 'OAuth Required',
+          description: 'Redirecting to complete OAuth authentication...',
+        })
+        window.location.href = result.oauthRedirectUrl
+      },
+    })
+
   return useMemo(
     () => ({
       data,
@@ -159,6 +171,8 @@ export default function useIntegrations({
       isScalingDown,
       scaleUp,
       isScalingUp,
+      reauthorize,
+      isReauthorizing,
       mutate,
       ...rest,
     }),
@@ -173,6 +187,8 @@ export default function useIntegrations({
       isScalingDown,
       scaleUp,
       isScalingUp,
+      reauthorize,
+      isReauthorizing,
       mutate,
       rest,
     ],

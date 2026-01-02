@@ -4,9 +4,11 @@ import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { integrations } from '../../schema/models/integrations'
+import { eq } from 'drizzle-orm'
 import {
   ExternalMcpIntegrationConfiguration,
   HostedMcpIntegrationConfigurationForm,
+  OAuthStatus,
   PipedreamIntegrationConfiguration,
   UnconfiguredPipedreamIntegrationConfiguration,
 } from './helpers/schema'
@@ -89,6 +91,24 @@ export async function createIntegration<p extends IntegrationType>(
     return Result.error(componentsResult.error!)
   }
 
+  const needsOAuth =
+    type === IntegrationType.ExternalMCP &&
+    (configuration as ExternalMcpIntegrationConfiguration).useOAuth
+
+  // For OAuth integrations, we need to:
+  // 1. Create the integration first (OAuth registration needs the integration ID)
+  // 2. Do OAuth registration
+  // 3. If OAuth fails, delete the integration
+  // This ensures we don't leave orphaned integrations on OAuth failure.
+
+  // For OAuth integrations, set status to pending until callback completes
+  const finalConfiguration = needsOAuth
+    ? {
+        ...(configuration as ExternalMcpIntegrationConfiguration),
+        oauthStatus: OAuthStatus.pending,
+      }
+    : configuration
+
   const integrationResult = await transaction.call(async (tx) => {
     const result = await tx
       .insert(integrations)
@@ -96,7 +116,7 @@ export async function createIntegration<p extends IntegrationType>(
         workspaceId: workspace.id,
         name,
         type,
-        configuration: configuration as ExternalMcpIntegrationConfiguration,
+        configuration: finalConfiguration as ExternalMcpIntegrationConfiguration,
         authorId: author.id,
         ...componentsResult.unwrap(),
       })
@@ -109,18 +129,20 @@ export async function createIntegration<p extends IntegrationType>(
     return Result.error(integrationResult.error!)
   }
 
-  const integration = integrationResult.value
+  const integration = integrationResult.value!
 
-  if (
-    type === IntegrationType.ExternalMCP &&
-    (configuration as ExternalMcpIntegrationConfiguration).useOAuth
-  ) {
+  if (needsOAuth) {
     const oauthResult = await initiateOAuthRegistration({
       integration,
       authorId: author.id,
     })
 
     if (!oauthResult.ok) {
+      // OAuth failed - delete the integration we just created
+      await transaction.call(async (tx) => {
+        await tx.delete(integrations).where(eq(integrations.id, integration.id))
+        return Result.ok(undefined)
+      })
       return Result.error(oauthResult.error!)
     }
 

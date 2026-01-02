@@ -104,7 +104,12 @@ async function findMatchingIntegration({
     configuration: copyIntegrationConfiguration(originIntegration)!,
     author: targetUser,
   })
-  return newIntegrationResult
+
+  if (!newIntegrationResult.ok) {
+    return Result.error(newIntegrationResult.error!)
+  }
+
+  return Result.ok(newIntegrationResult.value!.integration)
 }
 
 /**

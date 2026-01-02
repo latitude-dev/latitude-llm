@@ -52,26 +52,37 @@ export const PIPEDREAM_MCP_URL = 'https://remote.mcp.pipedream.net'
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
 
+type CreateMcpTransportOptions = {
+  authProvider?: OAuthClientProvider
+  headers?: Record<string, string>
+}
+
 export function createMcpTransport(
   url: string,
-  authProvider?: OAuthClientProvider,
+  options?: CreateMcpTransportOptions,
 ): TypedResult<McpClientTransport, McpUrlError> {
   const urlWithProtocol = url.match(/^https?:\/\//) ? url : `http://${url}`
   try {
     const urlObject = new URL(urlWithProtocol)
 
+    const requestInit: RequestInit | undefined = options?.headers
+      ? { headers: options.headers }
+      : undefined
+
     const isSSE = urlObject.pathname.endsWith('/sse')
     if (isSSE) {
       return Result.ok(
         new SSEClientTransport(urlObject, {
-          authProvider,
+          authProvider: options?.authProvider,
+          requestInit,
         }),
       )
     }
 
     return Result.ok(
       new StreamableHTTPClientTransport(urlObject, {
-        authProvider,
+        authProvider: options?.authProvider,
+        requestInit,
       }),
     )
   } catch (error) {

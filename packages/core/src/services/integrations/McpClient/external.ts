@@ -53,10 +53,10 @@ export async function createAndConnectExternalMcpClient(
     })
   }
 
-  const transportResult = createMcpTransport(
-    integration.configuration.url,
-    oauthProvider,
-  )
+  const transportResult = createMcpTransport(integration.configuration.url, {
+    authProvider: oauthProvider,
+    headers: integration.configuration.headers,
+  })
   if (!Result.isOk(transportResult)) {
     return Result.error(new McpConnectionError(transportResult.error.message))
   }

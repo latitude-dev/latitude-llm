@@ -10,10 +10,13 @@ import { mcpOAuthCredentials } from '../../../schema/models/mcpOAuthCredentials'
 describe('McpOAuthProvider', () => {
   let workspace: Workspace
   let integration: IntegrationDto
+  let userId: string
 
   beforeEach(async () => {
-    const { workspace: createdWorkspace } = await factories.createWorkspace()
+    const { workspace: createdWorkspace, userData } =
+      await factories.createWorkspace()
     workspace = createdWorkspace
+    userId = userData.id
 
     integration = await factories.createIntegration({
       workspace,
@@ -93,12 +96,11 @@ describe('McpOAuthProvider', () => {
   })
 
   it('should save author ID when provided', async () => {
-    const authorId = 'test-author-id'
     const provider = new McpOAuthProvider({
       redirectUrl: 'https://app.example.com/callback',
       integration,
       credentials: null,
-      authorId,
+      authorId: userId,
     })
 
     await provider.saveTokens({
@@ -111,7 +113,7 @@ describe('McpOAuthProvider', () => {
       integration.id,
     )
     expect(storedCredentials).toBeDefined()
-    expect(storedCredentials?.authorId).toBe(authorId)
+    expect(storedCredentials?.authorId).toBe(userId)
   })
 
   it('should save and retrieve code verifier', async () => {
