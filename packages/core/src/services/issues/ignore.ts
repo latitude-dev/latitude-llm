@@ -18,6 +18,12 @@ export async function ignoreIssue(
   },
   transaction = new Transaction(),
 ) {
+  if (issue.mergedAt) {
+    return Result.error(
+      new UnprocessableEntityError('Cannot ignore a merged issue'),
+    )
+  }
+
   if (issue.resolvedAt) {
     return Result.error(
       new UnprocessableEntityError('Cannot ignore a resolved issue'),

@@ -52,6 +52,32 @@ describe('unresolveIssue', () => {
     expect(unresolvedIssue.resolvedAt).toBeNull()
   })
 
+  it('fails when issue is merged', async () => {
+    const { workspace, project, documents } = await createProject({
+      documents: { 'test-doc': 'Hello world' },
+    })
+    const document = documents[0]!
+    const user = await createUser()
+
+    const { issue } = await createIssue({
+      workspace,
+      project,
+      document,
+      createdAt: new Date(),
+    })
+
+    const [mergedIssue] = await database
+      .update(issues)
+      .set({ mergedAt: new Date(), resolvedAt: new Date() })
+      .where(eq(issues.id, issue.id))
+      .returning()
+
+    const result = await unresolveIssue({ issue: mergedIssue!, user })
+
+    expect(result.ok).toBe(false)
+    expect(result.error!.message).toContain('Cannot unresolve a merged issue')
+  })
+
   it('fails when issue is ignored', async () => {
     const { workspace, project, documents } = await createProject({
       documents: { 'test-doc': 'Hello world' },

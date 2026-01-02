@@ -34,20 +34,21 @@ const UNDO_MESSAGES = {
   },
 }
 
+type IssueActionsProps = {
+  issue: SerializedIssue
+  placement: 'item' | 'details'
+  onOptimisticAction?: () => void
+}
 /**
  * The way this works is tha optimistic updates are performed immediately on the SWR cache,
  * and a toast with an "Undo" action is shown. If the user clicks "Undo", the cache is reverted.
  * If the timeout elapses without an undo, the backend call is made to perform the action.
  */
-export function IssueItemActions({
+function RealIssueItemActions({
   issue,
   placement,
   onOptimisticAction,
-}: {
-  issue: SerializedIssue
-  placement: 'item' | 'details'
-  onOptimisticAction?: () => void
-}) {
+}: IssueActionsProps) {
   const { mutate } = useSWRConfig()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -324,5 +325,21 @@ export function IssueItemActions({
         evaluations={issueEvaluations}
       />
     </>
+  )
+}
+
+export function IssueItemActions({
+  issue,
+  placement,
+  onOptimisticAction,
+}: IssueActionsProps) {
+  if (issue.isMerged) return null
+
+  return (
+    <RealIssueItemActions
+      issue={issue}
+      placement={placement}
+      onOptimisticAction={onOptimisticAction}
+    />
   )
 }
