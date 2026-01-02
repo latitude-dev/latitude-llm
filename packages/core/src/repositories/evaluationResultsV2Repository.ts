@@ -812,6 +812,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       eq(issueEvaluationResults.issueId, issueId),
       isNotNull(commits.mergedAt),
       isNull(evaluationResultsV2.error),
+      isNull(evaluationResultsV2.experimentId),
       sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
     ]
 

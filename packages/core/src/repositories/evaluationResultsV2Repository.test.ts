@@ -522,4 +522,84 @@ describe('EvaluationResultsV2Repository', () => {
       expect(results.find((r) => r.id === result3.id)).toBeDefined()
     })
   })
+
+  describe('selectForIssueGeneration', () => {
+    it('excludes results from experiments', async () => {
+      const { commit, documents, user } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          prompt: factories.helpers.createPrompt({ provider: 'openai' }),
+        },
+      })
+
+      const document = documents[0]!
+      const { issue } = await factories.createIssue({
+        workspace,
+        project: { id: commit.projectId } as any,
+        document,
+      })
+
+      const evaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+      })
+
+      const { experiment } = await factories.createExperiment({
+        workspace,
+        user,
+        document,
+        commit,
+        evaluations: [evaluation],
+      })
+
+      // Create a non-experiment result (should be included)
+      const span1 = await factories.createSpan({
+        workspaceId: workspace.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+      })
+      const nonExperimentResult = await factories.createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: span1,
+        hasPassed: false,
+      })
+      await factories.createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: nonExperimentResult,
+      })
+
+      // Create an experiment result (should be excluded)
+      const span2 = await factories.createSpan({
+        workspaceId: workspace.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+      })
+      const experimentResult = await factories.createEvaluationResultV2({
+        workspace,
+        evaluation,
+        experiment,
+        commit,
+        span: span2,
+        hasPassed: false,
+      })
+      await factories.createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: experimentResult,
+      })
+
+      const result = await repository.selectForIssueGeneration({
+        issueId: issue.id,
+      })
+      const results = result.unwrap()
+
+      expect(results.find((r) => r.id === nonExperimentResult.id)).toBeDefined()
+      expect(results.find((r) => r.id === experimentResult.id)).toBeUndefined()
+    })
+  })
 })

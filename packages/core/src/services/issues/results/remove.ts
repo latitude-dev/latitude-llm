@@ -177,26 +177,26 @@ export async function removeResultFromIssue<
       return Result.ok({ issue, histogram, result })
     },
     async ({ issue }) => {
-      if (!issueWasLast) {
-        const payload = { workspaceId: workspace.id, issueId: issue.id }
-        const { issuesQueue } = await queues()
+      if (issueWasLast || !shouldUpdateCentroid) return
 
-        await issuesQueue.add('generateIssueDetailsJob', payload, {
-          attempts: ISSUE_JOBS_MAX_ATTEMPTS,
-          deduplication: {
-            id: generateIssueDetailsJobKey(payload),
-            ttl: ISSUE_JOBS_GENERATE_DETAILS_THROTTLE,
-          },
-        })
+      const payload = { workspaceId: workspace.id, issueId: issue.id }
+      const { issuesQueue } = await queues()
 
-        await issuesQueue.add('mergeCommonIssuesJob', payload, {
-          attempts: ISSUE_JOBS_MAX_ATTEMPTS,
-          deduplication: {
-            id: mergeCommonIssuesJobKey(payload),
-            ttl: ISSUE_JOBS_MERGE_COMMON_THROTTLE,
-          },
-        })
-      }
+      await issuesQueue.add('generateIssueDetailsJob', payload, {
+        attempts: ISSUE_JOBS_MAX_ATTEMPTS,
+        deduplication: {
+          id: generateIssueDetailsJobKey(payload),
+          ttl: ISSUE_JOBS_GENERATE_DETAILS_THROTTLE,
+        },
+      })
+
+      await issuesQueue.add('mergeCommonIssuesJob', payload, {
+        attempts: ISSUE_JOBS_MAX_ATTEMPTS,
+        deduplication: {
+          id: mergeCommonIssuesJobKey(payload),
+          ttl: ISSUE_JOBS_MERGE_COMMON_THROTTLE,
+        },
+      })
     },
   )
 }

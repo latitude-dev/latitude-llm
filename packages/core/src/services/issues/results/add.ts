@@ -145,6 +145,8 @@ export async function addResultToIssue<
       return Result.ok({ issue, histogram, result })
     },
     async ({ issue }) => {
+      if (!shouldUpdateCentroid) return
+
       const payload = { workspaceId: workspace.id, issueId: issue.id }
       const { issuesQueue } = await queues()
 

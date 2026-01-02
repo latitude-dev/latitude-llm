@@ -5,6 +5,18 @@ import { mergeCommit } from '../services/commits'
 import * as factories from './factories'
 import { env } from '@latitude-data/env'
 
+/**
+ * Waits for async Transaction success callbacks to complete.
+ *
+ * The Transaction class calls success callbacks without awaiting them
+ * (see Transaction.ts). When callbacks are async, they start executing
+ * but the Transaction.call() returns before they complete. This helper
+ * gives the event loop time to process those pending promises.
+ */
+export function waitForTransactionCallbacks() {
+  return new Promise((resolve) => setTimeout(resolve, 100))
+}
+
 export async function testConsumeStream(stream: ReadableStream) {
   const reader = stream.getReader()
 
