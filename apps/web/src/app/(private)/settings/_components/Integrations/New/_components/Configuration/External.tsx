@@ -205,6 +205,7 @@ export const ExternalIntegrationConfiguration = forwardRef<
                     type='password'
                   />
                   <Button
+                    type='button'
                     variant='ghost'
                     size='small'
                     onClick={() => removeHeader(index)}
@@ -213,7 +214,7 @@ export const ExternalIntegrationConfiguration = forwardRef<
                   </Button>
                 </div>
               ))}
-              <Button variant='outline' onClick={addHeader}>
+              <Button type='button' variant='outline' onClick={addHeader}>
                 <Icon name='plus' />
                 Add Header
               </Button>
