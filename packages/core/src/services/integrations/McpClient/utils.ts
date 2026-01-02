@@ -1,6 +1,7 @@
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import { OAuthClientProvider } from '@modelcontextprotocol/sdk/client/auth.js'
 import { LatitudeError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 
@@ -53,6 +54,7 @@ export const sleep = (ms: number): Promise<void> =>
 
 export function createMcpTransport(
   url: string,
+  authProvider?: OAuthClientProvider,
 ): TypedResult<McpClientTransport, McpUrlError> {
   const urlWithProtocol = url.match(/^https?:\/\//) ? url : `http://${url}`
   try {
@@ -60,10 +62,18 @@ export function createMcpTransport(
 
     const isSSE = urlObject.pathname.endsWith('/sse')
     if (isSSE) {
-      return Result.ok(new SSEClientTransport(urlObject))
+      return Result.ok(
+        new SSEClientTransport(urlObject, {
+          authProvider,
+        }),
+      )
     }
 
-    return Result.ok(new StreamableHTTPClientTransport(urlObject))
+    return Result.ok(
+      new StreamableHTTPClientTransport(urlObject, {
+        authProvider,
+      }),
+    )
   } catch (error) {
     return Result.error(new McpUrlError(`Invalid MCP server URL: ${url}`))
   }
