@@ -361,6 +361,10 @@ export class IssueHistogramsRepository extends Repository<IssueHistogram> {
       totalCount: sql<number>`COALESCE(SUM(${issueHistograms.count}), 0)`.as(
         'totalCount',
       ),
+      lastCommitId:
+        sql<number>`(array_agg(${issueHistograms.commitId} ORDER BY ${issueHistograms.occurredAt} DESC))[1]`.as(
+          'lastCommitId',
+        ),
     }
   }
 }

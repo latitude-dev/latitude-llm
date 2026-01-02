@@ -3,7 +3,6 @@
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { relativeTime } from '$/lib/relativeTime'
 import { EvaluationResultV2, PromptSpan } from '@latitude-data/constants'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -19,6 +18,8 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import { CommitVersionCell } from '$/components/CommitVersionCell'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 
 type SpanRowProps = {
   span: PromptSpan
@@ -142,19 +143,7 @@ export function SpanRow({
           </Text.H5>
         </TableCell>
         <TableCell>
-          <div className='flex flex-row gap-1 items-center truncate'>
-            <Badge
-              variant={commit.version ? 'accent' : 'muted'}
-              className='flex-shrink-0'
-            >
-              <Text.H6 noWrap>
-                {commit.version ? `v${commit.version}` : 'Draft'}
-              </Text.H6>
-            </Badge>
-            <Text.H5 noWrap ellipsis color={textColor}>
-              {commit.title}
-            </Text.H5>
-          </div>
+          <CommitVersionCell commit={commit} textColor={textColor} />
         </TableCell>
         <TableCell>
           <Text.H5 noWrap color={textColor}>

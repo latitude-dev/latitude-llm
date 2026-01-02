@@ -1,3 +1,5 @@
+import { CommitVersionCell } from '$/components/CommitVersionCell'
+import { ROUTES } from '$/services/routes'
 import { SerializedIssue } from '$/stores/issues'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -6,6 +8,7 @@ import Link from 'next/link'
 import { HistogramCell } from '../../HistogramCell'
 import { StatusBadges, useIssueStatuses } from '../../IssueStatusBadge'
 import { LastSeenCell } from '../../LastSeenCell'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 
 export function IssueDetails({ issue }: { issue: SerializedIssue }) {
   const mergedToIssue = issue.mergedToIssue as
@@ -51,6 +54,22 @@ export function IssueDetails({ issue }: { issue: SerializedIssue }) {
         <Text.H5 color='foregroundMuted'>Last occurrence</Text.H5>
         <div>
           <LastSeenCell issue={issue} />
+        </div>
+
+        <Text.H5 color='foregroundMuted'>Last version</Text.H5>
+        <div>
+          <Link
+            className='flex items-center gap-2'
+            href={
+              ROUTES.projects
+                .detail({ id: issue.projectId })
+                .commits.detail({ uuid: issue.lastCommit.uuid })
+                .documents.detail({ uuid: issue.documentUuid }).root
+            }
+          >
+            <CommitVersionCell commit={issue.lastCommit} />
+            <Icon name='externalLink' />
+          </Link>
         </div>
 
         <Text.H5 color='foregroundMuted'>Trend</Text.H5>
