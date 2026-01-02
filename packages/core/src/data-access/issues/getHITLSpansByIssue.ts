@@ -40,7 +40,7 @@ export async function getHITLSpansByIssue(
     issue: Issue
     page: number
     pageSize: number
-    afterDate?: string
+    afterDate?: Date
     orderDirection?: 'asc' | 'desc'
   },
   db = database,

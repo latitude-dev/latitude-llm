@@ -15,15 +15,15 @@ import {
   LlmEvaluationMetric,
 } from '../../../constants'
 import { generateConfigurationHash } from '../../../services/evaluationsV2/generateConfigurationHash'
-import { Span } from '@latitude-data/constants/tracing'
+import { SerializedSpanPair } from './validateGeneratedEvaluationJob'
 
 export type RecalculateAlignmentMetricJobData = {
   workspaceId: number
   commitId: number
   evaluationUuid: string
   documentUuid: string
-  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: Pick<Span, 'id' | 'traceId' | 'createdAt'>[] // prettier-ignore
-  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: Pick<Span, 'id' | 'traceId' | 'createdAt'>[] // prettier-ignore
+  spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: SerializedSpanPair[]
+  spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: SerializedSpanPair[]
   hasEvaluationConfigurationChanged: boolean
 }
 

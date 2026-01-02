@@ -2,16 +2,16 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { describe, expect, it, vi } from 'vitest'
 import * as calculateMCCModule from './calculateMCC'
 import { evaluateConfiguration } from './evaluateConfiguration'
-import { Span } from '@latitude-data/constants/tracing'
+import { SerializedSpanPair } from '../../../jobs/job-definitions/evaluations/validateGeneratedEvaluationJob'
 
 const createPair = (
   spanId: string,
   traceId: string,
-  createdAt?: Date,
-): Pick<Span, 'id' | 'traceId' | 'createdAt'> => ({
+  createdAt?: string,
+): SerializedSpanPair => ({
   id: spanId,
   traceId,
-  createdAt: createdAt ?? new Date(),
+  createdAt: createdAt ?? new Date().toISOString(),
 })
 
 /**
@@ -260,8 +260,8 @@ describe('evaluateConfiguration', () => {
           falseNegatives: 1,
         },
         alignmentHash: 'existing-hash-123',
-        lastProcessedPositiveSpanDate: '2024-01-01T00:00:00.000Z',
-        lastProcessedNegativeSpanDate: '2024-01-01T00:00:00.000Z',
+        lastProcessedPositiveSpanDate: new Date('2024-01-01T00:00:00.000Z'),
+        lastProcessedNegativeSpanDate: new Date('2024-01-01T00:00:00.000Z'),
       }
 
       await evaluateConfiguration({
@@ -288,28 +288,12 @@ describe('evaluateConfiguration', () => {
           },
         },
         spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation: [
-          createPair(
-            'good-1',
-            'trace-good-1',
-            new Date('2024-06-01T12:00:00.000Z'),
-          ),
-          createPair(
-            'good-2',
-            'trace-good-2',
-            new Date('2024-06-02T12:00:00.000Z'),
-          ),
+          createPair('good-1', 'trace-good-1', '2024-06-01T12:00:00.000Z'),
+          createPair('good-2', 'trace-good-2', '2024-06-02T12:00:00.000Z'),
         ],
         spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
-          createPair(
-            'bad-1',
-            'trace-bad-1',
-            new Date('2024-06-01T14:00:00.000Z'),
-          ),
-          createPair(
-            'bad-2',
-            'trace-bad-2',
-            new Date('2024-06-02T14:00:00.000Z'),
-          ),
+          createPair('bad-1', 'trace-bad-1', '2024-06-01T14:00:00.000Z'),
+          createPair('bad-2', 'trace-bad-2', '2024-06-02T14:00:00.000Z'),
         ],
         alreadyCalculatedAlignmentMetricMetadata: existingMetadata,
       })

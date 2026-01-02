@@ -16,8 +16,8 @@ export async function hasUnprocessedSpans(
     workspace: Workspace
     commit: Commit
     issue: Issue
-    positiveSpanCutoffDate?: string
-    negativeSpanCutoffDate?: string
+    positiveSpanCutoffDate?: Date
+    negativeSpanCutoffDate?: Date
   },
   db = database,
 ) {
