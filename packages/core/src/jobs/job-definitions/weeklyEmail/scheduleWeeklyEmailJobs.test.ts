@@ -48,12 +48,12 @@ describe('scheduleWeeklyEmailJobs', () => {
 
     expect(mockAdd).toHaveBeenCalledWith(
       'sendWeeklyEmailJob',
-      { workspaceId: workspace1.id },
+      { workspaceId: String(workspace1.id) },
       { attempts: 3 },
     )
     expect(mockAdd).toHaveBeenCalledWith(
       'sendWeeklyEmailJob',
-      { workspaceId: workspace2.id },
+      { workspaceId: String(workspace2.id) },
       { attempts: 3 },
     )
   })
@@ -73,7 +73,7 @@ describe('scheduleWeeklyEmailJobs', () => {
     await scheduleWeeklyEmailJobs({} as Job)
     expect(mockAdd).not.toHaveBeenCalledWith(
       'sendWeeklyEmailJob',
-      { workspaceId: workspace.id },
+      { workspaceId: String(workspace.id) },
       expect.any(Object),
     )
   })
@@ -96,7 +96,7 @@ describe('scheduleWeeklyEmailJobs', () => {
 
     expect(mockAdd).not.toHaveBeenCalledWith(
       'sendWeeklyEmailJob',
-      { workspaceId: bigWorkspace.id },
+      { workspaceId: String(bigWorkspace.id) },
       expect.any(Object),
     )
   })
@@ -135,18 +135,18 @@ describe('scheduleWeeklyEmailJobs', () => {
 
     expect(mockAdd).toHaveBeenCalledWith(
       'sendWeeklyEmailJob',
-      { workspaceId: activeWorkspace.id },
+      { workspaceId: String(activeWorkspace.id) },
       { attempts: 3 },
     )
 
     expect(mockAdd).not.toHaveBeenCalledWith(
       'sendWeeklyEmailJob',
-      { workspaceId: bigWorkspace.id },
+      { workspaceId: String(bigWorkspace.id) },
       expect.any(Object),
     )
     expect(mockAdd).not.toHaveBeenCalledWith(
       'sendWeeklyEmailJob',
-      { workspaceId: inactiveWorkspace.id },
+      { workspaceId: String(inactiveWorkspace.id) },
       expect.any(Object),
     )
   })
