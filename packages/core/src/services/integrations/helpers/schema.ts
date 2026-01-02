@@ -4,19 +4,9 @@ import {
 } from '@latitude-data/constants'
 import { z } from 'zod'
 
-export const externalMcpOAuthSchema = z.object({
-  clientId: z.string().optional(),
-  clientSecret: z.string().optional(),
-  clientName: z.string().optional(),
-  scope: z.string().optional(),
-})
-
-export type ExternalMcpOAuthConfig = z.infer<typeof externalMcpOAuthSchema>
-
 export const externalMcpIntegrationConfigurationSchema = z.object({
   url: z.string(),
   useOAuth: z.boolean().optional(),
-  oauth: externalMcpOAuthSchema.optional(),
 })
 
 export type ExternalMcpIntegrationConfiguration = z.infer<

@@ -18,9 +18,6 @@ export const ExternalIntegrationConfiguration = forwardRef<
   const { execute, isPending } = useLatitudeAction(pingCustomMcpAction)
   const [url, setUrl] = useState<string>('')
   const [useOAuth, setUseOAuth] = useState<boolean>(false)
-  const [oauthClientId, setOAuthClientId] = useState<string>('')
-  const [oauthClientSecret, setOAuthClientSecret] = useState<string>('')
-  const [oauthScope, setOAuthScope] = useState<string>('')
 
   useImperativeHandle(
     ref,
@@ -38,18 +35,11 @@ export const ExternalIntegrationConfiguration = forwardRef<
           configuration: {
             url,
             useOAuth,
-            oauth: useOAuth
-              ? {
-                  clientId: oauthClientId || undefined,
-                  clientSecret: oauthClientSecret || undefined,
-                  scope: oauthScope || undefined,
-                }
-              : undefined,
           },
         }
       },
     }),
-    [url, useOAuth, oauthClientId, oauthClientSecret, oauthScope, execute],
+    [url, useOAuth, execute],
   )
 
   return (
@@ -73,38 +63,14 @@ export const ExternalIntegrationConfiguration = forwardRef<
         onCheckedChange={(checked) => setUseOAuth(checked === true)}
         name='useOAuth'
         label='Use OAuth authentication'
-        description='Enable if the MCP server requires OAuth authentication. Connection will be validated during the OAuth flow.'
+        description='Enable if the MCP server requires OAuth authentication. Uses dynamic client registration (RFC 7591).'
       />
       {useOAuth && (
         <div className='flex flex-col gap-4 pl-6 border-l-2 border-muted'>
           <Text.H5 color='foregroundMuted'>
-            When OAuth is enabled, the connection will be authenticated during
-            your first use of the integration. OAuth credentials are optional
-            for servers that support dynamic client registration. Provide them
-            if your server requires pre-registered clients.
+            OAuth authentication will use dynamic client registration. The
+            connection will be authenticated when creating the integration.
           </Text.H5>
-          <Input
-            name='oauthClientId'
-            label='Client ID (optional)'
-            description='OAuth client ID if pre-registered with the server.'
-            value={oauthClientId}
-            onChange={(e) => setOAuthClientId(e.target.value)}
-          />
-          <Input
-            name='oauthClientSecret'
-            label='Client Secret (optional)'
-            description='OAuth client secret if pre-registered with the server.'
-            type='password'
-            value={oauthClientSecret}
-            onChange={(e) => setOAuthClientSecret(e.target.value)}
-          />
-          <Input
-            name='oauthScope'
-            label='Scope (optional)'
-            description='OAuth scope to request (e.g., "mcp:tools mcp:resources").'
-            value={oauthScope}
-            onChange={(e) => setOAuthScope(e.target.value)}
-          />
         </div>
       )}
     </div>

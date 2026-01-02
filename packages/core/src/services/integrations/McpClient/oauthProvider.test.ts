@@ -22,11 +22,6 @@ describe('McpOAuthProvider', () => {
       configuration: {
         url: 'https://example.com/mcp',
         useOAuth: true,
-        oauth: {
-          clientId: 'test-client-id',
-          clientSecret: 'test-client-secret',
-          scope: 'mcp:tools',
-        },
       },
     })
   })
@@ -53,7 +48,6 @@ describe('McpOAuthProvider', () => {
     expect(metadata.client_name).toBe('TestOAuthMCP')
     expect(metadata.grant_types).toContain('authorization_code')
     expect(metadata.grant_types).toContain('refresh_token')
-    expect(metadata.scope).toBe('mcp:tools')
   })
 
   it('should generate state parameter with integration and workspace IDs', () => {

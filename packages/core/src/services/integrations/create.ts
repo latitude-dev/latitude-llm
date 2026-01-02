@@ -13,6 +13,7 @@ import {
 import { getApp } from './pipedream/apps'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { User } from '../../schema/models/types/User'
+import { initiateOAuthRegistration } from './McpClient/oauthRegistration'
 
 type ConfigurationFormTypeMap = {
   [K in IntegrationType]: K extends IntegrationType.ExternalMCP
@@ -62,10 +63,15 @@ type IntegrationCreateParams<T extends IntegrationType> = {
   author: User
 }
 
+export type IntegrationCreateResult = {
+  integration: IntegrationDto
+  oauthRedirectUrl?: string
+}
+
 export async function createIntegration<p extends IntegrationType>(
   params: IntegrationCreateParams<p>,
   transaction = new Transaction(),
-): PromisedResult<IntegrationDto> {
+): PromisedResult<IntegrationCreateResult> {
   const { workspace, name, type, configuration, author } = params
 
   if (type === IntegrationType.Latitude) {
@@ -83,7 +89,7 @@ export async function createIntegration<p extends IntegrationType>(
     return Result.error(componentsResult.error!)
   }
 
-  return await transaction.call(async (tx) => {
+  const integrationResult = await transaction.call(async (tx) => {
     const result = await tx
       .insert(integrations)
       .values({
@@ -98,4 +104,31 @@ export async function createIntegration<p extends IntegrationType>(
 
     return Result.ok(result[0]! as IntegrationDto)
   })
+
+  if (!integrationResult.ok) {
+    return Result.error(integrationResult.error!)
+  }
+
+  const integration = integrationResult.value
+
+  if (
+    type === IntegrationType.ExternalMCP &&
+    (configuration as ExternalMcpIntegrationConfiguration).useOAuth
+  ) {
+    const oauthResult = await initiateOAuthRegistration({
+      integration,
+      authorId: author.id,
+    })
+
+    if (!oauthResult.ok) {
+      return Result.error(oauthResult.error!)
+    }
+
+    return Result.ok({
+      integration,
+      oauthRedirectUrl: oauthResult.value,
+    })
+  }
+
+  return Result.ok({ integration })
 }

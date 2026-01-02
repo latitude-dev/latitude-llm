@@ -65,11 +65,13 @@ export const createIntegrationAction = authProcedure
       })
     }
 
-    return await createIntegration<typeof parsedInput.type>({
+    const result = await createIntegration<typeof parsedInput.type>({
       workspace: ctx.workspace,
       name: parsedInput.name,
       type: parsedInput.type,
       configuration: parsedInput.configuration,
       author: ctx.user,
     }).then((r) => r.unwrap())
+
+    return result
   })

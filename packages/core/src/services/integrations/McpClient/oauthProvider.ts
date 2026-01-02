@@ -7,7 +7,6 @@ import type {
 } from '@modelcontextprotocol/sdk/shared/auth.js'
 import { McpOAuthCredentials } from '../../../schema/models/types/McpOAuthCredentials'
 import { IntegrationDto } from '../../../schema/models/types/Integration'
-import { IntegrationType } from '@latitude-data/constants'
 import { database } from '../../../client'
 import { mcpOAuthCredentials } from '../../../schema/models/mcpOAuthCredentials'
 import { and, eq } from 'drizzle-orm'
@@ -63,18 +62,12 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
     this._authorId = options.authorId
     this._onRedirectToAuthorization = options.onRedirectToAuthorization
 
-    const oauthConfig =
-      options.integration.type === IntegrationType.ExternalMCP
-        ? options.integration.configuration.oauth
-        : undefined
-
     this._clientMetadata = {
       redirect_uris: [options.redirectUrl],
-      client_name: oauthConfig?.clientName ?? options.integration.name,
+      client_name: options.integration.name,
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],
       token_endpoint_auth_method: 'client_secret_post',
-      scope: oauthConfig?.scope,
     }
 
     if (options.credentials) {

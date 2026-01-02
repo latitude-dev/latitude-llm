@@ -77,7 +77,18 @@ export default function useIntegrations({
     error: createError,
     isPending: isCreating,
   } = useLatitudeAction(createIntegrationAction, {
-    onSuccess: async ({ data: integration }) => {
+    onSuccess: async ({ data: result }) => {
+      const integration = result.integration
+
+      if (result.oauthRedirectUrl) {
+        toast({
+          title: 'OAuth Required',
+          description: 'Redirecting to complete OAuth authentication...',
+        })
+        window.location.href = result.oauthRedirectUrl
+        return
+      }
+
       toast({
         title: 'Success',
         description: `${integration.name} created successfully`,
