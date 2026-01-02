@@ -52,6 +52,9 @@ export const API_ROUTES = {
       }),
       apps: '/api/integrations/pipedream/apps',
     },
+    oauth: {
+      callback: '/api/integrations/oauth/callback',
+    },
   },
   webhooks: {
     root: '/api/webhooks',

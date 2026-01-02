@@ -90,7 +90,7 @@ export function ConnectPipedreamModal({
         return
       }
 
-      const [newApp, createError] = await create({
+      const [result, createError] = await create({
         ...integration,
         name: integrationName,
       })
@@ -105,7 +105,7 @@ export function ConnectPipedreamModal({
         return
       }
 
-      onConnect(newApp as PipedreamIntegration)
+      onConnect(result.integration as PipedreamIntegration)
     },
     [create, integrationName, validate, onConnect],
   )

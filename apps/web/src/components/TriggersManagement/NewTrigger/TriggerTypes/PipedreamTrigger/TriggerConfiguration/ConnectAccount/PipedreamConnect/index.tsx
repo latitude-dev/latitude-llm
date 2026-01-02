@@ -55,7 +55,7 @@ export function PipedreamConnect({
       const [connectionId, error] = await connect()
       if (error) throw error
 
-      const [integration, createError] = await create({
+      const [result, createError] = await create({
         type: IntegrationType.Pipedream,
         configuration: {
           appName: app.nameSlug,
@@ -71,7 +71,7 @@ export function PipedreamConnect({
         name: integrationName,
       })
 
-      if (createError || !integration) {
+      if (createError || !result) {
         toast({
           title: 'Error creating integration',
           description: createError
@@ -79,9 +79,10 @@ export function PipedreamConnect({
             : 'Unknown error occurred',
           variant: 'destructive',
         })
+        return
       }
 
-      onAccountConnected(integration as IntegrationDto)
+      onAccountConnected(result.integration)
     },
     [app, connect, workspace, create, toast, onAccountConnected],
   )

@@ -4,8 +4,18 @@ import {
 } from '@latitude-data/constants'
 import { z } from 'zod'
 
+export const OAuthStatus = {
+  pending: 'pending',
+  completed: 'completed',
+} as const
+
+export type OAuthStatus = (typeof OAuthStatus)[keyof typeof OAuthStatus]
+
 export const externalMcpIntegrationConfigurationSchema = z.object({
   url: z.string(),
+  useOAuth: z.boolean().optional(),
+  oauthStatus: z.enum(['pending', 'completed']).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
 })
 
 export type ExternalMcpIntegrationConfiguration = z.infer<
