@@ -17,4 +17,3 @@ export const skipOnboardingAction = authProcedure.action(async ({ ctx }) => {
 
   return frontendRedirect(ROUTES.dashboard.root)
 })
-

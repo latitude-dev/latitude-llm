@@ -37,7 +37,7 @@ describe('getActiveWorkspacesForWeeklyEmail', () => {
       expect(result).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: workspace.id,
+            id: String(workspace.id),
           }),
         ]),
       )
@@ -61,7 +61,7 @@ describe('getActiveWorkspacesForWeeklyEmail', () => {
       expect(result).not.toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: oldWorkspace.id,
+            id: String(oldWorkspace.id),
           }),
         ]),
       )
@@ -91,7 +91,7 @@ describe('getActiveWorkspacesForWeeklyEmail', () => {
       expect(result).not.toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: nonPromptWorkspace.id,
+            id: String(nonPromptWorkspace.id),
           }),
         ]),
       )
@@ -133,15 +133,15 @@ describe('getActiveWorkspacesForWeeklyEmail', () => {
       // Should include common workspace and workspace2
       expect(result).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ id: workspace.id }),
-          expect.objectContaining({ id: workspace2.id }),
+          expect.objectContaining({ id: String(workspace.id) }),
+          expect.objectContaining({ id: String(workspace2.id) }),
         ]),
       )
 
       // Should not include workspace3
       expect(result).not.toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ id: workspace3.id }),
+          expect.objectContaining({ id: String(workspace3.id) }),
         ]),
       )
     })
@@ -171,8 +171,9 @@ describe('getActiveWorkspacesForWeeklyEmail', () => {
 
       const result = await getActiveWorkspacesForWeeklyEmail()
 
-      // Should include workspace only once
-      const workspaceCount = result.filter((w) => w.id === workspace.id).length
+      const workspaceCount = result.filter(
+        (w) => w.id === String(workspace.id),
+      ).length
       expect(workspaceCount).toEqual(1)
     })
   })
@@ -207,7 +208,7 @@ describe('getActiveWorkspacesForWeeklyEmail', () => {
       // Should include regular workspace
       expect(result).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ id: regularWorkspace.id }),
+          expect.objectContaining({ id: String(regularWorkspace.id) }),
         ]),
       )
 
@@ -254,15 +255,15 @@ describe('getActiveWorkspacesForWeeklyEmail', () => {
       // Should include common workspace and regularWorkspace (not big accounts)
       expect(result).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ id: workspace.id }),
-          expect.objectContaining({ id: regularWorkspace.id }),
+          expect.objectContaining({ id: String(workspace.id) }),
+          expect.objectContaining({ id: String(regularWorkspace.id) }),
         ]),
       )
 
       // Should not include bigWorkspace (big account)
       expect(result).not.toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ id: bigWorkspace.id }),
+          expect.objectContaining({ id: String(bigWorkspace.id) }),
         ]),
       )
     })
@@ -285,7 +286,7 @@ describe('getActiveWorkspacesForWeeklyEmail', () => {
       expect(result).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: edgeCaseWorkspace.id,
+            id: String(edgeCaseWorkspace.id),
           }),
         ]),
       )
@@ -307,28 +308,10 @@ describe('getActiveWorkspacesForWeeklyEmail', () => {
       expect(result).not.toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: tooOldWorkspace.id,
+            id: String(tooOldWorkspace.id),
           }),
         ]),
       )
-    })
-
-    it('returns full workspace objects with all fields', async () => {
-      const threeDaysAgo = new Date()
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
-
-      await createSpan({
-        workspaceId: workspace.id,
-        type: SpanType.Prompt,
-        startedAt: threeDaysAgo,
-      })
-
-      const result = await getActiveWorkspacesForWeeklyEmail()
-
-      const foundWorkspace = result.find((w) => w.id === workspace.id)
-      expect(foundWorkspace).toBeDefined()
-      expect(foundWorkspace?.name).toBeDefined()
-      expect(foundWorkspace?.createdAt).toBeDefined()
     })
   })
 })

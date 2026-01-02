@@ -1,43 +1,36 @@
-import { and, eq, gte, inArray } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { database } from '../../../client'
 import { SpanType } from '../../../constants'
-import { spans } from '../../../schema/models/spans'
-import { workspaces } from '../../../schema/models/workspaces'
 
 const NUMBER_OF_WEEKS = 4
 const DAYS_IN_WEEK = 7
 const LAST_PAST_DAYS = NUMBER_OF_WEEKS * DAYS_IN_WEEK
 
 /**
- * Gets workspaces that have had prompt spans created in the last 4 weeks.
+ * Gets workspace IDs that have had prompt spans created in the last 4 weeks.
  * Used to filter which workspaces should receive weekly email reports.
  * Excludes workspaces marked as big accounts (isBigAccount = true).
+ *
+ * Uses a LATERAL join to force PostgreSQL to use a nested loop strategy,
+ * which leverages the workspace_id index and terminates early per workspace.
  */
 export async function getActiveWorkspacesForWeeklyEmail(db = database) {
   const fourWeeksAgo = new Date()
   fourWeeksAgo.setDate(fourWeeksAgo.getDate() - LAST_PAST_DAYS)
 
-  const activeWorkspaceIds = await db
-    .selectDistinct({ workspaceId: spans.workspaceId })
-    .from(spans)
-    .where(
-      and(eq(spans.type, SpanType.Prompt), gte(spans.startedAt, fourWeeksAgo)),
-    )
+  const result = await db.execute<{ id: string }>(sql`
+    SELECT w.id
+    FROM latitude.workspaces w
+    CROSS JOIN LATERAL (
+      SELECT 1
+      FROM latitude.spans s
+      WHERE s.workspace_id = w.id
+        AND s.type = ${SpanType.Prompt}
+        AND s.started_at >= ${fourWeeksAgo}
+      LIMIT 1
+    ) AS has_activity
+    WHERE w.is_big_account = false
+  `)
 
-  if (activeWorkspaceIds.length === 0) return []
-
-  const activeWorkspaces = await db
-    .select()
-    .from(workspaces)
-    .where(
-      and(
-        inArray(
-          workspaces.id,
-          activeWorkspaceIds.map((w) => w.workspaceId),
-        ),
-        eq(workspaces.isBigAccount, false),
-      ),
-    )
-
-  return activeWorkspaces
+  return result.rows
 }
