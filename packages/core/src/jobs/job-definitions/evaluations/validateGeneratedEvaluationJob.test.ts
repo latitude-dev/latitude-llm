@@ -115,14 +115,14 @@ describe('validateGeneratedEvaluationJob', () => {
         {
           id: 'span-1',
           traceId: 'trace-1',
-          createdAt: new Date('2024-01-15T10:00:00.000Z'),
+          createdAt: '2024-01-15T10:00:00.000Z',
         },
       ],
       spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation: [
         {
           id: 'span-2',
           traceId: 'trace-2',
-          createdAt: new Date('2024-01-15T11:00:00.000Z'),
+          createdAt: '2024-01-15T11:00:00.000Z',
         },
       ],
       ...overrides,

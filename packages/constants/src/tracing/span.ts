@@ -307,3 +307,9 @@ export type ExternalSpan = Omit<Span<SpanType.External>, 'documentLogUuid'> & {
 export type SpanWithDetails<T extends SpanType = SpanType> = Span<T> & {
   metadata?: SpanMetadata<T> // Metadata is optional if it could not be uploaded
 }
+
+export type SerializedSpanPair = {
+  id: string
+  traceId: string
+  createdAt: string
+}
