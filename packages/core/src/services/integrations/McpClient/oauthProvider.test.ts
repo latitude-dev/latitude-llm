@@ -3,10 +3,7 @@ import { IntegrationDto } from '../../../schema/models/types/Integration'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { IntegrationType } from '@latitude-data/constants'
 import * as factories from '../../../tests/factories'
-import {
-  McpOAuthProvider,
-  getMcpOAuthCredentials,
-} from './oauthProvider'
+import { McpOAuthProvider, getMcpOAuthCredentials } from './oauthProvider'
 import { database } from '../../../client'
 import { mcpOAuthCredentials } from '../../../schema/models/mcpOAuthCredentials'
 

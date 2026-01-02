@@ -24,7 +24,9 @@ function encryptIfPresent(value: string | undefined | null): string | null {
   return encrypt(value)
 }
 
-function decryptIfPresent(value: string | undefined | null): string | undefined {
+function decryptIfPresent(
+  value: string | undefined | null,
+): string | undefined {
   if (!value) return undefined
   try {
     return decrypt(value)
@@ -144,9 +146,7 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
       token_type: 'Bearer',
       refresh_token: this._tokens.refreshToken,
       expires_in: this._tokens.expiresAt
-        ? Math.floor(
-            (this._tokens.expiresAt.getTime() - Date.now()) / 1000,
-          )
+        ? Math.floor((this._tokens.expiresAt.getTime() - Date.now()) / 1000)
         : undefined,
     }
   }

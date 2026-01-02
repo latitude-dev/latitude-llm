@@ -4,7 +4,11 @@ import { IntegrationsRepository } from '../../../repositories'
 import { IntegrationType } from '@latitude-data/constants'
 import { getMcpOAuthCredentials, McpOAuthProvider } from './oauthProvider'
 import { Result, TypedResult } from '../../../lib/Result'
-import { LatitudeError, BadRequestError, NotFoundError } from '../../../lib/errors'
+import {
+  LatitudeError,
+  BadRequestError,
+  NotFoundError,
+} from '../../../lib/errors'
 import { env } from '@latitude-data/env'
 
 type OAuthCallbackParams = {

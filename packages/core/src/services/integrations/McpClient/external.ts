@@ -9,10 +9,7 @@ import {
 import { Result } from '../../../lib/Result'
 import { TypedResult } from '../../../lib/Result'
 import { IntegrationType } from '@latitude-data/constants'
-import {
-  McpOAuthProvider,
-  getMcpOAuthCredentials,
-} from './oauthProvider'
+import { McpOAuthProvider, getMcpOAuthCredentials } from './oauthProvider'
 import { env } from '@latitude-data/env'
 
 type OAuthCallbacks = {
