@@ -1,9 +1,17 @@
-import { bigint, bigserial, index, text, timestamp } from 'drizzle-orm/pg-core'
+import {
+  bigint,
+  bigserial,
+  index,
+  text,
+  timestamp,
+  varchar,
+} from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { integrations } from './integrations'
 import { workspaces } from './workspaces'
+import { users } from './users'
 
 export const mcpOAuthCredentials = latitudeSchema.table(
   'mcp_oauth_credentials',
@@ -16,6 +24,9 @@ export const mcpOAuthCredentials = latitudeSchema.table(
       .notNull()
       .references(() => integrations.id, { onDelete: 'cascade' })
       .unique(),
+    authorId: varchar('author_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     clientId: text('client_id'),
     clientSecret: text('client_secret'),
     accessToken: text('access_token'),
@@ -30,6 +41,9 @@ export const mcpOAuthCredentials = latitudeSchema.table(
     ),
     integrationIdIdx: index('mcp_oauth_credentials_integration_id_idx').on(
       table.integrationId,
+    ),
+    authorIdIdx: index('mcp_oauth_credentials_author_id_idx').on(
+      table.authorId,
     ),
   }),
 )

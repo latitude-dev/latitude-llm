@@ -17,9 +17,14 @@ type OAuthCallbacks = {
   onRedirectToAuthorization?: (authorizationUrl: URL) => void
 }
 
+type ExternalMcpClientOptions = {
+  oauthCallbacks?: OAuthCallbacks
+  authorId?: string
+}
+
 export async function createAndConnectExternalMcpClient(
   integration: IntegrationDto,
-  oauthCallbacks?: OAuthCallbacks,
+  options?: ExternalMcpClientOptions,
 ): Promise<TypedResult<McpClientConnection, McpConnectionError>> {
   if (integration.type !== IntegrationType.ExternalMCP) {
     return Result.error(
@@ -42,7 +47,9 @@ export async function createAndConnectExternalMcpClient(
       redirectUrl,
       integration,
       credentials,
-      onRedirectToAuthorization: oauthCallbacks?.onRedirectToAuthorization,
+      authorId: options?.authorId,
+      onRedirectToAuthorization:
+        options?.oauthCallbacks?.onRedirectToAuthorization,
     })
   }
 

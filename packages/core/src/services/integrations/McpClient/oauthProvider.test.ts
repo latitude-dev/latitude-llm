@@ -98,6 +98,28 @@ describe('McpOAuthProvider', () => {
     expect(storedCredentials).toBeDefined()
   })
 
+  it('should save author ID when provided', async () => {
+    const authorId = 'test-author-id'
+    const provider = new McpOAuthProvider({
+      redirectUrl: 'https://app.example.com/callback',
+      integration,
+      credentials: null,
+      authorId,
+    })
+
+    await provider.saveTokens({
+      access_token: 'test-access-token',
+      token_type: 'Bearer',
+    })
+
+    const storedCredentials = await getMcpOAuthCredentials(
+      workspace.id,
+      integration.id,
+    )
+    expect(storedCredentials).toBeDefined()
+    expect(storedCredentials?.authorId).toBe(authorId)
+  })
+
   it('should save and retrieve code verifier', async () => {
     const provider = new McpOAuthProvider({
       redirectUrl: 'https://app.example.com/callback',

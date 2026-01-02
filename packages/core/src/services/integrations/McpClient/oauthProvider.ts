@@ -44,6 +44,7 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
   private _clientMetadata: OAuthClientMetadata
   private _integrationId: number
   private _workspaceId: number
+  private _authorId?: string
   private _clientInformation?: OAuthClientInformation
   private _tokens?: OAuthTokensStore
   private _codeVerifier?: string
@@ -53,11 +54,13 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
     redirectUrl: string
     integration: IntegrationDto
     credentials?: McpOAuthCredentials | null
+    authorId?: string
     onRedirectToAuthorization?: (authorizationUrl: URL) => void
   }) {
     this._redirectUrl = options.redirectUrl
     this._integrationId = options.integration.id
     this._workspaceId = options.integration.workspaceId
+    this._authorId = options.authorId
     this._onRedirectToAuthorization = options.onRedirectToAuthorization
 
     const oauthConfig =
@@ -127,12 +130,14 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
       .values({
         workspaceId: this._workspaceId,
         integrationId: this._integrationId,
+        authorId: this._authorId,
         clientId: clientInformation.client_id,
         clientSecret: encryptIfPresent(clientInformation.client_secret),
       })
       .onConflictDoUpdate({
         target: mcpOAuthCredentials.integrationId,
         set: {
+          authorId: this._authorId,
           clientId: clientInformation.client_id,
           clientSecret: encryptIfPresent(clientInformation.client_secret),
           updatedAt: new Date(),
@@ -166,6 +171,7 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
       .values({
         workspaceId: this._workspaceId,
         integrationId: this._integrationId,
+        authorId: this._authorId,
         accessToken: encryptIfPresent(tokens.access_token),
         refreshToken: encryptIfPresent(tokens.refresh_token),
         tokenExpiresAt: expiresAt,
@@ -173,6 +179,7 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
       .onConflictDoUpdate({
         target: mcpOAuthCredentials.integrationId,
         set: {
+          authorId: this._authorId,
           accessToken: encryptIfPresent(tokens.access_token),
           refreshToken: encryptIfPresent(tokens.refresh_token),
           tokenExpiresAt: expiresAt,
@@ -194,11 +201,13 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
       .values({
         workspaceId: this._workspaceId,
         integrationId: this._integrationId,
+        authorId: this._authorId,
         codeVerifier: encryptIfPresent(codeVerifier),
       })
       .onConflictDoUpdate({
         target: mcpOAuthCredentials.integrationId,
         set: {
+          authorId: this._authorId,
           codeVerifier: encryptIfPresent(codeVerifier),
           updatedAt: new Date(),
         },

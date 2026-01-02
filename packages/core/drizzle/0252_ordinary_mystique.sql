@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS "latitude"."mcp_oauth_credentials" (
   "id" bigserial PRIMARY KEY NOT NULL,
   "workspace_id" bigint NOT NULL REFERENCES "latitude"."workspaces"("id") ON DELETE CASCADE,
   "integration_id" bigint NOT NULL UNIQUE REFERENCES "latitude"."integrations"("id") ON DELETE CASCADE,
+  "author_id" varchar REFERENCES "latitude"."users"("id") ON DELETE SET NULL,
   "client_id" text,
   "client_secret" text,
   "access_token" text,
@@ -20,3 +21,6 @@ CREATE INDEX IF NOT EXISTS "mcp_oauth_credentials_workspace_id_idx" ON "latitude
 
 -- Create index on integration_id for faster lookups
 CREATE INDEX IF NOT EXISTS "mcp_oauth_credentials_integration_id_idx" ON "latitude"."mcp_oauth_credentials" ("integration_id");
+
+-- Create index on author_id for faster lookups
+CREATE INDEX IF NOT EXISTS "mcp_oauth_credentials_author_id_idx" ON "latitude"."mcp_oauth_credentials" ("author_id");
