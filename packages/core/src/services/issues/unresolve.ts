@@ -18,14 +18,18 @@ export async function unresolveIssue(
   },
   transaction = new Transaction(),
 ) {
-  // Check if the issue is ignored
+  if (issue.mergedAt) {
+    return Result.error(
+      new UnprocessableEntityError('Cannot unresolve a merged issue'),
+    )
+  }
+
   if (issue.ignoredAt) {
     return Result.error(
       new UnprocessableEntityError('Cannot unresolve an ignored issue'),
     )
   }
 
-  // Check if the issue is not resolved
   if (!issue.resolvedAt) {
     return Result.error(new UnprocessableEntityError('Issue is not resolved'))
   }

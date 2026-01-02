@@ -13,6 +13,7 @@ import { createProject } from '../../tests/factories/projects'
 import { createUser } from '../../tests/factories/users'
 import { createProviderApiKey } from '../../tests/factories/providerApiKeys'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
+import { issues } from '../../schema/models/issues'
 import { ignoreIssue } from './ignore'
 import * as publisherModule from '../../events/publisher'
 
@@ -46,6 +47,32 @@ describe('ignoreIssue', () => {
     expect(result.ok).toBe(true)
     const ignoredIssue = result.unwrap().issue
     expect(ignoredIssue.ignoredAt).not.toBeNull()
+  })
+
+  it('fails when issue is merged', async () => {
+    const { workspace, project, documents } = await createProject({
+      documents: { 'test-doc': 'Hello world' },
+    })
+    const document = documents[0]!
+    const user = await createUser()
+
+    const { issue } = await createIssue({
+      workspace,
+      project,
+      document,
+      createdAt: new Date(),
+    })
+
+    const [mergedIssue] = await database
+      .update(issues)
+      .set({ mergedAt: new Date() })
+      .where(eq(issues.id, issue.id))
+      .returning()
+
+    const result = await ignoreIssue({ issue: mergedIssue!, user })
+
+    expect(result.ok).toBe(false)
+    expect(result.error!.message).toContain('Cannot ignore a merged issue')
   })
 
   it('fails when issue is already resolved', async () => {

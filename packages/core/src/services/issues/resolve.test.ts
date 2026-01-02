@@ -45,6 +45,36 @@ describe('resolveIssue', () => {
     expect(resolvedIssue.resolvedAt).not.toBeNull()
   })
 
+  it('fails when issue is merged', async () => {
+    const { workspace, project, documents } = await createProject({
+      documents: { 'test-doc': 'Hello world' },
+    })
+    const document = documents[0]!
+    const user = await createUser()
+
+    const { issue } = await createIssue({
+      workspace,
+      project,
+      document,
+      createdAt: new Date(),
+    })
+
+    const [mergedIssue] = await database
+      .update(issues)
+      .set({ mergedAt: new Date() })
+      .where(eq(issues.id, issue.id))
+      .returning()
+
+    const result = await resolveIssue({
+      issue: mergedIssue!,
+      user,
+      ignoreEvaluations: false,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.error!.message).toContain('Cannot resolve a merged issue')
+  })
+
   it('fails when issue is already ignored', async () => {
     const { workspace, project, documents } = await createProject({
       documents: { 'test-doc': 'Hello world' },
