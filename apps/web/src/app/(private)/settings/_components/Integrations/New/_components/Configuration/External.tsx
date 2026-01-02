@@ -41,7 +41,7 @@ export const ExternalIntegrationConfiguration = forwardRef<
     checked: false,
     requiresOAuth: false,
   })
-  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const probeServer = useCallback(
     async (urlToProbe: string) => {
