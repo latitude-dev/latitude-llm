@@ -146,6 +146,7 @@ export const validateGeneratedEvaluationJob = async (
         alignmentHash,
         lastProcessedPositiveSpanDate: latestPositiveSpanDate,
         lastProcessedNegativeSpanDate: latestNegativeSpanDate,
+        recalculatingAt: undefined,
       },
     }).then((r) => r.unwrap())
 

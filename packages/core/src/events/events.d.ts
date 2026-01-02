@@ -20,7 +20,10 @@ import {
   EvaluationV2,
   Message,
 } from '../schema/types'
-import { ActiveEvaluation } from '@latitude-data/constants/evaluations'
+import {
+  ActiveEvaluation,
+  AlignmentMetricMetadata,
+} from '@latitude-data/constants/evaluations'
 
 export type Events =
   | 'magicLinkTokenCreated'
@@ -58,6 +61,7 @@ export type Events =
   | 'copilotSuggestionApplied'
   | 'evaluationV2Created'
   | 'evaluationV2Updated'
+  | 'evaluationV2AlignmentUpdated'
   | 'evaluationV2Deleted'
   | 'evaluationV2Ran'
   | 'evaluationV2Annotated'
@@ -444,6 +448,15 @@ export type EvaluationV2UpdatedEvent = LatitudeEventGeneric<
   {
     workspaceId: number
     evaluation: EvaluationV2
+  }
+>
+
+export type EvaluationV2AlignmentUpdatedEvent = LatitudeEventGeneric<
+  'evaluationV2AlignmentUpdated',
+  {
+    workspaceId: number
+    evaluationUuid: string
+    alignmentMetricMetadata: AlignmentMetricMetadata
   }
 >
 
@@ -966,6 +979,7 @@ export type LatitudeEvent =
   | CopilotSuggestionApplied
   | EvaluationV2CreatedEvent
   | EvaluationV2UpdatedEvent
+  | EvaluationV2AlignmentUpdatedEvent
   | EvaluationV2DeletedEvent
   | EvaluationV2RanEvent
   | EvaluationV2AnnotatedEvent
@@ -1054,6 +1068,7 @@ export interface IEventsHandlers {
   copilotSuggestionApplied: EventHandler<CopilotSuggestionApplied>[]
   evaluationV2Created: EventHandler<EvaluationV2CreatedEvent>[]
   evaluationV2Updated: EventHandler<EvaluationV2UpdatedEvent>[]
+  evaluationV2AlignmentUpdated: EventHandler<EvaluationV2AlignmentUpdatedEvent>[]
   evaluationV2Deleted: EventHandler<EvaluationV2DeletedEvent>[]
   evaluationV2Ran: EventHandler<EvaluationV2RanEvent>[]
   evaluationV2Annotated: EventHandler<EvaluationV2AnnotatedEvent>[]

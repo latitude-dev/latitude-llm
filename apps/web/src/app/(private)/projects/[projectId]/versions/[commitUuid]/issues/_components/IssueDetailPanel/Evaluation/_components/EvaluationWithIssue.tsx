@@ -1,17 +1,24 @@
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import {
+  EventArgs,
+  useSockets,
+} from '$/components/Providers/WebsocketsProvider/useSockets'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { EvaluationV2 } from '@latitude-data/core/constants'
+import {
+  AlignmentMetricMetadata,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ConfusionMatrixTooltipContent } from '$/components/ConfusionMatrix'
 import { calculateMCC } from '$/helpers/evaluation-generation/calculateMCC'
-import { useMemo } from 'react'
+import { useCallback, useState } from 'react'
 
 type EvaluationWithIssueProps = {
   evaluationWithIssue: EvaluationV2
@@ -30,12 +37,28 @@ export function EvaluationWithIssue({
 }: EvaluationWithIssueProps) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const confusionMatrix =
-    evaluationWithIssue.alignmentMetricMetadata?.confusionMatrix
-  const alignmentMetric = useMemo(
-    () => (confusionMatrix ? calculateMCC({ confusionMatrix }) : 0),
-    [confusionMatrix],
+
+  const [alignmentMetricMetadata, setAlignmentMetricMetadata] = useState<
+    AlignmentMetricMetadata | undefined
+  >(evaluationWithIssue.alignmentMetricMetadata ?? undefined)
+
+  const confusionMatrix = alignmentMetricMetadata?.confusionMatrix
+  const alignmentMetric = confusionMatrix
+    ? calculateMCC({ confusionMatrix })
+    : 0
+  const isRecalculating = !!alignmentMetricMetadata?.recalculatingAt
+
+  const onAlignmentMetricUpdated = useCallback(
+    (args: EventArgs<'evaluationV2AlignmentMetricUpdated'>) => {
+      if (!args || args.evaluationUuid !== evaluationWithIssue.uuid) return
+      setAlignmentMetricMetadata(args.alignmentMetricMetadata)
+    },
+    [evaluationWithIssue.uuid],
   )
+  useSockets({
+    event: 'evaluationV2AlignmentMetricUpdated',
+    onMessage: onAlignmentMetricUpdated,
+  })
 
   return (
     <div className='grid grid-cols-2 gap-x-4 gap-y-4 items-center'>
@@ -83,14 +106,17 @@ export function EvaluationWithIssue({
           side='bottom'
           trigger={<Icon name='info' color='foregroundMuted' size='small' />}
         >
-          <ConfusionMatrixTooltipContent
-            confusionMatrix={
-              evaluationWithIssue.alignmentMetricMetadata?.confusionMatrix
-            }
-          />
+          <ConfusionMatrixTooltipContent confusionMatrix={confusionMatrix} />
         </Tooltip>
       </div>
-      <Text.H5 color='foreground'>{alignmentMetric}%</Text.H5>
+      {isRecalculating ? (
+        <div className='flex flex-row items-center gap-2'>
+          <Icon name='loader' spin color='foregroundMuted' size='small' />
+          <Text.H5 color='foregroundMuted'>Recalculating...</Text.H5>
+        </div>
+      ) : (
+        <Text.H5 color='foreground'>{alignmentMetric}%</Text.H5>
+      )}
     </div>
   )
 }
