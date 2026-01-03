@@ -4,11 +4,14 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { SpanType } from '../../constants'
 import { createEvaluationResultV2 } from '../../tests/factories/evaluationResultsV2'
 import { createEvaluationV2 } from '../../tests/factories/evaluationsV2'
+import { createIssue } from '../../tests/factories/issues'
 import { createProject } from '../../tests/factories/projects'
 import { createSpan } from '../../tests/factories/spans'
+import { createUser } from '../../tests/factories/users'
 import { createWorkspace } from '../../tests/factories/workspaces'
 import * as weaviate from '../../weaviate'
 import { discoverIssue } from './discover'
+import { ignoreIssue } from './ignore'
 import * as sharedModule from './shared'
 
 vi.mock('../../voyage', () => ({
@@ -382,6 +385,125 @@ describe('discoverIssue', () => {
       const { embedding, issue } = discovering.unwrap()
       expect(embedding).toBeDefined()
       expect(issue).toBeUndefined()
+    })
+
+    it('filters out inactive candidates from discovery results', async () => {
+      const { workspace } = await createWorkspace({ features: ['issues'] })
+      const projectResult = await createProject({
+        workspace,
+        documents: {
+          'test-prompt': 'This is a test prompt',
+        },
+      })
+      const { project, commit, documents } = projectResult
+      const document = documents[0]!
+
+      const evaluation = await createEvaluationV2({
+        document,
+        commit,
+        workspace,
+      })
+
+      const span = await createSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      const result = await createEvaluationResultV2({
+        evaluation,
+        span,
+        commit,
+        workspace,
+        hasPassed: false,
+      })
+
+      // Create an active issue
+      const { issue: activeIssue } = await createIssue({
+        workspace,
+        project,
+        document,
+        createdAt: new Date(),
+        histograms: [
+          {
+            commitId: commit.id,
+            date: new Date(),
+            count: 1,
+          },
+        ],
+      })
+
+      // Create an inactive issue (ignored)
+      const { issue: inactiveIssue } = await createIssue({
+        workspace,
+        project,
+        document,
+        createdAt: new Date(),
+        histograms: [
+          {
+            commitId: commit.id,
+            date: new Date(),
+            count: 1,
+          },
+        ],
+      })
+
+      const user = await createUser()
+      await ignoreIssue({ issue: inactiveIssue, user }).then((r) => r.unwrap())
+
+      const mockEmbedding = Array(2048).fill(0.1)
+      vi.spyOn(sharedModule, 'embedReason').mockResolvedValue({
+        ok: true,
+        value: mockEmbedding,
+        unwrap: () => mockEmbedding,
+      } as any)
+
+      // Mock Weaviate to return both active and inactive issues as candidates
+      const mockHybrid = vi.fn().mockResolvedValue({
+        objects: [
+          {
+            uuid: activeIssue.uuid,
+            properties: {
+              title: activeIssue.title,
+              description: activeIssue.description,
+            },
+            metadata: { score: 0.95 },
+          },
+          {
+            uuid: inactiveIssue.uuid,
+            properties: {
+              title: inactiveIssue.title,
+              description: inactiveIssue.description,
+            },
+            metadata: { score: 0.9 },
+          },
+        ],
+      })
+
+      const mockCollection = {
+        query: {
+          hybrid: mockHybrid,
+        },
+      }
+
+      vi.spyOn(weaviate, 'getIssuesCollection').mockResolvedValue(
+        mockCollection as any,
+      )
+
+      const discovering = await discoverIssue({
+        result: { result, evaluation },
+        document,
+        project,
+      })
+
+      expect(discovering.error).toBeFalsy()
+      const { embedding, issue } = discovering.unwrap()
+      expect(embedding).toBeDefined()
+      // Should only return the active issue, not the inactive one
+      expect(issue).toBeDefined()
+      expect(issue?.uuid).toBe(activeIssue.uuid)
+      expect(issue?.uuid).not.toBe(inactiveIssue.uuid)
     })
   })
 })
