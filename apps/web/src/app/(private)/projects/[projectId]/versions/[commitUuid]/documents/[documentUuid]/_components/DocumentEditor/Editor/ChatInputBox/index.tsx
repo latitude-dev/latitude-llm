@@ -19,7 +19,7 @@ export const ChatInputBox = memo(function ChatInputBox({
   playground: ReturnType<typeof usePlaygroundChat>
 }) {
   return (
-    <div className='flex relative flex-row w-full items-center justify-center px-4'>
+    <div className='relative w-full'>
       <StatusIndicator
         playground={playground}
         resetChat={resetChat}

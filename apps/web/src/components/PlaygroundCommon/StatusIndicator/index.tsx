@@ -28,7 +28,7 @@ export function StatusIndicator({
   return (
     <div
       className={cn(
-        'absolute bg-background rounded-xl flex items-center justify-center flex-row',
+        'absolute left-1/2 -translate-x-1/2 bg-background rounded-xl flex items-center justify-center flex-row',
         'gap-2 border border-border px-3 py-2 shadow-sm !select-none',
         position === 'bottom' ? '' : '-top-14',
         { '-top-[5.5rem]': !canChat && position === 'top' },

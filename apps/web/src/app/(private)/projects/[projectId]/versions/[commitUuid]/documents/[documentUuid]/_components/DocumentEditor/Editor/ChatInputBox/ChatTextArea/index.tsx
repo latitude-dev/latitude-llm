@@ -1,7 +1,14 @@
 import { ToolMessage } from '@latitude-data/constants/legacyCompiler'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { cn } from '@latitude-data/web-ui/utils'
-import { ChangeEvent, KeyboardEvent, useCallback, useState } from 'react'
+import {
+  ChangeEvent,
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { ToolBar } from './ToolBar'
 
 type OnSubmitWithTools = (value: string | ToolMessage[]) => void
@@ -32,7 +39,17 @@ function SimpleTextArea({
   disabledBack?: boolean
   canSubmitWithEmptyValue?: boolean
 }) {
+  const textAreaRef = useRef<HTMLTextAreaElement>(null)
+  const wasDisabledRef = useRef(disabledSubmit)
   const [value, setValue] = useState('')
+
+  useEffect(() => {
+    if (wasDisabledRef.current && !disabledSubmit) {
+      textAreaRef.current?.focus()
+    }
+    wasDisabledRef.current = disabledSubmit
+  }, [disabledSubmit])
+
   const onSubmitHandler = useCallback(() => {
     if (disabledSubmit) return
     if (value === '' && !canSubmitWithEmptyValue) return
@@ -58,6 +75,7 @@ function SimpleTextArea({
   return (
     <div className='flex flex-col w-full'>
       <TextArea
+        ref={textAreaRef}
         disabled={disabledSubmit}
         className={cn(
           'bg-background w-full p-3 resize-none text-sm rounded-2xl',

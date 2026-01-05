@@ -182,7 +182,7 @@ export function DocumentEditorContentArea({
             </div>
             <div
               className={cn(
-                'sticky bottom-2 flex flex-row items-center justify-center',
+                'sticky bottom-2 flex flex-row items-center justify-center px-4',
               )}
             >
               {playground.mode === 'preview' &&
