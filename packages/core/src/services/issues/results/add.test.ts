@@ -1,4 +1,12 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import { env } from '@latitude-data/env'
 import { Providers, SpanType } from '@latitude-data/constants'
 import { eq } from 'drizzle-orm'

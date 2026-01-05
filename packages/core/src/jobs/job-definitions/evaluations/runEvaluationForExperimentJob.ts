@@ -31,6 +31,14 @@ export async function runEvaluationForExperimentJob(
   token: string,
 ) {
   const { conversationUuid, workspaceId, experimentUuid, ...rest } = job.data
+
+  const experimentsRepository = new ExperimentsRepository(workspaceId)
+  const experiment = await experimentsRepository
+    .findByUuid(experimentUuid)
+    .then((r) => r.unwrap())
+
+  if (experiment.finishedAt) return
+
   const spansRepo = new SpansRepository(workspaceId)
 
   const traceId = await spansRepo.getLastTraceByLogUuid(conversationUuid)
