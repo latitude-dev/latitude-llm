@@ -39,7 +39,6 @@ import { commits } from '../schema/models/commits'
 import { datasetRows } from '../schema/models/datasetRows'
 import { datasets } from '../schema/models/datasets'
 import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
-import { evaluationVersions } from '../schema/models/evaluationVersions'
 import { issueEvaluationResults } from '../schema/models/issueEvaluationResults'
 import { providerLogs } from '../schema/models/providerLogs'
 import { Commit } from '../schema/models/types/Commit'
@@ -896,7 +895,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const whereConditions = [
       eq(issueEvaluationResults.workspaceId, workspace.id),
       eq(issueEvaluationResults.issueId, issue.id),
-      eq(evaluationVersions.type, EvaluationType.Human),
+      eq(evaluationResultsV2.evaluationType, EvaluationType.Human),
       isNotNull(evaluationResultsV2.evaluatedSpanId),
       isNotNull(evaluationResultsV2.evaluatedTraceId),
       isNull(commits.deletedAt),
@@ -923,13 +922,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         evaluationResultsV2,
         eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
       )
-      .innerJoin(
-        evaluationVersions,
-        eq(
-          evaluationResultsV2.evaluationUuid,
-          evaluationVersions.evaluationUuid,
-        ),
-      )
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .where(and(...whereConditions))
       .orderBy(
@@ -947,7 +939,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   async fetchPaginatedHITLResultsByDocument({
     workspace,
     commit,
-    documentUuid,
+    documentUuid: _documentUuid,
     excludeIssueId,
     page,
     pageSize,
@@ -971,12 +963,11 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     const whereConditions = [
       eq(evaluationResultsV2.workspaceId, workspace.id),
-      eq(evaluationVersions.type, EvaluationType.Human),
+      eq(evaluationResultsV2.evaluationType, EvaluationType.Human),
       isNotNull(evaluationResultsV2.evaluatedSpanId),
       isNotNull(evaluationResultsV2.evaluatedTraceId),
       isNull(commits.deletedAt),
       inArray(evaluationResultsV2.commitId, commitIds),
-      // Exclude spans that have evaluation results linked to the specific issue
       isNull(issueEvaluationResults.id),
     ]
 
@@ -996,16 +987,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         createdAt: evaluationResultsV2.createdAt,
       })
       .from(evaluationResultsV2)
-      .innerJoin(
-        evaluationVersions,
-        and(
-          eq(
-            evaluationResultsV2.evaluationUuid,
-            evaluationVersions.evaluationUuid,
-          ),
-          eq(evaluationVersions.documentUuid, documentUuid),
-        ),
-      )
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .leftJoin(
         issueEvaluationResults,

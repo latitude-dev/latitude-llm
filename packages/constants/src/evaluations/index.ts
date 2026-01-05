@@ -235,6 +235,8 @@ export type EvaluationResultV2<
   workspaceId: number
   commitId: number
   evaluationUuid: string
+  evaluationType?: T | null
+  evaluationMetric?: M | null
   experimentId?: number | null
   datasetId?: number | null
   evaluatedRowId?: number | null
