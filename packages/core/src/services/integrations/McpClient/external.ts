@@ -9,9 +9,22 @@ import {
 import { Result } from '../../../lib/Result'
 import { TypedResult } from '../../../lib/Result'
 import { IntegrationType } from '@latitude-data/constants'
+import { McpOAuthProvider, getMcpOAuthCredentials } from './oauthProvider'
+import { env } from '@latitude-data/env'
+import { API_ROUTES } from '../../../constants'
+
+type OAuthCallbacks = {
+  onRedirectToAuthorization?: (authorizationUrl: URL) => void
+}
+
+type ExternalMcpClientOptions = {
+  oauthCallbacks?: OAuthCallbacks
+  authorId?: string
+}
 
 export async function createAndConnectExternalMcpClient(
   integration: IntegrationDto,
+  options?: ExternalMcpClientOptions,
 ): Promise<TypedResult<McpClientConnection, McpConnectionError>> {
   if (integration.type !== IntegrationType.ExternalMCP) {
     return Result.error(
@@ -21,7 +34,29 @@ export async function createAndConnectExternalMcpClient(
     )
   }
 
-  const transportResult = createMcpTransport(integration.configuration.url)
+  const useOAuth = integration.configuration.useOAuth ?? false
+  let oauthProvider: McpOAuthProvider | undefined
+
+  if (useOAuth) {
+    const credentials = await getMcpOAuthCredentials(
+      integration.workspaceId,
+      integration.id,
+    )
+    const redirectUrl = `${env.APP_URL}${API_ROUTES.integrations.oauth.callback}`
+    oauthProvider = new McpOAuthProvider({
+      redirectUrl,
+      integration,
+      credentials,
+      authorId: options?.authorId,
+      onRedirectToAuthorization:
+        options?.oauthCallbacks?.onRedirectToAuthorization,
+    })
+  }
+
+  const transportResult = createMcpTransport(integration.configuration.url, {
+    authProvider: oauthProvider,
+    headers: integration.configuration.headers,
+  })
   if (!Result.isOk(transportResult)) {
     return Result.error(new McpConnectionError(transportResult.error.message))
   }

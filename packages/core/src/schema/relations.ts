@@ -17,6 +17,7 @@ import { users } from './models/users'
 import { workspaces } from './models/workspaces'
 import { integrations } from './models/integrations'
 import { mcpServers } from './models/mcpServers'
+import { mcpOAuthCredentials } from './models/mcpOAuthCredentials'
 
 /**
  * NOTE: All relations are declared in this file to
@@ -182,4 +183,18 @@ export const integrationsRelations = relations(integrations, ({ one }) => ({
     fields: [integrations.mcpServerId],
     references: [mcpServers.id],
   }),
+  oauthCredentials: one(mcpOAuthCredentials, {
+    fields: [integrations.id],
+    references: [mcpOAuthCredentials.integrationId],
+  }),
 }))
+
+export const mcpOAuthCredentialsRelations = relations(
+  mcpOAuthCredentials,
+  ({ one }) => ({
+    integration: one(integrations, {
+      fields: [mcpOAuthCredentials.integrationId],
+      references: [integrations.id],
+    }),
+  }),
+)

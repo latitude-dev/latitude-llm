@@ -547,3 +547,11 @@ export class RemoteOptions {
 }
 
 export const ONBOARDING_DOCUMENT_PATH = 'onboarding'
+
+export const API_ROUTES = {
+  integrations: {
+    oauth: {
+      callback: '/api/integrations/oauth/callback',
+    },
+  },
+}

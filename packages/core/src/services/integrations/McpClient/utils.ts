@@ -1,6 +1,7 @@
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import { OAuthClientProvider } from '@modelcontextprotocol/sdk/client/auth.js'
 import { LatitudeError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 
@@ -51,19 +52,39 @@ export const PIPEDREAM_MCP_URL = 'https://remote.mcp.pipedream.net'
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
 
+type CreateMcpTransportOptions = {
+  authProvider?: OAuthClientProvider
+  headers?: Record<string, string>
+}
+
 export function createMcpTransport(
   url: string,
+  options?: CreateMcpTransportOptions,
 ): TypedResult<McpClientTransport, McpUrlError> {
   const urlWithProtocol = url.match(/^https?:\/\//) ? url : `http://${url}`
   try {
     const urlObject = new URL(urlWithProtocol)
 
+    const requestInit: RequestInit | undefined = options?.headers
+      ? { headers: options.headers }
+      : undefined
+
     const isSSE = urlObject.pathname.endsWith('/sse')
     if (isSSE) {
-      return Result.ok(new SSEClientTransport(urlObject))
+      return Result.ok(
+        new SSEClientTransport(urlObject, {
+          authProvider: options?.authProvider,
+          requestInit,
+        }),
+      )
     }
 
-    return Result.ok(new StreamableHTTPClientTransport(urlObject))
+    return Result.ok(
+      new StreamableHTTPClientTransport(urlObject, {
+        authProvider: options?.authProvider,
+        requestInit,
+      }),
+    )
   } catch (error) {
     return Result.error(new McpUrlError(`Invalid MCP server URL: ${url}`))
   }

@@ -15,6 +15,7 @@ import {
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import useIntegrations from '$/stores/integrations'
@@ -28,6 +29,9 @@ import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
 import { useState, useMemo } from 'react'
 import Image from 'next/image'
+import type { ExternalMcpIntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
+import type { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+import { ToolsModal } from './ToolsModal'
 
 export default function Integrations() {
   const { data: integrations, isLoading: isLoading } = useIntegrations()
@@ -65,14 +69,27 @@ export default function Integrations() {
   )
 }
 
+function getOAuthStatus(integration: {
+  type: IntegrationType
+  configuration: unknown
+}): 'pending' | 'completed' | null {
+  if (integration.type !== IntegrationType.ExternalMCP) return null
+  const config = integration.configuration as ExternalMcpIntegrationConfiguration
+  if (!config.useOAuth) return null
+  return config.oauthStatus ?? 'pending'
+}
+
 const IntegrationsTable = () => {
   const router = useRouter()
-  const { data: integrations, scaleDown, scaleUp } = useIntegrations()
+  const { data: integrations, scaleDown, scaleUp, reauthorize } =
+    useIntegrations()
   const { data: workspace } = useCurrentWorkspace()
   const [sortLastUsedDirection, setSortLastUsedDirection] =
     useState<SortDirection>(null)
   const [sortCreatedAtDirection, setSortCreatedAtDirection] =
     useState<SortDirection>(null)
+  const [toolsModalIntegration, setToolsModalIntegration] =
+    useState<IntegrationDto | null>(null)
 
   const handleLastUsedSort = () => {
     if (sortLastUsedDirection === null) {
@@ -141,6 +158,7 @@ const IntegrationsTable = () => {
       <TableBody>
         {sortedIntegrations.map((integration) => {
           const values = integrationOptions(integration)
+          const oauthStatus = getOAuthStatus(integration)
           return (
             <TableRow key={integration.id} hoverable={false} verticalPadding>
               <TableCell>
@@ -183,6 +201,10 @@ const IntegrationsTable = () => {
                     short
                     mcpServerId={integration.mcpServerId || undefined}
                   />
+                ) : oauthStatus === 'pending' ? (
+                  <Badge variant='warningMuted'>OAuth Pending</Badge>
+                ) : oauthStatus === 'completed' ? (
+                  <Badge variant='successMuted'>OAuth Connected</Badge>
                 ) : (
                   '-'
                 )}
@@ -190,6 +212,14 @@ const IntegrationsTable = () => {
               <TableCell>
                 <DropdownMenu
                   options={[
+                    {
+                      label: 'See available tools',
+                      hidden:
+                        !integration.hasTools || oauthStatus === 'pending',
+                      disabled:
+                        !integration.hasTools || oauthStatus === 'pending',
+                      onClick: () => setToolsModalIntegration(integration),
+                    },
                     {
                       label: 'Details',
                       hidden: integration.type !== IntegrationType.HostedMCP,
@@ -199,6 +229,15 @@ const IntegrationsTable = () => {
                           ROUTES.settings.integrations.details(integration.id)
                             .root,
                         ),
+                    },
+                    {
+                      label:
+                        oauthStatus === 'pending'
+                          ? 'Complete OAuth Setup'
+                          : 'Re-authorize OAuth',
+                      hidden: oauthStatus === null,
+                      disabled: oauthStatus === null,
+                      onClick: () => reauthorize({ integrationId: integration.id }),
                     },
                     {
                       label: 'Scale Up',
@@ -246,6 +285,12 @@ const IntegrationsTable = () => {
           )
         })}
       </TableBody>
+      {toolsModalIntegration && (
+        <ToolsModal
+          integration={toolsModalIntegration}
+          onClose={() => setToolsModalIntegration(null)}
+        />
+      )}
     </Table>
   )
 }
