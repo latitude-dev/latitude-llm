@@ -30,29 +30,31 @@ function ChoiceCard({
   return (
     <div
       className={cn(
-        'flex flex-col items-center gap-6 p-8 rounded-lg',
-        'transition-colors cursor-pointer',
-        'border border-border hover:border-primary',
-        'bg-background hover:bg-accent',
+        'flex flex-col gap-4 p-5 rounded-2xl h-full',
+        'transition-all cursor-pointer',
+        'border-2',
+        isHovered
+          ? 'border-primary bg-primary/5'
+          : 'border-border bg-background',
       )}
       ref={ref}
       onClick={onClick}
     >
       <div
-        className={cn('rounded-full p-4 w-fit border transition-colors', {
-          'bg-muted border-muted': !isHovered,
-          'bg-primary border-primary': isHovered,
-        })}
+        className={cn(
+          'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
+          isHovered ? 'bg-primary' : 'bg-muted',
+        )}
       >
         <Icon
           name={icon}
-          size='large'
+          size='normal'
           color={isHovered ? 'white' : 'foregroundMuted'}
         />
       </div>
       <div className='flex flex-col items-start gap-2'>
-        <Text.H4M>{title}</Text.H4M>
-        <Text.H6 color='foregroundMuted'>{description}</Text.H6>
+        <Text.H3M>{title}</Text.H3M>
+        <Text.H5 color='foregroundMuted'>{description}</Text.H5>
       </div>
     </div>
   )
@@ -77,7 +79,7 @@ export default function OnboardingChoicePage() {
 
   return (
     <div className='flex flex-col items-center justify-center min-h-screen p-8'>
-      <div className='flex flex-col items-center gap-8 max-w-2xl w-full'>
+      <div className='flex flex-col items-center gap-10 max-w-2xl w-full'>
         <div className='flex flex-col items-center gap-4'>
           <Icon name='logo' size='xlarge' />
           <Text.H2M color='foreground'>Welcome to Latitude</Text.H2M>
@@ -86,11 +88,11 @@ export default function OnboardingChoicePage() {
           </Text.H5>
         </div>
 
-        <div className='flex flex-col md:flex-row gap-6 w-full'>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4 w-full'>
           <ChoiceCard
             icon='code'
-            title='I have an existing project'
-            description='Already have an AI-powered project? Install Latitude to monitor and improve your existing setup.'
+            title='Connect an existing project'
+            description='The fastest way to get started. Install Latitude in your existing AI project in just 5 minutes.'
             onClick={handleExistingProject}
           />
 

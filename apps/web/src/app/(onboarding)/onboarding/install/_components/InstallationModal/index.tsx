@@ -1,9 +1,9 @@
 'use client'
 
 import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { FrameworkDefinition } from '../../frameworks'
+import { FrameworkDefinition } from '$/components/IntegrationGallery/frameworks'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { InstallationSteps } from './Steps'
+import { InstallationSteps } from '$/components/IntegrationGallery/InstallationSteps'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 

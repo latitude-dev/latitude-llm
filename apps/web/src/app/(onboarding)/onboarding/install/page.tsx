@@ -6,53 +6,20 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { skipOnboardingAction } from '$/actions/workspaceOnboarding/skip'
-import InviteDeveloperModal from './_components/InviteDeveloperModal'
+import { InviteMembersModal } from '$/components/InviteMembersModal'
 import {
   useLocalStorage,
   AppLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import useApiKeys from '$/stores/apiKeys'
 import { useOnboardingInstall } from './_lib/OnboardingInstallProvider'
-import { FrameworkDefinition, FRAMEWORKS } from './frameworks'
+import {
+  FrameworkDefinition,
+  MODEL_PROVIDERS,
+  FRAMEWORKS,
+} from '$/components/IntegrationGallery/frameworks'
+import { FrameworkCard } from '$/components/IntegrationGallery/FrameworkCard'
 import InstallationModal from './_components/InstallationModal'
-import { useHover } from '@latitude-data/web-ui/browser'
-import { cn } from '@latitude-data/web-ui/utils'
-
-function FrameworkCard({
-  framework,
-  onClick,
-}: {
-  framework: FrameworkDefinition
-  onClick: () => void
-}) {
-  const [ref, isHovered] = useHover<HTMLDivElement>()
-
-  return (
-    <Button
-      key={framework.name}
-      variant='ghost'
-      className='p-0'
-      fullWidth
-      onClick={onClick}
-    >
-      <div
-        ref={ref}
-        className={cn(
-          'w-full flex flex-col gap-2 p-4 rounded-lg',
-          'border border-border hover:border-primary hover:bg-accent transition-colors',
-        )}
-      >
-        <Icon
-          name={framework.icon}
-          color={isHovered ? 'accentForeground' : 'foregroundMuted'}
-        />
-        <Text.H5M color={isHovered ? 'accentForeground' : 'foreground'}>
-          {framework.name}
-        </Text.H5M>
-      </div>
-    </Button>
-  )
-}
 
 export default function OnboardingInstallPage() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
@@ -65,6 +32,7 @@ export default function OnboardingInstallPage() {
 
   const [selectedFramework, setSelectedFramework] =
     useState<FrameworkDefinition | null>(null)
+  const [hasInteracted, setHasInteracted] = useState(false)
 
   const { data: apiKeys } = useApiKeys()
   const { project } = useOnboardingInstall()
@@ -76,6 +44,11 @@ export default function OnboardingInstallPage() {
     skipOnboarding()
   }, [skipOnboarding, setReplayOnboarding])
 
+  const handleCardClick = useCallback((framework: FrameworkDefinition) => {
+    setSelectedFramework(framework)
+    setHasInteracted(true)
+  }, [])
+
   const onOpenInviteModal = useCallback(() => {
     setSelectedFramework(null)
     setInviteModalOpen(true)
@@ -83,7 +56,7 @@ export default function OnboardingInstallPage() {
 
   return (
     <div className='flex flex-col h-screen'>
-      <InviteDeveloperModal
+      <InviteMembersModal
         open={inviteModalOpen}
         setOpen={setInviteModalOpen}
       />
@@ -102,7 +75,7 @@ export default function OnboardingInstallPage() {
         </div>
         <div className='flex items-center gap-3'>
           <Button
-            variant='outline'
+            variant={hasInteracted ? 'outline' : 'default'}
             fancy
             onClick={onOpenInviteModal}
             iconProps={{ name: 'userRoundPlus', placement: 'left' }}
@@ -110,25 +83,44 @@ export default function OnboardingInstallPage() {
             Invite developers
           </Button>
           <Button
+            variant={hasInteracted ? 'default' : 'outline'}
             fancy
             onClick={handleSkip}
             disabled={isSkipping}
             iconProps={{ name: 'arrowRight', placement: 'right' }}
           >
-            {isSkipping ? 'Finishing...' : 'Skip'}
+            {isSkipping ? 'Finishing...' : hasInteracted ? 'Continue' : 'Skip'}
           </Button>
         </div>
       </header>
 
-      <main className='flex-1 overflow-hidden items-center flex flex-col'>
-        <div className='grid grid-cols-2 gap-x-4 gap-y-2 max-w-2xl w-full p-6'>
-          {FRAMEWORKS.map((framework) => (
-            <FrameworkCard
-              key={framework.name}
-              framework={framework}
-              onClick={() => setSelectedFramework(framework)}
-            />
-          ))}
+      <main className='flex-1 overflow-auto items-center flex flex-col'>
+        <div className='flex flex-col gap-6 max-w-3xl w-full p-6'>
+          <div className='flex flex-col gap-4'>
+            <Text.H5M color='foregroundMuted'>Model Providers</Text.H5M>
+            <div className='grid grid-cols-3 gap-4'>
+              {MODEL_PROVIDERS.map((framework) => (
+                <FrameworkCard
+                  key={framework.name}
+                  framework={framework}
+                  onClick={() => handleCardClick(framework)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className='flex flex-col gap-4'>
+            <Text.H5M color='foregroundMuted'>Frameworks</Text.H5M>
+            <div className='grid grid-cols-3 gap-4'>
+              {FRAMEWORKS.map((framework) => (
+                <FrameworkCard
+                  key={framework.name}
+                  framework={framework}
+                  onClick={() => handleCardClick(framework)}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </main>
     </div>
