@@ -139,14 +139,22 @@ async function stopExperiments({
       const experiment = await repository
         .find(optimization.baselineExperimentId)
         .then((r) => r.unwrap())
-      await stopExperiment(experiment).then((r) => r.unwrap())
+
+      await stopExperiment({
+        experiment: experiment,
+        workspaceId: workspace.id,
+      }).then((r) => r.unwrap())
     }
 
     if (optimization.optimizedExperimentId) {
       const experiment = await repository
         .find(optimization.optimizedExperimentId)
         .then((r) => r.unwrap())
-      await stopExperiment(experiment).then((r) => r.unwrap())
+
+      await stopExperiment({
+        experiment: experiment,
+        workspaceId: workspace.id,
+      }).then((r) => r.unwrap())
     }
   } catch {
     /* No-op */

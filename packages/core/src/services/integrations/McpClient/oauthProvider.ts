@@ -152,7 +152,10 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
     }
   }
 
-  async saveTokens(tokens: OAuthTokens, db: DbConnection = database): Promise<void> {
+  async saveTokens(
+    tokens: OAuthTokens,
+    db: DbConnection = database,
+  ): Promise<void> {
     const expiresAt = tokens.expires_in
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null

@@ -74,15 +74,20 @@ function getOAuthStatus(integration: {
   configuration: unknown
 }): 'pending' | 'completed' | null {
   if (integration.type !== IntegrationType.ExternalMCP) return null
-  const config = integration.configuration as ExternalMcpIntegrationConfiguration
+  const config =
+    integration.configuration as ExternalMcpIntegrationConfiguration
   if (!config.useOAuth) return null
   return config.oauthStatus ?? 'pending'
 }
 
 const IntegrationsTable = () => {
   const router = useRouter()
-  const { data: integrations, scaleDown, scaleUp, reauthorize } =
-    useIntegrations()
+  const {
+    data: integrations,
+    scaleDown,
+    scaleUp,
+    reauthorize,
+  } = useIntegrations()
   const { data: workspace } = useCurrentWorkspace()
   const [sortLastUsedDirection, setSortLastUsedDirection] =
     useState<SortDirection>(null)
@@ -237,7 +242,8 @@ const IntegrationsTable = () => {
                           : 'Re-authorize OAuth',
                       hidden: oauthStatus === null,
                       disabled: oauthStatus === null,
-                      onClick: () => reauthorize({ integrationId: integration.id }),
+                      onClick: () =>
+                        reauthorize({ integrationId: integration.id }),
                     },
                     {
                       label: 'Scale Up',

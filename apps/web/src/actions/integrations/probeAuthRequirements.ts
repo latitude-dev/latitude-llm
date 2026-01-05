@@ -11,4 +11,3 @@ export const probeAuthRequirementsAction = authProcedure
     async ({ parsedInput }) =>
       await probeAuthRequirements(parsedInput.url).then((r) => r.unwrap()),
   )
-

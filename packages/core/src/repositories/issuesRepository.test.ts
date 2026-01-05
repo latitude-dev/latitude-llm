@@ -70,7 +70,10 @@ describe('IssuesRepository - lastCommit field', () => {
   })
 
   it('returns lastCommit from the most recent occurrence', async () => {
-    const { commit: newerDraft } = await factories.createDraft({ project, user })
+    const { commit: newerDraft } = await factories.createDraft({
+      project,
+      user,
+    })
 
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
