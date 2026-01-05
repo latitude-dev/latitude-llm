@@ -12,6 +12,8 @@ import { mcpOAuthCredentials } from '../../../schema/models/mcpOAuthCredentials'
 import { and, eq } from 'drizzle-orm'
 import { encrypt, decrypt } from '../../../lib/encryption'
 
+type DbConnection = typeof database
+
 type OAuthTokensStore = {
   accessToken?: string
   refreshToken?: string
@@ -150,7 +152,7 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
     }
   }
 
-  async saveTokens(tokens: OAuthTokens): Promise<void> {
+  async saveTokens(tokens: OAuthTokens, db: DbConnection = database): Promise<void> {
     const expiresAt = tokens.expires_in
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null
@@ -159,7 +161,7 @@ export class McpOAuthProvider implements McpOAuthClientProvider {
       refreshToken: tokens.refresh_token,
       expiresAt,
     }
-    await database
+    await db
       .insert(mcpOAuthCredentials)
       .values({
         workspaceId: this._workspaceId,

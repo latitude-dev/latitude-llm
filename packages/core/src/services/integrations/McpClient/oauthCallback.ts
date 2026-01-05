@@ -220,18 +220,20 @@ export async function handleOAuthCallback(
       },
     )
 
-    // Step 6: Save the tokens
-    await oauthProvider.saveTokens(tokens)
+    // Step 6: Save tokens and update integration status in a transaction
+    await database.transaction(async (tx) => {
+      // @ts-expect-error - tx is a PgTransaction which duck-types with Database
+      await oauthProvider.saveTokens(tokens, tx)
 
-    // Update the integration's OAuth status to completed
-    const updatedConfiguration: ExternalMcpIntegrationConfiguration = {
-      ...integration.configuration,
-      oauthStatus: OAuthStatus.completed,
-    }
-    await database
-      .update(integrations)
-      .set({ configuration: updatedConfiguration })
-      .where(eq(integrations.id, integration.id))
+      const updatedConfiguration: ExternalMcpIntegrationConfiguration = {
+        ...integration.configuration,
+        oauthStatus: OAuthStatus.completed,
+      }
+      await tx
+        .update(integrations)
+        .set({ configuration: updatedConfiguration })
+        .where(eq(integrations.id, integration.id))
+    })
 
     return Result.ok(undefined)
   } catch (err) {

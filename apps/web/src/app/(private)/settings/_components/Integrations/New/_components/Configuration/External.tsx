@@ -209,13 +209,16 @@ export const ExternalIntegrationConfiguration = forwardRef<
                     variant='ghost'
                     size='small'
                     onClick={() => removeHeader(index)}
-                  >
-                    <Icon name='trash' color='destructiveMutedForeground' />
-                  </Button>
+                    iconProps={{ name: 'trash', color: 'destructiveMutedForeground' }}
+                  />
                 </div>
               ))}
-              <Button type='button' variant='outline' onClick={addHeader}>
-                <Icon name='plus' />
+              <Button
+                type='button'
+                variant='outline'
+                onClick={addHeader}
+                iconProps={{ name: 'plus' }}
+              >
                 Add Header
               </Button>
             </div>

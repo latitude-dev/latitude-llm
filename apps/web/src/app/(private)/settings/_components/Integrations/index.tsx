@@ -158,6 +158,7 @@ const IntegrationsTable = () => {
       <TableBody>
         {sortedIntegrations.map((integration) => {
           const values = integrationOptions(integration)
+          const oauthStatus = getOAuthStatus(integration)
           return (
             <TableRow key={integration.id} hoverable={false} verticalPadding>
               <TableCell>
@@ -200,9 +201,9 @@ const IntegrationsTable = () => {
                     short
                     mcpServerId={integration.mcpServerId || undefined}
                   />
-                ) : getOAuthStatus(integration) === 'pending' ? (
+                ) : oauthStatus === 'pending' ? (
                   <Badge variant='warningMuted'>OAuth Pending</Badge>
-                ) : getOAuthStatus(integration) === 'completed' ? (
+                ) : oauthStatus === 'completed' ? (
                   <Badge variant='successMuted'>OAuth Connected</Badge>
                 ) : (
                   '-'
@@ -214,11 +215,9 @@ const IntegrationsTable = () => {
                     {
                       label: 'See available tools',
                       hidden:
-                        !integration.hasTools ||
-                        getOAuthStatus(integration) === 'pending',
+                        !integration.hasTools || oauthStatus === 'pending',
                       disabled:
-                        !integration.hasTools ||
-                        getOAuthStatus(integration) === 'pending',
+                        !integration.hasTools || oauthStatus === 'pending',
                       onClick: () => setToolsModalIntegration(integration),
                     },
                     {
@@ -233,11 +232,11 @@ const IntegrationsTable = () => {
                     },
                     {
                       label:
-                        getOAuthStatus(integration) === 'pending'
+                        oauthStatus === 'pending'
                           ? 'Complete OAuth Setup'
                           : 'Re-authorize OAuth',
-                      hidden: getOAuthStatus(integration) === null,
-                      disabled: getOAuthStatus(integration) === null,
+                      hidden: oauthStatus === null,
+                      disabled: oauthStatus === null,
                       onClick: () => reauthorize({ integrationId: integration.id }),
                     },
                     {
