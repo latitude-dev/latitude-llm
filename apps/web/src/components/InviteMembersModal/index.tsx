@@ -66,7 +66,7 @@ function NewUserRow({
   )
 }
 
-export default function InviteDeveloperModal({
+export function InviteMembersModal({
   open,
   setOpen,
 }: {
@@ -120,3 +120,4 @@ export default function InviteDeveloperModal({
     </Modal>
   )
 }
+

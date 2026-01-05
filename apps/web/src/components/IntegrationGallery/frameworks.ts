@@ -1,7 +1,7 @@
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 
 interface IFrameworkDefinition {
-  name: string // The name of the framework / provider
+  name: string
   icon: IconName
 }
 
@@ -32,7 +32,7 @@ export type FrameworkDefinition =
   | SupportedFrameworkDefinition
   | UnsupportedFrameworkDefinition
 
-export const FRAMEWORKS: FrameworkDefinition[] = [
+export const MODEL_PROVIDERS: FrameworkDefinition[] = [
   {
     name: 'OpenAI',
     icon: 'openai',
@@ -51,7 +51,7 @@ const completion = await client.chat.completions.create({ ... });
   },
   {
     name: 'Anthropic',
-    icon: 'code',
+    icon: 'anthropic',
     autoInstrumentation: {
       import: "import * as Anthropic from '@anthropic-ai/sdk'",
       line: 'anthropic: Anthropic, // This enables automatic tracing for the Anthropic SDK',
@@ -66,8 +66,24 @@ const response = await client.messages.create({ ... });
     },
   },
   {
+    name: 'Gemini',
+    icon: 'googleGemini',
+    manualInstrumentation: {
+      completion: {
+        imports: ["import { GoogleGenAI } from '@google/genai'"],
+        model: 'gemini-3-pro',
+        codeblock: `
+const google = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const response = await google.models.generateContent({ ... });
+const text = response.text;
+        `.trim(),
+        return: 'return text',
+      },
+    },
+  },
+  {
     name: 'Azure OpenAI',
-    icon: 'code',
+    icon: 'azure',
     autoInstrumentation: {
       import: "import OpenAI from 'openai'",
       line: 'openai: OpenAI, // This enables automatic tracing for the Azure OpenAI SDK',
@@ -82,24 +98,8 @@ const completion = await client.chat.completions.create({ ... });
     },
   },
   {
-    name: 'Cohere',
-    icon: 'code',
-    autoInstrumentation: {
-      import: "import * as Cohere from 'cohere-ai'",
-      line: 'cohere: Cohere, // This enables automatic tracing for the Cohere SDK',
-    },
-    implementation: {
-      import: "import { CohereClient } from 'cohere-ai'",
-      codeblock: `
-const client = new CohereClient({ ... });
-const response = await client.generate({ ... });
-      `.trim(),
-      return: 'return response',
-    },
-  },
-  {
     name: 'Amazon Bedrock',
-    icon: 'code',
+    icon: 'amazonBedrock',
     autoInstrumentation: {
       import: "import * as Bedrock from '@aws-sdk/client-bedrock-runtime'",
       line: 'bedrock: Bedrock, // This enables automatic tracing for the Amazon Bedrock SDK',
@@ -117,24 +117,8 @@ const response = await client.send(
     },
   },
   {
-    name: 'Together AI',
-    icon: 'code',
-    autoInstrumentation: {
-      import: "import { Together } from 'together-ai'",
-      line: 'together: Together, // This enables automatic tracing for the Together AI SDK',
-    },
-    implementation: {
-      import: "import { Together } from 'together-ai'",
-      codeblock: `
-const client = new Together({ ... });
-const response = await client.generate({ ... });
-      `.trim(),
-      return: 'return response',
-    },
-  },
-  {
     name: 'Vertex AI',
-    icon: 'code',
+    icon: 'googleVertex',
     autoInstrumentation: {
       import: "import * as VertexAI from '@google-cloud/vertexai'",
       line: 'vertexai: VertexAI, // This enables automatic tracing for the Google Vertex AI SDK',
@@ -150,8 +134,40 @@ const result = await model.generateContent({ ... });
     },
   },
   {
+    name: 'Cohere',
+    icon: 'sparkles',
+    autoInstrumentation: {
+      import: "import * as Cohere from 'cohere-ai'",
+      line: 'cohere: Cohere, // This enables automatic tracing for the Cohere SDK',
+    },
+    implementation: {
+      import: "import { CohereClient } from 'cohere-ai'",
+      codeblock: `
+const client = new CohereClient({ ... });
+const response = await client.generate({ ... });
+      `.trim(),
+      return: 'return response',
+    },
+  },
+  {
+    name: 'Together AI',
+    icon: 'sparkles',
+    autoInstrumentation: {
+      import: "import { Together } from 'together-ai'",
+      line: 'together: Together, // This enables automatic tracing for the Together AI SDK',
+    },
+    implementation: {
+      import: "import { Together } from 'together-ai'",
+      codeblock: `
+const client = new Together({ ... });
+const response = await client.generate({ ... });
+      `.trim(),
+      return: 'return response',
+    },
+  },
+  {
     name: 'Google AI Platform',
-    icon: 'code',
+    icon: 'googleGemini',
     autoInstrumentation: {
       import: "import * as AIPlatform from '@google-cloud/aiplatform'",
       line: 'aiplatform: AIPlatform, // This enables automatic tracing for the Google AI Platform SDK',
@@ -166,44 +182,12 @@ const response = await client.predict({ ... });
       return: 'return response',
     },
   },
-  {
-    name: 'LangChain',
-    icon: 'code',
-    autoInstrumentation: {
-      import:
-        "import * as LangchainCallbacks from '@langchain/core/callbacks/manager'",
-      line: 'langchain: { callbackManagerModule: LangchainCallbacks }, // This enables automatic tracing for the LangChain SDK',
-    },
-    implementation: {
-      import: "import { createAgent } from 'langchain'",
-      codeblock: `
-const agent = createAgent({ model: 'claude-sonnet-4-5' });
-const result = await agent.invoke({ ... });
-      `.trim(),
-      return: 'return result',
-    },
-  },
-  {
-    name: 'LlamaIndex',
-    icon: 'code',
-    autoInstrumentation: {
-      import: "import * as LlamaIndex from 'llamaindex'",
-      line: 'llamaindex: LlamaIndex, // This enables automatic tracing for the LlamaIndex SDK',
-    },
-    implementation: {
-      import:
-        "import { agent } from '@llamaindex/workflow'\nimport { Settings } from 'llamaindex'\nimport { openai } from '@llamaindex/openai'",
-      codeblock: `
-Settings.llm = openai({ model: 'gpt-4o' });
-const myAgent = agent({ ... });
-const response = await myAgent.run(prompt);
-      `.trim(),
-      return: 'return response',
-    },
-  },
+]
+
+export const FRAMEWORKS: FrameworkDefinition[] = [
   {
     name: 'Vercel AI SDK',
-    icon: 'code',
+    icon: 'zap',
     autoInstrumentation: {
       import: '',
       line: '',
@@ -224,19 +208,39 @@ const { text } = await generateText({
     },
   },
   {
-    name: 'Gemini',
-    icon: 'sparkles',
-    manualInstrumentation: {
-      completion: {
-        imports: ["import { GoogleGenAI } from '@google/genai'"],
-        model: 'gemini-3-pro',
-        codeblock: `
-const google = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const response = await google.models.generateContent({ ... });
-const text = response.text;
-        `.trim(),
-        return: 'return text',
-      },
+    name: 'LangChain',
+    icon: 'link',
+    autoInstrumentation: {
+      import:
+        "import * as LangchainCallbacks from '@langchain/core/callbacks/manager'",
+      line: 'langchain: { callbackManagerModule: LangchainCallbacks }, // This enables automatic tracing for the LangChain SDK',
+    },
+    implementation: {
+      import: "import { createAgent } from 'langchain'",
+      codeblock: `
+const agent = createAgent({ model: 'claude-sonnet-4-5' });
+const result = await agent.invoke({ ... });
+      `.trim(),
+      return: 'return result',
     },
   },
-] as const
+  {
+    name: 'LlamaIndex',
+    icon: 'database',
+    autoInstrumentation: {
+      import: "import * as LlamaIndex from 'llamaindex'",
+      line: 'llamaindex: LlamaIndex, // This enables automatic tracing for the LlamaIndex SDK',
+    },
+    implementation: {
+      import:
+        "import { agent } from '@llamaindex/workflow'\nimport { Settings } from 'llamaindex'\nimport { openai } from '@llamaindex/openai'",
+      codeblock: `
+Settings.llm = openai({ model: 'gpt-4o' });
+const myAgent = agent({ ... });
+const response = await myAgent.run(prompt);
+      `.trim(),
+      return: 'return response',
+    },
+  },
+]
+
