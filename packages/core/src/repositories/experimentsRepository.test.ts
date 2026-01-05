@@ -66,16 +66,19 @@ describe('ExperimentsRepository', () => {
         workspace,
         commit,
         document,
+        name: 'evaluation-1',
       }),
       factories.createEvaluationV2({
         workspace,
         commit,
         document,
+        name: 'evaluation-2',
       }),
       factories.createEvaluationV2({
         workspace,
         commit,
         document,
+        name: 'evaluation-3',
       }),
     ])
 

@@ -3,6 +3,7 @@ import { ISSUE_GROUP, ISSUE_STATUS } from '@latitude-data/constants/issues'
 import { type Commit } from '../schema/models/types/Commit'
 import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
 import { type Project } from '../schema/models/types/Project'
+import { type User } from '../schema/models/types/User'
 import { type Workspace } from '../schema/models/types/Workspace'
 import { resolveIssue } from '../services/issues/resolve'
 import { ignoreIssue } from '../services/issues/ignore'
@@ -15,6 +16,137 @@ let project: Project
 let commit: Commit
 let document: DocumentVersion
 let repository: IssuesRepository
+let user: User
+
+describe('IssuesRepository - lastCommit field', () => {
+  beforeEach(async () => {
+    const setup = await factories.createProject({
+      documents: {
+        'test-doc': 'Test document content',
+      },
+    })
+
+    workspace = setup.workspace
+    project = setup.project
+    commit = setup.commit
+    document = setup.documents[0]!
+    user = setup.user
+
+    repository = new IssuesRepository(workspace.id)
+  })
+
+  it('returns lastCommit with correct commit info', async () => {
+    await factories.createIssue({
+      workspace,
+      project,
+      document,
+      createdAt: new Date(),
+      histograms: [
+        {
+          commitId: commit.id,
+          date: new Date(),
+          count: 1,
+        },
+      ],
+    })
+
+    const result = await repository.fetchIssuesFiltered({
+      project,
+      commit,
+      filters: {},
+      sorting: { sort: 'relevance', sortDirection: 'desc' },
+      page: 1,
+      limit: 100,
+    })
+
+    const issues = result.unwrap().issues
+    expect(issues.length).toBe(1)
+
+    const issue = issues[0]!
+    expect(issue.lastCommit).toBeDefined()
+    expect(issue.lastCommit?.uuid).toBe(commit.uuid)
+    expect(issue.lastCommit?.title).toBe(commit.title)
+    expect(issue.lastCommit?.version).toBe(commit.version)
+  })
+
+  it('returns lastCommit from the most recent occurrence', async () => {
+    const { commit: newerDraft } = await factories.createDraft({ project, user })
+
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayOccurredAt = new Date(yesterday)
+    yesterdayOccurredAt.setHours(10, 0, 0, 0)
+
+    const today = new Date()
+    const todayOccurredAt = new Date(today)
+    todayOccurredAt.setHours(15, 0, 0, 0)
+
+    await factories.createIssue({
+      workspace,
+      project,
+      document,
+      createdAt: yesterday,
+      histograms: [
+        {
+          commitId: commit.id,
+          date: yesterday,
+          occurredAt: yesterdayOccurredAt,
+          count: 5,
+        },
+        {
+          commitId: newerDraft.id,
+          date: today,
+          occurredAt: todayOccurredAt,
+          count: 2,
+        },
+      ],
+    })
+
+    const result = await repository.fetchIssuesFiltered({
+      project,
+      commit: newerDraft,
+      filters: {},
+      sorting: { sort: 'relevance', sortDirection: 'desc' },
+      page: 1,
+      limit: 100,
+    })
+
+    const issues = result.unwrap().issues
+    expect(issues.length).toBe(1)
+
+    const issue = issues[0]!
+    expect(issue.lastCommit).toBeDefined()
+    expect(issue.lastCommit?.uuid).toBe(newerDraft.uuid)
+    expect(issue.lastCommit?.title).toBe(newerDraft.title)
+  })
+
+  it('returns lastCommit in findWithStats', async () => {
+    const { issue } = await factories.createIssue({
+      workspace,
+      project,
+      document,
+      createdAt: new Date(),
+      histograms: [
+        {
+          commitId: commit.id,
+          date: new Date(),
+          count: 1,
+        },
+      ],
+    })
+
+    const issueWithStats = await repository.findWithStats({
+      project,
+      issueId: issue.id,
+    })
+
+    expect(issueWithStats).toBeDefined()
+    expect(issueWithStats?.lastCommit).toBeDefined()
+    expect(issueWithStats?.lastCommit?.uuid).toBe(commit.uuid)
+    expect(issueWithStats?.lastCommit?.title).toBe(commit.title)
+    expect(issueWithStats?.lastCommit?.version).toBe(commit.version)
+  })
+})
 
 describe('IssuesRepository - Group Filtering', () => {
   beforeEach(async () => {
@@ -28,8 +160,7 @@ describe('IssuesRepository - Group Filtering', () => {
     project = setup.project
     commit = setup.commit
     document = setup.documents[0]!
-
-    const { user } = setup
+    user = setup.user
 
     // Create issues with different statuses
     // 1. Active issue (not resolved, not ignored, not merged)
