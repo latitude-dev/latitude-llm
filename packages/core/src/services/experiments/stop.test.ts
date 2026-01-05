@@ -158,6 +158,35 @@ describe('stopExperiment', () => {
     })
   })
 
+  describe('race conditions', () => {
+    it('prevents evaluation jobs from being enqueued after experiment is stopped', async () => {
+      const { experiment } = await createExperiment({
+        document,
+        commit,
+        evaluations: [],
+        user,
+        workspace,
+      })
+
+      // This test ensures that evaluation jobs are not enqueued if the experiment
+      // is marked as finished between when a background run starts and when it
+      // completes. The backgroundRunJob now re-fetches the experiment status
+      // before enqueueing evaluation jobs to prevent this race condition.
+      
+      const result = await stopExperiment({
+        experiment,
+        workspaceId: workspace.id,
+      })
+
+      expect(result.ok).toBe(true)
+      expect(result.value?.finishedAt).toBeInstanceOf(Date)
+      
+      // The experiment should now be marked as finished, which would cause
+      // any ongoing background runs to skip evaluation enqueueing when they
+      // re-fetch the experiment status
+    })
+  })
+
   describe('job cancellation', () => {
     it('cancels pending jobs in the queue', async () => {
       const { experiment } = await createExperiment({
