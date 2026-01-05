@@ -1,6 +1,7 @@
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useAlignmentMetricUpdates } from '$/hooks/useAlignmentMetricUpdates'
 import { useIssue } from '$/stores/issues/issue'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -12,7 +13,6 @@ import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { ConfusionMatrixTooltipContent } from '$/components/ConfusionMatrix'
-import { calculateMCC } from '$/helpers/evaluation-generation/calculateMCC'
 
 export default function AlignmentMetricChart<
   T extends EvaluationType = EvaluationType,
@@ -28,10 +28,11 @@ export default function AlignmentMetricChart<
     issueId: evaluation.issueId,
   })
 
-  const confusionMatrix = evaluation.alignmentMetricMetadata?.confusionMatrix
-  const alignmentMetric = confusionMatrix
-    ? calculateMCC({ confusionMatrix })
-    : undefined
+  const { confusionMatrix, alignmentMetric, isRecalculating } =
+    useAlignmentMetricUpdates({
+      evaluationUuid: evaluation.uuid,
+      initialMetadata: evaluation.alignmentMetricMetadata,
+    })
 
   const alignmentMetricLink =
     ROUTES.projects
@@ -47,9 +48,14 @@ export default function AlignmentMetricChart<
       }
       loading={isLoading}
     >
-      {alignmentMetric !== undefined ? (
+      {isRecalculating ? (
+        <div className='flex flex-row items-center gap-2'>
+          <Icon name='loader' spin color='foregroundMuted' size='normal' />
+          <ChartBlankSlate>Recalculating...</ChartBlankSlate>
+        </div>
+      ) : alignmentMetric !== undefined ? (
         <div className='flex flex-row items-center gap-1'>
-          <PanelChart data={`${Math.round(alignmentMetric)}%`} />
+          <PanelChart data={`${alignmentMetric}%`} />
 
           <Link href={alignmentMetricLink} target='_blank'>
             <Icon

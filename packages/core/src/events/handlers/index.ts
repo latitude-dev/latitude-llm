@@ -12,6 +12,7 @@ import { notifyClientOfDocumentTriggerDeleted } from './notifyClientOfDocumentTr
 import { notifyClientOfDocumentTriggerEventCreated } from './notifyClientOfDocumentTriggerEventCreated'
 import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluationResultV2Created'
 import { notifyClientOfEvaluationStatus } from './notifyClientOfEvaluationStatus'
+import { notifyClientOfEvaluationV2AlignmentUpdated } from './notifyClientOfEvaluationV2AlignmentUpdated'
 import { notifyClientOfExportReady } from './notifyClientOfExportReady'
 import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
 import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
@@ -73,6 +74,7 @@ export const EventHandlers: IEventsHandlers = {
   copilotSuggestionApplied: [],
   evaluationV2Created: [pingProjectUpdateJob],
   evaluationV2Updated: [pingProjectUpdateJob],
+  evaluationV2AlignmentUpdated: [notifyClientOfEvaluationV2AlignmentUpdated],
   evaluationV2Deleted: [pingProjectUpdateJob],
   evaluationV2Ran: [],
   evaluationV2Annotated: [unlockIssuesDashboardOnAnnotation],

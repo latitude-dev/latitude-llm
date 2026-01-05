@@ -1,5 +1,6 @@
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useAlignmentMetricUpdates } from '$/hooks/useAlignmentMetricUpdates'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -10,8 +11,6 @@ import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ConfusionMatrixTooltipContent } from '$/components/ConfusionMatrix'
-import { calculateMCC } from '$/helpers/evaluation-generation/calculateMCC'
-import { useMemo } from 'react'
 
 type EvaluationWithIssueProps = {
   evaluationWithIssue: EvaluationV2
@@ -30,12 +29,12 @@ export function EvaluationWithIssue({
 }: EvaluationWithIssueProps) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const confusionMatrix =
-    evaluationWithIssue.alignmentMetricMetadata?.confusionMatrix
-  const alignmentMetric = useMemo(
-    () => (confusionMatrix ? calculateMCC({ confusionMatrix }) : 0),
-    [confusionMatrix],
-  )
+
+  const { confusionMatrix, alignmentMetric, isRecalculating } =
+    useAlignmentMetricUpdates({
+      evaluationUuid: evaluationWithIssue.uuid,
+      initialMetadata: evaluationWithIssue.alignmentMetricMetadata,
+    })
 
   return (
     <div className='grid grid-cols-2 gap-x-4 gap-y-4 items-center'>
@@ -83,14 +82,17 @@ export function EvaluationWithIssue({
           side='bottom'
           trigger={<Icon name='info' color='foregroundMuted' size='small' />}
         >
-          <ConfusionMatrixTooltipContent
-            confusionMatrix={
-              evaluationWithIssue.alignmentMetricMetadata?.confusionMatrix
-            }
-          />
+          <ConfusionMatrixTooltipContent confusionMatrix={confusionMatrix} />
         </Tooltip>
       </div>
-      <Text.H5 color='foreground'>{alignmentMetric}%</Text.H5>
+      {isRecalculating ? (
+        <div className='flex flex-row items-center gap-2'>
+          <Icon name='loader' spin color='foregroundMuted' size='small' />
+          <Text.H5 color='foregroundMuted'>Recalculating...</Text.H5>
+        </div>
+      ) : (
+        <Text.H5 color='foreground'>{alignmentMetric}%</Text.H5>
+      )}
     </div>
   )
 }

@@ -23,6 +23,7 @@ import { type Commit } from '../../schema/models/types/Commit'
 import { Issue } from '../../schema/models/types/Issue'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { syncDefaultCompositeTarget } from './create'
+import { maybeEnqueueAlignmentRecalculation } from './enqueueAlignmentRecalculation'
 import { validateEvaluationV2 } from './validate'
 
 export async function updateEvaluationV2<
@@ -48,120 +49,133 @@ export async function updateEvaluationV2<
   },
   transaction = new Transaction(),
 ) {
-  return await transaction.call(async (tx) => {
-    let settingsChanged = false
-    for (const setting in settings ?? {}) {
-      const key = setting as keyof typeof settings
-      if (!isEqual(settings?.[key], evaluation[key])) {
-        settingsChanged = true
-        break
+  const originalEvaluation = evaluation
+  return await transaction.call(
+    async (tx) => {
+      let settingsChanged = false
+      for (const setting in settings ?? {}) {
+        const key = setting as keyof typeof settings
+        if (!isEqual(settings?.[key], evaluation[key])) {
+          settingsChanged = true
+          break
+        }
       }
-    }
-    if (settingsChanged) {
-      await assertCanEditCommit(commit, tx).then((r) => r.unwrap())
-    }
-
-    const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
-    const document = await documentsRepository
-      .getDocumentAtCommit({
-        commitUuid: commit.uuid,
-        documentUuid: evaluation.documentUuid,
-      })
-      .then((r) => r.unwrap())
-
-    if (!settings) settings = {}
-    settings = compactObject(settings)
-
-    if (!options) options = {}
-    options = compactObject(options)
-
-    let issue: Issue | null = null
-    if (issueId) {
-      const issuesRepository = new IssuesRepository(workspace.id, tx)
-      const projectRepository = new ProjectsRepository(workspace.id, tx)
-      const projectResult = await projectRepository.find(commit.projectId)
-      if (!Result.isOk(projectResult)) {
-        return projectResult
+      if (settingsChanged) {
+        await assertCanEditCommit(commit, tx).then((r) => r.unwrap())
       }
-      const project = projectResult.unwrap()
-      issue = await issuesRepository.findById({
-        project,
-        issueId,
-      })
-      if (!issue) {
-        return Result.error(new BadRequestError('Issue not found'))
+
+      const documentsRepository = new DocumentVersionsRepository(
+        workspace.id,
+        tx,
+      )
+      const document = await documentsRepository
+        .getDocumentAtCommit({
+          commitUuid: commit.uuid,
+          documentUuid: evaluation.documentUuid,
+        })
+        .then((r) => r.unwrap())
+
+      if (!settings) settings = {}
+      settings = compactObject(settings)
+
+      if (!options) options = {}
+      options = compactObject(options)
+
+      let issue: Issue | null = null
+      if (issueId) {
+        const issuesRepository = new IssuesRepository(workspace.id, tx)
+        const projectRepository = new ProjectsRepository(workspace.id, tx)
+        const projectResult = await projectRepository.find(commit.projectId)
+        if (!Result.isOk(projectResult)) {
+          return projectResult
+        }
+        const project = projectResult.unwrap()
+        issue = await issuesRepository.findById({
+          project,
+          issueId,
+        })
+        if (!issue) {
+          return Result.error(new BadRequestError('Issue not found'))
+        }
       }
-    }
 
-    const validating = await validateEvaluationV2(
-      {
-        mode: 'update',
-        evaluation: evaluation,
-        settings: { ...evaluation, ...settings },
-        options: { ...evaluation, ...options },
-        document: document,
-        commit: commit,
-        workspace: workspace,
-        issue: issue,
-      },
-      tx,
-    )
-    if (validating.error) return Result.error(validating.error)
-    settings = validating.value.settings
-    options = validating.value.options
+      const validating = await validateEvaluationV2(
+        {
+          mode: 'update',
+          evaluation: evaluation,
+          settings: { ...evaluation, ...settings },
+          options: { ...evaluation, ...options },
+          document: document,
+          commit: commit,
+          workspace: workspace,
+          issue: issue,
+        },
+        tx,
+      )
+      if (validating.error) return Result.error(validating.error)
+      settings = validating.value.settings
+      options = validating.value.options
 
-    const result = await tx
-      .insert(evaluationVersions)
-      .values({
-        ...evaluation,
-        id: undefined,
-        commitId: commit.id,
-        issueId: issueId !== undefined ? issueId : evaluation.issueId,
-        alignmentMetricMetadata,
-        ...settings,
-        ...options,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [
-          evaluationVersions.commitId,
-          evaluationVersions.evaluationUuid,
-        ],
-        set: {
+      const result = await tx
+        .insert(evaluationVersions)
+        .values({
+          ...evaluation,
+          id: undefined,
+          commitId: commit.id,
+          issueId: issueId !== undefined ? issueId : evaluation.issueId,
+          alignmentMetricMetadata,
           ...settings,
           ...options,
           updatedAt: new Date(),
-          issueId: issueId !== undefined ? issueId : evaluation.issueId,
-          alignmentMetricMetadata,
+        })
+        .onConflictDoUpdate({
+          target: [
+            evaluationVersions.commitId,
+            evaluationVersions.evaluationUuid,
+          ],
+          set: {
+            ...settings,
+            ...options,
+            updatedAt: new Date(),
+            issueId: issueId !== undefined ? issueId : evaluation.issueId,
+            alignmentMetricMetadata,
+          },
+        })
+        .returning()
+        .then((r) => r[0]!)
+
+      evaluation = {
+        ...result,
+        uuid: result.evaluationUuid,
+        versionId: result.id,
+      } as unknown as EvaluationV2<T, M>
+
+      let target = undefined
+      if (issueId !== undefined) {
+        const syncing = await syncDefaultCompositeTarget(
+          { evaluation, issue, document, commit, workspace }, // prettier-ignore
+          transaction,
+        )
+        // Note: failing silently
+        target = syncing.value
+      }
+
+      publisher.publishLater({
+        type: 'evaluationV2Updated',
+        data: {
+          evaluation: evaluation,
+          workspaceId: workspace.id,
         },
       })
-      .returning()
-      .then((r) => r[0]!)
 
-    evaluation = {
-      ...result,
-      uuid: result.evaluationUuid,
-      versionId: result.id,
-    } as unknown as EvaluationV2<T, M>
-
-    let target = undefined
-    if (issueId !== undefined) {
-      const syncing = await syncDefaultCompositeTarget(
-        { evaluation, issue, document, commit, workspace }, // prettier-ignore
-        transaction,
-      )
-      // Note: failing silently
-      target = syncing.value
-    }
-
-    publisher.publishLater({
-      type: 'evaluationV2Updated',
-      data: {
-        evaluation: evaluation,
-        workspaceId: workspace.id,
-      },
-    })
-
-    return Result.ok({ evaluation, target })
-  })
+      return Result.ok({ evaluation, target })
+    },
+    async ({ evaluation }) => {
+      await maybeEnqueueAlignmentRecalculation({
+        oldEvaluation: originalEvaluation,
+        newEvaluation: evaluation,
+        commit,
+      })
+    },
+  )
 }

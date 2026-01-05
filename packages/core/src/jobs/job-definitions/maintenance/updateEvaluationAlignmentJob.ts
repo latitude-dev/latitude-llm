@@ -8,7 +8,10 @@ import {
 import { Result } from '../../../lib/Result'
 import { NotFoundError } from '../../../lib/errors'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { recalculateAlignmentMetric } from '../../../services/evaluationsV2/generateFromIssue/recalculateAlignmentMetric'
+import {
+  recalculateAlignmentMetric,
+  RecalculationSource,
+} from '../../../services/evaluationsV2/generateFromIssue/recalculateAlignmentMetric'
 import {
   EvaluationV2,
   EvaluationType,
@@ -21,12 +24,13 @@ export type UpdateEvaluationAlignmentJobData = {
   evaluationUuid: string
   documentUuid: string
   issueId: number
+  source: RecalculationSource
 }
 
 export async function updateEvaluationAlignmentJob(
   job: Job<UpdateEvaluationAlignmentJobData>,
 ) {
-  const { workspaceId, commitId, evaluationUuid, documentUuid, issueId } = job.data // prettier-ignore
+  const { workspaceId, commitId, evaluationUuid, documentUuid, issueId, source } = job.data // prettier-ignore
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError('Workspace not found')
 
@@ -65,5 +69,6 @@ export async function updateEvaluationAlignmentJob(
       LlmEvaluationMetric.Binary
     >,
     issue,
+    source,
   })
 }
