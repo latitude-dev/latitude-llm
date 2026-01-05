@@ -108,6 +108,10 @@ export const backgroundRunJob = async (
 
     experiment = await fetchExperiment({ workspaceId, experimentId })
 
+    if (experiment?.finishedAt) {
+      return
+    }
+
     await startRun({
       workspaceId,
       projectId,

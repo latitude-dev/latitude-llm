@@ -47,7 +47,16 @@ export class ProgressTracker {
     multi.set(this.getKey('failed'), 0)
     multi.set(this.getKey('totalScore'), 0)
 
+    if (uuids.length > 0) {
+      multi.sadd(this.getKey('runUuids'), ...uuids)
+    }
+
     await multi.exec()
+  }
+
+  async getRunUuids(): Promise<string[]> {
+    const redis = await this.ensureConnection()
+    return redis.smembers(this.getKey('runUuids'))
   }
 
   private async getEvaluationsPerRow(redis: Redis) {
@@ -142,14 +151,17 @@ export class ProgressTracker {
 
   async cleanup() {
     if (this.redis) {
-      // Delete all keys associated with this batch
       const keys = [
+        this.getKey('totalRows'),
+        this.getKey('evaluationsPerRow'),
+        this.getKey('completed'),
         this.getKey('passed'),
         this.getKey('enqueued'),
         this.getKey('errors'),
         this.getKey('failed'),
         this.getKey('totalScore'),
         this.getKey('rows'),
+        this.getKey('runUuids'),
       ]
       await this.redis.del(...keys)
       await this.redis.quit()
