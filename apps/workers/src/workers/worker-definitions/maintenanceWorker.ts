@@ -5,11 +5,15 @@ import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
   autoScaleJob: jobs.autoScaleJob,
+  backfillEvaluationResultsTypeAndMetricJob:
+    jobs.backfillEvaluationResultsTypeAndMetricJob,
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   cleanDocumentSuggestionsJob: jobs.cleanDocumentSuggestionsJob,
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
   requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
   scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
+  scheduleBackfillEvaluationResultsTypeAndMetricJobs:
+    jobs.scheduleBackfillEvaluationResultsTypeAndMetricJobs,
   updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
   scheduleWeeklyEmailJobs: jobs.scheduleWeeklyEmailJobs,
   dailyAlignmentMetricUpdateJob: jobs.dailyAlignmentMetricUpdateJob,

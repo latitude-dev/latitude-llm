@@ -1,5 +1,5 @@
 {
-  "id": "7cd2f4b4-db2f-4a72-885e-f4d9d4747422",
+  "id": "06164628-77ce-41e9-8993-6ba21b4b5187",
   "prevId": "c3c0e2ef-b238-4386-97c9-07789e6ff662",
   "version": "7",
   "dialect": "postgresql",
@@ -2391,17 +2391,17 @@
           "primaryKey": false,
           "notNull": true
         },
-        "evaluation_type": {
-          "name": "evaluation_type",
+        "type": {
+          "name": "type",
           "type": "varchar(32)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "evaluation_metric": {
-          "name": "evaluation_metric",
+        "metric": {
+          "name": "metric",
           "type": "varchar(64)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "experiment_id": {
           "name": "experiment_id",
@@ -2744,7 +2744,7 @@
           "name": "evaluation_results_v2_type_workspace_idx",
           "columns": [
             {
-              "expression": "evaluation_type",
+              "expression": "type",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

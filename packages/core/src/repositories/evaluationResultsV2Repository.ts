@@ -895,7 +895,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const whereConditions = [
       eq(issueEvaluationResults.workspaceId, workspace.id),
       eq(issueEvaluationResults.issueId, issue.id),
-      eq(evaluationResultsV2.evaluationType, EvaluationType.Human),
+      eq(evaluationResultsV2.type, EvaluationType.Human),
       isNotNull(evaluationResultsV2.evaluatedSpanId),
       isNotNull(evaluationResultsV2.evaluatedTraceId),
       isNull(commits.deletedAt),
@@ -963,7 +963,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     const whereConditions = [
       eq(evaluationResultsV2.workspaceId, workspace.id),
-      eq(evaluationResultsV2.evaluationType, EvaluationType.Human),
+      eq(evaluationResultsV2.type, EvaluationType.Human),
       isNotNull(evaluationResultsV2.evaluatedSpanId),
       isNotNull(evaluationResultsV2.evaluatedTraceId),
       isNull(commits.deletedAt),
