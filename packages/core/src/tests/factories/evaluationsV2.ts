@@ -23,6 +23,7 @@ type CreateEvaluationV2Args<
   commit: Commit
   workspace: Workspace
   createdAt?: Date
+  issueId?: number
 } & Partial<EvaluationSettings<T, M>> &
   Partial<EvaluationOptions>
 
@@ -69,6 +70,7 @@ export async function createEvaluationV2<
       autoApplySuggestions: args.autoApplySuggestions,
     },
     workspace: args.workspace,
+    issueId: args.issueId,
   }).then((r) => r.unwrap())
 
   evaluation.createdAt = args.createdAt ?? evaluation.createdAt

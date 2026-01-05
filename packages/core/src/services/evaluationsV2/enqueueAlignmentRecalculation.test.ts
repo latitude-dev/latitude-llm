@@ -12,7 +12,6 @@ import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Project } from '../../schema/models/types/Project'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
-import { createEvaluationV2 as createEvaluationV2Svc } from './create'
 import {
   enqueueAlignmentRecalculation,
   maybeEnqueueAlignmentRecalculation,
@@ -62,38 +61,27 @@ describe('enqueueAlignmentRecalculation', () => {
       project,
     })
 
-    const createResult = await createEvaluationV2Svc({
+    evaluation = (await factories.createEvaluationV2({
       document,
       commit,
       workspace,
-      settings: {
-        name: 'test evaluation',
-        description: 'test',
-        type: EvaluationType.Llm,
-        metric: LlmEvaluationMetric.Binary,
-        configuration: {
-          reverseScale: false,
-          actualOutput: {
-            messageSelection: 'last',
-            parsingFormat: 'string',
-          },
-          provider: 'openai',
-          model: 'gpt-4o',
-          criteria: 'original criteria',
-          passDescription: 'pass',
-          failDescription: 'fail',
+      type: EvaluationType.Llm,
+      metric: LlmEvaluationMetric.Binary,
+      configuration: {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
         },
+        provider: 'openai',
+        model: 'gpt-4o',
+        criteria: 'original criteria',
+        passDescription: 'pass',
+        failDescription: 'fail',
       },
-      options: {
-        evaluateLiveLogs: true,
-      },
+      evaluateLiveLogs: true,
       issueId: issue.id,
-    }).then((r) => r.unwrap())
-
-    evaluation = createResult.evaluation as EvaluationV2<
-      EvaluationType.Llm,
-      LlmEvaluationMetric.Binary
-    >
+    })) as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
 
     const mockMaintenanceQueueAdd = vi.fn().mockResolvedValue({})
 

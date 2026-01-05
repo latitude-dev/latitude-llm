@@ -1,24 +1,16 @@
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { useAlignmentMetricUpdates } from '$/hooks/useAlignmentMetricUpdates'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import {
-  AlignmentMetricMetadata,
-  EvaluationV2,
-} from '@latitude-data/core/constants'
+import { EvaluationV2 } from '@latitude-data/core/constants'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ConfusionMatrixTooltipContent } from '$/components/ConfusionMatrix'
-import { calculateMCC } from '$/helpers/evaluation-generation/calculateMCC'
-import { useCallback, useState } from 'react'
 
 type EvaluationWithIssueProps = {
   evaluationWithIssue: EvaluationV2
@@ -38,27 +30,11 @@ export function EvaluationWithIssue({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
 
-  const [alignmentMetricMetadata, setAlignmentMetricMetadata] = useState<
-    AlignmentMetricMetadata | undefined
-  >(evaluationWithIssue.alignmentMetricMetadata ?? undefined)
-
-  const confusionMatrix = alignmentMetricMetadata?.confusionMatrix
-  const alignmentMetric = confusionMatrix
-    ? calculateMCC({ confusionMatrix })
-    : 0
-  const isRecalculating = !!alignmentMetricMetadata?.recalculatingAt
-
-  const onAlignmentMetricUpdated = useCallback(
-    (args: EventArgs<'evaluationV2AlignmentMetricUpdated'>) => {
-      if (!args || args.evaluationUuid !== evaluationWithIssue.uuid) return
-      setAlignmentMetricMetadata(args.alignmentMetricMetadata)
-    },
-    [evaluationWithIssue.uuid],
-  )
-  useSockets({
-    event: 'evaluationV2AlignmentMetricUpdated',
-    onMessage: onAlignmentMetricUpdated,
-  })
+  const { confusionMatrix, alignmentMetric, isRecalculating } =
+    useAlignmentMetricUpdates({
+      evaluationUuid: evaluationWithIssue.uuid,
+      initialMetadata: evaluationWithIssue.alignmentMetricMetadata,
+    })
 
   return (
     <div className='grid grid-cols-2 gap-x-4 gap-y-4 items-center'>
