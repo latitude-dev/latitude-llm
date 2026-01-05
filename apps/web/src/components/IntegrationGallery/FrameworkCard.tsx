@@ -1,6 +1,5 @@
 'use client'
 
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useHover } from '@latitude-data/web-ui/browser'
@@ -14,44 +13,37 @@ export function FrameworkCard({
   framework: FrameworkDefinition
   onClick: () => void
 }) {
-  const [ref, isHovered] = useHover<HTMLDivElement>()
+  const [ref, isHovered] = useHover<HTMLButtonElement>()
 
   return (
-    <Button
-      key={framework.name}
-      variant='ghost'
-      className='p-0'
-      fullWidth
+    <button
+      ref={ref}
+      type='button'
       onClick={onClick}
-      tabIndex={-1}
+      className={cn(
+        'w-full flex flex-col gap-4 p-5 rounded-2xl text-left',
+        'border-2 transition-all cursor-pointer',
+        isHovered
+          ? 'border-primary bg-primary/5'
+          : 'border-border bg-background',
+      )}
     >
       <div
-        ref={ref}
         className={cn(
-          'w-full flex flex-col gap-4 p-5 rounded-2xl',
-          'border-2 transition-all',
-          isHovered
-            ? 'border-primary bg-primary/5'
-            : 'border-border bg-background',
+          'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
+          isHovered ? 'bg-primary' : 'bg-muted',
         )}
       >
-        <div
-          className={cn(
-            'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
-            isHovered ? 'bg-primary' : 'bg-muted',
-          )}
-        >
-          <Icon
-            name={framework.icon}
-            size='normal'
-            color={isHovered ? 'white' : 'foregroundMuted'}
-          />
-        </div>
-        <Text.H4M color={isHovered ? 'accentForeground' : 'foreground'}>
-          {framework.name}
-        </Text.H4M>
+        <Icon
+          name={framework.icon}
+          size='normal'
+          color={isHovered ? 'white' : 'foregroundMuted'}
+        />
       </div>
-    </Button>
+      <Text.H4M color={isHovered ? 'accentForeground' : 'foreground'}>
+        {framework.name}
+      </Text.H4M>
+    </button>
   )
 }
 
