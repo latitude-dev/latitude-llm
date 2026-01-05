@@ -39,10 +39,8 @@ export const evaluationResultsV2 = latitudeSchema.table(
     evaluationUuid: uuid('evaluation_uuid').notNull(),
     type: varchar('type', {
       length: 32,
-    })
-      .$type<EvaluationType>()
-      .notNull(),
-    metric: varchar('metric', { length: 64 }).notNull(),
+    }).$type<EvaluationType>(),
+    metric: varchar('metric', { length: 64 }),
     experimentId: bigint('experiment_id', { mode: 'number' }).references(
       () => experiments.id,
       { onDelete: 'restrict', onUpdate: 'cascade' },
