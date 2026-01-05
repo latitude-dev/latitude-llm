@@ -326,6 +326,19 @@ async function handleExperimentSuccess({
     (progressTracker) => progressTracker.documentRunFinished(runUuid, true),
   )
 
+  // Re-fetch experiment to check if it was stopped while the run was executing
+  const experimentsRepository = new ExperimentsRepository(workspaceId)
+  const latestExperiment = await experimentsRepository.find(experiment.id)
+  if (latestExperiment.error) {
+    return Result.error(latestExperiment.error)
+  }
+  
+  const freshExperiment = latestExperiment.unwrap()
+  if (freshExperiment.finishedAt) {
+    // Experiment was stopped while this run was executing, skip evaluation enqueueing
+    return Result.nil()
+  }
+
   // TODO(): This is temporary while we think of a more long lasting solution to ban/rate limit users
   const evaluationsDisabledResult = await isFeatureEnabledByName(
     workspace.id,
