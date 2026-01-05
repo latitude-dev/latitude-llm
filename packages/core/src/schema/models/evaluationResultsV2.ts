@@ -37,7 +37,9 @@ export const evaluationResultsV2 = latitudeSchema.table(
       .notNull()
       .references(() => commits.id, { onDelete: 'restrict' }),
     evaluationUuid: uuid('evaluation_uuid').notNull(),
-    evaluationType: varchar('evaluation_type', { length: 32 }).$type<EvaluationType>(),
+    evaluationType: varchar('evaluation_type', {
+      length: 32,
+    }).$type<EvaluationType>(),
     evaluationMetric: varchar('evaluation_metric', { length: 64 }),
     experimentId: bigint('experiment_id', { mode: 'number' }).references(
       () => experiments.id,

@@ -1772,13 +1772,6 @@
       "when": 1767619514017,
       "tag": "0253_add_evaluation_type_to_results",
       "breakpoints": true
-    },
-    {
-      "idx": 254,
-      "version": "7",
-      "when": 1767619600000,
-      "tag": "0254_backfill_evaluation_type_to_results",
-      "breakpoints": true
     }
   ]
 }
