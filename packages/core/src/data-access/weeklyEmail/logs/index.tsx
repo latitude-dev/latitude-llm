@@ -1,7 +1,6 @@
 import {
   and,
   between,
-  count,
   countDistinct,
   desc,
   eq,
@@ -23,12 +22,12 @@ import { Workspace } from '../../../schema/models/types/Workspace'
 import { SureDateRange } from '../../../constants'
 import { getDateRangeOrLastWeekRange } from '../utils'
 
-async function getAllTimesSpansProductionCount(
+async function hasProductionSpans(
   { workspace }: { workspace: Workspace },
   db = database,
-) {
-  return db
-    .select({ count: count() })
+): Promise<boolean> {
+  const result = await db
+    .select({ exists: sql<number>`1` })
     .from(spans)
     .where(
       and(
@@ -37,7 +36,9 @@ async function getAllTimesSpansProductionCount(
         inArray(spans.source, RUN_SOURCES[RunSourceGroup.Production]),
       ),
     )
-    .then((r) => r[0].count)
+    .limit(1)
+
+  return result.length > 0
 }
 
 async function getGlobalLogsStats(
@@ -156,11 +157,7 @@ export async function getLogsData(
   },
   db = database,
 ): Promise<LogStats> {
-  const allTimesProductionSpansCount = await getAllTimesSpansProductionCount(
-    { workspace },
-    db,
-  )
-  const usedInProduction = allTimesProductionSpansCount > 0
+  const usedInProduction = await hasProductionSpans({ workspace }, db)
 
   const range = getDateRangeOrLastWeekRange(dateRange)
 
