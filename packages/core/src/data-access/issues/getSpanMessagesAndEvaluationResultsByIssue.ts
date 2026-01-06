@@ -5,13 +5,18 @@ import {
   EvaluationResultsV2Repository,
 } from '../../repositories'
 import { Result } from '../../lib/Result'
-import { EvaluationResultV2 } from '../../constants'
+import {
+  EvaluationResultSuccessValue,
+  EvaluationResultV2,
+  EvaluationV2,
+} from '../../constants'
 import { Issue } from '../../schema/models/types/Issue'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { assembleTraceWithMessages } from '../../services/tracing/traces/assemble'
 import { adaptCompletionSpanMessagesToLegacy } from '../../services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { getHITLSpansByIssue } from './getHITLSpansByIssue'
+import { getEvaluationMetricSpecification } from '../../services/evaluationsV2/specifications'
 
 export type SpanMessagesWithEvalResultReason = {
   messages: LegacyMessage[]
@@ -29,10 +34,12 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
   workspace,
   commit,
   issue,
+  existingEvaluations,
 }: {
   workspace: Workspace
   commit: Commit
   issue: Issue
+  existingEvaluations: EvaluationV2[]
 }) {
   // Three is enough, as we don't want to overfit or add too many tokens to the prompt
   const spansResult = await getHITLSpansByIssue({
@@ -79,30 +86,37 @@ export async function getSpanMessagesAndEvaluationResultsByIssue({
     }
 
     // There will always be exactly one evaluation result for a span and trace id
-    const evaluationResults = evaluationResultsResult.filter(
+    const evaluationResult = evaluationResultsResult.find(
       (result) =>
         result.evaluatedSpanId === span.id &&
         result.evaluatedTraceId === span.traceId,
-    )[0]
+    )
+
+    const evaluation = evaluationResult
+      ? existingEvaluations.find(
+          (e) => e.uuid === evaluationResult.evaluationUuid,
+        )
+      : undefined
 
     messagesAndEvaluationResults.push({
       messages: adaptCompletionSpanMessagesToLegacy(completionSpan),
-      reason: getReasonFromEvaluationResult(evaluationResults),
+      reason: getReasonFromEvaluationResult(evaluationResult, evaluation),
     })
   }
 
   return Result.ok(messagesAndEvaluationResults)
 }
 
-// We need an efficient way of extracting reasons directly from metadata without fetching evaluations
-function getReasonFromEvaluationResult(result: EvaluationResultV2) {
-  if (result.error || !result.metadata) {
+function getReasonFromEvaluationResult(
+  result: EvaluationResultV2 | undefined,
+  evaluation: EvaluationV2 | undefined,
+): string {
+  if (!result || !evaluation || result.error) {
     return ''
   }
-
-  // LLM, Rule, and Human evaluations all have a reason field (required for LLM, optional for Rule/Human)
-  if ('reason' in result.metadata && result.metadata.reason) {
-    return result.metadata.reason ?? ''
-  }
-  return ''
+  const specification = getEvaluationMetricSpecification(evaluation)
+  const resultReason = specification.resultReason as (
+    result: EvaluationResultSuccessValue,
+  ) => string | undefined
+  return resultReason(result) ?? ''
 }

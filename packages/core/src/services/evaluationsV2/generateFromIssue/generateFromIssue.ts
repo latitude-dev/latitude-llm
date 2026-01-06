@@ -99,17 +99,20 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
   const copilot = copilotResult.unwrap()
 
   // Get the existing evaluation names for the same commit and document to avoid generating evals with the same name (unique key)
-  const existingEvaluationNamesResult = await getExistingEvaluationNames({
-    workspace: workspace,
-    commit: commit,
-    issue: issue,
-  })
-
-  if (!Result.isOk(existingEvaluationNamesResult)) {
-    return existingEvaluationNamesResult
+  const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
+  const evaluationsFromSameCommitAndDocumentResult =
+    await evaluationsRepository.listAtCommitByDocument({
+      projectId: commit.projectId,
+      commitUuid: commit.uuid,
+      documentUuid: issue.documentUuid,
+    })
+  if (!Result.isOk(evaluationsFromSameCommitAndDocumentResult)) {
+    return evaluationsFromSameCommitAndDocumentResult
   }
+  const existingEvaluations =
+    evaluationsFromSameCommitAndDocumentResult.unwrap()
 
-  const existingEvaluationNames = existingEvaluationNamesResult.unwrap()
+  const existingEvaluationNames = existingEvaluations.map((e) => e.name)
 
   // Getting failed examples (evaluation results with the issue attached) to feed the copilot
   const messagesAndReasonWhyFailedForIssueResult =
@@ -117,6 +120,7 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
       workspace: workspace,
       commit: commit,
       issue: issue,
+      existingEvaluations,
     })
 
   if (!Result.isOk(messagesAndReasonWhyFailedForIssueResult)) {
@@ -195,31 +199,6 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
     },
   }
   return Result.ok(evaluationConfigWithProviderAndModel)
-}
-
-async function getExistingEvaluationNames({
-  workspace,
-  commit,
-  issue,
-}: {
-  workspace: Workspace
-  commit: Commit
-  issue: Issue
-}) {
-  const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
-  const evaluationsFromSameCommitAndDocumentResult =
-    await evaluationsRepository.listAtCommitByDocument({
-      projectId: commit.projectId,
-      commitUuid: commit.uuid,
-      documentUuid: issue.documentUuid,
-    })
-  if (!Result.isOk(evaluationsFromSameCommitAndDocumentResult)) {
-    return evaluationsFromSameCommitAndDocumentResult
-  }
-  const existingEvaluations =
-    evaluationsFromSameCommitAndDocumentResult.unwrap()
-
-  return Result.ok(existingEvaluations.map((e) => e.name))
 }
 
 export async function getSpansFromSpanAndTraceIdPairs({
