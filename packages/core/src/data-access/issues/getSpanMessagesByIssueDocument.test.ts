@@ -462,25 +462,24 @@ describe('getSpanMessagesByIssueDocument', () => {
 
   describe('commit history filtering', () => {
     it('should only return evaluation results from commits in the commit history', async () => {
-      // Create first merged commit
+      const now = new Date()
+
       const commit1 = await createCommit({
         projectId: project.id,
         user,
-        mergedAt: new Date('2024-01-01'),
+        mergedAt: new Date(now.getTime() + 1000),
       })
 
-      // Create second merged commit (more recent)
       const commit2 = await createCommit({
         projectId: project.id,
         user,
-        mergedAt: new Date('2024-01-02'),
+        mergedAt: new Date(now.getTime() + 2000),
       })
 
-      // Create third merged commit (most recent - future commit)
       const commit3 = await createCommit({
         projectId: project.id,
         user,
-        mergedAt: new Date('2024-01-03'),
+        mergedAt: new Date(now.getTime() + 3000),
       })
 
       // Create spans in different commits

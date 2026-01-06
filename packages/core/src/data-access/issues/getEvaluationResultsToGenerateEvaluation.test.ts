@@ -408,25 +408,26 @@ describe('getEvaluationResultsToGenerateEvaluation', () => {
     it('should only count annotations from commits in the commit history', async () => {
       const setup = await setupTestProject(mockWorkspace)
 
-      // Create first merged commit
+      // Create commits with dates AFTER setup.commit so the evaluation is visible in their history
+      const now = new Date()
+
       const commit1 = await factories.createCommit({
         projectId: setup.project.id,
         user: setup.user,
-        mergedAt: new Date('2024-01-01'),
+        mergedAt: new Date(now.getTime() + 1000),
       })
 
       // Create second merged commit (more recent)
       const commit2 = await factories.createCommit({
         projectId: setup.project.id,
         user: setup.user,
-        mergedAt: new Date('2024-01-02'),
+        mergedAt: new Date(now.getTime() + 2000),
       })
 
-      // Create third merged commit (most recent - future commit)
       const commit3 = await factories.createCommit({
         projectId: setup.project.id,
         user: setup.user,
-        mergedAt: new Date('2024-01-03'),
+        mergedAt: new Date(now.getTime() + 3000),
       })
 
       // Create 5 negative annotations for main issue in commit1 (should be counted)
