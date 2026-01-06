@@ -174,7 +174,12 @@ export function RunPanel({
                   HumanEvaluationMetric
                 >
               }
-              result={annotations.bottom.result}
+              result={
+                annotations.bottom.result as EvaluationResultV2<
+                  EvaluationType.Human,
+                  HumanEvaluationMetric
+                >
+              }
               span={span}
               onAnnotate={onAnnotate}
             />

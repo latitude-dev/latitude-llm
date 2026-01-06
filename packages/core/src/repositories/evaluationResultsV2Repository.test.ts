@@ -4,6 +4,8 @@ import { Providers } from '@latitude-data/constants'
 import { type Workspace } from '../schema/models/types/Workspace'
 import * as factories from '../tests/factories'
 import { EvaluationResultsV2Repository } from './evaluationResultsV2Repository'
+import { mergeCommit } from '../services/commits'
+import { updateEvaluationV2 } from '../services/evaluationsV2/update'
 describe('EvaluationResultsV2Repository', () => {
   let workspace: Workspace
   let repository: EvaluationResultsV2Repository
@@ -227,6 +229,82 @@ describe('EvaluationResultsV2Repository', () => {
 
       expect(page2.results.length).toBe(2)
       expect(page2.hasNextPage).toBe(true)
+    })
+
+    it('does not return duplicate results when evaluation has multiple versions', async () => {
+      const { commit, documents, project, user } = await factories.createProject(
+        {
+          workspace,
+          providers: [{ type: Providers.OpenAI, name: 'openai' }],
+          documents: {
+            prompt: factories.helpers.createPrompt({ provider: 'openai' }),
+          },
+          skipMerge: true,
+        },
+      )
+
+      const document = documents[0]!
+
+      // Create HITL evaluation in the draft commit
+      const hitlEvaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+        type: 'human' as any,
+        metric: 'binary' as any,
+      })
+
+      // Merge the initial commit
+      const mergedCommit = await mergeCommit(commit).then((r) => r.unwrap())
+
+      const { issue } = await factories.createIssue({
+        workspace,
+        project: { id: mergedCommit.projectId } as any,
+        document,
+      })
+
+      // Create span and result
+      const span = await factories.createSpan({
+        workspaceId: workspace.id,
+        commitUuid: mergedCommit.uuid,
+        documentUuid: document.documentUuid,
+      })
+
+      const result = await factories.createEvaluationResultV2({
+        workspace,
+        evaluation: hitlEvaluation,
+        commit: mergedCommit,
+        span,
+      })
+
+      await factories.createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: result,
+      })
+
+      // Create a new draft and modify the evaluation (creates a new version)
+      const { commit: draft } = await factories.createDraft({ project, user })
+      await updateEvaluationV2({
+        evaluation: hitlEvaluation,
+        commit: draft,
+        settings: { name: 'Updated HITL Evaluation Name' },
+        workspace,
+      })
+      const mergedDraft = await mergeCommit(draft).then((r) => r.unwrap())
+
+      // Fetch results using the latest commit - should NOT have duplicates
+      const { results } = await repository.fetchPaginatedHITLResultsByIssue({
+        workspace,
+        commit: mergedDraft,
+        issue,
+        page: 1,
+        pageSize: 10,
+      })
+
+      // Should return exactly 1 result, not 2 (due to 2 versions)
+      expect(results.length).toBe(1)
+      expect(results[0]?.id).toBe(result.id)
     })
   })
 
@@ -520,6 +598,78 @@ describe('EvaluationResultsV2Repository', () => {
       expect(results.find((r) => r.id === result1.id)).toBeUndefined()
       expect(results.find((r) => r.id === result2.id)).toBeDefined()
       expect(results.find((r) => r.id === result3.id)).toBeDefined()
+    })
+
+    it('does not return duplicate results when evaluation has multiple versions', async () => {
+      const { commit, documents, project, user } = await factories.createProject(
+        {
+          workspace,
+          providers: [{ type: Providers.OpenAI, name: 'openai' }],
+          documents: {
+            prompt: factories.helpers.createPrompt({ provider: 'openai' }),
+          },
+          skipMerge: true,
+        },
+      )
+
+      const document = documents[0]!
+
+      // Create HITL evaluation in the draft commit
+      const hitlEvaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+        type: 'human' as any,
+        metric: 'binary' as any,
+      })
+
+      // Merge the initial commit
+      const mergedCommit = await mergeCommit(commit).then((r) => r.unwrap())
+
+      // Create a dummy issue to exclude (has no results linked to it)
+      const { issue: dummyIssue } = await factories.createIssue({
+        workspace,
+        project: { id: mergedCommit.projectId } as any,
+        document,
+      })
+
+      // Create span and result (not linked to any issue)
+      const span = await factories.createSpan({
+        workspaceId: workspace.id,
+        commitUuid: mergedCommit.uuid,
+        documentUuid: document.documentUuid,
+      })
+
+      const result = await factories.createEvaluationResultV2({
+        workspace,
+        evaluation: hitlEvaluation,
+        commit: mergedCommit,
+        span,
+      })
+
+      // Create a new draft and modify the evaluation (creates a new version)
+      const { commit: draft } = await factories.createDraft({ project, user })
+      await updateEvaluationV2({
+        evaluation: hitlEvaluation,
+        commit: draft,
+        settings: { name: 'Updated HITL Evaluation Name' },
+        workspace,
+      })
+      const mergedDraft = await mergeCommit(draft).then((r) => r.unwrap())
+
+      // Fetch results using the latest commit - should NOT have duplicates
+      const { results } = await repository.fetchPaginatedHITLResultsByDocument({
+        workspace,
+        commit: mergedDraft,
+        documentUuid: document.documentUuid,
+        excludeIssueId: dummyIssue.id,
+        page: 1,
+        pageSize: 10,
+      })
+
+      // Should return exactly 1 result, not 2 (due to 2 versions)
+      expect(results.length).toBe(1)
+      expect(results[0]?.id).toBe(result.id)
     })
   })
 

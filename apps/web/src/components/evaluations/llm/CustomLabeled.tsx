@@ -1,4 +1,5 @@
 import {
+  EvaluationResultV2,
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
@@ -82,7 +83,7 @@ function ConfigurationAdvancedForm({
 
 function ResultBadge({
   evaluation,
-  ...rest
+  result,
 }: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.CustomLabeled>) {
   return (
     <LlmEvaluationCustomSpecification.ResultBadge
@@ -92,7 +93,12 @@ function ResultBadge({
           LlmEvaluationMetric.Custom
         >
       }
-      {...rest}
+      result={
+        result as unknown as EvaluationResultV2<
+          EvaluationType.Llm,
+          LlmEvaluationMetric.Custom
+        >
+      }
     />
   )
 }

@@ -53,6 +53,8 @@ export async function createEvaluationResultV2<
     commitId: commit.id,
     experimentId: experiment?.id,
     evaluationUuid: evaluation.uuid,
+    type: evaluation.type,
+    metric: evaluation.metric,
     datasetId: dataset?.id,
     evaluatedRowId: datasetRow?.id,
     evaluatedSpanId: span.id,

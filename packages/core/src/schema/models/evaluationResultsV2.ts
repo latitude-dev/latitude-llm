@@ -13,6 +13,7 @@ import {
 import {
   EvaluationResultError,
   EvaluationResultMetadata,
+  EvaluationType,
 } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -36,6 +37,10 @@ export const evaluationResultsV2 = latitudeSchema.table(
       .notNull()
       .references(() => commits.id, { onDelete: 'restrict' }),
     evaluationUuid: uuid('evaluation_uuid').notNull(),
+    type: varchar('type', {
+      length: 32,
+    }).$type<EvaluationType>(),
+    metric: varchar('metric', { length: 64 }),
     experimentId: bigint('experiment_id', { mode: 'number' }).references(
       () => experiments.id,
       { onDelete: 'restrict', onUpdate: 'cascade' },
@@ -101,5 +106,9 @@ export const evaluationResultsV2 = latitudeSchema.table(
     uniqueIndex(
       'evaluation_results_v2_unique_evaluated_span_id_evaluation_uuid_idx',
     ).on(table.evaluatedSpanId, table.evaluatedTraceId, table.evaluationUuid),
+    index('evaluation_results_v2_type_workspace_idx').on(
+      table.type,
+      table.workspaceId,
+    ),
   ],
 )
