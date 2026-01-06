@@ -3,6 +3,7 @@ import { eq, inArray, sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { database } from '../../../client'
 import { EvaluationType, RuleEvaluationMetric } from '../../../constants'
+import { Providers } from '@latitude-data/constants'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import * as factories from '../../../tests/factories'
 import { backfillEvaluationResultsTypeAndMetricJob } from './backfillEvaluationResultsTypeAndMetricJob'
@@ -16,8 +17,9 @@ describe('backfillEvaluationResultsTypeAndMetricJob', () => {
 
   beforeEach(async () => {
     const projectData = await factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'OpenAI' }],
       documents: {
-        test: factories.helpers.createPrompt({ provider: 'openai' }),
+        test: factories.helpers.createPrompt({ provider: 'OpenAI' }),
       },
     })
     workspace = projectData.workspace
