@@ -4,6 +4,7 @@ import { database } from '../../../client'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import * as factories from '../../../tests/factories'
 import { scheduleBackfillEvaluationResultsTypeAndMetricJobs } from './scheduleBackfillEvaluationResultsTypeAndMetricJobs'
+import { Providers } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => ({
   queues: vi.fn(),
@@ -30,8 +31,9 @@ describe('scheduleBackfillEvaluationResultsTypeAndMetricJobs', () => {
     })
 
     const projectData = await factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'OpenAI' }],
       documents: {
-        test: factories.helpers.createPrompt({ provider: 'openai' }),
+        test: factories.helpers.createPrompt({ provider: 'OpenAI' }),
       },
     })
     workspace = projectData.workspace
@@ -196,4 +198,3 @@ describe('scheduleBackfillEvaluationResultsTypeAndMetricJobs', () => {
     expect(jobResult.message).toContain('ID range')
   })
 })
-
