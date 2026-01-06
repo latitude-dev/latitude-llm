@@ -939,7 +939,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   async fetchPaginatedHITLResultsByDocument({
     workspace,
     commit,
-    documentUuid: _documentUuid,
+    documentUuid,
     excludeIssueId,
     page,
     pageSize,
@@ -961,6 +961,20 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const limit = pageSize + 1
     const offset = calculateOffset(page, pageSize)
 
+    const evaluationsRepo = new EvaluationsV2Repository(workspace.id, this.db)
+    const evaluations = await evaluationsRepo
+      .listAtCommitByDocument({
+        commitUuid: commit.uuid,
+        documentUuid,
+      })
+      .then((r) => r.unwrap())
+
+    const evaluationUuids = evaluations.map((e) => e.uuid)
+
+    if (evaluationUuids.length === 0) {
+      return { results: [], hasNextPage: false }
+    }
+
     const whereConditions = [
       eq(evaluationResultsV2.workspaceId, workspace.id),
       eq(evaluationResultsV2.type, EvaluationType.Human),
@@ -969,6 +983,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       isNull(commits.deletedAt),
       inArray(evaluationResultsV2.commitId, commitIds),
       isNull(issueEvaluationResults.id),
+      inArray(evaluationResultsV2.evaluationUuid, evaluationUuids),
     ]
 
     if (afterDate) {

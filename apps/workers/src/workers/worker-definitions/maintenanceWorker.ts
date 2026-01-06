@@ -26,6 +26,6 @@ export function startMaintenanceWorker() {
 
   return createWorker(Queues.maintenanceQueue, jobMappings, {
     connection: WORKER_CONNECTION_CONFIG,
-    concurrency: 20,
+    concurrency: 5,
   })
 }
