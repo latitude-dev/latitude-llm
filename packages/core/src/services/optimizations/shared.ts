@@ -5,8 +5,6 @@ export function maskParameter({
   parameter,
 }: {
   parameter: string
-  value: unknown
-  configuration: OptimizationConfiguration
 }) {
   return `{{${parameter}}} (REDACTED)`
 }

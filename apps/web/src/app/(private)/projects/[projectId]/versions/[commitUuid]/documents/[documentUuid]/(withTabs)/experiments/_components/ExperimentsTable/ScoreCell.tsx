@@ -2,7 +2,7 @@
 
 import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
 import { Badge, BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 const scoreBadgeVariant = (score: number): BadgeProps['variant'] => {
@@ -44,11 +44,11 @@ export function ScoreCell({
 
   if (icon) {
     return (
-      <Badge variant={scoreBadgeVariant(avgScore)}>
-        <div className='flex flex-row gap-1 items-center select-none'>
-          {scoreText}
-          <Icon name={icon} size='small' className='shrink-0 -mt-px' />
-        </div>
+      <Badge
+        variant={scoreBadgeVariant(avgScore)}
+        iconProps={{ name: icon, placement: 'end' }}
+      >
+        {scoreText}
       </Badge>
     )
   }

@@ -532,7 +532,7 @@ async function buildDatasetRows({
       let value = example.metadata?.parameters?.[parameter]
 
       if (maskPii && configuration.parameters?.[parameter]?.isPii) {
-        value = maskParameter({ parameter, value, configuration })
+        value = maskParameter({ parameter })
       }
 
       row[columns[parameter].identifier] = value ?? undefined

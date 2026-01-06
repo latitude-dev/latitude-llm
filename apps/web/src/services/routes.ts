@@ -260,29 +260,10 @@ export const ROUTES = {
                       },
                     },
                     [DocumentRoutes.optimizations]: {
-                      root: (params: Partial<Pagination> = {}) => {
-                        const searchParams = new URLSearchParams()
-                        for (const [key, value] of Object.entries(params)) {
-                          searchParams.set(key, String(value))
-                        }
-                        if (!searchParams.size) return rootOptimizations
-                        return `${rootOptimizations}?${searchParams.toString()}`
-                      },
-                      detail: ({
-                        uuid,
-                        ...params
-                      }: Partial<Pagination> & {
-                        uuid: string
-                      }) => {
-                        const searchParams = new URLSearchParams()
-                        for (const [key, value] of Object.entries(params)) {
-                          searchParams.set(key, String(value))
-                        }
-                        searchParams.set('optimizationUuid', uuid)
-                        return {
-                          root: `${rootOptimizations}?${searchParams.toString()}`,
-                        }
-                      },
+                      root: rootOptimizations,
+                      detail: (uuid: string) => ({
+                        root: `${rootOptimizations}/${uuid}`,
+                      }),
                     },
                   }
                 },
