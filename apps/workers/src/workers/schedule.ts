@@ -59,10 +59,10 @@ export async function setupSchedules() {
     { opts: { attempts: 1 } },
   )
 
-  // Every day at 3 AM - Schedules backfill jobs for evaluation results type and metric
+  // Every day at 12 AM - Schedules backfill jobs for evaluation results type and metric
   await maintenanceQueue.upsertJobScheduler(
     'scheduleBackfillEvaluationResultsTypeAndMetricJobs',
-    { pattern: '0 0 3 * * *' },
+    { pattern: '0 0 12 * * *' },
     { opts: { attempts: 1 } },
   )
 }
