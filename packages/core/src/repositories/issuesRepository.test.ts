@@ -8,6 +8,7 @@ import { type Workspace } from '../schema/models/types/Workspace'
 import { resolveIssue } from '../services/issues/resolve'
 import { ignoreIssue } from '../services/issues/ignore'
 import { mergeIssues } from '../services/issues/merge'
+import { destroyDocument } from '../services/documents/destroyDocument'
 import * as factories from '../tests/factories'
 import { IssuesRepository } from './issuesRepository'
 
@@ -353,5 +354,189 @@ describe('IssuesRepository - Group Filtering', () => {
         expect(issue.description).toBeDefined()
       })
     })
+  })
+})
+
+describe('IssuesRepository - Deleted Documents Filtering', () => {
+  beforeEach(async () => {
+    const setup = await factories.createProject({
+      documents: {
+        'doc-1': 'Test document 1',
+        'doc-2': 'Test document 2',
+      },
+    })
+
+    workspace = setup.workspace
+    project = setup.project
+    commit = setup.commit
+    document = setup.documents[0]!
+    user = setup.user
+
+    repository = new IssuesRepository(workspace.id)
+  })
+
+  it('excludes issues from deleted documents', async () => {
+    await factories.createIssue({
+      workspace,
+      project,
+      document,
+      createdAt: new Date(),
+      histograms: [
+        {
+          commitId: commit.id,
+          date: new Date(),
+          count: 1,
+        },
+      ],
+    })
+
+    const result = await repository.fetchIssuesFiltered({
+      project,
+      commit,
+      filters: {},
+      sorting: { sort: 'relevance', sortDirection: 'desc' },
+      page: 1,
+      limit: 100,
+    })
+
+    const issues = result.unwrap().issues
+    expect(issues.length).toBe(1)
+
+    const { commit: draftCommit } = await factories.createDraft({
+      project,
+      user,
+    })
+    await destroyDocument({ document, commit: draftCommit, workspace })
+
+    const resultAfterDelete = await repository.fetchIssuesFiltered({
+      project,
+      commit: draftCommit,
+      filters: {},
+      sorting: { sort: 'relevance', sortDirection: 'desc' },
+      page: 1,
+      limit: 100,
+    })
+
+    const issuesAfterDelete = resultAfterDelete.unwrap().issues
+    expect(issuesAfterDelete.length).toBe(0)
+  })
+
+  it('shows issues from non-deleted documents after another document is deleted', async () => {
+    const setup = await factories.createProject({
+      documents: {
+        'doc-a': 'Document A',
+        'doc-b': 'Document B',
+      },
+    })
+
+    const docA = setup.documents.find((d) => d.path === 'doc-a')!
+    const docB = setup.documents.find((d) => d.path === 'doc-b')!
+
+    await factories.createIssue({
+      workspace: setup.workspace,
+      project: setup.project,
+      document: docA,
+      createdAt: new Date(),
+      histograms: [
+        {
+          commitId: setup.commit.id,
+          date: new Date(),
+          count: 1,
+        },
+      ],
+    })
+
+    await factories.createIssue({
+      workspace: setup.workspace,
+      project: setup.project,
+      document: docB,
+      createdAt: new Date(),
+      histograms: [
+        {
+          commitId: setup.commit.id,
+          date: new Date(),
+          count: 1,
+        },
+      ],
+    })
+
+    const repo = new IssuesRepository(setup.workspace.id)
+    const resultBefore = await repo.fetchIssuesFiltered({
+      project: setup.project,
+      commit: setup.commit,
+      filters: {},
+      sorting: { sort: 'relevance', sortDirection: 'desc' },
+      page: 1,
+      limit: 100,
+    })
+
+    expect(resultBefore.unwrap().issues.length).toBe(2)
+
+    const { commit: draftCommit } = await factories.createDraft({
+      project: setup.project,
+      user: setup.user,
+    })
+    await destroyDocument({
+      document: docA,
+      commit: draftCommit,
+      workspace: setup.workspace,
+    })
+
+    const resultAfter = await repo.fetchIssuesFiltered({
+      project: setup.project,
+      commit: draftCommit,
+      filters: {},
+      sorting: { sort: 'relevance', sortDirection: 'desc' },
+      page: 1,
+      limit: 100,
+    })
+
+    const issuesAfter = resultAfter.unwrap().issues
+    expect(issuesAfter.length).toBe(1)
+    expect(issuesAfter[0]!.documentUuid).toBe(docB.documentUuid)
+  })
+
+  it('still shows issues from deleted document when viewing older commit', async () => {
+    await factories.createIssue({
+      workspace,
+      project,
+      document,
+      createdAt: new Date(),
+      histograms: [
+        {
+          commitId: commit.id,
+          date: new Date(),
+          count: 1,
+        },
+      ],
+    })
+
+    const { commit: draftCommit } = await factories.createDraft({
+      project,
+      user,
+    })
+    await destroyDocument({ document, commit: draftCommit, workspace })
+
+    const resultOnOlderCommit = await repository.fetchIssuesFiltered({
+      project,
+      commit,
+      filters: {},
+      sorting: { sort: 'relevance', sortDirection: 'desc' },
+      page: 1,
+      limit: 100,
+    })
+
+    expect(resultOnOlderCommit.unwrap().issues.length).toBe(1)
+
+    const resultOnDraft = await repository.fetchIssuesFiltered({
+      project,
+      commit: draftCommit,
+      filters: {},
+      sorting: { sort: 'relevance', sortDirection: 'desc' },
+      page: 1,
+      limit: 100,
+    })
+
+    expect(resultOnDraft.unwrap().issues.length).toBe(0)
   })
 })

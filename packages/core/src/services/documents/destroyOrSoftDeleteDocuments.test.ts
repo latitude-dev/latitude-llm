@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { database } from '../../client'
 import { Providers } from '@latitude-data/constants'
@@ -9,8 +9,14 @@ import * as factories from '../../tests/factories'
 import { updateEvaluationV2 } from '../evaluationsV2/update'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
 import { updateDocument } from './update'
+import * as publisherModule from '../../events/publisher'
+
+const publisherSpy = vi.spyOn(publisherModule.publisher, 'publishLater')
 
 describe('destroyOrSoftDeleteDocuments', () => {
+  beforeEach(() => {
+    publisherSpy.mockClear()
+  })
   it('remove documents that were not present in merged commits', async (ctx) => {
     const { project, user, workspace, providers } =
       await factories.createProject()
@@ -152,5 +158,73 @@ describe('destroyOrSoftDeleteDocuments', () => {
     const draftEvaluation = evaluations.find((e) => e.commitId === draft.id)
     expect(evaluations.length).toBe(2)
     expect(draftEvaluation!.deletedAt).not.toBe(null)
+  })
+
+  it('publishes documentsDeleted event with correct payload for hard deleted documents', async (ctx) => {
+    const { project, user, workspace, providers } =
+      await factories.createProject()
+    const { commit: draft } = await factories.createDraft({ project, user })
+    const { documentVersion: draftDocument } =
+      await factories.createDocumentVersion({
+        workspace,
+        user,
+        commit: draft,
+        path: 'doc1',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+        }),
+      })
+
+    await destroyOrSoftDeleteDocuments({
+      commit: draft,
+      documents: [draftDocument],
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    expect(publisherSpy).toHaveBeenCalledWith({
+      type: 'documentsDeleted',
+      data: {
+        workspaceId: workspace.id,
+        projectId: project.id,
+        commitUuid: draft.uuid,
+        documentUuids: [draftDocument.documentUuid],
+        softDeletedDocumentUuids: [],
+        hardDeletedDocumentUuids: [draftDocument.documentUuid],
+      },
+    })
+  })
+
+  it('publishes documentsDeleted event with correct payload for soft deleted documents', async (ctx) => {
+    const {
+      workspace,
+      project,
+      user,
+      documents: allDocs,
+    } = await factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        doc1: ctx.factories.helpers.createPrompt({ provider: 'openai' }),
+      },
+    })
+    const document = allDocs[0]!
+    const { commit: draft } = await factories.createDraft({ project, user })
+
+    await destroyOrSoftDeleteDocuments({
+      commit: draft,
+      documents: [document],
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    expect(publisherSpy).toHaveBeenCalledWith({
+      type: 'documentsDeleted',
+      data: {
+        workspaceId: workspace.id,
+        projectId: project.id,
+        commitUuid: draft.uuid,
+        documentUuids: [document.documentUuid],
+        softDeletedDocumentUuids: [document.documentUuid],
+        hardDeletedDocumentUuids: [],
+      },
+    })
   })
 })

@@ -55,6 +55,7 @@ const eventHandlersJobMappings = {
   notifyClientOfEvaluationV2AlignmentUpdated:
     jobs.notifyClientOfEvaluationV2AlignmentUpdated,
   notifyClientOfOptimizationStatus: jobs.notifyClientOfOptimizationStatus,
+  unassignIssuesOnDocumentsDeleted: jobs.unassignIssuesOnDocumentsDeleted,
 }
 
 export function startEventsWorker() {

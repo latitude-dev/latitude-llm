@@ -15,6 +15,7 @@ import {
   eq,
   getTableColumns,
   ilike,
+  inArray,
   isNotNull,
   isNull,
   or,
@@ -36,6 +37,7 @@ import { type Issue } from '../schema/models/types/Issue'
 import { type Project } from '../schema/models/types/Project'
 import { CommitsRepository } from './commitsRepository'
 import { IssueEvaluationResultsRepository } from './issueEvaluationResultsRepository'
+import { DocumentVersionsRepository } from './documentVersionsRepository'
 import { IssueHistogramsRepository } from './issueHistogramsRepository'
 import Repository from './repositoryV2'
 
@@ -307,7 +309,12 @@ export class IssuesRepository extends Repository<Issue> {
     limit,
   }: FilteringArguments) {
     const offset = (page - 1) * limit
-    const whereConditions = this.buildWhereConditions({ project, filters })
+    const activeDocumentUuids = await this.getActiveDocumentUuids({ commit })
+    const whereConditions = this.buildWhereConditions({
+      project,
+      filters,
+      activeDocumentUuids,
+    })
     const orderByClause = this.buildOrderByClause({
       sort,
       sortDirection,
@@ -325,6 +332,7 @@ export class IssuesRepository extends Repository<Issue> {
       project,
       commit,
       filters,
+      where: whereConditions,
     })
     const totalCount = totalResult.unwrap()
 
@@ -397,8 +405,10 @@ export class IssuesRepository extends Repository<Issue> {
     project,
     commit,
     filters,
-  }: Omit<FilteringArguments, 'page' | 'limit' | 'sorting'>) {
-    const whereConditions = this.buildWhereConditions({ project, filters })
+    where,
+  }: Omit<FilteringArguments, 'page' | 'limit' | 'sorting'> & {
+    where: SQL[]
+  }) {
     const commitIds = await this.getCommitIds({ commit })
     const subquery = this.buildHistogramSubquery({
       project,
@@ -410,7 +420,7 @@ export class IssuesRepository extends Repository<Issue> {
       .select({ issueId: issues.id })
       .from(issues)
       .innerJoin(subquery, eq(subquery.issueId, issues.id))
-      .where(and(...whereConditions))
+      .where(and(...where))
       .as('filteredIssues')
 
     const query = this.db
@@ -444,14 +454,22 @@ export class IssuesRepository extends Repository<Issue> {
   private buildWhereConditions({
     project,
     filters,
+    activeDocumentUuids,
   }: {
     project: Project
     filters: IssueFilters
+    activeDocumentUuids: string[]
   }) {
     const conditions: SQL[] = [
       this.scopeFilter,
       eq(issues.projectId, project.id),
     ]
+
+    if (activeDocumentUuids.length > 0) {
+      conditions.push(inArray(issues.documentUuid, activeDocumentUuids))
+    } else {
+      conditions.push(sql`FALSE`)
+    }
 
     // Use documentUuid filter if provided, otherwise use commit.mainDocumentUuid as default
     if (filters.documentUuid) {
@@ -593,5 +611,20 @@ export class IssuesRepository extends Repository<Issue> {
     const commits = await commitsRepo.getCommitsHistory({ commit })
     const commitIds = commits.map((c: { id: number }) => c.id)
     return commitIds
+  }
+
+  private async getActiveDocumentUuids({
+    commit,
+  }: {
+    commit: Commit
+  }): Promise<string[]> {
+    const documentsRepo = new DocumentVersionsRepository(
+      this.workspaceId,
+      this.db,
+    )
+    const documents = await documentsRepo
+      .getDocumentsAtCommit(commit)
+      .then((r) => r.unwrap())
+    return documents.map((d) => d.documentUuid)
   }
 }
