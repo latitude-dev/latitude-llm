@@ -53,7 +53,10 @@ function generatePkceChallenge(): {
     .replace(/=/g, '')
 
   // Generate SHA256 hash of verifier and encode as base64url
-  const challengeBytes = crypto.createHash('sha256').update(code_verifier).digest()
+  const challengeBytes = crypto
+    .createHash('sha256')
+    .update(code_verifier)
+    .digest()
   const code_challenge = challengeBytes
     .toString('base64')
     .replace(/\+/g, '-')
@@ -96,7 +99,9 @@ async function registerClientWithPathSupport(
   })
 
   if (!response.ok) {
-    throw new Error(`Dynamic client registration failed: HTTP ${response.status}`)
+    throw new Error(
+      `Dynamic client registration failed: HTTP ${response.status}`,
+    )
   }
 
   return OAuthClientInformationFullSchema.parse(await response.json())
@@ -139,7 +144,10 @@ function startAuthorizationWithPathSupport(
   authorizationUrl.searchParams.set('response_type', responseType)
   authorizationUrl.searchParams.set('client_id', clientInformation.client_id)
   authorizationUrl.searchParams.set('code_challenge', codeChallenge)
-  authorizationUrl.searchParams.set('code_challenge_method', codeChallengeMethod)
+  authorizationUrl.searchParams.set(
+    'code_challenge_method',
+    codeChallengeMethod,
+  )
   authorizationUrl.searchParams.set('redirect_uri', redirectUrl)
 
   if (scope) {

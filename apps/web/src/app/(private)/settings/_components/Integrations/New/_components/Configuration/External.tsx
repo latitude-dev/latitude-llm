@@ -186,8 +186,8 @@ export const ExternalIntegrationConfiguration = forwardRef<
           expandedContent={
             <div className='flex flex-col gap-4 w-full'>
               <Text.H6 color='foregroundMuted'>
-                Add custom headers to include with every request (e.g., x-api-key
-                for authentication).
+                Add custom headers to include with every request (e.g.,
+                x-api-key for authentication).
               </Text.H6>
               {headers.map((header, index) => (
                 <div key={index} className='flex items-center gap-2'>
@@ -200,7 +200,9 @@ export const ExternalIntegrationConfiguration = forwardRef<
                   <Input
                     placeholder='Header value'
                     value={header.value}
-                    onChange={(e) => updateHeader(index, 'value', e.target.value)}
+                    onChange={(e) =>
+                      updateHeader(index, 'value', e.target.value)
+                    }
                     className='flex-1'
                     type='password'
                   />
@@ -209,7 +211,10 @@ export const ExternalIntegrationConfiguration = forwardRef<
                     variant='ghost'
                     size='small'
                     onClick={() => removeHeader(index)}
-                    iconProps={{ name: 'trash', color: 'destructiveMutedForeground' }}
+                    iconProps={{
+                      name: 'trash',
+                      color: 'destructiveMutedForeground',
+                    }}
                   />
                 </div>
               ))}

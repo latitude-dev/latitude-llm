@@ -1,9 +1,9 @@
-import { eq, getTableColumns, and, isNull, desc } from 'drizzle-orm'
+import { EvaluationResultV2 } from '@latitude-data/constants'
+import { and, desc, eq, getTableColumns, isNull } from 'drizzle-orm'
 import { issueEvaluationResults } from '../schema/models/issueEvaluationResults'
+import { issues } from '../schema/models/issues'
 import { IssueEvaluationResult } from '../schema/models/types/IssueEvaluationResult'
 import Repository from './repositoryV2'
-import { EvaluationResultV2 } from '@latitude-data/constants'
-import { issues } from '../schema/models/issues'
 
 const tt = getTableColumns(issueEvaluationResults)
 
@@ -36,7 +36,7 @@ export class IssueEvaluationResultsRepository extends Repository<IssueEvaluation
   async findLastActiveAssignedIssue({
     result,
   }: {
-    result: EvaluationResultV2
+    result: Pick<EvaluationResultV2, 'id'>
   }) {
     const findResult = await this.db
       .select(tt)

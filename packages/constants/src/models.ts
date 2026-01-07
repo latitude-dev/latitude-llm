@@ -15,6 +15,7 @@ export enum LogSources {
   ShadowTest = 'shadow_test',
   ABTestChallenger = 'ab_test_challenger',
   User = 'user',
+  Optimization = 'optimization',
 }
 
 type Commit = {

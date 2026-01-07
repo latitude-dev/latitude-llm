@@ -58,10 +58,7 @@ export default function ProductionBanner({ project }: { project: Project }) {
         projectId={project.id}
         onInviteDevelopers={handleInviteDevelopers}
       />
-      <InviteMembersModal
-        open={inviteModalOpen}
-        setOpen={setInviteModalOpen}
-      />
+      <InviteMembersModal open={inviteModalOpen} setOpen={setInviteModalOpen} />
     </>
   )
 }

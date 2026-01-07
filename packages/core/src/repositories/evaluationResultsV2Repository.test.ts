@@ -232,16 +232,15 @@ describe('EvaluationResultsV2Repository', () => {
     })
 
     it('does not return duplicate results when evaluation has multiple versions', async () => {
-      const { commit, documents, project, user } = await factories.createProject(
-        {
+      const { commit, documents, project, user } =
+        await factories.createProject({
           workspace,
           providers: [{ type: Providers.OpenAI, name: 'openai' }],
           documents: {
             prompt: factories.helpers.createPrompt({ provider: 'openai' }),
           },
           skipMerge: true,
-        },
-      )
+        })
 
       const document = documents[0]!
 
@@ -601,16 +600,15 @@ describe('EvaluationResultsV2Repository', () => {
     })
 
     it('does not return duplicate results when evaluation has multiple versions', async () => {
-      const { commit, documents, project, user } = await factories.createProject(
-        {
+      const { commit, documents, project, user } =
+        await factories.createProject({
           workspace,
           providers: [{ type: Providers.OpenAI, name: 'openai' }],
           documents: {
             prompt: factories.helpers.createPrompt({ provider: 'openai' }),
           },
           skipMerge: true,
-        },
-      )
+        })
 
       const document = documents[0]!
 

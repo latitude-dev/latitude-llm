@@ -4,4 +4,3 @@ export function withIndent(code: string, indent: number) {
     .map((line) => `  `.repeat(indent) + line)
     .join('\n')
 }
-

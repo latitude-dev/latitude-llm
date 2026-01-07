@@ -1,9 +1,9 @@
 'use server'
 
-import { withDocument, withDocumentSchema } from '../procedures'
 import { ExperimentsRepository } from '@latitude-data/core/repositories'
-import { z } from 'zod'
 import { stopExperiment } from '@latitude-data/core/services/experiments/stop'
+import { z } from 'zod'
+import { withDocument, withDocumentSchema } from '../procedures'
 
 export const stopExperimentAction = withDocument
   .inputSchema(withDocumentSchema.extend({ experimentUuid: z.string() }))

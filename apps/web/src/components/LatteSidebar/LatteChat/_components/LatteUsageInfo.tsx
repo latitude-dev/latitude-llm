@@ -2,13 +2,13 @@
 
 import { usePaywallModal } from '$/app/(private)/providers/PaywallModalProvider'
 import { formatCount } from '@latitude-data/constants/formatCount'
+import { LatteUsage } from '@latitude-data/core/constants'
+import { SubscriptionPlan } from '@latitude-data/core/plans'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { format } from 'date-fns'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { LatteUsage } from '@latitude-data/core/constants'
-import { SubscriptionPlan } from '@latitude-data/core/plans'
 
 const ANIMATION_DURATION = 4
 
@@ -149,13 +149,6 @@ function UsageBar({
           />
         )}
       </div>
-      {/* TODO(credits): Uncomment this when clients are informed about */}
-      {/* {bonus > 0 && (
-        <div
-          className='h-1 bg-success-muted-foreground/60 rounded-full'
-          style={{ width: `${bonus}px` }}
-        />
-      )} */}
     </div>
   )
 }

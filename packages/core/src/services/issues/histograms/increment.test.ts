@@ -1,13 +1,13 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { format } from 'date-fns'
-import { createProject, createIssue } from '../../../tests/factories'
-import { incrementIssueHistogram } from './increment'
-import * as publisherModule from '../../../events/publisher'
-import type { Workspace } from '../../../schema/models/types/Workspace'
-import type { Project } from '../../../schema/models/types/Project'
-import type { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
-import type { Commit } from '../../../schema/models/types/Commit'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EvaluationResultV2 } from '../../../constants'
+import * as publisherModule from '../../../events/publisher'
+import type { Commit } from '../../../schema/models/types/Commit'
+import type { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import type { Project } from '../../../schema/models/types/Project'
+import type { Workspace } from '../../../schema/models/types/Workspace'
+import { createIssue, createProject } from '../../../tests/factories'
+import { incrementIssueHistogram } from './increment'
 
 // Mock the publisher
 vi.mock('../../../events/publisher', () => ({
@@ -384,6 +384,80 @@ describe('incrementIssueHistogram', () => {
 
       // Event should still be published
       expect(publisherModule.publisher.publishLater).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('when createdAt is passed as a string', () => {
+    it('should handle string dates from BullMQ marshalling', async () => {
+      const doc = documents[0]!
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      const dateAsString = '2025-01-06T12:00:00.000Z'
+      const evaluationResult = {
+        id: 1,
+        createdAt: dateAsString,
+      } as unknown as EvaluationResultV2
+
+      const result = await incrementIssueHistogram({
+        result: evaluationResult,
+        issue,
+        commit,
+        workspace,
+      })
+
+      const histogram = result.unwrap().histogram
+
+      expect(histogram).toBeDefined()
+      expect(histogram.count).toBe(1)
+      expect(histogram.date).toBe('2025-01-06')
+      expect(histogram.occurredAt).toEqual(new Date(dateAsString))
+    })
+
+    it('should increment correctly when mixing string and Date createdAt', async () => {
+      const doc = documents[0]!
+      const { issue } = await createIssue({
+        workspace,
+        project,
+        document: doc,
+        createdAt: new Date(),
+      })
+
+      const dateAsString = '2025-01-06T12:00:00.000Z'
+      const dateAsDate = new Date('2025-01-06T14:00:00.000Z')
+
+      const firstResult = {
+        id: 1,
+        createdAt: dateAsString,
+      } as unknown as EvaluationResultV2
+
+      const secondResult = {
+        id: 2,
+        createdAt: dateAsDate,
+      } as EvaluationResultV2
+
+      await incrementIssueHistogram({
+        result: firstResult,
+        issue,
+        commit,
+        workspace,
+      })
+
+      const result = await incrementIssueHistogram({
+        result: secondResult,
+        issue,
+        commit,
+        workspace,
+      })
+
+      const histogram = result.unwrap().histogram
+
+      expect(histogram.count).toBe(2)
+      expect(histogram.occurredAt).toEqual(dateAsDate)
     })
   })
 

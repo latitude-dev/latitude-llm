@@ -54,6 +54,7 @@ const eventHandlersJobMappings = {
   enqueueShadowTestChallengerHandler: jobs.enqueueShadowTestChallengerHandler,
   notifyClientOfEvaluationV2AlignmentUpdated:
     jobs.notifyClientOfEvaluationV2AlignmentUpdated,
+  notifyClientOfOptimizationStatus: jobs.notifyClientOfOptimizationStatus,
 }
 
 export function startEventsWorker() {

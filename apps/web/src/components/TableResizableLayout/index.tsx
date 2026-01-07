@@ -1,9 +1,9 @@
-import { ReactNode, RefObject, useState, useRef, useEffect } from 'react'
 import {
   ResizableBox,
   SplitHandle,
 } from '@latitude-data/web-ui/atoms/Resizable'
 import { cn } from '@latitude-data/web-ui/utils'
+import { ReactNode, RefObject, useEffect, useRef, useState } from 'react'
 
 const MIN_RIGHT_PANE_WIDTH = 560
 const RESIZE_HANDLES = ['w' as const]

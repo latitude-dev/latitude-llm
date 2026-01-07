@@ -15,15 +15,15 @@ import {
   Span,
 } from '../constants'
 import { DocumentRunStatusEvent, EvaluationStatusEvent } from '../events/events'
-import type { ProviderLogDto } from '../schema/types'
+import { Commit } from '../schema/models/types/Commit'
+import type { Dataset } from '../schema/models/types/Dataset'
 import type { DatasetRow } from '../schema/models/types/DatasetRow'
 import type { DocumentSuggestion } from '../schema/models/types/DocumentSuggestion'
 import type { DocumentTrigger } from '../schema/models/types/DocumentTrigger'
 import type { DocumentTriggerEvent } from '../schema/models/types/DocumentTriggerEvent'
 import type { ExperimentDto } from '../schema/models/types/Experiment'
 import type { Project } from '../schema/models/types/Project'
-import type { Dataset } from '../schema/models/types/Dataset'
-import { Commit } from '../schema/models/types/Commit'
+import type { OptimizationWithDetails, ProviderLogDto } from '../schema/types'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -196,6 +196,11 @@ type EvaluationV2AlignmentMetricUpdatedArgs = {
   alignmentMetricMetadata: AlignmentMetricMetadata | undefined
 }
 
+type OptimizationStatusArgs = {
+  workspaceId: number
+  optimization: OptimizationWithDetails
+}
+
 export type WebServerToClientEvents = {
   evaluationStatus: (args: EvaluationStatusArgs) => void
   evaluationV2AlignmentMetricUpdated: (
@@ -217,6 +222,7 @@ export type WebServerToClientEvents = {
   latteProjectChanges: (args: LatteProjectChangesArgs) => void
   documentRunStatus: (args: DocumentRunStatusArgs) => void
   spanCreated: (args: SpanCreatedArgs) => void
+  optimizationStatus: (args: OptimizationStatusArgs) => void
 }
 
 export type WebClientToServerEvents = {
@@ -285,4 +291,8 @@ export type WorkersClientToServerEvents = {
     data: DocumentRunStatusArgs
   }) => void
   spanCreated: (args: { workspaceId: number; data: SpanCreatedArgs }) => void
+  optimizationStatus: (args: {
+    workspaceId: number
+    data: OptimizationStatusArgs
+  }) => void
 }

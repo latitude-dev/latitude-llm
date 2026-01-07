@@ -53,7 +53,9 @@ export function ToolsModal({
             <Text.H5B color='destructiveMutedForeground'>
               Error loading tools
             </Text.H5B>
-            <Text.H6 color='destructiveMutedForeground'>{error.message}</Text.H6>
+            <Text.H6 color='destructiveMutedForeground'>
+              {error.message}
+            </Text.H6>
           </div>
         )}
 
@@ -100,7 +102,9 @@ export function ToolsModal({
                           >
                             <div className='flex flex-col gap-1'>
                               <div className='flex flex-row gap-2 items-center'>
-                                <Text.H6B color='background'>{property}</Text.H6B>
+                                <Text.H6B color='background'>
+                                  {property}
+                                </Text.H6B>
                                 {propertySchema.type && (
                                   <Text.H7 color='background'>
                                     {propertySchema.type}
@@ -125,4 +129,3 @@ export function ToolsModal({
     </Modal>
   )
 }
-

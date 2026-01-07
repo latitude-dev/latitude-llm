@@ -1,3 +1,5 @@
+import { Span, SpanType } from '@latitude-data/constants'
+import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import {
   EvaluationResultsV2Repository,
@@ -6,8 +8,6 @@ import {
 import { Commit } from '../../schema/models/types/Commit'
 import { Issue } from '../../schema/models/types/Issue'
 import { Workspace } from '../../schema/models/types/Workspace'
-import { Span } from '@latitude-data/constants'
-import { database } from '../../client'
 
 /**
  * Fetches spans associated with an issue through HITL (Human-in-the-Loop) evaluation results,
@@ -69,7 +69,7 @@ export async function getHITLSpansByIssue(
     await spansRepository.findByEvaluationResults(paginatedResults)
 
   return Result.ok({
-    spans: orderedSpans,
+    spans: orderedSpans as Span<SpanType.Prompt>[],
     hasNextPage,
   })
 }

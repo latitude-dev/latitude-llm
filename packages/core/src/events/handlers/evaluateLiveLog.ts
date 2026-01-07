@@ -3,7 +3,6 @@ import {
   LIVE_EVALUABLE_SPAN_TYPES,
   LogSources,
   PromptSpanMetadata,
-  SpanType,
 } from '../../constants'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
@@ -21,7 +20,10 @@ import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatu
 import { SpanCreatedEvent } from '../events'
 
 const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
-  (source) => source !== 'evaluation' && source !== 'experiment',
+  (source) =>
+    source !== LogSources.Evaluation &&
+    source !== LogSources.Experiment &&
+    source !== LogSources.Optimization,
 ) as LogSources[]
 
 export const evaluateLiveLogJob = async ({
@@ -56,24 +58,20 @@ export const evaluateLiveLogJob = async ({
     return
   }
 
-  const versionUuid =
-    spanMetadata.type === SpanType.Prompt
-      ? spanMetadata.versionUuid
-      : spanMetadata.versionUuid
-  const promptUuid = spanMetadata.promptUuid
-
-  if (!versionUuid || !promptUuid) return
+  if (!spanMetadata.versionUuid || !spanMetadata.promptUuid) {
+    return
+  }
 
   const commitsRepository = new CommitsRepository(workspace.id)
   const commit = await commitsRepository
-    .getCommitByUuid({ uuid: versionUuid })
+    .getCommitByUuid({ uuid: spanMetadata.versionUuid })
     .then((r) => r.unwrap())
 
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
   let evaluations = await evaluationsRepository
     .listAtCommitByDocument({
       commitUuid: commit.uuid,
-      documentUuid: promptUuid,
+      documentUuid: spanMetadata.promptUuid,
     })
     .then((r) => r.unwrap())
 

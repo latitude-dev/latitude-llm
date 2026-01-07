@@ -59,7 +59,8 @@ export enum RunSourceGroup {
 export const RUN_SOURCES: Record<RunSourceGroup, LogSources[]> = {
   [RunSourceGroup.Production]: [
     LogSources.API,
-    LogSources.Copilot,
+    LogSources.ShadowTest,
+    LogSources.ABTestChallenger,
     LogSources.EmailTrigger,
     LogSources.IntegrationTrigger,
     LogSources.ScheduledTrigger,
