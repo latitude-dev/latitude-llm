@@ -37,6 +37,7 @@ export * from '../../events/handlers/unlockIssuesDashboardOnAnnotation'
 export * from '../../events/handlers/stopDeploymentTestsForCommitHandler'
 export * from '../../events/handlers/enqueueShadowTestChallenger'
 export * from '../../events/handlers/notifyClientOfOptimizationStatus'
+export * from '../../events/handlers/unassignIssuesOnDocumentsDeleted'
 
 // Jobs
 export * from './actions/generateProjectNameJob'

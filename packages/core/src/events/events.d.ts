@@ -50,6 +50,7 @@ export type Events =
   | 'commitMerged'
   | 'commitDeleted'
   | 'documentCreated'
+  | 'documentsDeleted'
   | 'documentRunRequested'
   | 'publicDocumentRunRequested'
   | 'chatMessageRequested'
@@ -335,6 +336,18 @@ export type DocumentCreatedEvent = LatitudeEventGeneric<
     document: DocumentVersion
     workspaceId: number
     userEmail?: string
+  }
+>
+
+export type DocumentsDeletedEvent = LatitudeEventGeneric<
+  'documentsDeleted',
+  {
+    workspaceId: number
+    projectId: number
+    commitUuid: string
+    documentUuids: string[]
+    softDeletedDocumentUuids: string[]
+    hardDeletedDocumentUuids: string[]
   }
 >
 
@@ -1020,6 +1033,7 @@ export type LatitudeEvent =
   | CommitMergedEvent
   | CommitDeletedEvent
   | DocumentCreatedEvent
+  | DocumentsDeletedEvent
   | DocumentRunRequestedEvent
   | PublicDocumentRunRequestedEvent
   | ChatMessageRequestedEvent
@@ -1114,6 +1128,7 @@ export interface IEventsHandlers {
   commitMerged: EventHandler<CommitMergedEvent>[]
   commitDeleted: EventHandler<CommitDeletedEvent>[]
   documentCreated: EventHandler<DocumentCreatedEvent>[]
+  documentsDeleted: EventHandler<DocumentsDeletedEvent>[]
   documentRunRequested: EventHandler<DocumentRunRequestedEvent>[]
   publicDocumentRunRequested: EventHandler<PublicDocumentRunRequestedEvent>[]
   chatMessageRequested: EventHandler<ChatMessageRequestedEvent>[]

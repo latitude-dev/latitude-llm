@@ -36,6 +36,7 @@ import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
 import { undeployDocumentTriggerJob } from './undeployDocumentTriggerJob'
 import { unlockIssuesDashboardOnAnnotation } from './unlockIssuesDashboardOnAnnotation'
 import { updateWebhookLastTriggeredAt } from './webhooks'
+import { unassignIssuesOnDocumentsDeleted } from './unassignIssuesOnDocumentsDeleted'
 
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
@@ -44,6 +45,7 @@ export const EventHandlers: IEventsHandlers = {
   datasetCreated: [],
   datasetUploaded: [createDatasetRowsJob],
   documentCreated: [],
+  documentsDeleted: [unassignIssuesOnDocumentsDeleted],
   documentLogCreated: [notifyToClientDocumentLogCreatedJob],
   experimentVariantsCreated: [],
   documentSuggestionCreated: [
