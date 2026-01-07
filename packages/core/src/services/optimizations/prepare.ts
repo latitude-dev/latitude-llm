@@ -44,6 +44,15 @@ import { createDataset } from '../datasets/create'
 import { buildColumns, nanoidHashAlgorithm } from '../datasets/utils'
 import { maskParameter } from './shared'
 
+// TODO(AO/OPT): Remove this, just for testing
+async function awaitTesting() {
+  if (process.env.NODE_ENV === 'test') return
+
+  await new Promise((resolve) =>
+    setTimeout(resolve, 5000 + Math.floor(Math.random() * 11000)),
+  )
+}
+
 export async function prepareOptimization(
   {
     optimization,
@@ -84,9 +93,7 @@ export async function prepareOptimization(
     testset = gettingts.value
   } else {
     // TODO(AO/OPT): Remove this, just for testing
-    await new Promise((resolve) =>
-      setTimeout(resolve, 5000 + Math.floor(Math.random() * 11000)),
-    )
+    await awaitTesting()
 
     const projectsRepository = new ProjectsRepository(workspace.id)
     const gettingpj = await projectsRepository.find(optimization.projectId)

@@ -25,6 +25,8 @@ import { OPTIMIZATION_ENGINES, OptimizerEvaluateArgs } from './optimizers'
 
 // TODO(AO/OPT): Remove this, just for testing
 async function awaitTesting(iterations?: number) {
+  if (process.env.NODE_ENV === 'test') return
+
   const minMs = 10000
   const maxMs = 45000
 
