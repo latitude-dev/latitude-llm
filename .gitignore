@@ -94,6 +94,8 @@ __testing__
 # New spans
 apps/web/ingest
 apps/workers/workspaces/*/traces
+provider-logs/*
+workspaces/*
 
 # Helm chart secrets (do not commit)
 charts/latitude/values.secrets.yaml

@@ -221,6 +221,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       workspace,
       commit,
       issue,
+      existingEvaluations: [evaluation],
     })
 
     expect(result.ok).toBe(true)
@@ -256,6 +257,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       workspace,
       commit,
       issue,
+      existingEvaluations: [evaluation],
     })
 
     expect(result.ok).toBe(true)
@@ -283,6 +285,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       workspace,
       commit,
       issue,
+      existingEvaluations: [evaluation],
     })
 
     expect(result.ok).toBe(true)
@@ -307,6 +310,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       workspace,
       commit,
       issue,
+      existingEvaluations: [evaluation],
     })
 
     expect(result.ok).toBe(true)
@@ -337,6 +341,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       workspace,
       commit,
       issue,
+      existingEvaluations: [evaluation],
     })
 
     expect(result.ok).toBe(true)
@@ -366,6 +371,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       workspace,
       commit,
       issue,
+      existingEvaluations: [evaluation],
     })
 
     expect(result.ok).toBe(false)
@@ -379,6 +385,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       workspace,
       commit,
       issue,
+      existingEvaluations: [evaluation],
     })
 
     expect(result.ok).toBe(true)
@@ -426,6 +433,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       workspace,
       commit,
       issue,
+      existingEvaluations: [evaluation],
     })
 
     expect(result.ok).toBe(true)
@@ -535,6 +543,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
         workspace,
         commit: commit2,
         issue,
+        existingEvaluations: [evaluation],
       })
 
       expect(result.ok).toBe(true)
@@ -642,6 +651,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
         workspace,
         commit: draftCommit,
         issue,
+        existingEvaluations: [evaluation],
       })
 
       expect(result.ok).toBe(true)
@@ -733,6 +743,7 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
         workspace,
         commit,
         issue,
+        existingEvaluations: [evaluation],
       })
 
       expect(result.ok).toBe(true)
