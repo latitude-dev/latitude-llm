@@ -6,17 +6,8 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getOptimizationPhase } from './shared'
-
-function getElapsedTime(
-  start: Date | null,
-  end: Date | null | undefined,
-): number | undefined {
-  if (!start) return undefined
-  const endTime = end ? new Date(end).getTime() : Date.now()
-  return endTime - new Date(start).getTime()
-}
 
 export function StatusCell({
   optimization,
@@ -35,14 +26,11 @@ export function StatusCell({
     return () => clearInterval(timer)
   }, [phase.isActive])
 
-  const elapsed = getElapsedTime(
-    optimization.createdAt ? new Date(optimization.createdAt) : null,
-    phase.isActive
-      ? now
-      : optimization.finishedAt
-        ? new Date(optimization.finishedAt)
-        : undefined,
-  )
+  const elapsed = useMemo(() => {
+    const start = new Date(optimization.createdAt)
+    const end = new Date(optimization.finishedAt ?? now)
+    return Math.max(0, end.getTime() - start.getTime())
+  }, [optimization.createdAt, optimization.finishedAt, now])
 
   if (phase.isActive) {
     return (
@@ -78,11 +66,9 @@ export function StatusCell({
                 >
                   {phase.label}
                 </Text.H5>
-                {elapsed !== undefined && (
-                  <Text.H6 noWrap color='foregroundMuted' userSelect={false}>
-                    {formatDuration(elapsed, false)}
-                  </Text.H6>
-                )}
+                <Text.H6 noWrap color='foregroundMuted' userSelect={false}>
+                  {formatDuration(elapsed, false)}
+                </Text.H6>
               </div>
             </div>
           </Button>
@@ -108,11 +94,9 @@ export function StatusCell({
         >
           {phase.label}
         </Text.H5>
-        {elapsed !== undefined && (
-          <Text.H6 noWrap color='foregroundMuted' userSelect={false}>
-            {formatDuration(elapsed, false)}
-          </Text.H6>
-        )}
+        <Text.H6 noWrap color='foregroundMuted' userSelect={false}>
+          {formatDuration(elapsed, false)}
+        </Text.H6>
       </div>
     </div>
   )
