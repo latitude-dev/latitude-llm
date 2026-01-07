@@ -340,6 +340,7 @@ function CombineEvaluations({
         Combine evaluations
       </TableWithHeader.Button>
       <ConfirmModal
+        dismissible
         size='medium'
         open={openCreateModal}
         title='Create a new composite score'

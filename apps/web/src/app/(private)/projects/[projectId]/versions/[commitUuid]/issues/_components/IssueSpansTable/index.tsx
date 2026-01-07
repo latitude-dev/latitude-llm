@@ -38,7 +38,7 @@ export function IssueSpansTable({
       <TableHeader className='sticky top-0 z-10'>
         <TableRow>
           <TableHead>Time</TableHead>
-          <TableHead>Commit</TableHead>
+          <TableHead>Version</TableHead>
           <TableHead>Duration</TableHead>
           <TableHead />
         </TableRow>
