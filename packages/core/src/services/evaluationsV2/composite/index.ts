@@ -4,6 +4,7 @@ import {
   CompositeEvaluationMetric,
   CompositeEvaluationResultError,
   CompositeEvaluationResultMetadata,
+  EvaluationConfiguration,
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
@@ -40,28 +41,15 @@ export const CompositeEvaluationSpecification = {
   metrics: METRICS,
 }
 
-async function validate<M extends CompositeEvaluationMetric>(
-  {
-    metric,
-    uuid,
-    configuration,
-    evaluations,
-    ...rest
-  }: EvaluationMetricValidateArgs<EvaluationType.Composite, M> & {
-    metric: M
-  },
-  db = database,
-) {
-  const metricSpecification = METRICS[metric]
-  if (!metricSpecification) {
-    return Result.error(new BadRequestError('Invalid metric'))
-  }
-
-  const parsing = metricSpecification.configuration.safeParse(configuration)
-  if (parsing.error) {
-    return Result.error(parsing.error)
-  }
-
+async function validateSubEvaluations<M extends CompositeEvaluationMetric>({
+  uuid,
+  configuration,
+  evaluations,
+}: {
+  uuid?: string
+  configuration: EvaluationConfiguration<EvaluationType.Composite, M>
+  evaluations: EvaluationV2[]
+}) {
   if (configuration.evaluationUuids?.length === 0) {
     return Result.error(new BadRequestError('Sub-evaluations are required'))
   }
@@ -114,6 +102,49 @@ async function validate<M extends CompositeEvaluationMetric>(
       )
     }
   }
+
+  return Result.ok(configuration)
+}
+
+async function validate<M extends CompositeEvaluationMetric>(
+  {
+    metric,
+    uuid,
+    configuration,
+    evaluations,
+    ...rest
+  }: EvaluationMetricValidateArgs<EvaluationType.Composite, M> & {
+    metric: M
+  },
+  db = database,
+) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) {
+    return Result.error(new BadRequestError('Invalid metric'))
+  }
+
+  const parsing = metricSpecification.configuration.safeParse(configuration)
+  if (parsing.error) {
+    return Result.error(parsing.error)
+  }
+
+  const validating = await validateSubEvaluations({ uuid, configuration, evaluations }) // prettier-ignore
+  if (validating.error) {
+    if (validating.error instanceof BadRequestError) {
+      return Result.error(
+        new z.ZodError([
+          {
+            code: 'custom',
+            path: ['evaluationUuids'],
+            message: validating.error.message,
+          },
+        ]),
+      )
+    }
+
+    return Result.error(validating.error)
+  }
+  configuration = validating.value
 
   if (
     configuration.minThreshold !== undefined &&
