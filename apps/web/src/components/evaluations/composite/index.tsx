@@ -8,13 +8,10 @@ import {
   CompositeEvaluationSpecification,
   EvaluationType,
 } from '@latitude-data/constants'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
-import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { MultiSelectInput } from '@latitude-data/web-ui/molecules/MultiSelectInput'
 import { useMemo } from 'react'
@@ -89,31 +86,6 @@ function ConfigurationSimpleForm<M extends CompositeEvaluationMetric>({
     return options
   }, [uuid, evaluations])
 
-  const linkedEvaluationUuids = useMemo(() => {
-    return evaluationOptions.filter((e) => e.linked).map((e) => e.value)
-  }, [evaluationOptions])
-
-  const isTargetSynced = useMemo(() => {
-    if (isLoadingEvaluations) return true
-    if (!configuration.defaultTarget) return true
-
-    const linkedSet = new Set(linkedEvaluationUuids)
-    const currentSet = new Set(configuration.evaluationUuids)
-
-    if (linkedSet.size !== currentSet.size) return false
-
-    for (const uuid of linkedSet) {
-      if (!currentSet.has(uuid)) return false
-    }
-
-    return true
-  }, [
-    isLoadingEvaluations,
-    configuration.defaultTarget,
-    linkedEvaluationUuids,
-    configuration.evaluationUuids,
-  ])
-
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
@@ -134,32 +106,6 @@ function ConfigurationSimpleForm<M extends CompositeEvaluationMetric>({
         disabled={disabled || isLoadingEvaluations}
         required
       />
-      {!isTargetSynced && (
-        <Alert
-          centered
-          spacing='xsmall'
-          variant='warning'
-          description='This composite score is unsynced from evaluations that are tracking and monitoring active issues'
-          cta={
-            <Button
-              variant='outline'
-              iconProps={{
-                name: 'refresh',
-                placement: 'left',
-                strokeWidth: 2.5,
-              }}
-              onClick={() =>
-                setConfiguration({
-                  ...configuration,
-                  evaluationUuids: linkedEvaluationUuids,
-                })
-              }
-            >
-              Sync score
-            </Button>
-          }
-        />
-      )}
       {!!metricSpecification.ConfigurationSimpleForm && (
         <metricSpecification.ConfigurationSimpleForm
           uuid={uuid}
@@ -205,18 +151,6 @@ function ConfigurationSimpleForm<M extends CompositeEvaluationMetric>({
           required
         />
       </FormFieldGroup>
-      <SwitchInput
-        checked={configuration.defaultTarget ?? false}
-        name='defaultTarget'
-        label='Optimizations and Distillations'
-        description='Optimize and distill more efficient versions of your prompt using this evaluation by default'
-        onCheckedChange={(value) =>
-          setConfiguration({ ...configuration, defaultTarget: value })
-        }
-        errors={errors?.['defaultTarget']}
-        disabled={disabled}
-        required
-      />
     </>
   )
 }
