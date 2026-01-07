@@ -83,6 +83,11 @@ export async function prepareOptimization(
     }
     testset = gettingts.value
   } else {
+    // TODO(AO/OPT): Remove this, just for testing
+    await new Promise((resolve) =>
+      setTimeout(resolve, 5000 + Math.floor(Math.random() * 11000)),
+    )
+
     const projectsRepository = new ProjectsRepository(workspace.id)
     const gettingpj = await projectsRepository.find(optimization.projectId)
     if (gettingpj.error) {

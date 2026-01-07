@@ -46,12 +46,12 @@ export function ScoreCell({
     return (
       <Badge variant={scoreBadgeVariant(avgScore)}>
         <div className='flex flex-row gap-1 items-center select-none'>
-          {scoreText}
+          {scoreText}%
           <Icon name={icon} size='small' className='shrink-0 -mt-px' />
         </div>
       </Badge>
     )
   }
 
-  return <Badge variant={scoreBadgeVariant(avgScore)}>{scoreText}</Badge>
+  return <Badge variant={scoreBadgeVariant(avgScore)}>{scoreText}%</Badge>
 }

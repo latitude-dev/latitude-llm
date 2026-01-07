@@ -23,6 +23,17 @@ import { scanDocumentContent } from '../documents'
 import { updateDocument } from '../documents/update'
 import { OPTIMIZATION_ENGINES, OptimizerEvaluateArgs } from './optimizers'
 
+// TODO(AO/OPT): Remove this, just for testing
+async function awaitTesting(iterations?: number) {
+  const minMs = 10000
+  const maxMs = 45000
+
+  let waitMs = minMs + Math.round(((maxMs - minMs) * (iterations ?? 0)) / 100)
+  waitMs = Math.min(maxMs, Math.max(minMs, waitMs))
+
+  await new Promise((resolve) => setTimeout(resolve, waitMs))
+}
+
 export async function executeOptimization(
   {
     optimization,
@@ -54,6 +65,9 @@ export async function executeOptimization(
       ),
     )
   }
+
+  // TODO(AO/OPT): Remove this, just for testing
+  await awaitTesting(optimization.configuration?.iterations)
 
   const projectsRepository = new ProjectsRepository(workspace.id)
   const gettingpj = await projectsRepository.find(optimization.projectId)
