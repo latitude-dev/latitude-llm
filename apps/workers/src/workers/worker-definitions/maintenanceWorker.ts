@@ -6,15 +6,12 @@ import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 const jobMappings = {
   autoScaleJob: jobs.autoScaleJob,
-  backfillEvaluationResultsTypeAndMetricJob:
-    jobs.backfillEvaluationResultsTypeAndMetricJob,
+  cleanupOrphanedEvaluationResultsJob: jobs.cleanupOrphanedEvaluationResultsJob,
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   cleanDocumentSuggestionsJob: jobs.cleanDocumentSuggestionsJob,
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
   requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
   scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
-  scheduleBackfillEvaluationResultsTypeAndMetricJobs:
-    jobs.scheduleBackfillEvaluationResultsTypeAndMetricJobs,
   updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
   scheduleWeeklyEmailJobs: jobs.scheduleWeeklyEmailJobs,
   dailyAlignmentMetricUpdateJob: jobs.dailyAlignmentMetricUpdateJob,
