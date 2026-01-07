@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { database } from '../../../client'
 import {
+  CompositeEvaluationConfiguration,
   CompositeEvaluationMetric,
   CompositeEvaluationResultError,
   CompositeEvaluationResultMetadata,
@@ -40,6 +41,104 @@ export const CompositeEvaluationSpecification = {
   metrics: METRICS,
 }
 
+function validateSubEvaluations({
+  uuid,
+  configuration,
+  evaluations,
+}: {
+  uuid?: string
+  configuration: CompositeEvaluationConfiguration
+  evaluations: EvaluationV2[]
+}) {
+  if (configuration.evaluationUuids?.length === 0) {
+    return Result.error(
+      new z.ZodError([
+        {
+          code: 'custom',
+          path: ['evaluationUuids'],
+          message:
+            'At least one sub-evaluation is required. Only evaluations that support batch evaluation and do not require an expected output can be used',
+        },
+      ]),
+    )
+  }
+
+  const evaluationsByUuid = new Map(evaluations.map((e) => [e.uuid, e]))
+
+  for (const subUuid of configuration.evaluationUuids) {
+    if (subUuid === uuid) {
+      return Result.error(
+        new z.ZodError([
+          {
+            code: 'custom',
+            path: ['evaluationUuids'],
+            message: 'Cannot use the current evaluation as a sub-evaluation',
+          },
+        ]),
+      )
+    }
+
+    const evaluation = evaluationsByUuid.get(subUuid)
+    if (!evaluation || evaluation.deletedAt) {
+      return Result.error(
+        new z.ZodError([
+          {
+            code: 'custom',
+            path: ['evaluationUuids'],
+            message: `Sub-evaluation ${subUuid} not found`,
+          },
+        ]),
+      )
+    }
+
+    // Note: to simplify things, only batch evaluation mode is supported
+    const specification = getEvaluationMetricSpecification(evaluation)
+    if (!specification.supportsBatchEvaluation) {
+      return Result.error(
+        new z.ZodError([
+          {
+            code: 'custom',
+            path: ['evaluationUuids'],
+            message: `Sub-evaluation ${evaluation.name} does not support batch evaluation`,
+          },
+        ]),
+      )
+    }
+
+    // Note: to simplify things, currently sub-evaluations cannot require an expected output
+    if (specification.requiresExpectedOutput) {
+      return Result.error(
+        new z.ZodError([
+          {
+            code: 'custom',
+            path: ['evaluationUuids'],
+            message: `Sub-evaluation ${evaluation.name} requires an expected output`,
+          },
+        ]),
+      )
+    }
+
+    if (
+      evaluation.type === EvaluationType.Composite &&
+      (
+        evaluation as EvaluationV2<EvaluationType.Composite>
+      ).configuration.evaluationUuids.includes(uuid ?? '')
+    ) {
+      return Result.error(
+        new z.ZodError([
+          {
+            code: 'custom',
+            path: ['evaluationUuids'],
+            message: `Cannot use ${evaluation.name}, which includes the current evaluation, as a sub-evaluation`,
+          },
+        ]),
+      )
+    }
+  }
+
+  return Result.ok(undefined)
+}
+
 async function validate<M extends CompositeEvaluationMetric>(
   {
     metric,
@@ -62,57 +161,14 @@ async function validate<M extends CompositeEvaluationMetric>(
     return Result.error(parsing.error)
   }
 
-  if (configuration.evaluationUuids?.length === 0) {
-    return Result.error(new BadRequestError('Sub-evaluations are required'))
-  }
+  const validatedSubEvaluations = validateSubEvaluations({
+    uuid,
+    configuration,
+    evaluations,
+  })
 
-  for (const subUuid of configuration.evaluationUuids) {
-    if (subUuid === uuid) {
-      return Result.error(
-        new BadRequestError(
-          'Cannot use the current evaluation as a sub-evaluation',
-        ),
-      )
-    }
-
-    const evaluation = evaluations.find((e) => e.uuid === subUuid)
-    if (!evaluation || evaluation.deletedAt) {
-      return Result.error(
-        new BadRequestError(`Sub-evaluation ${subUuid} not found`),
-      )
-    }
-
-    // Note: to simplify things, only batch evaluation mode is supported
-    const specification = getEvaluationMetricSpecification(evaluation)
-    if (!specification.supportsBatchEvaluation) {
-      return Result.error(
-        new BadRequestError(
-          `Sub-evaluation ${evaluation.name} does not support batch evaluation`,
-        ),
-      )
-    }
-
-    // Note: to simplify things, currently sub-evaluations cannot require an expected output
-    if (specification.requiresExpectedOutput) {
-      return Result.error(
-        new BadRequestError(
-          `Sub-evaluation ${evaluation.name} requires an expected output`,
-        ),
-      )
-    }
-
-    if (
-      evaluation.type === EvaluationType.Composite &&
-      (
-        evaluation as EvaluationV2<EvaluationType.Composite>
-      ).configuration.evaluationUuids.includes(uuid ?? '')
-    ) {
-      return Result.error(
-        new BadRequestError(
-          `Cannot use ${evaluation.name}, which includes the current evaluation, as a sub-evaluation`,
-        ),
-      )
-    }
+  if (!Result.isOk(validatedSubEvaluations)) {
+    return validatedSubEvaluations
   }
 
   if (
