@@ -300,7 +300,11 @@ describe('unassignIssuesOnDocumentsDeleted', () => {
 
   it('only deletes histograms for the specific commit', async () => {
     const { workspace } = await createWorkspace({ features: ['issues'] })
-    const { project, documents, commit: commit1 } = await createProject({
+    const {
+      project,
+      documents,
+      commit: commit1,
+    } = await createProject({
       workspace,
       documents: { 'test-doc': 'test content' },
     })

@@ -1,6 +1,5 @@
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { EvaluationType, EvaluationV2 } from '@latitude-data/core/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
@@ -33,13 +32,10 @@ export function EvaluationSelector({
   })
 
   const defaultEvaluation = useMemo(() => {
-    return evaluations.find(
-      (e) =>
-        e.type === EvaluationType.Composite &&
-        !!(e as EvaluationV2<EvaluationType.Composite>).configuration
-          .defaultTarget,
-    ) as EvaluationV2<EvaluationType.Composite> | undefined
-  }, [evaluations])
+    if (!document.mainEvaluationUuid) return undefined
+
+    return evaluations.find((e) => e.uuid === document.mainEvaluationUuid)
+  }, [evaluations, document.mainEvaluationUuid])
 
   useEffect(() => {
     if (value) return

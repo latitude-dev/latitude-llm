@@ -1,5 +1,4 @@
 import {
-  CompositeEvaluationMetric,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -11,16 +10,13 @@ import { compactObject } from '../../lib/compactObject'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import {
-  EvaluationsV2Repository,
-  IssuesRepository,
-  ProjectsRepository,
-} from '../../repositories'
+import { IssuesRepository, ProjectsRepository } from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Issue } from '../../schema/models/types/Issue'
 import { type Workspace } from '../../schema/models/types/Workspace'
+import { syncDefaultCompositeTarget } from './sync'
 import { validateEvaluationV2 } from './validate'
 
 export async function createEvaluationV2<
@@ -43,7 +39,7 @@ export async function createEvaluationV2<
     workspace: Workspace
   },
   transaction = new Transaction(),
-) {
+): Promise<TypedResult<{ evaluation: EvaluationV2<T, M> }>> {
   return await transaction.call(async (tx) => {
     if (!options) options = {}
     options = compactObject(options)
@@ -103,14 +99,13 @@ export async function createEvaluationV2<
       versionId: result.id,
     } as unknown as EvaluationV2<T, M>
 
-    let target = undefined
     if (issueId !== undefined) {
-      const syncing = await syncDefaultCompositeTarget(
-        { evaluation, issue, document, commit, workspace }, // prettier-ignore
+      // Note: failing silently.
+      // We don't want to block evaluation creation
+      await syncDefaultCompositeTarget(
+        { evaluation, issueId, document, commit, workspace },
         transaction,
       )
-      // Note: failing silently
-      target = syncing.value
     }
 
     await publisher.publishLater({
@@ -121,101 +116,6 @@ export async function createEvaluationV2<
       },
     })
 
-    return Result.ok({ evaluation, target })
-  })
-}
-
-// Note: this is here to avoid a circular dependency because it has recursivity
-export async function syncDefaultCompositeTarget<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(
-  {
-    evaluation,
-    issue,
-    document,
-    commit,
-    workspace,
-  }: {
-    evaluation: EvaluationV2<T, M>
-    issue: Issue | null
-    document: DocumentVersion
-    commit: Commit
-    workspace: Workspace
-  },
-  transaction = new Transaction(),
-) {
-  return await transaction.call(async (tx) => {
-    const repository = new EvaluationsV2Repository(workspace.id, tx)
-    const target = await repository
-      .getDefaultCompositeTarget({
-        projectId: commit.projectId,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
-      })
-      .then((r) => r.unwrap())
-    const included = !!target?.configuration.evaluationUuids.includes(
-      evaluation.uuid,
-    )
-
-    if (!target) {
-      if (!issue) {
-        return Result.nil()
-      }
-
-      const creating = (await createEvaluationV2(
-        {
-          document,
-          commit,
-          settings: {
-            name: 'Performance',
-            description: 'Measures the overall performance',
-            type: EvaluationType.Composite,
-            metric: CompositeEvaluationMetric.Weighted,
-            configuration: {
-              reverseScale: false,
-              actualOutput: {
-                messageSelection: 'last',
-                parsingFormat: 'string',
-              },
-              expectedOutput: {
-                parsingFormat: 'string',
-              },
-              evaluationUuids: [evaluation.uuid],
-              weights: { [evaluation.uuid]: 100 },
-              minThreshold: 75,
-              defaultTarget: true,
-            },
-          },
-          options: {
-            evaluateLiveLogs: false,
-            enableSuggestions: false,
-            autoApplySuggestions: false,
-          },
-          workspace,
-        },
-        transaction,
-      )) as TypedResult<{ evaluation: EvaluationV2<EvaluationType.Composite> }>
-      if (creating.error) {
-        return Result.error(creating.error)
-      }
-      const target = creating.value.evaluation
-
-      return Result.ok({ ...target, action: 'create' })
-    }
-
-    if (included) {
-      if (!issue) {
-        return Result.ok({ ...target, action: 'delete' })
-      }
-
-      return Result.nil()
-    }
-
-    if (!issue) {
-      return Result.nil()
-    }
-
-    return Result.ok({ ...target, action: 'update' })
+    return Result.ok({ evaluation })
   })
 }

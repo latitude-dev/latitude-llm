@@ -9,7 +9,6 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { EvaluationType, EvaluationV2 } from '@latitude-data/core/constants'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
@@ -33,7 +32,6 @@ import {
   BlankSlateStep,
   BlankSlateWithSteps,
 } from '@latitude-data/web-ui/molecules/BlankSlateWithSteps'
-import Link from 'next/link'
 import { useCallback, useMemo, useState } from 'react'
 import { EvaluationsGenerator } from './EvaluationsGenerator'
 
@@ -93,38 +91,6 @@ export function EvaluationsTable({
           .enableControls,
     ) as EvaluationV2<EvaluationType.Human> | undefined
   }, [evaluations])
-  const optimizationsEvaluation = useMemo(() => {
-    return evaluations.find(
-      (e) =>
-        e.type === EvaluationType.Composite &&
-        !!(e as EvaluationV2<EvaluationType.Composite>).configuration
-          .defaultTarget,
-    ) as EvaluationV2<EvaluationType.Composite> | undefined
-  }, [evaluations])
-
-  const isTargetSynced = useMemo(() => {
-    if (!optimizationsEvaluation) return true
-
-    const linkedUuids = evaluations
-      .filter(
-        (e) =>
-          e.uuid !== optimizationsEvaluation.uuid && !e.deletedAt && e.issueId,
-      )
-      .map((e) => e.uuid)
-
-    const linkedSet = new Set(linkedUuids)
-    const currentSet = new Set(
-      optimizationsEvaluation.configuration.evaluationUuids,
-    )
-
-    if (linkedSet.size !== currentSet.size) return false
-
-    for (const uuid of linkedSet) {
-      if (!currentSet.has(uuid)) return false
-    }
-
-    return true
-  }, [evaluations, optimizationsEvaluation])
 
   const [openDeleteModal, setOpenDeleteModal] = useState(false)
   const onDelete = useCallback(
@@ -184,45 +150,6 @@ export function EvaluationsTable({
     ],
   )
 
-  const onUnuseOptimizations = useCallback(
-    async (evaluation: EvaluationV2<EvaluationType.Composite>) => {
-      if (evaluation.uuid !== optimizationsEvaluation?.uuid) return
-      if (isUpdatingEvaluation) return
-      return await updateEvaluation({
-        documentUuid: document.documentUuid,
-        evaluationUuid: evaluation.uuid,
-        settings: {
-          configuration: { ...evaluation.configuration, defaultTarget: false },
-        },
-      })
-    },
-    [document, isUpdatingEvaluation, updateEvaluation, optimizationsEvaluation],
-  )
-
-  const onUseOptimizations = useCallback(
-    async (evaluation: EvaluationV2<EvaluationType.Composite>) => {
-      if (evaluation.uuid === optimizationsEvaluation?.uuid) return
-      if (isUpdatingEvaluation) return
-      if (optimizationsEvaluation) {
-        await onUnuseOptimizations(optimizationsEvaluation)
-      }
-      return await updateEvaluation({
-        documentUuid: document.documentUuid,
-        evaluationUuid: evaluation.uuid,
-        settings: {
-          configuration: { ...evaluation.configuration, defaultTarget: true },
-        },
-      })
-    },
-    [
-      document,
-      isUpdatingEvaluation,
-      updateEvaluation,
-      optimizationsEvaluation,
-      onUnuseOptimizations,
-    ],
-  )
-
   const onToggleLiveEvaluation = useCallback(
     async (evaluation: EvaluationV2) => {
       if (isUpdatingEvaluation) return
@@ -267,47 +194,6 @@ export function EvaluationsTable({
                   />
                   <Text.H5M>{EVALUATION_SPECIFICATIONS[type].name}</Text.H5M>
                 </span>
-                {type === EvaluationType.Composite &&
-                  optimizationsEvaluation &&
-                  !isTargetSynced && (
-                    <Alert
-                      spacing='xsmall'
-                      variant='warning'
-                      direction='column'
-                      description={`${optimizationsEvaluation.name} score is unsynced from evaluations that are tracking and monitoring active issues`}
-                      cta={
-                        <Link
-                          href={
-                            ROUTES.projects
-                              .detail({ id: project.id })
-                              .commits.detail({ uuid: commit.uuid })
-                              .documents.detail({
-                                uuid: document.documentUuid,
-                              })
-                              .evaluations.detail({
-                                uuid: optimizationsEvaluation.uuid,
-                              }).root + '?action=editSettings'
-                          }
-                          className='leading-none'
-                        >
-                          <Button
-                            variant='link'
-                            size='none'
-                            textColor='warningMutedForeground'
-                            iconProps={{
-                              name: 'arrowRight',
-                              color: 'warningMutedForeground',
-                              size: 'normal',
-                              placement: 'right',
-                              strokeWidth: 2.5,
-                            }}
-                          >
-                            Sync score
-                          </Button>
-                        </Link>
-                      }
-                    />
-                  )}
                 <Table className='table-fixed'>
                   <TableHeader className='isolate sticky top-0 z-10'>
                     <TableRow>
@@ -371,23 +257,6 @@ export function EvaluationsTable({
                                     This evaluation is used for annotations
                                   </Tooltip>
                                 )}
-                                {evaluation.uuid ===
-                                  optimizationsEvaluation?.uuid && (
-                                  <Tooltip
-                                    asChild
-                                    trigger={
-                                      <Badge variant='accent'>
-                                        Optimizations
-                                      </Badge>
-                                    }
-                                    maxWidth='none'
-                                    align='center'
-                                    side='top'
-                                  >
-                                    This evaluation is the default for
-                                    optimizations and distillations
-                                  </Tooltip>
-                                )}
                                 {!!evaluation.evaluateLiveLogs && (
                                   <Tooltip
                                     asChild
@@ -398,6 +267,22 @@ export function EvaluationsTable({
                                     side='top'
                                   >
                                     This evaluation is running on live logs
+                                  </Tooltip>
+                                )}
+                                {evaluation.uuid ===
+                                  document.mainEvaluationUuid && (
+                                  <Tooltip
+                                    asChild
+                                    trigger={
+                                      <Badge variant='accent'>
+                                        Optimizations
+                                      </Badge>
+                                    }
+                                    align='center'
+                                    side='top'
+                                  >
+                                    This evaluation is the default for
+                                    optimizations and distillations
                                   </Tooltip>
                                 )}
                               </div>
@@ -444,33 +329,6 @@ export function EvaluationsTable({
                                               onClick: () =>
                                                 onUseAnnotations(
                                                   evaluation as EvaluationV2<EvaluationType.Human>,
-                                                ),
-                                              disabled: isUpdatingEvaluation,
-                                            },
-                                      ] as MenuOption[])
-                                    : []),
-                                  ...(evaluation.type ===
-                                  EvaluationType.Composite
-                                    ? ([
-                                        evaluation.uuid ===
-                                        optimizationsEvaluation?.uuid
-                                          ? {
-                                              label: 'Unuse for optimizations',
-                                              onElementClick: (e) =>
-                                                e.stopPropagation(),
-                                              onClick: () =>
-                                                onUnuseOptimizations(
-                                                  evaluation as EvaluationV2<EvaluationType.Composite>,
-                                                ),
-                                              disabled: isUpdatingEvaluation,
-                                            }
-                                          : {
-                                              label: 'Use for optimizations',
-                                              onElementClick: (e) =>
-                                                e.stopPropagation(),
-                                              onClick: () =>
-                                                onUseOptimizations(
-                                                  evaluation as EvaluationV2<EvaluationType.Composite>,
                                                 ),
                                               disabled: isUpdatingEvaluation,
                                             },

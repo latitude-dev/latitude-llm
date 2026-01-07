@@ -123,7 +123,7 @@ describe('generateEvaluationFromIssue', () => {
       }),
     )
     mockCreateEvaluationV2.mockResolvedValue(
-      Result.ok({ evaluation: mockEvaluation, target: undefined }),
+      Result.ok({ evaluation: mockEvaluation }),
     )
     mockUpdateActiveEvaluation.mockResolvedValue(
       Result.ok({
@@ -193,9 +193,6 @@ describe('generateEvaluationFromIssue', () => {
       projectId: commit.projectId,
       workflowUuid: TEST_WORKFLOW_UUID,
       evaluationUuid: mockEvaluation.uuid,
-      evaluationName: mockEvaluation.name,
-      targetUuid: undefined,
-      targetAction: undefined,
     })
 
     // Verify createValidationFlow was called with correct parameters
@@ -274,7 +271,7 @@ describe('generateEvaluationFromIssue', () => {
       }),
     )
     mockCreateEvaluationV2.mockResolvedValue(
-      Result.ok({ evaluation: mockEvaluation, target: undefined }),
+      Result.ok({ evaluation: mockEvaluation }),
     )
     mockUpdateActiveEvaluation.mockResolvedValue(
       Result.ok({
@@ -354,7 +351,7 @@ describe('generateEvaluationFromIssue', () => {
       }),
     )
     mockCreateEvaluationV2.mockResolvedValue(
-      Result.ok({ evaluation: mockEvaluation, target: undefined }),
+      Result.ok({ evaluation: mockEvaluation }),
     )
     mockUpdateActiveEvaluation.mockResolvedValue(
       Result.ok({

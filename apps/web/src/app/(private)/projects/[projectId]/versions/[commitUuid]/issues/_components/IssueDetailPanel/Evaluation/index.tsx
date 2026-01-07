@@ -3,16 +3,10 @@
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { useCompositeTargetToast } from '$/hooks/useCompositeTargetToast'
-import { ROUTES } from '$/services/routes'
 import { useActiveEvaluations } from '$/stores/activeEvaluations'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { useEnoughAnnotationsForIssue } from '$/stores/issues/enoughAnnotationsForIssue'
-import {
-  ActiveEvaluation,
-  EvaluationType,
-  EvaluationV2,
-} from '@latitude-data/constants/evaluations'
+import { ActiveEvaluation } from '@latitude-data/constants/evaluations'
 import {
   MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE,
   MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES,
@@ -45,8 +39,6 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
       documentUuid: issue.documentUuid,
     },
   })
-  const targetToast = useCompositeTargetToast({ project, commit })
-
   const { data: issueEvaluationStats } = useEnoughAnnotationsForIssue({
     project: project,
     commit: commit,
@@ -89,35 +81,10 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
           setEndedEvaluation(null)
         }, 10000) // 10 seconds
       } else {
-        const target = evaluations.find(
-          (e) => e.uuid === evaluation.targetUuid,
-        ) as EvaluationV2<EvaluationType.Composite> | undefined
-        if (target) {
-          targetToast({
-            evaluation: { name: evaluation.evaluationName! },
-            target: { ...target, action: evaluation.targetAction! },
-          })
-        }
-        // Note: this is an edge case that only happens here because we cannot
-        // access the performance evaluation that has been just created (race)
-        else if (evaluation.targetAction === 'create') {
-          toast({
-            title: `A new Performance score has been created`,
-            description: `from ${evaluation.evaluationName!} evaluation`,
-            href:
-              ROUTES.projects
-                .detail({ id: project.id })
-                .commits.detail({ uuid: commit.uuid })
-                .documents.detail({ uuid: issue.documentUuid })
-                .evaluations.detail({ uuid: evaluation.targetUuid! }).root +
-              '?action=editSettings',
-          })
-        } else {
-          toast({
-            title: `Evaluation ${evaluation.evaluationName!} generated successfully`,
-            description: 'Let the magic begin!',
-          })
-        }
+        toast({
+          title: 'Evaluation generated successfully',
+          description: 'Let the magic begin!',
+        })
 
         // For success, mutate evaluations to get the new, generated one and wait for it to appear
         mutateEvaluations().then(() => {
@@ -127,15 +94,7 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
         })
       }
     },
-    [
-      evaluations,
-      project,
-      commit,
-      issue,
-      setEndedEvaluation,
-      mutateEvaluations,
-      targetToast,
-    ],
+    [issue, setEndedEvaluation, mutateEvaluations],
   )
 
   const { data: activeEvaluations, isLoading: isLoadingActiveEvaluations } =

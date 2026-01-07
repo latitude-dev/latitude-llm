@@ -60,6 +60,7 @@ export const documentVersions = latitudeSchema.table(
     linkedDatasetAndRow: json('linked_dataset_by_dataset_id_and_row_id')
       .$type<LinkedDatasetByDatasetIdAndRowId>()
       .default({}),
+    mainEvaluationUuid: uuid('main_evaluation_uuid'),
     deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },

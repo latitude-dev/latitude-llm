@@ -53,10 +53,12 @@ export async function updateDocument(
       {
         commit,
         document,
-        path,
-        content,
-        promptlVersion,
-        deletedAt,
+        data: {
+          path,
+          content,
+          promptlVersion,
+          deletedAt,
+        },
       },
       transaction,
     )

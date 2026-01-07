@@ -11,7 +11,7 @@ import { publisher } from '../../events/publisher'
 import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 import { compactObject } from '../../lib/compactObject'
 import { BadRequestError } from '../../lib/errors'
-import { Result } from '../../lib/Result'
+import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import {
   DocumentVersionsRepository,
@@ -22,7 +22,7 @@ import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { Issue } from '../../schema/models/types/Issue'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { syncDefaultCompositeTarget } from './create'
+import { syncDefaultCompositeTarget } from './sync'
 import { maybeEnqueueAlignmentRecalculation } from './enqueueAlignmentRecalculation'
 import { validateEvaluationV2 } from './validate'
 
@@ -48,7 +48,7 @@ export async function updateEvaluationV2<
     alignmentMetricMetadata?: AlignmentMetricMetadata
   },
   transaction = new Transaction(),
-) {
+): Promise<TypedResult<{ evaluation: EvaluationV2<T, M> }>> {
   const originalEvaluation = evaluation
   return await transaction.call(
     async (tx) => {
@@ -150,14 +150,12 @@ export async function updateEvaluationV2<
         versionId: result.id,
       } as unknown as EvaluationV2<T, M>
 
-      let target = undefined
       if (issueId !== undefined) {
-        const syncing = await syncDefaultCompositeTarget(
-          { evaluation, issue, document, commit, workspace }, // prettier-ignore
+        // issueId === null means un-assign the issue.
+        await syncDefaultCompositeTarget(
+          { evaluation, issueId, document, commit, workspace },
           transaction,
         )
-        // Note: failing silently
-        target = syncing.value
       }
 
       publisher.publishLater({
@@ -168,7 +166,7 @@ export async function updateEvaluationV2<
         },
       })
 
-      return Result.ok({ evaluation, target })
+      return Result.ok({ evaluation })
     },
     async ({ evaluation }) => {
       await maybeEnqueueAlignmentRecalculation({

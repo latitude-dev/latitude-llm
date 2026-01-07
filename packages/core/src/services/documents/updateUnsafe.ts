@@ -24,25 +24,29 @@ export async function updateDocumentUnsafe(
   {
     commit,
     document,
-    path,
-    content,
-    promptlVersion,
-    deletedAt,
+    data: { path, content, promptlVersion, deletedAt, mainEvaluationUuid },
   }: {
     commit: Commit
     document: DocumentVersion
-    path?: string
-    content?: string | null
-    promptlVersion?: number
-    deletedAt?: Date | null
+    data: {
+      path?: string
+      content?: string | null
+      promptlVersion?: number
+      deletedAt?: Date | null
+      mainEvaluationUuid?: string | null
+    }
   },
   transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion, Error>> {
   return await transaction.call(async (tx) => {
     const updatedDocData = Object.fromEntries(
-      Object.entries({ path, content, promptlVersion, deletedAt }).filter(
-        ([_, v]) => v !== undefined,
-      ),
+      Object.entries({
+        path,
+        content,
+        promptlVersion,
+        deletedAt,
+        mainEvaluationUuid,
+      }).filter(([_, v]) => v !== undefined),
     )
 
     const workspace = await findWorkspaceFromCommit(commit, tx)

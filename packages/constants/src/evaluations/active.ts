@@ -4,9 +4,6 @@ export type ActiveEvaluation = {
   issueId: number | null
   queuedAt: Date
   evaluationUuid?: string // Can be null in the beginning of the workflow, when the first eval config hasnt been generated yet
-  evaluationName?: string
-  targetUuid?: string // Default target composite evaluation
-  targetAction?: string
   startedAt?: Date
   endedAt?: Date
   error?: Error

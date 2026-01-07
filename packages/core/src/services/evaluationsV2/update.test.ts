@@ -319,7 +319,7 @@ describe('updateEvaluationV2', () => {
       .then((r) => r[0]!)
 
     expect(dbEvaluation.issueId).toBe(issue.id)
-    expect(mocks.publisher).toHaveBeenCalledExactlyOnceWith({
+    expect(mocks.publisher).toHaveBeenCalledWith({
       type: 'evaluationV2Updated',
       data: {
         evaluation: updatedEvaluation,
@@ -391,7 +391,7 @@ describe('updateEvaluationV2', () => {
       .then((r) => r[0]!)
 
     expect(dbEvaluation.issueId).toBe(issue2.id)
-    expect(mocks.publisher).toHaveBeenCalledExactlyOnceWith({
+    expect(mocks.publisher).toHaveBeenCalledWith({
       type: 'evaluationV2Updated',
       data: {
         evaluation: updatedEvaluation,
@@ -457,7 +457,7 @@ describe('updateEvaluationV2', () => {
       .then((r) => r[0]!)
 
     expect(dbEvaluation.issueId).toBeNull()
-    expect(mocks.publisher).toHaveBeenCalledExactlyOnceWith({
+    expect(mocks.publisher).toHaveBeenCalledWith({
       type: 'evaluationV2Updated',
       data: {
         evaluation: updatedEvaluation,
