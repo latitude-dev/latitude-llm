@@ -213,12 +213,12 @@ describe('getSpanMessagesByIssueDocument', () => {
 
     const data = result.value!
     expect(data).toHaveLength(2)
-    expect(data[0]!.role).toBe(MessageRole.user)
-    expect(data[0]!.content).toEqual([
+    expect(data[0]!.messages[0]!.role).toBe(MessageRole.user)
+    expect(data[0]!.messages[0]!.content).toEqual([
       { type: 'text', text: 'Hello, how are you?' },
     ])
-    expect(data[1]!.role).toBe(MessageRole.assistant)
-    expect(data[1]!.content).toEqual([
+    expect(data[1]!.messages[0]!.role).toBe(MessageRole.assistant)
+    expect(data[1]!.messages[0]!.content).toEqual([
       { type: 'text', text: 'I am doing well, thank you!' },
     ])
   })
@@ -427,10 +427,10 @@ describe('getSpanMessagesByIssueDocument', () => {
 
     const data = result.value!
     expect(data).toHaveLength(4) // 2 input + 2 output
-    expect(data[0]!.role).toBe(MessageRole.user)
-    expect(data[1]!.role).toBe(MessageRole.user)
-    expect(data[2]!.role).toBe(MessageRole.assistant)
-    expect(data[3]!.role).toBe(MessageRole.assistant)
+    expect(data[0]!.messages[0]!.role).toBe(MessageRole.user)
+    expect(data[1]!.messages[0]!.role).toBe(MessageRole.user)
+    expect(data[2]!.messages[0]!.role).toBe(MessageRole.assistant)
+    expect(data[3]!.messages[0]!.role).toBe(MessageRole.assistant)
   })
 
   it('should limit results to 5 passed evaluation results', async () => {
@@ -798,8 +798,8 @@ describe('getSpanMessagesByIssueDocument', () => {
       // Should only have messages from span1 (HITL evaluation)
       // span1 has 2 messages (user + assistant), so we should get 2 messages
       expect(data.length).toBe(2)
-      expect(data[0]!.role).toBe('user')
-      expect(data[1]!.role).toBe('assistant')
+      expect(data[0]!.messages[0]!.role).toBe('user')
+      expect(data[1]!.messages[0]!.role).toBe('assistant')
       // Should not have messages from span2 (LLM evaluation)
     })
   })

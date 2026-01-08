@@ -67,10 +67,16 @@ describe('buildSpanMessagesWithReasons', () => {
 
     mockAssembleTraceWithMessages
       .mockResolvedValueOnce(
-        Result.ok({ completionSpan: { metadata: {} } as any }),
+        Result.ok({
+          trace: { messages: [] } as any,
+          completionSpan: { metadata: {} } as any,
+        }),
       )
       .mockResolvedValueOnce(
-        Result.ok({ completionSpan: { metadata: {} } as any }),
+        Result.ok({
+          trace: { messages: [] } as any,
+          completionSpan: { metadata: {} } as any,
+        }),
       )
 
     mockAdaptCompletionSpanMessagesToLegacy
@@ -115,7 +121,7 @@ describe('buildSpanMessagesWithReasons', () => {
     const spans = [{ id: 'span-1', traceId: 'trace-1' }]
 
     mockAssembleTraceWithMessages.mockResolvedValueOnce(
-      Result.ok({ completionSpan: undefined }),
+      Result.ok({ trace: { messages: [] } as any, completionSpan: undefined }),
     )
 
     const result = await buildSpanMessagesWithReasons({
@@ -146,14 +152,18 @@ describe('buildSpanMessagesWithReasons', () => {
     ]
 
     mockAssembleTraceWithMessages.mockResolvedValueOnce(
-      Result.ok({ completionSpan: { metadata: {} } as any }),
+      Result.ok({
+        trace: { messages: [] } as any,
+        completionSpan: { metadata: {} } as any,
+      }),
     )
     mockAdaptCompletionSpanMessagesToLegacy.mockReturnValueOnce(messages as any)
 
-    vi.mocked(specificationsModule.getEvaluationMetricSpecification)
-      .mockReturnValueOnce({
-        resultReason: () => 'Test reason',
-      } as any)
+    vi.mocked(
+      specificationsModule.getEvaluationMetricSpecification,
+    ).mockReturnValueOnce({
+      resultReason: () => 'Test reason',
+    } as any)
 
     const result = await buildSpanMessagesWithReasons({
       workspace: mockWorkspace,
@@ -193,10 +203,11 @@ describe('getReasonFromEvaluationResult', () => {
   })
 
   it('returns reason from specification', () => {
-    vi.mocked(specificationsModule.getEvaluationMetricSpecification)
-      .mockReturnValueOnce({
-        resultReason: () => 'Extracted reason',
-      } as any)
+    vi.mocked(
+      specificationsModule.getEvaluationMetricSpecification,
+    ).mockReturnValueOnce({
+      resultReason: () => 'Extracted reason',
+    } as any)
 
     const result = {} as EvaluationResultV2
     const evaluation = {} as EvaluationV2
@@ -206,10 +217,11 @@ describe('getReasonFromEvaluationResult', () => {
   })
 
   it('returns empty string when resultReason returns undefined', () => {
-    vi.mocked(specificationsModule.getEvaluationMetricSpecification)
-      .mockReturnValueOnce({
-        resultReason: () => undefined,
-      } as any)
+    vi.mocked(
+      specificationsModule.getEvaluationMetricSpecification,
+    ).mockReturnValueOnce({
+      resultReason: () => undefined,
+    } as any)
 
     const result = {} as EvaluationResultV2
     const evaluation = {} as EvaluationV2
