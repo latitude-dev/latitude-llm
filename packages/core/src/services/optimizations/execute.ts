@@ -227,6 +227,6 @@ async function evaluatePrompt(
   }: OptimizerEvaluateArgs, // TODO(AO/OPT): Implement cancellation
   _ = database,
 ) {
-  // TODO(AO/OPT): Implement
+  // TODO(AO/OPT): Implement (get the reasoning as the Actual Output + Reasoning Specification Method) (Also treat prompt syntax errors as learnable)
   return Result.ok<EvaluationResultV2>(undefined as any)
 }

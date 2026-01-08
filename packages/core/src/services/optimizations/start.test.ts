@@ -421,7 +421,7 @@ value1
       publisherMock = vi.mocked(publisher.publishLater)
     })
 
-    it('fails when dataset has only 1 row (empty trainset)', async () => {
+    it('fails when dataset has only 1 row', async () => {
       const { dataset } = await factories.createDataset({
         workspace: workspaceWithParams,
         author: userForSplit,
@@ -442,14 +442,14 @@ value1
           workspace: workspaceWithParams,
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError(
-        new BadRequestError('Cannot optimize with an empty trainset'),
+        new BadRequestError('At least four dataset rows are required'),
       )
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
       expect(publisherMock).not.toHaveBeenCalled()
     })
 
-    it('succeeds when dataset has 2 rows (minimum valid split)', async () => {
+    it('fails when dataset has 2 rows', async () => {
       const { dataset } = await factories.createDataset({
         workspace: workspaceWithParams,
         author: userForSplit,
@@ -457,6 +457,67 @@ value1
 inputParam
 value1
 value2
+`.trim(),
+      })
+
+      await expect(
+        startOptimization({
+          evaluation: evaluationForDoc,
+          dataset,
+          configuration: {},
+          document: documentWithParams,
+          baselineCommit: commitWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError(
+        new BadRequestError('At least four dataset rows are required'),
+      )
+
+      expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+      expect(publisherMock).not.toHaveBeenCalled()
+    })
+
+    it('fails when dataset has 3 rows', async () => {
+      const { dataset } = await factories.createDataset({
+        workspace: workspaceWithParams,
+        author: userForSplit,
+        fileContent: `
+inputParam
+value1
+value2
+value3
+`.trim(),
+      })
+
+      await expect(
+        startOptimization({
+          evaluation: evaluationForDoc,
+          dataset,
+          configuration: {},
+          document: documentWithParams,
+          baselineCommit: commitWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError(
+        new BadRequestError('At least four dataset rows are required'),
+      )
+
+      expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+      expect(publisherMock).not.toHaveBeenCalled()
+    })
+
+    it('succeeds when dataset has 4 rows (minimum valid split)', async () => {
+      const { dataset } = await factories.createDataset({
+        workspace: workspaceWithParams,
+        author: userForSplit,
+        fileContent: `
+inputParam
+value1
+value2
+value3
+value4
 `.trim(),
       })
 
@@ -481,8 +542,9 @@ value2
         result.optimization.testsetId!,
       )
 
-      expect(trainCount).toBe(1)
-      expect(testCount).toBe(1)
+      expect(trainCount! + testCount!).toBe(4)
+      expect(trainCount).toBeGreaterThanOrEqual(1)
+      expect(testCount).toBeGreaterThanOrEqual(1)
     })
 
     it('creates trainset and testset with correct 70/30 split', async () => {
@@ -540,6 +602,7 @@ inputParam
 value1
 value2
 value3
+value4
 `.trim(),
       })
 
@@ -580,6 +643,7 @@ inputParam
 sensitive_data_1
 sensitive_data_2
 sensitive_data_3
+sensitive_data_4
 `.trim(),
       })
 
@@ -673,6 +737,7 @@ inputParam,extraCol1,extraCol2
 value1,extra1,extra2
 value2,extra3,extra4
 value3,extra5,extra6
+value4,extra7,extra8
 `.trim(),
       })
 
@@ -715,6 +780,7 @@ mappedColumn
 value1
 value2
 value3
+value4
 `.trim(),
       })
 
@@ -743,7 +809,7 @@ value3
         result.optimization.testsetId!,
       )
 
-      expect(trainCount! + testCount!).toBe(3)
+      expect(trainCount! + testCount!).toBe(4)
     })
   })
 })

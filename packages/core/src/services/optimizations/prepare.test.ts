@@ -331,7 +331,7 @@ describe('prepareOptimization', () => {
         )
     })
 
-    it('fails when no positive or negative examples found (empty trainset)', async () => {
+    it('fails when no positive or negative examples found', async () => {
       const optimization = await factories.createOptimization({
         baseline: { commit },
         document,
@@ -345,7 +345,107 @@ describe('prepareOptimization', () => {
           workspace,
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError(
-        new UnprocessableEntityError('Cannot optimize with an empty trainset'),
+        new UnprocessableEntityError(
+          'At least two negative examples are required',
+        ),
+      )
+
+      expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+      expect(publisherMock).not.toHaveBeenCalled()
+    })
+
+    it('fails when only one negative example found', async () => {
+      const mockIssue = createMockIssue(1)
+      issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+      const negativeSpans = [
+        createMockSpan('span-neg-1', 'trace-neg-1', {
+          inputParam: 'negative1',
+        }),
+      ]
+
+      const positiveSpans = [
+        createMockSpan('span-pos-1', 'trace-pos-1', {
+          inputParam: 'positive1',
+        }),
+        createMockSpan('span-pos-2', 'trace-pos-2', {
+          inputParam: 'positive2',
+        }),
+      ]
+
+      getSpansByIssueMock.mockResolvedValue(
+        Result.ok({ spans: negativeSpans, next: null }),
+      )
+
+      getSpansWithoutIssuesMock.mockResolvedValue(
+        Result.ok({ spans: positiveSpans, next: null }),
+      )
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit: commitWithParams },
+        document: documentWithParams,
+        project: projectWithParams,
+        workspace: workspaceWithParams,
+      })
+
+      await expect(
+        prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError(
+        new UnprocessableEntityError(
+          'At least two negative examples are required',
+        ),
+      )
+
+      expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+      expect(publisherMock).not.toHaveBeenCalled()
+    })
+
+    it('fails when only one positive example found', async () => {
+      const mockIssue = createMockIssue(1)
+      issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+      const negativeSpans = [
+        createMockSpan('span-neg-1', 'trace-neg-1', {
+          inputParam: 'negative1',
+        }),
+        createMockSpan('span-neg-2', 'trace-neg-2', {
+          inputParam: 'negative2',
+        }),
+      ]
+
+      const positiveSpans = [
+        createMockSpan('span-pos-1', 'trace-pos-1', {
+          inputParam: 'positive1',
+        }),
+      ]
+
+      getSpansByIssueMock.mockResolvedValue(
+        Result.ok({ spans: negativeSpans, next: null }),
+      )
+
+      getSpansWithoutIssuesMock.mockResolvedValue(
+        Result.ok({ spans: positiveSpans, next: null }),
+      )
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit: commitWithParams },
+        document: documentWithParams,
+        project: projectWithParams,
+        workspace: workspaceWithParams,
+      })
+
+      await expect(
+        prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError(
+        new UnprocessableEntityError(
+          'At least two positive examples are required',
+        ),
       )
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
