@@ -9,7 +9,6 @@ import {
   ChainEventTypes,
   EMPTY_USAGE,
   LegacyVercelSDKVersion4Usage as LanguageModelUsage,
-  SpanType,
 } from '@latitude-data/constants'
 import {
   Message,
@@ -21,36 +20,6 @@ import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'
-import { useConversation } from '$/stores/conversations'
-import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findFirstSpanOfType'
-
-function useAnnotationData({
-  documentLogUuid,
-}: {
-  documentLogUuid: string | undefined
-}) {
-  const { traces, isLoading } = useConversation(
-    { conversationId: documentLogUuid },
-    { refreshInterval: documentLogUuid ? 5_000 : undefined },
-  )
-  const trace = traces[0]
-  const span = findFirstSpanOfType(trace?.children ?? [], SpanType.Prompt)
-  const isReady = !isLoading && !!span
-
-  return useMemo(() => {
-    if (!isReady) {
-      return {
-        span: undefined,
-        isReady: false as const,
-      }
-    }
-
-    return {
-      span,
-      isReady: true as const,
-    }
-  }, [span, isReady])
-}
 
 type LanguageModelUsageDelta = Pick<
   LanguageModelUsage,
@@ -94,9 +63,6 @@ export function usePlaygroundChat({
   const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
   const [error, setError] = useState<Error | undefined>()
   const [isLoading, setIsLoading] = useState(false)
-  const annotationData = useAnnotationData({
-    documentLogUuid,
-  })
   const [messages, setMessages] = useState<Message[]>([])
   const [unrespondedToolCalls, setUnrespondedToolCalls] = useState<ToolCall[]>(
     [],
@@ -559,7 +525,6 @@ export function usePlaygroundChat({
       duration,
       cost,
       reset,
-      annotationData,
     }),
     [
       mode,
@@ -582,7 +547,6 @@ export function usePlaygroundChat({
       duration,
       cost,
       reset,
-      annotationData,
     ],
   )
 }
