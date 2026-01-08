@@ -401,10 +401,16 @@ describe('generateFromIssue', () => {
 
     mockAssembleTraceWithMessages
       .mockResolvedValueOnce(
-        Result.ok({ completionSpan: { metadata: {} } as any }),
+        Result.ok({
+          trace: { messages: [] } as any,
+          completionSpan: { metadata: {} } as any,
+        }),
       )
       .mockResolvedValueOnce(
-        Result.ok({ completionSpan: { metadata: {} } as any }),
+        Result.ok({
+          trace: { messages: [] } as any,
+          completionSpan: { metadata: {} } as any,
+        }),
       )
 
     mockAdaptCompletionSpanMessagesToLegacy
@@ -433,8 +439,12 @@ describe('generateFromIssue', () => {
         existingEvaluationNames: [],
         examplesWithIssueAndReasonWhy: [{ messages, reason: 'Test reason' }],
         goodExamplesWithoutIssue: [{ messages, reason: '' }],
-        falsePositiveExamples: [{ messages: falsePositiveMessages, reason: '' }],
-        falseNegativeExamples: [{ messages: falseNegativeMessages, reason: '' }],
+        falsePositiveExamples: [
+          { messages: falsePositiveMessages, reason: '' },
+        ],
+        falseNegativeExamples: [
+          { messages: falseNegativeMessages, reason: '' },
+        ],
         previousEvaluationConfiguration: previousConfig,
       },
       schema: __test__.llmEvaluationBinarySpecificationWithoutModel,
