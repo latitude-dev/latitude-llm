@@ -56,13 +56,11 @@ export function Step7_NextSteps({
       return ROUTES.projects
         .detail({ id: projectId })
         .commits.detail({ uuid: commitUuid })
-        .documents.detail({ uuid: documentUuid })
-        .traces.root
+        .documents.detail({ uuid: documentUuid }).traces.root
     }
     return ROUTES.projects
       .detail({ id: projectId })
-      .commits.detail({ uuid: commitUuid })
-      .overview.root
+      .commits.detail({ uuid: commitUuid }).overview.root
   }, [projectId, commitUuid, documentUuid])
 
   const annotationsRoute = useMemo(() => {
@@ -75,8 +73,7 @@ export function Step7_NextSteps({
   const issuesRoute = useMemo(() => {
     return ROUTES.projects
       .detail({ id: projectId })
-      .commits.detail({ uuid: commitUuid })
-      .issues.root
+      .commits.detail({ uuid: commitUuid }).issues.root
   }, [projectId, commitUuid])
 
   return (

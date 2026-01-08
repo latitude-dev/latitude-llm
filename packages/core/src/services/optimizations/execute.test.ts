@@ -4,6 +4,7 @@ import { EvaluationType, RuleEvaluationMetric } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
+import { DocumentVersionsRepository } from '../../repositories'
 import { Commit } from '../../schema/models/types/Commit'
 import { Dataset } from '../../schema/models/types/Dataset'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -365,5 +366,86 @@ describe('executeOptimization', () => {
         workspace: expect.objectContaining({ id: workspace.id }),
       }),
     )
+  })
+
+  describe('when document only exists in a draft', () => {
+    it('executes optimization by forking the baseline commit', async () => {
+      const {
+        workspace: w,
+        project: p,
+        commit: draftCommit,
+        documents,
+        user: u,
+      } = await factories.createProject({
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          prompt: factories.helpers.createPrompt({
+            provider: 'openai',
+            model: 'gpt-4o',
+          }),
+        },
+        skipMerge: true,
+      })
+
+      const draftDocument = documents[0]!
+
+      const draftTrainset = await factories
+        .createDataset({ workspace: w, author: u })
+        .then((r) => r.dataset)
+      const draftTestset = await factories
+        .createDataset({ workspace: w, author: u })
+        .then((r) => r.dataset)
+
+      const evaluation = await factories.createEvaluationV2({
+        document: draftDocument,
+        commit: draftCommit,
+        workspace: w,
+        type: EvaluationType.Rule,
+        metric: RuleEvaluationMetric.RegularExpression,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          expectedOutput: {
+            parsingFormat: 'string',
+          },
+          pattern: '.*',
+        },
+      })
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit: draftCommit },
+        evaluation,
+        document: draftDocument,
+        project: p,
+        workspace: w,
+        trainset: draftTrainset,
+        testset: draftTestset,
+      })
+
+      optimizerMock.mockResolvedValue(Result.ok(draftDocument.content))
+
+      const result = await executeOptimization({
+        optimization: {
+          ...optimization,
+          preparedAt: new Date(),
+        } as Optimization,
+        workspace: w,
+      }).then((r) => r.unwrap())
+
+      expect(result.optimization.executedAt).not.toBeNull()
+      expect(result.optimization.optimizedCommitId).not.toBeNull()
+      expect(result.optimized.commit).toBeDefined()
+
+      const docsRepo = new DocumentVersionsRepository(w.id)
+      const forkedDocs = await docsRepo
+        .getDocumentsAtCommit(result.optimized.commit)
+        .then((r) => r.unwrap())
+
+      expect(forkedDocs).toHaveLength(1)
+      expect(forkedDocs[0]!.documentUuid).toBe(draftDocument.documentUuid)
+    })
   })
 })

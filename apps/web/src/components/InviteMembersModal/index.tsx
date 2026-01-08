@@ -89,11 +89,13 @@ function PendingInviteRow({ invite }: { invite: PendingInvite }) {
         <div className='flex items-center justify-between gap-4'>
           <Text.H5 color='foregroundMuted'>{invite.email}</Text.H5>
           {invite.status === 'pending' && (
-            <Icon name='loader' className='animate-spin' color='foregroundMuted' />
+            <Icon
+              name='loader'
+              className='animate-spin'
+              color='foregroundMuted'
+            />
           )}
-          {invite.status === 'success' && (
-            <Icon name='check' color='success' />
-          )}
+          {invite.status === 'success' && <Icon name='check' color='success' />}
           {invite.status === 'error' && (
             <Icon name='alert' color='destructive' />
           )}
@@ -122,7 +124,7 @@ export function InviteMembersModal({
   const onInviteUser = useCallback(
     async (name: string, email: string) => {
       const inviteId = `${email}-${Date.now()}`
-      
+
       setPendingInvites((prev) => [
         ...prev,
         { id: inviteId, name, email, status: 'pending' },
@@ -132,19 +134,19 @@ export function InviteMembersModal({
         await invite({ name, email })
         setPendingInvites((prev) =>
           prev.map((p) =>
-            p.id === inviteId ? { ...p, status: 'success' as const } : p
-          )
+            p.id === inviteId ? { ...p, status: 'success' as const } : p,
+          ),
         )
         setHasInvitedAny(true)
-        
+
         setTimeout(() => {
           setPendingInvites((prev) => prev.filter((p) => p.id !== inviteId))
         }, 2000)
       } catch {
         setPendingInvites((prev) =>
           prev.map((p) =>
-            p.id === inviteId ? { ...p, status: 'error' as const } : p
-          )
+            p.id === inviteId ? { ...p, status: 'error' as const } : p,
+          ),
         )
       }
     },
@@ -154,7 +156,7 @@ export function InviteMembersModal({
   const isInviting = pendingInvites.some((p) => p.status === 'pending')
 
   const visiblePendingInvites = pendingInvites.filter(
-    (p) => !users.some((u) => u.email === p.email)
+    (p) => !users.some((u) => u.email === p.email),
   )
 
   const handleContinue = useCallback(() => {
