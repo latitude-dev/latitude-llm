@@ -5,6 +5,7 @@ import {
   HumanEvaluationMetric,
   LlmEvaluationMetric,
   SpanWithDetails,
+  HumanEvaluationBinaryResultMetadata,
 } from '@latitude-data/constants'
 import {
   createCommit,
@@ -706,6 +707,263 @@ describe('getHITLSpansByDocument', () => {
       expect(spans).toHaveLength(1)
       expect(spans[0]!.id).toBe(promptSpan.id)
       expect(spans[0]!.type).toBe(SpanType.Prompt)
+    })
+  })
+
+  describe('evaluation results with reasons', () => {
+    it('returns evaluation results with reasons when present', async () => {
+      const hitlEvaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+        type: EvaluationType.Human,
+        metric: HumanEvaluationMetric.Binary,
+      })
+
+      const span = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-with-reason',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      const reasonText =
+        'This response was marked as good because it was helpful'
+      await createEvaluationResultV2({
+        workspace,
+        evaluation: hitlEvaluation,
+        commit,
+        span: {
+          ...span,
+          type: SpanType.Prompt,
+        } as unknown as SpanWithDetails<SpanType.Prompt>,
+        metadata: {
+          configuration: hitlEvaluation.configuration,
+          actualOutput: 'actual output',
+          expectedOutput: 'expected output',
+          datasetLabel: 'default',
+          reason: reasonText,
+        },
+      })
+
+      const { issue: dummyIssue } = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+
+      const result = await getHITLSpansByDocument({
+        workspace,
+        commit,
+        documentUuid: document.documentUuid,
+        excludeIssueId: dummyIssue.id,
+        page: 1,
+        pageSize: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans, evaluationResults } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(evaluationResults).toHaveLength(1)
+      const metadata = evaluationResults[0]!
+        .metadata as HumanEvaluationBinaryResultMetadata
+      expect(metadata.reason).toBe(reasonText)
+    })
+
+    it('returns evaluation results without reasons when not present', async () => {
+      const hitlEvaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+        type: EvaluationType.Human,
+        metric: HumanEvaluationMetric.Binary,
+      })
+
+      const span = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-no-reason',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation: hitlEvaluation,
+        commit,
+        span: {
+          ...span,
+          type: SpanType.Prompt,
+        } as unknown as SpanWithDetails<SpanType.Prompt>,
+      })
+
+      const { issue: dummyIssue } = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+
+      const result = await getHITLSpansByDocument({
+        workspace,
+        commit,
+        documentUuid: document.documentUuid,
+        excludeIssueId: dummyIssue.id,
+        page: 1,
+        pageSize: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans, evaluationResults } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(evaluationResults).toHaveLength(1)
+      const metadata = evaluationResults[0]!
+        .metadata as HumanEvaluationBinaryResultMetadata
+      expect(metadata.reason).toBeUndefined()
+    })
+
+    it('returns matching evaluation results for each span', async () => {
+      const hitlEvaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+        type: EvaluationType.Human,
+        metric: HumanEvaluationMetric.Binary,
+      })
+
+      const span1 = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-1-reason',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      const span2 = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-2-reason',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      const reason1 = 'Reason for first span'
+      const reason2 = 'Reason for second span'
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation: hitlEvaluation,
+        commit,
+        span: {
+          ...span1,
+          type: SpanType.Prompt,
+        } as unknown as SpanWithDetails<SpanType.Prompt>,
+        metadata: {
+          configuration: hitlEvaluation.configuration,
+          actualOutput: 'output 1',
+          expectedOutput: 'expected 1',
+          datasetLabel: 'default',
+          reason: reason1,
+        },
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation: hitlEvaluation,
+        commit,
+        span: {
+          ...span2,
+          type: SpanType.Prompt,
+        } as unknown as SpanWithDetails<SpanType.Prompt>,
+        metadata: {
+          configuration: hitlEvaluation.configuration,
+          actualOutput: 'output 2',
+          expectedOutput: 'expected 2',
+          datasetLabel: 'default',
+          reason: reason2,
+        },
+      })
+
+      const { issue: dummyIssue } = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+
+      const result = await getHITLSpansByDocument({
+        workspace,
+        commit,
+        documentUuid: document.documentUuid,
+        excludeIssueId: dummyIssue.id,
+        page: 1,
+        pageSize: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans, evaluationResults } = result.unwrap()
+      expect(spans).toHaveLength(2)
+      expect(evaluationResults).toHaveLength(2)
+
+      const reasons = evaluationResults.map(
+        (r) => (r.metadata as HumanEvaluationBinaryResultMetadata).reason,
+      )
+      expect(reasons).toContain(reason1)
+      expect(reasons).toContain(reason2)
+    })
+
+    it('returns evaluationUuid to match results with evaluations', async () => {
+      const hitlEvaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+        type: EvaluationType.Human,
+        metric: HumanEvaluationMetric.Binary,
+      })
+
+      const span = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-eval-uuid',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation: hitlEvaluation,
+        commit,
+        span: {
+          ...span,
+          type: SpanType.Prompt,
+        } as unknown as SpanWithDetails<SpanType.Prompt>,
+        metadata: {
+          configuration: hitlEvaluation.configuration,
+          actualOutput: 'actual',
+          expectedOutput: 'expected',
+          datasetLabel: 'default',
+          reason: 'Some reason',
+        },
+      })
+
+      const { issue: dummyIssue } = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+
+      const result = await getHITLSpansByDocument({
+        workspace,
+        commit,
+        documentUuid: document.documentUuid,
+        excludeIssueId: dummyIssue.id,
+        page: 1,
+        pageSize: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { evaluationResults } = result.unwrap()
+      expect(evaluationResults).toHaveLength(1)
+      expect(evaluationResults[0]!.evaluationUuid).toBe(hitlEvaluation.uuid)
     })
   })
 })
