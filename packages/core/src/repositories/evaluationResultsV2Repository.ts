@@ -99,6 +99,46 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
   }
 
+  async findByIds(ids: number[]): Promise<EvaluationResultV2[]> {
+    if (!ids.length) return []
+
+    const results = await this.scope
+      .where(and(this.scopeFilter, inArray(evaluationResultsV2.id, ids)))
+      .limit(ids.length)
+
+    return results as EvaluationResultV2[]
+  }
+
+  async listBySpanAndEvaluations({
+    spans,
+    evaluationUuids,
+    commitHistoryIds,
+  }: {
+    spans: { id: string; traceId: string }[]
+    evaluationUuids: string[]
+    commitHistoryIds: number[]
+  }): Promise<EvaluationResultV2[]> {
+    if (!spans.length || !evaluationUuids.length) return []
+
+    const spanIds = spans.map((s) => s.id)
+    const traceIds = spans.map((s) => s.traceId)
+
+    const results = await this.db
+      .select(tt)
+      .from(evaluationResultsV2)
+      .where(
+        and(
+          this.scopeFilter,
+          inArray(evaluationResultsV2.evaluatedSpanId, spanIds),
+          inArray(evaluationResultsV2.evaluatedTraceId, traceIds),
+          inArray(evaluationResultsV2.evaluationUuid, evaluationUuids),
+          inArray(evaluationResultsV2.commitId, commitHistoryIds),
+        ),
+      )
+
+    return results as EvaluationResultV2[]
+  }
+
   async findByEvaluatedSpanAndEvaluation({
     evaluatedSpanId,
     evaluatedTraceId,
@@ -996,12 +1036,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const orderDirectionFn = orderDirection === 'asc' ? asc : desc
 
     const evalResults = await this.db
-      .select({
-        id: evaluationResultsV2.id,
-        evaluatedSpanId: evaluationResultsV2.evaluatedSpanId,
-        evaluatedTraceId: evaluationResultsV2.evaluatedTraceId,
-        createdAt: evaluationResultsV2.createdAt,
-      })
+      .select(tt)
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .leftJoin(
@@ -1022,7 +1057,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     const hasNextPage = evalResults.length > pageSize
     const results = hasNextPage ? evalResults.slice(0, pageSize) : evalResults
-    return { results, hasNextPage }
+    return { results: results as EvaluationResultV2[], hasNextPage }
   }
 
   private async getEvaluationsByCommit({
