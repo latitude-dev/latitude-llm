@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { usePostHog } from 'posthog-js/react'
 import {
   useLocalStorage,
@@ -29,6 +30,9 @@ type Props = {
 
 export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documentUuid }: Props) {
   const posthog = usePostHog()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const hasHandledReset = useRef(false)
   const {
     currentStep,
     currentSlide,
@@ -41,7 +45,16 @@ export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documen
     nextSlide,
     prevSlide,
     setFirstTraceId,
+    resetOnboarding,
   } = useOnboardingState()
+
+  useEffect(() => {
+    if (searchParams.get('reset') === 'true' && !hasHandledReset.current) {
+      hasHandledReset.current = true
+      resetOnboarding()
+      router.replace('/onboarding', { scroll: false })
+    }
+  }, [searchParams, resetOnboarding, router])
 
   const { setValue: setReplayOnboarding } = useLocalStorage<boolean>({
     key: AppLocalStorage.replayOnboarding,

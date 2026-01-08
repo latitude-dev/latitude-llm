@@ -45,13 +45,6 @@ export const ROUTES = {
   },
   onboarding: {
     root: '/onboarding',
-    choice: '/onboarding/choice',
-    install: '/onboarding/install',
-    promptEngineering: {
-      pasteYourPrompt: '/onboarding-prompt-engineering/paste-your-prompt',
-      generateDataset: '/onboarding-prompt-engineering/generate-dataset',
-      runExperiment: '/onboarding-prompt-engineering/run-experiment',
-    },
   },
   backoffice: {
     root: BACKOFFICE_ROOT,
