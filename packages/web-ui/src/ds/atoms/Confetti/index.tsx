@@ -1,6 +1,20 @@
 'use client'
 
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, useRef, type CSSProperties } from 'react'
+
+const KEYFRAMES_ID = 'confetti-keyframes'
+const KEYFRAMES_CSS = `
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(var(--drift)) rotate(var(--rotation));
+    opacity: 0;
+  }
+}
+`
 
 const DEFAULT_COLORS = [
   '#FF6B6B',
@@ -42,6 +56,19 @@ type Props = {
  */
 export function Confetti({ count = 100, colors = DEFAULT_COLORS }: Props) {
   const [pieces, setPieces] = useState<ConfettiPiece[]>([])
+  const styleInjectedRef = useRef(false)
+
+  useEffect(() => {
+    if (!styleInjectedRef.current && typeof document !== 'undefined') {
+      styleInjectedRef.current = true
+      if (!document.getElementById(KEYFRAMES_ID)) {
+        const style = document.createElement('style')
+        style.id = KEYFRAMES_ID
+        style.textContent = KEYFRAMES_CSS
+        document.head.appendChild(style)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const shapes: Shape[] = ['rectangle', 'square', 'circle']
@@ -95,19 +122,6 @@ export function Confetti({ count = 100, colors = DEFAULT_COLORS }: Props) {
           }}
         />
       ))}
-      <style jsx>{`
-        @keyframes confetti-fall {
-          0% {
-            transform: translateY(0) translateX(0) rotate(0deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(100vh) translateX(var(--drift))
-              rotate(var(--rotation));
-            opacity: 0;
-          }
-        }
-      `}</style>
     </div>
   )
 }
