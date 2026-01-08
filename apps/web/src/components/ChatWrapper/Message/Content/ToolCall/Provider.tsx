@@ -14,11 +14,15 @@ export function ProviderToolCard({
   toolResponse,
   status,
   sourceData,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
   status: 'pending' | 'success' | 'error'
   sourceData: ToolSourceData<ToolSource.ProviderTool>
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   return (
     <ToolCard
@@ -31,6 +35,8 @@ export function ProviderToolCard({
         />
       }
       headerLabel={<ToolCardText>{toolRequest.toolName}</ToolCardText>}
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
     />
   )
 }

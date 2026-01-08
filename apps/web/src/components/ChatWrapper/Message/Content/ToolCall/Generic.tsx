@@ -8,10 +8,14 @@ export function GenericToolCard({
   toolRequest,
   toolResponse,
   status,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
   status: 'pending' | 'success' | 'error'
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   return (
     <ToolCard
@@ -19,6 +23,8 @@ export function GenericToolCard({
       toolResponse={toolResponse}
       headerIcon={<ToolCardIcon status={status} name='wrench' />}
       headerLabel={<ToolCardText>{toolRequest.toolName}</ToolCardText>}
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
     />
   )
 }

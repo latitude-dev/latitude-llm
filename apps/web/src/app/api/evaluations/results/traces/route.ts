@@ -24,7 +24,6 @@ export const GET = errorHandler(
       })
 
       const traceIdList = traceIds?.split(',') || []
-
       const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
       const results = await resultsRepository
         .listByTraceIds(traceIdList)

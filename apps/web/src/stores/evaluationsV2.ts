@@ -53,7 +53,7 @@ export function useEvaluationsV2(
     searchParams: {
       projectId: project.id.toString(),
       commitUuid: commit.uuid,
-      ...(document && { documentUuid: document.documentUuid }),
+      ...(document?.documentUuid && { documentUuid: document.documentUuid }),
     },
   })
   const {
@@ -319,7 +319,11 @@ export function useEvaluationsV2(
     isPending: isAnnotatingEvaluation,
   } = useLatitudeAction(annotateEvaluationV2Action, {
     onSuccess: async () => {
-      // no-op
+      toast({
+        title: 'Annotation saved',
+        description:
+          'More annotations help us provide better recommendations to improve your prompts',
+      })
     },
     onError: async (error) => {
       if (error.code === 'ERROR') {
@@ -340,6 +344,7 @@ export function useEvaluationsV2(
       resultMetadata,
       spanId,
       traceId,
+      resultUuid,
     }: {
       evaluationUuid: string
       documentUuid: string
@@ -347,6 +352,7 @@ export function useEvaluationsV2(
       spanId: string
       traceId: string
       resultMetadata?: Partial<EvaluationResultMetadata>
+      resultUuid?: string
     }) => {
       return await executeAnnotateEvaluationV2({
         projectId: project.id,
@@ -357,6 +363,7 @@ export function useEvaluationsV2(
         resultMetadata: resultMetadata,
         spanId,
         traceId,
+        resultUuid,
       })
     },
     [project, commit, executeAnnotateEvaluationV2],

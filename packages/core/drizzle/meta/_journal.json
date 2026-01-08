@@ -1786,6 +1786,13 @@
       "when": 1767805023496,
       "tag": "0255_zippy_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 256,
+      "version": "7",
+      "when": 1767883913032,
+      "tag": "0256_sudden_nightshade",
+      "breakpoints": true
     }
   ]
 }

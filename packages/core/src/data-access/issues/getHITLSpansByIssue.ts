@@ -16,9 +16,8 @@ import { Workspace } from '../../schema/models/types/Workspace'
  * Relationship: Issue → issueEvaluationResults → evaluationResultsV2 → evaluationVersions (type='human') → commits → spans
  *
  * Why paginate by evaluation results when returning spans?
- * - There's a 1:1 relationship between evaluation results and spans
- *   (each evaluationResultV2 has exactly one evaluatedSpanId + evaluatedTraceId)
- * - Paginating 25 evaluation results = getting exactly 25 spans
+ * - There can be multiple evaluation results for the same span (after unique constraints were removed)
+ * - Paginating 25 evaluation results returns up to 25 unique spans (after deduplication)
  * - The UI displays spans ordered by when they were evaluated (evaluationResultsV2.createdAt)
  * - This approach lets us paginate on smaller tables (evaluation results) before
  *   touching the huge spans table, then fetch only the specific spans we need

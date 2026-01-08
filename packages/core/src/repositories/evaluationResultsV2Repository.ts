@@ -911,7 +911,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     const orderDirectionFn = orderDirection === 'asc' ? asc : desc
 
-    const evalResults = await this.db
+    // Fetch more results to account for duplicates during deduplication. We
+    // multiply by 2 to have a buffer.
+    const fetchLimit = limit * 2
+    const allEvalResults = await this.db
       .select({
         id: evaluationResultsV2.id,
         evaluatedSpanId: evaluationResultsV2.evaluatedSpanId,
@@ -929,11 +932,23 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         orderDirectionFn(evaluationResultsV2.createdAt),
         orderDirectionFn(evaluationResultsV2.id),
       )
-      .limit(limit)
+      .limit(fetchLimit)
       .offset(offset)
 
-    const hasNextPage = evalResults.length > pageSize
-    const results = hasNextPage ? evalResults.slice(0, pageSize) : evalResults
+    // Deduplicate by span (keep first occurrence which is the latest due to ordering)
+    const seenSpans = new Set<string>()
+    const deduplicatedResults = allEvalResults.filter((result) => {
+      const spanKey = `${result.evaluatedSpanId}:${result.evaluatedTraceId}`
+      if (seenSpans.has(spanKey)) {
+        return false
+      }
+      seenSpans.add(spanKey)
+      return true
+    })
+
+    const paginatedResults = deduplicatedResults.slice(0, pageSize)
+    const hasNextPage = deduplicatedResults.length > pageSize
+    const results = hasNextPage ? paginatedResults : deduplicatedResults
     return { results, hasNextPage }
   }
 
@@ -995,7 +1010,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     const orderDirectionFn = orderDirection === 'asc' ? asc : desc
 
-    const evalResults = await this.db
+    // Fetch more results to account for duplicates during deduplication. We
+    // multiply by 2 to have a buffer.
+    const fetchLimit = limit * 2
+    const allEvalResults = await this.db
       .select({
         id: evaluationResultsV2.id,
         evaluatedSpanId: evaluationResultsV2.evaluatedSpanId,
@@ -1017,11 +1035,23 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         orderDirectionFn(evaluationResultsV2.createdAt),
         orderDirectionFn(evaluationResultsV2.id),
       )
-      .limit(limit)
+      .limit(fetchLimit)
       .offset(offset)
 
-    const hasNextPage = evalResults.length > pageSize
-    const results = hasNextPage ? evalResults.slice(0, pageSize) : evalResults
+    // Deduplicate by span (keep first occurrence which is the latest due to ordering)
+    const seenSpans = new Set<string>()
+    const deduplicatedResults = allEvalResults.filter((result) => {
+      const spanKey = `${result.evaluatedSpanId}:${result.evaluatedTraceId}`
+      if (seenSpans.has(spanKey)) {
+        return false
+      }
+      seenSpans.add(spanKey)
+      return true
+    })
+
+    const paginatedResults = deduplicatedResults.slice(0, pageSize)
+    const hasNextPage = deduplicatedResults.length > pageSize
+    const results = hasNextPage ? paginatedResults : deduplicatedResults
     return { results, hasNextPage }
   }
 

@@ -5,7 +5,6 @@ import { database } from '../../client'
 import {
   CLOUD_MESSAGES,
   EvaluationMetric,
-  EvaluationResultSuccessValue,
   EvaluationType,
   ISSUE_GENERATION_CACHE_KEY,
 } from '../../constants'
@@ -14,8 +13,8 @@ import { hashContent } from '../../lib/hashContent'
 import { Result } from '../../lib/Result'
 import { type ResultWithEvaluationV2 } from '../../schema/types'
 import { getCopilot, runCopilot } from '../copilot'
-import { getEvaluationMetricSpecification } from '../evaluationsV2/specifications'
 import { validateResultForIssue } from './results/validate'
+import { getOrSetEnrichedReason } from './results/getOrSetEnrichedReason'
 
 const generatorSchema = z.object({
   title: z.string().max(256),
@@ -62,20 +61,21 @@ export async function generateIssue(
     filtered.push(result)
   }
 
-  const reasons = filtered
-    .map(
-      <T extends EvaluationType, M extends EvaluationMetric<T>>({
-        evaluation,
-        result,
-      }: ResultWithEvaluationV2<T, M>) => {
-        const specification = getEvaluationMetricSpecification(evaluation)
-        const reason = specification.resultReason(
-          result as EvaluationResultSuccessValue<T, M>,
-        )
-
-        return reason
-      },
+  const reasons = (
+    await Promise.all(
+      filtered.map(
+        async <T extends EvaluationType, M extends EvaluationMetric<T>>({
+          evaluation,
+          result,
+        }: ResultWithEvaluationV2<T, M>) => {
+          const reasoning = await getOrSetEnrichedReason({ result, evaluation })
+          if (!Result.isOk(reasoning)) return undefined
+          return reasoning.value
+        },
+      ),
     )
+  )
+    .filter(Boolean)
     .filter((reason): reason is string => !!reason?.trim())
 
   if (reasons.length === 0) {

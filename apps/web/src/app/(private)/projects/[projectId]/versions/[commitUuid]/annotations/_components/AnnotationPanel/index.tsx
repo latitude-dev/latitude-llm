@@ -1,18 +1,15 @@
-import { useCallback, useMemo, useState } from 'react'
-import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
+import { useCallback, useMemo } from 'react'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { MessageList } from '$/components/ChatWrapper'
-import DebugToggle from '$/components/DebugToggle'
+import { AnnotationsProvider, MessageList } from '$/components/ChatWrapper'
 import { ROUTES } from '$/services/routes'
 import {
-  EvaluationResultV2,
-  EvaluationType,
-  EvaluationV2,
   HumanEvaluationMetric,
+  EvaluationResultV2,
   Span,
   SpanType,
   SpanWithDetails,
+  EvaluationType,
 } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -26,18 +23,18 @@ import {
 } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { sum } from 'lodash-es'
-import { useAnnotationBySpan } from '$/hooks/useAnnotationsBySpan'
-import { useAnnotationsProgress } from '$/stores/issues/annotationsProgress'
 import { RunPanelStats } from '$/components/RunPanelStats'
+import { AnnotationFormWithoutContext } from '$/components/ChatWrapper/AnnotationFormWithoutContext'
 
-export function RunPanel({
+export function AnnotationsPanel({
   span,
   onAnnotate,
 }: {
   span: SpanWithDetails<SpanType.Prompt>
-  onAnnotate: (span: Span) => void
+  onAnnotate: (
+    result: EvaluationResultV2<EvaluationType.Human, HumanEvaluationMetric>,
+  ) => void
 }) {
-  const [debugMode, setDebugMode] = useState(false)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { data: trace, isLoading: isLoadingTrace } = useTrace({
@@ -51,19 +48,7 @@ export function RunPanel({
     () => adaptCompletionSpanMessagesToLegacy(completionSpan),
     [completionSpan],
   )
-  const { annotations, isLoading: isLoadingAnnotations } = useAnnotationBySpan({
-    project,
-    commit,
-    span,
-  })
   const toolContentMap = useToolContentMap(conversation as unknown as Message[])
-  const sourceMapAvailable = useMemo(() => {
-    return conversation.some((message) => {
-      if (typeof message.content !== 'object') return false
-      return message.content.some((content) => '_promptlSourceMap' in content)
-    })
-  }, [conversation])
-
   const buildSelectedSpanUrl = useCallback(
     ({
       projectId,
@@ -91,7 +76,7 @@ export function RunPanel({
     [],
   )
 
-  const isLoading = isLoadingTrace || isLoadingAnnotations
+  const isLoading = isLoadingTrace
   if (isLoading) {
     return (
       <div className='w-full h-full flex flex-1 justify-center items-center gap-2'>
@@ -146,79 +131,29 @@ export function RunPanel({
           <div className='w-full flex flex-col'>
             <div className='flex flex-row items-center justify-between w-full pb-2'>
               <Text.H6M>Messages</Text.H6M>
-              {sourceMapAvailable && (
-                <div className='flex flex-row gap-2 items-center'>
-                  <DebugToggle enabled={debugMode} setEnabled={setDebugMode} />
-                </div>
-              )}
             </div>
-            <MessageList
+            <AnnotationsProvider
+              project={project}
+              commit={commit}
+              span={span}
               messages={conversation as unknown as Message[]}
-              parameters={Object.keys(span.metadata?.parameters ?? {})}
-              debugMode={debugMode}
-              toolContentMap={toolContentMap}
-            />
+              onAnnotate={onAnnotate}
+            >
+              <MessageList
+                debugMode
+                messages={conversation as unknown as Message[]}
+                parameters={Object.keys(span.metadata?.parameters ?? {})}
+                toolContentMap={toolContentMap}
+              />
+              <AnnotationFormWithoutContext />
+            </AnnotationsProvider>
           </div>
         ) : (
           <Text.H5 color='foregroundMuted'>
             No messages generated for this run
           </Text.H5>
         )}
-        <div className='w-full flex flex-col gap-y-4 pt-4'>
-          {span.status !== 'error' && annotations.bottom && (
-            <AnnotationFormWrapper
-              key={annotations.bottom.evaluation.uuid}
-              evaluation={
-                annotations.bottom.evaluation as EvaluationV2<
-                  EvaluationType.Human,
-                  HumanEvaluationMetric
-                >
-              }
-              result={
-                annotations.bottom.result as EvaluationResultV2<
-                  EvaluationType.Human,
-                  HumanEvaluationMetric
-                >
-              }
-              span={span}
-              onAnnotate={onAnnotate}
-            />
-          )}
-        </div>
       </div>
     </div>
-  )
-}
-
-function AnnotationFormWrapper({
-  evaluation,
-  span,
-  result,
-  onAnnotate,
-}: {
-  evaluation: EvaluationV2<EvaluationType.Human, HumanEvaluationMetric>
-  span: Span
-  result?: EvaluationResultV2<EvaluationType.Human, HumanEvaluationMetric>
-  onAnnotate: (span: Span) => void
-}) {
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-  const { refetch: refetchProgress } = useAnnotationsProgress({
-    projectId: project.id,
-    commitUuid: commit.uuid,
-  })
-
-  const handleAnnotate = useCallback(() => {
-    refetchProgress()
-    onAnnotate(span)
-  }, [onAnnotate, span, refetchProgress])
-
-  return (
-    <AnnotationForm
-      evaluation={evaluation}
-      result={result}
-      span={span as SpanWithDetails<SpanType.Prompt>}
-      onAnnotate={handleAnnotate}
-    />
   )
 }

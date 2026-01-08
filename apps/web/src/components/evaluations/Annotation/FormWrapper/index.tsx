@@ -7,7 +7,7 @@ import {
   EvaluationResultV2,
   EvaluationType,
   EvaluationV2,
-  SpanType,
+  MainSpanType,
   SpanWithDetails,
 } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
@@ -48,7 +48,7 @@ type IAnnotationForm<
   commit: Commit
   result: EvaluationResultV2WithIssue<T, M> | undefined
   evaluation: EvaluationV2<T, M>
-  span: SpanWithDetails<SpanType.Prompt>
+  span: SpanWithDetails<MainSpanType>
   setDisabled: ReactStateDispatch<boolean>
   isExpanded: boolean
   setIsExpanded: ReactStateDispatch<boolean>
@@ -92,7 +92,7 @@ export const AnnotationProvider = <
   isSubmitting: boolean
   onSubmit: IAnnotationForm<T, M>['onSubmit']
   commit: Commit
-  span: SpanWithDetails<SpanType.Prompt>
+  span: SpanWithDetails<MainSpanType>
   evaluation: EvaluationV2<T, M>
   result: EvaluationResultV2WithIssue<T, M> | undefined
   documentUuid: string
@@ -185,8 +185,10 @@ AnnotationFormWrapper.Footer = function Footer({
 
 AnnotationFormWrapper.SaveButton = function SaveButton({
   onClick,
+  disabled: externallyDisabled = false,
 }: {
   onClick: () => void
+  disabled?: boolean
 }) {
   const { isSubmitting, hasChanges } = use(AnnotationContext)
 
@@ -199,7 +201,7 @@ AnnotationFormWrapper.SaveButton = function SaveButton({
       variant='default'
       {...(isSubmitting ? { iconProps: { name: 'loader', spin: true } } : {})}
       onClick={onClick}
-      disabled={isSubmitting}
+      disabled={isSubmitting || externallyDisabled}
     >
       {isSubmitting ? 'Saving...' : 'Save annotation'}
     </Button>
@@ -233,7 +235,7 @@ AnnotationFormWrapper.TextArea = function TextArea({
   name,
   value,
   onChange,
-  placeholder = 'Write your feedback here...',
+  placeholder = 'You can select text to include it in the annotation',
   disabled = false,
 }: {
   name: string

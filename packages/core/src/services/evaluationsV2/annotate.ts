@@ -2,6 +2,7 @@ import {
   EVALUATION_SCORE_SCALE,
   EvaluationMetric,
   EvaluationResultMetadata,
+  EvaluationResultV2,
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
@@ -14,10 +15,7 @@ import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { LegacyMessage } from '../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
-import {
-  DocumentVersionsRepository,
-  EvaluationResultsV2Repository,
-} from '../../repositories'
+import { DocumentVersionsRepository } from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { type User } from '../../schema/models/types/User'
@@ -26,6 +24,7 @@ import { extractActualOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { updateEvaluationResultV2 } from './results/update'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
+import { EvaluationResultsV2Repository } from '../../repositories'
 
 export async function annotateEvaluationV2<
   T extends EvaluationType,
@@ -39,6 +38,7 @@ export async function annotateEvaluationV2<
     resultScore,
     resultMetadata,
     currentUser,
+    resultUuid: existingResultUuid,
   }: {
     workspace: Workspace
     commit: Commit
@@ -47,20 +47,12 @@ export async function annotateEvaluationV2<
     resultScore: number
     resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
     currentUser?: User
+    resultUuid?: string
   },
   transaction = new Transaction(),
 ) {
-  const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
-  const existingResult =
-    await resultsRepository.findByEvaluatedSpanAndEvaluation({
-      evaluatedSpanId: span.id,
-      evaluatedTraceId: span.traceId,
-      evaluationUuid: evaluation.uuid,
-    })
-  const resultUuid = existingResult
-    ? existingResult.uuid
-    : generateUUIDIdentifier()
-
+  const resultUuid = existingResultUuid ?? generateUUIDIdentifier()
+  const isUpdate = !!existingResultUuid
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) {
     return Result.error(new BadRequestError('Invalid evaluation type'))
@@ -95,7 +87,7 @@ export async function annotateEvaluationV2<
     ...(completionSpan.metadata?.output ?? []),
   ] as unknown as LegacyMessage[]
 
-  let value
+  let value: EvaluationResultValue
   try {
     // Note: some actual output errors are learnable and thus are treated as failures
     const actualOutput = extractActualOutput({
@@ -148,31 +140,33 @@ export async function annotateEvaluationV2<
     value = { error: { message: (error as Error).message } }
   }
 
-  let alreadyExisted = false
-  let sendToAnalytics = false
+  let sendToAnalytics: boolean = false
 
   return await transaction.call(
-    async () => {
-      let result
-      alreadyExisted = !!existingResult
+    async (tx) => {
+      let result: EvaluationResultV2<T, M>
+      if (isUpdate) {
+        const resultsRepo = new EvaluationResultsV2Repository(workspace.id, tx)
+        const existingResult = await resultsRepo
+          .findByUuid(resultUuid)
+          .then((r) => r.unwrap())
 
-      if (existingResult) {
-        alreadyExisted = true
         sendToAnalytics = existingResult.score !== resultScore
-        const { result: updatedResult } = await updateEvaluationResultV2(
+
+        const updated = await updateEvaluationResultV2(
           {
             workspace,
-            result: existingResult,
-            commit: commit,
+            commit,
+            result: existingResult as EvaluationResultV2<T, M>,
             value: value as EvaluationResultValue<T, M>,
             evaluation,
           },
           transaction,
         ).then((r) => r.unwrap())
-        result = updatedResult
+        result = updated.result
       } else {
         sendToAnalytics = true
-        const { result: createdResult } = await createEvaluationResultV2(
+        const created = await createEvaluationResultV2(
           {
             uuid: resultUuid,
             evaluation: evaluation,
@@ -183,19 +177,16 @@ export async function annotateEvaluationV2<
           },
           transaction,
         ).then((r) => r.unwrap())
-        result = createdResult
+        result = created.result
       }
 
-      return Result.ok({ result })
+      return Result.ok(result)
     },
-    ({ result }) =>
-      // Always publish event, but only include userEmail when score changed
-      // Analytics platform checks userEmail to decide whether to process the event
-      // This prevents sending partial reason text from debounced updates
+    (result) =>
       publisher.publishLater({
         type: 'evaluationV2Annotated',
         data: {
-          isNew: !alreadyExisted,
+          isNew: !isUpdate,
           userEmail: sendToAnalytics ? currentUser?.email || null : null,
           workspaceId: workspace.id,
           evaluation,

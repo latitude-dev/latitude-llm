@@ -1,17 +1,14 @@
-import { AssembledSpan, AssembledTrace, SpanType } from '../../../../constants'
+import {
+  AssembledSpan,
+  AssembledTrace,
+  isMainSpan,
+  SpanType,
+} from '../../../../constants'
 import { adaptPromptlMessageToLegacy } from '../../../../utils/promptlAdapter'
-
-const MAIN_SPAN_TYPES = new Set([
-  SpanType.Prompt,
-  SpanType.Chat,
-  SpanType.External,
-])
 
 function findRootSpans(trace: AssembledTrace): AssembledSpan[] {
   return trace.children
-    .filter(
-      (span) => MAIN_SPAN_TYPES.has(span.type as SpanType) && !span.parentId,
-    )
+    .filter((span) => isMainSpan(span) && !span.parentId)
     .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
 }
 

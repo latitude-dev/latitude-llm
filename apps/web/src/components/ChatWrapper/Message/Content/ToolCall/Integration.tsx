@@ -19,11 +19,15 @@ export function IntegrationToolCard({
   toolResponse,
   status,
   sourceData,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
   status: 'pending' | 'success' | 'error'
   sourceData: ToolSourceData<ToolSource.Integration>
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   const { data: integrations, isLoading } = useIntegrations()
   const integration = useMemo(
@@ -68,6 +72,8 @@ export function IntegrationToolCard({
           )}
         </div>
       }
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
     />
   )
 }

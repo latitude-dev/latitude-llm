@@ -94,7 +94,8 @@ export function DocumentTraces({
             isSelected={selectableState.isSelected}
             isExpanded={
               selection.documentLogUuid !== null &&
-              selection.documentLogUuid === span.documentLogUuid
+              (selection.documentLogUuid === span.documentLogUuid ||
+                selection.expandedDocumentLogUuid === span.documentLogUuid)
             }
             evaluationResults={evaluationResultsByTraceId[span.traceId] || []}
             isEvaluationResultsLoading={isEvaluationResultsLoading}

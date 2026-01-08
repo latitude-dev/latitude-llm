@@ -21,12 +21,16 @@ export function LatitudeToolCard({
   status,
   sourceData,
   debugMode,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
   status: 'pending' | 'success' | 'error'
   sourceData: ToolSourceData<ToolSource.Latitude>
   debugMode?: boolean
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   if (debugMode) {
     // No custom UI
@@ -41,6 +45,8 @@ export function LatitudeToolCard({
           />
         }
         headerLabel={<ToolCardText>{toolRequest.toolName}</ToolCardText>}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
@@ -51,6 +57,8 @@ export function LatitudeToolCard({
         toolRequest={toolRequest}
         toolResponse={toolResponse}
         status={status}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
@@ -60,6 +68,8 @@ export function LatitudeToolCard({
         toolRequest={toolRequest}
         toolResponse={toolResponse}
         status={status}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
@@ -69,14 +79,28 @@ export function LatitudeToolCard({
         toolRequest={toolRequest}
         toolResponse={toolResponse}
         status={status}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
   }
   if (sourceData.latitudeTool === LatitudeTool.Think) {
-    return <ThinkLatitudeToolCard toolRequest={toolRequest} />
+    return (
+      <ThinkLatitudeToolCard
+        toolRequest={toolRequest}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
+      />
+    )
   }
   if (sourceData.latitudeTool === LatitudeTool.TODO) {
-    return <TodoLatitudeToolCard toolRequest={toolRequest} />
+    return (
+      <TodoLatitudeToolCard
+        toolRequest={toolRequest}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
+      />
+    )
   }
 
   return (
@@ -90,6 +114,8 @@ export function LatitudeToolCard({
         />
       }
       headerLabel={<ToolCardText>{toolRequest.toolName}</ToolCardText>}
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
     />
   )
 }

@@ -1,18 +1,24 @@
 import { Ref, useMemo } from 'react'
-import { DetailsPanel } from '$/components/tracing/spans/DetailsPanel'
-import { useLastTrace } from '$/stores/conversations'
-import { SpanType, SpanWithDetails } from '@latitude-data/constants'
-import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
-import { MessageList } from '$/components/ChatWrapper'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useSpan } from '$/stores/spans'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { AnnotationForms } from './AnnotationForms'
-import { TraceEvaluations } from './TraceEvaluations'
 import { MetadataInfoTabs } from '../MetadataInfoTabs'
+import { DetailsPanel } from '$/components/tracing/spans/DetailsPanel'
+import { AnnotationsProvider, MessageList } from '$/components/ChatWrapper'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
+import {
+  AssembledSpan,
+  AssembledTrace,
+  isMainSpan,
+  SpanType,
+  SpanWithDetails,
+} from '@latitude-data/constants'
+import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
+import { useSpan } from '$/stores/spans'
+import { TraceEvaluations } from './TraceEvaluations'
+import { useLastTrace } from '$/stores/conversations'
 import { adaptCompletionSpanMessagesToLegacy } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
+import { AnnotationFormWithoutContext } from '../ChatWrapper/AnnotationFormWithoutContext'
 
 export const DEFAULT_TABS = [
   { label: 'Metadata', value: 'metadata' },
@@ -25,13 +31,11 @@ export function TraceInfoPanel({
   documentLogUuid,
   documentUuid,
   insideOtherPanel = false,
-  mergedToIssueId,
 }: {
   spanId: string
   documentLogUuid: string
   documentUuid: string
   insideOtherPanel?: boolean
-  mergedToIssueId?: number
   ref?: Ref<HTMLDivElement>
 }) {
   const { commit } = useCurrentCommit()
@@ -61,14 +65,10 @@ export function TraceInfoPanel({
       {({ selectedTab }) => (
         <>
           {selectedTab === 'metadata' && (
-            <TraceMetadata
-              isLoading={isLoading}
-              span={span}
-              mergedToIssueId={mergedToIssueId}
-            />
+            <TraceMetadata isLoading={isLoading} span={span} />
           )}
           {selectedTab === 'messages' && (
-            <TraceMessages documentLogUuid={documentLogUuid} />
+            <TraceMessages span={span} documentLogUuid={documentLogUuid} />
           )}
           {selectedTab === 'evaluations' && (
             <TraceEvaluations
@@ -86,36 +86,57 @@ export function TraceInfoPanel({
 function TraceMetadata({
   span,
   isLoading,
-  mergedToIssueId,
 }: {
   span?: SpanWithDetails<SpanType> | null
   isLoading: boolean
-  mergedToIssueId?: number
 }) {
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+
   if (isLoading) return <LoadingText alignX='center' />
   if (!span) return null
 
   return (
     <div className='flex flex-col gap-4'>
-      <DetailsPanel span={span} />
-      {span.type === SpanType.Prompt && (
-        <AnnotationForms
+      {span.type === SpanType.Prompt ? (
+        <AnnotationsProvider
           span={span as SpanWithDetails<SpanType.Prompt>}
-          mergedToIssueId={mergedToIssueId}
-        />
+          commit={commit}
+          project={project}
+        >
+          <div className='flex flex-col gap-4'>
+            <DetailsPanel span={span} />
+            <AnnotationFormWithoutContext />
+          </div>
+        </AnnotationsProvider>
+      ) : (
+        <DetailsPanel span={span} />
       )}
     </div>
   )
 }
 
 function TraceMessages({
+  span,
   documentLogUuid,
 }: {
+  span?: SpanWithDetails
   documentLogUuid: string | null
 }) {
-  const { completionSpan, isLoading } = useLastTrace({ documentLogUuid })
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const { trace, completionSpan, isLoading } = useLastTrace({ documentLogUuid })
+  const mainSpan = findMainSpan(trace ?? undefined)
+  const mainMetadata = mainSpan?.metadata
   const messages = adaptCompletionSpanMessagesToLegacy(
     completionSpan ?? undefined,
+  )
+  const parameters = useMemo(
+    () =>
+      mainMetadata && 'parameters' in mainMetadata
+        ? Object.keys(mainMetadata.parameters as Record<string, unknown>)
+        : undefined,
+    [mainMetadata],
   )
 
   if (isLoading) {
@@ -130,5 +151,28 @@ function TraceMessages({
     )
   }
 
-  return <MessageList debugMode messages={messages} />
+  return (
+    <AnnotationsProvider
+      project={project}
+      commit={commit}
+      span={span}
+      messages={messages}
+    >
+      <div className='flex flex-col gap-4'>
+        <MessageList
+          debugMode
+          messages={messages}
+          parameters={parameters ? Object.keys(parameters) : undefined}
+        />
+        <AnnotationFormWithoutContext />
+      </div>
+    </AnnotationsProvider>
+  )
+}
+
+function findMainSpan(
+  trace: AssembledTrace | undefined,
+): AssembledSpan | undefined {
+  if (!trace) return undefined
+  return trace.children.find((span) => isMainSpan(span))
 }
