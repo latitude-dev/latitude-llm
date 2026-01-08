@@ -1,7 +1,6 @@
 import { isEqual } from 'date-fns'
 import {
   EvaluationMetric,
-  EvaluationResultSuccessValue,
   EvaluationType,
   ISSUE_JOBS_GENERATE_DETAILS_THROTTLE,
   ISSUE_JOBS_MAX_ATTEMPTS,
@@ -16,13 +15,13 @@ import { CommitsRepository, IssuesRepository } from '../../../repositories'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
-import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import { incrementIssueHistogram } from '../histograms/increment'
 import { embedReason, updateCentroid } from '../shared'
 import { updateIssue } from '../update'
 import { validateResultForIssue } from './validate'
 import { addIssueEvaluationResult } from '../../issueEvaluationResults/add'
 import { canUpdateCentroid } from './canUpdateCentroid'
+import { getOrSetEnrichedReason } from './getOrSetEnrichedReason'
 
 /**
  * No need to check for existing associations,
@@ -56,10 +55,9 @@ export async function addResultToIssue<
   const commit = getting.value
 
   if (!embedding) {
-    const specification = getEvaluationMetricSpecification(evaluation)
-    const reason = specification.resultReason(
-      result as EvaluationResultSuccessValue<T, M>,
-    )!
+    const reasoning = await getOrSetEnrichedReason({ result, evaluation })
+    if (!Result.isOk(reasoning)) return reasoning
+    const reason = reasoning.value
 
     const embedying = await embedReason(reason)
     if (!Result.isOk(embedying)) return embedying

@@ -1,6 +1,7 @@
 import { FinishReason } from 'ai'
 import { Message } from 'promptl-ai'
 import { LogSources } from '../models'
+import { AssembledSpan } from './trace'
 
 export enum SpanKind {
   Internal = 'internal',
@@ -44,8 +45,8 @@ export const LIVE_EVALUABLE_SPAN_TYPES = [
 
 export type EvaluableSpanType =
   | SpanType.Prompt
-  | SpanType.External
   | SpanType.Chat
+  | SpanType.External
 
 export const SPAN_SPECIFICATIONS = {
   [SpanType.Prompt]: {
@@ -151,15 +152,15 @@ export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
 
 export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
   documentLogUuid: string
-  versionUuid: string
-  template: string
   experimentUuid: string
   externalId: string
   parameters: Record<string, unknown>
+  projectId: number
   promptUuid: string
   source: LogSources
-  projectId: number
+  template: string
   testDeploymentId?: number
+  versionUuid: string
 }
 
 export type ChatSpanMetadata = BaseSpanMetadata<SpanType.Chat> & {
@@ -294,4 +295,15 @@ export type SerializedSpanPair = {
   id: string
   traceId: string
   createdAt: string
+}
+
+export type MainSpanType = SpanType.External | SpanType.Prompt | SpanType.Chat
+export const MAIN_SPAN_TYPES = new Set([
+  SpanType.Prompt,
+  SpanType.Chat,
+  SpanType.External,
+])
+
+export function isMainSpan(span: Span | SpanWithDetails | AssembledSpan) {
+  return MAIN_SPAN_TYPES.has(span.type)
 }

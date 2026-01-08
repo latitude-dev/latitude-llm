@@ -77,17 +77,24 @@ export function RunCodeLatitudeToolCard({
   toolRequest,
   toolResponse,
   status,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
   status: 'pending' | 'success' | 'error'
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const args = toolRequest.args as CodeToolArgs
   const value = useMemo(() => runCodeContent(args), [args])
 
   return (
-    <ToolCardWrapper>
+    <ToolCardWrapper
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
+    >
       <ToolCardHeader
         icon={<ToolCardIcon status={status} name='code' />}
         label={<ToolCardText color='foregroundMuted'>Run Code</ToolCardText>}

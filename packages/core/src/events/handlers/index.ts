@@ -82,9 +82,9 @@ export const EventHandlers: IEventsHandlers = {
   evaluationV2Ran: [],
   evaluationV2Annotated: [unlockIssuesDashboardOnAnnotation],
   evaluationResultV2Created: [
-    requestDocumentSuggestionJobV2,
-    notifyClientOfEvaluationResultV2Created,
     assignIssueToEvaluationResultV2Job,
+    notifyClientOfEvaluationResultV2Created,
+    requestDocumentSuggestionJobV2,
   ],
   evaluationResultV2Updated: [handleEvaluationResultV2Updated],
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],

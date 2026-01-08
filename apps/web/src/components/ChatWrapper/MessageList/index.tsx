@@ -58,28 +58,59 @@ export const MessageList = memo(
       [messages, toolContentMap],
     )
 
+    // Create a map of displayable message index to original message index.
+    // This is needed because the message index is used to determine the
+    // position of contextual annotations.
+    const originalIndexMap = useMemo(() => {
+      const map = new Map<number, number>()
+      let originalIndex = 0
+      displayableMessages.forEach((_, displayIndex) => {
+        while (originalIndex < messages.length) {
+          const message = messages[originalIndex]
+          if (
+            !(
+              toolContentMap &&
+              message.role === MessageRole.tool &&
+              isToolMessageResolved(message, toolContentMap)
+            )
+          ) {
+            map.set(displayIndex, originalIndex)
+            originalIndex++
+            break
+          }
+          originalIndex++
+        }
+      })
+      return map
+    }, [messages, displayableMessages, toolContentMap])
+
     return (
       <div className='flex flex-col min-w-0'>
-        {displayableMessages.map((message, index) => {
+        {displayableMessages.map((message, displayIndex) => {
+          const originalIndex =
+            originalIndexMap.get(displayIndex) ?? displayIndex
           return (
-            <Message
-              key={index}
-              role={message.role}
-              content={message.content}
-              parameters={parameters}
-              debugMode={debugMode}
-              toolContentMap={toolContentMap}
-              isGeneratingToolCall={
-                message.role === MessageRole.assistant &&
-                message._isGeneratingToolCall
-              }
-              additionalAssistantMessage={
-                // If this is an additional assistant message, added to a previous assistant message
-                index > 0 &&
-                message.role === MessageRole.assistant &&
-                messages[index - 1].role === MessageRole.assistant
-              }
-            />
+            <div key={displayIndex} data-message-index={originalIndex}>
+              <Message
+                role={message.role}
+                content={message.content}
+                parameters={parameters}
+                debugMode={debugMode}
+                toolContentMap={toolContentMap}
+                isGeneratingToolCall={
+                  message.role === MessageRole.assistant &&
+                  message._isGeneratingToolCall
+                }
+                additionalAssistantMessage={
+                  // If this is an additional assistant message, added to a previous assistant message
+                  displayIndex > 0 &&
+                  message.role === MessageRole.assistant &&
+                  displayableMessages[displayIndex - 1].role ===
+                    MessageRole.assistant
+                }
+                messageIndex={originalIndex}
+              />
+            </div>
           )
         })}
       </div>

@@ -9,30 +9,28 @@ import { DebugMessage } from './DebugMessage'
 import { UserMessage } from './UserMessage'
 import { SystemMessage } from './SystemMessage'
 
-export const Message = memo(
-  ({ role, debugMode: debugMode, ...rest }: MessageProps) => {
-    if (debugMode) {
-      // Debug Mode
-      return <DebugMessage role={role} {...rest} />
-    }
-
-    // Readable Mode
-    if (role === MessageRole.assistant) {
-      return <AssistantMessage {...rest} />
-    }
-
-    if (role === MessageRole.user) {
-      return <UserMessage {...rest} />
-    }
-
-    if (role === MessageRole.system) {
-      return <SystemMessage {...rest} />
-    }
-
-    // Fallback to Debug Mode
+export const Message = memo(({ role, debugMode, ...rest }: MessageProps) => {
+  if (debugMode) {
+    // Debug Mode
     return <DebugMessage role={role} {...rest} />
-  },
-)
+  }
+
+  // Readable Mode
+  if (role === MessageRole.assistant) {
+    return <AssistantMessage {...rest} />
+  }
+
+  if (role === MessageRole.user) {
+    return <UserMessage {...rest} />
+  }
+
+  if (role === MessageRole.system) {
+    return <SystemMessage {...rest} />
+  }
+
+  // Fallback to Debug Mode
+  return <DebugMessage role={role} {...rest} />
+})
 
 export function MessageSkeleton({ role }: { role: string }) {
   return (

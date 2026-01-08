@@ -20,6 +20,7 @@ export const annotateEvaluationV2Action = withEvaluation
       resultMetadata: z.custom<Partial<EvaluationResultMetadata>>().optional(),
       spanId: z.string(),
       traceId: z.string(),
+      resultUuid: z.string().optional(),
     }),
   )
   .action(async ({ ctx, parsedInput }) => {
@@ -48,6 +49,7 @@ export const annotateEvaluationV2Action = withEvaluation
       commit: ctx.commit,
       workspace: ctx.workspace,
       currentUser: ctx.user,
+      resultUuid: parsedInput.resultUuid,
     }).then((r) => r.unwrap())
 
     return result

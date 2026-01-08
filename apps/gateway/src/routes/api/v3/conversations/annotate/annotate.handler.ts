@@ -85,7 +85,7 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
     throw new NotFoundError('Could not find evaluation for this version')
   }
 
-  const { result: annotation } = await annotateEvaluationV2({
+  const annotation = await annotateEvaluationV2({
     span: { ...span, metadata } as SpanWithDetails<SpanType.Prompt>,
     evaluation,
     resultScore: score,

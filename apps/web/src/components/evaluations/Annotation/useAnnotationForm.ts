@@ -6,7 +6,7 @@ import {
   EvaluationResultV2,
   EvaluationV2,
   SpanWithDetails,
-  SpanType,
+  MainSpanType,
 } from '@latitude-data/constants'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
@@ -18,8 +18,9 @@ type UseAnnontationFormProps<
   M extends EvaluationMetric<T>,
 > = {
   evaluation: EvaluationV2<T, M>
-  span: SpanWithDetails<SpanType.Prompt>
+  span: SpanWithDetails<MainSpanType>
   onAnnotate?: (result: EvaluationResultV2<T, M>) => void
+  result?: EvaluationResultV2<T, M>
 }
 
 export type OnSubmitProps<
@@ -33,7 +34,7 @@ export type OnSubmitProps<
 export function useAnnotationForm<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
->({ evaluation, span, onAnnotate }: UseAnnontationFormProps<T, M>) {
+>({ evaluation, span, onAnnotate, result }: UseAnnontationFormProps<T, M>) {
   const [isSubmitting, startTransition] = useTransition()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -60,21 +61,22 @@ export function useAnnotationForm<
       if (isAnnotatingEvaluation) return
 
       startTransition(async () => {
-        const [result, errors] = await annotateEvaluation({
+        const [updatedResult, errors] = await annotateEvaluation({
           documentUuid: span.documentUuid!,
           evaluationUuid: evaluation.uuid,
           spanId: span.id,
           traceId: span.traceId,
           resultScore: score,
           resultMetadata,
+          resultUuid: result?.uuid,
         })
 
         if (errors) return
 
         mutate()
 
-        if (result && onAnnotate) {
-          onAnnotate(result as unknown as EvaluationResultV2<T, M>)
+        if (updatedResult && onAnnotate) {
+          onAnnotate(updatedResult as unknown as EvaluationResultV2<T, M>)
         }
       })
     },
@@ -85,6 +87,7 @@ export function useAnnotationForm<
       span,
       mutate,
       onAnnotate,
+      result?.uuid,
     ],
   )
 

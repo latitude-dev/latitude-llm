@@ -198,7 +198,7 @@ describe('annotateEvaluationV2', () => {
     )
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
       resultScore: 4,
       resultMetadata: {
         reason: 'reason',
@@ -240,7 +240,7 @@ describe('annotateEvaluationV2', () => {
     )
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
       resultScore: 4,
       resultMetadata: {
         reason: 'reason',
@@ -302,7 +302,7 @@ describe('annotateEvaluationV2', () => {
     )
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
       resultScore: 4,
       resultMetadata: {
         reason: 'reason',
@@ -359,7 +359,7 @@ describe('annotateEvaluationV2', () => {
   it('succeeds when annotated result metadata is invalid', async () => {
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
       resultScore: 4,
       resultMetadata: {
         // @ts-expect-error testing this
@@ -424,7 +424,7 @@ describe('annotateEvaluationV2', () => {
     )
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
       resultScore: 4,
       resultMetadata: {
         reason: 'reason',
@@ -491,7 +491,7 @@ describe('annotateEvaluationV2', () => {
     })
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
       resultScore: 4,
       resultMetadata: {
         reason: 'reason',
@@ -549,7 +549,7 @@ describe('annotateEvaluationV2', () => {
     evaluation.configuration.actualOutput = undefined as any
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
       resultScore: 4,
       resultMetadata: {
         reason: 'reason',
@@ -607,7 +607,7 @@ describe('annotateEvaluationV2', () => {
   it('succeeds when annotating a log with a score in range', async () => {
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
       resultScore: 4,
       resultMetadata: {
         reason: 'reason',
@@ -666,7 +666,7 @@ describe('annotateEvaluationV2', () => {
   it('succeeds when annotating a log with a score out of range', async () => {
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
       resultScore: -8,
       evaluation: evaluation,
       span,
@@ -720,7 +720,7 @@ describe('annotateEvaluationV2', () => {
   })
 
   it('succeeds when annotating a log already annotated', async () => {
-    const { result: originalResult } = await annotateEvaluationV2({
+    const originalResult = await annotateEvaluationV2({
       resultScore: 4,
       resultMetadata: {
         reason: 'reason',
@@ -732,7 +732,8 @@ describe('annotateEvaluationV2', () => {
     }).then((r) => r.unwrap())
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
+      resultUuid: originalResult.uuid,
       resultScore: 2,
       evaluation: evaluation,
       span: span,
@@ -781,7 +782,7 @@ describe('annotateEvaluationV2', () => {
   })
 
   it('sends analytics event with userEmail null when updating existing annotation with same score but different reason', async () => {
-    const { result: originalResult } = await annotateEvaluationV2({
+    const originalResult = await annotateEvaluationV2({
       resultScore: 4,
       resultMetadata: {
         reason: 'original reason',
@@ -793,7 +794,8 @@ describe('annotateEvaluationV2', () => {
     }).then((r) => r.unwrap())
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
+      resultUuid: originalResult.uuid,
       resultScore: 4, // Same score
       resultMetadata: {
         reason: 'updated reason', // Different reason
@@ -847,7 +849,7 @@ describe('annotateEvaluationV2', () => {
   })
 
   it('sends analytics event when updating existing annotation with different score', async () => {
-    const { result: originalResult } = await annotateEvaluationV2({
+    const originalResult = await annotateEvaluationV2({
       resultScore: 4,
       resultMetadata: {
         reason: 'original reason',
@@ -859,7 +861,8 @@ describe('annotateEvaluationV2', () => {
     }).then((r) => r.unwrap())
     mocks.publisher.mockClear()
 
-    const { result } = await annotateEvaluationV2({
+    const result = await annotateEvaluationV2({
+      resultUuid: originalResult.uuid,
       resultScore: 5, // Different score
       resultMetadata: {
         reason: 'updated reason',

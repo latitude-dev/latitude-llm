@@ -10,6 +10,7 @@ type SelectionState = {
   documentLogUuid: string | null
   spanId: string | null
   activeRunUuid: string | null
+  expandedDocumentLogUuid: string | null
 }
 
 type RowType = 'trace' | 'activeRun'
@@ -29,7 +30,12 @@ type TraceSpanSelectionContextType = {
 
 export const TraceSpanSelectionContext =
   createContext<TraceSpanSelectionContextType>({
-    selection: { documentLogUuid: null, spanId: null, activeRunUuid: null },
+    selection: {
+      documentLogUuid: null,
+      spanId: null,
+      activeRunUuid: null,
+      expandedDocumentLogUuid: null,
+    },
     onClickTraceRow:
       <T extends RowType>(_args: OnClickTraceRowParams<T>) =>
       () => {},
@@ -45,6 +51,7 @@ function initialSelectionState({
   const directDocumentLogUuid = params.get('documentLogUuid')
   const directSpanId = params.get('spanId')
   const directActiveRunUuid = params.get('activeRunUuid')
+  const directExpandedDocumentLogUuid = params.get('expandedDocumentLogUuid')
   let initialDocumentLogUuid = directDocumentLogUuid
   let initialSpanId = directSpanId
 
@@ -61,6 +68,7 @@ function initialSelectionState({
     documentLogUuid: initialDocumentLogUuid,
     spanId: initialSpanId,
     activeRunUuid: directActiveRunUuid,
+    expandedDocumentLogUuid: directExpandedDocumentLogUuid,
   }
 }
 
@@ -75,11 +83,17 @@ export function TraceSpanSelectionProvider({
     initialSelectionState({ params }),
   )
   const clearSelection = useCallback(() => {
-    setSelection({ documentLogUuid: null, spanId: null, activeRunUuid: null })
+    setSelection({
+      documentLogUuid: null,
+      spanId: null,
+      activeRunUuid: null,
+      expandedDocumentLogUuid: null,
+    })
     const newParams = new URLSearchParams(params.toString())
     newParams.delete('documentLogUuid')
     newParams.delete('spanId')
     newParams.delete('activeRunUuid')
+    newParams.delete('expandedDocumentLogUuid')
     router.replace(`?${newParams.toString()}`)
   }, [params, router])
 
@@ -102,6 +116,7 @@ export function TraceSpanSelectionProvider({
             documentLogUuid: data.documentLogUuid,
             spanId: data.spanId,
             activeRunUuid: null,
+            expandedDocumentLogUuid: selection.expandedDocumentLogUuid,
           })
         } else if (type === 'activeRun') {
           const isSelected = data.runUuid === selection.activeRunUuid
@@ -116,6 +131,7 @@ export function TraceSpanSelectionProvider({
             documentLogUuid: null,
             spanId: null,
             activeRunUuid: data.runUuid,
+            expandedDocumentLogUuid: null,
           })
         }
         router.replace(`?${newParams.toString()}`, { scroll: false })
@@ -131,9 +147,29 @@ export function TraceSpanSelectionProvider({
       const documentLogUuid = span.documentLogUuid ?? selection.documentLogUuid
       if (!documentLogUuid) return
 
+      const newParams = new URLSearchParams(params.toString())
+      const isSubagentSpan =
+        span.documentLogUuid &&
+        span.documentLogUuid !== selection.documentLogUuid
+
+      // For subagent spans, keep the parent trace expanded while selecting the subagent span
+      if (isSubagentSpan) {
+        newParams.set('documentLogUuid', documentLogUuid)
+        newParams.set('spanId', spanId)
+        if (selection.documentLogUuid) newParams.set('expandedDocumentLogUuid', selection.documentLogUuid) // prettier-ignore
+        setSelection({
+          documentLogUuid,
+          spanId,
+          activeRunUuid: null,
+          expandedDocumentLogUuid: selection.documentLogUuid,
+        })
+        router.replace(`?${newParams.toString()}`, { scroll: false })
+        return
+      }
+
       onClickTraceRow({ type: 'trace', data: { documentLogUuid, spanId } })()
     },
-    [selection, onClickTraceRow],
+    [selection, params, router, onClickTraceRow],
   )
 
   return (

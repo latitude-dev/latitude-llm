@@ -63,10 +63,10 @@ export async function getSpansWithoutIssues(
     ? sql`(${spans.startedAt}, ${spans.id}) < (${cursor.value}, ${cursor.id})`
     : undefined
 
-  // Note: Duplicates in this subquery are okay - the LEFT JOIN + IS NULL pattern
-  // filters out all matched rows regardless of count, and avoiding DISTINCT saves cost.
+  // Deduplicate spans with active issues since there can be multiple evaluation results
+  // per span after removing the unique constraints on evaluationResultsV2
   const spansWithActiveIssues = db
-    .select({
+    .selectDistinct({
       spanId: evaluationResultsV2.evaluatedSpanId,
       traceId: evaluationResultsV2.evaluatedTraceId,
     })

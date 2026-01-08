@@ -1,6 +1,5 @@
 import {
   EvaluationMetric,
-  EvaluationResultSuccessValue,
   EvaluationType,
   ISSUE_JOBS_GENERATE_DETAILS_THROTTLE,
   ISSUE_JOBS_MAX_ATTEMPTS,
@@ -20,7 +19,6 @@ import {
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
-import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import { deleteIssue } from '../delete'
 import { decrementIssueHistogram } from '../histograms/decrement'
 import { embedReason, updateCentroid } from '../shared'
@@ -28,6 +26,7 @@ import { updateIssue } from '../update'
 import { canUpdateCentroid } from './canUpdateCentroid'
 import { validateResultForIssue } from './validate'
 import { removeIssueEvaluationResult } from '../../issueEvaluationResults/remove'
+import { getOrSetEnrichedReason } from './getOrSetEnrichedReason'
 
 export async function removeResultFromIssue<
   T extends EvaluationType,
@@ -67,10 +66,9 @@ export async function removeResultFromIssue<
   const commit = getting.value
 
   if (!embedding) {
-    const specification = getEvaluationMetricSpecification(evaluation)
-    const reason = specification.resultReason(
-      result as EvaluationResultSuccessValue<T, M>,
-    )!
+    const reasoning = await getOrSetEnrichedReason({ result, evaluation })
+    if (!Result.isOk(reasoning)) return reasoning
+    const reason = reasoning.value
 
     const embedying = await embedReason(reason)
     if (embedying.error) {

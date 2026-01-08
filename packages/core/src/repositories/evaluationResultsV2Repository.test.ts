@@ -669,6 +669,303 @@ describe('EvaluationResultsV2Repository', () => {
       expect(results.length).toBe(1)
       expect(results[0]?.id).toBe(result.id)
     })
+
+    it('deduplicates multiple evaluation results for the same span', async () => {
+      const { commit, documents } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          prompt: factories.helpers.createPrompt({ provider: 'openai' }),
+        },
+      })
+
+      const document = documents[0]!
+
+      // Create HITL evaluation
+      const hitlEvaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+        type: 'human' as any,
+        metric: 'binary' as any,
+      })
+
+      // Create dummy issue to exclude
+      const { issue: dummyIssue } = await factories.createIssue({
+        workspace,
+        project: { id: commit.projectId } as any,
+        document,
+      })
+
+      // Create a single span
+      const span = await factories.createSpan({
+        workspaceId: workspace.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+      })
+
+      // Create multiple evaluation results for the same span
+      // This simulates the scenario after removing unique constraints
+      await factories.createEvaluationResultV2({
+        workspace,
+        evaluation: hitlEvaluation,
+        commit,
+        span,
+        hasPassed: true,
+      })
+
+      await factories.createEvaluationResultV2({
+        workspace,
+        evaluation: hitlEvaluation,
+        commit,
+        span,
+        hasPassed: false,
+      })
+
+      // Both results exist in the database but should only return 1
+      const { results } = await repository.fetchPaginatedHITLResultsByDocument({
+        workspace,
+        commit,
+        documentUuid: document.documentUuid,
+        excludeIssueId: dummyIssue.id,
+        page: 1,
+        pageSize: 10,
+      })
+
+      // Should return exactly 1 result, not 2
+      expect(results.length).toBe(1)
+      // Should return the first one created (due to ordering)
+      expect(results[0]?.evaluatedSpanId).toBe(span.id)
+      expect(results[0]?.evaluatedTraceId).toBe(span.traceId)
+    })
+
+    it('respects pageSize with deduplication', async () => {
+      const { commit, documents } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          prompt: factories.helpers.createPrompt({ provider: 'openai' }),
+        },
+      })
+
+      const document = documents[0]!
+
+      // Create HITL evaluation
+      const hitlEvaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+        type: 'human' as any,
+        metric: 'binary' as any,
+      })
+
+      // Create dummy issue to exclude
+      const { issue: dummyIssue } = await factories.createIssue({
+        workspace,
+        project: { id: commit.projectId } as any,
+        document,
+      })
+
+      // Create 2 spans
+      const spans = await Promise.all(
+        Array.from({ length: 2 }, () =>
+          factories.createSpan({
+            workspaceId: workspace.id,
+            commitUuid: commit.uuid,
+            documentUuid: document.documentUuid,
+          }),
+        ),
+      )
+
+      // For each span, create 2 evaluation results (simulating duplicates)
+      for (const span of spans) {
+        await factories.createEvaluationResultV2({
+          workspace,
+          evaluation: hitlEvaluation,
+          commit,
+          span,
+        })
+        await factories.createEvaluationResultV2({
+          workspace,
+          evaluation: hitlEvaluation,
+          commit,
+          span,
+        })
+      }
+
+      // Request page with size 2, should get exactly 2 unique spans (deduped from 4 results)
+      const { results, hasNextPage } =
+        await repository.fetchPaginatedHITLResultsByDocument({
+          workspace,
+          commit,
+          documentUuid: document.documentUuid,
+          excludeIssueId: dummyIssue.id,
+          page: 1,
+          pageSize: 2,
+        })
+
+      // Should have exactly 2 results (deduped from 4 results in DB)
+      expect(results.length).toBe(2)
+      expect(hasNextPage).toBe(false)
+      // Verify they are different spans
+      expect(results[0]?.evaluatedSpanId).not.toBe(results[1]?.evaluatedSpanId)
+    })
+  })
+
+  describe('fetchPaginatedHITLResultsByIssue > deduplication', () => {
+    it('deduplicates multiple evaluation results for the same span', async () => {
+      const { commit, documents } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          prompt: factories.helpers.createPrompt({ provider: 'openai' }),
+        },
+      })
+
+      const document = documents[0]!
+      const { issue } = await factories.createIssue({
+        workspace,
+        project: { id: commit.projectId } as any,
+        document,
+      })
+
+      // Create HITL evaluation
+      const hitlEvaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+        type: 'human' as any,
+        metric: 'binary' as any,
+      })
+
+      // Create a single span
+      const span = await factories.createSpan({
+        workspaceId: workspace.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+      })
+
+      // Create multiple evaluation results for the same span
+      const result1 = await factories.createEvaluationResultV2({
+        workspace,
+        evaluation: hitlEvaluation,
+        commit,
+        span,
+        hasPassed: true,
+      })
+
+      const result2 = await factories.createEvaluationResultV2({
+        workspace,
+        evaluation: hitlEvaluation,
+        commit,
+        span,
+        hasPassed: false,
+      })
+
+      // Link both to issue (simulating duplicate evaluation results per span)
+      await factories.createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: result1,
+      })
+      await factories.createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: result2,
+      })
+
+      // Fetch results - should only return 1 despite having 2 evaluation results
+      const { results } = await repository.fetchPaginatedHITLResultsByIssue({
+        workspace,
+        commit,
+        issue,
+        page: 1,
+        pageSize: 10,
+      })
+
+      expect(results.length).toBe(1)
+      expect(results[0]?.evaluatedSpanId).toBe(span.id)
+      expect(results[0]?.evaluatedTraceId).toBe(span.traceId)
+    })
+
+    it('respects pageSize with deduplication', async () => {
+      const { commit, documents } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          prompt: factories.helpers.createPrompt({ provider: 'openai' }),
+        },
+      })
+
+      const document = documents[0]!
+      const { issue } = await factories.createIssue({
+        workspace,
+        project: { id: commit.projectId } as any,
+        document,
+      })
+
+      // Create HITL evaluation
+      const hitlEvaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+        type: 'human' as any,
+        metric: 'binary' as any,
+      })
+
+      // Create 2 spans
+      const spans = await Promise.all(
+        Array.from({ length: 2 }, () =>
+          factories.createSpan({
+            workspaceId: workspace.id,
+            commitUuid: commit.uuid,
+            documentUuid: document.documentUuid,
+          }),
+        ),
+      )
+
+      // For each span, create 2 evaluation results and link them to issue
+      for (const span of spans) {
+        const result1 = await factories.createEvaluationResultV2({
+          workspace,
+          evaluation: hitlEvaluation,
+          commit,
+          span,
+        })
+        const result2 = await factories.createEvaluationResultV2({
+          workspace,
+          evaluation: hitlEvaluation,
+          commit,
+          span,
+        })
+
+        await factories.createIssueEvaluationResult({
+          workspace,
+          issue,
+          evaluationResult: result1,
+        })
+        await factories.createIssueEvaluationResult({
+          workspace,
+          issue,
+          evaluationResult: result2,
+        })
+      }
+
+      // Request page with size 2, should get exactly 2 unique spans (deduped from 4 results)
+      const { results, hasNextPage } =
+        await repository.fetchPaginatedHITLResultsByIssue({
+          workspace,
+          commit,
+          issue,
+          page: 1,
+          pageSize: 2,
+        })
+
+      expect(results.length).toBe(2)
+      expect(hasNextPage).toBe(false)
+      // Verify they are different spans
+      expect(results[0]?.evaluatedSpanId).not.toBe(results[1]?.evaluatedSpanId)
+    })
   })
 
   describe('selectForIssueGeneration', () => {

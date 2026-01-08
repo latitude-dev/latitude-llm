@@ -14,4 +14,5 @@ export type MessageProps = {
   toolContentMap?: Record<string, ToolContent>
   isGeneratingToolCall?: boolean
   additionalAssistantMessage?: boolean
+  messageIndex?: number
 }

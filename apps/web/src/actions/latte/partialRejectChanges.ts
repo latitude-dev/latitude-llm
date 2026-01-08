@@ -28,7 +28,7 @@ export const partialRejectLatteChangesAction = authProcedure
       accepted: false, // Mark as rejected since we're rejecting specific changes
     })
 
-    const evaluationUuid = result.value?.result.uuid
+    const evaluationUuid = result.value?.uuid
 
     return { evaluationUuid, checkpoints }
   })

@@ -122,10 +122,14 @@ export function ClientToolCard({
   toolRequest,
   toolResponse,
   status,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
   status: 'pending' | 'success' | 'error'
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   const [_isOpen, setIsOpen] = useState(false)
   const isOpen = useMemo(
@@ -134,7 +138,10 @@ export function ClientToolCard({
   )
 
   return (
-    <ToolCardWrapper>
+    <ToolCardWrapper
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
+    >
       <ToolCardHeader
         icon={<ToolCardIcon status={status} name='wrench' />}
         label={<ToolCardText>{toolRequest.toolName}</ToolCardText>}

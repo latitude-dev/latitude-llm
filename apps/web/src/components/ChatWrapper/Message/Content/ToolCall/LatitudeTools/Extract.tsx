@@ -87,16 +87,23 @@ export function WebExtractLatitudeToolCard({
   toolRequest,
   toolResponse,
   status,
+  messageIndex,
+  contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
   status: 'pending' | 'success' | 'error'
+  messageIndex?: number
+  contentBlockIndex?: number
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const args = toolRequest.args as ExtractToolArgs
 
   return (
-    <ToolCardWrapper>
+    <ToolCardWrapper
+      messageIndex={messageIndex}
+      contentBlockIndex={contentBlockIndex}
+    >
       <ToolCardHeader
         icon={<ToolCardIcon status={status} name='globe' />}
         label={<ToolCardText color='foregroundMuted'>{args.url}</ToolCardText>}

@@ -186,7 +186,7 @@ export function IssuesSelector({
           ? 'Save the annotation first to assign an issue'
           : isMergedIssue
             ? 'This span belongs to a merged issue. The assigned issue cannot be changed.'
-            : 'Discovery could take a few minutes...'
+            : 'Discovery can take a few minutes'
       }
       onChange={onChange}
       onSearch={onSearch}

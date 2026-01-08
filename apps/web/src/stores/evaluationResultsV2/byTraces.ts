@@ -41,7 +41,6 @@ export default function useEvaluationResultsV2ByTraces(
   }, [traceIds, project.id, commit.uuid, document?.documentUuid])
 
   const fetcher = useFetcher<EvaluationResultV2[]>(`${route}?${query}`)
-
   const { data = [], ...rest } = useSWR<EvaluationResultV2[]>(
     disabled
       ? null

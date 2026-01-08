@@ -5,7 +5,6 @@ import { database } from '../../client'
 import {
   CLOUD_MESSAGES,
   EvaluationMetric,
-  EvaluationResultSuccessValue,
   EvaluationType,
   ISSUE_DISCOVERY_MAX_CANDIDATES,
   ISSUE_DISCOVERY_MIN_KEYWORDS,
@@ -27,9 +26,9 @@ import {
   getIssuesCollection,
   ISSUES_COLLECTION_TENANT_NAME,
 } from '../../weaviate'
-import { getEvaluationMetricSpecification } from '../evaluationsV2/specifications'
 import { validateResultForIssue } from './results/validate'
 import { embedReason, normalizeEmbedding } from './shared'
+import { getOrSetEnrichedReason } from './results/getOrSetEnrichedReason'
 
 /**
  * Discovers potential issues by analyzing evaluation results and searching for similar issues.
@@ -78,15 +77,12 @@ export async function discoverIssue<
     return Result.error(validating.error)
   }
 
-  const specification = getEvaluationMetricSpecification(evaluation)
-  const reason = specification.resultReason(
-    result as EvaluationResultSuccessValue<T, M>,
-  )!
+  const reasoning = await getOrSetEnrichedReason({ result, evaluation })
+  if (reasoning.error) return Result.error(reasoning.error)
+  const reason = reasoning.value
 
   const embedying = await embedReason(reason)
-  if (embedying.error) {
-    return Result.error(embedying.error)
-  }
+  if (embedying.error) return Result.error(embedying.error)
   let embedding = embedying.value
   if (!embedding) return Result.ok({ embedding: [] })
 

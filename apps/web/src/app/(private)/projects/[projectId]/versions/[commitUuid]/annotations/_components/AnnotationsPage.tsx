@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ROUTES } from '$/services/routes'
@@ -17,8 +17,8 @@ import {
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useDebounce } from 'use-debounce'
-import { RunPanel } from './RunPanel'
-import { RunsList } from './RunsList'
+import { AnnotationsPanel } from './AnnotationPanel'
+import { AnnotationsList } from './AnnotationsList'
 import {
   AppLocalStorage,
   useLocalStorage,
@@ -27,7 +27,7 @@ import { useSearchParams } from 'next/navigation'
 import { mapSourceGroupToLogSources } from '@latitude-data/core/services/runs/mapSourceGroupToLogSources'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 
-export function RunsPage({
+export function AnnotationsPage({
   issuesEnabled,
   initialSpans,
   defaultSourceGroup,
@@ -127,6 +127,9 @@ export function RunsPage({
     () => spans.find((span) => span.id === selectedSpanId),
     [spans, selectedSpanId],
   )
+  const onAnnotate = useCallback(() => {
+    mutateAnnotations()
+  }, [mutateAnnotations])
 
   return (
     <div className='w-full h-full flex items-center justify-center'>
@@ -135,30 +138,30 @@ export function RunsPage({
         initialPercentage={50}
         minSize={400}
         firstPane={
-          <RunsList
-            issuesEnabled={issuesEnabled}
-            sourceGroup={debouncedSourceGroup}
-            setSourceGroup={setSourceGroup}
-            realtimeIsEnabled={realtimeIsEnabled}
-            toggleRealtime={setRealtimeIsEnabled}
-            spans={spans}
+          <AnnotationsList
             annotations={hitlAnnotations}
             goToNextPage={goToNextPage}
             goToPrevPage={goToPrevPage}
             hasNext={hasNext}
             hasPrev={hasPrev}
-            totalCount={totalSpansCount}
             isLoading={isSpansLoading}
+            issuesEnabled={issuesEnabled}
+            realtimeIsEnabled={realtimeIsEnabled}
             selectedSpanId={selectedSpanId}
             setSelectedSpanId={setSelectedSpanId}
+            setSourceGroup={setSourceGroup}
+            sourceGroup={debouncedSourceGroup}
+            spans={spans}
+            toggleRealtime={setRealtimeIsEnabled}
+            totalCount={totalSpansCount}
           />
         }
         secondPane={
           selectedSpan ? (
-            <RunPanel
+            <AnnotationsPanel
               key={selectedSpan.id}
               span={selectedSpan as SpanWithDetails<SpanType.Prompt>}
-              onAnnotate={() => mutateAnnotations()}
+              onAnnotate={onAnnotate}
             />
           ) : (
             <div className='w-full h-full flex flex-col gap-6 p-6 overflow-hidden relative'>

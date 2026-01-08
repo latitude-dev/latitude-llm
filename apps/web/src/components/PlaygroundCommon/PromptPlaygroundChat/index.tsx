@@ -3,13 +3,6 @@ import { ErrorMessage, MessageList } from '$/components/ChatWrapper'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
-import { SpanType, SpanWithDetails } from '@latitude-data/constants'
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { Project } from '@latitude-data/core/schema/models/types/Project'
-import { useAnnotationBySpan } from '$/hooks/useAnnotationsBySpan'
 import Actions, { ActionsState } from './Actions'
 
 export default function PromptPlaygroundChat({
@@ -37,7 +30,6 @@ export default function PromptPlaygroundChat({
 
       <Messages
         messages={playground.messages}
-        annotationData={playground.annotationData}
         error={playground.error}
         parameterKeys={parameterKeys}
         debugMode={debugMode ?? false}
@@ -58,21 +50,17 @@ function Header({ debugMode, setDebugMode }: ActionsState) {
 
 const Messages = memo(function Messages({
   messages,
-  annotationData,
   error,
   parameterKeys,
   debugMode,
   toolContentMap,
 }: {
   messages: ReturnType<typeof usePlaygroundChat>['messages']
-  annotationData: ReturnType<typeof usePlaygroundChat>['annotationData']
   error: ReturnType<typeof usePlaygroundChat>['error']
   parameterKeys: string[]
   debugMode: boolean
   toolContentMap: ReturnType<typeof useToolContentMap>
 }) {
-  const { commit } = useCurrentCommit()
-  const { project } = useCurrentProject()
   return (
     <div className='flex flex-col gap-3 flex-grow flex-shrink min-h-0'>
       <MessageList
@@ -83,44 +71,6 @@ const Messages = memo(function Messages({
       />
 
       {error && <ErrorMessage error={error} />}
-
-      {annotationData.isReady ? (
-        <AnnotationSpanForm
-          project={project}
-          commit={commit}
-          span={annotationData.span}
-        />
-      ) : null}
     </div>
   )
 })
-
-function AnnotationSpanForm({
-  project,
-  commit,
-  span,
-}: {
-  project: Project
-  commit: Commit
-  span: SpanWithDetails<SpanType.Prompt>
-}) {
-  const uiAnnotations = useAnnotationBySpan({
-    project,
-    commit,
-    span,
-  })
-
-  const manualAnnotation = uiAnnotations.annotations.bottom
-
-  if (!manualAnnotation || uiAnnotations.isLoading) return null
-
-  return (
-    <div className='w-full border-t flex flex-col gap-y-4 mt-4 p-4'>
-      <AnnotationForm
-        span={span}
-        evaluation={manualAnnotation.evaluation}
-        result={manualAnnotation.result}
-      />
-    </div>
-  )
-}

@@ -6,12 +6,37 @@ import {
   baseEvaluationResultMetadata,
 } from './shared'
 
+const selectedContextSchema = z.object({
+  messageIndex: z.number().int().nonnegative(),
+  contentBlockIndex: z.number().int().nonnegative(),
+  contentType: z.enum([
+    'text',
+    'reasoning',
+    'image',
+    'file',
+    'tool-call',
+    'tool-result',
+  ]),
+  textRange: z
+    .object({
+      start: z.number().int().nonnegative(),
+      end: z.number().int().nonnegative(),
+    })
+    .optional(),
+  selectedText: z.string().optional(),
+  toolCallId: z.string().optional(),
+})
+
+export type SelectedContext = z.infer<typeof selectedContextSchema>
+
 const humanEvaluationConfiguration = baseEvaluationConfiguration.extend({
   enableControls: z.boolean().optional(), // UI annotation controls
   criteria: z.string().optional(),
 })
 const humanEvaluationResultMetadata = baseEvaluationResultMetadata.extend({
   reason: z.string().optional(),
+  enrichedReason: z.string().optional(),
+  selectedContexts: z.array(selectedContextSchema).optional(),
 })
 const humanEvaluationResultError = baseEvaluationResultError.extend({})
 
@@ -38,9 +63,7 @@ export const HumanEvaluationBinarySpecification = {
       EvaluationType.Human,
       HumanEvaluationMetric.Binary
     >,
-  ) => {
-    return result.metadata.reason
-  },
+  ) => result.metadata.reason,
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
@@ -83,9 +106,7 @@ export const HumanEvaluationRatingSpecification = {
       EvaluationType.Human,
       HumanEvaluationMetric.Rating
     >,
-  ) => {
-    return result.metadata.reason
-  },
+  ) => result.metadata.reason,
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
