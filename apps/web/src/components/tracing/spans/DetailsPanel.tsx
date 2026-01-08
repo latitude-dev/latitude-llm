@@ -79,7 +79,8 @@ function StatusBadge({
 
 export function DetailsPanel<T extends SpanType>({
   span,
-}: DetailsPanelProps<T>) {
+  hideMetadataWarning = false,
+}: DetailsPanelProps<T> & { hideMetadataWarning?: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const specification = SPAN_SPECIFICATIONS[span.type]
@@ -141,6 +142,7 @@ export function DetailsPanel<T extends SpanType>({
         />
       )}
       {!span.metadata ? (
+        !hideMetadataWarning &&
         span.status !== SpanStatus.Error && (
           <Alert
             variant='warning'

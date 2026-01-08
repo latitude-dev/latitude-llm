@@ -44,6 +44,7 @@ export const ROUTES = {
     },
   },
   onboarding: {
+    root: '/onboarding',
     choice: '/onboarding/choice',
     install: '/onboarding/install',
     promptEngineering: {

@@ -24,6 +24,7 @@ export enum AppLocalStorage {
   onboardingChoice = 'onboardingChoice',
   replayOnboarding = 'replayOnboarding',
   lastRunTab = 'lastRunTab',
+  onboardingState = 'onboardingState',
 }
 
 export const isLocalStorageAvailable = (() => {
