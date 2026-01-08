@@ -9,6 +9,7 @@ import {
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { skipOnboardingAction } from '$/actions/workspaceOnboarding/skip'
+import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
 import {
   useOnboardingState,
   ONBOARDING_STEPS,
@@ -32,7 +33,7 @@ export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documen
   const posthog = usePostHog()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const hasHandledReset = useRef(false)
+  const shouldReset = searchParams.get('reset') === 'true'
   const {
     currentStep,
     currentSlide,
@@ -45,16 +46,13 @@ export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documen
     nextSlide,
     prevSlide,
     setFirstTraceId,
-    resetOnboarding,
-  } = useOnboardingState()
+  } = useOnboardingState(shouldReset)
 
   useEffect(() => {
-    if (searchParams.get('reset') === 'true' && !hasHandledReset.current) {
-      hasHandledReset.current = true
-      resetOnboarding()
+    if (shouldReset) {
       router.replace('/onboarding', { scroll: false })
     }
-  }, [searchParams, resetOnboarding, router])
+  }, [shouldReset, router])
 
   const { setValue: setReplayOnboarding } = useLocalStorage<boolean>({
     key: AppLocalStorage.replayOnboarding,
@@ -63,6 +61,11 @@ export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documen
 
   const { execute: skipOnboarding, isPending: isSkipping } =
     useLatitudeAction(skipOnboardingAction)
+
+  const { execute: completeOnboarding } =
+    useLatitudeAction(completeOnboardingAction)
+
+  const hasCompletedOnboardingRef = useRef(false)
 
   const trackStep = useCallback(
     (step: number, action: 'viewed' | 'completed') => {
@@ -78,6 +81,16 @@ export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documen
   useEffect(() => {
     trackStep(currentStep, 'viewed')
   }, [currentStep, trackStep])
+
+  // Automatically mark onboarding as complete when user reaches the final step
+  // This allows them to click links without being redirected back to onboarding
+  useEffect(() => {
+    if (currentStep === ONBOARDING_STEPS.NEXT_STEPS && !hasCompletedOnboardingRef.current) {
+      hasCompletedOnboardingRef.current = true
+      setReplayOnboarding(false)
+      completeOnboarding()
+    }
+  }, [currentStep, setReplayOnboarding, completeOnboarding])
 
   const handleSkipOnboarding = useCallback(() => {
     try {

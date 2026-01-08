@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   useLocalStorage,
@@ -74,7 +74,7 @@ const DEFAULT_STATE: OnboardingLocalState = {
   firstTraceId: null,
 }
 
-export function useOnboardingState() {
+export function useOnboardingState(shouldReset = false) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -84,12 +84,23 @@ export function useOnboardingState() {
       defaultValue: DEFAULT_STATE,
     })
 
-  const localState = localStateRaw ?? DEFAULT_STATE
+  const localState = shouldReset ? DEFAULT_STATE : (localStateRaw ?? DEFAULT_STATE)
+  const hasResetRef = useRef(false)
+
+  useEffect(() => {
+    if (shouldReset && !hasResetRef.current) {
+      hasResetRef.current = true
+      setLocalState(DEFAULT_STATE)
+    }
+  }, [shouldReset, setLocalState])
 
   const stepFromUrl = searchParams.get('step')
   const slideFromUrl = searchParams.get('slide')
 
   const currentStep = useMemo(() => {
+    if (shouldReset) {
+      return ONBOARDING_STEPS.WHAT_IS_LATITUDE
+    }
     if (stepFromUrl !== null) {
       const parsed = parseInt(stepFromUrl, 10)
       if (!isNaN(parsed) && parsed >= 0 && parsed <= 6) {
@@ -97,7 +108,7 @@ export function useOnboardingState() {
       }
     }
     return localState.step
-  }, [stepFromUrl, localState.step])
+  }, [shouldReset, stepFromUrl, localState.step])
 
   const currentSlideIndex = useMemo(() => {
     if (slideFromUrl !== null) {
