@@ -578,6 +578,22 @@ async function createDatasets(
     negativesLength += list.length
   }
 
+  if (negativesLength < 2) {
+    return Result.error(
+      new UnprocessableEntityError(
+        'At least two negative examples are required',
+      ),
+    )
+  }
+
+  if (positives.length < 2) {
+    return Result.error(
+      new UnprocessableEntityError(
+        'At least two positive examples are required',
+      ),
+    )
+  }
+
   const halfLimit = Math.floor(
     Math.min(negativesLength, positives.length, OPTIMIZATION_DATASET_ROWS / 2),
   )

@@ -266,6 +266,12 @@ async function splitDataset(
   let rowsRepository = new DatasetRowsRepository(workspace.id)
   const rows = await rowsRepository.getCountByDataset(dataset.id)
 
+  if (rows < 4) {
+    return Result.error(
+      new BadRequestError('At least four dataset rows are required'),
+    )
+  }
+
   const trainrows = Math.floor(rows * OPTIMIZATION_DATASET_SPLIT)
   if (trainrows < 1) {
     return Result.error(
