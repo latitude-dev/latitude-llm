@@ -157,11 +157,12 @@ export function useTextSelection(messages: Message[]) {
       const textNodes: Text[] = []
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
 
-      let node: Node | null
-      while ((node = walker.nextNode())) {
+      let node = walker.nextNode()
+      while (node) {
         if (node.nodeType === Node.TEXT_NODE && node.textContent) {
           textNodes.push(node as Text)
         }
+        node = walker.nextNode()
       }
       return textNodes
     }
@@ -173,16 +174,15 @@ export function useTextSelection(messages: Message[]) {
      * This handles cases where content spans multiple DOM text nodes by accumulating
      * the offset as it traverses through each text node.
      *
-     * When text is split into groups, DOM text nodes might not match the original text
-     * structure exactly. This method tries to find the selected text in the original
-     * fullText and uses that position for more accurate offsets.
+     * When text is split into groups (paragraphs), the DOM structure differs from the original
+     * text because newline characters are removed during rendering. This method builds a
+     * mapping from DOM positions to original text positions to account for this.
      *
      * @param textNodes - Array of all text nodes in the content block, in document order
      * @param startContainer - The DOM node where the selection starts
      * @param endContainer - The DOM node where the selection ends
      * @param range - The browser Selection range containing startOffset and endOffset
      * @param fullText - The original full text content from the content block
-     * @param selectedText - The selected text string
      * @returns Object with textStart and textEnd offsets, or null if invalid
      */
     const calculateTextOffsets = (
@@ -191,61 +191,59 @@ export function useTextSelection(messages: Message[]) {
       endContainer: Node,
       range: Range,
       fullText: string,
-      selectedText: string,
     ): { textStart: number; textEnd: number } | null => {
-      let textStart = -1
-      let textEnd = -1
+      // Build a mapping from DOM position to original text position
+      // The DOM text is the original text with newlines removed, so we need to
+      // map positions by accounting for where newlines occur
+      const domToOriginal: number[] = []
+      let domPos = 0
+
+      for (let origPos = 0; origPos < fullText.length; origPos++) {
+        if (fullText[origPos] === '\n') {
+          // Newline in original text doesn't exist in DOM, skip it
+          continue
+        }
+        // Map this DOM position to the original position
+        domToOriginal[domPos] = origPos
+        domPos++
+      }
+      // Add end position for when selection ends at the very end
+      domToOriginal[domPos] = fullText.length
+
+      // Calculate DOM-based offsets
+      let domStart = -1
+      let domEnd = -1
       let currentOffset = 0
 
       for (const textNode of textNodes) {
         const textLength = textNode.textContent?.length || 0
 
         if (textNode === startContainer) {
-          textStart = currentOffset + range.startOffset
+          domStart = currentOffset + range.startOffset
         }
 
         if (textNode === endContainer) {
-          textEnd = currentOffset + range.endOffset
+          domEnd = currentOffset + range.endOffset
         }
 
         currentOffset += textLength
 
-        if (textStart >= 0 && textEnd >= 0) {
+        if (domStart >= 0 && domEnd >= 0) {
           break
         }
       }
 
-      if (textStart < 0 || textEnd < 0 || textEnd <= textStart) {
+      if (domStart < 0 || domEnd < 0 || domEnd <= domStart) {
         return null
       }
 
-      // When text is split into groups, DOM text nodes might not match
-      // the original text structure exactly. We need to map DOM offsets to original text offsets.
-      // The DOM text should be a subset or transformation of fullText, so we'll try to find
-      // the selected text in the original fullText and use that position.
-      const selectedTextTrimmed = selectedText.trim()
-
-      // Try to find the selected text in the original fullText to get accurate offsets
-      // This handles cases where DOM structure differs from original text (e.g., grouped paragraphs)
-      const selectedTextInFullText = fullText.indexOf(selectedTextTrimmed)
-
-      if (selectedTextInFullText >= 0) {
-        // Found the selected text in the original text - use that position
-        // But we need to verify it's close to the DOM-calculated position to avoid false matches
-        const domCalculatedStart = textStart
-        const difference = Math.abs(selectedTextInFullText - domCalculatedStart)
-
-        // If the difference is reasonable (within 50 chars), use the original text position
-        // This handles cases where DOM structure causes slight offset differences
-        if (difference < 50 || selectedTextInFullText < domCalculatedStart) {
-          textStart = selectedTextInFullText
-          textEnd = selectedTextInFullText + selectedTextTrimmed.length
-        }
-      }
-
-      // Ensure offsets are within the original text bounds
-      textStart = Math.max(0, Math.min(textStart, fullText.length))
-      textEnd = Math.max(textStart + 1, Math.min(textEnd, fullText.length))
+      // Map DOM positions to original text positions
+      const textStart =
+        domStart < domToOriginal.length
+          ? domToOriginal[domStart]!
+          : fullText.length
+      const textEnd =
+        domEnd < domToOriginal.length ? domToOriginal[domEnd]! : fullText.length
 
       return { textStart, textEnd }
     }
@@ -340,7 +338,6 @@ export function useTextSelection(messages: Message[]) {
       endContainer,
       range,
       fullText,
-      selectedText,
     )
 
     if (!offsets) {
@@ -371,6 +368,9 @@ export function useTextSelection(messages: Message[]) {
       x: rect.right,
       y: rect.top,
     })
+
+    // Clear browser selection to avoid visual interference with our selection highlighting
+    window.getSelection()?.removeAllRanges()
   }, [messages, clearSelection, selection])
 
   // Event listeners for handling selection and popover positioning
@@ -464,6 +464,6 @@ export function useTextSelection(messages: Message[]) {
       containerRef,
       clearSelection,
     }),
-    [selection, popoverPosition, containerRef, clearSelection],
+    [selection, popoverPosition, clearSelection],
   )
 }
