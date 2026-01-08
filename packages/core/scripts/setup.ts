@@ -210,7 +210,9 @@ async function main() {
         await updateDocumentUnsafe({
           commit,
           document,
-          content,
+          data: {
+            content,
+          },
         }).then((r) => r.unwrap())
         updated++
         console.log(`  ✓ Updated: ${documentPath}`)

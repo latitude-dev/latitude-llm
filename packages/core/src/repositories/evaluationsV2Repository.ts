@@ -10,7 +10,7 @@ import {
   ne,
   sql,
 } from 'drizzle-orm'
-import { EvaluationType, EvaluationV2 } from '../constants'
+import { EvaluationV2 } from '../constants'
 import { NotFoundError } from '../lib/errors'
 import { Result, TypedResult } from '../lib/Result'
 import { commits } from '../schema/models/commits'
@@ -260,30 +260,5 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
 
     // TODO: This should return a Result<EvaluationV2[]> no?
     return result
-  }
-
-  async getDefaultCompositeTarget({
-    projectId,
-    commitUuid,
-    documentUuid,
-  }: {
-    projectId?: number
-    commitUuid: string
-    documentUuid: string
-  }) {
-    const evaluations = await this.listAtCommitByDocument({
-      projectId: projectId,
-      commitUuid: commitUuid,
-      documentUuid: documentUuid,
-    }).then((r) => r.unwrap())
-
-    const target = evaluations.find(
-      (e) =>
-        e.type === EvaluationType.Composite &&
-        !!(e as EvaluationV2<EvaluationType.Composite>).configuration
-          .defaultTarget,
-    ) as EvaluationV2<EvaluationType.Composite> | undefined
-
-    return Result.ok<EvaluationV2<EvaluationType.Composite> | undefined>(target)
   }
 }

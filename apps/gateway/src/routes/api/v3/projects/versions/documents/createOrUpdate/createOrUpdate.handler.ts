@@ -55,7 +55,9 @@ export const createOrUpdateDocumentHandler: AppRouteHandler<
     document = await updateDocumentUnsafe({
       commit,
       document: existingDoc,
-      content: prompt,
+      data: {
+        content: prompt,
+      },
     }).then((r) => r.unwrap())
   } else {
     // Document doesn't exist, create it using unsafe version

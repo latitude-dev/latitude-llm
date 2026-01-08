@@ -128,7 +128,11 @@ async function validate<M extends CompositeEvaluationMetric>(
     return Result.error(parsing.error)
   }
 
-  const validating = await validateSubEvaluations({ uuid, configuration, evaluations }) // prettier-ignore
+  const validating = await validateSubEvaluations({
+    uuid,
+    configuration,
+    evaluations,
+  })
   if (validating.error) {
     if (validating.error instanceof BadRequestError) {
       return Result.error(
@@ -180,27 +184,6 @@ async function validate<M extends CompositeEvaluationMetric>(
     )
   }
 
-  if (configuration.defaultTarget) {
-    const existing = evaluations.find(
-      (e) =>
-        e.type === EvaluationType.Composite &&
-        (e as EvaluationV2<EvaluationType.Composite>).configuration
-          .defaultTarget,
-    )
-
-    if (existing) {
-      return Result.error(
-        new z.ZodError([
-          {
-            code: 'custom',
-            path: ['defaultTarget'],
-            message: `${existing.name} evaluation is already the default for optimizations and distillations`,
-          },
-        ]),
-      )
-    }
-  }
-
   const validation = await metricSpecification.validate(
     { uuid, configuration, evaluations, ...rest },
     db,
@@ -220,7 +203,6 @@ async function validate<M extends CompositeEvaluationMetric>(
     evaluationUuids: configuration.evaluationUuids,
     minThreshold: configuration.minThreshold,
     maxThreshold: configuration.maxThreshold,
-    defaultTarget: configuration.defaultTarget,
   })
 }
 

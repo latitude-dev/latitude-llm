@@ -816,6 +816,7 @@ describe('changesPresenter', () => {
       documentType: DocumentType.Prompt,
       linkedDataset: {},
       linkedDatasetAndRow: {},
+      mainEvaluationUuid: null,
     }
 
     const result = changesPresenter({
@@ -852,6 +853,7 @@ describe('changesPresenter', () => {
       documentType: DocumentType.Prompt,
       linkedDataset: {},
       linkedDatasetAndRow: {},
+      mainEvaluationUuid: null,
     }
 
     const previousDoc: DocumentVersion = {
@@ -889,6 +891,7 @@ describe('changesPresenter', () => {
       documentType: DocumentType.Prompt,
       linkedDataset: {},
       linkedDatasetAndRow: {},
+      mainEvaluationUuid: null,
     }
 
     const previousDoc: DocumentVersion = {
@@ -924,6 +927,7 @@ describe('changesPresenter', () => {
       documentType: DocumentType.Prompt,
       linkedDataset: {},
       linkedDatasetAndRow: {},
+      mainEvaluationUuid: null,
     }
 
     const previousDoc: DocumentVersion = {
@@ -960,6 +964,7 @@ describe('changesPresenter', () => {
       documentType: DocumentType.Prompt,
       linkedDataset: {},
       linkedDatasetAndRow: {},
+      mainEvaluationUuid: null,
     }
 
     const doc2: DocumentVersion = {
@@ -1015,6 +1020,7 @@ describe('changesPresenter', () => {
       documentType: DocumentType.Prompt,
       linkedDataset: {},
       linkedDatasetAndRow: {},
+      mainEvaluationUuid: null,
     }
 
     const errors = {

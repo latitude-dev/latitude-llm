@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { EvaluationMetric, EvaluationType, EvaluationV2 } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { Result } from '../../lib/Result'
+import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import {
   DocumentVersionsRepository,
@@ -10,7 +10,7 @@ import {
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { syncDefaultCompositeTarget } from './create'
+import { syncDefaultCompositeTarget } from './sync'
 
 export async function deleteEvaluationV2<
   T extends EvaluationType = EvaluationType,
@@ -26,7 +26,7 @@ export async function deleteEvaluationV2<
     workspace: Workspace
   },
   transaction = new Transaction(),
-) {
+): Promise<TypedResult<{ evaluation: EvaluationV2<T, M> }>> {
   return await transaction.call(async (tx) => {
     const repository = new EvaluationsV2Repository(workspace.id, tx)
     const existsAnotherVersion = await repository
@@ -68,7 +68,6 @@ export async function deleteEvaluationV2<
       evaluation.deletedAt = new Date()
     }
 
-    let target = undefined
     if (evaluation.issueId) {
       const documentsRepository = new DocumentVersionsRepository(
         workspace.id,
@@ -83,12 +82,10 @@ export async function deleteEvaluationV2<
 
       // Note: if the deleted evaluation had an issue linked,
       // we treat it as if the issue was being unlinked
-      const syncing = await syncDefaultCompositeTarget(
-        { evaluation, issue: null, document, commit, workspace }, // prettier-ignore
+      await syncDefaultCompositeTarget(
+        { evaluation, issueId: null, document, commit, workspace },
         transaction,
       )
-      // Note: failing silently
-      target = syncing.value
     }
 
     await publisher.publishLater({
@@ -99,6 +96,6 @@ export async function deleteEvaluationV2<
       },
     })
 
-    return Result.ok({ evaluation, target })
+    return Result.ok({ evaluation })
   })
 }

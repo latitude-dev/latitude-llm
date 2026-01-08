@@ -12,9 +12,6 @@ export async function updateActiveEvaluation({
   workspaceId,
   projectId,
   evaluationUuid,
-  evaluationName,
-  targetUuid,
-  targetAction,
   workflowUuid,
   startedAt,
   endedAt,
@@ -25,9 +22,6 @@ export async function updateActiveEvaluation({
   projectId: number
   workflowUuid: string
   evaluationUuid?: string
-  evaluationName?: string
-  targetUuid?: string
-  targetAction?: string
   startedAt?: Date
   endedAt?: Date
   error?: Error
@@ -60,9 +54,6 @@ export async function updateActiveEvaluation({
     const updatedEvaluation: ActiveEvaluation = {
       ...existingEvaluation,
       evaluationUuid: evaluationUuid ?? existingEvaluation.evaluationUuid,
-      evaluationName: evaluationName ?? existingEvaluation.evaluationName,
-      targetUuid: targetUuid ?? existingEvaluation.targetUuid,
-      targetAction: targetAction ?? existingEvaluation.targetAction,
       queuedAt: new Date(existingEvaluation.queuedAt),
       startedAt:
         startedAt ??

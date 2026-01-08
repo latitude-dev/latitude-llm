@@ -30,12 +30,17 @@ async function unassignIssueEvaluationResults({
     .from(evaluationResultsV2)
     .where(eq(evaluationResultsV2.commitId, commit.id))
 
-  await db.delete(issueEvaluationResults).where(
-    and(
-      inArray(issueEvaluationResults.issueId, issueIdsSubquery),
-      inArray(issueEvaluationResults.evaluationResultId, evalResultIdsSubquery),
-    ),
-  )
+  await db
+    .delete(issueEvaluationResults)
+    .where(
+      and(
+        inArray(issueEvaluationResults.issueId, issueIdsSubquery),
+        inArray(
+          issueEvaluationResults.evaluationResultId,
+          evalResultIdsSubquery,
+        ),
+      ),
+    )
 }
 
 async function deleteHistogramsAndUpdateEscalation({
@@ -66,13 +71,15 @@ async function deleteHistogramsAndUpdateEscalation({
 
   const issueIds = affectedIssues.map((i) => i.id)
 
-  await db.delete(issueHistograms).where(
-    and(
-      eq(issueHistograms.workspaceId, workspaceId),
-      eq(issueHistograms.commitId, commit.id),
-      inArray(issueHistograms.issueId, issueIds),
-    ),
-  )
+  await db
+    .delete(issueHistograms)
+    .where(
+      and(
+        eq(issueHistograms.workspaceId, workspaceId),
+        eq(issueHistograms.commitId, commit.id),
+        inArray(issueHistograms.issueId, issueIds),
+      ),
+    )
 
   for (const { id } of affectedIssues) {
     const issue = await issuesRepo.find(id).then((r) => r.unwrap())

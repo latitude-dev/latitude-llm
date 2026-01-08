@@ -100,7 +100,7 @@ export async function generateEvaluationFromIssue(
       return evaluationResult
     }
 
-    const { evaluation, target } = evaluationResult.unwrap()
+    const { evaluation } = evaluationResult.unwrap()
 
     // Adding generated evaluation uuid to the active evaluation
     await updateActiveEvaluation({
@@ -108,9 +108,6 @@ export async function generateEvaluationFromIssue(
       projectId: commit.projectId,
       workflowUuid,
       evaluationUuid: evaluation.uuid,
-      evaluationName: evaluation.name,
-      targetUuid: target?.uuid,
-      targetAction: target?.action,
     })
 
     return await createValidationFlow(
