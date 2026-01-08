@@ -2,20 +2,21 @@ import { Commit } from '../../schema/models/types/Commit'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { Result } from '../../lib/Result'
 import { Issue } from '../../schema/models/types/Issue'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import { EvaluationsV2Repository } from '../../repositories'
 import { getHITLSpansByDocument } from './getHITLSpansByDocument'
-import { getSpanMessagesBySpans } from './getSpanMessagesBySpans'
+import {
+  buildSpanMessagesWithReasons,
+  SpanMessagesWithReason,
+} from '../../services/spans/buildSpanMessagesWithReasons'
 
-/*
-Gets the conversation (span messages) for the same document as the issue but without an issue attached.
-This is used to get positive examples (passed evaluations) to feed the copilot.
-
-We're not getting the reason why the evaluation passed, as the user rarely writes the reason why for good examples (less tokens to add to the prompt).
-
-IMPORTANT:
-- The evaluation results MUST be from HITL evaluation results, as we want to use the user's annotations to calculate the MCC, not from other evaluations results
-- The spans MUST be ordered by the createdAt date in descending order to get the latest spans first for generating the most up-to-date config
-*/
+/**
+ * Gets the conversation (span messages) for the same document as the issue but without an issue attached.
+ * This is used to get positive examples (passed evaluations) to feed the copilot.
+ *
+ * IMPORTANT:
+ * - The evaluation results MUST be from HITL evaluation results, as we want to use the user's annotations to calculate the MCC, not from other evaluations results
+ * - The spans MUST be ordered by the createdAt date in descending order to get the latest spans first for generating the most up-to-date config
+ */
 export async function getSpanMessagesByIssueDocument({
   workspace,
   commit,
@@ -40,14 +41,25 @@ export async function getSpanMessagesByIssueDocument({
     return spansResult
   }
 
-  const { spans } = spansResult.unwrap()
+  const { spans, evaluationResults } = spansResult.unwrap()
 
   if (spans.length === 0) {
-    return Result.ok([] as LegacyMessage[])
+    return Result.ok([] as SpanMessagesWithReason[])
   }
 
-  return await getSpanMessagesBySpans({
+  const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
+  const evaluations = await evaluationsRepository
+    .listAtCommitByDocument({
+      projectId: commit.projectId,
+      commitUuid: commit.uuid,
+      documentUuid: issue.documentUuid,
+    })
+    .then((r) => r.unwrap())
+
+  return buildSpanMessagesWithReasons({
     workspace,
     spans,
+    evaluationResults,
+    evaluations,
   })
 }

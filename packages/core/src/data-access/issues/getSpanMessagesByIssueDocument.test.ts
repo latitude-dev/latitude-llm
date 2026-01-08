@@ -212,13 +212,14 @@ describe('getSpanMessagesByIssueDocument', () => {
     if (!result.ok) return
 
     const data = result.value!
-    expect(data).toHaveLength(2)
-    expect(data[0]!.role).toBe(MessageRole.user)
-    expect(data[0]!.content).toEqual([
+    expect(data).toHaveLength(1)
+    expect(data[0]!.messages).toHaveLength(2)
+    expect(data[0]!.messages[0]!.role).toBe(MessageRole.user)
+    expect(data[0]!.messages[0]!.content).toEqual([
       { type: 'text', text: 'Hello, how are you?' },
     ])
-    expect(data[1]!.role).toBe(MessageRole.assistant)
-    expect(data[1]!.content).toEqual([
+    expect(data[0]!.messages[1]!.role).toBe(MessageRole.assistant)
+    expect(data[0]!.messages[1]!.content).toEqual([
       { type: 'text', text: 'I am doing well, thank you!' },
     ])
   })
@@ -303,7 +304,7 @@ describe('getSpanMessagesByIssueDocument', () => {
     expect(data).toHaveLength(0)
   })
 
-  it('should skip evaluation results when completion span is not found', async () => {
+  it('should return error when completion span is not found', async () => {
     // Create a prompt span without a completion span
     const promptSpan = await createSpan({
       workspaceId: workspace.id,
@@ -322,11 +323,7 @@ describe('getSpanMessagesByIssueDocument', () => {
       issue,
     })
 
-    expect(result.ok).toBe(true)
-    if (!result.ok) return
-
-    const data = result.value!
-    expect(data).toHaveLength(0)
+    expect(result.ok).toBe(false)
   })
 
   it('should return empty array when no passed evaluation results are found', async () => {
@@ -426,11 +423,12 @@ describe('getSpanMessagesByIssueDocument', () => {
     if (!result.ok) return
 
     const data = result.value!
-    expect(data).toHaveLength(4) // 2 input + 2 output
-    expect(data[0]!.role).toBe(MessageRole.user)
-    expect(data[1]!.role).toBe(MessageRole.user)
-    expect(data[2]!.role).toBe(MessageRole.assistant)
-    expect(data[3]!.role).toBe(MessageRole.assistant)
+    expect(data).toHaveLength(1) // 1 conversation
+    expect(data[0]!.messages).toHaveLength(4) // 2 input + 2 output
+    expect(data[0]!.messages[0]!.role).toBe(MessageRole.user)
+    expect(data[0]!.messages[1]!.role).toBe(MessageRole.user)
+    expect(data[0]!.messages[2]!.role).toBe(MessageRole.assistant)
+    expect(data[0]!.messages[3]!.role).toBe(MessageRole.assistant)
   })
 
   it('should limit results to 5 passed evaluation results', async () => {
@@ -795,11 +793,12 @@ describe('getSpanMessagesByIssueDocument', () => {
       if (!result.ok) return
 
       const data = result.value!
-      // Should only have messages from span1 (HITL evaluation)
-      // span1 has 2 messages (user + assistant), so we should get 2 messages
-      expect(data.length).toBe(2)
-      expect(data[0]!.role).toBe('user')
-      expect(data[1]!.role).toBe('assistant')
+      // Should only have 1 conversation from span1 (HITL evaluation)
+      // span1 has 2 messages (user + assistant) in that conversation
+      expect(data.length).toBe(1)
+      expect(data[0]!.messages).toHaveLength(2)
+      expect(data[0]!.messages[0]!.role).toBe('user')
+      expect(data[0]!.messages[1]!.role).toBe('assistant')
       // Should not have messages from span2 (LLM evaluation)
     })
   })
