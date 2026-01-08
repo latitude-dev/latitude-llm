@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useEffect, useState, type CSSProperties } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Confetti } from '@latitude-data/web-ui/atoms/Confetti'
 import { OnboardingLayout } from './OnboardingLayout'
 import { ROUTES } from '$/services/routes'
 
@@ -14,101 +15,6 @@ type Props = {
   documentUuid?: string
   onComplete: () => void
   isCompleting: boolean
-}
-
-const CONFETTI_COLORS = [
-  '#FF6B6B',
-  '#4ECDC4',
-  '#45B7D1',
-  '#96CEB4',
-  '#FFEAA7',
-  '#DDA0DD',
-  '#98D8C8',
-  '#F7DC6F',
-  '#BB8FCE',
-  '#85C1E9',
-]
-
-type Shape = 'rectangle' | 'square' | 'circle'
-
-type ConfettiPiece = {
-  id: number
-  left: number
-  delay: number
-  duration: number
-  color: string
-  size: number
-  shape: Shape
-  drift: number
-  wobble: number
-}
-
-function Confetti() {
-  const [pieces, setPieces] = useState<ConfettiPiece[]>([])
-
-  useEffect(() => {
-    const shapes: Shape[] = ['rectangle', 'square', 'circle']
-    const confettiPieces: ConfettiPiece[] = Array.from({ length: 100 }, (_, i) => ({
-      id: i,
-      left: Math.random() * 100,
-      delay: Math.random() * 1.5,
-      duration: 3 + Math.random() * 3,
-      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)]!,
-      size: 8 + Math.random() * 8,
-      shape: shapes[Math.floor(Math.random() * shapes.length)]!,
-      drift: (Math.random() - 0.5) * 200,
-      wobble: Math.random() * 10,
-    }))
-    setPieces(confettiPieces)
-  }, [])
-
-  const getShapeStyles = (piece: ConfettiPiece): CSSProperties => {
-    const base: CSSProperties = {
-      backgroundColor: piece.color,
-      width: piece.size,
-    }
-
-    switch (piece.shape) {
-      case 'circle':
-        return { ...base, height: piece.size, borderRadius: '50%' }
-      case 'square':
-        return { ...base, height: piece.size, borderRadius: '2px' }
-      case 'rectangle':
-      default:
-        return { ...base, height: piece.size * 0.4, borderRadius: '2px' }
-    }
-  }
-
-  return (
-    <div className='fixed inset-x-0 top-0 h-screen pointer-events-none overflow-hidden z-50'>
-      {pieces.map((piece) => (
-        <div
-          key={piece.id}
-          className='absolute'
-          style={{
-            left: `${piece.left}%`,
-            top: '-20px',
-            ...getShapeStyles(piece),
-            animation: `confetti-fall ${piece.duration}s ease-out ${piece.delay}s forwards`,
-            ['--drift' as string]: `${piece.drift}px`,
-            ['--rotation' as string]: `${360 + Math.random() * 720}deg`,
-          }}
-        />
-      ))}
-      <style jsx>{`
-        @keyframes confetti-fall {
-          0% {
-            transform: translateY(0) translateX(0) rotate(0deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(100vh) translateX(var(--drift)) rotate(var(--rotation));
-            opacity: 0;
-          }
-        }
-      `}</style>
-    </div>
-  )
 }
 
 function LinkCard({
@@ -224,4 +130,3 @@ export function Step7_NextSteps({
     </OnboardingLayout>
   )
 }
-
