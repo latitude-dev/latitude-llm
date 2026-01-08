@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Card } from '@latitude-data/web-ui/atoms/Card'
@@ -89,7 +89,7 @@ export function Step1_ReliabilityLoop({
     }
   }, [slide, displayedSlide.id, slideIndex, prevSlideIndex])
 
-  const getAnimationStyle = (): React.CSSProperties => {
+  const getAnimationStyle = (): CSSProperties => {
     const offset = 24
 
     switch (phase) {

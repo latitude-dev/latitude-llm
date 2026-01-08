@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useEffect, useState } from 'react'
+import { useMemo, useEffect, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -62,8 +62,8 @@ function Confetti() {
     setPieces(confettiPieces)
   }, [])
 
-  const getShapeStyles = (piece: ConfettiPiece): React.CSSProperties => {
-    const base: React.CSSProperties = {
+  const getShapeStyles = (piece: ConfettiPiece): CSSProperties => {
+    const base: CSSProperties = {
       backgroundColor: piece.color,
       width: piece.size,
     }
@@ -125,14 +125,14 @@ function LinkCard({
   return (
     <Link
       href={href}
-      className='flex items-start gap-4 p-4 rounded-lg border border-border bg-background hover:bg-muted/50 transition-colors text-left w-full'
+      className='flex items-center gap-4 p-4 rounded-xl border border-border bg-background hover:bg-muted/50 transition-colors text-left w-full'
     >
-      <div className='p-2 rounded-lg bg-primary/10'>
-        <Icon name={icon} color='primary' />
+      <div className='p-4 rounded-lg bg-primary/10'>
+        <Icon name={icon} color='primary' size='medium' />
       </div>
       <div className='flex flex-col gap-1'>
-        <Text.H5M color='foreground'>{title}</Text.H5M>
-        <Text.H6 color='foregroundMuted'>{description}</Text.H6>
+        <Text.H4M color='foreground'>{title}</Text.H4M>
+        <Text.H5 color='foregroundMuted'>{description}</Text.H5>
       </div>
     </Link>
   )
@@ -193,21 +193,21 @@ export function Step7_NextSteps({
           <LinkCard
             icon='eye'
             title='See all traces your app sends'
-            description='View traces of every model call from your application.'
+            description='View traces of every model call from your application'
             href={tracesRoute}
           />
 
           <LinkCard
             icon='listCheck'
             title='Review and label responses'
-            description='Annotate model outputs to build evaluation datasets.'
+            description='Annotate model outputs to build evaluation datasets'
             href={annotationsRoute}
           />
 
           <LinkCard
             icon='alertCircle'
             title='Find failures and edge cases'
-            description='Discover patterns in problematic responses.'
+            description='Discover patterns in problematic responses'
             href={issuesRoute}
           />
         </div>

@@ -170,6 +170,7 @@ export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documen
         <Step5_WaitingForTrace
           onTraceReceived={handleTraceReceived}
           onBack={handleStep5Back}
+          onSkip={() => goToStep(ONBOARDING_STEPS.NEXT_STEPS)}
         />
       )
 
