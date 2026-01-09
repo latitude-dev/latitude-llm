@@ -26,7 +26,8 @@ export type OptimizerArgs<_E extends OptimizationEngine> = {
     db?: Database,
   ) => Promise<TypedResult<EvaluationResultV2>>
   evaluation: EvaluationV2
-  dataset: Dataset
+  trainset: Dataset
+  valset: Dataset
   optimization: Optimization
   workspace: Workspace
   abortSignal?: AbortSignal

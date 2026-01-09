@@ -68,6 +68,14 @@ export async function executeOptimization(
     )
   }
 
+  if (!optimization.testsetId) {
+    return Result.error(
+      new UnprocessableEntityError(
+        'Cannot execute an optimization without a testset',
+      ),
+    )
+  }
+
   // TODO(AO/OPT): Remove this, just for testing
   await awaitTesting(optimization.configuration?.iterations)
 
@@ -116,11 +124,18 @@ export async function executeOptimization(
   const evaluation = gettingev.value
 
   const datasetsRepository = new DatasetsRepository(workspace.id)
+
   const gettingds = await datasetsRepository.find(optimization.trainsetId)
   if (gettingds.error) {
     return Result.error(gettingds.error)
   }
   const trainset = gettingds.value
+
+  const gettingts = await datasetsRepository.find(optimization.testsetId)
+  if (gettingts.error) {
+    return Result.error(gettingts.error)
+  }
+  const testset = gettingts.value
 
   const optimize = OPTIMIZATION_ENGINES[optimization.engine]
   if (!optimize) {
@@ -131,10 +146,12 @@ export async function executeOptimization(
     )
   }
 
+  // BONUS(AO/OPT): Implement checkpointing saving for fault tolerance
   const optimizing = await optimize({
     evaluate: evaluatePrompt,
     evaluation: evaluation,
-    dataset: trainset,
+    trainset: trainset,
+    valset: testset, // BONUS(AO/OPT): Only use a small subset of the testset
     optimization: optimization,
     workspace: workspace,
     abortSignal: abortSignal,
@@ -227,6 +244,11 @@ async function evaluatePrompt(
   }: OptimizerEvaluateArgs, // TODO(AO/OPT): Implement cancellation
   _ = database,
 ) {
-  // TODO(AO/OPT): Implement (get the reasoning as the Actual Output + Reasoning Specification Method) (Also treat prompt syntax errors as learnable)
+  // TODO(AO/OPT): Implement
+  /*
+  - Get the reasoning as the Actual Output + Reasoning Specification Method
+  - If multiple reasonigs and scores are provider, maybe return all separated for multi-objective optimization
+  - Also treat prompt syntax errors as learnable
+  */
   return Result.ok<EvaluationResultV2>(undefined as any)
 }
