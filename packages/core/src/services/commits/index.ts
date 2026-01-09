@@ -1,5 +1,6 @@
 export * from './create'
 export * from './delete'
+export * from './fork'
 export * from './getChanges'
 export * from './merge'
 export * from './update'

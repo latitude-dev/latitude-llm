@@ -18,7 +18,7 @@ import {
 import { optimizations } from '../../schema/models/optimizations'
 import { Optimization } from '../../schema/models/types/Optimization'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { createCommit } from '../commits/create'
+import { forkCommit } from '../commits/fork'
 import { scanDocumentContent } from '../documents'
 import { updateDocument } from '../documents/update'
 import { OPTIMIZATION_ENGINES, OptimizerEvaluateArgs } from './optimizers'
@@ -160,9 +160,11 @@ export async function executeOptimization(
     async (tx) => {
       const now = new Date()
 
-      const optimizedCommit = await createCommit(
+      const optimizedCommit = await forkCommit(
         {
-          project: project,
+          commit: baselineCommit,
+          workspace,
+          project,
           user: author,
           data: {
             title: `Optimized ${document.path.split('/').pop()} #${optimization.uuid.slice(0, 8)}`,

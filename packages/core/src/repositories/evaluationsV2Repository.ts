@@ -10,6 +10,7 @@ import {
   ne,
   sql,
 } from 'drizzle-orm'
+import { database } from '../client'
 import { EvaluationV2 } from '../constants'
 import { NotFoundError } from '../lib/errors'
 import { Result, TypedResult } from '../lib/Result'
@@ -26,11 +27,28 @@ const tt = {
   versionId: sql<number>`${evaluationVersions.id}::integer`.as('versionId'),
 }
 
+type EvaluationsV2RepositoryOptions = {
+  includeDeleted?: boolean
+}
+
 export class EvaluationsV2Repository extends Repository<EvaluationV2> {
+  private opts: EvaluationsV2RepositoryOptions
+
+  constructor(
+    workspaceId: number,
+    db = database,
+    opts: EvaluationsV2RepositoryOptions = {},
+  ) {
+    super(workspaceId, db)
+    this.opts = opts
+  }
+
   get scopeFilter() {
     return and(
       eq(evaluationVersions.workspaceId, this.workspaceId),
-      isNull(evaluationVersions.deletedAt),
+      this.opts.includeDeleted
+        ? undefined
+        : isNull(evaluationVersions.deletedAt),
     )
   }
 
@@ -113,7 +131,9 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
           ),
       ),
     )
-    evaluations = evaluations.filter((e) => !e.deletedAt)
+    if (!this.opts.includeDeleted) {
+      evaluations = evaluations.filter((e) => !e.deletedAt)
+    }
     evaluations = evaluations.sort((a, b) =>
       differenceInMilliseconds(b.createdAt, a.createdAt),
     )

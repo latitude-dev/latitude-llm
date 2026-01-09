@@ -152,6 +152,7 @@ export async function startValidateOptimization(
 
     const baseline = await createExperiment(
       {
+        workspace,
         name: `Baseline #${optimization.uuid.slice(0, 8)}`,
         commit: baselineCommit,
         document: baselineDocument,
@@ -159,7 +160,6 @@ export async function startValidateOptimization(
         evaluations: [evaluation],
         parametersPopulation: population,
         simulationSettings: simulation,
-        workspace: workspace,
       },
       transaction,
     ).then((r) => r.unwrap())
@@ -205,8 +205,8 @@ export async function startValidateOptimization(
   // Note: this cannot be inside the transaction because the
   // enqueued task may not see the created experiment
   const startingeb = await startExperiment({
+    workspace,
     experimentUuid: experiments.baseline.uuid,
-    workspace: workspace,
   })
   if (startingeb.error) {
     return Result.error(startingeb.error)
