@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   useLocalStorage,
@@ -21,8 +21,12 @@ export default function OnboardingGuard({
     defaultValue: false,
   })
   const [isReady, setIsReady] = useState(false)
+  const hasCheckedRef = useRef(false)
 
   useEffect(() => {
+    if (hasCheckedRef.current) return
+    hasCheckedRef.current = true
+
     if (isOnboardingCompleted && !isReplaying) {
       router.replace(ROUTES.dashboard.root)
     } else {

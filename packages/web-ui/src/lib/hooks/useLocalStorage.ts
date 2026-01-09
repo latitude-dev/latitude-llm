@@ -20,10 +20,9 @@ export enum AppLocalStorage {
   chatDebugMode = 'chatDebugMode',
   latteThread = 'latteThread',
   latteSidebarWidth = 'latteSidebarWidth',
-  promptEngineeringOnboardingState = 'promptEngineeringOnboardingState',
-  onboardingChoice = 'onboardingChoice',
   replayOnboarding = 'replayOnboarding',
   lastRunTab = 'lastRunTab',
+  onboardingState = 'onboardingState',
 }
 
 export const isLocalStorageAvailable = (() => {

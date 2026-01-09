@@ -46,6 +46,9 @@
       "import": "./src/ds/atoms/ClientOnly/index.tsx"
     },
     "./atoms/CodeBlock": "./src/ds/atoms/CodeBlock/index.tsx",
+    "./atoms/Confetti": {
+      "import": "./src/ds/atoms/Confetti/index.tsx"
+    },
     "./atoms/Command": "./src/ds/atoms/Command/index.tsx",
     "./atoms/DataGrid": "./src/ds/atoms/DataGrid/index.tsx",
     "./atoms/Container": "./src/ds/atoms/Container/index.tsx",

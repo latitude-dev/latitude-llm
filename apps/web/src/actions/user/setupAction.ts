@@ -10,9 +10,6 @@ import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access/users'
 import { errorHandlingProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
 import { UserTitle } from '@latitude-data/constants/users'
-import { env } from '@latitude-data/env'
-import { markWorkspaceOnboardingComplete } from '@latitude-data/core/services/workspaceOnboarding/update'
-import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
 
 export const setupAction = errorHandlingProcedure
   .inputSchema(
@@ -56,22 +53,10 @@ export const setupAction = errorHandlingProcedure
       },
     })
 
-    // If there is no returnTo or its NOT a clone action url, redirect to the setup form
+    // If there is no returnTo or its NOT a clone action url, redirect to onboarding
+    // Add reset=true to ensure new users start from the beginning
     if (!parsedInput.returnTo || !isCloneActionUrl(parsedInput.returnTo)) {
-      const isCloud = !!env.LATITUDE_CLOUD
-      if (isCloud) {
-        return frontendRedirect(ROUTES.onboarding.choice)
-      }
-      // If user is self-hosted and they're in the new prompt engineering onboarding, we complete the onboarding and redirect to the dashboard as they cannot generate the dataset with copilot
-      const onboarding = await getWorkspaceOnboarding({
-        workspace,
-      }).then((r) => r.unwrap())
-
-      await markWorkspaceOnboardingComplete({
-        onboarding,
-      }).then((r) => r.unwrap())
-
-      return frontendRedirect(ROUTES.dashboard.root)
+      return frontendRedirect(`${ROUTES.onboarding.root}?reset=true`)
     }
 
     return frontendRedirect(parsedInput.returnTo)

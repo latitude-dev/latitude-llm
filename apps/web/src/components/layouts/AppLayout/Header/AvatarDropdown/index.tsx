@@ -55,6 +55,10 @@ export default function AvatarDropdown({
     key: AppLocalStorage.replayOnboarding,
     defaultValue: false,
   })
+  const { setValue: setOnboardingState } = useLocalStorage({
+    key: AppLocalStorage.onboardingState,
+    defaultValue: null,
+  })
 
   const onClickBackoffice = useCallback(() => {
     router.push(ROUTES.backoffice.root)
@@ -65,9 +69,10 @@ export default function AvatarDropdown({
   }, [router])
 
   const onClickReplayOnboarding = useCallback(() => {
+    setOnboardingState(null)
     setReplayOnboarding(true)
-    router.push(ROUTES.onboarding.choice)
-  }, [setReplayOnboarding, router])
+    router.push(ROUTES.onboarding.root)
+  }, [setOnboardingState, setReplayOnboarding, router])
 
   const onClickLogout = useCallback(async () => {
     await logoutAction()

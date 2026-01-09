@@ -35,7 +35,7 @@ export default async function PrivateLayout({
   const completed = await isOnboardingCompleted()
 
   if (!completed) {
-    redirect(ROUTES.onboarding.choice)
+    redirect(ROUTES.onboarding.root)
   }
 
   const supportIdentity = createSupportUserIdentity(user)

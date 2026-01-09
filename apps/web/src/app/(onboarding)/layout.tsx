@@ -6,6 +6,12 @@ import { ReactNode } from 'react'
 import { WorkspaceProvider } from '../providers/WorkspaceProvider'
 import { isOnboardingCompleted } from '$/data-access'
 import OnboardingGuard from './_lib/OnboardingGuard'
+import {
+  LatitudeWebsocketsProvider,
+  SocketIOProvider,
+} from '$/components/Providers/WebsocketsProvider'
+import { SessionProvider } from '$/components/Providers/SessionProvider'
+import { env } from '@latitude-data/env'
 
 export default async function OnboardingLayout({
   children,
@@ -22,11 +28,24 @@ export default async function OnboardingLayout({
         workspace={workspace}
         subscription={subscriptionPlan}
       >
-        <WorkspaceProvider workspace={workspace}>
-          <OnboardingGuard isOnboardingCompleted={isCompleted}>
-            {children}
-          </OnboardingGuard>
-        </WorkspaceProvider>
+        <SocketIOProvider>
+          <SessionProvider
+            currentUser={user}
+            workspace={workspace}
+            subscriptionPlan={subscriptionPlan}
+          >
+            <LatitudeWebsocketsProvider
+              workspace={workspace}
+              socketServer={env.WEBSOCKETS_SERVER}
+            >
+              <WorkspaceProvider workspace={workspace}>
+                <OnboardingGuard isOnboardingCompleted={isCompleted}>
+                  {children}
+                </OnboardingGuard>
+              </WorkspaceProvider>
+            </LatitudeWebsocketsProvider>
+          </SessionProvider>
+        </SocketIOProvider>
       </IdentifyUser>
     </CSPostHogProvider>
   )
