@@ -24,7 +24,7 @@ export type SlideshowSlide = {
   headline: string
   body: string
   footer?: string
-  video?: string
+  image?: string
 }
 
 export const SLIDESHOW_SLIDES: SlideshowSlide[] = [
@@ -32,31 +32,31 @@ export const SLIDESHOW_SLIDES: SlideshowSlide[] = [
     id: 'observe',
     headline: 'Trace every request',
     body: 'Capture every prompt, input, and output from your AI app. Real traces show what actually happens in production.',
-    video: '/onboarding/observe.mp4',
+    image: '/onboarding/observe.png',
   },
   {
     id: 'annotate',
     headline: 'Annotate responses',
     body: 'Your team labels responses as good, bad, or broken. This defines what quality looks like for your use case.',
-    video: '/onboarding/annotate.mp4',
+    image: '/onboarding/annotate.png',
   },
   {
     id: 'discover',
-    headline: 'Discover failure modes',
+    headline: 'Discover failure patterns',
     body: 'Latitude automatically groups similar failures into issues. You see recurring patterns, not one-off mistakes.',
-    video: '/onboarding/discover.mp4',
+    image: '/onboarding/discover.png',
   },
   {
     id: 'evaluate',
     headline: 'Generate evaluations',
     body: 'Create evaluations for specific issues with one click. This helps you build a complete evaluation system grounded in your real failures.',
-    video: '/onboarding/evaluate.mp4',
+    image: '/onboarding/evaluate.png',
   },
   {
     id: 'optimize',
     headline: 'Optimize automatically',
     body: 'Prompts are automatically optimized and evaluated to reduce failures before hitting production.',
-    video: '/onboarding/optimize.mp4',
+    image: '/onboarding/optimize.png',
   },
 ]
 

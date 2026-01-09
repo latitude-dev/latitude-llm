@@ -133,18 +133,15 @@ export function Step1_ReliabilityLoop({
             )}
             style={animationStyle}
           >
-            {displayedSlide.video ? (
-              <video
+            {displayedSlide.image ? (
+              <img
                 key={displayedSlide.id}
-                src={displayedSlide.video}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className='w-full h-full object-cover'
+                src={displayedSlide.image}
+                alt={displayedSlide.headline}
+                className='w-full h-full object-cover object-left-top'
               />
             ) : (
-              <Text.H6 color='foregroundMuted'>Video</Text.H6>
+              <Text.H6 color='foregroundMuted'>Image</Text.H6>
             )}
           </div>
 
