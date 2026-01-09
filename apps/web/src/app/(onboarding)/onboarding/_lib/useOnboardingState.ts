@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   useLocalStorage,
@@ -96,32 +96,41 @@ export function useOnboardingState(shouldReset = false) {
 
   const stepFromUrl = searchParams.get('step')
   const slideFromUrl = searchParams.get('slide')
+  const frameworkFromUrl = searchParams.get('framework')
 
-  const currentStep = useMemo(() => {
-    if (shouldReset) {
-      return ONBOARDING_STEPS.WHAT_IS_LATITUDE
+  // Derive current step from URL first, then localStorage
+  let currentStep: OnboardingStep = localState.step
+  if (shouldReset) {
+    currentStep = ONBOARDING_STEPS.WHAT_IS_LATITUDE
+  } else if (stepFromUrl !== null) {
+    const parsed = parseInt(stepFromUrl, 10)
+    if (!isNaN(parsed) && parsed >= 0 && parsed <= 6) {
+      currentStep = parsed as OnboardingStep
     }
-    if (stepFromUrl !== null) {
-      const parsed = parseInt(stepFromUrl, 10)
-      if (!isNaN(parsed) && parsed >= 0 && parsed <= 6) {
-        return parsed as OnboardingStep
-      }
-    }
-    return localState.step
-  }, [shouldReset, stepFromUrl, localState.step])
+  }
 
-  const currentSlideIndex = useMemo(() => {
-    if (slideFromUrl !== null) {
-      const parsed = parseInt(slideFromUrl, 10)
-      if (!isNaN(parsed) && parsed >= 0 && parsed < SLIDESHOW_SLIDES.length) {
-        return parsed
-      }
+  // Derive slide index from URL first, then localStorage
+  let currentSlideIndex = localState.slideIndex
+  if (slideFromUrl !== null) {
+    const parsed = parseInt(slideFromUrl, 10)
+    if (!isNaN(parsed) && parsed >= 0 && parsed < SLIDESHOW_SLIDES.length) {
+      currentSlideIndex = parsed
     }
-    return localState.slideIndex
-  }, [slideFromUrl, localState.slideIndex])
+  }
+
+  // Derive selected framework from URL - if we're on integration step and URL has no framework, show gallery
+  // Only fall back to localStorage if there's no step in URL (initial load)
+  let selectedFramework: string | null = null
+  if (stepFromUrl !== null) {
+    // URL is the source of truth - use framework from URL (or null if not present)
+    selectedFramework = frameworkFromUrl
+  } else {
+    // No step in URL, use localStorage
+    selectedFramework = localState.selectedFramework
+  }
 
   const updateUrl = useCallback(
-    (step: OnboardingStep, slideIndex?: number) => {
+    (step: OnboardingStep, slideIndex?: number, framework?: string | null, replace = false) => {
       const params = new URLSearchParams()
       params.set('step', step.toString())
       if (
@@ -130,15 +139,23 @@ export function useOnboardingState(shouldReset = false) {
       ) {
         params.set('slide', slideIndex.toString())
       }
-      router.replace(`/onboarding?${params.toString()}`, { scroll: false })
+      if (step === ONBOARDING_STEPS.INTEGRATION && framework) {
+        params.set('framework', framework)
+      }
+      const url = `/onboarding?${params.toString()}`
+      if (replace) {
+        router.replace(url, { scroll: false })
+      } else {
+        router.push(url, { scroll: false })
+      }
     },
     [router],
   )
 
   const goToStep = useCallback(
     (step: OnboardingStep) => {
-      setLocalState((prev) => ({ ...(prev ?? DEFAULT_STATE), step, slideIndex: 0 }))
-      updateUrl(step, 0)
+      setLocalState((prev) => ({ ...(prev ?? DEFAULT_STATE), step, slideIndex: 0, selectedFramework: null }))
+      updateUrl(step, 0, null)
     },
     [setLocalState, updateUrl],
   )
@@ -176,8 +193,9 @@ export function useOnboardingState(shouldReset = false) {
   const setSelectedFramework = useCallback(
     (framework: string | null) => {
       setLocalState((prev) => ({ ...(prev ?? DEFAULT_STATE), selectedFramework: framework }))
+      updateUrl(ONBOARDING_STEPS.INTEGRATION, undefined, framework)
     },
-    [setLocalState],
+    [setLocalState, updateUrl],
   )
 
   const setFirstTraceId = useCallback(
@@ -189,7 +207,7 @@ export function useOnboardingState(shouldReset = false) {
 
   const resetOnboarding = useCallback(() => {
     setLocalState(DEFAULT_STATE)
-    updateUrl(ONBOARDING_STEPS.WHAT_IS_LATITUDE, 0)
+    updateUrl(ONBOARDING_STEPS.WHAT_IS_LATITUDE, 0, null, true)
   }, [setLocalState, updateUrl])
 
   return {
@@ -197,7 +215,7 @@ export function useOnboardingState(shouldReset = false) {
     currentSlideIndex,
     currentSlide: SLIDESHOW_SLIDES[currentSlideIndex],
     totalSlides: SLIDESHOW_SLIDES.length,
-    selectedFramework: localState.selectedFramework,
+    selectedFramework,
     firstTraceId: localState.firstTraceId,
     goToStep,
     nextStep,

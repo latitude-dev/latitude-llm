@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -16,29 +16,45 @@ import { InviteMembersModal } from '$/components/InviteMembersModal'
 type Props = {
   workspaceApiKey?: string
   projectId: number
+  selectedFramework: string | null
+  onSelectFramework: (framework: string | null) => void
   onContinue: () => void
   onBack: () => void
   onFinish: () => void
 }
 
+const ALL_FRAMEWORKS = [...MODEL_PROVIDERS, ...FRAMEWORKS]
+
 export function Step4_Integration({
   workspaceApiKey,
   projectId,
+  selectedFramework: selectedFrameworkName,
+  onSelectFramework,
   onContinue,
   onBack,
   onFinish,
 }: Props) {
-  const [selectedFramework, setSelectedFramework] =
-    useState<FrameworkDefinition | null>(null)
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
+
+  const selectedFramework = useMemo(() => {
+    if (!selectedFrameworkName) return null
+    return ALL_FRAMEWORKS.find((f) => f.name === selectedFrameworkName) ?? null
+  }, [selectedFrameworkName])
+
+  const handleSelectFramework = useCallback(
+    (framework: FrameworkDefinition) => {
+      onSelectFramework(framework.name)
+    },
+    [onSelectFramework],
+  )
 
   const handleBack = useCallback(() => {
     if (selectedFramework) {
-      setSelectedFramework(null)
+      onSelectFramework(null)
     } else {
       onBack()
     }
-  }, [selectedFramework, onBack])
+  }, [selectedFramework, onSelectFramework, onBack])
 
   return (
     <div className='flex flex-col min-h-screen bg-background'>
@@ -90,7 +106,7 @@ export function Step4_Integration({
                 <Button
                   variant='ghost'
                   size='small'
-                  onClick={() => setSelectedFramework(null)}
+                  onClick={() => onSelectFramework(null)}
                   iconProps={{ name: 'chevronLeft', placement: 'left' }}
                 >
                   Back to selection
@@ -134,7 +150,7 @@ export function Step4_Integration({
                     <FrameworkCard
                       key={framework.name}
                       framework={framework}
-                      onClick={() => setSelectedFramework(framework)}
+                      onClick={() => handleSelectFramework(framework)}
                     />
                   ))}
                 </div>
@@ -147,7 +163,7 @@ export function Step4_Integration({
                     <FrameworkCard
                       key={framework.name}
                       framework={framework}
-                      onClick={() => setSelectedFramework(framework)}
+                      onClick={() => handleSelectFramework(framework)}
                     />
                   ))}
                 </div>

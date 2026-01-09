@@ -42,10 +42,12 @@ export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documen
     isFirstSlide,
     isLastSlide,
     firstTraceId,
+    selectedFramework,
     goToStep,
     nextSlide,
     prevSlide,
     setFirstTraceId,
+    setSelectedFramework,
   } = useOnboardingState(shouldReset)
 
   useEffect(() => {
@@ -185,6 +187,8 @@ export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documen
         <Step4_Integration
           workspaceApiKey={workspaceApiKey}
           projectId={projectId}
+          selectedFramework={selectedFramework}
+          onSelectFramework={setSelectedFramework}
           onContinue={handleStep4Continue}
           onBack={handleStep4Back}
           onFinish={handleSkipOnboarding}

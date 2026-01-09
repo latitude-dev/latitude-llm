@@ -134,6 +134,7 @@ export function Step1_ReliabilityLoop({
             style={animationStyle}
           >
             {displayedSlide.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 key={displayedSlide.id}
                 src={displayedSlide.image}
