@@ -1,6 +1,15 @@
 import { and, eq } from 'drizzle-orm'
+import { scan } from 'promptl-ai'
 import { database } from '../../client'
-import { EvaluationResultV2 } from '../../constants'
+import {
+  EvaluationMetric,
+  EvaluationResultSuccessValue,
+  EvaluationType,
+  EvaluationV2,
+  LogSources,
+  SpanType,
+  SpanWithDetails,
+} from '../../constants'
 import { publisher } from '../../events/publisher'
 import { validateOptimizationJobKey } from '../../jobs/job-definitions/optimizations/validateOptimizationJob'
 import { queues } from '../../jobs/queues'
@@ -15,26 +24,28 @@ import {
   ProjectsRepository,
   UsersRepository,
 } from '../../repositories'
+import {
+  SpanMetadatasRepository,
+  SpansRepository,
+} from '../../repositories/spansRepository'
+import { Column } from '../../schema/models/datasets'
 import { optimizations } from '../../schema/models/optimizations'
+import { Commit } from '../../schema/models/types/Commit'
+import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Optimization } from '../../schema/models/types/Optimization'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import {
+  WorkspaceDto,
+  type Workspace,
+} from '../../schema/models/types/Workspace'
+import { BACKGROUND } from '../../telemetry'
 import { createCommit } from '../commits/create'
+import { runDocumentAtCommit } from '../commits/runDocumentAtCommit'
 import { scanDocumentContent } from '../documents'
 import { updateDocument } from '../documents/update'
+import { runEvaluationV2 } from '../evaluationsV2/run'
+import { getEvaluationMetricSpecification } from '../evaluationsV2/specifications'
 import { OPTIMIZATION_ENGINES, OptimizerEvaluateArgs } from './optimizers'
-
-// TODO(AO/OPT): Remove this, just for testing
-async function awaitTesting(iterations?: number) {
-  if (process.env.NODE_ENV === 'test') return
-
-  const minMs = 10000
-  const maxMs = 45000
-
-  let waitMs = minMs + Math.round(((maxMs - minMs) * (iterations ?? 0)) / 100)
-  waitMs = Math.min(maxMs, Math.max(minMs, waitMs))
-
-  await new Promise((resolve) => setTimeout(resolve, waitMs))
-}
+import { hashParameters } from './shared'
 
 export async function executeOptimization(
   {
@@ -75,9 +86,6 @@ export async function executeOptimization(
       ),
     )
   }
-
-  // TODO(AO/OPT): Remove this, just for testing
-  await awaitTesting(optimization.configuration?.iterations)
 
   const projectsRepository = new ProjectsRepository(workspace.id)
   const gettingpj = await projectsRepository.find(optimization.projectId)
@@ -137,6 +145,10 @@ export async function executeOptimization(
   }
   const testset = gettingts.value
 
+  const columns = trainset.columns
+    .map((c) => ({ ...c, datasetId: trainset.id }))
+    .concat(testset.columns.map((c) => ({ ...c, datasetId: testset.id })))
+
   const optimize = OPTIMIZATION_ENGINES[optimization.engine]
   if (!optimize) {
     return Result.error(
@@ -148,7 +160,14 @@ export async function executeOptimization(
 
   // BONUS(AO/OPT): Implement checkpointing saving for fault tolerance
   const optimizing = await optimize({
-    evaluate: evaluatePrompt,
+    evaluate: await evaluatePrompt({
+      columns: columns,
+      evaluation: evaluation,
+      optimization: optimization,
+      document: document,
+      commit: baselineCommit,
+      workspace: workspace as WorkspaceDto,
+    }),
     evaluation: evaluation,
     trainset: trainset,
     valset: testset, // BONUS(AO/OPT): Only use a small subset of the testset
@@ -234,21 +253,167 @@ export async function executeOptimization(
   )
 }
 
-async function evaluatePrompt(
-  {
-    prompt: _prompt,
-    example: _example,
-    evaluation: _evaluation,
-    optimization: _optimization,
-    workspace: _workspace,
-  }: OptimizerEvaluateArgs, // TODO(AO/OPT): Implement cancellation
-  _ = database,
-) {
-  // TODO(AO/OPT): Implement
-  /*
-  - Get the reasoning as the Actual Output + Reasoning Specification Method
-  - If multiple reasonigs and scores are provider, maybe return all separated for multi-objective optimization
-  - Also treat prompt syntax errors as learnable
-  */
-  return Result.ok<EvaluationResultV2>(undefined as any)
+// BONUS(AO/OPT): Implement multi-objective optimization
+async function evaluatePrompt<
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>({
+  columns,
+  evaluation,
+  optimization,
+  document,
+  commit,
+  workspace,
+}: {
+  columns: (Column & { datasetId: number })[]
+  evaluation: EvaluationV2<T, M>
+  optimization: Optimization
+  document: DocumentVersion
+  commit: Commit
+  workspace: WorkspaceDto
+}) {
+  const { parameters: baselineParameters } = await scan({
+    prompt: optimization.baselinePrompt,
+  })
+  const { keyhash: parametersHash } = hashParameters(
+    Object.fromEntries(baselineParameters.entries()),
+  )
+
+  return async function (
+    { prompt, example, abortSignal }: OptimizerEvaluateArgs, // TODO(AO/OPT): Implement cancellation
+    _ = database,
+  ) {
+    const scanning = await scanDocumentContent({
+      document: { ...document, content: prompt },
+      commit: commit,
+    })
+    if (scanning.error) {
+      return Result.error(scanning.error)
+    } else if (scanning.value.errors.length > 0) {
+      // Note: we treat prompt syntax errors as learnable
+      let reason = ''
+      for (const error of scanning.value.errors) {
+        reason += error.toString() + '\n\n'
+      }
+      reason = reason.trim()
+
+      return Result.ok({
+        trace: [],
+        result: { score: 0, reason, passed: false },
+      })
+    }
+    const { parameters } = scanning.value
+
+    const { keyhash } = hashParameters(Object.fromEntries(parameters.entries()))
+    if (keyhash !== parametersHash) {
+      // Note: we treat prompt syntax errors as learnable
+      const reason = `
+The optimized prompt must have the same parameters as the baseline prompt.
+The parameters are: ${Array.from(baselineParameters).join(', ')}`.trim()
+
+      return Result.ok({
+        trace: [],
+        result: { score: 0, reason, passed: false },
+      })
+    }
+
+    const values: Record<string, unknown> = {}
+    for (const parameter of parameters) {
+      const column =
+        optimization.configuration.parameters?.[parameter]?.column ?? parameter
+
+      const identifier = columns.find(
+        (c) => c.name === column && c.datasetId === example.datasetId,
+      )!.identifier
+
+      values[parameter] = example.rowData[identifier] ?? undefined
+    }
+
+    const running = await runDocumentAtCommit({
+      context: BACKGROUND({ workspaceId: workspace.id }),
+      source: LogSources.Optimization,
+      parameters: values,
+      customPrompt: prompt,
+      simulationSettings: {
+        simulateToolResponses:
+          optimization.configuration.simulation?.simulateToolResponses ?? true,
+        simulatedTools:
+          optimization.configuration.simulation?.simulatedTools ?? [], // Note: empty array means all tools are simulated
+        toolSimulationInstructions:
+          optimization.configuration.simulation?.toolSimulationInstructions ??
+          '',
+      },
+      document: document,
+      commit: commit,
+      workspace: workspace,
+      abortSignal: abortSignal,
+    })
+    if (running.error) {
+      return Result.error(running.error)
+    }
+    const conversationUuid = running.value.uuid
+
+    // TODO(AO/OPT): Implement waiting for trace to show up
+    await new Promise((resolve) => setTimeout(resolve, 10000))
+
+    const spansRepository = new SpansRepository(workspace.id)
+    const metadatasRepository = new SpanMetadatasRepository(workspace.id)
+
+    const traceId =
+      await spansRepository.getLastTraceByLogUuid(conversationUuid)
+
+    const listing = await spansRepository.list({ traceId })
+    if (listing.error) {
+      return Result.error(listing.error)
+    }
+    const trace = listing.value
+
+    const span = trace.find((span) => span.type === SpanType.Prompt)
+    if (!span) {
+      return Result.error(new UnprocessableEntityError('No prompt span found'))
+    }
+
+    const getting = await metadatasRepository.get({
+      spanId: span.id,
+      traceId: span.traceId,
+    })
+    if (getting.error) {
+      return Result.error(getting.error)
+    }
+    const metadata = getting.value
+
+    const evaluating = await runEvaluationV2({
+      evaluation: evaluation,
+      span: { ...span, metadata } as SpanWithDetails<SpanType.Prompt>,
+      commit: commit,
+      workspace: workspace,
+      dry: false, // BONUS(AO/OPT): Should we persist evaluation results from optimization runs?
+    })
+    if (evaluating.error) {
+      return Result.error(evaluating.error)
+    }
+    const { result } = evaluating.value
+
+    if (result.error) {
+      return Result.error(
+        new UnprocessableEntityError(
+          `Error while evaluating: ${result.error.message}`,
+        ),
+      )
+    }
+
+    const specification = getEvaluationMetricSpecification(evaluation)
+    const reason = specification.resultReason(
+      result as EvaluationResultSuccessValue<T, M>,
+    )
+
+    return Result.ok({
+      trace: [], // TODO(AO/OPT): Add trace to result
+      result: {
+        score: result.normalizedScore ?? 0,
+        reason: reason ?? '',
+        passed: result.hasPassed ?? false,
+      },
+    })
+  }
 }

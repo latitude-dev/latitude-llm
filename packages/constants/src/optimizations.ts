@@ -3,6 +3,7 @@ import { SimulationSettingsSchema } from './simulation'
 
 export enum OptimizationEngine {
   Identity = 'identity',
+  Gepa = 'gepa',
 }
 
 export const OptimizationConfigurationSchema = z.object({

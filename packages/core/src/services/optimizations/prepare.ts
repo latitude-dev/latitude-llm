@@ -5,7 +5,6 @@ import {
   EvaluationV2,
   OPTIMIZATION_DATASET_ROWS,
   OPTIMIZATION_DATASET_SPLIT,
-  Span,
   SpanType,
   SpanWithDetails,
 } from '../../constants'
@@ -15,7 +14,6 @@ import { publisher } from '../../events/publisher'
 import { executeOptimizationJobKey } from '../../jobs/job-definitions/optimizations/executeOptimizationJob'
 import { queues } from '../../jobs/queues'
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
-import { hashContent } from '../../lib/hashContent'
 import { interleaveList } from '../../lib/interleaveList'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -42,16 +40,7 @@ import { Cursor } from '../../schema/types'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
 import { createDataset } from '../datasets/create'
 import { buildColumns, nanoidHashAlgorithm } from '../datasets/utils'
-import { maskParameter } from './shared'
-
-// TODO(AO/OPT): Remove this, just for testing
-async function awaitTesting() {
-  if (process.env.NODE_ENV === 'test') return
-
-  await new Promise((resolve) =>
-    setTimeout(resolve, 5000 + Math.floor(Math.random() * 11000)),
-  )
-}
+import { hashParameters, hashSpan, maskParameter } from './shared'
 
 export async function prepareOptimization(
   {
@@ -92,9 +81,6 @@ export async function prepareOptimization(
     }
     testset = gettingts.value
   } else {
-    // TODO(AO/OPT): Remove this, just for testing
-    await awaitTesting()
-
     const projectsRepository = new ProjectsRepository(workspace.id)
     const gettingpj = await projectsRepository.find(optimization.projectId)
     if (gettingpj.error) {
@@ -231,20 +217,6 @@ export async function prepareOptimization(
       })
     },
   )
-}
-
-function hashSpan(span: Span<SpanType.Prompt>) {
-  return `${span.traceId}:${span.id}`
-}
-
-function hashParameters(parameters: Record<string, unknown>) {
-  const keys = Object.keys(parameters).sort()
-  const values = keys.map((key) => parameters[key])
-
-  const keyhash = hashContent(JSON.stringify(keys))
-  const valhash = hashContent(JSON.stringify(values))
-
-  return { keyhash, valhash }
 }
 
 async function getIssueCandidates({

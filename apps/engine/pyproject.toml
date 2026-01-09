@@ -5,6 +5,7 @@ description = "Latitude AI Engine"
 requires-python = ">=3.13, <3.14"
 dependencies = [
     "fastapi[standard]>=0.128.0",
+    "gepa>=0.0.24",
     "pydantic>=2.11.9",
     "typing-extensions>=4.15.0",
     "promptl-ai>=1.2.0",

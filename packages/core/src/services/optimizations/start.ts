@@ -85,7 +85,7 @@ export async function startOptimization(
     )
   }
 
-  const engine = OptimizationEngine.Identity // TODO(AO/OPT): Implement other engines
+  const engine = OptimizationEngine.Gepa
 
   const validating = await validateConfiguration({
     engine: engine,

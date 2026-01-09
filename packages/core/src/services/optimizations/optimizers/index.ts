@@ -1,30 +1,34 @@
+import { Message } from 'promptl-ai'
 import { Database } from '../../../client'
-import {
-  EvaluationResultV2,
-  EvaluationV2,
-  OptimizationEngine,
-} from '../../../constants'
+import { EvaluationV2, OptimizationEngine } from '../../../constants'
 import { TypedResult } from '../../../lib/Result'
 import { Dataset } from '../../../schema/models/types/Dataset'
 import { DatasetRow } from '../../../schema/models/types/DatasetRow'
 import { Optimization } from '../../../schema/models/types/Optimization'
 import { Workspace } from '../../../schema/models/types/Workspace'
+import { gepaOptimizer } from './gepa'
 import { identityOptimizer } from './identity'
 
 export type OptimizerEvaluateArgs = {
   prompt: string
   example: DatasetRow
-  evaluation: EvaluationV2
-  optimization: Optimization
-  workspace: Workspace
   abortSignal?: AbortSignal
+}
+
+export type OptimizerEvaluateResult = {
+  trace: Message[]
+  result: {
+    score: number // Normalized score
+    reason: string
+    passed: boolean
+  }
 }
 
 export type OptimizerArgs<_E extends OptimizationEngine> = {
   evaluate: (
     args: OptimizerEvaluateArgs,
     db?: Database,
-  ) => Promise<TypedResult<EvaluationResultV2>>
+  ) => Promise<TypedResult<OptimizerEvaluateResult>>
   evaluation: EvaluationV2
   trainset: Dataset
   valset: Dataset
@@ -43,4 +47,5 @@ export const OPTIMIZATION_ENGINES: {
   [T in OptimizationEngine]: Optimizer<T>
 } = {
   [OptimizationEngine.Identity]: identityOptimizer,
+  [OptimizationEngine.Gepa]: gepaOptimizer,
 }
