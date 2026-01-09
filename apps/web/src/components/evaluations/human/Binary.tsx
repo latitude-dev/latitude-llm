@@ -216,7 +216,9 @@ function AnnotationForm({
           <div className='animate-in fade-in duration-300 flex items-center gap-x-2'>
             <AForm.SaveButton
               onClick={handleSave}
-              disabled={!localReason || localScore === undefined}
+              disabled={
+                localScore === undefined || (localScore === 0 && !localReason)
+              }
             />
             <AForm.AnnotationTooltipInfo
               tooltip={

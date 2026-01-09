@@ -63,7 +63,14 @@ export async function getOrSetEnrichedReason<
     result as EvaluationResultSuccessValue<T, M>,
   )!
 
+  // If there is no selected context no need to generalize
   if (!result.metadata || !('selectedContexts' in result.metadata)) {
+    return Result.ok(initialReason)
+  }
+  if (
+    !result.metadata.selectedContexts ||
+    result.metadata.selectedContexts.length === 0
+  ) {
     return Result.ok(initialReason)
   }
 

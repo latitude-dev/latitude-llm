@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as env from '@latitude-data/env'
 import {
+  CompletionSpanMetadata,
   EvaluationType,
   HumanEvaluationMetric,
   HumanEvaluationResultMetadata,
   Providers,
   SpanType,
+  SPAN_METADATA_STORAGE_KEY,
 } from '@latitude-data/constants'
+import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
@@ -18,6 +21,8 @@ import * as factories from '../../../tests/factories'
 import { getOrSetEnrichedReason } from './getOrSetEnrichedReason'
 import * as copilotModule from '../../copilot'
 import { eq } from 'drizzle-orm'
+import { diskFactory } from '../../../lib/disk'
+import { cache as redis } from '../../../cache'
 
 vi.mock('../../copilot', () => ({
   getCopilot: vi.fn(),
@@ -63,6 +68,70 @@ describe('getOrSetEnrichedReason', () => {
     }
     mockGetCopilot.mockResolvedValue(Result.ok(mockCopilot))
   })
+
+  async function createPromptSpanWithCompletion({
+    traceId,
+    input = [
+      {
+        role: MessageRole.user,
+        content: [{ type: 'text' as const, text: 'Test question' }],
+      },
+    ],
+    output = [
+      {
+        role: MessageRole.assistant,
+        content: [{ type: 'text' as const, text: 'Test answer' }],
+        toolCalls: [],
+      },
+    ],
+  }: {
+    traceId?: string
+    input?: Message[]
+    output?: Message[]
+  } = {}) {
+    const promptSpan = await factories.createSpan({
+      workspaceId: workspace.id,
+      commitUuid: commit.uuid,
+      type: SpanType.Prompt,
+      traceId,
+    })
+
+    const completionSpan = await factories.createSpan({
+      workspaceId: workspace.id,
+      commitUuid: commit.uuid,
+      type: SpanType.Completion,
+      traceId: promptSpan.traceId,
+      parentId: promptSpan.id,
+    })
+
+    const completionMetadata: CompletionSpanMetadata = {
+      traceId: completionSpan.traceId,
+      spanId: completionSpan.id,
+      type: SpanType.Completion,
+      attributes: {},
+      events: [],
+      links: [],
+      provider: 'openai',
+      model: 'gpt-4o',
+      configuration: {},
+      input: input as any,
+      output: output as any,
+    }
+
+    const disk = diskFactory('private')
+    const metadataKey = SPAN_METADATA_STORAGE_KEY(
+      workspace.id,
+      completionSpan.traceId,
+      completionSpan.id,
+    )
+    await disk.put(metadataKey, JSON.stringify(completionMetadata))
+
+    // Clear cache to ensure we read from disk
+    const cache = await redis()
+    await cache.del(metadataKey)
+
+    return { promptSpan, completionSpan }
+  }
 
   describe('early returns', () => {
     it('returns enriched reason if already present in metadata', async () => {
@@ -153,6 +222,47 @@ describe('getOrSetEnrichedReason', () => {
       expect(mockRunCopilot).not.toHaveBeenCalled()
     })
 
+    it('returns initial reason if selectedContexts is empty', async () => {
+      const evaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+        type: EvaluationType.Human,
+        metric: HumanEvaluationMetric.Binary,
+      })
+
+      const span = await factories.createSpan({
+        workspaceId: workspace.id,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      const reason = 'original reason'
+      const result = await factories.createEvaluationResultV2({
+        evaluation,
+        span,
+        commit,
+        workspace,
+        metadata: {
+          configuration: evaluation.configuration,
+          actualOutput: 'actual',
+          expectedOutput: 'expected',
+          reason,
+          selectedContexts: [],
+        } as HumanEvaluationResultMetadata,
+      })
+
+      const enrichedReasonResult = await getOrSetEnrichedReason({
+        result,
+        evaluation,
+      })
+
+      expect(enrichedReasonResult.ok).toBe(true)
+      expect(enrichedReasonResult.value).toBe(reason)
+      expect(mockGetCopilot).not.toHaveBeenCalled()
+      expect(mockRunCopilot).not.toHaveBeenCalled()
+    })
+
     it('returns initial reason if metadata is null', async () => {
       const evaluation = await factories.createEvaluationV2({
         document,
@@ -200,15 +310,11 @@ describe('getOrSetEnrichedReason', () => {
         type: EvaluationType.Rule,
       })
 
-      const span = await factories.createSpan({
-        workspaceId: workspace.id,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
+      const { promptSpan } = await createPromptSpanWithCompletion()
 
       const result = await factories.createEvaluationResultV2({
         evaluation,
-        span,
+        span: promptSpan,
         commit,
         workspace,
         metadata: {
@@ -259,15 +365,11 @@ describe('getOrSetEnrichedReason', () => {
         metric: HumanEvaluationMetric.Binary,
       })
 
-      const span = await factories.createSpan({
-        workspaceId: workspace.id,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
+      const { promptSpan } = await createPromptSpanWithCompletion()
 
       const result = await factories.createEvaluationResultV2({
         evaluation,
-        span,
+        span: promptSpan,
         commit,
         workspace,
         metadata: {
@@ -305,15 +407,11 @@ describe('getOrSetEnrichedReason', () => {
         metric: HumanEvaluationMetric.Binary,
       })
 
-      const span = await factories.createSpan({
-        workspaceId: workspace.id,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
+      const { promptSpan } = await createPromptSpanWithCompletion()
 
       const result = await factories.createEvaluationResultV2({
         evaluation,
-        span,
+        span: promptSpan,
         commit,
         workspace,
         metadata: {
@@ -354,15 +452,11 @@ describe('getOrSetEnrichedReason', () => {
         metric: HumanEvaluationMetric.Binary,
       })
 
-      const span = await factories.createSpan({
-        workspaceId: workspace.id,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
+      const { promptSpan } = await createPromptSpanWithCompletion()
 
       const result = await factories.createEvaluationResultV2({
         evaluation,
-        span,
+        span: promptSpan,
         commit,
         workspace,
         metadata: {
@@ -406,11 +500,7 @@ describe('getOrSetEnrichedReason', () => {
         metric: HumanEvaluationMetric.Binary,
       })
 
-      const span = await factories.createSpan({
-        workspaceId: workspace.id,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
+      const { promptSpan } = await createPromptSpanWithCompletion()
 
       const originalReason = 'This is the original reason'
       const enrichedReason = 'This is the enriched and generalized reason'
@@ -425,7 +515,7 @@ describe('getOrSetEnrichedReason', () => {
 
       const result = await factories.createEvaluationResultV2({
         evaluation,
-        span,
+        span: promptSpan,
         commit,
         workspace,
         metadata: {
@@ -464,6 +554,7 @@ describe('getOrSetEnrichedReason', () => {
             document: expect.any(Object),
           }),
           parameters: {
+            messages: expect.any(Array),
             annotation: originalReason,
             context: expect.stringContaining('"messageIndex":0'),
           },
@@ -494,11 +585,7 @@ describe('getOrSetEnrichedReason', () => {
         metric: HumanEvaluationMetric.Binary,
       })
 
-      const span = await factories.createSpan({
-        workspaceId: workspace.id,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-      })
+      const { promptSpan } = await createPromptSpanWithCompletion()
 
       const originalReason = 'Original reason'
       const enrichedReason = 'Enriched reason'
@@ -512,7 +599,7 @@ describe('getOrSetEnrichedReason', () => {
 
       const result = await factories.createEvaluationResultV2({
         evaluation,
-        span,
+        span: promptSpan,
         commit,
         workspace,
         metadata: {
