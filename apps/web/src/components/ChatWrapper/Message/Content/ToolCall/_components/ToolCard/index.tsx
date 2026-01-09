@@ -111,8 +111,8 @@ export function ToolCardWrapper({
           ))}
           {!blockAnnotations.length &&
             evaluation &&
-            messageIndex &&
-            contentBlockIndex &&
+            messageIndex !== undefined &&
+            contentBlockIndex !== undefined &&
             span !== undefined &&
             isMainSpan(span) && (
               <AnnotationForm
