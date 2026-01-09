@@ -15,13 +15,13 @@ import { CommitsRepository, IssuesRepository } from '../../../repositories'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
+import { addIssueEvaluationResult } from '../../issueEvaluationResults/add'
 import { incrementIssueHistogram } from '../histograms/increment'
 import { embedReason, updateCentroid } from '../shared'
 import { updateIssue } from '../update'
-import { validateResultForIssue } from './validate'
-import { addIssueEvaluationResult } from '../../issueEvaluationResults/add'
 import { canUpdateCentroid } from './canUpdateCentroid'
 import { getOrSetEnrichedReason } from './getOrSetEnrichedReason'
+import { validateResultForIssue } from './validate'
 
 /**
  * No need to check for existing associations,
@@ -100,7 +100,7 @@ export async function addResultToIssue<
           {
             embedding: embedding!,
             type: evaluation.type,
-            createdAt: result.createdAt,
+            createdAt: new Date(result.createdAt), // Note: ensure the createdAt is a Date object, it can come as a string from bullmq marshalling
           },
           'add',
           timestamp,

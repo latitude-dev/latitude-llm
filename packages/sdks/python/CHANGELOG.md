@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.0] - 2026-01-09
+
+### Added
+
+- Bump PromptL to 1.2.0
+
 ## [5.3.0] - 2025-10-10
 
 Official release of v5.3.0.

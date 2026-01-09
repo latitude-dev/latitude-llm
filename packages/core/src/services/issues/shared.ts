@@ -86,12 +86,8 @@ export function updateCentroid(
     timestamp,
   )
 
-  const createdAt =
-    result.createdAt instanceof Date
-      ? result.createdAt
-      : new Date(result.createdAt as string)
   const lambda = ISSUE_HALF_LIFE
-    ? Math.pow(0.5, (now - createdAt.getTime()) / ISSUE_HALF_LIFE)
+    ? Math.pow(0.5, (now - result.createdAt.getTime()) / ISSUE_HALF_LIFE)
     : 1.0
   const wEff = (ISSUE_EVALUATION_WEIGHTS[result.type] ?? 1.0) * lambda
 

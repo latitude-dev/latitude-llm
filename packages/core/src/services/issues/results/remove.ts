@@ -19,14 +19,14 @@ import {
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
+import { removeIssueEvaluationResult } from '../../issueEvaluationResults/remove'
 import { deleteIssue } from '../delete'
 import { decrementIssueHistogram } from '../histograms/decrement'
 import { embedReason, updateCentroid } from '../shared'
 import { updateIssue } from '../update'
 import { canUpdateCentroid } from './canUpdateCentroid'
-import { validateResultForIssue } from './validate'
-import { removeIssueEvaluationResult } from '../../issueEvaluationResults/remove'
 import { getOrSetEnrichedReason } from './getOrSetEnrichedReason'
+import { validateResultForIssue } from './validate'
 
 export async function removeResultFromIssue<
   T extends EvaluationType,
@@ -118,7 +118,7 @@ export async function removeResultFromIssue<
           {
             embedding: embedding!,
             type: evaluation.type,
-            createdAt: result.createdAt,
+            createdAt: new Date(result.createdAt), // Note: ensure the createdAt is a Date object, it can come as a string from bullmq marshalling
           },
           'remove',
           timestamp,

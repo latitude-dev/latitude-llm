@@ -6,7 +6,7 @@ dependencies = [
     "openai>=1.107.3",
     "devtools>=0.12.2",
     "python-dotenv>=1.1.1",
-    "latitude-sdk>=5.2.0",
+    "latitude-sdk>=5.4.0",
 ]
 
 [build-system]
