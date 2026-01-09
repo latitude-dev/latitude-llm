@@ -60,7 +60,7 @@ export class AbortedError extends LatitudeError {
   public statusCode = 499
   public reason = 'Client Closed Request'
   public name = LatitudeErrorCodes.AbortedError
-  constructor(message: string) {
+  constructor(message: string = 'Operation was aborted') {
     super(message)
     this.reason = message
   }

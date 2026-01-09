@@ -23,12 +23,36 @@ type GoalOption = {
 }
 
 const GOAL_OPTIONS: GoalOption[] = [
-  { value: LatitudeGoal.ObservingTraces, label: 'Observing production traces', icon: 'eye' },
-  { value: LatitudeGoal.SettingUpEvaluations, label: 'Setting up evaluations', icon: 'listCheck' },
-  { value: LatitudeGoal.ManagingPromptVersions, label: 'Managing prompt versions', icon: 'history' },
-  { value: LatitudeGoal.ImprovingAccuracy, label: 'Improving accuracy / reliability', icon: 'circleCheck' },
-  { value: LatitudeGoal.ImprovingLatency, label: 'Scaling (latency / cost)', icon: 'zap' },
-  { value: LatitudeGoal.JustExploring, label: 'Just exploring', icon: 'search' },
+  {
+    value: LatitudeGoal.ObservingTraces,
+    label: 'Observing production traces',
+    icon: 'eye',
+  },
+  {
+    value: LatitudeGoal.SettingUpEvaluations,
+    label: 'Setting up evaluations',
+    icon: 'listCheck',
+  },
+  {
+    value: LatitudeGoal.ManagingPromptVersions,
+    label: 'Managing prompt versions',
+    icon: 'history',
+  },
+  {
+    value: LatitudeGoal.ImprovingAccuracy,
+    label: 'Improving accuracy / reliability',
+    icon: 'circleCheck',
+  },
+  {
+    value: LatitudeGoal.ImprovingLatency,
+    label: 'Scaling (latency / cost)',
+    icon: 'zap',
+  },
+  {
+    value: LatitudeGoal.JustExploring,
+    label: 'Just exploring',
+    icon: 'search',
+  },
   { value: LatitudeGoal.Other, label: 'Other', icon: 'ellipsis' },
 ]
 
@@ -52,7 +76,9 @@ function OptionCard({
       className={cn(
         'w-full flex flex-row items-center gap-4 p-4 rounded-2xl text-left',
         'border-2 transition-all cursor-pointer',
-        isActive ? 'border-primary bg-primary/5' : 'border-border bg-background',
+        isActive
+          ? 'border-primary bg-primary/5'
+          : 'border-border bg-background',
       )}
     >
       <div
@@ -75,7 +101,9 @@ function OptionCard({
 }
 
 export function Step0c_LatitudeGoals({ onContinue }: Props) {
-  const [selectedOption, setSelectedOption] = useState<LatitudeGoal | null>(null)
+  const [selectedOption, setSelectedOption] = useState<LatitudeGoal | null>(
+    null,
+  )
   const [otherText, setOtherText] = useState('')
   const { execute, isPending } = useLatitudeAction(updateLatitudeGoalAction, {
     onSuccess: () => {
@@ -92,7 +120,10 @@ export function Step0c_LatitudeGoals({ onContinue }: Props) {
 
   const handleSubmitOther = () => {
     if (selectedOption === LatitudeGoal.Other && otherText.trim()) {
-      execute({ latitudeGoal: LatitudeGoal.Other, latitudeGoalOther: otherText.trim() })
+      execute({
+        latitudeGoal: LatitudeGoal.Other,
+        latitudeGoalOther: otherText.trim(),
+      })
     }
   }
 
@@ -102,7 +133,9 @@ export function Step0c_LatitudeGoals({ onContinue }: Props) {
         <Icon name='logo' size='xxxlarge' />
 
         <div className='flex flex-col items-center gap-2'>
-          <Text.H2M color='foreground' centered>What do you want to use Latitude for?</Text.H2M>
+          <Text.H2M color='foreground' centered>
+            What do you want to use Latitude for?
+          </Text.H2M>
           <Text.H5 color='foregroundMuted' centered>
             This helps us tailor your experience
           </Text.H5>
@@ -142,4 +175,3 @@ export function Step0c_LatitudeGoals({ onContinue }: Props) {
     </OnboardingLayout>
   )
 }
-

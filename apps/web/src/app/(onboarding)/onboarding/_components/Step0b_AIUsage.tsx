@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { OnboardingLayout } from './OnboardingLayout'
-import { AIUsageStage } from '@latitude-data/constants/users'
-import { cn } from '@latitude-data/web-ui/utils'
-import { useHover } from '@latitude-data/web-ui/browser'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { updateAIUsageStageAction } from '$/actions/user/updateAIUsageStage'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { AIUsageStage } from '@latitude-data/constants/users'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useHover } from '@latitude-data/web-ui/browser'
+import { cn } from '@latitude-data/web-ui/utils'
+import { useState } from 'react'
+import { OnboardingLayout } from './OnboardingLayout'
 
 type Props = {
   onContinue: () => void

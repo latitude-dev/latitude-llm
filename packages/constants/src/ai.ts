@@ -1,11 +1,11 @@
-import { FinishReason, TextStreamPart, Tool } from 'ai'
 import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import { FinishReason, TextStreamPart, Tool } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 import {
   LegacyVercelSDKVersion4Usage as LanguageModelUsage,
-  type ReplaceTextDelta,
   LegacyResponseMessage,
+  type ReplaceTextDelta,
 } from './ai/vercelSdkV5ToV4'
 import { ParameterType } from './config'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
@@ -242,4 +242,14 @@ export const EMPTY_USAGE = () => ({
   totalTokens: 0,
   reasoningTokens: 0,
   cachedInputTokens: 0,
+})
+
+export const languageModelUsageSchema = z.object({
+  inputTokens: z.number(),
+  outputTokens: z.number(),
+  promptTokens: z.number(),
+  completionTokens: z.number(),
+  totalTokens: z.number(),
+  reasoningTokens: z.number(),
+  cachedInputTokens: z.number(),
 })

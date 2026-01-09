@@ -165,7 +165,9 @@ export async function embedReason(reason: string) {
 
   try {
     const cache = await getCache()
-    const key = ISSUE_EMBEDDING_CACHE_KEY(hashContent(reason))
+    const key = ISSUE_EMBEDDING_CACHE_KEY(
+      hashContent(reason + ISSUE_EMBEDDING_MODEL),
+    )
 
     try {
       const item = await cache.get(key)

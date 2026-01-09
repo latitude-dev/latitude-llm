@@ -34,10 +34,12 @@ import { type Workspace } from './schema/models/types/Workspace'
 export {
   DocumentType,
   EMAIL_REGEX,
+  EMPTY_USAGE,
   FINISH_REASON_DETAILS,
   HEAD_COMMIT,
   isLatitudeUrl,
   isSafeUrl,
+  languageModelUsageSchema,
   LegacyChainEventTypes,
   LogSources,
   ModifiedDocumentType,
@@ -45,6 +47,7 @@ export {
   type DocumentLog,
   type DocumentLogWithMetadata,
   type DocumentLogWithMetadataAndError,
+  type LegacyVercelSDKVersion4Usage as LanguageModelUsage,
   type LegacyChainEvent,
 } from '@latitude-data/constants'
 export * from '@latitude-data/constants/actions'

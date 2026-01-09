@@ -711,6 +711,9 @@ describe('prepareOptimization', () => {
           parameters: {
             inputParam: { isPii: true },
           },
+          scope: {
+            instructions: true,
+          },
         },
       })
 

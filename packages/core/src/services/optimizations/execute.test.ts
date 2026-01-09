@@ -18,6 +18,8 @@ import * as optimizersModule from './optimizers'
 
 const mocks = vi.hoisted(() => ({
   optimizationsQueue: vi.fn(),
+  evaluateFactory: vi.fn(),
+  proposeFactory: vi.fn(),
 }))
 
 vi.mock('../../jobs/queues', () => ({
@@ -33,6 +35,15 @@ vi.mock('../../events/publisher', () => ({
     publishLater: vi.fn(),
   },
 }))
+
+vi.mock('./optimizers', async (importOriginal) => {
+  const original = await importOriginal<typeof optimizersModule>()
+  return {
+    ...original,
+    evaluateFactory: mocks.evaluateFactory,
+    proposeFactory: mocks.proposeFactory,
+  }
+})
 
 describe('executeOptimization', () => {
   let publisherMock: MockInstance
@@ -79,6 +90,9 @@ describe('executeOptimization', () => {
       .then((r) => r.dataset)
 
     publisherMock = vi.mocked(publisher.publishLater)
+
+    mocks.evaluateFactory.mockResolvedValue(vi.fn())
+    mocks.proposeFactory.mockResolvedValue(vi.fn())
 
     optimizerMock = vi
       .spyOn(optimizersModule.OPTIMIZATION_ENGINES, OptimizationEngine.Identity)
@@ -360,8 +374,10 @@ describe('executeOptimization', () => {
     expect(optimizerMock).toHaveBeenCalledWith(
       expect.objectContaining({
         evaluate: expect.any(Function),
+        propose: expect.any(Function),
         evaluation: expect.objectContaining({ uuid: evaluation.uuid }),
-        dataset: expect.objectContaining({ id: trainset.id }),
+        trainset: expect.objectContaining({ id: trainset.id }),
+        valset: expect.objectContaining({ id: testset.id }),
         optimization: expect.objectContaining({ id: optimization.id }),
         workspace: expect.objectContaining({ id: workspace.id }),
       }),

@@ -29,8 +29,7 @@ async function testAzureCompletion() {
     endpoint: process.env.AZURE_OPENAI_ENDPOINT,
   })
 
-  const deploymentName =
-    process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o-mini'
+  const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o-mini'
 
   const response = await client.chat.completions.create({
     model: deploymentName,

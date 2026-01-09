@@ -138,9 +138,7 @@ async function runTest(testName: string): Promise<boolean> {
 
 function listTests(): void {
   console.log('\nAvailable tests:\n')
-  console.log(
-    `${'Test'.padEnd(15)} ${'Required Env Vars'.padEnd(50)} Status`,
-  )
+  console.log(`${'Test'.padEnd(15)} ${'Required Env Vars'.padEnd(50)} Status`)
   console.log('-'.repeat(80))
 
   for (const [testName, config] of Object.entries(TESTS)) {
@@ -172,7 +170,9 @@ async function main(): Promise<void> {
   }
 
   const testsToRun =
-    args.length > 0 ? args.filter((a) => !a.startsWith('-')) : Object.keys(TESTS)
+    args.length > 0
+      ? args.filter((a) => !a.startsWith('-'))
+      : Object.keys(TESTS)
 
   console.log(`\nRunning ${testsToRun.length} test(s) against localhost:8787\n`)
 

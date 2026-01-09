@@ -4,6 +4,8 @@ import {
   CLOUD_MESSAGES,
   EvaluationV2,
   OPTIMIZATION_DATASET_SPLIT,
+  OPTIMIZATION_MAX_TIME,
+  OPTIMIZATION_MAX_TOKENS,
   OptimizationConfiguration,
   OptimizationEngine,
 } from '../../constants'
@@ -85,7 +87,7 @@ export async function startOptimization(
     )
   }
 
-  const engine = OptimizationEngine.Identity // TODO(AO/OPT): Implement other engines
+  const engine = OptimizationEngine.Gepa
 
   const validating = await validateConfiguration({
     engine: engine,
@@ -206,6 +208,35 @@ async function validateConfiguration({
         new BadRequestError(`Column '${column}' not found in dataset`),
       )
     }
+  }
+
+  if (
+    !configuration.scope?.configuration &&
+    !configuration.scope?.instructions
+  ) {
+    return Result.error(
+      new BadRequestError('At least one optimization scope is required'),
+    )
+  }
+
+  if (
+    configuration.budget?.time !== undefined &&
+    (configuration.budget?.time < 0 ||
+      configuration.budget?.time > OPTIMIZATION_MAX_TIME)
+  ) {
+    return Result.error(
+      new BadRequestError('Time budget must be a number between 0 and 2 hours'),
+    )
+  }
+
+  if (
+    configuration.budget?.tokens !== undefined &&
+    (configuration.budget?.tokens < 0 ||
+      configuration.budget?.tokens > OPTIMIZATION_MAX_TOKENS)
+  ) {
+    return Result.error(
+      new BadRequestError('Token budget must be a number between 0 and 100M'),
+    )
   }
 
   return Result.ok(configuration)

@@ -318,7 +318,7 @@ export function ConfigurationAdvancedForm<
                 })
               }
               errors={errors?.['actualOutput.fieldAccessor']}
-              className='w-full px-3'
+              className='w-full px-3 h-8'
               disabled={disabled || !formatIsAccessible}
               required
             />

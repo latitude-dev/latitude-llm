@@ -112,9 +112,9 @@ describe('isFinalOnboardingStep', () => {
   })
 
   it('returns true for latitudeGoalOther update', () => {
-    expect(
-      isFinalOnboardingStep({ latitudeGoalOther: 'Custom goal' }),
-    ).toBe(true)
+    expect(isFinalOnboardingStep({ latitudeGoalOther: 'Custom goal' })).toBe(
+      true,
+    )
   })
 
   it('returns true when both latitudeGoal and latitudeGoalOther are present', () => {

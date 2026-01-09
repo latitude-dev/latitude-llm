@@ -23,7 +23,11 @@ type RoleOption = {
 const ROLE_OPTIONS: RoleOption[] = [
   { value: UserTitle.Engineer, label: 'Engineer', icon: 'code' },
   { value: UserTitle.DataAIAndML, label: 'Data / AI / ML', icon: 'braces' },
-  { value: UserTitle.ProductManager, label: 'Product Manager', icon: 'squareChart' },
+  {
+    value: UserTitle.ProductManager,
+    label: 'Product Manager',
+    icon: 'squareChart',
+  },
   { value: UserTitle.Designer, label: 'Designer', icon: 'brush' },
   { value: UserTitle.Founder, label: 'Founder', icon: 'rocket' },
   { value: UserTitle.Other, label: 'Other', icon: 'userRound' },
@@ -49,7 +53,9 @@ function RoleCard({
       className={cn(
         'w-full flex flex-col gap-4 p-5 rounded-2xl text-left',
         'border-2 transition-all cursor-pointer',
-        isActive ? 'border-primary bg-primary/5' : 'border-border bg-background',
+        isActive
+          ? 'border-primary bg-primary/5'
+          : 'border-border bg-background',
       )}
     >
       <div

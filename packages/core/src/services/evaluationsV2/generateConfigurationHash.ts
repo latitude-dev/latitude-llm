@@ -1,22 +1,20 @@
 import {
-  EvaluationV2,
   EvaluationType,
+  EvaluationV2,
   LlmEvaluationMetric,
 } from '../../constants'
-import { hashContent } from '../../lib/hashContent'
+import { hashObject } from '../../lib/hashObject'
 
 export function generateConfigurationHash(
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>,
 ) {
   const { provider, model, criteria, passDescription, failDescription } =
     evaluation.configuration
-  return hashContent(
-    JSON.stringify({
-      provider,
-      model,
-      criteria,
-      passDescription,
-      failDescription,
-    }),
-  )
+  return hashObject({
+    provider,
+    model,
+    criteria,
+    passDescription,
+    failDescription,
+  }).hash
 }

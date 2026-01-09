@@ -57,17 +57,17 @@ npx tsx examples/test_openai.ts
 
 ## Available Examples
 
-| Provider     | File                  | Required Package                                  |
-| ------------ | --------------------- | ------------------------------------------------- |
-| OpenAI       | `test_openai.ts`      | `openai`                                          |
-| Anthropic    | `test_anthropic.ts`   | `@anthropic-ai/sdk`                               |
-| Cohere       | `test_cohere.ts`      | `cohere-ai`                                       |
-| Together AI  | `test_together.ts`    | `together-ai`                                     |
-| Azure OpenAI | `test_azure.ts`       | `openai`                                          |
-| Bedrock      | `test_bedrock.ts`     | `@aws-sdk/client-bedrock-runtime`                 |
-| Vertex AI    | `test_vertex.ts`      | `@google-cloud/vertexai`                          |
-| LangChain    | `test_langchain.ts`   | `langchain`, `@langchain/openai`, `@langchain/core` |
-| LlamaIndex   | `test_llamaindex.ts`  | `llamaindex`                                      |
+| Provider     | File                 | Required Package                                    |
+| ------------ | -------------------- | --------------------------------------------------- |
+| OpenAI       | `test_openai.ts`     | `openai`                                            |
+| Anthropic    | `test_anthropic.ts`  | `@anthropic-ai/sdk`                                 |
+| Cohere       | `test_cohere.ts`     | `cohere-ai`                                         |
+| Together AI  | `test_together.ts`   | `together-ai`                                       |
+| Azure OpenAI | `test_azure.ts`      | `openai`                                            |
+| Bedrock      | `test_bedrock.ts`    | `@aws-sdk/client-bedrock-runtime`                   |
+| Vertex AI    | `test_vertex.ts`     | `@google-cloud/vertexai`                            |
+| LangChain    | `test_langchain.ts`  | `langchain`, `@langchain/openai`, `@langchain/core` |
+| LlamaIndex   | `test_llamaindex.ts` | `llamaindex`                                        |
 
 ## Expected Behavior
 

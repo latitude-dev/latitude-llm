@@ -114,7 +114,11 @@ describe('startOptimization', () => {
     await expect(
       startOptimization({
         evaluation,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document,
         baselineCommit: commit,
         project,
@@ -132,7 +136,11 @@ describe('startOptimization', () => {
     await expect(
       startOptimization({
         evaluation,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document,
         baselineCommit: commit,
         project,
@@ -152,7 +160,11 @@ describe('startOptimization', () => {
     await expect(
       startOptimization({
         evaluation,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: invalidDocument,
         baselineCommit: commit,
         project,
@@ -195,7 +207,11 @@ describe('startOptimization', () => {
     await expect(
       startOptimization({
         evaluation: humanEvaluation,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document,
         baselineCommit: commit,
         project,
@@ -264,7 +280,11 @@ value1
       startOptimization({
         evaluation: evalForDoc,
         dataset: datasetWithWrongCols,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: docWithParams,
         baselineCommit: commitWithParams,
         project: p2,
@@ -281,7 +301,11 @@ value1
   it('succeeds when starting optimization without dataset', async () => {
     const result = await startOptimization({
       evaluation,
-      configuration: {},
+      configuration: {
+        scope: {
+          instructions: true,
+        },
+      },
       document,
       baselineCommit: commit,
       project,
@@ -324,7 +348,11 @@ value1
   it('stores the baseline prompt correctly', async () => {
     const result = await startOptimization({
       evaluation,
-      configuration: {},
+      configuration: {
+        scope: {
+          instructions: true,
+        },
+      },
       document,
       baselineCommit: commit,
       project,
@@ -338,6 +366,9 @@ value1
     const configuration = {
       parameters: {
         testParam: { column: 'param1', isPii: true },
+      },
+      scope: {
+        instructions: true,
       },
     }
 
@@ -435,7 +466,11 @@ value1
         startOptimization({
           evaluation: evaluationForDoc,
           dataset,
-          configuration: {},
+          configuration: {
+            scope: {
+              instructions: true,
+            },
+          },
           document: documentWithParams,
           baselineCommit: commitWithParams,
           project: projectWithParams,
@@ -464,7 +499,11 @@ value2
         startOptimization({
           evaluation: evaluationForDoc,
           dataset,
-          configuration: {},
+          configuration: {
+            scope: {
+              instructions: true,
+            },
+          },
           document: documentWithParams,
           baselineCommit: commitWithParams,
           project: projectWithParams,
@@ -494,7 +533,11 @@ value3
         startOptimization({
           evaluation: evaluationForDoc,
           dataset,
-          configuration: {},
+          configuration: {
+            scope: {
+              instructions: true,
+            },
+          },
           document: documentWithParams,
           baselineCommit: commitWithParams,
           project: projectWithParams,
@@ -524,7 +567,11 @@ value4
       const result = await startOptimization({
         evaluation: evaluationForDoc,
         dataset,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: documentWithParams,
         baselineCommit: commitWithParams,
         project: projectWithParams,
@@ -569,7 +616,11 @@ value10
       const result = await startOptimization({
         evaluation: evaluationForDoc,
         dataset,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: documentWithParams,
         baselineCommit: commitWithParams,
         project: projectWithParams,
@@ -609,7 +660,11 @@ value4
       const result = await startOptimization({
         evaluation: evaluationForDoc,
         dataset,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: documentWithParams,
         baselineCommit: commitWithParams,
         project: projectWithParams,
@@ -653,6 +708,9 @@ sensitive_data_4
         configuration: {
           parameters: {
             inputParam: { isPii: true },
+          },
+          scope: {
+            instructions: true,
           },
         },
         document: documentWithParams,
@@ -699,7 +757,11 @@ sensitive_data_4
       const result = await startOptimization({
         evaluation: evaluationForDoc,
         dataset,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: documentWithParams,
         baselineCommit: commitWithParams,
         project: projectWithParams,
@@ -744,7 +806,11 @@ value4,extra7,extra8
       const result = await startOptimization({
         evaluation: evaluationForDoc,
         dataset,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: documentWithParams,
         baselineCommit: commitWithParams,
         project: projectWithParams,
@@ -790,6 +856,9 @@ value4
         configuration: {
           parameters: {
             inputParam: { column: 'mappedColumn' },
+          },
+          scope: {
+            instructions: true,
           },
         },
         document: documentWithParams,

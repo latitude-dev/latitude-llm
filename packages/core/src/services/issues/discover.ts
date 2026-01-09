@@ -26,9 +26,9 @@ import {
   getIssuesCollection,
   ISSUES_COLLECTION_TENANT_NAME,
 } from '../../weaviate'
+import { getOrSetEnrichedReason } from './results/getOrSetEnrichedReason'
 import { validateResultForIssue } from './results/validate'
 import { embedReason, normalizeEmbedding } from './shared'
-import { getOrSetEnrichedReason } from './results/getOrSetEnrichedReason'
 
 /**
  * Discovers potential issues by analyzing evaluation results and searching for similar issues.
@@ -168,7 +168,10 @@ async function rerankCandidates({
     const key = ISSUE_DISCOVERY_RERANK_CACHE_KEY(
       hashContent(
         reason +
-          candidates.map((candidate) => candidate.uuid + candidate.description),
+          candidates
+            .map((c) => c.uuid + c.description)
+            .sort()
+            .join(''),
       ),
     )
 

@@ -21,8 +21,12 @@ export const users = latitudeSchema.table(
     lastSuggestionNotifiedAt: timestamp('last_suggestion_notified_at'),
     devMode: boolean('dev_mode'),
     title: varchar('title', { length: 128 }).$type<UserTitle>(),
-    aiUsageStage: varchar('ai_usage_stage', { length: 128 }).$type<AIUsageStage>(),
-    latitudeGoal: varchar('latitude_goal', { length: 128 }).$type<LatitudeGoal>(),
+    aiUsageStage: varchar('ai_usage_stage', {
+      length: 128,
+    }).$type<AIUsageStage>(),
+    latitudeGoal: varchar('latitude_goal', {
+      length: 128,
+    }).$type<LatitudeGoal>(),
     latitudeGoalOther: text('latitude_goal_other'),
     ...timestamps(),
   },

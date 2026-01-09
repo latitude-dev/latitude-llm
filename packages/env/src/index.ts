@@ -64,6 +64,8 @@ if (environment === 'development' || environment === 'test') {
       STRIPE_WEBHOOK_SECRET: '',
       COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH: 'evaluation-v2-generator',
       COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH: 'generator',
+      ENGINE_PATH: 'apps/engine',
+      ENGINE_PYTHON: 'python3',
     },
     { path: pathToEnv },
   )
@@ -171,6 +173,10 @@ export const env = createEnv({
       .optional()
       .default(true),
 
+    // Engine
+    ENGINE_PATH: z.string().optional(),
+    ENGINE_PYTHON: z.string().optional(),
+
     KEEP_ALIVE_TIMEOUT: z.coerce.number().optional().default(601000),
 
     LATITUDE_CLOUD: z.boolean().optional().default(false),
@@ -185,6 +191,7 @@ export const env = createEnv({
     COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH: z.string().optional(),
     COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH: z.string(),
     COPILOT_PROMPT_ISSUE_DETAILS_GENERATOR_PATH: z.string().optional(),
+    COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH: z.string().optional(),
     COPILOT_GENERATE_TOOL_RESPONSES_COMMIT_UUID: z.string().optional(),
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
     COPILOT_PROMPT_REFINE_PATH: z.string().optional(),
