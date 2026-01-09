@@ -17,6 +17,9 @@ import { BadRequestError } from '@latitude-data/constants/errors'
 import { updateEvaluationResultV2 } from '../../evaluationsV2/results/update'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { findCommitById } from '../../../data-access/commits'
+import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
+import { adaptCompletionSpanMessagesToLegacy } from '../../tracing/spans/fetching/findCompletionSpanFromTrace'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 
 /**
  * Builds a reason for an evaluation result, optionally generalizing it based on selected contexts.
@@ -64,9 +67,36 @@ export async function getOrSetEnrichedReason<
     return Result.ok(initialReason)
   }
 
+  // Get the evaluated span's trace to extract messages
+  if (!result.evaluatedTraceId) {
+    return Result.error(
+      new BadRequestError('Evaluation result does not have a trace ID'),
+    )
+  }
+
+  const workspace = await unsafelyFindWorkspace(result.workspaceId)
+  const assembledTraceResult = await assembleTraceWithMessages({
+    traceId: result.evaluatedTraceId,
+    workspace,
+  })
+  if (!Result.isOk(assembledTraceResult)) {
+    return Result.error(
+      new BadRequestError('Cannot assemble trace for evaluation result'),
+    )
+  }
+
+  const { completionSpan } = assembledTraceResult.unwrap()
+  if (!completionSpan) {
+    return Result.error(
+      new BadRequestError('Cannot find completion span for evaluation result'),
+    )
+  }
+
+  const messages = adaptCompletionSpanMessagesToLegacy(completionSpan)
   const context = JSON.stringify(result.metadata.selectedContexts)
   const enriching = await generalizeReason({
     reason: initialReason,
+    messages,
     context,
   })
   if (!Result.isOk(enriching)) return enriching
@@ -115,9 +145,11 @@ export async function getOrSetEnrichedReason<
 }
 
 async function generalizeReason({
+  messages,
   reason,
   context,
 }: {
+  messages: Message[]
   reason: string
   context: string
 }) {
@@ -135,6 +167,7 @@ async function generalizeReason({
   const response = await runCopilot({
     copilot: copilot.value,
     parameters: {
+      messages,
       annotation: reason,
       context: context,
     },
