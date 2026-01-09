@@ -174,9 +174,13 @@ async function generalizeReason({
     schema: z.object({
       reasoning: z.string(),
       generalized_annotation: z.string(),
+      error: z.string().optional(),
     }),
   })
   if (!Result.isOk(response)) return Result.error(response.error!)
+  if (response.value.error !== undefined && response.value.error !== '') {
+    return Result.error(new Error(response.value.error))
+  }
 
   return Result.ok(response.value.generalized_annotation)
 }
