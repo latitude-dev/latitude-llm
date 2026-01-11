@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."memberships" ADD COLUMN "role" varchar(32) DEFAULT 'admin' NOT NULL;

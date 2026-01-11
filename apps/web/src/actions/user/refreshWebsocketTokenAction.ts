@@ -20,11 +20,11 @@ export const refreshWebsocketTokenAction = authProcedure.action(
 
     await setWebsocketSessionCookie({
       name: 'websocket',
-      sessionData: { user, workspace },
+      sessionData: { user: { id: user.id }, workspace: { id: workspace.id } },
     })
     await setWebsocketSessionCookie({
       name: 'websocketRefresh',
-      sessionData: { user, workspace },
+      sessionData: { user: { id: user.id }, workspace: { id: workspace.id } },
     })
 
     return { success: true }

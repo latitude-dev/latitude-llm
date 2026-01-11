@@ -102,6 +102,9 @@
     },
     "./telemetry": {
       "import": "./src/telemetry/index.ts"
+    },
+    "./permissions/workspace": {
+      "import": "./src/permissions/workspace.ts"
     }
   },
   "scripts": {

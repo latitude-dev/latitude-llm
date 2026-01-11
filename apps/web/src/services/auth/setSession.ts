@@ -3,17 +3,15 @@ import { generateWebsocketToken } from '@latitude-data/core/websockets/utils'
 import { cookies } from 'next/headers'
 
 import { lucia } from '.'
-import { SessionData } from './getCurrentUser'
 import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies'
 
-type PartialSession = Omit<SessionData, 'session'>
 export async function setWebsocketSessionCookie(
   {
     name,
     sessionData,
   }: {
     name: TokenType
-    sessionData: PartialSession
+    sessionData: { user: { id: string }; workspace: { id: number } }
   },
   cks?: ReadonlyRequestCookies,
 ) {
@@ -36,7 +34,7 @@ export async function setSession(
   {
     sessionData: { workspace, user },
   }: {
-    sessionData: PartialSession
+    sessionData: { user: { id: string; email: string }; workspace: any }
   },
   cks?: ReadonlyRequestCookies,
 ) {
@@ -52,14 +50,14 @@ export async function setSession(
     setWebsocketSessionCookie(
       {
         name: 'websocket',
-        sessionData: { user, workspace },
+        sessionData: { user: { id: user.id }, workspace: { id: workspace.id } },
       },
       cks,
     ),
     setWebsocketSessionCookie(
       {
         name: 'websocketRefresh',
-        sessionData: { user, workspace },
+        sessionData: { user: { id: user.id }, workspace: { id: workspace.id } },
       },
       cks,
     ),

@@ -1,5 +1,8 @@
 import { cache } from 'react'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { Membership } from '@latitude-data/core/schema/models/types/Membership'
+import { WorkspacePermission } from '@latitude-data/core/permissions/workspace'
+import { User } from '@latitude-data/core/schema/models/types/User'
 
 import { getDataFromSession } from '$/data-access'
 import { Session } from 'lucia'
@@ -11,11 +14,13 @@ import { getSession } from './getSession'
 
 export type SessionData = {
   session: Session
-  user: {
-    id: string
-    email: string
-  }
+  user: User
   workspace: Workspace
+  membership: Membership
+  workspacePermissions: WorkspacePermission[]
+  subscriptionPlan: Awaited<
+    ReturnType<typeof getDataFromSession>
+  >['subscriptionPlan']
   impersonating?: true
 }
 
@@ -54,10 +59,14 @@ export const getCurrentUserOrRedirect = cache(async () => {
     return redirectToLogin(currentUrl)
   }
 
-  const { user, workspace, subscriptionPlan } = await getDataFromSession(
-    sessionData.session,
-  )
-  if (!user || !workspace) {
+  const {
+    user,
+    workspace,
+    membership,
+    workspacePermissions,
+    subscriptionPlan,
+  } = await getDataFromSession(sessionData.session)
+  if (!user || !workspace || !membership) {
     return redirectToLogin(currentUrl)
   }
 
@@ -65,6 +74,8 @@ export const getCurrentUserOrRedirect = cache(async () => {
     session: sessionData.session!,
     user,
     workspace,
+    membership,
+    workspacePermissions,
     subscriptionPlan,
   }
 })

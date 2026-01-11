@@ -1,18 +1,31 @@
 import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
 import { type User } from '../schema/models/types/User'
+import { type Membership } from '../schema/models/types/Membership'
+import { WorkspaceRole } from '../permissions/workspace'
 import { databaseErrorCodes, UnprocessableEntityError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { memberships } from '../schema/models/memberships'
 import { users } from '../schema/models/users'
 import RepositoryLegacy from './repository'
 
+export type WorkspaceUser = User & {
+  membershipId: number
+  role: WorkspaceRole
+  confirmedAt: Membership['confirmedAt']
+}
+
 const tt = {
   ...getTableColumns(users),
+  membershipId: memberships.id,
+  role: memberships.role,
   confirmedAt: memberships.confirmedAt,
 }
 
-export class UsersRepository extends RepositoryLegacy<typeof tt, User> {
+export class UsersRepository extends RepositoryLegacy<
+  typeof tt,
+  WorkspaceUser
+> {
   get scope() {
     return this.db
       .select(tt)
