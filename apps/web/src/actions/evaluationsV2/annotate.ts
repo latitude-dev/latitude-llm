@@ -10,10 +10,13 @@ import {
   SpanType,
   SpanWithDetails,
 } from '@latitude-data/core/constants'
-import { withEvaluation, withEvaluationSchema } from '../procedures'
+import {
+  withEvaluationForAnnotations,
+  withEvaluationSchema,
+} from '../procedures'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 
-export const annotateEvaluationV2Action = withEvaluation
+export const annotateEvaluationV2Action = withEvaluationForAnnotations
   .inputSchema(
     withEvaluationSchema.extend({
       resultScore: z.number(),

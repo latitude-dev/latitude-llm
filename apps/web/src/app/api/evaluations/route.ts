@@ -5,6 +5,7 @@ import { EvaluationsV2Repository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { WorkspacePermissions } from '@latitude-data/core/permissions/workspace'
 
 const searchParamsSchema = z.object({
   projectId: z.string().optional(),
@@ -40,5 +41,6 @@ export const GET = errorHandler(
 
       return NextResponse.json(evaluations, { status: 200 })
     },
+    WorkspacePermissions.AccessAnnotations,
   ),
 )
