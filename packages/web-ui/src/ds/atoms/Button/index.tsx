@@ -30,8 +30,7 @@ const buttonContainerVariants = cva(
         linkDestructive: 'shadow-none underline-offset-4 hover:underline',
         shiny: '',
         shinyLatte: '',
-        // TODO: apply a color token for this
-        latte: 'bg-[#E5B217] hover:bg-[#E5B217]/90 border-latte-border',
+        latte: 'bg-latte hover:bg-latte/90 border-latte-border',
         primaryMuted: 'bg-primary-muted',
         destructiveMuted: 'bg-destructive-muted',
         successMuted: 'bg-success-muted',
