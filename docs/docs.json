@@ -220,7 +220,16 @@
               "developers/providers/cohere",
               "developers/providers/together-ai",
               "developers/providers/vertex-ai",
-              "developers/providers/gemini"
+              "developers/providers/gemini",
+              "developers/providers/groq",
+              "developers/providers/mistral",
+              "developers/providers/ollama",
+              "developers/providers/litellm",
+              "developers/providers/replicate",
+              "developers/providers/sagemaker",
+              "developers/providers/transformers",
+              "developers/providers/aleph-alpha",
+              "developers/providers/watsonx"
             ]
           },
           {
@@ -228,7 +237,9 @@
             "pages": [
               "developers/frameworks/langchain",
               "developers/frameworks/llamaindex",
-              "developers/frameworks/vercel-ai-sdk"
+              "developers/frameworks/vercel-ai-sdk",
+              "developers/frameworks/haystack",
+              "developers/frameworks/dspy"
             ]
           }
         ]

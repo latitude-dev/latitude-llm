@@ -1,0 +1,160 @@
+---
+title: Mistral AI
+description: Connect your Mistral AI-powered application to Latitude Telemetry for feature-level observability and evaluations.
+---
+
+<Note>This integration is only available in the **Python SDK**.</Note>
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses the official **Mistral AI SDK**.
+
+After completing these steps:
+
+- Every Mistral AI call (e.g. `chat.complete`) can be captured as a log in Latitude.
+- Logs are grouped under a **prompt**, identified by a `path`, inside a Latitude **project**.
+- You can inspect inputs/outputs, measure latency, and debug Mistral AI-powered features from the Latitude dashboard.
+
+<Check>
+  You'll keep calling Mistral AI exactly as you do today — Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+---
+
+## Requirements
+
+Before you start, make sure you have:
+
+- A **Latitude account** and **API key**
+- A **Latitude project ID**
+- A Python-based project that uses the **Mistral AI SDK**
+
+That's it — prompts do **not** need to be created ahead of time.
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install requirements">
+    Add the Latitude Telemetry package to your project:
+
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry
+      ```
+    </CodeGroup>
+
+  </Step>
+
+  <Step title="Initialize Latitude Telemetry">
+    Create a single Telemetry instance when your app starts.
+
+    You must enable the **MistralAI** instrumentor so Telemetry can trace it.
+
+    ```python telemetry.py
+    import os
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(
+            instrumentors=[Instrumentors.MistralAI],  # This enables automatic tracing for the Mistral AI SDK
+        ),
+    )
+    ```
+
+    <Info>
+      The Telemetry instance should only be created once. Initialize it before
+      importing `mistralai` so clients are automatically traced.
+    </Info>
+
+  </Step>
+
+  <Step title="Wrap your Mistral AI-powered feature">
+    Wrap the code that calls Mistral AI using <code>telemetry.capture</code>.
+
+    You can use the `capture` method as a decorator (recommended) or as a context manager:
+
+    ```python Using decorator (recommended)
+    import os
+    from telemetry import telemetry
+    from mistralai import Mistral
+    from mistralai.models import UserMessage
+
+    @telemetry.capture(
+        project_id=123,  # The ID of your project in Latitude
+        path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+    )
+    def generate_support_reply(input: str) -> str:
+        client = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
+        response = client.chat.complete(
+            model="mistral-small-latest",
+            messages=[UserMessage(role="user", content=input)],
+        )
+
+        return response.choices[0].message.content
+    ```
+
+    ```python Using context manager
+    import os
+    from telemetry import telemetry
+    from mistralai import Mistral
+    from mistralai.models import UserMessage
+
+    def generate_support_reply(input: str) -> str:
+        with telemetry.capture(
+            project_id=123,  # The ID of your project in Latitude
+            path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+        ):
+            client = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
+            response = client.chat.complete(
+                model="mistral-small-latest",
+                messages=[UserMessage(role="user", content=input)],
+            )
+
+            return response.choices[0].message.content
+    ```
+
+    <Info>
+    The `path`:
+    - Identifies the prompt in Latitude
+    - Can be new or existing
+    - Should not contain spaces or special characters (use letters, numbers, `- _ / .`)
+    </Info>
+
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing your logs in Latitude
+
+Once your feature is wrapped, logs will appear automatically.
+
+1. Open the **prompt** in your Latitude dashboard (identified by `path`)
+2. Go to the **Traces** section
+3. Each execution will show:
+   - Input and output messages
+   - Model and token usage
+   - Latency and errors
+   - One trace per feature invocation
+
+Each Mistral AI call appears as a child span under the captured prompt execution, giving you a full, end-to-end view of what happened.
+
+---
+
+## That's it
+
+No changes to your Mistral AI calls, no special return values, and no extra plumbing — just wrap the feature you want to observe.

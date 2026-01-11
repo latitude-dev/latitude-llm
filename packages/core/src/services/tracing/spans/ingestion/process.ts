@@ -31,7 +31,11 @@ function convertSpanAttribute(
   }
 
   if (attribute.arrayValue != undefined) {
-    const values = attribute.arrayValue.values.map(convertSpanAttribute)
+    const arrayValues = attribute.arrayValue.values
+    if (!arrayValues || arrayValues.length === 0) {
+      return Result.ok([])
+    }
+    const values = arrayValues.map(convertSpanAttribute)
     if (values.some((v) => v.error)) return Result.error(values[0]!.error!)
 
     return Result.ok(values.map((v) => v.value!))
@@ -137,6 +141,31 @@ export function extractSpanType(
       case VALUES.AI_SDK.operationId.toolCall:
         return Result.ok(SpanType.Tool)
     }
+  }
+
+  // OpenInference (Arize/Phoenix)
+  const openInferenceSpanKind = attributes[ATTRIBUTES.OPENINFERENCE.span.kind]
+  if (openInferenceSpanKind) {
+    switch (String(openInferenceSpanKind)) {
+      case VALUES.OPENINFERENCE.span.kind.llm:
+        return Result.ok(SpanType.Completion)
+      case VALUES.OPENINFERENCE.span.kind.embedding:
+        return Result.ok(SpanType.Embedding)
+      case VALUES.OPENINFERENCE.span.kind.tool:
+        return Result.ok(SpanType.Tool)
+    }
+  }
+
+  // Fallback: If we have gen_ai.system and gen_ai.request.model, it's likely a completion
+  // This handles instrumentations like Bedrock that don't set an explicit operation type
+  const genAiSystem =
+    attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system] ||
+    attributes['gen_ai.system']
+  const genAiRequestModel =
+    attributes[ATTRIBUTES.LATITUDE.request.model] ||
+    attributes['gen_ai.request.model']
+  if (genAiSystem && genAiRequestModel) {
+    return Result.ok(SpanType.Completion)
   }
 
   return Result.ok(SpanType.Unknown)

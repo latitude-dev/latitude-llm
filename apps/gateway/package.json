@@ -20,6 +20,7 @@
     "@hono/swagger-ui": "0.4.1",
     "@hono/zod-openapi": "1.1.1",
     "@latitude-data/constants": "workspace:^",
+    "@opentelemetry/otlp-transformer": "catalog:",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/sdk": "workspace:^",

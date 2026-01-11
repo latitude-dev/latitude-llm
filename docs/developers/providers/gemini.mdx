@@ -5,16 +5,16 @@ description: Connect your Gemini-powered application to Latitude Telemetry for f
 
 ## Overview
 
-This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses the official **Gemini SDK**.
+This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses the official **Gemini SDK** (`google-genai`).
 
 After completing these steps:
 
-- Every Gemini generation (e.g. `generateContent`) can be captured as a log in Latitude.
+- Every Gemini call (e.g. `generate_content`) can be captured as a log in Latitude.
 - Logs are grouped under a **prompt**, identified by a `path`, inside a Latitude **project**.
 - You can inspect inputs/outputs, measure latency, and debug your Gemini-powered features from the Latitude dashboard.
 
 <Check>
-  You’ll keep calling Gemini exactly as you do today — Telemetry simply observes
+  You'll keep calling Gemini exactly as you do today — Telemetry simply observes
   and enriches those calls.
 </Check>
 
@@ -26,9 +26,9 @@ Before you start, make sure you have:
 
 - A **Latitude account** and **API key**
 - A **Latitude project ID**
-- A Node.js-based project that uses the **Gemini SDK**
+- A Node.js or Python-based project that uses the **Gemini SDK**
 
-That’s it — prompts do **not** need to be created ahead of time.
+That's it — prompts do **not** need to be created ahead of time.
 
 ---
 
@@ -39,117 +39,165 @@ That’s it — prompts do **not** need to be created ahead of time.
   <Step title="Install requirements">
     Add the Latitude Telemetry package to your project:
 
-    <CodeGroup>
-      ```bash npm
-      npm add @latitude-data/telemetry
-      ```
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm add @latitude-data/telemetry
+          ```
 
-      ```bash pnpm
-      pnpm add @latitude-data/telemetry
-      ```
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry
+          ```
 
-      ```bash yarn
-      yarn add @latitude-data/telemetry
-      ```
+          ```bash yarn
+          yarn add @latitude-data/telemetry
+          ```
 
-      ```bash bun
-      bun add @latitude-data/telemetry
-      ```
-    </CodeGroup>
+          ```bash bun
+          bun add @latitude-data/telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
 
   </Step>
 
   <Step title="Initialize Latitude Telemetry">
-    Create a single <code>LatitudeTelemetry</code> instance when your app starts.
+    Create a single Telemetry instance when your app starts.
 
-    ```ts telemetry.ts
-    import { LatitudeTelemetry } from '@latitude-data/telemetry'
+    You must enable the **GoogleGenerativeAI** instrumentor so Telemetry can trace Gemini calls automatically.
 
-    export const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY)
-    ```
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts telemetry.ts
+        import { LatitudeTelemetry, Instrumentors } from '@latitude-data/telemetry'
+
+        export const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY, {
+          instrumentors: [Instrumentors.GoogleGenerativeAI],  // This enables automatic tracing for Gemini
+        })
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python telemetry.py
+        import os
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(
+                instrumentors=[Instrumentors.GoogleGenerativeAI],  # This enables automatic tracing for Gemini
+            ),
+        )
+        ```
+      </Tab>
+    </Tabs>
 
     <Info>
-      The Telemetry instance should only be created once.
+      The Telemetry instance should only be created once. Initialize it
+      before importing from `google-genai` so Gemini calls are
+      automatically traced.
     </Info>
 
   </Step>
 
   <Step title="Wrap your Gemini-powered feature">
-    Wrap the feature you want to observe using <code>telemetry.capture</code>.
+    Wrap the code that calls Gemini using <code>telemetry.capture</code>.
 
-    ```ts
-    import { telemetry } from './telemetry'
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { GoogleGenerativeAI } from '@google/generative-ai'
+        import { telemetry } from './telemetry'
 
-    export async function getSupportReply(input: string) {
-      return telemetry.capture(
-        {
-          projectId: 123, // Your Latitude project ID
-          path: 'get-support-reply', // Prompt identifier (created automatically if missing)
-        },
-        async () => {
+        export async function generateSupportReply(input: string) {
+          return telemetry.capture(
+            {
+              projectId: 123,  // The ID of your project in Latitude
+              path: 'generate-support-reply',  // Add a path to identify this prompt in Latitude
+            },
+            async () => {
+              // Your regular LLM-powered feature code here
+              const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+              const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
-          // Your regular LLM-powered feature code here
-          const response = await generateGeminiResponse(input)
+              const result = await model.generateContent(input)
 
-          // You can return anything you want — the value is passed through unchanged
-          return response
+              // You can return anything you want — the value is passed through unchanged
+              return result.response.text()
+            }
+          )
         }
-      )
-    }
-    ```
+        ```
+      </Tab>
+      <Tab title="Python">
+        You can use the `capture` method as a decorator (recommended) or as a context manager:
+
+        ```python Using decorator (recommended)
+        import os
+        from telemetry import telemetry
+        from google import genai
+
+        @telemetry.capture(
+            project_id=123,  # The ID of your project in Latitude
+            path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+        )
+        def generate_support_reply(input: str) -> str:
+            client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=input,
+            )
+
+            # You can return anything you want — the value is passed through unchanged
+            return response.text
+        ```
+
+        ```python Using context manager
+        import os
+        from telemetry import telemetry
+        from google import genai
+
+        def generate_support_reply(input: str) -> str:
+            with telemetry.capture(
+                project_id=123,  # The ID of your project in Latitude
+                path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+            ):
+                client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=input,
+                )
+
+                # You can return anything you want — the value is passed through unchanged
+                return response.text
+        ```
+      </Tab>
+    </Tabs>
 
     <Info>
-      The <code>path</code>:
-      - Identifies the prompt in Latitude
-      - Can be new or existing
-      - Should not contain spaces or special characters (use letters, numbers, <code>- _ / .</code>)
+    The `path`:
+    - Identifies the prompt in Latitude
+    - Can be new or existing
+    - Should not contain spaces or special characters (use letters, numbers, `- _ / .`)
     </Info>
-
-  </Step>
-
-  <Step title="Define the completion span">
-    Inside your generation function, create a completion span before calling Gemini,
-    then end it after the response returns.
-
-    ```ts
-    import { telemetry } from './telemetry'
-    import { GoogleGenAI } from '@google/genai'
-
-    export async function generateGeminiResponse(prompt: string) {
-      const model = 'gemini-2.0-flash'
-
-      // 1) Start the completion span
-      const span = telemetry.span.completion({
-        model,
-        input: [{ role: 'user', content: prompt }],
-      })
-
-      try {
-        // 2) Call Gemini as usual
-        const google = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
-        const response = await google.models.generateContent( ... )
-        const text = response.text ?? ''
-
-        // 3) End the span (attach output + useful metadata)
-        span.end({
-          output: [{ role: 'assistant', content: text }],
-        })
-
-        return text
-      } catch (error) {
-
-        // Make sure to close the span even on errors
-        span.fail(error)
-        throw error
-      }
-    }
-    ```
-
-    <Note>
-      Although the `input` and `output` attributes are required for defining the span initialization and completion,
-      you should include as much metadata as possible, to improve observability. Adding information such as the model,
-      configuration, output tokens and finish reason will help you debug, analyze and evaluate your traces.
-    </Note>
 
   </Step>
 
@@ -165,12 +213,14 @@ Once your feature is wrapped, logs will appear automatically.
 2. Go to the **Traces** section
 3. Each execution will show:
    - Input and output messages
-   - Model and token usage (when provided)
+   - Model and token usage
    - Latency and errors
    - One trace per feature invocation
 
+Each Gemini call appears as a child span under the captured prompt execution, giving you a full, end-to-end view of what happened.
+
 ---
 
-## That’s it
+## That's it
 
-No changes to how you call Gemini — just wrap the feature and define the completion span around the generation.
+No changes to your Gemini calls, no special return values, and no extra plumbing — just wrap the feature you want to observe.

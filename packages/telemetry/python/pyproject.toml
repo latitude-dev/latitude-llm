@@ -9,34 +9,34 @@ license = "MIT"
 urls.repository = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/python"
 urls.homepage = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/python#readme"
 urls.documentation = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/python#readme"
-requires-python = ">=3.9, <3.13"
+requires-python = ">=3.11, <3.13"
 dependencies = [
     "opentelemetry-api>=1.29.0",
     "opentelemetry-sdk>=1.29.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.29.0",
     "opentelemetry-semantic-conventions-ai>=0.4.2",
     "openinference-semantic-conventions>=0.1.12",
-    "opentelemetry-instrumentation-alephalpha>=0.36.0",
-    "opentelemetry-instrumentation-anthropic>=0.36.0",
-    "opentelemetry-instrumentation-bedrock>=0.36.0",
-    "opentelemetry-instrumentation-cohere>=0.36.0",
-    "openinference-instrumentation-dspy>=0.1.14",
-    "opentelemetry-instrumentation-google-generativeai>=0.36.0",
-    "opentelemetry-instrumentation-groq>=0.36.0",
-    "opentelemetry-instrumentation-haystack>=0.36.0",
-    "opentelemetry-instrumentation-langchain>=0.36.0",
+    "opentelemetry-instrumentation-alephalpha>=0.50.1",
+    "opentelemetry-instrumentation-anthropic>=0.50.1",
+    "opentelemetry-instrumentation-bedrock>=0.50.1",
+    "opentelemetry-instrumentation-cohere>=0.50.1",
+    "openinference-instrumentation-dspy>=0.1.31",
+    "opentelemetry-instrumentation-google-generativeai>=0.50.1",
+    "opentelemetry-instrumentation-groq>=0.50.1",
+    "opentelemetry-instrumentation-haystack>=0.50.1",
+    "opentelemetry-instrumentation-langchain>=0.50.1",
     "openinference-instrumentation-litellm>=0.1.6",
-    "opentelemetry-instrumentation-llamaindex>=0.36.0",
-    "opentelemetry-instrumentation-mistralai>=0.36.0",
-    "opentelemetry-instrumentation-ollama>=0.36.0",
-    "opentelemetry-instrumentation-openai>=0.36.0",
-    "opentelemetry-instrumentation-replicate>=0.36.0",
-    "opentelemetry-instrumentation-sagemaker>=0.36.0",
-    "opentelemetry-instrumentation-together>=0.36.0",
+    "opentelemetry-instrumentation-llamaindex>=0.50.1",
+    "opentelemetry-instrumentation-mistralai>=0.50.1",
+    "opentelemetry-instrumentation-ollama>=0.50.1",
+    "opentelemetry-instrumentation-openai>=0.50.1",
+    "opentelemetry-instrumentation-replicate>=0.50.1",
+    "opentelemetry-instrumentation-sagemaker>=0.50.1",
+    "opentelemetry-instrumentation-together>=0.50.1",
     "opentelemetry-instrumentation-threading>=0.50b0",
-    "opentelemetry-instrumentation-transformers>=0.36.0",
-    "opentelemetry-instrumentation-vertexai>=0.36.0",
-    "opentelemetry-instrumentation-watsonx>=0.36.0",
-    "httpx>=0.27.2",
+    "opentelemetry-instrumentation-transformers>=0.50.1",
+    "opentelemetry-instrumentation-vertexai>=0.50.1",
+    "opentelemetry-instrumentation-watsonx>=0.50.1",
     "pydantic>=2.10.3",
     "typing-extensions>=4.12.2",
 ]
@@ -46,7 +46,6 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "pytest-xdist>=3.6.1",
     "pytest>=8.3.4",
-    "respx>=0.22.0",
     "pyright>=1.1.392",
     "ruff>=0.8.3",
     "sh>=1.14.3",
@@ -58,14 +57,14 @@ dev = [
 ]
 
 [tool.pyright]
-pythonVersion = "3.9"
+pythonVersion = "3.11"
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false
 reportUnnecessaryIsInstance = false
 reportPrivateUsage = false
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py311"
 line-length = 120
 indent-width = 4
 

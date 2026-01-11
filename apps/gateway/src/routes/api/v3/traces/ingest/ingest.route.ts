@@ -1,18 +1,19 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import { ROUTES } from '$/routes'
-import { createRoute } from '@hono/zod-openapi'
+import { createRoute, z } from '@hono/zod-openapi'
 import { Otlp } from '@latitude-data/constants'
 
 export const ingestRoute = createRoute({
   method: http.Methods.POST,
   path: ROUTES.api.v3.traces.ingest,
   tags: ['Traces'],
-  description: 'Ingest OTLP spans',
+  description: 'Ingest OTLP spans (JSON or Protobuf)',
   request: {
     body: {
       content: {
         [http.MediaTypes.JSON]: { schema: Otlp.serviceRequestSchema },
+        [http.MediaTypes.PROTOBUF]: { schema: z.instanceof(ArrayBuffer) },
       },
     },
   },

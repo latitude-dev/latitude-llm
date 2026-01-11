@@ -212,6 +212,9 @@ export const ATTRIBUTES = {
   // OpenInference (Arize/Phoenix)
   // https://arize-ai.github.io/openinference/spec/semantic_conventions.html
   OPENINFERENCE: {
+    span: {
+      kind: 'openinference.span.kind',
+    },
     tool: {
       name: 'tool.name',
     },
@@ -368,6 +371,19 @@ export const VALUES = {
           embedding: 'embedding',
           unknown: 'unknown',
         },
+      },
+    },
+  },
+  OPENINFERENCE: {
+    span: {
+      kind: {
+        llm: 'LLM',
+        chain: 'CHAIN',
+        embedding: 'EMBEDDING',
+        tool: 'TOOL',
+        agent: 'AGENT',
+        retriever: 'RETRIEVER',
+        reranker: 'RERANKER',
       },
     },
   },

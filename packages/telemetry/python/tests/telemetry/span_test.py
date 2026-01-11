@@ -1,18 +1,11 @@
-from typing import List, cast
-from unittest import mock
-
-import httpx
-
 from latitude_telemetry import SpanPrompt
 from tests.utils import TestCase
 
 
 class TestSpan(TestCase):
-    def test_success(self):
-        endpoint = "/otlp/v1/traces"
-        endpoint_mock = self.gateway_mock.post(endpoint).mock()
-
-        with self.telemetry.span(
+    def test_legacy_span_creates_spans(self):
+        """Test that legacy_span creates spans with proper nesting."""
+        with self.telemetry.legacy_span(
             name="first",
             prompt=SpanPrompt(
                 uuid="prompt-uuid",
@@ -22,37 +15,35 @@ class TestSpan(TestCase):
             distinct_id="distinct-id",
             metadata={"key": "value"},
         ):
-            with self.telemetry.span("second"):
+            with self.telemetry.legacy_span("second"):
                 pass
 
-        requests = cast(List[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
+        spans = self.get_exported_spans()
+        self.assertEqual(len(spans), 2)
 
-        self.assert_requested(
-            requests[0],
-            method="POST",
-            endpoint=endpoint,
-            body=self.create_instrumentation_request(
-                name="second",
-                parentSpanId=mock.ANY,
-                attributes=[],
-            ),
-        )
-        self.assert_requested(
-            requests[1],
-            method="POST",
-            endpoint=endpoint,
-            body=self.create_instrumentation_request(
-                name="first",
-                attributes=[
-                    {
-                        "key": "latitude.prompt",
-                        "value": {
-                            "stringValue": '{"uuid":"prompt-uuid","versionUuid":"version-uuid","parameters":{"parameter":"value"}}'  # noqa: E501
-                        },
-                    },
-                    {"key": "latitude.distinctId", "value": {"stringValue": "distinct-id"}},
-                    {"key": "latitude.metadata", "value": {"stringValue": '{"key": "value"}'}},
-                ],
-            ),
-        )
-        self.assertEqual(endpoint_mock.call_count, 2)
+        # Find spans by name
+        first_span = self.find_span_by_name("first")
+        second_span = self.find_span_by_name("second")
+
+        self.assertIsNotNone(first_span)
+        self.assertIsNotNone(second_span)
+
+        # Verify first span has correct attributes
+        self.assert_span_has_attribute(first_span, "latitude.prompt")
+        self.assert_span_has_attribute(first_span, "latitude.distinctId", "distinct-id")
+        self.assert_span_has_attribute(first_span, "latitude.metadata")
+
+        # Verify parent-child relationship
+        self.assertIsNotNone(second_span.parent)
+        self.assertEqual(second_span.parent.span_id, first_span.context.span_id)
+
+    def test_single_span(self):
+        """Test creating a single span."""
+        with self.telemetry.legacy_span("test-span"):
+            pass
+
+        spans = self.get_exported_spans()
+        self.assertEqual(len(spans), 1)
+
+        span = spans[0]
+        self.assert_span_name(span, "test-span")
