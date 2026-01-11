@@ -44,15 +44,11 @@ SpanMetadata = Dict[str, Any]
 
 
 class GatewayOptions(Model):
-    host: str
-    port: int
-    ssl: bool
-    api_version: str
+    """Gateway configuration options."""
+
+    base_url: str
 
     @property
-    def protocol(self) -> str:
-        return "https" if self.ssl else "http"
-
-    @property
-    def base_url(self) -> str:
-        return f"{self.protocol}://{self.host}:{self.port}/api/{self.api_version}"
+    def traces_url(self) -> str:
+        """URL for the traces endpoint (v3 API)."""
+        return f"{self.base_url}/api/v3/traces"

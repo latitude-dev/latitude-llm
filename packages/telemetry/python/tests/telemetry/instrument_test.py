@@ -50,7 +50,7 @@ class TestInstrument(TestCase):
 
     def test_success_instruments_openai(self):
         openai, completion = self.create_openai_mock()
-        endpoint = "/otlp/v1/traces"
+        endpoint = "/traces"
         endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("openai.resources.chat.completions.Completions.create", return_value=completion):
@@ -88,7 +88,7 @@ class TestInstrument(TestCase):
 
     def test_success_not_instruments_openai(self):
         openai, completion = self.create_openai_mock()
-        endpoint = "/otlp/v1/traces"
+        endpoint = "/traces"
         endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("openai.resources.chat.completions.Completions.create", return_value=completion):
@@ -120,7 +120,7 @@ class TestInstrument(TestCase):
 
     def test_success_instruments_anthropic(self):
         anthropic, completion = self.create_anthropic_mock()
-        endpoint = "/otlp/v1/traces"
+        endpoint = "/traces"
         endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("anthropic.resources.messages.Messages.create", return_value=completion):
@@ -159,7 +159,7 @@ class TestInstrument(TestCase):
 
     def test_success_not_instruments_anthropic(self):
         anthropic, completion = self.create_anthropic_mock()
-        endpoint = "/otlp/v1/traces"
+        endpoint = "/traces"
         endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("anthropic.resources.messages.Messages.create", return_value=completion):
@@ -198,7 +198,7 @@ class TestInstrument(TestCase):
 
     def test_success_instruments_litellm(self):
         litellm, completion = self.create_litellm_mock()
-        endpoint = "/otlp/v1/traces"
+        endpoint = "/traces"
         endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("litellm.llms.openai.openai.OpenAIChatCompletion.completion", return_value=completion):
@@ -246,7 +246,7 @@ class TestInstrument(TestCase):
 
     def test_success_not_instruments_litellm(self):
         litellm, completion = self.create_litellm_mock()
-        endpoint = "/otlp/v1/traces"
+        endpoint = "/traces"
         endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("litellm.llms.openai.openai.OpenAIChatCompletion.completion", return_value=completion):

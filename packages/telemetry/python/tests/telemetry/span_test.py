@@ -9,10 +9,11 @@ from tests.utils import TestCase
 
 class TestSpan(TestCase):
     def test_success(self):
-        endpoint = "/otlp/v1/traces"
+        endpoint = "/traces"
         endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
-        with self.telemetry.span(
+        # Use legacy_span for backward compatibility test
+        with self.telemetry.legacy_span(
             name="first",
             prompt=SpanPrompt(
                 uuid="prompt-uuid",
@@ -22,7 +23,7 @@ class TestSpan(TestCase):
             distinct_id="distinct-id",
             metadata={"key": "value"},
         ):
-            with self.telemetry.span("second"):
+            with self.telemetry.legacy_span("second"):
                 pass
 
         requests = cast(List[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore

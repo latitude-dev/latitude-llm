@@ -248,7 +248,7 @@ class Exporter(SpanExporter):
 
         try:
             method = "POST"
-            url = f"{self._options.gateway.base_url}/otlp/v1/traces"
+            url = self._options.gateway.traces_url
             content = CreateTraceRequestBody(resource_spans=spans).model_dump_json()
 
             while attempt <= self._options.retries:
