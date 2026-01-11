@@ -15,24 +15,20 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
 
+        self.base_url = "https://fake-host.com"
         self.internal_options = InternalOptions(
-            gateway=GatewayOptions(
-                host="fake-host.com",
-                port=443,
-                ssl=True,
-                api_version="v2",
-            ),
+            gateway=GatewayOptions(base_url=self.base_url),
             retries=3,
             delay=0,
             timeout=0.5,
         )
         self.api_key = "fake-api-key"
-        self.base_url = "https://fake-host.com/api/v3"
+        self.traces_url = f"{self.base_url}/api/v3"
 
         self.gateway_mock = respx.MockRouter(
             assert_all_called=False,
             assert_all_mocked=True,
-            base_url=self.base_url,
+            base_url=self.traces_url,
         )
         self.gateway_mock.start()
         self.gateway_mock.reset()
@@ -60,7 +56,7 @@ class TestCase(unittest.TestCase):
         body: Optional[Dict[str, Any]] = None,
     ):
         self.assertEqual(request.method, method)
-        self.assertEqual(request.url, f"{self.base_url}{endpoint}")
+        self.assertEqual(request.url, f"{self.traces_url}{endpoint}")
         self.assertDictContainsSubset(
             {**{"authorization": f"Bearer {self.api_key}"}, **(headers or {})},
             dict(request.headers),
@@ -82,7 +78,7 @@ class TestCase(unittest.TestCase):
                             {"key": "telemetry.sdk.language", "value": {"stringValue": "python"}},
                             {"key": "telemetry.sdk.name", "value": {"stringValue": "opentelemetry"}},
                             {"key": "telemetry.sdk.version", "value": {"stringValue": "1.29.0"}},
-                            {"key": "service.name", "value": {"stringValue": "latitude_telemetry.telemetry"}},
+                            {"key": "service.name", "value": {"stringValue": "latitude-telemetry-python"}},
                         ]
                     },
                     "scopeSpans": [
