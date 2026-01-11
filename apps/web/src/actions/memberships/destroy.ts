@@ -3,10 +3,13 @@
 import { MembershipsRepository } from '@latitude-data/core/repositories'
 import { destroyMembership } from '@latitude-data/core/services/memberships/destroy'
 import { z } from 'zod'
+import { WorkspacePermissions } from '@latitude-data/core/permissions/workspace'
 
-import { authProcedure } from '../procedures'
+import { withWorkspacePermission } from '../procedures'
 
-export const destroyMembershipAction = authProcedure
+export const destroyMembershipAction = withWorkspacePermission(
+  WorkspacePermissions.ManageMembers,
+)
   .inputSchema(z.object({ id: z.string() }))
   .action(async ({ parsedInput: { id }, ctx: { workspace, user } }) => {
     if (user.id === id) {

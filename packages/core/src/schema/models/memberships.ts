@@ -8,12 +8,14 @@ import {
   uniqueIndex,
   uuid,
   boolean,
+  varchar,
 } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { users } from '../models/users'
 import { workspaces } from '../models/workspaces'
 import { timestamps } from '../schemaHelpers'
+import { WorkspaceRole } from '../../permissions/workspace'
 
 export const memberships = latitudeSchema.table(
   'memberships',
@@ -29,6 +31,10 @@ export const memberships = latitudeSchema.table(
       .notNull()
       .unique()
       .default(sql`gen_random_uuid()`),
+    role: varchar('role', { length: 32 })
+      .$type<WorkspaceRole>()
+      .notNull()
+      .default('admin'),
     confirmedAt: timestamp('confirmed_at'),
     wantToReceiveWeeklyEmail: boolean('want_to_receive_weekly_email').default(
       true,

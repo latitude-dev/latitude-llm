@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
+import { WorkspaceRole } from '../../permissions/workspace'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -15,11 +16,13 @@ export async function inviteUser(
     email,
     workspace,
     author,
+    role,
   }: {
     email: string
     name: string
     workspace: Workspace
     author: User
+    role?: WorkspaceRole
   },
   transaction = new Transaction(),
 ) {
@@ -36,9 +39,10 @@ export async function inviteUser(
         user = result.unwrap()
       }
 
-      await createMembership({ author, user, workspace }, transaction).then(
-        (r) => r.unwrap(),
-      )
+      await createMembership(
+        { author, user, workspace, role: role ?? 'admin' },
+        transaction,
+      ).then((r) => r.unwrap())
 
       return Result.ok(user)
     },

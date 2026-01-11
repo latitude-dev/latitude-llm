@@ -22,7 +22,12 @@ export const createMembership = async (
     async (tx) => {
       const result = await tx
         .insert(memberships)
-        .values({ userId: user.id, workspaceId: workspace.id, ...rest })
+        .values({
+          userId: user.id,
+          workspaceId: workspace.id,
+          role: rest.role ?? 'admin',
+          ...rest,
+        })
         .returning()
       const m = result[0]!
 

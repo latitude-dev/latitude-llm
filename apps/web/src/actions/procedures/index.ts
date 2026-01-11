@@ -29,6 +29,11 @@ import {
 } from '@latitude-data/core/repositories'
 import { getDataFromSession } from '$/data-access'
 import { flattenErrors } from '@latitude-data/core/lib/zodUtils'
+import {
+  WorkspacePermission,
+  WorkspacePermissions,
+  assertWorkspacePermission,
+} from '@latitude-data/core/permissions/workspace'
 
 const DEFAULT_RATE_LIMIT_POINTS = 1000
 const DEFAULT_RATE_LIMIT_DURATION = 60
@@ -93,25 +98,53 @@ export const errorHandlingProcedure = createSafeActionClient({
 })
 
 /**
- * Auth procedure.
+ * Base auth procedure including membership context.
  */
-export const authProcedure = errorHandlingProcedure.use(
+export const workspaceAuthProcedure = errorHandlingProcedure.use(
   async ({ next, ctx }) => {
     const data = await getDataFromSession()
 
-    if (!data.user || !data.workspace) {
+    if (!data.user || !data.workspace || !data.membership) {
       throw new UnauthorizedError('Unauthorized')
     }
+
     return next({
       ctx: {
         ...ctx,
         session: data.session,
         workspace: data.workspace,
         user: data.user,
+        membership: data.membership,
+        workspacePermissions: data.workspacePermissions,
       },
     })
   },
 )
+
+/**
+ * Admin (workspace) procedure.
+ */
+export const authProcedure = workspaceAuthProcedure.use(({ next, ctx }) => {
+  assertWorkspacePermission({
+    role: ctx.membership.role,
+    permissions: ctx.workspacePermissions,
+    permission: WorkspacePermissions.ManageWorkspace,
+  })
+
+  return next({ ctx })
+})
+
+export function withWorkspacePermission(permission: WorkspacePermission) {
+  return workspaceAuthProcedure.use(({ next, ctx }) => {
+    assertWorkspacePermission({
+      role: ctx.membership.role,
+      permissions: ctx.workspacePermissions,
+      permission,
+    })
+
+    return next({ ctx })
+  })
+}
 
 /**
  * Admin procedure.
@@ -128,7 +161,7 @@ export const withAdmin = authProcedure.use(async ({ next, ctx }) => {
 export const maybeAuthProcedure = errorHandlingProcedure.use(
   async ({ next, ctx }) => {
     const data = await getDataFromSession()
-    if (!data.user || !data.workspace) {
+    if (!data.user || !data.workspace || !data.membership) {
       return next({ ctx })
     }
     return next({
@@ -137,6 +170,8 @@ export const maybeAuthProcedure = errorHandlingProcedure.use(
         session: data.session,
         workspace: data.workspace,
         user: data.user,
+        membership: data.membership,
+        workspacePermissions: data.workspacePermissions,
       },
     })
   },
@@ -156,30 +191,34 @@ export const withProjectSchema = z.object({
   projectId: z.number().or(z.string()),
 })
 
-/**
- * With project procedure.
- */
-export const withProject = authProcedure.use(
-  async ({ next, ctx, clientInput }) => {
-    const { projectId } = validateSchema(withProjectSchema, clientInput)
-    const projectScope = new ProjectsRepository(ctx.workspace.id)
-    const project = await projectScope
-      .getProjectById(Number(projectId))
-      .then((r) => r.unwrap())
+const buildWithProject = (
+  procedure: typeof workspaceAuthProcedure,
+  permission?: WorkspacePermission,
+) =>
+  (permission ? withWorkspacePermission(permission) : procedure).use(
+    async ({ next, ctx, clientInput }) => {
+      const { projectId } = validateSchema(withProjectSchema, clientInput)
+      const projectScope = new ProjectsRepository(ctx.workspace.id)
+      const project = await projectScope
+        .getProjectById(Number(projectId))
+        .then((r) => r.unwrap())
 
-    return next({ ctx: { ...ctx, project } })
-  },
+      return next({ ctx: { ...ctx, project } })
+    },
+  )
+
+export const withProject = buildWithProject(authProcedure)
+export const withProjectForAnnotations = buildWithProject(
+  workspaceAuthProcedure,
+  WorkspacePermissions.WriteAnnotations,
 )
 
 export const withCommitSchema = withProjectSchema.extend({
   commitUuid: z.string(),
 })
 
-/**
- * With commit procedure.
- */
-export const withCommit = withProject.use(
-  async ({ next, ctx, clientInput }) => {
+const buildWithCommit = (procedure: ReturnType<typeof buildWithProject>) =>
+  procedure.use(async ({ next, ctx, clientInput }) => {
     const { commitUuid } = validateSchema(withCommitSchema, clientInput)
     const repository = new CommitsRepository(ctx.workspace.id)
     const commit = await repository
@@ -190,18 +229,19 @@ export const withCommit = withProject.use(
       .then((r) => r.unwrap())
 
     return next({ ctx: { ...ctx, commit } })
-  },
+  })
+
+export const withCommit = buildWithCommit(withProject)
+export const withCommitForAnnotations = buildWithCommit(
+  withProjectForAnnotations,
 )
 
 export const withDocumentSchema = withCommitSchema.extend({
   documentUuid: z.string(),
 })
 
-/**
- * With document procedure.
- */
-export const withDocument = withCommit.use(
-  async ({ next, ctx, clientInput }) => {
+const buildWithDocument = (procedure: ReturnType<typeof buildWithCommit>) =>
+  procedure.use(async ({ next, ctx, clientInput }) => {
     const { documentUuid } = validateSchema(withDocumentSchema, clientInput)
 
     const repo = new DocumentVersionsRepository(ctx.workspace.id)
@@ -216,18 +256,19 @@ export const withDocument = withCommit.use(
     return next({
       ctx: { ...ctx, document, currentCommitUuid: ctx.commit.uuid },
     })
-  },
+  })
+
+export const withDocument = buildWithDocument(withCommit)
+export const withDocumentForAnnotations = buildWithDocument(
+  withCommitForAnnotations,
 )
 
 export const withEvaluationSchema = withDocumentSchema.extend({
   evaluationUuid: z.string(),
 })
 
-/**
- * With evaluation procedure.
- */
-export const withEvaluation = withDocument.use(
-  async ({ next, ctx, clientInput }) => {
+const buildWithEvaluation = (procedure: ReturnType<typeof buildWithDocument>) =>
+  procedure.use(async ({ next, ctx, clientInput }) => {
     const { evaluationUuid } = validateSchema(withEvaluationSchema, clientInput)
     const repository = new EvaluationsV2Repository(ctx.workspace.id)
     const evaluation = await repository
@@ -240,23 +281,28 @@ export const withEvaluation = withDocument.use(
       .then((r) => r.unwrap())
 
     return next({ ctx: { ...ctx, evaluation } })
-  },
+  })
+
+export const withEvaluation = buildWithEvaluation(withDocument)
+export const withEvaluationForAnnotations = buildWithEvaluation(
+  withDocumentForAnnotations,
 )
 
 export const withDatasetSchema = withDocumentSchema.extend({
   datasetId: z.number(),
 })
 
-/**
- * With dataset procedure.
- */
-export const withDataset = withDocument.use(
-  async ({ next, ctx, clientInput }) => {
+const buildWithDataset = (procedure: ReturnType<typeof buildWithDocument>) =>
+  procedure.use(async ({ next, ctx, clientInput }) => {
     const { datasetId } = validateSchema(withDatasetSchema, clientInput)
     const repo = new DatasetsRepository(ctx.workspace.id)
     const dataset = await repo.find(datasetId).then((r) => r.unwrap())
     return next({ ctx: { ...ctx, dataset: dataset as Dataset } })
-  },
+  })
+
+export const withDataset = buildWithDataset(withDocument)
+export const withDatasetForAnnotations = buildWithDataset(
+  withDocumentForAnnotations,
 )
 
 type DataFromSession = Awaited<ReturnType<typeof getDataFromSession>>
@@ -265,6 +311,8 @@ type RateLimitCtx = {
   session?: DataFromSession['session']
   user?: DataFromSession['user']
   workspace?: DataFromSession['workspace']
+  membership?: DataFromSession['membership']
+  workspacePermissions?: DataFromSession['workspacePermissions']
 }
 
 /**

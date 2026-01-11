@@ -3,6 +3,7 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { assembleTraceWithMessages } from '@latitude-data/core/services/tracing/traces/assemble'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
+import { WorkspacePermissions } from '@latitude-data/core/permissions/workspace'
 
 export const GET = errorHandler(
   authHandler(
@@ -26,5 +27,6 @@ export const GET = errorHandler(
 
       return NextResponse.json(trace, { status: 200 })
     },
+    WorkspacePermissions.AccessAnnotations,
   ),
 )
