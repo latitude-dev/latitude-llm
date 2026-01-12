@@ -7,12 +7,24 @@ import Transaction from '../../lib/Transaction'
 import { commits } from '../../schema/models/commits'
 import { pingProjectUpdate } from '../projects'
 import { CommitsRepository } from '../../repositories/commitsRepository'
+import { Database } from '../../client'
+
+async function findCommit(
+  { baseCommit, project }: { baseCommit?: Commit; project: Project },
+  db: Database,
+) {
+  if (baseCommit) return baseCommit
+
+  const commitsScope = new CommitsRepository(project.workspaceId, db)
+  return commitsScope.getHeadCommit(project.id)
+}
 
 export async function createCommit(
   {
     project,
     user,
     data: { title, description, mergedAt, version },
+    baseCommit,
   }: {
     project: Project
     user: User
@@ -22,13 +34,13 @@ export async function createCommit(
       version?: number
       mergedAt?: Date
     }
+    baseCommit?: Commit
   },
   transaction = new Transaction(),
 ) {
   return transaction.call<Commit>(
     async (tx) => {
-      const commitsScope = new CommitsRepository(project.workspaceId, tx)
-      const liveCommit = await commitsScope.getHeadCommit(project.id)
+      const fromCommit = await findCommit({ project, baseCommit }, tx)
 
       const [commit] = await tx
         .insert(commits)
@@ -39,7 +51,7 @@ export async function createCommit(
           description,
           version,
           mergedAt,
-          mainDocumentUuid: liveCommit?.mainDocumentUuid,
+          mainDocumentUuid: fromCommit?.mainDocumentUuid,
         })
         .returning()
 
