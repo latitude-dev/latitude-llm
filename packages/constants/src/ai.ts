@@ -12,6 +12,12 @@ import { LatitudeEventData, LegacyChainEventTypes } from './events'
 import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
 import { ProviderLog } from './models'
 
+export type PromptSource = {
+  commitUuid?: string
+  documentUuid?: string
+  evaluationUuid?: string
+}
+
 export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
 
 export type ToolDefinition = JSONSchema7 & {
@@ -163,6 +169,7 @@ export type RunSyncAPIResponse<S extends AssertedStreamType = 'text'> = {
   uuid: string
   conversation: Message[]
   response: ChainCallResponseDto<S>
+  source?: PromptSource
 }
 
 export type ChatSyncAPIResponse<S extends AssertedStreamType = 'text'> =

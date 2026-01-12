@@ -106,6 +106,7 @@ async function handleNonStreamingMode(
   const body = runPresenter({
     response,
     provider: providerUsed,
+    source: undefined,
   }).unwrap()
 
   return ctx.json(body)
