@@ -84,5 +84,10 @@ export const spans = latitudeSchema.table(
       table.id,
     ),
     index('spans_previous_trace_id_idx').on(table.previousTraceId),
+    index('spans_workspace_type_source_idx').on(
+      table.workspaceId,
+      table.type,
+      table.source,
+    ),
   ],
 )
