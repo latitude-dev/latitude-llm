@@ -163,29 +163,27 @@ export async function buildLlmEvaluationRunFunction<
 export async function runPrompt<
   M extends LlmEvaluationMetric,
   S extends z.ZodType = z.ZodType,
->(
-  {
-    prompt,
-    parameters,
-    schema,
-    resultUuid,
-    evaluation,
-    providers,
-    commit,
-    workspace,
-    telemetry = realTelemetry,
-  }: {
-    prompt: string
-    parameters?: Record<string, unknown>
-    schema?: S
-    resultUuid: string
-    evaluation: EvaluationV2<EvaluationType.Llm, M>
-    providers: Map<string, ProviderApiKey>
-    commit: Commit
-    workspace: WorkspaceDto
-    telemetry?: LatitudeTelemetry
-  },
-) {
+>({
+  prompt,
+  parameters,
+  schema,
+  resultUuid,
+  evaluation,
+  providers,
+  commit,
+  workspace,
+  telemetry = realTelemetry,
+}: {
+  prompt: string
+  parameters?: Record<string, unknown>
+  schema?: S
+  resultUuid: string
+  evaluation: EvaluationV2<EvaluationType.Llm, M>
+  providers: Map<string, ProviderApiKey>
+  commit: Commit
+  workspace: WorkspaceDto
+  telemetry?: LatitudeTelemetry
+}) {
   const { promptChain, promptConfig, runArgs } =
     await buildLlmEvaluationRunFunction({
       resultUuid,

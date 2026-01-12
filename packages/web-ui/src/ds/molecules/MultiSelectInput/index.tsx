@@ -4,8 +4,7 @@ import { FormField } from '../../atoms/FormField'
 import { MultiSelect, MultiSelectProps } from '../MultiSelect'
 
 interface MultiSelectInputProps
-  extends MultiSelectProps,
-    Omit<typeof FormField, 'children'> {
+  extends MultiSelectProps, Omit<typeof FormField, 'children'> {
   required?: boolean
   description?: string
   info?: string

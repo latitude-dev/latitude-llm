@@ -160,9 +160,8 @@ describe('assertCanEditCommit', () => {
 
     const runningTest = startResult.value!
 
-    const { stopDeploymentTest } = await import(
-      '../services/deploymentTests/stop'
-    )
+    const { stopDeploymentTest } =
+      await import('../services/deploymentTests/stop')
     const stopResult = await stopDeploymentTest({ test: runningTest })
     expect(stopResult.ok).toBe(true)
 

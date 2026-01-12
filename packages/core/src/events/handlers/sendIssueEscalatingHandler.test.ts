@@ -171,9 +171,8 @@ describe('sendIssueEscalatingHandler', () => {
 
       // Create 2 additional users (total 3 users with the one from createProject)
       const { createUser } = await import('../../tests/factories/users')
-      const { createMembership } = await import(
-        '../../services/memberships/create'
-      )
+      const { createMembership } =
+        await import('../../services/memberships/create')
 
       const user2 = await createUser({ email: 'user2@example.com' })
       const user3 = await createUser({ email: 'user3@example.com' })
@@ -445,9 +444,8 @@ describe('sendIssueEscalatingHandler', () => {
 
       // Create 2 additional users
       const { createUser } = await import('../../tests/factories/users')
-      const { createMembership } = await import(
-        '../../services/memberships/create'
-      )
+      const { createMembership } =
+        await import('../../services/memberships/create')
 
       const user2 = await createUser({ email: 'user2@example.com' })
       const user3 = await createUser({ email: 'user3@example.com' })
@@ -512,9 +510,8 @@ describe('sendIssueEscalatingHandler', () => {
 
       // Update the default user's membership to opt out
       const { MembershipsRepository } = await import('../../repositories')
-      const { updateEscalatingIssuesEmailPreference } = await import(
-        '../../services/memberships/updateEscalatingIssuesEmailPreference'
-      )
+      const { updateEscalatingIssuesEmailPreference } =
+        await import('../../services/memberships/updateEscalatingIssuesEmailPreference')
 
       const membershipsRepo = new MembershipsRepository(workspace.id)
       const membership = await membershipsRepo

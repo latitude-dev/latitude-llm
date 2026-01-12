@@ -734,9 +734,8 @@ async function createIssuesAndHistograms(
     })
 
     // Update escalating_at based on histogram data
-    const { updateEscalatingIssue } = await import(
-      '../../src/services/issues/updateEscalating.ts'
-    )
+    const { updateEscalatingIssue } =
+      await import('../../src/services/issues/updateEscalating.ts')
     await updateEscalatingIssue({ issue: issueData.issue }).then((r) =>
       r.unwrap(),
     )

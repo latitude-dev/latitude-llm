@@ -58,4 +58,3 @@ export function Step3_ConnectChoice({
     </OnboardingLayout>
   )
 }
-

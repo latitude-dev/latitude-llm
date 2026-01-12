@@ -17,7 +17,8 @@ export const ONBOARDING_STEPS = {
   NEXT_STEPS: 6,
 } as const
 
-export type OnboardingStep = (typeof ONBOARDING_STEPS)[keyof typeof ONBOARDING_STEPS]
+export type OnboardingStep =
+  (typeof ONBOARDING_STEPS)[keyof typeof ONBOARDING_STEPS]
 
 export type SlideshowSlide = {
   id: string
@@ -84,7 +85,9 @@ export function useOnboardingState(shouldReset = false) {
       defaultValue: DEFAULT_STATE,
     })
 
-  const localState = shouldReset ? DEFAULT_STATE : (localStateRaw ?? DEFAULT_STATE)
+  const localState = shouldReset
+    ? DEFAULT_STATE
+    : (localStateRaw ?? DEFAULT_STATE)
   const hasResetRef = useRef(false)
 
   useEffect(() => {
@@ -130,7 +133,12 @@ export function useOnboardingState(shouldReset = false) {
   }
 
   const updateUrl = useCallback(
-    (step: OnboardingStep, slideIndex?: number, framework?: string | null, replace = false) => {
+    (
+      step: OnboardingStep,
+      slideIndex?: number,
+      framework?: string | null,
+      replace = false,
+    ) => {
       const params = new URLSearchParams()
       params.set('step', step.toString())
       if (
@@ -154,19 +162,30 @@ export function useOnboardingState(shouldReset = false) {
 
   const goToStep = useCallback(
     (step: OnboardingStep) => {
-      setLocalState((prev) => ({ ...(prev ?? DEFAULT_STATE), step, slideIndex: 0, selectedFramework: null }))
+      setLocalState((prev) => ({
+        ...(prev ?? DEFAULT_STATE),
+        step,
+        slideIndex: 0,
+        selectedFramework: null,
+      }))
       updateUrl(step, 0, null)
     },
     [setLocalState, updateUrl],
   )
 
   const nextStep = useCallback(() => {
-    const next = Math.min(currentStep + 1, ONBOARDING_STEPS.NEXT_STEPS) as OnboardingStep
+    const next = Math.min(
+      currentStep + 1,
+      ONBOARDING_STEPS.NEXT_STEPS,
+    ) as OnboardingStep
     goToStep(next)
   }, [currentStep, goToStep])
 
   const prevStep = useCallback(() => {
-    const prev = Math.max(currentStep - 1, ONBOARDING_STEPS.WHAT_IS_LATITUDE) as OnboardingStep
+    const prev = Math.max(
+      currentStep - 1,
+      ONBOARDING_STEPS.WHAT_IS_LATITUDE,
+    ) as OnboardingStep
     goToStep(prev)
   }, [currentStep, goToStep])
 
@@ -175,7 +194,10 @@ export function useOnboardingState(shouldReset = false) {
     if (nextIndex >= SLIDESHOW_SLIDES.length) {
       goToStep(ONBOARDING_STEPS.CONNECT_CHOICE)
     } else {
-      setLocalState((prev) => ({ ...(prev ?? DEFAULT_STATE), slideIndex: nextIndex }))
+      setLocalState((prev) => ({
+        ...(prev ?? DEFAULT_STATE),
+        slideIndex: nextIndex,
+      }))
       updateUrl(ONBOARDING_STEPS.RELIABILITY_LOOP, nextIndex)
     }
   }, [currentSlideIndex, goToStep, setLocalState, updateUrl])
@@ -185,14 +207,20 @@ export function useOnboardingState(shouldReset = false) {
     if (prevIndex < 0) {
       goToStep(ONBOARDING_STEPS.WHAT_IS_LATITUDE)
     } else {
-      setLocalState((prev) => ({ ...(prev ?? DEFAULT_STATE), slideIndex: prevIndex }))
+      setLocalState((prev) => ({
+        ...(prev ?? DEFAULT_STATE),
+        slideIndex: prevIndex,
+      }))
       updateUrl(ONBOARDING_STEPS.RELIABILITY_LOOP, prevIndex)
     }
   }, [currentSlideIndex, goToStep, setLocalState, updateUrl])
 
   const setSelectedFramework = useCallback(
     (framework: string | null) => {
-      setLocalState((prev) => ({ ...(prev ?? DEFAULT_STATE), selectedFramework: framework }))
+      setLocalState((prev) => ({
+        ...(prev ?? DEFAULT_STATE),
+        selectedFramework: framework,
+      }))
       updateUrl(ONBOARDING_STEPS.INTEGRATION, undefined, framework)
     },
     [setLocalState, updateUrl],
@@ -200,7 +228,10 @@ export function useOnboardingState(shouldReset = false) {
 
   const setFirstTraceId = useCallback(
     (traceId: string | null) => {
-      setLocalState((prev) => ({ ...(prev ?? DEFAULT_STATE), firstTraceId: traceId }))
+      setLocalState((prev) => ({
+        ...(prev ?? DEFAULT_STATE),
+        firstTraceId: traceId,
+      }))
     },
     [setLocalState],
   )
@@ -229,4 +260,3 @@ export function useOnboardingState(shouldReset = false) {
     isLastSlide: currentSlideIndex === SLIDESHOW_SLIDES.length - 1,
   }
 }
-

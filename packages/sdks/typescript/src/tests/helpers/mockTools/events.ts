@@ -206,7 +206,6 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             },
           ],
         },
-        providerLogUuid: '123',
         tokenUsage: {
           inputTokens: 251,
           outputTokens: 59,
@@ -984,7 +983,6 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             },
           ],
         },
-        providerLogUuid: '456',
         tokenUsage: {
           inputTokens: 391,
           outputTokens: 91,
@@ -2165,7 +2163,6 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           },
           toolCalls: [],
         },
-        providerLogUuid: '789',
         finishReason: 'stop',
         tokenUsage: {
           inputTokens: 523,

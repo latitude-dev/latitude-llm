@@ -118,7 +118,8 @@ export function Step1_ReliabilityLoop({
   }
 
   const animationStyle = getAnimationStyle()
-  const transitionClass = phase === 'enter-start' ? '' : 'transition-all duration-150 ease-out'
+  const transitionClass =
+    phase === 'enter-start' ? '' : 'transition-all duration-150 ease-out'
 
   return (
     <OnboardingLayout>
@@ -147,10 +148,7 @@ export function Step1_ReliabilityLoop({
           </div>
 
           <div
-            className={cn(
-              'flex flex-col items-center gap-2',
-              transitionClass,
-            )}
+            className={cn('flex flex-col items-center gap-2', transitionClass)}
             style={animationStyle}
           >
             <Text.H3M color='foreground' centered>
@@ -179,4 +177,3 @@ export function Step1_ReliabilityLoop({
     </OnboardingLayout>
   )
 }
-

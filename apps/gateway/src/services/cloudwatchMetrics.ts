@@ -26,8 +26,8 @@ class CloudWatchMetricsService {
   private isConfigured(): boolean {
     return Boolean(
       env.NODE_ENV === 'production' &&
-        env.AWS_ACCESS_KEY &&
-        env.AWS_ACCESS_SECRET,
+      env.AWS_ACCESS_KEY &&
+      env.AWS_ACCESS_SECRET,
     )
   }
 

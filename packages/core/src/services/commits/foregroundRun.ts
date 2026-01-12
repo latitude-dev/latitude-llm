@@ -9,6 +9,7 @@ import type { Commit } from '../../schema/models/types/Commit'
 import { type OkType } from '../../lib/Result'
 import { Project } from '../../schema/models/types/Project'
 import { publisher } from '../../events/publisher'
+import { ProviderApiKeysRepository } from '../../repositories'
 
 type RunResult = OkType<typeof runDocumentAtCommit>
 

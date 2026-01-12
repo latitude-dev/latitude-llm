@@ -163,14 +163,15 @@ model: gpt-4o
       const { context, workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
-      const { lastResponse, duration, stream, uuid } = await runDocumentAtCommit({
-        context,
-        workspace,
-        document,
-        commit,
-        parameters: {},
-        source: LogSources.API,
-      }).then((r) => r.unwrap())
+      const { lastResponse, duration, stream, uuid } =
+        await runDocumentAtCommit({
+          context,
+          workspace,
+          document,
+          commit,
+          parameters: {},
+          source: LogSources.API,
+        }).then((r) => r.unwrap())
 
       await lastResponse
       await duration

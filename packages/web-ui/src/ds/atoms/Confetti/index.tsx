@@ -125,4 +125,3 @@ export function Confetti({ count = 100, colors = DEFAULT_COLORS }: Props) {
     </div>
   )
 }
-

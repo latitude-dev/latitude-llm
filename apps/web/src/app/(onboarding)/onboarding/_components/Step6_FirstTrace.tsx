@@ -88,4 +88,3 @@ export function Step6_FirstTrace({ traceId, onContinue }: Props) {
     </div>
   )
 }
-

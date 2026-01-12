@@ -246,7 +246,7 @@ export abstract class StreamManager {
 
     const toolCalls =
       this.response && 'toolCalls' in this.response
-        ? this.response.toolCalls ?? []
+        ? (this.response.toolCalls ?? [])
         : []
     const tokenUsage = this.logUsage ?? EMPTY_USAGE()
     const duration = this.endTime! - this.startTime!
@@ -346,7 +346,6 @@ export abstract class StreamManager {
 
     this.sendEvent({
       type: ChainEventTypes.ProviderCompleted,
-      providerLogUuid: response.providerLog!.uuid,
       tokenUsage,
       finishReason,
       response,
