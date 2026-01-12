@@ -7,14 +7,10 @@ import {
   EvaluationV2,
 } from '../../constants'
 import { Result } from '../../lib/Result'
-import {
-  DocumentLogsRepository,
-  ProviderLogsRepository,
-  SpansRepository,
-} from '../../repositories'
+import { SpansRepository } from '../../repositories'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
 import { EVALUATION_SPECIFICATIONS } from '../evaluationsV2/specifications'
+import { serializeSpanAsDocumentLog } from '../tracing/spans/serialize'
 
 export async function serializeEvaluation<
   T extends EvaluationType,
@@ -85,53 +81,30 @@ export async function serializeEvaluationResult<
       result as EvaluationResultSuccessValue<T, M>,
     ) || 'No reason reported'
 
-  let documentLogUuid: string
-  if (result.evaluatedSpanId && result.evaluatedTraceId) {
-    const spansRepository = new SpansRepository(workspace.id, db)
-    const span = await spansRepository
-      .get({
-        spanId: result.evaluatedSpanId,
-        traceId: result.evaluatedTraceId,
-      })
-      .then((r) => r.unwrap())
-
-    if (!span) {
-      return Result.error(
-        new Error(`Span not found for spanId and traceId combination`),
-      )
-    }
-
-    if (!span.documentLogUuid) {
-      return Result.error(new Error(`Span missing documentLogUuid`))
-    }
-
-    documentLogUuid = span.documentLogUuid
-  } else if (result.evaluatedLogId) {
-    // Fallback to legacy providerLog approach for backward compatibility
-    const providerLogsRepository = new ProviderLogsRepository(workspace.id, db)
-    const providerLog = await providerLogsRepository
-      .find(result.evaluatedLogId)
-      .then((r) => r.unwrap())
-
-    documentLogUuid = providerLog.documentLogUuid!
-  } else {
+  if (!result.evaluatedSpanId || !result.evaluatedTraceId) {
     return Result.error(
-      new Error(
-        'Evaluation result missing both span references and evaluatedLogId',
-      ),
+      new Error('Evaluation result missing span references'),
     )
   }
 
-  const documentLogsRepository = new DocumentLogsRepository(workspace.id, db)
-  const documentLog = await documentLogsRepository
-    .findByUuid(documentLogUuid)
+  const spansRepository = new SpansRepository(workspace.id, db)
+  const span = await spansRepository
+    .get({
+      spanId: result.evaluatedSpanId,
+      traceId: result.evaluatedTraceId,
+    })
     .then((r) => r.unwrap())
 
-  const evaluatedLog = await serializeDocumentLog(
-    { documentLog, workspace },
+  if (!span) {
+    return Result.error(
+      new Error(`Span not found for spanId and traceId combination`),
+    )
+  }
+
+  const evaluatedLog = await serializeSpanAsDocumentLog(
+    { span, workspace },
     db,
   ).then((r) => r.unwrap())
 
-  // Compatibility with refine v1 prompt
   return Result.ok({ result: result.score, reason, evaluatedLog })
 }

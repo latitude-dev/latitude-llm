@@ -4,7 +4,6 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Adapters, Chain, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
-import { database } from '../../../client'
 import {
   EvaluationType,
   EvaluationV2,
@@ -17,7 +16,6 @@ import {
 import { formatConversation } from '../../../helpers'
 import { Result } from '../../../lib/Result'
 import { updatePromptMetadata } from '../../../lib/updatePromptMetadata'
-import { ProviderLogsRepository } from '../../../repositories'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
@@ -184,7 +182,6 @@ export async function runPrompt<
     workspace: WorkspaceDto
     telemetry?: LatitudeTelemetry
   },
-  db = database,
 ) {
   const { promptChain, runArgs } = await buildLlmEvaluationRunFunction({
     resultUuid,
@@ -248,10 +245,13 @@ export async function runPrompt<
   }
 
   const verdict = parseVerdict({ response, schema })
-  const repository = new ProviderLogsRepository(workspace.id, db)
-  const stats = await repository
-    .statsByDocumentLogUuid(response.providerLog.documentLogUuid)
-    .then((r) => r.unwrap())
+  const providerLog = response.providerLog
+  const stats = {
+    documentLogUuid: providerLog.documentLogUuid!,
+    tokens: providerLog.tokens ?? 0,
+    duration: providerLog.duration ?? 0,
+    costInMillicents: providerLog.costInMillicents ?? 0,
+  }
 
   return { response, stats, verdict }
 }

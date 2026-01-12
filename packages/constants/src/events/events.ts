@@ -7,6 +7,7 @@ import { FinishReason } from 'ai'
 import {
   ChainStepResponse,
   LegacyVercelSDKVersion4Usage,
+  PromptSource,
   ProviderData,
   StreamEventTypes,
   StreamType,
@@ -25,12 +26,6 @@ export enum ChainEventTypes {
   ToolCompleted = 'tool-completed',
   ToolResult = 'tool-result',
   ToolsStarted = 'tools-started',
-}
-
-type PromptSource = {
-  commitUuid?: string
-  documentUuid?: string
-  evaluationUuid?: string
 }
 
 interface GenericLatitudeEventData {

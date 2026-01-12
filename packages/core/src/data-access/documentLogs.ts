@@ -4,6 +4,19 @@ import { DocumentLog } from '../constants'
 import { documentLogs } from '../schema/models/documentLogs'
 import { documentVersions } from '../schema/models/documentVersions'
 
+export const unsafelyFindDocumentLogById = async (
+  id: number,
+  db = database,
+) => {
+  const result = await db
+    .select()
+    .from(documentLogs)
+    .where(eq(documentLogs.id, id))
+    .limit(1)
+
+  return result[0]
+}
+
 export const unsafelyFindDocumentLogByUuid = async (
   documentLogUuid: string,
   db = database,

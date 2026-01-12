@@ -162,6 +162,8 @@ export async function createProviderLog(
             data: {
               id: log.id,
               workspaceId: workspace.id,
+              providerId: log.providerId ?? undefined,
+              apiKeyId: log.apiKeyId ?? undefined,
             },
           })
         },

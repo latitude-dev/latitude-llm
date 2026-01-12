@@ -12,13 +12,11 @@ import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
 import {
   CommitsRepository,
-  DocumentLogsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
   OptimizationsRepository,
   ProjectsRepository,
   ProviderApiKeysRepository,
-  ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
@@ -196,54 +194,6 @@ export const getDocumentsFromMergedCommitsCache = cache(
     return documents
   },
 )
-
-export const getDocumentLogsApproximatedCountCached = cache(
-  async (documentUuid: string) => {
-    const { workspace } = await getCurrentUserOrRedirect()
-    const repository = new DocumentLogsRepository(workspace.id)
-    return await repository
-      .approximatedCount({ documentUuid })
-      .then((r) => r.unwrap())
-  },
-)
-
-export const getDocumentLogsApproximatedCountByProjectCached = cache(
-  async (projectId: number) => {
-    const { workspace } = await getCurrentUserOrRedirect()
-    const repository = new DocumentLogsRepository(workspace.id)
-    return await repository
-      .approximatedCountByProject({ projectId })
-      .then((r) => r.unwrap())
-  },
-)
-
-export const hasDocumentLogsCached = cache(async (documentUuid: string) => {
-  const { workspace } = await getCurrentUserOrRedirect()
-  const repository = new DocumentLogsRepository(workspace.id)
-  return await repository.hasLogs({ documentUuid }).then((r) => r.unwrap())
-})
-
-export const hasDocumentLogsByProjectCached = cache(
-  async (projectId: number) => {
-    const { workspace } = await getCurrentUserOrRedirect()
-    const repository = new DocumentLogsRepository(workspace.id)
-    return await repository
-      .hasLogsByProject({ projectId })
-      .then((r) => r.unwrap())
-  },
-)
-
-export const getDocumentLogCached = cache(async (uuid: string) => {
-  const { workspace } = await getCurrentUserOrRedirect()
-  const repository = new DocumentLogsRepository(workspace.id)
-  return await repository.findByUuid(uuid).then((r) => r.unwrap())
-})
-
-export const getProviderLogCached = cache(async (uuid: string) => {
-  const { workspace } = await getCurrentUserOrRedirect()
-  const scope = new ProviderLogsRepository(workspace.id)
-  return await scope.findByUuid(uuid).then((r) => r.unwrap())
-})
 
 export const getEvaluationV2AtCommitByDocumentCached = cache(
   async <

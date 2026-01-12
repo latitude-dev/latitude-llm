@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChainEventTypes } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Providers } from '@latitude-data/constants'
+import { asc, eq } from 'drizzle-orm'
+import { database } from '../../client'
 import { LogSources, StreamEventTypes } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { ProviderLogsRepository } from '../../repositories'
+import { providerLogs } from '../../schema/models/providerLogs'
 import { createProject, createTelemetryContext } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { Ok, Result } from './../../lib/Result'
@@ -181,8 +183,11 @@ model: gpt-4o
       await duration
 
       const { value } = await testConsumeStream(stream)
-      const repo = new ProviderLogsRepository(workspace.id)
-      const logs = await repo.findAll().then((r) => r.unwrap())
+      const logs = await database
+        .select()
+        .from(providerLogs)
+        .where(eq(providerLogs.workspaceId, workspace.id))
+        .orderBy(asc(providerLogs.generatedAt))
 
       expect(value).toEqual(
         expect.arrayContaining([

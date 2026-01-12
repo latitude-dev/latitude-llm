@@ -149,7 +149,11 @@ export type ExperimentVariantsCreatedEvent = LatitudeEventGeneric<
 
 export type ProviderLogCreatedEvent = LatitudeEventGeneric<
   'providerLogCreated',
-  Pick<ProviderLog, 'id'> & { workspaceId: number }
+  Pick<ProviderLog, 'id'> & {
+    workspaceId: number
+    providerId?: number
+    apiKeyId?: number
+  }
 >
 
 type StreamTextData = {

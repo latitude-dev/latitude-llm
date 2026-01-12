@@ -1,10 +1,12 @@
 import { LatitudeEvent } from '../../../../events/events'
 import { WebhookPayload } from '../../../../services/webhooks/types'
-import { findDocumentFromLog } from '../../../../data-access/documentLogs'
+import {
+  findDocumentFromLog,
+  unsafelyFindDocumentLogById,
+} from '../../../../data-access/documentLogs'
 import { Result, TypedResult } from '../../../../lib/Result'
 import { findLastProviderLogFromDocumentLogUuid } from '../../../../data-access/providerLogs'
 import { buildProviderLogResponse } from '../../../../services/providerLogs/buildResponse'
-import { DocumentLogsRepository } from '../../../../repositories'
 
 export async function processWebhookPayload(
   event: LatitudeEvent,
@@ -12,9 +14,12 @@ export async function processWebhookPayload(
   try {
     switch (event.type) {
       case 'documentLogCreated': {
-        const { id, workspaceId } = event.data
-        const repo = new DocumentLogsRepository(workspaceId)
-        const log = await repo.find(id).then((r) => r.unwrap())
+        const { id } = event.data
+        const log = await unsafelyFindDocumentLogById(id)
+        if (!log) {
+          return Result.error(new Error(`DocumentLog with id ${id} not found`))
+        }
+
         const providerLog = await findLastProviderLogFromDocumentLogUuid(
           log.uuid,
         )
