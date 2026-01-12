@@ -1,5 +1,8 @@
 import { faker } from '@faker-js/faker'
+import { eq } from 'drizzle-orm'
 
+import { database } from '../../client'
+import { users } from '../../schema/models/users'
 import { createUser as createUserFn } from '../../services/users/createUser'
 
 function makeRandomUserData() {
@@ -16,8 +19,15 @@ export type ICreateUser = {
 }
 
 export async function createUser(userData: Partial<ICreateUser> = {}) {
+  const { createdAt, ...rest } = userData
   const randomUserData = makeRandomUserData()
-  const data = { ...randomUserData, ...userData }
-  const result = await createUserFn(data)
-  return result.unwrap()
+  const data = { ...randomUserData, ...rest }
+  const user = await createUserFn(data).then((r) => r.unwrap())
+
+  if (createdAt) {
+    await database.update(users).set({ createdAt }).where(eq(users.id, user.id))
+    user.createdAt = createdAt
+  }
+
+  return user
 }

@@ -79,6 +79,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const body = runPresenter({
     response,
     provider: providerUsed,
+    source: undefined,
   }).unwrap()
 
   return c.json(body, 200)

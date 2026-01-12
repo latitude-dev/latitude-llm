@@ -20,6 +20,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [],
+        source: undefined,
       },
     },
     {
@@ -85,6 +86,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           },
         ],
         config: {},
+        source: undefined,
       },
     },
     {

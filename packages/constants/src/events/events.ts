@@ -7,6 +7,7 @@ import { FinishReason } from 'ai'
 import {
   ChainStepResponse,
   LegacyVercelSDKVersion4Usage,
+  PromptSource,
   ProviderData,
   StreamEventTypes,
   StreamType,
@@ -32,6 +33,7 @@ interface GenericLatitudeEventData {
   timestamp: number
   messages: Message[]
   uuid: string
+  source?: PromptSource
 }
 
 export interface LatitudeChainStartedEventData
@@ -109,16 +111,16 @@ export type LatitudeEventData =
 // Just a type helper for ChainStreamManager. Omit<LatitudeEventData, 'timestamp' | 'messages' | 'uuid'> does not work.
 // prettier-ignore
 export type OmittedLatitudeEventData =
-  | Omit<LatitudeChainStartedEventData, 'timestamp' | 'messages' | 'uuid'>
-  | Omit<LatitudeStepStartedEventData, 'timestamp' | 'messages' | 'uuid'>
-  | Omit<LatitudeProviderStartedEventData, 'timestamp' | 'messages' | 'uuid'>
-  | Omit<LatitudeProviderCompletedEventData, 'timestamp' | 'messages' | 'uuid'>
-  | Omit<LatitudeToolsStartedEventData, 'timestamp' | 'messages' | 'uuid'>
-  | Omit<LatitudeToolCompletedEventData, 'timestamp' | 'messages' | 'uuid'>
-  | Omit<LatitudeStepCompletedEventData, 'timestamp' | 'messages' | 'uuid'>
-  | Omit<LatitudeChainCompletedEventData, 'timestamp' | 'messages' | 'uuid'>
-  | Omit<LatitudeChainErrorEventData, 'timestamp' | 'messages' | 'uuid'>
-  | Omit<LatitudeIntegrationWakingUpEventData, 'timestamp' | 'messages' | 'uuid'>
+  | Omit<LatitudeChainStartedEventData, 'timestamp' | 'messages' | 'uuid' | 'source'>
+  | Omit<LatitudeStepStartedEventData, 'timestamp' | 'messages' | 'uuid' | 'source'>
+  | Omit<LatitudeProviderStartedEventData, 'timestamp' | 'messages' | 'uuid' | 'source'>
+  | Omit<LatitudeProviderCompletedEventData, 'timestamp' | 'messages' | 'uuid' | 'source'>
+  | Omit<LatitudeToolsStartedEventData, 'timestamp' | 'messages' | 'uuid' | 'source'>
+  | Omit<LatitudeToolCompletedEventData, 'timestamp' | 'messages' | 'uuid' | 'source'>
+  | Omit<LatitudeStepCompletedEventData, 'timestamp' | 'messages' | 'uuid' | 'source'>
+  | Omit<LatitudeChainCompletedEventData, 'timestamp' | 'messages' | 'uuid' | 'source'>
+  | Omit<LatitudeChainErrorEventData, 'timestamp' | 'messages' | 'uuid' | 'source'>
+  | Omit<LatitudeIntegrationWakingUpEventData, 'timestamp' | 'messages' | 'uuid' | 'source'>
 
 export type ChainEvent =
   | {
