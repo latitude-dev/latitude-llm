@@ -31,7 +31,6 @@ import {
 } from 'react'
 import { OnSubmitProps } from '../useAnnotationForm'
 
-// TODO(AO): Remove issueId from result
 type EvaluationResultV2WithIssue<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,

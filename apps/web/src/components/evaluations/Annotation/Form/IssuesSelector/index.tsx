@@ -120,8 +120,6 @@ export function IssuesSelector({
       if (!result) return
       if (!span.documentUuid) return
 
-      // TODO(AO): Remember to unassign the issue if the user
-      // updates the annotation from failed to passed!
       if (issueId === undefined) {
         unAssignIssue({
           projectId,
