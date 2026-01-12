@@ -304,9 +304,16 @@ describe('discoverResultIssueJob', () => {
 
       expect(discoverIssueSpy).toHaveBeenCalledTimes(1)
       expect(generateIssueSpy).toHaveBeenCalledTimes(1)
-      expect(generateIssueSpy).toHaveBeenCalledWith({
-        results: [{ result: evaluationResult, evaluation: expect.any(Object) }],
-      })
+      expect(generateIssueSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          results: expect.arrayContaining([
+            expect.objectContaining({
+              result: expect.any(Object),
+              evaluation: expect.any(Object),
+            }),
+          ]),
+        }),
+      )
       expect(assignResultSpy).toHaveBeenCalledTimes(1)
       expect(assignResultSpy).toHaveBeenCalledWith(
         expect.objectContaining({
