@@ -265,7 +265,7 @@ describe('runPrompt', () => {
       prompt: prompt,
       parameters: parameters,
       schema: promptSchema,
-      resultUuid: 'resultUuid',
+      resultUuid: resultUuid,
       evaluation: evaluation,
       providers: new Map([[provider.name, provider]]),
       commit: commit,

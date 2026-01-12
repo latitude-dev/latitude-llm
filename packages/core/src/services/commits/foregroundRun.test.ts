@@ -70,6 +70,10 @@ describe('runForegroundDocument', () => {
             providerId: 1,
           },
         }),
+        provider: Promise.resolve({
+          id: provider.id,
+          name: provider.name,
+        }),
       }) as any,
     )
 

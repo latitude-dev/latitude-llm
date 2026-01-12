@@ -61,7 +61,7 @@ Hello world
 
     const document = documents[0]!
     const provider = providers[0]!
-    const documentLogUuid = 'document-log-uuid'
+    const documentLogUuid = '550e8400-e29b-41d4-a716-446655440000'
     await writeConversationCache({
       documentLogUuid,
       workspaceId: workspace.id,

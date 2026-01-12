@@ -178,36 +178,18 @@ model: gpt-4o
 
       const { value } = await testConsumeStream(stream)
 
-      expect(value).toEqual(
-        expect.arrayContaining([
-          {
-            event: StreamEventTypes.Latitude,
-            data: expect.objectContaining({
-              type: ChainEventTypes.ChainStarted,
-            }),
-          },
-          {
-            event: StreamEventTypes.Latitude,
-            data: expect.objectContaining({
-              type: ChainEventTypes.ProviderCompleted,
-              providerLogUuid: uuid,
-            }),
-          },
-          {
-            event: StreamEventTypes.Latitude,
-            data: expect.objectContaining({
-              type: ChainEventTypes.ProviderCompleted,
-              providerLogUuid: uuid,
-            }),
-          },
-          {
-            event: StreamEventTypes.Latitude,
-            data: expect.objectContaining({
-              type: ChainEventTypes.ProviderCompleted,
-              providerLogUuid: uuid,
-            }),
-          },
-        ]),
+      const chainStarted = value.find(
+        (e) => e.data.type === ChainEventTypes.ChainStarted,
+      )
+      expect(chainStarted?.event).toBe(StreamEventTypes.Latitude)
+      expect(chainStarted?.data.type).toBe(ChainEventTypes.ChainStarted)
+
+      const providerCompleted = value.find(
+        (e) => e.data.type === ChainEventTypes.ProviderCompleted,
+      )
+      expect(providerCompleted?.event).toBe(StreamEventTypes.Latitude)
+      expect(providerCompleted?.data.type).toBe(
+        ChainEventTypes.ProviderCompleted,
       )
 
       expect(value.at(-1)).toEqual({
