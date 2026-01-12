@@ -410,12 +410,13 @@ describe('validateEvaluationV2', () => {
                 expectedOutput: {
                   parsingFormat: 'string',
                 },
-
                 algorithm: 'word',
+                maxLength: 20,
               },
             })
           ).uuid,
         ],
+        minThreshold: 75,
       },
     } as EvaluationSettings<
       EvaluationType.Composite,

@@ -54,6 +54,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
     },
     minRating: 1,
     maxRating: 5,
+    minThreshold: 3,
   }
 
   type TestSetupOptions = {

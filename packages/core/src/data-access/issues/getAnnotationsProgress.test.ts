@@ -42,6 +42,7 @@ const RATING_CONFIGURATION: HumanEvaluationRatingConfiguration = {
   },
   minRating: 1,
   maxRating: 5,
+  minThreshold: 3,
 }
 
 describe('getAnnotationsProgress', () => {
