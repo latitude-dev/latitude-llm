@@ -113,7 +113,7 @@ export abstract class StreamManager {
   private resolveResponse?: (
     response: ChainStepResponse<StreamType> | undefined,
   ) => void
-  private provider?: ProviderApiKey
+  protected provider?: ProviderApiKey
   private resolveProvider?: (provider: ProviderApiKey | undefined) => void
 
   constructor({

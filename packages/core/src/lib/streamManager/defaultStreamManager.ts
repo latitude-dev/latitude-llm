@@ -32,7 +32,7 @@ export class DefaultStreamManager
   implements StreamManager
 {
   private config: ValidatedChainStep['config']
-  private provider: ProviderApiKey
+  protected provider: ProviderApiKey
   private output: Output
   private schema: JSONSchema7
 
