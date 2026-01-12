@@ -11,6 +11,7 @@ import {
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
+import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
 import {
   EvaluationMetricCloneArgs,
   EvaluationMetricRunArgs,
@@ -18,7 +19,6 @@ import {
   normalizeScore,
 } from '../shared'
 import { buildEvaluationParameters, promptTask, runPrompt } from './shared'
-import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
 
 export const LlmEvaluationRatingSpecification = {
   ...specification,
@@ -58,6 +58,21 @@ async function validate(
   if (!configuration.maxRatingDescription) {
     return Result.error(
       new BadRequestError('Maximum rating description is required'),
+    )
+  }
+
+  if (
+    configuration.minThreshold === undefined &&
+    configuration.maxThreshold === undefined
+  ) {
+    return Result.error(
+      new z.ZodError([
+        {
+          code: 'custom',
+          path: ['threshold'],
+          message: 'At least one threshold (minimum or maximum) is required',
+        },
+      ]),
     )
   }
 

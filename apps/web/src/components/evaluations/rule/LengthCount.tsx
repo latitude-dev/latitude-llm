@@ -4,15 +4,14 @@ import {
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
 import { formatCount } from '@latitude-data/constants/formatCount'
-import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
+import { ThresholdInput } from '../ThresholdInput'
 
 const specification = RuleEvaluationLengthCountSpecification
 export default {
@@ -54,39 +53,28 @@ function ConfigurationSimpleForm({
         disabled={disabled}
         required
       />
-      <FormFieldGroup
-        layout='horizontal'
-        description='The minimum and maximum length of the response'
-      >
-        <NumberInput
-          value={configuration.minLength ?? undefined}
-          name='minLength'
-          label='Minimum length'
-          placeholder='No minimum'
-          min={0}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minLength: value })
-          }
-          errors={errors?.['minLength']}
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-        <NumberInput
-          value={configuration.maxLength ?? undefined}
-          name='maxLength'
-          label='Maximum length'
-          placeholder='No maximum'
-          min={0}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxLength: value })
-          }
-          errors={errors?.['maxLength']}
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-      </FormFieldGroup>
+      <ThresholdInput
+        threshold={{
+          min: configuration.minLength ?? undefined,
+          max: configuration.maxLength ?? undefined,
+        }}
+        setThreshold={(value) =>
+          setConfiguration({
+            ...configuration,
+            minLength: value.min,
+            maxLength: value.max,
+          })
+        }
+        name='length'
+        label='length'
+        description='length of the response'
+        min={0}
+        showMin={true}
+        showMax={true}
+        errors={errors}
+        disabled={disabled}
+        required
+      />
     </>
   )
 }

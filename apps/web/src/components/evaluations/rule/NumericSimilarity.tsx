@@ -5,15 +5,14 @@ import {
   RuleEvaluationMetric,
   RuleEvaluationNumericSimilaritySpecification,
 } from '@latitude-data/constants'
-import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { useEffect } from 'react'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
+import { ThresholdInput } from '../ThresholdInput'
 
 const specification = RuleEvaluationNumericSimilaritySpecification
 export default {
@@ -41,41 +40,29 @@ function ConfigurationSimpleForm({
 
   return (
     <>
-      <FormFieldGroup
-        layout='horizontal'
-        description='The minimum and maximum percentage of similarity of the response'
-      >
-        <NumberInput
-          value={configuration.minSimilarity ?? undefined}
-          name='minSimilarity'
-          label='Minimum similarity'
-          placeholder='No minimum'
-          min={0}
-          max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minSimilarity: value })
-          }
-          errors={errors?.['minSimilarity']}
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-        <NumberInput
-          value={configuration.maxSimilarity ?? undefined}
-          name='maxSimilarity'
-          label='Maximum similarity'
-          placeholder='No maximum'
-          min={0}
-          max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxSimilarity: value })
-          }
-          errors={errors?.['maxSimilarity']}
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-      </FormFieldGroup>
+      <ThresholdInput
+        threshold={{
+          min: configuration.minSimilarity ?? undefined,
+          max: configuration.maxSimilarity ?? undefined,
+        }}
+        setThreshold={(value) =>
+          setConfiguration({
+            ...configuration,
+            minSimilarity: value.min,
+            maxSimilarity: value.max,
+          })
+        }
+        name='similarity'
+        label='similarity'
+        description='percentage of similarity of the response'
+        min={0}
+        max={100}
+        showMin={!configuration.reverseScale}
+        showMax={configuration.reverseScale}
+        errors={errors}
+        disabled={disabled}
+        required
+      />
     </>
   )
 }

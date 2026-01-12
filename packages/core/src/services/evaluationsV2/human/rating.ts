@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { database } from '../../../client'
 import {
   EvaluationType,
@@ -39,6 +40,21 @@ async function validate(
 
   configuration.maxRatingDescription =
     configuration.maxRatingDescription?.trim()
+
+  if (
+    configuration.minThreshold === undefined &&
+    configuration.maxThreshold === undefined
+  ) {
+    return Result.error(
+      new z.ZodError([
+        {
+          code: 'custom',
+          path: ['threshold'],
+          message: 'At least one threshold (minimum or maximum) is required',
+        },
+      ]),
+    )
+  }
 
   if (
     configuration.minThreshold !== undefined &&

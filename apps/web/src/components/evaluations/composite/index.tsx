@@ -9,9 +9,7 @@ import {
   EvaluationType,
 } from '@latitude-data/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { MultiSelectInput } from '@latitude-data/web-ui/molecules/MultiSelectInput'
 import { useMemo } from 'react'
@@ -23,6 +21,7 @@ import {
   ResultPanelProps,
   getEvaluationMetricSpecification,
 } from '../index'
+import { ThresholdInput } from '../ThresholdInput'
 import CompositeEvaluationAverageSpecification from './Average'
 import CompositeEvaluationCustomSpecification from './Custom'
 import CompositeEvaluationWeightedSpecification from './Weighted'
@@ -116,41 +115,29 @@ function ConfigurationSimpleForm<M extends CompositeEvaluationMetric>({
           {...rest}
         />
       )}
-      <FormFieldGroup
-        layout='horizontal'
-        description='The minimum and maximum score threshold of the response'
-      >
-        <NumberInput
-          value={configuration.minThreshold ?? undefined}
-          name='minThreshold'
-          label='Minimum threshold'
-          placeholder='No minimum'
-          min={0}
-          max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minThreshold: value })
-          }
-          errors={errors?.['minThreshold']}
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-        <NumberInput
-          value={configuration.maxThreshold ?? undefined}
-          name='maxThreshold'
-          label='Maximum threshold'
-          placeholder='No maximum'
-          min={0}
-          max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxThreshold: value })
-          }
-          errors={errors?.['maxThreshold']}
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-      </FormFieldGroup>
+      <ThresholdInput
+        threshold={{
+          min: configuration.minThreshold ?? undefined,
+          max: configuration.maxThreshold ?? undefined,
+        }}
+        setThreshold={(value) =>
+          setConfiguration({
+            ...configuration,
+            minThreshold: value.min,
+            maxThreshold: value.max,
+          })
+        }
+        name='threshold'
+        label='threshold'
+        description='score threshold of the response'
+        min={0}
+        max={100}
+        showMin={!configuration.reverseScale}
+        showMax={configuration.reverseScale}
+        errors={errors}
+        disabled={disabled}
+        required
+      />
     </>
   )
 }

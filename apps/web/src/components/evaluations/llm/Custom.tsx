@@ -17,6 +17,7 @@ import {
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
+import { ThresholdInput } from '../ThresholdInput'
 
 const specification = LlmEvaluationCustomSpecification
 export default {
@@ -170,43 +171,55 @@ function ConfigurationAdvancedForm({
   errors,
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
+  useEffect(() => {
+    if (
+      configuration.minScore === undefined ||
+      configuration.maxScore === undefined
+    ) {
+      return
+    }
+
+    const threshold = Math.ceil(
+      (configuration.minScore + configuration.maxScore) / 2,
+    )
+
+    setConfiguration({
+      ...configuration,
+      minThreshold: !configuration.reverseScale ? threshold : undefined,
+      maxThreshold: configuration.reverseScale ? threshold : undefined,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    configuration.minScore,
+    configuration.maxScore,
+    configuration.reverseScale,
+  ])
+
   return (
     <>
-      <FormFieldGroup
-        layout='horizontal'
-        description='The minimum and maximum score threshold of the response'
-      >
-        <NumberInput
-          value={configuration.minThreshold ?? undefined}
-          name='minThreshold'
-          label='Minimum threshold'
-          placeholder='No minimum'
-          min={configuration.minScore}
-          max={configuration.maxScore}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minThreshold: value })
-          }
-          errors={errors?.['minThreshold']}
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-        <NumberInput
-          value={configuration.maxThreshold ?? undefined}
-          name='maxThreshold'
-          label='Maximum threshold'
-          placeholder='No maximum'
-          min={configuration.minScore}
-          max={configuration.maxScore}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxThreshold: value })
-          }
-          errors={errors?.['maxThreshold']}
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-      </FormFieldGroup>
+      <ThresholdInput
+        threshold={{
+          min: configuration.minThreshold ?? undefined,
+          max: configuration.maxThreshold ?? undefined,
+        }}
+        setThreshold={(value) =>
+          setConfiguration({
+            ...configuration,
+            minThreshold: value.min,
+            maxThreshold: value.max,
+          })
+        }
+        name='threshold'
+        label='threshold'
+        description='score threshold of the response'
+        min={configuration.minScore}
+        max={configuration.maxScore}
+        showMin={true}
+        showMax={true}
+        errors={errors}
+        disabled={disabled}
+        required
+      />
     </>
   )
 }

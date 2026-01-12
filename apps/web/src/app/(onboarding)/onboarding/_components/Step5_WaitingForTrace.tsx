@@ -50,7 +50,9 @@ export function Step5_WaitingForTrace({
       <div className='flex flex-col items-center gap-8 max-w-xl text-center'>
         <div className='flex flex-col items-center gap-4'>
           <Icon name='loader' size='xlarge' className='animate-spin' />
-          <Text.H2M color='foreground'>Waiting for your first request…</Text.H2M>
+          <Text.H2M color='foreground'>
+            Waiting for your first request…
+          </Text.H2M>
           <Text.H4 color='foregroundMuted'>
             Make one model call from your app. Any input works.
           </Text.H4>
@@ -76,4 +78,3 @@ export function Step5_WaitingForTrace({
     </OnboardingLayout>
   )
 }
-
