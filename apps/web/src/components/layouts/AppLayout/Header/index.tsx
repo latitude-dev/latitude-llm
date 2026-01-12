@@ -8,7 +8,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 
 import AvatarDropdown from './AvatarDropdown'
 import { HeaderBreadcrumb } from './Breadcrumb'
-import { RewardsButton } from './Rewards'
+import { TrialBadge } from './TrialBadge'
 import { UsageIndicator } from './UsageIndicator'
 
 import Link from 'next/link'
@@ -56,8 +56,8 @@ export default function AppHeader({
         <nav className='flex flex-row gap-x-4 items-center'>
           {cloudInfo ? (
             <>
+              <TrialBadge />
               <UsageIndicator />
-              <RewardsButton />
             </>
           ) : null}
 

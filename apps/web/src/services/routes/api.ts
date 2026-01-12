@@ -4,6 +4,11 @@ import { buildExperimentsApiParams } from '@latitude-data/core/data-access/exper
 type PaginationParameters = { page: number; pageSize: number }
 
 export const API_ROUTES = {
+  pricings: {
+    detail: (slug: string) => ({
+      root: `/api/pricings/${slug}`,
+    }),
+  },
   traces: {
     detail: (traceId: string) => ({
       root: `/api/traces/${traceId}`,

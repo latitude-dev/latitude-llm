@@ -1,8 +1,26 @@
+import { z, ZodType } from 'zod'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { z } from 'zod'
 
-import { RewardConfig } from './RewardMenuBase'
 import { RewardType } from '@latitude-data/core/constants'
+import { ReactNode } from 'react'
+
+export type RewardConfig = {
+  type: RewardType
+  title: string
+  referenceSchema: ZodType
+  placeholder: string
+  steps: Array<{
+    title: ReactNode
+    content?: ReactNode
+    links?: Array<{ href: string; text: string }>
+    input?: boolean
+  }>
+  buttonConfig?: {
+    allowMultiple?: boolean
+    claimLabel?: string
+    alreadyClamedLabel?: string
+  }
+}
 
 export const REWARD_CONFIGS: Record<RewardType, RewardConfig> = {
   [RewardType.XFollow]: {

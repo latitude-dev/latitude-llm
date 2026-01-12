@@ -19,8 +19,11 @@ export async function applyUserPlanLimit({
 
   // should not be possible but we are nice and opt for letting the request continue...
   if (!subscription) return Result.nil()
+
   // Team and enterprise plans don't have this limit as they are charged per seat
-  if (![...FREE_PLANS, ...PRO_PLANS].includes(subscription.plan)) return Result.nil() // prettier-ignore
+  if (![...FREE_PLANS, ...PRO_PLANS].includes(subscription.plan)) {
+    return Result.nil()
+  }
 
   const result = await findWorkspaceUsers(workspace)
   if (result.error) return result

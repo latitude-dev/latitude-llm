@@ -1,3 +1,4 @@
+import { addDays, isSameDay } from 'date-fns'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { QuotaType } from '../../constants'
 import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
@@ -15,10 +16,6 @@ const SubscriptionPlansMock = {
     latte_credits: 30,
   },
 }
-
-vi.mock('./path/to/subscription/service', () => ({
-  createSubscription: vi.fn(),
-}))
 
 describe('createWorkspace', () => {
   beforeEach(async () => {
@@ -57,5 +54,16 @@ describe('createWorkspace', () => {
         workspace: workspace,
       }).then((r) => r.unwrap().limit),
     ).toEqual(30)
+  })
+
+  it('creates a subscription with trial end date 30 days from now', async () => {
+    const now = new Date()
+    const user = await createUser()
+    const workspace = await createWorkspace({ name: 'foo', user }).then((r) =>
+      r.unwrap(),
+    )
+
+    const trialEndsAt = workspace.currentSubscription.trialEndsAt!
+    expect(isSameDay(trialEndsAt, addDays(now, 30))).toBe(true)
   })
 })

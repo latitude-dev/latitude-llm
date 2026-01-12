@@ -46,6 +46,9 @@ export const ROUTES = {
   onboarding: {
     root: '/onboarding',
   },
+  choosePricingPlan: {
+    root: '/choose-plan',
+  },
   backoffice: {
     root: BACKOFFICE_ROOT,
     [BackofficeRoutes.rewards]: {
