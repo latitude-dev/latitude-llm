@@ -1,7 +1,15 @@
 import { env } from '@latitude-data/env'
 import { SpanType } from '@latitude-data/constants'
 import { Job } from 'bullmq'
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import { NotFoundError, UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import * as factories from '../../../tests/factories'
@@ -35,7 +43,10 @@ vi.mock('../../../utils/datadogCapture', () => ({
 
 const discoverIssueSpy = vi.spyOn(discoverIssueModule, 'discoverIssue')
 const generateIssueSpy = vi.spyOn(generateIssueModule, 'generateIssue')
-const assignResultSpy = vi.spyOn(assignModule, 'assignEvaluationResultV2ToIssue')
+const assignResultSpy = vi.spyOn(
+  assignModule,
+  'assignEvaluationResultV2ToIssue',
+)
 
 describe('discoverResultIssueJob', () => {
   const originalCloud = env.LATITUDE_CLOUD
@@ -76,7 +87,6 @@ describe('discoverResultIssueJob', () => {
       expect(discoverIssueSpy).not.toHaveBeenCalled()
       expect(generateIssueSpy).not.toHaveBeenCalled()
       expect(assignResultSpy).not.toHaveBeenCalled()
-
       ;(env as any).LATITUDE_CLOUD = true
     })
 
@@ -86,15 +96,18 @@ describe('discoverResultIssueJob', () => {
         data: { workspaceId: 999999, resultId: 1 },
       } as Job<DiscoverResultIssueJobData>
 
-      await expect(discoverResultIssueJob(jobData)).rejects.toThrow(NotFoundError)
+      await expect(discoverResultIssueJob(jobData)).rejects.toThrow(
+        NotFoundError,
+      )
     })
 
     it('returns early if result already belongs to an issue', async () => {
-      const { workspace, documents, commit, project } = await factories.createProject({
-        documents: {
-          'test-prompt': 'Test content',
-        },
-      })
+      const { workspace, documents, commit, project } =
+        await factories.createProject({
+          documents: {
+            'test-prompt': 'Test content',
+          },
+        })
       const document = documents[0]!
 
       const evaluation = await factories.createEvaluationV2({
@@ -144,11 +157,12 @@ describe('discoverResultIssueJob', () => {
     })
 
     it('discovers an existing issue and assigns result to it', async () => {
-      const { workspace, documents, commit, project } = await factories.createProject({
-        documents: {
-          'test-prompt': 'Test content',
-        },
-      })
+      const { workspace, documents, commit, project } =
+        await factories.createProject({
+          documents: {
+            'test-prompt': 'Test content',
+          },
+        })
       const document = documents[0]!
 
       const evaluation = await factories.createEvaluationV2({
@@ -223,7 +237,7 @@ describe('discoverResultIssueJob', () => {
     })
 
     it('generates a new issue when no candidate found and publishes event', async () => {
-      const { workspace, documents, commit, _project } = await factories.createProject({
+      const { workspace, documents, commit } = await factories.createProject({
         documents: {
           'test-prompt': 'Test content',
         },
@@ -266,7 +280,11 @@ describe('discoverResultIssueJob', () => {
 
       generateIssueSpy.mockResolvedValueOnce(Result.ok(newIssueData))
 
-      const createdIssue = { id: 123, uuid: 'new-issue-uuid', ...newIssueData } as any
+      const createdIssue = {
+        id: 123,
+        uuid: 'new-issue-uuid',
+        ...newIssueData,
+      } as any
 
       assignResultSpy.mockResolvedValueOnce(
         Result.ok({
@@ -339,7 +357,9 @@ describe('discoverResultIssueJob', () => {
       })
 
       discoverIssueSpy.mockResolvedValueOnce(
-        Result.error(new UnprocessableEntityError('Invalid result for issue discovery')),
+        Result.error(
+          new UnprocessableEntityError('Invalid result for issue discovery'),
+        ),
       )
 
       const jobData = {
@@ -391,7 +411,9 @@ describe('discoverResultIssueJob', () => {
         data: { workspaceId: workspace.id, resultId: evaluationResult.id },
       } as Job<DiscoverResultIssueJobData>
 
-      await expect(discoverResultIssueJob(jobData)).rejects.toThrow('Unexpected error')
+      await expect(discoverResultIssueJob(jobData)).rejects.toThrow(
+        'Unexpected error',
+      )
     })
 
     it('captures exception and returns when generateIssue returns UnprocessableEntityError', async () => {
@@ -494,7 +516,9 @@ describe('discoverResultIssueJob', () => {
         data: { workspaceId: workspace.id, resultId: evaluationResult.id },
       } as Job<DiscoverResultIssueJobData>
 
-      await expect(discoverResultIssueJob(jobData)).rejects.toThrow('Generation failed')
+      await expect(discoverResultIssueJob(jobData)).rejects.toThrow(
+        'Generation failed',
+      )
     })
 
     it('throws error when span not found', async () => {
