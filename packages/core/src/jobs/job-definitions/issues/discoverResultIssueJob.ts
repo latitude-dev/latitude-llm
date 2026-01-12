@@ -30,7 +30,6 @@ export function discoverResultIssueJobKey({
   return `discoverResultIssueJob-${workspaceId}-${resultId}`
 }
 
-// TODO(AO): Tests for this beast!
 export const discoverResultIssueJob = async (
   job: Job<DiscoverResultIssueJobData>,
 ) => {
