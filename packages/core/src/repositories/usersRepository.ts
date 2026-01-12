@@ -17,7 +17,7 @@ export type WorkspaceUser = User & {
 
 const tt = {
   ...getTableColumns(users),
-  membershipId: memberships.id,
+  membershipId: sql<number>`${memberships.id}`.mapWith(Number).as('membershipId'),
   role: memberships.role,
   confirmedAt: memberships.confirmedAt,
 }
