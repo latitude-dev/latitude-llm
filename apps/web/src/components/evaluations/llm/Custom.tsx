@@ -171,6 +171,30 @@ function ConfigurationAdvancedForm({
   errors,
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
+  useEffect(() => {
+    if (
+      configuration.minScore === undefined ||
+      configuration.maxScore === undefined
+    ) {
+      return
+    }
+
+    const threshold = Math.ceil(
+      (configuration.minScore + configuration.maxScore) / 2,
+    )
+
+    setConfiguration({
+      ...configuration,
+      minThreshold: !configuration.reverseScale ? threshold : undefined,
+      maxThreshold: configuration.reverseScale ? threshold : undefined,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    configuration.minScore,
+    configuration.maxScore,
+    configuration.reverseScale,
+  ])
+
   return (
     <>
       <ThresholdInput

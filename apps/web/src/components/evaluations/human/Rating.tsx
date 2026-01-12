@@ -12,7 +12,7 @@ import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { StepperNumberInput } from '@latitude-data/web-ui/atoms/StepperNumberInput'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { use, useCallback, useMemo } from 'react'
+import { use, useCallback, useEffect, useMemo } from 'react'
 import { CriteriaDescription as CriteriaWrapper } from '../Annotation/CriteriaDescription'
 import {
   AnnotationFormWrapper as AForm,
@@ -125,6 +125,30 @@ function ConfigurationAdvancedForm({
   errors,
   disabled,
 }: ConfigurationFormProps<EvaluationType.Human, HumanEvaluationMetric.Rating>) {
+  useEffect(() => {
+    if (
+      configuration.minRating === undefined ||
+      configuration.maxRating === undefined
+    ) {
+      return
+    }
+
+    const threshold = Math.ceil(
+      (configuration.minRating + configuration.maxRating) / 2,
+    )
+
+    setConfiguration({
+      ...configuration,
+      minThreshold: !configuration.reverseScale ? threshold : undefined,
+      maxThreshold: configuration.reverseScale ? threshold : undefined,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    configuration.minRating,
+    configuration.maxRating,
+    configuration.reverseScale,
+  ])
+
   return (
     <>
       <ThresholdInput

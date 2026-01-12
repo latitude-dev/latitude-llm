@@ -6,6 +6,7 @@ import {
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { useEffect } from 'react'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
@@ -91,6 +92,17 @@ function ConfigurationAdvancedForm({
   errors,
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Comparison>) {
+  useEffect(() => {
+    const threshold = Math.ceil((0 + 100) / 2)
+
+    setConfiguration({
+      ...configuration,
+      minThreshold: !configuration.reverseScale ? threshold : undefined,
+      maxThreshold: configuration.reverseScale ? threshold : undefined,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configuration.reverseScale])
+
   return (
     <>
       <ThresholdInput
