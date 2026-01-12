@@ -92,10 +92,7 @@ describe('discoverResultIssueJob', () => {
     it('returns early if result already belongs to an issue', async () => {
       const { workspace, documents, commit, project } = await factories.createProject({
         documents: {
-          'test-prompt': factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Test content',
-          }),
+          'test-prompt': 'Test content',
         },
       })
       const document = documents[0]!
@@ -149,10 +146,7 @@ describe('discoverResultIssueJob', () => {
     it('discovers an existing issue and assigns result to it', async () => {
       const { workspace, documents, commit, project } = await factories.createProject({
         documents: {
-          'test-prompt': factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Test content',
-          }),
+          'test-prompt': 'Test content',
         },
       })
       const document = documents[0]!
@@ -203,6 +197,8 @@ describe('discoverResultIssueJob', () => {
         Result.ok({
           issue: existingIssue,
           issueEvaluationResult: { id: 1 } as any,
+          histogram: {} as any,
+          result: evaluationResult,
         }),
       )
 
@@ -227,12 +223,9 @@ describe('discoverResultIssueJob', () => {
     })
 
     it('generates a new issue when no candidate found and publishes event', async () => {
-      const { workspace, documents, commit, project } = await factories.createProject({
+      const { workspace, documents, commit, _project } = await factories.createProject({
         documents: {
-          'test-prompt': factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Test content',
-          }),
+          'test-prompt': 'Test content',
         },
       })
       const document = documents[0]!
@@ -279,6 +272,8 @@ describe('discoverResultIssueJob', () => {
         Result.ok({
           issue: createdIssue,
           issueEvaluationResult: { id: 1 } as any,
+          histogram: {} as any,
+          result: evaluationResult,
         }),
       )
 
@@ -317,10 +312,7 @@ describe('discoverResultIssueJob', () => {
     it('captures exception and returns when discoverIssue returns UnprocessableEntityError', async () => {
       const { workspace, documents, commit } = await factories.createProject({
         documents: {
-          'test-prompt': factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Test content',
-          }),
+          'test-prompt': 'Test content',
         },
       })
       const document = documents[0]!
@@ -365,10 +357,7 @@ describe('discoverResultIssueJob', () => {
     it('throws error when discoverIssue returns non-UnprocessableEntityError', async () => {
       const { workspace, documents, commit } = await factories.createProject({
         documents: {
-          'test-prompt': factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Test content',
-          }),
+          'test-prompt': 'Test content',
         },
       })
       const document = documents[0]!
@@ -408,10 +397,7 @@ describe('discoverResultIssueJob', () => {
     it('captures exception and returns when generateIssue returns UnprocessableEntityError', async () => {
       const { workspace, documents, commit } = await factories.createProject({
         documents: {
-          'test-prompt': factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Test content',
-          }),
+          'test-prompt': 'Test content',
         },
       })
       const document = documents[0]!
@@ -465,10 +451,7 @@ describe('discoverResultIssueJob', () => {
     it('throws error when generateIssue returns non-UnprocessableEntityError', async () => {
       const { workspace, documents, commit } = await factories.createProject({
         documents: {
-          'test-prompt': factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Test content',
-          }),
+          'test-prompt': 'Test content',
         },
       })
       const document = documents[0]!
@@ -517,10 +500,7 @@ describe('discoverResultIssueJob', () => {
     it('throws error when span not found', async () => {
       const { workspace, documents, commit } = await factories.createProject({
         documents: {
-          'test-prompt': factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Test content',
-          }),
+          'test-prompt': 'Test content',
         },
       })
       const document = documents[0]!
@@ -572,6 +552,8 @@ describe('discoverResultIssueJob', () => {
         Result.ok({
           issue: createdIssue,
           issueEvaluationResult: { id: 1 } as any,
+          histogram: {} as any,
+          result: evaluationResult,
         }),
       )
 
