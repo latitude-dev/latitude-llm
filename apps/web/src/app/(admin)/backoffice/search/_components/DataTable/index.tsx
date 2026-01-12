@@ -87,7 +87,9 @@ export function DataTable({
   )
 
   if (noCard) {
-    return <div className={`flex flex-col gap-4 ${className || ''}`}>{content}</div>
+    return (
+      <div className={`flex flex-col gap-4 ${className || ''}`}>{content}</div>
+    )
   }
 
   return (

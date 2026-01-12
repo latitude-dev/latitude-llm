@@ -59,7 +59,9 @@ function WebExtractOutput({
   }, [toolResponse, isExpectedResponse])
 
   if (!toolResponse) {
-    return <ToolCardPendingState status={status} loadingText='Loading page...' />
+    return (
+      <ToolCardPendingState status={status} loadingText='Loading page...' />
+    )
   }
 
   if (!isExpectedResponse) {

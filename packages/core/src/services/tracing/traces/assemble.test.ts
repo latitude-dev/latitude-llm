@@ -431,8 +431,7 @@ describe('assembleTraceWithMessages', () => {
       (meta0.tokens?.completion ?? 0) +
       (meta1.tokens?.completion ?? 0) +
       (meta2.tokens?.completion ?? 0)
-    const totalCost =
-      (meta0.cost ?? 0) + (meta1.cost ?? 0) + (meta2.cost ?? 0)
+    const totalCost = (meta0.cost ?? 0) + (meta1.cost ?? 0) + (meta2.cost ?? 0)
 
     expect(totalPromptTokens).toBe(450)
     expect(totalCompletionTokens).toBe(225)
@@ -570,15 +569,15 @@ describe('assembleTraceWithMessages', () => {
     }
 
     const totalCost = allCompletions.reduce(
-      (sum, span) => sum + ((span.metadata as CompletionSpanMetadata).cost ?? 0),
+      (sum, span) =>
+        sum + ((span.metadata as CompletionSpanMetadata).cost ?? 0),
       0,
     )
     expect(totalCost).toBeCloseTo(0.03)
 
     const totalPromptTokens = allCompletions.reduce(
       (sum, span) =>
-        sum +
-        ((span.metadata as CompletionSpanMetadata).tokens?.prompt ?? 0),
+        sum + ((span.metadata as CompletionSpanMetadata).tokens?.prompt ?? 0),
       0,
     )
     expect(totalPromptTokens).toBe(1400)
