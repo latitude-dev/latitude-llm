@@ -175,4 +175,3 @@ export function Step4_Integration({
     </div>
   )
 }
-

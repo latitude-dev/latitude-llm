@@ -29,7 +29,12 @@ type Props = {
   documentUuid?: string
 }
 
-export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documentUuid }: Props) {
+export function OnboardingFlow({
+  workspaceApiKey,
+  projectId,
+  commitUuid,
+  documentUuid,
+}: Props) {
   const posthog = usePostHog()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -64,8 +69,9 @@ export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documen
   const { execute: skipOnboarding, isPending: isSkipping } =
     useLatitudeAction(skipOnboardingAction)
 
-  const { execute: completeOnboarding } =
-    useLatitudeAction(completeOnboardingAction)
+  const { execute: completeOnboarding } = useLatitudeAction(
+    completeOnboardingAction,
+  )
 
   const hasCompletedOnboardingRef = useRef(false)
 
@@ -87,7 +93,10 @@ export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documen
   // Automatically mark onboarding as complete when user reaches the final step
   // This allows them to click links without being redirected back to onboarding
   useEffect(() => {
-    if (currentStep === ONBOARDING_STEPS.NEXT_STEPS && !hasCompletedOnboardingRef.current) {
+    if (
+      currentStep === ONBOARDING_STEPS.NEXT_STEPS &&
+      !hasCompletedOnboardingRef.current
+    ) {
       hasCompletedOnboardingRef.current = true
       setReplayOnboarding(false)
       completeOnboarding()
@@ -231,4 +240,3 @@ export function OnboardingFlow({ workspaceApiKey, projectId, commitUuid, documen
       return <Step0_WhatIsLatitude onContinue={handleStep0Continue} />
   }
 }
-
