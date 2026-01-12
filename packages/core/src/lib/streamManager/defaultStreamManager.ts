@@ -61,7 +61,7 @@ export class DefaultStreamManager
     try {
       this.setMessages(this.messages)
       this.startStep()
-      this.startProviderStep({
+      await this.startProviderStep({
         config: this.config,
         messages: this.messages,
         provider: this.provider,
@@ -82,6 +82,7 @@ export class DefaultStreamManager
           abortSignal: this.abortSignal,
           controller: this.controller!,
           documentLogUuid: this.uuid,
+          conversationContext: this.getConversationContext(),
           messages: this.messages,
           output: this.output,
           provider: this.provider,

@@ -10,6 +10,7 @@ const jobMappings = {
     jobs.backfillEvaluationResultsTypeAndMetricJob,
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   cleanDocumentSuggestionsJob: jobs.cleanDocumentSuggestionsJob,
+  clearConversationCacheJob: jobs.clearConversationCacheJob,
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
   requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
   scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,

@@ -3,13 +3,15 @@ import { LatitudeError } from '../../lib/errors'
 import { BACKGROUND } from '../../telemetry'
 import { buildClientToolHandlersMap } from '../documents/tools/clientTools/handlers'
 import { runDocumentAtCommit } from './runDocumentAtCommit'
-import { ProviderApiKeysRepository } from '../../repositories'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import type { WorkspaceDto } from '../../schema/models/types/Workspace'
 import type { Commit } from '../../schema/models/types/Commit'
 import { type OkType } from '../../lib/Result'
 import { Project } from '../../schema/models/types/Project'
 import { publisher } from '../../events/publisher'
+import { scanDocumentContent } from '../documents'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { buildProvidersMap } from '../providerApiKeys/buildMap'
 
 type RunResult = OkType<typeof runDocumentAtCommit>
 
@@ -104,10 +106,22 @@ export async function runForegroundDocument(
       if (!response)
         throw new LatitudeError('Stream ended with no error and no content')
 
-      const providerScope = new ProviderApiKeysRepository(workspace.id)
-      const provider = await providerScope
-        .find(response.providerLog?.providerId)
-        .then((r) => r.unwrap())
+      const metadataResult = await scanDocumentContent({
+        document,
+        commit,
+      })
+      if (metadataResult.error) throw metadataResult.error
+      const config = metadataResult.value.config as LatitudePromptConfig
+
+      const providersMap = await buildProvidersMap({
+        workspaceId: workspace.id,
+      })
+      const provider = providersMap.get(config.provider)
+      if (!provider) {
+        throw new LatitudeError(
+          `Provider API key not found for ${config.provider}`,
+        )
+      }
 
       return { response, provider }
     },

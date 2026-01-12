@@ -26,6 +26,7 @@ import {
   McpClientManager,
 } from '../../services/integrations/McpClient/McpClientManager'
 import { telemetry, TelemetryContext } from '../../telemetry'
+import { writeConversationCache } from '../../services/conversations/cache'
 import { ChainError, RunErrorCodes } from '../errors'
 import { generateUUIDIdentifier } from '../generateUUID'
 import { ToolHandler } from '../../services/documents/tools/clientTools/handlers'
@@ -239,7 +240,10 @@ export abstract class StreamManager {
   protected endStream() {
     this.endTime = Date.now()
 
-    const toolCalls = this.response?.providerLog?.toolCalls ?? []
+    const toolCalls =
+      this.response && 'toolCalls' in this.response
+        ? this.response.toolCalls ?? []
+        : []
     const tokenUsage = this.logUsage ?? EMPTY_USAGE()
     const duration = this.endTime! - this.startTime!
     const finishReason = this.finishReason ?? 'stop'
@@ -268,7 +272,7 @@ export abstract class StreamManager {
     this.resolveRunUsage?.(runUsage)
   }
 
-  protected startProviderStep({
+  protected async startProviderStep({
     config,
     messages,
     provider,
@@ -295,6 +299,18 @@ export abstract class StreamManager {
       },
       this.$context,
     )
+
+    const conversationContext = this.getConversationContext()
+    if (conversationContext) {
+      await writeConversationCache({
+        documentLogUuid: this.uuid,
+        workspaceId: this.workspace.id,
+        commitUuid: conversationContext.commitUuid,
+        documentUuid: conversationContext.documentUuid,
+        providerId: provider.id,
+        messages,
+      }).then((r) => r.unwrap())
+    }
 
     this.sendEvent({ type: ChainEventTypes.ProviderStarted, config })
   }
@@ -323,7 +339,7 @@ export abstract class StreamManager {
 
     this.sendEvent({
       type: ChainEventTypes.ProviderCompleted,
-      providerLogUuid: response.providerLog!.uuid,
+      providerLogUuid: response.documentLogUuid ?? this.uuid,
       tokenUsage,
       finishReason,
       response,
@@ -357,6 +373,17 @@ export abstract class StreamManager {
       ...omit(config, 'tools', 'latitudeTools', 'agents'),
       ...(Object.keys(tools).length ? { tools } : {}),
     } as VercelConfig
+  }
+
+  protected getConversationContext() {
+    if ('commit' in this.promptSource) {
+      return {
+        commitUuid: this.promptSource.commit.uuid,
+        documentUuid: this.promptSource.document.documentUuid,
+      }
+    }
+
+    return undefined
   }
 
   protected sendEvent(event: OmittedLatitudeEventData) {

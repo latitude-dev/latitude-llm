@@ -31,6 +31,12 @@ export async function setupSchedules() {
     { opts: { attempts: 1 } },
   )
 
+  await maintenanceQueue.upsertJobScheduler(
+    'clearConversationCacheJob',
+    { pattern: '0 0 * * * *' },
+    { opts: { attempts: 1 } },
+  )
+
   // Every day at 1 AM - Removes logs older than 30 days from free plan accounts
   await maintenanceQueue.upsertJobScheduler(
     'scheduleWorkspaceCleanupJobs',
