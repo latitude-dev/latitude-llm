@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { database } from '../../../client'
 import {
   EvaluationType,
@@ -28,6 +29,22 @@ async function validate(
   >,
   _ = database,
 ) {
+  if (
+    configuration.minLength === undefined &&
+    configuration.maxLength === undefined
+  ) {
+    return Result.error(
+      new z.ZodError([
+        {
+          code: 'custom',
+          path: ['lengthThreshold'],
+          message:
+            'At least one threshold (minimum or maximum length) is required',
+        },
+      ]),
+    )
+  }
+
   if (configuration.minLength !== undefined && configuration.minLength < 0) {
     return Result.error(
       new BadRequestError('Minimum length must be a positive number'),

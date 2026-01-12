@@ -67,6 +67,7 @@ model: gpt-4o
 Evaluate the response: {{ actualOutput }}`,
         minScore: 0,
         maxScore: 100,
+        minThreshold: 50,
       },
     })
 

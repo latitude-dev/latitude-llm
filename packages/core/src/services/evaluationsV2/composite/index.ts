@@ -151,6 +151,21 @@ async function validate<M extends CompositeEvaluationMetric>(
   configuration = validating.value
 
   if (
+    configuration.minThreshold === undefined &&
+    configuration.maxThreshold === undefined
+  ) {
+    return Result.error(
+      new z.ZodError([
+        {
+          code: 'custom',
+          path: ['threshold'],
+          message: 'At least one threshold (minimum or maximum) is required',
+        },
+      ]),
+    )
+  }
+
+  if (
     configuration.minThreshold !== undefined &&
     (configuration.minThreshold < 0 || configuration.minThreshold > 100)
   ) {

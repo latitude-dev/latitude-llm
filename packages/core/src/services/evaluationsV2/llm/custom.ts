@@ -10,13 +10,13 @@ import {
 } from '../../../constants'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
+import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
 import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 import { buildEvaluationParameters, runPrompt } from './shared'
-import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
 
 export const LlmEvaluationCustomSpecification = {
   ...specification,
@@ -49,6 +49,21 @@ async function validate(
   if (configuration.minScore >= configuration.maxScore) {
     return Result.error(
       new BadRequestError('Minimum score must be less than maximum score'),
+    )
+  }
+
+  if (
+    configuration.minThreshold === undefined &&
+    configuration.maxThreshold === undefined
+  ) {
+    return Result.error(
+      new z.ZodError([
+        {
+          code: 'custom',
+          path: ['threshold'],
+          message: 'At least one threshold (minimum or maximum) is required',
+        },
+      ]),
     )
   }
 

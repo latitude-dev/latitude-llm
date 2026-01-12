@@ -14,6 +14,7 @@ import {
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
+import { ThresholdInput } from '../ThresholdInput'
 
 const specification = LlmEvaluationRatingSpecification
 export default {
@@ -131,41 +132,29 @@ function ConfigurationAdvancedForm({
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Rating>) {
   return (
     <>
-      <FormFieldGroup
-        layout='horizontal'
-        description='The minimum and maximum rating threshold of the response'
-      >
-        <NumberInput
-          value={configuration.minThreshold ?? undefined}
-          name='minThreshold'
-          label='Minimum threshold'
-          placeholder='No minimum'
-          min={configuration.minRating}
-          max={configuration.maxRating}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minThreshold: value })
-          }
-          errors={errors?.['minThreshold']}
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-        <NumberInput
-          value={configuration.maxThreshold ?? undefined}
-          name='maxThreshold'
-          label='Maximum threshold'
-          placeholder='No maximum'
-          min={configuration.minRating}
-          max={configuration.maxRating}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxThreshold: value })
-          }
-          errors={errors?.['maxThreshold']}
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-      </FormFieldGroup>
+      <ThresholdInput
+        threshold={{
+          min: configuration.minThreshold ?? undefined,
+          max: configuration.maxThreshold ?? undefined,
+        }}
+        setThreshold={(value) =>
+          setConfiguration({
+            ...configuration,
+            minThreshold: value.min,
+            maxThreshold: value.max,
+          })
+        }
+        name='threshold'
+        label='threshold'
+        description='rating threshold of the response'
+        min={configuration.minRating}
+        max={configuration.maxRating}
+        showMin={!configuration.reverseScale}
+        showMax={configuration.reverseScale}
+        errors={errors}
+        disabled={disabled}
+        required
+      />
     </>
   )
 }

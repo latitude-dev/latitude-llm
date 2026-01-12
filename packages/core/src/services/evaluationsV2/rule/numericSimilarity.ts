@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { database } from '../../../client'
 import {
   EvaluationType,
@@ -28,6 +29,22 @@ async function validate(
   >,
   _ = database,
 ) {
+  if (
+    configuration.minSimilarity === undefined &&
+    configuration.maxSimilarity === undefined
+  ) {
+    return Result.error(
+      new z.ZodError([
+        {
+          code: 'custom',
+          path: ['similarityThreshold'],
+          message:
+            'At least one threshold (minimum or maximum similarity) is required',
+        },
+      ]),
+    )
+  }
+
   if (
     configuration.minSimilarity !== undefined &&
     (configuration.minSimilarity < 0 || configuration.minSimilarity > 100)
