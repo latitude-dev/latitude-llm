@@ -270,7 +270,7 @@ async function handleForegroundRun({
     throw e
   })
 
-  if (!finalResponse.response)
+  if (!finalResponse.response || !finalResponse.provider)
     throw new LatitudeError('Stream ended with no error and no content')
 
   const body = runPresenter({

@@ -4,16 +4,13 @@ import { Providers } from '@latitude-data/constants'
 import { LogSources } from '../../../constants'
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { Result } from '../../../lib/Result'
-import {
-  createDocumentLog,
-  createProject,
-  createProviderLog,
-} from '../../../tests/factories'
+import { createProject } from '../../../tests/factories'
 import {
   telemetry as realTelemetry,
   type LatitudeTelemetry,
 } from '../../../telemetry'
 import { addMessages } from './index'
+import { writeConversationCache } from '../../conversations/cache'
 
 const mocks = {
   runAi: vi.fn(async () => {
@@ -64,18 +61,20 @@ Hello world
 
     const document = documents[0]!
     const provider = providers[0]!
-
-    const { documentLog } = await createDocumentLog({
-      document,
-      commit,
-    })
-
-    await createProviderLog({
-      workspace,
-      documentLogUuid: documentLog.uuid,
+    const documentLogUuid = '550e8400-e29b-41d4-a716-446655440000'
+    await writeConversationCache({
+      documentLogUuid,
+      workspaceId: workspace.id,
+      commitUuid: commit.uuid,
+      documentUuid: document.documentUuid,
       providerId: provider.id,
-      providerType: provider.provider,
-    })
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [{ type: 'text', text: 'Hello' }],
+        },
+      ],
+    }).then((r) => r.unwrap())
 
     const mockPrompt = vi
       .fn()
@@ -97,7 +96,7 @@ Hello world
     const result = await addMessages(
       {
         workspace,
-        documentLogUuid: documentLog.uuid,
+        documentLogUuid,
         messages: [
           {
             role: MessageRole.user,
@@ -115,7 +114,7 @@ Hello world
 
     expect(mockChat).toHaveBeenCalledWith(
       expect.objectContaining({
-        documentLogUuid: documentLog.uuid,
+        documentLogUuid,
         name: document.path.split('/').at(-1),
         source: LogSources.API,
         previousTraceId: expect.any(String),

@@ -13,7 +13,6 @@ import { LogSources } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import * as aiModule from '../../../services/ai'
 import * as processResponseModule from '../../../services/chains/ProviderProcessor'
-import * as createProviderLogModule from '../../../services/providerLogs/create'
 import * as consumeStreamModule from '../ChainStreamConsumer/consumeStream'
 import * as factories from '../../../tests/factories'
 import * as usageModule from '../../../services/workspaces/usage'
@@ -267,40 +266,6 @@ describe('streamAIResponse', () => {
         },
         documentLogUuid: randomUUID(),
       })
-      vi.spyOn(createProviderLogModule, 'createProviderLog').mockResolvedValue(
-        Result.ok({
-          id: 1,
-          uuid: randomUUID(),
-          workspaceId: 1,
-          providerId: 1,
-          providerType: Providers.OpenAI,
-          model: 'gpt-4',
-          config: { model: 'gpt-4' },
-          messages: [],
-          responseText: 'test response',
-          responseObject: null,
-          responseReasoning: null,
-          toolCalls: [],
-          usage: {
-            inputTokens: 10,
-            outputTokens: 20,
-            promptTokens: 10,
-            completionTokens: 20,
-            totalTokens: 30,
-            cachedInputTokens: 0,
-            reasoningTokens: 0,
-          },
-          duration: 100,
-          source: LogSources.API,
-          costInMillicents: 0,
-          documentLogUuid: null,
-          finishReason: 'stop',
-          output: null,
-          generatedAt: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as unknown as ProviderLog),
-      )
       vi.spyOn(consumeStreamModule, 'consumeStream').mockResolvedValue({
         error: undefined,
       })
