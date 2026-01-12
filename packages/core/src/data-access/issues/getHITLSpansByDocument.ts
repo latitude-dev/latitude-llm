@@ -63,6 +63,7 @@ export async function getHITLSpansByDocument(
   if (paginatedResults.length === 0) {
     return Result.ok({
       spans: [] as Span[],
+      evaluationResults: paginatedResults,
       hasNextPage: false,
     })
   }
@@ -73,6 +74,7 @@ export async function getHITLSpansByDocument(
 
   return Result.ok({
     spans: orderedSpans as Span<SpanType.Prompt>[],
+    evaluationResults: paginatedResults,
     hasNextPage,
   })
 }

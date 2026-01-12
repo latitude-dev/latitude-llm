@@ -1,8 +1,9 @@
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { getSpanMessagesAndEvaluationResultsByIssue } from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import {
+  CommitsRepository,
+  EvaluationResultsV2Repository,
   EvaluationsV2Repository,
   SpansRepository,
 } from '@latitude-data/core/repositories'
@@ -15,10 +16,14 @@ import z from 'zod'
 import { database } from '../../../client'
 import {
   CLOUD_MESSAGES,
+  EvaluationV2,
   LlmEvaluationBinarySpecification,
 } from '../../../constants'
 import { getSpanMessagesByIssueDocument } from '../../../data-access/issues/getSpanMessagesByIssueDocument'
-import { getSpanMessagesBySpans } from '../../../data-access/issues/getSpanMessagesBySpans'
+import {
+  buildSpanMessagesWithReasons,
+  SpanMessagesWithReason,
+} from '../../spans/buildSpanMessagesWithReasons'
 import { getCopilot, runCopilot } from '../../copilot'
 
 const llmEvaluationBinarySpecificationWithoutModel =
@@ -143,11 +148,13 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
   const passedExampleMessagesFromIssueDocument =
     passedExampleMessagesFromIssueDocumentResult.unwrap()
 
-  let falsePositiveExamples: LegacyMessage[] = []
+  let falsePositiveExamples: SpanMessagesWithReason[] = []
   if (falsePositivesSpanAndTraceIdPairs) {
     const falsePositiveExamplesResult = await getSpansFromSpanAndTraceIdPairs({
-      workspace: workspace,
+      workspace,
+      commit,
       spanAndTraceIdPairs: falsePositivesSpanAndTraceIdPairs,
+      evaluations: existingEvaluations,
     })
     if (!Result.isOk(falsePositiveExamplesResult)) {
       return falsePositiveExamplesResult
@@ -155,11 +162,13 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
     falsePositiveExamples = falsePositiveExamplesResult.unwrap()
   }
 
-  let falseNegativeExamples: LegacyMessage[] = []
+  let falseNegativeExamples: SpanMessagesWithReason[] = []
   if (falseNegativesSpanAndTraceIdPairs) {
     const falseNegativeExamplesResult = await getSpansFromSpanAndTraceIdPairs({
-      workspace: workspace,
+      workspace,
+      commit,
       spanAndTraceIdPairs: falseNegativesSpanAndTraceIdPairs,
+      evaluations: existingEvaluations,
     })
     if (!Result.isOk(falseNegativeExamplesResult)) {
       return falseNegativeExamplesResult
@@ -173,7 +182,7 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
       issueName: issue.title,
       issueDescription: issue.description,
       existingEvaluationNames: existingEvaluationNames,
-      examplesWithIssueAndReasonWhy: messagesAndReasonWhyFailedForIssue,
+      examplesWithIssue: messagesAndReasonWhyFailedForIssue,
       goodExamplesWithoutIssue: passedExampleMessagesFromIssueDocument,
       falsePositiveExamples,
       falseNegativeExamples,
@@ -204,12 +213,16 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
 export async function getSpansFromSpanAndTraceIdPairs({
   spanAndTraceIdPairs,
   workspace,
+  commit,
+  evaluations,
 }: {
   spanAndTraceIdPairs: {
     spanId: string
     traceId: string
   }[]
   workspace: Workspace
+  commit: Commit
+  evaluations: EvaluationV2[]
 }) {
   const spanRepository = new SpansRepository(workspace.id)
   const spansResult =
@@ -219,9 +232,26 @@ export async function getSpansFromSpanAndTraceIdPairs({
   }
   const spans = spansResult.unwrap()
 
-  return getSpanMessagesBySpans({
+  const evaluationResultsRepository = new EvaluationResultsV2Repository(
+    workspace.id,
+  )
+  const commitsRepo = new CommitsRepository(workspace.id)
+  const commitHistory = await commitsRepo.getCommitsHistory({ commit })
+  const commitHistoryIds = commitHistory.map((c) => c.id)
+
+  const evaluationUuids = evaluations.map((e) => e.uuid)
+  const evaluationResults =
+    await evaluationResultsRepository.listBySpanAndEvaluations({
+      spans,
+      evaluationUuids,
+      commitHistoryIds,
+    })
+
+  return buildSpanMessagesWithReasons({
     workspace,
     spans,
+    evaluationResults,
+    evaluations,
   })
 }
 
