@@ -113,6 +113,8 @@ export abstract class StreamManager {
   private resolveResponse?: (
     response: ChainStepResponse<StreamType> | undefined,
   ) => void
+  private provider?: ProviderApiKey
+  private resolveProvider?: (provider: ProviderApiKey | undefined) => void
 
   constructor({
     workspace,
@@ -210,6 +212,7 @@ export abstract class StreamManager {
       duration,
       logUsage,
       runUsage,
+      provider,
     } = this.initializePromisedValues()
 
     return {
@@ -220,6 +223,7 @@ export abstract class StreamManager {
       duration,
       logUsage,
       runUsage,
+      provider,
       stream: this.stream,
       start: this.start.bind(this),
     }
@@ -270,6 +274,7 @@ export abstract class StreamManager {
     this.resolveDuration?.(duration)
     this.resolveLogUsage?.(logUsage)
     this.resolveRunUsage?.(runUsage)
+    this.resolveProvider?.(this.provider)
   }
 
   protected async startProviderStep({
@@ -281,6 +286,8 @@ export abstract class StreamManager {
     messages: LegacyMessage[]
     provider: ProviderApiKey
   }) {
+    this.provider = provider
+
     this.$completion = telemetry.span.completion(
       {
         configuration: config,
@@ -339,7 +346,7 @@ export abstract class StreamManager {
 
     this.sendEvent({
       type: ChainEventTypes.ProviderCompleted,
-      providerLogUuid: response.documentLogUuid ?? this.uuid,
+      providerLogUuid: response.providerLog!.uuid,
       tokenUsage,
       finishReason,
       response,
@@ -431,6 +438,9 @@ export abstract class StreamManager {
       createPromiseWithResolver<LanguageModelUsage>()
     const [runUsage, resolveRunUsage] =
       createPromiseWithResolver<LanguageModelUsage>()
+    const [provider, resolveProvider] = createPromiseWithResolver<
+      ProviderApiKey | undefined
+    >()
     this.resolveToolCalls = resolveToolCalls
     this.resolveMessages = resolveMessages
     this.resolveError = resolveError
@@ -438,6 +448,7 @@ export abstract class StreamManager {
     this.resolveDuration = resolveDuration
     this.resolveLogUsage = resolveLogUsage
     this.resolveRunUsage = resolveRunUsage
+    this.resolveProvider = resolveProvider
 
     return {
       messages,
@@ -447,6 +458,7 @@ export abstract class StreamManager {
       duration,
       logUsage,
       runUsage,
+      provider,
     }
   }
 
