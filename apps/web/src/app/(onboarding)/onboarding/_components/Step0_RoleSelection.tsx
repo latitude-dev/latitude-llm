@@ -87,6 +87,8 @@ export function Step0_RoleSelection({ onContinue }: Props) {
   return (
     <OnboardingLayout hideHeader>
       <div className='flex flex-col items-center gap-8 w-full max-w-2xl'>
+        <Icon name='logo' size='xxxlarge' />
+
         <div className='flex flex-col items-center gap-2 text-center'>
           <Text.H2M color='foreground'>What's your role?</Text.H2M>
           <Text.H5 color='foregroundMuted'>

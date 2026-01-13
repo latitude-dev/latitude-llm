@@ -85,6 +85,8 @@ export function Step0b_AIUsage({ onContinue }: Props) {
   return (
     <OnboardingLayout hideHeader>
       <div className='flex flex-col items-center gap-8 w-full'>
+        <Icon name='logo' size='xxxlarge' />
+
         <div className='flex flex-col items-center gap-2'>
           <Text.H2M color='foreground' centered>Where is AI used in your product today?</Text.H2M>
           <Text.H5 color='foregroundMuted' centered>

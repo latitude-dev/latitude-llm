@@ -27,7 +27,7 @@ const GOAL_OPTIONS: GoalOption[] = [
   { value: LatitudeGoal.SettingUpEvaluations, label: 'Setting up evaluations', icon: 'listCheck' },
   { value: LatitudeGoal.ManagingPromptVersions, label: 'Managing prompt versions', icon: 'history' },
   { value: LatitudeGoal.ImprovingAccuracy, label: 'Improving accuracy / reliability', icon: 'circleCheck' },
-  { value: LatitudeGoal.ImprovingLatency, label: 'Improving latency / reducing cost', icon: 'zap' },
+  { value: LatitudeGoal.ImprovingLatency, label: 'Scaling (latency / cost)', icon: 'zap' },
   { value: LatitudeGoal.JustExploring, label: 'Just exploring', icon: 'search' },
   { value: LatitudeGoal.Other, label: 'Other', icon: 'ellipsis' },
 ]
@@ -99,6 +99,8 @@ export function Step0c_LatitudeGoals({ onContinue }: Props) {
   return (
     <OnboardingLayout hideHeader>
       <div className='flex flex-col items-center gap-8 w-full'>
+        <Icon name='logo' size='xxxlarge' />
+
         <div className='flex flex-col items-center gap-2'>
           <Text.H2M color='foreground' centered>What do you want to use Latitude for?</Text.H2M>
           <Text.H5 color='foregroundMuted' centered>
