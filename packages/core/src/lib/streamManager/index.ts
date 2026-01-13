@@ -369,6 +369,18 @@ export abstract class StreamManager {
         timestamp: Date.now(),
         messages: this.messages,
         uuid: this.uuid,
+        source: {
+          documentUuid:
+            'document' in this.promptSource
+              ? this.promptSource.document.documentUuid
+              : undefined,
+          commitUuid:
+            'commit' in this.promptSource
+              ? this.promptSource.commit.uuid
+              : undefined,
+          evaluationUuid:
+            'uuid' in this.promptSource ? this.promptSource.uuid : undefined,
+        },
       },
     })
   }

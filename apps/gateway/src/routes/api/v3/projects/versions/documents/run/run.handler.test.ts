@@ -646,6 +646,10 @@ describe('POST /run', () => {
           toolCalls: [],
           cost: expectedCost,
         },
+        source: {
+          commitUuid: commit.uuid,
+          documentUuid: expect.any(String),
+        },
       })
     })
 
@@ -935,7 +939,7 @@ describe('POST /run', () => {
     beforeEach(async () => {
       const {
         workspace: wsp,
-        user,
+        user: usr,
         project: prj,
         providers,
       } = await createProject({
@@ -949,6 +953,7 @@ describe('POST /run', () => {
       })
       project = prj
       workspace = wsp
+      user = usr
       provider = providers[0]!
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
@@ -959,19 +964,20 @@ describe('POST /run', () => {
         project,
         user,
       })
-      const document = await createDocumentVersion({
+      const doc = await createDocumentVersion({
         workspace,
         user,
         commit: cmt,
         path,
         content: helpers.createPrompt({ provider: providers[0]! }),
       })
+      document = doc.documentVersion
 
       commit = await mergeCommit(cmt).then((r) => r.unwrap())
 
       route = `/api/v3/projects/${project!.id}/versions/${commit!.uuid}/documents/run`
       body = JSON.stringify({
-        path: document.documentVersion.path,
+        path: document.path,
         parameters: {},
       })
       headers = {
@@ -1129,6 +1135,10 @@ describe('POST /run', () => {
           text: 'Hello',
           cost: expectedCost,
         },
+        source: {
+          commitUuid: commit.uuid,
+          documentUuid: document.documentUuid,
+        },
       })
       expect(mocks.runForegroundDocument).toHaveBeenCalled()
       expect(mocks.enqueueRun).not.toHaveBeenCalled()
@@ -1272,6 +1282,10 @@ describe('POST /run', () => {
           usage,
           text: 'Hello',
           cost: expectedCost,
+        },
+        source: {
+          commitUuid: commit.uuid,
+          documentUuid: document.documentUuid,
         },
       })
       expect(mocks.runForegroundDocument).toHaveBeenCalled()

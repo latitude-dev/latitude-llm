@@ -48,7 +48,7 @@ export async function createEvaluationV2<
     document: args.document,
     commit: args.commit,
     settings: {
-      name: args.name ?? faker.word.noun(),
+      name: args.name ?? `${faker.word.noun()}-${faker.string.uuid()}`,
       description: args.description ?? faker.lorem.sentence(),
       type: args.type ?? EvaluationType.Rule,
       metric: args.metric ?? RuleEvaluationMetric.ExactMatch,
