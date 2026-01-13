@@ -179,9 +179,8 @@ describe('handleTriggerMerge', () => {
 
     // Create a trigger directly in the database with pending status to bypass mocks
     const { database } = await import('../../client')
-    const { documentTriggers } = await import(
-      '../../schema/models/documentTriggers'
-    )
+    const { documentTriggers } =
+      await import('../../schema/models/documentTriggers')
     const { v4: uuidv4 } = await import('uuid')
 
     const triggerUuid = uuidv4()
@@ -309,9 +308,8 @@ describe('handleTriggerMerge', () => {
 
     // Create a pending integration trigger directly in the new draft
     const { database } = await import('../../client')
-    const { documentTriggers } = await import(
-      '../../schema/models/documentTriggers'
-    )
+    const { documentTriggers } =
+      await import('../../schema/models/documentTriggers')
     const { v4: uuidv4 } = await import('uuid')
 
     const pendingTriggerUuid = uuidv4()

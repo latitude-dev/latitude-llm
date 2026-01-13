@@ -403,9 +403,8 @@ describe('recalculateAlignmentMetric', () => {
   })
 
   it('returns error when getEqualAmountsOfPositiveAndNegativeExamples fails', async () => {
-    const getEqualAmountsModule = await import(
-      './getEqualAmountsOfPositiveAndNegativeExamples'
-    )
+    const getEqualAmountsModule =
+      await import('./getEqualAmountsOfPositiveAndNegativeExamples')
     vi.spyOn(
       getEqualAmountsModule,
       'getEqualAmountsOfPositiveAndNegativeExamples',

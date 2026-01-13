@@ -265,7 +265,6 @@ async function run(
     throw error
   }
 
-  metadata.evaluationLogId = result.response.providerLog!.id
   metadata.reason = result.verdict.reason
   metadata.tokens = result.stats.tokens
   metadata.cost = result.stats.costInMillicents

@@ -36,8 +36,7 @@ interface GenericLatitudeEventData {
   source?: PromptSource
 }
 
-export interface LatitudeChainStartedEventData
-  extends GenericLatitudeEventData {
+export interface LatitudeChainStartedEventData extends GenericLatitudeEventData {
   type: ChainEventTypes.ChainStarted
 }
 
@@ -45,39 +44,32 @@ export interface LatitudeStepStartedEventData extends GenericLatitudeEventData {
   type: ChainEventTypes.StepStarted
 }
 
-export interface LatitudeProviderStartedEventData
-  extends GenericLatitudeEventData {
+export interface LatitudeProviderStartedEventData extends GenericLatitudeEventData {
   type: ChainEventTypes.ProviderStarted
   config: Config
 }
 
-export interface LatitudeProviderCompletedEventData
-  extends GenericLatitudeEventData {
+export interface LatitudeProviderCompletedEventData extends GenericLatitudeEventData {
   type: ChainEventTypes.ProviderCompleted
-  providerLogUuid: string
   tokenUsage: LegacyVercelSDKVersion4Usage
   finishReason: FinishReason
   response: ChainStepResponse<StreamType>
 }
 
-export interface LatitudeToolsStartedEventData
-  extends GenericLatitudeEventData {
+export interface LatitudeToolsStartedEventData extends GenericLatitudeEventData {
   type: ChainEventTypes.ToolsStarted
   tools: ToolCall[]
 }
 
-export interface LatitudeToolCompletedEventData
-  extends GenericLatitudeEventData {
+export interface LatitudeToolCompletedEventData extends GenericLatitudeEventData {
   type: ChainEventTypes.ToolCompleted
 }
 
-export interface LatitudeStepCompletedEventData
-  extends GenericLatitudeEventData {
+export interface LatitudeStepCompletedEventData extends GenericLatitudeEventData {
   type: ChainEventTypes.StepCompleted
 }
 
-export interface LatitudeChainCompletedEventData
-  extends GenericLatitudeEventData {
+export interface LatitudeChainCompletedEventData extends GenericLatitudeEventData {
   type: ChainEventTypes.ChainCompleted
   response: ChainStepResponse<StreamType> | undefined
   toolCalls: ToolCall[]
@@ -90,8 +82,7 @@ export interface LatitudeChainErrorEventData extends GenericLatitudeEventData {
   error: Error | ChainError<RunErrorCodes>
 }
 
-export interface LatitudeIntegrationWakingUpEventData
-  extends GenericLatitudeEventData {
+export interface LatitudeIntegrationWakingUpEventData extends GenericLatitudeEventData {
   type: ChainEventTypes.IntegrationWakingUp
   integrationName: string
 }

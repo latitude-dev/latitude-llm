@@ -114,8 +114,7 @@ export interface StepBlock extends SerializedElementNode {
 }
 
 type RootChild = StepBlock | StepChild
-export interface BlockRootNode
-  extends SerializedRootNode<SerializedLexicalNode> {
+export interface BlockRootNode extends SerializedRootNode<SerializedLexicalNode> {
   type: 'root'
   children: RootChild[]
   readOnly?: boolean

@@ -8,13 +8,15 @@ type Props = Omit<ComponentProps<typeof PrismHighlighter>, 'style'> & {
   currentTheme?: string
 }
 
-const darkThemePromise = import(
-  'react-syntax-highlighter/dist/esm/styles/prism/one-dark'
-).then((module) => module.default)
+const darkThemePromise =
+  import('react-syntax-highlighter/dist/esm/styles/prism/one-dark').then(
+    (module) => module.default,
+  )
 
-const lightThemePromise = import(
-  'react-syntax-highlighter/dist/esm/styles/prism/one-light'
-).then((module) => module.default)
+const lightThemePromise =
+  import('react-syntax-highlighter/dist/esm/styles/prism/one-light').then(
+    (module) => module.default,
+  )
 
 export default function LazyPrism({
   children,
