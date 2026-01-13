@@ -9,6 +9,8 @@ import { getFirstWorkspace } from '$/data-access/workspaces'
 import type { User } from '@latitude-data/core/schema/models/types/User'
 import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { SubscriptionPlan, SubscriptionPlans } from '@latitude-data/core/plans'
+import { MembershipsRepository } from '@latitude-data/core/repositories'
+import { workspacePermissionsForRole } from '@latitude-data/core/permissions/workspace'
 import type { Session } from 'lucia'
 import { getSession } from '$/services/auth/getSession'
 
@@ -81,6 +83,8 @@ export async function getDataFromSession(session?: Session | null) {
       session: null,
       user: null,
       workspace: null,
+      membership: null,
+      workspacePermissions: [],
       subscriptionPlan: null,
     }
   }
@@ -90,5 +94,39 @@ export async function getDataFromSession(session?: Session | null) {
   const plan = workspace?.currentSubscription.plan
   const subscriptionPlan = getPlanFromSubscriptionSlug(plan)
 
-  return { user, workspace, subscriptionPlan, session }
+  if (!workspace || !user) {
+    return {
+      session,
+      user: null,
+      workspace: null,
+      membership: null,
+      workspacePermissions: [],
+      subscriptionPlan,
+    }
+  }
+
+  const membershipsRepo = new MembershipsRepository(workspace.id)
+  const membershipResult = await membershipsRepo.findByUserId(user.id)
+  if (membershipResult.error) {
+    return {
+      session,
+      user: null,
+      workspace: null,
+      membership: null,
+      workspacePermissions: [],
+      subscriptionPlan,
+    }
+  }
+
+  const membership = membershipResult.unwrap()
+  const workspacePermissions = workspacePermissionsForRole(membership.role)
+
+  return {
+    user,
+    workspace,
+    membership,
+    workspacePermissions,
+    subscriptionPlan,
+    session,
+  }
 }

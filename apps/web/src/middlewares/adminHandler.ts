@@ -7,7 +7,10 @@ export function adminHandler(handler: any) {
     req: NextRequest,
     { params, ...rest }: { params?: Promise<Record<string, string>> } = {},
   ) => {
-    let user, workspace
+    let user: Awaited<ReturnType<typeof getCurrentUserOrRedirect>>['user']
+    let workspace: Awaited<
+      ReturnType<typeof getCurrentUserOrRedirect>
+    >['workspace']
     try {
       const { user: uzer, workspace: workzpace } =
         await getCurrentUserOrRedirect()

@@ -69,6 +69,7 @@ describe('AnalyticsClient', () => {
           type: 'membershipCreated',
           data: {
             id: 1,
+            role: 'admin',
             workspaceId: 123,
             userId: '234',
             invitationToken: 'a-token',

@@ -18,7 +18,13 @@ export default async function OnboardingLayout({
 }: {
   children: ReactNode
 }) {
-  const { workspace, user, subscriptionPlan } = await getCurrentUserOrRedirect()
+  const {
+    workspace,
+    user,
+    subscriptionPlan,
+    membership,
+    workspacePermissions,
+  } = await getCurrentUserOrRedirect()
   const isCompleted = await isOnboardingCompleted()
 
   return (
@@ -32,6 +38,8 @@ export default async function OnboardingLayout({
           <SessionProvider
             currentUser={user}
             workspace={workspace}
+            membership={membership}
+            workspacePermissions={workspacePermissions}
             subscriptionPlan={subscriptionPlan}
           >
             <LatitudeWebsocketsProvider

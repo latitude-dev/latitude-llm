@@ -34,7 +34,10 @@ export const switchWorkspaceAction = authProcedure
     await removeSession({ session: ctx.session as Session })
     await setSession(
       {
-        sessionData: { workspace, user },
+        sessionData: {
+          user: { id: user.id, email: user.email },
+          workspace,
+        },
       },
       await cookies(),
     )

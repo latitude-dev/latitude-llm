@@ -85,6 +85,7 @@ describe('inviteUserAction', () => {
         expect(mocks.inviteUser).toHaveBeenCalledWith({
           email: 'test@example.com',
           name: 'Test User',
+          role: undefined,
           workspace,
           author: user,
         })
@@ -156,6 +157,7 @@ describe('inviteUserAction', () => {
         expect(mocks.inviteUser).toHaveBeenCalledWith({
           email: 'valid@example.com',
           name: 'Valid User',
+          role: undefined,
           workspace,
           author: user,
         })

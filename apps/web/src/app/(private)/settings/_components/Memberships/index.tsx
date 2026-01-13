@@ -14,21 +14,40 @@ import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
-import useUsers from '$/stores/users'
+import useUsers, { SerializedWorkspaceUser } from '$/stores/users'
 import Link from 'next/link'
-import { User } from '@latitude-data/core/schema/models/types/User'
 
 import NewUser from './New'
+import EditRoleModal from './RoleModal'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
 
+const roleLabel: Record<string, string> = {
+  admin: 'Admin',
+  annotator: 'Annotator',
+}
+
 export default function Memberships() {
   const [open, setOpen] = useState(false)
-  const { data: users, isLoading } = useUsers()
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
+  const [selectedUser, setSelectedUser] =
+    useState<SerializedWorkspaceUser | null>(null)
+  const { data: users, isLoading, updateRole } = useUsers()
+
+  const handleRoleModalChange = (openRoleModal: boolean) => {
+    setIsRoleModalOpen(openRoleModal)
+    if (!openRoleModal) setSelectedUser(null)
+  }
 
   return (
     <div className='flex flex-col gap-4'>
       <NewUser open={open} setOpen={setOpen} />
+      <EditRoleModal
+        open={isRoleModalOpen}
+        setOpen={handleRoleModalChange}
+        user={selectedUser}
+        onSubmit={updateRole}
+      />
       <div className='flex flex-row items-center justify-between'>
         <div className='flex flex-row items-center gap-2'>
           <Text.H4B>Workspace Members</Text.H4B>
@@ -39,22 +58,37 @@ export default function Memberships() {
         </Button>
       </div>
       <div className='flex flex-col gap-2'>
-        {users.length > 0 && <UsersTable users={users} />}
-        {isLoading && <TableSkeleton cols={4} rows={3} />}
+        {users.length > 0 && (
+          <UsersTable
+            users={users}
+            onEditRole={(user) => {
+              setSelectedUser(user)
+              setIsRoleModalOpen(true)
+            }}
+          />
+        )}
+        {isLoading && <TableSkeleton cols={5} rows={3} />}
       </div>
     </div>
   )
 }
 
-function UsersTable({ users }: { users: User[] }) {
+function UsersTable({
+  users,
+  onEditRole,
+}: {
+  users: SerializedWorkspaceUser[]
+  onEditRole: (user: SerializedWorkspaceUser) => void
+}) {
   return (
     <Table>
       <TableHeader>
         <TableRow verticalPadding>
           <TableHead>Name</TableHead>
           <TableHead>Email</TableHead>
+          <TableHead>Role</TableHead>
           <TableHead>Confirmed At</TableHead>
-          <TableHead />
+          <TableHead className='text-right'>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -68,13 +102,28 @@ function UsersTable({ users }: { users: User[] }) {
             </TableCell>
             <TableCell>
               <Text.H5 color='foregroundMuted'>
+                {roleLabel[user.role] ?? user.role}
+              </Text.H5>
+            </TableCell>
+            <TableCell>
+              <Text.H5 color='foregroundMuted'>
                 {relativeTime(user.confirmedAt ? user.confirmedAt : null)}
               </Text.H5>
             </TableCell>
             <TableCell>
-              <Link href={ROUTES.settings.users.destroy(user.id).root}>
-                <Icon name='trash' />
-              </Link>
+              <div className='flex flex-row gap-3 items-center justify-end'>
+                <Button
+                  variant='ghost'
+                  size='small'
+                  iconProps={{ name: 'pencil', placement: 'left' }}
+                  onClick={() => onEditRole(user)}
+                >
+                  Edit role
+                </Button>
+                <Link href={ROUTES.settings.users.destroy(user.id).root}>
+                  <Icon name='trash' />
+                </Link>
+              </div>
             </TableCell>
           </TableRow>
         ))}

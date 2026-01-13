@@ -16,7 +16,13 @@ export default async function AdminLayout({
 }: {
   children: ReactNode
 }) {
-  const { user, workspace, subscriptionPlan } = await getCurrentUserOrRedirect()
+  const {
+    user,
+    workspace,
+    subscriptionPlan,
+    membership,
+    workspacePermissions,
+  } = await getCurrentUserOrRedirect()
   if (!user?.admin) {
     return notFound()
   }
@@ -25,6 +31,8 @@ export default async function AdminLayout({
     <SessionProvider
       currentUser={user}
       workspace={workspace}
+      membership={membership}
+      workspacePermissions={workspacePermissions}
       subscriptionPlan={subscriptionPlan}
     >
       <BackofficeTabs>{children}</BackofficeTabs>

@@ -11,6 +11,7 @@ import { z } from 'zod'
 import { parseSpansFilters } from '$/lib/schemas/filters'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
+import { WorkspacePermissions } from '@latitude-data/core/permissions/workspace'
 
 const searchParamsSchema = z.object({
   projectId: z.string(),
@@ -58,7 +59,13 @@ export const GET = errorHandler(
         ? JSON.parse(parsedParams.from)
         : null
 
-      let spansResult
+      let spansResult:
+        | {
+            items: unknown[]
+            count: number | null
+            next: { value: string; id: string } | null
+          }
+        | undefined
       const spansRepository = new SpansRepository(workspace.id)
 
       if (filters.documentLogUuid) {
@@ -135,6 +142,7 @@ export const GET = errorHandler(
         { status: 200 },
       )
     },
+    WorkspacePermissions.AccessAnnotations,
   ),
 )
 

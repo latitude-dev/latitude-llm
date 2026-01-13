@@ -3,6 +3,7 @@
 import { getUserFromCredentials } from '$/data-access'
 import { ROUTES } from '$/services/routes'
 import { z } from 'zod'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
 
 import { setSession } from '$/services/auth/setSession'
 import { withAdmin } from '../../procedures'
@@ -14,11 +15,17 @@ export const impersonateAction = withAdmin
     const { user, workspace } = await getUserFromCredentials(parsedInput).then(
       (r) => r.unwrap(),
     )
+
+    // Get full workspace with subscription
+    const fullWorkspace = await unsafelyFindWorkspace(workspace.id)
+
     await setSession({
       sessionData: {
-        impersonating: true,
-        user,
-        workspace,
+        user: {
+          id: user.id,
+          email: user.email,
+        },
+        workspace: fullWorkspace,
       },
     })
 

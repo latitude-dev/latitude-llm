@@ -3,11 +3,15 @@
 import type { SubscriptionPlanContent } from '@latitude-data/core/plans'
 import type { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
 import type { User } from '@latitude-data/core/schema/models/types/User'
+import { Membership } from '@latitude-data/core/schema/models/types/Membership'
+import { WorkspacePermission } from '@latitude-data/core/permissions/workspace'
 import { createContext, ReactNode, useContext } from 'react'
 
 interface ISessionContext {
   currentUser: User
   workspace: WorkspaceDto
+  membership: Membership
+  workspacePermissions: WorkspacePermission[]
   subscriptionPlan: SubscriptionPlanContent
 }
 
