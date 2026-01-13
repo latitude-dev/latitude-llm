@@ -32,13 +32,8 @@ export function TreeToolbar() {
   const { addToRootFolder } = useTempNodes((s) => ({
     addToRootFolder: s.addToRootFolder,
   }))
-  const {
-    isLoading,
-    isMerged,
-    onMergeCommitClick,
-    onCreateFile,
-    onCreateAgent,
-  } = useFileTreeContext()
+  const { isLoading, isMerged, onMergeCommitClick, onCreateAgent } =
+    useFileTreeContext()
   const { nodeInput, setNodeInput } = useNodeInput()
   const isFile = nodeInput ? FILE_TYPES.includes(nodeInput) : false
   const icons: IconName[] = nodeInput
@@ -95,25 +90,6 @@ export function TreeToolbar() {
           >
             New prompt
           </Tooltip>
-          <Tooltip
-            asChild
-            trigger={
-              <Button
-                variant='shiny'
-                size='icon'
-                lookDisabled={isMerged}
-                disabled={isLoading}
-                iconProps={{
-                  name: 'bot',
-                  color: isMerged ? 'foregroundMuted' : 'primary',
-                  darkColor: isMerged ? 'foregroundMuted' : 'foreground',
-                }}
-                onClick={onClick(EntityType.Agent)}
-              />
-            }
-          >
-            New AI agent
-          </Tooltip>
         </div>
       </div>
       {nodeInput ? (
@@ -130,9 +106,7 @@ export function TreeToolbar() {
           icons={icons}
           indentation={[{ isLast: true }]}
           onSaveValue={async ({ path }) => {
-            if (nodeInput === EntityType.Prompt) {
-              onCreateFile(path)
-            } else if (nodeInput === EntityType.Agent) {
+            if (isFile) {
               onCreateAgent(path)
             } else {
               addToRootFolder({ path })
