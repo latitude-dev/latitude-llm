@@ -366,4 +366,189 @@ describe('ExperimentsRepository', () => {
       expect(() => result.unwrap()).toThrowError(NotFoundError)
     })
   })
+
+  describe('tenancy', () => {
+    it('findByDocumentUuid does not return experiments from other workspaces', async () => {
+      const experiment = await createExperiment({
+        name: 'experiment1',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { workspace: otherWorkspace } = await factories.createWorkspace()
+      const otherRepo = new ExperimentsRepository(otherWorkspace.id)
+
+      const resultsFromOwner = await repo.findByDocumentUuid({
+        documentUuid: document.documentUuid,
+        page: 1,
+        pageSize: 10,
+      })
+      expect(resultsFromOwner.length).toBe(1)
+      expect(resultsFromOwner[0]!.id).toBe(experiment.id)
+
+      const resultsFromOther = await otherRepo.findByDocumentUuid({
+        documentUuid: document.documentUuid,
+        page: 1,
+        pageSize: 10,
+      })
+      expect(resultsFromOther.length).toBe(0)
+    })
+
+    it('findByUuid does not return experiments from other workspaces', async () => {
+      const experiment = await createExperiment({
+        name: 'experiment1',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { workspace: otherWorkspace } = await factories.createWorkspace()
+      const otherRepo = new ExperimentsRepository(otherWorkspace.id)
+
+      const resultFromOwner = await repo.findByUuid(experiment.uuid)
+      expect(resultFromOwner.ok).toBe(true)
+      expect(resultFromOwner.unwrap().id).toBe(experiment.id)
+
+      const resultFromOther = await otherRepo.findByUuid(experiment.uuid)
+      expect(resultFromOther.ok).toBe(false)
+      expect(() => resultFromOther.unwrap()).toThrowError(NotFoundError)
+    })
+
+    it('findByIds does not return experiments from other workspaces', async () => {
+      const experiment = await createExperiment({
+        name: 'experiment1',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { workspace: otherWorkspace } = await factories.createWorkspace()
+      const otherRepo = new ExperimentsRepository(otherWorkspace.id)
+
+      const resultsFromOwner = await repo.findByIds([experiment.id])
+      expect(resultsFromOwner.length).toBe(1)
+      expect(resultsFromOwner[0]!.id).toBe(experiment.id)
+
+      const resultsFromOther = await otherRepo.findByIds([experiment.id])
+      expect(resultsFromOther.length).toBe(0)
+    })
+
+    it('getScores does not return scores from experiments in other workspaces', async () => {
+      const experiment = await createExperiment({
+        name: 'experiment1',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      await factories.createExperimentResults({
+        workspace,
+        commit,
+        document,
+        experiment,
+        costInMillicents: 100,
+        duration: 100,
+        scores: evaluations.map((evaluation) => ({
+          evaluation,
+          score: 10,
+        })),
+      })
+
+      const { workspace: otherWorkspace } = await factories.createWorkspace()
+      const otherRepo = new ExperimentsRepository(otherWorkspace.id)
+
+      const resultFromOwner = await repo.getScores(experiment.uuid)
+      expect(resultFromOwner.ok).toBe(true)
+      expect(Object.keys(resultFromOwner.unwrap()).length).toBe(
+        evaluations.length,
+      )
+
+      const resultFromOther = await otherRepo.getScores(experiment.uuid)
+      expect(resultFromOther.ok).toBe(false)
+      expect(() => resultFromOther.unwrap()).toThrowError(NotFoundError)
+    })
+
+    it('countByDocumentUuid does not count experiments from other workspaces', async () => {
+      await createExperiment({
+        name: 'experiment1',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { workspace: otherWorkspace } = await factories.createWorkspace()
+      const otherRepo = new ExperimentsRepository(otherWorkspace.id)
+
+      const countFromOwner = await repo.countByDocumentUuid(
+        document.documentUuid,
+      )
+      expect(countFromOwner).toBe(1)
+
+      const countFromOther = await otherRepo.countByDocumentUuid(
+        document.documentUuid,
+      )
+      expect(countFromOther).toBe(0)
+    })
+  })
 })

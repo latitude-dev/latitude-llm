@@ -5,7 +5,6 @@ import {
   eq,
   getTableColumns,
   inArray,
-  isNotNull,
   isNull,
   sql,
   sum,
@@ -17,11 +16,9 @@ import { ErrorableEntity } from '../constants'
 import { LatitudeError, NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { PromisedResult } from '../lib/Transaction'
-import { commits } from '../schema/models/commits'
 import { documentLogs } from '../schema/models/documentLogs'
 import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
 import { experiments } from '../schema/models/experiments'
-import { projects } from '../schema/models/projects'
 import { providerLogs } from '../schema/models/providerLogs'
 import { runErrors } from '../schema/models/runErrors'
 import {
@@ -112,44 +109,10 @@ export class ExperimentsRepository extends Repository<Experiment> {
         .groupBy(evaluationResultsV2.experimentId),
     )
 
-    const logsCondition = params.documentUuid
-      ? eq(documentLogs.documentUuid, params.documentUuid)
-      : experiment
-        ? eq(documentLogs.experimentId, experiment.id)
-        : params.ids?.length
-          ? inArray(documentLogs.experimentId, params.ids)
-          : undefined
-
-    if (!logsCondition) {
-      return Result.error(
-        new LatitudeError(`Invalid condition provided with params ${params}`),
-      )
-    }
-
-    const logsAggregation = this.db.$with('logsAggregation').as(
-      this.db
-        .select({
-          experimentId: documentLogs.experimentId,
-          logErrors: sql<number>`COUNT(${runErrors.id})`.as('log_errors'),
-        })
-        .from(documentLogs)
-        .innerJoin(runErrors, eq(runErrors.errorableUuid, documentLogs.uuid))
-        .innerJoin(commits, eq(commits.id, documentLogs.commitId))
-        .innerJoin(
-          projects,
-          and(
-            eq(projects.id, commits.projectId),
-            eq(projects.workspaceId, this.workspaceId),
-          ),
-        )
-        .where(and(isNotNull(documentLogs.experimentId), logsCondition))
-        .groupBy(documentLogs.experimentId),
-    )
-
     return Result.ok(
       this.db.$with('aggregated_results').as(
         this.db
-          .with(evaluationAggregation, logsAggregation)
+          .with(evaluationAggregation)
           .select({
             id: experiments.id,
             passedEvals: sql<number>`MAX(${evaluationAggregation.passedEvals})`
@@ -164,18 +127,11 @@ export class ExperimentsRepository extends Repository<Experiment> {
             totalScore: sql<number>`MAX(${evaluationAggregation.totalScore})`
               .mapWith(Number)
               .as('total_score'),
-            logErrors: sql<number>`MAX(${logsAggregation.logErrors})`
-              .mapWith(Number)
-              .as('log_errors'),
           })
           .from(experiments)
           .leftJoin(
             evaluationAggregation,
             eq(evaluationAggregation.experimentId, experiments.id),
-          )
-          .leftJoin(
-            logsAggregation,
-            eq(logsAggregation.experimentId, experiments.id),
           )
           .groupBy(experiments.id),
       ),
@@ -202,7 +158,6 @@ export class ExperimentsRepository extends Repository<Experiment> {
         passedEvals: aggregatedResults.passedEvals,
         failedEvals: aggregatedResults.failedEvals,
         evalErrors: aggregatedResults.evalErrors,
-        logErrors: aggregatedResults.logErrors,
         totalScore: aggregatedResults.totalScore,
       })
       .from(experiments)
@@ -240,7 +195,6 @@ export class ExperimentsRepository extends Repository<Experiment> {
         passedEvals: aggregatedResults.passedEvals,
         failedEvals: aggregatedResults.failedEvals,
         evalErrors: aggregatedResults.evalErrors,
-        logErrors: aggregatedResults.logErrors,
         totalScore: aggregatedResults.totalScore,
       })
       .from(experiments)
@@ -270,7 +224,6 @@ export class ExperimentsRepository extends Repository<Experiment> {
         passedEvals: aggregatedResults.passedEvals,
         failedEvals: aggregatedResults.failedEvals,
         evalErrors: aggregatedResults.evalErrors,
-        logErrors: aggregatedResults.logErrors,
         totalScore: aggregatedResults.totalScore,
       })
       .from(experiments)
@@ -433,37 +386,27 @@ export class ExperimentsRepository extends Repository<Experiment> {
       passedEvals: number
       failedEvals: number
       evalErrors: number
-      logErrors: number
       totalScore: number
     },
   ): ExperimentDto => {
     const passedEvals = row.passedEvals ?? 0
     const failedEvals = row.failedEvals ?? 0
     const evalErrors = row.evalErrors ?? 0
-    const logErrors = row.logErrors ?? 0
     const totalScore = row.totalScore ?? 0
-
-    // A row is "completed" when:
-    // - The document log returned an error (counts as completed)
-    // - All evaluations for that row have finished (either passed, failed, or errored).
 
     const completedEvals = passedEvals + failedEvals + evalErrors
     const evalCount = row.evaluationUuids.length
 
-    // How many full evaluation cycles are complete.
-    // (If there are N expected evaluations, we only count a "completed" cycle
-    // when all N evaluations are done.)
     const fullEvalCyclesEstimation =
       evalCount > 0 ? Math.floor(completedEvals / evalCount) : 0
 
-    const completedEstimation = row.logErrors + fullEvalCyclesEstimation
+    const completedEstimation = fullEvalCyclesEstimation
 
     return {
       ...omit(row, [
         'passedEvals',
         'failedEvals',
         'evalErrors',
-        'logErrors',
         'totalScore',
       ]),
 
@@ -473,7 +416,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
 
         passed: passedEvals,
         failed: failedEvals,
-        errors: evalErrors + row.evaluationUuids.length * logErrors,
+        errors: evalErrors,
 
         totalScore,
       },
