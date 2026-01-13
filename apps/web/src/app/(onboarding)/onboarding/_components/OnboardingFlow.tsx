@@ -14,6 +14,9 @@ import {
   useOnboardingState,
   ONBOARDING_STEPS,
 } from '../_lib/useOnboardingState'
+import { Step0_RoleSelection } from './Step0_RoleSelection'
+import { Step0b_AIUsage } from './Step0b_AIUsage'
+import { Step0c_LatitudeGoals } from './Step0c_LatitudeGoals'
 import { Step0_WhatIsLatitude } from './Step0_WhatIsLatitude'
 import { Step1_ReliabilityLoop } from './Step1_ReliabilityLoop'
 import { Step3_ConnectChoice } from './Step3_ConnectChoice'
@@ -49,6 +52,7 @@ export function OnboardingFlow({
     firstTraceId,
     selectedFramework,
     goToStep,
+    goToStepWithoutReset,
     nextSlide,
     prevSlide,
     setFirstTraceId,
@@ -136,6 +140,21 @@ export function OnboardingFlow({
     [posthog, setFirstTraceId, goToStep],
   )
 
+  const handleRoleSelectionContinue = useCallback(() => {
+    trackStep(ONBOARDING_STEPS.ROLE_SELECTION, 'completed')
+    goToStepWithoutReset(ONBOARDING_STEPS.AI_USAGE)
+  }, [trackStep, goToStepWithoutReset])
+
+  const handleAIUsageContinue = useCallback(() => {
+    trackStep(ONBOARDING_STEPS.AI_USAGE, 'completed')
+    goToStepWithoutReset(ONBOARDING_STEPS.LATITUDE_GOALS)
+  }, [trackStep, goToStepWithoutReset])
+
+  const handleLatitudeGoalsContinue = useCallback(() => {
+    trackStep(ONBOARDING_STEPS.LATITUDE_GOALS, 'completed')
+    goToStepWithoutReset(ONBOARDING_STEPS.WHAT_IS_LATITUDE)
+  }, [trackStep, goToStepWithoutReset])
+
   const handleStep0Continue = useCallback(() => {
     trackStep(ONBOARDING_STEPS.WHAT_IS_LATITUDE, 'completed')
     goToStep(ONBOARDING_STEPS.RELIABILITY_LOOP)
@@ -165,6 +184,15 @@ export function OnboardingFlow({
   }, [trackStep, goToStep])
 
   switch (currentStep) {
+    case ONBOARDING_STEPS.ROLE_SELECTION:
+      return <Step0_RoleSelection onContinue={handleRoleSelectionContinue} />
+
+    case ONBOARDING_STEPS.AI_USAGE:
+      return <Step0b_AIUsage onContinue={handleAIUsageContinue} />
+
+    case ONBOARDING_STEPS.LATITUDE_GOALS:
+      return <Step0c_LatitudeGoals onContinue={handleLatitudeGoalsContinue} />
+
     case ONBOARDING_STEPS.WHAT_IS_LATITUDE:
       return <Step0_WhatIsLatitude onContinue={handleStep0Continue} />
 
@@ -237,6 +265,6 @@ export function OnboardingFlow({
       )
 
     default:
-      return <Step0_WhatIsLatitude onContinue={handleStep0Continue} />
+      return <Step0_RoleSelection onContinue={handleRoleSelectionContinue} />
   }
 }

@@ -8,13 +8,16 @@ import {
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 
 export const ONBOARDING_STEPS = {
-  WHAT_IS_LATITUDE: 0,
-  RELIABILITY_LOOP: 1,
-  CONNECT_CHOICE: 2,
-  INTEGRATION: 3,
-  WAITING_FOR_TRACE: 4,
-  FIRST_TRACE: 5,
-  NEXT_STEPS: 6,
+  ROLE_SELECTION: 0,
+  AI_USAGE: 1,
+  LATITUDE_GOALS: 2,
+  WHAT_IS_LATITUDE: 3,
+  RELIABILITY_LOOP: 4,
+  CONNECT_CHOICE: 5,
+  INTEGRATION: 6,
+  WAITING_FOR_TRACE: 7,
+  FIRST_TRACE: 8,
+  NEXT_STEPS: 9,
 } as const
 
 export type OnboardingStep =
@@ -69,7 +72,7 @@ type OnboardingLocalState = {
 }
 
 const DEFAULT_STATE: OnboardingLocalState = {
-  step: ONBOARDING_STEPS.WHAT_IS_LATITUDE,
+  step: ONBOARDING_STEPS.ROLE_SELECTION,
   slideIndex: 0,
   selectedFramework: null,
   firstTraceId: null,
@@ -101,13 +104,23 @@ export function useOnboardingState(shouldReset = false) {
   const slideFromUrl = searchParams.get('slide')
   const frameworkFromUrl = searchParams.get('framework')
 
+  const hasInitializedUrlRef = useRef(false)
+  useEffect(() => {
+    if (!hasInitializedUrlRef.current && stepFromUrl === null && !shouldReset) {
+      hasInitializedUrlRef.current = true
+      const params = new URLSearchParams()
+      params.set('step', localState.step.toString())
+      router.replace(`/onboarding?${params.toString()}`, { scroll: false })
+    }
+  }, [stepFromUrl, localState.step, router, shouldReset])
+
   // Derive current step from URL first, then localStorage
   let currentStep: OnboardingStep = localState.step
   if (shouldReset) {
-    currentStep = ONBOARDING_STEPS.WHAT_IS_LATITUDE
+    currentStep = ONBOARDING_STEPS.ROLE_SELECTION
   } else if (stepFromUrl !== null) {
     const parsed = parseInt(stepFromUrl, 10)
-    if (!isNaN(parsed) && parsed >= 0 && parsed <= 6) {
+    if (!isNaN(parsed) && parsed >= 0 && parsed <= 9) {
       currentStep = parsed as OnboardingStep
     }
   }
@@ -184,7 +197,7 @@ export function useOnboardingState(shouldReset = false) {
   const prevStep = useCallback(() => {
     const prev = Math.max(
       currentStep - 1,
-      ONBOARDING_STEPS.WHAT_IS_LATITUDE,
+      ONBOARDING_STEPS.ROLE_SELECTION,
     ) as OnboardingStep
     goToStep(prev)
   }, [currentStep, goToStep])
@@ -215,6 +228,17 @@ export function useOnboardingState(shouldReset = false) {
     }
   }, [currentSlideIndex, goToStep, setLocalState, updateUrl])
 
+  const goToStepWithoutReset = useCallback(
+    (step: OnboardingStep) => {
+      setLocalState((prev) => ({
+        ...(prev ?? DEFAULT_STATE),
+        step,
+      }))
+      updateUrl(step, currentSlideIndex, selectedFramework)
+    },
+    [setLocalState, updateUrl, currentSlideIndex, selectedFramework],
+  )
+
   const setSelectedFramework = useCallback(
     (framework: string | null) => {
       setLocalState((prev) => ({
@@ -238,7 +262,7 @@ export function useOnboardingState(shouldReset = false) {
 
   const resetOnboarding = useCallback(() => {
     setLocalState(DEFAULT_STATE)
-    updateUrl(ONBOARDING_STEPS.WHAT_IS_LATITUDE, 0, null, true)
+    updateUrl(ONBOARDING_STEPS.ROLE_SELECTION, 0, null, true)
   }, [setLocalState, updateUrl])
 
   return {
@@ -249,6 +273,7 @@ export function useOnboardingState(shouldReset = false) {
     selectedFramework,
     firstTraceId: localState.firstTraceId,
     goToStep,
+    goToStepWithoutReset,
     nextStep,
     prevStep,
     nextSlide,

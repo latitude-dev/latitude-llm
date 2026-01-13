@@ -38,6 +38,8 @@ export function IdentifyUser({
 
   const email = user?.email
   const title = user?.title
+  const aiUsageStage = user?.aiUsageStage
+  const latitudeGoal = user?.latitudeGoal
   const plan = subscription?.plan
 
   useEffect(() => {
@@ -51,6 +53,8 @@ export function IdentifyUser({
       posthog.identify(email, {
         email: email,
         title: title,
+        aiUsageStage: aiUsageStage,
+        latitudeGoal: latitudeGoal,
         subscriptionPlan: plan,
       })
       posthog.group('workspace', String(workspace.id))
@@ -58,7 +62,7 @@ export function IdentifyUser({
     } catch (_) {
       // do nothing, just to avoid crashing the app
     }
-  }, [posthog, email, workspace.id, title, plan])
+  }, [posthog, email, workspace.id, title, aiUsageStage, latitudeGoal, plan])
 
   return children
 }

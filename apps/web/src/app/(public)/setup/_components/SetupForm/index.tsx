@@ -12,25 +12,6 @@ import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import Link from 'next/link'
-import { Select } from '@latitude-data/web-ui/atoms/Select'
-import { USER_TITLES, UserTitle } from '@latitude-data/constants/users'
-
-export const humanizeUserTitle = (title: UserTitle): string => {
-  switch (title) {
-    case UserTitle.Engineer:
-      return 'Engineer'
-    case UserTitle.DataAIAndML:
-      return 'Data/AI/ML'
-    case UserTitle.ProductManager:
-      return 'Product Manager'
-    case UserTitle.Designer:
-      return 'Designer'
-    case UserTitle.Founder:
-      return 'Founder'
-    case UserTitle.Other:
-      return 'Other'
-  }
-}
 
 export default function SetupForm({
   email,
@@ -92,17 +73,6 @@ export default function SetupForm({
           placeholder='Acme Inc.'
           errors={errors?.companyName}
           defaultValue={data?.companyName || companyName}
-        />
-        <Select
-          required
-          name='title'
-          label='Your role'
-          errors={errors?.title}
-          placeholder='Select'
-          options={USER_TITLES.map((title: UserTitle) => ({
-            label: humanizeUserTitle(title),
-            value: title,
-          }))}
         />
         <div className='flex flex-col gap-6'>
           <Button fullWidth isLoading={isPending} fancy>
