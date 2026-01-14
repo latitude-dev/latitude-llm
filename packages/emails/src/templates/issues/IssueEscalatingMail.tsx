@@ -1,5 +1,3 @@
-import React from 'react'
-
 import { Column, Row, Section } from '@react-email/components'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import ContainerLayout from '../../components/ContainerLayout'

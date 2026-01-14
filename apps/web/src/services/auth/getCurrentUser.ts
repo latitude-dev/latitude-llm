@@ -1,13 +1,15 @@
 import { cache } from 'react'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { WorkspacesRepository } from '@latitude-data/core/repositories'
 
-import { getDataFromSession } from '$/data-access'
+import { getDataFromSession, getPlanFromSubscriptionSlug } from '$/data-access'
 import { Session } from 'lucia'
 
 import { notFound, redirect } from 'next/navigation'
 import { ROUTES } from '../routes'
 import { getCurrentUrl } from './getCurrentUrl'
 import { getSession } from './getSession'
+import { replaceSession } from './replaceSession'
 
 export type SessionData = {
   session: Session
@@ -48,7 +50,6 @@ function redirectToLogin(currentUrl?: string) {
  */
 export const getCurrentUserOrRedirect = cache(async () => {
   const currentUrl = await getCurrentUrl()
-
   const sessionData = await getSession()
   if (!sessionData?.session) {
     return redirectToLogin(currentUrl)
@@ -61,6 +62,41 @@ export const getCurrentUserOrRedirect = cache(async () => {
     return redirectToLogin(currentUrl)
   }
 
+  const requestedWorkspaceId = getWorkspaceIdFromUrl(currentUrl)
+  if (
+    requestedWorkspaceId &&
+    requestedWorkspaceId !== sessionData.session.currentWorkspaceId
+  ) {
+    const workspacesScope = new WorkspacesRepository(user.id)
+    const requestedWorkspaceResult =
+      await workspacesScope.find(requestedWorkspaceId)
+
+    if (requestedWorkspaceResult.ok && requestedWorkspaceResult.value) {
+      const requestedWorkspace = requestedWorkspaceResult.unwrap()
+
+      try {
+        await replaceSession({
+          oldSession: sessionData.session,
+          sessionData: { user, workspace: requestedWorkspace },
+        })
+      } catch {
+        // do nothing
+      }
+
+      return {
+        session: {
+          ...sessionData.session,
+          currentWorkspaceId: requestedWorkspace.id,
+        },
+        user,
+        workspace: requestedWorkspace,
+        subscriptionPlan: getPlanFromSubscriptionSlug(
+          requestedWorkspace.currentSubscription.plan,
+        ),
+      }
+    }
+  }
+
   return {
     session: sessionData.session!,
     user,
@@ -68,3 +104,21 @@ export const getCurrentUserOrRedirect = cache(async () => {
     subscriptionPlan,
   }
 })
+
+const getWorkspaceIdFromUrl = (currentUrl?: string) => {
+  if (!currentUrl) return
+
+  try {
+    const url = new URL(currentUrl, 'http://localhost')
+    const workspaceId = url.searchParams.get('workspaceId')
+    if (!workspaceId) return
+    const parsedWorkspaceId = Number(workspaceId)
+    if (!Number.isInteger(parsedWorkspaceId) || parsedWorkspaceId <= 0) {
+      return
+    }
+
+    return parsedWorkspaceId
+  } catch {
+    return
+  }
+}
