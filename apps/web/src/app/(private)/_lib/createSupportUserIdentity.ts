@@ -34,6 +34,9 @@ export function createSupportUserIdentity(user: User) {
       name: user.name ?? 'No name',
       id: user.id,
       createdAt: toUnixTimestampInSeconds(user.createdAt),
+      jobTitle: user.title ?? undefined,
+      aiUsageStage: user.aiUsageStage ?? undefined,
+      latitudeGoal: user.latitudeGoalOther || user.latitudeGoal || undefined,
     },
   }
 }
