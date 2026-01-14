@@ -141,7 +141,6 @@
     "@aws-sdk/s3-request-presigner": "3.850.0",
     "@codesandbox/sdk": "2.2.1",
     "@google-cloud/storage": "^7.7.0",
-    "@kubernetes/client-node": "1.0.0",
     "@latitude-data/constants": "workspace:*",
     "@latitude-data/emails": "workspace:*",
     "@latitude-data/env": "workspace:*",

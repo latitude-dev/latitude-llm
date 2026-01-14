@@ -32,8 +32,6 @@ const eventHandlersJobMappings = {
     jobs.notifyClientOfDocumentSuggestionCreated,
   notifyClientOfEvaluationResultV2Created:
     jobs.notifyClientOfEvaluationResultV2Created,
-  notifyClientOfScaleUpMcpServer: jobs.notifyClientOfScaleUpMcpServer,
-  notifyClientOfMcpServerConnected: jobs.notifyClientOfMcpServerConnected,
   undeployDocumentTriggerJob: jobs.undeployDocumentTriggerJob,
   notifyClientOfDocumentTriggerCreated:
     jobs.notifyClientOfDocumentTriggerCreated,

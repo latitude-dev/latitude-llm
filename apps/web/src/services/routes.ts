@@ -124,9 +124,6 @@ export const ROUTES = {
       destroy: (id: number) => {
         return { root: `/settings/integrations/${id}/destroy` }
       },
-      details: (id: number) => {
-        return { root: `/settings/integrations/${id}/details` }
-      },
     },
     users: {
       destroy: (userId: string) => {
