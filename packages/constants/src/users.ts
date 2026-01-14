@@ -13,7 +13,6 @@ export enum AIUsageStage {
   NotInProduction = 'not_in_production',
   InternalToolOnly = 'internal_tool_only',
   LiveWithCustomers = 'live_with_customers',
-  CorePartOfProduct = 'core_part_of_product',
 }
 
 export const AI_USAGE_STAGES = Object.values(AIUsageStage)

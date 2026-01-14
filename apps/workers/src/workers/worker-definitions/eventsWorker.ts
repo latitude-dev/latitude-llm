@@ -14,6 +14,7 @@ const eventsJobMappings = {
 const eventHandlersJobMappings = {
   createClaimInvitationReferralJob: jobs.createClaimInvitationReferralJob,
   createLoopsContact: jobs.createLoopsContact,
+  updateLoopsContact: jobs.updateLoopsContact,
   sendInvitationToUserJob: jobs.sendInvitationToUserJob,
   sendMagicLinkJob: jobs.sendMagicLinkJob,
   sendReferralInvitationJob: jobs.sendReferralInvitationJob,

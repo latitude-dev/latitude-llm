@@ -1,7 +1,7 @@
 import { env } from '@latitude-data/env'
 import { LoopsClient } from 'loops'
 
-import { type UserCreatedEvent } from '../events'
+import { type UserOnboardingInfoUpdatedEvent } from '../events'
 import { Result } from '../../lib/Result'
 
 function getApiKey() {
@@ -14,30 +14,27 @@ function getApiKey() {
   return apiKey
 }
 
-export async function createLoopsContact({
+export async function updateLoopsContact({
   data: event,
 }: {
-  data: UserCreatedEvent
+  data: UserOnboardingInfoUpdatedEvent
 }) {
-  // In dev is an empty string
   const apiKey = getApiKey()
   if (apiKey === '') return Result.nil()
 
   const client = new LoopsClient(apiKey)
   const data = event.data
   const userEmail = data.userEmail
-  const response = await client.createContact(userEmail, {
-    userId: data.id,
-    firstName: data.name,
-    workspaceId: data.workspaceId,
-    source: 'latitudeLlmAppSignup',
-    userGroup: 'LLMs',
-    subscribed: true,
+
+  const response = await client.updateContact(userEmail, {
+    ...(data.title && { jobTitle: data.title }),
+    ...(data.aiUsageStage && { aiUsageStage: data.aiUsageStage }),
+    ...(data.latitudeGoal && {
+      latitudeGoal: data.latitudeGoalOther || data.latitudeGoal,
+    }),
   })
 
   if (!response.success) {
-    if (response.message.match('Email or userId is already on list')) return
-
     throw new Error(`For email: ${userEmail}: ${response.message}`)
   }
 }
