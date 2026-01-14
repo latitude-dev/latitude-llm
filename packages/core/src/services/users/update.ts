@@ -6,8 +6,13 @@ import Transaction from '../../lib/Transaction'
 import { users } from '../../schema/models/users'
 import { publisher } from '../../events/publisher'
 
-function isFinalOnboardingStep(values: Partial<User>): boolean {
-  return 'latitudeGoal' in values || 'latitudeGoalOther' in values
+const FINAL_ONBOARDING_FIELDS: (keyof User)[] = [
+  'latitudeGoal',
+  'latitudeGoalOther',
+]
+
+export function isFinalOnboardingStep(values: Partial<User>): boolean {
+  return FINAL_ONBOARDING_FIELDS.some((field) => field in values)
 }
 
 export const updateUser = async (
