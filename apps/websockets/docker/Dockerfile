@@ -1,7 +1,7 @@
 ARG PROJECT="@latitude-data/websockets-server"
 ARG PROJECT_PATH="apps/websockets"
 
-FROM node:22.22.0-alpine AS alpine
+FROM node:22-alpine AS alpine
 
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat curl
@@ -61,7 +61,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --shamefully-hoist \
   --filter "${PROJECT}..."
 
-FROM node:22.22.0-alpine AS runner
+FROM node:22-alpine AS runner
 
 # Required for the health check
 RUN apk add --update --no-cache curl
