@@ -3,7 +3,7 @@ ARG PROJECT_PATH="apps/gateway"
 ARG DD_GIT_REPOSITORY_URL
 ARG DD_GIT_COMMIT_SHA
 
-FROM node:22-alpine AS alpine
+FROM node:22.22.0-alpine AS alpine
 
 # Install build dependencies
 RUN apk add --update --no-cache \
@@ -95,7 +95,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --shamefully-hoist \
   --filter "${PROJECT}..."
 
-FROM node:22-alpine AS runner
+FROM node:22.22.0-alpine AS runner
 
 # Required for the health check
 RUN apk add --update --no-cache curl
