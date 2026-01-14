@@ -75,24 +75,20 @@ export const getCurrentUserOrRedirect = cache(async () => {
       const requestedWorkspace = requestedWorkspaceResult.unwrap()
 
       try {
-        await replaceSession({
-          oldSession: sessionData.session,
+        const newSession = await replaceSession({
           sessionData: { user, workspace: requestedWorkspace },
         })
-      } catch {
-        // do nothing
-      }
 
-      return {
-        session: {
-          ...sessionData.session,
-          currentWorkspaceId: requestedWorkspace.id,
-        },
-        user,
-        workspace: requestedWorkspace,
-        subscriptionPlan: getPlanFromSubscriptionSlug(
-          requestedWorkspace.currentSubscription.plan,
-        ),
+        return {
+          session: newSession,
+          user,
+          workspace: requestedWorkspace,
+          subscriptionPlan: getPlanFromSubscriptionSlug(
+            requestedWorkspace.currentSubscription.plan,
+          ),
+        }
+      } catch {
+        // If session replacement fails, continue with original session
       }
     }
   }

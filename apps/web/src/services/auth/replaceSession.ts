@@ -1,5 +1,3 @@
-import { Session as LuciaSession } from 'lucia'
-
 import { lucia } from '.'
 import { setWebsocketSessionCookie } from './setSession'
 import { SessionData } from './getCurrentUser'
@@ -8,20 +6,18 @@ import { cookies } from 'next/headers'
 type PartialSession = Omit<SessionData, 'session'>
 
 /**
- * Replaces the current session with a new one in a single operation.
- * This invalidates the old session and creates a new one without setting
- * an intermediate blank cookie.
+ * Creates a new session for a different workspace.
+ * Note: We intentionally do NOT invalidate the old session here because
+ * other code in the same request may still need to validate the session
+ * using the request cookie (which still has the old session ID).
+ * The old session will become orphaned once the browser receives the new cookie.
  */
 export async function replaceSession({
-  oldSession,
   sessionData,
 }: {
-  oldSession: LuciaSession
   sessionData: PartialSession
 }) {
   const cks = await cookies()
-
-  await lucia.invalidateSession(oldSession.id)
 
   const { workspace, user } = sessionData
   const session = await lucia.createSession(user.id, {
@@ -47,4 +43,6 @@ export async function replaceSession({
       cks,
     ),
   ])
+
+  return session
 }
