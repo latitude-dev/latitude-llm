@@ -4,6 +4,7 @@ import { clearProviderApiKeysCache } from './clearProviderApiKeysCache'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
 import { createLoopsContact } from './createLoopsContact'
+import { updateLoopsContact } from './updateLoopsContact'
 import { enqueueShadowTestChallengerHandler } from './enqueueShadowTestChallenger'
 import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { generateDetailsForMergedIssue } from './generateDetailsForMergedIssue'
@@ -64,6 +65,7 @@ export const EventHandlers: IEventsHandlers = {
   providerLogCreated: [touchApiKeyJob, touchProviderApiKeyJob],
   sendReferralInvitation: [sendReferralInvitationJob],
   userCreated: [createLoopsContact],
+  userOnboardingInfoUpdated: [updateLoopsContact],
   userInvited: [],
   workspaceCreated: [],
   documentRunRequested: [],

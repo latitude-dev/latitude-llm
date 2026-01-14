@@ -28,6 +28,7 @@ import {
 export type Events =
   | 'magicLinkTokenCreated'
   | 'userCreated'
+  | 'userOnboardingInfoUpdated'
   | 'membershipCreated'
   | 'experimentVariantsCreated'
   | 'providerLogCreated'
@@ -131,6 +132,10 @@ export type MagicLinkTokenCreated = LatitudeEventGeneric<
 export type UserCreatedEvent = LatitudeEventGeneric<
   'userCreated',
   User & { workspaceId: number; userEmail: string }
+>
+export type UserOnboardingInfoUpdatedEvent = LatitudeEventGeneric<
+  'userOnboardingInfoUpdated',
+  User & { userEmail: string }
 >
 export type MembershipCreatedEvent = LatitudeEventGeneric<
   'membershipCreated',
@@ -1011,6 +1016,7 @@ export type OptimizationStatusEvent =
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
+  | UserOnboardingInfoUpdatedEvent
   | MagicLinkTokenCreated
   | ProviderLogCreatedEvent
   | ExperimentVariantsCreatedEvent
@@ -1107,6 +1113,7 @@ export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
   membershipCreated: EventHandler<MembershipCreatedEvent>[]
   userCreated: EventHandler<UserCreatedEvent>[]
+  userOnboardingInfoUpdated: EventHandler<UserOnboardingInfoUpdatedEvent>[]
   providerLogCreated: EventHandler<ProviderLogCreatedEvent>[]
   experimentVariantsCreated: EventHandler<ExperimentVariantsCreatedEvent>[]
   workspaceCreated: EventHandler<WorkspaceCreatedEvent>[]

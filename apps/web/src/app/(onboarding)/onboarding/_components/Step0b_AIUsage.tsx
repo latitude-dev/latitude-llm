@@ -21,10 +21,21 @@ type AIUsageOption = {
 }
 
 const AI_USAGE_OPTIONS: AIUsageOption[] = [
-  { value: AIUsageStage.NotInProduction, label: 'Not in production yet', icon: 'circleDashed' },
-  { value: AIUsageStage.InternalToolOnly, label: 'Internal tool only', icon: 'lock' },
-  { value: AIUsageStage.LiveWithCustomers, label: 'Live with customers', icon: 'users' },
-  { value: AIUsageStage.CorePartOfProduct, label: 'Core part of the product', icon: 'zap' },
+  {
+    value: AIUsageStage.NotInProduction,
+    label: 'Not in production yet',
+    icon: 'circleDashed',
+  },
+  {
+    value: AIUsageStage.InternalToolOnly,
+    label: 'Internal tool only',
+    icon: 'lock',
+  },
+  {
+    value: AIUsageStage.LiveWithCustomers,
+    label: 'Live with customers',
+    icon: 'users',
+  },
 ]
 
 function OptionCard({
@@ -47,7 +58,9 @@ function OptionCard({
       className={cn(
         'w-full flex flex-row items-center gap-4 p-4 rounded-2xl text-left',
         'border-2 transition-all cursor-pointer',
-        isActive ? 'border-primary bg-primary/5' : 'border-border bg-background',
+        isActive
+          ? 'border-primary bg-primary/5'
+          : 'border-border bg-background',
       )}
     >
       <div
@@ -70,7 +83,9 @@ function OptionCard({
 }
 
 export function Step0b_AIUsage({ onContinue }: Props) {
-  const [selectedOption, setSelectedOption] = useState<AIUsageStage | null>(null)
+  const [selectedOption, setSelectedOption] = useState<AIUsageStage | null>(
+    null,
+  )
   const { execute } = useLatitudeAction(updateAIUsageStageAction, {
     onSuccess: () => {
       onContinue()
@@ -88,7 +103,9 @@ export function Step0b_AIUsage({ onContinue }: Props) {
         <Icon name='logo' size='xxxlarge' />
 
         <div className='flex flex-col items-center gap-2'>
-          <Text.H2M color='foreground' centered>Where is AI used in your product today?</Text.H2M>
+          <Text.H2M color='foreground' centered>
+            Where is AI used in your product today?
+          </Text.H2M>
           <Text.H5 color='foregroundMuted' centered>
             This helps us understand your current stage
           </Text.H5>
@@ -108,4 +125,3 @@ export function Step0b_AIUsage({ onContinue }: Props) {
     </OnboardingLayout>
   )
 }
-
