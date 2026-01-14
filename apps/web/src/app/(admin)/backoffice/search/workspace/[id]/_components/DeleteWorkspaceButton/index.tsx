@@ -34,8 +34,8 @@ export function DeleteWorkspaceButton({ workspaceId, workspaceName }: Props) {
   const { execute, isPending } = useLatitudeAction(destroyWorkspaceAction, {
     onSuccess: () => {
       toast({
-        title: 'Workspace Deleted',
-        description: `Workspace "${workspaceName}" has been permanently deleted.`,
+        title: 'Workspace Deletion Queued',
+        description: `Workspace "${workspaceName}" is being deleted. This may take a few moments.`,
       })
       setIsModalOpen(false)
       router.push(ROUTES.backoffice.root)
@@ -43,7 +43,7 @@ export function DeleteWorkspaceButton({ workspaceId, workspaceName }: Props) {
     onError: (error) => {
       toast({
         title: 'Error',
-        description: error?.message || 'Failed to delete workspace',
+        description: error?.message || 'Failed to queue workspace deletion',
         variant: 'destructive',
       })
     },
