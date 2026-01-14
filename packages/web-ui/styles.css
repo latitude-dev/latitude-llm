@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @layer utilities {
+
   /* Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -22,12 +23,9 @@
       linear-gradient(hsl(var(--background)) 30%, hsl(var(--background) / 0)),
       linear-gradient(hsl(var(--background)), hsl(var(--background)) 0%) 0 100%,
       radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.1), transparent),
-      radial-gradient(
-          farthest-side at 50% 100%,
-          hsl(var(--background-shadow) / 0.1),
-          rgba(0, 0, 0, 0)
-        )
-        0 100%;
+      radial-gradient(farthest-side at 50% 100%,
+        hsl(var(--background-shadow) / 0.1),
+        rgba(0, 0, 0, 0)) 0 100%;
     background-repeat: no-repeat;
     background-color: hsl(var(--background));
     background-size:
@@ -295,6 +293,7 @@
       --rdg-row-selected-background-color: hsl(var(--accent));
       --rdg-row-selected-hover-background-color: hsl(var(--accent));
       --rdg-checkbox-focus-color: hsl(var(--accent-button));
+
     }
   }
 

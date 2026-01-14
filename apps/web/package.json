@@ -19,6 +19,14 @@
     "datadog:sourcemaps:server": "datadog-ci sourcemaps upload .next/server --service=latitude-llm-web --minified-path-prefix=/app/apps/web/.next/server/ --release-version=${RELEASE_VERSION:-unknown} --disable-git --max-concurrency=20",
     "datadog:sourcemaps": "pnpm datadog:sourcemaps:client && pnpm datadog:sourcemaps:server"
   },
+  "browserslist": [
+    "Chrome >= 89",
+    "Edge >= 89",
+    "Firefox >= 66",
+    "Safari >= 15",
+    "iOS >= 15",
+    "Opera >= 76"
+  ],
   "dependencies": {
     "@ai-sdk/rsc": "^1.0.44",
     "@aws-sdk/client-s3": "3.850.0",
@@ -76,7 +84,7 @@
     "promptl-ai": "catalog:",
     "rate-limiter-flexible": "5.0.3",
     "react": "catalog:",
-    "react-data-grid": "7.0.0-beta.51",
+    "react-data-grid": "catalog:",
     "react-dom": "catalog:",
     "react-infinite-scroll-component": "^6.1.1",
     "require-in-the-middle": "7.5.2",

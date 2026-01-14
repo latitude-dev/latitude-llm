@@ -8,7 +8,7 @@ import useDatasets from '$/stores/datasets'
 import { ClientPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import type {
-  CellClickArgs,
+  CellMouseArgs,
   CellMouseEvent,
   Props as DataGridProps,
   RenderCellProps,
@@ -164,7 +164,7 @@ export default function DataGrid({
     return [SelectColumn, ...dataColumns]
   }, [dataset.columns, backgroundCssClasses])
   const onCellClick = useCallback(
-    (args: CellClickArgs<ClientDatasetRow>, event: CellMouseEvent) => {
+    (args: CellMouseArgs<ClientDatasetRow>, event: CellMouseEvent) => {
       event.preventGridDefault()
       args.selectCell(true)
     },

@@ -69,6 +69,9 @@ catalogs:
     react:
       specifier: 19.1.4
       version: 19.1.4
+    react-data-grid:
+      specifier: 7.0.0-beta.59
+      version: 7.0.0-beta.59
     react-dom:
       specifier: 19.1.4
       version: 19.1.4
@@ -400,8 +403,8 @@ importers:
         specifier: 'catalog:'
         version: 19.1.4
       react-data-grid:
-        specifier: 7.0.0-beta.51
-        version: 7.0.0-beta.51(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
+        specifier: 'catalog:'
+        version: 7.0.0-beta.59(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
       react-dom:
         specifier: 'catalog:'
         version: 19.1.4(react@19.1.4)
@@ -1401,8 +1404,8 @@ importers:
         specifier: 'catalog:'
         version: 19.1.4
       react-data-grid:
-        specifier: 7.0.0-beta.51
-        version: 7.0.0-beta.51(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
+        specifier: 'catalog:'
+        version: 7.0.0-beta.59(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
       react-day-picker:
         specifier: 8.10.1
         version: 8.10.1(date-fns@3.6.0)(react@19.1.4)
@@ -11771,11 +11774,11 @@ packages:
     resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
     hasBin: true
 
-  react-data-grid@7.0.0-beta.51:
-    resolution: {integrity: sha512-SRzMbVqC6er9z/XYSgrjnM6s7mythMZXxIsVsTt+4spD2PhChotFnF/9rQKK8xynKSBb4GK1VNDsjkq1Hr0B6g==}
+  react-data-grid@7.0.0-beta.59:
+    resolution: {integrity: sha512-iAp/UYWjfmXYFsyKDtGDMP1IvhwtQSjCP6G/wFEbMNuumWGOEZF8Ut1S2Bp4XxVpOrBkEVKXn+QC3rs14AcB7A==}
     peerDependencies:
-      react: ^19.0
-      react-dom: ^19.0
+      react: ^19.2
+      react-dom: ^19.2
 
   react-day-picker@8.10.1:
     resolution: {integrity: sha512-TMx7fNbhLk15eqcMt+7Z7S2KF7mfTId/XJDjKE8f+IUcFn0l08/kI4FiYTL/0yuOLmEcbR4Fwe3GJf/NiiMnPA==}
@@ -21358,7 +21361,7 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)
       '@typescript-eslint/parser': 6.21.0(eslint@8.57.1)(typescript@5.9.3)
       eslint-config-prettier: 9.1.2(eslint@8.57.1)
-      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0)
+      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@8.57.1)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.57.1)
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)
@@ -23273,7 +23276,7 @@ snapshots:
       eslint-plugin-turbo: 2.5.8(eslint@8.57.1)(turbo@2.5.8)
       turbo: 2.5.8
 
-  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0):
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)):
     dependencies:
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)
 
@@ -27410,9 +27413,8 @@ snapshots:
       minimist: 1.2.8
       strip-json-comments: 2.0.1
 
-  react-data-grid@7.0.0-beta.51(react-dom@19.1.4(react@19.1.4))(react@19.1.4):
+  react-data-grid@7.0.0-beta.59(react-dom@19.1.4(react@19.1.4))(react@19.1.4):
     dependencies:
-      clsx: 2.1.1
       react: 19.1.4
       react-dom: 19.1.4(react@19.1.4)
 
