@@ -38,6 +38,9 @@
     "node": ">=22"
   },
   "pnpm": {
+    "overrides": {
+      "consolidate": "1.0.4"
+    },
     "peerDependencyRules": {
       "allowedVersions": {
         "react": ">=19.x",

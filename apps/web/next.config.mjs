@@ -13,12 +13,9 @@ const nextConfig = {
     '@latitude-data/sdk',
     '@napi-rs/canvas',
     'bullmq',
-    'consolidate',
-    'nodemailer-mailgun-transport',
     'openid-client',
     'pdfjs-dist',
     'promptl-ai',
-    'fast-json-stable-stringify',
   ],
   eslint: {
     // Fine because we do the linter pass in CI before building
