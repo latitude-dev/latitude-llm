@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   FrameworkDefinition,
   UnsupportedFrameworkDefinition,
@@ -189,7 +189,7 @@ function LanguageTabs({
   framework: FrameworkDefinition
   activeTab: Language
   onTabChange: (tab: Language) => void
-  children: (tab: Language) => React.ReactNode
+  children: (tab: Language) => ReactNode
 }) {
   const showTabs = hasTypeScript(framework) && hasPython(framework)
 
