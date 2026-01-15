@@ -85,11 +85,11 @@ That's it — prompts do **not** need to be created ahead of time.
 
     <Tabs>
       <Tab title="TypeScript">
-        ```ts telemetry.ts
+        ```ts
         import { LatitudeTelemetry } from '@latitude-data/telemetry'
         import * as AIPlatform from '@google-cloud/aiplatform'
 
-        export const telemetry = new LatitudeTelemetry(
+        const telemetry = new LatitudeTelemetry(
           process.env.LATITUDE_API_KEY,
           {
             instrumentations: {
@@ -98,9 +98,14 @@ That's it — prompts do **not** need to be created ahead of time.
           }
         )
         ```
+
+        <Info>
+          The Telemetry instance should only be created once. Any Google AI Platform client
+          instantiated after this will be automatically traced.
+        </Info>
       </Tab>
       <Tab title="Python">
-        ```python telemetry.py
+        ```python
         import os
         from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
@@ -111,13 +116,13 @@ That's it — prompts do **not** need to be created ahead of time.
             ),
         )
         ```
+
+        <Info>
+          The Telemetry instance should only be created once. Any Google AI Platform client
+          instantiated after this will be automatically traced.
+        </Info>
       </Tab>
     </Tabs>
-
-    <Info>
-      The Telemetry instance should only be created once. Any Google AI Platform client
-      instantiated after this will be automatically traced.
-    </Info>
 
   </Step>
 
@@ -127,23 +132,27 @@ That's it — prompts do **not** need to be created ahead of time.
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { telemetry } from './telemetry'
-        import { PredictionServiceClient } from '@google-cloud/aiplatform'
+        import { LatitudeTelemetry } from '@latitude-data/telemetry'
+        import * as AIPlatform from '@google-cloud/aiplatform'
 
-        export async function generateSupportReply(input: string) {
+        const telemetry = new LatitudeTelemetry(
+          process.env.LATITUDE_API_KEY,
+          { instrumentations: { aiplatform: AIPlatform } }
+        )
+
+        async function generateSupportReply(input: string) {
           return telemetry.capture(
             {
               projectId: 123, // The ID of your project in Latitude
               path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
             },
             async () => {
-
-              // Your regular LLM-powered feature code here
-              const client = new PredictionServiceClient({ ... });
-              const response = await client.predict({ ... })
-
-              // You can return anything you want — the value is passed through unchanged
-              return response;
+              const client = new AIPlatform.PredictionServiceClient()
+              const [response] = await client.predict({
+                endpoint: 'projects/.../locations/.../endpoints/...',
+                instances: [{ content: input }],
+              })
+              return response.predictions[0]
             }
           )
         }
@@ -153,40 +162,44 @@ That's it — prompts do **not** need to be created ahead of time.
         You can use the `capture` method as a decorator (recommended) or as a context manager:
 
         ```python Using decorator (recommended)
+        import os
         from google.cloud import aiplatform
-        from telemetry import telemetry
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.VertexAI]),
+        )
 
         @telemetry.capture(
             project_id=123,  # The ID of your project in Latitude
             path="generate-support-reply",  # Add a path to identify this prompt in Latitude
         )
         def generate_support_reply(input: str) -> str:
-            # Your regular LLM-powered feature code here
             aiplatform.init(project="your-gcp-project", location="us-central1")
-
             endpoint = aiplatform.Endpoint("projects/.../locations/.../endpoints/...")
             response = endpoint.predict(instances=[{"content": input}])
-
-            # You can return anything you want — the value is passed through unchanged
             return response.predictions[0]
         ```
 
         ```python Using context manager
+        import os
         from google.cloud import aiplatform
-        from telemetry import telemetry
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.VertexAI]),
+        )
 
         def generate_support_reply(input: str) -> str:
             with telemetry.capture(
                 project_id=123,  # The ID of your project in Latitude
                 path="generate-support-reply",  # Add a path to identify this prompt in Latitude
             ):
-                # Your regular LLM-powered feature code here
                 aiplatform.init(project="your-gcp-project", location="us-central1")
-
                 endpoint = aiplatform.Endpoint("projects/.../locations/.../endpoints/...")
                 response = endpoint.predict(instances=[{"content": input}])
-
-                # You can return anything you want — the value is passed through unchanged
                 return response.predictions[0]
         ```
       </Tab>

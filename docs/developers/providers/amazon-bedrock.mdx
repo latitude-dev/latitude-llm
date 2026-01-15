@@ -85,11 +85,11 @@ That's it — prompts do **not** need to be created ahead of time.
 
     <Tabs>
       <Tab title="TypeScript">
-        ```ts telemetry.ts
+        ```ts
         import { LatitudeTelemetry } from '@latitude-data/telemetry'
         import * as Bedrock from '@aws-sdk/client-bedrock-runtime'
 
-        export const telemetry = new LatitudeTelemetry(
+        const telemetry = new LatitudeTelemetry(
           process.env.LATITUDE_API_KEY,
           {
             instrumentations: {
@@ -98,9 +98,14 @@ That's it — prompts do **not** need to be created ahead of time.
           }
         )
         ```
+
+        <Info>
+          The Telemetry instance should only be created once. Any Amazon Bedrock client
+          instantiated after this will be automatically traced.
+        </Info>
       </Tab>
       <Tab title="Python">
-        ```python telemetry.py
+        ```python
         import os
         from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
@@ -111,13 +116,13 @@ That's it — prompts do **not** need to be created ahead of time.
             ),
         )
         ```
+
+        <Info>
+          The Telemetry instance should only be created once. Any Amazon Bedrock client
+          instantiated after this will be automatically traced.
+        </Info>
       </Tab>
     </Tabs>
-
-    <Info>
-      The Telemetry instance should only be created once. Any Amazon Bedrock client
-      instantiated after this will be automatically traced.
-    </Info>
 
   </Step>
 
@@ -127,25 +132,33 @@ That's it — prompts do **not** need to be created ahead of time.
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { telemetry } from './telemetry'
-        import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
+        import { LatitudeTelemetry } from '@latitude-data/telemetry'
+        import * as Bedrock from '@aws-sdk/client-bedrock-runtime'
 
-        export async function generateSupportReply(input: string) {
+        const telemetry = new LatitudeTelemetry(
+          process.env.LATITUDE_API_KEY,
+          { instrumentations: { bedrock: Bedrock } }
+        )
+
+        async function generateSupportReply(input: string) {
           return telemetry.capture(
             {
               projectId: 123, // The ID of your project in Latitude
               path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
             },
             async () => {
-
-              // Your regular LLM-powered feature code here
-              const client = new BedrockRuntimeClient({ region: 'us-east-1' });
+              const client = new Bedrock.BedrockRuntimeClient({ region: 'us-east-1' })
               const response = await client.send(
-                new InvokeModelCommand({ ... })
-              );
-
-              // You can return anything you want — the value is passed through unchanged
-              return response;
+                new Bedrock.InvokeModelCommand({
+                  modelId: 'anthropic.claude-v2',
+                  body: JSON.stringify({
+                    prompt: `\n\nHuman: ${input}\n\nAssistant:`,
+                    max_tokens_to_sample: 1024,
+                  }),
+                })
+              )
+              const result = JSON.parse(new TextDecoder().decode(response.body))
+              return result.completion
             }
           )
         }
@@ -155,18 +168,22 @@ That's it — prompts do **not** need to be created ahead of time.
         You can use the `capture` method as a decorator (recommended) or as a context manager:
 
         ```python Using decorator (recommended)
-        import boto3
+        import os
         import json
-        from telemetry import telemetry
+        import boto3
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.Bedrock]),
+        )
 
         @telemetry.capture(
             project_id=123,  # The ID of your project in Latitude
             path="generate-support-reply",  # Add a path to identify this prompt in Latitude
         )
         def generate_support_reply(input: str) -> str:
-            # Your regular LLM-powered feature code here
             client = boto3.client("bedrock-runtime", region_name="us-east-1")
-
             response = client.invoke_model(
                 modelId="anthropic.claude-v2",
                 body=json.dumps({
@@ -174,25 +191,27 @@ That's it — prompts do **not** need to be created ahead of time.
                     "max_tokens_to_sample": 1024,
                 }),
             )
-
-            # You can return anything you want — the value is passed through unchanged
             result = json.loads(response["body"].read())
             return result["completion"]
         ```
 
         ```python Using context manager
-        import boto3
+        import os
         import json
-        from telemetry import telemetry
+        import boto3
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.Bedrock]),
+        )
 
         def generate_support_reply(input: str) -> str:
             with telemetry.capture(
                 project_id=123,  # The ID of your project in Latitude
                 path="generate-support-reply",  # Add a path to identify this prompt in Latitude
             ):
-                # Your regular LLM-powered feature code here
                 client = boto3.client("bedrock-runtime", region_name="us-east-1")
-
                 response = client.invoke_model(
                     modelId="anthropic.claude-v2",
                     body=json.dumps({
@@ -200,8 +219,6 @@ That's it — prompts do **not** need to be created ahead of time.
                         "max_tokens_to_sample": 1024,
                     }),
                 )
-
-                # You can return anything you want — the value is passed through unchanged
                 result = json.loads(response["body"].read())
                 return result["completion"]
         ```

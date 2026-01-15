@@ -85,11 +85,11 @@ That's it — prompts do **not** need to be created ahead of time.
 
     <Tabs>
       <Tab title="TypeScript">
-        ```ts telemetry.ts
+        ```ts
         import { LatitudeTelemetry } from '@latitude-data/telemetry'
         import OpenAI from 'openai'
 
-        export const telemetry = new LatitudeTelemetry(
+        const telemetry = new LatitudeTelemetry(
           process.env.LATITUDE_API_KEY,
           {
             instrumentations: {
@@ -98,9 +98,14 @@ That's it — prompts do **not** need to be created ahead of time.
           }
         )
         ```
+
+        <Info>
+          The Telemetry instance should only be created once. Any OpenAI client
+          instantiated after this will be automatically traced.
+        </Info>
       </Tab>
       <Tab title="Python">
-        ```python telemetry.py
+        ```python
         import os
         from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
@@ -111,13 +116,13 @@ That's it — prompts do **not** need to be created ahead of time.
             ),
         )
         ```
+
+        <Info>
+          The Telemetry instance should only be created once. Any OpenAI client
+          instantiated after this will be automatically traced.
+        </Info>
       </Tab>
     </Tabs>
-
-    <Info>
-      The Telemetry instance should only be created once. Any OpenAI client
-      instantiated after this will be automatically traced.
-    </Info>
 
   </Step>
 
@@ -127,22 +132,26 @@ That's it — prompts do **not** need to be created ahead of time.
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { telemetry } from './telemetry'
+        import { LatitudeTelemetry } from '@latitude-data/telemetry'
         import OpenAI from 'openai'
 
-        export async function generateSupportReply(input: string) {
+        const telemetry = new LatitudeTelemetry(
+          process.env.LATITUDE_API_KEY,
+          { instrumentations: { openai: OpenAI } }
+        )
+
+        async function generateSupportReply(input: string) {
           return telemetry.capture(
             {
               projectId: 123, // The ID of your project in Latitude
               path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
             },
             async () => {
-
-              // Your regular LLM-powered feature code here
-              const client = new OpenAI();
-              const completion = await client.chat.completions.create({ ... })
-
-              // You can return anything you want — the value is passed through unchanged
+              const client = new OpenAI()
+              const completion = await client.chat.completions.create({
+                model: 'gpt-4o',
+                messages: [{ role: 'user', content: input }],
+              })
               return completion.choices[0].message.content
             }
           )
@@ -153,42 +162,48 @@ That's it — prompts do **not** need to be created ahead of time.
         You can use the `capture` method as a decorator (recommended) or as a context manager:
 
         ```python Using decorator (recommended)
+        import os
         from openai import OpenAI
-        from telemetry import telemetry
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.OpenAI]),
+        )
 
         @telemetry.capture(
             project_id=123,  # The ID of your project in Latitude
             path="generate-support-reply",  # Add a path to identify this prompt in Latitude
         )
         def generate_support_reply(input: str) -> str:
-            # Your regular LLM-powered feature code here
             client = OpenAI()
             completion = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[{"role": "user", "content": input}],
             )
-
-            # You can return anything you want — the value is passed through unchanged
             return completion.choices[0].message.content
         ```
 
         ```python Using context manager
+        import os
         from openai import OpenAI
-        from telemetry import telemetry
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.OpenAI]),
+        )
 
         def generate_support_reply(input: str) -> str:
             with telemetry.capture(
                 project_id=123,  # The ID of your project in Latitude
                 path="generate-support-reply",  # Add a path to identify this prompt in Latitude
             ):
-                # Your regular LLM-powered feature code here
                 client = OpenAI()
                 completion = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": input}],
                 )
-
-                # You can return anything you want — the value is passed through unchanged
                 return completion.choices[0].message.content
         ```
       </Tab>

@@ -85,16 +85,22 @@ That's it — prompts do **not** need to be created ahead of time.
 
     <Tabs>
       <Tab title="TypeScript">
-        ```ts telemetry.ts
+        ```ts
         import { LatitudeTelemetry, Instrumentors } from '@latitude-data/telemetry'
 
-        export const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY, {
+        const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY, {
           instrumentors: [Instrumentors.GoogleGenerativeAI],  // This enables automatic tracing for Gemini
         })
         ```
+
+        <Info>
+          The Telemetry instance should only be created once. Initialize it
+          before importing from `google-genai` so Gemini calls are
+          automatically traced.
+        </Info>
       </Tab>
       <Tab title="Python">
-        ```python telemetry.py
+        ```python
         import os
         from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
@@ -105,14 +111,14 @@ That's it — prompts do **not** need to be created ahead of time.
             ),
         )
         ```
+
+        <Info>
+          The Telemetry instance should only be created once. Initialize it
+          before importing from `google-genai` so Gemini calls are
+          automatically traced.
+        </Info>
       </Tab>
     </Tabs>
-
-    <Info>
-      The Telemetry instance should only be created once. Initialize it
-      before importing from `google-genai` so Gemini calls are
-      automatically traced.
-    </Info>
 
   </Step>
 
@@ -122,23 +128,23 @@ That's it — prompts do **not** need to be created ahead of time.
     <Tabs>
       <Tab title="TypeScript">
         ```ts
+        import { LatitudeTelemetry, Instrumentors } from '@latitude-data/telemetry'
         import { GoogleGenerativeAI } from '@google/generative-ai'
-        import { telemetry } from './telemetry'
 
-        export async function generateSupportReply(input: string) {
+        const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY, {
+          instrumentors: [Instrumentors.GoogleGenerativeAI],
+        })
+
+        async function generateSupportReply(input: string) {
           return telemetry.capture(
             {
-              projectId: 123,  // The ID of your project in Latitude
-              path: 'generate-support-reply',  // Add a path to identify this prompt in Latitude
+              projectId: 123, // The ID of your project in Latitude
+              path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
             },
             async () => {
-              // Your regular LLM-powered feature code here
               const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
               const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
               const result = await model.generateContent(input)
-
-              // You can return anything you want — the value is passed through unchanged
               return result.response.text()
             }
           )
@@ -150,8 +156,13 @@ That's it — prompts do **not** need to be created ahead of time.
 
         ```python Using decorator (recommended)
         import os
-        from telemetry import telemetry
         from google import genai
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.GoogleGenerativeAI]),
+        )
 
         @telemetry.capture(
             project_id=123,  # The ID of your project in Latitude
@@ -159,20 +170,22 @@ That's it — prompts do **not** need to be created ahead of time.
         )
         def generate_support_reply(input: str) -> str:
             client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-
             response = client.models.generate_content(
                 model="gemini-2.0-flash",
                 contents=input,
             )
-
-            # You can return anything you want — the value is passed through unchanged
             return response.text
         ```
 
         ```python Using context manager
         import os
-        from telemetry import telemetry
         from google import genai
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.GoogleGenerativeAI]),
+        )
 
         def generate_support_reply(input: str) -> str:
             with telemetry.capture(
@@ -180,13 +193,10 @@ That's it — prompts do **not** need to be created ahead of time.
                 path="generate-support-reply",  # Add a path to identify this prompt in Latitude
             ):
                 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-
                 response = client.models.generate_content(
                     model="gemini-2.0-flash",
                     contents=input,
                 )
-
-                # You can return anything you want — the value is passed through unchanged
                 return response.text
         ```
       </Tab>
