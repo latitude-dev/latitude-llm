@@ -171,7 +171,8 @@ function convertMessageRole(role: string): TypedResult<MessageRole> {
     case MESSAGE_ROLE_TOOL:
       return Result.ok(MessageRole.tool)
     default:
-      return Result.error(new UnprocessableEntityError('Invalid message role'))
+      // Default to assistant for unknown roles (common in completion responses)
+      return Result.ok(MessageRole.assistant)
   }
 }
 
@@ -253,6 +254,47 @@ function extractMessages(
   return convertMessages(messages)
 }
 
+/**
+ * Extracts messages from OpenInference indexed attributes format.
+ * OpenInference uses `llm.{input/output}_messages.{i}.message.{role,content}` format
+ * which creates a nested `.message` structure that needs to be unwrapped.
+ */
+function extractOpenInferenceMessages(
+  attributes: Record<string, SpanAttribute>,
+  prefix: string,
+): TypedResult<Message[]> {
+  const rawMessages: Record<string, unknown>[] = []
+
+  try {
+    for (const key in attributes) {
+      if (!key.startsWith(prefix)) continue
+      const field = key.replace(prefix + '.', '')
+      setField(rawMessages, field, attributes[key])
+    }
+  } catch {
+    return Result.error(
+      new UnprocessableEntityError('Invalid OpenInference messages'),
+    )
+  }
+
+  if (!validateUndefineds(rawMessages)) {
+    return Result.error(
+      new UnprocessableEntityError('Invalid OpenInference messages'),
+    )
+  }
+
+  // Unwrap the nested `.message` structure from OpenInference format
+  // e.g., { message: { role: "user", content: "..." } } -> { role: "user", content: "..." }
+  const messages = rawMessages.map((item) => {
+    if (item && typeof item === 'object' && 'message' in item) {
+      return item.message as Record<string, unknown>
+    }
+    return item
+  })
+
+  return convertMessages(messages)
+}
+
 export function extractInput(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<CompletionSpanMetadata['input']> {
@@ -310,6 +352,16 @@ export function extractInput(
     return Result.ok([...messages, ...extracting.value])
   }
 
+  // OpenInference indexed format: llm.input_messages.{i}.message.{role,content}
+  const extractingOpenInference = extractOpenInferenceMessages(
+    attributes,
+    ATTRIBUTES.OPENINFERENCE.llm.inputMessages,
+  )
+  if (extractingOpenInference.error) return Result.error(extractingOpenInference.error)
+  if (extractingOpenInference.value.length > 0) {
+    return Result.ok([...messages, ...extractingOpenInference.value])
+  }
+
   return Result.ok(messages)
 }
 
@@ -353,6 +405,16 @@ export function extractOutput(
     if (extracting.error) return Result.error(extracting.error)
     if (extracting.value.length < 1) continue
     return Result.ok(extracting.value)
+  }
+
+  // OpenInference indexed format: llm.output_messages.{i}.message.{role,content}
+  const extractingOpenInference = extractOpenInferenceMessages(
+    attributes,
+    ATTRIBUTES.OPENINFERENCE.llm.outputMessages,
+  )
+  if (extractingOpenInference.error) return Result.error(extractingOpenInference.error)
+  if (extractingOpenInference.value.length > 0) {
+    return Result.ok(extractingOpenInference.value)
   }
 
   const responseText = extractAttribute({

@@ -14,7 +14,7 @@ After completing these steps:
 - You can inspect inputs/outputs, measure latency, and debug Google Vertex AI-powered features from the Latitude dashboard.
 
 <Check>
-  You’ll keep calling Google Vertex AI exactly as you do today — Telemetry
+  You'll keep calling Google Vertex AI exactly as you do today — Telemetry
   simply observes and enriches those calls.
 </Check>
 
@@ -26,9 +26,9 @@ Before you start, make sure you have:
 
 - A **Latitude account** and **API key**
 - A **Latitude project ID**
-- A Node.js-based project that uses the **Google Vertex AI SDK**
+- A Node.js or Python-based project that uses the **Google Vertex AI SDK**
 
-That’s it — prompts do **not** need to be created ahead of time.
+That's it — prompts do **not** need to be created ahead of time.
 
 ---
 
@@ -39,44 +39,80 @@ That’s it — prompts do **not** need to be created ahead of time.
   <Step title="Install requirements">
     Add the Latitude Telemetry package to your project:
 
-    <CodeGroup>
-      ```bash npm
-      npm add @latitude-data/telemetry
-      ```
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm add @latitude-data/telemetry
+          ```
 
-      ```bash pnpm
-      pnpm add @latitude-data/telemetry
-      ```
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry
+          ```
 
-      ```bash yarn
-      yarn add @latitude-data/telemetry
-      ```
+          ```bash yarn
+          yarn add @latitude-data/telemetry
+          ```
 
-      ```bash bun
-      bun add @latitude-data/telemetry
-      ```
-    </CodeGroup>
+          ```bash bun
+          bun add @latitude-data/telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
 
   </Step>
 
   <Step title="Initialize Latitude Telemetry">
-    Create a single <code>LatitudeTelemetry</code> instance when your app starts
+    Create a single Telemetry instance when your app starts.
 
     You must pass the **Google Vertex AI SDK** so Telemetry can instrument it.
 
-    ```ts telemetry.ts
-    import { LatitudeTelemetry } from '@latitude-data/telemetry'
-    import * as VertexAI from '@google-cloud/vertexai'
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts telemetry.ts
+        import { LatitudeTelemetry } from '@latitude-data/telemetry'
+        import * as VertexAI from '@google-cloud/vertexai'
 
-    export const telemetry = new LatitudeTelemetry(
-      process.env.LATITUDE_API_KEY,
-      {
-        instrumentations: {
-          vertexai: VertexAI, // This enables automatic tracing for the Google Vertex AI SDK
-        },
-      }
-    )
-    ```
+        export const telemetry = new LatitudeTelemetry(
+          process.env.LATITUDE_API_KEY,
+          {
+            instrumentations: {
+              vertexai: VertexAI, // This enables automatic tracing for the Google Vertex AI SDK
+            },
+          }
+        )
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python telemetry.py
+        import os
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(
+                instrumentors=[Instrumentors.VertexAI],  # This enables automatic tracing for the Google Vertex AI SDK
+            ),
+        )
+        ```
+      </Tab>
+    </Tabs>
 
     <Info>
       The Telemetry instance should only be created once. Any Google Vertex AI client
@@ -88,29 +124,74 @@ That’s it — prompts do **not** need to be created ahead of time.
   <Step title="Wrap your Google Vertex AI-powered feature">
     Wrap the code that calls Google Vertex AI using <code>telemetry.capture</code>.
 
-    ```ts
-    import { telemetry } from './telemetry'
-    import { VertexAI } from '@google-cloud/vertexai'
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { telemetry } from './telemetry'
+        import { VertexAI } from '@google-cloud/vertexai'
 
-    export async function generateSupportReply(input: string) {
-      return telemetry.capture(
-        {
-          projectId: 123, // The ID of your project in Latitude
-          path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
-        },
-        async () => {
+        export async function generateSupportReply(input: string) {
+          return telemetry.capture(
+            {
+              projectId: 123, // The ID of your project in Latitude
+              path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
+            },
+            async () => {
 
-          // Your regular LLM-powered feature code here
-          const client = new VertexAI({ ... });
-          const model = client.getGenerativeModel({ model: 'gemini-3-pro' })
-          const result = await model.generateContent(...)
+              // Your regular LLM-powered feature code here
+              const client = new VertexAI({ ... });
+              const model = client.getGenerativeModel({ model: 'gemini-3-pro' })
+              const result = await model.generateContent(...)
 
-          // You can return anything you want — the value is passed through unchanged
-          return await result.response
+              // You can return anything you want — the value is passed through unchanged
+              return await result.response
+            }
+          )
         }
-      )
-    }
-    ```
+        ```
+      </Tab>
+      <Tab title="Python">
+        You can use the `capture` method as a decorator (recommended) or as a context manager:
+
+        ```python Using decorator (recommended)
+        import vertexai
+        from vertexai.generative_models import GenerativeModel
+        from telemetry import telemetry
+
+        @telemetry.capture(
+            project_id=123,  # The ID of your project in Latitude
+            path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+        )
+        def generate_support_reply(input: str) -> str:
+            # Your regular LLM-powered feature code here
+            vertexai.init(project="your-gcp-project", location="us-central1")
+            model = GenerativeModel("gemini-1.5-pro")
+            response = model.generate_content(input)
+
+            # You can return anything you want — the value is passed through unchanged
+            return response.text
+        ```
+
+        ```python Using context manager
+        import vertexai
+        from vertexai.generative_models import GenerativeModel
+        from telemetry import telemetry
+
+        def generate_support_reply(input: str) -> str:
+            with telemetry.capture(
+                project_id=123,  # The ID of your project in Latitude
+                path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+            ):
+                # Your regular LLM-powered feature code here
+                vertexai.init(project="your-gcp-project", location="us-central1")
+                model = GenerativeModel("gemini-1.5-pro")
+                response = model.generate_content(input)
+
+                # You can return anything you want — the value is passed through unchanged
+                return response.text
+        ```
+      </Tab>
+    </Tabs>
 
     <Info>
     The `path`:
@@ -141,6 +222,6 @@ Each Google Vertex AI call appears as a child span under the captured prompt exe
 
 ---
 
-## That’s it
+## That's it
 
 No changes to your Google Vertex AI calls, no special return values, and no extra plumbing — just wrap the feature you want to observe.

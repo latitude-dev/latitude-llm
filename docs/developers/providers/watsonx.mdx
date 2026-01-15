@@ -1,0 +1,176 @@
+---
+title: IBM watsonx.ai
+description: Connect your IBM watsonx.ai-powered application to Latitude Telemetry for feature-level observability and evaluations.
+---
+
+<Note>
+  This integration is only available in the **Python SDK**.
+</Note>
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses the official **IBM watsonx.ai SDK**.
+
+After completing these steps:
+
+- Every watsonx.ai call (e.g. `generate`, `generate_text`) can be captured as a log in Latitude.
+- Logs are grouped under a **prompt**, identified by a `path`, inside a Latitude **project**.
+- You can inspect inputs/outputs, measure latency, and debug watsonx.ai-powered features from the Latitude dashboard.
+
+<Check>
+  You'll keep calling watsonx.ai exactly as you do today — Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+---
+
+## Requirements
+
+Before you start, make sure you have:
+
+- A **Latitude account** and **API key**
+- A **Latitude project ID**
+- A Python-based project that uses the **IBM watsonx.ai SDK** (`ibm-watsonx-ai`)
+
+That's it — prompts do **not** need to be created ahead of time.
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install requirements">
+    Add the Latitude Telemetry package to your project:
+
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry
+      ```
+    </CodeGroup>
+
+  </Step>
+
+  <Step title="Initialize Latitude Telemetry">
+    Create a single Telemetry instance when your app starts.
+
+    You must enable the **Watsonx** instrumentor so Telemetry can trace it.
+
+    ```python telemetry.py
+    import os
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(
+            instrumentors=[Instrumentors.Watsonx],  # This enables automatic tracing for watsonx.ai
+        ),
+    )
+    ```
+
+    <Info>
+      The Telemetry instance should only be created once. Any watsonx.ai client
+      calls made after this will be automatically traced.
+    </Info>
+
+  </Step>
+
+  <Step title="Wrap your watsonx.ai-powered feature">
+    Wrap the code that calls watsonx.ai using <code>telemetry.capture</code>.
+
+    You can use the `capture` method as a decorator (recommended) or as a context manager:
+
+    ```python Using decorator (recommended)
+    from ibm_watsonx_ai.foundation_models import Model
+    from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
+    from telemetry import telemetry
+
+    @telemetry.capture(
+        project_id=123,  # The ID of your project in Latitude
+        path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+    )
+    def generate_support_reply(input: str) -> str:
+        # Your regular LLM-powered feature code here
+        model = Model(
+            model_id="ibm/granite-13b-chat-v2",
+            credentials={"url": "https://us-south.ml.cloud.ibm.com", "apikey": os.environ["WATSONX_API_KEY"]},
+            project_id=os.environ["WATSONX_PROJECT_ID"],
+        )
+
+        parameters = {
+            GenParams.MAX_NEW_TOKENS: 100,
+        }
+
+        response = model.generate_text(prompt=input, params=parameters)
+
+        # You can return anything you want — the value is passed through unchanged
+        return response
+    ```
+
+    ```python Using context manager
+    from ibm_watsonx_ai.foundation_models import Model
+    from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
+    from telemetry import telemetry
+
+    def generate_support_reply(input: str) -> str:
+        with telemetry.capture(
+            project_id=123,  # The ID of your project in Latitude
+            path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+        ):
+            # Your regular LLM-powered feature code here
+            model = Model(
+                model_id="ibm/granite-13b-chat-v2",
+                credentials={"url": "https://us-south.ml.cloud.ibm.com", "apikey": os.environ["WATSONX_API_KEY"]},
+                project_id=os.environ["WATSONX_PROJECT_ID"],
+            )
+
+            parameters = {
+                GenParams.MAX_NEW_TOKENS: 100,
+            }
+
+            response = model.generate_text(prompt=input, params=parameters)
+
+            # You can return anything you want — the value is passed through unchanged
+            return response
+    ```
+
+    <Info>
+    The `path`:
+    - Identifies the prompt in Latitude
+    - Can be new or existing
+    - Should not contain spaces or special characters (use letters, numbers, `- _ / .`)
+    </Info>
+
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing your logs in Latitude
+
+Once your feature is wrapped, logs will appear automatically.
+
+1. Open the **prompt** in your Latitude dashboard (identified by `path`)
+2. Go to the **Traces** section
+3. Each execution will show:
+   - Input and output messages
+   - Model and token usage
+   - Latency and errors
+   - One trace per feature invocation
+
+Each watsonx.ai call appears as a child span under the captured prompt execution, giving you a full, end-to-end view of what happened.
+
+---
+
+## That's it
+
+No changes to your watsonx.ai calls, no special return values, and no extra plumbing — just wrap the feature you want to observe.

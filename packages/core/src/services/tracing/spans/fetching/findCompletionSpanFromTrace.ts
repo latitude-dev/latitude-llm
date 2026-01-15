@@ -13,11 +13,36 @@ function findRootSpans(trace: AssembledTrace): AssembledSpan[] {
 }
 
 /**
+ * Recursively finds the last completion span in a subtree.
+ */
+function findLastCompletionSpan(
+  spans: AssembledSpan[],
+): AssembledSpan<SpanType.Completion> | undefined {
+  let lastCompletion: AssembledSpan<SpanType.Completion> | undefined
+
+  for (const span of spans) {
+    if (span.type === SpanType.Completion) {
+      lastCompletion = span as AssembledSpan<SpanType.Completion>
+    }
+    // Recursively search children
+    if (span.children && span.children.length > 0) {
+      const childCompletion = findLastCompletionSpan(span.children)
+      if (childCompletion) {
+        lastCompletion = childCompletion
+      }
+    }
+  }
+
+  return lastCompletion
+}
+
+/**
  * Finds the completion span containing the full conversation from a trace.
  *
  * There can be many completion spans in a trace, but only one contains the
- * full conversation. This method finds that span by searching the last
- * completion span in the main span's (Prompt, Chat, or External) immediate children.
+ * full conversation. This method finds that span by recursively searching
+ * the main span's (Prompt, Chat, or External) descendants for the last
+ * completion span.
  *
  * @param trace - The assembled trace to search, or undefined
  * @returns The completion span containing the full conversation, or undefined if not found
@@ -29,18 +54,8 @@ export function findCompletionSpanFromTrace(trace: AssembledTrace | undefined) {
   const lastSibling = rootSpans.at(-1)
   if (!lastSibling) return undefined
 
-  return lastSibling.children?.reduce<
-    AssembledSpan<SpanType.Completion> | undefined
-  >(
-    (
-      last: AssembledSpan<SpanType.Completion> | undefined,
-      span: AssembledSpan,
-    ) =>
-      span.type === SpanType.Completion
-        ? (span as AssembledSpan<SpanType.Completion>)
-        : last,
-    undefined,
-  )
+  // Recursively search for the last completion span in the entire subtree
+  return findLastCompletionSpan(lastSibling.children || [])
 }
 
 export function adaptCompletionSpanMessagesToLegacy(

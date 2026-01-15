@@ -14,7 +14,7 @@ After completing these steps:
 - You can inspect inputs/outputs, measure latency, and debug LangChain-powered features from the Latitude dashboard.
 
 <Check>
-  You’ll keep calling LangChain exactly as you do today — Telemetry simply
+  You'll keep calling LangChain exactly as you do today — Telemetry simply
   observes and enriches those calls.
 </Check>
 
@@ -26,9 +26,9 @@ Before you start, make sure you have:
 
 - A **Latitude account** and **API key**
 - A **Latitude project ID**
-- A Node.js-based project that uses the **LangChain SDK**
+- A Node.js or Python-based project that uses the **LangChain SDK**
 
-That’s it — prompts do **not** need to be created ahead of time.
+That's it — prompts do **not** need to be created ahead of time.
 
 ---
 
@@ -39,50 +39,87 @@ That’s it — prompts do **not** need to be created ahead of time.
   <Step title="Install requirements">
     Add the Latitude Telemetry package to your project:
 
-    <CodeGroup>
-      ```bash npm
-      npm add @latitude-data/telemetry
-      ```
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm add @latitude-data/telemetry
+          ```
 
-      ```bash pnpm
-      pnpm add @latitude-data/telemetry
-      ```
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry
+          ```
 
-      ```bash yarn
-      yarn add @latitude-data/telemetry
-      ```
+          ```bash yarn
+          yarn add @latitude-data/telemetry
+          ```
 
-      ```bash bun
-      bun add @latitude-data/telemetry
-      ```
-    </CodeGroup>
+          ```bash bun
+          bun add @latitude-data/telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
 
   </Step>
 
   <Step title="Initialize Latitude Telemetry">
-    Create a single <code>LatitudeTelemetry</code> instance when your app starts
+    Create a single Telemetry instance when your app starts.
 
     You must pass the **LangChain SDK** so Telemetry can instrument it.
 
-    ```ts telemetry.ts
-    import { LatitudeTelemetry } from '@latitude-data/telemetry'
-    import * as LangchainCallbacks from '@langchain/core/callbacks/manager'
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts telemetry.ts
+        import { LatitudeTelemetry } from '@latitude-data/telemetry'
+        import * as LangchainCallbacks from '@langchain/core/callbacks/manager'
 
-    export const telemetry = new LatitudeTelemetry(
-      process.env.LATITUDE_API_KEY,
-      {
-        instrumentations: {
-          langchain: {
-            callbackManagerModule: LangchainCallbacks, // This enables automatic tracing for the LangChain SDK
-          },
-        },
-      }
-    )
-    ```
+        export const telemetry = new LatitudeTelemetry(
+          process.env.LATITUDE_API_KEY,
+          {
+            instrumentations: {
+              langchain: {
+                callbackManagerModule: LangchainCallbacks, // This enables automatic tracing for the LangChain SDK
+              },
+            },
+          }
+        )
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python telemetry.py
+        import os
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(
+                instrumentors=[Instrumentors.LangChain],  # This enables automatic tracing for the LangChain SDK
+            ),
+        )
+        ```
+      </Tab>
+    </Tabs>
 
     <Info>
-      The Telemetry instance should only be created once. Any LangChain client
-      instantiated after this will be automatically traced.
+      The Telemetry instance should only be created once. Initialize it before
+      importing LangChain modules so subsequent clients are automatically
+      traced.
     </Info>
 
   </Step>
@@ -90,28 +127,69 @@ That’s it — prompts do **not** need to be created ahead of time.
   <Step title="Wrap your LangChain-powered feature">
     Wrap the code that calls LangChain using <code>telemetry.capture</code>.
 
-    ```ts
-    import { telemetry } from './telemetry'
-    import { createAgent } from "langchain";
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { telemetry } from './telemetry'
+        import { createAgent } from "langchain";
 
-    export async function generateSupportReply(input: string) {
-      return telemetry.capture(
-        {
-          projectId: 123, // The ID of your project in Latitude
-          path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
-        },
-        async () => {
+        export async function generateSupportReply(input: string) {
+          return telemetry.capture(
+            {
+              projectId: 123, // The ID of your project in Latitude
+              path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
+            },
+            async () => {
 
-          // Your regular LLM-powered feature code here
-          const agent = createAgent({ model: 'claude-sonnet-4-5' });
-          const result = await agent.invoke(...);
+              // Your regular LLM-powered feature code here
+              const agent = createAgent({ model: 'claude-sonnet-4-5' });
+              const result = await agent.invoke(...);
 
-          // You can return anything you want — the value is passed through unchanged
-          return result;
+              // You can return anything you want — the value is passed through unchanged
+              return result;
+            }
+          )
         }
-      )
-    }
-    ```
+        ```
+      </Tab>
+      <Tab title="Python">
+        You can use the `capture` method as a decorator (recommended) or as a context manager:
+
+        ```python Using decorator (recommended)
+        from telemetry import telemetry
+        from langchain_openai import ChatOpenAI
+        from langchain_core.messages import HumanMessage
+
+        @telemetry.capture(
+            project_id=123,  # The ID of your project in Latitude
+            path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+        )
+        def generate_support_reply(input: str) -> str:
+            llm = ChatOpenAI(model="gpt-4o")
+            messages = [HumanMessage(content=input)]
+            response = llm.invoke(messages)
+
+            return response.content
+        ```
+
+        ```python Using context manager
+        from telemetry import telemetry
+        from langchain_openai import ChatOpenAI
+        from langchain_core.messages import HumanMessage
+
+        def generate_support_reply(input: str) -> str:
+            with telemetry.capture(
+                project_id=123,  # The ID of your project in Latitude
+                path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+            ):
+                llm = ChatOpenAI(model="gpt-4o")
+                messages = [HumanMessage(content=input)]
+                response = llm.invoke(messages)
+
+                return response.content
+        ```
+      </Tab>
+    </Tabs>
 
     <Info>
     The `path`:
@@ -142,6 +220,6 @@ Each LangChain call appears as a child span under the captured prompt execution,
 
 ---
 
-## That’s it
+## That's it
 
 No changes to your LangChain calls, no special return values, and no extra plumbing — just wrap the feature you want to observe.

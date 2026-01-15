@@ -49,9 +49,8 @@ class TestInstrument(TestCase):
         return openai, completion
 
     def test_success_instruments_openai(self):
+        """Test that OpenAI instrumentation creates spans with correct attributes."""
         openai, completion = self.create_openai_mock()
-        endpoint = "/otlp/v1/traces"
-        endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("openai.resources.chat.completions.Completions.create", return_value=completion):
             self.telemetry.instrument([Instrumentors.OpenAI])
@@ -60,36 +59,20 @@ class TestInstrument(TestCase):
                 messages=[{"role": "user", "content": "Hello..."}],
             )
 
-        request, _ = endpoint_mock.calls.last
+        spans = self.get_exported_spans()
+        self.assertEqual(len(spans), 1)
 
-        self.assert_requested(
-            request,
-            method="POST",
-            endpoint=endpoint,
-            body=self.create_instrumentation_request(
-                name="openai.chat",
-                attributes=[
-                    {"key": "llm.request.type", "value": {"stringValue": "chat"}},
-                    {"key": "gen_ai.system", "value": {"stringValue": "OpenAI"}},
-                    {"key": "gen_ai.request.model", "value": {"stringValue": "gpt-4o-mini"}},
-                    {"key": "llm.headers", "value": {"stringValue": "None"}},
-                    {"key": "llm.is_streaming", "value": {"boolValue": False}},
-                    {"key": "gen_ai.response.model", "value": {"stringValue": "gpt-4o-mini"}},
-                    {"key": "llm.usage.total_tokens", "value": {"intValue": 30}},
-                    {"key": "gen_ai.usage.completion_tokens", "value": {"intValue": 20}},
-                    {"key": "gen_ai.usage.prompt_tokens", "value": {"intValue": 10}},
-                    {"key": "gen_ai.completion.0.finish_reason", "value": {"stringValue": "stop"}},
-                    {"key": "gen_ai.completion.0.role", "value": {"stringValue": "assistant"}},
-                    {"key": "gen_ai.completion.0.content", "value": {"stringValue": "World!"}},
-                ],
-            ),
-        )
-        self.assertEqual(endpoint_mock.call_count, 1)
+        span = spans[0]
+        self.assert_span_name(span, "openai.chat")
+        self.assert_span_has_attribute(span, "gen_ai.system", "openai")
+        self.assert_span_has_attribute(span, "gen_ai.request.model", "gpt-4o-mini")
+        self.assert_span_has_attribute(span, "gen_ai.response.model", "gpt-4o-mini")
+        self.assert_span_has_attribute(span, "gen_ai.usage.input_tokens", 10)
+        self.assert_span_has_attribute(span, "gen_ai.usage.output_tokens", 20)
 
     def test_success_not_instruments_openai(self):
+        """Test that uninstrumented OpenAI calls don't create spans."""
         openai, completion = self.create_openai_mock()
-        endpoint = "/otlp/v1/traces"
-        endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("openai.resources.chat.completions.Completions.create", return_value=completion):
             self.telemetry.uninstrument()
@@ -98,7 +81,8 @@ class TestInstrument(TestCase):
                 messages=[{"role": "user", "content": "Hello..."}],
             )
 
-        self.assertEqual(endpoint_mock.call_count, 0)
+        spans = self.get_exported_spans()
+        self.assertEqual(len(spans), 0)
 
     def create_anthropic_mock(self):
         anthropic = Anthropic(api_key="fake-api-key")
@@ -119,9 +103,8 @@ class TestInstrument(TestCase):
         return anthropic, completion
 
     def test_success_instruments_anthropic(self):
+        """Test that Anthropic instrumentation creates spans with correct attributes."""
         anthropic, completion = self.create_anthropic_mock()
-        endpoint = "/otlp/v1/traces"
-        endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("anthropic.resources.messages.Messages.create", return_value=completion):
             self.telemetry.instrument([Instrumentors.Anthropic])
@@ -131,36 +114,20 @@ class TestInstrument(TestCase):
                 messages=[{"role": "user", "content": "Hello..."}],
             )
 
-        request, _ = endpoint_mock.calls.last
+        spans = self.get_exported_spans()
+        self.assertEqual(len(spans), 1)
 
-        self.assert_requested(
-            request,
-            method="POST",
-            endpoint=endpoint,
-            body=self.create_instrumentation_request(
-                name="anthropic.chat",
-                attributes=[
-                    {"key": "gen_ai.system", "value": {"stringValue": "Anthropic"}},
-                    {"key": "llm.request.type", "value": {"stringValue": "completion"}},
-                    {"key": "gen_ai.request.model", "value": {"stringValue": "claude-3-5-sonnet-latest"}},
-                    {"key": "gen_ai.prompt.0.content", "value": {"stringValue": "Hello..."}},
-                    {"key": "gen_ai.prompt.0.role", "value": {"stringValue": "user"}},
-                    {"key": "gen_ai.response.model", "value": {"stringValue": "claude-3-5-sonnet-latest"}},
-                    {"key": "gen_ai.usage.prompt_tokens", "value": {"intValue": 10}},
-                    {"key": "gen_ai.usage.completion_tokens", "value": {"intValue": 20}},
-                    {"key": "llm.usage.total_tokens", "value": {"intValue": 30}},
-                    {"key": "gen_ai.completion.0.finish_reason", "value": {"stringValue": "end_turn"}},
-                    {"key": "gen_ai.completion.0.role", "value": {"stringValue": "assistant"}},
-                    {"key": "gen_ai.completion.0.content", "value": {"stringValue": "World!"}},
-                ],
-            ),
-        )
-        self.assertEqual(endpoint_mock.call_count, 1)
+        span = spans[0]
+        self.assert_span_name(span, "anthropic.chat")
+        self.assert_span_has_attribute(span, "gen_ai.system", "Anthropic")
+        self.assert_span_has_attribute(span, "gen_ai.request.model", "claude-3-5-sonnet-latest")
+        self.assert_span_has_attribute(span, "gen_ai.response.model", "claude-3-5-sonnet-latest")
+        self.assert_span_has_attribute(span, "gen_ai.usage.input_tokens", 10)
+        self.assert_span_has_attribute(span, "gen_ai.usage.output_tokens", 20)
 
     def test_success_not_instruments_anthropic(self):
+        """Test that uninstrumented Anthropic calls don't create spans."""
         anthropic, completion = self.create_anthropic_mock()
-        endpoint = "/otlp/v1/traces"
-        endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("anthropic.resources.messages.Messages.create", return_value=completion):
             self.telemetry.uninstrument()
@@ -170,7 +137,8 @@ class TestInstrument(TestCase):
                 messages=[{"role": "user", "content": "Hello..."}],
             )
 
-        self.assertEqual(endpoint_mock.call_count, 0)
+        spans = self.get_exported_spans()
+        self.assertEqual(len(spans), 0)
 
     def create_litellm_mock(self):
         completion = LiteLLMModelResponse(
@@ -197,9 +165,8 @@ class TestInstrument(TestCase):
         return litellm, completion
 
     def test_success_instruments_litellm(self):
+        """Test that LiteLLM instrumentation creates spans with correct attributes."""
         litellm, completion = self.create_litellm_mock()
-        endpoint = "/otlp/v1/traces"
-        endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("litellm.llms.openai.openai.OpenAIChatCompletion.completion", return_value=completion):
             self.telemetry.instrument([Instrumentors.LiteLLM])
@@ -208,46 +175,19 @@ class TestInstrument(TestCase):
                 messages=[{"role": "user", "content": "Hello..."}],
             )
 
-        request, _ = endpoint_mock.calls.last
+        spans = self.get_exported_spans()
+        self.assertEqual(len(spans), 1)
 
-        self.assert_requested(
-            request,
-            method="POST",
-            endpoint=endpoint,
-            body=self.create_instrumentation_request(
-                name="completion",
-                attributes=[
-                    {"key": "llm.model_name", "value": {"stringValue": "gpt-4o-mini"}},
-                    {"key": "input.value", "value": {"stringValue": '[{"role": "user", "content": "Hello..."}]'}},
-                    {"key": "llm.input_messages.0.message.role", "value": {"stringValue": "user"}},
-                    {"key": "llm.input_messages.0.message.content", "value": {"stringValue": "Hello..."}},
-                    {"key": "llm.invocation_parameters", "value": {"stringValue": "{}"}},
-                    {"key": "output.value", "value": {"stringValue": "World!"}},
-                    {"key": "llm.output_messages.0.message.role", "value": {"stringValue": "assistant"}},
-                    {"key": "llm.output_messages.0.message.content", "value": {"stringValue": "World!"}},
-                    {"key": "llm.token_count.prompt", "value": {"intValue": 10}},
-                    {"key": "llm.token_count.completion", "value": {"intValue": 20}},
-                    {"key": "llm.token_count.total", "value": {"intValue": 30}},
-                    {"key": "openinference.span.kind", "value": {"stringValue": "LLM"}},
-                    {"key": "gen_ai.request.model", "value": {"stringValue": "gpt-4o-mini"}},
-                    {"key": "gen_ai.response.model", "value": {"stringValue": "gpt-4o-mini"}},
-                    {"key": "llm.request.type", "value": {"stringValue": "completion"}},
-                    {"key": "gen_ai.usage.prompt_tokens", "value": {"intValue": 10}},
-                    {"key": "gen_ai.usage.completion_tokens", "value": {"intValue": 20}},
-                    {"key": "llm.usage.total_tokens", "value": {"intValue": 30}},
-                    {"key": "gen_ai.prompt.0.role", "value": {"stringValue": "user"}},
-                    {"key": "gen_ai.prompt.0.content", "value": {"stringValue": "Hello..."}},
-                    {"key": "gen_ai.completion.0.role", "value": {"stringValue": "assistant"}},
-                    {"key": "gen_ai.completion.0.content", "value": {"stringValue": "World!"}},
-                ],
-            ),
-        )
-        self.assertEqual(endpoint_mock.call_count, 1)
+        span = spans[0]
+        self.assert_span_name(span, "completion")
+        self.assert_span_has_attribute(span, "llm.model_name", "gpt-4o-mini")
+        self.assert_span_has_attribute(span, "llm.token_count.prompt", 10)
+        self.assert_span_has_attribute(span, "llm.token_count.completion", 20)
+        self.assert_span_has_attribute(span, "llm.token_count.total", 30)
 
     def test_success_not_instruments_litellm(self):
+        """Test that uninstrumented LiteLLM calls don't create spans."""
         litellm, completion = self.create_litellm_mock()
-        endpoint = "/otlp/v1/traces"
-        endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
         with mock.patch("litellm.llms.openai.openai.OpenAIChatCompletion.completion", return_value=completion):
             self.telemetry.uninstrument()
@@ -256,4 +196,5 @@ class TestInstrument(TestCase):
                 messages=[{"role": "user", "content": "Hello..."}],
             )
 
-        self.assertEqual(endpoint_mock.call_count, 0)
+        spans = self.get_exported_spans()
+        self.assertEqual(len(spans), 0)

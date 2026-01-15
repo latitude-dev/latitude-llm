@@ -14,7 +14,7 @@ After completing these steps:
 - You can inspect inputs/outputs, measure latency, and debug Cohere-powered features from the Latitude dashboard.
 
 <Check>
-  You’ll keep calling Cohere exactly as you do today — Telemetry simply observes
+  You'll keep calling Cohere exactly as you do today — Telemetry simply observes
   and enriches those calls.
 </Check>
 
@@ -26,9 +26,9 @@ Before you start, make sure you have:
 
 - A **Latitude account** and **API key**
 - A **Latitude project ID**
-- A Node.js-based project that uses the **Cohere SDK**
+- A Node.js or Python-based project that uses the **Cohere SDK**
 
-That’s it — prompts do **not** need to be created ahead of time.
+That's it — prompts do **not** need to be created ahead of time.
 
 ---
 
@@ -39,44 +39,80 @@ That’s it — prompts do **not** need to be created ahead of time.
   <Step title="Install requirements">
     Add the Latitude Telemetry package to your project:
 
-    <CodeGroup>
-      ```bash npm
-      npm add @latitude-data/telemetry
-      ```
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm add @latitude-data/telemetry
+          ```
 
-      ```bash pnpm
-      pnpm add @latitude-data/telemetry
-      ```
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry
+          ```
 
-      ```bash yarn
-      yarn add @latitude-data/telemetry
-      ```
+          ```bash yarn
+          yarn add @latitude-data/telemetry
+          ```
 
-      ```bash bun
-      bun add @latitude-data/telemetry
-      ```
-    </CodeGroup>
+          ```bash bun
+          bun add @latitude-data/telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
 
   </Step>
 
   <Step title="Initialize Latitude Telemetry">
-    Create a single <code>LatitudeTelemetry</code> instance when your app starts
+    Create a single Telemetry instance when your app starts.
 
     You must pass the **Cohere SDK** so Telemetry can instrument it.
 
-    ```ts telemetry.ts
-    import { LatitudeTelemetry } from '@latitude-data/telemetry'
-    import * as Cohere from 'cohere-ai'
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts telemetry.ts
+        import { LatitudeTelemetry } from '@latitude-data/telemetry'
+        import * as Cohere from 'cohere-ai'
 
-    export const telemetry = new LatitudeTelemetry(
-      process.env.LATITUDE_API_KEY,
-      {
-        instrumentations: {
-          cohere: Cohere, // This enables automatic tracing for the Cohere SDK
-        },
-      }
-    )
-    ```
+        export const telemetry = new LatitudeTelemetry(
+          process.env.LATITUDE_API_KEY,
+          {
+            instrumentations: {
+              cohere: Cohere, // This enables automatic tracing for the Cohere SDK
+            },
+          }
+        )
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python telemetry.py
+        import os
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(
+                instrumentors=[Instrumentors.Cohere],  # This enables automatic tracing for the Cohere SDK
+            ),
+        )
+        ```
+      </Tab>
+    </Tabs>
 
     <Info>
       The Telemetry instance should only be created once. Any Cohere client
@@ -88,28 +124,73 @@ That’s it — prompts do **not** need to be created ahead of time.
   <Step title="Wrap your Cohere-powered feature">
     Wrap the code that calls Cohere using <code>telemetry.capture</code>.
 
-    ```ts
-    import { telemetry } from './telemetry'
-    import { CohereClient } from 'cohere-ai'
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { telemetry } from './telemetry'
+        import { CohereClient } from 'cohere-ai'
 
-    export async function generateSupportReply(input: string) {
-      return telemetry.capture(
-        {
-          projectId: 123, // The ID of your project in Latitude
-          path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
-        },
-        async () => {
+        export async function generateSupportReply(input: string) {
+          return telemetry.capture(
+            {
+              projectId: 123, // The ID of your project in Latitude
+              path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
+            },
+            async () => {
 
-          // Your regular LLM-powered feature code here
-          const client = new CohereClient({ ... });
-          const response = await client.generate({ ... })
+              // Your regular LLM-powered feature code here
+              const client = new CohereClient({ ... });
+              const response = await client.generate({ ... })
 
-          // You can return anything you want — the value is passed through unchanged
-          return response;
+              // You can return anything you want — the value is passed through unchanged
+              return response;
+            }
+          )
         }
-      )
-    }
-    ```
+        ```
+      </Tab>
+      <Tab title="Python">
+        You can use the `capture` method as a decorator (recommended) or as a context manager:
+
+        ```python Using decorator (recommended)
+        import os
+        import cohere
+        from telemetry import telemetry
+
+        @telemetry.capture(
+            project_id=123,  # The ID of your project in Latitude
+            path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+        )
+        def generate_support_reply(input: str) -> str:
+            client = cohere.Client(api_key=os.environ["COHERE_API_KEY"])
+            response = client.chat(
+                model="command-a-03-2025",
+                message=input,
+            )
+
+            return response.text
+        ```
+
+        ```python Using context manager
+        import os
+        import cohere
+        from telemetry import telemetry
+
+        def generate_support_reply(input: str) -> str:
+            with telemetry.capture(
+                project_id=123,  # The ID of your project in Latitude
+                path="generate-support-reply",  # Add a path to identify this prompt in Latitude
+            ):
+                client = cohere.Client(api_key=os.environ["COHERE_API_KEY"])
+                response = client.chat(
+                    model="command-a-03-2025",
+                    message=input,
+                )
+
+                return response.text
+        ```
+      </Tab>
+    </Tabs>
 
     <Info>
     The `path`:
@@ -140,6 +221,6 @@ Each Cohere call appears as a child span under the captured prompt execution, gi
 
 ---
 
-## That’s it
+## That's it
 
 No changes to your Cohere calls, no special return values, and no extra plumbing — just wrap the feature you want to observe.

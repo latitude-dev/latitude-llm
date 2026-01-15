@@ -1,5 +1,5 @@
 import { database } from '../../../../client'
-import { ATTRIBUTES, Otlp, SpanStatus, SpanType } from '../../../../constants'
+import { ATTRIBUTES, Otlp, SpanStatus } from '../../../../constants'
 import { Result } from '../../../../lib/Result'
 import { type ApiKey } from '../../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
@@ -50,8 +50,8 @@ export async function ingestSpans(
           captureException(extracting.error)
           continue
         }
-        const type = extracting.value
-        if (type === SpanType.Unknown) continue
+        // Note: We no longer skip Unknown spans to preserve trace hierarchy
+        // (e.g., DSPy CHAIN spans that parent LLM completion spans)
 
         const extractingApiKeyAndWorkspace = await extractApiKeyAndWorkspace(
           { apiKeyId, workspaceId, attributes },

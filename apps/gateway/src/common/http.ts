@@ -403,6 +403,7 @@ enum Methods {
  */
 enum MediaTypes {
   JSON = 'application/json',
+  PROTOBUF = 'application/x-protobuf',
   SSE = 'text/event-stream',
   TEXT = 'text/plain',
   HTML = 'text/html',
