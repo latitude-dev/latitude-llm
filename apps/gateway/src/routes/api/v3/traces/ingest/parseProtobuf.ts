@@ -1,5 +1,5 @@
 import type { Otlp } from '@latitude-data/constants'
-import root from '@opentelemetry/otlp-transformer/build/src/generated/root'
+import root from '@opentelemetry/otlp-transformer/build/src/generated/root.js'
 
 type ProtobufRoot = {
   opentelemetry: {
