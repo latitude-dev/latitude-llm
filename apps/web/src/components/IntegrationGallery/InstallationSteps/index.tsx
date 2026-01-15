@@ -34,21 +34,20 @@ function initializeCodeblockTypeScript(framework: FrameworkDefinition): string {
 import { LatitudeTelemetry } from '@latitude-data/telemetry'
 ${framework.autoInstrumentation.import}
 
-export const telemetry = new LatitudeTelemetry(
+const telemetry = new LatitudeTelemetry(
   process.env.LATITUDE_API_KEY,
   {
-  instrumentations: {
-    ${framework.autoInstrumentation.line}
-  },
+    instrumentations: {
+      ${framework.autoInstrumentation.line}
+    },
+  }
 )`.trim()
   }
 
   return `
 import { LatitudeTelemetry } from '@latitude-data/telemetry'
 
-export const telemetry = new LatitudeTelemetry(
-  process.env.LATITUDE_API_KEY,
-)`.trim()
+const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY)`.trim()
 }
 
 function initializeCodeblockPython(framework: FrameworkDefinition): string {
@@ -73,20 +72,27 @@ function implementationCodeblockTypeScript(
 
   if ('autoInstrumentation' in framework && framework.implementation) {
     return `
-import { telemetry } from './telemetry'
+import { LatitudeTelemetry } from '@latitude-data/telemetry'
+${framework.autoInstrumentation.import}
 ${framework.implementation.import}
 
-export async function generateSupportReply(input: string) {
+const telemetry = new LatitudeTelemetry(
+  process.env.LATITUDE_API_KEY,
+  {
+    instrumentations: {
+      ${framework.autoInstrumentation.line}
+    },
+  }
+)
+
+async function generateSupportReply(input: string) {
   return telemetry.capture(
     {
       projectId: process.env.LATITUDE_PROJECT_ID,
       path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
     },
     async () => {
-      // Your regular LLM-powered feature code here
 ${withIndent(framework.implementation.codeblock, 3)}
-
-      // You can return anything you want — the value is passed through unchanged
       return ${framework.implementation.return}
     }
   )
@@ -94,10 +100,11 @@ ${withIndent(framework.implementation.codeblock, 3)}
   }
 
   return `
-import { telemetry } from './telemetry'
-import { generateAIResponse } from './generateAIResponse'
+import { LatitudeTelemetry } from '@latitude-data/telemetry'
 
-export async function generateSupportReply(input: string) {
+const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY)
+
+async function generateSupportReply(input: string) {
   return telemetry.capture(
     {
       projectId: process.env.LATITUDE_PROJECT_ID,
@@ -105,10 +112,8 @@ export async function generateSupportReply(input: string) {
     },
     async () => {
       // Your AI generation code here
-      const response = await generateAIResponse(...);
-
-      // You can return anything you want — the value is passed through unchanged
-      return response;
+      const response = await generateAIResponse(...)
+      return response
     }
   )
 }`.trim()
@@ -118,18 +123,21 @@ function implementationCodeblockPython(framework: FrameworkDefinition): string {
   if (!hasPython(framework)) return ''
   const python = framework.python!
   return `
+import os
 ${python.implementation.imports.join('\n')}
-from telemetry import telemetry
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+telemetry = Telemetry(
+    os.environ["LATITUDE_API_KEY"],
+    TelemetryOptions(instrumentors=[${python.instrumentor}]),
+)
 
 @telemetry.capture(
     project_id=os.environ["LATITUDE_PROJECT_ID"],
     path="generate-support-reply",  # Add a path to identify this prompt in Latitude
 )
 def generate_support_reply(input: str) -> str:
-    # Your regular LLM-powered feature code here
 ${withIndent(python.implementation.codeblock, 1)}
-
-    # You can return anything you want — the value is passed through unchanged
     return ${python.implementation.return}`.trim()
 }
 
@@ -145,10 +153,12 @@ function ManualInstrumentationStep({
     >
       <CodeBlock language='ts' textWrap={false}>
         {`
-import { telemetry } from './telemetry'
+import { LatitudeTelemetry } from '@latitude-data/telemetry'
 ${framework.manualInstrumentation.completion.imports.join('\n')}
 
-export async function generateAIResponse(input: string) {
+const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY)
+
+async function generateAIResponse(input: string) {
   const model = '${framework.manualInstrumentation.completion.model}'
 
   // 1) Start the completion span
@@ -168,7 +178,6 @@ ${withIndent(framework.manualInstrumentation.completion.codeblock, 2)}
 
     ${framework.manualInstrumentation.completion.return}
   } catch (error) {
-
     // Make sure to close the span even on errors
     span.fail(error)
     throw error

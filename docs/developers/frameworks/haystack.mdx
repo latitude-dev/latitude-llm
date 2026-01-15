@@ -64,7 +64,7 @@ That's it — prompts do **not** need to be created ahead of time.
 
     You must enable the **Haystack** instrumentor so Telemetry can trace it.
 
-    ```python telemetry.py
+    ```python
     import os
     from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
@@ -89,48 +89,52 @@ That's it — prompts do **not** need to be created ahead of time.
     You can use the `capture` method as a decorator (recommended) or as a context manager:
 
     ```python Using decorator (recommended)
+    import os
     from haystack import Pipeline
     from haystack.components.generators import OpenAIGenerator
     from haystack.components.builders import PromptBuilder
-    from telemetry import telemetry
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.Haystack]),
+    )
 
     @telemetry.capture(
         project_id=123,  # The ID of your project in Latitude
         path="generate-support-reply",  # Add a path to identify this prompt in Latitude
     )
     def generate_support_reply(input: str) -> str:
-        # Your regular Haystack pipeline code here
         pipeline = Pipeline()
         pipeline.add_component("prompt_builder", PromptBuilder(template="Answer: {{query}}"))
         pipeline.add_component("llm", OpenAIGenerator(model="gpt-4o"))
         pipeline.connect("prompt_builder", "llm")
-
         result = pipeline.run({"prompt_builder": {"query": input}})
-
-        # You can return anything you want — the value is passed through unchanged
         return result["llm"]["replies"][0]
     ```
 
     ```python Using context manager
+    import os
     from haystack import Pipeline
     from haystack.components.generators import OpenAIGenerator
     from haystack.components.builders import PromptBuilder
-    from telemetry import telemetry
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.Haystack]),
+    )
 
     def generate_support_reply(input: str) -> str:
         with telemetry.capture(
             project_id=123,  # The ID of your project in Latitude
             path="generate-support-reply",  # Add a path to identify this prompt in Latitude
         ):
-            # Your regular Haystack pipeline code here
             pipeline = Pipeline()
             pipeline.add_component("prompt_builder", PromptBuilder(template="Answer: {{query}}"))
             pipeline.add_component("llm", OpenAIGenerator(model="gpt-4o"))
             pipeline.connect("prompt_builder", "llm")
-
             result = pipeline.run({"prompt_builder": {"query": input}})
-
-            # You can return anything you want — the value is passed through unchanged
             return result["llm"]["replies"][0]
     ```
 
