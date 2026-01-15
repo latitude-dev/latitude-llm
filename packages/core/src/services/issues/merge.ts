@@ -55,13 +55,30 @@ export async function mergeIssues(
     return Result.ok<MergeResult>({ winner: issue, mergedIssues: [] })
   }
 
-  const totals = await getHistogramTotals({
+  const issuesWithEvaluations = await getIssuesWithEvaluations({
     workspaceId: workspace.id,
     issueIds: similar.map(({ issue }) => issue.id),
   })
+
+  if (issuesWithEvaluations.has(issue.id)) {
+    return Result.ok<MergeResult>({ winner: issue, mergedIssues: [] })
+  }
+
+  const eligibleSimilar = similar.filter(
+    ({ issue }) => !issuesWithEvaluations.has(issue.id),
+  )
+
+  if (eligibleSimilar.length <= 1) {
+    return Result.ok<MergeResult>({ winner: issue, mergedIssues: [] })
+  }
+
+  const totals = await getHistogramTotals({
+    workspaceId: workspace.id,
+    issueIds: eligibleSimilar.map(({ issue }) => issue.id),
+  })
   const { winner, mergedIssues } = pickWinner({
     anchorIssue: issue,
-    candidates: similar.map(({ issue }) => issue),
+    candidates: eligibleSimilar.map(({ issue }) => issue),
     totals,
   })
 
@@ -252,6 +269,36 @@ async function getHistogramTotals({
   rows.forEach((row) => totals.set(row.issueId, row.total ?? 0))
 
   return totals
+}
+
+async function getIssuesWithEvaluations({
+  workspaceId,
+  issueIds,
+}: {
+  workspaceId: number
+  issueIds: number[]
+}): Promise<Set<number>> {
+  const result = new Set<number>()
+  if (issueIds.length === 0) return result
+
+  const rows = await database
+    .selectDistinct({ issueId: evaluationVersions.issueId })
+    .from(evaluationVersions)
+    .where(
+      and(
+        eq(evaluationVersions.workspaceId, workspaceId),
+        inArray(evaluationVersions.issueId, issueIds),
+        isNull(evaluationVersions.deletedAt),
+      ),
+    )
+
+  rows.forEach((row) => {
+    if (row.issueId !== null) {
+      result.add(row.issueId)
+    }
+  })
+
+  return result
 }
 
 function pickWinner({
