@@ -59,71 +59,52 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must enable the **LiteLLM** instrumentor so Telemetry can trace it.
-
-    ```python telemetry.py
-    import os
-    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-    telemetry = Telemetry(
-        os.environ["LATITUDE_API_KEY"],
-        TelemetryOptions(
-            instrumentors=[Instrumentors.LiteLLM],  # This enables automatic tracing for LiteLLM
-        ),
-    )
-    ```
-
-    <Info>
-      The Telemetry instance should only be created once. Any LiteLLM calls
-      made after this will be automatically traced.
-    </Info>
-
-  </Step>
-
   <Step title="Wrap your LiteLLM-powered feature">
-    Wrap the code that calls LiteLLM using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that calls LiteLLM using <code>telemetry.capture</code>.
 
     You can use the `capture` method as a decorator (recommended) or as a context manager:
 
     ```python Using decorator (recommended)
+    import os
     import litellm
-    from telemetry import telemetry
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.LiteLLM]),
+    )
 
     @telemetry.capture(
         project_id=123,  # The ID of your project in Latitude
         path="generate-support-reply",  # Add a path to identify this prompt in Latitude
     )
     def generate_support_reply(input: str) -> str:
-        # Your regular LLM-powered feature code here
-        # LiteLLM supports 100+ providers with a unified interface
         response = litellm.completion(
             model="gpt-4o",  # or "anthropic/claude-3-sonnet", "ollama/llama3", etc.
             messages=[{"role": "user", "content": input}],
         )
-
-        # You can return anything you want — the value is passed through unchanged
         return response.choices[0].message.content
     ```
 
     ```python Using context manager
+    import os
     import litellm
-    from telemetry import telemetry
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.LiteLLM]),
+    )
 
     def generate_support_reply(input: str) -> str:
         with telemetry.capture(
             project_id=123,  # The ID of your project in Latitude
             path="generate-support-reply",  # Add a path to identify this prompt in Latitude
         ):
-            # Your regular LLM-powered feature code here
             response = litellm.completion(
                 model="gpt-4o",
                 messages=[{"role": "user", "content": input}],
             )
-
-            # You can return anything you want — the value is passed through unchanged
             return response.choices[0].message.content
     ```
 

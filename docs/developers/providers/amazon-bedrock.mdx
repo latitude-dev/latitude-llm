@@ -78,56 +78,8 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must pass the **Amazon Bedrock SDK** so Telemetry can instrument it.
-
-    <Tabs>
-      <Tab title="TypeScript">
-        ```ts
-        import { LatitudeTelemetry } from '@latitude-data/telemetry'
-        import * as Bedrock from '@aws-sdk/client-bedrock-runtime'
-
-        const telemetry = new LatitudeTelemetry(
-          process.env.LATITUDE_API_KEY,
-          {
-            instrumentations: {
-              bedrock: Bedrock, // This enables automatic tracing for the Amazon Bedrock SDK
-            },
-          }
-        )
-        ```
-
-        <Info>
-          The Telemetry instance should only be created once. Any Amazon Bedrock client
-          instantiated after this will be automatically traced.
-        </Info>
-      </Tab>
-      <Tab title="Python">
-        ```python
-        import os
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(
-                instrumentors=[Instrumentors.Bedrock],  # This enables automatic tracing for the Amazon Bedrock SDK
-            ),
-        )
-        ```
-
-        <Info>
-          The Telemetry instance should only be created once. Any Amazon Bedrock client
-          instantiated after this will be automatically traced.
-        </Info>
-      </Tab>
-    </Tabs>
-
-  </Step>
-
   <Step title="Wrap your Bedrock-powered feature">
-    Wrap the code that calls Amazon Bedrock using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that calls Amazon Bedrock using <code>telemetry.capture</code>.
 
     <Tabs>
       <Tab title="TypeScript">

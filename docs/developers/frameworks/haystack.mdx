@@ -59,32 +59,8 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must enable the **Haystack** instrumentor so Telemetry can trace it.
-
-    ```python
-    import os
-    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-    telemetry = Telemetry(
-        os.environ["LATITUDE_API_KEY"],
-        TelemetryOptions(
-            instrumentors=[Instrumentors.Haystack],  # This enables automatic tracing for Haystack
-        ),
-    )
-    ```
-
-    <Info>
-      The Telemetry instance should only be created once. Any Haystack pipeline
-      runs after this will be automatically traced.
-    </Info>
-
-  </Step>
-
   <Step title="Wrap your Haystack-powered feature">
-    Wrap the code that runs Haystack pipelines using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that runs Haystack pipelines using <code>telemetry.capture</code>.
 
     You can use the `capture` method as a decorator (recommended) or as a context manager:
 

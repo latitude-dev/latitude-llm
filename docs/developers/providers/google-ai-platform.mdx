@@ -78,56 +78,8 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must pass the **Google AI Platform SDK** so Telemetry can instrument it.
-
-    <Tabs>
-      <Tab title="TypeScript">
-        ```ts
-        import { LatitudeTelemetry } from '@latitude-data/telemetry'
-        import * as AIPlatform from '@google-cloud/aiplatform'
-
-        const telemetry = new LatitudeTelemetry(
-          process.env.LATITUDE_API_KEY,
-          {
-            instrumentations: {
-              aiplatform: AIPlatform, // This enables automatic tracing for the Google AI Platform SDK
-            },
-          }
-        )
-        ```
-
-        <Info>
-          The Telemetry instance should only be created once. Any Google AI Platform client
-          instantiated after this will be automatically traced.
-        </Info>
-      </Tab>
-      <Tab title="Python">
-        ```python
-        import os
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(
-                instrumentors=[Instrumentors.VertexAI],  # Google AI Platform uses the VertexAI instrumentor
-            ),
-        )
-        ```
-
-        <Info>
-          The Telemetry instance should only be created once. Any Google AI Platform client
-          instantiated after this will be automatically traced.
-        </Info>
-      </Tab>
-    </Tabs>
-
-  </Step>
-
   <Step title="Wrap your Google AI Platform-powered feature">
-    Wrap the code that calls Google AI Platform using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that calls Google AI Platform using <code>telemetry.capture</code>.
 
     <Tabs>
       <Tab title="TypeScript">

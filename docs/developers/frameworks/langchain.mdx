@@ -78,60 +78,8 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must pass the **LangChain SDK** so Telemetry can instrument it.
-
-    <Tabs>
-      <Tab title="TypeScript">
-        ```ts
-        import { LatitudeTelemetry } from '@latitude-data/telemetry'
-        import * as LangchainCallbacks from '@langchain/core/callbacks/manager'
-
-        const telemetry = new LatitudeTelemetry(
-          process.env.LATITUDE_API_KEY,
-          {
-            instrumentations: {
-              langchain: {
-                callbackManagerModule: LangchainCallbacks, // This enables automatic tracing for the LangChain SDK
-              },
-            },
-          }
-        )
-        ```
-
-        <Info>
-          The Telemetry instance should only be created once. Initialize it before
-          importing LangChain modules so subsequent clients are automatically
-          traced.
-        </Info>
-      </Tab>
-      <Tab title="Python">
-        ```python
-        import os
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(
-                instrumentors=[Instrumentors.LangChain],  # This enables automatic tracing for the LangChain SDK
-            ),
-        )
-        ```
-
-        <Info>
-          The Telemetry instance should only be created once. Initialize it before
-          importing LangChain modules so subsequent clients are automatically
-          traced.
-        </Info>
-      </Tab>
-    </Tabs>
-
-  </Step>
-
   <Step title="Wrap your LangChain-powered feature">
-    Wrap the code that calls LangChain using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that calls LangChain using <code>telemetry.capture</code>.
 
     <Tabs>
       <Tab title="TypeScript">

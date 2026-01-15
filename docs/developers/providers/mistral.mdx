@@ -57,40 +57,21 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must enable the **MistralAI** instrumentor so Telemetry can trace it.
-
-    ```python telemetry.py
-    import os
-    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-    telemetry = Telemetry(
-        os.environ["LATITUDE_API_KEY"],
-        TelemetryOptions(
-            instrumentors=[Instrumentors.MistralAI],  # This enables automatic tracing for the Mistral AI SDK
-        ),
-    )
-    ```
-
-    <Info>
-      The Telemetry instance should only be created once. Initialize it before
-      importing `mistralai` so clients are automatically traced.
-    </Info>
-
-  </Step>
-
   <Step title="Wrap your Mistral AI-powered feature">
-    Wrap the code that calls Mistral AI using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that calls Mistral AI using <code>telemetry.capture</code>.
 
     You can use the `capture` method as a decorator (recommended) or as a context manager:
 
     ```python Using decorator (recommended)
     import os
-    from telemetry import telemetry
     from mistralai import Mistral
     from mistralai.models import UserMessage
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.MistralAI]),
+    )
 
     @telemetry.capture(
         project_id=123,  # The ID of your project in Latitude
@@ -102,15 +83,19 @@ That's it — prompts do **not** need to be created ahead of time.
             model="mistral-small-latest",
             messages=[UserMessage(role="user", content=input)],
         )
-
         return response.choices[0].message.content
     ```
 
     ```python Using context manager
     import os
-    from telemetry import telemetry
     from mistralai import Mistral
     from mistralai.models import UserMessage
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.MistralAI]),
+    )
 
     def generate_support_reply(input: str) -> str:
         with telemetry.capture(
@@ -122,7 +107,6 @@ That's it — prompts do **not** need to be created ahead of time.
                 model="mistral-small-latest",
                 messages=[UserMessage(role="user", content=input)],
             )
-
             return response.choices[0].message.content
     ```
 
