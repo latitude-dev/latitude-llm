@@ -20,4 +20,3 @@ export const updateLatitudeGoalAction = authProcedure
 
     return result
   })
-

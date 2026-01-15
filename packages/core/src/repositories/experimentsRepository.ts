@@ -403,12 +403,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
     const completedEstimation = fullEvalCyclesEstimation
 
     return {
-      ...omit(row, [
-        'passedEvals',
-        'failedEvals',
-        'evalErrors',
-        'totalScore',
-      ]),
+      ...omit(row, ['passedEvals', 'failedEvals', 'evalErrors', 'totalScore']),
 
       results: {
         total: row.metadata.count,

@@ -114,7 +114,11 @@ describe('startOptimization', () => {
     await expect(
       startOptimization({
         evaluation,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document,
         baselineCommit: commit,
         project,
@@ -132,7 +136,11 @@ describe('startOptimization', () => {
     await expect(
       startOptimization({
         evaluation,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document,
         baselineCommit: commit,
         project,
@@ -152,7 +160,11 @@ describe('startOptimization', () => {
     await expect(
       startOptimization({
         evaluation,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: invalidDocument,
         baselineCommit: commit,
         project,
@@ -195,7 +207,11 @@ describe('startOptimization', () => {
     await expect(
       startOptimization({
         evaluation: humanEvaluation,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document,
         baselineCommit: commit,
         project,
@@ -264,7 +280,11 @@ value1
       startOptimization({
         evaluation: evalForDoc,
         dataset: datasetWithWrongCols,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: docWithParams,
         baselineCommit: commitWithParams,
         project: p2,
@@ -278,10 +298,207 @@ value1
     expect(publisherMock).not.toHaveBeenCalled()
   })
 
+  it('fails when no optimization scope is provided', async () => {
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {},
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('At least one optimization scope is required'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when scope has neither configuration nor instructions enabled', async () => {
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: {
+            configuration: false,
+            instructions: false,
+          },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('At least one optimization scope is required'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when budget time is negative', async () => {
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: { instructions: true },
+          budget: { time: -1 },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Time budget must be a number between 0 and 2 hours'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when budget time exceeds maximum (2 hours)', async () => {
+    const maxTime = 2 * 60 * 60 // 2 hours in seconds
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: { instructions: true },
+          budget: { time: maxTime + 1 },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Time budget must be a number between 0 and 2 hours'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when budget tokens is negative', async () => {
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: { instructions: true },
+          budget: { tokens: -1 },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Token budget must be a number between 0 and 100M'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when budget tokens exceeds maximum (100M)', async () => {
+    const maxTokens = 100_000_000
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: { instructions: true },
+          budget: { tokens: maxTokens + 1 },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Token budget must be a number between 0 and 100M'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('succeeds with valid budget configuration', async () => {
+    const result = await startOptimization({
+      evaluation,
+      configuration: {
+        scope: { instructions: true },
+        budget: { time: 300, tokens: 50_000_000 },
+      },
+      document,
+      baselineCommit: commit,
+      project,
+      workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result.optimization).toBeDefined()
+    expect(result.optimization.configuration.budget).toEqual({
+      time: 300,
+      tokens: 50_000_000,
+    })
+
+    expect(mocks.optimizationsQueue).toHaveBeenCalledTimes(1)
+    expect(publisherMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('succeeds with scope.configuration enabled', async () => {
+    const result = await startOptimization({
+      evaluation,
+      configuration: {
+        scope: { configuration: true },
+      },
+      document,
+      baselineCommit: commit,
+      project,
+      workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result.optimization).toBeDefined()
+    expect(result.optimization.configuration.scope).toEqual({
+      configuration: true,
+    })
+
+    expect(mocks.optimizationsQueue).toHaveBeenCalledTimes(1)
+    expect(publisherMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('succeeds with both scope options enabled', async () => {
+    const result = await startOptimization({
+      evaluation,
+      configuration: {
+        scope: { configuration: true, instructions: true },
+      },
+      document,
+      baselineCommit: commit,
+      project,
+      workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result.optimization).toBeDefined()
+    expect(result.optimization.configuration.scope).toEqual({
+      configuration: true,
+      instructions: true,
+    })
+
+    expect(mocks.optimizationsQueue).toHaveBeenCalledTimes(1)
+    expect(publisherMock).toHaveBeenCalledTimes(1)
+  })
+
   it('succeeds when starting optimization without dataset', async () => {
     const result = await startOptimization({
       evaluation,
-      configuration: {},
+      configuration: {
+        scope: {
+          instructions: true,
+        },
+      },
       document,
       baselineCommit: commit,
       project,
@@ -324,7 +541,11 @@ value1
   it('stores the baseline prompt correctly', async () => {
     const result = await startOptimization({
       evaluation,
-      configuration: {},
+      configuration: {
+        scope: {
+          instructions: true,
+        },
+      },
       document,
       baselineCommit: commit,
       project,
@@ -338,6 +559,9 @@ value1
     const configuration = {
       parameters: {
         testParam: { column: 'param1', isPii: true },
+      },
+      scope: {
+        instructions: true,
       },
     }
 
@@ -435,7 +659,11 @@ value1
         startOptimization({
           evaluation: evaluationForDoc,
           dataset,
-          configuration: {},
+          configuration: {
+            scope: {
+              instructions: true,
+            },
+          },
           document: documentWithParams,
           baselineCommit: commitWithParams,
           project: projectWithParams,
@@ -464,7 +692,11 @@ value2
         startOptimization({
           evaluation: evaluationForDoc,
           dataset,
-          configuration: {},
+          configuration: {
+            scope: {
+              instructions: true,
+            },
+          },
           document: documentWithParams,
           baselineCommit: commitWithParams,
           project: projectWithParams,
@@ -494,7 +726,11 @@ value3
         startOptimization({
           evaluation: evaluationForDoc,
           dataset,
-          configuration: {},
+          configuration: {
+            scope: {
+              instructions: true,
+            },
+          },
           document: documentWithParams,
           baselineCommit: commitWithParams,
           project: projectWithParams,
@@ -524,7 +760,11 @@ value4
       const result = await startOptimization({
         evaluation: evaluationForDoc,
         dataset,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: documentWithParams,
         baselineCommit: commitWithParams,
         project: projectWithParams,
@@ -569,7 +809,11 @@ value10
       const result = await startOptimization({
         evaluation: evaluationForDoc,
         dataset,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: documentWithParams,
         baselineCommit: commitWithParams,
         project: projectWithParams,
@@ -609,7 +853,11 @@ value4
       const result = await startOptimization({
         evaluation: evaluationForDoc,
         dataset,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: documentWithParams,
         baselineCommit: commitWithParams,
         project: projectWithParams,
@@ -653,6 +901,9 @@ sensitive_data_4
         configuration: {
           parameters: {
             inputParam: { isPii: true },
+          },
+          scope: {
+            instructions: true,
           },
         },
         document: documentWithParams,
@@ -699,7 +950,11 @@ sensitive_data_4
       const result = await startOptimization({
         evaluation: evaluationForDoc,
         dataset,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: documentWithParams,
         baselineCommit: commitWithParams,
         project: projectWithParams,
@@ -744,7 +999,11 @@ value4,extra7,extra8
       const result = await startOptimization({
         evaluation: evaluationForDoc,
         dataset,
-        configuration: {},
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
         document: documentWithParams,
         baselineCommit: commitWithParams,
         project: projectWithParams,
@@ -790,6 +1049,9 @@ value4
         configuration: {
           parameters: {
             inputParam: { column: 'mappedColumn' },
+          },
+          scope: {
+            instructions: true,
           },
         },
         document: documentWithParams,

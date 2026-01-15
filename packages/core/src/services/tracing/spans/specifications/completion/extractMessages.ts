@@ -357,7 +357,8 @@ export function extractInput(
     attributes,
     ATTRIBUTES.OPENINFERENCE.llm.inputMessages,
   )
-  if (extractingOpenInference.error) return Result.error(extractingOpenInference.error)
+  if (extractingOpenInference.error)
+    return Result.error(extractingOpenInference.error)
   if (extractingOpenInference.value.length > 0) {
     return Result.ok([...messages, ...extractingOpenInference.value])
   }
@@ -412,7 +413,8 @@ export function extractOutput(
     attributes,
     ATTRIBUTES.OPENINFERENCE.llm.outputMessages,
   )
-  if (extractingOpenInference.error) return Result.error(extractingOpenInference.error)
+  if (extractingOpenInference.error)
+    return Result.error(extractingOpenInference.error)
   if (extractingOpenInference.value.length > 0) {
     return Result.ok(extractingOpenInference.value)
   }

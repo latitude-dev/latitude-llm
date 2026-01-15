@@ -8,11 +8,11 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { type DatasetRow } from '../schema/models/types/DatasetRow'
-import { type Dataset } from '../schema/models/types/Dataset'
 import { DEFAULT_PAGINATION_SIZE } from '../constants'
 import { calculateOffset } from '../lib/pagination/calculateOffset'
 import { datasetRows } from '../schema/models/datasetRows'
+import { type Dataset } from '../schema/models/types/Dataset'
+import { type DatasetRow } from '../schema/models/types/DatasetRow'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(datasetRows)
@@ -28,6 +28,14 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
       .from(datasetRows)
       .where(this.scopeFilter)
       .$dynamic()
+  }
+
+  findAllByDataset(datasetId: number) {
+    return this.db
+      .select(tt)
+      .from(datasetRows)
+      .where(and(this.scopeFilter, eq(datasetRows.datasetId, datasetId)))
+      .orderBy(desc(datasetRows.createdAt), desc(datasetRows.id))
   }
 
   findManyByDataset({

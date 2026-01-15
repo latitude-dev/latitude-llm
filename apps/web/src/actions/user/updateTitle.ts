@@ -18,4 +18,3 @@ export const updateUserTitleAction = authProcedure
 
     return result
   })
-

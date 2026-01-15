@@ -66,7 +66,11 @@ export async function createOptimization({
   }
 
   if (!configuration) {
-    configuration = {}
+    configuration = {
+      scope: {
+        instructions: true,
+      },
+    }
   }
 
   const isPrepared = trainset && testset

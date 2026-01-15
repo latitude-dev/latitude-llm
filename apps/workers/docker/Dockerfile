@@ -80,10 +80,17 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --shamefully-hoist \
   --filter "${PROJECT}..."
 
+# RUNNER stage
+# ------------------------------------------------------
 FROM node:22-alpine AS runner
 
 # Required for the health check
 RUN apk add --update --no-cache curl
+
+# Install uv and Python 3.13 (standalone build - self-contained, no system deps)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+ENV UV_PYTHON_INSTALL_DIR="/opt/python"
+RUN uv python install 3.13
 
 ARG PROJECT_PATH
 ARG DD_GIT_REPOSITORY_URL
@@ -120,6 +127,14 @@ COPY --from=builder --chown=latitude:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=latitude:nodejs /app/${PROJECT_PATH} ./${PROJECT_PATH}
 COPY --from=builder --chown=latitude:nodejs /app/packages/telemetry/typescript ./packages/telemetry/typescript
 COPY --from=builder --chown=latitude:nodejs /app/packages/core/src/assets/eu-central-1-bundle.pem ./packages/core/src/assets/eu-central-1-bundle.pem
+
+# Copy Python engine source and install dependencies
+COPY --chown=latitude:nodejs apps/engine/app ./apps/engine/app
+COPY --chown=latitude:nodejs apps/engine/pyproject.toml ./apps/engine/pyproject.toml
+COPY --chown=latitude:nodejs apps/engine/uv.lock ./apps/engine/uv.lock
+COPY --chown=latitude:nodejs apps/engine/.python-version ./apps/engine/.python-version
+RUN --mount=type=cache,target=/home/latitude/.cache/uv,uid=1001,gid=1001 \
+  cd /app/apps/engine && uv sync --frozen --no-dev --no-install-project
 
 WORKDIR /app/${PROJECT_PATH}
 

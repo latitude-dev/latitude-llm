@@ -1,10 +1,10 @@
-import { memo, useState } from 'react'
-import { MessageProps } from '../types'
-import { cn } from '@latitude-data/web-ui/utils'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { cn } from '@latitude-data/web-ui/utils'
+import { memo, useState } from 'react'
 import { Content } from '../Content'
 import { ToolCardSkeleton } from '../Content/ToolCall/Skeleton'
+import { MessageProps } from '../types'
 
 const roleVariant = (role: string) => {
   switch (role) {
@@ -41,27 +41,27 @@ export const DebugMessage = memo(
 
     return (
       <div
-        className={cn('min-w-0 flex flex-col gap-1 items-start py-2', {
+        className={cn('min-w-0 w-full flex flex-col gap-1 items-start py-2', {
           'animate-pulse': animatePulse,
         })}
       >
         <div>
           <Badge variant={roleVariant(role)}>{roleToString(role)}</Badge>
         </div>
-        <div className='min-w-0 flex flex-row gap-4 pl-4'>
+        <div className='min-w-0 w-full flex flex-row gap-4 pl-4'>
           <div
             className='flex-shrink-0 bg-muted w-1 rounded-lg cursor-pointer hover:bg-primary transition-colors'
             onClick={() => setCollapseMessage(!collapsedMessage)}
           />
-          <div className='flex flex-col gap-1 min-w-0'>
+          <div className='flex-1 flex flex-col gap-1 min-w-0 overflow-hidden'>
             {collapsedMessage ? (
               <button
                 className='block min-w-0'
                 onClick={() => setCollapseMessage(false)}
               >
-                <Text.H6 color='foregroundMuted' lineClamp={3}>
+                <Text.H5 color='foregroundMuted' lineClamp={3}>
                   ...
-                </Text.H6>
+                </Text.H5>
               </button>
             ) : (
               <Content

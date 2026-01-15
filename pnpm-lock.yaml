@@ -882,6 +882,9 @@ importers:
       expr-eval:
         specifier: 2.0.2
         version: 2.0.2
+      fast-json-stable-stringify:
+        specifier: 2.1.0
+        version: 2.1.0
       fastest-levenshtein:
         specifier: 1.0.16
         version: 1.0.16

@@ -10,10 +10,12 @@ export async function runCopilot<S extends z.ZodType = z.ZodType>({
   copilot,
   parameters = {},
   schema,
+  abortSignal,
 }: {
   copilot: Copilot
   parameters?: Record<string, unknown>
   schema?: S
+  abortSignal?: AbortSignal
 }): Promise<
   TypedResult<
     S extends z.ZodType ? z.infer<S> : unknown,
@@ -27,6 +29,7 @@ export async function runCopilot<S extends z.ZodType = z.ZodType>({
     document: copilot.document,
     parameters: parameters,
     source: LogSources.API,
+    abortSignal: abortSignal,
   }).then((r) => r.unwrap())
 
   const error = await result.error

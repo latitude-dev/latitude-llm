@@ -10,7 +10,10 @@ export const OPTIMIZATION_PRESETS = {
     duration: '~5 min',
     cost: 'Lower cost',
     configuration: {
-      iterations: 5,
+      budget: {
+        time: 5 * 60, // 5 minutes
+        tokens: 100_000, // 100k tokens
+      },
     },
   },
   balanced: {
@@ -20,17 +23,23 @@ export const OPTIMIZATION_PRESETS = {
     duration: '~15 min',
     cost: 'Medium cost',
     configuration: {
-      iterations: 33,
+      budget: {
+        time: 15 * 60, // 15 minutes
+        tokens: 10_000_000, // 10M tokens
+      },
     },
   },
   deep: {
     value: 'deep' as const,
     title: 'Deep',
     description: 'Comprehensive run for best results',
-    duration: '~30 min',
+    duration: '~1 hour',
     cost: 'Higher cost',
     configuration: {
-      iterations: 75,
+      budget: {
+        time: 60 * 60, // 1 hour
+        tokens: 50_000_000, // 50M tokens
+      },
     },
   },
 } as const
@@ -80,7 +89,7 @@ function PresetCard({
         )}
       </div>
       <Text.H6 color='foregroundMuted'>{preset.description}</Text.H6>
-      <div className='flex gap-2 mt-1'>
+      <div className='flex justify-start gap-2 mt-1'>
         <div className='flex items-center gap-1'>
           <Icon
             name='clock'

@@ -3,20 +3,26 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useMetadata } from '$/hooks/useMetadata'
-import { OptimizationConfiguration } from '@latitude-data/constants'
+import {
+  OPTIMIZATION_MAX_TIME,
+  OPTIMIZATION_MAX_TOKENS,
+  OptimizationConfiguration,
+} from '@latitude-data/constants'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { StandardSchemaV1 } from '@standard-schema/spec'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { BudgetSelector } from './BudgetSelector'
 import { DatasetSelector } from './DatasetSelector'
 import { EvaluationSelector } from './EvaluationSelector'
-import { IterationsSlider } from './IterationsSlider'
 import { ParametersConfiguration } from './ParametersConfiguration'
 import {
   OPTIMIZATION_PRESETS,
   PresetSelector,
   type OptimizationPresetKey,
 } from './PresetSelector'
+import { ScopeSelector } from './ScopeSelector'
 import { SimulationSettingsSection } from './SimulationSettings'
 
 export type OptimizationFormErrors = ActionErrors<
@@ -101,6 +107,15 @@ export function OptimizationForm({
     [configuration, setConfiguration],
   )
 
+  const showBudgetWarning = useMemo(() => {
+    const time = configuration.budget?.time ?? 0
+    const tokens = configuration.budget?.tokens ?? 0
+    return (
+      (time > 0 && time < OPTIMIZATION_MAX_TIME * 0.1) ||
+      (tokens > 0 && tokens < OPTIMIZATION_MAX_TOKENS * 0.1)
+    )
+  }, [configuration.budget])
+
   return (
     <form className='min-w-0' id='optimizationForm'>
       <FormWrapper>
@@ -109,6 +124,13 @@ export function OptimizationForm({
           onChange={handlePresetChange}
           disabled={disabled}
         />
+        {showBudgetWarning && (
+          <Alert
+            variant='warning'
+            title='Optimization budget is low'
+            description='If your original prompt or evaluation takes too much time or tokens, the optimization system may not be able to propose even a single candidate'
+          />
+        )}
         <EvaluationSelector
           project={project}
           commit={commit}
@@ -153,10 +175,18 @@ export function OptimizationForm({
                 errors={errors}
                 disabled={disabled}
               />
-              <IterationsSlider
-                value={configuration.iterations}
+              <ScopeSelector
+                value={configuration.scope}
                 onChange={(value) =>
-                  setConfiguration({ ...configuration, iterations: value })
+                  setConfiguration({ ...configuration, scope: value })
+                }
+                errors={errors}
+                disabled={disabled}
+              />
+              <BudgetSelector
+                value={configuration.budget}
+                onChange={(value) =>
+                  setConfiguration({ ...configuration, budget: value })
                 }
                 errors={errors}
                 disabled={disabled}

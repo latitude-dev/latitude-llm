@@ -9,12 +9,12 @@ import {
   ISSUE_GENERATION_CACHE_KEY,
 } from '../../constants'
 import { UnprocessableEntityError } from '../../lib/errors'
-import { hashContent } from '../../lib/hashContent'
+import { hashObject } from '../../lib/hashObject'
 import { Result } from '../../lib/Result'
 import { type ResultWithEvaluationV2 } from '../../schema/types'
 import { getCopilot, runCopilot } from '../copilot'
-import { validateResultForIssue } from './results/validate'
 import { getOrSetEnrichedReason } from './results/getOrSetEnrichedReason'
+import { validateResultForIssue } from './results/validate'
 
 const generatorSchema = z.object({
   title: z.string().max(256),
@@ -87,9 +87,7 @@ export async function generateIssue(
   const parameters = { context: context ?? '', reasons }
 
   const cache = await getCache()
-  const key = ISSUE_GENERATION_CACHE_KEY(
-    hashContent(JSON.stringify(parameters)),
-  )
+  const key = ISSUE_GENERATION_CACHE_KEY(hashObject(parameters).hash)
 
   try {
     const item = await cache.get(key)

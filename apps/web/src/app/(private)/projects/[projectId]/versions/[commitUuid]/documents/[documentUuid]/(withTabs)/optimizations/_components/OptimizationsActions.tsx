@@ -26,6 +26,9 @@ const DEFAULT_CONFIGURATION = {
     simulatedTools: [], // Note: empty array means all tools are simulated
     toolSimulationInstructions: '',
   },
+  scope: {
+    instructions: true,
+  },
 }
 
 export function OptimizationsActions({

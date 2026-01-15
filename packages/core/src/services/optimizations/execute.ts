@@ -1,6 +1,4 @@
 import { and, eq } from 'drizzle-orm'
-import { database } from '../../client'
-import { EvaluationResultV2 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { validateOptimizationJobKey } from '../../jobs/job-definitions/optimizations/validateOptimizationJob'
 import { queues } from '../../jobs/queues'
@@ -17,25 +15,21 @@ import {
 } from '../../repositories'
 import { optimizations } from '../../schema/models/optimizations'
 import { Optimization } from '../../schema/models/types/Optimization'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import {
+  WorkspaceDto,
+  type Workspace,
+} from '../../schema/models/types/Workspace'
 import { forkCommit } from '../commits/fork'
 import { scanDocumentContent } from '../documents'
 import { updateDocument } from '../documents/update'
-import { OPTIMIZATION_ENGINES, OptimizerEvaluateArgs } from './optimizers'
+import {
+  OPTIMIZATION_ENGINES,
+  evaluateFactory,
+  proposeFactory,
+} from './optimizers'
 
-// TODO(AO/OPT): Remove this, just for testing
-async function awaitTesting(iterations?: number) {
-  if (process.env.NODE_ENV === 'test') return
-
-  const minMs = 10000
-  const maxMs = 45000
-
-  let waitMs = minMs + Math.round(((maxMs - minMs) * (iterations ?? 0)) / 100)
-  waitMs = Math.min(maxMs, Math.max(minMs, waitMs))
-
-  await new Promise((resolve) => setTimeout(resolve, waitMs))
-}
-
+// BONUS(AO/OPT): Implement multi-objective optimization
+// BONUS(AO/OPT): Implement multi-document optimization
 export async function executeOptimization(
   {
     optimization,
@@ -68,8 +62,13 @@ export async function executeOptimization(
     )
   }
 
-  // TODO(AO/OPT): Remove this, just for testing
-  await awaitTesting(optimization.configuration?.iterations)
+  if (!optimization.testsetId) {
+    return Result.error(
+      new UnprocessableEntityError(
+        'Cannot execute an optimization without a testset',
+      ),
+    )
+  }
 
   const projectsRepository = new ProjectsRepository(workspace.id)
   const gettingpj = await projectsRepository.find(optimization.projectId)
@@ -116,11 +115,22 @@ export async function executeOptimization(
   const evaluation = gettingev.value
 
   const datasetsRepository = new DatasetsRepository(workspace.id)
+
   const gettingds = await datasetsRepository.find(optimization.trainsetId)
   if (gettingds.error) {
     return Result.error(gettingds.error)
   }
   const trainset = gettingds.value
+
+  const gettingts = await datasetsRepository.find(optimization.testsetId)
+  if (gettingts.error) {
+    return Result.error(gettingts.error)
+  }
+  const testset = gettingts.value
+
+  const columns = trainset.columns
+    .map((c) => ({ ...c, datasetId: trainset.id }))
+    .concat(testset.columns.map((c) => ({ ...c, datasetId: testset.id })))
 
   const optimize = OPTIMIZATION_ENGINES[optimization.engine]
   if (!optimize) {
@@ -131,11 +141,27 @@ export async function executeOptimization(
     )
   }
 
+  // BONUS(AO/OPT): Implement checkpointing saving for fault tolerance
   const optimizing = await optimize({
-    evaluate: evaluatePrompt,
+    evaluate: await evaluateFactory({
+      columns: columns,
+      evaluation: evaluation,
+      optimization: optimization,
+      document: document,
+      commit: baselineCommit,
+      workspace: workspace as WorkspaceDto,
+    }),
+    propose: await proposeFactory({
+      optimization: optimization,
+      document: document,
+      workspace: workspace,
+    }),
     evaluation: evaluation,
-    dataset: trainset,
+    trainset: trainset,
+    valset: testset, // BONUS(AO/OPT): Only use a small subset of the testset
     optimization: optimization,
+    document: document,
+    commit: baselineCommit,
     workspace: workspace,
     abortSignal: abortSignal,
   })
@@ -163,13 +189,13 @@ export async function executeOptimization(
       const optimizedCommit = await forkCommit(
         {
           commit: baselineCommit,
-          workspace,
-          project,
-          user: author,
           data: {
             title: `Optimized ${document.path.split('/').pop()} #${optimization.uuid.slice(0, 8)}`,
             description: 'Created by an optimization.',
           },
+          project: project,
+          user: author,
+          workspace: workspace,
         },
         transaction,
       ).then((r) => r.unwrap())
@@ -217,18 +243,4 @@ export async function executeOptimization(
       })
     },
   )
-}
-
-async function evaluatePrompt(
-  {
-    prompt: _prompt,
-    example: _example,
-    evaluation: _evaluation,
-    optimization: _optimization,
-    workspace: _workspace,
-  }: OptimizerEvaluateArgs, // TODO(AO/OPT): Implement cancellation
-  _ = database,
-) {
-  // TODO(AO/OPT): Implement (get the reasoning as the Actual Output + Reasoning Specification Method) (Also treat prompt syntax errors as learnable)
-  return Result.ok<EvaluationResultV2>(undefined as any)
 }

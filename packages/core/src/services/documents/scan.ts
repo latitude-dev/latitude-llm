@@ -2,13 +2,13 @@ import path from 'path'
 
 import { type ConversationMetadata, scan } from 'promptl-ai'
 
-import { type Commit } from '../../schema/models/types/Commit'
-import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { database } from '../../client'
+import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { LatitudeError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import { DocumentVersionsRepository } from '../../repositories'
-import { findWorkspaceFromCommit } from '../../data-access/workspaces'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 
 export async function getDocumentMetadata({
   document,
@@ -42,6 +42,11 @@ export async function getDocumentMetadata({
   return scaned
 }
 
+const FRONTMATTER_REGEX = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/m
+function getDocumentInstructions(prompt: string): string {
+  return prompt.replace(FRONTMATTER_REGEX, '').trim()
+}
+
 export async function scanDocumentContent(
   {
     document,
@@ -51,7 +56,9 @@ export async function scanDocumentContent(
     commit: Commit
   },
   db = database,
-): Promise<TypedResult<ConversationMetadata, LatitudeError>> {
+): Promise<
+  TypedResult<ConversationMetadata & { instructions: string }, LatitudeError>
+> {
   let docs: DocumentVersion[] | undefined
 
   const metadata = await getDocumentMetadata({
@@ -69,7 +76,9 @@ export async function scanDocumentContent(
     },
   })
 
-  return Result.ok(metadata)
+  const instructions = getDocumentInstructions(document.content)
+
+  return Result.ok({ ...metadata, instructions })
 }
 
 export async function scanCommitDocumentContents({

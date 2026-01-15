@@ -15,7 +15,7 @@ import { publisher } from '../../events/publisher'
 import { executeOptimizationJobKey } from '../../jobs/job-definitions/optimizations/executeOptimizationJob'
 import { queues } from '../../jobs/queues'
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
-import { hashContent } from '../../lib/hashContent'
+import { hashObject } from '../../lib/hashObject'
 import { interleaveList } from '../../lib/interleaveList'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -43,15 +43,6 @@ import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
 import { createDataset } from '../datasets/create'
 import { buildColumns, nanoidHashAlgorithm } from '../datasets/utils'
 import { maskParameter } from './shared'
-
-// TODO(AO/OPT): Remove this, just for testing
-async function awaitTesting() {
-  if (process.env.NODE_ENV === 'test') return
-
-  await new Promise((resolve) =>
-    setTimeout(resolve, 5000 + Math.floor(Math.random() * 11000)),
-  )
-}
 
 export async function prepareOptimization(
   {
@@ -92,9 +83,6 @@ export async function prepareOptimization(
     }
     testset = gettingts.value
   } else {
-    // TODO(AO/OPT): Remove this, just for testing
-    await awaitTesting()
-
     const projectsRepository = new ProjectsRepository(workspace.id)
     const gettingpj = await projectsRepository.find(optimization.projectId)
     if (gettingpj.error) {
@@ -134,7 +122,7 @@ export async function prepareOptimization(
     const issues = gettingis.value
 
     const { parameters } = await scan({ prompt: optimization.baselinePrompt })
-    const { keyhash: parametersHash } = hashParameters(
+    const { keyhash: parametersHash } = hashObject(
       Object.fromEntries(parameters.entries()),
     )
 
@@ -231,20 +219,6 @@ export async function prepareOptimization(
       })
     },
   )
-}
-
-function hashSpan(span: Span<SpanType.Prompt>) {
-  return `${span.traceId}:${span.id}`
-}
-
-function hashParameters(parameters: Record<string, unknown>) {
-  const keys = Object.keys(parameters).sort()
-  const values = keys.map((key) => parameters[key])
-
-  const keyhash = hashContent(JSON.stringify(keys))
-  const valhash = hashContent(JSON.stringify(values))
-
-  return { keyhash, valhash }
 }
 
 async function getIssueCandidates({
@@ -368,12 +342,12 @@ async function getNegativeExamples({
 
         if (!metadata) continue
 
-        const { keyhash, valhash } = hashParameters(metadata.parameters ?? {})
+        const { hash, keyhash } = hashObject(metadata.parameters ?? {})
         if (keyhash !== parametersHash) continue
-        if (seenParameters.has(valhash)) continue
+        if (seenParameters.has(hash)) continue
 
         seenSpans.add(spanhash)
-        seenParameters.add(valhash)
+        seenParameters.add(hash)
         validSpans.push({ ...span, metadata })
       }
 
@@ -485,12 +459,12 @@ async function getPositiveExamples({
 
       if (!metadata) continue
 
-      const { keyhash, valhash } = hashParameters(metadata.parameters ?? {})
+      const { hash, keyhash } = hashObject(metadata.parameters ?? {})
       if (keyhash !== parametersHash) continue
-      if (seenParameters.has(valhash)) continue
+      if (seenParameters.has(hash)) continue
 
       seenSpans.add(spanhash)
-      seenParameters.add(valhash)
+      seenParameters.add(hash)
       result.push({ ...span, metadata })
     }
 
@@ -718,4 +692,8 @@ async function createDatasets(
 
     return Result.ok({ trainset, testset })
   })
+}
+
+function hashSpan(span: Span<SpanType.Prompt>) {
+  return `${span.traceId}:${span.id}`
 }
