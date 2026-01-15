@@ -57,41 +57,20 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must enable the **CrewAI** instrumentor so Telemetry can trace it. Since CrewAI typically uses an LLM provider (like OpenAI), you should also enable that instrumentor.
-
-    ```python telemetry.py
-    import os
-    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-    telemetry = Telemetry(
-        os.environ["LATITUDE_API_KEY"],
-        TelemetryOptions(
-            instrumentors=[
-                Instrumentors.CrewAI,  # This enables automatic tracing for CrewAI
-                Instrumentors.OpenAI,  # Also trace the underlying LLM calls
-            ],
-        ),
-    )
-    ```
-
-    <Info>
-      The Telemetry instance should only be created once. Initialize it before
-      importing CrewAI so crew executions are automatically traced.
-    </Info>
-
-  </Step>
-
   <Step title="Wrap your CrewAI-powered feature">
-    Wrap the code that runs CrewAI crews using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that runs CrewAI crews using <code>telemetry.capture</code>.
 
     You can use the `capture` method as a decorator (recommended) or as a context manager:
 
     ```python Using decorator (recommended)
-    from telemetry import telemetry
+    import os
     from crewai import Agent, Task, Crew
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.CrewAI]),
+    )
 
     # Define your agents
     researcher = Agent(
@@ -137,8 +116,14 @@ That's it — prompts do **not** need to be created ahead of time.
     ```
 
     ```python Using context manager
-    from telemetry import telemetry
+    import os
     from crewai import Agent, Task, Crew
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.CrewAI]),
+    )
 
     # Define your agents
     researcher = Agent(
