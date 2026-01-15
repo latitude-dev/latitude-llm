@@ -17,6 +17,7 @@ import { ClearCacheButton } from '../ClearCacheButton'
 import { ChangePlanButton } from '../ChangePlanButton'
 import { ToggleIssuesUnlockedButton } from '../ToggleIssuesUnlockedButton'
 import { BigAccountBanner } from '../BigAccountBanner'
+import { DeleteWorkspaceButton } from '../DeleteWorkspaceButton'
 
 type Props = {
   workspace: WorkspaceWithDetails
@@ -349,6 +350,23 @@ export function WorkspaceDashboard({ workspace }: Props) {
               </TableRow>
             ))}
           </DataTable>
+        </div>
+
+        <div className='mt-8 p-6 border border-destructive/30 rounded-lg bg-destructive/5'>
+          <div className='flex flex-col gap-4'>
+            <div>
+              <Text.H4 color='destructive'>Danger Zone</Text.H4>
+              <Text.H5 color='foregroundMuted'>
+                Permanently delete this workspace and all associated data.
+              </Text.H5>
+            </div>
+            <div className='flex justify-end'>
+              <DeleteWorkspaceButton
+                workspaceId={workspace.id}
+                workspaceName={workspace.name}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
