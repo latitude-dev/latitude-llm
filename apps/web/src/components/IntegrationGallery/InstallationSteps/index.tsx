@@ -252,7 +252,7 @@ LATITUDE_PROJECT_ID=${projectId}
         description='Initialize Latitude Telemetry and wrap the code that generates the AI response using telemetry.capture. You must add a path to identify this prompt in your Latitude project.'
       >
         <>
-          <Alert description='The path is used to identify the prompt in your Latitude project. It must not contain spaces or special characters (use letters, numbers, - _ / .), and it will automatically create a new prompt in your Latitude project if it does not exist.' />
+          <Alert description='The path must not contain spaces or special characters (use letters, numbers, - _ / .)' />
           {pythonOnlyMode ? (
             <CodeBlock language='python' textWrap={false}>
               {implementationCodeblockPython(framework)}
