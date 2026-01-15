@@ -298,6 +298,199 @@ value1
     expect(publisherMock).not.toHaveBeenCalled()
   })
 
+  it('fails when no optimization scope is provided', async () => {
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {},
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('At least one optimization scope is required'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when scope has neither configuration nor instructions enabled', async () => {
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: {
+            configuration: false,
+            instructions: false,
+          },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('At least one optimization scope is required'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when budget time is negative', async () => {
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: { instructions: true },
+          budget: { time: -1 },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Time budget must be a number between 0 and 2 hours'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when budget time exceeds maximum (2 hours)', async () => {
+    const maxTime = 2 * 60 * 60 // 2 hours in seconds
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: { instructions: true },
+          budget: { time: maxTime + 1 },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Time budget must be a number between 0 and 2 hours'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when budget tokens is negative', async () => {
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: { instructions: true },
+          budget: { tokens: -1 },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Token budget must be a number between 0 and 100M'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when budget tokens exceeds maximum (100M)', async () => {
+    const maxTokens = 100_000_000
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: { instructions: true },
+          budget: { tokens: maxTokens + 1 },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Token budget must be a number between 0 and 100M'),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('succeeds with valid budget configuration', async () => {
+    const result = await startOptimization({
+      evaluation,
+      configuration: {
+        scope: { instructions: true },
+        budget: { time: 300, tokens: 50_000_000 },
+      },
+      document,
+      baselineCommit: commit,
+      project,
+      workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result.optimization).toBeDefined()
+    expect(result.optimization.configuration.budget).toEqual({
+      time: 300,
+      tokens: 50_000_000,
+    })
+
+    expect(mocks.optimizationsQueue).toHaveBeenCalledTimes(1)
+    expect(publisherMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('succeeds with scope.configuration enabled', async () => {
+    const result = await startOptimization({
+      evaluation,
+      configuration: {
+        scope: { configuration: true },
+      },
+      document,
+      baselineCommit: commit,
+      project,
+      workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result.optimization).toBeDefined()
+    expect(result.optimization.configuration.scope).toEqual({
+      configuration: true,
+    })
+
+    expect(mocks.optimizationsQueue).toHaveBeenCalledTimes(1)
+    expect(publisherMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('succeeds with both scope options enabled', async () => {
+    const result = await startOptimization({
+      evaluation,
+      configuration: {
+        scope: { configuration: true, instructions: true },
+      },
+      document,
+      baselineCommit: commit,
+      project,
+      workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result.optimization).toBeDefined()
+    expect(result.optimization.configuration.scope).toEqual({
+      configuration: true,
+      instructions: true,
+    })
+
+    expect(mocks.optimizationsQueue).toHaveBeenCalledTimes(1)
+    expect(publisherMock).toHaveBeenCalledTimes(1)
+  })
+
   it('succeeds when starting optimization without dataset', async () => {
     const result = await startOptimization({
       evaluation,
