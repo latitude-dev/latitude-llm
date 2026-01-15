@@ -78,115 +78,97 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must enable the **GoogleGenerativeAI** instrumentor so Telemetry can trace Gemini calls automatically.
-
-    <Tabs>
-      <Tab title="TypeScript">
-        ```ts telemetry.ts
-        import { LatitudeTelemetry, Instrumentors } from '@latitude-data/telemetry'
-
-        export const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY, {
-          instrumentors: [Instrumentors.GoogleGenerativeAI],  // This enables automatic tracing for Gemini
-        })
-        ```
-      </Tab>
-      <Tab title="Python">
-        ```python telemetry.py
-        import os
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(
-                instrumentors=[Instrumentors.GoogleGenerativeAI],  # This enables automatic tracing for Gemini
-            ),
-        )
-        ```
-      </Tab>
-    </Tabs>
-
-    <Info>
-      The Telemetry instance should only be created once. Initialize it
-      before importing from `google-genai` so Gemini calls are
-      automatically traced.
-    </Info>
-
-  </Step>
-
   <Step title="Wrap your Gemini-powered feature">
-    Wrap the code that calls Gemini using <code>telemetry.capture</code>.
-
     <Tabs>
       <Tab title="TypeScript">
-        ```ts
-        import { GoogleGenerativeAI } from '@google/generative-ai'
-        import { telemetry } from './telemetry'
+        Since Gemini doesn't have automatic instrumentation in TypeScript, you need to manually create spans to track your Gemini calls.
 
-        export async function generateSupportReply(input: string) {
+        ```ts
+        import { LatitudeTelemetry } from '@latitude-data/telemetry'
+        import { GoogleGenAI } from '@google/genai'
+
+        const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY)
+
+        async function generateSupportReply(input: string) {
           return telemetry.capture(
             {
-              projectId: 123,  // The ID of your project in Latitude
-              path: 'generate-support-reply',  // Add a path to identify this prompt in Latitude
+              projectId: 123, // The ID of your project in Latitude
+              path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
             },
             async () => {
-              // Your regular LLM-powered feature code here
-              const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-              const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+              const model = 'gemini-2.0-flash'
 
-              const result = await model.generateContent(input)
+              // 1) Start the completion span
+              const span = telemetry.span.completion({
+                model,
+                input: [{ role: 'user', content: input }]
+              })
 
-              // You can return anything you want — the value is passed through unchanged
-              return result.response.text()
+              try {
+                // 2) Call Gemini as usual
+                const google = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+                const response = await google.models.generateContent({
+                  model,
+                  contents: input,
+                })
+                const text = response.text
+
+                // 3) End the span (attach output + useful metadata)
+                span.end({
+                  output: [{ role: 'assistant', content: text }],
+                })
+
+                return text
+              } catch (error) {
+                // Make sure to close the span even on errors
+                span.fail(error)
+                throw error
+              }
             }
           )
         }
         ```
       </Tab>
       <Tab title="Python">
-        You can use the `capture` method as a decorator (recommended) or as a context manager:
+        Python has automatic instrumentation for Gemini. You can use the `capture` method as a decorator (recommended) or as a context manager:
 
         ```python Using decorator (recommended)
         import os
-        from telemetry import telemetry
-        from google import genai
+        import google.generativeai as genai
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.GoogleGenAI]),
+        )
 
         @telemetry.capture(
             project_id=123,  # The ID of your project in Latitude
             path="generate-support-reply",  # Add a path to identify this prompt in Latitude
         )
         def generate_support_reply(input: str) -> str:
-            client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=input,
-            )
-
-            # You can return anything you want — the value is passed through unchanged
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content(input)
             return response.text
         ```
 
         ```python Using context manager
         import os
-        from telemetry import telemetry
-        from google import genai
+        import google.generativeai as genai
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.GoogleGenAI]),
+        )
 
         def generate_support_reply(input: str) -> str:
             with telemetry.capture(
                 project_id=123,  # The ID of your project in Latitude
                 path="generate-support-reply",  # Add a path to identify this prompt in Latitude
             ):
-                client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-
-                response = client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=input,
-                )
-
-                # You can return anything you want — the value is passed through unchanged
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                response = model.generate_content(input)
                 return response.text
         ```
       </Tab>

@@ -57,38 +57,20 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must enable the **DSPy** instrumentor so Telemetry can trace it.
-
-    ```python telemetry.py
-    import os
-    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-    telemetry = Telemetry(
-        os.environ["LATITUDE_API_KEY"],
-        TelemetryOptions(
-            instrumentors=[Instrumentors.DSPy],  # This enables automatic tracing for DSPy
-        ),
-    )
-    ```
-
-    <Info>
-      The Telemetry instance should only be created once. Initialize it before
-      importing DSPy so program executions are automatically traced.
-    </Info>
-
-  </Step>
-
   <Step title="Wrap your DSPy-powered feature">
-    Wrap the code that runs DSPy programs using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that runs DSPy programs using <code>telemetry.capture</code>.
 
     You can use the `capture` method as a decorator (recommended) or as a context manager:
 
     ```python Using decorator (recommended)
-    from telemetry import telemetry
+    import os
     import dspy
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.DSPy]),
+    )
 
     # Configure DSPy with your LLM
     lm = dspy.LM("openai/gpt-4o")
@@ -107,16 +89,19 @@ That's it — prompts do **not** need to be created ahead of time.
         path="generate-support-reply",  # Add a path to identify this prompt in Latitude
     )
     def generate_support_reply(input: str) -> str:
-        # Your regular DSPy code here
         result = qa_module(question=input)
-
-        # You can return anything you want — the value is passed through unchanged
         return result.answer
     ```
 
     ```python Using context manager
-    from telemetry import telemetry
+    import os
     import dspy
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.DSPy]),
+    )
 
     # Configure DSPy with your LLM
     lm = dspy.LM("openai/gpt-4o")
@@ -135,10 +120,7 @@ That's it — prompts do **not** need to be created ahead of time.
             project_id=123,  # The ID of your project in Latitude
             path="generate-support-reply",  # Add a path to identify this prompt in Latitude
         ):
-            # Your regular DSPy code here
             result = qa_module(question=input)
-
-            # You can return anything you want — the value is passed through unchanged
             return result.answer
     ```
 

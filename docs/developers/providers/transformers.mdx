@@ -59,66 +59,48 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must enable the **Transformers** instrumentor so Telemetry can trace it.
-
-    ```python telemetry.py
-    import os
-    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-    telemetry = Telemetry(
-        os.environ["LATITUDE_API_KEY"],
-        TelemetryOptions(
-            instrumentors=[Instrumentors.Transformers],  # This enables automatic tracing for Transformers
-        ),
-    )
-    ```
-
-    <Info>
-      The Telemetry instance should only be created once. Any Transformers
-      pipeline calls made after this will be automatically traced.
-    </Info>
-
-  </Step>
-
   <Step title="Wrap your Transformers-powered feature">
-    Wrap the code that calls Transformers using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that calls Transformers using <code>telemetry.capture</code>.
 
     You can use the `capture` method as a decorator (recommended) or as a context manager:
 
     ```python Using decorator (recommended)
+    import os
     from transformers import pipeline
-    from telemetry import telemetry
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.Transformers]),
+    )
 
     @telemetry.capture(
         project_id=123,  # The ID of your project in Latitude
         path="generate-support-reply",  # Add a path to identify this prompt in Latitude
     )
     def generate_support_reply(input: str) -> str:
-        # Your regular LLM-powered feature code here
         generator = pipeline("text-generation", model="gpt2")
         result = generator(input, max_length=100)
-
-        # You can return anything you want — the value is passed through unchanged
         return result[0]["generated_text"]
     ```
 
     ```python Using context manager
+    import os
     from transformers import pipeline
-    from telemetry import telemetry
+    from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+    telemetry = Telemetry(
+        os.environ["LATITUDE_API_KEY"],
+        TelemetryOptions(instrumentors=[Instrumentors.Transformers]),
+    )
 
     def generate_support_reply(input: str) -> str:
         with telemetry.capture(
             project_id=123,  # The ID of your project in Latitude
             path="generate-support-reply",  # Add a path to identify this prompt in Latitude
         ):
-            # Your regular LLM-powered feature code here
             generator = pipeline("text-generation", model="gpt2")
             result = generator(input, max_length=100)
-
-            # You can return anything you want — the value is passed through unchanged
             return result[0]["generated_text"]
     ```
 

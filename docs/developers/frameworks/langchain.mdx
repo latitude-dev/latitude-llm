@@ -78,75 +78,36 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must pass the **LangChain SDK** so Telemetry can instrument it.
-
-    <Tabs>
-      <Tab title="TypeScript">
-        ```ts telemetry.ts
-        import { LatitudeTelemetry } from '@latitude-data/telemetry'
-        import * as LangchainCallbacks from '@langchain/core/callbacks/manager'
-
-        export const telemetry = new LatitudeTelemetry(
-          process.env.LATITUDE_API_KEY,
-          {
-            instrumentations: {
-              langchain: {
-                callbackManagerModule: LangchainCallbacks, // This enables automatic tracing for the LangChain SDK
-              },
-            },
-          }
-        )
-        ```
-      </Tab>
-      <Tab title="Python">
-        ```python telemetry.py
-        import os
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(
-                instrumentors=[Instrumentors.LangChain],  # This enables automatic tracing for the LangChain SDK
-            ),
-        )
-        ```
-      </Tab>
-    </Tabs>
-
-    <Info>
-      The Telemetry instance should only be created once. Initialize it before
-      importing LangChain modules so subsequent clients are automatically
-      traced.
-    </Info>
-
-  </Step>
-
   <Step title="Wrap your LangChain-powered feature">
-    Wrap the code that calls LangChain using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that calls LangChain using <code>telemetry.capture</code>.
 
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { telemetry } from './telemetry'
-        import { createAgent } from "langchain";
+        import { LatitudeTelemetry } from '@latitude-data/telemetry'
+        import * as LangchainCallbacks from '@langchain/core/callbacks/manager'
+        import { ChatOpenAI } from '@langchain/openai'
+        import { HumanMessage } from '@langchain/core/messages'
 
-        export async function generateSupportReply(input: string) {
+        const telemetry = new LatitudeTelemetry(
+          process.env.LATITUDE_API_KEY,
+          {
+            instrumentations: {
+              langchain: { callbackManagerModule: LangchainCallbacks },
+            },
+          }
+        )
+
+        async function generateSupportReply(input: string) {
           return telemetry.capture(
             {
               projectId: 123, // The ID of your project in Latitude
               path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
             },
             async () => {
-
-              // Your regular LLM-powered feature code here
-              const agent = createAgent({ model: 'claude-sonnet-4-5' });
-              const result = await agent.invoke(...);
-
-              // You can return anything you want — the value is passed through unchanged
-              return result;
+              const llm = new ChatOpenAI({ model: 'gpt-4o' })
+              const response = await llm.invoke([new HumanMessage(input)])
+              return response.content
             }
           )
         }
@@ -156,9 +117,15 @@ That's it — prompts do **not** need to be created ahead of time.
         You can use the `capture` method as a decorator (recommended) or as a context manager:
 
         ```python Using decorator (recommended)
-        from telemetry import telemetry
+        import os
         from langchain_openai import ChatOpenAI
         from langchain_core.messages import HumanMessage
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.LangChain]),
+        )
 
         @telemetry.capture(
             project_id=123,  # The ID of your project in Latitude
@@ -168,14 +135,19 @@ That's it — prompts do **not** need to be created ahead of time.
             llm = ChatOpenAI(model="gpt-4o")
             messages = [HumanMessage(content=input)]
             response = llm.invoke(messages)
-
             return response.content
         ```
 
         ```python Using context manager
-        from telemetry import telemetry
+        import os
         from langchain_openai import ChatOpenAI
         from langchain_core.messages import HumanMessage
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.LangChain]),
+        )
 
         def generate_support_reply(input: str) -> str:
             with telemetry.capture(
@@ -185,7 +157,6 @@ That's it — prompts do **not** need to be created ahead of time.
                 llm = ChatOpenAI(model="gpt-4o")
                 messages = [HumanMessage(content=input)]
                 response = llm.invoke(messages)
-
                 return response.content
         ```
       </Tab>

@@ -59,31 +59,15 @@ That’s it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single <code>LatitudeTelemetry</code> instance when your app starts
-
-    You must pass the **Vercel AI SDK** so Telemetry can instrument it.
-
-    ```ts telemetry.ts
-    import { LatitudeTelemetry } from '@latitude-data/telemetry'
-
-    export const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY)
-    ```
-
-    <Info>
-      The Telemetry instance should only be created once. Any Vercel AI SDK client
-      instantiated after this will be automatically traced.
-    </Info>
-
-  </Step>
-
   <Step title="Wrap your Vercel AI SDK-powered feature">
-    Wrap the code that calls Vercel AI SDK using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that calls Vercel AI SDK using <code>telemetry.capture</code>.
 
     ```ts
-    import { telemetry } from './telemetry'
+    import { LatitudeTelemetry } from '@latitude-data/telemetry'
     import { generateText } from 'ai'
     import { openai } from '@ai-sdk/openai'
+
+    const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY)
 
     export async function generateSupportReply(input: string) {
       return telemetry.capture(
@@ -92,8 +76,6 @@ That’s it — prompts do **not** need to be created ahead of time.
           path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
         },
         async () => {
-
-          // Your regular LLM-powered feature code here
           const { text } = await generateText({
             model: openai('gpt-4o'),
             prompt: input,
@@ -101,9 +83,7 @@ That’s it — prompts do **not** need to be created ahead of time.
               isEnabled: true, // Make sure to enable experimental telemetry
             },
           })
-
-          // You can return anything you want — the value is passed through unchanged
-          return text;
+          return text
         }
       )
     }

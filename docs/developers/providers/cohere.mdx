@@ -78,72 +78,35 @@ That's it — prompts do **not** need to be created ahead of time.
 
   </Step>
 
-  <Step title="Initialize Latitude Telemetry">
-    Create a single Telemetry instance when your app starts.
-
-    You must pass the **Cohere SDK** so Telemetry can instrument it.
-
-    <Tabs>
-      <Tab title="TypeScript">
-        ```ts telemetry.ts
-        import { LatitudeTelemetry } from '@latitude-data/telemetry'
-        import * as Cohere from 'cohere-ai'
-
-        export const telemetry = new LatitudeTelemetry(
-          process.env.LATITUDE_API_KEY,
-          {
-            instrumentations: {
-              cohere: Cohere, // This enables automatic tracing for the Cohere SDK
-            },
-          }
-        )
-        ```
-      </Tab>
-      <Tab title="Python">
-        ```python telemetry.py
-        import os
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(
-                instrumentors=[Instrumentors.Cohere],  # This enables automatic tracing for the Cohere SDK
-            ),
-        )
-        ```
-      </Tab>
-    </Tabs>
-
-    <Info>
-      The Telemetry instance should only be created once. Any Cohere client
-      instantiated after this will be automatically traced.
-    </Info>
-
-  </Step>
-
   <Step title="Wrap your Cohere-powered feature">
-    Wrap the code that calls Cohere using <code>telemetry.capture</code>.
+    Initialize Latitude Telemetry and wrap the code that calls Cohere using <code>telemetry.capture</code>.
 
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { telemetry } from './telemetry'
-        import { CohereClient } from 'cohere-ai'
+        import { LatitudeTelemetry } from '@latitude-data/telemetry'
+        import * as Cohere from 'cohere-ai'
 
-        export async function generateSupportReply(input: string) {
+        const telemetry = new LatitudeTelemetry(
+          process.env.LATITUDE_API_KEY,
+          { instrumentations: { cohere: Cohere } }
+        )
+
+        async function generateSupportReply(input: string) {
           return telemetry.capture(
             {
               projectId: 123, // The ID of your project in Latitude
               path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
             },
             async () => {
-
-              // Your regular LLM-powered feature code here
-              const client = new CohereClient({ ... });
-              const response = await client.generate({ ... })
-
-              // You can return anything you want — the value is passed through unchanged
-              return response;
+              const client = new Cohere.CohereClient({
+                token: process.env.COHERE_API_KEY,
+              })
+              const response = await client.chat({
+                model: 'command-a-03-2025',
+                message: input,
+              })
+              return response.text
             }
           )
         }
@@ -155,7 +118,12 @@ That's it — prompts do **not** need to be created ahead of time.
         ```python Using decorator (recommended)
         import os
         import cohere
-        from telemetry import telemetry
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.Cohere]),
+        )
 
         @telemetry.capture(
             project_id=123,  # The ID of your project in Latitude
@@ -167,14 +135,18 @@ That's it — prompts do **not** need to be created ahead of time.
                 model="command-a-03-2025",
                 message=input,
             )
-
             return response.text
         ```
 
         ```python Using context manager
         import os
         import cohere
-        from telemetry import telemetry
+        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+        telemetry = Telemetry(
+            os.environ["LATITUDE_API_KEY"],
+            TelemetryOptions(instrumentors=[Instrumentors.Cohere]),
+        )
 
         def generate_support_reply(input: str) -> str:
             with telemetry.capture(
@@ -186,7 +158,6 @@ That's it — prompts do **not** need to be created ahead of time.
                     model="command-a-03-2025",
                     message=input,
                 )
-
                 return response.text
         ```
       </Tab>
