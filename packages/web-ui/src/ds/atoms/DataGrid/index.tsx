@@ -10,7 +10,7 @@ export type {
   RenderCellProps,
   RenderEditCellProps,
   RenderHeaderCellProps,
-  CellMouseArgs,
+  CellClickArgs,
   CellMouseEvent,
   RowsChangeData,
   DataGridProps,
