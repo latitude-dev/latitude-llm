@@ -28,43 +28,6 @@ function hasTypeScript(framework: FrameworkDefinition): boolean {
   return !isPythonOnly(framework)
 }
 
-function initializeCodeblockTypeScript(framework: FrameworkDefinition): string {
-  if ('autoInstrumentation' in framework && framework.autoInstrumentation) {
-    return `
-import { LatitudeTelemetry } from '@latitude-data/telemetry'
-${framework.autoInstrumentation.import}
-
-const telemetry = new LatitudeTelemetry(
-  process.env.LATITUDE_API_KEY,
-  {
-    instrumentations: {
-      ${framework.autoInstrumentation.line}
-    },
-  }
-)`.trim()
-  }
-
-  return `
-import { LatitudeTelemetry } from '@latitude-data/telemetry'
-
-const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY)`.trim()
-}
-
-function initializeCodeblockPython(framework: FrameworkDefinition): string {
-  if (!hasPython(framework)) return ''
-  const python = framework.python!
-  return `
-import os
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
-
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    TelemetryOptions(
-        instrumentors=[${python.instrumentor}],
-    ),
-)`.trim()
-}
-
 function implementationCodeblockTypeScript(
   framework: FrameworkDefinition,
 ): string {
@@ -290,39 +253,8 @@ LATITUDE_PROJECT_ID=${projectId}
       </InstallationStep>
 
       <InstallationStep
-        title='Initialize Latitude Telemetry'
-        description='Create a single Telemetry instance when your app starts.'
-      >
-        <>
-          {pythonOnlyMode ? (
-            <CodeBlock language='python' textWrap={false}>
-              {initializeCodeblockPython(framework)}
-            </CodeBlock>
-          ) : (
-            <LanguageTabs
-              framework={framework}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            >
-              {(tab) => (
-                <CodeBlock
-                  language={tab === 'typescript' ? 'ts' : 'python'}
-                  textWrap={false}
-                >
-                  {tab === 'typescript'
-                    ? initializeCodeblockTypeScript(framework)
-                    : initializeCodeblockPython(framework)}
-                </CodeBlock>
-              )}
-            </LanguageTabs>
-          )}
-          <Alert description='The telemetry instance should only be created once, and imported everywhere you need to use it.' />
-        </>
-      </InstallationStep>
-
-      <InstallationStep
         title='Wrap your AI call'
-        description='Wrap the code that generates the AI response using telemetry.capture. You must add a path to identify this prompt in your Latitude project.'
+        description='Initialize Latitude Telemetry and wrap the code that generates the AI response using telemetry.capture. You must add a path to identify this prompt in your Latitude project.'
       >
         <>
           {pythonOnlyMode ? (
