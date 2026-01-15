@@ -60,6 +60,7 @@ uv add langchain langchain-openai
 uv add llama-index llama-index-llms-openai
 uv add haystack-ai
 uv add dspy-ai
+uv add crewai
 ```
 
 4. Run an example:
@@ -79,6 +80,7 @@ uv run python examples/test_openai.py
 | Groq         | `test_groq.py`         | `groq`                                   |
 | Mistral      | `test_mistral.py`      | `mistralai`                              |
 | Cohere       | `test_cohere.py`       | `cohere`                                 |
+| CrewAI       | `test_crewai.py`       | `crewai`                                 |
 | Together     | `test_together.py`     | `together`                               |
 | Replicate    | `test_replicate.py`    | `replicate`                              |
 | Gemini       | `test_gemini.py`       | `google-generativeai`                    |

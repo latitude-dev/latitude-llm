@@ -8,6 +8,7 @@ class Instrumentors(StrEnum):
     Anthropic = "anthropic"
     Bedrock = "bedrock"
     Cohere = "cohere"
+    CrewAI = "crewai"
     DSPy = "dspy"
     GoogleGenerativeAI = "googlegenerativeai"
     Groq = "groq"

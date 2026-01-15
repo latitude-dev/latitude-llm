@@ -20,6 +20,7 @@ dependencies = [
     "opentelemetry-instrumentation-anthropic>=0.50.1",
     "opentelemetry-instrumentation-bedrock>=0.50.1",
     "opentelemetry-instrumentation-cohere>=0.50.1",
+    "opentelemetry-instrumentation-crewai>=0.50.1",
     "openinference-instrumentation-dspy>=0.1.31",
     "opentelemetry-instrumentation-google-generativeai>=0.50.1",
     "opentelemetry-instrumentation-groq>=0.50.1",
@@ -39,6 +40,7 @@ dependencies = [
     "opentelemetry-instrumentation-watsonx>=0.50.1",
     "pydantic>=2.10.3",
     "typing-extensions>=4.12.2",
+    "crewai>=1.6.1",
 ]
 
 [dependency-groups]

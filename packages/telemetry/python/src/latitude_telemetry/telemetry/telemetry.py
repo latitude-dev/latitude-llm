@@ -346,6 +346,11 @@ class Telemetry:
 
             self._instrumentors[Instrumentors.Cohere] = CohereInstrumentor()
 
+        if is_package_installed("crewai"):
+            from opentelemetry.instrumentation.crewai import CrewAIInstrumentor
+
+            self._instrumentors[Instrumentors.CrewAI] = CrewAIInstrumentor()
+
         if (
             is_package_installed("dspy")
             or is_package_installed("dspy-ai")
