@@ -8,8 +8,8 @@ import {
   EvaluationType,
   LlmEvaluationMetric,
 } from '../../constants'
-import { Result } from '../../lib/Result'
 import { publisher } from '../../events/publisher'
+import { Result } from '../../lib/Result'
 import { DocumentVersionsRepository } from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
@@ -335,6 +335,204 @@ describe('syncDefaultCompositeTarget', () => {
 
       const updatedDocument = await getDocument()
       expect(updatedDocument.mainEvaluationUuid).toBe(compositeUuid)
+    })
+  })
+
+  describe('when commit is merged', () => {
+    let mergedWorkspace: Workspace
+    let mergedProject: Project
+    let mergedCommit: Commit
+    let mergedDocument: DocumentVersion
+    let mergedIssue: Issue
+
+    beforeEach(async () => {
+      const {
+        workspace: w,
+        project: p,
+        documents,
+        commit: c,
+      } = await factories.createProject({
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          prompt: factories.helpers.createPrompt({
+            provider: 'openai',
+            model: 'gpt-4o',
+          }),
+        },
+      })
+
+      mergedWorkspace = w
+      mergedProject = p
+      mergedCommit = c
+      mergedDocument = documents[0]!
+
+      expect(mergedCommit.mergedAt).not.toBeNull()
+
+      const { issue: i } = await factories.createIssue({
+        document: mergedDocument,
+        workspace: mergedWorkspace,
+        project: mergedProject,
+      })
+      mergedIssue = i
+    })
+
+    async function createMergedLlmEvaluation(issueId?: number) {
+      return factories.createEvaluationV2({
+        document: mergedDocument,
+        commit: mergedCommit,
+        workspace: mergedWorkspace,
+        type: EvaluationType.Llm,
+        metric: LlmEvaluationMetric.Binary,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          provider: 'openai',
+          model: 'gpt-4o',
+          criteria: 'test criteria',
+          passDescription: 'pass',
+          failDescription: 'fail',
+        },
+        issueId,
+      })
+    }
+
+    async function getMergedDocument() {
+      const repo = new DocumentVersionsRepository(mergedWorkspace.id)
+      return repo
+        .getDocumentAtCommit({
+          projectId: mergedProject.id,
+          commitUuid: mergedCommit.uuid,
+          documentUuid: mergedDocument.documentUuid,
+        })
+        .then((r) => r.unwrap())
+    }
+
+    async function getMergedCompositeEvaluation(uuid: string) {
+      const result = await database
+        .select()
+        .from(evaluationVersions)
+        .where(
+          and(
+            eq(evaluationVersions.evaluationUuid, uuid),
+            eq(evaluationVersions.commitId, mergedCommit.id),
+          ),
+        )
+        .then((r) => r[0])
+
+      if (!result) return undefined
+
+      return {
+        ...result,
+        configuration:
+          result.configuration as CompositeEvaluationConfiguration<CompositeEvaluationMetric>,
+      }
+    }
+
+    it('creates composite when evaluation has an issue on merged commit', async () => {
+      const evaluation = await createMergedLlmEvaluation()
+      mocks.publisher.mockClear()
+
+      const doc = await getMergedDocument()
+
+      const result = await syncDefaultCompositeTarget({
+        evaluation,
+        issueId: mergedIssue.id,
+        document: doc,
+        commit: mergedCommit,
+        workspace: mergedWorkspace,
+      })
+
+      const composite = result.unwrap()!
+      expect(composite).toEqual(
+        expect.objectContaining({
+          type: EvaluationType.Composite,
+          metric: CompositeEvaluationMetric.Average,
+          name: 'Performance',
+          configuration: expect.objectContaining({
+            evaluationUuids: expect.arrayContaining([evaluation.uuid]),
+          }),
+        }),
+      )
+
+      const updatedDocument = await getMergedDocument()
+      expect(updatedDocument.mainEvaluationUuid).toBe(composite.uuid)
+    })
+
+    it('removes evaluation from composite when it loses issue on merged commit', async () => {
+      const evaluation1 = await createMergedLlmEvaluation(mergedIssue.id)
+      let doc = await getMergedDocument()
+
+      const { issue: issue2 } = await factories.createIssue({
+        document: mergedDocument,
+        workspace: mergedWorkspace,
+        project: mergedProject,
+      })
+      const evaluation2 = await createMergedLlmEvaluation()
+
+      await syncDefaultCompositeTarget({
+        evaluation: evaluation2,
+        issueId: issue2.id,
+        document: doc,
+        commit: mergedCommit,
+        workspace: mergedWorkspace,
+      })
+
+      doc = await getMergedDocument()
+      const compositeUuid = doc.mainEvaluationUuid!
+      const compositeBefore = await getMergedCompositeEvaluation(compositeUuid)
+      expect(compositeBefore?.configuration.evaluationUuids).toHaveLength(2)
+
+      mocks.publisher.mockClear()
+
+      const result = await syncDefaultCompositeTarget({
+        evaluation: evaluation1,
+        issueId: null,
+        document: doc,
+        commit: mergedCommit,
+        workspace: mergedWorkspace,
+      })
+
+      expect(Result.isOk(result)).toBe(true)
+      const updatedComposite = result.unwrap()!
+      expect(updatedComposite).toBeDefined()
+      expect(updatedComposite.configuration.evaluationUuids).toHaveLength(1)
+      expect(updatedComposite.configuration.evaluationUuids).not.toContain(
+        evaluation1.uuid,
+      )
+      expect(updatedComposite.configuration.evaluationUuids).toContain(
+        evaluation2.uuid,
+      )
+
+      const updatedDocument = await getMergedDocument()
+      expect(updatedDocument.mainEvaluationUuid).toBe(compositeUuid)
+    })
+
+    it('deletes composite when last evaluation loses issue on merged commit', async () => {
+      const evaluation = await createMergedLlmEvaluation(mergedIssue.id)
+      const doc = await getMergedDocument()
+      const compositeUuid = doc.mainEvaluationUuid!
+
+      mocks.publisher.mockClear()
+
+      const result = await syncDefaultCompositeTarget({
+        evaluation,
+        issueId: null,
+        document: doc,
+        commit: mergedCommit,
+        workspace: mergedWorkspace,
+      })
+
+      expect(Result.isOk(result)).toBe(true)
+      expect(result.unwrap()).toBeUndefined()
+
+      const updatedDocument = await getMergedDocument()
+      expect(updatedDocument.mainEvaluationUuid).toBeNull()
+
+      const composite = await getMergedCompositeEvaluation(compositeUuid)
+      expect(composite?.deletedAt).not.toBeNull()
     })
   })
 })

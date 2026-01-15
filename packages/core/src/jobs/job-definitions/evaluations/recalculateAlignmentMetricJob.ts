@@ -1,22 +1,22 @@
+import { SerializedSpanPair } from '@latitude-data/constants/tracing'
 import { Job } from 'bullmq'
+import {
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetric,
+} from '../../../constants'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { publisher } from '../../../events/publisher'
 import { NotFoundError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { evaluateConfiguration } from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
 import {
   CommitsRepository,
   EvaluationsV2Repository,
 } from '../../../repositories'
+import { generateConfigurationHash } from '../../../services/evaluationsV2/generateConfigurationHash'
+import { evaluateConfiguration } from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
 import { updateEvaluationV2 } from '../../../services/evaluationsV2/update'
 import { captureException } from '../../../utils/datadogCapture'
-import {
-  EvaluationV2,
-  EvaluationType,
-  LlmEvaluationMetric,
-} from '../../../constants'
-import { generateConfigurationHash } from '../../../services/evaluationsV2/generateConfigurationHash'
-import { SerializedSpanPair } from '@latitude-data/constants/tracing'
 
 export type RecalculateAlignmentMetricJobData = {
   workspaceId: number
@@ -123,6 +123,7 @@ export const recalculateAlignmentMetricJob = async (
       workspace,
       commit: commit,
       alignmentMetricMetadata: updatedAlignmentMetricMetadata,
+      force: true,
     }).then((r) => r.unwrap())
 
     publisher.publishLater({
@@ -166,6 +167,7 @@ export const recalculateAlignmentMetricJob = async (
         workspace,
         commit: commit,
         alignmentMetricMetadata: failedAlignmentMetricMetadata,
+        force: true,
       }).catch(() => {})
 
       publisher.publishLater({

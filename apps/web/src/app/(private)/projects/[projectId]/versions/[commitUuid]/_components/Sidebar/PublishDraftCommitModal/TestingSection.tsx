@@ -29,7 +29,7 @@ export function TestingSection({
         <SwitchInput
           checked={enabled}
           onCheckedChange={onEnabledChange}
-          label='Testing'
+          label='Deploy as test version'
           fullWidth={false}
           inverted
         />

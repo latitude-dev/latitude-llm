@@ -1,10 +1,10 @@
+import { Database } from '../../client'
 import {
   CompositeEvaluationMetric,
   EvaluationMetric,
   EvaluationType,
   EvaluationV2,
 } from '../../constants'
-import { Database } from '../../client'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { EvaluationsV2Repository } from '../../repositories'
@@ -175,6 +175,7 @@ async function removeFromComposite<
           evaluationUuids: newEvaluationUuids,
         },
       },
+      force: true,
     },
     transaction,
   )
@@ -217,6 +218,7 @@ async function addToComposite<
           evaluationUuids: newEvaluationUuids,
         },
       },
+      force: true,
     },
     transaction,
   )

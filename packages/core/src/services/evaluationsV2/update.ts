@@ -22,8 +22,8 @@ import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { Issue } from '../../schema/models/types/Issue'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { syncDefaultCompositeTarget } from './sync'
 import { maybeEnqueueAlignmentRecalculation } from './enqueueAlignmentRecalculation'
+import { syncDefaultCompositeTarget } from './sync'
 import { validateEvaluationV2 } from './validate'
 
 export async function updateEvaluationV2<
@@ -38,6 +38,7 @@ export async function updateEvaluationV2<
     issueId,
     workspace,
     alignmentMetricMetadata,
+    force = false,
   }: {
     evaluation: EvaluationV2<T, M>
     commit: Commit
@@ -46,6 +47,7 @@ export async function updateEvaluationV2<
     options?: Partial<EvaluationOptions>
     issueId?: number | null
     alignmentMetricMetadata?: AlignmentMetricMetadata
+    force?: boolean
   },
   transaction = new Transaction(),
 ): Promise<TypedResult<{ evaluation: EvaluationV2<T, M> }>> {
@@ -60,7 +62,7 @@ export async function updateEvaluationV2<
           break
         }
       }
-      if (settingsChanged) {
+      if (settingsChanged && !force) {
         await assertCanEditCommit(commit, tx).then((r) => r.unwrap())
       }
 

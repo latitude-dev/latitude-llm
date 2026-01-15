@@ -41,7 +41,10 @@
 
 - Use factories extensively, minimize mocks for integration tests
 - Tests located alongside source files with `.test.ts` extension
-- Run `pnpm test` from package root or `pnpm --filter <package> test` for specific packages
+- To run tests for a specific package, `cd` into the package directory and run:
+  - `pnpm test -- "path/to/file.test.ts"` - Run a specific test file
+  - `pnpm test -- "path/to/directory"` - Run all tests in a directory
+  - `pnpm test` - Run all tests in the package
 
 ## CRUD Operations Pattern
 

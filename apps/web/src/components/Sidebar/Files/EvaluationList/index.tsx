@@ -1,25 +1,26 @@
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import Link from 'next/link'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { ROUTES } from '$/services/routes'
 import {
   getEvaluationMetricSpecification,
   getEvaluationTypeSpecification,
 } from '$/components/evaluations'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { TextColor } from '@latitude-data/web-ui/tokens'
-import { cn } from '@latitude-data/web-ui/utils'
-import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
 import { IndentationLine } from '$/components/Sidebar/Files/IndentationBar'
 import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
-import { type ParamValue } from 'next/dist/server/request/params'
+import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
+import { ROUTES } from '$/services/routes'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationV2,
   ModifiedDocumentType,
 } from '@latitude-data/core/constants'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextColor } from '@latitude-data/web-ui/tokens'
+import { cn } from '@latitude-data/web-ui/utils'
+import { type ParamValue } from 'next/dist/server/request/params'
+import Link from 'next/link'
+import { useMemo } from 'react'
 
 const INDENTATION_UNIT_PX = 24
 function IndentationBar({
@@ -140,13 +141,15 @@ export function EvaluationList({
     commit,
     document,
   })
-  const evaluationsSize = data.length
+  const evaluations = useMemo(() => {
+    return data.filter((evaluation) => !evaluation.ignoredAt)
+  }, [data])
   return (
     <ul className='flex flex-col min-w-0'>
-      {data.map((evaluation, index) => (
+      {evaluations.map((evaluation, index) => (
         <li key={evaluation.uuid}>
           <EvaluationItem
-            isLast={index === evaluationsSize - 1}
+            isLast={index === evaluations.length - 1}
             indentation={indentation}
             color={color}
             selectedBackgroundColor={selectedBackgroundColor}

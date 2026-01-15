@@ -1,29 +1,29 @@
+import { MIN_ALIGNMENT_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
+import { SerializedSpanPair } from '@latitude-data/constants/tracing'
 import { Job } from 'bullmq'
+import {
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetric,
+} from '../../../constants'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { NotFoundError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { evaluateConfiguration } from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
-import { MIN_ALIGNMENT_METRIC_THRESHOLD } from '@latitude-data/constants/issues'
 import {
   CommitsRepository,
   EvaluationsV2Repository,
 } from '../../../repositories'
-import { updateEvaluationV2 } from '../../../services/evaluationsV2/update'
-import { endActiveEvaluation } from '../../../services/evaluationsV2/active/end'
-import { captureException } from '../../../utils/datadogCapture'
-import { failActiveEvaluation } from '../../../services/evaluationsV2/active/fail'
-import { queues } from '../../queues'
-import { deleteEvaluationV2 } from '../../../services/evaluationsV2/delete'
-import {
-  EvaluationV2,
-  EvaluationType,
-  LlmEvaluationMetric,
-} from '../../../constants'
 import { Commit } from '../../../schema/models/types/Commit'
 import { Workspace } from '../../../schema/models/types/Workspace'
-import { getFalsePositivesAndFalseNegatives } from '../../../services/evaluationsV2/generateFromIssue/getFalseExamples'
+import { endActiveEvaluation } from '../../../services/evaluationsV2/active/end'
+import { failActiveEvaluation } from '../../../services/evaluationsV2/active/fail'
+import { deleteEvaluationV2 } from '../../../services/evaluationsV2/delete'
 import { generateConfigurationHash } from '../../../services/evaluationsV2/generateConfigurationHash'
-import { SerializedSpanPair } from '@latitude-data/constants/tracing'
+import { evaluateConfiguration } from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
+import { getFalsePositivesAndFalseNegatives } from '../../../services/evaluationsV2/generateFromIssue/getFalseExamples'
+import { updateEvaluationV2 } from '../../../services/evaluationsV2/update'
+import { captureException } from '../../../utils/datadogCapture'
+import { queues } from '../../queues'
 
 export type ValidateGeneratedEvaluationJobData = {
   workspaceId: number
@@ -148,6 +148,7 @@ export const validateGeneratedEvaluationJob = async (
         lastProcessedNegativeSpanDate: latestNegativeSpanDate,
         recalculatingAt: undefined,
       },
+      force: true,
     }).then((r) => r.unwrap())
 
     const endResult = await endActiveEvaluation({

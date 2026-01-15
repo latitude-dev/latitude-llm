@@ -40,8 +40,10 @@ export async function mergeIssues(
   },
   transaction = new Transaction(),
 ) {
-  if (!env.LATITUDE_CLOUD)
+  if (!env.LATITUDE_CLOUD) {
     return Result.ok<MergeResult>({ winner: issue, mergedIssues: [] })
+  }
+
   if (issue.mergedAt) {
     return Result.error(
       new UnprocessableEntityError(
