@@ -3,7 +3,6 @@
 import { useState, type ReactNode } from 'react'
 import {
   FrameworkDefinition,
-  UnsupportedFrameworkDefinition,
   PythonOnlyFrameworkDefinition,
 } from '../frameworks'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
@@ -62,6 +61,50 @@ ${withIndent(framework.implementation.codeblock, 3)}
 }`.trim()
   }
 
+  // For frameworks with manual instrumentation (like Gemini), show combined pattern
+  if ('manualInstrumentation' in framework) {
+    const manual = framework.manualInstrumentation
+    return `
+import { LatitudeTelemetry } from '@latitude-data/telemetry'
+${manual.completion.imports.join('\n')}
+
+const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY)
+
+async function generateSupportReply(input: string) {
+  return telemetry.capture(
+    {
+      projectId: process.env.LATITUDE_PROJECT_ID,
+      path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
+    },
+    async () => {
+      const model = '${manual.completion.model}'
+
+      // 1) Start the completion span
+      const span = telemetry.span.completion({
+        model,
+        input: [{ role: 'user', content: input }]
+      })
+
+      try {
+        // 2) Call the API as usual
+${withIndent(manual.completion.codeblock, 4)}
+
+        // 3) End the span (attach output + useful metadata)
+        span.end({
+          output: [{ role: 'assistant', content: text }],
+        })
+
+        return text
+      } catch (error) {
+        // Make sure to close the span even on errors
+        span.fail(error)
+        throw error
+      }
+    }
+  )
+}`.trim()
+  }
+
   return `
 import { LatitudeTelemetry } from '@latitude-data/telemetry'
 
@@ -102,54 +145,6 @@ telemetry = Telemetry(
 def generate_support_reply(input: str) -> str:
 ${withIndent(python.implementation.codeblock, 1)}
     return ${python.implementation.return}`.trim()
-}
-
-function ManualInstrumentationStep({
-  framework,
-}: {
-  framework: UnsupportedFrameworkDefinition
-}) {
-  return (
-    <InstallationStep
-      title='Instrument your AI calls'
-      description={`Inside your generation function, create a completion span before calling ${framework.name}. Then, end it after the response is returned.`}
-    >
-      <CodeBlock language='ts' textWrap={false}>
-        {`
-import { LatitudeTelemetry } from '@latitude-data/telemetry'
-${framework.manualInstrumentation.completion.imports.join('\n')}
-
-const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY)
-
-async function generateAIResponse(input: string) {
-  const model = '${framework.manualInstrumentation.completion.model}'
-
-  // 1) Start the completion span
-  const span = telemetry.span.completion({
-    model,
-    input: [{ role: 'user', content: input }]
-  })
-
-  try {
-    // 2) Call ${framework.name} as usual
-${withIndent(framework.manualInstrumentation.completion.codeblock, 2)}
-
-    // 3) End the span (attach output + useful metadata)
-    span.end({
-      output: [{ role: 'assistant', content: response }],
-    })
-
-    ${framework.manualInstrumentation.completion.return}
-  } catch (error) {
-    // Make sure to close the span even on errors
-    span.fail(error)
-    throw error
-  }
-}
-`.trim()}
-      </CodeBlock>
-    </InstallationStep>
-  )
 }
 
 function LanguageTabs({
@@ -282,10 +277,6 @@ LATITUDE_PROJECT_ID=${projectId}
           <Alert description='The path is used to identify the prompt in your Latitude project. It must not contain spaces or special characters (use letters, numbers, - _ / .), and it will automatically create a new prompt in your Latitude project if it does not exist.' />
         </>
       </InstallationStep>
-
-      {'manualInstrumentation' in framework && !pythonOnlyMode && (
-        <ManualInstrumentationStep framework={framework} />
-      )}
     </>
   )
 }
