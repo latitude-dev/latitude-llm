@@ -239,7 +239,8 @@
               "developers/frameworks/llamaindex",
               "developers/frameworks/vercel-ai-sdk",
               "developers/frameworks/haystack",
-              "developers/frameworks/dspy"
+              "developers/frameworks/dspy",
+              "developers/frameworks/crewai"
             ]
           }
         ]

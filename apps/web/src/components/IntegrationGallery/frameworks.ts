@@ -647,4 +647,35 @@ result = pipeline.run({"prompt_builder": {"query": input}})
       },
     },
   },
+  {
+    name: 'CrewAI',
+    icon: 'users',
+    pythonOnly: true,
+    python: {
+      instrumentor: 'Instrumentors.CrewAI',
+      implementation: {
+        imports: ['from crewai import Agent, Task, Crew'],
+        codeblock: `
+# Define your agent
+researcher = Agent(
+    role="Researcher",
+    goal="Research and summarize topics concisely",
+    backstory="You are a skilled researcher.",
+)
+
+# Define your task
+task = Task(
+    description=input,
+    expected_output="A concise response.",
+    agent=researcher,
+)
+
+# Create and run the crew
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+        `.trim(),
+        return: 'result.raw',
+      },
+    },
+  },
 ]
