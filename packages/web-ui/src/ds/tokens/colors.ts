@@ -42,7 +42,7 @@ export const colors = {
     accent: 'text-accent',
     accentForeground: 'text-accent-foreground',
     purple: 'text-purple',
-    purpleForeground: 'text-white',
+    purpleForeground: 'text-purple-foreground',
     destructive: 'text-destructive',
     destructiveForeground: 'text-destructive-foreground',
     destructiveMutedForeground: 'text-destructive-muted-foreground',
