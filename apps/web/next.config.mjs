@@ -13,6 +13,7 @@ const nextConfig = {
     '@latitude-data/sdk',
     '@napi-rs/canvas',
     'bullmq',
+    'consolidate',
     'nodemailer-mailgun-transport',
     'openid-client',
     'pdfjs-dist',
