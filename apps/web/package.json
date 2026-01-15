@@ -96,6 +96,7 @@
     "zustand": "4.5.6"
   },
   "devDependencies": {
+    "@babel/preset-typescript": "^7.27.0",
     "@datadog/datadog-ci": "catalog:",
     "@faker-js/faker": "^8.4.1",
     "@latitude-data/eslint-config": "workspace:*",
