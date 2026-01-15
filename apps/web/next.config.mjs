@@ -17,6 +17,7 @@ const nextConfig = {
     'openid-client',
     'pdfjs-dist',
     'promptl-ai',
+    'fast-json-stable-stringify',
   ],
   eslint: {
     // Fine because we do the linter pass in CI before building
