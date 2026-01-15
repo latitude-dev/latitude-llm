@@ -47,11 +47,9 @@ export function IntercomProvider({
       created_at: identity.userData.createdAt,
       hide_default_launcher: floatingButton === 'none',
       alignment: floatingButton,
-      custom_attributes: {
-        job_title: identity.userData.jobTitle,
-        ai_usage_stage: identity.userData.aiUsageStage,
-        latitude_goal: identity.userData.latitudeGoal,
-      },
+      job_title: identity.userData.jobTitle,
+      ai_usage_stage: identity.userData.aiUsageStage,
+      latitude_goal: identity.userData.latitudeGoal,
     })
 
     onUnreadCountChange(unreadCountHandler)
