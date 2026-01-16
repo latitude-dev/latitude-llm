@@ -2,26 +2,28 @@ import { subscriptions } from '../../../schema/models/subscriptions'
 import { workspaces } from '../../../schema/models/workspaces'
 import { Job } from 'bullmq'
 import { eq, inArray } from 'drizzle-orm'
-import { FREE_PLANS } from '../../../plans'
+import { FREE_PLANS, SubscriptionPlan } from '../../../plans'
 import { database } from '../../../client'
 import { queues } from '../../queues'
 
 export type ScheduleWorkspaceCleanupJobsData = Record<string, never>
 
+const PLANS_WITH_LIMITED_RETENTION = [...FREE_PLANS, SubscriptionPlan.TeamV4]
+
 /**
- * Job that runs nightly to schedule cleanup jobs for workspaces on free plans.
+ * Job that runs nightly to schedule cleanup jobs for workspaces with limited retention.
  *
  * This job:
- * 1. Finds all workspaces with free plans (hobby_v1, hobby_v2)
+ * 1. Finds all workspaces with plans that have limited retention (free plans and TeamV4)
  * 2. Enqueues individual cleanup jobs for each workspace
- * 3. Each cleanup job will delete document logs and provider logs older than 30 days
+ * 3. Each cleanup job will delete document logs and provider logs older than the plan's retention period
  */
 export const scheduleWorkspaceCleanupJobs = async (
   _: Job<ScheduleWorkspaceCleanupJobsData>,
 ) => {
   const { maintenanceQueue } = await queues()
-  // Find all workspaces with free plans
-  const freeWorkspaces = await database
+  // Find all workspaces with limited retention plans
+  const workspacesWithLimitedRetention = await database
     .select({
       id: workspaces.id,
     })
@@ -30,13 +32,13 @@ export const scheduleWorkspaceCleanupJobs = async (
       subscriptions,
       eq(subscriptions.id, workspaces.currentSubscriptionId),
     )
-    .where(inArray(subscriptions.plan, FREE_PLANS))
+    .where(inArray(subscriptions.plan, PLANS_WITH_LIMITED_RETENTION))
     .then((r) => r)
 
   let _enqueuedJobs = 0
 
-  // Enqueue individual cleanup job for each free workspace
-  for (const workspace of freeWorkspaces) {
+  // Enqueue individual cleanup job for each workspace with limited retention
+  for (const workspace of workspacesWithLimitedRetention) {
     await maintenanceQueue.add(
       'cleanupWorkspaceOldLogsJob',
       { workspaceId: workspace.id },
