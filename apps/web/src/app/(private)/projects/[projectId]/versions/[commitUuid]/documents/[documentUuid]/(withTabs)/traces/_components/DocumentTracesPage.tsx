@@ -133,7 +133,6 @@ export function DocumentTracesPage({
                   <SelectionTracesBanner
                     spans={spans.items}
                     selectableState={selectableState}
-                    filters={filters}
                   />
                 }
                 rightPane={

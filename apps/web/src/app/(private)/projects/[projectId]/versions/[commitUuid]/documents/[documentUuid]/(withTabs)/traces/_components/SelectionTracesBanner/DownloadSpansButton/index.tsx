@@ -2,52 +2,32 @@
 
 import { useCallback, useState } from 'react'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentUrl } from '$/hooks/useCurrentUrl'
 import { handleResponse } from '$/hooks/useFetcher'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
-import { SpansFilters } from '$/lib/schemas/filters'
 import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { Span } from '@latitude-data/constants'
-import { downloadSpansAction } from '$/actions/spans/downloadSpans'
 
 const MAX_IMMEDIATE_DOWNLOAD = 25
 
 export function DownloadSpansButton({
   selectableState,
   spans,
-  filters,
 }: {
   selectableState: SelectableRowsHook
   spans: Span[]
-  filters: SpansFilters
 }) {
   const { document: latitudeDocument } = useCurrentDocument()
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
   const { toast } = useToast()
   const navigate = useNavigate()
   const currentUrl = useCurrentUrl()
   const [isDownloading, setIsDownloading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-
-  const { execute: executeDownloadAction, isPending: isActionPending } =
-    useLatitudeAction(downloadSpansAction, {
-      onError: (error) => {
-        toast({
-          title: 'Error',
-          description: error?.message || 'Failed to start export',
-          variant: 'destructive',
-        })
-      },
-    })
 
   const handleImmediateDownload = useCallback(async () => {
     const selectedSpans = spans.filter((span) =>
@@ -94,82 +74,49 @@ export function DownloadSpansButton({
   ])
 
   const handleDownload = useCallback(async () => {
-    if (selectableState.selectionMode === 'NONE') {
-      return
-    }
-
     setIsDownloading(true)
 
     try {
-      const selectedSpanIdentifiers = spans
-        .filter((span) => selectableState.selectedRowIds.includes(span.id))
-        .map((span) => ({ traceId: span.traceId, spanId: span.id }))
+      if (selectableState.selectionMode === 'NONE') {
+        console.error('Attempted to download spans with no selection')
+        return // invalid state
+      }
 
-      const excludedSpanIdentifiers = Array.from(selectableState.excludedIds)
-        .map((id) => spans.find((span) => span.id === id))
-        .filter((span): span is Span => span !== undefined)
-        .map((span) => ({ traceId: span.traceId, spanId: span.id }))
-
-      const [data, error] = await executeDownloadAction({
-        projectId: project.id,
-        commitUuid: commit.uuid,
-        documentUuid: latitudeDocument.documentUuid,
-        selectionMode: selectableState.selectionMode,
-        selectedSpanIdentifiers,
-        excludedSpanIdentifiers,
-        filters,
-      })
-
-      if (error || !data) return
-
-      if (data.mode === 'sync') {
+      if (selectableState.selectionMode === 'PARTIAL') {
         await handleImmediateDownload()
       } else {
+        // For ALL or ALL_EXCEPT modes, we would need async download
+        // For now, we'll just show an error since we don't have async download for spans yet
         toast({
-          title: 'Export started',
-          description: 'You will receive an email when your export is ready.',
+          title: 'Not supported',
+          description:
+            'Downloading all spans is not yet supported. Please select specific spans to download.',
+          variant: 'destructive',
         })
-        selectableState.clearSelections()
       }
     } finally {
       setIsDownloading(false)
       setIsModalOpen(false)
     }
-  }, [
-    selectableState,
-    spans,
-    project.id,
-    commit.uuid,
-    latitudeDocument.documentUuid,
-    filters,
-    executeDownloadAction,
-    handleImmediateDownload,
-    toast,
-  ])
-
-  const isProcessing = isDownloading || isActionPending
-  const isAsyncDownload =
-    selectableState.selectionMode === 'ALL' ||
-    selectableState.selectionMode === 'ALL_EXCEPT' ||
-    selectableState.selectedCount > MAX_IMMEDIATE_DOWNLOAD
+  }, [handleImmediateDownload, selectableState, toast])
 
   const getModalContent = () => {
     const selectedCount = selectableState.selectedCount
-    if (isAsyncDownload) {
-      return `You are about to export ${selectedCount} spans. This will be processed in the background and you will receive an email when your export is ready.`
+    if (selectedCount <= MAX_IMMEDIATE_DOWNLOAD) {
+      return `Are you sure you want to download ${selectedCount} spans?`
     }
-    return `Are you sure you want to download ${selectedCount} spans?`
+    return `You are about to download ${selectedCount} spans.`
   }
 
   return (
     <>
       <Button
-        disabled={selectableState.selectedCount === 0 || isProcessing}
+        disabled={selectableState.selectedCount === 0 || isDownloading}
         fancy
         variant='outline'
         onClick={() => setIsModalOpen(true)}
       >
-        {isProcessing
+        {isDownloading
           ? 'Processing...'
           : `Download ${selectableState.selectedCount} spans`}
       </Button>
@@ -179,9 +126,9 @@ export function DownloadSpansButton({
         onOpenChange={setIsModalOpen}
         title='Download Spans'
         confirm={{
-          label: isAsyncDownload ? 'Start Export' : 'Download',
-          isConfirming: isProcessing,
-          disabled: isProcessing,
+          label: 'Download',
+          isConfirming: isDownloading,
+          disabled: isDownloading,
         }}
         cancel={{
           label: 'Close',

@@ -494,9 +494,7 @@ response = model.generate_text(prompt=input, params=parameters)
     python: {
       instrumentor: 'Instrumentors.AlephAlpha',
       implementation: {
-        imports: [
-          'from aleph_alpha_client import Client, CompletionRequest, Prompt',
-        ],
+        imports: ['from aleph_alpha_client import Client, CompletionRequest, Prompt'],
         codeblock: `
 client = Client(token=os.environ["ALEPH_ALPHA_API_KEY"])
 request = CompletionRequest(
