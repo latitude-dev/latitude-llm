@@ -59,10 +59,16 @@ export async function enqueueExportSpansJob(data: ExportSpansJobData) {
 const BATCH_SIZE = 500
 
 type FixedColumnsByName = {
+  input: Column
   label: Column
   spanId: Column
   traceId: Column
-  tokens: Column
+  tokensPrompt: Column
+  tokensCached: Column
+  tokensReasoning: Column
+  tokensCompletion: Column
+  model: Column
+  cost: Column
 }
 
 async function* iterateSpans({
@@ -127,13 +133,11 @@ async function buildRowsForBatch({
   spans,
   repo,
   metadataRepo,
-  parametersByName,
   fixedColumnsByName,
 }: {
   spans: Span[]
   repo: SpansRepository
   metadataRepo: SpanMetadatasRepository
-  parametersByName: Record<string, Column>
   fixedColumnsByName: FixedColumnsByName
 }): Promise<DatasetRowData[]> {
   const parentIds = spans.map((s) => ({ traceId: s.traceId, spanId: s.id }))
@@ -145,8 +149,6 @@ async function buildRowsForBatch({
 
   const completionsByParent = completionsResult.value!
 
-  const metadatas = await metadataRepo.getBatch<SpanType.Prompt>(parentIds)
-
   const completionSpans = Array.from(completionsByParent.values())
   const completionMetadatas = await metadataRepo.getBatch<SpanType.Completion>(
     completionSpans.map((c) => ({ traceId: c.traceId, spanId: c.id })),
@@ -156,77 +158,93 @@ async function buildRowsForBatch({
 
   for (const span of spans) {
     const spanKey = `${span.traceId}:${span.id}`
-    const metadata = metadatas.get(spanKey)
     const completionSpan = completionsByParent.get(spanKey)
 
-    let output: string | undefined
-    if (completionSpan) {
-      const completionKey = `${completionSpan.traceId}:${completionSpan.id}`
-      const completionMetadata = completionMetadatas.get(completionKey)
+    if (!completionSpan) continue
 
+    const completionKey = `${completionSpan.traceId}:${completionSpan.id}`
+    const completionMetadata = completionMetadatas.get(completionKey)
+
+    let output: string | undefined
+    let input: string | undefined
+
+    if (
+      completionMetadata &&
+      completionMetadata.type === SpanType.Completion
+    ) {
+      const typedMetadata =
+        completionMetadata as SpanMetadata<SpanType.Completion>
+
+      const completionOutput = typedMetadata.output
       if (
-        completionMetadata &&
-        completionMetadata.type === SpanType.Completion
+        completionOutput &&
+        Array.isArray(completionOutput) &&
+        completionOutput.length > 0
       ) {
-        const completionOutput = (
-          completionMetadata as SpanMetadata<SpanType.Completion>
-        ).output
-        if (
-          completionOutput &&
-          Array.isArray(completionOutput) &&
-          completionOutput.length > 0
-        ) {
-          const lastMessage = completionOutput[completionOutput.length - 1]
-          if (lastMessage) {
-            const formatted = formatMessage(lastMessage as unknown as Message)
-            if (formatted) {
-              output = formatted
-            }
+        const lastMessage = completionOutput[completionOutput.length - 1]
+        if (lastMessage) {
+          const formatted = formatMessage(lastMessage as unknown as Message)
+          if (formatted) {
+            output = formatted
           }
         }
+      }
+
+      const completionInput = typedMetadata.input
+      if (
+        completionInput &&
+        Array.isArray(completionInput) &&
+        completionInput.length > 0
+      ) {
+        input = completionInput
+          .map((msg) => formatMessage(msg as unknown as Message))
+          .filter(Boolean)
+          .join('\n\n')
       }
     }
 
     if (!output) continue
 
-    const parameters = metadata?.parameters ?? {}
-    const spanParameterColumns: DatasetRowData = {}
-
-    for (const [name, column] of Object.entries(parametersByName)) {
-      const value = parameters[name]
-      spanParameterColumns[column.identifier] =
-        value !== undefined
-          ? (value as DatasetRowData[keyof DatasetRowData])
-          : ''
-    }
-
-    const tokens =
-      ((span as any).tokensPrompt ?? 0) +
-      ((span as any).tokensCompletion ?? 0) +
-      ((span as any).tokensCached ?? 0) +
-      ((span as any).tokensReasoning ?? 0)
+    const costInCents = (completionSpan.cost ?? 0) / 1000
 
     rows.push({
-      ...spanParameterColumns,
+      [fixedColumnsByName.input.identifier]: input ?? '',
       [fixedColumnsByName.label.identifier]: output,
       [fixedColumnsByName.spanId.identifier]: span.id,
       [fixedColumnsByName.traceId.identifier]: span.traceId,
-      [fixedColumnsByName.tokens.identifier]: tokens,
+      [fixedColumnsByName.tokensPrompt.identifier]:
+        completionSpan.tokensPrompt ?? 0,
+      [fixedColumnsByName.tokensCached.identifier]:
+        completionSpan.tokensCached ?? 0,
+      [fixedColumnsByName.tokensReasoning.identifier]:
+        completionSpan.tokensReasoning ?? 0,
+      [fixedColumnsByName.tokensCompletion.identifier]:
+        completionSpan.tokensCompletion ?? 0,
+      [fixedColumnsByName.model.identifier]: completionSpan.model ?? '',
+      [fixedColumnsByName.cost.identifier]: costInCents,
     })
   }
 
   return rows
 }
 
-function buildFixedColumns(hashAlgorithm: typeof nanoidHashAlgorithm): {
+function buildExportColumns(
+  hashAlgorithm: typeof nanoidHashAlgorithm,
+): {
   columns: Column[]
   fixedColumnsByName: FixedColumnsByName
 } {
   const fixedColumnDefs = [
+    { name: 'input', role: DATASET_COLUMN_ROLES.metadata },
     { name: DEFAULT_DATASET_LABEL, role: DATASET_COLUMN_ROLES.label },
     { name: 'span_id', role: DATASET_COLUMN_ROLES.metadata },
     { name: 'trace_id', role: DATASET_COLUMN_ROLES.metadata },
-    { name: 'tokens', role: DATASET_COLUMN_ROLES.metadata },
+    { name: 'tokens_prompt', role: DATASET_COLUMN_ROLES.metadata },
+    { name: 'tokens_cached', role: DATASET_COLUMN_ROLES.metadata },
+    { name: 'tokens_reasoning', role: DATASET_COLUMN_ROLES.metadata },
+    { name: 'tokens_completion', role: DATASET_COLUMN_ROLES.metadata },
+    { name: 'model', role: DATASET_COLUMN_ROLES.metadata },
+    { name: 'cost', role: DATASET_COLUMN_ROLES.metadata },
   ]
 
   const columns = buildColumnsFn({
@@ -239,12 +257,24 @@ function buildFixedColumns(hashAlgorithm: typeof nanoidHashAlgorithm): {
     (acc, column) => {
       if (column.role === DATASET_COLUMN_ROLES.label) {
         acc.label = column
+      } else if (column.name === 'input') {
+        acc.input = column
       } else if (column.name === 'span_id') {
         acc.spanId = column
       } else if (column.name === 'trace_id') {
         acc.traceId = column
-      } else if (column.name === 'tokens') {
-        acc.tokens = column
+      } else if (column.name === 'tokens_prompt') {
+        acc.tokensPrompt = column
+      } else if (column.name === 'tokens_cached') {
+        acc.tokensCached = column
+      } else if (column.name === 'tokens_reasoning') {
+        acc.tokensReasoning = column
+      } else if (column.name === 'tokens_completion') {
+        acc.tokensCompletion = column
+      } else if (column.name === 'model') {
+        acc.model = column
+      } else if (column.name === 'cost') {
+        acc.cost = column
       }
       return acc
     },
@@ -287,9 +317,7 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
     ? new Set(selectedSpanIdentifiers.map((id) => `${id.traceId}:${id.spanId}`))
     : undefined
 
-  const { columns, fixedColumnsByName } = buildFixedColumns(nanoidHashAlgorithm)
-
-  const parametersByName: Record<string, Column> = {}
+  const { columns, fixedColumnsByName } = buildExportColumns(nanoidHashAlgorithm)
 
   const csvColumns = columns.map((col) => col.name)
 
@@ -321,7 +349,6 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
         spans: batch,
         repo,
         metadataRepo,
-        parametersByName,
         fixedColumnsByName,
       })
 
@@ -342,7 +369,6 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
       spans: batch,
       repo,
       metadataRepo,
-      parametersByName,
       fixedColumnsByName,
     })
 

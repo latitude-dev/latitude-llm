@@ -1,5 +1,6 @@
 import { Result } from '../../lib/Result'
-import { Workspace } from '../../schema/models/workspaces'
+import { PromisedResult } from '../../lib/Transaction'
+import { Workspace } from '../../schema/models/types/Workspace'
 import { findOrCreateExport } from '../exports/findOrCreate'
 import {
   enqueueExportSpansJob,
@@ -55,7 +56,7 @@ export async function downloadSpans({
   selectedSpanIdentifiers,
   excludedSpanIdentifiers,
   filters,
-}: DownloadSpansParams): Promise<Result<DownloadSpansResult>> {
+}: DownloadSpansParams): PromisedResult<DownloadSpansResult> {
   // For partial selections with small batch sizes, return sync mode
   if (
     selectionMode === 'PARTIAL' &&
