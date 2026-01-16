@@ -1,5 +1,5 @@
 import { database } from '../../../../client'
-import { ATTRIBUTES, Otlp, SpanStatus } from '../../../../constants'
+import { ATTRIBUTES, Otlp, SpanStatus, SpanType } from '../../../../constants'
 import { Result } from '../../../../lib/Result'
 import { type ApiKey } from '../../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
@@ -50,6 +50,8 @@ export async function ingestSpans(
           captureException(extracting.error)
           continue
         }
+        const type = extracting.value
+
         // Note: We no longer skip Unknown spans to preserve trace hierarchy
         // (e.g., DSPy CHAIN spans that parent LLM completion spans)
 
@@ -58,7 +60,9 @@ export async function ingestSpans(
           db,
         )
         if (extractingApiKeyAndWorkspace.error) {
-          captureException(extractingApiKeyAndWorkspace.error)
+          if (type !== SpanType.Unknown) {
+            captureException(extractingApiKeyAndWorkspace.error)
+          }
           continue
         }
         const { apiKey, workspace } = extractingApiKeyAndWorkspace.value
@@ -69,7 +73,9 @@ export async function ingestSpans(
 
         const enriching = enrichAttributes({ resource, scope, span })
         if (enriching.error) {
-          captureException(enriching.error)
+          if (type !== SpanType.Unknown) {
+            captureException(enriching.error)
+          }
           continue
         }
         span.attributes = enriching.value.filter(

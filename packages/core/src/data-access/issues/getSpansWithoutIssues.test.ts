@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { database } from '../../client'
 import { commits } from '../../schema/models/commits'
+import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { issues as issuesTable } from '../../schema/models/issues'
 import type { Commit } from '../../schema/models/types/Commit'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -346,10 +347,7 @@ describe('getSpansWithoutIssues', () => {
         workspace,
         evaluation,
         commit,
-        span: {
-          ...spanWithIssue,
-          type: SpanType.Prompt,
-        } as any,
+        span: spanWithIssue,
       })
 
       await createIssueEvaluationResult({
@@ -399,10 +397,7 @@ describe('getSpansWithoutIssues', () => {
         workspace,
         evaluation,
         commit,
-        span: {
-          ...spanWithIgnoredIssue,
-          type: SpanType.Prompt,
-        } as any,
+        span: spanWithIgnoredIssue,
       })
 
       await createIssueEvaluationResult({
@@ -465,20 +460,14 @@ describe('getSpansWithoutIssues', () => {
         workspace,
         evaluation: evaluation1,
         commit,
-        span: {
-          ...spanWithMixedIssues,
-          type: SpanType.Prompt,
-        } as any,
+        span: spanWithMixedIssues,
       })
 
       const evalResult2 = await createEvaluationResultV2({
         workspace,
         evaluation: evaluation2,
         commit,
-        span: {
-          ...spanWithMixedIssues,
-          type: SpanType.Prompt,
-        } as any,
+        span: spanWithMixedIssues,
       })
 
       await createIssueEvaluationResult({
@@ -543,20 +532,14 @@ describe('getSpansWithoutIssues', () => {
         workspace,
         evaluation: evaluation1,
         commit,
-        span: {
-          ...spanWithAllIgnoredIssues,
-          type: SpanType.Prompt,
-        } as any,
+        span: spanWithAllIgnoredIssues,
       })
 
       const evalResult2 = await createEvaluationResultV2({
         workspace,
         evaluation: evaluation2,
         commit,
-        span: {
-          ...spanWithAllIgnoredIssues,
-          type: SpanType.Prompt,
-        } as any,
+        span: spanWithAllIgnoredIssues,
       })
 
       await createIssueEvaluationResult({
@@ -1063,6 +1046,316 @@ describe('getSpansWithoutIssues', () => {
     })
   })
 
+  describe('excludeFailedResults filtering', () => {
+    it('includes spans with failed results when excludeFailedResults is false (default)', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const spanWithFailedResult = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-failed-result',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      const spanWithPassedResult = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-passed-result',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: spanWithFailedResult,
+        hasPassed: false,
+        error: null,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: spanWithPassedResult,
+        hasPassed: true,
+        error: null,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(2)
+
+      const spanIds = spans.map((s) => s.id)
+      expect(spanIds).toContain(spanWithFailedResult.id)
+      expect(spanIds).toContain(spanWithPassedResult.id)
+    })
+
+    it('excludes spans with failed results when excludeFailedResults is true', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-failed-result',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      }).then(async (span) => {
+        await createEvaluationResultV2({
+          workspace,
+          evaluation,
+          commit,
+          span,
+          hasPassed: false,
+          error: null,
+        })
+        return span
+      })
+
+      const spanWithPassedResult = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-passed-result',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: spanWithPassedResult,
+        hasPassed: true,
+        error: null,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        excludeFailedResults: true,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(spanWithPassedResult.id)
+    })
+
+    it('excludes spans with null hasPassed when excludeFailedResults is true', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-null-passed',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      }).then(async (span) => {
+        const evalResult = await createEvaluationResultV2({
+          workspace,
+          evaluation,
+          commit,
+          span,
+        })
+        await database
+          .update(evaluationResultsV2)
+          .set({ hasPassed: null })
+          .where(eq(evaluationResultsV2.id, evalResult.id))
+        return span
+      })
+
+      const spanWithPassedResult = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-passed-result',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: spanWithPassedResult,
+        hasPassed: true,
+        error: null,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        excludeFailedResults: true,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(spanWithPassedResult.id)
+    })
+
+    it('excludes spans with error results when excludeFailedResults is true', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-error-result',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      }).then(async (span) => {
+        await createEvaluationResultV2({
+          workspace,
+          evaluation,
+          commit,
+          span,
+          hasPassed: null,
+          error: { message: 'Some error' },
+        })
+        return span
+      })
+
+      const spanWithPassedResult = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-passed-result',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: spanWithPassedResult,
+        hasPassed: true,
+        error: null,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        excludeFailedResults: true,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(spanWithPassedResult.id)
+    })
+
+    it('includes spans without any evaluation results when excludeFailedResults is true', async () => {
+      const spanWithoutResults = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-no-results',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        excludeFailedResults: true,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(spanWithoutResults.id)
+    })
+
+    it('excludes spans with at least one failed result among multiple results', async () => {
+      const evaluation1 = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const evaluation2 = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const spanWithMixedResults = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-mixed-results',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation: evaluation1,
+        commit,
+        span: spanWithMixedResults,
+        hasPassed: true,
+        error: null,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation: evaluation2,
+        commit,
+        span: spanWithMixedResults,
+        hasPassed: false,
+        error: null,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        excludeFailedResults: true,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(0)
+    })
+  })
+
   describe('complex scenarios', () => {
     it('handles all filters together correctly', async () => {
       const workspace3Setup = await createWorkspace()
@@ -1164,10 +1457,7 @@ describe('getSpansWithoutIssues', () => {
         workspace,
         evaluation,
         commit: commit1,
-        span: {
-          ...spanWithIssue,
-          type: SpanType.Prompt,
-        } as any,
+        span: spanWithIssue,
       })
 
       await createIssueEvaluationResult({
@@ -1229,10 +1519,7 @@ describe('getSpansWithoutIssues', () => {
         workspace,
         evaluation,
         commit: commit2,
-        span: {
-          ...span1,
-          type: SpanType.Prompt,
-        } as any,
+        span: span1,
       })
 
       await createIssueEvaluationResult({
