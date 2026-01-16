@@ -406,6 +406,8 @@ async function getNegativeExamples({
   return Result.ok(result)
 }
 
+// BONUS(AO/OPT): Try to prioritize spans with positive hitls
+// or evaluation results, then fallback to the current logic
 async function getPositiveExamples({
   parametersHash,
   seenSpans,
@@ -541,6 +543,8 @@ async function buildDatasetRows({
   return Result.ok(rows)
 }
 
+// BONUS(AO/OPT): If we dont hage enough negatives or positives,
+// just get the last n spans that are not from optimizations
 async function createDatasets(
   {
     parameters,

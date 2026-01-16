@@ -3,6 +3,7 @@ import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -81,6 +82,16 @@ export function EvaluationSelector({
         }
       })
   }, [evaluations, defaultEvaluation?.uuid])
+
+  if (options.length < 1) {
+    return (
+      <Alert
+        variant='destructive'
+        title='No evaluations available'
+        description='There are no evaluations available to steer the optimization algorithm. Only evaluations that do not require an expected output are supported'
+      />
+    )
+  }
 
   return (
     <Select
