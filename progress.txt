@@ -1,0 +1,35 @@
+# Async Span Download Implementation Progress
+
+## Implementation Order (from PRD)
+1. [x] Pass filters through components - Wire up the filters prop
+2. [x] Add batch repository methods - `findCompletionsByParentIds`, `getBatch`
+3. [ ] Create exportSpansJob - Streaming job with batch processing
+4. [ ] Create downloadSpansAction - Server action routing sync/async
+5. [ ] Update DownloadSpansButton - Handle async response with toast
+
+## Completed Tasks
+
+### Task 1: Pass filters through components (2026-01-16)
+**Commit:** 4b26d523f
+
+**Changes:**
+- `DocumentTracesPage.tsx`: Added `filters={filters}` prop to `SelectionTracesBanner` component
+- `SelectionTracesBanner/index.tsx`: Added `filters: SpansFilters` prop and passed it to `DownloadSpansButton`
+- `DownloadSpansButton/index.tsx`: Added `filters: SpansFilters` prop (prefixed with _ as unused for now)
+
+**Files modified:**
+- apps/web/src/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/DocumentTracesPage.tsx
+- apps/web/src/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SelectionTracesBanner/index.tsx
+- apps/web/src/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SelectionTracesBanner/DownloadSpansButton/index.tsx
+
+### Task 2: Add batch repository methods (2026-01-16)
+
+**Changes:**
+- `SpansRepository`: Added `findCompletionsByParentIds()` method for batch fetching completion spans by their parent prompt span IDs. Uses a single SQL query with OR conditions to fetch all completions at once, returning a Map keyed by `traceId:parentId`.
+- `SpanMetadatasRepository`: Added `getBatch()` method for parallel fetching of span metadata. Uses `Promise.all` to fetch multiple metadata entries in parallel, returning a Map keyed by `traceId:spanId`.
+
+**Files modified:**
+- packages/core/src/repositories/spansRepository.ts
+
+## Next Task
+Task 3: Create exportSpansJob - Streaming job with batch processing
