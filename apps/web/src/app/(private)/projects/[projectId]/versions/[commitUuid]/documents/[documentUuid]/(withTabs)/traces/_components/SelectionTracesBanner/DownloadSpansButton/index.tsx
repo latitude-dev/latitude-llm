@@ -155,10 +155,34 @@ export function DownloadSpansButton({
 
   const getModalContent = () => {
     const selectedCount = selectableState.selectedCount
+    const isSelectAll =
+      selectableState.selectionMode === 'ALL' ||
+      selectableState.selectionMode === 'ALL_EXCEPT'
+
     if (isAsyncDownload) {
-      return `You are about to export ${selectedCount} spans. This will be processed in the background and you will receive an email when your export is ready.`
+      const description = isSelectAll
+        ? `You are about to export all ${selectedCount} spans matching the current filter.`
+        : `You are about to export ${selectedCount} spans.`
+      return `${description} This will be processed in the background and you will receive an email when your export is ready.`
+    }
+
+    if (isSelectAll) {
+      return `Are you sure you want to download all ${selectedCount} spans matching the current filter?`
     }
     return `Are you sure you want to download ${selectedCount} spans?`
+  }
+
+  const getButtonText = () => {
+    if (isProcessing) return 'Processing...'
+
+    const count = selectableState.selectedCount
+    if (selectableState.selectionMode === 'ALL') {
+      return `Download all ${count} spans`
+    }
+    if (selectableState.selectionMode === 'ALL_EXCEPT') {
+      return `Download all ${count} spans`
+    }
+    return `Download ${count} spans`
   }
 
   return (
@@ -169,9 +193,7 @@ export function DownloadSpansButton({
         variant='outline'
         onClick={() => setIsModalOpen(true)}
       >
-        {isProcessing
-          ? 'Processing...'
-          : `Download ${selectableState.selectedCount} spans`}
+        {getButtonText()}
       </Button>
 
       <ConfirmModal
