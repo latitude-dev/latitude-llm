@@ -67,7 +67,12 @@ export class DocumentIntegrationReferencesRepository extends Repository<Document
         ),
       )
       .innerJoin(projects, eq(projects.id, commits.projectId))
-      .where(eq(projects.workspaceId, this.workspaceId))
+      .where(
+        and(
+          eq(projects.workspaceId, this.workspaceId),
+          isNull(projects.deletedAt),
+        ),
+      )
       .as('documentVersionsScope')
   }
 
@@ -82,11 +87,13 @@ export class DocumentIntegrationReferencesRepository extends Repository<Document
         commits,
         eq(commits.id, documentIntegrationReferences.commitId),
       )
+      .innerJoin(projects, eq(projects.id, commits.projectId))
       .where(
         and(
           isNull(commits.mergedAt),
           eq(documentIntegrationReferences.workspaceId, this.workspaceId),
           isNull(commits.deletedAt),
+          isNull(projects.deletedAt),
         ),
       )
 
