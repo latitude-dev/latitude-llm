@@ -812,5 +812,289 @@ describe('prepareOptimization', () => {
       expect(trainColNames).toContain('inputParam')
       expect(testColNames).toContain('inputParam')
     })
+
+    it('calls getSpansWithoutIssues with excludeFailedResults true for positive examples', async () => {
+      const mockIssue = createMockIssue(1)
+      issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+      const negativeSpans = [
+        createMockSpan('span-neg-1', 'trace-neg-1', {
+          inputParam: 'negative1',
+        }),
+        createMockSpan('span-neg-2', 'trace-neg-2', {
+          inputParam: 'negative2',
+        }),
+      ]
+
+      const positiveSpans = [
+        createMockSpan('span-pos-1', 'trace-pos-1', {
+          inputParam: 'positive1',
+        }),
+        createMockSpan('span-pos-2', 'trace-pos-2', {
+          inputParam: 'positive2',
+        }),
+      ]
+
+      getSpansByIssueMock.mockResolvedValue(
+        Result.ok({ spans: negativeSpans, next: null }),
+      )
+
+      getSpansWithoutIssuesMock.mockResolvedValue(
+        Result.ok({ spans: positiveSpans, next: null }),
+      )
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit: commitWithParams },
+        document: documentWithParams,
+        project: projectWithParams,
+        workspace: workspaceWithParams,
+      })
+
+      await prepareOptimization({
+        optimization,
+        workspace: workspaceWithParams,
+      }).then((r) => r.unwrap())
+
+      expect(getSpansWithoutIssuesMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          excludeFailedResults: true,
+          includeExperiments: false,
+        }),
+      )
+    })
+
+    it('calls getSpansByIssue with includeExperiments false for negative examples', async () => {
+      const mockIssue = createMockIssue(1)
+      issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+      const negativeSpans = [
+        createMockSpan('span-neg-1', 'trace-neg-1', {
+          inputParam: 'negative1',
+        }),
+        createMockSpan('span-neg-2', 'trace-neg-2', {
+          inputParam: 'negative2',
+        }),
+      ]
+
+      const positiveSpans = [
+        createMockSpan('span-pos-1', 'trace-pos-1', {
+          inputParam: 'positive1',
+        }),
+        createMockSpan('span-pos-2', 'trace-pos-2', {
+          inputParam: 'positive2',
+        }),
+      ]
+
+      getSpansByIssueMock.mockResolvedValue(
+        Result.ok({ spans: negativeSpans, next: null }),
+      )
+
+      getSpansWithoutIssuesMock.mockResolvedValue(
+        Result.ok({ spans: positiveSpans, next: null }),
+      )
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit: commitWithParams },
+        document: documentWithParams,
+        project: projectWithParams,
+        workspace: workspaceWithParams,
+      })
+
+      await prepareOptimization({
+        optimization,
+        workspace: workspaceWithParams,
+      }).then((r) => r.unwrap())
+
+      expect(getSpansByIssueMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          includeExperiments: false,
+        }),
+      )
+    })
+
+    it('paginates through spans when more are needed', async () => {
+      const mockIssue = createMockIssue(1)
+      issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+      const negativeSpansPage1 = [
+        createMockSpan('span-neg-1', 'trace-neg-1', {
+          inputParam: 'negative1',
+        }),
+      ]
+
+      const negativeSpansPage2 = [
+        createMockSpan('span-neg-2', 'trace-neg-2', {
+          inputParam: 'negative2',
+        }),
+      ]
+
+      const positiveSpansPage1 = [
+        createMockSpan('span-pos-1', 'trace-pos-1', {
+          inputParam: 'positive1',
+        }),
+      ]
+
+      const positiveSpansPage2 = [
+        createMockSpan('span-pos-2', 'trace-pos-2', {
+          inputParam: 'positive2',
+        }),
+      ]
+
+      let negativeCallCount = 0
+      getSpansByIssueMock.mockImplementation(async () => {
+        negativeCallCount++
+        if (negativeCallCount === 1) {
+          return Result.ok({
+            spans: negativeSpansPage1,
+            next: { value: new Date(), id: 1 },
+          })
+        }
+        return Result.ok({ spans: negativeSpansPage2, next: null })
+      })
+
+      let positiveCallCount = 0
+      getSpansWithoutIssuesMock.mockImplementation(async () => {
+        positiveCallCount++
+        if (positiveCallCount === 1) {
+          return Result.ok({
+            spans: positiveSpansPage1,
+            next: { value: new Date(), id: 'cursor-1' },
+          })
+        }
+        return Result.ok({ spans: positiveSpansPage2, next: null })
+      })
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit: commitWithParams },
+        document: documentWithParams,
+        project: projectWithParams,
+        workspace: workspaceWithParams,
+      })
+
+      const result = await prepareOptimization({
+        optimization,
+        workspace: workspaceWithParams,
+      }).then((r) => r.unwrap())
+
+      expect(result.optimization.preparedAt).not.toBeNull()
+      expect(getSpansByIssueMock).toHaveBeenCalledTimes(2)
+      expect(
+        getSpansWithoutIssuesMock.mock.calls.length,
+      ).toBeGreaterThanOrEqual(2)
+    })
+
+    it('falls back to including failed results when not enough positive spans found', async () => {
+      const mockIssue = createMockIssue(1)
+      issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+      const negativeSpans = [
+        createMockSpan('span-neg-1', 'trace-neg-1', {
+          inputParam: 'negative1',
+        }),
+        createMockSpan('span-neg-2', 'trace-neg-2', {
+          inputParam: 'negative2',
+        }),
+      ]
+
+      getSpansByIssueMock.mockResolvedValue(
+        Result.ok({ spans: negativeSpans, next: null }),
+      )
+
+      const callArgs: { excludeFailedResults: boolean }[] = []
+      let callCount = 0
+      getSpansWithoutIssuesMock.mockImplementation(async (args) => {
+        callArgs.push({ excludeFailedResults: args.excludeFailedResults })
+        callCount++
+
+        if (callCount === 1) {
+          return Result.ok({
+            spans: [
+              createMockSpan('span-pos-1', 'trace-pos-1', {
+                inputParam: 'positive1',
+              }),
+            ],
+            next: null,
+          })
+        }
+
+        if (callCount === 2) {
+          return Result.ok({
+            spans: [
+              createMockSpan('span-pos-2', 'trace-pos-2', {
+                inputParam: 'positive2',
+              }),
+            ],
+            next: null,
+          })
+        }
+
+        return Result.ok({ spans: [], next: null })
+      })
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit: commitWithParams },
+        document: documentWithParams,
+        project: projectWithParams,
+        workspace: workspaceWithParams,
+      })
+
+      const result = await prepareOptimization({
+        optimization,
+        workspace: workspaceWithParams,
+      }).then((r) => r.unwrap())
+
+      expect(result.optimization.preparedAt).not.toBeNull()
+
+      expect(callArgs[0]!.excludeFailedResults).toBe(true)
+
+      const fallbackCalls = callArgs.filter(
+        (c) => c.excludeFailedResults === false,
+      )
+      expect(fallbackCalls.length).toBeGreaterThan(0)
+    })
+
+    it('stops searching after maxSearches limit is reached', async () => {
+      const mockIssue = createMockIssue(1)
+      issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+      getSpansByIssueMock.mockResolvedValue(
+        Result.ok({
+          spans: [
+            createMockSpan('span-neg-1', 'trace-neg-1', {
+              inputParam: 'negative1',
+            }),
+            createMockSpan('span-neg-2', 'trace-neg-2', {
+              inputParam: 'negative2',
+            }),
+          ],
+          next: null,
+        }),
+      )
+
+      let searchCount = 0
+      getSpansWithoutIssuesMock.mockImplementation(async () => {
+        searchCount++
+        return Result.ok({
+          spans: [],
+          next: { value: new Date(), id: `cursor-${searchCount}` },
+        })
+      })
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit: commitWithParams },
+        document: documentWithParams,
+        project: projectWithParams,
+        workspace: workspaceWithParams,
+      })
+
+      await expect(
+        prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError()
+
+      expect(searchCount).toBeLessThanOrEqual(3)
+    })
   })
 })

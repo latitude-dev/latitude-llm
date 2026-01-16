@@ -9,10 +9,13 @@ import { MetadataItem, MetadataItemTooltip } from '$/components/MetadataItem'
 import { useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
 import { EvaluationV2 } from '@latitude-data/core/constants'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
 import { OptimizationWithDetails } from '@latitude-data/core/schema/types'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { usePanelDomRef } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -60,7 +63,7 @@ function getPhaseDurations(optimization: OptimizationWithDetails) {
   return phases
 }
 
-function EvaluationLink({
+function EvaluationBadge({
   evaluation,
   commitUuid,
 }: {
@@ -88,7 +91,7 @@ function EvaluationLink({
   )
 }
 
-function DatasetLink({ dataset }: { dataset: Dataset }) {
+function DatasetBadge({ dataset }: { dataset: Dataset }) {
   const href = ROUTES.datasets.detail(dataset.id)
 
   return (
@@ -99,6 +102,60 @@ function DatasetLink({ dataset }: { dataset: Dataset }) {
           <Icon name='externalLink' size='small' className='shrink-0' />
         </div>
       </Badge>
+    </Link>
+  )
+}
+
+function ResultsButton({
+  experiment,
+  baselineExperimentUuid,
+  optimizedExperimentUuid,
+}: {
+  experiment?: ExperimentDto
+  baselineExperimentUuid?: string
+  optimizedExperimentUuid?: string
+}) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+
+  if (!experiment?.finishedAt) {
+    return null
+  }
+
+  const href = ROUTES.projects
+    .detail({ id: project.id })
+    .commits.detail({ uuid: commit.uuid })
+    .documents.detail({ uuid: document.documentUuid })
+    .experiments.withSelected([baselineExperimentUuid, optimizedExperimentUuid]) // prettier-ignore
+
+  return (
+    <Link href={href} className='w-full'>
+      <Button variant='outline' fancy fullWidth>
+        Compare results
+      </Button>
+    </Link>
+  )
+}
+
+function ViewButton({ commit }: { commit?: Commit }) {
+  const { project } = useCurrentProject()
+  const { document } = useCurrentDocument()
+
+  if (!commit) {
+    return null
+  }
+
+  const href = ROUTES.projects
+    .detail({ id: project.id })
+    .commits.detail({ uuid: commit.uuid })
+    .documents.detail({ uuid: document.documentUuid }).editor.root
+
+  return (
+    <Link href={href} className='w-full'>
+      <Button variant='outline' fancy fullWidth>
+        View optimized prompt
+      </Button>
     </Link>
   )
 }
@@ -179,7 +236,7 @@ export const OptimizationPanelContent = forwardRef<
           )}
           {!!optimization.evaluation && (
             <MetadataItem label='Evaluation'>
-              <EvaluationLink
+              <EvaluationBadge
                 evaluation={optimization.evaluation}
                 commitUuid={optimization.baselineCommit?.uuid ?? commit.uuid}
               />
@@ -187,12 +244,12 @@ export const OptimizationPanelContent = forwardRef<
           )}
           {!!optimization.trainset && (
             <MetadataItem label='Trainset'>
-              <DatasetLink dataset={optimization.trainset} />
+              <DatasetBadge dataset={optimization.trainset} />
             </MetadataItem>
           )}
           {!!optimization.testset && (
             <MetadataItem label='Testset'>
-              <DatasetLink dataset={optimization.testset} />
+              <DatasetBadge dataset={optimization.testset} />
             </MetadataItem>
           )}
           {(!!optimization.baselineCommit ||
@@ -218,24 +275,36 @@ export const OptimizationPanelContent = forwardRef<
           )}
           {(!!optimization.optimizedCommit ||
             !!optimization.optimizedExperiment) && (
-            <MetadataItem label='Optimized'>
-              <div className='flex flex-row flex-wrap gap-2 items-center'>
-                {!!optimization.optimizedCommit && (
-                  <VersionBadge commit={optimization.optimizedCommit} />
-                )}
-                {!!optimization.optimizedExperiment?.finishedAt && (
-                  <ExperimentBadge
-                    experiment={optimization.optimizedExperiment}
-                    baselineExperimentUuid={
-                      optimization.baselineExperiment?.uuid
-                    }
-                    optimizedExperimentUuid={
-                      optimization.optimizedExperiment?.uuid
-                    }
-                  />
-                )}
+            <>
+              <MetadataItem label='Optimized'>
+                <div className='flex flex-row flex-wrap gap-2 items-center'>
+                  {!!optimization.optimizedCommit && (
+                    <VersionBadge commit={optimization.optimizedCommit} />
+                  )}
+                  {!!optimization.optimizedExperiment?.finishedAt && (
+                    <ExperimentBadge
+                      experiment={optimization.optimizedExperiment}
+                      baselineExperimentUuid={
+                        optimization.baselineExperiment?.uuid
+                      }
+                      optimizedExperimentUuid={
+                        optimization.optimizedExperiment?.uuid
+                      }
+                    />
+                  )}
+                </div>
+              </MetadataItem>
+              <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                <ResultsButton
+                  experiment={optimization.optimizedExperiment}
+                  baselineExperimentUuid={optimization.baselineExperiment?.uuid}
+                  optimizedExperimentUuid={
+                    optimization.optimizedExperiment?.uuid
+                  }
+                />
+                <ViewButton commit={optimization.optimizedCommit} />
               </div>
-            </MetadataItem>
+            </>
           )}
           <CollapsibleBox
             title='Configuration'

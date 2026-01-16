@@ -303,7 +303,7 @@ async function splitDataset(
     )
   }
 
-  const trainrows = Math.floor(rows * OPTIMIZATION_DATASET_SPLIT)
+  const trainrows = Math.ceil(rows * OPTIMIZATION_DATASET_SPLIT)
   if (trainrows < 1) {
     return Result.error(
       new BadRequestError('Cannot optimize with an empty trainset'),

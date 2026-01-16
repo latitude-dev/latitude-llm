@@ -4,7 +4,9 @@ import {
   eq,
   getTableColumns,
   inArray,
+  isNotNull,
   isNull,
+  or,
   sql,
 } from 'drizzle-orm'
 import { database } from '../../client'
@@ -33,6 +35,7 @@ export async function getSpansWithoutIssues(
     commit,
     document,
     includeExperiments = true,
+    excludeFailedResults = false,
     cursor,
     limit = 25,
   }: {
@@ -40,6 +43,7 @@ export async function getSpansWithoutIssues(
     commit: Commit
     document: DocumentVersion
     includeExperiments?: boolean
+    excludeFailedResults?: boolean
     cursor: Cursor<Date, string> | null
     limit?: number
   },
@@ -63,8 +67,6 @@ export async function getSpansWithoutIssues(
     ? sql`(${spans.startedAt}, ${spans.id}) < (${cursor.value}, ${cursor.id})`
     : undefined
 
-  // Deduplicate spans with active issues since there can be multiple evaluation results
-  // per span after removing the unique constraints on evaluationResultsV2
   const spansWithActiveIssues = db
     .selectDistinct({
       spanId: evaluationResultsV2.evaluatedSpanId,
@@ -86,7 +88,25 @@ export async function getSpansWithoutIssues(
     )
     .as('spansWithActiveIssues')
 
-  const rows = await db
+  const spansWithFailedResults = db
+    .selectDistinct({
+      spanId: evaluationResultsV2.evaluatedSpanId,
+      traceId: evaluationResultsV2.evaluatedTraceId,
+    })
+    .from(evaluationResultsV2)
+    .where(
+      and(
+        eq(evaluationResultsV2.workspaceId, workspace.id),
+        inArray(evaluationResultsV2.commitId, commitIds),
+        or(
+          isNotNull(evaluationResultsV2.error),
+          sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
+        ),
+      ),
+    )
+    .as('spansWithFailedResults')
+
+  let query = db
     .select(spansColumns)
     .from(spans)
     .leftJoin(
@@ -96,6 +116,18 @@ export async function getSpansWithoutIssues(
         eq(spans.traceId, spansWithActiveIssues.traceId),
       ),
     )
+
+  if (excludeFailedResults) {
+    query = query.leftJoin(
+      spansWithFailedResults,
+      and(
+        eq(spans.id, spansWithFailedResults.spanId),
+        eq(spans.traceId, spansWithFailedResults.traceId),
+      ),
+    )
+  }
+
+  const rows = await query
     .where(
       and(
         eq(spans.workspaceId, workspace.id),
@@ -104,6 +136,7 @@ export async function getSpansWithoutIssues(
         eq(spans.status, SpanStatus.Ok),
         inArray(spans.commitUuid, commitUuids),
         isNull(spansWithActiveIssues.spanId),
+        ...(excludeFailedResults ? [isNull(spansWithFailedResults.spanId)] : []), // prettier-ignore
         ...(!includeExperiments ? [isNull(spans.experimentUuid)] : []),
         cursorConditions,
       ),

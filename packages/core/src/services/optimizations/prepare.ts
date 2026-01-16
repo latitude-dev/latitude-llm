@@ -284,6 +284,8 @@ async function getIssueCandidates({
 const SPANS_BATCH_SIZE = 100
 const SPANS_MAX_SEARCH = 3 // Try to search at most 3 times to get enough spans
 
+// BONUS(AO/OPT): If no spans by issue are found, we can try getting spans
+// with negative evaluation results, prioritizing the selected evaluation
 async function getNegativeExamples({
   trackedIssues,
   otherIssues,
@@ -303,7 +305,7 @@ async function getNegativeExamples({
   workspace: Workspace
 }) {
   const halfLimit = Math.floor(OPTIMIZATION_DATASET_ROWS / 2)
-  const maxSearches = Math.floor(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
+  const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
 
   const metadatasRepository = new SpanMetadatasRepository(workspace.id)
   async function collectNegativeSpans(issue: Issue, target: number) {
@@ -421,55 +423,65 @@ async function getPositiveExamples({
   workspace: Workspace
 }) {
   const halfLimit = Math.floor(OPTIMIZATION_DATASET_ROWS / 2)
-  const maxSearches = Math.floor(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
+  const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
 
   const metadatasRepository = new SpanMetadatasRepository(workspace.id)
   const result: SpanWithDetails<SpanType.Prompt>[] = []
-  let cursor: Cursor<Date, string> | null = null
-  let searches = 0
 
-  while (result.length < halfLimit && searches < maxSearches) {
-    searches++
+  async function collectPositiveSpans(excludeFailedResults: boolean) {
+    let cursor: Cursor<Date, string> | null = null
+    let searches = 0
 
-    const gettingsp = await getSpansWithoutIssues({
-      includeExperiments: false, // Note: exclude experiments to not get duplicates from optimization runs
-      commit: baselineCommit,
-      document: document,
-      workspace: workspace,
-      cursor: cursor,
-      limit: SPANS_BATCH_SIZE,
-    })
-    if (gettingsp.error) break
-    const { spans, next } = gettingsp.value
+    while (result.length < halfLimit && searches < maxSearches) {
+      searches++
 
-    if (spans.length === 0) break
-
-    for (const span of spans) {
-      if (result.length >= halfLimit) break
-
-      const spanhash = hashSpan(span)
-      if (seenSpans.has(spanhash)) continue
-
-      const gettingmd = await metadatasRepository.get<SpanType.Prompt>({
-        traceId: span.traceId,
-        spanId: span.id,
+      const gettingsp = await getSpansWithoutIssues({
+        includeExperiments: false, // Note: exclude experiments to not get duplicates from optimization runs
+        excludeFailedResults: excludeFailedResults,
+        commit: baselineCommit,
+        document: document,
+        workspace: workspace,
+        cursor: cursor,
+        limit: SPANS_BATCH_SIZE,
       })
-      if (gettingmd.error) continue
-      const metadata = gettingmd.value
+      if (gettingsp.error) break
+      const { spans, next } = gettingsp.value
 
-      if (!metadata) continue
+      if (spans.length === 0) break
 
-      const { hash, keyhash } = hashObject(metadata.parameters ?? {})
-      if (keyhash !== parametersHash) continue
-      if (seenParameters.has(hash)) continue
+      for (const span of spans) {
+        if (result.length >= halfLimit) break
 
-      seenSpans.add(spanhash)
-      seenParameters.add(hash)
-      result.push({ ...span, metadata })
+        const spanhash = hashSpan(span)
+        if (seenSpans.has(spanhash)) continue
+
+        const gettingmd = await metadatasRepository.get<SpanType.Prompt>({
+          traceId: span.traceId,
+          spanId: span.id,
+        })
+        if (gettingmd.error) continue
+        const metadata = gettingmd.value
+
+        if (!metadata) continue
+
+        const { hash, keyhash } = hashObject(metadata.parameters ?? {})
+        if (keyhash !== parametersHash) continue
+        if (seenParameters.has(hash)) continue
+
+        seenSpans.add(spanhash)
+        seenParameters.add(hash)
+        result.push({ ...span, metadata })
+      }
+
+      if (!next) break
+      cursor = next
     }
+  }
 
-    if (!next) break
-    cursor = next
+  await collectPositiveSpans(true)
+
+  if (result.length < halfLimit) {
+    await collectPositiveSpans(false)
   }
 
   return Result.ok(result)
