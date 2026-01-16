@@ -6,6 +6,7 @@ import { useCurrentUrl } from '$/hooks/useCurrentUrl'
 import { handleResponse } from '$/hooks/useFetcher'
 import { useNavigate } from '$/hooks/useNavigate'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
+import { SpansFilters } from '$/lib/schemas/filters'
 import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
@@ -18,9 +19,11 @@ const MAX_IMMEDIATE_DOWNLOAD = 25
 export function DownloadSpansButton({
   selectableState,
   spans,
+  filters: _filters,
 }: {
   selectableState: SelectableRowsHook
   spans: Span[]
+  filters: SpansFilters
 }) {
   const { document: latitudeDocument } = useCurrentDocument()
   const { toast } = useToast()

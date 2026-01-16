@@ -6,13 +6,16 @@ import { SaveSpansAsDatasetModal } from './SaveSpansAsDatasetModal'
 import { Span } from '@latitude-data/constants'
 import { useSelectedSpans } from './SaveSpansAsDatasetModal/useSelectedSpans'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
+import { SpansFilters } from '$/lib/schemas/filters'
 
 export function SelectionTracesBanner({
   selectableState,
   spans,
+  filters,
 }: {
   selectableState: SelectableRowsHook
   spans: Span[]
+  filters: SpansFilters
 }) {
   const previewSpansState = useSelectedSpans({
     selectableState,
@@ -35,6 +38,7 @@ export function SelectionTracesBanner({
                 <DownloadSpansButton
                   selectableState={selectableState}
                   spans={spans}
+                  filters={filters}
                 />
               </div>
               <Tooltip
