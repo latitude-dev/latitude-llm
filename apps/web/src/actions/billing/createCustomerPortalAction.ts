@@ -9,6 +9,7 @@ import { authProcedure } from '$/actions/procedures'
 export const createCustomerPortalAction = authProcedure.action(
   async ({ ctx }) => {
     const url = await createCustomerPortalSession({
+      workspace: ctx.workspace,
       currentUser: ctx.user,
     })
 

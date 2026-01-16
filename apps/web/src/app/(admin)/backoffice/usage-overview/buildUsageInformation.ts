@@ -1,7 +1,7 @@
 import { getPlanFromSubscriptionSlug } from '$/data-access'
 import { GetUsageOverviewRow } from '@latitude-data/core/services/workspaces/usageOverview/getUsageOverview'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { SubscriptionPlanContent } from '@latitude-data/core/plans'
+import { SubscriptionPlanData } from '@latitude-data/core/plans'
 
 const TOLERANCE_PERCENT = 0.05
 export type UsageTrend = {
@@ -16,7 +16,7 @@ function getTrendIndicator({
 }: {
   runsTwoMonthsAgo: number
   runsLast30Days: number
-  plan: SubscriptionPlanContent
+  plan: SubscriptionPlanData
 }): UsageTrend {
   const smallerValue = Math.min(runsTwoMonthsAgo, runsLast30Days)
   const tolerance = smallerValue * TOLERANCE_PERCENT

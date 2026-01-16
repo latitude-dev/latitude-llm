@@ -1,4 +1,4 @@
-import { bigint, bigserial, index } from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, timestamp } from 'drizzle-orm/pg-core'
 
 import { SubscriptionPlan } from '../../plans'
 import { latitudeSchema } from '../db-schema'
@@ -13,6 +13,8 @@ export const plansEnum = latitudeSchema.enum('subscription_plans', [
   SubscriptionPlan.TeamV2,
   SubscriptionPlan.TeamV3,
   SubscriptionPlan.HobbyV3,
+  SubscriptionPlan.TeamV4,
+  SubscriptionPlan.ScaleV1,
 ])
 
 export const subscriptions = latitudeSchema.table(
@@ -21,6 +23,7 @@ export const subscriptions = latitudeSchema.table(
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     workspaceId: bigint('workspace_id', { mode: 'number' }).notNull(),
     plan: plansEnum('plan').notNull(),
+    trialEndsAt: timestamp('trial_ends_at'),
     ...timestamps(),
   },
   (table) => {

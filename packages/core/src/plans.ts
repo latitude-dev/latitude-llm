@@ -1,3 +1,5 @@
+import { addDays, differenceInDays, isAfter } from 'date-fns'
+
 export enum SubscriptionPlan {
   EnterpriseV1 = 'enterprise_v1',
   HobbyV1 = 'hobby_v1',
@@ -7,6 +9,8 @@ export enum SubscriptionPlan {
   ProV2 = 'pro_v2',
   TeamV2 = 'team_v2',
   TeamV3 = 'team_v3',
+  TeamV4 = 'team_v4',
+  ScaleV1 = 'scale_v1',
 }
 
 const NO_STRIPE_PRICE = 'NO_STRIPE_PRICE'
@@ -19,15 +23,17 @@ export const SubscriptionPlans = {
     retention_period: 30, // days
     rate_limit: 10, // per second
     latte_credits: 30,
+    optimizationsMonth: 0,
     stripePriceId: NO_STRIPE_PRICE,
   },
   [SubscriptionPlan.TeamV1]: {
     name: 'Team',
     credits: 100_000, // runs
     users: 5,
-    retention_period: 1825, // days
-    rate_limit: 166, // per second
+    retention_period: 90, // days
+    rate_limit: 83, // per second
     latte_credits: 300,
+    optimizationsMonth: 5,
     stripePriceId: 'price_1QjVaoAMdFMjIC4f7oRcoEzE',
   },
   [SubscriptionPlan.HobbyV2]: {
@@ -37,6 +43,7 @@ export const SubscriptionPlans = {
     retention_period: 30, // days
     rate_limit: 10, // per second
     latte_credits: 30,
+    optimizationsMonth: 0,
     stripePriceId: NO_STRIPE_PRICE,
   },
   [SubscriptionPlan.HobbyV3]: {
@@ -46,6 +53,7 @@ export const SubscriptionPlans = {
     retention_period: 30, // days
     rate_limit: 10, // per second
     latte_credits: 30,
+    optimizationsMonth: 5,
     stripePriceId: NO_STRIPE_PRICE,
   },
   [SubscriptionPlan.ProV2]: {
@@ -55,24 +63,27 @@ export const SubscriptionPlans = {
     retention_period: 30, // days
     rate_limit: 83, // per second
     latte_credits: 100,
+    optimizationsMonth: 5,
     stripePriceId: 'price_1S5XYVAMdFMjIC4ff8jaaa7B',
   },
   [SubscriptionPlan.TeamV2]: {
     name: 'Team',
     credits: 200_000, // runs
     users: 5,
-    retention_period: 1825, // days
-    rate_limit: 166, // per second
+    retention_period: 90, // days
+    rate_limit: 83, // per second
     latte_credits: 300,
+    optimizationsMonth: 5,
     stripePriceId: 'price_1S5XcmAMdFMjIC4fco75QEuP',
   },
   [SubscriptionPlan.TeamV3]: {
     name: 'Team',
     credits: 200_000, // runs
     users: 'unlimited' as const,
-    retention_period: 1825, // days
-    rate_limit: 166, // per second
+    retention_period: 90, // days
+    rate_limit: 83, // per second
     latte_credits: 300,
+    optimizationsMonth: 5,
     stripePriceId: 'price_1Seuy8AMdFMjIC4fIsnzPTN1',
   },
   [SubscriptionPlan.EnterpriseV1]: {
@@ -82,20 +93,54 @@ export const SubscriptionPlans = {
     retention_period: 3650, // days
     rate_limit: 500, // per second
     latte_credits: 'unlimited' as const,
+    optimizationsMonth: 'unlimited' as const,
     stripePriceId: NO_STRIPE_PRICE,
+  },
+  [SubscriptionPlan.TeamV4]: {
+    name: 'Team',
+    credits: 200_000, // runs
+    users: 'unlimited' as const,
+    retention_period: 90, // days
+    rate_limit: 83, // per second
+    latte_credits: 300,
+    optimizationsMonth: 5,
+    stripePriceId: 'price_1SpqqpAMdFMjIC4fR89sjjS7',
+  },
+  [SubscriptionPlan.ScaleV1]: {
+    name: 'Scale',
+    credits: 1_000_000, // runs
+    users: 'unlimited' as const,
+    retention_period: 36500, // days (~100 years, effectively unlimited)
+    rate_limit: 166, // per second
+    latte_credits: 1500, // 5x Team plan
+    optimizationsMonth: 'unlimited' as const,
+    stripePriceId: 'price_1SpqwPAMdFMjIC4fGJVuEG6t',
   },
 }
 
-export type SubscriptionPlanContent =
+export type TrialInfo = {
+  daysInTrial: number
+  trialEnded: boolean
+  trialEndsAt: Date | null
+  trialDaysLeft: number
+}
+
+export type SubscriptionPlanData =
   (typeof SubscriptionPlans)[keyof typeof SubscriptionPlans] & {
     plan: SubscriptionPlan
   }
 
+export type SubscriptionPlanContent = SubscriptionPlanData & {
+  trialInfo: TrialInfo | null
+}
+
 export const STRIPE_PLANS = [
   SubscriptionPlan.ProV2,
   SubscriptionPlan.TeamV1,
-  SubscriptionPlan.TeamV2, // TODO: Do we still need this?
+  SubscriptionPlan.TeamV2,
   SubscriptionPlan.TeamV3,
+  SubscriptionPlan.TeamV4,
+  SubscriptionPlan.ScaleV1,
 ]
 
 export const FREE_PLANS = [
@@ -104,3 +149,74 @@ export const FREE_PLANS = [
   SubscriptionPlan.HobbyV3,
 ]
 export const PRO_PLANS = [SubscriptionPlan.ProV2]
+export const TEAM_PLANS = [
+  SubscriptionPlan.TeamV1,
+  SubscriptionPlan.TeamV2,
+  SubscriptionPlan.TeamV3,
+  SubscriptionPlan.TeamV4,
+]
+export const LEGACY_PLANS = [
+  SubscriptionPlan.ProV2,
+  SubscriptionPlan.TeamV1,
+  SubscriptionPlan.TeamV2,
+  SubscriptionPlan.TeamV3,
+]
+
+export function getContactSalesLink(): string {
+  return 'https://latitude.so/book-demo'
+}
+
+export const TRIAL_DAYS = 30
+
+export function getTrialEndDateFromNow(): Date {
+  return addDays(new Date(), TRIAL_DAYS)
+}
+
+/**
+ * Computes trial information for a subscription
+ * Returns null if the plan is a paying plan (non-free)
+ */
+export function computeTrialInfo({
+  plan,
+  trialEndsAt,
+}: {
+  plan: SubscriptionPlan
+  trialEndsAt: Date | null
+}): TrialInfo | null {
+  const isFreePlan = FREE_PLANS.includes(plan)
+
+  if (!isFreePlan) return null
+  if (!trialEndsAt) return null
+
+  const now = new Date()
+  const trialEnded = isAfter(now, trialEndsAt)
+  const trialDaysLeft = Math.max(0, differenceInDays(trialEndsAt, now))
+
+  return {
+    daysInTrial: TRIAL_DAYS,
+    trialEnded,
+    trialEndsAt,
+    trialDaysLeft,
+  }
+}
+
+/**
+ * Checks if a subscription is paying (non-free plan) or in an active trial
+ * Returns true if the user can use paid features
+ */
+export function isPayingOrTrialing({
+  plan,
+  trialEndsAt,
+}: {
+  plan: SubscriptionPlan
+  trialEndsAt: Date | null
+}): boolean {
+  const isFreePlan = FREE_PLANS.includes(plan)
+
+  if (!isFreePlan) return true
+
+  const trialInfo = computeTrialInfo({ plan, trialEndsAt })
+  if (!trialInfo) return true
+
+  return !trialInfo.trialEnded
+}

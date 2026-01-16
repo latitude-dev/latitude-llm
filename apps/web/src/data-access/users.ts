@@ -8,7 +8,11 @@ import { users } from '@latitude-data/core/schema/models/users'
 import { getFirstWorkspace } from '$/data-access/workspaces'
 import type { User } from '@latitude-data/core/schema/models/types/User'
 import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { SubscriptionPlan, SubscriptionPlans } from '@latitude-data/core/plans'
+import {
+  computeTrialInfo,
+  SubscriptionPlan,
+  SubscriptionPlans,
+} from '@latitude-data/core/plans'
 import type { Session } from 'lucia'
 import { getSession } from '$/services/auth/getSession'
 
@@ -54,6 +58,22 @@ export function getPlanFromSubscriptionSlug(
   return { ...planData, plan }
 }
 
+function getSubscriptionWithPlanData({
+  planSlug,
+  trialEndsAt,
+}: {
+  planSlug: SubscriptionPlan | undefined
+  trialEndsAt: Date | null
+}) {
+  const data = getPlanFromSubscriptionSlug(planSlug)
+  const trialInfo = computeTrialInfo({ plan: data.plan, trialEndsAt })
+
+  return {
+    ...data,
+    trialInfo,
+  }
+}
+
 /**
  * Retrieves user, workspace, and subscription data from a session.
  *
@@ -87,8 +107,15 @@ export async function getDataFromSession(session?: Session | null) {
 
   const user = await unsafelyGetUser(session.userId)
   const workspace = await unsafelyFindWorkspace(session.currentWorkspaceId)
-  const plan = workspace?.currentSubscription.plan
-  const subscriptionPlan = getPlanFromSubscriptionSlug(plan)
 
-  return { user, workspace, subscriptionPlan, session }
+  const plan = workspace?.currentSubscription?.plan
+  const trialEndsAt = workspace?.currentSubscription.trialEndsAt
+  const subscriptionPlan = getSubscriptionWithPlanData({
+    planSlug: plan,
+    trialEndsAt,
+  })
+  const trial = subscriptionPlan.trialInfo
+  const trialEnded = trial?.trialEnded === true
+
+  return { user, workspace, subscriptionPlan, trialEnded, session }
 }

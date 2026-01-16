@@ -120,7 +120,12 @@ export function useOnboardingState(shouldReset = false) {
     currentStep = ONBOARDING_STEPS.ROLE_SELECTION
   } else if (stepFromUrl !== null) {
     const parsed = parseInt(stepFromUrl, 10)
-    if (!isNaN(parsed) && parsed >= 0 && parsed <= 9) {
+
+    if (
+      !isNaN(parsed) &&
+      parsed >= 0 &&
+      parsed <= ONBOARDING_STEPS.NEXT_STEPS
+    ) {
       currentStep = parsed as OnboardingStep
     }
   }

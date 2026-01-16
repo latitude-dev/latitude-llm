@@ -1,23 +1,29 @@
 import { Providers } from '@latitude-data/constants'
+import { PaymentRequiredError } from '@latitude-data/constants/errors'
 import { createChain } from 'promptl-ai'
+import { addDays, subDays } from 'date-fns'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { type Workspace } from '../../../schema/models/types/Workspace'
+import { type WorkspaceDto } from '../../../schema/models/types/Workspace'
+import { SubscriptionPlan, isPayingOrTrialing } from '../../../plans'
 import { Result } from '../../../lib/Result'
 import { applyAgentRule, validateChain } from './index'
+import { checkPayingOrTrial } from '../checkPayingOrTrial'
 import * as checkFreeProviderQuotaModule from '../checkFreeProviderQuota'
+import * as checkPayingOrTrialModule from '../checkPayingOrTrial'
 
 describe('validateChain - Plan Limits', () => {
-  let workspace: Workspace
+  let workspace: WorkspaceDto
   let providersMap: Map<string, any>
   let mockCheckFreeProviderQuota: any
+  let mockCheckPayingOrTrial: any
 
   beforeEach(() => {
     vi.resetAllMocks()
     vi.clearAllMocks()
     vi.restoreAllMocks()
 
-    // Mock workspace
+    // Mock workspace with currentSubscription
     workspace = {
       id: 1,
       uuid: 'test-uuid',
@@ -27,7 +33,15 @@ describe('validateChain - Plan Limits', () => {
       creatorId: '1',
       currentSubscriptionId: 1,
       defaultProviderId: null,
-    } as Workspace
+      currentSubscription: {
+        id: 1,
+        workspaceId: 1,
+        plan: SubscriptionPlan.HobbyV3,
+        trialEndsAt: addDays(new Date(), 15),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    } as WorkspaceDto
 
     // Mock providers map
     providersMap = new Map([
@@ -51,6 +65,12 @@ describe('validateChain - Plan Limits', () => {
       checkFreeProviderQuotaModule,
       'checkFreeProviderQuota',
     ).mockImplementation(mockCheckFreeProviderQuota)
+
+    // Mock checkPayingOrTrial by default to allow requests
+    mockCheckPayingOrTrial = vi.fn().mockResolvedValue(Result.nil())
+    vi.spyOn(checkPayingOrTrialModule, 'checkPayingOrTrial').mockImplementation(
+      mockCheckPayingOrTrial,
+    )
   })
 
   it('Check that free quota is called', async () => {
@@ -75,6 +95,193 @@ describe('validateChain - Plan Limits', () => {
 
     expect(result.ok).toBe(true)
     expect(mockCheckFreeProviderQuota).toHaveBeenCalled()
+  })
+
+  it('Check that paying or trial check is called', async () => {
+    const chain = createChain({
+      prompt: `
+        ---
+        provider: openai
+        model: gpt-4o-mini
+        ---
+
+        Test prompt
+      `,
+      parameters: {},
+    })
+
+    const result = await validateChain({
+      workspace,
+      providersMap,
+      chain,
+      newMessages: undefined,
+    })
+
+    expect(result.ok).toBe(true)
+    expect(mockCheckPayingOrTrial).toHaveBeenCalledWith({
+      subscription: workspace.currentSubscription,
+    })
+  })
+
+  it('Check that paying or trial check is called before free quota check', async () => {
+    const callOrder: string[] = []
+
+    mockCheckPayingOrTrial = vi.fn().mockImplementation(() => {
+      callOrder.push('checkPayingOrTrial')
+      return Promise.resolve(Result.nil())
+    })
+    vi.spyOn(checkPayingOrTrialModule, 'checkPayingOrTrial').mockImplementation(
+      mockCheckPayingOrTrial,
+    )
+
+    mockCheckFreeProviderQuota = vi.fn().mockImplementation(() => {
+      callOrder.push('checkFreeProviderQuota')
+      return Promise.resolve(Result.nil())
+    })
+    vi.spyOn(
+      checkFreeProviderQuotaModule,
+      'checkFreeProviderQuota',
+    ).mockImplementation(mockCheckFreeProviderQuota)
+
+    const chain = createChain({
+      prompt: `
+        ---
+        provider: openai
+        model: gpt-4o-mini
+        ---
+
+        Test prompt
+      `,
+      parameters: {},
+    })
+
+    await validateChain({
+      workspace,
+      providersMap,
+      chain,
+      newMessages: undefined,
+    })
+
+    expect(callOrder).toEqual(['checkPayingOrTrial', 'checkFreeProviderQuota'])
+  })
+
+  it('Returns PaymentRequiredError when trial has ended', async () => {
+    mockCheckPayingOrTrial = vi
+      .fn()
+      .mockResolvedValue(
+        Result.error(
+          new PaymentRequiredError(
+            'Your trial has ended. Please upgrade to continue using Latitude.',
+          ),
+        ),
+      )
+    vi.spyOn(checkPayingOrTrialModule, 'checkPayingOrTrial').mockImplementation(
+      mockCheckPayingOrTrial,
+    )
+
+    const chain = createChain({
+      prompt: `
+        ---
+        provider: openai
+        model: gpt-4o-mini
+        ---
+
+        Test prompt
+      `,
+      parameters: {},
+    })
+
+    const result = await validateChain({
+      workspace,
+      providersMap,
+      chain,
+      newMessages: undefined,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('payment_required_error')
+    expect(mockCheckFreeProviderQuota).not.toHaveBeenCalled()
+  })
+})
+
+describe('isPayingOrTrialing', () => {
+  it('returns true for paying plans', () => {
+    const result = isPayingOrTrialing({
+      plan: SubscriptionPlan.TeamV4,
+      trialEndsAt: null,
+    })
+
+    expect(result).toBe(true)
+  })
+
+  it('returns true for free plans in active trial', () => {
+    const result = isPayingOrTrialing({
+      plan: SubscriptionPlan.HobbyV3,
+      trialEndsAt: addDays(new Date(), 15),
+    })
+
+    expect(result).toBe(true)
+  })
+
+  it('returns false for free plans with ended trial', () => {
+    const result = isPayingOrTrialing({
+      plan: SubscriptionPlan.HobbyV3,
+      trialEndsAt: subDays(new Date(), 5),
+    })
+
+    expect(result).toBe(false)
+  })
+})
+
+describe('checkPayingOrTrial - direct tests', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('allows requests for paying plans', async () => {
+    const subscription = {
+      id: 1,
+      workspaceId: 1,
+      plan: SubscriptionPlan.TeamV4,
+      trialEndsAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const result = await checkPayingOrTrial({ subscription })
+
+    expect(result.ok).toBe(true)
+  })
+
+  it('allows requests for free plans in active trial', async () => {
+    const subscription = {
+      id: 1,
+      workspaceId: 1,
+      plan: SubscriptionPlan.HobbyV3,
+      trialEndsAt: addDays(new Date(), 15),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const result = await checkPayingOrTrial({ subscription })
+
+    expect(result.ok).toBe(true)
+  })
+
+  it('rejects requests for free plans with ended trial', async () => {
+    const subscription = {
+      id: 1,
+      workspaceId: 1,
+      plan: SubscriptionPlan.HobbyV3,
+      trialEndsAt: subDays(new Date(), 5),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const result = await checkPayingOrTrial({ subscription })
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toBeInstanceOf(PaymentRequiredError)
   })
 })
 

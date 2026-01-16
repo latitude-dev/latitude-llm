@@ -1,5 +1,4 @@
 'use client'
-import { REWARD_CONFIGS } from '$/components/layouts/AppLayout/Header/Rewards/Content/RewardMenu/RewardConfigs'
 import usePendingRewardClaims from '$/stores/admin/pendingRewardClaims'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
@@ -17,6 +16,8 @@ import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import Link from 'next/link'
 import { RewardType } from '@latitude-data/core/constants'
+import { REWARD_CONFIGS } from './_components/RewardsConfigs'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 
 const LINKABLE_REWARDS = [
   RewardType.XPost,
@@ -132,6 +133,11 @@ export default function AdminPage() {
 
   return (
     <div className='w-full max-w-[1250px] m-auto px-4 py-8 pt-0 flex flex-col gap-8'>
+      <Alert
+        variant='warning'
+        title='Rewards DEPRECATED'
+        description='We are not showing rewards inside the application anymore. Talk with Cesar. Rewards badge in the app header was replaced by Trial days left Badge when we introduced trials.'
+      />
       <div className='w-full flex flex-row align-center justify-end gap-2'>
         <LinkButton
           label='X Followers'

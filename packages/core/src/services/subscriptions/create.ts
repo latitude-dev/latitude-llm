@@ -1,6 +1,10 @@
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { SubscriptionPlans } from '../../plans'
+import {
+  FREE_PLANS,
+  getTrialEndDateFromNow,
+  SubscriptionPlans,
+} from '../../plans'
 import { subscriptions } from '../../schema/models/subscriptions'
 import { type Workspace } from '../../schema/models/types/Workspace'
 
@@ -16,6 +20,9 @@ export function createSubscription(
   },
   transaction = new Transaction(),
 ) {
+  const isTrial = FREE_PLANS.includes(plan)
+  const trialEndsAt = isTrial ? getTrialEndDateFromNow() : undefined
+
   return transaction.call(async (tx) => {
     const subscription = await tx
       .insert(subscriptions)
@@ -23,6 +30,7 @@ export function createSubscription(
         workspaceId: workspace.id,
         plan,
         createdAt,
+        trialEndsAt,
       })
       .returning()
 

@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { Metadata } from 'next'
 
 import { Container } from '@latitude-data/web-ui/atoms/Container'
 import { TitleWithActions } from '@latitude-data/web-ui/molecules/TitleWithActions'
@@ -12,8 +13,9 @@ import WorkspaceName from './_components/WorkspaceName'
 import Integrations from './_components/Integrations'
 import Webhooks from './_components/Webhooks'
 import Promocodes from './_components/Promocodes'
+import { CustomerPortalButton } from './_components/CustomerPortalButton'
 
-export const metadata = buildMetatags({
+export const metadata: Promise<Metadata> = buildMetatags({
   title: 'Settings',
   locationDescription: 'Settings Page',
 })
@@ -27,7 +29,7 @@ export default async function SettingsLayout({
     <Container>
       <AppTabs />
       {children}
-      <TitleWithActions title='Workspace' />
+      <TitleWithActions title='Workspace' actions={<CustomerPortalButton />} />
       <WorkspaceName />
       <Memberships />
       <WorkspaceApiKeys />

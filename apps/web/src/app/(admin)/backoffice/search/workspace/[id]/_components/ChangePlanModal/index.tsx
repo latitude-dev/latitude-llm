@@ -1,5 +1,3 @@
-'use client'
-
 import { FormEvent, useState, useEffect } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'

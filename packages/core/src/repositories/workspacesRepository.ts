@@ -15,6 +15,7 @@ export const workspacesDtoColumns = {
       .as('currentSubscriptionId'),
     plan: subscriptions.plan,
     workspaceId: subscriptions.workspaceId,
+    trialEndsAt: subscriptions.trialEndsAt,
     updatedAt: sql<Date>`${subscriptions.updatedAt}`
       .mapWith(subscriptions.updatedAt)
       .as('currentSubscriptionUpdatedAt'),

@@ -1807,6 +1807,13 @@
       "when": 1768313392895,
       "tag": "0258_cute_namora",
       "breakpoints": true
+    },
+    {
+      "idx": 259,
+      "version": "7",
+      "when": 1768494745686,
+      "tag": "0259_pricing_plan_team_v4_scale_v1",
+      "breakpoints": true
     }
   ]
 }

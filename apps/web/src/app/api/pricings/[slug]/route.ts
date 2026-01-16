@@ -1,14 +1,23 @@
 import { ROUTES } from '$/services/routes'
 import { getDataFromSession } from '$/data-access'
 import { NextRequest, NextResponse } from 'next/server'
-import { SubscriptionPlan } from '@latitude-data/core/plans'
+import {
+  getContactSalesLink,
+  SubscriptionPlan,
+} from '@latitude-data/core/plans'
 
 function isSubscriptionPlan(value: string): value is SubscriptionPlan {
   return Object.values(SubscriptionPlan).includes(value as SubscriptionPlan)
 }
 
-const PLAN_TEAM_PAYMENT_URL = 'https://buy.stripe.com/9B6bJ0dnyePe57g7vP38408'
+const PLAN_TEAM_PAYMENT_URL = 'https://buy.stripe.com/dRm6oGgzK8qQ2Z82bv38409'
 
+/**
+ * IMPORTANT:
+ * This API is used by public page
+ * https://latitude.so/pricing
+ * We get the plan slug from the URL and redirect the user to the appropriate payment link.
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
@@ -27,9 +36,11 @@ export async function GET(
     loginUrl.searchParams.set('returnTo', request.url)
     return NextResponse.redirect(loginUrl)
   }
-
+  const bookADemo = getContactSalesLink()
   const paymentUrlMap: Partial<Record<SubscriptionPlan, string>> = {
-    [SubscriptionPlan.TeamV3]: PLAN_TEAM_PAYMENT_URL,
+    [SubscriptionPlan.TeamV4]: PLAN_TEAM_PAYMENT_URL,
+    [SubscriptionPlan.ScaleV1]: bookADemo,
+    [SubscriptionPlan.EnterpriseV1]: bookADemo,
   }
   const paymentUrl = paymentUrlMap[slug]
   if (!paymentUrl) {

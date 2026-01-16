@@ -13,6 +13,7 @@ import { subscriptions } from '../../schema/models/subscriptions'
 import { workspaces } from '../../schema/models/workspaces'
 import { issueSubscriptionGrants } from '../subscriptions/grants'
 import { publisher } from '../../events/publisher'
+import { createSubscription } from '../subscriptions/create'
 
 function findTargetPlan({
   stripeSubscription,
@@ -143,20 +144,10 @@ export async function handleSubscriptionUpdate(
           })
         }
 
-        const [newSubscription] = await tx
-          .insert(subscriptions)
-          .values({
-            workspaceId: workspace.id,
-            plan: targetPlan,
-          })
-          .returning()
-
-        if (!newSubscription) {
-          throw new LatitudeError('Failed to create new subscription record.', {
-            workspaceId: workspace.id.toString(),
-            plan: targetPlan,
-          })
-        }
+        const newSubscription = await createSubscription(
+          { workspace, plan: targetPlan },
+          transaction,
+        ).then((r) => r.unwrap())
 
         // Assign it as the workspace's current subscription
         const [updatedWorkspace] = await tx

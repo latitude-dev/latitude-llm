@@ -15,7 +15,7 @@ export async function createWorkspace(
     user,
     createdAt,
     source = 'default',
-    subscriptionPlan = SubscriptionPlan.HobbyV3,
+    subscriptionPlan,
     isBigAccount = false,
   }: {
     name: string
@@ -43,7 +43,7 @@ export async function createWorkspace(
       const subscription = await createSubscription(
         {
           workspace,
-          plan: subscriptionPlan,
+          plan: subscriptionPlan ?? SubscriptionPlan.HobbyV3,
           createdAt,
         },
         transaction,
