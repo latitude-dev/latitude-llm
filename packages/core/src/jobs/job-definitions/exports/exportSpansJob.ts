@@ -168,10 +168,7 @@ async function buildRowsForBatch({
     let output: string | undefined
     let input: string | undefined
 
-    if (
-      completionMetadata &&
-      completionMetadata.type === SpanType.Completion
-    ) {
+    if (completionMetadata && completionMetadata.type === SpanType.Completion) {
       const typedMetadata =
         completionMetadata as SpanMetadata<SpanType.Completion>
 
@@ -228,9 +225,7 @@ async function buildRowsForBatch({
   return rows
 }
 
-function buildExportColumns(
-  hashAlgorithm: typeof nanoidHashAlgorithm,
-): {
+function buildExportColumns(hashAlgorithm: typeof nanoidHashAlgorithm): {
   columns: Column[]
   fixedColumnsByName: FixedColumnsByName
 } {
@@ -244,7 +239,7 @@ function buildExportColumns(
     { name: 'tokens_reasoning', role: DATASET_COLUMN_ROLES.metadata },
     { name: 'tokens_completion', role: DATASET_COLUMN_ROLES.metadata },
     { name: 'model', role: DATASET_COLUMN_ROLES.metadata },
-    { name: 'cost', role: DATASET_COLUMN_ROLES.metadata },
+    { name: 'cost ($)', role: DATASET_COLUMN_ROLES.metadata },
   ]
 
   const columns = buildColumnsFn({
@@ -273,7 +268,7 @@ function buildExportColumns(
         acc.tokensCompletion = column
       } else if (column.name === 'model') {
         acc.model = column
-      } else if (column.name === 'cost') {
+      } else if (column.name === 'cost ($)') {
         acc.cost = column
       }
       return acc
@@ -317,7 +312,8 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
     ? new Set(selectedSpanIdentifiers.map((id) => `${id.traceId}:${id.spanId}`))
     : undefined
 
-  const { columns, fixedColumnsByName } = buildExportColumns(nanoidHashAlgorithm)
+  const { columns, fixedColumnsByName } =
+    buildExportColumns(nanoidHashAlgorithm)
 
   const csvColumns = columns.map((col) => col.name)
 
