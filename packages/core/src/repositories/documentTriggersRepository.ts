@@ -12,6 +12,7 @@ import { type Commit } from '../schema/models/types/Commit'
 import { type DocumentTrigger } from '../schema/models/types/DocumentTrigger'
 import { commits } from '../schema/models/commits'
 import { documentTriggers } from '../schema/models/documentTriggers'
+import { projects } from '../schema/models/projects'
 import Repository from './repositoryV2'
 import { Result } from '../lib/Result'
 import { PromisedResult } from '../lib/Transaction'
@@ -122,7 +123,13 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
           isNull(commits.deletedAt),
         ),
       )
-      .where(eq(documentTriggers.workspaceId, this.workspaceId))
+      .innerJoin(projects, eq(projects.id, commits.projectId))
+      .where(
+        and(
+          eq(documentTriggers.workspaceId, this.workspaceId),
+          isNull(projects.deletedAt),
+        ),
+      )
 
     const totalTriggers = mergeTriggers(
       mergedTriggers,
@@ -237,10 +244,12 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
             eq(commits.projectId, documentTriggers.projectId),
           ),
         )
+        .innerJoin(projects, eq(projects.id, commits.projectId))
         .where(
           and(
             eq(documentTriggers.workspaceId, this.workspaceId),
             isNull(commits.deletedAt),
+            isNull(projects.deletedAt),
             isNotNull(commits.mergedAt),
             maxMergedAt ? lte(commits.mergedAt, maxMergedAt) : undefined,
             projectId ? eq(documentTriggers.projectId, projectId) : undefined,
@@ -262,6 +271,7 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
           isNull(commits.deletedAt),
         ),
       )
+      .innerJoin(projects, eq(projects.id, commits.projectId))
       .innerJoin(
         lastVersionOfEachTrigger,
         and(
@@ -270,6 +280,7 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
           eq(lastVersionOfEachTrigger.mergedAt, commits.mergedAt),
         ),
       )
+      .where(isNull(projects.deletedAt))
 
     return mergedTriggers as DocumentTrigger[]
   }
