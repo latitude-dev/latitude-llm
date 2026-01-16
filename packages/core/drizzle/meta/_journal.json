@@ -1828,6 +1828,13 @@
       "when": 1768908736835,
       "tag": "0261_integration_header_presets",
       "breakpoints": true
+    },
+    {
+      "idx": 262,
+      "version": "7",
+      "when": 1768926353268,
+      "tag": "0262_add_spans_index_workspace_and_started_at",
+      "breakpoints": true
     }
   ]
 }
