@@ -205,7 +205,7 @@ async function buildRowsForBatch({
 
     if (!output) continue
 
-    const costInCents = (completionSpan.cost ?? 0) / 1000
+    const costInDollars = (completionSpan.cost ?? 0) / 100000
 
     rows.push({
       [fixedColumnsByName.input.identifier]: input ?? '',
@@ -221,7 +221,7 @@ async function buildRowsForBatch({
       [fixedColumnsByName.tokensCompletion.identifier]:
         completionSpan.tokensCompletion ?? 0,
       [fixedColumnsByName.model.identifier]: completionSpan.model ?? '',
-      [fixedColumnsByName.cost.identifier]: costInCents,
+      [fixedColumnsByName.cost.identifier]: costInDollars,
     })
   }
 
