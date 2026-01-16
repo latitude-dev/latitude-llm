@@ -3,7 +3,7 @@
 ## Implementation Order (from PRD)
 1. [x] Pass filters through components - Wire up the filters prop
 2. [x] Add batch repository methods - `findCompletionsByParentIds`, `getBatch`
-3. [ ] Create exportSpansJob - Streaming job with batch processing
+3. [x] Create exportSpansJob - Streaming job with batch processing
 4. [ ] Create downloadSpansAction - Server action routing sync/async
 5. [ ] Update DownloadSpansButton - Handle async response with toast
 
@@ -31,5 +31,36 @@
 **Files modified:**
 - packages/core/src/repositories/spansRepository.ts
 
+### Task 3: Create exportSpansJob - Streaming job with batch processing (2026-01-16)
+
+**Changes:**
+- Created `packages/core/src/jobs/job-definitions/exports/exportSpansJob.ts` with:
+  - `ExportSpansJobData` type definition for job input
+  - `enqueueExportSpansJob()` function to add job to defaultQueue
+  - `exportSpansJob` handler implementing streaming CSV generation
+  - Cursor-based pagination via async generator `iterateSpans()`
+  - Batch processing with `buildRowsForBatch()` to avoid N+1 queries
+  - Uses `findCompletionsByParentIds()` and `getBatch()` for batch DB operations
+  - Streams CSV directly to disk via PassThrough stream
+  - Calls `markExportReady()` on completion to trigger email notification
+- Created `packages/core/src/jobs/job-definitions/exports/index.ts` barrel export
+- Registered job in `packages/core/src/jobs/job-definitions/index.ts`
+- Added job mapping in `apps/workers/src/workers/worker-definitions/defaultWorker.ts`
+
+**Key implementation details:**
+- BATCH_SIZE = 500 spans per iteration to balance memory vs DB round trips
+- Supports ALL, ALL_EXCEPT, and PARTIAL selection modes
+- Uses Set for O(1) excluded span lookup
+- Fixed columns: label, span_id, trace_id, tokens
+- CSV rows built from prompt span metadata and completion span output
+
+**Files created:**
+- packages/core/src/jobs/job-definitions/exports/exportSpansJob.ts
+- packages/core/src/jobs/job-definitions/exports/index.ts
+
+**Files modified:**
+- packages/core/src/jobs/job-definitions/index.ts
+- apps/workers/src/workers/worker-definitions/defaultWorker.ts
+
 ## Next Task
-Task 3: Create exportSpansJob - Streaming job with batch processing
+Task 4: Create downloadSpansAction - Server action routing sync/async

@@ -6,6 +6,7 @@ const jobMappings = {
   createProviderLogJob: jobs.createProviderLogJob,
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   generateProjectNameJob: jobs.generateProjectNameJob,
+  exportSpansJob: jobs.exportSpansJob,
 }
 
 export function startDefaultWorker() {
