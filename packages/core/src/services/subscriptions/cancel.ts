@@ -39,7 +39,7 @@ export async function cancelSubscription(
         .where(eq(subscriptions.id, subscription.id))
         .returning()
 
-      return Result.ok(updatedSubscription!)
+      return Result.ok(updatedSubscription)
     },
     async (updatedSubscription) => {
       const firstUser = await findFirstUserInWorkspace(workspace)

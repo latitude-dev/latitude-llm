@@ -1,4 +1,8 @@
-import { AbortedError, LatitudeError } from '@latitude-data/constants/errors'
+import {
+  AbortedError,
+  BillingError,
+  LatitudeError,
+} from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { captureException } from '$/helpers/captureException'
 import { NextRequest, NextResponse } from 'next/server'
@@ -32,6 +36,15 @@ export function errorHandler(handler: any) {
         return NextResponse.json(
           { message: 'Request aborted by client' },
           { status: 499 },
+        )
+      }
+
+      if (error instanceof BillingError) {
+        captureException(error.originalError ?? error, error.tags)
+
+        return NextResponse.json(
+          { message: error.message, details: error.details },
+          { status: error.statusCode },
         )
       }
 
