@@ -474,9 +474,7 @@ export class SpansRepository extends Repository<Span> {
       return Result.ok<Map<string, Span<SpanType.Completion>>>(new Map())
     }
 
-    const conditions = parentIds.map(
-      ({ spanId }) => eq(spans.parentId, spanId),
-    )
+    const conditions = parentIds.map(({ spanId }) => eq(spans.parentId, spanId))
 
     const result = await this.db
       .select(tt)
