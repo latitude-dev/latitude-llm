@@ -69,7 +69,7 @@ async function sendEmail({
     {}, // No mailer options, we'll set recipients later
     {
       issueTitle: issue.title,
-      link: `${env.APP_URL}/projects/${projectId}/versions/${commitUuid}/issues?issueId=${issue.id}`,
+      link: `${env.APP_URL}/projects/${projectId}/versions/${commitUuid}/issues?issueId=${issue.id}&workspaceId=${issue.workspaceId}`,
     },
   )
 
