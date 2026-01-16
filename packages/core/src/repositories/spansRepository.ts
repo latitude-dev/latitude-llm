@@ -462,6 +462,46 @@ export class SpansRepository extends Repository<Span> {
   private buildSpanKey(spanId: string, traceId: string) {
     return `${spanId}:${traceId}`
   }
+
+  /**
+   * Batch fetch completion spans for multiple parent prompt spans.
+   * Returns a Map keyed by parent span key (traceId:parentId) to avoid N+1 queries.
+   */
+  async findCompletionsByParentIds(
+    parentIds: Array<{ traceId: string; spanId: string }>,
+  ) {
+    if (parentIds.length === 0) {
+      return Result.ok<Map<string, Span<SpanType.Completion>>>(new Map())
+    }
+
+    const conditions = parentIds.map(({ spanId }) => eq(spans.parentId, spanId))
+
+    const result = await this.db
+      .select(tt)
+      .from(spans)
+      .where(
+        and(
+          this.scopeFilter,
+          eq(spans.type, SpanType.Completion),
+          or(...conditions),
+        ),
+      )
+
+    const completionsByParent = new Map<string, Span<SpanType.Completion>>()
+    for (const completion of result) {
+      if (completion.parentId) {
+        const parentKey = `${completion.traceId}:${completion.parentId}`
+        if (!completionsByParent.has(parentKey)) {
+          completionsByParent.set(
+            parentKey,
+            completion as Span<SpanType.Completion>,
+          )
+        }
+      }
+    }
+
+    return Result.ok(completionsByParent)
+  }
 }
 
 export class SpanMetadatasRepository {
@@ -509,5 +549,36 @@ export class SpanMetadatasRepository {
     } catch {
       return Result.nil()
     }
+  }
+
+  /**
+   * Batch fetch metadata for multiple spans in parallel.
+   * Returns a Map keyed by span key (traceId:spanId).
+   */
+  async getBatch<T extends SpanType = SpanType>(
+    spanIdentifiers: Array<{ traceId: string; spanId: string }>,
+  ) {
+    if (spanIdentifiers.length === 0) {
+      return new Map<string, SpanMetadata<T>>()
+    }
+
+    const results = await Promise.all(
+      spanIdentifiers.map(async ({ traceId, spanId }) => {
+        const result = await this.get<T>({ traceId, spanId })
+        return {
+          key: `${traceId}:${spanId}`,
+          metadata: result.ok ? result.value : undefined,
+        }
+      }),
+    )
+
+    const metadataMap = new Map<string, SpanMetadata<T>>()
+    for (const { key, metadata } of results) {
+      if (metadata) {
+        metadataMap.set(key, metadata)
+      }
+    }
+
+    return metadataMap
   }
 }

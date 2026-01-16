@@ -41,6 +41,7 @@ export * from '../../events/handlers/notifyClientOfOptimizationStatus'
 export * from '../../events/handlers/unassignIssuesOnDocumentsDeleted'
 
 // Jobs
+export * from './exports/exportSpansJob'
 export * from './actions/generateProjectNameJob'
 export * from './copilot'
 export * from './documents/runDocumentJob'

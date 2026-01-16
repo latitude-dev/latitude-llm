@@ -110,3 +110,6 @@ packages/core/scripts/disposables/*
 # But not the README
 !packages/core/scripts/disposables/
 !packages/core/scripts/disposables/README.md
+
+PRD.md
+progress.txt
