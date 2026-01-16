@@ -275,7 +275,7 @@ The email flow is already implemented:
 2. **Add batch repository methods** - `findCompletionsByParentIds`, `getBatch` ✅
 3. **Create exportSpansJob** - Streaming job with batch processing ✅
 4. **Create downloadSpansAction** - Server action routing sync/async ✅
-5. **Update DownloadSpansButton** - Handle async response with toast
+5. **Update DownloadSpansButton** - Handle async response with toast ✅
 
 ## Testing Plan
 

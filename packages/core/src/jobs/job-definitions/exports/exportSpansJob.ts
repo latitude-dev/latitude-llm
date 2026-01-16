@@ -124,14 +124,12 @@ async function* iterateSpans({
 }
 
 async function buildRowsForBatch({
-  workspace,
   spans,
   repo,
   metadataRepo,
   parametersByName,
   fixedColumnsByName,
 }: {
-  workspace: { id: number }
   spans: Span[]
   repo: SpansRepository
   metadataRepo: SpanMetadatasRepository
@@ -320,7 +318,6 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
 
     if (batch.length >= BATCH_SIZE) {
       const rows = await buildRowsForBatch({
-        workspace,
         spans: batch,
         repo,
         metadataRepo,
@@ -342,7 +339,6 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
 
   if (batch.length > 0) {
     const rows = await buildRowsForBatch({
-      workspace,
       spans: batch,
       repo,
       metadataRepo,

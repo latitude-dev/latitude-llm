@@ -5,7 +5,7 @@
 2. [x] Add batch repository methods - `findCompletionsByParentIds`, `getBatch`
 3. [x] Create exportSpansJob - Streaming job with batch processing
 4. [x] Create downloadSpansAction - Server action routing sync/async
-5. [ ] Update DownloadSpansButton - Handle async response with toast
+5. [x] Update DownloadSpansButton - Handle async response with toast
 
 ## Completed Tasks
 
@@ -84,5 +84,36 @@
 **Files created:**
 - apps/web/src/actions/spans/downloadSpans.ts
 
-## Next Task
-Task 5: Update DownloadSpansButton - Handle async response with toast
+### Task 5: Update DownloadSpansButton - Handle async response with toast (2026-01-16)
+
+**Changes:**
+- Refactored `DownloadSpansButton` component to use `downloadSpansAction` via `useLatitudeAction` hook
+- Added project and commit context via `useCurrentProject` and `useCurrentCommit` hooks
+- Removed the error toast for unsupported ALL/ALL_EXCEPT modes - now fully supported
+- Implemented dual-mode handling:
+  - Sync mode (≤25 PARTIAL spans): Continues to use immediate download via existing API endpoint
+  - Async mode (ALL, ALL_EXCEPT, or >25 PARTIAL spans): Shows "Export started" toast and clears selection
+- Added `isAsyncDownload` computed property for UI differentiation
+- Updated modal content to inform users about async export and email notification
+- Changed confirm button label to "Start Export" for async downloads
+- Combined `isDownloading` and `isActionPending` states for button/modal disabling
+
+**Key implementation details:**
+- Uses `useLatitudeAction` hook pattern for server action calls with error handling
+- Properly destructures `[data, error]` tuple from execute result
+- Maps `selectedRowIds` and `excludedIds` to span identifiers with traceId
+- Clears selection after starting async export for better UX
+- Fixed lint error in `exportSpansJob.ts` by removing unused `workspace` parameter
+
+**Files modified:**
+- apps/web/src/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SelectionTracesBanner/DownloadSpansButton/index.tsx
+- packages/core/src/jobs/job-definitions/exports/exportSpansJob.ts (lint fix)
+
+## Implementation Complete
+
+All 5 tasks from the PRD have been completed. The async span download feature is now fully implemented:
+- Users can select ALL or ALL_EXCEPT modes (or >25 spans in PARTIAL mode)
+- Clicking "Start Export" enqueues a background job
+- The job streams spans in batches of 500 to avoid memory issues
+- CSV is streamed directly to disk storage
+- Users receive an email notification with a download link when ready
