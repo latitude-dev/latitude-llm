@@ -71,11 +71,11 @@ describe('computeTrialInfo', () => {
     })
   })
 
-  it('returns 0 days left when less than 24 hours remain', () => {
-    const now = new Date('2026-01-16T12:00:00Z')
+  it('counts calendar days not 24-hour periods', () => {
+    const now = new Date('2026-01-16T23:59:00Z')
     vi.setSystemTime(now)
 
-    const trialEndsAt = new Date('2026-01-17T06:00:00Z')
+    const trialEndsAt = new Date('2026-01-17T00:01:00Z')
 
     const result = computeTrialInfo({
       plan: SubscriptionPlan.HobbyV3,
@@ -86,8 +86,31 @@ describe('computeTrialInfo', () => {
       daysInTrial: TRIAL_DAYS,
       trialEnded: false,
       trialEndsAt,
-      trialDaysLeft: 0,
+      trialDaysLeft: 1,
     })
+  })
+
+  it('shows 30 days on first day of trial regardless of signup time', () => {
+    const now = new Date('2026-01-16T10:00:00Z')
+    vi.setSystemTime(now)
+
+    const trialEndsAt = new Date('2026-02-15T10:00:00Z')
+
+    const result = computeTrialInfo({
+      plan: SubscriptionPlan.HobbyV3,
+      trialEndsAt,
+    })
+
+    expect(result!.trialDaysLeft).toBe(30)
+
+    vi.setSystemTime(new Date('2026-01-16T23:59:00Z'))
+
+    const resultLater = computeTrialInfo({
+      plan: SubscriptionPlan.HobbyV3,
+      trialEndsAt,
+    })
+
+    expect(resultLater!.trialDaysLeft).toBe(30)
   })
 
   it('returns trialEnded true when now equals trialEndsAt', () => {

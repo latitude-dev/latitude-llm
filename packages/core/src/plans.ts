@@ -1,4 +1,4 @@
-import { addDays, differenceInDays, isAfter } from 'date-fns'
+import { addDays, isAfter } from 'date-fns'
 
 export enum SubscriptionPlan {
   EnterpriseV1 = 'enterprise_v1',
@@ -114,7 +114,7 @@ export const SubscriptionPlans = {
     rate_limit: 166, // per second
     latte_credits: 1500, // 5x Team plan
     optimizationsMonth: 'unlimited' as const,
-    stripePriceId: 'price_1SpqwPAMdFMjIC4fGJVuEG6t',
+    stripePriceId: NO_STRIPE_PRICE,
   },
 }
 
@@ -140,7 +140,6 @@ export const STRIPE_PLANS = [
   SubscriptionPlan.TeamV2,
   SubscriptionPlan.TeamV3,
   SubscriptionPlan.TeamV4,
-  SubscriptionPlan.ScaleV1,
 ]
 
 export const FREE_PLANS = [
@@ -172,6 +171,21 @@ export function getTrialEndDateFromNow(): Date {
   return addDays(new Date(), TRIAL_DAYS)
 }
 
+function differenceInCalendarDaysUtc(dateLeft: Date, dateRight: Date): number {
+  const leftUtc = Date.UTC(
+    dateLeft.getUTCFullYear(),
+    dateLeft.getUTCMonth(),
+    dateLeft.getUTCDate(),
+  )
+  const rightUtc = Date.UTC(
+    dateRight.getUTCFullYear(),
+    dateRight.getUTCMonth(),
+    dateRight.getUTCDate(),
+  )
+  const MS_PER_DAY = 24 * 60 * 60 * 1000
+  return Math.floor((leftUtc - rightUtc) / MS_PER_DAY)
+}
+
 /**
  * Computes trial information for a subscription
  * Returns null if the plan is a paying plan (non-free)
@@ -190,7 +204,10 @@ export function computeTrialInfo({
 
   const now = new Date()
   const trialEnded = isAfter(now, trialEndsAt)
-  const trialDaysLeft = Math.max(0, differenceInDays(trialEndsAt, now))
+  const trialDaysLeft = Math.max(
+    0,
+    differenceInCalendarDaysUtc(trialEndsAt, now),
+  )
 
   return {
     daysInTrial: TRIAL_DAYS,

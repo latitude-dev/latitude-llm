@@ -11,7 +11,7 @@ export const changeWorkspacePlanAction = withAdmin
   .inputSchema(
     z.object({
       workspaceId: z.number(),
-      plan: z.nativeEnum(SubscriptionPlan),
+      plan: z.enum(SubscriptionPlan),
     }),
   )
   .action(async ({ parsedInput }) => {
@@ -20,7 +20,7 @@ export const changeWorkspacePlanAction = withAdmin
       throw new BadRequestError('Workspace not found')
     }
 
-    const updatedWorkspace = await changeWorkspacePlan(
+    const { workspace: updatedWorkspace } = await changeWorkspacePlan(
       workspace,
       parsedInput.plan,
     ).then((r) => r.unwrap())

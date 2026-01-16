@@ -1,7 +1,10 @@
+'use client'
+
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Confetti } from '@latitude-data/web-ui/atoms/Confetti'
 import { cn } from '@latitude-data/web-ui/utils'
 import { PlanOption } from '../../_lib/buildPlanOptions'
 
@@ -70,9 +73,7 @@ function PlanCard({ option }: { option: PlanOption }) {
 
       <div className='mt-auto pt-2'>
         {option.actionUrl && !isDisabled ? (
-          <a href={option.actionUrl} target='_blank' rel='noreferrer'>
-            {button}
-          </a>
+          <a href={option.actionUrl}>{button}</a>
         ) : (
           button
         )}
@@ -81,7 +82,13 @@ function PlanCard({ option }: { option: PlanOption }) {
   )
 }
 
-export function PlanSelection({ planOptions }: { planOptions: PlanOption[] }) {
+export function PlanSelection({
+  planOptions,
+  renderConfetti,
+}: {
+  planOptions: PlanOption[]
+  renderConfetti: boolean
+}) {
   const count = planOptions.length
 
   return (
@@ -92,6 +99,7 @@ export function PlanSelection({ planOptions }: { planOptions: PlanOption[] }) {
         'max-w-7xl': count === 4,
       })}
     >
+      {renderConfetti && <Confetti count={1000} />}
       <div className='flex flex-col items-center gap-4 text-center'>
         <div className='relative'>
           <Icon name='logo' size='xxxlarge' />

@@ -17,6 +17,7 @@ export async function createWorkspace(
     source = 'default',
     subscriptionPlan,
     isBigAccount = false,
+    stripeCustomerId,
   }: {
     name: string
     user: User
@@ -24,6 +25,7 @@ export async function createWorkspace(
     createdAt?: Date
     subscriptionPlan?: SubscriptionPlan
     isBigAccount?: boolean
+    stripeCustomerId?: string
   },
   transaction = new Transaction(),
 ) {
@@ -36,6 +38,7 @@ export async function createWorkspace(
           creatorId: user.id,
           createdAt,
           isBigAccount,
+          stripeCustomerId,
         })
         .returning()
       let workspace = insertedWorkspaces[0]!
@@ -61,7 +64,11 @@ export async function createWorkspace(
         transaction,
       ).then((r) => r.unwrap())
 
-      return Result.ok({ ...workspace, currentSubscription: subscription })
+      return Result.ok({
+        ...workspace,
+        hasBillingPortal: !!workspace.stripeCustomerId,
+        currentSubscription: subscription,
+      })
     },
     (w) =>
       publisher.publishLater({
