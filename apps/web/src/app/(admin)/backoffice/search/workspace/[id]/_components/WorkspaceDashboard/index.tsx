@@ -9,6 +9,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
+import { FREE_PLANS } from '@latitude-data/core/plans'
 
 import { BasicInfoList } from '$/app/(admin)/backoffice/search/_components/BasicInfoList'
 import { DashboardHeader } from '$/app/(admin)/backoffice/search/_components/DashboardHeader'
@@ -18,6 +19,7 @@ import { ChangePlanButton } from '../ChangePlanButton'
 import { ToggleIssuesUnlockedButton } from '../ToggleIssuesUnlockedButton'
 import { BigAccountBanner } from '../BigAccountBanner'
 import { DeleteWorkspaceButton } from '../DeleteWorkspaceButton'
+import { SubscriptionRow } from '$/components/Subscriptions/SubscriptionRow'
 
 type Props = {
   workspace: WorkspaceWithDetails
@@ -55,16 +57,6 @@ export function WorkspaceDashboard({ workspace }: Props) {
       label: 'Credits Limit',
       value: workspace.quotas.credits.toLocaleString(),
       icon: 'coins' as const,
-    },
-    {
-      label: 'Subscription Plan',
-      value: workspace.subscription.plan,
-      icon: 'blocks' as const,
-    },
-    {
-      label: 'Billable Period',
-      value: `${new Date(workspace.subscription.billableFrom).toLocaleDateString()} - ${new Date(workspace.subscription.billableAt).toLocaleDateString()}`,
-      icon: 'rectangleHorizontal' as const,
     },
   ]
 
@@ -110,11 +102,19 @@ export function WorkspaceDashboard({ workspace }: Props) {
           </div>
         </div>
 
+        <SubscriptionRow
+          workspaceId={workspace.id}
+          workspaceName={workspace.name}
+          stripeCustomerId={workspace.stripeCustomerId}
+          subscription={workspace.subscription}
+        />
+
         <DataTable
           title='Subscription History'
           count={workspace.subscriptions.length}
           columns={[
             { header: 'Plan' },
+            { header: 'Status' },
             { header: 'Started At' },
             { header: 'Ended At' },
           ]}
@@ -122,12 +122,18 @@ export function WorkspaceDashboard({ workspace }: Props) {
           icon='blocks'
         >
           {workspace.subscriptions.map((subscription, index) => {
-            // Since subscriptions are sorted by createdAt DESC (most recent first),
-            // the previous subscription chronologically is at index - 1
             const previousSubscription = workspace.subscriptions[index - 1]
             const endDate = previousSubscription
               ? previousSubscription.createdAt
               : null
+            const subscriptionIsFreePlan = FREE_PLANS.includes(
+              subscription.plan,
+            )
+            const subscriptionIsInTrial =
+              subscriptionIsFreePlan &&
+              subscription.trialEndsAt &&
+              new Date(subscription.trialEndsAt) > new Date()
+            const subscriptionIsCancelled = subscription.cancelledAt !== null
 
             return (
               <TableRow key={subscription.id}>
@@ -136,7 +142,7 @@ export function WorkspaceDashboard({ workspace }: Props) {
                     <div className='p-2 bg-accent rounded-lg'>
                       <Icon name='blocks' size='small' color='primary' />
                     </div>
-                    <Text.H5 weight='medium'>
+                    <Badge variant='success'>
                       {subscription.plan
                         .split('_')
                         .map(
@@ -144,7 +150,31 @@ export function WorkspaceDashboard({ workspace }: Props) {
                             word.charAt(0).toUpperCase() + word.slice(1),
                         )
                         .join(' ')}
-                    </Text.H5>
+                    </Badge>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className='flex gap-1 flex-wrap'>
+                    {!endDate && !subscriptionIsCancelled && (
+                      <Badge variant='successMuted' size='small'>
+                        Active
+                      </Badge>
+                    )}
+                    {subscriptionIsInTrial && (
+                      <Badge variant='warningMuted' size='small'>
+                        Trial
+                      </Badge>
+                    )}
+                    {subscriptionIsCancelled && (
+                      <Badge variant='warningMuted' size='small'>
+                        Cancelled
+                      </Badge>
+                    )}
+                    {endDate && (
+                      <Badge variant='muted' size='small'>
+                        Ended
+                      </Badge>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>

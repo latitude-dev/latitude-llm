@@ -30,14 +30,14 @@ export function getIntegrationData({
       ...commonData,
       icon: imageUrl
         ? {
-          type: 'image' as const,
-          src: imageUrl,
-          alt: label,
-        }
+            type: 'image' as const,
+            src: imageUrl,
+            alt: label,
+          }
         : {
-          type: 'icon' as const,
-          name: 'unplug' as IconName,
-        },
+            type: 'icon' as const,
+            name: 'unplug' as IconName,
+          },
     }
   }
 

@@ -22,7 +22,7 @@ const integrations: IntegrationDto[] = [
     id: 3,
     name: 'latitude',
     type: IntegrationType.Latitude,
-    configuration: {}
+    configuration: {},
   },
 ] as unknown as IntegrationDto[]
 
