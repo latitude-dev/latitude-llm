@@ -103,6 +103,7 @@ export const EventHandlers: IEventsHandlers = {
   documentTriggerEventCreated: [notifyClientOfDocumentTriggerEventCreated],
   promocodeClaimed: [],
   subscriptionUpdated: [],
+  subscriptionEnqueuedForCancellation: [],
   commitMerged: [stopDeploymentTestsForCommitHandler],
   commitDeleted: [stopDeploymentTestsForCommitHandler],
   documentRunQueued: [notifyClientOfRunStatusByDocument],

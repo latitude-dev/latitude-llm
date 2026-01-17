@@ -84,6 +84,7 @@ export type Events =
   | 'documentTriggerEventCreated'
   | 'promocodeClaimed'
   | 'subscriptionUpdated'
+  | 'subscriptionEnqueuedForCancellation'
   | 'documentRunQueued'
   | 'documentRunStarted'
   | 'documentRunProgress'
@@ -681,6 +682,17 @@ export type SubscriptionUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type SubscriptionEnqueuedForCancellationEvent = LatitudeEventGeneric<
+  'subscriptionEnqueuedForCancellation',
+  {
+    workspaceId: number
+    subscriptionId: number
+    stripeCustomerId: string
+    cancellationDate: string
+    userEmail: string
+  }
+>
+
 type DocumentRunStatusEventData = {
   workspaceId: number
   projectId: number
@@ -1072,6 +1084,7 @@ export type LatitudeEvent =
   | DocumentTriggerEventCreatedEvent
   | PromocodeClaimedEvent
   | SubscriptionUpdatedEvent
+  | SubscriptionEnqueuedForCancellationEvent
   | DocumentRunQueuedEvent
   | DocumentRunStartedEvent
   | DocumentRunProgressEvent
@@ -1168,6 +1181,7 @@ export interface IEventsHandlers {
   documentTriggerEventCreated: EventHandler<DocumentTriggerEventCreatedEvent>[]
   promocodeClaimed: EventHandler<PromocodeClaimedEvent>[]
   subscriptionUpdated: EventHandler<SubscriptionUpdatedEvent>[]
+  subscriptionEnqueuedForCancellation: EventHandler<SubscriptionEnqueuedForCancellationEvent>[]
   documentRunQueued: EventHandler<DocumentRunQueuedEvent>[]
   documentRunStarted: EventHandler<DocumentRunStartedEvent>[]
   documentRunProgress: EventHandler<DocumentRunProgressEvent>[]
