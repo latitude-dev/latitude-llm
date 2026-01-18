@@ -2,27 +2,30 @@ import { commits } from '../../../schema/models/commits'
 import { documentLogs } from '../../../schema/models/documentLogs'
 import { projects } from '../../../schema/models/projects'
 import { providerLogs } from '../../../schema/models/providerLogs'
+import { spans } from '../../../schema/models/spans'
 import { Job } from 'bullmq'
 import { and, eq, inArray, lt } from 'drizzle-orm'
 import Transaction from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { findWorkspaceSubscription } from '../../../services/subscriptions/data-access/find'
-import { FREE_PLANS } from '../../../plans'
+import { SubscriptionPlans } from '../../../plans'
 
 export type CleanupWorkspaceOldLogsJobData = {
   workspaceId: number
 }
 
 /**
- * Job that deletes document logs and associated provider logs older than 30 days
- * for a specific workspace.
+ * Job that deletes document logs, provider logs, and spans older than the
+ * plan's retention period for a specific workspace.
  *
  * This job uses optimized SQL operations to avoid loading data into memory:
- * 1. Calculates the cutoff date (30 days ago)
- * 2. Deletes provider logs using a correlated subquery
- * 3. Deletes document logs using a correlated subquery
- * 4. Uses batch processing if needed for very large datasets
+ * 1. Gets the retention period from the workspace's subscription plan
+ * 2. Calculates the cutoff date based on retention period
+ * 3. Deletes spans in batches
+ * 4. Deletes provider logs using a correlated subquery
+ * 5. Deletes document logs using a correlated subquery
+ * 6. Uses batch processing if needed for very large datasets
  */
 export const cleanupWorkspaceOldLogsJob = async (
   job: Job<CleanupWorkspaceOldLogsJobData>,
@@ -35,26 +38,62 @@ export const cleanupWorkspaceOldLogsJob = async (
     (r) => r.value,
   )
   if (!subscription) return Result.nil()
-  if (!FREE_PLANS.includes(subscription?.plan)) return Result.nil()
 
-  // Calculate cutoff date (30 days ago)
+  const planConfig = SubscriptionPlans[subscription.plan]
+  const retentionDays = planConfig.retention_period
+
+  // Skip cleanup for plans with very long retention (effectively unlimited)
+  if (retentionDays >= 36500) return Result.nil()
+
+  // Calculate cutoff date based on plan's retention period
   const cutoffDate = new Date()
-  cutoffDate.setDate(cutoffDate.getDate() - 30)
+  cutoffDate.setDate(cutoffDate.getDate() - retentionDays)
 
   await new Transaction().call(async (tx) => {
     let _totalDeletedProviderLogs = 0
     let _totalDeletedDocumentLogs = 0
+    let _totalDeletedSpans = 0
 
-    // Delete provider logs in batches to avoid memory issues and long-running transactions
     const batchSize = 1000
+
+    // Delete spans in batches
+    let deletedSpansBatch: number
+    do {
+      const spansToDelete = await tx
+        .select({ traceId: spans.traceId, id: spans.id })
+        .from(spans)
+        .where(
+          and(
+            eq(spans.workspaceId, workspaceId),
+            lt(spans.startedAt, cutoffDate),
+          ),
+        )
+        .limit(batchSize)
+
+      if (spansToDelete.length === 0) {
+        deletedSpansBatch = 0
+      } else {
+        const deletedSpansResult = await tx
+          .delete(spans)
+          .where(
+            inArray(
+              spans.traceId,
+              spansToDelete.map((row) => row.traceId),
+            ),
+          )
+          .returning({ traceId: spans.traceId })
+
+        deletedSpansBatch = deletedSpansResult.length
+      }
+
+      _totalDeletedSpans += deletedSpansBatch
+    } while (deletedSpansBatch === batchSize)
 
     // Delete document logs in batches
     let deletedDocumentLogsBatch: number
     let deletedProviderLogsBatch: number
 
     do {
-      // Delete old document logs from this workspace
-      // Use Drizzle query syntax: first select IDs to delete, then delete them
       const idsToDelete = await tx
         .select({ id: documentLogs.id })
         .from(documentLogs)
