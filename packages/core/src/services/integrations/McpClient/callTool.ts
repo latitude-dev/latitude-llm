@@ -60,8 +60,10 @@ export async function callIntegrationTool({
     return Result.error(new LatitudeError('MCP Client Manager not provided'))
   }
 
-  const clientResult =
-    await streamManager.mcpClientManager.getClient(integration)
+  const clientResult = await streamManager.mcpClientManager.getClient(
+    integration,
+    { runtimeHeaders: streamManager.mcpHeaders },
+  )
   if (clientResult.error) {
     return clientResult
   }

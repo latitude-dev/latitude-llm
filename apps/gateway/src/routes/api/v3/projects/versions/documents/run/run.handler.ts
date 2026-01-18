@@ -32,6 +32,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     parameters,
     customIdentifier,
     tools,
+    mcpHeaders,
     stream: useSSE,
     background,
     userMessage,
@@ -84,6 +85,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       parameters,
       customIdentifier,
       tools,
+      mcpHeaders,
       userMessage,
       source,
     })
@@ -100,6 +102,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     source,
     useSSE,
     tools,
+    mcpHeaders,
     userMessage: userMessage || undefined,
   })
 }
@@ -113,6 +116,7 @@ async function handleBackgroundRun({
   parameters,
   customIdentifier,
   tools,
+  mcpHeaders,
   userMessage,
   source,
 }: {
@@ -124,6 +128,7 @@ async function handleBackgroundRun({
   parameters: Record<string, unknown>
   customIdentifier?: string
   tools: string[]
+  mcpHeaders?: Record<string, string>
   userMessage?: string
   source: LogSources
 }) {
@@ -145,6 +150,7 @@ async function handleBackgroundRun({
     parameters,
     customIdentifier,
     tools,
+    mcpHeaders,
     userMessage,
     source: effectiveSource,
     activeDeploymentTest: abTest || undefined,
@@ -164,6 +170,7 @@ async function handleForegroundRun({
   source,
   useSSE,
   tools,
+  mcpHeaders,
   userMessage,
 }: {
   c: Context
@@ -176,6 +183,7 @@ async function handleForegroundRun({
   source: LogSources
   useSSE: boolean
   tools: string[]
+  mcpHeaders?: Record<string, string>
   userMessage?: string
 }) {
   // Find active AB test and route accordingly
@@ -201,6 +209,7 @@ async function handleForegroundRun({
     abortSignal: c.req.raw.signal, // FIXME: This does not seem to work
     project,
     tools,
+    mcpHeaders,
     userMessage,
   })
 

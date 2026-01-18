@@ -15,7 +15,8 @@ import { BadRequestError } from '@latitude-data/constants/errors'
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const { conversationUuid } = c.req.valid('param')
-  const { messages, tools, stream: useSSE, __internal } = c.req.valid('json')
+  const { messages, tools, mcpHeaders, stream: useSSE, __internal } =
+    c.req.valid('json')
   const workspace = c.get('workspace')
   if (tools.length > 0 && !useSSE) {
     throw new BadRequestError('You must enable Stream to use custom tools')
@@ -25,6 +26,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
     await addMessages({
       workspace,
       tools: buildClientToolHandlersMap(tools),
+      mcpHeaders,
       documentLogUuid: conversationUuid,
       messages: messages as LegacyMessage[],
       source: __internal?.source ?? LogSources.API,

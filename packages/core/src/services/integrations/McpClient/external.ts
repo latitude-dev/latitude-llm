@@ -20,6 +20,7 @@ type OAuthCallbacks = {
 type ExternalMcpClientOptions = {
   oauthCallbacks?: OAuthCallbacks
   authorId?: string
+  runtimeHeaders?: Record<string, string>
 }
 
 export async function createAndConnectExternalMcpClient(
@@ -53,9 +54,19 @@ export async function createAndConnectExternalMcpClient(
     })
   }
 
+  // Merge static integration headers with runtime headers
+  // Runtime headers take precedence over static headers
+  const mergedHeaders =
+    integration.configuration.headers || options?.runtimeHeaders
+      ? {
+          ...integration.configuration.headers,
+          ...options?.runtimeHeaders,
+        }
+      : undefined
+
   const transportResult = createMcpTransport(integration.configuration.url, {
     authProvider: oauthProvider,
-    headers: integration.configuration.headers,
+    headers: mergedHeaders,
   })
   if (!Result.isOk(transportResult)) {
     return Result.error(new McpConnectionError(transportResult.error.message))

@@ -28,6 +28,7 @@ export type RunDocumentAtCommitArgs = {
   customIdentifier?: string
   source: LogSources
   tools?: Record<string, ToolHandler>
+  mcpHeaders?: Record<string, string>
   customPrompt?: string
   experiment?: Experiment
   errorableUuid?: string
@@ -52,6 +53,7 @@ export async function runDocumentAtCommit(
     userMessage,
     abortSignal,
     tools = {},
+    mcpHeaders,
     simulationSettings,
     testDeploymentId,
   }: RunDocumentAtCommitArgs,
@@ -123,6 +125,7 @@ export async function runDocumentAtCommit(
     chain,
     uuid: errorableUuid,
     tools,
+    mcpHeaders,
     promptSource: {
       document,
       commit,
