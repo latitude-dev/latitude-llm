@@ -24,12 +24,14 @@ export const subscriptions = latitudeSchema.table(
     workspaceId: bigint('workspace_id', { mode: 'number' }).notNull(),
     plan: plansEnum('plan').notNull(),
     trialEndsAt: timestamp('trial_ends_at'),
+    cancelledAt: timestamp('cancelled_at'),
     ...timestamps(),
   },
   (table) => {
     return {
       workspaceIdIndex: index().on(table.workspaceId),
       planIndex: index().on(table.plan),
+      cancelledAtIndex: index().on(table.cancelledAt),
     }
   },
 )
