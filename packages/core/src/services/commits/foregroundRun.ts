@@ -22,7 +22,7 @@ export type RunForegroundDocumentParams = {
   customIdentifier?: string
   source: LogSources
   tools: string[]
-  mcpHeaders?: Record<string, string>
+  mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
   abortSignal?: AbortSignal
 }

@@ -24,7 +24,7 @@ export type EnqueueRunProps = {
   datasetRowId?: number
   document: DocumentVersion
   experiment?: Experiment
-  mcpHeaders?: Record<string, string>
+  mcpHeaders?: Record<string, Record<string, string>>
   parameters?: Record<string, unknown>
   project: Project
   runUuid?: string

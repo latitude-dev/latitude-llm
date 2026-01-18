@@ -128,7 +128,7 @@ async function handleBackgroundRun({
   parameters: Record<string, unknown>
   customIdentifier?: string
   tools: string[]
-  mcpHeaders?: Record<string, string>
+  mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
   source: LogSources
 }) {
@@ -183,7 +183,7 @@ async function handleForegroundRun({
   source: LogSources
   useSSE: boolean
   tools: string[]
-  mcpHeaders?: Record<string, string>
+  mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
 }) {
   // Find active AB test and route accordingly

@@ -32,7 +32,7 @@ type AddMessagesArgs = {
   messages: Message[]
   source: LogSources
   tools?: Record<string, ToolHandler>
-  mcpHeaders?: Record<string, string>
+  mcpHeaders?: Record<string, Record<string, string>>
   abortSignal?: AbortSignal
   context?: TelemetryContext
   testDeploymentId?: number

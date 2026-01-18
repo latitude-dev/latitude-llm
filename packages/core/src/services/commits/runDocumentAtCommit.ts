@@ -28,7 +28,7 @@ export type RunDocumentAtCommitArgs = {
   customIdentifier?: string
   source: LogSources
   tools?: Record<string, ToolHandler>
-  mcpHeaders?: Record<string, string>
+  mcpHeaders?: Record<string, Record<string, string>>
   customPrompt?: string
   experiment?: Experiment
   errorableUuid?: string
