@@ -5,6 +5,7 @@ import { Subscription } from './Subscription'
 
 export type Workspace = InferSelectModel<typeof workspaces>
 export type WorkspaceDto = Workspace & {
+  hasBillingPortal: boolean
   currentSubscription: Subscription
 }
 

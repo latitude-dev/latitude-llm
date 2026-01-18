@@ -18,6 +18,7 @@ export type ICreateWorkspace = {
   onboarding?: boolean
   features?: string[]
   isBigAccount?: boolean
+  stripeCustomerId?: string
 }
 export async function createWorkspace(
   workspaceData: Partial<ICreateWorkspace> = {},
@@ -35,6 +36,7 @@ export async function createWorkspace(
     subscriptionPlan: workspaceData.subscriptionPlan,
     createdAt: workspaceData.createdAt,
     isBigAccount: workspaceData.isBigAccount,
+    stripeCustomerId: workspaceData.stripeCustomerId,
   })
   const workspace = result.unwrap()
   await createMembership({ workspace, user: userData }).then((r) => r.unwrap())

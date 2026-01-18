@@ -9,6 +9,9 @@ import { workspaces } from '../schema/models/workspaces'
 
 export const workspacesDtoColumns = {
   ...getTableColumns(workspaces),
+  hasBillingPortal: sql<boolean>`${workspaces.stripeCustomerId} IS NOT NULL`
+    .mapWith(Boolean)
+    .as('hasBillingPortal'),
   currentSubscription: {
     id: sql<number>`${subscriptions.id}`
       .mapWith(Number)
@@ -16,6 +19,7 @@ export const workspacesDtoColumns = {
     plan: subscriptions.plan,
     workspaceId: subscriptions.workspaceId,
     trialEndsAt: subscriptions.trialEndsAt,
+    cancelledAt: subscriptions.cancelledAt,
     updatedAt: sql<Date>`${subscriptions.updatedAt}`
       .mapWith(subscriptions.updatedAt)
       .as('currentSubscriptionUpdatedAt'),

@@ -18,7 +18,13 @@ export async function findFirstUserInWorkspace(
     .orderBy(asc(users.createdAt))
     .limit(1)
 
-  return results[0]
+  const firstUser = results[0]
+
+  if (!firstUser) {
+    throw new Error(`No users found in workspace with id ${workspace.id}`)
+  }
+
+  return firstUser
 }
 
 export function unsafelyGetUser(id?: string) {

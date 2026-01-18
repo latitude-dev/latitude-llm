@@ -1,4 +1,4 @@
-import { addDays, differenceInDays, isAfter } from 'date-fns'
+import { addDays, differenceInCalendarDays, isAfter } from 'date-fns'
 
 export enum SubscriptionPlan {
   EnterpriseV1 = 'enterprise_v1',
@@ -84,7 +84,9 @@ export const SubscriptionPlans = {
     rate_limit: 83, // per second
     latte_credits: 300,
     optimizationsMonth: 5,
-    stripePriceId: 'price_1Seuy8AMdFMjIC4fIsnzPTN1',
+    // stripePriceId: 'price_1Seuy8AMdFMjIC4fIsnzPTN1',
+    // FIXME: Undo test price ID
+    stripePriceId: 'price_1S5PEuPC43jluwNQr2N4XJpX',
   },
   [SubscriptionPlan.EnterpriseV1]: {
     name: 'Enterprise',
@@ -104,7 +106,9 @@ export const SubscriptionPlans = {
     rate_limit: 83, // per second
     latte_credits: 300,
     optimizationsMonth: 5,
-    stripePriceId: 'price_1SpqqpAMdFMjIC4fR89sjjS7',
+    /* stripePriceId: 'price_1SpqqpAMdFMjIC4fR89sjjS7', */
+    // FIXME: Undo test price ID
+    stripePriceId: 'price_1SqbJiPC43jluwNQJaCtXNGQ',
   },
   [SubscriptionPlan.ScaleV1]: {
     name: 'Scale',
@@ -190,7 +194,7 @@ export function computeTrialInfo({
 
   const now = new Date()
   const trialEnded = isAfter(now, trialEndsAt)
-  const trialDaysLeft = Math.max(0, differenceInDays(trialEndsAt, now))
+  const trialDaysLeft = Math.max(0, differenceInCalendarDays(trialEndsAt, now))
 
   return {
     daysInTrial: TRIAL_DAYS,

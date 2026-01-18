@@ -16,6 +16,7 @@ import {
   useLocalStorage,
   AppLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { useBillingPortal } from '$/hooks/useBillingPortal'
 
 type DropdownItemProps = {
   label: string
@@ -68,6 +69,7 @@ export default function AvatarDropdown({
     router.push(ROUTES.notifications.root)
   }, [router])
 
+  const billingPortal = useBillingPortal()
   const onClickReplayOnboarding = useCallback(() => {
     setOnboardingState(null)
     setReplayOnboarding(true)
@@ -88,6 +90,11 @@ export default function AvatarDropdown({
           label: 'Notifications',
           icon: 'bell',
           onClick: onClickNotifications,
+        },
+        billingPortal.hasBillingPortal && {
+          label: 'Billing information',
+          icon: 'creditCard',
+          onClick: billingPortal.onClick,
         },
         isCloud && {
           label: 'Replay Onboarding',
@@ -114,6 +121,7 @@ export default function AvatarDropdown({
       onClickNotifications,
       onClickReplayOnboarding,
       onClickLogout,
+      billingPortal,
     ],
   )
 
