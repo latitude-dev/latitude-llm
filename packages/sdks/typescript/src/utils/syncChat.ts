@@ -20,6 +20,7 @@ export async function syncChat<
   uuid: string,
   {
     messages,
+    mcpHeaders,
     tools,
     onFinished,
     onError,
@@ -32,7 +33,7 @@ export async function syncChat<
       handler: HandlerType.Chat,
       params: { conversationUuid: uuid },
       options: options,
-      body: { messages, tools: waitForTools(tools), stream: false },
+      body: { messages, tools: waitForTools(tools), stream: false, mcpHeaders },
     })
 
     if (!response.ok) {
