@@ -117,8 +117,12 @@ export function SubscriptionRow({
   const cancelHasChanged =
     cancelledAt !== formatDateForInput(subscription.cancelledAt)
 
+  const hasMissingCustomerId = !initialStripeCustomerId
+
   return (
-    <div className='grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 border rounded-lg bg-card items-center'>
+    <div
+      className={`grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 border rounded-lg bg-card items-center ${hasMissingCustomerId ? 'border-destructive' : ''}`}
+    >
       <div className='flex flex-col gap-1'>
         <Text.H5 weight='medium'>{workspaceName}</Text.H5>
         <div className='flex items-center gap-2 flex-wrap'>

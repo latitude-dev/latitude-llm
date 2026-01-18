@@ -74,13 +74,6 @@ export function WorkspaceDashboard({ workspace }: Props) {
 
         <BasicInfoList items={basicInfo} title='Workspace Information' />
 
-        <SubscriptionRow
-          workspaceId={workspace.id}
-          workspaceName={workspace.name}
-          stripeCustomerId={workspace.stripeCustomerId}
-          subscription={workspace.subscription}
-        />
-
         <BigAccountBanner
           workspaceId={workspace.id}
           isBigAccount={workspace.isBigAccount}
@@ -108,6 +101,13 @@ export function WorkspaceDashboard({ workspace }: Props) {
             <ClearCacheButton workspaceId={workspace.id} />
           </div>
         </div>
+
+        <SubscriptionRow
+          workspaceId={workspace.id}
+          workspaceName={workspace.name}
+          stripeCustomerId={workspace.stripeCustomerId}
+          subscription={workspace.subscription}
+        />
 
         <DataTable
           title='Subscription History'

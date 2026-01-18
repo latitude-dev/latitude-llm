@@ -66,6 +66,11 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               value: BackofficeRoutes.weekly,
               route: ROUTES.backoffice.weekly.root,
             },
+            {
+              label: 'Billing',
+              value: BackofficeRoutes.billing,
+              route: ROUTES.backoffice.billing.root,
+            },
           ]}
           selected={selected}
         />
