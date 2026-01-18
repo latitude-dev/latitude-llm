@@ -18,6 +18,7 @@ import {
 import { UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result, TypedResult } from '../../lib/Result'
+import { IssuesRepository } from '../../repositories'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Project } from '../../schema/models/types/Project'
 import { type ResultWithEvaluationV2 } from '../../schema/types'
@@ -88,7 +89,12 @@ export async function discoverIssue<
 
   embedding = normalizeEmbedding(embedding)
 
-  const finding = await findCandidates({ reason, embedding, document, project })
+  const finding = await findCandidates({
+    reason,
+    embedding,
+    document,
+    project,
+  })
   if (finding.error) {
     return Result.error(finding.error)
   }
@@ -124,11 +130,23 @@ async function findCandidates({
   document: DocumentVersion
   project: Project
 }) {
+  async function filterOutInactiveCandidates(
+    candidates: IssueCandidate[],
+  ): Promise<IssueCandidate[]> {
+    const issuesRepo = new IssuesRepository(project.workspaceId)
+    const inactiveIssues = await issuesRepo.findByProjectDocumentAndStatus({
+      project,
+      documentUuid: document.documentUuid,
+      status: 'inactive',
+    })
+    const inactiveUuids = new Set(inactiveIssues.map((issue) => issue.uuid))
+    return candidates.filter((candidate) => !inactiveUuids.has(candidate.uuid))
+  }
+
   try {
     const tenantName = ISSUES_COLLECTION_TENANT_NAME(project.workspaceId, project.id, document.documentUuid) // prettier-ignore
-    const issues = await getIssuesCollection({ tenantName })
-
-    const { objects } = await issues.query.hybrid(reason, {
+    const issuesCollection = await getIssuesCollection({ tenantName })
+    const { objects } = await issuesCollection.query.hybrid(reason, {
       vector: embedding,
       alpha: ISSUE_DISCOVERY_SEARCH_RATIO,
       maxVectorDistance: 1 - ISSUE_DISCOVERY_MIN_SIMILARITY,
@@ -140,7 +158,6 @@ async function findCandidates({
       returnProperties: ['title', 'description'],
       returnMetadata: ['score'],
     })
-
     const candidates = objects
       .map((object) => ({
         uuid: object.uuid,
@@ -149,8 +166,11 @@ async function findCandidates({
         score: object.metadata!.score!,
       }))
       .slice(0, ISSUE_DISCOVERY_MAX_CANDIDATES)
+    if (candidates.length === 0) return Result.ok<IssueCandidate[]>([])
 
-    return Result.ok<IssueCandidate[]>(candidates)
+    const activeCandidates = await filterOutInactiveCandidates(candidates)
+
+    return Result.ok<IssueCandidate[]>(activeCandidates)
   } catch (error) {
     return Result.error(error as Error)
   }
