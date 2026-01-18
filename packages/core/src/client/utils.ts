@@ -8,6 +8,7 @@ export {
   gt,
   gte,
   inArray,
+  notInArray,
   lt,
   lte,
   ne,

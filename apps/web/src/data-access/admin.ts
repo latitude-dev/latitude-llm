@@ -24,6 +24,7 @@ export type WorkspaceWithDetails = {
   createdAt: Date
   issuesUnlocked: boolean
   isBigAccount: boolean
+  stripeCustomerId: string | null
   subscription: OkType<typeof findWorkspaceSubscription>
   subscriptions: Subscription[]
   quotas: {
@@ -330,6 +331,92 @@ export async function findProjectByIdForAdmin(
     }
 
     return Result.ok(projectWithDetails)
+  } catch (error) {
+    return Result.error(error as Error)
+  }
+}
+
+export type PayingWorkspace = {
+  id: number
+  name: string
+  stripeCustomerId: string | null
+  subscription: OkType<typeof findWorkspaceSubscription>
+}
+
+/**
+ * Find all workspaces with paying (non-free) subscription plans for admin purposes
+ */
+export async function findPayingWorkspacesForAdmin(
+  {
+    userId,
+  }: {
+    userId: string
+  },
+  db = database,
+) {
+  const assertResult = await assertUserIsAdmin(userId, db)
+  if (!Result.isOk(assertResult)) return assertResult
+
+  try {
+    const { FREE_PLANS } = await import('@latitude-data/core/plans')
+    const { addMonths } = await import('date-fns')
+    const { getLatestRenewalDate } = await import(
+      '@latitude-data/core/services/workspaces/utils/calculateRenewalDate'
+    )
+
+    const payingWorkspaces = await db
+      .select({
+        id: workspaces.id,
+        name: workspaces.name,
+        stripeCustomerId: workspaces.stripeCustomerId,
+        subscriptionId: subscriptions.id,
+        subscriptionWorkspaceId: subscriptions.workspaceId,
+        subscriptionPlan: subscriptions.plan,
+        subscriptionCreatedAt: subscriptions.createdAt,
+        subscriptionUpdatedAt: subscriptions.updatedAt,
+        subscriptionTrialEndsAt: subscriptions.trialEndsAt,
+        subscriptionCancelledAt: subscriptions.cancelledAt,
+      })
+      .from(workspaces)
+      .innerJoin(
+        subscriptions,
+        utils.eq(workspaces.currentSubscriptionId, subscriptions.id),
+      )
+      .where(utils.notInArray(subscriptions.plan, FREE_PLANS))
+      .orderBy(utils.desc(workspaces.createdAt))
+
+    const results: PayingWorkspace[] = payingWorkspaces
+      .map((workspace) => {
+        const billableFrom = getLatestRenewalDate(
+          workspace.subscriptionCreatedAt,
+          new Date(),
+        )
+        const billableAt = addMonths(billableFrom, 1)
+
+        return {
+          id: workspace.id,
+          name: workspace.name,
+          stripeCustomerId: workspace.stripeCustomerId,
+          subscription: {
+            id: workspace.subscriptionId,
+            workspaceId: workspace.subscriptionWorkspaceId,
+            plan: workspace.subscriptionPlan,
+            createdAt: workspace.subscriptionCreatedAt,
+            updatedAt: workspace.subscriptionUpdatedAt,
+            trialEndsAt: workspace.subscriptionTrialEndsAt,
+            cancelledAt: workspace.subscriptionCancelledAt,
+            billableFrom,
+            billableAt,
+          },
+        }
+      })
+      .sort((a, b) => {
+        if (!a.stripeCustomerId && b.stripeCustomerId) return -1
+        if (a.stripeCustomerId && !b.stripeCustomerId) return 1
+        return 0
+      })
+
+    return Result.ok(results)
   } catch (error) {
     return Result.error(error as Error)
   }

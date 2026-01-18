@@ -84,6 +84,9 @@ export type Events =
   | 'documentTriggerEventCreated'
   | 'promocodeClaimed'
   | 'subscriptionUpdated'
+  | 'subscriptionEnqueuedForCancellation'
+  | 'stripeCustomerIdAssigned'
+  | 'stripeCustomerIdUnassigned'
   | 'documentRunQueued'
   | 'documentRunStarted'
   | 'documentRunProgress'
@@ -681,6 +684,34 @@ export type SubscriptionUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type SubscriptionEnqueuedForCancellationEvent = LatitudeEventGeneric<
+  'subscriptionEnqueuedForCancellation',
+  {
+    workspaceId: number
+    subscriptionId: number
+    cancellationDate: string
+    userEmail: string
+  }
+>
+
+export type StripeCustomerIdAssignedEvent = LatitudeEventGeneric<
+  'stripeCustomerIdAssigned',
+  {
+    workspaceId: number
+    stripeCustomerId: string
+    userEmail: string
+    origin: 'webhook' | 'backoffice'
+  }
+>
+
+export type StripeCustomerIdUnassignedEvent = LatitudeEventGeneric<
+  'stripeCustomerIdUnassigned',
+  {
+    workspaceId: number
+    userEmail: string
+  }
+>
+
 type DocumentRunStatusEventData = {
   workspaceId: number
   projectId: number
@@ -1072,6 +1103,9 @@ export type LatitudeEvent =
   | DocumentTriggerEventCreatedEvent
   | PromocodeClaimedEvent
   | SubscriptionUpdatedEvent
+  | SubscriptionEnqueuedForCancellationEvent
+  | StripeCustomerIdAssignedEvent
+  | StripeCustomerIdUnassignedEvent
   | DocumentRunQueuedEvent
   | DocumentRunStartedEvent
   | DocumentRunProgressEvent
@@ -1168,6 +1202,9 @@ export interface IEventsHandlers {
   documentTriggerEventCreated: EventHandler<DocumentTriggerEventCreatedEvent>[]
   promocodeClaimed: EventHandler<PromocodeClaimedEvent>[]
   subscriptionUpdated: EventHandler<SubscriptionUpdatedEvent>[]
+  subscriptionEnqueuedForCancellation: EventHandler<SubscriptionEnqueuedForCancellationEvent>[]
+  stripeCustomerIdAssigned: EventHandler<StripeCustomerIdAssignedEvent>[]
+  stripeCustomerIdUnassigned: EventHandler<StripeCustomerIdUnassignedEvent>[]
   documentRunQueued: EventHandler<DocumentRunQueuedEvent>[]
   documentRunStarted: EventHandler<DocumentRunStartedEvent>[]
   documentRunProgress: EventHandler<DocumentRunProgressEvent>[]
