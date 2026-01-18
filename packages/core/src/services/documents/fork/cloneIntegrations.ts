@@ -6,7 +6,6 @@ import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { IntegrationsRepository } from '../../../repositories'
 import {
-  HostedMcpIntegrationConfiguration,
   PipedreamIntegrationConfiguration,
   UnconfiguredPipedreamIntegrationConfiguration,
 } from '../../integrations/helpers/schema'
@@ -25,10 +24,6 @@ function neutralNameForIntegration(integration: IntegrationDto): string {
   if (integration.type === IntegrationType.Pipedream) {
     return (integration.configuration as PipedreamIntegrationConfiguration)
       .appName
-  }
-
-  if (integration.type === IntegrationType.HostedMCP) {
-    return (integration.configuration as HostedMcpIntegrationConfiguration).type
   }
 
   return integration.name

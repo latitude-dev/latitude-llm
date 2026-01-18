@@ -1,7 +1,4 @@
-import {
-  INTEGRATION_TYPE_VALUES,
-  HOSTED_INTEGRATION_TYPE_OPTIONS,
-} from '$/lib/integrationTypeOptions'
+import { INTEGRATION_TYPE_VALUES } from '$/lib/integrationTypeOptions'
 import { IntegrationType } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
@@ -33,14 +30,14 @@ export function getIntegrationData({
       ...commonData,
       icon: imageUrl
         ? {
-            type: 'image' as const,
-            src: imageUrl,
-            alt: label,
-          }
+          type: 'image' as const,
+          src: imageUrl,
+          alt: label,
+        }
         : {
-            type: 'icon' as const,
-            name: 'unplug' as IconName,
-          },
+          type: 'icon' as const,
+          name: 'unplug' as IconName,
+        },
     }
   }
 
@@ -51,20 +48,6 @@ export function getIntegrationData({
         type: 'icon' as const,
         name: 'logo' as IconName,
       },
-    }
-  }
-
-  if (
-    integration.type === IntegrationType.HostedMCP &&
-    Object.keys(HOSTED_INTEGRATION_TYPE_OPTIONS).includes(
-      integration.configuration.type,
-    )
-  ) {
-    const { icon } =
-      HOSTED_INTEGRATION_TYPE_OPTIONS[integration.configuration.type]
-    return {
-      ...commonData,
-      icon,
     }
   }
 

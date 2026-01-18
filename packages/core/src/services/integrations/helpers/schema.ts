@@ -93,3 +93,14 @@ export const integrationConfigurationSchema = z.union([
 export type IntegrationConfiguration = z.infer<
   typeof integrationConfigurationSchema
 >
+
+/**
+ * Keeping `IntegrationConfiguration` for backgward compatibility,
+ * but excluding `HostedMCP` type as it's not an active integration type.
+ */
+export type ActiveIntegrationConfiguration = Exclude<
+  IntegrationConfiguration,
+  {
+    type: IntegrationType.HostedMCP
+  }
+>

@@ -17,14 +17,6 @@ vi.mock('../../../services/integrations/pipedream/apps', () => {
   }
 })
 
-vi.mock('../../../services/mcpServers/deployService', () => {
-  return {
-    deployMcpServer: vi.fn(async () =>
-      Result.ok({ id: 1, endpoint: 'https://mock.mcp' }),
-    ),
-  }
-})
-
 describe('cloneIntegrations', () => {
   let originWorkspace: Workspace
   let targetWorkspace: Workspace

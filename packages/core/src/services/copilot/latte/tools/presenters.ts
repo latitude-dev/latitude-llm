@@ -90,15 +90,6 @@ export function providerPresenter(provider: ProviderApiKey) {
 }
 
 export function integrationPresenter(integration: IntegrationDto) {
-  if (integration.type === IntegrationType.HostedMCP) {
-    return {
-      name: integration.name,
-      type: integration.configuration.type,
-      hasTools: integration.hasTools,
-      hasTriggers: integration.hasTriggers,
-    }
-  }
-
   if (integration.type === IntegrationType.Pipedream) {
     return {
       id: integration.id,

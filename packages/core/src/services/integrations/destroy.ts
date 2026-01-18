@@ -1,14 +1,10 @@
 import { eq } from 'drizzle-orm'
 
-import { IntegrationType } from '@latitude-data/constants'
 import { ForbiddenError } from '@latitude-data/constants/errors'
-import { type McpServer } from '../../schema/models/types/McpServer'
 import { IntegrationDto } from '../../schema/models/types/Integration'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { McpServerRepository } from '../../repositories'
 import { integrations } from '../../schema/models/integrations'
-import { destroyMcpServer } from '../mcpServers/destroyService'
 import { destroyPipedreamAccountFromIntegration } from './pipedream/destroy'
 import { listIntegrationReferences } from './references'
 
@@ -34,25 +30,6 @@ export async function destroyIntegration(
         ),
       )
     }
-
-    // If integration type is MCPServer, first destroy the associated MCP server
-    let mcpServer: McpServer | null = null
-    if (
-      integration.type === IntegrationType.HostedMCP &&
-      integration.mcpServerId
-    ) {
-      // Get the MCP server
-      const mcpServerRepo = new McpServerRepository(
-        integration.workspaceId,
-        trx,
-      )
-      mcpServer = await mcpServerRepo
-        .find(integration.mcpServerId)
-        .then((r) => r.unwrap())
-    }
-
-    // Destroy Hosted MCP
-    if (mcpServer) await destroyMcpServer(mcpServer, transaction)
 
     // Remove user's account from Pipedream
     await destroyPipedreamAccountFromIntegration(integration).then((r) =>

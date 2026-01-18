@@ -5,7 +5,6 @@ import { createWorker } from '../utils/createWorker'
 import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 const jobMappings = {
-  autoScaleJob: jobs.autoScaleJob,
   backfillEvaluationResultsTypeAndMetricJob:
     jobs.backfillEvaluationResultsTypeAndMetricJob,
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
@@ -13,10 +12,8 @@ const jobMappings = {
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
   destroyWorkspaceJob: jobs.destroyWorkspaceJob,
   requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
-  scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
   scheduleBackfillEvaluationResultsTypeAndMetricJobs:
     jobs.scheduleBackfillEvaluationResultsTypeAndMetricJobs,
-  updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
   scheduleWeeklyEmailJobs: jobs.scheduleWeeklyEmailJobs,
   dailyAlignmentMetricUpdateJob: jobs.dailyAlignmentMetricUpdateJob,
   updateEvaluationAlignmentJob: jobs.updateEvaluationAlignmentJob,

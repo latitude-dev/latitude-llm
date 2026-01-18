@@ -17,10 +17,8 @@ import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluat
 import { notifyClientOfEvaluationStatus } from './notifyClientOfEvaluationStatus'
 import { notifyClientOfEvaluationV2AlignmentUpdated } from './notifyClientOfEvaluationV2AlignmentUpdated'
 import { notifyClientOfExportReady } from './notifyClientOfExportReady'
-import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
 import { notifyClientOfOptimizationStatus } from './notifyClientOfOptimizationStatus'
 import { notifyClientOfRunStatusByDocument } from './notifyClientOfRunStatusByDocument'
-import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
 import { notifyClientOfSpanCreated } from './notifyClientOfSpanCreated'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { pingProjectUpdateJob } from './pingProjectUpdateJob'
@@ -89,8 +87,6 @@ export const EventHandlers: IEventsHandlers = {
     requestDocumentSuggestionJobV2,
   ],
   evaluationResultV2Updated: [handleEvaluationResultV2Updated],
-  scaleMcpServer: [notifyClientOfScaleUpMcpServer],
-  mcpServerConnected: [notifyClientOfMcpServerConnected],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],
   spanCreated: [evaluateLiveLogJob, notifyClientOfSpanCreated],
   segmentCreated: [],

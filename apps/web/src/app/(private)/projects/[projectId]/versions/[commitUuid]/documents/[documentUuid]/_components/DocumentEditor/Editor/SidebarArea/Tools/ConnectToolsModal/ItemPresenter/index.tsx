@@ -85,10 +85,7 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
   const accountsCount = integrationIds?.length ?? 0
   const isPipedream = isGrouped || type === 'UnConnectedPipedreamApp'
   const isUnconnected = type === 'UnConnectedPipedreamApp'
-
-  // For MCP and Latitude integrations
-  const isMCP =
-    type === IntegrationType.ExternalMCP || type === IntegrationType.HostedMCP
+  const isMCP = type === IntegrationType.ExternalMCP
   const isLatitude = type === IntegrationType.Latitude
   const canExpand = (isPipedream && !isUnconnected) || isMCP || isLatitude
 

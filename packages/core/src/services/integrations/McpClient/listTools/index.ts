@@ -3,7 +3,6 @@ import { JSONSchema7 } from 'json-schema'
 import { IntegrationDto } from '../../../../schema/models/types/Integration'
 import { LatitudeError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
-import { StreamManager } from '../../../../lib/streamManager'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { touchIntegration } from '../../touch'
 import { getMcpClient } from '../McpClientManager'
@@ -12,7 +11,6 @@ import { listPipedreamIntegrationTools } from '../../pipedream/listTools'
 
 export async function listTools(
   integration: IntegrationDto,
-  streamManager?: StreamManager,
 ): PromisedResult<McpTool[], LatitudeError> {
   if (integration.type === IntegrationType.Pipedream) {
     const toolsResult = await listPipedreamIntegrationTools(
@@ -30,7 +28,7 @@ export async function listTools(
     return Result.ok(fixedTools as McpTool[])
   }
 
-  const clientResult = await getMcpClient(integration, streamManager)
+  const clientResult = await getMcpClient(integration)
   if (clientResult.error) {
     return clientResult
   }

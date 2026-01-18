@@ -23,8 +23,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { integrationOptions } from '$/lib/integrationTypeOptions'
 import { IntegrationType } from '@latitude-data/constants'
-import { McpServerStatus } from '../../integrations/[integrationId]/details/_components/McpServerStatus'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
 import { useState, useMemo } from 'react'
@@ -82,13 +80,7 @@ function getOAuthStatus(integration: {
 
 const IntegrationsTable = () => {
   const router = useRouter()
-  const {
-    data: integrations,
-    scaleDown,
-    scaleUp,
-    reauthorize,
-  } = useIntegrations()
-  const { data: workspace } = useCurrentWorkspace()
+  const { data: integrations, reauthorize } = useIntegrations()
   const [sortLastUsedDirection, setSortLastUsedDirection] =
     useState<SortDirection>(null)
   const [sortCreatedAtDirection, setSortCreatedAtDirection] =
@@ -201,12 +193,7 @@ const IntegrationsTable = () => {
                 </Text.H5>
               </TableCell>
               <TableCell>
-                {integration.type === IntegrationType.HostedMCP ? (
-                  <McpServerStatus
-                    short
-                    mcpServerId={integration.mcpServerId || undefined}
-                  />
-                ) : oauthStatus === 'pending' ? (
+                {oauthStatus === 'pending' ? (
                   <Badge variant='warningMuted'>OAuth Pending</Badge>
                 ) : oauthStatus === 'completed' ? (
                   <Badge variant='successMuted'>OAuth Connected</Badge>
@@ -226,16 +213,6 @@ const IntegrationsTable = () => {
                       onClick: () => setToolsModalIntegration(integration),
                     },
                     {
-                      label: 'Details',
-                      hidden: integration.type !== IntegrationType.HostedMCP,
-                      disabled: integration.type !== IntegrationType.HostedMCP,
-                      onClick: () =>
-                        router.push(
-                          ROUTES.settings.integrations.details(integration.id)
-                            .root,
-                        ),
-                    },
-                    {
                       label:
                         oauthStatus === 'pending'
                           ? 'Complete OAuth Setup'
@@ -244,31 +221,6 @@ const IntegrationsTable = () => {
                       disabled: oauthStatus === null,
                       onClick: () =>
                         reauthorize({ integrationId: integration.id }),
-                    },
-                    {
-                      label: 'Scale Up',
-                      hidden:
-                        integration.type !== IntegrationType.HostedMCP ||
-                        workspace?.id !== 1,
-                      disabled:
-                        integration.type !== IntegrationType.HostedMCP ||
-                        workspace?.id !== 1,
-                      onClick: () =>
-                        integration.mcpServerId &&
-                        scaleUp({ mcpServerId: integration.mcpServerId }),
-                    },
-                    {
-                      label: 'Scale Down',
-                      hidden:
-                        integration.type !== IntegrationType.HostedMCP ||
-                        workspace?.id !== 1,
-                      disabled:
-                        integration.type !== IntegrationType.HostedMCP ||
-                        workspace?.id !== 1,
-                      onClick: () =>
-                        integration.mcpServerId &&
-                        scaleDown({ mcpServerId: integration.mcpServerId }),
-                      type: 'destructive',
                     },
                     {
                       label: 'Remove',

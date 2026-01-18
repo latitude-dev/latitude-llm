@@ -2,10 +2,7 @@ import Image from 'next/image'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { IntegrationType } from '@latitude-data/constants'
-import {
-  INTEGRATION_TYPE_VALUES,
-  HOSTED_INTEGRATION_TYPE_OPTIONS,
-} from '$/lib/integrationTypeOptions'
+import { INTEGRATION_TYPE_VALUES } from '$/lib/integrationTypeOptions'
 
 type IntegrationIconProps = {
   integration: IntegrationDto
@@ -15,7 +12,7 @@ type IntegrationIconProps = {
 
 /**
  * Renders the appropriate icon for an integration.
- * Handles Pipedream integrations with custom images, HostedMCP integrations,
+ * Handles Pipedream integrations with custom images
  * and standard integration types with icon names.
  */
 export function IntegrationIcon({
@@ -48,36 +45,9 @@ export function IntegrationIcon({
     )
   }
 
-  // HostedMCP integrations: use HOSTED_INTEGRATION_TYPE_OPTIONS
-  if (
-    integration.type === IntegrationType.HostedMCP &&
-    Object.keys(HOSTED_INTEGRATION_TYPE_OPTIONS).includes(
-      integration.configuration.type,
-    )
-  ) {
-    const { icon } =
-      HOSTED_INTEGRATION_TYPE_OPTIONS[integration.configuration.type]
-
-    if (icon.type === 'image') {
-      return (
-        <Image
-          src={icon.src}
-          alt={icon.alt}
-          width={size}
-          height={size}
-          className={className}
-          unoptimized
-        />
-      )
-    }
-
-    return (
-      <Icon
-        name={icon.name}
-        size={size === 16 ? 'normal' : 'large'}
-        className={className}
-      />
-    )
+  // @ts-expect-error HostedMCP is not supported as type but we validate on runtime
+  if (integration.type === IntegrationType.HostedMCP) {
+    throw new Error('HostedMCP integration type is not supported here')
   }
 
   // Standard integration types: use INTEGRATION_TYPE_VALUES

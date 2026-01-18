@@ -1,4 +1,4 @@
-import { IntegrationType } from '@latitude-data/constants'
+import { ActiveIntegrationType } from '@latitude-data/constants'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { IconProps } from '@latitude-data/web-ui/atoms/Icons'
 
@@ -16,7 +16,7 @@ export type ActiveIntegration = {
   id: number
   name: string
   icon: ImageIcon
-  type: IntegrationType
+  type: ActiveIntegrationType
   configuration: IntegrationDto['configuration']
   tools: boolean | string[]
   allToolNames: string[]
