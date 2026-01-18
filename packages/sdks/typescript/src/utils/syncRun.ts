@@ -28,6 +28,7 @@ export async function syncRun<
     tools,
     customIdentifier,
     userMessage,
+    mcpHeaders,
     onFinished,
     onError,
     options,
@@ -64,6 +65,7 @@ export async function syncRun<
       customIdentifier,
       tools: waitForTools(tools),
       userMessage,
+      mcpHeaders,
     },
   })
 

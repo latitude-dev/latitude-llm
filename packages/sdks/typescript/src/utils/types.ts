@@ -302,6 +302,7 @@ export type RunPromptOptions<
   tools?: ToolCalledFn<Tools>
   signal?: AbortSignal
   userMessage?: string
+  mcpHeaders?: Record<string, Record<string, string>>
 } & (Background extends true
     ? { background: Background }
     : { background?: Background })
@@ -343,6 +344,7 @@ export type ChatOptions<
   stream?: boolean
   tools?: ToolCalledFn<Tools>
   signal?: AbortSignal
+  mcpHeaders?: Record<string, Record<string, string>>
 }
 
 export type AttachRunOptions<
@@ -404,12 +406,14 @@ type RunDocumentBodyParams = {
   background?: boolean
   tools?: string[]
   userMessage?: string
+  mcpHeaders?: Record<string, Record<string, string>>
 }
 
 type ChatBodyParams = {
   messages: Message[]
   stream?: boolean
   tools?: string[]
+  mcpHeaders?: Record<string, Record<string, string>>
 }
 
 type AttachRunBodyParams = {
