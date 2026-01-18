@@ -42,7 +42,7 @@ type CommonArgs<C extends PromptlChain = PromptlChain> = {
   pausedTokenUsage?: LanguageModelUsage
 
   tools?: Record<string, ToolHandler>
-  mcpHeaders?: Record<string, string>
+  mcpHeaders?: Record<string, Record<string, string>>
   abortSignal?: AbortSignal
   simulationSettings?: SimulationSettings
 }

@@ -42,7 +42,7 @@ export type BackgroundRunJobData = {
   parameters?: Record<string, unknown>
   customIdentifier?: string
   tools?: string[]
-  mcpHeaders?: Record<string, string>
+  mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
   source?: LogSources
   simulationSettings?: SimulationSettings

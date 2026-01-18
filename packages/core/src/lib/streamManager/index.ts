@@ -70,7 +70,7 @@ export type StreamManagerProps = {
   messages?: LegacyMessage[]
   tokenUsage?: LanguageModelUsage
   tools?: Record<string, ToolHandler>
-  mcpHeaders?: Record<string, string>
+  mcpHeaders?: Record<string, Record<string, string>>
   simulationSettings?: SimulationSettings
 }
 
@@ -83,7 +83,7 @@ export type StreamManagerProps = {
 export abstract class StreamManager {
   public controller?: ReadableStreamDefaultController<ChainEvent>
   public mcpClientManager: McpClientManager
-  public mcpHeaders?: Record<string, string>
+  public mcpHeaders?: Record<string, Record<string, string>>
   public promptSource: PromptSource
   public source: LogSources
   public stream: ReadableStream<ChainEvent>

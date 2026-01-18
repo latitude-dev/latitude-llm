@@ -35,13 +35,16 @@ export const runRoute = createRoute({
               }),
             tools: z.array(z.string()).optional().default([]),
             mcpHeaders: z
-              .record(z.string(), z.string())
+              .record(z.string(), z.record(z.string(), z.string()))
               .optional()
               .openapi({
                 type: 'object',
-                additionalProperties: { type: 'string' },
+                additionalProperties: {
+                  type: 'object',
+                  additionalProperties: { type: 'string' },
+                },
                 description:
-                  'Custom headers to pass to MCP servers at runtime (e.g., for multi-tenancy)',
+                  'Custom headers to pass to MCP servers at runtime, keyed by integration name (e.g., { "myMcp": { "customer-id": "abc123" } })',
               }),
             userMessage: z.string().optional(),
             background: z.boolean().optional(),
