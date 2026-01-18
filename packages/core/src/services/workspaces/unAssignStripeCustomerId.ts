@@ -8,25 +8,16 @@ import Transaction from '../../lib/Transaction'
 import { workspaces } from '../../schema/models/workspaces'
 import { publisher } from '../../events/publisher'
 
-export type AssignStripeCustomerIdOrigin = 'webhook' | 'backoffice'
-
 /**
- * Assigns a Stripe customer ID to a workspace.
- *
- * This links the workspace to a Stripe customer, enabling subscription
- * management through Stripe.
+ * Removes the Stripe customer ID from a workspace.
  */
-export async function assignStripeCustomerId(
+export async function unAssignStripeCustomerId(
   {
     workspace,
-    stripeCustomerId,
     userEmail,
-    origin,
   }: {
     workspace: Workspace | WorkspaceDto
-    stripeCustomerId: string
     userEmail: string
-    origin: AssignStripeCustomerIdOrigin
   },
   transaction = new Transaction(),
 ) {
@@ -34,7 +25,7 @@ export async function assignStripeCustomerId(
     async (tx) => {
       await tx
         .update(workspaces)
-        .set({ stripeCustomerId })
+        .set({ stripeCustomerId: null })
         .where(eq(workspaces.id, workspace.id))
 
       const updated = await unsafelyFindWorkspace(workspace.id, tx)
@@ -46,12 +37,10 @@ export async function assignStripeCustomerId(
     },
     async (updated) => {
       publisher.publishLater({
-        type: 'stripeCustomerIdAssigned',
+        type: 'stripeCustomerIdUnassigned',
         data: {
           workspaceId: updated.id,
-          stripeCustomerId,
           userEmail,
-          origin,
         },
       })
     },

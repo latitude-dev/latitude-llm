@@ -4,15 +4,16 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { subscriptions } from '../../schema/models/subscriptions'
 import { Subscription } from '../../schema/models/types/Subscription'
-import { Workspace } from '../../schema/models/types/Workspace'
-import { findFirstUserInWorkspace } from '../../data-access/users'
+import { Workspace, WorkspaceDto } from '../../schema/models/types/Workspace'
 
 /**
- * Marks a subscription for cancellation by setting its `cancelledAt` date.
+ * Sets or clears the cancellation date for a subscription.
  *
- * This does NOT immediately downgrade the workspace. Instead, a nightly job
+ * When setting a date: marks the subscription for cancellation. A nightly job
  * (`processCancelledSubscriptionsJob`) runs daily at 3 AM to find subscriptions
  * where `cancelledAt` is in the past and downgrades them to HobbyV3.
+ *
+ * When clearing (null): removes the scheduled cancellation.
  *
  * This approach ensures users retain access until their paid period ends,
  * regardless of when they initiated the cancellation.
@@ -21,13 +22,13 @@ export async function cancelSubscription(
   {
     workspace,
     subscription,
+    userEmail,
     cancelledAt,
-    stripeCustomerId,
   }: {
-    workspace: Workspace
+    workspace: Workspace | WorkspaceDto
     subscription: Subscription
-    cancelledAt: Date
-    stripeCustomerId: string
+    userEmail: string
+    cancelledAt: Date | null
   },
   transaction = new Transaction(),
 ) {
@@ -42,15 +43,15 @@ export async function cancelSubscription(
       return Result.ok(updatedSubscription!)
     },
     async (updatedSubscription) => {
-      const firstUser = await findFirstUserInWorkspace(workspace)
       publisher.publishLater({
         type: 'subscriptionEnqueuedForCancellation',
         data: {
           workspaceId: workspace.id,
           subscriptionId: updatedSubscription.id,
-          stripeCustomerId,
-          cancellationDate: cancelledAt.toISOString(),
-          userEmail: firstUser.email,
+          cancellationDate: cancelledAt
+            ? cancelledAt.toISOString()
+            : 'uncancelled',
+          userEmail,
         },
       })
     },

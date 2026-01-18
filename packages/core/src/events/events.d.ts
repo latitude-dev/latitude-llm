@@ -85,6 +85,8 @@ export type Events =
   | 'promocodeClaimed'
   | 'subscriptionUpdated'
   | 'subscriptionEnqueuedForCancellation'
+  | 'stripeCustomerIdAssigned'
+  | 'stripeCustomerIdUnassigned'
   | 'documentRunQueued'
   | 'documentRunStarted'
   | 'documentRunProgress'
@@ -687,8 +689,25 @@ export type SubscriptionEnqueuedForCancellationEvent = LatitudeEventGeneric<
   {
     workspaceId: number
     subscriptionId: number
-    stripeCustomerId: string
     cancellationDate: string
+    userEmail: string
+  }
+>
+
+export type StripeCustomerIdAssignedEvent = LatitudeEventGeneric<
+  'stripeCustomerIdAssigned',
+  {
+    workspaceId: number
+    stripeCustomerId: string
+    userEmail: string
+    origin: 'webhook' | 'backoffice'
+  }
+>
+
+export type StripeCustomerIdUnassignedEvent = LatitudeEventGeneric<
+  'stripeCustomerIdUnassigned',
+  {
+    workspaceId: number
     userEmail: string
   }
 >
@@ -1085,6 +1104,8 @@ export type LatitudeEvent =
   | PromocodeClaimedEvent
   | SubscriptionUpdatedEvent
   | SubscriptionEnqueuedForCancellationEvent
+  | StripeCustomerIdAssignedEvent
+  | StripeCustomerIdUnassignedEvent
   | DocumentRunQueuedEvent
   | DocumentRunStartedEvent
   | DocumentRunProgressEvent
@@ -1182,6 +1203,8 @@ export interface IEventsHandlers {
   promocodeClaimed: EventHandler<PromocodeClaimedEvent>[]
   subscriptionUpdated: EventHandler<SubscriptionUpdatedEvent>[]
   subscriptionEnqueuedForCancellation: EventHandler<SubscriptionEnqueuedForCancellationEvent>[]
+  stripeCustomerIdAssigned: EventHandler<StripeCustomerIdAssignedEvent>[]
+  stripeCustomerIdUnassigned: EventHandler<StripeCustomerIdUnassignedEvent>[]
   documentRunQueued: EventHandler<DocumentRunQueuedEvent>[]
   documentRunStarted: EventHandler<DocumentRunStartedEvent>[]
   documentRunProgress: EventHandler<DocumentRunProgressEvent>[]

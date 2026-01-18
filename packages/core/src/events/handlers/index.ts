@@ -104,6 +104,8 @@ export const EventHandlers: IEventsHandlers = {
   promocodeClaimed: [],
   subscriptionUpdated: [],
   subscriptionEnqueuedForCancellation: [],
+  stripeCustomerIdAssigned: [],
+  stripeCustomerIdUnassigned: [],
   commitMerged: [stopDeploymentTestsForCommitHandler],
   commitDeleted: [stopDeploymentTestsForCommitHandler],
   documentRunQueued: [notifyClientOfRunStatusByDocument],
