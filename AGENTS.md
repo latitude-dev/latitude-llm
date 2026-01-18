@@ -270,6 +270,11 @@ import { createFeatureAction } from '$/actions/admin/features/create'
 
 ### TypeScript SDK (`packages/sdks/typescript/`)
 
+**IMPORTANT**: When making changes to the TypeScript SDK, you MUST:
+1. Update the version in `package.json` (follow semver: patch for fixes, minor for features, major for breaking changes)
+2. Update `CHANGELOG.md` with the new version and description of changes
+3. These updates trigger the CI/CD pipeline to publish the new version
+
 The TypeScript SDK is automatically published to npm and GitHub releases via `.github/workflows/publish-typescript-sdk.yml`:
 
 1. **Manual Changelog**: Update `CHANGELOG.md` with release notes for the new version

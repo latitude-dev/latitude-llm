@@ -32,6 +32,7 @@ type AddMessagesArgs = {
   messages: Message[]
   source: LogSources
   tools?: Record<string, ToolHandler>
+  mcpHeaders?: Record<string, Record<string, string>>
   abortSignal?: AbortSignal
   context?: TelemetryContext
   testDeploymentId?: number
@@ -57,6 +58,7 @@ export async function addMessages(
     source,
     abortSignal,
     tools = {},
+    mcpHeaders,
     context = BACKGROUND({ workspaceId: workspace.id }),
   }: AddMessagesArgs,
   telemetry: LatitudeTelemetry = realTelemetry,
@@ -125,6 +127,7 @@ export async function addMessages(
     source,
     workspace,
     tools,
+    mcpHeaders,
     abortSignal,
   })
 

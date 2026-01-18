@@ -25,6 +25,9 @@ export const chatRoute = createRoute({
             messages: z.array(messageSchema),
             stream: z.boolean().default(false),
             tools: z.array(z.string()).optional().default([]),
+            mcpHeaders: z
+              .record(z.string(), z.record(z.string(), z.string()))
+              .optional(),
           }),
         },
       },

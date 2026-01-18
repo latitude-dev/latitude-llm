@@ -42,6 +42,7 @@ type CommonArgs<C extends PromptlChain = PromptlChain> = {
   pausedTokenUsage?: LanguageModelUsage
 
   tools?: Record<string, ToolHandler>
+  mcpHeaders?: Record<string, Record<string, string>>
   abortSignal?: AbortSignal
   simulationSettings?: SimulationSettings
 }
@@ -59,6 +60,7 @@ export function runChain<C extends PromptlChain>({
   promptSource,
   abortSignal,
   tools = {},
+  mcpHeaders,
   uuid = generateUUIDIdentifier(),
   simulationSettings,
 }: RunChainArgs<C>) {
@@ -74,6 +76,7 @@ export function runChain<C extends PromptlChain>({
     source,
     chain,
     tools,
+    mcpHeaders,
     simulationSettings,
   })
 
