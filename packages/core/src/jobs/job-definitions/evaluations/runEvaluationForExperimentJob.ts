@@ -5,7 +5,10 @@ import { ExperimentsRepository } from '../../../repositories'
 import { updateExperimentStatus } from '../../../services/experiments/updateStatus'
 import { captureException } from '../../../utils/datadogCapture'
 import { queues } from '../../queues'
-import { RunEvaluationV2JobData } from './runEvaluationV2Job'
+import {
+  runEvaluationV2JobKey,
+  RunEvaluationV2JobData,
+} from './runEvaluationV2Job'
 import { LatitudeError } from '@latitude-data/constants/errors'
 
 export type RunEvaluationForExperimentJobData = {
@@ -77,7 +80,9 @@ export async function runEvaluationForExperimentJob(
     ...rest,
   }
 
-  evaluationsQueue.add('runEvaluationV2Job', payload)
+  evaluationsQueue.add('runEvaluationV2Job', payload, {
+    deduplication: { id: runEvaluationV2JobKey(payload) },
+  })
 }
 
 /**

@@ -17,6 +17,7 @@ import {
 } from '../../repositories'
 import { getEvaluationMetricSpecification } from '../../services/evaluationsV2/specifications'
 import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatureEnabledByName'
+import { captureException } from '../../utils/datadogCapture'
 import { SpanCreatedEvent } from '../events'
 
 const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
@@ -53,8 +54,16 @@ export const evaluateLiveLogJob = async ({
     )
   }
 
-  const source = 'source' in spanMetadata ? spanMetadata.source : undefined
-  if (!LIVE_EVALUABLE_LOG_SOURCES.includes(source ?? LogSources.API)) {
+  if (!span.source) {
+    captureException(
+      new Error(
+        `[evaluateLiveLogJob] Span has no source. spanId=${span.id}, traceId=${span.traceId}, type=${span.type}`,
+      ),
+    )
+    return
+  }
+
+  if (!LIVE_EVALUABLE_LOG_SOURCES.includes(span.source)) {
     return
   }
 
