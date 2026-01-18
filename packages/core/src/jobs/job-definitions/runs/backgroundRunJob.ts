@@ -42,6 +42,7 @@ export type BackgroundRunJobData = {
   parameters?: Record<string, unknown>
   customIdentifier?: string
   tools?: string[]
+  mcpHeaders?: Record<string, string>
   userMessage?: string
   source?: LogSources
   simulationSettings?: SimulationSettings
@@ -81,6 +82,7 @@ export const backgroundRunJob = async (
     parameters = {},
     customIdentifier,
     tools = [],
+    mcpHeaders,
     userMessage,
     source = LogSources.API,
     simulationSettings,
@@ -140,6 +142,7 @@ export const backgroundRunJob = async (
       abortSignal: abortController.signal,
       context: BACKGROUND({ workspaceId }),
       tools: buildClientToolHandlersMap(tools),
+      mcpHeaders,
       userMessage,
       simulationSettings,
     }).then((r) => r.unwrap())

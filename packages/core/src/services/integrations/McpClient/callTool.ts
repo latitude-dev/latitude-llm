@@ -63,6 +63,7 @@ export async function callIntegrationTool({
   const clientResult = await streamManager.mcpClientManager.getClient(
     integration,
     streamManager,
+    { runtimeHeaders: streamManager.mcpHeaders },
   )
   if (clientResult.error) {
     return clientResult

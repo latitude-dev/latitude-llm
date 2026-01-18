@@ -34,6 +34,15 @@ export const runRoute = createRoute({
                 description: 'Document parameters as key-value pairs',
               }),
             tools: z.array(z.string()).optional().default([]),
+            mcpHeaders: z
+              .record(z.string(), z.string())
+              .optional()
+              .openapi({
+                type: 'object',
+                additionalProperties: { type: 'string' },
+                description:
+                  'Custom headers to pass to MCP servers at runtime (e.g., for multi-tenancy)',
+              }),
             userMessage: z.string().optional(),
             background: z.boolean().optional(),
           }),

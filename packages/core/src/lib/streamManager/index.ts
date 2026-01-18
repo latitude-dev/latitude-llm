@@ -70,6 +70,7 @@ export type StreamManagerProps = {
   messages?: LegacyMessage[]
   tokenUsage?: LanguageModelUsage
   tools?: Record<string, ToolHandler>
+  mcpHeaders?: Record<string, string>
   simulationSettings?: SimulationSettings
 }
 
@@ -82,6 +83,7 @@ export type StreamManagerProps = {
 export abstract class StreamManager {
   public controller?: ReadableStreamDefaultController<ChainEvent>
   public mcpClientManager: McpClientManager
+  public mcpHeaders?: Record<string, string>
   public promptSource: PromptSource
   public source: LogSources
   public stream: ReadableStream<ChainEvent>
@@ -120,6 +122,7 @@ export abstract class StreamManager {
     abortSignal,
     context,
     tools = {},
+    mcpHeaders,
     messages = [],
     uuid = generateUUIDIdentifier(),
     simulationSettings,
@@ -129,6 +132,7 @@ export abstract class StreamManager {
     this.messages = messages
     this.promptSource = promptSource
     this.mcpClientManager = createMcpClientManager()
+    this.mcpHeaders = mcpHeaders
     this.source = source
     this.abortSignal = abortSignal
     this.$context = context
