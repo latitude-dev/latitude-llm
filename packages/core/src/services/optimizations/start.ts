@@ -9,7 +9,7 @@ import {
   OPTIMIZATION_MIN_ROWS,
   OPTIMIZATION_TESTSET_SPLIT,
   OptimizationConfiguration,
-  OptimizationEngine
+  OptimizationEngine,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { prepareOptimizationJobKey } from '../../jobs/job-definitions/optimizations/prepareOptimizationJob'
@@ -302,7 +302,9 @@ async function splitDataset(
 
   if (rows < OPTIMIZATION_MIN_ROWS) {
     return Result.error(
-      new BadRequestError(`At least ${OPTIMIZATION_MIN_ROWS} dataset rows are required`),
+      new BadRequestError(
+        `At least ${OPTIMIZATION_MIN_ROWS} dataset rows are required`,
+      ),
     )
   }
 
