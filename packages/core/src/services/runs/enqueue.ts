@@ -24,6 +24,7 @@ export type EnqueueRunProps = {
   datasetRowId?: number
   document: DocumentVersion
   experiment?: Experiment
+  mcpHeaders?: Record<string, Record<string, string>>
   parameters?: Record<string, unknown>
   project: Project
   runUuid?: string
@@ -42,6 +43,7 @@ export async function enqueueRun({
   datasetRowId,
   document,
   experiment,
+  mcpHeaders,
   parameters,
   project,
   runUuid,
@@ -84,6 +86,7 @@ export async function enqueueRun({
       parameters: parameters,
       customIdentifier: customIdentifier,
       tools: tools,
+      mcpHeaders: mcpHeaders,
       userMessage: userMessage,
       source: source,
       simulationSettings,

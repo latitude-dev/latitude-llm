@@ -9,10 +9,15 @@ import {
   McpConnectionError,
 } from './utils'
 
+export type McpClientOptions = {
+  runtimeHeaders?: Record<string, string>
+}
+
 // Public Types
 export interface McpClientManager {
   getClient: (
     integration: IntegrationDto,
+    options?: McpClientOptions,
   ) => Promise<TypedResult<McpClient, McpConnectionError>>
   closeClient: (integration: IntegrationDto) => void
   closeAllClients: () => void
@@ -36,23 +41,29 @@ export const createMcpClientManager = (): McpClientManager => {
 
   const getClient = async (
     integration: IntegrationDto,
+    options?: McpClientOptions,
   ): Promise<TypedResult<McpClient, McpConnectionError>> => {
     const key = getClientKey(integration)
+    const hasRuntimeHeaders =
+      options?.runtimeHeaders && Object.keys(options.runtimeHeaders).length > 0
 
-    // Return cached client if exists
-    if (clientMap.has(key)) {
+    // When runtime headers are provided, always create a fresh connection
+    // to ensure the correct headers are used for this request
+    if (!hasRuntimeHeaders && clientMap.has(key)) {
       return Result.ok(clientMap.get(key)!)
     }
 
-    // Create new client
-    const result = await createAndConnectClient(integration)
+    // Create new client with optional runtime headers
+    const result = await createAndConnectClient(integration, options)
     if (!Result.isOk(result)) return result
 
     const { client, transport } = result.value
 
-    // Cache the client and transport
-    clientMap.set(key, client)
-    transportMap.set(key, transport)
+    // Only cache if no runtime headers (otherwise each request may need different headers)
+    if (!hasRuntimeHeaders) {
+      clientMap.set(key, client)
+      transportMap.set(key, transport)
+    }
 
     return Result.ok(client)
   }
@@ -90,6 +101,7 @@ export const createMcpClientManager = (): McpClientManager => {
 
 async function createAndConnectClient(
   integration: IntegrationDto,
+  options?: McpClientOptions,
 ): Promise<TypedResult<McpClientConnection, McpConnectionError>> {
   // @ts-expect-error - HostedMCP is deprecated but still present in the DB enum
   if (integration.type === IntegrationType.HostedMCP) {
@@ -101,7 +113,9 @@ async function createAndConnectClient(
   }
 
   if (integration.type === IntegrationType.ExternalMCP) {
-    return createAndConnectExternalMcpClient(integration)
+    return createAndConnectExternalMcpClient(integration, {
+      runtimeHeaders: options?.runtimeHeaders,
+    })
   }
 
   return Result.error(

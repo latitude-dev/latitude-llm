@@ -43,6 +43,16 @@ export const ExternalIntegrationConfiguration = forwardRef<
   })
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const isValidUrl = useCallback((urlString: string): boolean => {
+    if (!urlString.trim()) return false
+    try {
+      const url = new URL(urlString)
+      return url.protocol === 'http:' || url.protocol === 'https:'
+    } catch {
+      return false
+    }
+  }, [])
+
   const probeServer = useCallback(
     async (urlToProbe: string) => {
       if (!urlToProbe.trim()) {
@@ -75,11 +85,13 @@ export const ExternalIntegrationConfiguration = forwardRef<
         clearTimeout(debounceRef.current)
       }
 
+      if (!isValidUrl(newUrl)) return
+
       debounceRef.current = setTimeout(() => {
         probeServer(newUrl)
-      }, 100)
+      }, 500)
     },
-    [probeServer],
+    [probeServer, isValidUrl],
   )
 
   useEffect(() => {
@@ -156,7 +168,7 @@ export const ExternalIntegrationConfiguration = forwardRef<
         required
         name='url'
         label='URL'
-        description='URL to your Custom MCP Server.'
+        description='URL to your external MCP Server.'
         value={url}
         onChange={(e) => handleUrlChange(e.target.value)}
       />

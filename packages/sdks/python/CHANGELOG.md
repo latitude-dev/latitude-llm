@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.0] - 2026-01-19
+
+### Added
+
+- Added `mcp_headers` parameter to `prompts.run()` and `prompts.chat()` methods for passing custom headers to MCP integrations at runtime
+
 ## [5.4.0] - 2026-01-09
 
 ### Added

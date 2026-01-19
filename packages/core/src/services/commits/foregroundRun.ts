@@ -22,6 +22,7 @@ export type RunForegroundDocumentParams = {
   customIdentifier?: string
   source: LogSources
   tools: string[]
+  mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
   abortSignal?: AbortSignal
 }
@@ -54,6 +55,7 @@ export async function runForegroundDocument(
     source,
     abortSignal,
     tools,
+    mcpHeaders,
     userMessage,
     project,
   } = params
@@ -68,6 +70,7 @@ export async function runForegroundDocument(
     abortSignal,
     context: BACKGROUND({ workspaceId: workspace.id }),
     tools: buildClientToolHandlersMap(tools ?? []),
+    mcpHeaders,
     userMessage: userMessage ?? undefined,
   }).then((r) => r.unwrap())
 

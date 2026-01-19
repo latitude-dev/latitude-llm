@@ -145,7 +145,7 @@ export default function NewIntegration() {
             },
             {
               value: IntegrationType.ExternalMCP,
-              label: 'Custom MCP server',
+              label: 'External MCP server',
             },
           ]}
           onChange={(value) => {

@@ -27,6 +27,7 @@ export async function backgroundRun<
     tools,
     customIdentifier,
     userMessage,
+    mcpHeaders,
     onError,
     options,
   }: RunPromptOptions<Tools, S, true> & {
@@ -62,6 +63,7 @@ export async function backgroundRun<
       customIdentifier,
       tools: waitForTools(tools),
       userMessage,
+      mcpHeaders,
     },
   })
 

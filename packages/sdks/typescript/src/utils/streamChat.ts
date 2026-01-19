@@ -23,6 +23,7 @@ export async function streamChat<
   uuid: string,
   {
     messages,
+    mcpHeaders,
     onEvent,
     onFinished,
     onError,
@@ -36,7 +37,7 @@ export async function streamChat<
       handler: HandlerType.Chat,
       params: { conversationUuid: uuid },
       options: options,
-      body: { messages, tools: waitForTools(tools), stream: true },
+      body: { messages, tools: waitForTools(tools), stream: true, mcpHeaders },
     })
 
     if (!response.ok) {
