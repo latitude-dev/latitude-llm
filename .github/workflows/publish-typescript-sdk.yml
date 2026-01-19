@@ -76,11 +76,47 @@ jobs:
         if: steps.check_version.outputs.should_publish == 'true'
         run: pnpm exec turbo run test --filter=@latitude-data/sdk...
 
+      - name: Check for internal dependencies
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: node tools/check-sdk-dependencies.js packages/sdks/typescript/package.json
+
       - name: Publish to npm
         if: steps.check_version.outputs.should_publish == 'true'
         run: pnpm publish --access public --filter=@latitude-data/sdk --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify npm installation
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          echo "Waiting for npm registry to update..."
+          sleep 30
+
+          # Create a temporary directory for testing
+          TEST_DIR=$(mktemp -d)
+          cd "$TEST_DIR"
+
+          # Initialize a new project
+          npm init -y
+
+          # Install the published package
+          echo "Installing @latitude-data/sdk@${{ steps.get_version.outputs.version }}..."
+          npm install @latitude-data/sdk@${{ steps.get_version.outputs.version }}
+
+          # Verify the package can be imported
+          echo "Verifying package import..."
+          node -e "
+            const sdk = require('@latitude-data/sdk');
+            if (!sdk.Latitude) {
+              console.error('ERROR: Latitude class not found in package exports');
+              process.exit(1);
+            }
+            console.log('SUCCESS: Package installed and imports correctly');
+          "
+
+          # Cleanup
+          cd -
+          rm -rf "$TEST_DIR"
 
       - name: Extract changelog for current version
         if: steps.check_version.outputs.should_publish == 'true'
