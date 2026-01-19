@@ -19,7 +19,7 @@ export const INTEGRATION_TYPE_VALUES: Record<
   IntegrationTypeOption
 > = {
   [IntegrationType.ExternalMCP]: {
-    label: 'Custom MCP Server',
+    label: 'External MCP Server',
     icon: { type: 'icon', name: 'mcp' },
   },
   [IntegrationType.Latitude]: {

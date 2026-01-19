@@ -14,13 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `mcpHeaders` parameter to `prompts.run()` and `prompts.chat()` methods for passing custom headers to MCP servers at runtime. Headers are keyed by integration name to support multiple MCP integrations per prompt.
 
 Example usage:
+
 ```typescript
 latitude.prompts.run('my-prompt', {
   parameters: { name: 'John' },
   mcpHeaders: {
-    'myMcpIntegration': { 'customer-id': 'abc123' },
-    'anotherMcp': { 'x-tenant-id': 'tenant-456' }
-  }
+    myMcpIntegration: { 'customer-id': 'abc123' },
+    anotherMcp: { 'x-tenant-id': 'tenant-456' },
+  },
 })
 ```
 

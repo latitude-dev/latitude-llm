@@ -149,7 +149,9 @@ export function SubscriptionRow({
               Cancelling
             </Badge>
           )}
-          <ClientOnly loader={<Text.H6 color='foregroundMuted'>Loading...</Text.H6>}>
+          <ClientOnly
+            loader={<Text.H6 color='foregroundMuted'>Loading...</Text.H6>}
+          >
             <Text.H6 color='foregroundMuted'>
               Billing Period:{' '}
               {new Date(subscription.billableFrom).toLocaleDateString()} -{' '}

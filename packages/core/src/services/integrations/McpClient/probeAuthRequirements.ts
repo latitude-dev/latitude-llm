@@ -24,6 +24,15 @@ export async function probeAuthRequirements(
 
   try {
     const serverUrl = new URL(urlWithProtocol)
+
+    // SSE endpoints hold connections open for streaming, so we can't probe them directly.
+    // SSE transport doesn't support OAuth anyway - it's only for Streamable HTTP transport.
+    if (serverUrl.pathname.endsWith('/sse')) {
+      return Result.ok({
+        requiresOAuth: false,
+        requiresApiKey: false,
+      })
+    }
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS)
 
