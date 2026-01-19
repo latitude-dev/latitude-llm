@@ -111,7 +111,7 @@ function UseSpanInEditorButton({ span }: { span: SpanWithDetails }) {
       params.set('documentLogUuid', span.documentLogUuid)
     }
     return `${url}?${params.toString()}`
-  }, [url, span.id, span.traceId, span.source])
+  }, [url, span.id, span.traceId, span.source, span.documentLogUuid])
 
   const handleClick = useCallback(() => {
     if (!span.documentUuid) return

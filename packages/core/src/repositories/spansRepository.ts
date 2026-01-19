@@ -103,7 +103,6 @@ export class SpansRepository extends Repository<Span> {
     spanId: string
   }) {
     const traceIds = await this.listTraceIdsByLogUuid(documentLogUuid)
-
     if (traceIds.length === 0) return Result.nil()
 
     const result = await this.scope
