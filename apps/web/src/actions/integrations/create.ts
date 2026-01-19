@@ -7,7 +7,6 @@ import { z } from 'zod'
 import { IntegrationType } from '@latitude-data/constants'
 import {
   externalMcpIntegrationConfigurationSchema,
-  hostedMcpIntegrationConfigurationFormSchema,
   pipedreamIntegrationConfigurationSchema,
 } from '@latitude-data/core/services/integrations/helpers/schema'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
@@ -39,11 +38,6 @@ const integrationSchema = z.discriminatedUnion('type', [
     name: nameSchema,
     type: z.literal(IntegrationType.ExternalMCP),
     configuration: externalMcpIntegrationConfigurationSchema,
-  }),
-  z.object({
-    name: nameSchema,
-    type: z.literal(IntegrationType.HostedMCP),
-    configuration: hostedMcpIntegrationConfigurationFormSchema,
   }),
   z.object({
     name: nameSchema,

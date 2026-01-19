@@ -1,7 +1,6 @@
 import { IntegrationType } from '@latitude-data/constants'
 import {
   externalMcpIntegrationConfigurationSchema,
-  hostedMcpIntegrationConfigurationFormSchema,
   pipedreamIntegrationConfigurationSchema,
 } from '@latitude-data/core/services/integrations/helpers/schema'
 import { z } from 'zod'
@@ -17,12 +16,6 @@ const fullCustomMcpConfigurationSchema = z.object({
   configuration: externalMcpIntegrationConfigurationSchema,
 })
 
-const fullMcpServerConfigurationSchema = z.object({
-  name: z.string(),
-  type: z.literal(IntegrationType.HostedMCP),
-  configuration: hostedMcpIntegrationConfigurationFormSchema,
-})
-
 const fullPipedreamConfigurationSchema = z.object({
   name: z.string(),
   type: z.literal(IntegrationType.Pipedream),
@@ -31,7 +24,6 @@ const fullPipedreamConfigurationSchema = z.object({
 
 export const inputSchema = z.discriminatedUnion('type', [
   fullCustomMcpConfigurationSchema,
-  fullMcpServerConfigurationSchema,
   fullPipedreamConfigurationSchema,
 ])
 

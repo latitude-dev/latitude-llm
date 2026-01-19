@@ -70,36 +70,6 @@ export const API_ROUTES = {
   claimedRewards: {
     root: '/api/claimedRewards',
   },
-  mcpServers: {
-    root: '/api/mcpServers',
-    logs: (
-      mcpServerId: string,
-      options?: {
-        tailLines?: number
-        timestamps?: boolean
-        previous?: boolean
-        limitBytes?: number
-      },
-    ) => {
-      const params = new URLSearchParams()
-      params.append('mcpServerId', mcpServerId)
-
-      if (options?.tailLines !== undefined) {
-        params.append('tailLines', options.tailLines.toString())
-      }
-      if (options?.timestamps !== undefined) {
-        params.append('timestamps', options.timestamps.toString())
-      }
-      if (options?.previous !== undefined) {
-        params.append('previous', options.previous.toString())
-      }
-      if (options?.limitBytes !== undefined) {
-        params.append('limitBytes', options.limitBytes.toString())
-      }
-
-      return `/api/mcpServers/logs?${params.toString()}`
-    },
-  },
   providerLogs: {
     root: '/api/providerLogs',
     detail: (providerLogId: string | number) => ({

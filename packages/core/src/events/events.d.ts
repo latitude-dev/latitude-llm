@@ -69,8 +69,6 @@ export type Events =
   | 'evaluationV2Annotated'
   | 'evaluationResultV2Created'
   | 'evaluationResultV2Updated'
-  | 'mcpServerConnected'
-  | 'scaleMcpServer'
   | 'webhookDeliveryCreated'
   | 'exportReady'
   | 'spanCreated'
@@ -539,23 +537,6 @@ export type EvaluationResultV2UpdatedEvent = LatitudeEventGeneric<
     result: EvaluationResultV2
     previousHasPassed: boolean | null
     evaluation: EvaluationV2
-  }
->
-
-export type ScaleMcpServerEvent = LatitudeEventGeneric<
-  'scaleMcpServer',
-  {
-    workspaceId: number
-    mcpServerId: number
-    replicas: number
-  }
->
-
-export type McpServerConnectedEvent = LatitudeEventGeneric<
-  'mcpServerConnected',
-  {
-    workspaceId: number
-    mcpServerId: number
   }
 >
 
@@ -1057,8 +1038,6 @@ export type LatitudeEvent =
   | EvaluationV2AnnotatedEvent
   | EvaluationResultV2CreatedEvent
   | EvaluationResultV2UpdatedEvent
-  | ScaleMcpServerEvent
-  | McpServerConnectedEvent
   | WebhookDeliveryCreatedEvent
   | ExportReadyEvent
   | SpanCreatedEvent
@@ -1153,8 +1132,6 @@ export interface IEventsHandlers {
   evaluationV2Annotated: EventHandler<EvaluationV2AnnotatedEvent>[]
   evaluationResultV2Created: EventHandler<EvaluationResultV2CreatedEvent>[]
   evaluationResultV2Updated: EventHandler<EvaluationResultV2UpdatedEvent>[]
-  scaleMcpServer: EventHandler<ScaleMcpServerEvent>[]
-  mcpServerConnected: EventHandler<McpServerConnectedEvent>[]
   webhookDeliveryCreated: EventHandler<WebhookDeliveryCreatedEvent>[]
   exportReady: EventHandler<ExportReadyEvent>[]
   spanCreated: EventHandler<SpanCreatedEvent>[]

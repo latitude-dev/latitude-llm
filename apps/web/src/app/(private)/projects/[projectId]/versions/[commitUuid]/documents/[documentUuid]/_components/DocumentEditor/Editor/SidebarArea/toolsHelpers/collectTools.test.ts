@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { collectTools } from './collectTools'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { IntegrationType } from '@latitude-data/constants'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ImageIcon } from './types'
 
 const integrations: IntegrationDto[] = [
@@ -10,20 +11,20 @@ const integrations: IntegrationDto[] = [
     name: 'google',
     type: IntegrationType.ExternalMCP,
     configuration: {},
-  } as IntegrationDto,
+  },
   {
     id: 2,
     name: 'slack',
     type: IntegrationType.Pipedream,
     configuration: {},
-  } as IntegrationDto,
+  },
   {
     id: 3,
     name: 'latitude',
     type: IntegrationType.Latitude,
-    configuration: {},
-  } as IntegrationDto,
-]
+    configuration: {}
+  },
+] as unknown as IntegrationDto[]
 
 describe('collectTools', () => {
   it('returns empty object if tools is undefined', () => {
@@ -34,7 +35,11 @@ describe('collectTools', () => {
 
   it('returns empty object if tools is not an array', () => {
     expect(
-      collectTools({ integrations, tools: 'google/search', existingMap: {} }),
+      collectTools({
+        integrations,
+        tools: 'google/search' as unknown as LatitudePromptConfig['tools'],
+        existingMap: {},
+      }),
     ).toEqual({})
   })
 
@@ -163,7 +168,7 @@ describe('collectTools', () => {
           '/broken',
           'slack/*',
           undefined,
-        ],
+        ] as unknown as LatitudePromptConfig['tools'],
         existingMap: {},
       }),
     ).toMatchObject({
@@ -176,7 +181,13 @@ describe('collectTools', () => {
     expect(
       collectTools({
         integrations,
-        tools: [123, {}, null, '/broken', 'invalid/tool'],
+        tools: [
+          123,
+          {},
+          null,
+          '/broken',
+          'invalid/tool',
+        ] as unknown as LatitudePromptConfig['tools'],
         existingMap: {},
       }),
     ).toEqual({})

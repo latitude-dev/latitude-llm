@@ -1,18 +1,12 @@
-import { ReactNode, useCallback, useState } from 'react'
-import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
+import { ReactNode, useCallback } from 'react'
 import useIntegrationTools, { McpToolDto } from '$/stores/integrationTools'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
-import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { cn } from '@latitude-data/web-ui/utils'
-import Link from 'next/link'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 
 export function ItemWrapper({
@@ -134,37 +128,6 @@ export function IntegrationToolsList({
     isValidating,
     error,
   } = useIntegrationTools(integration)
-  const [wakingUp, setWakingUp] = useState(false)
-
-  useSockets({
-    event: 'mcpServerScaleEvent',
-    onMessage: (e) => {
-      if (!e) return
-
-      const { mcpServerId, replicas } = e
-      if (replicas < 1) return
-      if (mcpServerId !== integration?.mcpServerId) return
-
-      setWakingUp(true)
-    },
-  })
-
-  useSockets({
-    event: 'mcpServerConnected',
-    onMessage: ({ mcpServerId }) => {
-      if (mcpServerId !== integration?.mcpServerId) return
-
-      setWakingUp(false)
-
-      toast({
-        title: 'MCP server connected',
-        description:
-          'MCP servers in Hobby plans are automatically suspended after 10 minutes of inactivity.',
-        variant: 'default',
-      })
-    },
-  })
-
   const toggleTool = useCallback(
     (toolName: string) => () => {
       if (disabled) return
@@ -205,32 +168,7 @@ export function IntegrationToolsList({
     }
   }
 
-  if (isLoading || (isValidating && wakingUp)) {
-    if (wakingUp) {
-      return (
-        <BlankSlate>
-          <div className='flex flex-col items-center gap-4'>
-            <div className='flex flex-row items-center gap-4'>
-              <Text.H6B centered color='foreground'>
-                Waking up MCP server...
-              </Text.H6B>
-              <DotIndicator pulse variant='warning' />
-            </div>
-            <div className='w-full px-4'>
-              <FakeProgress delayIncrement={200} completed={!wakingUp} />
-            </div>
-            <Text.H6 centered color='foreground'>
-              If you want to avoid cold starts, please{' '}
-              <Link href='/' className='text-primary'>
-                upgrade
-              </Link>{' '}
-              to the Team plan.
-            </Text.H6>
-          </div>
-        </BlankSlate>
-      )
-    }
-
+  if (isLoading || isValidating) {
     return (
       <>
         <div className='flex flex-row items-center gap-2 p-4 justify-between'>

@@ -10,13 +10,6 @@ export async function setupSchedules() {
     { opts: { attempts: 1 } },
   )
 
-  // Every 10 minutes
-  await maintenanceQueue.upsertJobScheduler(
-    'autoScaleJob',
-    { pattern: '*/10 * * * *' },
-    { opts: { attempts: 1 } },
-  )
-
   // Every day at 2 AM
   await maintenanceQueue.upsertJobScheduler(
     'cleanDocumentSuggestionsJob',

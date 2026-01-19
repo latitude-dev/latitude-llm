@@ -12,7 +12,7 @@ import { IntegrationType } from '@latitude-data/constants'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
 import {
-  IntegrationConfiguration,
+  ActiveIntegrationConfiguration,
   UnconfiguredPipedreamIntegrationConfiguration,
 } from '@latitude-data/core/services/integrations/helpers/schema'
 import { PipedreamIntegrationConfiguration } from './_components/Configuration/Pipedream'
@@ -20,7 +20,7 @@ import { ExternalIntegrationConfiguration } from './_components/Configuration/Ex
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 
 export type ValidIntegration = Exclude<
-  IntegrationConfiguration,
+  ActiveIntegrationConfiguration,
   | { type: IntegrationType.Latitude }
   | {
       type: IntegrationType.Pipedream

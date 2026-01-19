@@ -93,17 +93,6 @@ type EvaluationResultV2CreatedArgs = {
   datasetRow?: DatasetRow
 }
 
-type McpServerScaleEventArgs = {
-  workspaceId: number
-  replicas: number
-  mcpServerId: number
-}
-
-type McpServerConnectedArgs = {
-  workspaceId: number
-  mcpServerId: number
-}
-
 type ProjectUpdatedArgs = {
   workspaceId: number
   project: Project
@@ -212,8 +201,6 @@ export type WebServerToClientEvents = {
   documentLogCreated: (args: DocumentLogCreatedArgs) => void
   documentSuggestionCreated: (args: DocumentSuggestionCreatedArgs) => void
   evaluationResultV2Created: (args: EvaluationResultV2CreatedArgs) => void
-  mcpServerScaleEvent: (args: McpServerScaleEventArgs) => void
-  mcpServerConnected: (args: McpServerConnectedArgs) => void
   projectUpdated: (args: ProjectUpdatedArgs) => void
   triggerCreated: (args: DocumentTriggerCreatedArgs) => void
   triggerDeleted: (args: DocumentTriggerDeletedArgs) => void
@@ -253,14 +240,6 @@ export type WorkersClientToServerEvents = {
   experimentStatus: (args: {
     workspaceId: number
     data: ExperimentStatusArgs
-  }) => void
-  mcpServerScaleEvent: (args: {
-    workspaceId: number
-    data: McpServerScaleEventArgs
-  }) => void
-  mcpServerConnected: (args: {
-    workspaceId: number
-    data: McpServerConnectedArgs
   }) => void
   projectUpdated: (args: {
     workspaceId: number

@@ -5,6 +5,11 @@ export enum IntegrationType {
   HostedMCP = 'mcp_server', // DEPRECATED: Do not use
 }
 
+export type ActiveIntegrationType = Exclude<
+  IntegrationType,
+  IntegrationType.HostedMCP
+>
+
 export enum HostedIntegrationType {
   Stripe = 'stripe',
   Slack = 'slack',
