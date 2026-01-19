@@ -1,11 +1,11 @@
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import * as dataAccessDocumentLogs from '../../../data-access/documentLogs'
 import * as dataAccess from '../../../data-access/workspaces'
 import * as dataAccessProjects from '../../../data-access/projects'
 import {
   CommitsRepository,
-  DocumentLogsRepository,
   ProjectsRepository,
   UsersRepository,
 } from '../../../repositories'
@@ -69,9 +69,10 @@ describe('runLatteJob', () => {
         document: { uuid: 'doc-123' },
       }),
     } as any)
-    vi.spyOn(DocumentLogsRepository.prototype, 'findByUuid').mockResolvedValue({
-      ok: false,
-    } as any)
+    vi.spyOn(
+      dataAccessDocumentLogs,
+      'unsafelyFindDocumentLogByUuid',
+    ).mockResolvedValue(undefined as any)
     vi.spyOn(WebsocketClient, 'sendEvent').mockResolvedValue({
       emit: vi.fn(),
     } as any)
@@ -108,10 +109,10 @@ describe('runLatteJob', () => {
   })
 
   it('creates a new chat when no document log exists', async () => {
-    // ensure findByUuid returns ok: false
-    ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce(
-      { ok: false },
-    )
+    vi.spyOn(
+      dataAccessDocumentLogs,
+      'unsafelyFindDocumentLogByUuid',
+    ).mockResolvedValueOnce(undefined as any)
     const projectOk = { ok: true, value: project }
     ;(ProjectsRepository.prototype.find as any).mockResolvedValueOnce(projectOk)
 
@@ -135,9 +136,10 @@ describe('runLatteJob', () => {
   })
 
   it('appends a message when the document log already exists', async () => {
-    ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce(
-      { ok: true },
-    )
+    vi.spyOn(
+      dataAccessDocumentLogs,
+      'unsafelyFindDocumentLogByUuid',
+    ).mockResolvedValueOnce({ uuid: threadUuid } as any)
     const projectOk = { ok: true, value: project }
     ;(ProjectsRepository.prototype.find as any).mockResolvedValueOnce(projectOk)
     await runLatteJob(mockJob)

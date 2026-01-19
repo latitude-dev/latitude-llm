@@ -1,13 +1,10 @@
 import { Job } from 'bullmq'
 
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
+import { unsafelyFindDocumentLogByUuid } from '../../../data-access/documentLogs'
 import { clearCancelJobFlag, isJobCancelled } from '../../../lib/cancelJobs'
 import { LatitudeError } from '../../../lib/errors'
-import {
-  DocumentLogsRepository,
-  ProjectsRepository,
-  UsersRepository,
-} from '../../../repositories'
+import { ProjectsRepository, UsersRepository } from '../../../repositories'
 import {
   addMessageToExistingLatte,
   runNewLatte,
@@ -101,9 +98,8 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
       document: copilotDocument,
     } = copilotResult.unwrap()
 
-    const documentLogsScope = new DocumentLogsRepository(copilotWorkspace.id)
-    const documentLogResult = await documentLogsScope.findByUuid(threadUuid)
-    if (!documentLogResult.ok) {
+    const existingDocumentLog = await unsafelyFindDocumentLogByUuid(threadUuid)
+    if (!existingDocumentLog) {
       // Chat still does not exist, we create a new one
       const runResult = await runNewLatte({
         copilotWorkspace,
