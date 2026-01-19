@@ -1,10 +1,12 @@
-import { type Commit } from '../../schema/models/types/Commit'
-import { type Experiment } from '../../schema/models/types/Experiment'
-import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { WorkspaceDto } from '../../schema/models/types/Workspace'
+import type { SimulationSettings } from '@latitude-data/constants/simulation'
 import { LogSources } from '../../constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import { isRetryableError } from '../../lib/isRetryableError'
 import { Result } from '../../lib/Result'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Experiment } from '../../schema/models/types/Experiment'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import {
   type LatitudeTelemetry,
   telemetry as realTelemetry,
@@ -13,11 +15,9 @@ import {
 import { runChain } from '../chains/run'
 import { createDocumentLog } from '../documentLogs/create'
 import { getResolvedContent } from '../documents'
-import { isErrorRetryable } from '../evaluationsV2/run'
+import { ToolHandler } from '../documents/tools/clientTools/handlers'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { RunDocumentChecker } from './RunDocumentChecker'
-import type { SimulationSettings } from '@latitude-data/constants/simulation'
-import { ToolHandler } from '../documents/tools/clientTools/handlers'
 
 export type RunDocumentAtCommitArgs = {
   context: TelemetryContext
@@ -142,7 +142,7 @@ export async function runDocumentAtCommit(
       if (error) {
         $prompt.fail(error)
 
-        if (isErrorRetryable(error)) return response
+        if (isRetryableError(error)) return response
       } else {
         $prompt.end()
       }

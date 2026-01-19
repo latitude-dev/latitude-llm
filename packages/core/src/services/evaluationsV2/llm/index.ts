@@ -8,11 +8,11 @@ import {
   LlmEvaluationSpecification as specification,
 } from '../../../constants'
 import { BadRequestError } from '../../../lib/errors'
+import { isRetryableError } from '../../../lib/isRetryableError'
 import { Result } from '../../../lib/Result'
 import { ProviderApiKeysRepository } from '../../../repositories'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { createRunError } from '../../runErrors/create'
-import { isErrorRetryable } from '../run'
 import {
   EvaluationMetricBackendSpecification,
   EvaluationMetricCloneArgs,
@@ -139,7 +139,7 @@ async function run<M extends LlmEvaluationMetric>(
 
     return value
   } catch (error) {
-    if (isErrorRetryable(error as Error)) throw error
+    if (isRetryableError(error as Error)) throw error
 
     let runError
     if (error instanceof ChainError) {

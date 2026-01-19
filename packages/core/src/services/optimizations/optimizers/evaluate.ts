@@ -15,6 +15,7 @@ import { AbortedError, UnprocessableEntityError } from '../../../lib/errors'
 import { hashContent } from '../../../lib/hashContent'
 import { hashObject } from '../../../lib/hashObject'
 import { isAbortError } from '../../../lib/isAbortError'
+import { isRetryableError } from '../../../lib/isRetryableError'
 import { Result } from '../../../lib/Result'
 import {
   SpanMetadatasRepository,
@@ -324,6 +325,11 @@ async function runPrompt(
       return Result.error(error)
     }
 
+    // BONUS(AO/OPT): Exponential backoff on rate limit errors
+    if (isRetryableError(error)) {
+      return Result.error(error)
+    }
+
     // BONUS(AO/OPT): Check whether we can discern which errors are really learnable or not
     const feedback = `
 The optimized prompt had an error while running it, it may or may not be fixable (schema errors are always fixable!).
@@ -374,6 +380,11 @@ async function evaluatePrompt<
     dry: true, // BONUS(AO/OPT): Decide whether we should persist evaluation results from optimizations
   })
   if (evaluating.error) {
+    // BONUS(AO/OPT): Exponential backoff on rate limit errors
+    if (isRetryableError(evaluating.error)) {
+      return Result.error(evaluating.error)
+    }
+
     return Result.error(evaluating.error)
   }
   const { result } = evaluating.value

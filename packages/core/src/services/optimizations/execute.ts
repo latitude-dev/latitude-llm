@@ -141,7 +141,7 @@ export async function executeOptimization(
     )
   }
 
-  // BONUS(AO/OPT): Implement checkpointing saving for fault tolerance
+  // BONUS(AO/OPT): Implement checkpointing saving for fault tolerance (in gepa run_dir can be used)
   const optimizing = await optimize({
     evaluate: await evaluateFactory({
       columns: columns,

@@ -4,8 +4,8 @@ import { type Message } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '../../../constants'
 import { unsafelyFindProviderApiKey } from '../../../data-access/providerApiKeys'
 import { buildConversation } from '../../../helpers'
+import { isRetryableError } from '../../../lib/isRetryableError'
 import { Result } from '../../../lib/Result'
-import { ToolHandler } from '../../documents/tools/clientTools/handlers'
 import { DefaultStreamManager } from '../../../lib/streamManager/defaultStreamManager'
 import {
   CommitsRepository,
@@ -23,7 +23,7 @@ import {
 } from '../../../telemetry'
 import { getInputSchema, getOutputType } from '../../chains/ChainValidator'
 import { scanDocumentContent } from '../../documents'
-import { isErrorRetryable } from '../../evaluationsV2/run'
+import { ToolHandler } from '../../documents/tools/clientTools/handlers'
 import serializeProviderLog from '../../providerLogs/serialize'
 
 type AddMessagesArgs = {
@@ -140,7 +140,7 @@ export async function addMessages(
     if (error) {
       $chat.fail(error)
 
-      if (isErrorRetryable(error)) return response
+      if (isRetryableError(error)) return response
     } else {
       $chat.end()
     }

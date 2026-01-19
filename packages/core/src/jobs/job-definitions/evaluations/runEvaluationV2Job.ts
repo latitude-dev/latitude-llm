@@ -1,6 +1,8 @@
+import { SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { NotFoundError } from '../../../lib/errors'
+import { isRetryableError } from '../../../lib/isRetryableError'
 import {
   CommitsRepository,
   DatasetRowsRepository,
@@ -10,13 +12,9 @@ import {
   SpanMetadatasRepository,
   SpansRepository,
 } from '../../../repositories'
-import {
-  isErrorRetryable,
-  runEvaluationV2,
-} from '../../../services/evaluationsV2/run'
-import { captureException } from '../../../utils/datadogCapture'
-import { SpanType, SpanWithDetails } from '@latitude-data/constants'
+import { runEvaluationV2 } from '../../../services/evaluationsV2/run'
 import { updateExperimentStatus } from '../../../services/experiments/updateStatus'
+import { captureException } from '../../../utils/datadogCapture'
 
 export type RunEvaluationV2JobData = {
   workspaceId: number
@@ -149,7 +147,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       }
     }
   } catch (error) {
-    if (isErrorRetryable(error as Error)) throw error
+    if (isRetryableError(error as Error)) throw error
 
     captureException(error as Error)
 

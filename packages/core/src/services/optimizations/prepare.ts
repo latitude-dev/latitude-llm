@@ -3,11 +3,13 @@ import { scan } from 'promptl-ai'
 import {
   EvaluationType,
   EvaluationV2,
-  OPTIMIZATION_DATASET_ROWS,
-  OPTIMIZATION_DATASET_SPLIT,
+  OPTIMIZATION_MAX_ROWS,
+  OPTIMIZATION_MIN_ROWS,
+  OPTIMIZATION_TARGET_ROWS,
+  OPTIMIZATION_TESTSET_SPLIT,
   Span,
   SpanType,
-  SpanWithDetails,
+  SpanWithDetails
 } from '../../constants'
 import { getSpansByIssue } from '../../data-access/issues/getSpansByIssue'
 import { getSpansWithoutIssues } from '../../data-access/issues/getSpansWithoutIssues'
@@ -304,7 +306,7 @@ async function getNegativeExamples({
   optimization: Optimization
   workspace: Workspace
 }) {
-  const halfLimit = Math.floor(OPTIMIZATION_DATASET_ROWS / 2)
+  const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
 
   const metadatasRepository = new SpanMetadatasRepository(workspace.id)
@@ -424,7 +426,7 @@ async function getPositiveExamples({
   optimization: Optimization
   workspace: Workspace
 }) {
-  const halfLimit = Math.floor(OPTIMIZATION_DATASET_ROWS / 2)
+  const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
 
   const metadatasRepository = new SpanMetadatasRepository(workspace.id)
@@ -568,41 +570,37 @@ async function createDatasets(
     negativesLength += list.length
   }
 
-  if (negativesLength < 2) {
+  if (negativesLength < (OPTIMIZATION_MIN_ROWS / 2)) {
     return Result.error(
       new UnprocessableEntityError(
-        'At least two negative examples are required',
+        `At least ${OPTIMIZATION_MIN_ROWS / 2} negative examples are required`,
       ),
     )
   }
 
-  if (positives.length < 2) {
+  if (positives.length < (OPTIMIZATION_MIN_ROWS / 2)) {
     return Result.error(
       new UnprocessableEntityError(
-        'At least two positive examples are required',
+        `At least ${OPTIMIZATION_MIN_ROWS / 2} positive examples are required`,
       ),
     )
   }
 
   const halfLimit = Math.floor(
-    Math.min(negativesLength, positives.length, OPTIMIZATION_DATASET_ROWS / 2),
+    Math.min(negativesLength, positives.length, OPTIMIZATION_TARGET_ROWS / 2),
   )
-  const split = Math.floor(halfLimit * OPTIMIZATION_DATASET_SPLIT)
+  const split = Math.floor(halfLimit * OPTIMIZATION_TESTSET_SPLIT)
 
   const negatives = interleaveList(negativesMap, halfLimit, true)
   positives = [...positives].sort(() => Math.random() - 0.5).slice(0, halfLimit)
 
   // prettier-ignore
-  const trainsplit = [
-    ...negatives.slice(0, split),
-    ...positives.slice(0, split),
-  ].sort(() => Math.random() - 0.5)
+  const trainsplit = [...negatives.slice(0, split), ...positives.slice(0, split)]
+    .sort(() => Math.random() - 0.5).slice(0, OPTIMIZATION_MAX_ROWS / 2)
 
   // prettier-ignore
-  const testsplit = [
-    ...negatives.slice(split),
-    ...positives.slice(split),
-  ].sort(() => Math.random() - 0.5)
+  const testsplit = [...negatives.slice(split), ...positives.slice(split)]
+    .sort(() => Math.random() - 0.5).slice(0, OPTIMIZATION_MAX_ROWS / 2)
 
   const buildingco = await buildDatasetColumns({ parameters, optimization })
   if (buildingco.error) {

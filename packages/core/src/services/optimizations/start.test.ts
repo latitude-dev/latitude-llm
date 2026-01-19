@@ -1,4 +1,8 @@
-import { OPTIMIZATION_DATASET_SPLIT, Providers } from '@latitude-data/constants'
+import {
+  OPTIMIZATION_MAX_ROWS,
+  OPTIMIZATION_TESTSET_SPLIT,
+  Providers,
+} from '@latitude-data/constants'
 import * as envModule from '@latitude-data/env'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
@@ -670,7 +674,7 @@ value1
           workspace: workspaceWithParams,
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError(
-        new BadRequestError('At least four dataset rows are required'),
+        new BadRequestError('At least 4 dataset rows are required'),
       )
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
@@ -703,7 +707,7 @@ value2
           workspace: workspaceWithParams,
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError(
-        new BadRequestError('At least four dataset rows are required'),
+        new BadRequestError('At least 4 dataset rows are required'),
       )
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
@@ -737,7 +741,7 @@ value3
           workspace: workspaceWithParams,
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError(
-        new BadRequestError('At least four dataset rows are required'),
+        new BadRequestError('At least 4 dataset rows are required'),
       )
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
@@ -832,8 +836,8 @@ value10
       )
 
       expect(trainCount! + testCount!).toBe(10)
-      expect(trainCount).toBe(Math.floor(10 * OPTIMIZATION_DATASET_SPLIT))
-      expect(testCount).toBe(10 - Math.floor(10 * OPTIMIZATION_DATASET_SPLIT))
+      expect(trainCount).toBe(Math.floor(10 * OPTIMIZATION_TESTSET_SPLIT))
+      expect(testCount).toBe(10 - Math.floor(10 * OPTIMIZATION_TESTSET_SPLIT))
     })
 
     it('names trainset and testset datasets correctly', async () => {
@@ -1072,6 +1076,43 @@ value4
       )
 
       expect(trainCount! + testCount!).toBe(4)
+    })
+
+    it('caps dataset rows at OPTIMIZATION_MAX_ROWS without throwing error', async () => {
+      const rowCount = OPTIMIZATION_MAX_ROWS + 50
+      const rows = Array.from({ length: rowCount }, (_, i) => `value${i + 1}`)
+      const { dataset } = await factories.createDataset({
+        workspace: workspaceWithParams,
+        author: userForSplit,
+        fileContent: `inputParam\n${rows.join('\n')}`,
+      })
+
+      const result = await startOptimization({
+        evaluation: evaluationForDoc,
+        dataset,
+        configuration: {
+          scope: {
+            instructions: true,
+          },
+        },
+        document: documentWithParams,
+        baselineCommit: commitWithParams,
+        project: projectWithParams,
+        workspace: workspaceWithParams,
+      }).then((r) => r.unwrap())
+
+      expect(result.optimization.trainsetId).not.toBeNull()
+      expect(result.optimization.testsetId).not.toBeNull()
+
+      const rowsRepository = new DatasetRowsRepository(workspaceWithParams.id)
+      const trainCount = await rowsRepository.getCountByDataset(
+        result.optimization.trainsetId!,
+      )
+      const testCount = await rowsRepository.getCountByDataset(
+        result.optimization.testsetId!,
+      )
+
+      expect(trainCount! + testCount!).toBe(OPTIMIZATION_MAX_ROWS)
     })
   })
 })

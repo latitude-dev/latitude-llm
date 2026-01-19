@@ -1,9 +1,9 @@
 import { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
-import { isErrorRetryable } from '../../../services/evaluationsV2/run'
-import { BACKGROUND } from '../../../telemetry'
+import { isRetryableError } from '../../../lib/isRetryableError'
 import { runDocumentAtCommit } from '../../../services/commits'
+import { BACKGROUND } from '../../../telemetry'
 import { getJobDocumentData } from '../helpers'
 
 export type RunDocumentJobData = {
@@ -53,6 +53,6 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
       },
     }).then((r) => r.unwrap())
   } catch (error) {
-    if (isErrorRetryable(error as Error)) throw error
+    if (isRetryableError(error as Error)) throw error
   }
 }

@@ -3,11 +3,13 @@ import { pick } from 'lodash-es'
 import {
   CLOUD_MESSAGES,
   EvaluationV2,
-  OPTIMIZATION_DATASET_SPLIT,
+  OPTIMIZATION_MAX_ROWS,
   OPTIMIZATION_MAX_TIME,
   OPTIMIZATION_MAX_TOKENS,
+  OPTIMIZATION_MIN_ROWS,
+  OPTIMIZATION_TESTSET_SPLIT,
   OptimizationConfiguration,
-  OptimizationEngine,
+  OptimizationEngine
 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { prepareOptimizationJobKey } from '../../jobs/job-definitions/optimizations/prepareOptimizationJob'
@@ -295,15 +297,16 @@ async function splitDataset(
   transaction = new Transaction(),
 ) {
   let rowsRepository = new DatasetRowsRepository(workspace.id)
-  const rows = await rowsRepository.getCountByDataset(dataset.id)
+  let rows = await rowsRepository.getCountByDataset(dataset.id)
+  rows = Math.min(rows, OPTIMIZATION_MAX_ROWS)
 
-  if (rows < 4) {
+  if (rows < OPTIMIZATION_MIN_ROWS) {
     return Result.error(
-      new BadRequestError('At least four dataset rows are required'),
+      new BadRequestError(`At least ${OPTIMIZATION_MIN_ROWS} dataset rows are required`),
     )
   }
 
-  const trainrows = Math.ceil(rows * OPTIMIZATION_DATASET_SPLIT)
+  const trainrows = Math.ceil(rows * OPTIMIZATION_TESTSET_SPLIT)
   if (trainrows < 1) {
     return Result.error(
       new BadRequestError('Cannot optimize with an empty trainset'),
@@ -359,19 +362,19 @@ async function splitDataset(
 
     rowsRepository = new DatasetRowsRepository(workspace.id, tx)
 
-    let offset = 0
-    while (true) {
+    let processed = 0
+    while (processed < rows) {
       const batch = await rowsRepository.findByDatasetWithOffsetAndLimit({
         datasetId: dataset.id,
-        offset: offset,
-        limit: SPLIT_BATCH_SIZE,
+        offset: processed,
+        limit: Math.min(rows - processed, SPLIT_BATCH_SIZE),
       })
       if (batch.length < 1) {
         break
       }
 
       const sample = [...batch].sort(() => Math.random() - 0.5)
-      const split = Math.floor(sample.length * OPTIMIZATION_DATASET_SPLIT)
+      const split = Math.floor(sample.length * OPTIMIZATION_TESTSET_SPLIT)
 
       let trainbatch = sample.slice(0, split).map((r) => r.rowData)
       if (trainbatch.length > 0) {
@@ -419,11 +422,7 @@ async function splitDataset(
         }
       }
 
-      if (batch.length < SPLIT_BATCH_SIZE) {
-        break
-      } else {
-        offset += SPLIT_BATCH_SIZE
-      }
+      processed += batch.length
     }
 
     return Result.ok({ trainset, testset })

@@ -1,9 +1,9 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { ErrorableEntity } from '../../../constants'
+import { isRetryableError } from '../../../lib/isRetryableError'
 import { type RunError } from '../../../schema/models/types/RunError'
 import { createRunError } from '../../../services/runErrors/create'
-import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 
 export async function createChainRunError({
   error,
@@ -33,7 +33,7 @@ export async function createChainRunError({
   }
 
   let dbError
-  if (!isErrorRetryable(chainError)) {
+  if (!isRetryableError(chainError)) {
     dbError = await createRunError({
       data: {
         errorableUuid,

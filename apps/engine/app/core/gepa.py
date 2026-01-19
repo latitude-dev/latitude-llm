@@ -84,11 +84,11 @@ async def handle_gepa_optimize(server: RpcServer, params: GepaOptimizeParams) ->
         trainset=params.trainset,
         valset=params.valset,
         candidate_selection_strategy="pareto",
-        frontier_type="instance",  # TODO(AO/OPT): Test "hybrid"
+        frontier_type="instance",  # BONUS(AO/OPT): Use "hybrid" for multi-objective optimization
         batch_sampler="epoch_shuffled",
         reflection_minibatch_size=5,
         module_selector="round_robin",
-        use_merge=False,  # TODO(AO/OPT): Test "True"
+        use_merge=True,
         max_merge_invocations=5,
         merge_val_overlap_floor=5,
         val_evaluation_policy="full_eval",

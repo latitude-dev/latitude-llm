@@ -61,7 +61,7 @@ export default function AppHeader({
             </>
           ) : null}
 
-          <Link href={LATITUDE_SLACK_URL} target='_blank'>
+          <Link href={LATITUDE_SLACK_URL} className='pb-px' target='_blank'>
             <Text.H5>Slack</Text.H5>
           </Link>
 

@@ -1,9 +1,4 @@
 import {
-  ChainError,
-  NotFoundError,
-  RunErrorCodes,
-} from '@latitude-data/constants/errors'
-import {
   CompletionSpanMetadata,
   EVALUATION_SCORE_SCALE,
   EvaluationMetric,
@@ -16,8 +11,10 @@ import {
 import { publisher } from '../../events/publisher'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import { isRetryableError } from '../../lib/isRetryableError'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
+import { LegacyMessage } from '../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
 import {
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
@@ -27,11 +24,10 @@ import { type Dataset } from '../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { type Experiment } from '../../schema/models/types/Experiment'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
+import { assembleTraceWithMessages } from '../tracing/traces/assemble'
 import { extractActualOutput, extractExpectedOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
-import { assembleTraceWithMessages } from '../tracing/traces/assemble'
-import { LegacyMessage } from '../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
 
 export async function runEvaluationV2<
   T extends EvaluationType,
@@ -209,7 +205,9 @@ export async function runEvaluationV2<
       )
     }
   } catch (error) {
-    if (isErrorRetryable(error as Error)) return Result.error(error as Error)
+    if (isRetryableError(error as Error)) {
+      return Result.error(error as Error)
+    }
 
     value = { error: { message: (error as Error).message } }
   }
@@ -249,12 +247,5 @@ export async function runEvaluationV2<
         },
       })
     },
-  )
-}
-
-export function isErrorRetryable(error: Error) {
-  return (
-    error instanceof NotFoundError ||
-    (error instanceof ChainError && error.errorCode === RunErrorCodes.RateLimit)
   )
 }

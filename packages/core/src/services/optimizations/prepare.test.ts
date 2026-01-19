@@ -346,7 +346,7 @@ describe('prepareOptimization', () => {
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError(
         new UnprocessableEntityError(
-          'At least two negative examples are required',
+          'At least 2 negative examples are required',
         ),
       )
 
@@ -395,7 +395,7 @@ describe('prepareOptimization', () => {
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError(
         new UnprocessableEntityError(
-          'At least two negative examples are required',
+          'At least 2 negative examples are required',
         ),
       )
 
@@ -444,7 +444,7 @@ describe('prepareOptimization', () => {
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError(
         new UnprocessableEntityError(
-          'At least two positive examples are required',
+          'At least 2 positive examples are required',
         ),
       )
 
