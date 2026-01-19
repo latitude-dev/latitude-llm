@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/sdk",
-  "version": "5.3.0",
+  "version": "5.3.1",
   "description": "Latitude SDK for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -47,11 +47,11 @@
     "node-fetch": "2.7.0",
     "promptl-ai": "catalog:",
     "zod": "catalog:",
-    "@latitude-data/constants": "workspace:*",
     "@opentelemetry/semantic-conventions": "catalog:"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
+    "@latitude-data/constants": "workspace:*",
     "@latitude-data/typescript-config": "workspace:^",
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-replace": "^6.0.1",
