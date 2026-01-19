@@ -38,6 +38,7 @@ describe('validateChain - Plan Limits', () => {
         workspaceId: 1,
         plan: SubscriptionPlan.HobbyV3,
         trialEndsAt: addDays(new Date(), 15),
+        cancelledAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -244,6 +245,7 @@ describe('checkPayingOrTrial - direct tests', () => {
       workspaceId: 1,
       plan: SubscriptionPlan.TeamV4,
       trialEndsAt: null,
+      cancelledAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -259,6 +261,7 @@ describe('checkPayingOrTrial - direct tests', () => {
       workspaceId: 1,
       plan: SubscriptionPlan.HobbyV3,
       trialEndsAt: addDays(new Date(), 15),
+      cancelledAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -274,6 +277,7 @@ describe('checkPayingOrTrial - direct tests', () => {
       workspaceId: 1,
       plan: SubscriptionPlan.HobbyV3,
       trialEndsAt: subDays(new Date(), 5),
+      cancelledAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

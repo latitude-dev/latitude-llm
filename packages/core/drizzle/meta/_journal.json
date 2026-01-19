@@ -1814,6 +1814,13 @@
       "when": 1768494745686,
       "tag": "0259_pricing_plan_team_v4_scale_v1",
       "breakpoints": true
+    },
+    {
+      "idx": 260,
+      "version": "7",
+      "when": 1768812273835,
+      "tag": "0260_add_stripe_customer_id_to_workspaces",
+      "breakpoints": true
     }
   ]
 }
