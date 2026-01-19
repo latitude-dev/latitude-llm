@@ -167,7 +167,7 @@ export function DownloadSpansButton({
     }
 
     if (isSelectAll) {
-      return `Are you sure you want to download all ${selectedCount} spans matching the current filter?`
+      return `Are you sure you want to download all spans matching the current filter?`
     }
     return `Are you sure you want to download ${selectedCount} spans?`
   }
@@ -177,10 +177,10 @@ export function DownloadSpansButton({
 
     const count = selectableState.selectedCount
     if (selectableState.selectionMode === 'ALL') {
-      return `Download all ${count} spans`
+      return `Download all spans`
     }
     if (selectableState.selectionMode === 'ALL_EXCEPT') {
-      return `Download all ${count} spans`
+      return `Download spans`
     }
     return `Download ${count} spans`
   }
