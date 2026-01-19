@@ -90,7 +90,6 @@ export async function gepaOptimizer(
 
   const rowsRepository = new DatasetRowsRepository(workspace.id, db)
 
-  // BONUS(AO/OPT): Maybe we should just get the ids and then get the row on demand?
   const trainrows = await rowsRepository.findAllByDataset(trainset.id)
   const trainples = []
   for (const row of trainrows) {
@@ -99,7 +98,6 @@ export async function gepaOptimizer(
     trainples.push({ id })
   }
 
-  // BONUS(AO/OPT): Maybe we should just get the ids and then get the row on demand?
   const valrows = await rowsRepository.findAllByDataset(valset.id)
   const valples = []
   for (const row of valrows) {

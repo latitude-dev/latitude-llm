@@ -1,12 +1,18 @@
+import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
-import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
 
 export function ExperimentPrompt({
   experiment,
+  isSamePrompt,
+  onCompare,
 }: {
   experiment: ExperimentDto | undefined
+  isSamePrompt?: boolean
+  onCompare?: () => void
 }) {
   return (
     <div
@@ -18,7 +24,43 @@ export function ExperimentPrompt({
         },
       )}
     >
-      <Text.H5B color='foregroundMuted'>Prompt</Text.H5B>
+      <div className='w-full flex flex-row items-center justify-between'>
+        <Text.H5B color='foregroundMuted'>Prompt</Text.H5B>
+        {onCompare && (
+          <Tooltip
+            asChild
+            trigger={
+              <Button
+                variant={isSamePrompt ? 'ghost' : 'primaryMuted'}
+                iconProps={{
+                  name: 'gitCompareArrows',
+                  className: 'shrink-0',
+                }}
+                onClick={onCompare}
+                disabled={isSamePrompt}
+                containerClassName={cn({
+                  '!pointer-events-auto !cursor-default': isSamePrompt,
+                })}
+                className={cn({
+                  '!pointer-events-auto !cursor-default': isSamePrompt,
+                })}
+                innerClassName={cn({
+                  '!pointer-events-auto !cursor-default': isSamePrompt,
+                })}
+              >
+                Compare
+              </Button>
+            }
+            align='center'
+            side='top'
+            className='max-w-96'
+          >
+            {isSamePrompt
+              ? 'This prompt is the same as the first experiment'
+              : 'Compare this prompt with the first experiment'}
+          </Tooltip>
+        )}
+      </div>
       <div className='flex flex-col gap-1'>
         {experiment?.metadata?.prompt ? (
           experiment.metadata.prompt.split('\n').map((line, index) => (
