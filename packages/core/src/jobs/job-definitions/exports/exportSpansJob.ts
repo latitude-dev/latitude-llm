@@ -11,7 +11,7 @@ import {
 } from '../../../constants'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { diskFactory } from '../../../lib/disk'
-import { Result } from '../../../lib/Result'
+import { NotFoundError } from '../../../lib/errors'
 import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
 import { findByUuid } from '../../../data-access/exports/findByUuid'
 import { markExportReady } from '../../../services/exports/markExportReady'
@@ -24,6 +24,7 @@ import {
 } from '../../../services/datasets/utils'
 import { Column } from '../../../schema/models/datasets'
 import { DatasetRowData } from '../../../schema/models/datasetRows'
+import { captureException } from '../../../utils/datadogCapture'
 
 export type ExportSpansJobData = {
   exportUuid: string
@@ -41,6 +42,9 @@ export type ExportSpansJobData = {
   }
 }
 
+/**
+ * Enqueue a CSV export job for spans.
+ */
 export async function enqueueExportSpansJob(data: ExportSpansJobData) {
   const { defaultQueue } = await queues()
   return defaultQueue.add('exportSpansJob', data, {
@@ -279,68 +283,94 @@ function buildExportColumns(hashAlgorithm: typeof nanoidHashAlgorithm): {
   return { columns, fixedColumnsByName }
 }
 
+/**
+ * Export spans to CSV and mark the export as ready.
+ */
 export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
-  const {
-    exportUuid,
-    workspaceId,
-    documentUuid,
-    selectionMode,
-    excludedSpanIdentifiers,
-    selectedSpanIdentifiers,
-    filters,
-  } = job.data
+  try {
+    const {
+      exportUuid,
+      workspaceId,
+      documentUuid,
+      selectionMode,
+      excludedSpanIdentifiers,
+      selectedSpanIdentifiers,
+      filters,
+    } = job.data
 
-  const workspace = await unsafelyFindWorkspace(workspaceId)
-  if (!workspace) {
-    return Result.error(new Error(`Workspace ${workspaceId} not found`))
-  }
+    const workspace = await unsafelyFindWorkspace(workspaceId)
+    if (!workspace) {
+      throw new NotFoundError(`Workspace not found ${workspaceId}`)
+    }
 
-  const exportRecord = await findByUuid({ uuid: exportUuid, workspace })
-  if (!exportRecord) {
-    return Result.error(new Error(`Export ${exportUuid} not found`))
-  }
+    const exportRecord = await findByUuid({ uuid: exportUuid, workspace })
+    if (!exportRecord) {
+      throw new NotFoundError(`Export not found ${exportUuid}`)
+    }
 
-  const repo = new SpansRepository(workspaceId)
-  const metadataRepo = new SpanMetadatasRepository(workspaceId)
-  const disk = diskFactory('private')
+    const repo = new SpansRepository(workspaceId)
+    const metadataRepo = new SpanMetadatasRepository(workspaceId)
+    const disk = diskFactory('private')
 
-  const excludedIds = new Set(
-    excludedSpanIdentifiers.map((id) => `${id.traceId}:${id.spanId}`),
-  )
+    const excludedIds = new Set(
+      excludedSpanIdentifiers.map((id) => `${id.traceId}:${id.spanId}`),
+    )
 
-  const selectedSpanIds = selectedSpanIdentifiers
-    ? new Set(selectedSpanIdentifiers.map((id) => `${id.traceId}:${id.spanId}`))
-    : undefined
+    const selectedSpanIds = selectedSpanIdentifiers
+      ? new Set(
+          selectedSpanIdentifiers.map((id) => `${id.traceId}:${id.spanId}`),
+        )
+      : undefined
 
-  const { columns, fixedColumnsByName } =
-    buildExportColumns(nanoidHashAlgorithm)
+    const { columns, fixedColumnsByName } =
+      buildExportColumns(nanoidHashAlgorithm)
 
-  const csvColumns = columns.map((col) => col.name)
+    const csvColumns = columns.map((col) => col.name)
 
-  const passThrough = new PassThrough()
-  const csvStringifier = stringify({
-    header: true,
-    columns: csvColumns,
-  })
+    const passThrough = new PassThrough()
+    const csvStringifier = stringify({
+      header: true,
+      columns: csvColumns,
+    })
 
-  csvStringifier.pipe(passThrough)
+    csvStringifier.pipe(passThrough)
 
-  const fileKey = exportRecord.fileKey
-  const uploadPromise = disk.putStream(fileKey, passThrough)
+    const fileKey = exportRecord.fileKey
+    const uploadPromise = disk.putStream(fileKey, passThrough)
 
-  let batch: Span[] = []
+    let batch: Span[] = []
 
-  for await (const span of iterateSpans({
-    repo,
-    documentUuid,
-    filters,
-    excludedIds,
-    selectionMode,
-    selectedSpanIds,
-  })) {
-    batch.push(span)
+    for await (const span of iterateSpans({
+      repo,
+      documentUuid,
+      filters,
+      excludedIds,
+      selectionMode,
+      selectedSpanIds,
+    })) {
+      batch.push(span)
 
-    if (batch.length >= BATCH_SIZE) {
+      if (batch.length >= BATCH_SIZE) {
+        const rows = await buildRowsForBatch({
+          spans: batch,
+          repo,
+          metadataRepo,
+          fixedColumnsByName,
+        })
+
+        for (const row of rows) {
+          const csvRow = columns.map((col) => {
+            const value = row[col.identifier]
+            return value !== undefined ? String(value) : ''
+          })
+          csvStringifier.write(csvRow)
+        }
+
+        batch = []
+      }
+    }
+
+    if (batch.length > 0) {
       const rows = await buildRowsForBatch({
         spans: batch,
         repo,
@@ -355,34 +385,18 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
         })
         csvStringifier.write(csvRow)
       }
-
-      batch = []
     }
-  }
 
-  if (batch.length > 0) {
-    const rows = await buildRowsForBatch({
-      spans: batch,
-      repo,
-      metadataRepo,
-      fixedColumnsByName,
-    })
+    csvStringifier.end()
 
-    for (const row of rows) {
-      const csvRow = columns.map((col) => {
-        const value = row[col.identifier]
-        return value !== undefined ? String(value) : ''
-      })
-      csvStringifier.write(csvRow)
+    const uploadResult = await uploadPromise
+    if (uploadResult.error) {
+      throw uploadResult.error
     }
+
+    await markExportReady({ export: exportRecord }).then((r) => r.unwrap())
+  } catch (error) {
+    captureException(error as Error)
+    throw error
   }
-
-  csvStringifier.end()
-
-  const uploadResult = await uploadPromise
-  if (uploadResult.error) {
-    return Result.error(uploadResult.error)
-  }
-
-  return markExportReady({ export: exportRecord })
 }
