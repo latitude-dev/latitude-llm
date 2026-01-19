@@ -35,29 +35,22 @@
         "tab": "Latitude",
         "groups": [
           {
+            "group": "Overview",
+            "pages": [
+              "guides/getting-started/introduction"
+            ]
+          },
+          {
             "group": "Getting started",
             "pages": [
-              "guides/getting-started/introduction",
-              "guides/getting-started/core-concepts",
               {
-                "group": "Onboarding Paths",
-                "pages": [
-                  "guides/getting-started/quick-start-pm",
-                  "guides/getting-started/quick-start-dev",
-                  "guides/contribution/contributors"
-                ]
+                "group": "Developers",
+                "pages": ["guides/getting-started/quick-start-dev"]
               },
               {
-                "group": "Providers",
-                "pages": [
-                  "guides/getting-started/providers",
-                  "guides/getting-started/providers/openai",
-                  "guides/getting-started/providers/anthropic",
-                  "guides/getting-started/providers/azure",
-                  "guides/getting-started/providers/google"
-                ]
-              },
-              "guides/getting-started/invite-your-team"
+                "group": "No-code",
+                "pages": ["guides/getting-started/quick-start-pm"]
+              }
             ]
           },
           {
@@ -77,14 +70,7 @@
             "group": "Agents",
             "pages": [
               "guides/prompt-manager/agents",
-              "guides/prompt-manager/subagents",
-              {
-                "group": "Integrations",
-                "pages": [
-                  "guides/prompt-manager/latitude-tools",
-                  "guides/integration/mcp-integrations"
-                ]
-              }
+              "guides/prompt-manager/subagents"
             ]
           },
           {
@@ -119,8 +105,6 @@
           {
             "group": "Deployment",
             "pages": [
-              "guides/integration/overview",
-              "guides/integration/publishing-deployment",
               {
                 "group": "Latitude SDK",
                 "pages": ["guides/sdk/typescript", "guides/sdk/python"]
@@ -149,10 +133,6 @@
               "guides/self-hosted/development-setup",
               "guides/self-hosted/production-setup"
             ]
-          },
-          {
-            "group": "Changelog",
-            "pages": ["changelog/overview"]
           },
           {
             "group": "Support",
