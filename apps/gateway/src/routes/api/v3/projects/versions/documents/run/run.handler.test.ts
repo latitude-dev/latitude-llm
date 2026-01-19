@@ -300,6 +300,66 @@ describe('POST /run', () => {
       })
     })
 
+    it('sends mcpHeaders to runForegroundDocument', async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            event: StreamEventTypes.Latitude,
+            data: {
+              type: ChainEventTypes.ChainCompleted,
+            },
+          })
+
+          controller.close()
+        },
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
+      })
+
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: { text: 'Hello', usage: {} },
+            provider: provider,
+          }),
+        }),
+      )
+
+      await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify({
+          path: 'path/to/document',
+          parameters: { foo: 'bar' },
+          stream: true,
+          mcpHeaders: {
+            'stripe-mcp': { authorization: 'Bearer sk_test_123' },
+            'github-mcp': { 'x-github-token': 'ghp_abc123' },
+          },
+        }),
+        headers,
+      })
+
+      expect(mocks.runForegroundDocument).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspace: expect.objectContaining({ id: workspace.id }),
+          document: expect.anything(),
+          commit: expect.objectContaining({ id: commit.id }),
+          project: expect.objectContaining({ id: project.id }),
+          parameters: { foo: 'bar' },
+          mcpHeaders: {
+            'stripe-mcp': { authorization: 'Bearer sk_test_123' },
+            'github-mcp': { 'x-github-token': 'ghp_abc123' },
+          },
+        }),
+      )
+    })
+
     it('stream succeeds with tool calls', async () => {
       const stream = new ReadableStream({
         start(controller) {
@@ -1036,6 +1096,57 @@ describe('POST /run', () => {
       expect(await res.json()).toEqual({ uuid: 'test-run-uuid' })
       expect(mocks.enqueueRun).toHaveBeenCalled()
       expect(mocks.runForegroundDocument).not.toHaveBeenCalled()
+    })
+
+    it('passes mcpHeaders to enqueueRun for background execution', async () => {
+      mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
+        if (featureName === 'api-background-runs') {
+          return Promise.resolve(Result.ok(false))
+        }
+        return Promise.resolve(Result.ok(false))
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveSource: LogSources.API,
+      })
+
+      mocks.enqueueRun.mockReturnValue(
+        Promise.resolve(
+          Result.ok({
+            run: { uuid: 'test-run-uuid' },
+          }),
+        ),
+      )
+
+      await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify({
+          path: 'path/to/document',
+          parameters: { foo: 'bar' },
+          background: true,
+          mcpHeaders: {
+            'stripe-mcp': { authorization: 'Bearer sk_test_123' },
+            'github-mcp': { 'x-github-token': 'ghp_abc123' },
+          },
+        }),
+        headers,
+      })
+
+      expect(mocks.enqueueRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspace: expect.objectContaining({ id: workspace.id }),
+          document: expect.anything(),
+          commit: expect.objectContaining({ id: commit.id }),
+          project: expect.objectContaining({ id: project.id }),
+          parameters: { foo: 'bar' },
+          mcpHeaders: {
+            'stripe-mcp': { authorization: 'Bearer sk_test_123' },
+            'github-mcp': { 'x-github-token': 'ghp_abc123' },
+          },
+        }),
+      )
     })
 
     it('runs in foreground when background=false is explicitly set, even with feature flag enabled', async () => {

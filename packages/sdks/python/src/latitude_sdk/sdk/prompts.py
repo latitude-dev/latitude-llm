@@ -79,6 +79,7 @@ class RunPromptOptions(StreamCallbacks, PromptOptions, Model):
     tools: Optional[dict[str, OnToolCall]] = None
     stream: Optional[bool] = True  # Note: making stream the default
     background: Optional[bool] = None
+    mcp_headers: Optional[dict[str, dict[str, str]]] = None
 
 
 RunPromptResult = Union[FinishedResult, BackgroundResult]
@@ -87,6 +88,7 @@ RunPromptResult = Union[FinishedResult, BackgroundResult]
 class ChatPromptOptions(StreamCallbacks, Model):
     tools: Optional[dict[str, OnToolCall]] = None
     stream: Optional[bool] = True  # Note: making stream the default
+    mcp_headers: Optional[dict[str, dict[str, str]]] = None
 
 
 class ChatPromptResult(FinishedResult, Model):
@@ -201,6 +203,7 @@ class Prompts:
                     tools=list(options.tools.keys()) if options.tools else None,
                     stream=options.stream,
                     background=options.background,
+                    mcp_headers=options.mcp_headers,
                 ),
                 stream=options.stream,
             ) as response:
@@ -249,6 +252,7 @@ class Prompts:
                     messages=messages,
                     tools=list(options.tools.keys()) if options.tools else None,
                     stream=options.stream,
+                    mcp_headers=options.mcp_headers,
                 ),
                 stream=options.stream,
             ) as response:

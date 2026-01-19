@@ -92,6 +92,62 @@ describe('/chat', () => {
     )
 
     it(
+      'sends mcpHeaders in request body when provided',
+      server.boundary(async () => {
+        const { mockBody, conversationUuid } = mockStreamResponse({
+          server,
+          apiVersion: 'v3',
+          conversationUuid: 'fake-document-log-uuid',
+        })
+
+        await sdk.prompts.chat(
+          conversationUuid,
+          [
+            {
+              role: MessageRole.user,
+              content: [
+                {
+                  type: 'text',
+                  text: 'fake-user-content',
+                },
+              ],
+            },
+          ],
+          {
+            stream: true,
+            mcpHeaders: {
+              'stripe-mcp': { authorization: 'Bearer sk_test_123' },
+              'github-mcp': { 'x-github-token': 'ghp_abc123' },
+            },
+          },
+        )
+
+        expect(mockBody).toHaveBeenCalledWith({
+          body: {
+            __internal: { source: LogSources.API },
+            messages: [
+              {
+                role: MessageRole.user,
+                content: [
+                  {
+                    type: 'text',
+                    text: 'fake-user-content',
+                  },
+                ],
+              },
+            ],
+            stream: true,
+            tools: [],
+            mcpHeaders: {
+              'stripe-mcp': { authorization: 'Bearer sk_test_123' },
+              'github-mcp': { 'x-github-token': 'ghp_abc123' },
+            },
+          },
+        })
+      }),
+    )
+
+    it(
       'sends data to onMessage and returns final response and onFinish',
       server.boundary(async () => {
         const onMessageMock = vi.fn()
@@ -347,6 +403,61 @@ describe('/chat', () => {
         expect(onFinishMock).toHaveBeenCalledWith(finalResponse)
         expect(response).toEqual(finalResponse)
         expect(onErrorMock).not.toHaveBeenCalled()
+      }),
+    )
+
+    it(
+      'sends mcpHeaders in request body when provided (non-streaming)',
+      server.boundary(async () => {
+        const { mockBody, conversationUuid } = mockRequest({
+          server,
+          apiVersion: 'v3',
+          conversationUuid: 'fake-document-log-uuid',
+          fakeResponse: RUN_TEXT_RESPONSE,
+        })
+
+        await sdk.prompts.chat(
+          conversationUuid,
+          [
+            {
+              role: MessageRole.user,
+              content: [
+                {
+                  type: 'text',
+                  text: 'fake-user-content',
+                },
+              ],
+            },
+          ],
+          {
+            stream: false,
+            mcpHeaders: {
+              'stripe-mcp': { authorization: 'Bearer sk_test_123' },
+            },
+          },
+        )
+
+        expect(mockBody).toHaveBeenCalledWith({
+          body: {
+            __internal: { source: LogSources.API },
+            messages: [
+              {
+                role: MessageRole.user,
+                content: [
+                  {
+                    type: 'text',
+                    text: 'fake-user-content',
+                  },
+                ],
+              },
+            ],
+            tools: [],
+            stream: false,
+            mcpHeaders: {
+              'stripe-mcp': { authorization: 'Bearer sk_test_123' },
+            },
+          },
+        })
       }),
     )
 
