@@ -1,9 +1,9 @@
 import { faker } from '@faker-js/faker'
 
-import { type User } from '../../schema/models/types/User'
-import { type Workspace } from '../../schema/models/types/Workspace'
 import { DatasetV2CreatedEvent } from '../../events/events'
 import { DiskWrapper } from '../../lib/disk'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'
 import { createTestCsvFile } from '../../services/datasetRows/testHelper'
 import { createDatasetFromFile as createDatasetFromFileFn } from '../../services/datasets/createFromFile'
@@ -59,7 +59,7 @@ export async function createDataset(datasetData: Props) {
     user = newWorkspace.userData
   }
 
-  const randomName = faker.commerce.productName()
+  const randomName = `${faker.word.noun()}-${faker.string.uuid()}`
   const { name = randomName } = datasetData
 
   const csvDelimiter = datasetData.csvDelimiter ?? ','

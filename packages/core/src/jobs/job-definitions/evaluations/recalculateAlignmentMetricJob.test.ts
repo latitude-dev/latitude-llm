@@ -1,30 +1,30 @@
+import { Providers } from '@latitude-data/constants'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Result } from '../../../lib/Result'
-import { NotFoundError } from '../../../lib/errors'
-import { Providers } from '@latitude-data/constants'
-import * as factories from '../../../tests/factories'
-import type { Commit } from '../../../schema/models/types/Commit'
-import type { WorkspaceDto } from '../../../schema/models/types/Workspace'
-import type { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
-import {
-  recalculateAlignmentMetricJob,
-  type RecalculateAlignmentMetricJobData,
-} from './recalculateAlignmentMetricJob'
-import * as evaluateConfigurationModule from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
-import * as updateEvaluationV2Module from '../../../services/evaluationsV2/update'
-import { publisher } from '../../../events/publisher'
-import { captureException } from '../../../utils/datadogCapture'
-import * as unsafelyFindWorkspaceModule from '../../../data-access/workspaces'
-import {
-  CommitsRepository,
-  EvaluationsV2Repository,
-} from '../../../repositories'
 import {
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetric,
 } from '../../../constants'
+import * as unsafelyFindWorkspaceModule from '../../../data-access/workspaces'
+import { publisher } from '../../../events/publisher'
+import { Result } from '../../../lib/Result'
+import { NotFoundError } from '../../../lib/errors'
+import {
+  CommitsRepository,
+  EvaluationsV2Repository,
+} from '../../../repositories'
+import type { Commit } from '../../../schema/models/types/Commit'
+import type { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import type { WorkspaceDto } from '../../../schema/models/types/Workspace'
+import * as evaluateConfigurationModule from '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration'
+import * as updateEvaluationV2Module from '../../../services/evaluationsV2/update'
+import * as factories from '../../../tests/factories'
+import { captureException } from '../../../utils/datadogCapture'
+import {
+  recalculateAlignmentMetricJob,
+  type RecalculateAlignmentMetricJobData,
+} from './recalculateAlignmentMetricJob'
 
 vi.mock(
   '../../../services/evaluationsV2/generateFromIssue/evaluateConfiguration',
@@ -244,6 +244,7 @@ describe('recalculateAlignmentMetricJob', () => {
           lastProcessedNegativeSpanDate: '2024-01-02',
           recalculatingAt: undefined,
         }),
+        force: true,
       })
 
       expect(mockPublisherPublishLater).toHaveBeenCalledWith({
@@ -358,6 +359,7 @@ describe('recalculateAlignmentMetricJob', () => {
             lastProcessedPositiveSpanDate: '2023-12-01',
             lastProcessedNegativeSpanDate: '2023-12-02',
           }),
+          force: true,
         }),
       )
     })
@@ -420,6 +422,7 @@ describe('recalculateAlignmentMetricJob', () => {
           alignmentMetricMetadata: expect.objectContaining({
             recalculatingAt: undefined,
           }),
+          force: true,
         }),
       )
       expect(mockPublisherPublishLater).toHaveBeenCalledWith({
@@ -473,6 +476,7 @@ describe('recalculateAlignmentMetricJob', () => {
             lastProcessedNegativeSpanDate: '2023-12-02',
             recalculatingAt: undefined,
           }),
+          force: true,
         }),
       )
     })
@@ -499,6 +503,7 @@ describe('recalculateAlignmentMetricJob', () => {
             },
             recalculatingAt: undefined,
           }),
+          force: true,
         }),
       )
     })

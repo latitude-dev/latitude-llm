@@ -274,6 +274,7 @@ describe('validateGeneratedEvaluationJob', () => {
           lastProcessedPositiveSpanDate: '2024-01-15T10:00:00.000Z',
           lastProcessedNegativeSpanDate: '2024-01-15T11:00:00.000Z',
         },
+        force: true,
       })
 
       expect(mockEndActiveEvaluation).toHaveBeenCalledWith({
@@ -583,6 +584,7 @@ describe('validateGeneratedEvaluationJob', () => {
             lastProcessedPositiveSpanDate: '2024-01-15T10:00:00.000Z',
             lastProcessedNegativeSpanDate: '2024-01-15T11:00:00.000Z',
           },
+          force: true,
         }),
       )
       expect(mockDeleteEvaluationV2).not.toHaveBeenCalled()
