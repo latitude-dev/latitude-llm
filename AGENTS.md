@@ -201,6 +201,22 @@
   )
   ```
 
+## Jobs Pattern (`packages/core/src/jobs/`)
+
+BullMQ jobs handle background processing tasks like exports, evaluations, and document runs.
+
+### Return Values
+
+- Jobs should return `undefined` on success whenever possible
+- Avoid returning data from jobs unless the return value is explicitly needed by the caller
+- This keeps job results lightweight and prevents unnecessary data serialization
+
+### Job Configuration
+
+- Use `removeOnComplete: true` to clean up successful jobs
+- Use `removeOnFail: false` to retain failed jobs for debugging
+- Configure appropriate retry attempts and backoff strategies
+
 ## Backoffice/Admin Patterns
 
 ### Navigation Setup
@@ -271,6 +287,7 @@ import { createFeatureAction } from '$/actions/admin/features/create'
 ### TypeScript SDK (`packages/sdks/typescript/`)
 
 **IMPORTANT**: When making changes to the TypeScript SDK, you MUST:
+
 1. Update the version in `package.json` (follow semver: patch for fixes, minor for features, major for breaking changes)
 2. Update `CHANGELOG.md` with the new version and description of changes
 3. These updates trigger the CI/CD pipeline to publish the new version
