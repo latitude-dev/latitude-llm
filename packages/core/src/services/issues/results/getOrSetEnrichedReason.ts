@@ -10,7 +10,7 @@ import {
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import { Result } from '../../../lib/Result'
 import { env } from '@latitude-data/env'
-import { getCopilot, runCopilot } from '../../copilot'
+import { runCopilot } from '../../copilot'
 import z from 'zod'
 import Transaction from '../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
@@ -166,13 +166,8 @@ async function generalizeReason({
     )
   }
 
-  const copilot = await getCopilot({
-    path: env.COPILOT_PROMPT_ANNOTATION_GENERALIZER_PATH,
-  })
-  if (!Result.isOk(copilot)) return Result.error(copilot.error!)
-
   const response = await runCopilot({
-    copilot: copilot.value,
+    path: env.COPILOT_PROMPT_ANNOTATION_GENERALIZER_PATH,
     parameters: {
       messages,
       annotation: reason,

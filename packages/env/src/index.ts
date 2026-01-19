@@ -183,21 +183,29 @@ export const env = createEnv({
     LATITUDE_CLOUD_PAYMENT_URL: z.url().optional(),
 
     // Copilot
-    COPILOT_PROMPT_ANNOTATION_GENERALIZER_PATH: z.string().optional(),
-    COPILOT_PROMPT_EDITOR_COPILOT_PATH: z.string().optional(),
-    COPILOT_PROMPT_DATASET_GENERATOR_PATH: z.string().optional(),
-    COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH: z.string().optional(),
-    COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH: z.string().optional(),
-    COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH: z.string().optional(),
-    COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH: z.string(),
-    COPILOT_PROMPT_ISSUE_DETAILS_GENERATOR_PATH: z.string().optional(),
-    COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH: z.string().optional(),
-    COPILOT_GENERATE_TOOL_RESPONSES_COMMIT_UUID: z.string().optional(),
-    COPILOT_PROJECT_ID: z.coerce.number().optional(),
-    COPILOT_PROMPT_REFINE_PATH: z.string().optional(),
-    COPILOT_WORKSPACE_API_KEY: z.string().optional(),
-    COPILOT_LATTE_PROMPT_PATH: z.string().optional(),
     COPILOT_LATTE_CHANGES_FEEDBACK_HITL_EVALUATION_UUID: z.string().optional(),
+    // Copilot cloud
+    COPILOT_PROJECT_ID: z.coerce.number().optional(),
+    COPILOT_WORKSPACE_API_KEY: z.string().optional(),
+    // Copilot enterprise
+    ENTERPRISE_COPILOT_PROJECT_NAME: z.string().optional(),
+    ENTERPRISE_COPILOT_WORKSPACE_NAME: z.string().optional(),
+
+    // Copilot prompts
+    COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH: z.string().optional(),
+    COPILOT_PROMPT_ANNOTATION_GENERALIZER_PATH: z.string().optional(),
+    COPILOT_PROMPT_DATASET_GENERATOR_PATH: z.string().optional(),
+    COPILOT_PROMPT_EDITOR_COPILOT_PATH: z.string().optional(),
+    COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH: z.string().optional(),
+    COPILOT_PROMPT_ISSUE_DETAILS_GENERATOR_PATH: z.string().optional(),
+    COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH: z.string().optional(),
+    COPILOT_PROMPT_LATTE_PATH: z.string().optional(),
+    COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH: z.string().optional(),
+    COPILOT_PROMPT_REFINE_PATH: z.string().optional(),
+    COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH: z.string(),
+
+    // Are we in enterprise mode?
+    LATITUDE_ENTERPRISE_MODE: z.coerce.boolean().optional().default(false),
 
     // Sample Agents
     SAMPLE_AGENTS_PROJECT_ID: z.coerce.number().optional(),
@@ -307,6 +315,7 @@ export const env = createEnv({
     DISABLE_EMAIL_AUTHENTICATION:
       process.env.DISABLE_EMAIL_AUTHENTICATION === 'true',
     ENABLE_ALL_FLAGS: process.env.ENABLE_ALL_FLAGS === 'true',
+    LATITUDE_ENTERPRISE_MODE: process.env.LATITUDE_ENTERPRISE_MODE === 'true',
     COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH:
       process.env.COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH ??
       'tool-responses-generator',

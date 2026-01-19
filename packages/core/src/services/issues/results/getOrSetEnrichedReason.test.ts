@@ -25,12 +25,10 @@ import { diskFactory } from '../../../lib/disk'
 import { cache as redis } from '../../../cache'
 
 vi.mock('../../copilot', () => ({
-  getCopilot: vi.fn(),
   runCopilot: vi.fn(),
 }))
 
 describe('getOrSetEnrichedReason', () => {
-  const mockGetCopilot = vi.mocked(copilotModule.getCopilot)
   const mockRunCopilot = vi.mocked(copilotModule.runCopilot)
 
   let workspace: Workspace
@@ -61,12 +59,6 @@ describe('getOrSetEnrichedReason', () => {
         '/copilot/annotation/generalizer',
     } as typeof env.env)
 
-    const mockCopilot = {
-      workspace: {} as any,
-      commit: {} as Commit,
-      document: {} as DocumentVersion,
-    }
-    mockGetCopilot.mockResolvedValue(Result.ok(mockCopilot))
   })
 
   async function createPromptSpanWithCompletion({
@@ -178,7 +170,7 @@ describe('getOrSetEnrichedReason', () => {
 
       expect(enrichedReasonResult.ok).toBe(true)
       expect(enrichedReasonResult.value).toBe(existingEnrichedReason)
-      expect(mockGetCopilot).not.toHaveBeenCalled()
+      expect(mockRunCopilot).not.toHaveBeenCalled()
       expect(mockRunCopilot).not.toHaveBeenCalled()
     })
 
@@ -218,7 +210,7 @@ describe('getOrSetEnrichedReason', () => {
       expect(enrichedReasonResult.ok).toBe(true)
       // Should return the initial reason from the specification
       expect(enrichedReasonResult.value).toBeTruthy()
-      expect(mockGetCopilot).not.toHaveBeenCalled()
+      expect(mockRunCopilot).not.toHaveBeenCalled()
       expect(mockRunCopilot).not.toHaveBeenCalled()
     })
 
@@ -259,7 +251,7 @@ describe('getOrSetEnrichedReason', () => {
 
       expect(enrichedReasonResult.ok).toBe(true)
       expect(enrichedReasonResult.value).toBe(reason)
-      expect(mockGetCopilot).not.toHaveBeenCalled()
+      expect(mockRunCopilot).not.toHaveBeenCalled()
       expect(mockRunCopilot).not.toHaveBeenCalled()
     })
 
@@ -296,7 +288,7 @@ describe('getOrSetEnrichedReason', () => {
       expect(enrichedReasonResult.ok).toBe(true)
       // resultReason for Human Binary returns result.metadata.reason, which is undefined when metadata is null
       expect(enrichedReasonResult.value).toBeUndefined()
-      expect(mockGetCopilot).not.toHaveBeenCalled()
+      expect(mockRunCopilot).not.toHaveBeenCalled()
       expect(mockRunCopilot).not.toHaveBeenCalled()
     })
   })
@@ -398,51 +390,6 @@ describe('getOrSetEnrichedReason', () => {
       )
     })
 
-    it('returns error when getCopilot fails', async () => {
-      const evaluation = await factories.createEvaluationV2({
-        document,
-        commit,
-        workspace,
-        type: EvaluationType.Human,
-        metric: HumanEvaluationMetric.Binary,
-      })
-
-      const { promptSpan } = await createPromptSpanWithCompletion()
-
-      const result = await factories.createEvaluationResultV2({
-        evaluation,
-        span: promptSpan,
-        commit,
-        workspace,
-        metadata: {
-          configuration: evaluation.configuration,
-          actualOutput: 'actual',
-          expectedOutput: 'expected',
-          reason: 'original reason',
-          selectedContexts: [
-            {
-              messageIndex: 0,
-              contentBlockIndex: 0,
-              contentType: 'text',
-            },
-          ],
-        } as HumanEvaluationResultMetadata,
-      })
-
-      mockGetCopilot.mockResolvedValue(
-        Result.error(new Error('Failed to get copilot')) as any,
-      )
-
-      const enrichedReasonResult = await getOrSetEnrichedReason({
-        result,
-        evaluation,
-      })
-
-      expect(enrichedReasonResult.ok).toBe(false)
-      expect(enrichedReasonResult.error?.message).toBe('Failed to get copilot')
-      expect(mockRunCopilot).not.toHaveBeenCalled()
-    })
-
     it('returns error when runCopilot fails', async () => {
       const evaluation = await factories.createEvaluationV2({
         document,
@@ -485,7 +432,7 @@ describe('getOrSetEnrichedReason', () => {
 
       expect(enrichedReasonResult.ok).toBe(false)
       expect(enrichedReasonResult.error?.message).toBe('Failed to run copilot')
-      expect(mockGetCopilot).toHaveBeenCalled()
+      expect(mockRunCopilot).toHaveBeenCalled()
       expect(mockRunCopilot).toHaveBeenCalled()
     })
   })
@@ -543,16 +490,9 @@ describe('getOrSetEnrichedReason', () => {
       expect(enrichedReasonResult.value).toBe(enrichedReason)
 
       // Verify copilot was called with correct parameters
-      expect(mockGetCopilot).toHaveBeenCalledWith({
-        path: '/copilot/annotation/generalizer',
-      })
       expect(mockRunCopilot).toHaveBeenCalledWith(
         expect.objectContaining({
-          copilot: expect.objectContaining({
-            workspace: expect.any(Object),
-            commit: expect.any(Object),
-            document: expect.any(Object),
-          }),
+          path: '/copilot/annotation/generalizer',
           parameters: {
             messages: expect.any(Array),
             annotation: originalReason,
@@ -691,7 +631,7 @@ describe('getOrSetEnrichedReason', () => {
 
       expect(enrichedReasonResult.ok).toBe(true)
       expect(enrichedReasonResult.value).toBe(existingEnrichedReason)
-      expect(mockGetCopilot).not.toHaveBeenCalled()
+      expect(mockRunCopilot).not.toHaveBeenCalled()
       expect(mockRunCopilot).not.toHaveBeenCalled()
     })
   })

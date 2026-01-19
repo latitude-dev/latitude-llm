@@ -14,9 +14,9 @@ import {
 } from '@latitude-data/core/repositories'
 
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
+import { runCopilot } from '@latitude-data/core/services/copilot/run'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { env } from '@latitude-data/env'
 import {
   ChainEventDto,
   GenerationResponse,
@@ -176,34 +176,22 @@ async function generateAIParameters({
       })
       .then((r) => r.unwrap())
 
-    const sdk = await createSdk({
-      workspace: workspace,
-      apiKey: env.COPILOT_WORKSPACE_API_KEY!,
-      projectId: env.COPILOT_PROJECT_ID,
-      __internal: { source: LogSources.Copilot },
-    }).then((r) => r.unwrap())
-
     const { parameters } = await scanDocumentContent({ document, commit }).then(
       (r) => r.unwrap(),
     )
-    const result = await sdk.prompts.run<Record<string, unknown>>(
-      'other/simulation/parameters', // TODO: env var
-      {
-        parameters: {
-          prompt_template: document.content,
-          parameters_list: JSON.stringify(Array.from(parameters)),
-        },
-        stream: false,
+    const result = await runCopilot({
+      path: 'other/simulation/parameters', // TODO: env var
+      parameters: {
+        prompt_template: document.content,
+        parameters_list: JSON.stringify(Array.from(parameters)),
       },
-    )
+      schema: z.object({
+        parameter_record: z.record(z.string(), z.unknown()).optional(),
+      }),
+    })
+    if (result.error) return Result.error(result.error)
 
-    // we return the response wrapped within a parameter_record key
-    const response = result?.response?.object.parameter_record as Record<
-      string,
-      unknown
-    >
-
-    return Result.ok(response ?? {})
+    return Result.ok(result.value.parameter_record ?? {})
   } catch (error) {
     return Result.error(error as Error)
   }

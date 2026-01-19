@@ -9,7 +9,7 @@ import { Result } from '../../../lib/Result'
 import { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { Optimization } from '../../../schema/models/types/Optimization'
 import { Workspace } from '../../../schema/models/types/Workspace'
-import { getCopilot, runCopilot } from '../../copilot'
+import { runCopilot } from '../../copilot'
 import { OptimizerProposeArgs } from './index'
 import { Trajectory } from './shared'
 
@@ -57,10 +57,6 @@ export async function proposeFactory({
     throw new Error('COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH is not set')
   }
 
-  const copilot = await getCopilot({
-    path: env.COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH,
-  }).then((r) => r.unwrap())
-
   return async function (
     { prompt, context, abortSignal }: OptimizerProposeArgs, // TODO(AO/OPT): Implement cancellation
     _ = database,
@@ -88,7 +84,7 @@ export async function proposeFactory({
     }
 
     const running = await runCopilot({
-      copilot: copilot,
+      path: env.COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH,
       parameters: parameters,
       schema: proposerSchema,
       abortSignal: abortSignal,

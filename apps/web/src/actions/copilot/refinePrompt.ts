@@ -1,6 +1,5 @@
 'use server'
 
-import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { publisher } from '@latitude-data/core/events/publisher'
 import {
   BadRequestError,
@@ -18,6 +17,7 @@ import { env } from '@latitude-data/env'
 import { z } from 'zod'
 import { CLOUD_MESSAGES } from '@latitude-data/core/constants'
 import { withDocument, withDocumentSchema } from '../procedures'
+import { runCopilot } from '@latitude-data/core/services/copilot/run'
 
 export const refinePromptAction = withDocument
   .inputSchema(
@@ -29,14 +29,6 @@ export const refinePromptAction = withDocument
   .action(async ({ ctx, parsedInput }) => {
     if (!env.LATITUDE_CLOUD) {
       throw new BadRequestError(CLOUD_MESSAGES.refinePrompt)
-    }
-
-    if (!env.COPILOT_WORKSPACE_API_KEY) {
-      throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
-    }
-
-    if (!env.COPILOT_PROJECT_ID) {
-      throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
 
     if (!env.COPILOT_PROMPT_REFINE_PATH) {
@@ -81,25 +73,20 @@ export const refinePromptAction = withDocument
       ),
     )
 
-    const sdk = await createSdk({
-      workspace: ctx.workspace,
-      apiKey: env.COPILOT_WORKSPACE_API_KEY,
-      projectId: env.COPILOT_PROJECT_ID,
-    }).then((r) => r.unwrap())
-
-    const result = await sdk.prompts.run<{
-      prompt: string
-      summary: string
-    }>(env.COPILOT_PROMPT_REFINE_PATH, {
-      stream: false,
+    const result = await runCopilot({
+      path: env.COPILOT_PROMPT_REFINE_PATH,
       parameters: {
         prompt: ctx.document.content,
         evaluation: serializedEvaluation,
         results: serializedResults,
       },
+      schema: z.object({
+        prompt: z.string(),
+        summary: z.string(),
+      }),
     })
-    if (!result || result.response.streamType !== 'object') {
-      throw new UnprocessableEntityError('Failed to refine prompt')
+    if (result.error) {
+      throw new UnprocessableEntityError(result.error.message)
     }
 
     publisher.publishLater({
@@ -114,8 +101,5 @@ export const refinePromptAction = withDocument
       },
     })
 
-    return result.response.object as {
-      prompt: string
-      summary: string
-    }
+    return result.value
   })

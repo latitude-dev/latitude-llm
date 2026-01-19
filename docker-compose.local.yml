@@ -135,7 +135,7 @@ services:
       - shared-storage:/app/apps/web/public/files
     depends_on:
       - db
-    command: ['pnpm', '--filter', '@latitude-data/core', 'db:migrate']
+    command: ['sh', '-c', 'pnpm --filter @latitude-data/core db:migrate && pnpm --filter @latitude-data/core scripts:setup']
 
 volumes:
   db-data:

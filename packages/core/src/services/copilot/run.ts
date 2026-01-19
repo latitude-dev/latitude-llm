@@ -4,24 +4,35 @@ import { UnprocessableEntityError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import { BACKGROUND } from '../../telemetry'
 import { runDocumentAtCommit } from '../commits/runDocumentAtCommit'
-import { Copilot } from './shared'
+import { getCopilot } from './get'
+import { database } from '../../client'
 
 export async function runCopilot<S extends z.ZodType = z.ZodType>({
-  copilot,
+  path,
   parameters = {},
   schema,
   abortSignal,
+  db = database,
 }: {
-  copilot: Copilot
+  path: string
   parameters?: Record<string, unknown>
   schema?: S
   abortSignal?: AbortSignal
+  db?: typeof database
 }): Promise<
   TypedResult<
     S extends z.ZodType ? z.infer<S> : unknown,
     UnprocessableEntityError
   >
 > {
+  const copilotResult = await getCopilot({ path }, db)
+  if (copilotResult.error) {
+    return Result.error(
+      new UnprocessableEntityError(copilotResult.error.message),
+    )
+  }
+
+  const copilot = copilotResult.value
   const result = await runDocumentAtCommit({
     context: BACKGROUND({ workspaceId: copilot.workspace.id }),
     workspace: copilot.workspace,

@@ -7,6 +7,22 @@ export function assertCopilotIsSupported(cloudMessage: string) {
     return Result.error(new BadRequestError(cloudMessage))
   }
 
+  if (env.LATITUDE_ENTERPRISE_MODE) {
+    if (!env.ENTERPRISE_COPILOT_WORKSPACE_NAME) {
+      return Result.error(
+        new BadRequestError('ENTERPRISE_COPILOT_WORKSPACE_NAME is not set'),
+      )
+    }
+
+    if (!env.ENTERPRISE_COPILOT_PROJECT_NAME) {
+      return Result.error(
+        new BadRequestError('ENTERPRISE_COPILOT_PROJECT_NAME is not set'),
+      )
+    }
+
+    return Result.nil()
+  }
+
   if (!env.COPILOT_WORKSPACE_API_KEY) {
     return Result.error(
       new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set'),
