@@ -107,6 +107,9 @@ function UseSpanInEditorButton({ span }: { span: SpanWithDetails }) {
     if (span.source) {
       params.set('logSource', span.source)
     }
+    if (span.documentLogUuid) {
+      params.set('documentLogUuid', span.documentLogUuid)
+    }
     return `${url}?${params.toString()}`
   }, [url, span.id, span.traceId, span.source])
 
