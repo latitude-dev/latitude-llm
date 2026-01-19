@@ -214,7 +214,7 @@ describe('assembleTraceWithMessages', () => {
   })
 
   it('returns trace structure even when no completion span exists', async () => {
-    await factories.createSpan({
+    const promptSpan = await factories.createSpan({
       workspaceId: workspace.id,
       traceId: 'trace-no-completion',
       type: SpanType.Prompt,
@@ -224,6 +224,7 @@ describe('assembleTraceWithMessages', () => {
     const result = await assembleTraceWithMessages({
       traceId: 'trace-no-completion',
       workspace,
+      spanId: promptSpan.id,
     })
 
     expect(result.ok).toBe(true)
@@ -255,6 +256,7 @@ describe('assembleTraceWithMessages', () => {
     const result = await assembleTraceWithMessages({
       traceId: 'trace-with-completion',
       workspace,
+      spanId: promptSpan.id,
     })
 
     expect(result.ok).toBe(true)
@@ -299,6 +301,7 @@ describe('assembleTraceWithMessages', () => {
     const result = await assembleTraceWithMessages({
       traceId: 'trace-with-metadata',
       workspace,
+      spanId: promptSpan.id,
     })
 
     expect(result.ok).toBe(true)

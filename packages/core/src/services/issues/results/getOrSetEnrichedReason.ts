@@ -80,11 +80,17 @@ export async function getOrSetEnrichedReason<
       new BadRequestError('Evaluation result does not have a trace ID'),
     )
   }
+  if (!result.evaluatedSpanId) {
+    return Result.error(
+      new BadRequestError('Evaluation result does not have a span ID'),
+    )
+  }
 
   const workspace = await unsafelyFindWorkspace(result.workspaceId)
   const assembledTraceResult = await assembleTraceWithMessages({
     traceId: result.evaluatedTraceId,
     workspace,
+    spanId: result.evaluatedSpanId,
   })
   if (!Result.isOk(assembledTraceResult)) {
     return Result.error(

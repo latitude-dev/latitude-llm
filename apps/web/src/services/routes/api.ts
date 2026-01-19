@@ -15,6 +15,7 @@ export const API_ROUTES = {
       spans: {
         detail: (spanId: string) => ({
           root: `/api/traces/${traceId}/spans/${spanId}`,
+          messages: `/api/traces/${traceId}/spans/${spanId}/messages`,
         }),
       },
     }),
@@ -348,9 +349,6 @@ export const API_ROUTES = {
         root: conversationRoot,
         traceIds: {
           root: `${conversationRoot}/trace-ids`,
-        },
-        lastTrace: {
-          root: `${conversationRoot}/last-trace`,
         },
         spans: {
           detail: (spanId: string) => ({

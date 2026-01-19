@@ -49,6 +49,7 @@ export async function buildSpanMessagesWithReasons({
     const assembledTraceResult = await assembleTraceWithMessages({
       traceId: span.traceId,
       workspace,
+      spanId: span.id,
     })
 
     if (!Result.isOk(assembledTraceResult)) {

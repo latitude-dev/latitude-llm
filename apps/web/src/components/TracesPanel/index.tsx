@@ -16,7 +16,7 @@ import {
 import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
 import { useSpan } from '$/stores/spans'
 import { TraceEvaluations } from './TraceEvaluations'
-import { useLastTrace } from '$/stores/conversations'
+import { useTraceWithMessages } from '$/stores/traces'
 import { adaptCompletionSpanMessagesToLegacy } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { AnnotationFormWithoutContext } from '../ChatWrapper/AnnotationFormWithoutContext'
 
@@ -68,7 +68,7 @@ export function TraceInfoPanel({
             <TraceMetadata isLoading={isLoading} span={span} />
           )}
           {selectedTab === 'messages' && (
-            <TraceMessages span={span} documentLogUuid={documentLogUuid} />
+            <TraceMessages span={span} />
           )}
           {selectedTab === 'evaluations' && (
             <TraceEvaluations
@@ -118,14 +118,15 @@ function TraceMetadata({
 
 function TraceMessages({
   span,
-  documentLogUuid,
 }: {
   span?: SpanWithDetails
-  documentLogUuid: string | null
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const { trace, completionSpan, isLoading } = useLastTrace({ documentLogUuid })
+  const { trace, completionSpan, isLoading } = useTraceWithMessages({
+    traceId: span?.traceId ?? null,
+    spanId: span?.id ?? null,
+  })
   const mainSpan = findMainSpan(trace ?? undefined)
   const mainMetadata = mainSpan?.metadata
   const messages = adaptCompletionSpanMessagesToLegacy(

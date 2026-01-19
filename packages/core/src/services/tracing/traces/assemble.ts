@@ -12,6 +12,8 @@ import { PromisedResult } from '../../../lib/Transaction'
 import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { findCompletionSpanFromTrace } from '../spans/fetching/findCompletionSpanFromTrace'
+import { findCompletionSpanForSpan } from '../spans/fetching/findCompletionSpanForSpan'
+import { findSpanById } from '../spans/fetching/findSpanById'
 
 /**
  * Assembles a trace structure without fetching span metadata.
@@ -78,14 +80,22 @@ export async function assembleTraceStructure(
  * Use this when you need the trace structure plus the conversation messages.
  * The metadata is attached to both the returned completionSpan AND to the
  * completion span within the trace tree for backward compatibility.
+ *
+ * The completion span is determined by finding the nearest parent span of type
+ * Prompt, External, or Chat for the specified span, then finding that parent's
+ * latest Completion child. This allows viewing span-specific conversations
+ * (e.g., subagent conversations) rather than always showing the global trace
+ * conversation.
  */
 export async function assembleTraceWithMessages(
   {
     traceId,
     workspace,
+    spanId,
   }: {
     traceId: string
     workspace: Workspace
+    spanId?: string
   },
   db = database,
 ): PromisedResult<{
@@ -99,7 +109,20 @@ export async function assembleTraceWithMessages(
   if (!Result.isOk(structureResult)) return structureResult
 
   const { trace } = structureResult.unwrap()
-  const completionSpan = findCompletionSpanFromTrace(trace)
+
+  // Find the target span in the trace
+  const targetSpan = findSpanById(trace.children, spanId)
+
+  // Find completion span for the specific span, or fallback to global completion span
+  let completionSpan: AssembledSpan<SpanType.Completion> | undefined
+  if (targetSpan) {
+    completionSpan = findCompletionSpanForSpan(targetSpan, trace)
+  }
+
+  // Fallback to global completion span if span-specific one not found
+  if (!completionSpan) {
+    completionSpan = findCompletionSpanFromTrace(trace)
+  }
 
   if (!completionSpan) {
     return Result.ok({ trace, completionSpan: undefined })
@@ -113,8 +136,7 @@ export async function assembleTraceWithMessages(
   if (!Result.isOk(metadataResult)) return metadataResult
 
   // Attach metadata to the completion span in the tree for backward compatibility
-  // This mutates the span in place so findCompletionSpanFromTrace(trace) returns
-  // a span with metadata attached
+  // This mutates the span in place
   completionSpan.metadata = metadataResult.unwrap() as
     | CompletionSpanMetadata
     | undefined

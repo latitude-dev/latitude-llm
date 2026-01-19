@@ -16,11 +16,8 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import Link from 'next/link'
-import { useTrace } from '$/stores/traces'
-import {
-  findCompletionSpanFromTrace,
-  adaptCompletionSpanMessagesToLegacy,
-} from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
+import { useTraceWithMessages } from '$/stores/traces'
+import { adaptCompletionSpanMessagesToLegacy } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { sum } from 'lodash-es'
 import { RunPanelStats } from '$/components/RunPanelStats'
@@ -37,15 +34,15 @@ export function AnnotationsPanel({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { data: trace, isLoading: isLoadingTrace } = useTrace({
+  const {
+    completionSpan,
+    isLoading: isLoadingTrace,
+  } = useTraceWithMessages({
     traceId: span.traceId,
+    spanId: span.id,
   })
-  const completionSpan = useMemo(
-    () => findCompletionSpanFromTrace(trace),
-    [trace],
-  )
   const conversation = useMemo(
-    () => adaptCompletionSpanMessagesToLegacy(completionSpan),
+    () => adaptCompletionSpanMessagesToLegacy(completionSpan ?? undefined),
     [completionSpan],
   )
   const toolContentMap = useToolContentMap(conversation as unknown as Message[])

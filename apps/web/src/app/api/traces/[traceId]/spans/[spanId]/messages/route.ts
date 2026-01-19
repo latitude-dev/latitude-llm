@@ -5,12 +5,11 @@ import {
   AssembledTrace,
   SpanType,
 } from '@latitude-data/core/constants'
-import { SpansRepository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { assembleTraceWithMessages } from '@latitude-data/core/services/tracing/traces/assemble'
 import { NextRequest, NextResponse } from 'next/server'
 
-export type LastTraceResponse = {
+export type SpanMessagesResponse = {
   trace: AssembledTrace | null
   completionSpan?: AssembledSpan<SpanType.Completion>
 }
@@ -24,24 +23,18 @@ export const GET = errorHandler(
         workspace,
       }: {
         params: {
-          conversationId: string
+          traceId: string
+          spanId: string
         }
         workspace: Workspace
       },
     ) => {
-      const { conversationId } = params
-
-      const repository = new SpansRepository(workspace.id)
-      const lastMainSpan =
-        await repository.findLastMainSpanByDocumentLogUuid(conversationId)
-
-      if (!lastMainSpan) {
-        return NextResponse.json({ trace: null }, { status: 200 })
-      }
+      const { traceId, spanId } = params
 
       const result = await assembleTraceWithMessages({
-        traceId: lastMainSpan.traceId,
+        traceId,
         workspace,
+        spanId,
       })
 
       if (!result.ok || !result.value) {
@@ -49,10 +42,7 @@ export const GET = errorHandler(
       }
 
       return NextResponse.json(
-        {
-          trace: result.value.trace,
-          completionSpan: result.value.completionSpan,
-        },
+        result.unwrap(),
         { status: 200 },
       )
     },

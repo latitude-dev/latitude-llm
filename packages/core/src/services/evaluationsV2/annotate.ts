@@ -72,6 +72,7 @@ export async function annotateEvaluationV2<
   const assembledTraceResult = await assembleTraceWithMessages({
     traceId: span.traceId,
     workspace,
+    spanId: span.id,
   })
   if (!Result.isOk(assembledTraceResult)) {
     return Result.error(new BadRequestError('Could not assemble trace'))
