@@ -47,7 +47,13 @@ export function IntegrationIcon({
 
   // @ts-expect-error HostedMCP is not supported as type but we validate on runtime
   if (integration.type === IntegrationType.HostedMCP) {
-    throw new Error('HostedMCP integration type is not supported here')
+    return (
+      <Icon
+        name='mcp'
+        size={size === 16 ? 'normal' : 'large'}
+        className={className}
+      />
+    )
   }
 
   // Standard integration types: use INTEGRATION_TYPE_VALUES

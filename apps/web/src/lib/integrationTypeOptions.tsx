@@ -51,7 +51,11 @@ export function integrationOptions(
 
   // @ts-expect-error HostedMCP is not supported as type but we validate on runtime
   if (integration.type === IntegrationType.HostedMCP) {
-    throw new Error('HostedMCP integration type is not supported here')
+    return {
+      // @ts-expect-error HostedMCP is not supported as type but we validate on runtime
+      label: `${integration.name} DEPRECATED: Hosted MCP Server`,
+      icon: { type: 'icon', name: 'mcp' },
+    }
   }
 
   return INTEGRATION_TYPE_VALUES[integration.type]
