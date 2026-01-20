@@ -22,7 +22,6 @@ describe('generateEvaluationV2', () => {
   let mocks: {
     cacheGet: MockInstance
     cacheSet: MockInstance
-    getCopilot: MockInstance
     runCopilot: MockInstance
   }
 
@@ -101,11 +100,6 @@ describe('generateEvaluationV2', () => {
     mocks = {
       cacheGet: mockCacheGet,
       cacheSet: mockCacheSet,
-      getCopilot: vi
-        .spyOn(copilot, 'getCopilot')
-        .mockImplementation(async (_) => {
-          return Result.ok({ workspace, commit, document })
-        }),
       runCopilot: vi
         .spyOn(copilot, 'runCopilot')
         .mockImplementation(async (_) => {
@@ -137,7 +131,6 @@ describe('generateEvaluationV2', () => {
       new UnprocessableEntityError('No provider for evaluations available'),
     )
 
-    expect(mocks.getCopilot).toHaveBeenCalledOnce()
     expect(mocks.cacheGet).toHaveBeenCalledOnce()
     expect(mocks.runCopilot).not.toHaveBeenCalled()
     expect(mocks.cacheSet).not.toHaveBeenCalled()
@@ -164,7 +157,6 @@ describe('generateEvaluationV2', () => {
       new UnprocessableEntityError('No model for evaluations available'),
     )
 
-    expect(mocks.getCopilot).toHaveBeenCalledOnce()
     expect(mocks.cacheGet).toHaveBeenCalledOnce()
     expect(mocks.runCopilot).not.toHaveBeenCalled()
     expect(mocks.cacheSet).not.toHaveBeenCalled()
@@ -183,15 +175,15 @@ describe('generateEvaluationV2', () => {
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(new UnprocessableEntityError('copilot error'))
 
-    expect(mocks.getCopilot).toHaveBeenCalledOnce()
     expect(mocks.cacheGet).toHaveBeenCalledOnce()
     expect(mocks.runCopilot).toHaveBeenCalledExactlyOnceWith({
-      copilot: expect.any(Object),
+      path: expect.any(String),
       parameters: {
         instructions: '',
         prompt: document.content,
       },
       schema: expect.any(ZodObject),
+      db: expect.anything(),
     })
     expect(mocks.cacheSet).not.toHaveBeenCalled()
   })
@@ -205,15 +197,15 @@ describe('generateEvaluationV2', () => {
     }).then((r) => r.unwrap())
 
     expect(generatedSettings).toEqual(settings)
-    expect(mocks.getCopilot).toHaveBeenCalledOnce()
     expect(mocks.cacheGet).toHaveBeenCalledOnce()
     expect(mocks.runCopilot).toHaveBeenCalledExactlyOnceWith({
-      copilot: expect.any(Object),
+      path: expect.any(String),
       parameters: {
         instructions: 'instructions',
         prompt: document.content,
       },
       schema: expect.any(ZodObject),
+      db: expect.anything(),
     })
     expect(mocks.cacheSet).toHaveBeenCalledExactlyOnceWith(
       expect.any(String),
@@ -231,7 +223,6 @@ describe('generateEvaluationV2', () => {
     }).then((r) => r.unwrap())
 
     expect(generatedSettings).toEqual(settings)
-    expect(mocks.getCopilot).toHaveBeenCalledOnce()
     expect(mocks.cacheGet).toHaveBeenCalledOnce()
     expect(mocks.runCopilot).not.toHaveBeenCalled()
     expect(mocks.cacheSet).not.toHaveBeenCalled()

@@ -61,7 +61,8 @@
     "PAGER",
     "TEST_LATITUDE_API_KEY",
     "ECS_AGENT_URI",
-    "RELEASE_VERSION"
+    "RELEASE_VERSION",
+    "LATITUDE_ENTERPRISE_MODE"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": [

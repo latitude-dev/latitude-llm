@@ -35,6 +35,20 @@ export class ProjectsRepository extends RepositoryLegacy<typeof tt, Project> {
     return Result.ok(project)
   }
 
+  async getProjectByName(name: string) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.name, name))
+    const project = result[0]
+
+    if (!project) {
+      return Result.error(new NotFoundError(NOT_FOUND_MSG))
+    }
+
+    return Result.ok(project)
+  }
+
   async getProjectByDocumentUuid(documentUuid: string) {
     const results = await this.db
       .select(this.scope._.selectedFields)

@@ -15,7 +15,7 @@ import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { findFirstModelForProvider } from '../ai/providers/models'
-import { getCopilot, runCopilot } from '../copilot'
+import { runCopilot } from '../copilot'
 import { findDefaultEvaluationProvider } from '../providerApiKeys/findDefaultProvider'
 
 const generatorSchema = z.object({
@@ -53,11 +53,6 @@ export async function generateEvaluationV2(
     )
   }
 
-  const copilot = await getCopilot(
-    { path: env.COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH },
-    db,
-  ).then((r) => r.unwrap())
-
   let settings:
     | EvaluationSettings<EvaluationType.Llm, LlmEvaluationMetric.Rating>
     | undefined
@@ -92,12 +87,13 @@ export async function generateEvaluationV2(
   }
 
   const result = await runCopilot({
-    copilot: copilot,
+    path: env.COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH,
     parameters: {
       instructions: instructions ?? '',
       prompt: document.content,
     },
     schema: generatorSchema,
+    db,
   }).then((r) => r.unwrap())
 
   settings = {

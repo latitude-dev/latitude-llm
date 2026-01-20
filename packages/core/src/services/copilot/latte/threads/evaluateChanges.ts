@@ -31,7 +31,7 @@ export async function evaluateLatteThreadChanges(
   if (!env.COPILOT_LATTE_CHANGES_FEEDBACK_HITL_EVALUATION_UUID) {
     return Result.error(
       new NotImplementedError(
-        'The evaluation UUID for Latte changes feedback HITL is not set in the environment variables.',
+        'This environment does not support adding feedback to Latte threads',
       ),
     )
   }

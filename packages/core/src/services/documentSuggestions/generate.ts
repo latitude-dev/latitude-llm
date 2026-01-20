@@ -22,7 +22,7 @@ import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { getCopilot, runCopilot } from '../copilot'
+import { runCopilot } from '../copilot'
 import {
   serializeEvaluationResult as serializeEvaluationResultV2,
   serializeEvaluation as serializeEvaluationV2,
@@ -90,10 +90,6 @@ export async function generateDocumentSuggestion(
     return Result.error(new Error('COPILOT_PROMPT_REFINE_PATH is not set'))
   }
 
-  const copilot = await getCopilot({
-    path: env.COPILOT_PROMPT_REFINE_PATH,
-  }).then((r) => r.unwrap())
-
   if (!evaluation.enableSuggestions) {
     return Result.error(
       new UnprocessableEntityError(
@@ -148,7 +144,7 @@ export async function generateDocumentSuggestion(
   )
 
   const result = await runCopilot({
-    copilot: copilot,
+    path: env.COPILOT_PROMPT_REFINE_PATH,
     parameters: {
       prompt: document.content,
       evaluation: serializedEvaluation,

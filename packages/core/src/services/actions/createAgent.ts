@@ -14,7 +14,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { ProjectsRepository } from '../../repositories'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { getCopilot, runCopilot } from '../copilot'
+import { runCopilot } from '../copilot'
 import { createProject } from '../projects/create'
 import { ActionExecuteArgs } from './shared'
 
@@ -109,19 +109,11 @@ export async function generateAgentDetails(
     )
   }
 
-  const getting = await getCopilot(
-    { path: env.COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH },
-    db,
-  )
-  if (getting.error) {
-    return Result.error(getting.error)
-  }
-  const copilot = getting.unwrap()
-
   const generating = await runCopilot({
-    copilot: copilot,
+    path: env.COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH,
     parameters: { prompt },
     schema: generatorSchema,
+    db,
   })
   if (generating.error) {
     return Result.error(generating.error)

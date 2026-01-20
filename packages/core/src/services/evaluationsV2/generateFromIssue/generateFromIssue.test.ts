@@ -3,7 +3,6 @@ import * as env from '@latitude-data/env'
 import { Providers } from '@latitude-data/constants'
 import {
   BadRequestError,
-  NotFoundError,
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
@@ -14,14 +13,11 @@ import {
   generateEvaluationConfigFromIssueWithCopilot,
 } from './generateFromIssue'
 import * as factories from '../../../tests/factories'
-import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import type {
-  Workspace,
-  WorkspaceDto,
-} from '@latitude-data/core/schema/models/types/Workspace'
+import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
-import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import * as getSpanMessagesAndEvaluationResultsByIssue from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 import * as getSpanMessagesByIssueDocument from '../../../data-access/issues/getSpanMessagesByIssueDocument'
@@ -34,7 +30,6 @@ import * as assembleModule from '../../tracing/traces/assemble'
 import * as adaptModule from '../../tracing/spans/fetching/findCompletionSpanFromTrace'
 
 vi.mock('../../copilot', () => ({
-  getCopilot: vi.fn(),
   runCopilot: vi.fn(),
 }))
 
@@ -74,7 +69,6 @@ vi.mock('../../tracing/spans/fetching/findCompletionSpanFromTrace', () => ({
 const MODEL = 'gpt-4o'
 
 describe('generateFromIssue', () => {
-  const mockGetCopilot = vi.mocked(copilotModule.getCopilot)
   const mockRunCopilot = vi.mocked(copilotModule.runCopilot)
 
   const mockGetSpanMessagesAndEvaluationResultsByIssue = vi.mocked(
@@ -138,14 +132,6 @@ describe('generateFromIssue', () => {
       COPILOT_PROJECT_ID: 1,
       NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: 'openai',
     } as typeof env.env)
-
-    // Setup default mocks for copilot functions
-    const mockCopilot = {
-      workspace: {} as WorkspaceDto,
-      commit: {} as Commit,
-      document: {} as DocumentVersion,
-    }
-    mockGetCopilot.mockResolvedValue(Result.ok(mockCopilot))
 
     mockRunCopilot.mockResolvedValue(
       Result.ok({
@@ -218,9 +204,8 @@ describe('generateFromIssue', () => {
     expect(evaluation).toBeDefined()
 
     // Verify copilot calls
-    expect(mockGetCopilot).toHaveBeenCalled()
     expect(mockRunCopilot).toHaveBeenCalledWith({
-      copilot: expect.any(Object),
+      path: '/copilot/evaluations/generator',
       parameters: {
         issueName: issue.title,
         issueDescription: issue.description,
@@ -232,6 +217,7 @@ describe('generateFromIssue', () => {
         previousEvaluationConfiguration: undefined,
       },
       schema: __test__.llmEvaluationBinarySpecificationWithoutModel,
+      db: expect.anything(),
     })
   })
 
@@ -258,7 +244,7 @@ describe('generateFromIssue', () => {
     )
 
     // Verify no repository or copilot calls were made
-    expect(mockGetCopilot).not.toHaveBeenCalled()
+    expect(mockRunCopilot).not.toHaveBeenCalled()
   })
 
   it('returns error when COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH is not set', async () => {
@@ -283,7 +269,7 @@ describe('generateFromIssue', () => {
     )
 
     // Verify no repository or copilot calls were made
-    expect(mockGetCopilot).not.toHaveBeenCalled()
+    expect(mockRunCopilot).not.toHaveBeenCalled()
   })
 
   it('returns error when document is not found at commit', async () => {
@@ -296,29 +282,7 @@ describe('generateFromIssue', () => {
     })
 
     expect(Result.isOk(result)).toBe(true)
-    expect(mockGetCopilot).toHaveBeenCalled()
-  })
-
-  it('returns error when getCopilot fails', async () => {
-    mockGetCopilot.mockResolvedValue(
-      Result.error(new NotFoundError('Copilot not found')),
-    )
-
-    const result = await generateEvaluationConfigFromIssueWithCopilot({
-      issue,
-      providerName: provider.name,
-      model: MODEL,
-      workspace,
-      commit,
-    })
-
-    expect(Result.isOk(result)).toBe(false)
-    expect(result.error).toBeInstanceOf(NotFoundError)
-    expect(result.error?.message).toBe('Copilot not found')
-
-    // Verify copilot was called but no further calls
-    expect(mockGetCopilot).toHaveBeenCalled()
-    expect(mockRunCopilot).not.toHaveBeenCalled()
+    expect(mockRunCopilot).toHaveBeenCalled()
   })
 
   it('returns error when runCopilot fails', async () => {
@@ -338,8 +302,6 @@ describe('generateFromIssue', () => {
     expect(result.error).toBeInstanceOf(UnprocessableEntityError)
     expect(result.error?.message).toBe('Copilot execution failed')
 
-    // Verify copilot run was called but evaluation creation was not
-    expect(mockGetCopilot).toHaveBeenCalled()
     expect(mockRunCopilot).toHaveBeenCalled()
   })
 
@@ -353,7 +315,7 @@ describe('generateFromIssue', () => {
     })
 
     expect(mockRunCopilot).toHaveBeenCalledWith({
-      copilot: expect.anything(),
+      path: '/copilot/evaluations/generator',
       parameters: {
         issueName: issue.title,
         issueDescription: issue.description,
@@ -365,6 +327,7 @@ describe('generateFromIssue', () => {
         previousEvaluationConfiguration: undefined,
       },
       schema: expect.anything(),
+      db: expect.anything(),
     })
   })
 
@@ -432,7 +395,7 @@ describe('generateFromIssue', () => {
     expect(mockSpansRepositoryFindBySpanAndTraceIds).toHaveBeenCalledTimes(2)
 
     expect(mockRunCopilot).toHaveBeenCalledWith({
-      copilot: expect.any(Object),
+      path: '/copilot/evaluations/generator',
       parameters: {
         issueName: issue.title,
         issueDescription: issue.description,
@@ -448,6 +411,7 @@ describe('generateFromIssue', () => {
         previousEvaluationConfiguration: previousConfig,
       },
       schema: __test__.llmEvaluationBinarySpecificationWithoutModel,
+      db: expect.anything(),
     })
   })
 })

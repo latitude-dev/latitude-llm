@@ -2,7 +2,6 @@ import { env } from '@latitude-data/env'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../lib/Result'
 import { database } from '../../client'
-import { getCopilot } from '../copilot/get'
 import { runCopilot } from '../copilot/run'
 import { z } from 'zod'
 import { CLOUD_MESSAGES } from '../../constants'
@@ -38,20 +37,8 @@ export async function generateDatasetWithCopilot(
     )
   }
 
-  const copilotResult = await getCopilot(
-    {
-      path: env.COPILOT_PROMPT_DATASET_GENERATOR_PATH,
-    },
-    db,
-  )
-
-  if (!Result.isOk(copilotResult)) {
-    return copilotResult
-  }
-
-  const copilot = copilotResult.unwrap()
   return await runCopilot({
-    copilot: copilot,
+    path: env.COPILOT_PROMPT_DATASET_GENERATOR_PATH,
     parameters: {
       row_count: rowCount,
       parameters: parameters,
@@ -59,5 +46,6 @@ export async function generateDatasetWithCopilot(
       prompt: prompt,
     },
     schema: generatedDatasetResponseSchema,
+    db,
   })
 }

@@ -24,7 +24,7 @@ import {
   buildSpanMessagesWithReasons,
   SpanMessagesWithReason,
 } from '../../spans/buildSpanMessagesWithReasons'
-import { getCopilot, runCopilot } from '../../copilot'
+import { runCopilot } from '../../copilot'
 
 const llmEvaluationBinarySpecificationWithoutModel =
   LlmEvaluationBinarySpecification.configuration
@@ -89,19 +89,6 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
   if (!Result.isOk(assertResult)) {
     return assertResult
   }
-
-  const copilotResult = await getCopilot(
-    {
-      path: env.COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH,
-    },
-    db,
-  )
-
-  if (!Result.isOk(copilotResult)) {
-    return copilotResult
-  }
-
-  const copilot = copilotResult.unwrap()
 
   // Get the existing evaluation names for the same commit and document to avoid generating evals with the same name (unique key)
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
@@ -177,7 +164,7 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
   }
 
   const evaluationConfigResult = await runCopilot({
-    copilot: copilot,
+    path: env.COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH,
     parameters: {
       issueName: issue.title,
       issueDescription: issue.description,
@@ -189,6 +176,7 @@ export async function generateEvaluationConfigFromIssueWithCopilot(
       previousEvaluationConfiguration,
     },
     schema: llmEvaluationBinarySpecificationWithoutModel,
+    db,
   })
 
   if (!Result.isOk(evaluationConfigResult)) {

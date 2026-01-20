@@ -22,6 +22,10 @@ export async function unsafelyFindWorkspaceByName(name: string, db = database) {
   const result = await db
     .select(workspacesDtoColumns)
     .from(workspaces)
+    .innerJoin(
+      subscriptions,
+      eq(workspaces.currentSubscriptionId, subscriptions.id),
+    )
     .where(eq(workspaces.name, name))
     .limit(1)
 

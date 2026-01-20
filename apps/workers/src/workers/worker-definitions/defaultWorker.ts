@@ -3,10 +3,10 @@ import { Queues } from '@latitude-data/core/queues/types'
 import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
-  createProviderLogJob: jobs.createProviderLogJob,
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
-  generateProjectNameJob: jobs.generateProjectNameJob,
+  createProviderLogJob: jobs.createProviderLogJob,
   exportSpansJob: jobs.exportSpansJob,
+  generateProjectNameJob: jobs.generateProjectNameJob,
 }
 
 export function startDefaultWorker() {
