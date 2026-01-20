@@ -16,6 +16,7 @@ import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
 import { integrations } from './models/integrations'
+import { integrationHeaderPresets } from './models/integrationHeaderPresets'
 import { mcpServers } from './models/mcpServers'
 import { mcpOAuthCredentials } from './models/mcpOAuthCredentials'
 
@@ -195,6 +196,24 @@ export const mcpOAuthCredentialsRelations = relations(
     integration: one(integrations, {
       fields: [mcpOAuthCredentials.integrationId],
       references: [integrations.id],
+    }),
+  }),
+)
+
+export const integrationHeaderPresetsRelations = relations(
+  integrationHeaderPresets,
+  ({ one }) => ({
+    integration: one(integrations, {
+      fields: [integrationHeaderPresets.integrationId],
+      references: [integrations.id],
+    }),
+    workspace: one(workspaces, {
+      fields: [integrationHeaderPresets.workspaceId],
+      references: [workspaces.id],
+    }),
+    author: one(users, {
+      fields: [integrationHeaderPresets.authorId],
+      references: [users.id],
     }),
   }),
 )

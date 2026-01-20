@@ -380,4 +380,9 @@ export const API_ROUTES = {
   claimedPromocodes: {
     root: '/api/claimedPromocodes',
   },
+  integrationHeaderPresets: {
+    detail: (integrationId: number) => ({
+      root: `/api/integrationHeaderPresets/${integrationId}`,
+    }),
+  },
 }
