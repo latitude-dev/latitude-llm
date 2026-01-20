@@ -1,9 +1,10 @@
 import { LifecycleManager } from '$telemetry/core'
 import { BaseInstrumentation } from '$telemetry/instrumentations/base'
 import { ManualInstrumentation } from '$telemetry/instrumentations/manual'
+import { ATTRIBUTES } from '@latitude-data/constants'
 import type * as openaiAgents from '@openai/agents'
 import * as otel from '@opentelemetry/api'
-import { context } from '@opentelemetry/api'
+import { context, trace } from '@opentelemetry/api'
 
 const SPAN_KEY = (traceId: string, spanId: string) => `${traceId}:${spanId}`
 
@@ -68,12 +69,35 @@ export class OpenAIAgentsInstrumentation implements BaseInstrumentation {
     /* No-op */
   }
 
+  private toSnakeCase(str: string) {
+    return str
+      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+      .replace(/[^A-Za-z0-9]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toLowerCase()
+  }
+
+  private attribifyData(data: Record<string, unknown>) {
+    const attributes: otel.Attributes = {}
+
+    for (const [key, value] of Object.entries(data)) {
+      if (!value) continue
+
+      const attribute = `${ATTRIBUTES.OPENAI_AGENTS._root}.${this.toSnakeCase(key)}`
+      attributes[attribute] =
+        typeof value !== 'string' ? JSON.stringify(value) : value
+    }
+
+    return attributes
+  }
+
   private onAgentSpanStart(
     ctx: otel.Context,
     data: openaiAgents.AgentSpanData,
   ) {
     return this.manualTelemetry.unknown(ctx, {
-      name: data.type,
+      name: data.name,
     })
   }
 
@@ -102,6 +126,9 @@ export class OpenAIAgentsInstrumentation implements BaseInstrumentation {
         break
     }
 
+    const attributes = this.attribifyData(span.spanData)
+    trace.getSpan(current.context)?.setAttributes(attributes)
+
     this.spans[SPAN_KEY(span.traceId, span.spanId)] = current
   }
 
@@ -129,9 +156,18 @@ export class OpenAIAgentsInstrumentation implements BaseInstrumentation {
     const current = this.spans[key]
     if (!current) return
 
+    const attributes = this.attribifyData(span.spanData)
+    trace.getSpan(current.context)?.setAttributes(attributes)
+
     if (span.error) {
-      // TODO(oaiagents): add attributes to store span.error.data if any
-      current.fail(new Error(span.error.message))
+      current.fail(new Error(span.error.message), {
+        attributes: {
+          [ATTRIBUTES.OPENAI_AGENTS.error.message]: span.error.message,
+          ...(span.error.data && {
+            [ATTRIBUTES.OPENAI_AGENTS.error.details]: JSON.stringify(span.error.data), // prettier-ignore
+          }),
+        },
+      })
       delete this.spans[key]
       return
     }

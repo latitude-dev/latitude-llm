@@ -1,14 +1,15 @@
 import {
   ATTR_GEN_AI_OPERATION_NAME,
-  ATTR_GEN_AI_SYSTEM,
-  ATTR_GEN_AI_RESPONSE_MODEL,
   ATTR_GEN_AI_RESPONSE_FINISH_REASONS,
+  ATTR_GEN_AI_RESPONSE_ID,
+  ATTR_GEN_AI_RESPONSE_MODEL,
+  ATTR_GEN_AI_SYSTEM,
+  ATTR_GEN_AI_TOOL_CALL_ID,
+  ATTR_GEN_AI_TOOL_DESCRIPTION,
+  ATTR_GEN_AI_TOOL_NAME,
+  ATTR_GEN_AI_TOOL_TYPE,
   ATTR_GEN_AI_USAGE_INPUT_TOKENS,
   ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
-  ATTR_GEN_AI_TOOL_NAME,
-  ATTR_GEN_AI_TOOL_CALL_ID,
-  ATTR_GEN_AI_TOOL_TYPE,
-  ATTR_GEN_AI_RESPONSE_ID,
   GEN_AI_OPERATION_NAME_VALUE_CHAT,
   GEN_AI_OPERATION_NAME_VALUE_CREATE_AGENT,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
@@ -20,20 +21,19 @@ import {
   GEN_AI_OUTPUT_TYPE_VALUE_JSON,
   GEN_AI_OUTPUT_TYPE_VALUE_SPEECH,
   GEN_AI_OUTPUT_TYPE_VALUE_TEXT,
-  ATTR_GEN_AI_TOOL_DESCRIPTION,
 } from '@opentelemetry/semantic-conventions/incubating'
 
 import {
-  ATTR_SERVICE_NAME,
-  ATTR_HTTP_REQUEST_METHOD,
-  ATTR_HTTP_RESPONSE_STATUS_CODE,
   ATTR_ERROR_TYPE,
   ATTR_EXCEPTION_MESSAGE,
   ATTR_EXCEPTION_TYPE,
+  ATTR_HTTP_REQUEST_METHOD,
+  ATTR_HTTP_RESPONSE_STATUS_CODE,
   ATTR_OTEL_SCOPE_NAME,
   ATTR_OTEL_SCOPE_VERSION,
   ATTR_OTEL_STATUS_CODE,
   ATTR_OTEL_STATUS_DESCRIPTION,
+  ATTR_SERVICE_NAME,
 } from '@opentelemetry/semantic-conventions'
 
 import { SpanAttribute } from './span'
@@ -256,7 +256,6 @@ export const ATTRIBUTES = {
   },
 
   // OpenLLMetry (Traceloop)
-  // https://github.com/traceloop/openllmetry
   // https://github.com/traceloop/openllmetry/blob/main/packages/opentelemetry-semantic-conventions-ai/opentelemetry/semconv_ai/__init__.py
   OPENLLMETRY: {
     llm: {
@@ -308,6 +307,16 @@ export const ATTRIBUTES = {
     settings: 'ai.settings',
     prompt: {
       messages: 'ai.prompt.messages',
+    },
+  },
+
+  // OpenAI Agents
+  // https://openai.github.io/openai-agents-js/guides/tracing/
+  OPENAI_AGENTS: {
+    _root: 'openai_agents',
+    error: {
+      message: 'openai_agents.error.message',
+      details: 'openai_agents.error.details',
     },
   },
 } as const
@@ -412,7 +421,7 @@ export const VALUES = {
       toolCall: 'ai.toolCall',
     },
   },
-}
+} as const
 
 /**
  * Returns the first value found in the attributes object with one of the given keys.

@@ -10,7 +10,8 @@
  */
 
 import * as openaiAgents from '@openai/agents'
-import { Agent, run, tool } from '@openai/agents'
+import { Agent, OpenAIResponsesModel, Runner, tool } from '@openai/agents'
+import OpenAI from 'openai'
 import z from 'zod'
 import { Instrumentation, LatitudeTelemetry } from '../src'
 
@@ -26,8 +27,7 @@ const funfact = tool({
   description: 'Give a fun fact about a historical event',
   parameters: z.object({ event: z.string() }),
   execute: async ({ event }) => {
-    if (event === 'sharks') return 'Sharks are older than trees.'
-    if (event === 'trees') return 'Trees are older than sharks.'
+    if (Math.random() > 0.5) throw new Error('Hah! Gotcha!')
     return `Guess what? ${event} is newer than the birth of the universe`
   },
 })
@@ -40,7 +40,14 @@ const agent = new Agent({
 })
 
 async function testOpenAIAgent() {
-  const response = await run(
+  const client = new OpenAI()
+
+  const runner = new Runner({
+    model: new OpenAIResponsesModel(client, 'gpt-5-nano'), // or new OpenAIChatCompletionsModel(client, model)
+    traceIncludeSensitiveData: true, // By default is true, but we set it explicitly here for clarity
+  })
+
+  const response = await runner.run(
     agent,
     'Talk to me about sharks, and include some fun facts. You must use your tool to get fun facts.',
   )
