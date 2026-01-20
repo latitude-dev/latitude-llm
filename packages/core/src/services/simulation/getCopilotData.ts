@@ -2,7 +2,7 @@ import { env } from '@latitude-data/env'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result } from '../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,

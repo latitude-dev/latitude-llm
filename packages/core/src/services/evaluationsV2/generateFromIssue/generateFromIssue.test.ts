@@ -13,11 +13,11 @@ import {
   generateEvaluationConfigFromIssueWithCopilot,
 } from './generateFromIssue'
 import * as factories from '../../../tests/factories'
-import type {
-  Workspace,
-} from '@latitude-data/core/schema/models/types/Workspace'
+import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import * as getSpanMessagesAndEvaluationResultsByIssue from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 import * as getSpanMessagesByIssueDocument from '../../../data-access/issues/getSpanMessagesByIssueDocument'

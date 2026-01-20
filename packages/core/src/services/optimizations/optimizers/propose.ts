@@ -84,7 +84,7 @@ export async function proposeFactory({
     }
 
     const running = await runCopilot({
-      path: env.COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH,
+      path: env.COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH!,
       parameters: parameters,
       schema: proposerSchema,
       abortSignal: abortSignal,

@@ -58,7 +58,6 @@ describe('getOrSetEnrichedReason', () => {
       COPILOT_PROMPT_ANNOTATION_GENERALIZER_PATH:
         '/copilot/annotation/generalizer',
     } as typeof env.env)
-
   })
 
   async function createPromptSpanWithCompletion({
