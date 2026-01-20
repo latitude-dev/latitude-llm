@@ -11,6 +11,7 @@ Manual test examples for each instrumented provider against a local Latitude ins
 ```bash
 export LATITUDE_API_KEY="your-latitude-api-key"
 export LATITUDE_PROJECT_ID="your-project-id"
+export GATEWAY_BASE_URL="http://localhost:8787"
 
 # Provider-specific API keys (set the ones you want to test)
 export OPENAI_API_KEY="your-openai-key"
@@ -45,6 +46,7 @@ npm install @aws-sdk/client-bedrock-runtime  # For Bedrock
 npm install @google-cloud/vertexai  # For Vertex AI
 npm install langchain @langchain/openai @langchain/core
 npm install llamaindex
+npm install @openai/agents
 ```
 
 4. Run an example:
@@ -57,17 +59,18 @@ npx tsx examples/test_openai.ts
 
 ## Available Examples
 
-| Provider     | File                 | Required Package                                    |
-| ------------ | -------------------- | --------------------------------------------------- |
-| OpenAI       | `test_openai.ts`     | `openai`                                            |
-| Anthropic    | `test_anthropic.ts`  | `@anthropic-ai/sdk`                                 |
-| Cohere       | `test_cohere.ts`     | `cohere-ai`                                         |
-| Together AI  | `test_together.ts`   | `together-ai`                                       |
-| Azure OpenAI | `test_azure.ts`      | `openai`                                            |
-| Bedrock      | `test_bedrock.ts`    | `@aws-sdk/client-bedrock-runtime`                   |
-| Vertex AI    | `test_vertex.ts`     | `@google-cloud/vertexai`                            |
-| LangChain    | `test_langchain.ts`  | `langchain`, `@langchain/openai`, `@langchain/core` |
-| LlamaIndex   | `test_llamaindex.ts` | `llamaindex`                                        |
+| Provider      | File                    | Required Package                                    |
+| ------------- | ----------------------- | --------------------------------------------------- |
+| OpenAI        | `test_openai.ts`        | `openai`                                            |
+| Anthropic     | `test_anthropic.ts`     | `@anthropic-ai/sdk`                                 |
+| Cohere        | `test_cohere.ts`        | `cohere-ai`                                         |
+| Together AI   | `test_together.ts`      | `together-ai`                                       |
+| Azure OpenAI  | `test_azure.ts`         | `openai`                                            |
+| Bedrock       | `test_bedrock.ts`       | `@aws-sdk/client-bedrock-runtime`                   |
+| Vertex AI     | `test_vertex.ts`        | `@google-cloud/vertexai`                            |
+| LangChain     | `test_langchain.ts`     | `langchain`, `@langchain/openai`, `@langchain/core` |
+| LlamaIndex    | `test_llamaindex.ts`    | `llamaindex`                                        |
+| OpenAI Agents | `test_openai_agents.ts` | `@openai/agents`                                    |
 
 ## Expected Behavior
 

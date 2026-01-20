@@ -271,6 +271,15 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
   }
 
+  unknown(ctx: otel.Context, options?: StartSpanOptions) {
+    return this.span(
+      ctx,
+      options?.name || SPAN_SPECIFICATIONS[SpanType.Unknown].name,
+      SpanType.Unknown,
+      options,
+    )
+  }
+
   tool(ctx: otel.Context, options: StartToolSpanOptions) {
     const start = options
 
@@ -743,7 +752,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const attributes = {
       [ATTRIBUTES.LATITUDE.request.template]: template,
       [ATTRIBUTES.LATITUDE.request.parameters]: jsonParameters,
-
       [ATTRIBUTES.LATITUDE.commitUuid]: versionUuid || HEAD_COMMIT,
       [ATTRIBUTES.LATITUDE.documentUuid]: promptUuid,
       [ATTRIBUTES.LATITUDE.projectId]: projectId,
@@ -781,7 +789,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
       ...(rest.attributes || {}),
     }
 
-    return this.span(ctx, name || 'chat', SpanType.Chat, { attributes })
+    return this.span(ctx, name || `chat-${documentLogUuid}`, SpanType.Chat, {
+      attributes,
+    })
   }
 
   external(

@@ -57,6 +57,10 @@ const TESTS: Record<string, TestConfig> = {
     file: 'test_llamaindex.ts',
     requiredEnvVars: ['OPENAI_API_KEY'],
   },
+  openaiAgents: {
+    file: 'test_openai_agents.ts',
+    requiredEnvVars: ['OPENAI_API_KEY'],
+  },
 }
 
 function checkCommonEnv(): string[] {
