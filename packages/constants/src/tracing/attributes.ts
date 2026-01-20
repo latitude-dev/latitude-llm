@@ -310,6 +310,23 @@ export const ATTRIBUTES = {
       messages: 'ai.prompt.messages',
     },
   },
+
+  // OpenAI Agents
+  // https://openai.github.io/openai-agents-js/guides/tracing/
+  OPENAI_AGENTS: {
+    type: 'openai.agents.type',
+    response: {
+      input: 'openai.agents._input',
+      output: 'openai.agents._response',
+    },
+    toolCall: {
+      name: 'openai.agents.name',
+      input: 'openai.agents.input',
+      output: 'openai.agents.output',
+    },
+    traceId: 'openai.agents.trace_id',
+    spanId: 'openai.agents.span_id',
+  }
 } as const
 
 export const VALUES = {
@@ -410,6 +427,13 @@ export const VALUES = {
 
       // Tool calling
       toolCall: 'ai.toolCall',
+    },
+  },
+
+  OPENAI_AGENTS: {
+    type: {
+      response: 'response',
+      function: 'function',
     },
   },
 }
