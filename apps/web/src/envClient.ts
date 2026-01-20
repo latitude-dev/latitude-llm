@@ -16,6 +16,7 @@ export const envClient = createEnv({
     NEXT_PUBLIC_DATADOG_SITE: z.string().optional(),
     NEXT_PUBLIC_NODE_ENV: z.string().optional(),
     NEXT_PUBLIC_RELEASE_VERSION: z.string().optional(),
+    NEXT_PUBLIC_GTM_ID: z.string().optional(),
   },
   runtimeEnv: {
     NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL:
@@ -37,5 +38,6 @@ export const envClient = createEnv({
       process.env.NEXT_PUBLIC_RELEASE_VERSION ??
       process.env.RELEASE_VERSION ??
       '',
+    NEXT_PUBLIC_GTM_ID: process.env.NEXT_PUBLIC_GTM_ID ?? '',
   },
 })
