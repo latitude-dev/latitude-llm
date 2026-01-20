@@ -29,6 +29,7 @@ export function getStripe({
   }
 
   stripeInstance = new Stripe(secret, {
+    apiVersion: '2025-12-15.clover',
     typescript: true,
   })
 
