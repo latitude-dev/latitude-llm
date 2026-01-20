@@ -42,6 +42,12 @@ export async function createCheckoutSession({
           workspaceId: String(workspaceId),
         },
       },
+      allow_promotion_codes: true,
+      billing_address_collection: 'required',
+      name_collection: {
+        individual: { enabled: true },
+        business: { enabled: true },
+      },
       success_url: successUrl,
       cancel_url: cancelUrl,
     })
