@@ -32,6 +32,7 @@ const inputSchema = z.object({
   stream: z.boolean().default(true),
   userMessage: z.string().optional(),
   aiParameters: z.boolean().optional(),
+  mcpHeaders: z.record(z.string(), z.record(z.string(), z.string())).optional(),
 })
 
 export const POST = errorHandler(
@@ -54,6 +55,7 @@ export const POST = errorHandler(
           parameters: _parameters,
           userMessage,
           aiParameters,
+          mcpHeaders,
         } = inputSchema.parse(body)
         const projectId = Number(body.projectId)
         const commitsScope = new CommitsRepository(workspace.id)
@@ -111,6 +113,7 @@ export const POST = errorHandler(
             versionUuid: commitUuid,
             parameters,
             userMessage,
+            mcpHeaders,
           })
           if (!result?.uuid) throw new Error('Failed to create run')
 

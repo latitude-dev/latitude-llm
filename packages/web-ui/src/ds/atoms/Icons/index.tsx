@@ -171,6 +171,7 @@ import {
   GraduationCap,
   Bell,
   CreditCardIcon,
+  KeyRound,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -334,6 +335,7 @@ const Icons = {
   intercom: Intercom,
   intercomChat: IntercomChat,
   jira: Jira,
+  key: KeyRound,
   lab: FlaskConical,
   letterText: LetterText,
   lightBulb: Lightbulb,
