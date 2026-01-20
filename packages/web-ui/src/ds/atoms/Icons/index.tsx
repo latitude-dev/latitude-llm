@@ -170,6 +170,7 @@ import {
   UserRoundPlus,
   GraduationCap,
   Bell,
+  CreditCardIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -431,6 +432,7 @@ const Icons = {
   deepSeek: DeepSeek,
   perplexity: Perplexity,
   zap: Zap,
+  creditCard: CreditCardIcon,
   chartNoAxesGantt: ChartNoAxesGantt,
   rectangleHorizontal: RectangleHorizontal,
   expand: Expand,

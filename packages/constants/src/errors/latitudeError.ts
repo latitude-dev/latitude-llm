@@ -138,6 +138,44 @@ export class PaymentRequiredError extends LatitudeError {
   public name = LatitudeErrorCodes.PaymentRequiredError
 }
 
+export type BillingErrorTags = {
+  workspaceId?: number
+  userEmail?: string
+  stripeCustomerId?: string
+  plan?: string
+}
+
+/**
+ * Error class for billing-related failures (Stripe API errors, etc.).
+ * Includes tags for error tracking in Datadog.
+ */
+export class BillingError extends LatitudeError {
+  public statusCode = 400
+  public name = LatitudeErrorCodes.BillingError
+  public tags: BillingErrorTags
+  public originalError?: Error
+
+  constructor(
+    message: string,
+    {
+      tags = {},
+      originalError,
+    }: {
+      tags?: BillingErrorTags
+      originalError?: Error
+    } = {},
+  ) {
+    super(message, {
+      workspaceId: tags.workspaceId?.toString(),
+      userEmail: tags.userEmail,
+      stripeCustomerId: tags.stripeCustomerId,
+      plan: tags.plan,
+    })
+    this.tags = tags
+    this.originalError = originalError
+  }
+}
+
 export const databaseErrorCodes = {
   foreignKeyViolation: '23503',
   uniqueViolation: '23505',

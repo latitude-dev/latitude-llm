@@ -17,6 +17,7 @@ const jobMappings = {
   scheduleWeeklyEmailJobs: jobs.scheduleWeeklyEmailJobs,
   dailyAlignmentMetricUpdateJob: jobs.dailyAlignmentMetricUpdateJob,
   updateEvaluationAlignmentJob: jobs.updateEvaluationAlignmentJob,
+  processCancelledSubscriptionsJob: jobs.processCancelledSubscriptionsJob,
 }
 
 export function startMaintenanceWorker() {

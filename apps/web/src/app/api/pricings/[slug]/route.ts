@@ -1,56 +1,91 @@
 import { ROUTES } from '$/services/routes'
-import { getDataFromSession } from '$/data-access'
+import { authHandler } from '$/middlewares/authHandler'
+import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import {
+  FREE_PLANS,
   getContactSalesLink,
+  LEGACY_PLANS,
   SubscriptionPlan,
 } from '@latitude-data/core/plans'
+import { createCheckoutSession } from '@latitude-data/core/services/billing/createCheckoutSession'
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
+import { env } from '@latitude-data/env'
+
+const CONTACT_SALES_PLANS = [
+  SubscriptionPlan.ScaleV1,
+  SubscriptionPlan.EnterpriseV1,
+]
 
 function isSubscriptionPlan(value: string): value is SubscriptionPlan {
   return Object.values(SubscriptionPlan).includes(value as SubscriptionPlan)
 }
 
-const PLAN_TEAM_PAYMENT_URL = 'https://buy.stripe.com/dRm6oGgzK8qQ2Z82bv38409'
-
 /**
- * IMPORTANT:
- * This API is used by public page
- * https://latitude.so/pricing
- * We get the plan slug from the URL and redirect the user to the appropriate payment link.
+ * Handles plan selection and subscription management.
+ *
+ * - Free (hobby) users selecting Team V4 → Creates Stripe Checkout Session
+ * - Existing paying customers (legacy/Scale/Enterprise plans) → Redirects to contact sales
+ * - Scale/Enterprise plan selection → Redirects to book a demo (not self-serve)
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
-) {
-  const { slug } = await params
-  if (!isSubscriptionPlan(slug)) {
-    return NextResponse.json(
-      { message: 'Invalid pricing plan' },
-      { status: 400 },
-    )
-  }
+export const GET = errorHandler(
+  authHandler(
+    async (
+      _req: NextRequest,
+      {
+        params,
+        user,
+        workspace,
+      }: {
+        params: { slug: string }
+        user: User
+        workspace: WorkspaceDto
+      },
+    ) => {
+      const { slug } = params
+      if (!isSubscriptionPlan(slug)) {
+        return NextResponse.json(
+          { message: 'Invalid pricing plan' },
+          { status: 400 },
+        )
+      }
 
-  const { user } = await getDataFromSession()
-  if (!user) {
-    const loginUrl = new URL(ROUTES.auth.login, request.url)
-    loginUrl.searchParams.set('returnTo', request.url)
-    return NextResponse.redirect(loginUrl)
-  }
-  const bookADemo = getContactSalesLink()
-  const paymentUrlMap: Partial<Record<SubscriptionPlan, string>> = {
-    [SubscriptionPlan.TeamV4]: PLAN_TEAM_PAYMENT_URL,
-    [SubscriptionPlan.ScaleV1]: bookADemo,
-    [SubscriptionPlan.EnterpriseV1]: bookADemo,
-  }
-  const paymentUrl = paymentUrlMap[slug]
-  if (!paymentUrl) {
-    return NextResponse.json(
-      { message: 'Invalid pricing plan' },
-      { status: 400 },
-    )
-  }
+      const currentPlan = workspace.currentSubscription.plan
 
-  const upgradeLink = `${paymentUrl}?prefilled_email=${encodeURIComponent(user.email)}`
+      if (CONTACT_SALES_PLANS.includes(slug)) {
+        return NextResponse.redirect(getContactSalesLink())
+      }
 
-  return NextResponse.redirect(upgradeLink)
-}
+      const isFreePlan = currentPlan && FREE_PLANS.includes(currentPlan)
+      const isLegacyPaidPlan = currentPlan && LEGACY_PLANS.includes(currentPlan)
+      const isContactSalesPlan =
+        currentPlan && CONTACT_SALES_PLANS.includes(currentPlan)
+
+      if (isFreePlan && slug === SubscriptionPlan.TeamV4) {
+        const returnUrl = `${env.APP_URL}${ROUTES.choosePricingPlan.root}`
+        const { url } = await createCheckoutSession({
+          plan: SubscriptionPlan.TeamV4,
+          workspaceId: workspace.id,
+          userEmail: user.email,
+          successUrl: `${returnUrl}?checkout=success`,
+          cancelUrl: `${returnUrl}?checkout=canceled`,
+        }).then((r) => r.unwrap())
+
+        return NextResponse.redirect(url)
+      }
+
+      if (isLegacyPaidPlan || isContactSalesPlan) {
+        return NextResponse.redirect(getContactSalesLink())
+      }
+
+      return NextResponse.json(
+        {
+          message:
+            'This plan is not available for your current subscription. Please contact our support team and we will be happy to assist you.',
+        },
+        { status: 400 },
+      )
+    },
+  ),
+)
