@@ -21,6 +21,7 @@ import { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
 
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
@@ -70,6 +71,16 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     })
   }
 
+  const { effectiveCommit, effectiveDocument, effectiveSource, abTest } =
+    await resolveAbTestRouting({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      commit,
+      document,
+      source,
+      customIdentifier,
+    })
+
   const shouldRunInBackground = await shouldRunInBackgroundMode({
     workspaceId: workspace.id,
     explicitBackground: background,
@@ -79,27 +90,28 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     return await handleBackgroundRun({
       c,
       workspace,
-      document,
-      commit,
+      document: effectiveDocument,
+      commit: effectiveCommit,
       project,
       parameters,
       customIdentifier,
       tools,
       mcpHeaders,
       userMessage,
-      source,
+      source: effectiveSource,
+      abTest,
     })
   }
 
   return await handleForegroundRun({
     c,
     workspace,
-    document,
-    commit,
+    document: effectiveDocument,
+    commit: effectiveCommit,
     project,
     parameters,
     customIdentifier,
-    source,
+    source: effectiveSource,
     useSSE,
     tools,
     mcpHeaders,
@@ -119,6 +131,7 @@ async function handleBackgroundRun({
   mcpHeaders,
   userMessage,
   source,
+  abTest,
 }: {
   c: Context
   workspace: WorkspaceDto
@@ -131,20 +144,11 @@ async function handleBackgroundRun({
   mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
   source: LogSources
+  abTest: DeploymentTest | null
 }) {
-  // Find active AB test and route accordingly
-  const { effectiveCommit, effectiveSource, abTest } =
-    await resolveAbTestRouting({
-      workspaceId: workspace.id,
-      projectId: project.id,
-      commit,
-      source,
-      customIdentifier,
-    })
-
   const { run } = await enqueueRun({
     document,
-    commit: effectiveCommit,
+    commit,
     project,
     workspace,
     parameters,
@@ -152,7 +156,7 @@ async function handleBackgroundRun({
     tools,
     mcpHeaders,
     userMessage,
-    source: effectiveSource,
+    source,
     activeDeploymentTest: abTest || undefined,
   }).then((r) => r.unwrap())
 
@@ -186,15 +190,6 @@ async function handleForegroundRun({
   mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
 }) {
-  // Find active AB test and route accordingly
-  const { effectiveCommit, effectiveSource } = await resolveAbTestRouting({
-    workspaceId: workspace.id,
-    projectId: project.id,
-    commit,
-    source,
-    customIdentifier,
-  })
-
   const {
     stream: runStream,
     getFinalResponse,
@@ -202,10 +197,10 @@ async function handleForegroundRun({
   } = await runForegroundDocument({
     workspace,
     document,
-    commit: effectiveCommit,
+    commit,
     parameters,
     customIdentifier,
-    source: effectiveSource,
+    source,
     abortSignal: c.req.raw.signal, // FIXME: This does not seem to work
     project,
     tools,
@@ -284,7 +279,7 @@ async function handleForegroundRun({
     provider: finalResponse.provider,
     source: {
       documentUuid: document.documentUuid,
-      commitUuid: effectiveCommit.uuid,
+      commitUuid: commit.uuid,
     },
   }).unwrap()
 

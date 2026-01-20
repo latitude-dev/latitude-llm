@@ -4,18 +4,19 @@ async function run() {
   const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
     projectId: Number(process.env.PROJECT_ID),
     versionUuid: 'live',
+    __internal: {
+      gateway: {
+        host: 'localhost',
+        port: 8787,
+        ssl: false,
+      }
+    },
   })
 
-  const result = await sdk.prompts.run('run-prompt/example', {
-    parameters: {
-      product_name: 'iPhone',
-      features: 'Camera, Battery, Display',
-      target_audience: 'Tech enthusiasts',
-      tone: 'Informal',
-      word_count: 20,
-    },
+  const result = await sdk.prompts.run('drink_water_bug', {
     // Get messages as streaming
-    stream: true,
+    stream: false,
+    background: true,
 
     // To get streaming you can use `onEvent`
     onEvent: (event) => {
