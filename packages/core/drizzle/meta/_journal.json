@@ -1821,6 +1821,13 @@
       "when": 1768812273835,
       "tag": "0260_add_stripe_customer_id_to_workspaces",
       "breakpoints": true
+    },
+    {
+      "idx": 261,
+      "version": "7",
+      "when": 1768908736835,
+      "tag": "0261_integration_header_presets",
+      "breakpoints": true
     }
   ]
 }
