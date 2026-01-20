@@ -142,19 +142,20 @@ describe('POST /run', () => {
         project,
         user,
       })
-      const document = await createDocumentVersion({
+      const docResult = await createDocumentVersion({
         workspace,
         user,
         commit: cmt,
         path,
         content: helpers.createPrompt({ provider: providers[0]! }),
       })
+      document = docResult.documentVersion
 
       commit = await mergeCommit(cmt).then((r) => r.unwrap())
 
       route = `/api/v3/projects/${project!.id}/versions/${commit!.uuid}/documents/run`
       body = JSON.stringify({
-        path: document.documentVersion.path,
+        path: document.path,
         parameters: {},
         customIdentifier: 'miau',
         stream: true,
@@ -171,6 +172,13 @@ describe('POST /run', () => {
           return Promise.resolve(Result.ok(false))
         }
         return Promise.resolve(Result.ok(false))
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveDocument: document,
+        effectiveSource: LogSources.API,
       })
     })
 
@@ -195,6 +203,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.Playground,
       })
 
@@ -265,6 +274,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -317,6 +327,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -443,6 +454,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -500,19 +512,20 @@ describe('POST /run', () => {
         project,
         user,
       })
-      const document = await createDocumentVersion({
+      const docResult = await createDocumentVersion({
         workspace,
         user,
         commit: cmt,
         path,
         content: helpers.createPrompt({ provider: providers[0]! }),
       })
+      document = docResult.documentVersion
 
       commit = await mergeCommit(cmt).then((r) => r.unwrap())
 
       route = `/api/v3/projects/${project!.id}/versions/${commit!.uuid}/documents/run`
       body = JSON.stringify({
-        path: document.documentVersion.path,
+        path: document.path,
         parameters: {},
       })
       headers = {
@@ -527,6 +540,13 @@ describe('POST /run', () => {
           return Promise.resolve(Result.ok(false))
         }
         return Promise.resolve(Result.ok(false))
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveDocument: document,
+        effectiveSource: LogSources.API,
       })
     })
 
@@ -551,6 +571,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.Playground,
       })
 
@@ -645,6 +666,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -724,6 +746,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -759,6 +782,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -811,6 +835,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -907,6 +932,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
     })
@@ -1055,6 +1081,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
     })
@@ -1071,6 +1098,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -1109,6 +1137,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -1204,6 +1233,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -1271,6 +1301,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -1310,6 +1341,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
 
@@ -1464,6 +1496,7 @@ describe('POST /run', () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
+        effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
     })
@@ -1485,6 +1518,7 @@ describe('POST /run', () => {
         mocks.resolveAbTestRouting.mockResolvedValue({
           abTest: shadowTest,
           effectiveCommit: commit,
+          effectiveDocument: document,
           effectiveSource: LogSources.API,
         })
 
@@ -1593,6 +1627,7 @@ describe('POST /run', () => {
         mocks.resolveAbTestRouting.mockResolvedValue({
           abTest,
           effectiveCommit: commit,
+          effectiveDocument: document,
           effectiveSource: LogSources.API,
         })
 
@@ -1667,6 +1702,7 @@ describe('POST /run', () => {
           workspaceId: workspace.id,
           projectId: project.id,
           commit,
+          document: expect.anything(),
           source: LogSources.API,
           customIdentifier: 'user-123',
         })
@@ -1694,8 +1730,9 @@ describe('POST /run', () => {
         mocks.resolveAbTestRouting.mockResolvedValue({
           abTest,
           effectiveCommit: challengerCommit,
-          effectiveSource: LogSources.ABTestChallenger,
-        })
+        effectiveDocument: document,
+        effectiveSource: LogSources.ABTestChallenger,
+      })
 
         const documentLogUuid = generateUUIDIdentifier()
         const usage = {
@@ -1768,6 +1805,7 @@ describe('POST /run', () => {
           workspaceId: workspace.id,
           projectId: project.id,
           commit,
+          document: expect.anything(),
           source: LogSources.API,
           customIdentifier: 'user-456',
         })
@@ -1795,6 +1833,7 @@ describe('POST /run', () => {
         mocks.resolveAbTestRouting.mockResolvedValue({
           abTest,
           effectiveCommit: commit,
+          effectiveDocument: document,
           effectiveSource: LogSources.API,
         })
 
@@ -1868,6 +1907,7 @@ describe('POST /run', () => {
           workspaceId: workspace.id,
           projectId: project.id,
           commit,
+          document: expect.anything(),
           source: LogSources.API,
           customIdentifier: undefined,
         })
@@ -1891,6 +1931,7 @@ describe('POST /run', () => {
         mocks.resolveAbTestRouting.mockResolvedValue({
           abTest: shadowTest,
           effectiveCommit: commit,
+          effectiveDocument: document,
           effectiveSource: LogSources.API,
         })
 
