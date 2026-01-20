@@ -35,6 +35,7 @@ import { getEvaluationMetricSpecification } from '../../evaluationsV2/specificat
 import { OptimizerEvaluateArgs } from './index'
 import { LearnableTrajectory } from './shared'
 
+// BONUS(AO/OPT): Implement multi-objective optimization
 // BONUS(AO/OPT): Implement multi-document optimization
 export async function evaluateFactory<
   T extends EvaluationType,

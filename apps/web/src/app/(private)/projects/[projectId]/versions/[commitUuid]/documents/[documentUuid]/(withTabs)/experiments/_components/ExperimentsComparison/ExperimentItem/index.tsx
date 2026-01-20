@@ -1,32 +1,32 @@
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { cn } from '@latitude-data/web-ui/utils'
+import { stopExperimentAction } from '$/actions/experiments'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import {
   BestLogsMetadata,
   EvaluationWithBestExperiment,
 } from '$/stores/experimentComparison'
+import { DocumentVersion } from '@latitude-data/constants'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { ExperimentPrompt } from './Prompt'
-import {
-  ExperimentLogsMetadata,
-  ExperimentLogsMetadataPlaceholder,
-} from './LogsMetadata'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { cn } from '@latitude-data/web-ui/utils'
+import { useCallback } from 'react'
+import { ActionButtons } from './ActionButtons'
 import {
   ExperimentEvaluationScores,
   ExperimentEvaluationScoresPlaceholder,
 } from './EvaluationScores'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { ActionButtons } from './ActionButtons'
-import { DocumentVersion } from '@latitude-data/constants'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { stopExperimentAction } from '$/actions/experiments'
-import { useCallback } from 'react'
-import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
+import {
+  ExperimentLogsMetadata,
+  ExperimentLogsMetadataPlaceholder,
+} from './LogsMetadata'
+import { ExperimentPrompt } from './Prompt'
 
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { Project } from '@latitude-data/core/schema/models/types/Project'
 export function ExperimentItemPlaceholder({
   isLast,
   evaluationCount,
@@ -57,14 +57,20 @@ export function ExperimentItem({
   experiment,
   evaluations,
   bestLogsMetadata,
+  isFirst,
   isLast,
+  isSamePrompt,
   onUnselect,
+  onCompare,
 }: {
   experiment?: ExperimentWithScores
   evaluations?: EvaluationWithBestExperiment[]
   bestLogsMetadata: BestLogsMetadata
+  isFirst: boolean
   isLast: boolean
+  isSamePrompt: boolean
   onUnselect?: () => void
+  onCompare?: () => void
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -100,40 +106,41 @@ export function ExperimentItem({
       )}
     >
       <div className='flex flex-row w-full items-center justify-between gap-4'>
-        <div className='w-full'>
+        <div className='w-full truncate'>
           <Text.H4B ellipsis noWrap>
             {experiment.name}
           </Text.H4B>
         </div>
         {!experiment.finishedAt && (
           <Button
-            variant='outline'
-            fancy
-            className='border-destructive'
-            onClick={stopExperiment}
+            variant='outlineDestructive'
             iconProps={{
               name: 'circleStop',
-              color: 'destructive',
+              className: 'shrink-0',
             }}
+            onClick={stopExperiment}
           >
-            <Text.H5 noWrap color='destructive'>
-              Stop Execution
-            </Text.H5>
+            Cancel
           </Button>
         )}
         {onUnselect && (
           <Button
+            variant='ghost'
             iconProps={{
               name: 'close',
               color: 'foregroundMuted',
+              className: 'shrink-0',
             }}
             onClick={onUnselect}
-            variant='ghost'
             className='p-0'
           />
         )}
       </div>
-      <ExperimentPrompt experiment={experiment} />
+      <ExperimentPrompt
+        experiment={experiment}
+        onCompare={isFirst ? undefined : onCompare}
+        isSamePrompt={isSamePrompt}
+      />
       <ExperimentLogsMetadata
         experiment={experiment}
         bestLogsMetadata={bestLogsMetadata}
