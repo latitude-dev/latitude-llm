@@ -14,6 +14,9 @@ import { createProject } from '../src/services/projects/create'
 import { createMembership } from '../src/services/memberships/create'
 import { createApiKey } from '../src/services/apiKeys/create'
 import { createProviderApiKey } from '../src/services/providerApiKeys/create'
+import { createFeature } from '../src/services/features/create'
+import { toggleFeatureGlobally } from '../src/services/features/toggleGlobally'
+import { FeaturesRepository } from '../src/repositories'
 import { unsafelyFindWorkspace } from '../src/data-access/workspaces'
 import {
   ApiKeysRepository,
@@ -26,6 +29,7 @@ import { updateDocumentUnsafe } from '../src/services/documents/updateUnsafe'
 import { type Commit } from '../src/schema/models/types/Commit'
 import { type User } from '../src/schema/models/types/User'
 import { type Workspace } from '../src/schema/models/types/Workspace'
+import { type Feature } from '../src/schema/models/types/Feature'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -35,6 +39,13 @@ const REFERENCE_WORKSPACE = 'Latitude Reference'
 const REFERENCE_PROJECT = 'Copilot'
 const PROMPTS_DIR = path.join(__dirname, 'prompts')
 const ENTERPRISE_PROVIDER_NAME = 'OpenAI'
+const GLOBAL_FEATURES = [
+  'issues',
+  'traces',
+  'evaluationGenerator',
+  'testing',
+  'optimizations',
+]
 
 /**
  * Recursively gets all .promptl files from a directory
@@ -183,6 +194,43 @@ async function main() {
     console.log(`✓ API key found with ID: ${apiKeyResult.id}`)
   }
 
+  // 3. Enable global features
+  console.log(`\nEnabling global features: ${GLOBAL_FEATURES.join(', ')}`)
+  const featuresRepo = new FeaturesRepository()
+
+  for (const featureName of GLOBAL_FEATURES) {
+    console.log(`  Enabling feature: ${featureName}`)
+    const featureResult = await featuresRepo.findByName(featureName)
+
+    let feature: Feature
+    if (featureResult.ok) {
+      feature = featureResult.value!
+    } else {
+      // Feature doesn't exist, create it
+      const createResult = await createFeature({ name: featureName })
+      if (createResult.error) {
+        console.error(
+          `  ✗ Failed to create feature ${featureName}:`,
+          createResult.error,
+        )
+        continue
+      }
+      feature = createResult.value
+      console.log(`    ✓ Feature ${featureName} created`)
+    }
+
+    // Enable the feature globally
+    const toggleResult = await toggleFeatureGlobally(feature.id, true)
+    if (toggleResult.error) {
+      console.error(
+        `  ✗ Failed to enable feature ${featureName}:`,
+        toggleResult.error,
+      )
+      continue
+    }
+    console.log(`    ✓ Feature ${featureName} enabled globally`)
+  }
+
   // 4. Find or create project
   console.log(`Checking for project: ${REFERENCE_PROJECT}`)
   const projectResults = await database
@@ -315,6 +363,7 @@ async function main() {
   console.log(`  - User: ${user.email}`)
   console.log(`  - Workspace: ${workspace.name} (ID: ${workspace.id})`)
   console.log(`  - Project: ${project.name} (ID: ${project.id})`)
+  console.log(`  - Global features enabled: ${GLOBAL_FEATURES.length}`)
   console.log(`  - Prompts created: ${created}`)
   console.log(`  - Prompts updated: ${updated}`)
   console.log(`  - Total prompts: ${promptFiles.length}`)
