@@ -1,6 +1,5 @@
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { DatadogProvider } from '$/components/Providers/DatadogProvider'
-import { GoogleTagManager } from '$/components/Providers/GoogleTagManager'
 import { SWRProvider } from '$/components/Providers/SWRProvider'
 import { fontMono, fontSans, fontDisplay } from '$/helpers/fonts'
 import { ToastProvider } from '@latitude-data/web-ui/atoms/Toast'
@@ -37,7 +36,6 @@ export default function RootLayout({
       <body
         className={`w-full h-full ${fontSans.variable} ${fontMono.variable} ${fontDisplay.variable} font-sans`}
       >
-        <GoogleTagManager />
         <NextTopLoader showSpinner={false} />
         <DatadogProvider>
           <SWRProvider config={{ revalidateOnFocus: false }}>
