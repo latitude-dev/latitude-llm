@@ -155,7 +155,7 @@ export async function updateEvaluationV2<
       if (issueId !== undefined) {
         // issueId === null means un-assign the issue.
         await syncDefaultCompositeTarget(
-          { evaluation, issueId, document, commit, workspace },
+          { document, commit, workspace },
           transaction,
         )
       }

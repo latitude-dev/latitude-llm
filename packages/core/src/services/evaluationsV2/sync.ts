@@ -1,13 +1,16 @@
 import { Database } from '../../client'
 import {
   CompositeEvaluationMetric,
-  EvaluationMetric,
+  EvaluationSettings,
   EvaluationType,
   EvaluationV2,
 } from '../../constants'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
-import { EvaluationsV2Repository } from '../../repositories'
+import {
+  DocumentVersionsRepository,
+  EvaluationsV2Repository,
+} from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
@@ -17,6 +20,11 @@ import { deleteEvaluationV2 } from './delete'
 import { updateEvaluationV2 } from './update'
 
 type CompositeTarget = EvaluationV2<
+  EvaluationType.Composite,
+  CompositeEvaluationMetric.Average
+>
+
+type CompositeSettings = EvaluationSettings<
   EvaluationType.Composite,
   CompositeEvaluationMetric.Average
 >
@@ -49,17 +57,37 @@ async function getCompositeTarget({
   return Result.ok(result.value as CompositeTarget | undefined)
 }
 
-async function createCompositeEvaluation<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(
+function generateCompositeEvaluationSettings(
+  evaluations: EvaluationV2[],
+): CompositeSettings {
+  return {
+    name: 'Performance',
+    description: 'Measures the overall performance',
+    type: EvaluationType.Composite,
+    metric: CompositeEvaluationMetric.Average,
+    configuration: {
+      reverseScale: false,
+      actualOutput: {
+        messageSelection: 'last',
+        parsingFormat: 'string',
+      },
+      expectedOutput: {
+        parsingFormat: 'string',
+      },
+      evaluationUuids: evaluations.map((evaluation) => evaluation.uuid),
+      minThreshold: 75,
+    },
+  }
+}
+
+async function createCompositeEvaluation(
   {
-    evaluation,
+    evaluations,
     document,
     commit,
     workspace,
   }: {
-    evaluation: EvaluationV2<T, M>
+    evaluations: EvaluationV2[]
     document: DocumentVersion
     commit: Commit
     workspace: Workspace
@@ -67,28 +95,11 @@ async function createCompositeEvaluation<
   transaction: Transaction,
 ): PromisedResult<CompositeTarget> {
   return await transaction.call(async () => {
-    const creating = await createEvaluationV2(
+    const createResult = await createEvaluationV2(
       {
         document,
         commit,
-        settings: {
-          name: 'Performance',
-          description: 'Measures the overall performance',
-          type: EvaluationType.Composite,
-          metric: CompositeEvaluationMetric.Average,
-          configuration: {
-            reverseScale: false,
-            actualOutput: {
-              messageSelection: 'last',
-              parsingFormat: 'string',
-            },
-            expectedOutput: {
-              parsingFormat: 'string',
-            },
-            evaluationUuids: [evaluation.uuid],
-            minThreshold: 75,
-          },
-        },
+        settings: generateCompositeEvaluationSettings(evaluations),
         options: {
           evaluateLiveLogs: false,
           enableSuggestions: false,
@@ -99,9 +110,8 @@ async function createCompositeEvaluation<
       transaction,
     )
 
-    if (creating.error) return Result.error(creating.error)
-
-    const newComposite = creating.value.evaluation
+    if (createResult.error) return createResult
+    const newComposite = createResult.unwrap().evaluation
 
     await updateDocumentUnsafe(
       { document, commit, data: { mainEvaluationUuid: newComposite.uuid } },
@@ -109,6 +119,38 @@ async function createCompositeEvaluation<
     )
 
     return Result.ok(newComposite)
+  })
+}
+
+async function updateCompositeEvaluation(
+  {
+    compositeEvaluation,
+    evaluations,
+    commit,
+    workspace,
+  }: {
+    compositeEvaluation: CompositeTarget
+    evaluations: EvaluationV2[]
+    commit: Commit
+    workspace: Workspace
+  },
+  transaction: Transaction,
+): PromisedResult<CompositeTarget> {
+  return await transaction.call(async () => {
+    const updateResult = await updateEvaluationV2(
+      {
+        evaluation: compositeEvaluation,
+        commit,
+        workspace,
+        settings: generateCompositeEvaluationSettings(evaluations),
+        force: true,
+      },
+      transaction,
+    )
+
+    if (updateResult.error) return updateResult
+    const updatedComposite = updateResult.unwrap().evaluation
+    return Result.ok(updatedComposite)
   })
 }
 
@@ -143,172 +185,101 @@ async function deleteCompositeEvaluation(
   })
 }
 
-async function removeFromComposite<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(
-  {
-    evaluation,
-    target,
-    commit,
-    workspace,
-  }: {
-    evaluation: EvaluationV2<T, M>
-    target: CompositeTarget
-    commit: Commit
-    workspace: Workspace
-  },
-  transaction: Transaction,
-): PromisedResult<CompositeTarget> {
-  const newEvaluationUuids = target.configuration.evaluationUuids.filter(
-    (uuid) => uuid !== evaluation.uuid,
-  )
-
-  const updating = await updateEvaluationV2(
-    {
-      evaluation: target,
-      commit,
-      workspace,
-      settings: {
-        configuration: {
-          ...target.configuration,
-          evaluationUuids: newEvaluationUuids,
-        },
-      },
-      force: true,
-    },
-    transaction,
-  )
-
-  if (updating.error) return updating
-
-  return Result.ok(updating.value.evaluation)
-}
-
-async function addToComposite<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(
-  {
-    evaluation,
-    target,
-    commit,
-    workspace,
-  }: {
-    evaluation: EvaluationV2<T, M>
-    target: CompositeTarget
-    commit: Commit
-    workspace: Workspace
-  },
-  transaction: Transaction,
-): PromisedResult<CompositeTarget> {
-  const newEvaluationUuids = [
-    ...target.configuration.evaluationUuids,
-    evaluation.uuid,
-  ]
-
-  const updating = await updateEvaluationV2(
-    {
-      evaluation: target,
-      commit,
-      workspace,
-      settings: {
-        configuration: {
-          ...target.configuration,
-          evaluationUuids: newEvaluationUuids,
-        },
-      },
-      force: true,
-    },
-    transaction,
-  )
-
-  if (updating.error) return updating
-
-  return Result.ok(updating.value.evaluation)
-}
-
 /**
  * Syncs the default composite evaluation for a document.
  *
  * This function manages the "Performance" composite evaluation that combines
  * all issue-linked evaluations for a document:
  *
- * - CREATE: When no composite exists and evaluation has an issue → create composite
- * - ADD: When composite exists and evaluation has an issue → add to composite
- * - REMOVE: When evaluation loses its issue → remove from composite
- * - DELETE: When removing the last evaluation from composite → delete composite
- *   and clear mainEvaluationUuid on document.
+ * - Finds all issue-related evaluations for a document in the commit
+ * - If no issue-related evaluation exists, the default composite evaluation is removed
+ * - Otherwise, if no default composite evaluation exists, a new one is created
+ * - It updates the composite evaluation to include all issue-related evaluations
  */
-export async function syncDefaultCompositeTarget<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(
+export async function syncDefaultCompositeTarget(
   {
-    evaluation,
-    issueId,
-    document,
+    document: inputDocument,
     commit,
     workspace,
   }: {
-    evaluation: EvaluationV2<T, M>
-    issueId: number | null
     document: DocumentVersion
     commit: Commit
     workspace: Workspace
   },
   transaction = new Transaction(),
 ): Promise<TypedResult<CompositeTarget | undefined>> {
-  const hasIssue = issueId !== null
-
   return await transaction.call(async (tx) => {
-    const targetResult = await getCompositeTarget({
+    // Fetch a fresh document to ensure we have the latest mainEvaluationUuid
+    const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
+    const documentResult = await documentsRepository.getDocumentAtCommit({
+      projectId: commit.projectId,
+      commitUuid: commit.uuid,
+      documentUuid: inputDocument.documentUuid,
+    })
+    if (documentResult.error) return documentResult
+    const document = documentResult.unwrap()
+
+    // Get the default composite evaluation for the document
+    const compositeEvalResult = await getCompositeTarget({
       document,
       commit,
       workspace,
       db: tx,
     })
 
-    if (targetResult.error) return targetResult
+    if (compositeEvalResult.error) return compositeEvalResult
+    const compositeEvaluation = compositeEvalResult.unwrap()
 
-    const target = targetResult.value
-    const included = !!target?.configuration.evaluationUuids.includes(
-      evaluation.uuid,
+    // Get the issue-related evaluations for the document
+    const evaluationsScope = new EvaluationsV2Repository(workspace.id, tx)
+    const evaluationsResult = await evaluationsScope.listAtCommitByDocument({
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+    })
+    if (evaluationsResult.error) return evaluationsResult
+    const evaluations = evaluationsResult.unwrap()
+
+    const issueRelatedEvaluations = evaluations.filter(
+      (evaluation) => evaluation.issueId !== null,
     )
 
-    // No composite exists
-    if (!target) {
-      if (!hasIssue) return Result.nil()
-
-      return createCompositeEvaluation(
-        { evaluation, document, commit, workspace },
-        transaction,
-      )
-    }
-
-    // Composite exists and evaluation is included
-    if (included) {
-      if (hasIssue) return Result.nil()
-
-      const isLastOne = target.configuration.evaluationUuids.length === 1
-      if (isLastOne) {
-        return deleteCompositeEvaluation(
-          { target, document, commit, workspace },
-          transaction,
-        )
+    if (issueRelatedEvaluations.length === 0) {
+      if (!compositeEvaluation) {
+        // No issue evaluations and no composite eval, there is nothing to do.
+        return Result.nil()
       }
 
-      return removeFromComposite(
-        { evaluation, target, commit, workspace },
+      // There is a composite eval, but no longer any issue evaluations, so we need to delete it.
+      return deleteCompositeEvaluation(
+        {
+          target: compositeEvaluation,
+          document,
+          commit,
+          workspace,
+        },
         transaction,
       )
     }
 
-    // Composite exists but evaluation is not included
-    if (!hasIssue) return Result.nil()
+    if (!compositeEvaluation) {
+      return createCompositeEvaluation(
+        {
+          evaluations: issueRelatedEvaluations,
+          document,
+          commit,
+          workspace,
+        },
+        transaction,
+      )
+    }
 
-    return addToComposite(
-      { evaluation, target, commit, workspace },
+    return updateCompositeEvaluation(
+      {
+        compositeEvaluation,
+        evaluations: issueRelatedEvaluations,
+        commit,
+        workspace,
+      },
       transaction,
     )
   })

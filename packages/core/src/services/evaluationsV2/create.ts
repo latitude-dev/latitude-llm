@@ -103,7 +103,7 @@ export async function createEvaluationV2<
       // Note: failing silently.
       // We don't want to block evaluation creation
       await syncDefaultCompositeTarget(
-        { evaluation, issueId, document, commit, workspace },
+        { document, commit, workspace },
         transaction,
       )
     }
