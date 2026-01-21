@@ -132,7 +132,9 @@
 
 ## Database Schema Patterns
 
-### Schema Definition (`packages/core/src/schema/models/`)
+### PostgreSQL (Drizzle ORM)
+
+#### Schema Definition (`packages/core/src/schema/models/`)
 
 - Use Drizzle ORM with PostgreSQL schema
 - All tables use `latitudeSchema.table()` from `../db-schema`
@@ -172,6 +174,83 @@
     }
   }
   ```
+
+### ClickHouse Migrations (`packages/core/clickhouse/`)
+
+ClickHouse is used for analytics and high-performance data storage. Migrations use [golang-migrate](https://github.com/golang-migrate/migrate).
+
+#### Migration Commands
+
+- `pnpm --filter @latitude-data/core ch:connect` - Open interactive ClickHouse client
+- `pnpm --filter @latitude-data/core ch:status` - Show migration status
+- `pnpm --filter @latitude-data/core ch:create <name>` - Create new migration files
+- `pnpm --filter @latitude-data/core ch:up` - Apply pending migrations
+- `pnpm --filter @latitude-data/core ch:down [N|all]` - Rollback N migrations (default: 1) or all
+- `pnpm --filter @latitude-data/core ch:drop` - Drop all tables
+- `pnpm --filter @latitude-data/core ch:reset` - Reset database (down + up)
+- `pnpm --filter @latitude-data/core ch:status:test` - Show test database migration status
+- `pnpm --filter @latitude-data/core ch:up:test` - Apply migrations to test database
+- `pnpm --filter @latitude-data/core ch:down:test [N|all]` - Rollback test database
+- `pnpm --filter @latitude-data/core ch:reset:test` - Reset test database
+
+#### Two Migration Folders
+
+Migrations exist in two versions to support different deployment modes:
+
+- `clickhouse/migrations/unclustered/` - For single-node setups (development, self-hosted)
+- `clickhouse/migrations/clustered/` - For replicated cluster setups (production)
+
+The system automatically selects based on `CLICKHOUSE_CLUSTER_ENABLED` environment variable.
+
+#### Migration File Naming
+
+Files follow the convention: `NNNN_description.{up,down}.sql`
+
+Example:
+```
+0001_create_events.up.sql
+0001_create_events.down.sql
+```
+
+#### Writing Migrations
+
+**Always create both clustered and unclustered versions.** They must be kept in sync.
+
+Unclustered example (`unclustered/0001_create_events.up.sql`):
+```sql
+CREATE TABLE events (
+    id String,
+    workspace_id UInt64,
+    timestamp DateTime64(3)
+) ENGINE = ReplacingMergeTree()
+ORDER BY (workspace_id, timestamp, id);
+```
+
+Clustered example (`clustered/0001_create_events.up.sql`):
+```sql
+CREATE TABLE events ON CLUSTER default (
+    id String,
+    workspace_id UInt64,
+    timestamp DateTime64(3)
+) ENGINE = ReplicatedReplacingMergeTree()
+ORDER BY (workspace_id, timestamp, id);
+```
+
+#### Key Differences
+
+| Aspect | Unclustered | Clustered |
+|--------|-------------|-----------|
+| DDL clause | None | `ON CLUSTER default` |
+| Engine | `MergeTree`, `ReplacingMergeTree` | `ReplicatedMergeTree`, `ReplicatedReplacingMergeTree` |
+| Use case | Dev, self-hosted single-node | Production HA |
+
+#### Migration Rules
+
+- **Always create both versions**: Every migration needs clustered and unclustered variants
+- **Keep them in sync**: Logic must be identical, only syntax differs
+- **Make migrations reversible**: Always provide a working `down.sql`
+- **Use `ReplacingMergeTree`** for tables that need upsert semantics
+- **Include `workspace_id`** in queries for tenant isolation
 
 ## API Routes Pattern (`apps/web/src/app/api/`)
 
