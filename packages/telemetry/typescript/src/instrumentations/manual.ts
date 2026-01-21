@@ -1,3 +1,4 @@
+import { toCamelCase, toKebabCase, toSnakeCase } from '$telemetry/core'
 import { BaseInstrumentation } from '$telemetry/instrumentations/base'
 import {
   ATTRIBUTES,
@@ -173,39 +174,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
     return context
   }
 
-  private capitalize(str: string) {
-    if (str.length === 0) return str
-    return str.charAt(0).toUpperCase() + str.toLowerCase().slice(1)
-  }
-
-  private toCamelCase(str: string) {
-    return str
-      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-      .replace(/[^A-Za-z0-9]+/g, ' ')
-      .trim()
-      .split(' ')
-      .map((w, i) => (i ? this.capitalize(w) : w.toLowerCase()))
-      .join('')
-  }
-
-  private toSnakeCase(str: string) {
-    return str
-      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-      .replace(/[^A-Za-z0-9]+/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .toLowerCase()
-  }
-
-  private toKebabCase(input: string) {
-    return input
-      .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-      .replace(/[^A-Za-z0-9]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .toLowerCase()
-  }
-
   private error(span: otel.Span, error: Error, options?: ErrorOptions) {
     options = options || {}
 
@@ -339,7 +307,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     for (let i = 0; i < toolCalls.length; i++) {
       for (const key in toolCalls[i]!) {
-        const field = this.toCamelCase(key)
+        const field = toCamelCase(key)
         let value = toolCalls[i]![key]
         if (value === null || value === undefined) continue
 
@@ -417,7 +385,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const toolCalls = []
     for (const item of content) {
       for (const key in item) {
-        if (this.toCamelCase(key) !== 'type') continue
+        if (toCamelCase(key) !== 'type') continue
         if (typeof item[key] !== 'string') continue
         if (item[key] !== 'tool-call' && item[key] !== 'tool_use') continue
         toolCalls.push(item)
@@ -446,7 +414,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     let attributes: otel.Attributes = {}
     for (let i = 0; i < messages.length; i++) {
       for (const key in messages[i]!) {
-        const field = this.toCamelCase(key)
+        const field = toCamelCase(key)
         let value = messages[i]![key]
         if (value === null || value === undefined) continue
 
@@ -517,7 +485,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     const attributes: otel.Attributes = {}
     for (const key in configuration) {
-      const field = this.toSnakeCase(key)
+      const field = toSnakeCase(key)
       let value = configuration[key]
       if (value === null || value === undefined) continue
       if (typeof value === 'object' && !Array.isArray(value)) {
@@ -645,7 +613,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     const attributes: otel.Attributes = {}
     for (const key in headers) {
-      const field = this.toKebabCase(key)
+      const field = toKebabCase(key)
       const value = headers[key]
       if (value === null || value === undefined) continue
 
