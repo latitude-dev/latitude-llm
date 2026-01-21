@@ -107,7 +107,6 @@ export async function serializeEvaluationResult<
 
     documentLogUuid = span.documentLogUuid
   } else if (result.evaluatedLogId) {
-    // Fallback to legacy providerLog approach for backward compatibility
     const providerLogsRepository = new ProviderLogsRepository(workspace.id, db)
     const providerLog = await providerLogsRepository
       .find(result.evaluatedLogId)
@@ -132,6 +131,5 @@ export async function serializeEvaluationResult<
     db,
   ).then((r) => r.unwrap())
 
-  // Compatibility with refine v1 prompt
   return Result.ok({ result: result.score, reason, evaluatedLog })
 }

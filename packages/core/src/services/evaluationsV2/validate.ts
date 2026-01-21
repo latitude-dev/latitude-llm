@@ -204,8 +204,6 @@ export async function validateEvaluationV2<
     },
     options: {
       evaluateLiveLogs: options.evaluateLiveLogs,
-      enableSuggestions: options.enableSuggestions,
-      autoApplySuggestions: options.autoApplySuggestions,
     },
   })
 }

@@ -91,8 +91,6 @@ async function createCompositeEvaluation<
         },
         options: {
           evaluateLiveLogs: false,
-          enableSuggestions: false,
-          autoApplySuggestions: false,
         },
         workspace,
       },

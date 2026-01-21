@@ -29,7 +29,6 @@ export async function createEvaluationResultV2<
     dataset,
     datasetRow,
     value,
-    usedForSuggestion,
     workspace,
     dry = false,
   }: {
@@ -41,7 +40,6 @@ export async function createEvaluationResultV2<
     dataset?: Dataset
     datasetRow?: DatasetRow
     value: EvaluationResultValue<T, M>
-    usedForSuggestion?: boolean
     workspace: Workspace
     dry?: boolean
   },
@@ -60,7 +58,6 @@ export async function createEvaluationResultV2<
     evaluatedSpanId: span.id,
     evaluatedTraceId: span.traceId,
     ...value,
-    usedForSuggestion: usedForSuggestion,
   }
 
   if (dry) {

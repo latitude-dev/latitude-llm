@@ -3,59 +3,18 @@ import { type Workspace } from '../../schema/models/types/Workspace'
 import { ConflictError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { DocumentSuggestionsRepository } from '../../repositories'
-import { documentSuggestions } from '../../schema/models/documentSuggestions'
-
-async function inheritSuggestions(
-  {
-    fromVersion,
-    toVersion,
-    workspace,
-  }: {
-    fromVersion: DocumentVersion
-    toVersion: DocumentVersion
-    workspace: Workspace
-  },
-  transaction = new Transaction(),
-) {
-  if (toVersion.deletedAt) return Result.nil()
-
-  return transaction.call(async (tx) => {
-    const repository = new DocumentSuggestionsRepository(workspace.id, tx)
-
-    const suggestions = await repository
-      .listByDocumentVersion({
-        commitId: fromVersion.commitId,
-        documentUuid: fromVersion.documentUuid,
-      })
-      .then((r) => r.unwrap())
-
-    if (!suggestions.length) return Result.nil()
-
-    await tx.insert(documentSuggestions).values(
-      suggestions.map((suggestion) => ({
-        ...suggestion,
-        id: undefined,
-        commitId: toVersion.commitId,
-        documentUuid: toVersion.documentUuid,
-      })),
-    )
-
-    return Result.nil()
-  })
-}
 
 export async function inheritDocumentRelations(
   {
     fromVersion,
     toVersion,
-    workspace,
+    workspace: _workspace,
   }: {
     fromVersion: DocumentVersion
     toVersion: DocumentVersion
     workspace: Workspace
   },
-  transaction = new Transaction(),
+  _transaction = new Transaction(),
 ) {
   if (
     fromVersion.id === toVersion.id ||
@@ -68,12 +27,6 @@ export async function inheritDocumentRelations(
       new ConflictError('Cannot inherit relations between different documents'),
     )
   }
-
-  await Promise.all([
-    inheritSuggestions({ fromVersion, toVersion, workspace }, transaction).then(
-      (r) => r.unwrap(),
-    ),
-  ])
 
   return Result.nil()
 }

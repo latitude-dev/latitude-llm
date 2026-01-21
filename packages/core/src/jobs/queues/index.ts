@@ -6,7 +6,6 @@ import { Queues } from './types'
 let _queues:
   | {
       defaultQueue: Queue
-      documentSuggestionsQueue: Queue
       documentsQueue: Queue
       evaluationsQueue: Queue
       eventHandlersQueue: Queue
@@ -46,7 +45,6 @@ export async function queues() {
 
   _queues = {
     defaultQueue: new Queue(Queues.defaultQueue, options),
-    documentSuggestionsQueue: new Queue(Queues.documentSuggestionsQueue, options), // prettier-ignore
     documentsQueue: new Queue(Queues.documentsQueue, options),
     evaluationsQueue: new Queue(Queues.evaluationsQueue, options),
     eventHandlersQueue: new Queue(Queues.eventHandlersQueue, options),

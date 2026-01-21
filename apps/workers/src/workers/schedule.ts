@@ -3,20 +3,6 @@ import { queues } from '@latitude-data/core/queues'
 export async function setupSchedules() {
   const { maintenanceQueue } = await queues()
 
-  // Every day at 8 AM
-  await maintenanceQueue.upsertJobScheduler(
-    'requestDocumentSuggestionsJob',
-    { pattern: '0 0 8 * * *' },
-    { opts: { attempts: 1 } },
-  )
-
-  // Every day at 2 AM
-  await maintenanceQueue.upsertJobScheduler(
-    'cleanDocumentSuggestionsJob',
-    { pattern: '0 0 2 * * *' },
-    { opts: { attempts: 1 } },
-  )
-
   // Every minute
   await maintenanceQueue.upsertJobScheduler(
     'checkScheduledDocumentTriggersJob',

@@ -12,7 +12,7 @@ import {
 import {
   serializeEvaluationResult as serializeEvaluationResultV2,
   serializeEvaluation as serializeEvaluationV2,
-} from '@latitude-data/core/services/documentSuggestions/serialize'
+} from '@latitude-data/core/services/copilot/serializeEvaluation'
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
 import { CLOUD_MESSAGES } from '@latitude-data/core/constants'

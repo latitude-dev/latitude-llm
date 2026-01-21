@@ -22,13 +22,11 @@ import {
   sql,
 } from 'drizzle-orm'
 import {
-  EVALUATION_RESULT_RECENCY_DAYS,
   EvaluationResultV2,
   EvaluationType,
   ISSUE_GENERATION_MAX_RESULTS,
   ISSUE_GENERATION_RECENCY_DAYS,
   ISSUE_GENERATION_RECENCY_RATIO,
-  MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
   Span,
 } from '../constants'
 import { EvaluationResultsV2Search } from '../helpers'
@@ -810,40 +808,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .then((r) => r[0]!)
 
     return Result.ok<number>(result.count)
-  }
-
-  async selectForDocumentSuggestion({
-    commitId,
-    evaluationUuid,
-  }: {
-    commitId: number
-    evaluationUuid: string
-  }) {
-    const results = await this.db
-      .select(tt)
-      .from(evaluationResultsV2)
-      .where(
-        and(
-          this.scopeFilter,
-          eq(evaluationResultsV2.commitId, commitId),
-          eq(evaluationResultsV2.evaluationUuid, evaluationUuid),
-          sql`${evaluationResultsV2.usedForSuggestion} IS NOT TRUE`,
-          isNull(evaluationResultsV2.error),
-          sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
-          gte(
-            evaluationResultsV2.createdAt,
-            subDays(new Date(), EVALUATION_RESULT_RECENCY_DAYS),
-          ),
-        ),
-      )
-      .orderBy(
-        asc(evaluationResultsV2.normalizedScore),
-        desc(evaluationResultsV2.createdAt),
-        desc(evaluationResultsV2.id),
-      )
-      .limit(MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION)
-
-    return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
   }
 
   async selectForIssueGeneration({ issueId }: { issueId: number }) {

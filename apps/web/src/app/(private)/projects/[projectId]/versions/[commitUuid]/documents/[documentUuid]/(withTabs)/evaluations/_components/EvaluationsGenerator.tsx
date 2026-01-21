@@ -21,8 +21,6 @@ import {
 
 const DEFAULT_EVALUATION_OPTIONS = {
   evaluateLiveLogs: true,
-  enableSuggestions: true,
-  autoApplySuggestions: true,
 }
 
 export function EvaluationsGenerator({

@@ -1,5 +1,4 @@
 import { startDefaultWorker } from './worker-definitions/defaultWorker'
-import { startDocumentSuggestionsWorker } from './worker-definitions/documentSuggestionsWorker'
 import { startDocumentsWorker } from './worker-definitions/documentsWorker'
 import { startEvaluationsWorker } from './worker-definitions/evaluationsWorker'
 import {
@@ -26,7 +25,6 @@ export async function startWorkers() {
   const notificationsWorker = startNotificationsWorker()
   const webhooksWorker = startWebhooksWorker()
   const documentsWorker = startDocumentsWorker()
-  const documentSuggestionsWorker = startDocumentSuggestionsWorker()
   const tracingWorker = startTracingWorker()
   const runsWorker = startRunsWorker()
   const issuesWorker = startIssuesWorker()
@@ -43,7 +41,6 @@ export async function startWorkers() {
     notificationsWorker,
     webhooksWorker,
     documentsWorker,
-    documentSuggestionsWorker,
     tracingWorker,
     runsWorker,
     issuesWorker,

@@ -6,10 +6,8 @@ import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 const jobMappings = {
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
-  cleanDocumentSuggestionsJob: jobs.cleanDocumentSuggestionsJob,
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
   destroyWorkspaceJob: jobs.destroyWorkspaceJob,
-  requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
   scheduleWeeklyEmailJobs: jobs.scheduleWeeklyEmailJobs,
   dailyAlignmentMetricUpdateJob: jobs.dailyAlignmentMetricUpdateJob,
   updateEvaluationAlignmentJob: jobs.updateEvaluationAlignmentJob,

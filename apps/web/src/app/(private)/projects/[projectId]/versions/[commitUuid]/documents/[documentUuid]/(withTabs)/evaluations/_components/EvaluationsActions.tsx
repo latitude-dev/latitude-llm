@@ -46,8 +46,6 @@ const DEFAULT_EVALUATION_SETTINGS = {
 
 const DEFAULT_EVALUATION_OPTIONS = {
   evaluateLiveLogs: true,
-  enableSuggestions: true,
-  autoApplySuggestions: true,
 }
 
 const DEFAULT_COMPOSITE_SETTINGS = {
@@ -71,8 +69,6 @@ const DEFAULT_COMPOSITE_SETTINGS = {
 
 const DEFAULT_COMPOSITE_OPTIONS = {
   evaluateLiveLogs: false,
-  enableSuggestions: false,
-  autoApplySuggestions: false,
 }
 
 export function EvaluationsActions({

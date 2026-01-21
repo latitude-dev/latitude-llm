@@ -122,7 +122,7 @@ describe('updateEvaluationV2', () => {
         name: 'new name',
       },
       options: {
-        enableSuggestions: false,
+        
       },
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -131,7 +131,7 @@ describe('updateEvaluationV2', () => {
       expect.objectContaining({
         ...evaluation,
         name: 'new name',
-        enableSuggestions: false,
+        
         updatedAt: expect.any(Date),
       }),
     )
@@ -166,7 +166,7 @@ describe('updateEvaluationV2', () => {
       evaluation: evaluation,
       commit: commit,
       options: {
-        enableSuggestions: false,
+        
       },
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -174,7 +174,7 @@ describe('updateEvaluationV2', () => {
     expect(updatedEvaluation).toEqual(
       expect.objectContaining({
         ...evaluation,
-        enableSuggestions: false,
+        
         updatedAt: expect.any(Date),
       }),
     )
@@ -213,7 +213,7 @@ describe('updateEvaluationV2', () => {
         name: 'new name',
       },
       options: {
-        enableSuggestions: false,
+        
       },
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -225,7 +225,7 @@ describe('updateEvaluationV2', () => {
         versionId: updatedEvaluation.versionId,
         commitId: draft.id,
         name: 'new name',
-        enableSuggestions: false,
+        
         updatedAt: expect.any(Date),
       }),
     )
@@ -240,14 +240,14 @@ describe('updateEvaluationV2', () => {
         id: updatedEvaluation.versionId,
         commitId: draft.id,
         name: updatedEvaluation.name,
-        enableSuggestions: updatedEvaluation.enableSuggestions,
+        
         updatedAt: expect.any(Date),
       }),
       expect.objectContaining({
         id: evaluation.versionId,
         commitId: commit.id,
         name: evaluation.name,
-        enableSuggestions: evaluation.enableSuggestions,
+        
         updatedAt: expect.any(Date),
       }),
     ])

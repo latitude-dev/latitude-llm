@@ -61,8 +61,6 @@ export async function createDemoEvaluation(
         },
         options: {
           evaluateLiveLogs: false,
-          enableSuggestions: true,
-          autoApplySuggestions: true,
         },
         workspace,
       },

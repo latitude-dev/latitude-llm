@@ -8,7 +8,6 @@ import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { memo, Suspense, useCallback } from 'react'
 import { DocumentRefinement } from '../DocumentRefinement'
-import { DocumentSuggestions } from '../DocumentSuggestions'
 import { EditorSettings } from '../EditorSettings'
 import { LatteDiffManager } from './LatteDiffManager'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
@@ -108,15 +107,6 @@ export const PlaygroundTextEditor = memo(
           highlightedCursorIndex={highlightedCursorIndex}
           actionButtons={
             <>
-              <DocumentSuggestions
-                project={project}
-                commit={commit}
-                document={document}
-                prompt={value}
-                diff={diffOptions}
-                setDiff={setDiffOptions}
-                setPrompt={onChange}
-              />
               <DocumentRefinement
                 project={project}
                 commit={commit}

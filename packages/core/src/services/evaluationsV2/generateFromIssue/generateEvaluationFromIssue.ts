@@ -85,8 +85,6 @@ export async function generateEvaluationFromIssue(
         },
         options: {
           evaluateLiveLogs: true,
-          enableSuggestions: true,
-          autoApplySuggestions: true,
         },
         issueId: issue.id,
         document: document,

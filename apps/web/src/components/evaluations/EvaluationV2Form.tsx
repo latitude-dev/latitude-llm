@@ -39,7 +39,6 @@ type EvaluationV2FormSchema = StandardSchemaV1<{
   options: string
   settings: string
   evaluateLiveLogs: string
-  enableSuggestions: string
 }>
 
 export type EvaluationV2FormErrors = ActionErrors<EvaluationV2FormSchema>
@@ -155,7 +154,6 @@ export default function EvaluationV2Form<
     setOptions({
       ...options,
       evaluateLiveLogs: !!metricSpecification.supportsLiveEvaluation,
-      enableSuggestions: settings.type !== EvaluationType.Composite,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metricSpecification?.supportsLiveEvaluation])
@@ -296,19 +294,6 @@ export default function EvaluationV2Form<
                       }
                     />
                   )}
-                  <SwitchInput
-                    checked={!!options.enableSuggestions}
-                    name='enableSuggestions'
-                    label='Prompt suggestions'
-                    description='Generate suggestions to improve your prompt based on the latest evaluations results'
-                    onCheckedChange={(value) =>
-                      setOptions({ ...options, enableSuggestions: value })
-                    }
-                    errors={errors?.enableSuggestions}
-                    disabled={
-                      disabled || settings.type === EvaluationType.Composite
-                    }
-                  />
                 </FormFieldGroup>
               </FormWrapper>
             }

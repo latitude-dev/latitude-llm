@@ -67,8 +67,6 @@ export const evaluationResultsV2 = latitudeSchema.table(
     metadata: jsonb('metadata').$type<EvaluationResultMetadata>(),
     hasPassed: boolean('has_passed'),
     error: jsonb('error').$type<EvaluationResultError>(),
-    // Denormalized metadata fields - create indexes if necessary
-    usedForSuggestion: boolean('used_for_suggestion'),
     ...timestamps(),
   },
   (table) => [

@@ -66,8 +66,6 @@ export async function createEvaluationV2<
     },
     options: {
       evaluateLiveLogs: args.evaluateLiveLogs,
-      enableSuggestions: args.enableSuggestions,
-      autoApplySuggestions: args.autoApplySuggestions,
     },
     workspace: args.workspace,
     issueId: args.issueId,
