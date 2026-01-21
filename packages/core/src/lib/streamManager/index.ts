@@ -16,7 +16,6 @@ import {
 import { FinishReason } from 'ai'
 import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants/ai'
 import { omit } from 'lodash-es'
-import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { IntegrationDto } from '../../schema/models/types/Integration'
 import { LogSources, PromptSource } from '../../constants'
@@ -25,12 +24,13 @@ import {
   createMcpClientManager,
   McpClientManager,
 } from '../../services/integrations/McpClient/McpClientManager'
-import { telemetry, TelemetryContext } from '../../telemetry'
+import { TelemetryContext } from '../../telemetry'
 import { ChainError, RunErrorCodes } from '../errors'
 import { generateUUIDIdentifier } from '../generateUUID'
 import { ToolHandler } from '../../services/documents/tools/clientTools/handlers'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { createPromiseWithResolver } from './utils/createPromiseResolver'
+import { CompletionTelemetryOptions } from '../../services/ai'
 
 const addTokens = ({
   attr,
@@ -85,6 +85,7 @@ export abstract class StreamManager {
   public mcpClientManager: McpClientManager
   public mcpHeaders?: Record<string, Record<string, string>>
   public promptSource: PromptSource
+  public telemetryOptions?: CompletionTelemetryOptions
   public source: LogSources
   public stream: ReadableStream<ChainEvent>
   public tools: Record<string, ToolHandler>
@@ -94,7 +95,6 @@ export abstract class StreamManager {
   public readonly simulationSettings?: SimulationSettings
 
   public $context: TelemetryContext
-  public $completion: ReturnType<typeof telemetry.span.completion> | undefined
 
   protected messages: LegacyMessage[]
   protected error: ChainError<RunErrorCodes> | undefined
@@ -143,6 +143,11 @@ export abstract class StreamManager {
         this.controller = controller
       },
     })
+    
+    this.telemetryOptions = promptSource && 'document' in promptSource ? {
+      promptUuid: promptSource.document.documentUuid,
+      versionUuid: promptSource.commit.uuid,
+    } : undefined
 
     this.handleAbortSignal(abortSignal)
   }
@@ -184,8 +189,6 @@ export abstract class StreamManager {
     })
 
     this.error = e
-
-    this.$completion?.fail(e)
 
     this.endStream()
   }
@@ -274,57 +277,21 @@ export abstract class StreamManager {
 
   protected startProviderStep({
     config,
-    messages,
-    provider,
   }: {
     config: ValidatedChainStep['config']
-    messages: LegacyMessage[]
-    provider: ProviderApiKey
   }) {
-    this.$completion = telemetry.span.completion(
-      {
-        configuration: config,
-        input: messages,
-        model: config.model,
-        provider: provider.provider,
-        // TODO: add experiment uuid
-        promptUuid:
-          'document' in this.promptSource
-            ? this.promptSource.document.documentUuid
-            : undefined,
-        versionUuid:
-          'commit' in this.promptSource
-            ? this.promptSource.commit.uuid
-            : undefined,
-      },
-      this.$context,
-    )
-
     this.sendEvent({ type: ChainEventTypes.ProviderStarted, config })
   }
 
-  protected async endProviderStep({
-    responseMessages,
+  protected endProviderStep({
     tokenUsage,
     response,
     finishReason = 'stop',
   }: {
-    responseMessages: LegacyMessage[]
     tokenUsage: LanguageModelUsage
     response: ChainStepResponse<StreamType>
     finishReason?: FinishReason
   }) {
-    this.$completion?.end({
-      output: responseMessages,
-      tokens: {
-        prompt: tokenUsage.promptTokens,
-        cached: tokenUsage.cachedInputTokens,
-        reasoning: tokenUsage.reasoningTokens,
-        completion: tokenUsage.completionTokens,
-      },
-      finishReason,
-    })
-
     this.sendEvent({
       type: ChainEventTypes.ProviderCompleted,
       providerLogUuid: response.providerLog!.uuid,

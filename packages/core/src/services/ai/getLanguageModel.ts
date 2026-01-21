@@ -1,11 +1,14 @@
 import { OpenAIProvider } from '@ai-sdk/openai'
 import { Providers } from '@latitude-data/constants'
-import { LanguageModel } from 'ai'
+import { LanguageModel, wrapLanguageModel } from 'ai'
 import { omit } from 'lodash-es'
 import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { LlmProvider } from './helpers'
 import { VercelConfigWithProviderRules } from './providers/rules'
+import { createTelemetryMiddleware } from './telemetryMiddleware'
+import { TelemetryContext } from '@latitude-data/telemetry'
+import { CompletionTelemetryOptions } from '.'
 
 // FIXME: Is this doing anything? There are no options available here.
 function buildGenericLanguageModel({
@@ -32,16 +35,24 @@ export function getLanguageModel({
   provider,
   llmProvider,
   customLanguageModel,
+  context,
+  telemetryOptions,
 }: {
   model: string
   config: VercelConfigWithProviderRules
   provider: ProviderApiKey
   llmProvider: LlmProvider
   customLanguageModel?: LanguageModel
+  context: TelemetryContext
+  telemetryOptions?: CompletionTelemetryOptions
 }): LanguageModel {
-  if (customLanguageModel) return customLanguageModel
+  if (customLanguageModel) {
+    return wrapCompletionTelemetry({languageModel: customLanguageModel, provider, model, context, telemetryOptions})
+  }
+
   if (![Providers.OpenAI, Providers.Custom].includes(provider.provider)) {
-    return buildGenericLanguageModel({ model, config, llmProvider })
+    const baseModel = buildGenericLanguageModel({ model, config, llmProvider })
+    return wrapCompletionTelemetry({languageModel: baseModel, provider, model, context, telemetryOptions})
   }
 
   const configuration =
@@ -58,5 +69,39 @@ export function getLanguageModel({
   // Default for text completions in OpenAI is `/responses` endpoint since
   // vercel SDK v5:
   // https://github.com/vercel/ai/pull/6833
-  return buildGenericLanguageModel({ model, config, llmProvider })
+  const baseModel = buildGenericLanguageModel({ model, config, llmProvider })
+  return wrapCompletionTelemetry({languageModel: baseModel, provider, model, context, telemetryOptions})
+}
+
+function wrapCompletionTelemetry({
+  languageModel,
+  provider,
+  model,
+  context,
+  telemetryOptions,
+}: {
+  languageModel: LanguageModel
+  provider: ProviderApiKey
+  model: string
+  context: TelemetryContext
+  telemetryOptions?: CompletionTelemetryOptions
+}): LanguageModel {
+  if (!telemetryOptions) return languageModel
+
+  // wrapLanguageModel expects a LanguageModelV2 object, not a string model identifier.
+  // Since buildGenericLanguageModel always returns a LanguageModelV2 object, we can safely cast.
+  if (typeof languageModel === 'string') {
+    return languageModel
+  }
+
+  return wrapLanguageModel({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    model: languageModel as any,
+    middleware: createTelemetryMiddleware({
+      context,
+      providerName: provider.provider,
+      model,
+      ...telemetryOptions,
+    }),
+  })
 }

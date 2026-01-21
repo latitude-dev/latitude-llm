@@ -39,7 +39,7 @@ export async function resolveIntegrationToolDefinition({
             arguments: args,
           },
         },
-        streamManager.$completion!.context,
+        streamManager.$context,
       )
 
       publisher.publishLater({

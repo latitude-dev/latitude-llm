@@ -63,8 +63,6 @@ export class DefaultStreamManager
       this.startStep()
       this.startProviderStep({
         config: this.config,
-        messages: this.messages,
-        provider: this.provider,
       })
 
       const toolsBySource = await this.getToolsBySource().then((r) =>
@@ -78,7 +76,7 @@ export class DefaultStreamManager
       const { response, messages, tokenUsage, finishReason } =
         await streamAIResponse({
           config,
-          context: this.$completion!.context,
+          context: this.$context,
           abortSignal: this.abortSignal,
           controller: this.controller!,
           documentLogUuid: this.uuid,
@@ -89,6 +87,7 @@ export class DefaultStreamManager
           source: this.source,
           workspace: this.workspace,
           resolvedTools: toolsBySource,
+          telemetryOptions: this.telemetryOptions,
         })
 
       this.updateStateFromResponse({
@@ -98,7 +97,6 @@ export class DefaultStreamManager
         finishReason,
       })
       this.endProviderStep({
-        responseMessages: messages,
         tokenUsage,
         response,
         finishReason,

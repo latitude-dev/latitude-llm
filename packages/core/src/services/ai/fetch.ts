@@ -1,17 +1,19 @@
 import { FetchFunction } from '@ai-sdk/provider-utils'
-import { telemetry, TelemetryContext } from '../../telemetry'
+import { context as otelContext } from '@opentelemetry/api'
+import { telemetry } from '../../telemetry'
 
-export function instrumentedFetch({
-  context,
-}: {
-  context: TelemetryContext
-}): FetchFunction {
+export function instrumentedFetch(): FetchFunction {
   return async function (input, init) {
+    // Use the currently active OpenTelemetry context
+    // This allows HTTP spans to be children of whatever span is currently active
+    // (e.g., a Completion span when called from the telemetry middleware)
+    const activeContext = otelContext.active()
+
     const $http = telemetry.span.http(
       {
         request: await getRequest(input, init),
       },
-      context,
+      activeContext,
     )
 
     const result = fetch(input, init)

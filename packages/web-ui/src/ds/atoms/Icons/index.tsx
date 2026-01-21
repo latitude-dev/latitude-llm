@@ -172,6 +172,7 @@ import {
   Bell,
   CreditCardIcon,
   KeyRound,
+  MessageCircle,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -355,6 +356,7 @@ const Icons = {
   mapPin: MapPin,
   maximize: Maximize2,
   mcp: MCP,
+  messageCircle: MessageCircle,
   minimize: Minimize2,
   mintlify: Mintlify,
   minus: MinusIcon,
