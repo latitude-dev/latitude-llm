@@ -18,6 +18,7 @@ export type StartSpanOptions = {
 }
 
 export type EndSpanOptions = {
+  name?: string
   attributes?: otel.Attributes
 }
 
@@ -197,6 +198,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
         context: ctx,
         end: (_options?: EndSpanOptions) => {},
         fail: (_error: Error, _options?: ErrorOptions) => {},
+        __name: name,
+        __attributes: options?.attributes || ({} as otel.Attributes),
       }
     }
 
@@ -207,21 +210,17 @@ export class ManualInstrumentation implements BaseInstrumentation {
       operation = type
     }
 
-    const span = this.tracer.startSpan(
-      name,
-      {
-        attributes: {
-          [ATTRIBUTES.LATITUDE.type]: type,
-          ...(operation && {
-            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.operation]: operation,
-          }),
-          ...(start.attributes || {}),
-        },
-        kind: otel.SpanKind.CLIENT,
-      },
-      ctx,
-    )
+    const kind = otel.SpanKind.CLIENT
 
+    const attributes = {
+      [ATTRIBUTES.LATITUDE.type]: type,
+      ...(operation && {
+        [ATTRIBUTES.OPENTELEMETRY.GEN_AI.operation]: operation,
+      }),
+      ...(start.attributes || {}),
+    }
+
+    const span = this.tracer.startSpan(name, { attributes, kind }, ctx)
     const newCtx = trace.setSpan(ctx, span)
 
     return {
@@ -229,6 +228,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       end: (options?: EndSpanOptions) => {
         const end = options || {}
 
+        span.updateName(end.name || name)
         span.setAttributes(end.attributes || {})
         span.setStatus({ code: otel.SpanStatusCode.OK })
         span.end()
@@ -236,6 +236,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
       fail: (error: Error, options?: ErrorOptions) => {
         this.error(span, error, options)
       },
+      __name: name,
+      __attributes: attributes as otel.Attributes,
     }
   }
 
@@ -270,7 +272,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     })
 
     return {
-      context: span.context,
+      ...span,
       end: (options: EndToolSpanOptions) => {
         const end = options
 
@@ -286,6 +288,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         }
 
         span.end({
+          name: end.name,
           attributes: {
             [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.result.value]:
               stringResult,
@@ -295,7 +298,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
           },
         })
       },
-      fail: span.fail,
     }
   }
 
@@ -313,6 +315,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
         switch (field) {
           case 'id':
+          case 'callId':
           case 'toolCallId':
           case 'toolUseId': {
             if (typeof value !== 'string') continue
@@ -381,13 +384,19 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     if (!Array.isArray(content)) return attributes
 
-    /* Tool calls for Anthropic and PromptL are in the content */
+    /* Tool calls for OpenAI Responses / Anthropic / PromptL are in the content */
     const toolCalls = []
     for (const item of content) {
       for (const key in item) {
         if (toCamelCase(key) !== 'type') continue
         if (typeof item[key] !== 'string') continue
-        if (item[key] !== 'tool-call' && item[key] !== 'tool_use') continue
+        if (
+          item[key] !== 'tool-call' &&
+          item[key] !== 'tool_use' &&
+          item[key] !== 'function_call'
+        ) {
+          continue
+        }
         toolCalls.push(item)
       }
     }
@@ -413,6 +422,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     let attributes: otel.Attributes = {}
     for (let i = 0; i < messages.length; i++) {
+      const type = String(messages[i]!.type)
+
       for (const key in messages[i]!) {
         const field = toCamelCase(key)
         let value = messages[i]![key]
@@ -425,7 +436,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
             break
           }
 
-          /* Tool calls for Anthropic and PromptL are in the content */
+          /* Tool calls for OpenAI Responses / Anthropic / PromptL are in the content */
           case 'content': {
             attributes = {
               ...attributes,
@@ -434,7 +445,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
             break
           }
 
-          /* Tool calls for OpenAI */
+          /* Tool calls for OpenAI Completions */
           case 'toolCalls': {
             if (!Array.isArray(value)) continue
             attributes = {
@@ -444,8 +455,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
             break
           }
 
-          /* Tool result for OpenAI / Anthropic / PromptL */
+          /* Tool result for OpenAI Completions / Anthropic / PromptL */
 
+          case 'callId':
           case 'toolCallId':
           case 'toolId':
           case 'toolUseId': {
@@ -454,13 +466,31 @@ export class ManualInstrumentation implements BaseInstrumentation {
             break
           }
 
+          case 'name':
           case 'toolName': {
+            if (field === 'name' && type !== 'function_call_result') continue
             if (typeof value !== 'string') continue
             attributes[otelField.index(i).tool.toolName] = value
             break
           }
 
-          // Note: 'toolResult' is 'content' itself
+          /* 'toolResult' is 'content' itself for OpenAI Completions / Anthropic / PromptL */
+
+          /* 'toolResult' for OpenAI Responses */
+          case 'output': {
+            if (type !== 'function_call_result') continue
+            if (typeof value === 'string') {
+              attributes[otelField.index(i).tool.toolResult] = value
+            } else {
+              try {
+                attributes[otelField.index(i).tool.toolResult] =
+                  JSON.stringify(value)
+              } catch (error) {
+                attributes[otelField.index(i).tool.toolResult] = '{}'
+              }
+            }
+            break
+          }
 
           case 'isError': {
             if (typeof value !== 'boolean') continue
@@ -548,7 +578,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     )
 
     return {
-      context: span.context,
+      ...span,
       end: (options?: EndCompletionSpanOptions) => {
         const end = options ?? {}
 
@@ -572,6 +602,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         const finishReason = end.finishReason ?? ''
 
         span.end({
+          name: end.name,
           attributes: {
             [ATTRIBUTES.LATITUDE.response.messages]: jsonOutput,
             ...attrOutput,
@@ -589,7 +620,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
           },
         })
       },
-      fail: span.fail,
     }
   }
 
@@ -658,7 +688,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     )
 
     return {
-      context: span.context,
+      ...span,
       end: (options: EndHttpSpanOptions) => {
         const end = options
 
@@ -680,6 +710,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         }
 
         span.end({
+          name: end.name,
           attributes: {
             [ATTRIBUTES.OPENTELEMETRY.HTTP.response.statusCode]:
               end.response.status,
@@ -689,7 +720,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
           },
         })
       },
-      fail: span.fail,
     }
   }
 

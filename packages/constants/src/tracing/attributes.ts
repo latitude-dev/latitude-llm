@@ -180,6 +180,7 @@ export const ATTRIBUTES = {
             tool: {
               callId: `gen_ai.prompt.${promptIndex}.tool_call_id`,
               toolName: `gen_ai.prompt.${promptIndex}.tool_name`,
+              toolResult: `gen_ai.prompt.${promptIndex}.tool_result`,
               isError: `gen_ai.prompt.${promptIndex}.is_error`,
             },
           }),
@@ -195,9 +196,10 @@ export const ATTRIBUTES = {
               arguments: `gen_ai.completion.${completionIndex}.tool_calls.${toolCallIndex}.arguments`,
             }),
             tool: {
-              callId: `gen_ai.prompt.${completionIndex}.tool_call_id`,
-              toolName: `gen_ai.prompt.${completionIndex}.tool_name`,
-              isError: `gen_ai.prompt.${completionIndex}.is_error`,
+              callId: `gen_ai.completion.${completionIndex}.tool_call_id`,
+              toolName: `gen_ai.completion.${completionIndex}.tool_name`,
+              toolResult: `gen_ai.completion.${completionIndex}.tool_result`,
+              isError: `gen_ai.completion.${completionIndex}.is_error`,
             },
           }),
         },
