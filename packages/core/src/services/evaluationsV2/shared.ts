@@ -11,6 +11,7 @@ import {
   EvaluationSpecification,
   EvaluationType,
   EvaluationV2,
+  MainSpanType,
   SpanType,
   SpanWithDetails,
 } from '../../constants'
@@ -49,7 +50,7 @@ export type EvaluationMetricRunArgs<
   actualOutput: TypedResult<string>
   expectedOutput?: TypedResult<string>
   conversation: Message[]
-  span: SpanWithDetails<SpanType.Prompt>
+  span: SpanWithDetails<MainSpanType>
   document: DocumentVersion
   experiment?: Experiment
   dataset?: Dataset

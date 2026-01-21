@@ -5,7 +5,7 @@ import {
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
-  SpanType,
+  MainSpanType,
   SpanWithDetails,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
@@ -45,7 +45,7 @@ export async function runEvaluationV2<
     dry = false,
   }: {
     evaluation: EvaluationV2<T, M>
-    span: SpanWithDetails<SpanType.Prompt>
+    span: SpanWithDetails<MainSpanType>
     experiment?: Experiment
     dataset?: Dataset
     datasetLabel?: string

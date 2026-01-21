@@ -94,6 +94,8 @@ export type ChatSpanOptions = StartSpanOptions & {
   documentLogUuid: string
   previousTraceId: string
   source?: LogSources
+  versionUuid?: string // Alias for commitUuid
+  promptUuid?: string // Alias for documentUuid
 }
 
 export type ExternalSpanOptions = StartSpanOptions & {
@@ -771,12 +773,16 @@ export class ManualInstrumentation implements BaseInstrumentation {
       previousTraceId,
       source,
       name,
+      versionUuid,
+      promptUuid,
       ...rest
     }: ChatSpanOptions,
   ) {
     const attributes = {
       [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
       [ATTRIBUTES.LATITUDE.previousTraceId]: previousTraceId,
+      ...(versionUuid && { [ATTRIBUTES.LATITUDE.commitUuid]: versionUuid }),
+      ...(promptUuid && { [ATTRIBUTES.LATITUDE.documentUuid]: promptUuid }),
       ...(source && { [ATTRIBUTES.LATITUDE.source]: source }),
       ...(rest.attributes || {}),
     }

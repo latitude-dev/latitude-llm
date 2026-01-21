@@ -1,5 +1,9 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
-import { ChainStepResponse, StreamType } from '@latitude-data/constants'
+import {
+  ChainStepResponse,
+  MainSpanType,
+  StreamType,
+} from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Adapters, Chain, Chain as PromptlChain, scan } from 'promptl-ai'
@@ -66,15 +70,21 @@ export function buildEvaluationParameters({
   conversation,
   expectedOutput,
 }: {
-  span: SpanWithDetails<SpanType.Prompt>
+  span: SpanWithDetails<MainSpanType>
   completionSpan?: SpanWithDetails<SpanType.Completion>
   actualOutput: string
   conversation: Message[]
   expectedOutput?: string
 }) {
   return {
-    parameters: span.metadata?.parameters,
-    prompt: span.metadata?.template,
+    parameters:
+      span.metadata && 'parameters' in span.metadata
+        ? span.metadata.parameters
+        : {},
+    prompt:
+      span.metadata && 'template' in span.metadata
+        ? span.metadata.template
+        : '',
     cost: completionSpan?.metadata?.cost,
     tokens: completionSpan?.metadata?.tokens,
     duration: completionSpan?.duration,
