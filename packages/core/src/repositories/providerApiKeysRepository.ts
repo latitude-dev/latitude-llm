@@ -53,13 +53,13 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
 
   async findAll(opts: QueryOptions = {}) {
     const result = await super.findAll(opts)
-    if (!result.ok) return result
+    if (!Result.isOk(result)) return result
     return Result.ok(this.decryptTokens(result.value))
   }
 
   async find(id: string | number | undefined | null) {
     const result = await super.find(id)
-    if (!result.ok) return result
+    if (!Result.isOk(result)) return result
     return Result.ok(this.decryptToken(result.value))
   }
 
@@ -68,16 +68,14 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
     opts: { ordering?: SQL<unknown>[] } = {},
   ) {
     const result = await super.findMany(ids, opts)
-    if (!result.ok) return result
+    if (!Result.isOk(result)) return result
     return Result.ok(this.decryptTokens(result.value))
   }
 
   async findFirst() {
     const result = await super.findFirst()
-    if (!result.ok) return result
-    return Result.ok(
-      result.value ? this.decryptToken(result.value) : undefined,
-    )
+    if (!Result.isOk(result)) return result
+    return Result.ok(result.value ? this.decryptToken(result.value) : undefined)
   }
 
   async findByName(name: string) {
