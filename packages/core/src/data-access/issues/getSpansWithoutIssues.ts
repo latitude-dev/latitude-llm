@@ -10,7 +10,7 @@ import {
   sql,
 } from 'drizzle-orm'
 import { database } from '../../client'
-import { Span, SpanStatus, SpanType } from '../../constants'
+import { MainSpanType, Span, SpanStatus, SpanType } from '../../constants'
 import { Result } from '../../lib/Result'
 import { CommitsRepository } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
@@ -26,8 +26,11 @@ import { Cursor } from '../../schema/types'
 // BONUS(AO/OPT): Instead of filtering all experiments, only filter experiments from optimizations?
 
 /**
- * Fetches prompt spans that have no issues associated through evaluation results,
+ * Fetches spans that have no issues associated through evaluation results,
  * filtered by document and commit history.
+ *
+ * @param spanTypes - Array of span types to include. Defaults to [SpanType.Prompt]
+ *                    for backward compatibility (optimizer requires Prompt-only).
  */
 export async function getSpansWithoutIssues(
   {
@@ -36,6 +39,7 @@ export async function getSpansWithoutIssues(
     document,
     includeExperiments = true,
     excludeFailedResults = false,
+    spanTypes = [SpanType.Prompt],
     cursor,
     limit = 25,
   }: {
@@ -44,6 +48,7 @@ export async function getSpansWithoutIssues(
     document: DocumentVersion
     includeExperiments?: boolean
     excludeFailedResults?: boolean
+    spanTypes?: MainSpanType[]
     cursor: Cursor<Date, string> | null
     limit?: number
   },
@@ -56,7 +61,7 @@ export async function getSpansWithoutIssues(
 
   if (commitHistory.length === 0) {
     return Result.ok({
-      spans: [] as Span<SpanType.Prompt>[],
+      spans: [] as Span<MainSpanType>[],
       next: null,
     })
   }
@@ -132,7 +137,7 @@ export async function getSpansWithoutIssues(
       and(
         eq(spans.workspaceId, workspace.id),
         eq(spans.documentUuid, document.documentUuid),
-        eq(spans.type, SpanType.Prompt),
+        inArray(spans.type, spanTypes),
         eq(spans.status, SpanStatus.Ok),
         inArray(spans.commitUuid, commitUuids),
         isNull(spansWithActiveIssues.spanId),
@@ -158,7 +163,7 @@ export async function getSpansWithoutIssues(
       : null
 
   return Result.ok({
-    spans: paginatedSpans as Span<SpanType.Prompt>[],
+    spans: paginatedSpans as Span<MainSpanType>[],
     next,
   })
 }

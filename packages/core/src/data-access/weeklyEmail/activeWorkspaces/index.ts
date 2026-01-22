@@ -1,13 +1,13 @@
 import { sql } from 'drizzle-orm'
 import { database } from '../../../client'
-import { SpanType } from '../../../constants'
+import { MAIN_SPAN_TYPES, SpanType } from '../../../constants'
 
 const NUMBER_OF_WEEKS = 4
 const DAYS_IN_WEEK = 7
 const LAST_PAST_DAYS = NUMBER_OF_WEEKS * DAYS_IN_WEEK
 
 /**
- * Gets workspace IDs that have had prompt spans created in the last 4 weeks.
+ * Gets workspace IDs that have had main spans (Prompt, Chat, External) created in the last 4 weeks.
  * Used to filter which workspaces should receive weekly email reports.
  * Excludes workspaces marked as big accounts (isBigAccount = true).
  *
@@ -17,6 +17,7 @@ const LAST_PAST_DAYS = NUMBER_OF_WEEKS * DAYS_IN_WEEK
 export async function getActiveWorkspacesForWeeklyEmail(db = database) {
   const fourWeeksAgo = new Date()
   fourWeeksAgo.setDate(fourWeeksAgo.getDate() - LAST_PAST_DAYS)
+  const mainSpanTypes = Array.from(MAIN_SPAN_TYPES)
 
   const result = await db.execute<{ id: string }>(sql`
     SELECT w.id
@@ -25,7 +26,7 @@ export async function getActiveWorkspacesForWeeklyEmail(db = database) {
       SELECT 1
       FROM latitude.spans s
       WHERE s.workspace_id = w.id
-        AND s.type = ${SpanType.Prompt}
+        AND s.type = ANY(${mainSpanTypes})
         AND s.started_at >= ${fourWeeksAgo}
       LIMIT 1
     ) AS has_activity

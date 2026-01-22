@@ -4,7 +4,8 @@ import {
   CompletionSpanMetadata,
   EvaluationType,
   HumanEvaluationMetric,
-  PromptSpanMetadata,
+  MainSpanMetadata,
+  MainSpanType,
   RUN_CAPTION_SIZE,
   RunAnnotation,
   Span,
@@ -27,7 +28,7 @@ export async function spanToRun({
   span,
 }: {
   workspaceId: number
-  span: Span<SpanType.Prompt>
+  span: Span<MainSpanType>
 }): Promise<CompletedRun> {
   let caption = 'Run finished successfully without any response'
   const spansRepo = new SpansRepository(workspaceId)
@@ -49,14 +50,14 @@ export async function spanToRun({
   }
   caption = caption.trim().slice(0, RUN_CAPTION_SIZE)
 
-  let promptSpanMetadata: PromptSpanMetadata | undefined
+  let mainSpanMetadata: MainSpanMetadata | undefined
   if (span) {
-    promptSpanMetadata = (await spanMetadataRepo
+    mainSpanMetadata = (await spanMetadataRepo
       .get({
         spanId: span.id,
         traceId: span.traceId,
       })
-      .then((r) => r.value)) as PromptSpanMetadata | undefined
+      .then((r) => r.value)) as MainSpanMetadata | undefined
   }
   const evalsRepo = new EvaluationsV2Repository(workspaceId)
   const repository = new EvaluationResultsV2Repository(workspaceId)
@@ -92,6 +93,6 @@ export async function spanToRun({
     caption,
     annotations,
     source: span.source!,
-    span: { ...span, metadata: promptSpanMetadata }, // prettier-ignore
+    span: { ...span, metadata: mainSpanMetadata }, // prettier-ignore
   }
 }
