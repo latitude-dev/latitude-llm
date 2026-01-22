@@ -1,4 +1,5 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
+import stringify from 'fast-json-stable-stringify'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
   ActualOutputConfiguration,
@@ -31,6 +32,8 @@ type OutputType =
 
 const ARRAY_INDEX_REGEX = /\[(-?\d+)\]/g
 const TRIM_SEPARATORS_REGEX = /^\.+|\.+$/g
+
+// Note: nullable values are supported!
 function accessField(output: any, path: string = '') {
   path = path
     .trim()
@@ -53,19 +56,7 @@ function accessField(output: any, path: string = '') {
     }
   }
 
-  if (value === undefined || value === null) {
-    return undefined
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  try {
-    return JSON.stringify(value)
-  } catch (error) {
-    return String(value)
-  }
+  return value
 }
 
 function parseOutput(output: string | string[], format: string) {
@@ -193,14 +184,14 @@ export function extractActualOutput({
     }
   }
 
-  if (!actualOutput) {
+  if (actualOutput === undefined) {
     return Result.error(
       new UnprocessableEntityError('Actual output is required'),
     )
-  }
-
-  if (typeof actualOutput !== 'string') {
-    actualOutput = String(actualOutput)
+  } else if (actualOutput === null) {
+    actualOutput = '' // Note: we treat nullables as empty strings
+  } else if (typeof actualOutput !== 'string') {
+    actualOutput = stringify(actualOutput) // Note: using a deterministic stringification
   }
 
   return Result.ok(actualOutput)
@@ -244,14 +235,14 @@ export async function extractExpectedOutput({
     }
   }
 
-  if (!expectedOutput) {
+  if (expectedOutput === undefined) {
     return Result.error(
       new UnprocessableEntityError('Expected output is required'),
     )
-  }
-
-  if (typeof expectedOutput !== 'string') {
-    expectedOutput = String(expectedOutput)
+  } else if (expectedOutput === null) {
+    expectedOutput = '' // Note: we treat nullables as empty strings
+  } else if (typeof expectedOutput !== 'string') {
+    expectedOutput = stringify(expectedOutput) // Note: using a deterministic stringification
   }
 
   return Result.ok(expectedOutput)

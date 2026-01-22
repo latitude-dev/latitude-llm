@@ -156,7 +156,7 @@ async function run(
 
   if (expectedOutput?.error) {
     throw expectedOutput.error
-  } else if (!metadata.expectedOutput) {
+  } else if (metadata.expectedOutput === undefined) {
     throw new BadRequestError('Expected output is required')
   }
 

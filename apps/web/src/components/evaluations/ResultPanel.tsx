@@ -1,11 +1,13 @@
 'use client'
 
 import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
+import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SpanParameters'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   useCurrentProject,
   type IProjectContextType,
 } from '$/app/providers/ProjectProvider'
+import { MetadataInfoTabs } from '$/components/MetadataInfoTabs'
 import { MetadataItem } from '$/components/MetadataItem'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { useStickyNested } from '$/hooks/useStickyNested'
@@ -13,6 +15,7 @@ import { ROUTES } from '$/services/routes'
 import useDatasetRows from '$/stores/datasetRows'
 import useDatasetRowCount from '$/stores/datasetRows/count'
 import useDatasetRowPosition from '$/stores/datasetRows/position'
+import { useSpanByTraceId } from '$/stores/spans'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
   EvaluationMetric,
@@ -41,9 +44,6 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
-import { useSpanByTraceId } from '$/stores/spans'
-import { MetadataInfoTabs } from '$/components/MetadataInfoTabs'
-import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SpanParameters'
 
 const DataGrid = dynamic(
   () =>
@@ -185,74 +185,103 @@ export function ResultPanelMetadata<
         />
       ) : (
         <>
-          {result.metadata!.actualOutput && (
-            <MetadataItem
-              label='Actual output'
-              tooltip='Generated output from the model conversation'
-              stacked
-              collapsible
-            >
-              <div className='flex flex-col gap-2'>
-                {ACCESSIBLE_OUTPUT_FORMATS.includes(
-                  result.metadata!.configuration.actualOutput?.parsingFormat ||
-                    'string',
-                ) ? (
-                  <Text.H6 color='foregroundMuted' noWrap ellipsis>
-                    Parsed from{' '}
-                    {result
-                      .metadata!.configuration.actualOutput.parsingFormat.toUpperCase()
-                      .split('_')
-                      .join(' ')}
-                    {!!result.metadata!.configuration.actualOutput
-                      .fieldAccessor &&
-                      ` using field '${result.metadata!.configuration.actualOutput.fieldAccessor}'`}
-                  </Text.H6>
-                ) : (
-                  <div />
-                )}
-                <TextArea
-                  value={result.metadata!.actualOutput}
-                  minRows={1}
-                  maxRows={6}
-                  disabled={true}
-                />
-              </div>
-            </MetadataItem>
-          )}
-          {result.metadata!.expectedOutput && (
-            <MetadataItem
-              label='Expected output'
-              tooltip='Labeled output from the dataset column'
-              action={
-                dataset && !dataset.deletedAt && evaluatedDatasetRow ? (
-                  <Button
-                    variant='link'
-                    size='none'
-                    iconProps={{
-                      name: 'arrowRight',
-                      widthClass: 'w-4',
-                      heightClass: 'h-4',
-                      placement: 'right',
-                    }}
-                    onClick={() => setOpenDatasetModal(true)}
-                  >
-                    Edit
-                  </Button>
-                ) : undefined
-              }
-              stacked
-              collapsible
-            >
-              <div className='pt-2'>
-                <TextArea
-                  value={result.metadata!.expectedOutput}
-                  minRows={1}
-                  maxRows={6}
-                  disabled={true}
-                />
-              </div>
-            </MetadataItem>
-          )}
+          {result.metadata!.actualOutput !== undefined &&
+            result.metadata!.actualOutput !== null && (
+              <MetadataItem
+                label='Actual output'
+                tooltip='Generated output from the model conversation'
+                stacked
+                collapsible
+              >
+                <div className='flex flex-col gap-2'>
+                  {ACCESSIBLE_OUTPUT_FORMATS.includes(
+                    result.metadata!.configuration.actualOutput
+                      ?.parsingFormat || 'string',
+                  ) ? (
+                    <Text.H6 color='foregroundMuted' noWrap ellipsis>
+                      Parsed from{' '}
+                      {result
+                        .metadata!.configuration.actualOutput.parsingFormat.toUpperCase()
+                        .split('_')
+                        .join(' ')}
+                      {!!result.metadata!.configuration.actualOutput
+                        .fieldAccessor &&
+                        ` using field '${result.metadata!.configuration.actualOutput.fieldAccessor}'`}
+                    </Text.H6>
+                  ) : (
+                    <div />
+                  )}
+                  <TextArea
+                    value={result.metadata!.actualOutput}
+                    minRows={1}
+                    maxRows={6}
+                    disabled={true}
+                  />
+                  {result.metadata!.actualOutput === '' && (
+                    <Text.H6 color='foregroundMuted' noWrap ellipsis isItalic>
+                      (Actual output is either empty or null)
+                    </Text.H6>
+                  )}
+                </div>
+              </MetadataItem>
+            )}
+          {result.metadata!.expectedOutput !== undefined &&
+            result.metadata!.expectedOutput !== null && (
+              <MetadataItem
+                label='Expected output'
+                tooltip='Labeled output from the dataset column'
+                action={
+                  dataset && !dataset.deletedAt && evaluatedDatasetRow ? (
+                    <Button
+                      variant='link'
+                      size='none'
+                      iconProps={{
+                        name: 'arrowRight',
+                        widthClass: 'w-4',
+                        heightClass: 'h-4',
+                        placement: 'right',
+                      }}
+                      onClick={() => setOpenDatasetModal(true)}
+                    >
+                      Edit
+                    </Button>
+                  ) : undefined
+                }
+                stacked
+                collapsible
+              >
+                <div className='flex flex-col gap-2'>
+                  {ACCESSIBLE_OUTPUT_FORMATS.includes(
+                    result.metadata!.configuration.expectedOutput
+                      ?.parsingFormat || 'string',
+                  ) ? (
+                    <Text.H6 color='foregroundMuted' noWrap ellipsis>
+                      Parsed from{' '}
+                      {result
+                        .metadata!.configuration.expectedOutput!.parsingFormat.toUpperCase()
+                        .split('_')
+                        .join(' ')}
+                      {!!result.metadata!.configuration.expectedOutput!
+                        .fieldAccessor &&
+                        ` using field '${result.metadata!.configuration.expectedOutput!.fieldAccessor}'`}
+                    </Text.H6>
+                  ) : (
+                    <div />
+                  )}
+                  <TextArea
+                    value={result.metadata!.expectedOutput}
+                    minRows={1}
+                    maxRows={6}
+                    disabled={true}
+                  />
+                  {result.metadata!.expectedOutput === '' && (
+                    <Text.H6 color='foregroundMuted' noWrap ellipsis isItalic>
+                      (Expected output is either empty or null)
+                    </Text.H6>
+                  )}
+                </div>
+              </MetadataItem>
+            )}
           <MetadataItem label='Result'>
             <ResultBadge evaluation={evaluation} result={result} />
           </MetadataItem>

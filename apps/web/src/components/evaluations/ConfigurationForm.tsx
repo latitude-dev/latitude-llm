@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
+import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useIssue } from '$/stores/issues/issue'
 import { useSearchIssues } from '$/stores/issues/selectorIssues'
@@ -24,9 +24,9 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwitch'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
+import { useEffect, useMemo, useState } from 'react'
 import { useDebounce, useDebouncedCallback } from 'use-debounce'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
-import { useNavigate } from '$/hooks/useNavigate'
 import { useEvaluatedTraces } from './useEvaluatedTraces'
 
 const MESSAGE_SELECTION_OPTIONS =
@@ -269,7 +269,7 @@ export function ConfigurationAdvancedForm<
         </FormFieldGroup>
         <FormFieldGroup
           label='Parsing format'
-          description='How to parse the assistant messages'
+          description='How to parse the assistant messages. Stringification is done deterministically'
           layout='horizontal'
           tooltip={
             formatIsAccessible ? (
@@ -516,6 +516,13 @@ function ActualOutputTest({
               {trace.actualOutput}
             </Text.H5>
           </div>
+          {trace.actualOutput === '' && (
+            <div className='mt-1'>
+              <Text.H6 color='foregroundMuted' isItalic>
+                (Actual output is either empty or null)
+              </Text.H6>
+            </div>
+          )}
         </div>
       </div>
     </>

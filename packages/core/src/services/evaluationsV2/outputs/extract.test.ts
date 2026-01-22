@@ -1,3 +1,8 @@
+import {
+  Message,
+  MessageRole,
+  TextContent,
+} from '@latitude-data/constants/legacyCompiler'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_DATASET_LABEL } from '../../../constants'
 import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
@@ -5,11 +10,6 @@ import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
 import * as factories from '../../../tests/factories'
 import { extractActualOutput, extractExpectedOutput } from './extract'
-import {
-  Message,
-  MessageRole,
-  TextContent,
-} from '@latitude-data/constants/legacyCompiler'
 
 describe('extractActualOutput', () => {
   let conversation: Message[]
@@ -61,6 +61,9 @@ describe('extractActualOutput', () => {
                   variants: ['class-2-variant-1', 'class-2-variant-2'],
                 },
               ],
+              good: false,
+              count: 0,
+              alignment: null,
             },
           },
           {
@@ -162,7 +165,7 @@ describe('extractActualOutput', () => {
       `
 Some assistant response 1
 
-{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}
+{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}],"good":false,"count":0,"alignment":null}}
 
 {"type":"tool-call","toolCallId":"tool-call-2","toolName":"tool-2","args":{"answer":"Some answer"}}
 
@@ -183,7 +186,7 @@ Some assistant response 2
 
     expect(result).toEqual(
       `
-{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}
+{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}],"good":false,"count":0,"alignment":null}}
 
 {"type":"tool-call","toolCallId":"tool-call-2","toolName":"tool-2","args":{"answer":"Some answer"}}
 `.trim(),
@@ -201,11 +204,11 @@ Some assistant response 2
     }).unwrap()
 
     expect(result).toEqual(
-      '[{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}},{"type":"tool-call","toolCallId":"tool-call-2","toolName":"tool-2","args":{"answer":"Some answer"}}]',
+      '[{"args":{"alignment":null,"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}],"count":0,"good":false},"toolCallId":"tool-call-1","toolName":"tool-1","type":"tool-call"},{"args":{"answer":"Some answer"},"toolCallId":"tool-call-2","toolName":"tool-2","type":"tool-call"}]',
     )
   })
 
-  it('succeeds when accessing the output by field', async () => {
+  it('succeeds when accessing the output by field as string', async () => {
     const result = extractActualOutput({
       conversation,
       configuration: {
@@ -217,6 +220,48 @@ Some assistant response 2
     }).unwrap()
 
     expect(result).toEqual('class-2-variant-2')
+  })
+
+  it('succeeds when accessing the output by field as number', async () => {
+    const result = extractActualOutput({
+      conversation,
+      configuration: {
+        messageSelection: 'all',
+        contentFilter: 'tool_call',
+        parsingFormat: 'json',
+        fieldAccessor: '[-2].args.count',
+      },
+    }).unwrap()
+
+    expect(result).toEqual('0')
+  })
+
+  it('succeeds when accessing the output by field as boolean', async () => {
+    const result = extractActualOutput({
+      conversation,
+      configuration: {
+        messageSelection: 'all',
+        contentFilter: 'tool_call',
+        parsingFormat: 'json',
+        fieldAccessor: '[-2].args.good',
+      },
+    }).unwrap()
+
+    expect(result).toEqual('false')
+  })
+
+  it('succeeds when accessing the output by field as nullable', async () => {
+    const result = extractActualOutput({
+      conversation,
+      configuration: {
+        messageSelection: 'all',
+        contentFilter: 'tool_call',
+        parsingFormat: 'json',
+        fieldAccessor: '[-2].args.alignment',
+      },
+    }).unwrap()
+
+    expect(result).toEqual('')
   })
 })
 
@@ -310,23 +355,6 @@ value1,value2,"Some expected output"
     )
   })
 
-  it('fails when there is no output', async () => {
-    datasetRow.rowData[datasetColumn] = ''
-
-    await expect(
-      extractExpectedOutput({
-        dataset: dataset,
-        row: datasetRow,
-        column: datasetLabel,
-        configuration: {
-          parsingFormat: 'string',
-        },
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new UnprocessableEntityError('Expected output is required'),
-    )
-  })
-
   it('fails when configuration is not set', async () => {
     await expect(
       extractExpectedOutput({
@@ -342,9 +370,54 @@ value1,value2,"Some expected output"
     )
   })
 
+  it('succeeds when there is no output as undefined', async () => {
+    datasetRow.rowData[datasetColumn] = undefined
+
+    const result = await extractExpectedOutput({
+      dataset: dataset,
+      row: datasetRow,
+      column: datasetLabel,
+      configuration: {
+        parsingFormat: 'string',
+      },
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual('')
+  })
+
+  it('succeeds when there is no output as nullable', async () => {
+    datasetRow.rowData[datasetColumn] = null
+
+    const result = await extractExpectedOutput({
+      dataset: dataset,
+      row: datasetRow,
+      column: datasetLabel,
+      configuration: {
+        parsingFormat: 'string',
+      },
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual('')
+  })
+
+  it('succeeds when there is no output as empty', async () => {
+    datasetRow.rowData[datasetColumn] = ''
+
+    const result = await extractExpectedOutput({
+      dataset: dataset,
+      row: datasetRow,
+      column: datasetLabel,
+      configuration: {
+        parsingFormat: 'string',
+      },
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual('')
+  })
+
   it('succeeds when parsing the output', async () => {
     datasetRow.rowData[datasetColumn] =
-      '{"answer": {"classes": [{"id": "class-1", "variants": ["class-1-variant-1", "class-1-variant-2"]}, {"id": "class-2", "variants": ["class-2-variant-1", "class-2-variant-2"]}]}}'
+      '{"answer": {"classes": [{"id": "class-1", "variants": ["class-1-variant-1", "class-1-variant-2"]}, {"id": "class-2", "variants": ["class-2-variant-1", "class-2-variant-2"]}], "good": false, "count": 0, "alignment": null}}'
 
     const result = await extractExpectedOutput({
       dataset: dataset,
@@ -356,13 +429,13 @@ value1,value2,"Some expected output"
     }).then((r) => r.unwrap())
 
     expect(result).toEqual(
-      '{"answer":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}',
+      '{"answer":{"alignment":null,"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}],"count":0,"good":false}}',
     )
   })
 
-  it('succeeds when accessing the output by field', async () => {
+  it('succeeds when accessing the output by field as string', async () => {
     datasetRow.rowData[datasetColumn] =
-      '{"answer": {"classes": [{"id": "class-1", "variants": ["class-1-variant-1", "class-1-variant-2"]}, {"id": "class-2", "variants": ["class-2-variant-1", "class-2-variant-2"]}]}}'
+      '{"answer": {"classes": [{"id": "class-1", "variants": ["class-1-variant-1", "class-1-variant-2"]}, {"id": "class-2", "variants": ["class-2-variant-1", "class-2-variant-2"]}], "good": false, "count": 0, "alignment": null}}'
 
     const result = await extractExpectedOutput({
       dataset: dataset,
@@ -375,5 +448,56 @@ value1,value2,"Some expected output"
     }).then((r) => r.unwrap())
 
     expect(result).toEqual('class-2-variant-2')
+  })
+
+  it('succeeds when accessing the output by field as number', async () => {
+    datasetRow.rowData[datasetColumn] =
+      '{"answer": {"classes": [{"id": "class-1", "variants": ["class-1-variant-1", "class-1-variant-2"]}, {"id": "class-2", "variants": ["class-2-variant-1", "class-2-variant-2"]}], "good": false, "count": 0, "alignment": null}}'
+
+    const result = await extractExpectedOutput({
+      dataset: dataset,
+      row: datasetRow,
+      column: datasetLabel,
+      configuration: {
+        parsingFormat: 'json',
+        fieldAccessor: 'answer.count',
+      },
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual('0')
+  })
+
+  it('succeeds when accessing the output by field as boolean', async () => {
+    datasetRow.rowData[datasetColumn] =
+      '{"answer": {"classes": [{"id": "class-1", "variants": ["class-1-variant-1", "class-1-variant-2"]}, {"id": "class-2", "variants": ["class-2-variant-1", "class-2-variant-2"]}], "good": false, "count": 0, "alignment": null}}'
+
+    const result = await extractExpectedOutput({
+      dataset: dataset,
+      row: datasetRow,
+      column: datasetLabel,
+      configuration: {
+        parsingFormat: 'json',
+        fieldAccessor: 'answer.good',
+      },
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual('false')
+  })
+
+  it('succeeds when accessing the output by field as nullable', async () => {
+    datasetRow.rowData[datasetColumn] =
+      '{"answer": {"classes": [{"id": "class-1", "variants": ["class-1-variant-1", "class-1-variant-2"]}, {"id": "class-2", "variants": ["class-2-variant-1", "class-2-variant-2"]}], "good": false, "count": 0, "alignment": null}}'
+
+    const result = await extractExpectedOutput({
+      dataset: dataset,
+      row: datasetRow,
+      column: datasetLabel,
+      configuration: {
+        parsingFormat: 'json',
+        fieldAccessor: 'answer.alignment',
+      },
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual('')
   })
 })
