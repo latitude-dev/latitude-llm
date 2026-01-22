@@ -3,6 +3,8 @@ import { Queues } from '@latitude-data/core/queues/types'
 import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 import { createWorker } from '../utils/createWorker'
 
+const CONCURRENCY = 25
+
 const jobMappings = {
   generateIssueDetailsJob: jobs.generateIssueDetailsJob,
   discoverResultIssueJob: jobs.discoverResultIssueJob,
@@ -11,7 +13,10 @@ const jobMappings = {
 
 export function startIssuesWorker() {
   return createWorker(Queues.issuesQueue, jobMappings, {
-    concurrency: 25,
-    connection: WORKER_CONNECTION_CONFIG,
+    workerOptions: {
+      concurrency: CONCURRENCY,
+      connection: WORKER_CONNECTION_CONFIG,
+    },
+    maxConcurrency: CONCURRENCY,
   })
 }

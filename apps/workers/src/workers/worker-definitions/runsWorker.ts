@@ -3,13 +3,18 @@ import { Queues } from '@latitude-data/core/queues/types'
 import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 import { createWorker } from '../utils/createWorker'
 
+const CONCURRENCY = 100
+
 const jobMappings = {
   backgroundRunJob: jobs.backgroundRunJob,
 }
 
 export function startRunsWorker() {
   return createWorker(Queues.runsQueue, jobMappings, {
-    concurrency: 100,
-    connection: WORKER_CONNECTION_CONFIG,
+    workerOptions: {
+      concurrency: CONCURRENCY,
+      connection: WORKER_CONNECTION_CONFIG,
+    },
+    maxConcurrency: CONCURRENCY,
   })
 }

@@ -19,6 +19,7 @@ let _queues:
       issuesQueue: Queue
       generateEvaluationsQueue: Queue
       optimizationsQueue: Queue
+      deadLetterQueue: Queue
     }
   | undefined
 
@@ -43,6 +44,16 @@ export async function queues() {
     },
   }
 
+  const deadLetterOptions: QueueOptions = {
+    ...options,
+    defaultJobOptions: {
+      ...options.defaultJobOptions,
+      attempts: 1,
+      removeOnFail: false,
+      removeOnComplete: 1000,
+    },
+  }
+
   _queues = {
     defaultQueue: new Queue(Queues.defaultQueue, options),
     documentsQueue: new Queue(Queues.documentsQueue, options),
@@ -58,6 +69,7 @@ export async function queues() {
     issuesQueue: new Queue(Queues.issuesQueue, options),
     generateEvaluationsQueue: new Queue(Queues.generateEvaluationsQueue, options), // prettier-ignore
     optimizationsQueue: new Queue(Queues.optimizationsQueue, options),
+    deadLetterQueue: new Queue(Queues.deadLetterQueue, deadLetterOptions),
   }
 
   return _queues

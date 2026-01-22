@@ -53,16 +53,24 @@ const eventHandlersJobMappings = {
   unassignIssuesOnDocumentsDeleted: jobs.unassignIssuesOnDocumentsDeleted,
 }
 
+const CONCURRENCY = 100
+
 export function startEventsWorker() {
   return createWorker(Queues.eventsQueue, eventsJobMappings, {
-    concurrency: 100,
-    connection: WORKER_CONNECTION_CONFIG,
+    workerOptions: {
+      concurrency: CONCURRENCY,
+      connection: WORKER_CONNECTION_CONFIG,
+    },
+    maxConcurrency: CONCURRENCY,
   })
 }
 
 export function startEventHandlersWorker() {
   return createWorker(Queues.eventHandlersQueue, eventHandlersJobMappings, {
-    concurrency: 100,
-    connection: WORKER_CONNECTION_CONFIG,
+    workerOptions: {
+      concurrency: CONCURRENCY,
+      connection: WORKER_CONNECTION_CONFIG,
+    },
+    maxConcurrency: CONCURRENCY,
   })
 }

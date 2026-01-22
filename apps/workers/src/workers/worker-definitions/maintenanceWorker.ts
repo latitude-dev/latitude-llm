@@ -4,6 +4,8 @@ import { Queues } from '@latitude-data/core/queues/types'
 import { createWorker } from '../utils/createWorker'
 import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
+const CONCURRENCY = 5
+
 const jobMappings = {
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
@@ -18,7 +20,10 @@ export function startMaintenanceWorker() {
   setupLRO() // Setup LRO for the maintenance worker
 
   return createWorker(Queues.maintenanceQueue, jobMappings, {
-    connection: WORKER_CONNECTION_CONFIG,
-    concurrency: 5,
+    workerOptions: {
+      connection: WORKER_CONNECTION_CONFIG,
+      concurrency: CONCURRENCY,
+    },
+    maxConcurrency: CONCURRENCY,
   })
 }

@@ -3,6 +3,8 @@ import { Queues } from '@latitude-data/core/queues/types'
 import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 import { createWorker } from '../utils/createWorker'
 
+const CONCURRENCY = 100
+
 const jobMappings = {
   validateGeneratedEvaluationJob: jobs.validateGeneratedEvaluationJob,
   generateEvaluationV2FromIssueJob: jobs.generateEvaluationV2FromIssueJob,
@@ -11,7 +13,10 @@ const jobMappings = {
 
 export function startGenerateEvaluationWorker() {
   return createWorker(Queues.generateEvaluationsQueue, jobMappings, {
-    concurrency: 100,
-    connection: WORKER_CONNECTION_CONFIG,
+    workerOptions: {
+      concurrency: CONCURRENCY,
+      connection: WORKER_CONNECTION_CONFIG,
+    },
+    maxConcurrency: CONCURRENCY,
   })
 }

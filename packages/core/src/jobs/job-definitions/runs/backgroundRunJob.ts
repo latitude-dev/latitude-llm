@@ -31,6 +31,17 @@ import { captureException } from '../../../utils/datadogCapture'
 import { RunEvaluationForExperimentJobData } from '../evaluations/runEvaluationForExperimentJob'
 import { DeploymentTest } from '../../../schema/models/types/DeploymentTest'
 
+export type JobHandlerContext = {
+  logger: {
+    debug(message: string, extra?: Record<string, unknown>): void
+    info(message: string, extra?: Record<string, unknown>): void
+    warn(message: string, extra?: Record<string, unknown>): void
+    error(message: string, error?: Error, extra?: Record<string, unknown>): void
+    addContext(context: Record<string, unknown>): void
+  }
+  correlationId: string
+}
+
 export type BackgroundRunJobData = {
   workspaceId: number
   projectId: number
@@ -70,6 +81,8 @@ async function fetchExperiment({
 
 export const backgroundRunJob = async (
   job: Job<BackgroundRunJobData, BackgroundRunJobResult>,
+  _token?: string,
+  context?: JobHandlerContext,
 ) => {
   const {
     workspaceId,
@@ -88,6 +101,18 @@ export const backgroundRunJob = async (
     simulationSettings,
     activeDeploymentTest,
   } = job.data
+
+  const logger = context?.logger
+  const correlationId = context?.correlationId || runUuid
+
+  logger?.addContext({ workspaceId, projectId, documentUuid, runUuid, correlationId })
+  logger?.info('Background run job starting', {
+    experimentId,
+    source,
+    hasParameters: Object.keys(parameters).length > 0,
+    toolsCount: tools.length,
+  })
+
   const writeStream = new RedisStream({
     key: ACTIVE_RUN_STREAM_KEY(runUuid),
     cap: ACTIVE_RUN_STREAM_CAP,
@@ -95,12 +120,14 @@ export const backgroundRunJob = async (
   const abortController = new AbortController()
   const cancelJob = ({ jobId }: { jobId: string }) => {
     if (jobId !== job.id) return
+    logger?.info('Job cancellation requested')
     abortController.abort()
   }
 
   let experiment: Experiment | undefined = undefined
 
   try {
+    logger?.debug('Fetching document data')
     const { workspace, document, commit } = await getJobDocumentData({
       workspaceId,
       projectId,
@@ -111,9 +138,11 @@ export const backgroundRunJob = async (
     experiment = await fetchExperiment({ workspaceId, experimentId })
 
     if (experiment?.finishedAt) {
+      logger?.info('Experiment already finished, skipping run')
       return
     }
 
+    logger?.debug('Starting run')
     await startRun({
       workspaceId,
       projectId,
@@ -129,6 +158,10 @@ export const backgroundRunJob = async (
 
     publisher.subscribe('cancelJob', cancelJob)
 
+    logger?.info('Executing document at commit', {
+      documentPath: document.path,
+      commitUuid,
+    })
     const result = await runDocumentAtCommit({
       workspace,
       document,
@@ -147,6 +180,7 @@ export const backgroundRunJob = async (
       simulationSettings,
     }).then((r) => r.unwrap())
 
+    logger?.debug('Forwarding stream events')
     await forwardStreamEvents({
       workspaceId,
       projectId,
@@ -158,6 +192,7 @@ export const backgroundRunJob = async (
     })
 
     if (experiment) {
+      logger?.debug('Handling experiment success')
       await handleExperimentSuccess({
         experiment,
         workspaceId,
@@ -167,11 +202,17 @@ export const backgroundRunJob = async (
         datasetRowId,
       }).then((r) => r.unwrap())
     }
+
+    logger?.info('Background run completed successfully')
   } catch (error) {
+    logger?.error('Background run failed', error as Error, {
+      experimentId,
+      aborted: abortController.signal.aborted,
+    })
+
     writeStream.write({ type: ChainEventTypes.ChainError, data: error })
 
     if (experiment) {
-      // Mark document as finished (error)
       await updateExperimentStatus(
         {
           workspaceId,
@@ -184,7 +225,7 @@ export const backgroundRunJob = async (
 
     captureException(error as Error)
   } finally {
-    // CRITICAL: Close Redis connection before cleanup to prevent connection leaks
+    logger?.debug('Cleaning up resources')
     await writeStream.close().catch(() => {
       // Silently ignore close errors to not mask the original error
     })
@@ -200,9 +241,11 @@ export const backgroundRunJob = async (
         runUuid,
       })
       if (!Result.isOk(endResult)) {
+        logger?.error('Failed to end run', new Error('endRun returned error'))
         captureException(new Error(`[BackgroundRunJob] Failed to end run`))
       }
     } catch (error) {
+      logger?.error('Failed to end run', error as Error)
       captureException(new Error(`[BackgroundRunJob] Failed to end run`))
     }
   }

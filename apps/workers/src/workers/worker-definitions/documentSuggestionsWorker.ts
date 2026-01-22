@@ -3,15 +3,14 @@ import * as jobs from '@latitude-data/core/jobs/definitions'
 import { createWorker } from '../utils/createWorker'
 import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
-const CONCURRENCY = 100
+const CONCURRENCY = 1 // Very low concurrency to avoid rate limiting
 
 const jobMappings = {
-  runEvaluationV2Job: jobs.runEvaluationV2Job,
-  runEvaluationForExperimentJob: jobs.runEvaluationForExperimentJob,
+  generateDocumentSuggestionJob: jobs.generateDocumentSuggestionJob,
 }
 
-export function startEvaluationsWorker() {
-  return createWorker(Queues.evaluationsQueue, jobMappings, {
+export function startDocumentSuggestionsWorker() {
+  return createWorker(Queues.documentSuggestionsQueue, jobMappings, {
     workerOptions: {
       concurrency: CONCURRENCY,
       connection: WORKER_CONNECTION_CONFIG,

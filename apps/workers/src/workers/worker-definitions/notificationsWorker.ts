@@ -15,10 +15,12 @@ const jobMappings = {
  */
 export function startNotificationsWorker() {
   return createWorker(Queues.notificationsQueue, jobMappings, {
-    ...WORKER_OPTIONS,
-    limiter: {
-      max: 90,
-      duration: 60_000,
+    workerOptions: {
+      ...WORKER_OPTIONS,
+      limiter: {
+        max: 90,
+        duration: 60_000,
+      },
     },
   })
 }
