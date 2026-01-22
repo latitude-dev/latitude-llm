@@ -141,13 +141,13 @@ async function run(
   }
 
   const actualNumber = Number(metadata.actualOutput)
-  if (isNaN(actualNumber)) {
+  if (isNaN(actualNumber) || metadata.actualOutput === '') {
     metadata.reason = 'Invalid numeric actual output'
     return grade({ score: 0, metadata })
   }
 
   const expectedNumber = Number(metadata.expectedOutput)
-  if (isNaN(expectedNumber)) {
+  if (isNaN(expectedNumber) || metadata.expectedOutput === '') {
     throw new BadRequestError('Invalid numeric expected output')
   }
 
