@@ -144,32 +144,49 @@ export function TraceSpanSelectionProvider({
       const spanId = span?.id
       if (!spanId) return
 
-      const documentLogUuid = span.documentLogUuid ?? selection.documentLogUuid
+      // When selecting from trace graph, always preserve the original parent's documentLogUuid
+      // Use expandedDocumentLogUuid if set (parent trace), otherwise use current documentLogUuid
+      // Only use span's documentLogUuid if we don't have one in selection at all
+      const parentDocumentLogUuid =
+        selection.expandedDocumentLogUuid ?? selection.documentLogUuid
+      const documentLogUuid = parentDocumentLogUuid ?? span.documentLogUuid
       if (!documentLogUuid) return
 
       const newParams = new URLSearchParams(params.toString())
+      // Check if this is a subagent span by comparing to the original parent's documentLogUuid
       const isSubagentSpan =
         span.documentLogUuid &&
-        span.documentLogUuid !== selection.documentLogUuid
+        span.documentLogUuid !== parentDocumentLogUuid
 
       // For subagent spans, keep the parent trace expanded while selecting the subagent span
+      // Use the subagent's documentLogUuid for fetching its conversation, but preserve parent as expanded
       if (isSubagentSpan) {
-        newParams.set('documentLogUuid', documentLogUuid)
+        newParams.set('documentLogUuid', span.documentLogUuid!)
         newParams.set('spanId', spanId)
-        if (selection.documentLogUuid) newParams.set('expandedDocumentLogUuid', selection.documentLogUuid) // prettier-ignore
+        if (parentDocumentLogUuid) newParams.set('expandedDocumentLogUuid', parentDocumentLogUuid) // prettier-ignore
         setSelection({
-          documentLogUuid,
+          documentLogUuid: span.documentLogUuid!,
           spanId,
           activeRunUuid: null,
-          expandedDocumentLogUuid: selection.documentLogUuid,
+          expandedDocumentLogUuid: parentDocumentLogUuid,
         })
         router.replace(`?${newParams.toString()}`, { scroll: false })
         return
       }
 
-      onClickTraceRow({ type: 'trace', data: { documentLogUuid, spanId } })()
+      // For spans within the same trace, preserve parent documentLogUuid and only update spanId
+      newParams.set('documentLogUuid', documentLogUuid)
+      newParams.set('spanId', spanId)
+      newParams.delete('activeRunUuid')
+      setSelection({
+        documentLogUuid,
+        spanId,
+        activeRunUuid: null,
+        expandedDocumentLogUuid: selection.expandedDocumentLogUuid,
+      })
+      router.replace(`?${newParams.toString()}`, { scroll: false })
     },
-    [selection, params, router, onClickTraceRow],
+    [selection, params, router],
   )
 
   return (

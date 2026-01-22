@@ -80,10 +80,12 @@ export function adaptPromptlMessageToLegacy(
               type: 'tool-call',
               toolCallId: contentItem.toolCallId,
               toolName: contentItem.toolName,
-              // @ts-expect-error - TODO: What is happening here? promptl
-              // messages are supposed to have a toolArguments property yet in
-              // truth this has a .args argument
-              args: contentItem.args,
+              // Handle both args and toolArguments for compatibility
+              // promptl messages use toolArguments, but some sources may use args
+              args:
+                (contentItem as any).args ??
+                (contentItem as any).toolArguments ??
+                {},
             }
           default:
             return contentItem
@@ -103,7 +105,7 @@ export function adaptPromptlMessageToLegacy(
         (toolCall): LegacyToolCall => ({
           id: toolCall.toolCallId,
           name: toolCall.toolName,
-          arguments: toolCall.args,
+          arguments: toolCall.args ?? {},
           _sourceData: undefined, // promptl doesn't have source data
         }),
       )

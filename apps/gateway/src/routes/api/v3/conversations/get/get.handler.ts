@@ -21,6 +21,7 @@ export const getHandler: AppRouteHandler<GetRoute> = async (context) => {
   const assembledResult = await assembleTraceWithMessages({
     traceId: mainSpan.traceId,
     workspace,
+    spanId: mainSpan.id,
   })
 
   const messages = assembledResult.ok

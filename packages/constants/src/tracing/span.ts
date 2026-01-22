@@ -307,3 +307,7 @@ export const MAIN_SPAN_TYPES = new Set([
 export function isMainSpan(span: Span | SpanWithDetails | AssembledSpan) {
   return MAIN_SPAN_TYPES.has(span.type)
 }
+
+export function isCompletionSpan(span: Span | SpanWithDetails | AssembledSpan): span is AssembledSpan<SpanType.Completion> {
+  return span.type === SpanType.Completion
+}

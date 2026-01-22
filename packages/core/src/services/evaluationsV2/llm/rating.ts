@@ -232,7 +232,7 @@ async function run(
   }
 
   const assembledTraceResult = await assembleTraceWithMessages(
-    { traceId: span.traceId, workspace },
+    { traceId: span.traceId, workspace, spanId: span.id },
     db,
   )
   if (!Result.isOk(assembledTraceResult)) {
