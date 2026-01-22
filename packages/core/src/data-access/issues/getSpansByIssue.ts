@@ -10,7 +10,7 @@ import {
   sql,
 } from 'drizzle-orm'
 import { database } from '../../client'
-import { MAIN_SPAN_TYPES, MainSpanType, Span, SpanType } from '../../constants'
+import { MAIN_SPAN_TYPES, MainSpanType, Span } from '../../constants'
 import { Result } from '../../lib/Result'
 import { CommitsRepository } from '../../repositories'
 import { commits } from '../../schema/models/commits'
@@ -27,6 +27,9 @@ import { Cursor } from '../../schema/types'
 /**
  * Fetches spans associated with an issue through evaluation results,
  * filtered by specific commits.
+ *
+ * @param spanTypes - Array of span types to include. Defaults to all main span types.
+ *                    Pass [SpanType.Prompt] for optimizer use cases.
  */
 export async function getSpansByIssue(
   {
@@ -34,6 +37,7 @@ export async function getSpansByIssue(
     commit,
     issue,
     includeExperiments = true,
+    spanTypes = Array.from(MAIN_SPAN_TYPES) as MainSpanType[],
     cursor,
     limit = 25,
   }: {
@@ -41,6 +45,7 @@ export async function getSpansByIssue(
     commit: Commit
     issue: Issue
     includeExperiments?: boolean
+    spanTypes?: MainSpanType[]
     cursor: Cursor<Date, number> | null
     limit?: number
   },
@@ -121,7 +126,7 @@ export async function getSpansByIssue(
     .where(
       and(
         eq(spans.workspaceId, workspace.id),
-        inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),
+        inArray(spans.type, spanTypes),
         ...(!includeExperiments ? [isNull(spans.experimentUuid)] : []),
         cursorConditions,
       ),

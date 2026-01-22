@@ -321,15 +321,17 @@ async function getNegativeExamples({
       const gettingsp = await getSpansByIssue({
         issue: issue,
         includeExperiments: false, // Note: exclude experiments to not get duplicates from optimization runs
+        spanTypes: [SpanType.Prompt], // Note: optimizer only supports prompt spans
         commit: baselineCommit,
         workspace: workspace,
         cursor: cursor,
         limit: SPANS_BATCH_SIZE,
       })
       if (gettingsp.error) break
-      const { spans, next } = gettingsp.value
+      const { spans: rawSpans, next } = gettingsp.value
 
-      if (spans.length === 0) break
+      if (rawSpans.length === 0) break
+      const spans = rawSpans as Span<SpanType.Prompt>[]
 
       for (const span of spans) {
         if (validSpans.length >= target) break
@@ -449,9 +451,10 @@ async function getPositiveExamples({
         limit: SPANS_BATCH_SIZE,
       })
       if (gettingsp.error) break
-      const { spans, next } = gettingsp.value
+      const { spans: rawSpans, next } = gettingsp.value
 
-      if (spans.length === 0) break
+      if (rawSpans.length === 0) break
+      const spans = rawSpans as Span<SpanType.Prompt>[]
 
       for (const span of spans) {
         if (result.length >= halfLimit) break

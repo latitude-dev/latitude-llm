@@ -1,4 +1,4 @@
-import { and, count, gte, inArray } from 'drizzle-orm'
+import { and, count, eq, gte, inArray } from 'drizzle-orm'
 import Redis from 'ioredis'
 import { MAIN_SPAN_TYPES, QuotaType, WorkspaceUsage } from '../../constants'
 import { type Subscription } from '../../schema/models/types/Subscription'

@@ -12,7 +12,6 @@ import {
   EvaluationType,
   EvaluationV2,
   MainSpanType,
-  SpanType,
   SpanWithDetails,
 } from '../../constants'
 import { TypedResult } from '../../lib/Result'
@@ -73,7 +72,7 @@ export type EvaluationMetricAnnotateArgs<
   evaluation: EvaluationV2<T, M>
   actualOutput: TypedResult<string>
   conversation: Message[]
-  span: SpanWithDetails<SpanType.Prompt>
+  span: SpanWithDetails<MainSpanType>
   document: DocumentVersion
   commit: Commit
   workspace: Workspace

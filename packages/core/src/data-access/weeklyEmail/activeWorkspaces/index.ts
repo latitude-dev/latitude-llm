@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { database } from '../../../client'
-import { MAIN_SPAN_TYPES, SpanType } from '../../../constants'
+import { MAIN_SPAN_TYPES } from '../../../constants'
 
 const NUMBER_OF_WEEKS = 4
 const DAYS_IN_WEEK = 7
