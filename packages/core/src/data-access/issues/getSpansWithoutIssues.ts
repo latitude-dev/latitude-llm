@@ -10,7 +10,7 @@ import {
   sql,
 } from 'drizzle-orm'
 import { database } from '../../client'
-import { MainSpanType, Span, SpanStatus, SpanType } from '../../constants'
+import { MAIN_SPAN_TYPES, MainSpanType, Span, SpanStatus } from '../../constants'
 import { Result } from '../../lib/Result'
 import { CommitsRepository } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
@@ -29,8 +29,8 @@ import { Cursor } from '../../schema/types'
  * Fetches spans that have no issues associated through evaluation results,
  * filtered by document and commit history.
  *
- * @param spanTypes - Array of span types to include. Defaults to [SpanType.Prompt]
- *                    for backward compatibility (optimizer requires Prompt-only).
+ * @param spanTypes - Array of span types to include. Defaults to all main span types.
+ *                    Pass [SpanType.Prompt] for optimizer use cases.
  */
 export async function getSpansWithoutIssues(
   {
@@ -39,7 +39,7 @@ export async function getSpansWithoutIssues(
     document,
     includeExperiments = true,
     excludeFailedResults = false,
-    spanTypes = [SpanType.Prompt],
+    spanTypes = Array.from(MAIN_SPAN_TYPES) as MainSpanType[],
     cursor,
     limit = 25,
   }: {

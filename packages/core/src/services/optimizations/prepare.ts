@@ -444,6 +444,7 @@ async function getPositiveExamples({
       const gettingsp = await getSpansWithoutIssues({
         includeExperiments: false, // Note: exclude experiments to not get duplicates from optimization runs
         excludeFailedResults: excludeFailedResults,
+        spanTypes: [SpanType.Prompt], // Note: optimizer only supports prompt spans
         commit: baselineCommit,
         document: document,
         workspace: workspace,
