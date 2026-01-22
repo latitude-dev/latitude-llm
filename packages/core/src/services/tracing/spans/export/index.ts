@@ -60,8 +60,8 @@ async function findSpanMetadatas({
       spanId: span.id,
       traceId: span.traceId,
     })
-    if (result.ok && result.value!.type === SpanType.Prompt) {
-      metadatas.set(`${span.traceId}:${span.id}`, result.value!)
+    if (result.ok && result.value?.type === SpanType.Prompt) {
+      metadatas.set(`${span.traceId}:${span.id}`, result.value)
     }
   }
 
@@ -111,9 +111,9 @@ async function findCompletionOutputs({
       traceId: completionSpan.traceId,
     })
 
-    if (result.ok && result.value!.type === SpanType.Completion) {
+    if (result.ok && result.value?.type === SpanType.Completion) {
       // Extract output from completion metadata
-      const output = result.value!.output
+      const output = result.value.output
       if (output && Array.isArray(output) && output.length > 0) {
         // Format the last message (most recent output)
         const lastMessage = output[output.length - 1]

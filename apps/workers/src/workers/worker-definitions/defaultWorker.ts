@@ -3,6 +3,7 @@ import { Queues } from '@latitude-data/core/queues/types'
 import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
+  createDatasetFromSpansJob: jobs.createDatasetFromSpansJob,
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   createProviderLogJob: jobs.createProviderLogJob,
   exportSpansJob: jobs.exportSpansJob,

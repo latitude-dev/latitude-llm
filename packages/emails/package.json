@@ -16,6 +16,9 @@
     "./DocumentTriggerResponseMail": {
       "import": "./src/templates/documentTrigger/DocumentTriggerResponseMail.tsx"
     },
+    "./DatasetReadyMail": {
+      "import": "./src/templates/datasets/DatasetReadyMail.tsx"
+    },
     "./ExportReadyMail": {
       "import": "./src/templates/exports/ExportReadyMail.tsx"
     },
