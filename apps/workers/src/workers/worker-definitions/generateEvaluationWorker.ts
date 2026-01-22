@@ -1,6 +1,6 @@
 import * as jobs from '@latitude-data/core/jobs/definitions'
 import { Queues } from '@latitude-data/core/queues/types'
-import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
+import { WORKER_OPTIONS } from '../utils/connectionConfig'
 import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
@@ -11,7 +11,7 @@ const jobMappings = {
 
 export function startGenerateEvaluationWorker() {
   return createWorker(Queues.generateEvaluationsQueue, jobMappings, {
+    ...WORKER_OPTIONS,
     concurrency: 100,
-    connection: WORKER_CONNECTION_CONFIG,
   })
 }

@@ -51,4 +51,11 @@ export async function setupSchedules() {
     { pattern: '0 0 3 * * *' },
     { opts: { attempts: 1 } },
   )
+
+  // Every 5 minutes - Clean orphaned active jobs stuck beyond stall detection
+  await maintenanceQueue.upsertJobScheduler(
+    'cleanOrphanedActiveJobsJob',
+    { pattern: '*/5 * * * *' },
+    { opts: { attempts: 1 } },
+  )
 }

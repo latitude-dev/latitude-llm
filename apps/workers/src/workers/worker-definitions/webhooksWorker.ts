@@ -1,7 +1,7 @@
 import { Queues } from '@latitude-data/core/queues/types'
 import * as jobs from '@latitude-data/core/jobs/definitions'
 import { createWorker } from '../utils/createWorker'
-import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
+import { WORKER_OPTIONS } from '../utils/connectionConfig'
 
 const jobMappings = {
   processWebhookJob: jobs.processWebhookJob,
@@ -10,7 +10,7 @@ const jobMappings = {
 
 export function startWebhooksWorker() {
   return createWorker(Queues.webhooksQueue, jobMappings, {
+    ...WORKER_OPTIONS,
     concurrency: 50,
-    connection: WORKER_CONNECTION_CONFIG,
   })
 }

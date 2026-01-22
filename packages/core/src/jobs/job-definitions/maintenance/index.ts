@@ -1,3 +1,4 @@
+export * from './cleanOrphanedActiveJobsJob'
 export * from './cleanupWorkspaceOldLogsJob'
 export * from './dailyAlignmentMetricUpdateJob'
 export * from './destroyWorkspaceJob'

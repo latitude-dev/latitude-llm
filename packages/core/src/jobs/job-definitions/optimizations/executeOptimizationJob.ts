@@ -20,6 +20,8 @@ export function executeOptimizationJobKey({
   return `executeOptimizationJob-${workspaceId}-${optimizationId}`
 }
 
+const LOCK_EXTENSION_INTERVAL_MS = 5 * 60 * 1000
+
 export const executeOptimizationJob = async (
   job: Job<ExecuteOptimizationJobData>,
 ) => {
@@ -42,6 +44,14 @@ export const executeOptimizationJob = async (
   }
   publisher.subscribe('cancelJob', cancelJob)
 
+  const lockExtensionInterval = setInterval(async () => {
+    try {
+      await job.extendLock(job.token!, LOCK_EXTENSION_INTERVAL_MS * 2)
+    } catch {
+      // Lock extension failed - job may have been moved/completed
+    }
+  }, LOCK_EXTENSION_INTERVAL_MS)
+
   try {
     await executeOptimization({
       optimization: optimization,
@@ -60,6 +70,7 @@ export const executeOptimizationJob = async (
       }).then((r) => r.unwrap())
     }
   } finally {
+    clearInterval(lockExtensionInterval)
     await publisher.unsubscribe('cancelJob', cancelJob)
   }
 }

@@ -68,6 +68,8 @@ async function fetchExperiment({
   return experiment.unwrap()
 }
 
+const LOCK_EXTENSION_INTERVAL_MS = 5 * 60 * 1000
+
 export const backgroundRunJob = async (
   job: Job<BackgroundRunJobData, BackgroundRunJobResult>,
 ) => {
@@ -99,8 +101,27 @@ export const backgroundRunJob = async (
   }
 
   let experiment: Experiment | undefined = undefined
+  let lockExtensionInterval: NodeJS.Timeout | undefined
+
+  const startLockExtension = () => {
+    lockExtensionInterval = setInterval(async () => {
+      try {
+        await job.extendLock(job.token!, LOCK_EXTENSION_INTERVAL_MS * 2)
+      } catch {
+        // Lock extension failed - job may have been moved/completed
+      }
+    }, LOCK_EXTENSION_INTERVAL_MS)
+  }
+
+  const stopLockExtension = () => {
+    if (lockExtensionInterval) {
+      clearInterval(lockExtensionInterval)
+      lockExtensionInterval = undefined
+    }
+  }
 
   try {
+    startLockExtension()
     const { workspace, document, commit } = await getJobDocumentData({
       workspaceId,
       projectId,
@@ -184,6 +205,8 @@ export const backgroundRunJob = async (
 
     captureException(error as Error)
   } finally {
+    stopLockExtension()
+
     // CRITICAL: Close Redis connection before cleanup to prevent connection leaks
     await writeStream.close().catch(() => {
       // Silently ignore close errors to not mask the original error
