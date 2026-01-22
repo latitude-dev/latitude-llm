@@ -5,8 +5,25 @@ import { DownloadSpansButton } from './DownloadSpansButton'
 import { SaveSpansAsDatasetModal } from './SaveSpansAsDatasetModal'
 import { Span } from '@latitude-data/constants'
 import { useSelectedSpans } from './SaveSpansAsDatasetModal/useSelectedSpans'
-import { SelectableRowsHook } from '$/hooks/useSelectableRows'
+import { SelectableRowsHook, SelectionMode } from '$/hooks/useSelectableRows'
 import { SpansFilters } from '$/lib/schemas/filters'
+import { useMemo } from 'react'
+
+function getButtonText({
+  selectionMode,
+  selectedCount,
+}: {
+  selectionMode: SelectionMode
+  selectedCount: number
+}) {
+  if (selectionMode === 'ALL') {
+    return 'Add all spans to dataset'
+  }
+  if (selectionMode === 'ALL_EXCEPT') {
+    return 'Add all spans (except excluded) to dataset'
+  }
+  return `Add ${selectedCount} spans to dataset`
+}
 
 export function SelectionTracesBanner({
   selectableState,
@@ -21,6 +38,14 @@ export function SelectionTracesBanner({
     selectableState,
     spans,
   })
+  const buttonText = useMemo(
+    () =>
+      getButtonText({
+        selectionMode: selectableState.selectionMode,
+        selectedCount: selectableState.selectedCount,
+      }),
+    [selectableState.selectionMode, selectableState.selectedCount],
+  )
   return (
     <>
       <div className='z-10 sticky bottom-4 w-full'>
@@ -33,7 +58,7 @@ export function SelectionTracesBanner({
                   disabled={selectableState.selectedCount === 0}
                   onClick={previewSpansState.onClickShowPreview}
                 >
-                  Add {selectableState.selectedCount} spans to dataset
+                  {buttonText}
                 </Button>
                 <DownloadSpansButton
                   selectableState={selectableState}

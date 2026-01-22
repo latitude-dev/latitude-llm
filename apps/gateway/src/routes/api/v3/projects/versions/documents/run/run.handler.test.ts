@@ -1730,9 +1730,9 @@ describe('POST /run', () => {
         mocks.resolveAbTestRouting.mockResolvedValue({
           abTest,
           effectiveCommit: challengerCommit,
-        effectiveDocument: document,
-        effectiveSource: LogSources.ABTestChallenger,
-      })
+          effectiveDocument: document,
+          effectiveSource: LogSources.ABTestChallenger,
+        })
 
         const documentLogUuid = generateUUIDIdentifier()
         const usage = {

@@ -38,9 +38,8 @@ function CustomMcpHeadersModal({
     isDestroying,
   } = useIntegrationHeaderPresets(integrationId)
 
-  const [selectedPresetId, setSelectedPresetId] = useState<string>(
-    CUSTOM_PRESET_VALUE,
-  )
+  const [selectedPresetId, setSelectedPresetId] =
+    useState<string>(CUSTOM_PRESET_VALUE)
   const [headers, setHeaders] = useState<[string, string][]>([
     ...Object.entries(initialHeaders ?? {}),
     ['', ''],
@@ -227,32 +226,32 @@ function CustomMcpHeadersModal({
 
   return (
     <Modal
-      title="Custom headers"
-      description="Add custom headers to the MCP requests"
+      title='Custom headers'
+      description='Add custom headers to the MCP requests'
       dismissible
       open={open}
       onOpenChange={onOpenChange}
       footer={
-        <div className="flex items-center gap-2">
-          <Button variant="destructive" fancy onClick={handleUnset}>
+        <div className='flex items-center gap-2'>
+          <Button variant='destructive' fancy onClick={handleUnset}>
             Unset
           </Button>
-          <Button variant="default" fancy onClick={handleSave}>
+          <Button variant='default' fancy onClick={handleSave}>
             Save
           </Button>
         </div>
       }
     >
-      <div className="flex flex-col gap-4 py-1">
+      <div className='flex flex-col gap-4 py-1'>
         <Select
-          name="preset"
+          name='preset'
           options={presetOptions}
           value={selectedPresetId}
           onChange={handlePresetChange}
         />
 
         {headers.map(([key, value], idx) => (
-          <div key={idx} className="flex flex-col gap-1">
+          <div key={idx} className='flex flex-col gap-1'>
             <div
               className={cn('flex items-center gap-2', {
                 'opacity-75': idx === headers.length - 1,
@@ -262,20 +261,20 @@ function CustomMcpHeadersModal({
                 value={key}
                 onChange={(e) => handleUpdateHeaderKey(idx, e.target.value)}
                 errors={errors[idx] ? [errors[idx]] : undefined}
-                placeholder="Key"
-                errorStyle="tooltip"
+                placeholder='Key'
+                errorStyle='tooltip'
                 disabled={!isCustomMode}
               />
               <Input
                 value={value}
                 onChange={(e) => handleUpdateHeaderValue(idx, e.target.value)}
-                placeholder="Value"
+                placeholder='Value'
                 disabled={!isCustomMode}
               />
               {isCustomMode && (
                 <Button
-                  variant="ghost"
-                  className="p-0"
+                  variant='ghost'
+                  className='p-0'
                   onClick={() => handleRemoveHeader(idx)}
                   iconProps={{ name: 'trash' }}
                 />
@@ -285,29 +284,26 @@ function CustomMcpHeadersModal({
         ))}
 
         {isCustomMode && !showSavePreset && (
-          <Button
-            variant="outline"
-            onClick={() => setShowSavePreset(true)}
-          >
+          <Button variant='outline' onClick={() => setShowSavePreset(true)}>
             Save as preset
           </Button>
         )}
 
         {isCustomMode && showSavePreset && (
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
+          <div className='flex items-center gap-2'>
+            <div className='flex-1'>
               <Input
                 value={presetName}
                 onChange={(e) => {
                   setPresetName(e.target.value)
                   setPresetNameError(undefined)
                 }}
-                placeholder="Preset name"
+                placeholder='Preset name'
                 errors={presetNameError ? [presetNameError] : undefined}
               />
             </div>
             <Button
-              variant="ghost"
+              variant='ghost'
               onClick={() => {
                 setShowSavePreset(false)
                 setPresetName('')
@@ -317,7 +313,7 @@ function CustomMcpHeadersModal({
               Cancel
             </Button>
             <Button
-              variant="default"
+              variant='default'
               fancy
               onClick={handleSavePreset}
               disabled={isCreating}
@@ -329,7 +325,7 @@ function CustomMcpHeadersModal({
 
         {!isCustomMode && selectedPreset && (
           <Button
-            variant="destructive"
+            variant='destructive'
             onClick={handleRemovePreset}
             disabled={isDestroying}
           >
@@ -358,7 +354,7 @@ export function CustomMcpHeadersButton({
         trigger={
           <Button
             variant={hasHeaders ? 'primaryMuted' : 'ghost'}
-            size="small"
+            size='small'
             iconProps={{ name: 'key' }}
             onClick={() => setOpen(true)}
           />

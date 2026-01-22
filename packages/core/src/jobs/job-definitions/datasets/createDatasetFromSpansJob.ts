@@ -12,6 +12,7 @@ import { findOrCreateDataset } from '../../../services/datasets/findOrCreate'
 import { updateDatasetFromSpans } from '../../../services/datasets/updateFromSpans'
 import { queues } from '../../queues'
 import { captureException } from '../../../utils/datadogCapture'
+import { DatasetReadyMailer } from '../../../mailer/mailers/datasets/DatasetReadyMailer'
 
 export type CreateDatasetFromSpansJobData = {
   name: string
@@ -185,6 +186,18 @@ export const createDatasetFromSpansJob = async (
     if (!hasProcessedAny) {
       return
     }
+
+    const mailer = new DatasetReadyMailer(
+      {
+        datasetId: dataset.id,
+        datasetName: dataset.name,
+        user,
+      },
+      {
+        to: user.email,
+      },
+    )
+    await mailer.send()
   } catch (error) {
     captureException(error as Error)
     throw error

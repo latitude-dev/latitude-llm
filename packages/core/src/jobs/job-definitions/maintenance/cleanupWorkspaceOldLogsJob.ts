@@ -89,12 +89,14 @@ export const cleanupWorkspaceOldLogsJob = async (
           ),
         )
 
-        await tx.delete(spans).where(
-          and(
-            eq(spans.workspaceId, workspaceId),
-            inArray(spans.traceId, traceIds),
-          ),
-        )
+        await tx
+          .delete(spans)
+          .where(
+            and(
+              eq(spans.workspaceId, workspaceId),
+              inArray(spans.traceId, traceIds),
+            ),
+          )
 
         deletedSpansBatch = spansToDelete.length
       }

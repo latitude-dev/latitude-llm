@@ -62,6 +62,7 @@ export function SaveSpansAsDatasetModal({
   isLoadingPreview,
   fetchPreview,
   selectedCount,
+  selectionMode,
   error,
 }: Props) {
   const [showDatasetSelector, setShowDatasetSelector] = useState(false)
@@ -156,6 +157,7 @@ export function SaveSpansAsDatasetModal({
           previewData={previewData}
           isLoading={isLoadingPreview}
           selectedCount={selectedCount}
+          selectionMode={selectionMode}
         />
       </div>
     </Modal>

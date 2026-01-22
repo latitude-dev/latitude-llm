@@ -218,9 +218,7 @@ export function ActiveIntegration({
             </Text.H6>
           ) : null}
 
-          <CustomMcpHeadersButton
-            integration={integration}
-          />
+          <CustomMcpHeadersButton integration={integration} />
 
           {!isClientTools && (
             <DropdownMenu

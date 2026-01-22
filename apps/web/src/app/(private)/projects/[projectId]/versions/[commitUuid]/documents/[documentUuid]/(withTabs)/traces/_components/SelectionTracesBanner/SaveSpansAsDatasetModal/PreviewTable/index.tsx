@@ -13,6 +13,7 @@ import { type OutputItem } from '../useSelectedSpans'
 import { Column } from '@latitude-data/core/schema/models/datasets'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
+import { SelectionMode } from '$/hooks/useSelectableRows'
 
 function PreviewCell({
   cell,
@@ -40,24 +41,50 @@ function PreviewCell({
   )
 }
 
+function getDescriptionText({
+  selectedCount,
+  selectionMode,
+  isExistingDataset,
+}: {
+  selectedCount: number
+  selectionMode: SelectionMode
+  isExistingDataset: boolean
+}) {
+  const datasetText = isExistingDataset ? 'the dataset' : 'a new dataset'
+
+  if (selectionMode === 'ALL') {
+    return `All matching spans will be added to ${datasetText}. Here's a preview of some of them.`
+  }
+
+  if (selectionMode === 'ALL_EXCEPT') {
+    return `All matching spans (except excluded) will be added to ${datasetText}. Here's a preview of some of them.`
+  }
+
+  return `${selectedCount} spans will be added to ${datasetText}. Here's a preview.`
+}
+
 export function PreviewTable({
   selectedCount,
+  selectionMode,
   previewData,
   isLoading,
 }: {
   selectedCount: number
+  selectionMode: SelectionMode
   previewData: OutputItem
   isLoading: boolean
 }) {
   const { backgroundCssClasses } = useDatasetRole()
+  const isExistingDataset = previewData.datasetRows.length > 0
+  const description = getDescriptionText({
+    selectedCount,
+    selectionMode,
+    isExistingDataset,
+  })
   return (
     <div className='flex flex-col gap-y-2'>
       <Text.H4>Spans preview</Text.H4>
-      <Text.H6 color='foregroundMuted'>
-        {selectedCount} spans will be added to{' '}
-        {previewData.datasetRows.length > 0 ? 'the dataset' : 'a new dataset'}.
-        Here's a preview.
-      </Text.H6>
+      <Text.H6 color='foregroundMuted'>{description}</Text.H6>
       {isLoading ? (
         <TableSkeleton rows={10} cols={5} maxHeight={320} />
       ) : (

@@ -109,6 +109,8 @@ export function useSelectedSpans({
     Array<{ traceId: string; spanId: string }>
   >([])
   const [selectedCount, setSelectedCount] = useState(0)
+  const [selectionMode, setSelectionMode] =
+    useState<SelectableRowsHook['selectionMode']>('NONE')
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
   const { previewData, fetchPreview, isLoading } = usePreviewRowsStore({
     dataset: selectedDataset,
@@ -125,11 +127,13 @@ export function useSelectedSpans({
     }))
     setSelectedSpanIdentifiers(identifiers)
     setSelectedCount(selectableState.selectedCount)
+    setSelectionMode(selectableState.selectionMode)
   }, [
     previewModalState,
     setSelectedSpanIdentifiers,
     selectableState.selectedRowIds,
     selectableState.selectedCount,
+    selectableState.selectionMode,
     spans,
   ])
 
@@ -167,6 +171,7 @@ export function useSelectedSpans({
       setSelectedDataset(undefined)
       setSelectedSpanIdentifiers([])
       setSelectedCount(0)
+      setSelectionMode('NONE')
       selectableState.clearSelections()
       previewModalState.onClose()
     },
@@ -223,6 +228,7 @@ export function useSelectedSpans({
       fetchPreview,
       error,
       selectedCount,
+      selectionMode,
     }),
     [
       previewData,
@@ -236,6 +242,7 @@ export function useSelectedSpans({
       fetchPreview,
       error,
       selectedCount,
+      selectionMode,
     ],
   )
 }
