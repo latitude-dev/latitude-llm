@@ -82,7 +82,7 @@ export function resolveClientToolDefinition({
       ...toolManifest.definition,
       execute: instrumentToolHandler(awaitClientToolResult, {
         workspaceId: streamManager.workspace.id,
-        context: streamManager.$completion!.context,
+        context: streamManager.$context,
         toolManifest,
         toolName,
       }),
@@ -95,7 +95,7 @@ export function resolveClientToolDefinition({
       ...toolManifest.definition,
       execute: instrumentToolHandler(toolHandler, {
         workspaceId: streamManager.workspace.id,
-        context: streamManager.$completion!.context,
+        context: streamManager.$context,
         toolName,
         toolManifest,
       }),

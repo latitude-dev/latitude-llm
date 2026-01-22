@@ -9,7 +9,7 @@ import { JSONSchema7 } from 'json-schema'
 import { LogSources } from '../../../constants'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
-import { ai, AIReturn } from '../../../services/ai'
+import { ai, AIReturn, CompletionTelemetryOptions } from '../../../services/ai'
 import { processResponse } from '../../../services/chains/ProviderProcessor'
 import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
 import { createProviderLog } from '../../../services/providerLogs/create'
@@ -46,6 +46,7 @@ export async function streamAIResponse({
   output,
   abortSignal,
   resolvedTools,
+  telemetryOptions,
 }: {
   context: TelemetryContext
   controller: ReadableStreamDefaultController
@@ -59,6 +60,7 @@ export async function streamAIResponse({
   output?: Output
   abortSignal?: AbortSignal
   resolvedTools?: ResolvedToolsDict
+  telemetryOptions?: CompletionTelemetryOptions
 }): Promise<{
   response: ChainStepResponse<StreamType>
   messages: LegacyMessage[]
@@ -77,6 +79,7 @@ export async function streamAIResponse({
     output,
     abortSignal,
     onError: handleAIError,
+    telemetryOptions,
   }).then((r) => r.unwrap())
 
   const checkResult = checkValidStream({ type: aiResult.type })

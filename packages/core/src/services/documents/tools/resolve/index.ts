@@ -84,7 +84,7 @@ async function resolveToolDefinition({
   if (isSimulated) {
     return Result.ok(
       simulatedToolDefinition({
-        context: streamManager.$completion!.context,
+        context: streamManager.$context,
         toolName,
         toolManifest,
         simulationInstructions:

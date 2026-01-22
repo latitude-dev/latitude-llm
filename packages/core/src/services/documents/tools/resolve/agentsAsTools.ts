@@ -48,8 +48,8 @@ export async function resolveAgentAsToolDefinition({
   toolManifest: ToolManifest<ToolSource.Agent>
   streamManager: StreamManager
 }): PromisedResult<Tool, LatitudeError> {
-  const { $completion, workspace, promptSource } = streamManager
-  const context = $completion!.context
+  const { $context, workspace, promptSource } = streamManager
+  const context = $context
 
   if (!('commit' in promptSource)) {
     return Result.error(

@@ -16,7 +16,6 @@ import { createOpenAI, type OpenAIProvider } from '@ai-sdk/openai'
 import { createPerplexity, PerplexityProvider } from '@ai-sdk/perplexity'
 import { createXai, XaiProvider } from '@ai-sdk/xai'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { TelemetryContext } from '../../telemetry'
 
 import { Providers } from '@latitude-data/constants'
 import { Result, TypedResult } from '../../lib/Result'
@@ -36,7 +35,6 @@ export { type PartialPromptConfig as PartialConfig } from '@latitude-data/consta
 const GROQ_API_URL = 'https://api.groq.com/openai/v1'
 
 function createAmazonBedrockProvider(
-  context: TelemetryContext,
   config: AmazonBedrockConfiguration,
   name: string,
 ) {
@@ -53,7 +51,7 @@ function createAmazonBedrockProvider(
 
   return Result.ok(
     createAmazonBedrock({
-      fetch: instrumentedFetch({ context }),
+      fetch: instrumentedFetch(),
       region: config.region,
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
@@ -104,13 +102,11 @@ export type LlmProvider =
   | PerplexityProvider
 
 export function createProvider({
-  context,
   provider,
   apiKey,
   url,
   config,
 }: {
-  context: TelemetryContext
   provider: ProviderApiKey
   apiKey: string
   url?: string
@@ -124,14 +120,14 @@ export function createProvider({
     case Providers.OpenAI:
       return Result.ok(
         createOpenAI({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           apiKey,
         }),
       )
     case Providers.Groq:
       return Result.ok(
         createOpenAI({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           apiKey,
           baseURL: GROQ_API_URL,
         }),
@@ -139,21 +135,21 @@ export function createProvider({
     case Providers.Anthropic:
       return Result.ok(
         createAnthropic({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           apiKey,
         }),
       )
     case Providers.Mistral:
       return Result.ok(
         createMistral({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           apiKey,
         }),
       )
     case Providers.Azure:
       return Result.ok(
         createAzure({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           apiKey,
           ...(config?.azure ?? {}),
         }),
@@ -161,7 +157,7 @@ export function createProvider({
     case Providers.Google: {
       return Result.ok(
         createGoogleGenerativeAI({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           apiKey,
         }),
       )
@@ -176,7 +172,7 @@ export function createProvider({
 
       return Result.ok(
         createVertex({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           ...vertexConfig,
         }),
       )
@@ -192,7 +188,7 @@ export function createProvider({
 
       return Result.ok(
         createVertexAnthropic({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           ...vertexConfig,
         }),
       )
@@ -200,35 +196,34 @@ export function createProvider({
     case Providers.XAI:
       return Result.ok(
         createXai({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           apiKey,
         }),
       )
     case Providers.DeepSeek:
       return Result.ok(
         createDeepSeek({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           apiKey,
         }),
       )
     case Providers.Perplexity:
       return Result.ok(
         createPerplexity({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           apiKey,
         }),
       )
     case Providers.Custom:
       return Result.ok(
         createOpenAI({
-          fetch: instrumentedFetch({ context }),
+          fetch: instrumentedFetch(),
           apiKey,
           baseURL: url,
         }),
       )
     case Providers.AmazonBedrock:
       return createAmazonBedrockProvider(
-        context,
         provider.configuration as AmazonBedrockConfiguration,
         provider.name,
       )

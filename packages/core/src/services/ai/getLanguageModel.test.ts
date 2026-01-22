@@ -6,6 +6,7 @@ import * as factories from '../../tests/factories'
 import { getLanguageModel } from './getLanguageModel'
 import { LlmProvider } from './helpers'
 import { VercelConfigWithProviderRules } from './providers/rules'
+import { TelemetryContext } from '@latitude-data/telemetry'
 
 const GetLanguageModelMock = vi.hoisted(() => vi.fn())
 const GetChatLanguageModelMock = vi.hoisted(() => vi.fn())
@@ -60,6 +61,7 @@ describe('getLanguageModel', () => {
       llmProvider: MockLlmProvider,
       config,
       customLanguageModel,
+      context: {} as TelemetryContext,
     })
 
     expect(model).toEqual({ model: 'im_custom' })
@@ -71,6 +73,7 @@ describe('getLanguageModel', () => {
       model: 'gpt-4o',
       llmProvider: MockLlmProvider,
       config,
+      context: {} as TelemetryContext,
     })
 
     expect(GetChatLanguageModelMock).toHaveBeenCalledWith('gpt-4o', {
@@ -86,6 +89,7 @@ describe('getLanguageModel', () => {
       model: 'gpt-4o',
       llmProvider: MockLlmProvider,
       config,
+      context: {} as TelemetryContext,
     })
 
     expect(GetLanguageModelMock).toHaveBeenCalledWith('gpt-4o', {
@@ -105,6 +109,7 @@ describe('getLanguageModel', () => {
         provider: Providers.Anthropic,
         model: 'claude-3-5-sonnet',
       },
+      context: {} as TelemetryContext,
     })
 
     expect(GetLanguageModelMock).toHaveBeenCalledWith('claude-3-5-sonnet', {

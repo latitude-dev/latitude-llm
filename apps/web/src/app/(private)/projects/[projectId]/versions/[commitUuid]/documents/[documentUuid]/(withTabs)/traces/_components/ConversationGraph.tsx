@@ -88,13 +88,6 @@ const GraphItem = memo(
     ])
 
     const colorScheme = useMemo(() => {
-      if (isSelected) {
-        return {
-          background: 'bg-accent',
-          border: 'border-accent-foreground',
-        }
-      }
-
       if (span.status === SpanStatus.Error) {
         return {
           background: colors.backgrounds[SPAN_COLORS.red.background],
@@ -106,16 +99,16 @@ const GraphItem = memo(
         background: colors.backgrounds[specification.color.background],
         border: colors.borderColors[specification.color.border],
       }
-    }, [isSelected, span.status, specification.color])
+    }, [span.status, specification.color])
 
     return (
       <div className='relative w-full h-full'>
         <div
           className={cn(
-            'absolute h-5 rounded-md cursor-pointer border top-1 hover:opacity-80',
+            'absolute h-5 rounded-md cursor-pointer border top-1 hover:opacity-80 transition-opacity',
             colorScheme.background,
-            colorScheme.border +
-              (isSelected || isCollapsed ? ' border-2' : '/10'),
+            colorScheme.border + (isSelected ? ' border-2' : '/10'),
+            isCollapsed && 'border-dashed opacity-80',
           )}
           style={barStyle}
           onClick={() => {

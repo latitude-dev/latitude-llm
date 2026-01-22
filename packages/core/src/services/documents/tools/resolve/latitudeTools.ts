@@ -27,7 +27,7 @@ export function resolveLatitudeToolDefinition({
     )
   }
 
-  const context = streamManager.$completion!.context
+  const context = streamManager.$context
   const definition = toolDefinition.definition(context)!
 
   return Result.ok({

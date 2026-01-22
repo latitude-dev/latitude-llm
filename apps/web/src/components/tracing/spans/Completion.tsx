@@ -7,12 +7,11 @@ import { MetadataItem } from '$/components/MetadataItem'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useState } from 'react'
-import { DetailsPanelProps, SPAN_COLORS } from './shared'
+import { DetailsPanelProps, SPAN_COLORS, SpanFrontendSpecification } from './shared'
 import {
   FINISH_REASON_DETAILS,
   SPAN_SPECIFICATIONS,
@@ -23,10 +22,10 @@ import { cn } from '@latitude-data/web-ui/utils'
 const specification = SPAN_SPECIFICATIONS[SpanType.Completion]
 export default {
   ...specification,
-  icon: 'brain' as IconName,
+  icon: 'messageCircle',
   color: SPAN_COLORS.blue,
   DetailsPanel: DetailsPanel,
-}
+} satisfies SpanFrontendSpecification<SpanType.Completion>
 
 function MessagesDetails({
   input,

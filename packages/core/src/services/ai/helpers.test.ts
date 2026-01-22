@@ -4,11 +4,9 @@ import { Providers } from '@latitude-data/constants'
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { Result } from '../../lib/Result'
-import { TelemetryContext } from '../../telemetry'
 import * as factories from '../../tests/factories'
 import { createProvider as createProviderGlobal } from './helpers'
 
-let context: TelemetryContext
 let workspace: Workspace
 let user: User
 
@@ -18,7 +16,6 @@ describe('createProvider', () => {
 
     user = userData
     workspace = w
-    context = factories.createTelemetryContext({ workspace })
 
     vi.resetModules()
   })
@@ -32,7 +29,6 @@ describe('createProvider', () => {
     })
 
     const result = createProviderGlobal({
-      context,
       provider,
       apiKey: provider.token,
       url: undefined,
@@ -75,7 +71,6 @@ describe('createProvider', () => {
     const mod = await import('./helpers')
     const createProvider = mod.createProvider
     const result = createProvider({
-      context,
       provider,
       apiKey: provider.token,
       url: undefined,
@@ -127,7 +122,6 @@ describe('createProvider', () => {
     const mod = await import('./helpers')
     const createProvider = mod.createProvider
     const result = createProvider({
-      context,
       provider,
       apiKey: provider.token,
       url: undefined,
