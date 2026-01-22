@@ -25,7 +25,6 @@ import {
 import { ChatTextArea } from '../ChatInputBox/ChatTextArea'
 
 export function DocumentEditorContentArea({
-  refinementEnabled,
   setSelectedTab,
   isExperimentModalOpen,
   toggleExperimentModal,
@@ -33,7 +32,6 @@ export function DocumentEditorContentArea({
   togglePlaygroundOpen,
   isPlaygroundTransitioning,
 }: {
-  refinementEnabled: boolean
   setSelectedTab: ReactStateDispatch<TabValue>
   isExperimentModalOpen: boolean
   toggleExperimentModal: () => void
@@ -118,10 +116,7 @@ export function DocumentEditorContentArea({
                     !devMode,
                 })}
               >
-                <Editors
-                  document={document}
-                  refinementEnabled={refinementEnabled}
-                />
+                <Editors document={document} />
               </div>
             </div>
             <div

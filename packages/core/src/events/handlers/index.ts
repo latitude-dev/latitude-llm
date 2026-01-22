@@ -9,7 +9,6 @@ import { enqueueShadowTestChallengerHandler } from './enqueueShadowTestChallenge
 import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { generateDetailsForMergedIssue } from './generateDetailsForMergedIssue'
 import { handleEvaluationResultV2Updated } from './handleEvaluationResultV2Updated'
-import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
 import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTriggerCreated'
 import { notifyClientOfDocumentTriggerDeleted } from './notifyClientOfDocumentTriggerDeleted'
 import { notifyClientOfDocumentTriggerEventCreated } from './notifyClientOfDocumentTriggerEventCreated'
@@ -23,12 +22,10 @@ import { notifyClientOfSpanCreated } from './notifyClientOfSpanCreated'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { pingProjectUpdateJob } from './pingProjectUpdateJob'
 import { removeMergedIssueVectors } from './removeMergedIssueVectors'
-import { requestDocumentSuggestionJobV2 } from './requestDocumentSuggestionJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendIssueEscalatingHandler } from './sendIssueEscalatingHandler'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
-import { sendSuggestionNotification } from './sendSuggestionNotification'
 import { stopDeploymentTestsForCommitHandler } from './stopDeploymentTestsForCommitHandler'
 import { touchApiKeyJob } from './touchApiKeyJob'
 import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
@@ -47,12 +44,6 @@ export const EventHandlers: IEventsHandlers = {
   documentsDeleted: [unassignIssuesOnDocumentsDeleted],
   documentLogCreated: [notifyToClientDocumentLogCreatedJob],
   experimentVariantsCreated: [],
-  documentSuggestionCreated: [
-    notifyClientOfDocumentSuggestionCreated,
-    sendSuggestionNotification,
-  ],
-  documentSuggestionApplied: [],
-  documentSuggestionDiscarded: [],
   exportReady: [notifyClientOfExportReady],
   magicLinkTokenCreated: [sendMagicLinkJob],
   membershipCreated: [sendInvitationToUserJob],
@@ -71,8 +62,6 @@ export const EventHandlers: IEventsHandlers = {
   chatMessageRequested: [],
   sharedChatMessageRequested: [],
   forkDocumentRequested: [],
-  copilotRefinerGenerated: [],
-  copilotRefinerApplied: [],
   copilotSuggestionGenerated: [],
   copilotSuggestionApplied: [],
   evaluationV2Created: [pingProjectUpdateJob],
@@ -84,7 +73,6 @@ export const EventHandlers: IEventsHandlers = {
   evaluationResultV2Created: [
     assignIssueToEvaluationResultV2Job,
     notifyClientOfEvaluationResultV2Created,
-    requestDocumentSuggestionJobV2,
   ],
   evaluationResultV2Updated: [handleEvaluationResultV2Updated],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],

@@ -9,7 +9,7 @@ import Transaction from '../../lib/Transaction'
 import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema/models/documentVersions'
-import { inheritDocumentRelations } from './inheritRelations'
+import { canInheritDocumentRelations } from './inheritRelations'
 
 export async function resetToDocumentVersion(
   {
@@ -65,14 +65,10 @@ export async function resetToDocumentVersion(
       return Result.error(new LatitudeError('Could not reset to version'))
     }
 
-    await inheritDocumentRelations(
-      {
-        fromVersion: documentVersion,
-        toVersion: insertedDocument[0]!,
-        workspace: workspace,
-      },
-      transaction,
-    ).then((r) => r.unwrap())
+    canInheritDocumentRelations({
+      fromVersion: documentVersion,
+      toVersion: insertedDocument[0]!,
+    }).unwrap()
 
     // Invalidate all resolvedContent for this commit
     await tx

@@ -102,8 +102,6 @@ async function createCompositeEvaluation(
         settings: generateCompositeEvaluationSettings(evaluations),
         options: {
           evaluateLiveLogs: false,
-          enableSuggestions: false,
-          autoApplySuggestions: false,
         },
         workspace,
       },

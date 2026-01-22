@@ -19,7 +19,7 @@ import {
 } from '../../../repositories'
 import { documentVersions } from '../../../schema/models/documentVersions'
 import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
-import { inheritDocumentRelations } from '../inheritRelations'
+import { canInheritDocumentRelations } from '../inheritRelations'
 import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
 import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
@@ -100,11 +100,9 @@ async function replaceCommitChanges(
   {
     commit,
     documentChanges,
-    workspace,
   }: {
     commit: Commit
     documentChanges: DocumentVersion[]
-    workspace: Workspace
   },
   transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion[], Error>> {
@@ -178,21 +176,15 @@ async function replaceCommitChanges(
         )
       : []
 
-    await Promise.all(
-      insertedDocs.map(async (toVersion) => {
-        const fromVersion = docsToInsert.find(
-          (d) => d.documentUuid === toVersion.documentUuid,
-        )!
-        return await inheritDocumentRelations(
-          {
-            fromVersion,
-            toVersion,
-            workspace,
-          },
-          transaction,
-        ).then((r) => r.unwrap())
-      }),
-    )
+    insertedDocs.map(async (toVersion) => {
+      const fromVersion = docsToInsert.find(
+        (d) => d.documentUuid === toVersion.documentUuid,
+      )!
+      return canInheritDocumentRelations({
+        fromVersion,
+        toVersion,
+      }).unwrap()
+    })
 
     return Result.ok([...insertedDocs, ...updatedDocs])
   })
@@ -267,7 +259,6 @@ export async function recomputeChanges(
         {
           commit: draft,
           documentChanges: documentsToUpdate,
-          workspace: workspace,
         },
         transaction,
       )

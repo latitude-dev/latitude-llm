@@ -82,8 +82,6 @@ describe('createEvaluationV2', () => {
     }
     options = {
       evaluateLiveLogs: false,
-      enableSuggestions: true,
-      autoApplySuggestions: true,
     }
     issueId = null
 

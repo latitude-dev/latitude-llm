@@ -113,7 +113,7 @@ describe('unlockIssuesDashboardOnAnnotation', () => {
             metadata: {},
             hasPassed: true,
             error: null,
-            usedForSuggestion: false,
+
             workspaceId: workspace.id,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -169,7 +169,7 @@ describe('unlockIssuesDashboardOnAnnotation', () => {
             metadata: {},
             hasPassed: true,
             error: null,
-            usedForSuggestion: false,
+
             workspaceId: workspace.id,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -219,7 +219,7 @@ describe('unlockIssuesDashboardOnAnnotation', () => {
             metadata: {},
             hasPassed: true,
             error: null,
-            usedForSuggestion: false,
+
             workspaceId: workspace.id,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -272,7 +272,7 @@ describe('unlockIssuesDashboardOnAnnotation', () => {
             metadata: {},
             hasPassed: true,
             error: null,
-            usedForSuggestion: false,
+
             workspaceId: workspace.id,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -340,7 +340,7 @@ describe('unlockIssuesDashboardOnAnnotation', () => {
             metadata: {},
             hasPassed: true,
             error: null,
-            usedForSuggestion: false,
+
             workspaceId: workspace.id,
             createdAt: new Date(),
             updatedAt: new Date(),

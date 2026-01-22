@@ -9,7 +9,7 @@ import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
 import { documentVersions } from '../../schema/models/documentVersions'
 import { pingProjectUpdate } from '../projects'
-import { inheritDocumentRelations } from './inheritRelations'
+import { canInheritDocumentRelations } from './inheritRelations'
 import { updateListOfIntegrations } from './updateListOfIntegrations'
 import { getDocumentType } from './update'
 
@@ -97,14 +97,10 @@ export async function updateDocumentUnsafe(
       return Result.error(new NotFoundError('Document does not exist'))
     }
 
-    await inheritDocumentRelations(
-      {
-        fromVersion: document,
-        toVersion: updatedDocs[0]!,
-        workspace: workspace!,
-      },
-      transaction,
-    ).then((r) => r.unwrap())
+    canInheritDocumentRelations({
+      fromVersion: document,
+      toVersion: updatedDocs[0]!,
+    }).unwrap()
 
     // Invalidate all resolvedContent for this commit
     await tx

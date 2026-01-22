@@ -18,8 +18,6 @@ const eventHandlersJobMappings = {
   sendInvitationToUserJob: jobs.sendInvitationToUserJob,
   sendMagicLinkJob: jobs.sendMagicLinkJob,
   sendReferralInvitationJob: jobs.sendReferralInvitationJob,
-  sendSuggestionNotification: jobs.sendSuggestionNotification,
-  requestDocumentSuggestionJobV2: jobs.requestDocumentSuggestionJobV2,
   createDatasetRowsJob: jobs.createDatasetRowsJob,
   evaluateLiveLogJob: jobs.evaluateLiveLogJob,
   updateWebhookLastTriggeredAt: jobs.updateWebhookLastTriggeredAt,
@@ -28,8 +26,6 @@ const eventHandlersJobMappings = {
   touchApiKeyJob: jobs.touchApiKeyJob,
   notifyClientOfExportReady: jobs.notifyClientOfExportReady,
   notifyToClientDocumentLogCreatedJob: jobs.notifyToClientDocumentLogCreatedJob,
-  notifyClientOfDocumentSuggestionCreated:
-    jobs.notifyClientOfDocumentSuggestionCreated,
   notifyClientOfEvaluationResultV2Created:
     jobs.notifyClientOfEvaluationResultV2Created,
   undeployDocumentTriggerJob: jobs.undeployDocumentTriggerJob,

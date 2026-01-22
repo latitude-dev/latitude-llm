@@ -13,15 +13,10 @@ import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 export enum PlaygroundAction {
-  RefinePrompt = 'refinePrompt',
   RunLatte = 'runLatte',
 }
 
 export type PlaygroundActionPayload = {
-  [PlaygroundAction.RefinePrompt]: {
-    evaluationUuid: string
-    resultUuids: string[]
-  }
   [PlaygroundAction.RunLatte]: {
     prompt: string
   }

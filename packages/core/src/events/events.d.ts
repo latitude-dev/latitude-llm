@@ -7,7 +7,6 @@ import { type Commit } from '../schema/models/types/Commit'
 import { type Dataset } from '../schema/models/types/Dataset'
 import { type DatasetRow } from '../schema/models/types/DatasetRow'
 import { type DeploymentTest } from '../schema/models/types/DeploymentTest'
-import { type DocumentSuggestion } from '../schema/models/types/DocumentSuggestion'
 import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
 import { type Experiment } from '../schema/models/types/Experiment'
 import { type MagicLinkToken } from '../schema/models/types/MagicLinkTokens'
@@ -35,9 +34,6 @@ export type Events =
   | 'workspaceCreated'
   | 'projectCreated'
   | 'documentLogCreated'
-  | 'documentSuggestionCreated'
-  | 'documentSuggestionApplied'
-  | 'documentSuggestionDiscarded'
   | 'sendReferralInvitation'
   | 'claimReferralInvitations'
   | 'datasetCreated'
@@ -57,8 +53,6 @@ export type Events =
   | 'chatMessageRequested'
   | 'sharedChatMessageRequested'
   | 'forkDocumentRequested'
-  | 'copilotRefinerGenerated'
-  | 'copilotRefinerApplied'
   | 'copilotSuggestionGenerated'
   | 'copilotSuggestionApplied'
   | 'evaluationV2Created'
@@ -202,33 +196,6 @@ export type CommitCreatedEvent = LatitudeEventGeneric<
 export type DocumentLogCreatedEvent = LatitudeEventGeneric<
   'documentLogCreated',
   Pick<DocumentLog, 'id'> & { workspaceId: number }
->
-
-export type DocumentSuggestionCreatedEvent = LatitudeEventGeneric<
-  'documentSuggestionCreated',
-  {
-    workspaceId: number
-    suggestion: DocumentSuggestion
-    evaluation: EvaluationV2
-  }
->
-
-export type DocumentSuggestionAppliedEvent = LatitudeEventGeneric<
-  'documentSuggestionApplied',
-  {
-    workspaceId: number
-    userId: string
-    suggestion: DocumentSuggestion
-  }
->
-
-export type DocumentSuggestionDiscardedEvent = LatitudeEventGeneric<
-  'documentSuggestionDiscarded',
-  {
-    workspaceId: number
-    userId: string
-    suggestion: DocumentSuggestion
-  }
 >
 
 export type SendReferralInvitationEvent = LatitudeEventGeneric<
@@ -412,29 +379,6 @@ export type ForkDocumentRequestedEvent = LatitudeEventGeneric<
       workspaceId: number
       userEmail: string
     }
-  }
->
-
-export type CopilotRefinerGenerated = LatitudeEventGeneric<
-  'copilotRefinerGenerated',
-  {
-    workspaceId: number
-    projectId: number
-    commitUuid: string
-    documentUuid: string
-    userEmail: string
-  } & {
-    evaluationUuid: string
-  }
->
-export type CopilotRefinerApplied = LatitudeEventGeneric<
-  'copilotRefinerApplied',
-  {
-    workspaceId: number
-    projectId: number
-    commitUuid: string
-    documentUuid: string
-    userEmail: string
   }
 >
 
@@ -1035,9 +979,6 @@ export type LatitudeEvent =
   | WorkspaceCreatedEvent
   | ProjectCreatedEvent
   | DocumentLogCreatedEvent
-  | DocumentSuggestionCreatedEvent
-  | DocumentSuggestionAppliedEvent
-  | DocumentSuggestionDiscardedEvent
   | SendReferralInvitationEvent
   | ClaimReferralInvitationEvent
   | DatasetCreatedEvent
@@ -1057,8 +998,6 @@ export type LatitudeEvent =
   | ChatMessageRequestedEvent
   | SharedChatMessageRequestedEvent
   | ForkDocumentRequestedEvent
-  | CopilotRefinerGenerated
-  | CopilotRefinerApplied
   | CopilotSuggestionGenerated
   | CopilotSuggestionApplied
   | EvaluationV2CreatedEvent
@@ -1132,9 +1071,6 @@ export interface IEventsHandlers {
   workspaceCreated: EventHandler<WorkspaceCreatedEvent>[]
   projectCreated: EventHandler<ProjectCreatedEvent>[]
   documentLogCreated: EventHandler<DocumentLogCreatedEvent>[]
-  documentSuggestionCreated: EventHandler<DocumentSuggestionCreatedEvent>[]
-  documentSuggestionApplied: EventHandler<DocumentSuggestionAppliedEvent>[]
-  documentSuggestionDiscarded: EventHandler<DocumentSuggestionDiscardedEvent>[]
   sendReferralInvitation: EventHandler<SendReferralInvitationEvent>[]
   claimReferralInvitations: EventHandler<ClaimReferralInvitationEvent>[]
   datasetCreated: EventHandler<DatasetCreatedEvent>[]
@@ -1154,8 +1090,6 @@ export interface IEventsHandlers {
   chatMessageRequested: EventHandler<ChatMessageRequestedEvent>[]
   sharedChatMessageRequested: EventHandler<SharedChatMessageRequestedEvent>[]
   forkDocumentRequested: EventHandler<ForkDocumentRequestedEvent>[]
-  copilotRefinerGenerated: EventHandler<CopilotRefinerGenerated>[]
-  copilotRefinerApplied: EventHandler<CopilotRefinerApplied>[]
   copilotSuggestionGenerated: EventHandler<CopilotSuggestionGenerated>[]
   copilotSuggestionApplied: EventHandler<CopilotSuggestionApplied>[]
   evaluationV2Created: EventHandler<EvaluationV2CreatedEvent>[]

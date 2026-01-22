@@ -54,8 +54,6 @@ export const evaluationVersions = latitudeSchema.table(
     ).$type<AlignmentMetricMetadata>(),
     // Denormalized configuration fields - create indexes if necessary
     evaluateLiveLogs: boolean('evaluate_live_logs'),
-    enableSuggestions: boolean('enable_suggestions'),
-    autoApplySuggestions: boolean('auto_apply_suggestions'),
     ...timestamps(),
     deletedAt: timestamp('deleted_at'),
     ignoredAt: timestamp('ignored_at'),

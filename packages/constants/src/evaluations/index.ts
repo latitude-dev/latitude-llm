@@ -191,8 +191,6 @@ export type EvaluationV2<
   alignmentMetricMetadata?: AlignmentMetricMetadata | null
   configuration: EvaluationConfiguration<T, M>
   evaluateLiveLogs?: boolean | null
-  enableSuggestions?: boolean | null
-  autoApplySuggestions?: boolean | null
   createdAt: Date
   updatedAt: Date
   ignoredAt?: Date | null
@@ -243,7 +241,6 @@ export type EvaluationResultV2<
   evaluatedLogId?: number | null
   evaluatedSpanId?: string | null
   evaluatedTraceId?: string | null
-  usedForSuggestion?: boolean | null
   createdAt: Date
   updatedAt: Date
 } & EvaluationResultValue<T, M>
@@ -275,15 +272,10 @@ export const EvaluationSettingsSchema = z.object({
   configuration: EvaluationConfigurationSchema,
 })
 
-export type EvaluationOptions = Pick<
-  EvaluationV2,
-  'evaluateLiveLogs' | 'enableSuggestions' | 'autoApplySuggestions'
->
+export type EvaluationOptions = Pick<EvaluationV2, 'evaluateLiveLogs'>
 
 export const EvaluationOptionsSchema = z.object({
   evaluateLiveLogs: z.boolean().nullable().optional(),
-  enableSuggestions: z.boolean().nullable().optional(),
-  autoApplySuggestions: z.boolean().nullable().optional(),
 })
 
 export const EVALUATION_SCORE_SCALE = 100

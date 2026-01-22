@@ -18,7 +18,6 @@ import { DocumentRunStatusEvent, EvaluationStatusEvent } from '../events/events'
 import { Commit } from '../schema/models/types/Commit'
 import type { Dataset } from '../schema/models/types/Dataset'
 import type { DatasetRow } from '../schema/models/types/DatasetRow'
-import type { DocumentSuggestion } from '../schema/models/types/DocumentSuggestion'
 import type { DocumentTrigger } from '../schema/models/types/DocumentTrigger'
 import type { DocumentTriggerEvent } from '../schema/models/types/DocumentTriggerEvent'
 import type { ExperimentDto } from '../schema/models/types/Experiment'
@@ -65,12 +64,6 @@ type DocumentLogCreatedArgs = {
   commitUuid: string
   documentLogId: number
   documentLogWithMetadata: DocumentLogWithMetadataAndError
-}
-
-type DocumentSuggestionCreatedArgs = {
-  workspaceId: number
-  suggestion: DocumentSuggestion
-  evaluation: EvaluationV2
 }
 
 type DatasetRowsCreatedArgs =
@@ -199,7 +192,6 @@ export type WebServerToClientEvents = {
   datasetRowsCreated: (args: DatasetRowsCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
   documentLogCreated: (args: DocumentLogCreatedArgs) => void
-  documentSuggestionCreated: (args: DocumentSuggestionCreatedArgs) => void
   evaluationResultV2Created: (args: EvaluationResultV2CreatedArgs) => void
   projectUpdated: (args: ProjectUpdatedArgs) => void
   triggerCreated: (args: DocumentTriggerCreatedArgs) => void
@@ -224,10 +216,6 @@ export type WorkersClientToServerEvents = {
   documentLogCreated: (args: {
     workspaceId: number
     data: DocumentLogCreatedArgs
-  }) => void
-  documentSuggestionCreated: (args: {
-    workspaceId: number
-    data: DocumentSuggestionCreatedArgs
   }) => void
   evaluationResultV2Created: (args: {
     workspaceId: number

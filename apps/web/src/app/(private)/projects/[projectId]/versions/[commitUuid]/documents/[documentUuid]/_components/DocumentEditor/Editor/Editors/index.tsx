@@ -10,10 +10,8 @@ import { DocumentVersion } from '@latitude-data/core/schema/models/types/Documen
 
 export const Editors = memo(function Editors({
   document,
-  refinementEnabled,
 }: {
   document: DocumentVersion
-  refinementEnabled: boolean
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -37,7 +35,6 @@ export const Editors = memo(function Editors({
   return devMode || diffOptions ? (
     <PlaygroundTextEditor
       copilotEnabled={false}
-      refinementEnabled={refinementEnabled}
       compileErrors={metadata?.errors}
       project={project}
       document={document}

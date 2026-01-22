@@ -30,7 +30,6 @@ type CreateEvaluationResultV2Args<
   dataset?: Dataset
   datasetLabel?: string
   datasetRow?: DatasetRow
-  usedForSuggestion?: boolean
   workspace: Workspace
   createdAt?: Date
 } & Partial<EvaluationResultValue<T, M>>
@@ -71,7 +70,6 @@ export async function createEvaluationResultV2<
       hasPassed: args.hasPassed ?? true,
       error: args.error ?? null,
     } as EvaluationResultValue<T, M>,
-    usedForSuggestion: args.usedForSuggestion,
     workspace: args.workspace,
   }).then((r) => r.unwrap())
 

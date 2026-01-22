@@ -7,8 +7,6 @@ import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEdito
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { memo, Suspense, useCallback } from 'react'
-import { DocumentRefinement } from '../DocumentRefinement'
-import { DocumentSuggestions } from '../DocumentSuggestions'
 import { EditorSettings } from '../EditorSettings'
 import { LatteDiffManager } from './LatteDiffManager'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
@@ -24,7 +22,6 @@ export const PlaygroundTextEditor = memo(
     value,
     defaultValue,
     copilotEnabled,
-    refinementEnabled,
     isSaved,
     readOnlyMessage,
     highlightedCursorIndex,
@@ -34,7 +31,6 @@ export const PlaygroundTextEditor = memo(
     commit: ICommitContextType['commit']
     document: DocumentVersion
     copilotEnabled: boolean
-    refinementEnabled: boolean
     value: string
     defaultValue?: string
     isSaved: boolean
@@ -108,24 +104,6 @@ export const PlaygroundTextEditor = memo(
           highlightedCursorIndex={highlightedCursorIndex}
           actionButtons={
             <>
-              <DocumentSuggestions
-                project={project}
-                commit={commit}
-                document={document}
-                prompt={value}
-                diff={diffOptions}
-                setDiff={setDiffOptions}
-                setPrompt={onChange}
-              />
-              <DocumentRefinement
-                project={project}
-                commit={commit}
-                document={document}
-                diff={diffOptions}
-                setDiff={setDiffOptions}
-                setPrompt={onChange}
-                refinementEnabled={refinementEnabled}
-              />
               <LatteDiffManager />
               <EditorSettings copilotEnabled={copilotEnabled} />
             </>

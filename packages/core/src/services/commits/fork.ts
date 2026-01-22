@@ -11,7 +11,7 @@ import {
 } from '../../repositories'
 import { documentVersions } from '../../schema/models/documentVersions'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
-import { inheritDocumentRelations } from '../documents/inheritRelations'
+import { canInheritDocumentRelations } from '../documents/inheritRelations'
 import { createCommit } from './create'
 
 /**
@@ -66,17 +66,12 @@ export async function forkCommit(
         )
         .returning()
 
-      await Promise.all(
-        insertedDocs.map(async (toVersion) => {
-          const fromVersion = documents.find(
-            (d) => d.documentUuid === toVersion.documentUuid,
-          )!
-          return inheritDocumentRelations(
-            { fromVersion, toVersion, workspace },
-            transaction,
-          ).then((r) => r.unwrap())
-        }),
-      )
+      insertedDocs.map(async (toVersion) => {
+        const fromVersion = documents.find(
+          (d) => d.documentUuid === toVersion.documentUuid,
+        )!
+        return canInheritDocumentRelations({ fromVersion, toVersion }).unwrap()
+      })
     }
 
     const evalsRepo = new EvaluationsV2Repository(workspace.id, tx)
