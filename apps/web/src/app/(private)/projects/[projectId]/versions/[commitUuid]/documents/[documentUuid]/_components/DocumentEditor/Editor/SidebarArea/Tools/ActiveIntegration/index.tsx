@@ -19,6 +19,7 @@ import { IntegrationType } from '@latitude-data/constants'
 import { INTEGRATION_TYPE_VALUES } from '$/lib/integrationTypeOptions'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { parseMarkdownLinks } from '$/components/Pipedream/utils'
+import { CustomMcpHeadersButton } from './CustomMcpHeaders'
 
 function ImageIconComponent({ imageIcon }: { imageIcon?: ImageIcon }) {
   if (!imageIcon) return null
@@ -216,6 +217,10 @@ export function ActiveIntegration({
               ) : null}
             </Text.H6>
           ) : null}
+
+          <CustomMcpHeadersButton
+            integration={integration}
+          />
 
           {!isClientTools && (
             <DropdownMenu

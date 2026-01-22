@@ -23,13 +23,14 @@ ARG PROJECT
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-COPY packages/core/package.json ./packages/core/
+COPY packages/ ./packages/
+COPY tools/ ./tools/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
-  --frozen-lockfile \
-  --filter "${PROJECT}..."
+  --frozen-lockfile
 
-COPY packages/core/ ./packages/core/
+RUN pnpm build --filter='@latitude-data/telemetry' --filter='@latitude-data/constants'
 
-CMD ["pnpm", "--prefix", "packages/core", "db:migrate"]
+CMD sh -c "cd /app && pnpm --filter @latitude-data/core db:migrate && pnpm --filter @latitude-data/core scripts:setup"
+
 

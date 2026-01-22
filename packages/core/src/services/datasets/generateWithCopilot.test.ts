@@ -4,11 +4,9 @@ import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../lib/Result'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { CLOUD_MESSAGES } from '../../constants'
-import * as copilotGet from '../copilot/get'
 import * as copilotRun from '../copilot/run'
 import { generateDatasetWithCopilot } from './generateWithCopilot'
 
-let mockGetCopilot: MockInstance
 let mockRunCopilot: MockInstance
 let envSpy: MockInstance
 
@@ -25,15 +23,6 @@ describe('generateDatasetWithCopilot', () => {
       COPILOT_PROMPT_DATASET_GENERATOR_PATH: '/copilot/datasets/generator',
       COPILOT_WORKSPACE_API_KEY: 'workspace-api-key',
     } as any)
-
-    // Setup default mocks for copilot functions
-    mockGetCopilot = vi.spyOn(copilotGet, 'getCopilot').mockResolvedValue(
-      Result.ok({
-        workspace: {} as any,
-        commit: {} as any,
-        document: {} as any,
-      }),
-    )
 
     mockRunCopilot = vi.spyOn(copilotRun, 'runCopilot').mockResolvedValue(
       Result.ok({
@@ -140,20 +129,6 @@ describe('generateDatasetWithCopilot', () => {
     expect(Result.isOk(res)).toBe(false)
     expect(res.error).toBeInstanceOf(BadRequestError)
     expect(res.error?.message).toBe('COPILOT_WORKSPACE_API_KEY is not set')
-  })
-
-  it('returns error when getCopilot fails', async () => {
-    mockGetCopilot.mockResolvedValue(
-      Result.error(new Error('Copilot not found')),
-    )
-
-    const res = await generateDatasetWithCopilot({
-      parameters: 'foo',
-      rowCount: 1,
-    })
-
-    expect(Result.isOk(res)).toBe(false)
-    expect(res.error?.message).toBe('Copilot not found')
   })
 
   it('returns error when runCopilot fails', async () => {

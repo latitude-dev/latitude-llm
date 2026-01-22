@@ -23,6 +23,7 @@ export enum AppLocalStorage {
   replayOnboarding = 'replayOnboarding',
   lastRunTab = 'lastRunTab',
   onboardingState = 'onboardingState',
+  customMcpHeaders = 'customMcpHeaders',
 }
 
 export const isLocalStorageAvailable = (() => {

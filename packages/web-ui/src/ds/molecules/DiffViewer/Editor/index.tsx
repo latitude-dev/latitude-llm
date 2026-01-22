@@ -1,9 +1,9 @@
 'use client'
 
-import { useRef } from 'react'
-import { type editor } from 'monaco-editor'
-import { MonacoDiffEditor } from '../../DocumentTextEditor/Editor/DiffEditor'
 import { DiffValue } from '@latitude-data/constants'
+import { type editor } from 'monaco-editor'
+import { useRef } from 'react'
+import { MonacoDiffEditor } from '../../DocumentTextEditor/Editor/DiffEditor'
 
 export function DiffViewer({ newValue, oldValue }: DiffValue) {
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null)
@@ -23,6 +23,7 @@ export function DiffViewer({ newValue, oldValue }: DiffValue) {
         editorRef={diffEditorRef}
         newValue={newValue ?? ''}
         oldValue={oldValue ?? ''}
+        readOnlyMessage='Cannot edit a read-only diff editor'
       />
     </div>
   )

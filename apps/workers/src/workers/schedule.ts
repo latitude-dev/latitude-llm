@@ -31,13 +31,6 @@ export async function setupSchedules() {
     { opts: { attempts: 1 } },
   )
 
-  // Every day at 2 AM - Removes logs older than 30 days from free plan accounts
-  await maintenanceQueue.upsertJobScheduler(
-    'scheduleMigrateSpansJobs',
-    { pattern: '0 0 1 * * *' },
-    { opts: { attempts: 1 } },
-  )
-
   // Every Monday at 1:00:00 AM - Schedule weekly email reports
   await maintenanceQueue.upsertJobScheduler(
     'scheduleWeeklyEmailJobs',
@@ -49,6 +42,13 @@ export async function setupSchedules() {
   await maintenanceQueue.upsertJobScheduler(
     'dailyAlignmentMetricUpdateJob',
     { pattern: '0 0 1 * * *' },
+    { opts: { attempts: 1 } },
+  )
+
+  // Every day at 3 AM - Process cancelled subscriptions and downgrade workspaces
+  await maintenanceQueue.upsertJobScheduler(
+    'processCancelledSubscriptionsJob',
+    { pattern: '0 0 3 * * *' },
     { opts: { attempts: 1 } },
   )
 }

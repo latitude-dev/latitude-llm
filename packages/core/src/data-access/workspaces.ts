@@ -22,7 +22,28 @@ export async function unsafelyFindWorkspaceByName(name: string, db = database) {
   const result = await db
     .select(workspacesDtoColumns)
     .from(workspaces)
+    .innerJoin(
+      subscriptions,
+      eq(workspaces.currentSubscriptionId, subscriptions.id),
+    )
     .where(eq(workspaces.name, name))
+    .limit(1)
+
+  return result[0]
+}
+
+export async function unsafelyFindWorkspaceByStripeCustomerId(
+  stripeCustomerId: string,
+  db = database,
+) {
+  const result = await db
+    .select(workspacesDtoColumns)
+    .from(workspaces)
+    .innerJoin(
+      subscriptions,
+      eq(workspaces.currentSubscriptionId, subscriptions.id),
+    )
+    .where(eq(workspaces.stripeCustomerId, stripeCustomerId))
     .limit(1)
 
   return result[0]

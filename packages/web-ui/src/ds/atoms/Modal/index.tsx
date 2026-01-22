@@ -46,7 +46,7 @@ export type ModalProps = {
   defaultOpen?: boolean
   onOpenChange?: (open: boolean) => void
   open?: boolean
-  description?: string
+  description?: string | ReactNode
   warningDescription?: string
   children?: ReactNode
   footer?: ReactNode
@@ -95,7 +95,7 @@ export function Modal({
         })}
       >
         <div className='flex flex-col relative h-full overflow-hidden'>
-          {steps || title || description ? (
+          {steps || title || !!description ? (
             <div className='flex flex-col gap-y-4 pb-6'>
               {steps && (
                 <div className='pl-6 pt-6 pr-12'>
@@ -103,7 +103,7 @@ export function Modal({
                 </div>
               )}
 
-              {(title || description) && (
+              {(title || !!description) && (
                 <div className={cn('px-6', { 'pt-6': !steps })}>
                   <DialogHeader>
                     {title && (
@@ -120,7 +120,7 @@ export function Modal({
                         </span>
                       </DialogTitle>
                     )}
-                    {description && (
+                    {!!description && (
                       <DialogDescription>{description}</DialogDescription>
                     )}
                     {warningDescription && (

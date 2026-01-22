@@ -4,10 +4,10 @@ import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
   createDatasetFromSpansJob: jobs.createDatasetFromSpansJob,
-  createProviderLogJob: jobs.createProviderLogJob,
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
-  generateProjectNameJob: jobs.generateProjectNameJob,
+  createProviderLogJob: jobs.createProviderLogJob,
   exportSpansJob: jobs.exportSpansJob,
+  generateProjectNameJob: jobs.generateProjectNameJob,
 }
 
 export function startDefaultWorker() {

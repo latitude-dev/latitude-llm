@@ -1,4 +1,4 @@
-import { addDays, differenceInDays, isAfter } from 'date-fns'
+import { addDays, isAfter } from 'date-fns'
 
 export enum SubscriptionPlan {
   EnterpriseV1 = 'enterprise_v1',
@@ -14,6 +14,7 @@ export enum SubscriptionPlan {
 }
 
 const NO_STRIPE_PRICE = 'NO_STRIPE_PRICE'
+const ONE_HUNDRED_YEARS_IN_DAYS = 36500
 
 export const SubscriptionPlans = {
   [SubscriptionPlan.HobbyV1]: {
@@ -90,7 +91,7 @@ export const SubscriptionPlans = {
     name: 'Enterprise',
     credits: 'unlimited' as const, // runs
     users: 'unlimited' as const,
-    retention_period: 3650, // days
+    retention_period: ONE_HUNDRED_YEARS_IN_DAYS,
     rate_limit: 500, // per second
     latte_credits: 'unlimited' as const,
     optimizationsMonth: 'unlimited' as const,
@@ -110,13 +111,15 @@ export const SubscriptionPlans = {
     name: 'Scale',
     credits: 1_000_000, // runs
     users: 'unlimited' as const,
-    retention_period: 36500, // days (~100 years, effectively unlimited)
+    retention_period: ONE_HUNDRED_YEARS_IN_DAYS,
     rate_limit: 166, // per second
     latte_credits: 1500, // 5x Team plan
     optimizationsMonth: 'unlimited' as const,
-    stripePriceId: 'price_1SpqwPAMdFMjIC4fGJVuEG6t',
+    stripePriceId: NO_STRIPE_PRICE,
   },
 }
+
+const PLAN_KEYS = Object.keys(SubscriptionPlans) as SubscriptionPlan[]
 
 export type TrialInfo = {
   daysInTrial: number
@@ -140,7 +143,6 @@ export const STRIPE_PLANS = [
   SubscriptionPlan.TeamV2,
   SubscriptionPlan.TeamV3,
   SubscriptionPlan.TeamV4,
-  SubscriptionPlan.ScaleV1,
 ]
 
 export const FREE_PLANS = [
@@ -172,6 +174,29 @@ export function getTrialEndDateFromNow(): Date {
   return addDays(new Date(), TRIAL_DAYS)
 }
 
+function differenceInCalendarDaysUtc(dateLeft: Date, dateRight: Date): number {
+  const leftUtc = Date.UTC(
+    dateLeft.getUTCFullYear(),
+    dateLeft.getUTCMonth(),
+    dateLeft.getUTCDate(),
+  )
+  const rightUtc = Date.UTC(
+    dateRight.getUTCFullYear(),
+    dateRight.getUTCMonth(),
+    dateRight.getUTCDate(),
+  )
+  const MS_PER_DAY = 24 * 60 * 60 * 1000
+  return Math.floor((leftUtc - rightUtc) / MS_PER_DAY)
+}
+
+export function hasPlanLimitedRetention(plan: SubscriptionPlan): boolean {
+  return SubscriptionPlans[plan].retention_period < ONE_HUNDRED_YEARS_IN_DAYS
+}
+
+export function getPlansWithLimitedRetention(): SubscriptionPlan[] {
+  return PLAN_KEYS.filter(hasPlanLimitedRetention)
+}
+
 /**
  * Computes trial information for a subscription
  * Returns null if the plan is a paying plan (non-free)
@@ -190,7 +215,10 @@ export function computeTrialInfo({
 
   const now = new Date()
   const trialEnded = isAfter(now, trialEndsAt)
-  const trialDaysLeft = Math.max(0, differenceInDays(trialEndsAt, now))
+  const trialDaysLeft = Math.max(
+    0,
+    differenceInCalendarDaysUtc(trialEndsAt, now),
+  )
 
   return {
     daysInTrial: TRIAL_DAYS,

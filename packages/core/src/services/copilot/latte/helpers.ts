@@ -13,8 +13,7 @@ import {
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { LatteThreadUpdateArgs } from '../../../websockets/constants'
-import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { unsafelyFindProject } from '../../../data-access/projects'
+import { getCopilotData } from '../getCopilotData'
 
 import { PromisedResult } from '../../../lib/Transaction'
 import {
@@ -52,9 +51,19 @@ export function assertCopilotIsSupported(): TypedResult<
   undefined,
   LatitudeError
 > {
-  if (!env.COPILOT_PROJECT_ID) return missingKeyError('COPILOT_PROJECT_ID')
-  if (!env.COPILOT_LATTE_PROMPT_PATH) {
-    return missingKeyError('COPILOT_LATTE_PROMPT_PATH')
+  if (env.LATITUDE_ENTERPRISE_MODE) {
+    if (!env.ENTERPRISE_COPILOT_WORKSPACE_NAME) {
+      return missingKeyError('ENTERPRISE_COPILOT_WORKSPACE_NAME')
+    }
+    if (!env.ENTERPRISE_COPILOT_PROJECT_NAME) {
+      return missingKeyError('ENTERPRISE_COPILOT_PROJECT_NAME')
+    }
+  } else if (!env.COPILOT_PROJECT_ID) {
+    return missingKeyError('COPILOT_PROJECT_ID')
+  }
+
+  if (!env.COPILOT_PROMPT_LATTE_PATH) {
+    return missingKeyError('COPILOT_PROMPT_LATTE_PATH')
   }
 
   return Result.nil()
@@ -102,17 +111,11 @@ export async function getCopilotDocument(
   const supportResult = assertCopilotIsSupported()
   if (!supportResult.ok) return supportResult as ErrorResult<LatitudeError>
 
-  const project = await unsafelyFindProject(env.COPILOT_PROJECT_ID!)
-  if (!project) {
-    return Result.error(
-      new NotImplementedError(
-        `Copilot is not supported in this environment. There is no project with ID $COPILOT_PROJECT_ID`,
-      ),
-    )
+  const copilotData = await getCopilotData()
+  if (!Result.isOk(copilotData)) {
+    return Result.error(new NotImplementedError(copilotData.error.message))
   }
-  const workspace = await unsafelyFindWorkspace(project.workspaceId).then(
-    (w) => w!,
-  )
+  const { workspace, project } = copilotData.value
 
   const commitResult = await getCommitResult({
     workspaceId: workspace.id,
@@ -122,7 +125,7 @@ export async function getCopilotDocument(
   if (!commitResult.ok || !commitResult.value) {
     return Result.error(
       new NotImplementedError(
-        `Copilot is not supported in this environment. The desired commit does not exist in $COPILOT_PROJECT_ID`,
+        'Copilot is not supported in this environment. The desired commit does not exist in the configured project',
       ),
     )
   }
@@ -130,13 +133,13 @@ export async function getCopilotDocument(
 
   const documentScope = new DocumentVersionsRepository(workspace.id)
   const documentResult = await documentScope.getDocumentByPath({
-    path: env.COPILOT_LATTE_PROMPT_PATH!,
+    path: env.COPILOT_PROMPT_LATTE_PATH!,
     commit,
   })
   if (!documentResult.ok) {
     return Result.error(
       new NotImplementedError(
-        `Copilot is not supported in this environment. There is no document with path $COPILOT_LATTE_PROMPT_PATH`,
+        `Copilot is not supported in this environment. There is no document with path $COPILOT_PROMPT_LATTE_PATH`,
       ),
     )
   }

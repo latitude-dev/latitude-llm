@@ -5,18 +5,15 @@ import { createWorker } from '../utils/createWorker'
 import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 const jobMappings = {
-  backfillEvaluationResultsTypeAndMetricJob:
-    jobs.backfillEvaluationResultsTypeAndMetricJob,
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   cleanDocumentSuggestionsJob: jobs.cleanDocumentSuggestionsJob,
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
   destroyWorkspaceJob: jobs.destroyWorkspaceJob,
   requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
-  scheduleBackfillEvaluationResultsTypeAndMetricJobs:
-    jobs.scheduleBackfillEvaluationResultsTypeAndMetricJobs,
   scheduleWeeklyEmailJobs: jobs.scheduleWeeklyEmailJobs,
   dailyAlignmentMetricUpdateJob: jobs.dailyAlignmentMetricUpdateJob,
   updateEvaluationAlignmentJob: jobs.updateEvaluationAlignmentJob,
+  processCancelledSubscriptionsJob: jobs.processCancelledSubscriptionsJob,
 }
 
 export function startMaintenanceWorker() {

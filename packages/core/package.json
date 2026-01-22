@@ -198,7 +198,7 @@
     "react-dom": "catalog:",
     "safe-regex": "2.1.1",
     "socket.io-client": "4.7.5",
-    "stripe": "18.1.0",
+    "stripe": "20.1.0",
     "uuid": "11.1.0",
     "voyageai": "0.0.8",
     "weaviate-client": "3.9.0",

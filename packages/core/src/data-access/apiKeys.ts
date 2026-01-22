@@ -22,12 +22,11 @@ export async function unsafelyGetApiKeyByToken(
   return Result.ok(apiKey)
 }
 
-export async function unsafelyGetFirstApiKeyByWorkspaceId({
-  workspaceId,
-}: {
-  workspaceId: number
-}) {
-  const apiKey = await database
+export async function unsafelyGetFirstApiKeyByWorkspaceId(
+  { workspaceId }: { workspaceId: number },
+  db = database,
+) {
+  const apiKey = await db
     .select()
     .from(apiKeys)
     .where(eq(apiKeys.workspaceId, workspaceId))

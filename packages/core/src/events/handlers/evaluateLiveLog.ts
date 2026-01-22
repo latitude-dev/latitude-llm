@@ -1,4 +1,5 @@
 import {
+  ChatSpanMetadata,
   ExternalSpanMetadata,
   LIVE_EVALUABLE_SPAN_TYPES,
   LogSources,
@@ -44,6 +45,7 @@ export const evaluateLiveLogJob = async ({
     .then((r) => r.value)) as
     | PromptSpanMetadata
     | ExternalSpanMetadata
+    | ChatSpanMetadata
     | undefined
   if (!spanMetadata) return
 
@@ -67,20 +69,20 @@ export const evaluateLiveLogJob = async ({
     return
   }
 
-  if (!spanMetadata.versionUuid || !spanMetadata.promptUuid) {
+  if (!span.commitUuid || !span.documentUuid) {
     return
   }
 
   const commitsRepository = new CommitsRepository(workspace.id)
   const commit = await commitsRepository
-    .getCommitByUuid({ uuid: spanMetadata.versionUuid })
+    .getCommitByUuid({ uuid: span.commitUuid })
     .then((r) => r.unwrap())
 
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
   let evaluations = await evaluationsRepository
     .listAtCommitByDocument({
       commitUuid: commit.uuid,
-      documentUuid: spanMetadata.promptUuid,
+      documentUuid: span.documentUuid,
     })
     .then((r) => r.unwrap())
 

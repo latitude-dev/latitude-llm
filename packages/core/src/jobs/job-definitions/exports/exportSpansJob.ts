@@ -1,6 +1,5 @@
 import { Job } from 'bullmq'
-import { PassThrough } from 'stream'
-import { stringify } from 'csv-stringify'
+import { stringify } from 'csv-stringify/sync'
 
 import {
   SpanMetadata,
@@ -325,19 +324,9 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
     const { columns, fixedColumnsByName } =
       buildExportColumns(nanoidHashAlgorithm)
 
-    const csvColumns = columns.map((col) => col.name)
-
-    const passThrough = new PassThrough()
-    const csvStringifier = stringify({
-      header: true,
-      columns: csvColumns,
-    })
-
-    csvStringifier.pipe(passThrough)
-
     const fileKey = exportRecord.fileKey
-    const uploadPromise = disk.putStream(fileKey, passThrough)
 
+    const allCsvRows: string[][] = []
     let batch: Span[] = []
 
     for await (const span of iterateSpans({
@@ -363,7 +352,7 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
             const value = row[col.identifier]
             return value !== undefined ? String(value) : ''
           })
-          csvStringifier.write(csvRow)
+          allCsvRows.push(csvRow)
         }
 
         batch = []
@@ -383,13 +372,14 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
           const value = row[col.identifier]
           return value !== undefined ? String(value) : ''
         })
-        csvStringifier.write(csvRow)
+        allCsvRows.push(csvRow)
       }
     }
 
-    csvStringifier.end()
+    const csvColumns = columns.map((col) => col.name)
+    const csvContent = stringify([csvColumns, ...allCsvRows])
 
-    const uploadResult = await uploadPromise
+    const uploadResult = await disk.put(fileKey, csvContent)
     if (uploadResult.error) {
       throw uploadResult.error
     }

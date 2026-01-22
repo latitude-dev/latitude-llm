@@ -9,7 +9,7 @@ import {
   OPTIMIZATION_TESTSET_SPLIT,
   Span,
   SpanType,
-  SpanWithDetails
+  SpanWithDetails,
 } from '../../constants'
 import { getSpansByIssue } from '../../data-access/issues/getSpansByIssue'
 import { getSpansWithoutIssues } from '../../data-access/issues/getSpansWithoutIssues'
@@ -570,7 +570,7 @@ async function createDatasets(
     negativesLength += list.length
   }
 
-  if (negativesLength < (OPTIMIZATION_MIN_ROWS / 2)) {
+  if (negativesLength < OPTIMIZATION_MIN_ROWS / 2) {
     return Result.error(
       new UnprocessableEntityError(
         `At least ${OPTIMIZATION_MIN_ROWS / 2} negative examples are required`,
@@ -578,7 +578,7 @@ async function createDatasets(
     )
   }
 
-  if (positives.length < (OPTIMIZATION_MIN_ROWS / 2)) {
+  if (positives.length < OPTIMIZATION_MIN_ROWS / 2) {
     return Result.error(
       new UnprocessableEntityError(
         `At least ${OPTIMIZATION_MIN_ROWS / 2} positive examples are required`,

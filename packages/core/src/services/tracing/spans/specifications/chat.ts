@@ -22,5 +22,7 @@ async function process(
     documentLogUuid: attributes[ATTRIBUTES.LATITUDE.documentLogUuid] as string,
     previousTraceId: attributes[ATTRIBUTES.LATITUDE.previousTraceId] as string,
     source: attributes[ATTRIBUTES.LATITUDE.source] as LogSources,
+    promptUuid: attributes[ATTRIBUTES.LATITUDE.documentUuid] as string,
+    versionUuid: attributes[ATTRIBUTES.LATITUDE.commitUuid] as string,
   })
 }

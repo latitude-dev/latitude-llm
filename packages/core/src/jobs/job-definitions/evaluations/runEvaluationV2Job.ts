@@ -1,4 +1,4 @@
-import { SpanType, SpanWithDetails } from '@latitude-data/constants'
+import { MainSpanType, SpanWithDetails } from '@latitude-data/constants'
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { NotFoundError } from '../../../lib/errors'
@@ -114,7 +114,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
 
     const { result } = await runEvaluationV2({
       evaluation,
-      span: { ...span, metadata } as SpanWithDetails<SpanType.Prompt>,
+      span: { ...span, metadata } as SpanWithDetails<MainSpanType>,
       experiment,
       dataset,
       datasetLabel,

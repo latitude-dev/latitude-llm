@@ -170,6 +170,8 @@ import {
   UserRoundPlus,
   GraduationCap,
   Bell,
+  CreditCardIcon,
+  KeyRound,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -333,6 +335,7 @@ const Icons = {
   intercom: Intercom,
   intercomChat: IntercomChat,
   jira: Jira,
+  key: KeyRound,
   lab: FlaskConical,
   letterText: LetterText,
   lightBulb: Lightbulb,
@@ -431,6 +434,7 @@ const Icons = {
   deepSeek: DeepSeek,
   perplexity: Perplexity,
   zap: Zap,
+  creditCard: CreditCardIcon,
   chartNoAxesGantt: ChartNoAxesGantt,
   rectangleHorizontal: RectangleHorizontal,
   expand: Expand,

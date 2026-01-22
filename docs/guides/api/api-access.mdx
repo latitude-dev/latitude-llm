@@ -64,9 +64,9 @@ These headers are sent with every request to help you monitor and adjust your re
 
 ### Endpoints
 
-#### 1. Get a Document
+#### 1. Get a Prompt
 
-Retrieve a specific prompt by its path.
+Retrieve a specific prompt by its path. Use this endpoint to fetch the content and configuration of an existing prompt in your project.
 
 **Endpoint:** `GET /projects/{projectId}/versions/{versionUuid}/documents/{path}`
 
@@ -78,7 +78,7 @@ Retrieve a specific prompt by its path.
 
 **Response:**
 
-The response contains the existing document details along with its configuration.
+The response contains the prompt details along with its configuration.
 
 **Response Body:**
 
@@ -103,7 +103,9 @@ The response contains the existing document details along with its configuration
 }
 ```
 
-#### 2. Get or Create a Document
+#### 2. Get or Create a Prompt
+
+Retrieve an existing prompt or create it if it doesn't exist. This endpoint provides an idempotent way to ensure a prompt exists at a specific path without checking first.
 
 **Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/documents/get-or-create`
 
@@ -121,12 +123,12 @@ The response contains the existing document details along with its configuration
 }
 ```
 
-- `path`: Path to the document (required)
-- `prompt`: Prompt to use for the document (optional, defaults to empty)
+- `path`: Path to the prompt (required)
+- `prompt`: Prompt content to use (optional, defaults to empty)
 
 **Response:**
 
-The response contains the created (or existing) document details along with its configuration.
+The response contains the created (or existing) prompt details along with its configuration.
 
 **Response Body:**
 
@@ -151,9 +153,9 @@ The response contains the created (or existing) document details along with its 
 }
 ```
 
-#### 3. Create or Update a Document
+#### 3. Create or Update a Prompt
 
-Create a new document or update an existing one in a single operation. This endpoint provides more control than `get-or-create`, including the ability to update live commits with the `force` flag.
+Create a new prompt or update an existing one in a single operation. This endpoint provides more control than `get-or-create`, including the ability to update live commits with the `force` flag.
 
 **Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/documents/create-or-update`
 
@@ -172,16 +174,16 @@ Create a new document or update an existing one in a single operation. This endp
 }
 ```
 
-- `path`: Path to the document (required)
-- `prompt`: Content of the document (required)
+- `path`: Path to the prompt (required)
+- `prompt`: Content of the prompt (required)
 - `force`: Allow modifications to live/merged commits (optional, defaults to `false`)
 
 **Behavior:**
 
-- If the document **does not exist** at the specified path, it will be created
-- If the document **already exists** at the path, it will be updated with the new content
+- If the prompt **does not exist** at the specified path, it will be created
+- If the prompt **already exists** at the path, it will be updated with the new content
 - By default, modifications are only allowed on draft commits (not live/merged)
-- When `force: true`, allows creating or updating documents in live commits (use with caution)
+- When `force: true`, allows creating or updating prompts in live commits (use with caution)
 
 <Warning>
   Using `force: true` allows modifying production prompts directly. This should
@@ -191,7 +193,7 @@ Create a new document or update an existing one in a single operation. This endp
 
 **Response:**
 
-The response contains the created or updated document details along with its configuration.
+The response contains the created or updated prompt details along with its configuration.
 
 **Response Body:**
 
@@ -231,10 +233,10 @@ If you try to modify a live commit without the `force` flag, the API returns a 4
 
 **Use Cases:**
 
-- **Single API call for upsert operations**: No need to check if a document exists before creating/updating
+- **Single API call for upsert operations**: No need to check if a prompt exists before creating/updating
 - **Programmatic prompt updates**: Update prompts from your CI/CD pipeline or automation scripts
 - **Emergency hotfixes**: Use `force: true` to quickly fix production prompts when needed
-- **Batch operations**: Efficiently create or update multiple documents in a loop
+- **Batch operations**: Efficiently create or update multiple prompts in a loop
 
 **Example: Update with Force Flag**
 
@@ -390,9 +392,9 @@ If you try to publish a version that is already published or doesn't exist, the 
 }
 ```
 
-#### 6. Run a Document
+#### 6. Run a Prompt
 
-Run a specific document (prompt) with optional parameters.
+Execute a prompt with optional parameters. This endpoint processes your prompt template, sends it to the configured AI provider, and returns the generated response. Supports both streaming and non-streaming modes, as well as background processing for long-running operations.
 
 **Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/documents/run`
 
@@ -475,7 +477,7 @@ type ToolCall = {
 
 #### 7. Chat
 
-The previously described `POST /projects/{projectId}/versions/{versionUuid}/documents/run` endpoint can also be used to continue a conversation. Notice all events contain a `uuid` field that represents that conversation with the AI. You can use this uuid to continue the conversation.
+Continue a multi-turn conversation by sending additional messages to an existing conversation thread. This endpoint allows you to maintain context across multiple exchanges with the AI model by building upon messages from a previous run. The conversation history is automatically managed, and each new message is appended to the existing message chain.
 
 **Endpoint:** `POST /conversations/{conversationUuid}/chat`
 
@@ -517,7 +519,7 @@ Check out the [Streaming Events](/guides/api/streaming-events) guide for more in
 
 #### 8. Get a Conversation
 
-Retrieve a conversation by its UUID. This endpoint returns the complete conversation history including all messages.
+Retrieve the conversation history by its UUID. Use this endpoint to fetch the complete message history from a completed conversation, including all user messages, assistant responses, and tool calls.
 
 **Endpoint:** `GET /conversations/{conversationUuid}`
 
@@ -567,7 +569,7 @@ If the conversation is not found, the API returns a 404 status code with an erro
 
 #### 9. Stop a Conversation
 
-Stop an active conversation that is currently running.
+Stop an active run that is currently processing. This is useful when you need to cancel a long-running prompt execution, such as when the output is no longer needed or when you want to prevent further token consumption.
 
 **Endpoint:** `POST /conversations/{conversationUuid}/stop`
 
@@ -585,7 +587,7 @@ This endpoint returns a 200 status code when the conversation is successfully st
 
 #### 10. Attach to a Conversation
 
-Attach to an active conversation to receive its ongoing output.
+Attach to an active run to receive its output events. This endpoint is particularly useful when you've started a prompt execution with `background: true` and want to stream the results. You can attach at any point during the run's execution to receive the remaining events.
 
 **Endpoint:** `POST /conversations/{conversationUuid}/attach`
 
@@ -652,7 +654,7 @@ The API uses standard HTTP status codes. In case of an error, the response body 
 
 #### 11. Annotate a Log
 
-Add an annotation (evaluation score) to a log.
+Add a manual evaluation score to a conversation log. Use this endpoint to provide human feedback or manual assessments of prompt outputs, which can be used for quality tracking and model improvement.
 
 **Endpoint:** `POST /conversations/{conversationUuid}/evaluations/{evaluationUuid}/annotate`
 
@@ -691,7 +693,7 @@ Add an annotation (evaluation score) to a log.
 
 #### 12. Create Log Entry
 
-Create a log entry for a document.
+Create a log entry for a prompt without executing it. This endpoint allows you to record prompt executions that happened outside of Latitude (e.g., direct LLM API calls) for tracking, analytics, and evaluation purposes.
 
 **Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/documents/logs`
 

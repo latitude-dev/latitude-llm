@@ -80,6 +80,8 @@ export async function addMessages(
   const $chat = telemetry.span.chat(
     {
       documentLogUuid,
+      versionUuid: commit.uuid,
+      promptUuid: document.documentUuid,
       previousTraceId: previousSpan?.traceId ?? '',
       name: document.path.split('/').at(-1),
       source,

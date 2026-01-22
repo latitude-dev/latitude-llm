@@ -11,6 +11,7 @@ export enum LatitudeErrorCodes {
   NotImplementedError = 'NotImplementedError',
   PaymentRequiredError = 'PaymentRequiredError',
   AbortedError = 'AbortedError',
+  BillingError = 'BillingError',
 }
 
 export type LatitudeErrorDetails = {

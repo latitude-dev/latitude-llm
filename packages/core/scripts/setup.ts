@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
@@ -7,17 +7,29 @@ import { users } from '../src/schema/models/users'
 import { workspaces } from '../src/schema/models/workspaces'
 import { projects } from '../src/schema/models/projects'
 import { commits } from '../src/schema/models/commits'
+import { providerApiKeys } from '../src/schema/models/providerApiKeys'
 import { createUser } from '../src/services/users/createUser'
 import { createWorkspace } from '../src/services/workspaces/create'
 import { createProject } from '../src/services/projects/create'
 import { createMembership } from '../src/services/memberships/create'
+import { createApiKey } from '../src/services/apiKeys/create'
+import { createProviderApiKey } from '../src/services/providerApiKeys/create'
+import { createFeature } from '../src/services/features/create'
+import { toggleFeatureGlobally } from '../src/services/features/toggleGlobally'
+import { FeaturesRepository } from '../src/repositories'
 import { unsafelyFindWorkspace } from '../src/data-access/workspaces'
-import { CommitsRepository } from '../src/repositories'
-import { HEAD_COMMIT } from '@latitude-data/constants'
+import {
+  ApiKeysRepository,
+  CommitsRepository,
+  DocumentVersionsRepository,
+} from '../src/repositories'
+import { HEAD_COMMIT, Providers } from '@latitude-data/constants'
 import { createNewDocumentUnsafe } from '../src/services/documents/createUnsafe'
 import { updateDocumentUnsafe } from '../src/services/documents/updateUnsafe'
-import { DocumentVersionsRepository } from '../src/repositories'
 import { type Commit } from '../src/schema/models/types/Commit'
+import { type User } from '../src/schema/models/types/User'
+import { type Workspace } from '../src/schema/models/types/Workspace'
+import { type Feature } from '../src/schema/models/types/Feature'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -26,6 +38,14 @@ const REFERENCE_EMAIL = 'gerard@latitude.so'
 const REFERENCE_WORKSPACE = 'Latitude Reference'
 const REFERENCE_PROJECT = 'Copilot'
 const PROMPTS_DIR = path.join(__dirname, 'prompts')
+const ENTERPRISE_PROVIDER_NAME = 'OpenAI'
+const GLOBAL_FEATURES = [
+  'issues',
+  'traces',
+  'evaluationGenerator',
+  'testing',
+  'optimizations',
+]
 
 /**
  * Recursively gets all .promptl files from a directory
@@ -45,11 +65,11 @@ function getAllPromptlFiles(
     } else if (entry.isFile() && entry.name.endsWith('.promptl')) {
       // Convert absolute path to relative path from prompts directory
       const relativePath = path.relative(baseDir, fullPath)
-      // Remove .promptl extension, convert to forward slashes, replace spaces and underscores with dashes
+      // Remove .promptl extension, convert to forward slashes, replace spaces with dashes
       const documentPath = relativePath
         .replace(/\\/g, '/')
         .replace(/\.promptl$/, '')
-        .replace(/[\s_]+/g, '-')
+        .replace(/\s+/g, '-')
       files.push({ path: documentPath, fullPath })
     }
   }
@@ -58,11 +78,16 @@ function getAllPromptlFiles(
 }
 
 async function main() {
+  if (process.env.LATITUDE_ENTERPRISE_MODE !== 'true') {
+    console.log('Skipping setup in non-enterprise mode')
+    return
+  }
+
   console.log('Starting setup...')
 
   // 1. Find or create user
   console.log(`Checking for user: ${REFERENCE_EMAIL}`)
-  let user = await database
+  let user: User | undefined = await database
     .select()
     .from(users)
     .where(eq(users.email, REFERENCE_EMAIL))
@@ -92,7 +117,7 @@ async function main() {
     .limit(1)
     .then((rows) => rows[0])
 
-  let workspace
+  let workspace: Workspace
   if (!workspaceByName) {
     console.log(
       `Workspace not found. Creating workspace: ${REFERENCE_WORKSPACE}`,
@@ -122,7 +147,91 @@ async function main() {
     }
   }
 
-  // 3. Find or create project
+  const enterpriseToken = process.env.ENTERPRISE_OPENAI_API_KEY
+
+  if (!enterpriseToken) {
+    throw new Error('ENTERPRISE_OPENAI_API_KEY is not set')
+  }
+
+  const existingProvider = await database
+    .select()
+    .from(providerApiKeys)
+    .where(
+      and(
+        eq(providerApiKeys.workspaceId, workspace.id),
+        eq(providerApiKeys.name, ENTERPRISE_PROVIDER_NAME),
+        eq(providerApiKeys.provider, Providers.OpenAI),
+        isNull(providerApiKeys.deletedAt),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0])
+
+  if (!existingProvider) {
+    const providerResult = await createProviderApiKey({
+      workspace,
+      provider: Providers.OpenAI,
+      name: ENTERPRISE_PROVIDER_NAME,
+      token: enterpriseToken,
+      author: user,
+    })
+
+    if (providerResult.error) throw providerResult.error
+    console.log(`✓ Provider API key created: ${ENTERPRISE_PROVIDER_NAME}`)
+  } else {
+    console.log(`✓ Provider API key found: ${ENTERPRISE_PROVIDER_NAME}`)
+  }
+
+  const apiKeysRepo = new ApiKeysRepository(workspace.id)
+  const apiKeyResult = await apiKeysRepo.selectFirst().then((r) => r.unwrap())
+
+  if (!apiKeyResult) {
+    const apiKeyCreated = await createApiKey({ workspace }).then((r) =>
+      r.unwrap(),
+    )
+    console.log(`✓ API key created with ID: ${apiKeyCreated.id}`)
+  } else {
+    console.log(`✓ API key found with ID: ${apiKeyResult.id}`)
+  }
+
+  // 3. Enable global features
+  console.log(`\nEnabling global features: ${GLOBAL_FEATURES.join(', ')}`)
+  const featuresRepo = new FeaturesRepository()
+
+  for (const featureName of GLOBAL_FEATURES) {
+    console.log(`  Enabling feature: ${featureName}`)
+    const featureResult = await featuresRepo.findByName(featureName)
+
+    let feature: Feature
+    if (featureResult.ok) {
+      feature = featureResult.value!
+    } else {
+      // Feature doesn't exist, create it
+      const createResult = await createFeature({ name: featureName })
+      if (createResult.error) {
+        console.error(
+          `  ✗ Failed to create feature ${featureName}:`,
+          createResult.error,
+        )
+        continue
+      }
+      feature = createResult.value
+      console.log(`    ✓ Feature ${featureName} created`)
+    }
+
+    // Enable the feature globally
+    const toggleResult = await toggleFeatureGlobally(feature.id, true)
+    if (toggleResult.error) {
+      console.error(
+        `  ✗ Failed to enable feature ${featureName}:`,
+        toggleResult.error,
+      )
+      continue
+    }
+    console.log(`    ✓ Feature ${featureName} enabled globally`)
+  }
+
+  // 4. Find or create project
   console.log(`Checking for project: ${REFERENCE_PROJECT}`)
   const projectResults = await database
     .select()
@@ -172,7 +281,7 @@ async function main() {
     commit = commitResult.value
   }
 
-  // 4. Update prompts from the prompts folder
+  // 5. Update prompts from the prompts folder
   console.log(`\nUpdating prompts from ${PROMPTS_DIR}`)
   const promptFiles = getAllPromptlFiles(PROMPTS_DIR)
   console.log(`Found ${promptFiles.length} prompt files`)
@@ -254,6 +363,7 @@ async function main() {
   console.log(`  - User: ${user.email}`)
   console.log(`  - Workspace: ${workspace.name} (ID: ${workspace.id})`)
   console.log(`  - Project: ${project.name} (ID: ${project.id})`)
+  console.log(`  - Global features enabled: ${GLOBAL_FEATURES.length}`)
   console.log(`  - Prompts created: ${created}`)
   console.log(`  - Prompts updated: ${updated}`)
   console.log(`  - Total prompts: ${promptFiles.length}`)

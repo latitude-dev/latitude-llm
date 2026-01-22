@@ -2,14 +2,17 @@ import { LogSources } from '@latitude-data/constants'
 import {
   CommitsRepository,
   DeploymentTestsRepository,
+  DocumentVersionsRepository,
 } from '../../repositories'
 import { routeRequest } from './routeRequest'
 import { Commit } from '../../schema/models/types/Commit'
 import { DeploymentTest } from '../../schema/models/types/DeploymentTest'
+import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 
 export type ResolveAbTestRoutingResult = {
   abTest: DeploymentTest | null
   effectiveCommit: Commit
+  effectiveDocument: DocumentVersion
   effectiveSource: LogSources
 }
 
@@ -23,69 +26,65 @@ export type ResolveAbTestRoutingResult = {
  * @param params.workspaceId - The workspace ID
  * @param params.projectId - The project ID
  * @param params.commit - The original commit from the request
+ * @param params.document - The original document from the request
  * @param params.source - The original log source from the request
  * @param params.customIdentifier - Optional custom identifier for A/B test routing
  * @returns Object containing:
  *   - abTest: Active A/B test (if any)
  *   - effectiveCommit: Commit to use (may differ from original for A/B tests)
+ *   - effectiveDocument: Document to use (fetched from effectiveCommit if different)
  *   - effectiveSource: Log source (updated to reflect baseline/challenger for A/B tests)
  */
 export async function resolveAbTestRouting({
   workspaceId,
   projectId,
   commit,
+  document,
   source,
   customIdentifier,
 }: {
   workspaceId: number
   projectId: number
   commit: Commit
+  document: DocumentVersion
   source: LogSources
   customIdentifier?: string | null
 }): Promise<ResolveAbTestRoutingResult> {
   const deploymentTestsRepo = new DeploymentTestsRepository(workspaceId)
   const commitsRepo = new CommitsRepository(workspaceId)
 
-  // Find all active tests for the project
   const allActiveTests =
     await deploymentTestsRepo.findAllActiveForProject(projectId)
 
-  // Get the head commit (baseline is always the head commit)
   const headCommit = await commitsRepo.getHeadCommit(projectId)
   const isHeadCommit = headCommit?.id === commit.id
 
-  // Find active AB test
-  // A test is relevant if:
-  // 1. Commit is the head commit (baseline) - any test targeting this project
-  // 2. Commit is the challenger commit for the test
   const abTest = allActiveTests.find(
     (test) =>
       test.testType === 'ab' &&
       (isHeadCommit || test.challengerCommitId === commit.id),
   )
 
-  // If no AB test, no routing needed
   if (!abTest) {
     return {
       abTest: null,
       effectiveCommit: commit,
+      effectiveDocument: document,
       effectiveSource: source,
     }
   }
 
-  // Determine which variant to route to for AB test
   const routedTo = routeRequest(abTest, customIdentifier)
 
   if (!headCommit) {
-    // If no head commit, fall back to original commit
     return {
       abTest,
       effectiveCommit: commit,
+      effectiveDocument: document,
       effectiveSource: source,
     }
   }
 
-  // Determine the commit and log source based on routing
   const commitIdToUse =
     routedTo === 'baseline' ? headCommit.id : abTest.challengerCommitId
 
@@ -96,6 +95,7 @@ export async function resolveAbTestRouting({
     return {
       abTest,
       effectiveCommit: commit,
+      effectiveDocument: document,
       effectiveSource,
     }
   }
@@ -104,9 +104,18 @@ export async function resolveAbTestRouting({
     .getCommitById(commitIdToUse)
     .then((r) => r.unwrap())
 
+  const docsRepo = new DocumentVersionsRepository(workspaceId)
+  const effectiveDocument = await docsRepo
+    .getDocumentAtCommit({
+      commitId: effectiveCommit.id,
+      documentUuid: document.documentUuid,
+    })
+    .then((r) => r.unwrap())
+
   return {
     abTest,
     effectiveCommit,
+    effectiveDocument,
     effectiveSource,
   }
 }

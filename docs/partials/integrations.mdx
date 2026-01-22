@@ -1,0 +1,410 @@
+### Model providers
+
+<Columns cols={3}>
+  <Card title='OpenAI' icon='openai' href='/developers/providers/openai' arrow='true' />
+  <Card
+    title='Anthropic'
+    href='/developers/providers/anthropic'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 24 24'
+        className='text-primary dark:text-primary-light'
+        fill='currentColor'
+      >
+        <path d='M13.827 3.52h3.603L24 20h-3.603l-6.57-16.48zm-7.258 0h3.767L16.906 20h-3.674l-1.343-3.461H5.017l-1.344 3.46H0L6.57 3.522zm4.132 9.959L8.453 7.687 6.205 13.48H10.7z' />
+      </svg>
+    }
+  />
+  <Card title='Azure' href='/developers/providers/azure' arrow='true' icon='microsoft' />
+  <Card title='Google AI Platform' icon='google' href='/developers/providers/google-ai-platform' arrow='true' />
+  <Card title='Amazon Bedrock' href='/developers/providers/amazon-bedrock' arrow='true' icon='aws' />
+  <Card
+    title='Cohere'
+    href='/developers/providers/cohere'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        fill='currentColor'
+        className='text-primary dark:text-primary-light'
+      >
+        <g clipPath='url(#a)'>
+          <path
+            fillRule='evenodd'
+            d='M10.361 19.053c.84 0 2.512-.047 4.821-1.022 2.692-1.136 8.047-3.2 11.91-5.318 2.702-1.482 3.886-3.441 3.886-6.08C30.978 2.968 28.082 0 24.509 0H9.541C4.41 0 .25 4.265.25 9.526c0 5.262 3.895 9.527 10.111 9.527Z'
+            clipRule='evenodd'
+          />
+          <path
+            fillRule='evenodd'
+            d='M12.893 25.616c0-2.579 1.514-4.904 3.837-5.893l4.714-2.006c4.768-2.029 10.016 1.564 10.016 6.857 0 4.1-3.243 7.425-7.242 7.424l-5.104-.002c-3.436 0-6.221-2.857-6.221-6.38Z'
+            clipRule='evenodd'
+          />
+          <path d='M5.606 20.305c-2.958 0-5.356 2.458-5.356 5.491v.712c0 3.033 2.398 5.491 5.356 5.491 2.958 0 5.356-2.458 5.356-5.491v-.712c0-3.033-2.398-5.491-5.356-5.491Z' />
+        </g>
+        <defs>
+          <clipPath id='a'>
+            <path fill='#fff' d='M.25 0h31.21v32H.25z' />
+          </clipPath>
+        </defs>
+      </svg>
+    }
+  />
+  <Card
+    title='Together AI'
+    href='/developers/providers/together-ai'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        fill='currentColor'
+        className='text-primary dark:text-primary-light'
+      >
+        <g clipPath='url(#a)'>
+          <path d='M3.073 6.137H.997V4.445h2.076V1.218h1.85v3.227h2.91v1.692h-2.91v6.79c0 .482.09.828.27 1.038.196.196.527.294.993.294h2.008v1.692h-2.12c-1.084 0-1.858-.24-2.324-.722-.452-.481-.677-1.241-.677-2.279V6.137Z' />
+        </g>
+      </svg>
+    }
+  />
+  <Card title='Vertex AI' icon='google' href='/developers/providers/vertex-ai' arrow='true' />
+  <Card title='Gemini' icon='google' href='/developers/providers/gemini' arrow='true' />
+  <Card
+    title='Groq'
+    href='/developers/providers/groq'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 64 64'
+        width='24'
+        height='24'
+        className='text-primary dark:text-primary-light'
+      >
+        <text
+          x='32'
+          y='40'
+          textAnchor='middle'
+          fontSize='44'
+          fontFamily='system-ui, sans-serif'
+          fontWeight='400'
+          letterSpacing='-0.5'
+          fill='currentColor'
+        >
+          GR
+        </text>
+      </svg>
+    }
+  />
+  <Card
+    title='Mistral'
+    href='/developers/providers/mistral'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 64 64'
+        width='24'
+        height='24'
+        className='text-primary dark:text-primary-light'
+      >
+        <text
+          x='32'
+          y='40'
+          textAnchor='middle'
+          fontSize='44'
+          fontFamily='system-ui, sans-serif'
+          fontWeight='400'
+          letterSpacing='-0.5'
+          fill='currentColor'
+        >
+          MI
+        </text>
+      </svg>
+    }
+  />
+  <Card
+    title='Ollama'
+    href='/developers/providers/ollama'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 64 64'
+        width='24'
+        height='24'
+        className='text-primary dark:text-primary-light'
+      >
+        <text
+          x='32'
+          y='40'
+          textAnchor='middle'
+          fontSize='44'
+          fontFamily='system-ui, sans-serif'
+          fontWeight='400'
+          letterSpacing='-0.5'
+          fill='currentColor'
+        >
+          OL
+        </text>
+      </svg>
+    }
+  />
+  <Card
+    title='LiteLLM'
+    href='/developers/providers/litellm'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 64 64'
+        width='24'
+        height='24'
+        className='text-primary dark:text-primary-light'
+      >
+        <text
+          x='32'
+          y='40'
+          textAnchor='middle'
+          fontSize='36'
+          fontFamily='system-ui, sans-serif'
+          fontWeight='400'
+          letterSpacing='-0.5'
+          fill='currentColor'
+        >
+          LLM
+        </text>
+      </svg>
+    }
+  />
+  <Card
+    title='Replicate'
+    href='/developers/providers/replicate'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 64 64'
+        width='24'
+        height='24'
+        className='text-primary dark:text-primary-light'
+      >
+        <text
+          x='32'
+          y='40'
+          textAnchor='middle'
+          fontSize='44'
+          fontFamily='system-ui, sans-serif'
+          fontWeight='400'
+          letterSpacing='-0.5'
+          fill='currentColor'
+        >
+          RE
+        </text>
+      </svg>
+    }
+  />
+  <Card title='SageMaker' href='/developers/providers/sagemaker' arrow='true' icon='aws' />
+  <Card
+    title='Transformers'
+    href='/developers/providers/transformers'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 64 64'
+        width='24'
+        height='24'
+        className='text-primary dark:text-primary-light'
+      >
+        <text
+          x='32'
+          y='40'
+          textAnchor='middle'
+          fontSize='44'
+          fontFamily='system-ui, sans-serif'
+          fontWeight='400'
+          letterSpacing='-0.5'
+          fill='currentColor'
+        >
+          TR
+        </text>
+      </svg>
+    }
+  />
+  <Card
+    title='Aleph Alpha'
+    href='/developers/providers/aleph-alpha'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 64 64'
+        width='24'
+        height='24'
+        className='text-primary dark:text-primary-light'
+      >
+        <text
+          x='32'
+          y='40'
+          textAnchor='middle'
+          fontSize='44'
+          fontFamily='system-ui, sans-serif'
+          fontWeight='400'
+          letterSpacing='-0.5'
+          fill='currentColor'
+        >
+          AA
+        </text>
+      </svg>
+    }
+  />
+  <Card
+    title='watsonx'
+    href='/developers/providers/watsonx'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 64 64'
+        width='24'
+        height='24'
+        className='text-primary dark:text-primary-light'
+      >
+        <text
+          x='32'
+          y='40'
+          textAnchor='middle'
+          fontSize='44'
+          fontFamily='system-ui, sans-serif'
+          fontWeight='400'
+          letterSpacing='-0.5'
+          fill='currentColor'
+        >
+          WX
+        </text>
+      </svg>
+    }
+  />
+</Columns>
+
+### Frameworks
+
+<Columns cols={3}>
+  <Card title='Vercel AI SDK' icon='triangle' href='/developers/frameworks/vercel-ai-sdk' arrow='true' />
+  <Card
+    title='LangChain'
+    href='/developers/frameworks/langchain'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        className='text-primary dark:text-primary-light'
+        viewBox='0 0 80 41'
+        width='3em'
+        fill='currentColor'
+      >
+        <path d='M61.514 11.157a3.943 3.943 0 0 0-2.806 1.158l-3.018 3.01a3.951 3.951 0 0 0-1.147 3.095l.019.191a3.894 3.894 0 0 0 1.128 2.314c.435.434.914.709 1.496.9.03.175.047.352.047.53 0 .797-.31 1.546-.874 2.107l-.186.186c-1.008-.344-1.848-.847-2.607-1.604a6.888 6.888 0 0 1-1.927-3.67l-.034-.193-.153.124a3.675 3.675 0 0 0-.294.265l-3.018 3.01a3.957 3.957 0 0 0 2.807 6.757 3.959 3.959 0 0 0 2.806-1.158l3.019-3.01a3.958 3.958 0 0 0 0-5.599 3.926 3.926 0 0 0-1.462-.92 3.252 3.252 0 0 1 .924-2.855 6.883 6.883 0 0 1 2.664 1.656 6.906 6.906 0 0 1 1.926 3.67l.035.193.153-.124c.104-.083.202-.173.296-.267l3.018-3.01a3.956 3.956 0 0 0-2.808-6.756h-.004Z' />
+        <path d='M59.897.149h-39.49C9.153.149 0 9.279 0 20.5c0 11.222 9.154 20.351 20.406 20.351h39.49c11.253 0 20.407-9.13 20.407-20.35C80.303 9.277 71.149.148 59.897.148ZM40.419 32.056c-.651.134-1.384.158-1.882-.36-.183.42-.612.199-.943.144-.03.085-.057.16-.085.246-1.1.073-1.925-1.046-2.449-1.89-1.04-.562-2.222-.904-3.285-1.492-.062.968.15 2.17-.774 2.794-.047 1.862 2.824.22 3.088 1.608-.204.022-.43-.033-.594.124-.749.726-1.608-.55-2.471-.023-1.16.582-1.276 1.059-2.71 1.179-.08-.12-.047-.2.02-.273.404-.468.433-1.02 1.122-1.22-.71-.111-1.303.28-1.901.59-.778.317-.772-.717-1.968.054-.132-.108-.069-.206.007-.289.304-.37.704-.425 1.155-.405-2.219-1.233-3.263 1.508-4.288.145-.308.081-.424.358-.618.553-.167-.183-.04-.405-.033-.62-.2-.094-.453-.139-.394-.459-.391-.132-.665.1-.957.32-.263-.203.178-.5.26-.712.234-.407.769-.084 1.04-.377.772-.437 1.847.273 2.729.153.68.085 1.52-.61 1.179-1.305-.726-.926-.598-2.137-.614-3.244-.09-.645-1.643-1.467-2.092-2.163-.555-.627-.987-1.353-1.42-2.068-1.561-3.014-1.07-6.886-3.037-9.685-.89.49-2.048.259-2.816-.399-.414.377-.432.87-.465 1.392-.994-.99-.87-2.863-.075-3.966a5.276 5.276 0 0 1 1.144-1.11c.098-.07.131-.14.129-.25.786-3.524 6.144-2.845 7.838-.348 1.229 1.537 1.6 3.57 2.994 4.997 1.875 2.047 4.012 3.85 5.742 6.03 1.637 1.992 2.806 4.328 3.826 6.683.416.782.42 1.74 1.037 2.408.304.403 1.79 1.5 1.467 1.888.186.403 1.573.959 1.092 1.35h.002Zm26.026-12.024-3.018 3.01a6.955 6.955 0 0 1-2.875 1.728l-.056.016-.02.053a6.865 6.865 0 0 1-1.585 2.446l-3.019 3.01a6.936 6.936 0 0 1-4.932 2.035 6.936 6.936 0 0 1-4.932-2.035 6.95 6.95 0 0 1 0-9.838l3.018-3.01a6.882 6.882 0 0 1 2.871-1.721l.055-.017.02-.053a6.932 6.932 0 0 1 1.59-2.454l3.019-3.01a6.936 6.936 0 0 1 4.932-2.035c1.865 0 3.616.723 4.932 2.035a6.898 6.898 0 0 1 2.04 4.92c0 1.86-.724 3.607-2.04 4.918v.002Z' />
+        <path d='M28.142 28.413c-.265 1.03-.35 2.782-1.694 2.832-.11.595.413.819.89.627.472-.215.696.171.855.556.729.106 1.806-.242 1.847-1.103-1.088-.625-1.424-1.813-1.896-2.914l-.002.002Z' />
+      </svg>
+    }
+  />
+  <Card
+    title='LlamaIndex'
+    href='/developers/frameworks/llamaindex'
+    arrow='true'
+    icon={
+      <svg
+        className='text-primary dark:text-primary-light'
+        fill='currentColor'
+        viewBox='3 2 16 16'
+        width='24px'
+        height='24px'
+      >
+        <path d='M15.2 17.272s.882-1.47-1.182-2.522c0 0 .4 1.571-.536 3.028h-.961s-.043-.306.363-.462c.85-.327.885-1.724.636-1.892-.76-.51-1.06-.947-.863-2.057 0 0-1.315.481-2.948.275a.211.211 0 0 0-.21.104 4.216 4.216 0 0 1-.555.738s-.075.87-.27 1.488c0 0 .074 1.06-.194 1.804H7.332s.013-.462.565-.521c.677-.073-.12-2.176-.12-2.176s-.035 1.146-.724 2.692h-.878s0-.446.446-.557c.726-.18.402-1.486.285-2.211-.117-.728-.28-2.087-.874-2.841-.593-.755-.895-.749-.931-2.135 0 0-.504-.796-.323-1.844 0 0-.377-1.259.19-3.12 0 0-1.339-.272-1.364-.604-.028-.331.072-.708.43-.74.357-.032.88-.085.882-.461 0-.377-.455-.876-.172-1.023.263-.138.57.753.772.612.132-.091-.36-.572-.039-.506.132.028 1.25.398 1.63 2.35.378 1.952.22 3.256.767 3.256s3.045-.092 4.504.266c1.459.357 1.518.916 2.158.755.64-.162 1.376-.55 1.793.87.368 1.248-.665 1.09-.665 1.481s-.139.998.019 1.368c.157.37.07 1.263.208 1.77.138.505.304.965-.008 1.617 0 0 .153 1.1-.192 1.704h-.83s-.059-.345.345-.506H15.2Z' />
+      </svg>
+    }
+  />
+  <Card
+    title='Haystack'
+    href='/developers/frameworks/haystack'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 64 64'
+        width='24'
+        height='24'
+        className='text-primary dark:text-primary-light'
+      >
+        <text
+          x='32'
+          y='40'
+          textAnchor='middle'
+          fontSize='44'
+          fontFamily='system-ui, sans-serif'
+          fontWeight='400'
+          letterSpacing='-0.5'
+          fill='currentColor'
+        >
+          HY
+        </text>
+      </svg>
+    }
+  />
+  <Card
+    title='DSPy'
+    href='/developers/frameworks/dspy'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 64 64'
+        width='24'
+        height='24'
+        className='text-primary dark:text-primary-light'
+      >
+        <text
+          x='32'
+          y='40'
+          textAnchor='middle'
+          fontSize='44'
+          fontFamily='system-ui, sans-serif'
+          fontWeight='400'
+          letterSpacing='-0.5'
+          fill='currentColor'
+        >
+          DS
+        </text>
+      </svg>
+    }
+  />
+  <Card
+    title='CrewAI'
+    href='/developers/frameworks/crewai'
+    arrow='true'
+    icon={
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 64 64'
+        width='24'
+        height='24'
+        className='text-primary dark:text-primary-light'
+      >
+        <text
+          x='32'
+          y='40'
+          textAnchor='middle'
+          fontSize='44'
+          fontFamily='system-ui, sans-serif'
+          fontWeight='400'
+          letterSpacing='-0.5'
+          fill='currentColor'
+        >
+          CR
+        </text>
+      </svg>
+    }
+  />
+</Columns>

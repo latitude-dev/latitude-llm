@@ -12,7 +12,7 @@ import { UnprocessableEntityError } from '../../lib/errors'
 import { hashObject } from '../../lib/hashObject'
 import { Result } from '../../lib/Result'
 import { type ResultWithEvaluationV2 } from '../../schema/types'
-import { getCopilot, runCopilot } from '../copilot'
+import { runCopilot } from '../copilot'
 import { getOrSetEnrichedReason } from './results/getOrSetEnrichedReason'
 import { validateResultForIssue } from './results/validate'
 
@@ -41,15 +41,6 @@ export async function generateIssue(
       new Error('COPILOT_PROMPT_ISSUE_DETAILS_GENERATOR_PATH is not set'),
     )
   }
-
-  const getting = await getCopilot(
-    { path: env.COPILOT_PROMPT_ISSUE_DETAILS_GENERATOR_PATH },
-    db,
-  )
-  if (getting.error) {
-    return Result.error(getting.error)
-  }
-  const copilot = getting.value
 
   const filtered = []
   for (const result of results) {
@@ -97,9 +88,10 @@ export async function generateIssue(
   }
 
   const running = await runCopilot({
-    copilot: copilot,
+    path: env.COPILOT_PROMPT_ISSUE_DETAILS_GENERATOR_PATH,
     parameters: parameters,
     schema: generatorSchema,
+    db,
   })
   if (running.error) {
     return Result.error(running.error)

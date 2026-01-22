@@ -6,12 +6,12 @@ import {
   ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories'
 import { env } from '@latitude-data/env'
-import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
 import { CLOUD_MESSAGES } from '@latitude-data/core/constants'
 import { listModelsForProvider } from '@latitude-data/core/services/ai/providers/models/index'
+import { runCopilot } from '@latitude-data/core/services/copilot/run'
 
 // TODO: Make this generic. Pass prompts: string
 // Pass entityUuid and entityType so this can be used to track
@@ -28,14 +28,6 @@ export const requestSuggestionAction = authProcedure
   .action(async ({ ctx, parsedInput }) => {
     if (!env.LATITUDE_CLOUD) {
       throw new BadRequestError(CLOUD_MESSAGES.promptSuggestions)
-    }
-
-    if (!env.COPILOT_WORKSPACE_API_KEY) {
-      throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
-    }
-
-    if (!env.COPILOT_PROJECT_ID) {
-      throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
 
     if (!env.COPILOT_PROMPT_EDITOR_COPILOT_PATH) {
@@ -66,25 +58,20 @@ export const requestSuggestionAction = authProcedure
       })),
     )
 
-    const sdk = await createSdk({
-      workspace: ctx.workspace,
-      apiKey: env.COPILOT_WORKSPACE_API_KEY,
-      projectId: env.COPILOT_PROJECT_ID,
-    }).then((r) => r.unwrap())
-
-    const result = await sdk.prompts.run<{ code: string; response: string }>(
-      env.COPILOT_PROMPT_EDITOR_COPILOT_PATH,
-      {
-        stream: false,
-        parameters: {
-          prompt: document.content,
-          request,
-          providers,
-        },
+    const result = await runCopilot({
+      path: env.COPILOT_PROMPT_EDITOR_COPILOT_PATH,
+      parameters: {
+        prompt: document.content,
+        request,
+        providers,
       },
-    )
+      schema: z.object({
+        code: z.string(),
+        response: z.string(),
+      }),
+    })
 
-    if (!result) throw new Error('Failed to request prompt suggestion')
+    if (result.error) throw result.error
 
     publisher.publishLater({
       type: 'copilotSuggestionGenerated',
@@ -97,6 +84,5 @@ export const requestSuggestionAction = authProcedure
       },
     })
 
-    const resultResponse = result.response
-    return resultResponse.object
+    return result.value
   })

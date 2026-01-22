@@ -9,6 +9,7 @@ import { DocumentVersion } from '@latitude-data/core/schema/models/types/Documen
 import { TraceContext } from '@latitude-data/constants'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { useCallback, useMemo } from 'react'
+import { useAllCustomMcpHeaders } from '$/stores/customMcpHeaders'
 
 export function useRunPlaygroundPrompt({
   commit,
@@ -29,6 +30,8 @@ export function useRunPlaygroundPrompt({
     hasActiveStream,
     createAbortController,
   } = useStreamHandler()
+  const { data: mcpHeaders } = useAllCustomMcpHeaders()
+
   const runPromptFn = useCallback(async () => {
     const signal = createAbortController()
 
@@ -47,6 +50,7 @@ export function useRunPlaygroundPrompt({
           parameters: parameters ?? {},
           stream: true, // Explicitly request streaming
           userMessage,
+          mcpHeaders,
         }),
         signal: signal,
       },
@@ -60,6 +64,7 @@ export function useRunPlaygroundPrompt({
     commit.uuid,
     parameters,
     userMessage,
+    mcpHeaders,
     createAbortController,
     createStreamHandler,
   ])
