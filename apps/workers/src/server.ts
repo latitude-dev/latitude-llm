@@ -77,6 +77,8 @@ const server = app.listen(port, host, () => {
   console.log(`Health check server running on port ${port}`)
 })
 
+const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 30_000
+
 const gracefulShutdown = async (signal: string) => {
   console.log(`Received ${signal}, initiating graceful shutdown...`)
 
@@ -87,8 +89,20 @@ const gracefulShutdown = async (signal: string) => {
   const remaining = await jobTracker.getActiveJobsCountNow()
   console.log(`Paused workers. Remaining active jobs: ${remaining}`)
 
-  // 3) Wait for active jobs to complete
-  await Promise.all(workers.map((w) => w.close()))
+  // 3) Wait for active jobs to complete with timeout
+  // If jobs don't finish within timeout, force close to prevent hanging
+  const closeWithTimeout = (worker: (typeof workers)[0]) =>
+    Promise.race([
+      worker.close(),
+      new Promise<void>((resolve) =>
+        setTimeout(() => {
+          console.log(`Worker close timeout reached, forcing shutdown`)
+          resolve()
+        }, GRACEFUL_SHUTDOWN_TIMEOUT_MS),
+      ),
+    ])
+
+  await Promise.all(workers.map(closeWithTimeout))
 
   // 4) Stop job tracker polling and disable scale-in protection
   jobTracker.stopPolling()
