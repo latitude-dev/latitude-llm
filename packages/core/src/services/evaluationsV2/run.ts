@@ -62,7 +62,7 @@ export async function runEvaluationV2<
     evaluatedTraceId: span.traceId,
     evaluationUuid: evaluation.uuid,
   })
-  if (found) {
+  if (found && !dry) {
     return Result.error(
       new UnprocessableEntityError(
         'Cannot evaluate a log that is already evaluated for this evaluation',

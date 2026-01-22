@@ -178,7 +178,7 @@ value1,value2,value3
     )
   })
 
-  it('fails when evaluating a log that is already evaluated for this evaluation', async () => {
+  it('fails when evaluating a log that is already evaluated for this evaluation in non-dry mode', async () => {
     await factories.createEvaluationResultV2({
       evaluation: evaluation,
       span: span,
@@ -201,6 +201,7 @@ value1,value2,value3
         datasetRow: datasetRow,
         commit: commit,
         workspace: workspace,
+        dry: false,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new UnprocessableEntityError(
@@ -957,6 +958,64 @@ value1,value2,value3
         },
         hasPassed: false,
         // error: null, // Note: error not set because it didn't persist
+      }),
+    )
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
+  it('succeeds in dry mode even when a result already exists (alignment recalculation scenario)', async () => {
+    await factories.createEvaluationResultV2({
+      evaluation: evaluation,
+      span: span,
+      commit: commit,
+      experiment: experiment,
+      dataset: dataset,
+      datasetLabel: datasetLabel,
+      datasetRow: datasetRow,
+      workspace: workspace,
+    })
+
+    vi.spyOn(RuleEvaluationExactMatchSpecification, 'run').mockResolvedValue({
+      score: 1,
+      normalizedScore: 100,
+      metadata: {
+        configuration: evaluation.configuration,
+        actualOutput: 'actualOutput',
+        expectedOutput: 'expectedOutput',
+        datasetLabel: datasetLabel,
+      },
+      hasPassed: true,
+    })
+    mocks.publisher.mockClear()
+
+    const { result } = await runEvaluationV2({
+      evaluation: evaluation,
+      span: span,
+      experiment: experiment,
+      dataset: dataset,
+      datasetLabel: datasetLabel,
+      datasetRow: datasetRow,
+      commit: commit,
+      workspace: workspace,
+      dry: true,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedSpanId: span.id,
+        evaluatedTraceId: span.traceId,
+        score: 1,
+        normalizedScore: 100,
+        metadata: {
+          configuration: evaluation.configuration,
+          actualOutput: 'actualOutput',
+          expectedOutput: 'expectedOutput',
+          datasetLabel: datasetLabel,
+        },
+        hasPassed: true,
       }),
     )
     expect(mocks.publisher).not.toHaveBeenCalled()
