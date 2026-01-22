@@ -60,14 +60,30 @@ By default the actual output is the last assistant message in the conversation, 
    - Content filter: Optionally filter the messages by content type (e.g., text, images, tool calls...).
    - Parsing format: The format to parse the actual output into (e.g., string, JSON, YAML...).
    - Field accessor: The optional field to access in the actual output (e.g., `answer`, `arguments.recommendations[2]`, `[-1].tool_name`, ...).
-     ![Evaluation actual output configuration](/assets/evaluation-settings-outputs.png)
+     ![Evaluation actual output configuration](/assets/evaluation-settings-actual-output.png)
 4. Test the configuration by clicking on the "Test" button:
    ![Evaluation actual output test](/assets/evaluation-settings-outputs-test.png)
+
+Take into account that messages with multiple content are flattened into individual ones and stringification is done deterministically.
 
 ## Expected Outputs
 
 The expected output, also known as label, refers to the correct or ideal response that the language model should generate for a given prompt. You can create [Datasets](/guides/datasets/overview) with [Expected Output Columns](/guides/datasets/overview#marking-an-expected-output-column-as-a-label) to evaluate prompts with ground truth.
 ![Evaluation expected output](/assets/evaluation-expected-output.png)
+
+### Selecting the Expected Output to evaluate against
+
+By default the expected output is the value of the dataset column, parsed as a simple string. However, some use cases requires more complex parsing, like complex JSON objects or nested arrays.
+
+1. Go to the evaluation's settings by clicking on the right-side button in the evaluation's dashboard:
+   ![Evaluation settings button](/assets/evaluation-settings-button.png)
+2. Click on **Advanced configuration**.
+3. Configure:
+   - Parsing format: The format to parse the expected output into (e.g., string, JSON, YAML...).
+   - Field accessor: The optional field to access in the expected output (e.g., `answer`, `arguments.recommendations[2]`, `[-1].tool_name`, ...).
+     ![Evaluation expected output configuration](/assets/evaluation-settings-expected-output.png)
+
+Take into account that stringification is done deterministically.
 
 ## Negative Evaluations
 
