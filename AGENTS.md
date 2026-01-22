@@ -173,7 +173,7 @@ Destructive database migrations (dropping tables, columns, or other schema eleme
 
 **PR 2 - Database Migration (deploy after PR 1 is live):**
 
-1. Generate the Drizzle migration: `pnpm --filter @latitude-data/core db:generate`
+1. Generate the Drizzle migration: `pnpm --filter @latitude-data/core db:generate --name drop_unused_tables`
 2. This creates a migration file to drop the unused columns/tables
 3. Run the migration: `pnpm --filter @latitude-data/core db:migrate`
 
