@@ -786,6 +786,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: 3.850.0
         version: 3.850.0
+      '@clickhouse/client':
+        specifier: ^1.16.0
+        version: 1.16.0
       '@codesandbox/sdk':
         specifier: 2.2.1
         version: 2.2.1(@xterm/xterm@5.5.0)(ink@6.3.1(@types/react@19.1.4)(bufferutil@4.0.9)(react@19.1.4)(utf-8-validate@6.0.5))
@@ -2418,6 +2421,13 @@ packages:
   '@cfworker/json-schema@4.1.1':
     resolution: {integrity: sha512-gAmrUZSGtKc3AiBL71iNWxDsyUC5uMaKKGdvzYsBoTW/xi42JQHl7eKV2OYzCUqvc+D2RCcf7EXY2iCyFIk6og==}
 
+  '@clickhouse/client-common@1.16.0':
+    resolution: {integrity: sha512-qMzkI1NmV29ZjFkNpVSvGNfA0c7sCExlufAQMv+V+5xtNeYXnRfdqzmBLIQoq6Pf1ij0kw/wGLD3HQrl7pTFLA==}
+
+  '@clickhouse/client@1.16.0':
+    resolution: {integrity: sha512-ThPhoRMsKsf/hmBEgWlUsGxFecsr3i+k3JI8JV0Od7UpH2BSmk9VKMGJoyPCrTL0vPUs5rJH+7o4iCqBF09Xvg==}
+    engines: {node: '>=16'}
+
   '@codesandbox/sdk@2.2.1':
     resolution: {integrity: sha512-0tjvzhfuyoX+rUvZDLHGiJ4ZVQ03EiKNK4eZbhtnRgwUGscE++QzfSm0mJIUAGmABEobQXDxUsWm+V0B80bZVg==}
     hasBin: true
@@ -3642,6 +3652,7 @@ packages:
   '@mintlify/cli@4.0.599':
     resolution: {integrity: sha512-EZj5wFS2xRB0Hm9EHuTxFNUno1eGQJDaB8I0eKsCJTXKSKLFq1oaGdsgLjNeqYNc4XSXcqzobHSlHWUjNPRRdQ==}
     engines: {node: '>=18.0.0'}
+    deprecated: This version is deprecated. Please upgrade to version 4.0.423 or later.
     hasBin: true
 
   '@mintlify/common@1.0.430':
@@ -10829,6 +10840,7 @@ packages:
   mintlify@4.1.98:
     resolution: {integrity: sha512-DOxp9c/qKnCL4PSf0dELSMne/lneZ6zC8CipxrkQ6bXPedXnwUCeNjTVIYcFp19Z2to9KQJBgloU8TbeJ0CY0A==}
     engines: {node: '>=18.0.0'}
+    deprecated: This version is deprecated. Please upgrade to version 4.0.423 or later.
     hasBin: true
 
   mitt@3.0.1:
@@ -11785,7 +11797,7 @@ packages:
   puppeteer@22.15.0:
     resolution: {integrity: sha512-XjCY1SiSEi1T7iSYuxS82ft85kwDJUS7wj1Z0eGVXKdtr5g4xnVcbjwxhq5xBnpK/E7x1VZZoJDxpjAOasHT4Q==}
     engines: {node: '>=18'}
-    deprecated: < 24.10.2 is no longer supported
+    deprecated: < 24.15.0 is no longer supported
     hasBin: true
 
   qs@6.11.2:
@@ -12898,6 +12910,7 @@ packages:
   tar@6.2.1:
     resolution: {integrity: sha512-DZ4yORTwrbTj/7MZYq2w+/ZFdI6OZ/f9SFHR+71gIVUZhOQPHzVCLpvRnPgyaMpfWxxk/4ONva3GQSyNIKRv6A==}
     engines: {node: '>=10'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exhorbitant rates) by contacting i@izs.me
 
   teeny-request@10.1.0:
     resolution: {integrity: sha512-3ZnLvgWF29jikg1sAQ1g0o+lr5JX6sVgYvfUJazn7ZjJroDBUTWp44/+cFVX0bULjv4vci+rBD+oGVAkWqhUbw==}
@@ -13630,6 +13643,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -16136,6 +16150,12 @@ snapshots:
 
   '@cfworker/json-schema@4.1.1': {}
 
+  '@clickhouse/client-common@1.16.0': {}
+
+  '@clickhouse/client@1.16.0':
+    dependencies:
+      '@clickhouse/client-common': 1.16.0
+
   '@codesandbox/sdk@2.2.1(@xterm/xterm@5.5.0)(ink@6.3.1(@types/react@19.1.4)(bufferutil@4.0.9)(react@19.1.4)(utf-8-validate@6.0.5))':
     dependencies:
       '@hey-api/client-fetch': 0.7.3
@@ -16277,7 +16297,7 @@ snapshots:
       '@azure/arm-appservice': 16.0.0
       '@azure/arm-resources': 6.1.0
       '@azure/identity': 4.12.0
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       chalk: 3.0.0
       fast-deep-equal: 3.1.3
     transitivePeerDependencies:
@@ -16319,7 +16339,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-deployment@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
       simple-git: 3.16.0
@@ -16329,7 +16349,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-dora@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
       simple-git: 3.16.0
@@ -16339,7 +16359,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-gate@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       '@types/uuid': 9.0.8
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
@@ -16391,7 +16411,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-sarif@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       ajv: 8.17.1
       ajv-formats: 2.1.1(ajv@8.17.1)
       axios: 1.12.2(debug@4.4.3)
@@ -16406,7 +16426,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-sbom@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       ajv: 8.17.1
       ajv-formats: 2.1.1(ajv@8.17.1)
       axios: 1.12.2(debug@4.4.3)
@@ -16423,14 +16443,14 @@ snapshots:
       '@aws-sdk/client-cloudwatch-logs': 3.901.0
       '@aws-sdk/client-iam': 3.901.0
       '@aws-sdk/client-sfn': 3.901.0
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       deep-object-diff: 1.1.9
     transitivePeerDependencies:
       - aws-crt
 
   '@datadog/datadog-ci-plugin-synthetics@3.21.4(@datadog/datadog-ci-base@3.21.4)(bufferutil@4.0.9)(utf-8-validate@6.0.5)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
       debug: 4.4.3

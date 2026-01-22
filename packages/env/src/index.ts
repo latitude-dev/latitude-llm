@@ -297,6 +297,21 @@ export const env = createEnv({
       .default('709a3398-ed26-4e77-beef-90ed288cdd0a'),
 
     RELEASE_VERSION: z.string().optional(),
+
+    CLICKHOUSE_URL: z.string().optional().default('http://localhost:8123'),
+    CLICKHOUSE_MIGRATION_URL: z
+      .string()
+      .optional()
+      .default('clickhouse://localhost:9000'),
+    CLICKHOUSE_DB: z
+      .string()
+      .optional()
+      .default('latitude_analytics_development'),
+    CLICKHOUSE_USER: z.string().optional().default('latitude'),
+    CLICKHOUSE_PASSWORD: z.string().optional().default('secret'),
+    CLICKHOUSE_CLUSTER_ENABLED: z.string().optional().default('false'),
+    CLICKHOUSE_CLUSTER_NAME: z.string().optional().default('default'),
+    CLICKHOUSE_MIGRATION_SSL: z.string().optional().default('false'),
   },
   runtimeEnv: {
     ...process.env,
