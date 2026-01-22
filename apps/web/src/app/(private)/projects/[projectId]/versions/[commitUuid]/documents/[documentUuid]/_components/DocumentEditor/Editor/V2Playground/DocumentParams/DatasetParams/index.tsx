@@ -41,6 +41,23 @@ export function DatasetParams({
   const { getPosition, position, setPosition, isLoadingPosition } =
     useDatasetRowPosition()
 
+  // Column mapping
+  const [mappedValues, setMappedValues] = useState<Record<string, string>>({})
+
+  // Auto-map parameters to columns when dataset changes
+  const autoMapParameters = useCallback(
+    (dataset: Dataset) => {
+      const autoMapped: Record<string, string> = {}
+      dataset.columns.forEach((col) => {
+        if (metadataParameters.includes(col.name)) {
+          autoMapped[col.name] = col.identifier
+        }
+      })
+      setMappedValues(autoMapped)
+    },
+    [metadataParameters],
+  )
+
   // Dataset selection
   const [selectedDataset, setSelectedDataset] = useState<Dataset | undefined>()
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
@@ -50,6 +67,7 @@ export function DatasetParams({
       const selectedDs = data.find((ds) => ds.id === document.datasetV2Id)
       if (selectedDs) {
         setSelectedDataset(selectedDs)
+        autoMapParameters(selectedDs)
       }
     },
   })
@@ -108,9 +126,6 @@ export function DatasetParams({
     [updatePosition],
   )
 
-  // Column mapping
-  const [mappedValues, setMappedValues] = useState<Record<string, string>>({})
-
   const onSelectRowCell = useCallback(
     (param: string) => (columnIdentifier: string | undefined) => {
       if (!columnIdentifier) {
@@ -135,6 +150,7 @@ export function DatasetParams({
     const ds = datasets.find((ds) => ds.id === Number(value))
     if (ds) {
       setSelectedDataset(ds)
+      autoMapParameters(ds)
       await getPosition({
         dataset: ds,
         datasetRowId: document.linkedDatasetAndRow?.[ds.id]?.datasetRowId,
