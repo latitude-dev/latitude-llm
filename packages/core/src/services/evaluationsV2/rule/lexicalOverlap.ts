@@ -165,17 +165,15 @@ async function run(
   switch (metadata.configuration.algorithm) {
     case 'substring':
       {
-        const longestMatch = longestCommonSubstring(
-          metadata.actualOutput,
-          metadata.expectedOutput,
-        )
-
-        score =
-          metadata.expectedOutput.length > 0
-            ? (longestMatch / metadata.expectedOutput.length) * 100
-            : metadata.actualOutput.length === 0
-              ? 100
-              : 0
+        if (metadata.expectedOutput === '') {
+          score = metadata.actualOutput === '' ? 100 : 0
+        } else {
+          const longestMatch = longestCommonSubstring(
+            metadata.actualOutput,
+            metadata.expectedOutput,
+          )
+          score = (longestMatch / metadata.expectedOutput.length) * 100
+        }
       }
       break
     case 'levenshtein_distance':
@@ -186,12 +184,14 @@ async function run(
           metadata.expectedOutput.length,
         )
 
-        score = (1 - edits / maxEdits) * 100
+        score = maxEdits === 0 ? 100 : (1 - edits / maxEdits) * 100
       }
       break
     case 'rouge':
       {
-        if (
+        if (metadata.actualOutput === '' || metadata.expectedOutput === '') {
+          score = metadata.actualOutput === metadata.expectedOutput ? 100 : 0
+        } else if (
           metadata.actualOutput.trim().split(' ').length < 2 ||
           metadata.expectedOutput.trim().split(' ').length < 2
         ) {
