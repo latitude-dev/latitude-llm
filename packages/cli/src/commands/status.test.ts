@@ -51,7 +51,6 @@ describe('StatusCommand', () => {
       projectId: 123,
       rootFolder: 'prompts',
       version: 'test-version',
-      npm: true,
     }
 
     const mockVersionDetails = {
@@ -172,36 +171,27 @@ describe('StatusCommand', () => {
       vi.spyOn(
         statusCommand['promptManager'],
         'findAllPromptFiles',
-      ).mockResolvedValue(['test.promptl', 'example.js'])
-      vi.spyOn(statusCommand as any, 'readPromptContent')
-        .mockResolvedValueOnce('promptl content')
-        .mockResolvedValueOnce('js content')
-      vi.spyOn(statusCommand as any, 'convertFilePathToPromptPath')
-        .mockReturnValueOnce('test')
-        .mockReturnValueOnce('example')
+      ).mockResolvedValue(['test.promptl', 'example.promptl'])
     })
 
     it('should read all local prompts successfully', async () => {
       mockFs.access.mockResolvedValue(undefined)
+      mockFs.readFile
+        .mockResolvedValueOnce('promptl content')
+        .mockResolvedValueOnce('example content')
 
-      const result = await (statusCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (statusCommand as any).readLocalPrompts('prompts')
 
       expect(result).toEqual([
         { path: 'test', content: 'promptl content' },
-        { path: 'example', content: 'js content' },
+        { path: 'example', content: 'example content' },
       ])
     })
 
     it('should return empty array when prompts directory does not exist', async () => {
       mockFs.access.mockRejectedValue(new Error('Directory not found'))
 
-      const result = await (statusCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (statusCommand as any).readLocalPrompts('prompts')
 
       expect(result).toEqual([])
       expect(console.log).toHaveBeenCalledWith(
@@ -211,19 +201,13 @@ describe('StatusCommand', () => {
 
     it('should skip files that cannot be read', async () => {
       mockFs.access.mockResolvedValue(undefined)
-      vi.spyOn(statusCommand as any, 'readPromptContent')
+      mockFs.readFile
         .mockResolvedValueOnce('promptl content')
         .mockRejectedValueOnce(new Error('Cannot read file'))
 
-      const result = await (statusCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (statusCommand as any).readLocalPrompts('prompts')
 
-      expect(result).toEqual([
-        { path: 'test', content: 'promptl content' },
-        { path: 'example', content: 'js content' },
-      ])
+      expect(result).toEqual([{ path: 'test', content: 'promptl content' }])
     })
   })
 
@@ -271,81 +255,4 @@ describe('StatusCommand', () => {
     })
   })
 
-  describe('readPromptContent', () => {
-    it('should read .promptl files directly', async () => {
-      mockFs.readFile.mockResolvedValue('promptl content')
-
-      const result = await (statusCommand as any).readPromptContent(
-        '/path/test.promptl',
-      )
-
-      expect(mockFs.readFile).toHaveBeenCalledWith(
-        '/path/test.promptl',
-        'utf-8',
-      )
-      expect(result).toBe('promptl content')
-    })
-
-    it('should import JS files and extract prompt content', async () => {
-      vi.spyOn(statusCommand as any, 'importPromptFromFile').mockResolvedValue(
-        'js content',
-      )
-
-      const result = await (statusCommand as any).readPromptContent(
-        '/path/test.js',
-      )
-
-      expect(result).toBe('js content')
-    })
-
-    it('should handle import failures for JS files', async () => {
-      vi.spyOn(statusCommand as any, 'importPromptFromFile').mockRejectedValue(
-        new Error('Import failed'),
-      )
-
-      await expect(
-        (statusCommand as any).readPromptContent('/path/test.js'),
-      ).rejects.toThrow('Cannot read prompt from /path/test.js')
-
-      expect(console.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to import prompt from /path/test.js'),
-      )
-    })
-
-    it('should reject .cjs files with a helpful message', async () => {
-      await expect(
-        (statusCommand as any).readPromptContent('/path/test.cjs'),
-      ).rejects.toThrow(
-        'CommonJS prompt files are no longer supported. Rename to .js to continue.',
-      )
-    })
-  })
-
-  describe('convertToPromptVariableName', () => {
-    it('should convert file name to camelCase', () => {
-      const result = (statusCommand as any).convertToPromptVariableName(
-        'test-prompt_name',
-      )
-      expect(result).toBe('testPromptName')
-    })
-
-    it('should handle single word', () => {
-      const result = (statusCommand as any).convertToPromptVariableName('test')
-      expect(result).toBe('test')
-    })
-  })
-
-  describe('convertFilePathToPromptPath', () => {
-    it('should remove file extensions', () => {
-      expect(
-        (statusCommand as any).convertFilePathToPromptPath('test.js'),
-      ).toBe('test')
-      expect(
-        (statusCommand as any).convertFilePathToPromptPath('test.promptl'),
-      ).toBe('test')
-      expect(
-        (statusCommand as any).convertFilePathToPromptPath('test.ts'),
-      ).toBe('test')
-    })
-  })
 })

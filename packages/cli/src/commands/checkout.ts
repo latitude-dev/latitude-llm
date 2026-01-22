@@ -77,12 +77,7 @@ export class CheckoutCommand extends BaseCommand {
       )
 
       // Now proceed with saving the prompts
-      await this.savePrompts(
-        lockFile.rootFolder,
-        targetVersionUuid,
-        prompts,
-        !!lockFile.npm,
-      )
+      await this.savePrompts(lockFile.rootFolder, targetVersionUuid, prompts)
 
       console.log(`✅ Successfully checked out version ${targetVersionUuid}!`)
     } catch (error: any) {
@@ -195,7 +190,6 @@ export class CheckoutCommand extends BaseCommand {
     promptsRootFolder: string,
     versionUuid: string,
     prompts: any[],
-    isNpmProject: boolean = false,
   ): Promise<void> {
     try {
       console.log(
@@ -207,7 +201,6 @@ export class CheckoutCommand extends BaseCommand {
         promptsRootFolder,
         this.projectPath,
         this.promptManager,
-        isNpmProject,
       )
 
       console.log(`✅ Successfully saved prompts from version ${versionUuid}.`)

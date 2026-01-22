@@ -46,12 +46,6 @@ describe('InitCommand', () => {
         123,
       )
 
-      // Mock project manager
-      vi.spyOn(
-        initCommand['projectManager'],
-        'verifyNpmProject',
-      ).mockResolvedValue(true)
-
       // Mock lock file manager
       vi.spyOn(initCommand['lockFileManager'], 'exists').mockResolvedValue(
         false,

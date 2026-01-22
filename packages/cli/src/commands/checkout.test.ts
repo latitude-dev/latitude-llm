@@ -36,7 +36,6 @@ describe('CheckoutCommand', () => {
       projectId: 123,
       rootFolder: 'prompts',
       version: 'current-version',
-      npm: true,
     }
 
     beforeEach(() => {
@@ -269,7 +268,6 @@ describe('CheckoutCommand', () => {
         projectId: 123,
         rootFolder: 'prompts',
         version: 'old-version',
-        npm: true,
       }
       vi.spyOn(checkoutCommand['lockFileManager'], 'write').mockResolvedValue()
     })
@@ -287,7 +285,6 @@ describe('CheckoutCommand', () => {
           projectId: 123,
           rootFolder: 'prompts',
           version: 'new-version',
-          npm: true,
         },
       )
       expect(console.log).toHaveBeenCalledWith(
@@ -376,7 +373,6 @@ describe('CheckoutCommand', () => {
         'prompts',
         'version-uuid',
         mockPrompts,
-        true,
       )
 
       expect(console.log).toHaveBeenCalledWith(

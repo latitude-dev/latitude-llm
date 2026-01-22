@@ -43,7 +43,6 @@ describe('PullCommand', () => {
       projectId: 123,
       rootFolder: 'prompts',
       version: 'test-version',
-      npm: true,
     }
 
     beforeEach(() => {
@@ -105,7 +104,6 @@ describe('PullCommand', () => {
         123,
         'prompts',
         'test-version',
-        true,
       )
     })
 
@@ -177,7 +175,6 @@ describe('PullCommand', () => {
         123,
         'prompts',
         'test-version',
-        true,
       )
 
       expect(pullCommand['client']!.prompts.getAll).toHaveBeenCalledWith({
@@ -192,12 +189,7 @@ describe('PullCommand', () => {
       pullCommand['client']!.prompts.getAll = vi.fn().mockRejectedValue(error)
 
       await expect(
-        (pullCommand as any).computePullDiff(
-          123,
-          'prompts',
-          'test-version',
-          true,
-        ),
+        (pullCommand as any).computePullDiff(123, 'prompts', 'test-version'),
       ).rejects.toThrow('Failed to compute diff: API error')
     })
   })
@@ -208,36 +200,27 @@ describe('PullCommand', () => {
       vi.spyOn(
         pullCommand['promptManager'],
         'findAllPromptFiles',
-      ).mockResolvedValue(['test.promptl', 'example.js'])
-      vi.spyOn(pullCommand as any, 'readPromptContent')
-        .mockResolvedValueOnce('promptl content')
-        .mockResolvedValueOnce('js content')
-      vi.spyOn(pullCommand as any, 'convertFilePathToPromptPath')
-        .mockReturnValueOnce('test')
-        .mockReturnValueOnce('example')
+      ).mockResolvedValue(['test.promptl', 'example.promptl'])
     })
 
     it('should read all local prompts successfully', async () => {
       mockFs.access.mockResolvedValue(undefined)
+      mockFs.readFile
+        .mockResolvedValueOnce('promptl content')
+        .mockResolvedValueOnce('example content')
 
-      const result = await (pullCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (pullCommand as any).readLocalPrompts('prompts')
 
       expect(result).toEqual([
         { path: 'test', content: 'promptl content' },
-        { path: 'example', content: 'js content' },
+        { path: 'example', content: 'example content' },
       ])
     })
 
     it('should return empty array when prompts directory does not exist', async () => {
       mockFs.access.mockRejectedValue(new Error('Directory not found'))
 
-      const result = await (pullCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (pullCommand as any).readLocalPrompts('prompts')
 
       expect(result).toEqual([])
       expect(console.log).toHaveBeenCalledWith(
@@ -247,97 +230,13 @@ describe('PullCommand', () => {
 
     it('should skip files that cannot be read', async () => {
       mockFs.access.mockResolvedValue(undefined)
-      vi.spyOn(pullCommand as any, 'readPromptContent')
+      mockFs.readFile
         .mockResolvedValueOnce('promptl content')
         .mockRejectedValueOnce(new Error('Cannot read file'))
 
-      const result = await (pullCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (pullCommand as any).readLocalPrompts('prompts')
 
-      expect(result).toEqual([
-        { path: 'test', content: 'promptl content' },
-        { path: 'example', content: 'js content' },
-      ])
-    })
-  })
-
-  describe('readPromptContent', () => {
-    it('should read .promptl files directly', async () => {
-      mockFs.readFile.mockResolvedValue('promptl content')
-
-      const result = await (pullCommand as any).readPromptContent(
-        '/path/test.promptl',
-      )
-
-      expect(mockFs.readFile).toHaveBeenCalledWith(
-        '/path/test.promptl',
-        'utf-8',
-      )
-      expect(result).toBe('promptl content')
-    })
-
-    it('should import JS files and extract prompt content', async () => {
-      vi.spyOn(pullCommand as any, 'importPromptFromFile').mockResolvedValue(
-        'js content',
-      )
-
-      const result = await (pullCommand as any).readPromptContent(
-        '/path/test.js',
-      )
-
-      expect(result).toBe('js content')
-    })
-
-    it('should handle import failures for JS files', async () => {
-      vi.spyOn(pullCommand as any, 'importPromptFromFile').mockRejectedValue(
-        new Error('Import failed'),
-      )
-
-      await expect(
-        (pullCommand as any).readPromptContent('/path/test.js'),
-      ).rejects.toThrow('Cannot read prompt from /path/test.js')
-
-      expect(console.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to import prompt from /path/test.js'),
-      )
-    })
-
-    it('should reject .cjs files with a helpful message', async () => {
-      await expect(
-        (pullCommand as any).readPromptContent('/path/test.cjs'),
-      ).rejects.toThrow(
-        'CommonJS prompt files are no longer supported. Rename to .js to continue.',
-      )
-    })
-  })
-
-  describe('convertToPromptVariableName', () => {
-    it('should convert file name to camelCase', () => {
-      const result = (pullCommand as any).convertToPromptVariableName(
-        'test-prompt_name',
-      )
-      expect(result).toBe('testPromptName')
-    })
-
-    it('should handle single word', () => {
-      const result = (pullCommand as any).convertToPromptVariableName('test')
-      expect(result).toBe('test')
-    })
-  })
-
-  describe('convertFilePathToPromptPath', () => {
-    it('should remove file extensions', () => {
-      expect((pullCommand as any).convertFilePathToPromptPath('test.js')).toBe(
-        'test',
-      )
-      expect(
-        (pullCommand as any).convertFilePathToPromptPath('test.promptl'),
-      ).toBe('test')
-      expect((pullCommand as any).convertFilePathToPromptPath('test.ts')).toBe(
-        'test',
-      )
+      expect(result).toEqual([{ path: 'test', content: 'promptl content' }])
     })
   })
 
@@ -364,12 +263,7 @@ describe('PullCommand', () => {
     })
 
     it('should pull prompts successfully', async () => {
-      await (pullCommand as any).pullPrompts(
-        123,
-        'prompts',
-        'test-version',
-        true,
-      )
+      await (pullCommand as any).pullPrompts(123, 'prompts', 'test-version')
 
       expect(
         pullCommand['projectManager'].fetchAllPrompts,
@@ -384,7 +278,7 @@ describe('PullCommand', () => {
       ).mockRejectedValue(error)
 
       await expect(
-        (pullCommand as any).pullPrompts(123, 'prompts', 'test-version', true),
+        (pullCommand as any).pullPrompts(123, 'prompts', 'test-version'),
       ).rejects.toThrow('Failed to pull prompts: Fetch failed')
     })
   })
