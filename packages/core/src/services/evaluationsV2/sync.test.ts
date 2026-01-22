@@ -126,14 +126,12 @@ describe('syncDefaultCompositeTarget', () => {
     }
   }
 
-  describe('when no composite exists', () => {
-    it('does nothing when evaluation has no issue', async () => {
-      const evaluation = await createLlmEvaluation()
+  describe('when no issue-linked evaluations exist', () => {
+    it('does nothing when no composite exists', async () => {
+      await createLlmEvaluation() // evaluation without issue
       mocks.publisher.mockClear()
 
       const result = await syncDefaultCompositeTarget({
-        evaluation,
-        issueId: null,
         document,
         commit,
         workspace,
@@ -146,68 +144,35 @@ describe('syncDefaultCompositeTarget', () => {
       expect(updatedDocument.mainEvaluationUuid).toBeNull()
     })
 
-    it('creates composite when evaluation has an issue', async () => {
-      const evaluation = await createLlmEvaluation()
-      mocks.publisher.mockClear()
-
-      const result = await syncDefaultCompositeTarget({
-        evaluation,
-        issueId: issue.id,
-        document,
-        commit,
-        workspace,
-      })
-
-      const composite = result.unwrap()!
-      expect(composite).toEqual(
-        expect.objectContaining({
-          type: EvaluationType.Composite,
-          metric: CompositeEvaluationMetric.Average,
-          name: 'Performance',
-          configuration: expect.objectContaining({
-            evaluationUuids: expect.arrayContaining([evaluation.uuid]),
-          }),
-        }),
-      )
-
-      const updatedDocument = await getDocument()
-      expect(updatedDocument.mainEvaluationUuid).toBe(composite.uuid)
-    })
-  })
-
-  describe('when composite exists and evaluation is included', () => {
-    it('does nothing when evaluation still has an issue', async () => {
-      const evaluation = await createLlmEvaluation(issue.id)
-      const doc = await getDocument()
+    it('deletes composite when it exists but no issue-linked evaluations remain', async () => {
+      // First create an issue-linked evaluation to get a composite
+      await createLlmEvaluation(issue.id)
+      let doc = await getDocument()
       const compositeUuid = doc.mainEvaluationUuid!
+      expect(compositeUuid).toBeDefined()
 
+      // Now simulate removing the issue link by updating the evaluation
+      // We need to delete the issue-linked evaluation for this test
+      const evalVersion = await database
+        .select()
+        .from(evaluationVersions)
+        .where(
+          and(
+            eq(evaluationVersions.commitId, commit.id),
+            eq(evaluationVersions.type, EvaluationType.Llm),
+          ),
+        )
+        .then((r) => r[0]!)
+
+      await database
+        .update(evaluationVersions)
+        .set({ issueId: null })
+        .where(eq(evaluationVersions.id, evalVersion.id))
+
+      doc = await getDocument()
       mocks.publisher.mockClear()
 
       const result = await syncDefaultCompositeTarget({
-        evaluation,
-        issueId: issue.id,
-        document: doc,
-        commit,
-        workspace,
-      })
-
-      expect(Result.isOk(result)).toBe(true)
-      expect(result.unwrap()).toBeUndefined()
-
-      const updatedDocument = await getDocument()
-      expect(updatedDocument.mainEvaluationUuid).toBe(compositeUuid)
-    })
-
-    it('deletes composite when evaluation loses issue and is the last one', async () => {
-      const evaluation = await createLlmEvaluation(issue.id)
-      const doc = await getDocument()
-      const compositeUuid = doc.mainEvaluationUuid!
-
-      mocks.publisher.mockClear()
-
-      const result = await syncDefaultCompositeTarget({
-        evaluation,
-        issueId: null,
         document: doc,
         commit,
         workspace,
@@ -222,8 +187,70 @@ describe('syncDefaultCompositeTarget', () => {
       const composite = await getCompositeEvaluation(compositeUuid)
       expect(composite?.deletedAt).not.toBeNull()
     })
+  })
 
-    it('removes evaluation from composite when it loses issue and is not the last one', async () => {
+  describe('when issue-linked evaluations exist', () => {
+    it('creates composite when none exists', async () => {
+      const evaluation = await createLlmEvaluation(issue.id)
+      const doc = await getDocument()
+      const compositeUuid = doc.mainEvaluationUuid!
+
+      expect(compositeUuid).toBeDefined()
+      const composite = await getCompositeEvaluation(compositeUuid)
+      expect(composite).toEqual(
+        expect.objectContaining({
+          type: EvaluationType.Composite,
+          metric: CompositeEvaluationMetric.Average,
+          name: 'Performance',
+          configuration: expect.objectContaining({
+            evaluationUuids: expect.arrayContaining([evaluation.uuid]),
+          }),
+        }),
+      )
+    })
+
+    it('updates composite to include all issue-linked evaluations', async () => {
+      const evaluation1 = await createLlmEvaluation(issue.id)
+      let doc = await getDocument()
+      const compositeUuid = doc.mainEvaluationUuid!
+
+      const { issue: issue2 } = await factories.createIssue({
+        document,
+        workspace,
+        project,
+      })
+      const evaluation2 = await createLlmEvaluation(issue2.id)
+
+      doc = await getDocument()
+
+      const composite = await getCompositeEvaluation(compositeUuid)
+      expect(composite?.configuration.evaluationUuids).toHaveLength(2)
+      expect(composite?.configuration.evaluationUuids).toContain(
+        evaluation1.uuid,
+      )
+      expect(composite?.configuration.evaluationUuids).toContain(
+        evaluation2.uuid,
+      )
+    })
+
+    it('only includes issue-linked evaluations in composite', async () => {
+      const evaluation1 = await createLlmEvaluation(issue.id)
+      await createLlmEvaluation() // no issue
+      await createLlmEvaluation() // no issue
+
+      const doc = await getDocument()
+      const compositeUuid = doc.mainEvaluationUuid!
+
+      const composite = await getCompositeEvaluation(compositeUuid)
+      expect(composite?.configuration.evaluationUuids).toHaveLength(1)
+      expect(composite?.configuration.evaluationUuids).toContain(
+        evaluation1.uuid,
+      )
+    })
+  })
+
+  describe('when syncing removes evaluations from composite', () => {
+    it('removes evaluation from composite when it loses issue and others remain', async () => {
       const evaluation1 = await createLlmEvaluation(issue.id)
       let doc = await getDocument()
 
@@ -232,26 +259,33 @@ describe('syncDefaultCompositeTarget', () => {
         workspace,
         project,
       })
-      const evaluation2 = await createLlmEvaluation()
-
-      await syncDefaultCompositeTarget({
-        evaluation: evaluation2,
-        issueId: issue2.id,
-        document: doc,
-        commit,
-        workspace,
-      })
+      const evaluation2 = await createLlmEvaluation(issue2.id)
 
       doc = await getDocument()
       const compositeUuid = doc.mainEvaluationUuid!
-      const compositeBefore = await getCompositeEvaluation(compositeUuid)
-      expect(compositeBefore?.configuration.evaluationUuids).toHaveLength(2)
+      const composite = await getCompositeEvaluation(compositeUuid)
+      expect(composite?.configuration.evaluationUuids).toHaveLength(2)
+
+      // Remove issue from evaluation1 by updating the database directly
+      const evalVersion = await database
+        .select()
+        .from(evaluationVersions)
+        .where(
+          and(
+            eq(evaluationVersions.evaluationUuid, evaluation1.uuid),
+            eq(evaluationVersions.commitId, commit.id),
+          ),
+        )
+        .then((r) => r[0]!)
+
+      await database
+        .update(evaluationVersions)
+        .set({ issueId: null })
+        .where(eq(evaluationVersions.id, evalVersion.id))
 
       mocks.publisher.mockClear()
 
       const result = await syncDefaultCompositeTarget({
-        evaluation: evaluation1,
-        issueId: null,
         document: doc,
         commit,
         workspace,
@@ -273,50 +307,46 @@ describe('syncDefaultCompositeTarget', () => {
     })
   })
 
-  describe('when composite exists but evaluation is not included', () => {
-    it('does nothing when evaluation has no issue', async () => {
-      const evaluation1 = await createLlmEvaluation(issue.id)
-      const evaluation2 = await createLlmEvaluation()
+  describe('composite configuration is always reset', () => {
+    it('resets composite configuration to default values on sync', async () => {
+      const evaluation = await createLlmEvaluation(issue.id)
       const doc = await getDocument()
       const compositeUuid = doc.mainEvaluationUuid!
 
+      // Manually modify the composite configuration
+      const compositeVersion = await database
+        .select()
+        .from(evaluationVersions)
+        .where(
+          and(
+            eq(evaluationVersions.evaluationUuid, compositeUuid),
+            eq(evaluationVersions.commitId, commit.id),
+          ),
+        )
+        .then((r) => r[0]!)
+
+      await database
+        .update(evaluationVersions)
+        .set({
+          configuration: {
+            reverseScale: true, // modified
+            actualOutput: {
+              messageSelection: 'last',
+              parsingFormat: 'string',
+            },
+            expectedOutput: {
+              parsingFormat: 'string',
+            },
+            evaluationUuids: [evaluation.uuid],
+            minThreshold: 50, // modified
+          },
+          name: 'Custom Name', // modified
+        })
+        .where(eq(evaluationVersions.id, compositeVersion.id))
+
+      // Sync should reset the configuration
       mocks.publisher.mockClear()
-
       const result = await syncDefaultCompositeTarget({
-        evaluation: evaluation2,
-        issueId: null,
-        document: doc,
-        commit,
-        workspace,
-      })
-
-      expect(Result.isOk(result)).toBe(true)
-      expect(result.unwrap()).toBeUndefined()
-
-      const composite = await getCompositeEvaluation(compositeUuid)
-      expect(composite?.configuration.evaluationUuids).toHaveLength(1)
-      expect(composite?.configuration.evaluationUuids).toContain(
-        evaluation1.uuid,
-      )
-    })
-
-    it('adds evaluation to composite when it gains an issue', async () => {
-      const evaluation1 = await createLlmEvaluation(issue.id)
-      const evaluation2 = await createLlmEvaluation()
-      const doc = await getDocument()
-      const compositeUuid = doc.mainEvaluationUuid!
-
-      const { issue: issue2 } = await factories.createIssue({
-        document,
-        workspace,
-        project,
-      })
-
-      mocks.publisher.mockClear()
-
-      const result = await syncDefaultCompositeTarget({
-        evaluation: evaluation2,
-        issueId: issue2.id,
         document: doc,
         commit,
         workspace,
@@ -324,17 +354,10 @@ describe('syncDefaultCompositeTarget', () => {
 
       expect(Result.isOk(result)).toBe(true)
       const updatedComposite = result.unwrap()!
-      expect(updatedComposite).toBeDefined()
-      expect(updatedComposite.configuration.evaluationUuids).toHaveLength(2)
-      expect(updatedComposite.configuration.evaluationUuids).toContain(
-        evaluation1.uuid,
-      )
-      expect(updatedComposite.configuration.evaluationUuids).toContain(
-        evaluation2.uuid,
-      )
 
-      const updatedDocument = await getDocument()
-      expect(updatedDocument.mainEvaluationUuid).toBe(compositeUuid)
+      expect(updatedComposite.name).toBe('Performance')
+      expect(updatedComposite.configuration.reverseScale).toBe(false)
+      expect(updatedComposite.configuration.minThreshold).toBe(75)
     })
   })
 
@@ -431,21 +454,13 @@ describe('syncDefaultCompositeTarget', () => {
       }
     }
 
-    it('creates composite when evaluation has an issue on merged commit', async () => {
-      const evaluation = await createMergedLlmEvaluation()
-      mocks.publisher.mockClear()
-
+    it('creates composite on merged commit when issue-linked evaluation exists', async () => {
+      const evaluation = await createMergedLlmEvaluation(mergedIssue.id)
       const doc = await getMergedDocument()
+      const compositeUuid = doc.mainEvaluationUuid!
 
-      const result = await syncDefaultCompositeTarget({
-        evaluation,
-        issueId: mergedIssue.id,
-        document: doc,
-        commit: mergedCommit,
-        workspace: mergedWorkspace,
-      })
-
-      const composite = result.unwrap()!
+      expect(compositeUuid).toBeDefined()
+      const composite = await getMergedCompositeEvaluation(compositeUuid)
       expect(composite).toEqual(
         expect.objectContaining({
           type: EvaluationType.Composite,
@@ -456,12 +471,9 @@ describe('syncDefaultCompositeTarget', () => {
           }),
         }),
       )
-
-      const updatedDocument = await getMergedDocument()
-      expect(updatedDocument.mainEvaluationUuid).toBe(composite.uuid)
     })
 
-    it('removes evaluation from composite when it loses issue on merged commit', async () => {
+    it('updates composite on merged commit when new issue-linked evaluation is added', async () => {
       const evaluation1 = await createMergedLlmEvaluation(mergedIssue.id)
       let doc = await getMergedDocument()
 
@@ -470,56 +482,46 @@ describe('syncDefaultCompositeTarget', () => {
         workspace: mergedWorkspace,
         project: mergedProject,
       })
-      const evaluation2 = await createMergedLlmEvaluation()
-
-      await syncDefaultCompositeTarget({
-        evaluation: evaluation2,
-        issueId: issue2.id,
-        document: doc,
-        commit: mergedCommit,
-        workspace: mergedWorkspace,
-      })
+      const evaluation2 = await createMergedLlmEvaluation(issue2.id)
 
       doc = await getMergedDocument()
       const compositeUuid = doc.mainEvaluationUuid!
-      const compositeBefore = await getMergedCompositeEvaluation(compositeUuid)
-      expect(compositeBefore?.configuration.evaluationUuids).toHaveLength(2)
-
-      mocks.publisher.mockClear()
-
-      const result = await syncDefaultCompositeTarget({
-        evaluation: evaluation1,
-        issueId: null,
-        document: doc,
-        commit: mergedCommit,
-        workspace: mergedWorkspace,
-      })
-
-      expect(Result.isOk(result)).toBe(true)
-      const updatedComposite = result.unwrap()!
-      expect(updatedComposite).toBeDefined()
-      expect(updatedComposite.configuration.evaluationUuids).toHaveLength(1)
-      expect(updatedComposite.configuration.evaluationUuids).not.toContain(
+      const composite = await getMergedCompositeEvaluation(compositeUuid)
+      expect(composite?.configuration.evaluationUuids).toHaveLength(2)
+      expect(composite?.configuration.evaluationUuids).toContain(
         evaluation1.uuid,
       )
-      expect(updatedComposite.configuration.evaluationUuids).toContain(
+      expect(composite?.configuration.evaluationUuids).toContain(
         evaluation2.uuid,
       )
-
-      const updatedDocument = await getMergedDocument()
-      expect(updatedDocument.mainEvaluationUuid).toBe(compositeUuid)
     })
 
-    it('deletes composite when last evaluation loses issue on merged commit', async () => {
-      const evaluation = await createMergedLlmEvaluation(mergedIssue.id)
-      const doc = await getMergedDocument()
+    it('deletes composite on merged commit when last issue-linked evaluation loses issue', async () => {
+      await createMergedLlmEvaluation(mergedIssue.id)
+      let doc = await getMergedDocument()
       const compositeUuid = doc.mainEvaluationUuid!
 
+      // Remove issue from the evaluation
+      const evalVersion = await database
+        .select()
+        .from(evaluationVersions)
+        .where(
+          and(
+            eq(evaluationVersions.commitId, mergedCommit.id),
+            eq(evaluationVersions.type, EvaluationType.Llm),
+          ),
+        )
+        .then((r) => r[0]!)
+
+      await database
+        .update(evaluationVersions)
+        .set({ issueId: null })
+        .where(eq(evaluationVersions.id, evalVersion.id))
+
+      doc = await getMergedDocument()
       mocks.publisher.mockClear()
 
       const result = await syncDefaultCompositeTarget({
-        evaluation,
-        issueId: null,
         document: doc,
         commit: mergedCommit,
         workspace: mergedWorkspace,

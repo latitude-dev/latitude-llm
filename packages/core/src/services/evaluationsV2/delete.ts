@@ -83,7 +83,7 @@ export async function deleteEvaluationV2<
       // Note: if the deleted evaluation had an issue linked,
       // we treat it as if the issue was being unlinked
       await syncDefaultCompositeTarget(
-        { evaluation, issueId: null, document, commit, workspace },
+        { document, commit, workspace },
         transaction,
       )
     }
