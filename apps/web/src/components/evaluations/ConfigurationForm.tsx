@@ -128,7 +128,7 @@ export function ConfigurationAdvancedForm<
     group: ISSUE_GROUP.active,
   })
 
-  const options = useMemo(() => {
+  const issueOptions = useMemo(() => {
     const list = issues.map((issue) => ({
       label: issue.title,
       hoverDescription: issue.description,
@@ -422,7 +422,7 @@ export function ConfigurationAdvancedForm<
             loading={isLoadingSelectedIssue}
             searchLoading={isLoadingIssues}
             disabled={disabled || isLoadingSelectedIssue}
-            options={options}
+            options={issueOptions}
             onSearch={onSearch}
             onChange={(value) => setIssueId?.(value ?? null)}
             errors={errors?.['issueId']}

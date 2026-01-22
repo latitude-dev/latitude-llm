@@ -15,7 +15,9 @@ export const createIntegrationHeaderPresetAction = authProcedure
   .inputSchema(inputSchema)
   .action(async ({ parsedInput, ctx }) => {
     const integrationsRepo = new IntegrationsRepository(ctx.workspace.id)
-    await integrationsRepo.find(parsedInput.integrationId).then((r) => r.unwrap())
+    await integrationsRepo
+      .find(parsedInput.integrationId)
+      .then((r) => r.unwrap())
 
     const result = await createIntegrationHeaderPreset({
       integrationId: parsedInput.integrationId,

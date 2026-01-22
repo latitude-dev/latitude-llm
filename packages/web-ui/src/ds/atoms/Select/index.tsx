@@ -169,7 +169,9 @@ export function Select<V extends unknown = unknown>({
                     className={cn({
                       'border-red-500 focus:ring-red-500': errors,
                     })}
-                    removable={removable && !!selectedValue}
+                    removable={
+                      removable && !!selectedValue && !disabled && !loading
+                    }
                     onRemove={() => _onChange(undefined)}
                   >
                     <SelectValue
