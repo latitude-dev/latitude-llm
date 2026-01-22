@@ -1,5 +1,13 @@
 # Agent Guidelines for Latitude LLM
 
+## Philosophy
+
+This codebase will outlive you. Every shortcut becomes someone else's burden. Every hack compounds into technical debt that slows the whole team down.
+
+You are not just writing code. You are shaping the future of this project. The patterns you establish will be copied. The corners you cut will be cut again.
+
+Fight entropy. Leave the codebase better than you found it.
+
 ## Build/Test Commands
 
 - `pnpm build` - Build all packages
@@ -157,22 +165,26 @@
 Destructive database migrations (dropping tables, columns, or other schema elements) are NOT backwards compatible with currently-deployed code and must be performed in **two separate PRs**:
 
 **PR 1 - Code Changes (deploy first):**
+
 1. Remove all code references to the database entities being dropped
 2. Update Drizzle schema files to remove column/table definitions
 3. Update repositories, services, factories, and tests
 4. The old columns/tables remain in the database but are simply unused
 
 **PR 2 - Database Migration (deploy after PR 1 is live):**
+
 1. Generate the Drizzle migration: `pnpm --filter @latitude-data/core db:generate`
 2. This creates a migration file to drop the unused columns/tables
 3. Run the migration: `pnpm --filter @latitude-data/core db:migrate`
 
 **Why this approach?**
+
 - If you deploy a migration that drops columns/tables while old code is still running, the old code will crash trying to access non-existent schema
 - By removing code references first, the deployed application no longer needs those columns
 - Once the new code is running everywhere, the destructive migration can safely be applied
 
 **Example: Removing a feature with database tables**
+
 ```
 # PR 1: Remove code
 - Delete services, actions, UI components
