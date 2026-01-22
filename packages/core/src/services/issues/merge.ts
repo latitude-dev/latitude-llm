@@ -19,6 +19,7 @@ import {
   ISSUES_COLLECTION_TENANT_NAME,
 } from '../../weaviate'
 import { bulkLinkIssueEvaluationResults } from '../issueEvaluationResults/addBulk'
+import { judgeMergeCandidates } from './judge'
 import { embedCentroid, mergeCentroids } from './shared'
 import { updateIssue } from './update'
 
@@ -57,13 +58,29 @@ export async function mergeIssues(
     return Result.ok<MergeResult>({ winner: issue, mergedIssues: [] })
   }
 
+  const candidates = similar.map(({ issue }) => issue)
+  const judgedCandidates = await judgeMergeCandidates({
+    anchor: issue,
+    candidates: candidates.filter((c) => c.id !== issue.id),
+  })
+
+  const approvedIds = new Set([
+    issue.id,
+    ...judgedCandidates.map((c) => c.id),
+  ])
+  const approvedSimilar = similar.filter(({ issue }) => approvedIds.has(issue.id))
+
+  if (approvedSimilar.length <= 1) {
+    return Result.ok<MergeResult>({ winner: issue, mergedIssues: [] })
+  }
+
   const totals = await getHistogramTotals({
     workspaceId: workspace.id,
-    issueIds: similar.map(({ issue }) => issue.id),
+    issueIds: approvedSimilar.map(({ issue }) => issue.id),
   })
   const { winner, mergedIssues } = pickWinner({
     anchorIssue: issue,
-    candidates: similar.map(({ issue }) => issue),
+    candidates: approvedSimilar.map(({ issue }) => issue),
     totals,
   })
 
