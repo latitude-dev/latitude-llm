@@ -1,7 +1,6 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { ResultPanel } from '$/components/evaluations/ResultPanel'
-import { DevModeProvider } from '$/hooks/useDevMode'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useEvaluationResultsV2Count } from '$/stores/evaluationResultsV2'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
@@ -9,7 +8,6 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo, useRef } from 'react'
-import { EvaluationResultsTableActions } from './TableActions'
 import { EvaluationResultsTableBody } from './TableBody'
 import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
 import { EvaluationResultsV2Search } from '@latitude-data/core/helpers'
@@ -24,7 +22,6 @@ export function EvaluationResultsTable<
   setSelectedResult,
   search,
   setSearch,
-  refinementEnabled,
   isLoading: areResultsLoading,
 }: {
   results: EvaluationResultV2WithDetails<T, M>[]
@@ -32,7 +29,6 @@ export function EvaluationResultsTable<
   setSelectedResult: (result?: EvaluationResultV2WithDetails<T, M>) => void
   search: EvaluationResultsV2Search
   setSearch: (search: EvaluationResultsV2Search) => void
-  refinementEnabled: boolean
   isLoading?: boolean
 }) {
   const { project } = useCurrentProject()
@@ -84,13 +80,6 @@ export function EvaluationResultsTable<
               setSearch={setSearch}
               isLoading={isLoading}
             />
-            <DevModeProvider>
-              <EvaluationResultsTableActions
-                selectableState={selectableState}
-                refinementEnabled={refinementEnabled}
-                isLoading={isLoading}
-              />
-            </DevModeProvider>
           </div>
         ) : (
           <TableBlankSlate description='There are no results that match the selected filters. Change the filters to see more results.' />

@@ -62,8 +62,6 @@ export const EventHandlers: IEventsHandlers = {
   chatMessageRequested: [],
   sharedChatMessageRequested: [],
   forkDocumentRequested: [],
-  copilotRefinerGenerated: [],
-  copilotRefinerApplied: [],
   copilotSuggestionGenerated: [],
   copilotSuggestionApplied: [],
   evaluationV2Created: [pingProjectUpdateJob],

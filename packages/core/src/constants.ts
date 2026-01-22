@@ -392,7 +392,6 @@ export const CLOUD_MESSAGES = {
   generateDatasets: `Dataset generator is only available on Latitude Cloud. ${CLOUD_INFO}`,
   generateEvaluationIssueUsingCopilot: `Evaluation issue generator is only available on Latitude Cloud. ${CLOUD_INFO}`,
   generateEvaluations: `Evaluation generator is only available on Latitude Cloud. ${CLOUD_INFO}`,
-  refinePrompt: `Prompt refiner is only available on Latitude Cloud. ${CLOUD_INFO}`,
   promptSuggestions: `Prompt suggestions are only available on Latitude Cloud. ${CLOUD_INFO}`,
   generateAgentDetails: `Agent details generator is only available on Latitude Cloud. ${CLOUD_INFO}`,
   issueDiscovery: `Issue discovery is only available on Latitude Cloud. ${CLOUD_INFO}`,

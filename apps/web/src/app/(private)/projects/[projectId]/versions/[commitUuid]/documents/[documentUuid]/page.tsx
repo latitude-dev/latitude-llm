@@ -7,7 +7,6 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
-import { env } from '@latitude-data/env'
 import { redirect } from 'next/navigation'
 import { MetadataProvider } from '$/components/MetadataProvider'
 import { DevModeProvider } from '$/hooks/useDevMode'
@@ -98,7 +97,6 @@ export default async function DocumentPage({
           <DocumentEditor
             freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
             showPreview={showPreview}
-            refinementEnabled={env.LATITUDE_CLOUD}
           />
         </DocumentValueProvider>
       </DevModeProvider>

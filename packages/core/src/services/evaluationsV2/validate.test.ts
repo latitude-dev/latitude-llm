@@ -79,8 +79,6 @@ describe('validateEvaluationV2', () => {
     }
     options = {
       evaluateLiveLogs: false,
-      
-      
     }
 
     settingsLLMasJudgeBinary = {

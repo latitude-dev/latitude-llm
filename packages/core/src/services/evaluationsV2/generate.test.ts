@@ -86,7 +86,6 @@ describe('generateEvaluationV2', () => {
     vi.spyOn(env, 'env', 'get').mockReturnValue({
       ...env.env,
       LATITUDE_CLOUD: true,
-      COPILOT_PROMPT_REFINE_PATH: 'refiner',
     })
 
     const mockCacheGet = vi.fn().mockResolvedValue(null)

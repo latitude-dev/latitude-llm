@@ -121,9 +121,7 @@ describe('updateEvaluationV2', () => {
       settings: {
         name: 'new name',
       },
-      options: {
-        
-      },
+      options: {},
       workspace: workspace,
     }).then((r) => r.unwrap())
 
@@ -131,7 +129,7 @@ describe('updateEvaluationV2', () => {
       expect.objectContaining({
         ...evaluation,
         name: 'new name',
-        
+
         updatedAt: expect.any(Date),
       }),
     )
@@ -165,16 +163,14 @@ describe('updateEvaluationV2', () => {
     const { evaluation: updatedEvaluation } = await updateEvaluationV2({
       evaluation: evaluation,
       commit: commit,
-      options: {
-        
-      },
+      options: {},
       workspace: workspace,
     }).then((r) => r.unwrap())
 
     expect(updatedEvaluation).toEqual(
       expect.objectContaining({
         ...evaluation,
-        
+
         updatedAt: expect.any(Date),
       }),
     )
@@ -212,9 +208,7 @@ describe('updateEvaluationV2', () => {
       settings: {
         name: 'new name',
       },
-      options: {
-        
-      },
+      options: {},
       workspace: workspace,
     }).then((r) => r.unwrap())
 
@@ -225,7 +219,7 @@ describe('updateEvaluationV2', () => {
         versionId: updatedEvaluation.versionId,
         commitId: draft.id,
         name: 'new name',
-        
+
         updatedAt: expect.any(Date),
       }),
     )
@@ -240,14 +234,14 @@ describe('updateEvaluationV2', () => {
         id: updatedEvaluation.versionId,
         commitId: draft.id,
         name: updatedEvaluation.name,
-        
+
         updatedAt: expect.any(Date),
       }),
       expect.objectContaining({
         id: evaluation.versionId,
         commitId: commit.id,
         name: evaluation.name,
-        
+
         updatedAt: expect.any(Date),
       }),
     ])

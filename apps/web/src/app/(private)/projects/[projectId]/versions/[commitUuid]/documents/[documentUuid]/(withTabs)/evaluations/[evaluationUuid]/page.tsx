@@ -4,7 +4,6 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
-import { env } from '@latitude-data/env'
 import { cloneDeep } from 'lodash-es'
 import { redirect } from 'next/navigation'
 import { EvaluationPage as ClientEvaluationPage } from './_components/EvaluationPage'
@@ -88,7 +87,6 @@ export default async function EvaluationPage({
 
   return (
     <ClientEvaluationPage
-      refinementEnabled={env.LATITUDE_CLOUD}
       results={results}
       search={search}
       selectedResult={selectedResult}

@@ -53,8 +53,6 @@ export type Events =
   | 'chatMessageRequested'
   | 'sharedChatMessageRequested'
   | 'forkDocumentRequested'
-  | 'copilotRefinerGenerated'
-  | 'copilotRefinerApplied'
   | 'copilotSuggestionGenerated'
   | 'copilotSuggestionApplied'
   | 'evaluationV2Created'
@@ -381,29 +379,6 @@ export type ForkDocumentRequestedEvent = LatitudeEventGeneric<
       workspaceId: number
       userEmail: string
     }
-  }
->
-
-export type CopilotRefinerGenerated = LatitudeEventGeneric<
-  'copilotRefinerGenerated',
-  {
-    workspaceId: number
-    projectId: number
-    commitUuid: string
-    documentUuid: string
-    userEmail: string
-  } & {
-    evaluationUuid: string
-  }
->
-export type CopilotRefinerApplied = LatitudeEventGeneric<
-  'copilotRefinerApplied',
-  {
-    workspaceId: number
-    projectId: number
-    commitUuid: string
-    documentUuid: string
-    userEmail: string
   }
 >
 
@@ -1023,8 +998,6 @@ export type LatitudeEvent =
   | ChatMessageRequestedEvent
   | SharedChatMessageRequestedEvent
   | ForkDocumentRequestedEvent
-  | CopilotRefinerGenerated
-  | CopilotRefinerApplied
   | CopilotSuggestionGenerated
   | CopilotSuggestionApplied
   | EvaluationV2CreatedEvent
@@ -1117,8 +1090,6 @@ export interface IEventsHandlers {
   chatMessageRequested: EventHandler<ChatMessageRequestedEvent>[]
   sharedChatMessageRequested: EventHandler<SharedChatMessageRequestedEvent>[]
   forkDocumentRequested: EventHandler<ForkDocumentRequestedEvent>[]
-  copilotRefinerGenerated: EventHandler<CopilotRefinerGenerated>[]
-  copilotRefinerApplied: EventHandler<CopilotRefinerApplied>[]
   copilotSuggestionGenerated: EventHandler<CopilotSuggestionGenerated>[]
   copilotSuggestionApplied: EventHandler<CopilotSuggestionApplied>[]
   evaluationV2Created: EventHandler<EvaluationV2CreatedEvent>[]

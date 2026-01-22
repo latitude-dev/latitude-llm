@@ -201,7 +201,6 @@ export const env = createEnv({
     COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH: z.string().optional(),
     COPILOT_PROMPT_LATTE_PATH: z.string().optional(),
     COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH: z.string().optional(),
-    COPILOT_PROMPT_REFINE_PATH: z.string().optional(),
     COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH: z.string(),
 
     // Are we in enterprise mode?

@@ -17,8 +17,13 @@ export function useIntegrationHeaderPresets(
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
-  const fetcher = useFetcher<IntegrationHeaderPreset[], IntegrationHeaderPreset[]>(
-    integrationId ? ROUTES.api.integrationHeaderPresets.detail(integrationId).root : undefined,
+  const fetcher = useFetcher<
+    IntegrationHeaderPreset[],
+    IntegrationHeaderPreset[]
+  >(
+    integrationId
+      ? ROUTES.api.integrationHeaderPresets.detail(integrationId).root
+      : undefined,
     {
       serializer: (rows) => rows.map(deserialize),
     },
@@ -33,31 +38,31 @@ export function useIntegrationHeaderPresets(
     opts,
   )
 
-  const {
-    execute: create,
-    isPending: isCreating,
-  } = useLatitudeAction(createIntegrationHeaderPresetAction, {
-    onSuccess: ({ data: preset }) => {
-      toast({
-        title: 'Success',
-        description: 'Preset saved successfully',
-      })
-      mutate([...data, preset])
+  const { execute: create, isPending: isCreating } = useLatitudeAction(
+    createIntegrationHeaderPresetAction,
+    {
+      onSuccess: ({ data: preset }) => {
+        toast({
+          title: 'Success',
+          description: 'Preset saved successfully',
+        })
+        mutate([...data, preset])
+      },
     },
-  })
+  )
 
-  const {
-    execute: destroy,
-    isPending: isDestroying,
-  } = useLatitudeAction(destroyIntegrationHeaderPresetAction, {
-    onSuccess: ({ data: preset }) => {
-      toast({
-        title: 'Success',
-        description: 'Preset deleted successfully',
-      })
-      mutate(data.filter((p) => p.id !== preset.id))
+  const { execute: destroy, isPending: isDestroying } = useLatitudeAction(
+    destroyIntegrationHeaderPresetAction,
+    {
+      onSuccess: ({ data: preset }) => {
+        toast({
+          title: 'Success',
+          description: 'Preset deleted successfully',
+        })
+        mutate(data.filter((p) => p.id !== preset.id))
+      },
     },
-  })
+  )
 
   return useMemo(
     () => ({

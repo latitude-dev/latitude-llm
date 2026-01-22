@@ -16,7 +16,6 @@ import { DocumentParametersProvider } from './V2Playground/DocumentParams/Docume
 
 export default function DocumentEditor(props: {
   freeRunsCount?: number
-  refinementEnabled: boolean
   showPreview?: boolean
 }) {
   const { commit } = useCurrentCommit()
@@ -69,7 +68,6 @@ export default function DocumentEditor(props: {
         <div className='flex flex-1 h-full'>
           <DocumentParametersProvider documentUuid={document.documentUuid}>
             <DocumentEditorContentArea
-              refinementEnabled={props.refinementEnabled}
               setSelectedTab={setSelectedTab}
               isPlaygroundOpen={isPlaygroundOpen}
               isPlaygroundTransitioning={isPlaygroundTransitioning}

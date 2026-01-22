@@ -1,21 +1,14 @@
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { type Workspace } from '../../schema/models/types/Workspace'
 import { ConflictError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import Transaction from '../../lib/Transaction'
 
-export async function inheritDocumentRelations(
-  {
-    fromVersion,
-    toVersion,
-    workspace: _workspace,
-  }: {
-    fromVersion: DocumentVersion
-    toVersion: DocumentVersion
-    workspace: Workspace
-  },
-  _transaction = new Transaction(),
-) {
+export function canInheritDocumentRelations({
+  fromVersion,
+  toVersion,
+}: {
+  fromVersion: DocumentVersion
+  toVersion: DocumentVersion
+}) {
   if (
     fromVersion.id === toVersion.id ||
     fromVersion.commitId === toVersion.commitId

@@ -152,6 +152,40 @@
   })
   ```
 
+### Destructive Database Migrations
+
+Destructive database migrations (dropping tables, columns, or other schema elements) are NOT backwards compatible with currently-deployed code and must be performed in **two separate PRs**:
+
+**PR 1 - Code Changes (deploy first):**
+1. Remove all code references to the database entities being dropped
+2. Update Drizzle schema files to remove column/table definitions
+3. Update repositories, services, factories, and tests
+4. The old columns/tables remain in the database but are simply unused
+
+**PR 2 - Database Migration (deploy after PR 1 is live):**
+1. Generate the Drizzle migration: `pnpm --filter @latitude-data/core db:generate`
+2. This creates a migration file to drop the unused columns/tables
+3. Run the migration: `pnpm --filter @latitude-data/core db:migrate`
+
+**Why this approach?**
+- If you deploy a migration that drops columns/tables while old code is still running, the old code will crash trying to access non-existent schema
+- By removing code references first, the deployed application no longer needs those columns
+- Once the new code is running everywhere, the destructive migration can safely be applied
+
+**Example: Removing a feature with database tables**
+```
+# PR 1: Remove code
+- Delete services, actions, UI components
+- Remove columns from Drizzle schema files
+- Update event handlers and jobs
+- Remove from constants and configuration
+
+# PR 2: Database cleanup (after PR 1 is deployed)
+- pnpm --filter @latitude-data/core db:generate
+- Review the generated migration
+- pnpm --filter @latitude-data/core db:migrate
+```
+
 ### Repository Pattern (`packages/core/src/repositories/`)
 
 - For workspace-scoped entities: extend `RepositoryLegacy<T, U>`
@@ -498,7 +532,7 @@ Events trigger asynchronous processing via registered handlers:
 export const EventHandlers: IEventsHandlers = {
   spanCreated: [evaluateLiveLogJob],
   providerLogCreated: [touchApiKeyJob, touchProviderApiKeyJob],
-  evaluationResultV2Created: [requestDocumentSuggestionJobV2, ...],
+  evaluationResultV2Created: [assignIssueToEvaluationResultV2Job, ...],
   documentRunQueued: [notifyClientOfRunStatusByDocument],
   // ... many more event handlers
 }
