@@ -30,7 +30,9 @@ describe('createCheckoutSession', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(stripeModule.getStripe).mockReturnValue(Result.ok(mockStripe as any))
+    vi.mocked(stripeModule.getStripe).mockReturnValue(
+      Result.ok(mockStripe as any),
+    )
   })
 
   describe('successful checkout session creation', () => {
@@ -45,7 +47,9 @@ describe('createCheckoutSession', () => {
     })
 
     it('passes correct parameters to Stripe', async () => {
-      mockSessionsCreate.mockResolvedValue({ url: 'https://checkout.stripe.com/session' })
+      mockSessionsCreate.mockResolvedValue({
+        url: 'https://checkout.stripe.com/session',
+      })
 
       await createCheckoutSession(defaultParams)
 
@@ -53,7 +57,10 @@ describe('createCheckoutSession', () => {
         mode: 'subscription',
         customer_email: 'test@example.com',
         line_items: [
-          { price: SubscriptionPlans[SubscriptionPlan.TeamV4].stripePriceId, quantity: 1 },
+          {
+            price: SubscriptionPlans[SubscriptionPlan.TeamV4].stripePriceId,
+            quantity: 1,
+          },
         ],
         subscription_data: {
           metadata: {
@@ -72,7 +79,9 @@ describe('createCheckoutSession', () => {
     })
 
     it('uses correct price ID for TeamV3 plan', async () => {
-      mockSessionsCreate.mockResolvedValue({ url: 'https://checkout.stripe.com/session' })
+      mockSessionsCreate.mockResolvedValue({
+        url: 'https://checkout.stripe.com/session',
+      })
 
       await createCheckoutSession({
         ...defaultParams,
@@ -82,14 +91,19 @@ describe('createCheckoutSession', () => {
       expect(mockSessionsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           line_items: [
-            { price: SubscriptionPlans[SubscriptionPlan.TeamV3].stripePriceId, quantity: 1 },
+            {
+              price: SubscriptionPlans[SubscriptionPlan.TeamV3].stripePriceId,
+              quantity: 1,
+            },
           ],
         }),
       )
     })
 
     it('uses correct price ID for ProV2 plan', async () => {
-      mockSessionsCreate.mockResolvedValue({ url: 'https://checkout.stripe.com/session' })
+      mockSessionsCreate.mockResolvedValue({
+        url: 'https://checkout.stripe.com/session',
+      })
 
       await createCheckoutSession({
         ...defaultParams,
@@ -99,14 +113,19 @@ describe('createCheckoutSession', () => {
       expect(mockSessionsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           line_items: [
-            { price: SubscriptionPlans[SubscriptionPlan.ProV2].stripePriceId, quantity: 1 },
+            {
+              price: SubscriptionPlans[SubscriptionPlan.ProV2].stripePriceId,
+              quantity: 1,
+            },
           ],
         }),
       )
     })
 
     it('converts workspaceId to string in metadata', async () => {
-      mockSessionsCreate.mockResolvedValue({ url: 'https://checkout.stripe.com/session' })
+      mockSessionsCreate.mockResolvedValue({
+        url: 'https://checkout.stripe.com/session',
+      })
 
       await createCheckoutSession({
         ...defaultParams,
@@ -128,7 +147,9 @@ describe('createCheckoutSession', () => {
   describe('error cases', () => {
     it('returns error when Stripe is not configured', async () => {
       const stripeError = new BillingError('Stripe not configured')
-      vi.mocked(stripeModule.getStripe).mockReturnValue(Result.error(stripeError))
+      vi.mocked(stripeModule.getStripe).mockReturnValue(
+        Result.error(stripeError),
+      )
 
       const result = await createCheckoutSession(defaultParams)
 
@@ -164,7 +185,9 @@ describe('createCheckoutSession', () => {
 
       expect(result.ok).toBe(false)
       expect(result.error).toBeInstanceOf(BillingError)
-      expect(result.error!.message).toContain('Failed to create checkout session')
+      expect(result.error!.message).toContain(
+        'Failed to create checkout session',
+      )
       expect(result.error!.message).toContain('Stripe API error')
     })
 
@@ -193,7 +216,9 @@ describe('createCheckoutSession', () => {
 
   describe('getStripe call', () => {
     it('passes tags to getStripe for error context', async () => {
-      mockSessionsCreate.mockResolvedValue({ url: 'https://checkout.stripe.com/session' })
+      mockSessionsCreate.mockResolvedValue({
+        url: 'https://checkout.stripe.com/session',
+      })
 
       await createCheckoutSession(defaultParams)
 

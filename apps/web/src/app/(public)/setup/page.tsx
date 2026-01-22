@@ -33,27 +33,27 @@ export default async function SetupPage({
     <>
       <GoogleTagManager />
       <FocusLayout
-      header={
-        <FocusHeader
-          title='Create your Latitude account'
-          description='Join us today and start improve the way you work with LLMs!'
-        />
-      }
-      footer={<SignupFooter returnTo={returnTo} />}
-    >
-      <Card background='light'>
-        <CardContent standalone>
-          <SetupForm
-            email={email}
-            name={name}
-            companyName={companyName}
-            footer={<AuthFooter />}
-            source={source}
-            returnTo={returnTo}
+        header={
+          <FocusHeader
+            title='Create your Latitude account'
+            description='Join us today and start improve the way you work with LLMs!'
           />
-        </CardContent>
-      </Card>
-    </FocusLayout>
+        }
+        footer={<SignupFooter returnTo={returnTo} />}
+      >
+        <Card background='light'>
+          <CardContent standalone>
+            <SetupForm
+              email={email}
+              name={name}
+              companyName={companyName}
+              footer={<AuthFooter />}
+              source={source}
+              returnTo={returnTo}
+            />
+          </CardContent>
+        </Card>
+      </FocusLayout>
     </>
   )
 }

@@ -43,7 +43,7 @@ async function run(
 ) {
   if (expectedOutput?.error) {
     throw expectedOutput.error
-  } else if (!expectedOutput?.value) {
+  } else if (expectedOutput?.value === undefined) {
     throw new BadRequestError('Expected output is required')
   }
 

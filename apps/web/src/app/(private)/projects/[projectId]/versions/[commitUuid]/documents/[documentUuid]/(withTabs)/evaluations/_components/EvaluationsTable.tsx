@@ -253,6 +253,7 @@ export function EvaluationsTable({
                                     }
                                     align='center'
                                     side='top'
+                                    maxWidth='max-w-[400px]'
                                   >
                                     This evaluation is used for annotations
                                   </Tooltip>
@@ -265,6 +266,7 @@ export function EvaluationsTable({
                                     }
                                     align='center'
                                     side='top'
+                                    maxWidth='max-w-[400px]'
                                   >
                                     This evaluation is running on live logs
                                   </Tooltip>
@@ -280,6 +282,7 @@ export function EvaluationsTable({
                                     }
                                     align='center'
                                     side='top'
+                                    maxWidth='max-w-[400px]'
                                   >
                                     This evaluation is the default for
                                     optimizations and distillations

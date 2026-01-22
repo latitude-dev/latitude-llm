@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
+import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useIssue } from '$/stores/issues/issue'
 import { useSearchIssues } from '$/stores/issues/selectorIssues'
@@ -24,9 +24,9 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwitch'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
+import { useEffect, useMemo, useState } from 'react'
 import { useDebounce, useDebouncedCallback } from 'use-debounce'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
-import { useNavigate } from '$/hooks/useNavigate'
 import { useEvaluatedTraces } from './useEvaluatedTraces'
 
 const MESSAGE_SELECTION_OPTIONS =
@@ -96,13 +96,22 @@ export function ConfigurationAdvancedForm<
   const onSearch = useDebouncedCallback((value: string) => {
     setQuery(value)
   }, 500)
-  const formatIsAccessible = useMemo(
+
+  const actualFormatIsAccessible = useMemo(
     () =>
       !!configuration.actualOutput?.parsingFormat &&
       ACCESSIBLE_OUTPUT_FORMATS.includes(
         configuration.actualOutput.parsingFormat,
       ),
     [configuration.actualOutput?.parsingFormat],
+  )
+  const expectedFormatIsAccessible = useMemo(
+    () =>
+      !!configuration.expectedOutput?.parsingFormat &&
+      ACCESSIBLE_OUTPUT_FORMATS.includes(
+        configuration.expectedOutput.parsingFormat,
+      ),
+    [configuration.expectedOutput?.parsingFormat],
   )
 
   const { data: selectedIssue, isLoading: isLoadingSelectedIssue } = useIssue({
@@ -119,7 +128,7 @@ export function ConfigurationAdvancedForm<
     group: ISSUE_GROUP.active,
   })
 
-  const options = useMemo(() => {
+  const issueOptions = useMemo(() => {
     const list = issues.map((issue) => ({
       label: issue.title,
       hoverDescription: issue.description,
@@ -140,19 +149,19 @@ export function ConfigurationAdvancedForm<
   }, [issues, selectedIssue])
 
   useEffect(() => {
-    if (formatIsAccessible) return
-    if (!configuration.actualOutput) return
-    // FIXME: use proper callback setState so that you don't depend on options
-    // in the useEffect hook
-    setConfiguration({
-      ...configuration,
-      actualOutput: {
-        ...(configuration.actualOutput || {}),
-        fieldAccessor: undefined,
-      },
-    })
+    let actualOutput = configuration.actualOutput
+    if (actualOutput && !actualFormatIsAccessible) {
+      actualOutput = { ...actualOutput, fieldAccessor: undefined }
+    }
+
+    let expectedOutput = configuration.expectedOutput
+    if (expectedOutput && !expectedFormatIsAccessible) {
+      expectedOutput = { ...expectedOutput, fieldAccessor: undefined }
+    }
+
+    setConfiguration({ ...configuration, actualOutput, expectedOutput })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formatIsAccessible])
+  }, [actualFormatIsAccessible, expectedFormatIsAccessible])
 
   const [testConfiguration] = useDebounce(configuration.actualOutput, 750)
   const [showTest, setShowTest] = useState(false)
@@ -269,10 +278,10 @@ export function ConfigurationAdvancedForm<
         </FormFieldGroup>
         <FormFieldGroup
           label='Parsing format'
-          description='How to parse the assistant messages'
+          description='How to parse the assistant messages. Stringification is done deterministically'
           layout='horizontal'
           tooltip={
-            formatIsAccessible ? (
+            actualFormatIsAccessible ? (
               <Text.H6 color='background'>
                 Use a field accessor to extract a specific field from the output
                 using dot notation.
@@ -303,7 +312,7 @@ export function ConfigurationAdvancedForm<
             disabled={disabled}
             required
           />
-          {formatIsAccessible && (
+          {actualFormatIsAccessible && (
             <Input
               value={configuration.actualOutput?.fieldAccessor ?? ''}
               name='fieldAccessor'
@@ -319,7 +328,7 @@ export function ConfigurationAdvancedForm<
               }
               errors={errors?.['actualOutput.fieldAccessor']}
               className='w-full px-3 h-8'
-              disabled={disabled || !formatIsAccessible}
+              disabled={disabled || !actualFormatIsAccessible}
               required
             />
           )}
@@ -329,6 +338,73 @@ export function ConfigurationAdvancedForm<
         <div className='w-full flex flex-col gap-2 border-t-2 border-dashed border-border pt-4'>
           <ActualOutputTest configuration={testConfiguration} />
         </div>
+      )}
+      {!!metricSpecification.requiresExpectedOutput && (
+        <FormFieldGroup
+          label='Expected output'
+          description='How to extract the output, to evaluate against, from the dataset'
+          descriptionPosition='top'
+          layout='vertical'
+          group
+        >
+          <FormFieldGroup
+            label='Parsing format'
+            description='How to parse the dataset column. Stringification is done deterministically'
+            layout='horizontal'
+            tooltip={
+              expectedFormatIsAccessible ? (
+                <Text.H6 color='background'>
+                  Use a field accessor to extract a specific field from the
+                  output using dot notation.
+                  <br />
+                  <br />
+                  - Access a field: arguments, arguments.options (nested)
+                  <br />- Access a list: [0] (first), [-1] (last)
+                  <br />- Combine both: [0].arguments.options[-1]
+                </Text.H6>
+              ) : undefined
+            }
+          >
+            <Select
+              value={configuration.expectedOutput?.parsingFormat ?? 'string'}
+              name='parsingFormat'
+              placeholder='Select an option'
+              options={PARSING_FORMAT_OPTIONS}
+              onChange={(value) =>
+                setConfiguration({
+                  ...configuration,
+                  expectedOutput: {
+                    ...(configuration.expectedOutput || {}),
+                    parsingFormat: value,
+                  },
+                })
+              }
+              errors={errors?.['expectedOutput.parsingFormat']}
+              disabled={disabled}
+              required
+            />
+            {expectedFormatIsAccessible && (
+              <Input
+                value={configuration.expectedOutput?.fieldAccessor ?? ''}
+                name='fieldAccessor'
+                placeholder='No field'
+                onChange={(e) =>
+                  setConfiguration({
+                    ...configuration,
+                    expectedOutput: {
+                      ...(configuration.expectedOutput || {}),
+                      fieldAccessor: e.target.value || undefined,
+                    },
+                  })
+                }
+                errors={errors?.['expectedOutput.fieldAccessor']}
+                className='w-full px-3 h-8'
+                disabled={disabled || !expectedFormatIsAccessible}
+                required
+              />
+            )}
+          </FormFieldGroup>
+        </FormFieldGroup>
       )}
       {canAssignIssue && (
         <FormFieldGroup
@@ -346,7 +422,7 @@ export function ConfigurationAdvancedForm<
             loading={isLoadingSelectedIssue}
             searchLoading={isLoadingIssues}
             disabled={disabled || isLoadingSelectedIssue}
-            options={options}
+            options={issueOptions}
             onSearch={onSearch}
             onChange={(value) => setIssueId?.(value ?? null)}
             errors={errors?.['issueId']}
@@ -516,6 +592,13 @@ function ActualOutputTest({
               {trace.actualOutput}
             </Text.H5>
           </div>
+          {trace.actualOutput === '' && (
+            <div className='mt-1'>
+              <Text.H6 color='foregroundMuted' isItalic>
+                (Actual output is either empty or null)
+              </Text.H6>
+            </div>
+          )}
         </div>
       </div>
     </>

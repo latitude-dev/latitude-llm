@@ -1,9 +1,9 @@
 import { nanoid } from 'nanoid'
 
-import { type Dataset } from '../../schema/models/types/Dataset'
-import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { DATASET_COLUMN_ROLES, DatasetColumnRole } from '../../constants'
 import { type Column } from '../../schema/models/datasets'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 
 export type HashAlgorithmFn = (args: { columnName: string }) => string
 export type hashAlgorithmArgs = Parameters<HashAlgorithmFn>[0]
@@ -128,6 +128,6 @@ export function getColumnData({
   try {
     return JSON.stringify(data)
   } catch (error) {
-    return data.toString()
+    return String(data)
   }
 }
