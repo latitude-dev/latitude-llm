@@ -86,10 +86,22 @@ export async function mergeIssues(
     return Result.ok<MergeResult>({ winner, mergedIssues: [] })
   }
 
+  const issuesWithLinkedEvaluations = await getIssuesWithLinkedEvaluations({
+    workspaceId: workspace.id,
+    issueIds: mergedIssues.map((item) => item.id),
+  })
+  const filteredMergedIssues = mergedIssues.filter(
+    (item) => !issuesWithLinkedEvaluations.has(item.id),
+  )
+
+  if (filteredMergedIssues.length === 0) {
+    return Result.ok<MergeResult>({ winner, mergedIssues: [] })
+  }
+
   return await transaction.call(
     async (tx) => {
       const issuesRepository = new IssuesRepository(workspace.id, tx)
-      const idsToLock = [winner.id, ...mergedIssues.map((item) => item.id)]
+      const idsToLock = [winner.id, ...filteredMergedIssues.map((item) => item.id)]
       for (const id of idsToLock) {
         const locking = await issuesRepository.lock({ id })
         if (!Result.isOk(locking)) return locking
@@ -105,7 +117,7 @@ export async function mergeIssues(
       }
 
       const refreshedMergedIssues: Issue[] = []
-      for (const merged of mergedIssues) {
+      for (const merged of filteredMergedIssues) {
         const refreshed = await issuesRepository.find(merged.id)
         if (!Result.isOk(refreshed)) return refreshed
 
@@ -296,6 +308,39 @@ function pickWinner({
   const mergedIssues = candidates.filter((issue) => issue.id !== winner.id)
 
   return { winner, mergedIssues }
+}
+
+/**
+ * Get the set of issue IDs that have evaluations linked to them.
+ * An evaluation is considered linked if its issueId matches one of the issue IDs
+ * and it hasn't been deleted or ignored.
+ */
+async function getIssuesWithLinkedEvaluations({
+  workspaceId,
+  issueIds,
+}: {
+  workspaceId: number
+  issueIds: number[]
+}): Promise<Set<number>> {
+  if (issueIds.length === 0) return new Set()
+
+  const linkedEvaluations = await database
+    .select({ issueId: evaluationVersions.issueId })
+    .from(evaluationVersions)
+    .where(
+      and(
+        eq(evaluationVersions.workspaceId, workspaceId),
+        inArray(evaluationVersions.issueId, issueIds),
+        isNull(evaluationVersions.deletedAt),
+        isNull(evaluationVersions.ignoredAt),
+      ),
+    )
+
+  return new Set(
+    linkedEvaluations
+      .map((e) => e.issueId)
+      .filter((id): id is number => id !== null),
+  )
 }
 
 function mergeIssueCentroids({

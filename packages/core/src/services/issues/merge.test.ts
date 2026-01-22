@@ -3,20 +3,15 @@ import { and, eq, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { database } from '../../client'
-import { SpanType } from '../../constants'
 import { IssuesRepository } from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
-import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
 import { issueHistograms } from '../../schema/models/issueHistograms'
 import { issues } from '../../schema/models/issues'
-import { createEvaluationResultV2 } from '../../tests/factories/evaluationResultsV2'
 import { createEvaluationV2 } from '../../tests/factories/evaluationsV2'
 import { createIssue } from '../../tests/factories/issues'
 import { createProject } from '../../tests/factories/projects'
-import { createSpan } from '../../tests/factories/spans'
 import { createWorkspace } from '../../tests/factories/workspaces'
 import * as weaviate from '../../weaviate'
-import { addIssueEvaluationResult } from '../issueEvaluationResults/add'
 import { mergeIssues } from './merge'
 
 describe('mergeIssues', () => {
@@ -139,35 +134,6 @@ describe('mergeIssues', () => {
       .then((r) => r[0]!)
     expect(anchorWithCentroid.centroid.base).toEqual([1, 0])
 
-    const evaluation = await createEvaluationV2({
-      document,
-      commit,
-      workspace,
-    })
-    const span = await createSpan({
-      workspaceId: workspace.id,
-      documentUuid: document.documentUuid,
-      commitUuid: commit.uuid,
-      type: SpanType.Prompt,
-    })
-    const result = await createEvaluationResultV2({
-      evaluation,
-      span,
-      commit,
-      workspace,
-      hasPassed: false,
-    })
-
-    await addIssueEvaluationResult({
-      issue: other,
-      evaluationResult: result,
-      workspaceId: workspace.id,
-    })
-    await database
-      .update(evaluationVersions)
-      .set({ issueId: other.id, evaluateLiveLogs: true })
-      .where(eq(evaluationVersions.id, evaluation.versionId))
-
     // Use the issue with centroid for merging
     const merging = await mergeIssues({
       workspace,
@@ -219,24 +185,6 @@ describe('mergeIssues', () => {
       .where(eq(issueHistograms.issueId, winner.id))
       .then((r) => r[0]!.total)
     expect(Number(histogramTotals)).toBe(7)
-
-    // Verify evaluation results are assigned to winner via issueEvaluationResults table
-    const association = await database
-      .select()
-      .from(issueEvaluationResults)
-      .where(eq(issueEvaluationResults.issueId, winner.id))
-    expect(association.length).toBeGreaterThan(0)
-    expect(association[0]!.evaluationResultId).toBe(result.id)
-
-    // Verify evaluation is ignored (evaluateLiveLogs = false, ignoredAt set)
-    const updatedEvaluation = await database
-      .select()
-      .from(evaluationVersions)
-      .where(eq(evaluationVersions.id, evaluation.versionId))
-      .then((r) => r[0]!)
-    expect(updatedEvaluation.issueId).toBe(other.id) // Still linked to merged issue
-    expect(updatedEvaluation.evaluateLiveLogs).toBe(false) // Disabled
-    expect(updatedEvaluation.ignoredAt).not.toBeNull() // Marked as ignored
   })
 
   it('aggregates histogram counts when merging issues with overlapping histograms', async () => {
@@ -862,6 +810,567 @@ describe('mergeIssues', () => {
           returnMetadata: ['distance'],
         }),
       )
+    })
+  })
+
+  describe('issues with linked evaluations', () => {
+    it('does not merge issues when any candidate has a linked evaluation', async () => {
+      const mockNearVector = vi.fn()
+      const mockExists = vi.fn()
+      const mockDeleteById = vi.fn()
+      const mockUpdate = vi.fn()
+      const mockLength = vi.fn()
+      const mockRemoveTenant = vi.fn()
+
+      const mockCollection = {
+        query: { nearVector: mockNearVector },
+        data: {
+          exists: mockExists,
+          deleteById: mockDeleteById,
+          update: mockUpdate,
+        },
+        length: mockLength,
+        tenants: { remove: mockRemoveTenant },
+      }
+
+      vi.spyOn(weaviate, 'getIssuesCollection').mockResolvedValue(
+        mockCollection as any,
+      )
+
+      const { workspace } = await createWorkspace({ features: ['issues'] })
+      const projectResult = await createProject({
+        workspace,
+        documents: {
+          'test-prompt': 'This is a test prompt',
+        },
+      })
+      const { project, commit, documents } = projectResult
+      const document = documents[0]!
+
+      const anchorResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const anchor = anchorResult.issue
+
+      const otherResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const other = otherResult.issue
+
+      await database.insert(issueHistograms).values({
+        workspaceId: workspace.id,
+        projectId: project.id,
+        documentUuid: document.documentUuid,
+        issueId: anchor.id,
+        commitId: commit.id,
+        date: '2024-01-01',
+        occurredAt: new Date('2024-01-01'),
+        count: 5,
+      })
+
+      await database.insert(issueHistograms).values({
+        workspaceId: workspace.id,
+        projectId: project.id,
+        documentUuid: document.documentUuid,
+        issueId: other.id,
+        commitId: commit.id,
+        date: '2024-01-01',
+        occurredAt: new Date('2024-01-01'),
+        count: 2,
+      })
+
+      await database
+        .update(issues)
+        .set({
+          centroid: { base: [1, 0], weight: 1 },
+          updatedAt: new Date('2024-02-01'),
+        })
+        .where(eq(issues.id, anchor.id))
+
+      await database
+        .update(issues)
+        .set({
+          centroid: { base: [0.9, 0.1], weight: 1 },
+          updatedAt: new Date('2024-02-01'),
+        })
+        .where(eq(issues.id, other.id))
+
+      mockNearVector.mockResolvedValue({
+        objects: [
+          {
+            uuid: anchor.uuid,
+            vectors: { default: [1, 0] },
+          },
+          {
+            uuid: other.uuid,
+            vectors: { default: [0.9, 0.1] },
+          },
+        ],
+      })
+      mockExists.mockResolvedValue(true)
+      mockDeleteById.mockResolvedValue(undefined)
+      mockUpdate.mockResolvedValue(undefined)
+      mockLength.mockResolvedValue(1)
+      mockRemoveTenant.mockResolvedValue(undefined)
+
+      const evaluation = await createEvaluationV2({
+        document,
+        commit,
+        workspace,
+      })
+
+      await database
+        .update(evaluationVersions)
+        .set({ issueId: other.id })
+        .where(eq(evaluationVersions.id, evaluation.versionId))
+
+      const anchorWithCentroid = await database
+        .select()
+        .from(issues)
+        .where(eq(issues.id, anchor.id))
+        .then((r) => r[0]!)
+
+      const merging = await mergeIssues({
+        workspace,
+        issue: anchorWithCentroid,
+      })
+      expect(merging.error).toBeFalsy()
+      const { winner, mergedIssues } = merging.unwrap()
+
+      expect(winner.id).toBe(anchor.id)
+      expect(mergedIssues).toHaveLength(0)
+
+      const otherIssue = await database
+        .select()
+        .from(issues)
+        .where(eq(issues.id, other.id))
+        .then((r) => r[0]!)
+      expect(otherIssue.mergedAt).toBeNull()
+      expect(otherIssue.mergedToIssueId).toBeNull()
+    })
+
+    it('allows merge when the winner issue has a linked evaluation', async () => {
+      const mockNearVector = vi.fn()
+      const mockExists = vi.fn()
+      const mockDeleteById = vi.fn()
+      const mockUpdate = vi.fn()
+      const mockLength = vi.fn()
+      const mockRemoveTenant = vi.fn()
+
+      const mockCollection = {
+        query: { nearVector: mockNearVector },
+        data: {
+          exists: mockExists,
+          deleteById: mockDeleteById,
+          update: mockUpdate,
+        },
+        length: mockLength,
+        tenants: { remove: mockRemoveTenant },
+      }
+
+      vi.spyOn(weaviate, 'getIssuesCollection').mockResolvedValue(
+        mockCollection as any,
+      )
+
+      const { workspace } = await createWorkspace({ features: ['issues'] })
+      const projectResult = await createProject({
+        workspace,
+        documents: {
+          'test-prompt': 'This is a test prompt',
+        },
+      })
+      const { project, commit, documents } = projectResult
+      const document = documents[0]!
+
+      const anchorResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const anchor = anchorResult.issue
+
+      const otherResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const other = otherResult.issue
+
+      await database.insert(issueHistograms).values({
+        workspaceId: workspace.id,
+        projectId: project.id,
+        documentUuid: document.documentUuid,
+        issueId: anchor.id,
+        commitId: commit.id,
+        date: '2024-01-01',
+        occurredAt: new Date('2024-01-01'),
+        count: 5,
+      })
+
+      await database.insert(issueHistograms).values({
+        workspaceId: workspace.id,
+        projectId: project.id,
+        documentUuid: document.documentUuid,
+        issueId: other.id,
+        commitId: commit.id,
+        date: '2024-01-01',
+        occurredAt: new Date('2024-01-01'),
+        count: 2,
+      })
+
+      await database
+        .update(issues)
+        .set({
+          centroid: { base: [1, 0], weight: 1 },
+          updatedAt: new Date('2024-02-01'),
+        })
+        .where(eq(issues.id, anchor.id))
+
+      await database
+        .update(issues)
+        .set({
+          centroid: { base: [0.9, 0.1], weight: 1 },
+          updatedAt: new Date('2024-02-01'),
+        })
+        .where(eq(issues.id, other.id))
+
+      mockNearVector.mockResolvedValue({
+        objects: [
+          {
+            uuid: anchor.uuid,
+            vectors: { default: [1, 0] },
+          },
+          {
+            uuid: other.uuid,
+            vectors: { default: [0.9, 0.1] },
+          },
+        ],
+      })
+      mockExists.mockResolvedValue(true)
+      mockDeleteById.mockResolvedValue(undefined)
+      mockUpdate.mockResolvedValue(undefined)
+      mockLength.mockResolvedValue(1)
+      mockRemoveTenant.mockResolvedValue(undefined)
+
+      const evaluation = await createEvaluationV2({
+        document,
+        commit,
+        workspace,
+      })
+
+      // Link evaluation to the winner (anchor) - this should NOT prevent merge
+      await database
+        .update(evaluationVersions)
+        .set({ issueId: anchor.id })
+        .where(eq(evaluationVersions.id, evaluation.versionId))
+
+      const anchorWithCentroid = await database
+        .select()
+        .from(issues)
+        .where(eq(issues.id, anchor.id))
+        .then((r) => r[0]!)
+
+      const merging = await mergeIssues({
+        workspace,
+        issue: anchorWithCentroid,
+      })
+      expect(merging.error).toBeFalsy()
+      const { winner, mergedIssues } = merging.unwrap()
+
+      // Winner should still be anchor
+      expect(winner.id).toBe(anchor.id)
+      // Other issue should still be merged since it doesn't have a linked evaluation
+      expect(mergedIssues.map((i) => i.id)).toContain(other.id)
+
+      const otherIssue = await database
+        .select()
+        .from(issues)
+        .where(eq(issues.id, other.id))
+        .then((r) => r[0]!)
+      expect(otherIssue.mergedAt).not.toBeNull()
+      expect(otherIssue.mergedToIssueId).toBe(anchor.id)
+    })
+
+    it('allows merge when linked evaluation is deleted', async () => {
+      const mockNearVector = vi.fn()
+      const mockExists = vi.fn()
+      const mockDeleteById = vi.fn()
+      const mockUpdate = vi.fn()
+      const mockLength = vi.fn()
+      const mockRemoveTenant = vi.fn()
+
+      const mockCollection = {
+        query: { nearVector: mockNearVector },
+        data: {
+          exists: mockExists,
+          deleteById: mockDeleteById,
+          update: mockUpdate,
+        },
+        length: mockLength,
+        tenants: { remove: mockRemoveTenant },
+      }
+
+      vi.spyOn(weaviate, 'getIssuesCollection').mockResolvedValue(
+        mockCollection as any,
+      )
+
+      const { workspace } = await createWorkspace({ features: ['issues'] })
+      const projectResult = await createProject({
+        workspace,
+        documents: {
+          'test-prompt': 'This is a test prompt',
+        },
+      })
+      const { project, commit, documents } = projectResult
+      const document = documents[0]!
+
+      const anchorResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const anchor = anchorResult.issue
+
+      const otherResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const other = otherResult.issue
+
+      await database.insert(issueHistograms).values({
+        workspaceId: workspace.id,
+        projectId: project.id,
+        documentUuid: document.documentUuid,
+        issueId: anchor.id,
+        commitId: commit.id,
+        date: '2024-01-01',
+        occurredAt: new Date('2024-01-01'),
+        count: 5,
+      })
+
+      await database.insert(issueHistograms).values({
+        workspaceId: workspace.id,
+        projectId: project.id,
+        documentUuid: document.documentUuid,
+        issueId: other.id,
+        commitId: commit.id,
+        date: '2024-01-01',
+        occurredAt: new Date('2024-01-01'),
+        count: 2,
+      })
+
+      await database
+        .update(issues)
+        .set({
+          centroid: { base: [1, 0], weight: 1 },
+          updatedAt: new Date('2024-02-01'),
+        })
+        .where(eq(issues.id, anchor.id))
+
+      await database
+        .update(issues)
+        .set({
+          centroid: { base: [0.9, 0.1], weight: 1 },
+          updatedAt: new Date('2024-02-01'),
+        })
+        .where(eq(issues.id, other.id))
+
+      mockNearVector.mockResolvedValue({
+        objects: [
+          {
+            uuid: anchor.uuid,
+            vectors: { default: [1, 0] },
+          },
+          {
+            uuid: other.uuid,
+            vectors: { default: [0.9, 0.1] },
+          },
+        ],
+      })
+      mockExists.mockResolvedValue(true)
+      mockDeleteById.mockResolvedValue(undefined)
+      mockUpdate.mockResolvedValue(undefined)
+      mockLength.mockResolvedValue(1)
+      mockRemoveTenant.mockResolvedValue(undefined)
+
+      const evaluation = await createEvaluationV2({
+        document,
+        commit,
+        workspace,
+      })
+
+      await database
+        .update(evaluationVersions)
+        .set({ issueId: other.id, deletedAt: new Date() })
+        .where(eq(evaluationVersions.id, evaluation.versionId))
+
+      const anchorWithCentroid = await database
+        .select()
+        .from(issues)
+        .where(eq(issues.id, anchor.id))
+        .then((r) => r[0]!)
+
+      const merging = await mergeIssues({
+        workspace,
+        issue: anchorWithCentroid,
+      })
+      expect(merging.error).toBeFalsy()
+      const { winner, mergedIssues } = merging.unwrap()
+
+      expect(winner.id).toBe(anchor.id)
+      expect(mergedIssues.map((i) => i.id)).toContain(other.id)
+
+      const otherIssue = await database
+        .select()
+        .from(issues)
+        .where(eq(issues.id, other.id))
+        .then((r) => r[0]!)
+      expect(otherIssue.mergedAt).not.toBeNull()
+      expect(otherIssue.mergedToIssueId).toBe(anchor.id)
+    })
+
+    it('allows merge when linked evaluation is ignored', async () => {
+      const mockNearVector = vi.fn()
+      const mockExists = vi.fn()
+      const mockDeleteById = vi.fn()
+      const mockUpdate = vi.fn()
+      const mockLength = vi.fn()
+      const mockRemoveTenant = vi.fn()
+
+      const mockCollection = {
+        query: { nearVector: mockNearVector },
+        data: {
+          exists: mockExists,
+          deleteById: mockDeleteById,
+          update: mockUpdate,
+        },
+        length: mockLength,
+        tenants: { remove: mockRemoveTenant },
+      }
+
+      vi.spyOn(weaviate, 'getIssuesCollection').mockResolvedValue(
+        mockCollection as any,
+      )
+
+      const { workspace } = await createWorkspace({ features: ['issues'] })
+      const projectResult = await createProject({
+        workspace,
+        documents: {
+          'test-prompt': 'This is a test prompt',
+        },
+      })
+      const { project, commit, documents } = projectResult
+      const document = documents[0]!
+
+      const anchorResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const anchor = anchorResult.issue
+
+      const otherResult = await createIssue({
+        workspace,
+        project,
+        document,
+      })
+      const other = otherResult.issue
+
+      await database.insert(issueHistograms).values({
+        workspaceId: workspace.id,
+        projectId: project.id,
+        documentUuid: document.documentUuid,
+        issueId: anchor.id,
+        commitId: commit.id,
+        date: '2024-01-01',
+        occurredAt: new Date('2024-01-01'),
+        count: 5,
+      })
+
+      await database.insert(issueHistograms).values({
+        workspaceId: workspace.id,
+        projectId: project.id,
+        documentUuid: document.documentUuid,
+        issueId: other.id,
+        commitId: commit.id,
+        date: '2024-01-01',
+        occurredAt: new Date('2024-01-01'),
+        count: 2,
+      })
+
+      await database
+        .update(issues)
+        .set({
+          centroid: { base: [1, 0], weight: 1 },
+          updatedAt: new Date('2024-02-01'),
+        })
+        .where(eq(issues.id, anchor.id))
+
+      await database
+        .update(issues)
+        .set({
+          centroid: { base: [0.9, 0.1], weight: 1 },
+          updatedAt: new Date('2024-02-01'),
+        })
+        .where(eq(issues.id, other.id))
+
+      mockNearVector.mockResolvedValue({
+        objects: [
+          {
+            uuid: anchor.uuid,
+            vectors: { default: [1, 0] },
+          },
+          {
+            uuid: other.uuid,
+            vectors: { default: [0.9, 0.1] },
+          },
+        ],
+      })
+      mockExists.mockResolvedValue(true)
+      mockDeleteById.mockResolvedValue(undefined)
+      mockUpdate.mockResolvedValue(undefined)
+      mockLength.mockResolvedValue(1)
+      mockRemoveTenant.mockResolvedValue(undefined)
+
+      const evaluation = await createEvaluationV2({
+        document,
+        commit,
+        workspace,
+      })
+
+      await database
+        .update(evaluationVersions)
+        .set({ issueId: other.id, ignoredAt: new Date() })
+        .where(eq(evaluationVersions.id, evaluation.versionId))
+
+      const anchorWithCentroid = await database
+        .select()
+        .from(issues)
+        .where(eq(issues.id, anchor.id))
+        .then((r) => r[0]!)
+
+      const merging = await mergeIssues({
+        workspace,
+        issue: anchorWithCentroid,
+      })
+      expect(merging.error).toBeFalsy()
+      const { winner, mergedIssues } = merging.unwrap()
+
+      expect(winner.id).toBe(anchor.id)
+      expect(mergedIssues.map((i) => i.id)).toContain(other.id)
+
+      const otherIssue = await database
+        .select()
+        .from(issues)
+        .where(eq(issues.id, other.id))
+        .then((r) => r[0]!)
+      expect(otherIssue.mergedAt).not.toBeNull()
+      expect(otherIssue.mergedToIssueId).toBe(anchor.id)
     })
   })
 })
