@@ -308,6 +308,8 @@ export function isMainSpan(span: Span | SpanWithDetails | AssembledSpan) {
   return MAIN_SPAN_TYPES.has(span.type)
 }
 
-export function isCompletionSpan(span: Span | SpanWithDetails | AssembledSpan): span is AssembledSpan<SpanType.Completion> {
+export function isCompletionSpan(
+  span: Span | SpanWithDetails | AssembledSpan,
+): span is AssembledSpan<SpanType.Completion> {
   return span.type === SpanType.Completion
 }

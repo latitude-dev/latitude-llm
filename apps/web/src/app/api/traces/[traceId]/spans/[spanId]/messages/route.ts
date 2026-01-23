@@ -41,10 +41,7 @@ export const GET = errorHandler(
         return NextResponse.json({ trace: null }, { status: 200 })
       }
 
-      return NextResponse.json(
-        result.unwrap(),
-        { status: 200 },
-      )
+      return NextResponse.json(result.unwrap(), { status: 200 })
     },
   ),
 )

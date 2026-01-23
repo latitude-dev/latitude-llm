@@ -58,10 +58,12 @@ function findNearestMainSpan(
   return undefined
 }
 
-function findLatestCompletionSpan(span: AssembledSpan): AssembledSpan<SpanType.Completion> | undefined {
+function findLatestCompletionSpan(
+  span: AssembledSpan,
+): AssembledSpan<SpanType.Completion> | undefined {
   if (!span.children) return undefined
   const reversedChildren = [...span.children].reverse()
-  
+
   for (const child of reversedChildren) {
     if (isMainSpan(child)) continue
     if (isCompletionSpan(child)) return child
@@ -93,9 +95,9 @@ export function findCompletionSpanForSpan(
   trace: AssembledTrace | undefined,
 ): AssembledSpan<SpanType.Completion> | undefined {
   if (!span || !trace) return undefined
-  
+
   if (span.type === SpanType.Completion) {
-    return span as AssembledSpan<SpanType.Completion>;
+    return span as AssembledSpan<SpanType.Completion>
   }
 
   const mainSpan = findNearestMainSpan(span, trace)

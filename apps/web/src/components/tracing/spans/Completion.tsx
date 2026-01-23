@@ -11,7 +11,11 @@ import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useState } from 'react'
-import { DetailsPanelProps, SPAN_COLORS, SpanFrontendSpecification } from './shared'
+import {
+  DetailsPanelProps,
+  SPAN_COLORS,
+  SpanFrontendSpecification,
+} from './shared'
 import {
   FINISH_REASON_DETAILS,
   SPAN_SPECIFICATIONS,

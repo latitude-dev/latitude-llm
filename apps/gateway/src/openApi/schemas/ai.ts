@@ -126,6 +126,67 @@ export const messageSchema = z
       content: z.array(toolResultContentSchema),
     }),
   )
+  .openapi({
+    description: 'A message in the conversation',
+    oneOf: [
+      {
+        type: 'object',
+        properties: {
+          role: { type: 'string', enum: ['system'] },
+          content: { type: 'string' },
+        },
+        required: ['role', 'content'],
+      },
+      {
+        type: 'object',
+        properties: {
+          role: { type: 'string', enum: ['user'] },
+          content: { type: 'string' },
+          name: { type: 'string' },
+        },
+        required: ['role', 'content'],
+      },
+      {
+        type: 'object',
+        properties: {
+          role: { type: 'string', enum: ['assistant'] },
+          content: { type: 'string' },
+          toolCalls: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                name: { type: 'string' },
+                arguments: { type: 'object', additionalProperties: true },
+              },
+            },
+          },
+        },
+        required: ['role', 'content'],
+      },
+      {
+        type: 'object',
+        properties: {
+          role: { type: 'string', enum: ['tool'] },
+          content: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                type: { type: 'string', enum: ['tool-result'] },
+                toolCallId: { type: 'string' },
+                toolName: { type: 'string' },
+                result: { type: 'object', additionalProperties: true },
+                isError: { type: 'boolean' },
+              },
+            },
+          },
+        },
+        required: ['role', 'content'],
+      },
+    ],
+  })
 
 export const messagesSchema = z.array(messageSchema)
 
@@ -139,94 +200,119 @@ export const providerLogSchema = z.record(z.string(), z.any()).openapi({
   additionalProperties: true,
   description: 'Provider log as key-value pairs',
 })
-export const chainStepResponseSchema = z.discriminatedUnion('streamType', [
-  z.object({
-    streamType: z.literal('text'),
-    text: z.string(),
-    usage: languageModelUsageSchema,
-    toolCalls: z.array(toolCallSchema),
-    documentLogUuid: z.string().optional(),
-    providerLog: providerLogSchema.optional(),
-    cost: z.number(),
-  }),
-  z.object({
-    streamType: z.literal('object'),
-    object: z.any().openapi({
-      type: 'object',
-      additionalProperties: true,
-      description: 'Stream object data (any JSON-serializable value)',
+export const chainStepResponseSchema = z
+  .discriminatedUnion('streamType', [
+    z.object({
+      streamType: z.literal('text'),
+      text: z.string(),
+      usage: languageModelUsageSchema,
+      toolCalls: z.array(toolCallSchema),
+      documentLogUuid: z.string().optional(),
+      providerLog: providerLogSchema.optional(),
+      cost: z.number(),
     }),
-    text: z.string(),
-    usage: languageModelUsageSchema,
-    documentLogUuid: z.string().optional(),
-    providerLog: providerLogSchema.optional(),
-    cost: z.number(),
-  }),
-])
-
-export const chainCallResponseDtoSchema = z.discriminatedUnion('streamType', [
-  chainStepResponseSchema.options[0].omit({
-    documentLogUuid: true,
-    providerLog: true,
-  }),
-  chainStepResponseSchema.options[1].omit({
-    documentLogUuid: true,
-    providerLog: true,
-  }),
-])
-
-export const chainEventDtoResponseSchema = z.discriminatedUnion('streamType', [
-  chainStepResponseSchema.options[0].omit({ providerLog: true }),
-  chainStepResponseSchema.options[1].omit({ providerLog: true }),
-])
-
-export const legacyChainEventDtoSchema = z.discriminatedUnion('event', [
-  z.object({
-    event: z.literal(StreamEventTypes.Provider),
-    data: z.record(z.string(), z.any()).openapi({
-      type: 'object',
-      additionalProperties: true,
-      description: 'Provider event data as key-value pairs',
+    z.object({
+      streamType: z.literal('object'),
+      object: z.any().openapi({
+        type: 'object',
+        additionalProperties: true,
+        description: 'Stream object data (any JSON-serializable value)',
+      }),
+      text: z.string(),
+      usage: languageModelUsageSchema,
+      documentLogUuid: z.string().optional(),
+      providerLog: providerLogSchema.optional(),
+      cost: z.number(),
     }),
-  }),
-  z.object({
-    event: z.literal(StreamEventTypes.Latitude),
-    data: z.discriminatedUnion('type', [
-      z.object({
-        type: z.literal(LegacyChainEventTypes.Step),
-        config: configSchema,
-        isLastStep: z.boolean(),
-        messages: z.array(messageSchema),
-        uuid: z.string().optional(),
+  ])
+  .openapi({
+    description: 'Chain step response with text or object stream type',
+    discriminator: { propertyName: 'streamType' },
+  })
+
+export const chainCallResponseDtoSchema = z
+  .discriminatedUnion('streamType', [
+    chainStepResponseSchema.options[0].omit({
+      documentLogUuid: true,
+      providerLog: true,
+    }),
+    chainStepResponseSchema.options[1].omit({
+      documentLogUuid: true,
+      providerLog: true,
+    }),
+  ])
+  .openapi({
+    description: 'Chain call response DTO',
+    discriminator: { propertyName: 'streamType' },
+  })
+
+export const chainEventDtoResponseSchema = z
+  .discriminatedUnion('streamType', [
+    chainStepResponseSchema.options[0].omit({ providerLog: true }),
+    chainStepResponseSchema.options[1].omit({ providerLog: true }),
+  ])
+  .openapi({
+    description: 'Chain event DTO response',
+    discriminator: { propertyName: 'streamType' },
+  })
+
+export const legacyChainEventDtoSchema = z
+  .discriminatedUnion('event', [
+    z.object({
+      event: z.literal(StreamEventTypes.Provider),
+      data: z.record(z.string(), z.any()).openapi({
+        type: 'object',
+        additionalProperties: true,
+        description: 'Provider event data as key-value pairs',
       }),
-      z.object({
-        type: z.literal(LegacyChainEventTypes.StepComplete),
-        response: chainEventDtoResponseSchema,
-        uuid: z.string().optional(),
-      }),
-      z.object({
-        type: z.literal(LegacyChainEventTypes.Complete),
-        config: configSchema,
-        messages: z.array(messageSchema).optional(),
-        object: z.record(z.string(), z.any()).optional().openapi({
-          type: 'object',
-          additionalProperties: true,
-          description: 'Complete event object data as key-value pairs',
+    }),
+    z.object({
+      event: z.literal(StreamEventTypes.Latitude),
+      data: z
+        .discriminatedUnion('type', [
+          z.object({
+            type: z.literal(LegacyChainEventTypes.Step),
+            config: configSchema,
+            isLastStep: z.boolean(),
+            messages: z.array(messageSchema),
+            uuid: z.string().optional(),
+          }),
+          z.object({
+            type: z.literal(LegacyChainEventTypes.StepComplete),
+            response: chainEventDtoResponseSchema,
+            uuid: z.string().optional(),
+          }),
+          z.object({
+            type: z.literal(LegacyChainEventTypes.Complete),
+            config: configSchema,
+            messages: z.array(messageSchema).optional(),
+            object: z.record(z.string(), z.any()).optional().openapi({
+              type: 'object',
+              additionalProperties: true,
+              description: 'Complete event object data as key-value pairs',
+            }),
+            response: chainEventDtoResponseSchema,
+            uuid: z.string().optional(),
+          }),
+          z.object({
+            type: z.literal(LegacyChainEventTypes.Error),
+            error: z.object({
+              name: z.string(),
+              message: z.string(),
+              stack: z.string().optional(),
+            }),
+          }),
+        ])
+        .openapi({
+          description: 'Latitude event data',
+          discriminator: { propertyName: 'type' },
         }),
-        response: chainEventDtoResponseSchema,
-        uuid: z.string().optional(),
-      }),
-      z.object({
-        type: z.literal(LegacyChainEventTypes.Error),
-        error: z.object({
-          name: z.string(),
-          message: z.string(),
-          stack: z.string().optional(),
-        }),
-      }),
-    ]),
-  }),
-])
+    }),
+  ])
+  .openapi({
+    description: 'Legacy chain event DTO',
+    discriminator: { propertyName: 'event' },
+  })
 
 export const runBackgroundAPIResponseSchema = z.object({
   uuid: z.string(),

@@ -13,7 +13,13 @@ export const ingestRoute = createRoute({
     body: {
       content: {
         [http.MediaTypes.JSON]: { schema: Otlp.serviceRequestSchema },
-        [http.MediaTypes.PROTOBUF]: { schema: z.instanceof(ArrayBuffer) },
+        [http.MediaTypes.PROTOBUF]: {
+          schema: z.instanceof(ArrayBuffer).openapi({
+            type: 'string',
+            format: 'binary',
+            description: 'OTLP spans in Protobuf format',
+          }),
+        },
       },
     },
   },

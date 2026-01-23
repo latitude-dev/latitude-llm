@@ -27,7 +27,16 @@ export const chatRoute = createRoute({
             tools: z.array(z.string()).optional().default([]),
             mcpHeaders: z
               .record(z.string(), z.record(z.string(), z.string()))
-              .optional(),
+              .optional()
+              .openapi({
+                type: 'object',
+                additionalProperties: {
+                  type: 'object',
+                  additionalProperties: { type: 'string' },
+                },
+                description:
+                  'Custom headers to pass to MCP servers at runtime, keyed by integration name (e.g., { "myMcp": { "customer-id": "abc123" } })',
+              }),
           }),
         },
       },

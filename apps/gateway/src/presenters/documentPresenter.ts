@@ -19,8 +19,48 @@ export const documentPresenterSchema = z.object({
     additionalProperties: true,
     description: 'Document configuration as key-value pairs',
   }),
-  parameters: z.record(z.string(), z.object({ type: z.enum(ParameterType) })),
-  provider: z.enum(Providers).optional(),
+  parameters: z
+    .record(
+      z.string(),
+      z.object({ type: z.enum(ParameterType) }).openapi({
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['text', 'image', 'file'] },
+        },
+      }),
+    )
+    .openapi({
+      type: 'object',
+      additionalProperties: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['text', 'image', 'file'] },
+        },
+      },
+      description: 'Document parameters with their types',
+    }),
+  provider: z
+    .enum(Providers)
+    .optional()
+    .openapi({
+      type: 'string',
+      enum: [
+        'openai',
+        'anthropic',
+        'groq',
+        'mistral',
+        'azure',
+        'google',
+        'google_vertex',
+        'anthropic_vertex',
+        'custom',
+        'xai',
+        'amazon_bedrock',
+        'deepseek',
+        'perplexity',
+      ],
+      description: 'The provider used for this document',
+    }),
 })
 type Parameters = z.infer<typeof documentPresenterSchema>['parameters']
 

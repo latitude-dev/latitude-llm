@@ -115,12 +115,18 @@ describe('findCompletionSpanForSpan', () => {
 
   it('stops searching when encountering a child main span', () => {
     // Parent (Prompt) -> Completion -> Tool -> Child (Prompt) -> Completion
-    const childCompletion = createMockSpan(SpanType.Completion, 'child-completion')
+    const childCompletion = createMockSpan(
+      SpanType.Completion,
+      'child-completion',
+    )
     const childPrompt = createMockSpan(SpanType.Prompt, 'child-prompt', [
       childCompletion,
     ])
     const tool = createMockSpan(SpanType.Tool, 'tool-1', [childPrompt])
-    const parentCompletion = createMockSpan(SpanType.Completion, 'parent-completion')
+    const parentCompletion = createMockSpan(
+      SpanType.Completion,
+      'parent-completion',
+    )
     const parentPrompt = createMockSpan(SpanType.Prompt, 'parent-prompt', [
       parentCompletion,
       tool,
@@ -136,12 +142,18 @@ describe('findCompletionSpanForSpan', () => {
 
   it('finds child agent completion when selecting child agent span', () => {
     // Parent (Prompt) -> Completion -> Tool -> Child (Prompt) -> Completion
-    const childCompletion = createMockSpan(SpanType.Completion, 'child-completion')
+    const childCompletion = createMockSpan(
+      SpanType.Completion,
+      'child-completion',
+    )
     const childPrompt = createMockSpan(SpanType.Prompt, 'child-prompt', [
       childCompletion,
     ])
     const tool = createMockSpan(SpanType.Tool, 'tool-1', [childPrompt])
-    const parentCompletion = createMockSpan(SpanType.Completion, 'parent-completion')
+    const parentCompletion = createMockSpan(
+      SpanType.Completion,
+      'parent-completion',
+    )
     const parentPrompt = createMockSpan(SpanType.Prompt, 'parent-prompt', [
       parentCompletion,
       tool,
@@ -158,14 +170,21 @@ describe('findCompletionSpanForSpan', () => {
   it('finds child agent completion when selecting a span within child agent', () => {
     // Parent (Prompt) -> Completion -> Tool -> Child (Prompt) -> Completion -> Tool
     const childTool = createMockSpan(SpanType.Tool, 'child-tool')
-    const childCompletion = createMockSpan(SpanType.Completion, 'child-completion', [
-      childTool,
-    ])
+    const childCompletion = createMockSpan(
+      SpanType.Completion,
+      'child-completion',
+      [childTool],
+    )
     const childPrompt = createMockSpan(SpanType.Prompt, 'child-prompt', [
       childCompletion,
     ])
-    const parentTool = createMockSpan(SpanType.Tool, 'parent-tool', [childPrompt])
-    const parentCompletion = createMockSpan(SpanType.Completion, 'parent-completion')
+    const parentTool = createMockSpan(SpanType.Tool, 'parent-tool', [
+      childPrompt,
+    ])
+    const parentCompletion = createMockSpan(
+      SpanType.Completion,
+      'parent-completion',
+    )
     const parentPrompt = createMockSpan(SpanType.Prompt, 'parent-prompt', [
       parentCompletion,
       parentTool,
@@ -188,15 +207,24 @@ describe('findCompletionSpanForSpan', () => {
     const child2Prompt = createMockSpan(SpanType.Prompt, 'child2-prompt', [
       child2Completion,
     ])
-    const child1Tool = createMockSpan(SpanType.Tool, 'child1-tool', [child2Prompt])
-    const child1Completion = createMockSpan(SpanType.Completion, 'child1-completion', [
-      child1Tool,
+    const child1Tool = createMockSpan(SpanType.Tool, 'child1-tool', [
+      child2Prompt,
     ])
+    const child1Completion = createMockSpan(
+      SpanType.Completion,
+      'child1-completion',
+      [child1Tool],
+    )
     const child1Prompt = createMockSpan(SpanType.Prompt, 'child1-prompt', [
       child1Completion,
     ])
-    const parentTool = createMockSpan(SpanType.Tool, 'parent-tool', [child1Prompt])
-    const parentCompletion = createMockSpan(SpanType.Completion, 'parent-completion')
+    const parentTool = createMockSpan(SpanType.Tool, 'parent-tool', [
+      child1Prompt,
+    ])
+    const parentCompletion = createMockSpan(
+      SpanType.Completion,
+      'parent-completion',
+    )
     const parentPrompt = createMockSpan(SpanType.Prompt, 'parent-prompt', [
       parentCompletion,
       parentTool,
@@ -234,19 +262,26 @@ describe('findCompletionSpanForSpan', () => {
       'child1-completion-2',
       [secondChild1Tool],
     )
-    const secondChild1Prompt = createMockSpan(SpanType.Prompt, 'child1-prompt-2', [
-      secondChild1Completion,
-    ])
+    const secondChild1Prompt = createMockSpan(
+      SpanType.Prompt,
+      'child1-prompt-2',
+      [secondChild1Completion],
+    )
     const firstChild1Completion = createMockSpan(
       SpanType.Completion,
       'child1-completion-1',
     )
-    const firstChild1Prompt = createMockSpan(SpanType.Prompt, 'child1-prompt-1', [
-      firstChild1Completion,
-    ])
+    const firstChild1Prompt = createMockSpan(
+      SpanType.Prompt,
+      'child1-prompt-1',
+      [firstChild1Completion],
+    )
     const tool1 = createMockSpan(SpanType.Tool, 'tool-1', [firstChild1Prompt])
     const tool2 = createMockSpan(SpanType.Tool, 'tool-2', [secondChild1Prompt])
-    const parentCompletion = createMockSpan(SpanType.Completion, 'parent-completion')
+    const parentCompletion = createMockSpan(
+      SpanType.Completion,
+      'parent-completion',
+    )
     const parentPrompt = createMockSpan(SpanType.Prompt, 'parent-prompt', [
       parentCompletion,
       tool1,
@@ -259,11 +294,17 @@ describe('findCompletionSpanForSpan', () => {
     expect(parentResult?.id).toBe('parent-completion')
 
     // Selecting first Child1 should find first Child1's completion
-    const firstChild1Result = findCompletionSpanForSpan(firstChild1Prompt, trace)
+    const firstChild1Result = findCompletionSpanForSpan(
+      firstChild1Prompt,
+      trace,
+    )
     expect(firstChild1Result?.id).toBe('child1-completion-1')
 
     // Selecting second Child1 should find second Child1's completion (not Child2's)
-    const secondChild1Result = findCompletionSpanForSpan(secondChild1Prompt, trace)
+    const secondChild1Result = findCompletionSpanForSpan(
+      secondChild1Prompt,
+      trace,
+    )
     expect(secondChild1Result?.id).toBe('child1-completion-2')
 
     // Selecting Child2 should find Child2's completion
@@ -283,7 +324,9 @@ describe('findCompletionSpanForSpan', () => {
 
   it('works with External span type as main span', () => {
     const completion = createMockSpan(SpanType.Completion, 'completion-1')
-    const external = createMockSpan(SpanType.External, 'external-1', [completion])
+    const external = createMockSpan(SpanType.External, 'external-1', [
+      completion,
+    ])
     const trace = createMockTrace([external])
 
     const result = findCompletionSpanForSpan(external, trace)
@@ -305,12 +348,18 @@ describe('findCompletionSpanForSpan', () => {
 
   it('handles completion span before child main span', () => {
     // Main span has: Completion, then Tool with Child Prompt
-    const childCompletion = createMockSpan(SpanType.Completion, 'child-completion')
+    const childCompletion = createMockSpan(
+      SpanType.Completion,
+      'child-completion',
+    )
     const childPrompt = createMockSpan(SpanType.Prompt, 'child-prompt', [
       childCompletion,
     ])
     const tool = createMockSpan(SpanType.Tool, 'tool-1', [childPrompt])
-    const parentCompletion = createMockSpan(SpanType.Completion, 'parent-completion')
+    const parentCompletion = createMockSpan(
+      SpanType.Completion,
+      'parent-completion',
+    )
     const parentPrompt = createMockSpan(SpanType.Prompt, 'parent-prompt', [
       parentCompletion,
       tool,
@@ -325,12 +374,18 @@ describe('findCompletionSpanForSpan', () => {
 
   it('handles completion span after child main span', () => {
     // Main span has: Tool with Child Prompt, then Completion
-    const childCompletion = createMockSpan(SpanType.Completion, 'child-completion')
+    const childCompletion = createMockSpan(
+      SpanType.Completion,
+      'child-completion',
+    )
     const childPrompt = createMockSpan(SpanType.Prompt, 'child-prompt', [
       childCompletion,
     ])
     const tool = createMockSpan(SpanType.Tool, 'tool-1', [childPrompt])
-    const parentCompletion = createMockSpan(SpanType.Completion, 'parent-completion')
+    const parentCompletion = createMockSpan(
+      SpanType.Completion,
+      'parent-completion',
+    )
     const parentPrompt = createMockSpan(SpanType.Prompt, 'parent-prompt', [
       tool,
       parentCompletion,
@@ -346,7 +401,10 @@ describe('findCompletionSpanForSpan', () => {
   })
 
   it('handles multiple completion spans before child main span', () => {
-    const childCompletion = createMockSpan(SpanType.Completion, 'child-completion')
+    const childCompletion = createMockSpan(
+      SpanType.Completion,
+      'child-completion',
+    )
     const childPrompt = createMockSpan(SpanType.Prompt, 'child-prompt', [
       childCompletion,
     ])

@@ -34,7 +34,11 @@ describe('createStreamConsumer', () => {
     const mockChunks = [
       { type: 'text-delta', delta: 'Hello, ' },
       { type: 'text-delta', delta: 'world!' },
-      { type: 'finish', finishReason: 'stop', usage: { inputTokens: 10, outputTokens: 5 } },
+      {
+        type: 'finish',
+        finishReason: 'stop',
+        usage: { inputTokens: 10, outputTokens: 5 },
+      },
     ]
 
     const stream = createMockStream(mockChunks)
@@ -63,7 +67,11 @@ describe('createStreamConsumer', () => {
       { type: 'reasoning-delta', delta: 'Let me think...' },
       { type: 'reasoning-delta', delta: ' I should respond with hello.' },
       { type: 'text-delta', delta: 'Hello!' },
-      { type: 'finish', finishReason: 'stop', usage: { inputTokens: 10, outputTokens: 8 } },
+      {
+        type: 'finish',
+        finishReason: 'stop',
+        usage: { inputTokens: 10, outputTokens: 8 },
+      },
     ]
 
     const stream = createMockStream(mockChunks)
@@ -95,7 +103,11 @@ describe('createStreamConsumer', () => {
         toolName: 'calculator',
         input: { expression: '2 + 2' },
       },
-      { type: 'finish', finishReason: 'tool-calls', usage: { inputTokens: 15, outputTokens: 10 } },
+      {
+        type: 'finish',
+        finishReason: 'tool-calls',
+        usage: { inputTokens: 15, outputTokens: 10 },
+      },
     ]
 
     const stream = createMockStream(mockChunks)
@@ -213,7 +225,11 @@ describe('createStreamConsumer', () => {
         mediaType: 'application/pdf',
         data: pdfData,
       },
-      { type: 'finish', finishReason: 'stop', usage: { inputTokens: 10, outputTokens: 5 } },
+      {
+        type: 'finish',
+        finishReason: 'stop',
+        usage: { inputTokens: 10, outputTokens: 5 },
+      },
     ]
 
     const stream = createMockStream(mockChunks)

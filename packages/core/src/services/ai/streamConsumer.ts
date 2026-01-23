@@ -5,7 +5,12 @@
  */
 
 import type { LanguageModelV2StreamPart } from '@ai-sdk/provider'
-import { Message, MessageContent, MessageRole, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import {
+  Message,
+  MessageContent,
+  MessageRole,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
 
 /**
  * Represents a tool call captured from the stream
@@ -139,21 +144,18 @@ export function createStreamConsumer(
  * Builds output messages array from captured stream result.
  * Formats the result into the message structure expected by telemetry.
  */
-export function buildOutputMessages(
-  result: CapturedStreamResult,
-): Message[] {
+export function buildOutputMessages(result: CapturedStreamResult): Message[] {
   const content: MessageContent[] = []
 
   if (result.reasoning) {
     content.push({ type: 'reasoning', text: result.reasoning })
   }
-  
+
   if (result.text) {
     content.push({ type: 'text', text: result.text })
   }
 
   for (const file of result.files) {
-
     if (file.mediaType.startsWith('image/')) {
       content.push({
         type: 'image',

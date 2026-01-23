@@ -155,8 +155,7 @@ export function TraceSpanSelectionProvider({
       const newParams = new URLSearchParams(params.toString())
       // Check if this is a subagent span by comparing to the original parent's documentLogUuid
       const isSubagentSpan =
-        span.documentLogUuid &&
-        span.documentLogUuid !== parentDocumentLogUuid
+        span.documentLogUuid && span.documentLogUuid !== parentDocumentLogUuid
 
       // For subagent spans, keep the parent trace expanded while selecting the subagent span
       // Use the subagent's documentLogUuid for fetching its conversation, but preserve parent as expanded

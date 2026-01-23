@@ -22,7 +22,10 @@ export const GET = errorHandler(
         projectId,
       })
 
-      return NextResponse.json({ hasProductionSpans: hasTraces }, { status: 200 })
+      return NextResponse.json(
+        { hasProductionSpans: hasTraces },
+        { status: 200 },
+      )
     },
   ),
 )

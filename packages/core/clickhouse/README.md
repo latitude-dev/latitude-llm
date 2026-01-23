@@ -39,16 +39,19 @@ ClickHouse has different SQL syntax and engine types depending on whether you're
 ### Unclustered (Single-Node)
 
 Used for:
+
 - Local development
 - Self-hosted single-node deployments
 - Simpler setups without replication
 
 Characteristics:
+
 - Uses standard table engines like `MergeTree`, `ReplacingMergeTree`
 - No `ON CLUSTER` clause in DDL statements
 - Simpler configuration
 
 Example:
+
 ```sql
 CREATE TABLE events (
     id String,
@@ -61,16 +64,19 @@ ORDER BY (id, timestamp);
 ### Clustered (Replicated)
 
 Used for:
+
 - Production deployments
 - High-availability setups
 - Multi-node ClickHouse clusters
 
 Characteristics:
+
 - Uses replicated engines like `ReplicatedMergeTree`, `ReplicatedReplacingMergeTree`
 - Requires `ON CLUSTER` clause for DDL statements
 - Data is automatically replicated across nodes
 
 Example:
+
 ```sql
 CREATE TABLE events ON CLUSTER default (
     id String,
@@ -82,16 +88,16 @@ ORDER BY (id, timestamp);
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `CLICKHOUSE_URL` | Yes | `http://localhost:8123` | HTTP URL for application connections |
-| `CLICKHOUSE_MIGRATION_URL` | Yes | `clickhouse://localhost:9000` | Native protocol URL for migrations |
-| `CLICKHOUSE_DB` | No | `default` | Database name |
-| `CLICKHOUSE_USER` | Yes | - | ClickHouse username |
-| `CLICKHOUSE_PASSWORD` | Yes | - | ClickHouse password |
-| `CLICKHOUSE_CLUSTER_ENABLED` | No | `false` | Set to `true` for clustered mode |
-| `CLICKHOUSE_CLUSTER_NAME` | No | `default` | Cluster name (only used when clustered) |
-| `CLICKHOUSE_MIGRATION_SSL` | No | `false` | Enable SSL for migration connections |
+| Variable                     | Required | Default                       | Description                             |
+| ---------------------------- | -------- | ----------------------------- | --------------------------------------- |
+| `CLICKHOUSE_URL`             | Yes      | `http://localhost:8123`       | HTTP URL for application connections    |
+| `CLICKHOUSE_MIGRATION_URL`   | Yes      | `clickhouse://localhost:9000` | Native protocol URL for migrations      |
+| `CLICKHOUSE_DB`              | No       | `default`                     | Database name                           |
+| `CLICKHOUSE_USER`            | Yes      | -                             | ClickHouse username                     |
+| `CLICKHOUSE_PASSWORD`        | Yes      | -                             | ClickHouse password                     |
+| `CLICKHOUSE_CLUSTER_ENABLED` | No       | `false`                       | Set to `true` for clustered mode        |
+| `CLICKHOUSE_CLUSTER_NAME`    | No       | `default`                     | Cluster name (only used when clustered) |
+| `CLICKHOUSE_MIGRATION_SSL`   | No       | `false`                       | Enable SSL for migration connections    |
 
 ### URL Formats
 
@@ -133,6 +139,7 @@ pnpm --filter @latitude-data/core ch:create create_events
 ```
 
 This generates:
+
 ```
 migrations/unclustered/0001_create_events.up.sql
 migrations/unclustered/0001_create_events.down.sql
@@ -286,6 +293,7 @@ The system will automatically use the unclustered migrations, which work with st
 ### "golang-migrate is not installed"
 
 Install it via:
+
 ```bash
 brew install golang-migrate
 ```

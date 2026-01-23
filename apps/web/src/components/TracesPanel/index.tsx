@@ -67,9 +67,7 @@ export function TraceInfoPanel({
           {selectedTab === 'metadata' && (
             <TraceMetadata isLoading={isLoading} span={span} />
           )}
-          {selectedTab === 'messages' && (
-            <TraceMessages span={span} />
-          )}
+          {selectedTab === 'messages' && <TraceMessages span={span} />}
           {selectedTab === 'evaluations' && (
             <TraceEvaluations
               documentUuid={documentUuid}
@@ -116,11 +114,7 @@ function TraceMetadata({
   )
 }
 
-function TraceMessages({
-  span,
-}: {
-  span?: SpanWithDetails
-}) {
+function TraceMessages({ span }: { span?: SpanWithDetails }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { trace, completionSpan, isLoading } = useTraceWithMessages({

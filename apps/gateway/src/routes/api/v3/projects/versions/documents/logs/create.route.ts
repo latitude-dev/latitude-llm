@@ -19,8 +19,8 @@ const documentLogSchema = z.object({
   customIdentifier: z.string().optional(),
   duration: z.number().optional(),
   source: z.enum(LogSources),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.date().openapi({ type: 'string', format: 'date-time' }),
+  updatedAt: z.date().openapi({ type: 'string', format: 'date-time' }),
 })
 
 const documentParamsSchema = z.object({

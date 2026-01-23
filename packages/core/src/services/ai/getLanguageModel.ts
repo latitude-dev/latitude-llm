@@ -47,12 +47,24 @@ export function getLanguageModel({
   telemetryOptions?: CompletionTelemetryOptions
 }): LanguageModel {
   if (customLanguageModel) {
-    return wrapCompletionTelemetry({languageModel: customLanguageModel, provider, model, context, telemetryOptions})
+    return wrapCompletionTelemetry({
+      languageModel: customLanguageModel,
+      provider,
+      model,
+      context,
+      telemetryOptions,
+    })
   }
 
   if (![Providers.OpenAI, Providers.Custom].includes(provider.provider)) {
     const baseModel = buildGenericLanguageModel({ model, config, llmProvider })
-    return wrapCompletionTelemetry({languageModel: baseModel, provider, model, context, telemetryOptions})
+    return wrapCompletionTelemetry({
+      languageModel: baseModel,
+      provider,
+      model,
+      context,
+      telemetryOptions,
+    })
   }
 
   const configuration =
@@ -70,7 +82,13 @@ export function getLanguageModel({
   // vercel SDK v5:
   // https://github.com/vercel/ai/pull/6833
   const baseModel = buildGenericLanguageModel({ model, config, llmProvider })
-  return wrapCompletionTelemetry({languageModel: baseModel, provider, model, context, telemetryOptions})
+  return wrapCompletionTelemetry({
+    languageModel: baseModel,
+    provider,
+    model,
+    context,
+    telemetryOptions,
+  })
 }
 
 function wrapCompletionTelemetry({

@@ -4,7 +4,11 @@ import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
-import { DetailsPanelProps, SPAN_COLORS, SpanFrontendSpecification } from './shared'
+import {
+  DetailsPanelProps,
+  SPAN_COLORS,
+  SpanFrontendSpecification,
+} from './shared'
 import { SPAN_SPECIFICATIONS, SpanType } from '@latitude-data/core/constants'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Tool]

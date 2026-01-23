@@ -20,16 +20,21 @@ function convertPromptToMessages(
   })
 }
 
-export function createTelemetryMiddleware(
-  { context, providerName, model, promptUuid, versionUuid, experimentUuid }: {
-    context: TelemetryContext
-    providerName: string
-    model: string
-    promptUuid?: string
-    versionUuid?: string
-    experimentUuid?: string
-  },
-): LanguageModelMiddleware {
+export function createTelemetryMiddleware({
+  context,
+  providerName,
+  model,
+  promptUuid,
+  versionUuid,
+  experimentUuid,
+}: {
+  context: TelemetryContext
+  providerName: string
+  model: string
+  promptUuid?: string
+  versionUuid?: string
+  experimentUuid?: string
+}): LanguageModelMiddleware {
   return {
     wrapGenerate: async ({ doGenerate, params }) => {
       const inputMessages = convertPromptToMessages(params.prompt)
@@ -52,7 +57,9 @@ export function createTelemetryMiddleware(
 
       try {
         // Run doGenerate within the completion span's context so HTTP spans become children
-        const result = await otelContext.with($completion.context, () => doGenerate())
+        const result = await otelContext.with($completion.context, () =>
+          doGenerate(),
+        )
 
         const captured = extractGenerateResultContent(result)
         const outputMessages = buildOutputMessages(captured)
@@ -91,7 +98,9 @@ export function createTelemetryMiddleware(
 
       try {
         // Run doStream within the completion span's context so HTTP spans become children
-        const result = await otelContext.with($completion.context, () => doStream())
+        const result = await otelContext.with($completion.context, () =>
+          doStream(),
+        )
 
         const wrappedStream = result.stream.pipeThrough(
           createStreamConsumer((captured) => {

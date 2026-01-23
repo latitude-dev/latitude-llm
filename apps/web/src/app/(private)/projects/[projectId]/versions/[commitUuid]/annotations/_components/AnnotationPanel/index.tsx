@@ -34,10 +34,7 @@ export function AnnotationsPanel({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const {
-    completionSpan,
-    isLoading: isLoadingTrace,
-  } = useTraceWithMessages({
+  const { completionSpan, isLoading: isLoadingTrace } = useTraceWithMessages({
     traceId: span.traceId,
     spanId: span.id,
   })

@@ -143,11 +143,14 @@ export abstract class StreamManager {
         this.controller = controller
       },
     })
-    
-    this.telemetryOptions = promptSource && 'document' in promptSource ? {
-      promptUuid: promptSource.document.documentUuid,
-      versionUuid: promptSource.commit.uuid,
-    } : undefined
+
+    this.telemetryOptions =
+      promptSource && 'document' in promptSource
+        ? {
+            promptUuid: promptSource.document.documentUuid,
+            versionUuid: promptSource.commit.uuid,
+          }
+        : undefined
 
     this.handleAbortSignal(abortSignal)
   }

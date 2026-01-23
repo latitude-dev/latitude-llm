@@ -95,7 +95,13 @@ describe('createTelemetryMiddleware', () => {
       )
       expect(doGenerate).toHaveBeenCalled()
       expect(mockSpanEnd).toHaveBeenCalledWith({
-        output: [{ role: 'assistant', content: [{ type: 'text', text: 'Hello, world!' }], toolCalls: [] }],
+        output: [
+          {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Hello, world!' }],
+            toolCalls: [],
+          },
+        ],
         tokens: {
           prompt: 10,
           completion: 5,
@@ -320,7 +326,11 @@ describe('createTelemetryMiddleware', () => {
       const mockChunks = [
         { type: 'text-delta', delta: 'Hello, ' },
         { type: 'text-delta', delta: 'world!' },
-        { type: 'finish', finishReason: 'stop', usage: { inputTokens: 10, outputTokens: 2 } },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: { inputTokens: 10, outputTokens: 2 },
+        },
       ]
 
       const mockStream = createMockStream(mockChunks)
@@ -348,7 +358,13 @@ describe('createTelemetryMiddleware', () => {
 
       expect(consumedChunks).toEqual(mockChunks)
       expect(mockSpanEnd).toHaveBeenCalledWith({
-        output: [{ role: 'assistant', content: [{ type: 'text', text: 'Hello, world!' }], toolCalls: [] }],
+        output: [
+          {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Hello, world!' }],
+            toolCalls: [],
+          },
+        ],
         tokens: {
           prompt: 10,
           completion: 2,
@@ -367,7 +383,11 @@ describe('createTelemetryMiddleware', () => {
       })
 
       const mockChunks = [
-        { type: 'finish', finishReason: 'stop', usage: { inputTokens: 5, outputTokens: 0 } },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: { inputTokens: 5, outputTokens: 0 },
+        },
       ]
 
       const mockStream = createMockStream(mockChunks)
@@ -403,9 +423,7 @@ describe('createTelemetryMiddleware', () => {
         model,
       })
 
-      const mockChunks = [
-        { type: 'text-delta', delta: 'Hello' },
-      ]
+      const mockChunks = [{ type: 'text-delta', delta: 'Hello' }]
 
       const mockStream = createMockStream(mockChunks)
       const doStream = vi.fn().mockResolvedValue({ stream: mockStream })
@@ -534,7 +552,9 @@ describe('createTelemetryMiddleware', () => {
         model: {} as WrapStreamParams['model'],
       } as unknown as WrapStreamParams)
 
-      expect((result as unknown as { extra: typeof extraProp }).extra).toBe(extraProp)
+      expect((result as unknown as { extra: typeof extraProp }).extra).toBe(
+        extraProp,
+      )
     })
   })
 })
@@ -649,7 +669,13 @@ describe('extractTextFromContent (indirect)', () => {
     } as unknown as WrapGenerateParams)
 
     expect(mockSpanEnd).toHaveBeenCalledWith({
-      output: [{ role: 'assistant', content: [{ type: 'text', text: 'Part 1 Part 2' }], toolCalls: [] }],
+      output: [
+        {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Part 1 Part 2' }],
+          toolCalls: [],
+        },
+      ],
       tokens: {
         cached: undefined,
         completion: undefined,
@@ -684,7 +710,13 @@ describe('extractTextFromContent (indirect)', () => {
     } as unknown as WrapGenerateParams)
 
     expect(mockSpanEnd).toHaveBeenCalledWith({
-      output: [{ role: 'assistant', content: [{ type: 'text', text: 'With text' }], toolCalls: [] }],
+      output: [
+        {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'With text' }],
+          toolCalls: [],
+        },
+      ],
       tokens: {
         cached: undefined,
         completion: undefined,
