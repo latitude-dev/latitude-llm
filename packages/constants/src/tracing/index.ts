@@ -11,6 +11,7 @@ export enum InstrumentationScope {
   Manual = 'manual',
   Latitude = 'latitude',
   OpenAI = 'openai',
+  OpenAIAgents = 'openaiAgents',
   Anthropic = 'anthropic',
   AzureOpenAI = 'azure', // Only python — js uses OpenAI instrumentation
   VercelAI = 'vercelai',
