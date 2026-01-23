@@ -17,7 +17,7 @@ import { issueHistograms } from '../../schema/models/issueHistograms'
 import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
 import { Workspace } from '../../schema/models/types/Workspace'
-import { captureException } from '../../utils/datadogCapture'
+import { captureException, captureMessage } from '../../utils/datadogCapture'
 import {
   getIssuesCollection,
   ISSUES_COLLECTION_TENANT_NAME,
@@ -103,6 +103,11 @@ export async function mergeIssues(
   )
 
   if (mergedIssues.length === 0) {
+    if (candidates.length > 0 && approvedSimilar.length > 0) {
+      captureMessage(
+        `Issue ${issue.id} had ${candidates.length} candidates and ${approvedSimilar.length} candidates approved by the judge, but ended up with 0 issues to merge`,
+      )
+    }
     return Result.ok<MergeResult>({ winner, mergedIssues: [] })
   }
 
@@ -291,6 +296,11 @@ async function getHistogramTotals({
   return totals
 }
 
+/**
+ * Pick the winning issue from candidates based on histogram totals.
+ * The winner is selected by highest total, with tie-breakers preferring
+ * the anchor issue, then the issue with the lower ID.
+ */
 function pickWinner({
   anchorIssue,
   candidates,
