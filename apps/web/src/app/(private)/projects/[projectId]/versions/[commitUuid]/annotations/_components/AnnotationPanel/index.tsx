@@ -1,12 +1,10 @@
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { AnnotationsProvider, MessageList } from '$/components/ChatWrapper'
-import { ROUTES } from '$/services/routes'
 import {
   HumanEvaluationMetric,
   EvaluationResultV2,
-  Span,
   SpanType,
   SpanWithDetails,
   EvaluationType,
@@ -22,6 +20,7 @@ import { Message } from '@latitude-data/constants/legacyCompiler'
 import { sum } from 'lodash-es'
 import { RunPanelStats } from '$/components/RunPanelStats'
 import { AnnotationFormWithoutContext } from '$/components/ChatWrapper/AnnotationFormWithoutContext'
+import { buildTraceUrl } from '../../../documents/[documentUuid]/(withTabs)/traces/_components/TraceSpanSelectionContext'
 
 export function AnnotationsPanel({
   span,
@@ -43,32 +42,6 @@ export function AnnotationsPanel({
     [completionSpan],
   )
   const toolContentMap = useToolContentMap(conversation as unknown as Message[])
-  const buildSelectedSpanUrl = useCallback(
-    ({
-      projectId,
-      commitUuid,
-      span,
-    }: {
-      projectId: number
-      commitUuid: string
-      span: Span
-    }) => {
-      const filters = encodeURIComponent(
-        JSON.stringify({
-          spanId: span.id,
-          traceId: span.traceId,
-        }),
-      )
-      return (
-        ROUTES.projects
-          .detail({ id: projectId })
-          .commits.detail({ uuid: commitUuid })
-          .documents.detail({ uuid: span.documentUuid! }).traces.root +
-        `?filters=${filters}`
-      )
-    },
-    [],
-  )
 
   const isLoading = isLoadingTrace
   if (isLoading) {
@@ -101,9 +74,10 @@ export function AnnotationsPanel({
         )}
         <div className='w-full flex justify-center items-center'>
           <Link
-            href={buildSelectedSpanUrl({
+            href={buildTraceUrl({
               projectId: project.id,
               commitUuid: commit.uuid,
+              documentUuid: span.documentUuid!,
               span,
             })}
             target='_blank'

@@ -4,7 +4,33 @@ import { createContext, ReactNode, useState, useCallback } from 'react'
 import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation'
 import { parseSpansFilters } from '$/lib/schemas/filters'
 import { useNavigate } from '$/hooks/useNavigate'
-import { AssembledSpan } from '@latitude-data/constants'
+import { AssembledSpan, Span } from '@latitude-data/constants'
+import { ROUTES } from '$/services/routes'
+
+export function buildTraceUrl({
+  projectId,
+  commitUuid,
+  documentUuid,
+  span,
+}: {
+  projectId: number
+  commitUuid: string
+  documentUuid: string
+  span: Pick<Span, 'id' | 'documentLogUuid'>
+}) {
+  const params = new URLSearchParams()
+  if (span.documentLogUuid) {
+    params.set('documentLogUuid', span.documentLogUuid)
+  }
+  params.set('spanId', span.id)
+  return (
+    ROUTES.projects
+      .detail({ id: projectId })
+      .commits.detail({ uuid: commitUuid })
+      .documents.detail({ uuid: documentUuid }).traces.root +
+    `?${params.toString()}`
+  )
+}
 
 type SelectionState = {
   documentLogUuid: string | null
