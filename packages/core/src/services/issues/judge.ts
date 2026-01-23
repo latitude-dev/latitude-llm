@@ -57,10 +57,7 @@ export async function judgeMergeCandidates({
     parameters,
     schema: mergeJudgeSchema,
   })
-
-  if (!Result.isOk(response)) {
-    return candidates
-  }
+  if (!Result.isOk(response)) return candidates
 
   const result: MergeJudgeResult = response.value
   const approvedIds = new Set(

@@ -64,12 +64,10 @@ export async function mergeIssues(
     candidates: candidates.filter((c) => c.id !== issue.id),
   })
 
-  const approvedIds = new Set([
-    issue.id,
-    ...judgedCandidates.map((c) => c.id),
-  ])
-  const approvedSimilar = similar.filter(({ issue }) => approvedIds.has(issue.id))
-
+  const approvedIds = new Set([issue.id, ...judgedCandidates.map((c) => c.id)])
+  const approvedSimilar = similar.filter(({ issue }) =>
+    approvedIds.has(issue.id),
+  )
   if (approvedSimilar.length <= 1) {
     return Result.ok<MergeResult>({ winner: issue, mergedIssues: [] })
   }

@@ -19,12 +19,7 @@ export async function runCopilot<S extends z.ZodType = z.ZodType>({
   schema?: S
   abortSignal?: AbortSignal
   db?: typeof database
-}): Promise<
-  TypedResult<
-    S extends z.ZodType ? z.infer<S> : unknown,
-    UnprocessableEntityError
-  >
-> {
+}): Promise<TypedResult<S extends z.ZodType ? z.infer<S> : unknown, Error>> {
   const copilotResult = await getCopilot({ path }, db)
   if (copilotResult.error) {
     return Result.error(
@@ -33,7 +28,7 @@ export async function runCopilot<S extends z.ZodType = z.ZodType>({
   }
 
   const copilot = copilotResult.value
-  const result = await runDocumentAtCommit({
+  const rezult = await runDocumentAtCommit({
     context: BACKGROUND({ workspaceId: copilot.workspace.id }),
     workspace: copilot.workspace,
     commit: copilot.commit,
@@ -41,10 +36,12 @@ export async function runCopilot<S extends z.ZodType = z.ZodType>({
     parameters: parameters,
     source: LogSources.API,
     abortSignal: abortSignal,
-  }).then((r) => r.unwrap())
+  })
+  if (!Result.isOk(rezult)) return rezult
+  const result = rezult.value
 
   const error = await result.error
-  if (error) throw error
+  if (error) return Result.error(error)
 
   const response = await result.lastResponse
   if (response?.streamType !== 'object') {
