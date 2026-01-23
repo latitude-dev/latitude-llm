@@ -118,6 +118,7 @@ export async function enqueueRun({
   await publisher.publishLater({
     type: 'documentRunQueued',
     data: {
+      eventContext: 'background',
       projectId: project.id,
       workspaceId: workspace.id,
       documentUuid: document.documentUuid,

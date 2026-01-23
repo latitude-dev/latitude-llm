@@ -10,7 +10,16 @@ export const notifyClientOfRunStatusByDocument = async ({
 }: {
   data: DocumentRunStatusEvent
 }) => {
-  const { workspaceId, projectId, documentUuid, commitUuid, run } = event.data
+  const {
+    workspaceId,
+    projectId,
+    documentUuid,
+    commitUuid,
+    run,
+    eventContext,
+  } = event.data
+
+  if (eventContext === 'foreground') return
 
   await WebsocketClient.sendEvent('documentRunStatus', {
     workspaceId,
@@ -21,6 +30,7 @@ export const notifyClientOfRunStatusByDocument = async ({
       documentUuid,
       commitUuid,
       run,
+      eventContext,
     },
   })
 }
