@@ -1,12 +1,16 @@
 import { env } from '@latitude-data/env'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { database } from '../../client'
-import { ISSUE_DISCOVERY_MIN_SIMILARITY, IssueCentroid } from '../../constants'
+import {
+  HEAD_COMMIT,
+  ISSUE_DISCOVERY_MIN_SIMILARITY,
+  IssueCentroid,
+} from '../../constants'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { UnprocessableEntityError } from '../../lib/errors'
-import { IssuesRepository } from '../../repositories'
+import { EvaluationsV2Repository, IssuesRepository } from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
 import { issueHistograms } from '../../schema/models/issueHistograms'
@@ -76,11 +80,27 @@ export async function mergeIssues(
     workspaceId: workspace.id,
     issueIds: approvedSimilar.map(({ issue }) => issue.id),
   })
-  const { winner, mergedIssues } = pickWinner({
+  const res = pickWinner({
     anchorIssue: issue,
     candidates: approvedSimilar.map(({ issue }) => issue),
     totals,
   })
+  const winner = res.winner
+  let mergedIssues = res.mergedIssues
+
+  if (mergedIssues.length === 0) {
+    return Result.ok<MergeResult>({ winner, mergedIssues: [] })
+  }
+
+  const issuesWithLinkedEvaluations = await getIssuesWithLinkedEvaluations({
+    workspaceId: workspace.id,
+    projectId: issue.projectId,
+    documentUuid: issue.documentUuid,
+    issueIds: mergedIssues.map((item) => item.id),
+  })
+  mergedIssues = mergedIssues.filter(
+    (item) => !issuesWithLinkedEvaluations.has(item.id),
+  )
 
   if (mergedIssues.length === 0) {
     return Result.ok<MergeResult>({ winner, mergedIssues: [] })
@@ -296,6 +316,41 @@ function pickWinner({
   const mergedIssues = candidates.filter((issue) => issue.id !== winner.id)
 
   return { winner, mergedIssues }
+}
+
+/**
+ * Get the set of issue IDs that have evaluations linked to them.
+ * An evaluation is considered linked if its issueId matches one of the issue IDs
+ * and it hasn't been deleted or ignored.
+ */
+async function getIssuesWithLinkedEvaluations({
+  workspaceId,
+  projectId,
+  documentUuid,
+  issueIds,
+}: {
+  workspaceId: number
+  projectId: number
+  documentUuid: string
+  issueIds: number[]
+}): Promise<Set<number>> {
+  if (issueIds.length === 0) return new Set()
+
+  const evalsRepo = new EvaluationsV2Repository(workspaceId)
+  const evaluations = await evalsRepo
+    .listAtCommitByDocument({
+      projectId,
+      documentUuid,
+      commitUuid: HEAD_COMMIT,
+    })
+    .then((r) => r.unwrap())
+
+  const linkedIssueIds = evaluations
+    .filter((evaluation) => evaluation.issueId && !evaluation.ignoredAt)
+    .map((evaluation) => evaluation.issueId!)
+    .filter((id) => issueIds.includes(id))
+
+  return new Set(linkedIssueIds)
 }
 
 function mergeIssueCentroids({
