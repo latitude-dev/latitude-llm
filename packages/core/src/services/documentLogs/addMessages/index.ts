@@ -2,7 +2,6 @@ import { NotFoundError } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { type Message } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '../../../constants'
-import { unsafelyFindProviderApiKey } from '../../../data-access/providerApiKeys'
 import { buildConversation } from '../../../helpers'
 import { isRetryableError } from '../../../lib/isRetryableError'
 import { Result } from '../../../lib/Result'
@@ -25,6 +24,7 @@ import { getInputSchema, getOutputType } from '../../chains/ChainValidator'
 import { scanDocumentContent } from '../../documents'
 import { ToolHandler } from '../../documents/tools/clientTools/handlers'
 import serializeProviderLog from '../../providerLogs/serialize'
+import { unsafelyFindProviderApiKey } from '../../providerApiKeys/data-access/providerApiKeys'
 
 type AddMessagesArgs = {
   workspace: WorkspaceDto

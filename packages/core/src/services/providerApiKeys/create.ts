@@ -13,7 +13,9 @@ import {
   ProviderConfiguration,
 } from '../../schema/models/providerApiKeys'
 import { amazonBedrockConfigurationSchema } from '../ai'
+import { encryptProviderToken } from './helpers/tokenEncryption'
 import { validateProviderApiKeyName } from './helpers/validateName'
+import { serializeProviderApiKey } from './helpers/serializeProviderApiKey'
 
 export type Props = {
   workspace: Workspace
@@ -75,12 +77,13 @@ export function createProviderApiKey(
     const validatedName = validatedNameResult.unwrap()
 
     try {
+      const encryptedToken = encryptProviderToken(token)
       const result = await tx
         .insert(providerApiKeys)
         .values({
           workspaceId: workspace.id!,
           provider,
-          token,
+          token: encryptedToken,
           url,
           name: validatedName,
           defaultModel,
@@ -89,21 +92,26 @@ export function createProviderApiKey(
         })
         .returning()
 
-      publisher.publishLater({
-        type: 'providerApiKeyCreated',
-        data: {
-          providerApiKey: result[0]!,
-          workspaceId: workspace.id,
-          userEmail: author.email,
-        },
-      })
-
       const providerApiKey = result[0]
       if (!providerApiKey) {
         return Result.error(new BadRequestError('Provider API key not created'))
       }
 
-      return Result.ok(providerApiKey)
+      const decryptedProviderApiKey = serializeProviderApiKey({
+        ...providerApiKey,
+        token: providerApiKey.token,
+      })
+
+      publisher.publishLater({
+        type: 'providerApiKeyCreated',
+        data: {
+          providerApiKey: decryptedProviderApiKey,
+          workspaceId: workspace.id,
+          userEmail: author.email,
+        },
+      })
+
+      return Result.ok(decryptedProviderApiKey)
     } catch (e) {
       const error = 'cause' in (e as Error) ? (e as Error).cause : undefined
       if (

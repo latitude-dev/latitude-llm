@@ -5,6 +5,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { providerApiKeys } from '../../schema/models/providerApiKeys'
 import { validateProviderApiKeyName } from './helpers/validateName'
+import { serializeProviderApiKey } from './helpers/serializeProviderApiKey'
 
 export async function updateProviderApiKeyName(
   {
@@ -33,7 +34,6 @@ export async function updateProviderApiKeyName(
       }
 
       const validatedName = validatedNameResult.unwrap()
-
       const result = await tx
         .update(providerApiKeys)
         .set({ name: validatedName })
@@ -42,7 +42,7 @@ export async function updateProviderApiKeyName(
 
       const updated = result[0]!
 
-      return Result.ok(updated)
+      return Result.ok(serializeProviderApiKey(updated))
     },
     (updated) => {
       publisher.publishLater({

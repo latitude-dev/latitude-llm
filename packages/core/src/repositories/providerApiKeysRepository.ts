@@ -7,6 +7,7 @@ import {
   isNotNull,
   isNull,
   sql,
+  SQL,
 } from 'drizzle-orm'
 
 import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
@@ -18,7 +19,11 @@ import { documentVersions } from '../schema/models/documentVersions'
 import { evaluationVersions } from '../schema/models/evaluationVersions'
 import { projects } from '../schema/models/projects'
 import { providerApiKeys } from '../schema/models/providerApiKeys'
-import Repository from './repositoryV2'
+import {
+  serializeProviderApiKey,
+  serializeProviderApiKeys,
+} from '../services/providerApiKeys/helpers/serializeProviderApiKey'
+import Repository, { QueryOptions } from './repositoryV2'
 
 const tt = getTableColumns(providerApiKeys)
 
@@ -38,6 +43,33 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
       .$dynamic()
   }
 
+  async findAll(opts: QueryOptions = {}) {
+    const result = await super.findAll(opts)
+    if (!Result.isOk(result)) return result
+    return Result.ok(serializeProviderApiKeys(result.value))
+  }
+
+  async find(id: string | number | undefined | null) {
+    const result = await super.find(id)
+    if (!Result.isOk(result)) return result
+    return Result.ok(serializeProviderApiKey(result.value))
+  }
+
+  async findMany(
+    ids: (string | number)[],
+    opts: { ordering?: SQL<unknown>[] } = {},
+  ) {
+    const result = await super.findMany(ids, opts)
+    if (!Result.isOk(result)) return result
+    return Result.ok(serializeProviderApiKeys(result.value))
+  }
+
+  async findFirst() {
+    const result = await super.findFirst()
+    if (!Result.isOk(result)) return result
+    return Result.ok(result.value ? serializeProviderApiKey(result.value) : undefined)
+  }
+
   async findByName(name: string) {
     const result = await this.scope.where(
       and(this.scopeFilter, eq(providerApiKeys.name, name)),
@@ -49,13 +81,14 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
       )
     }
 
-    return Result.ok(result[0]!)
+    return Result.ok(serializeProviderApiKey(result[0]!))
   }
 
   async findAllByNames(names: string[]) {
-    return await this.scope.where(
+    const result = await this.scope.where(
       and(this.scopeFilter, inArray(providerApiKeys.name, names)),
     )
+    return serializeProviderApiKeys(result)
   }
 
   async getUsage(name: string) {

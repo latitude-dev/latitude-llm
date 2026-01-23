@@ -8,6 +8,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { providerApiKeys } from '../../schema/models/providerApiKeys'
 import { workspaces } from '../../schema/models/workspaces'
+import { serializeProviderApiKey } from './helpers/serializeProviderApiKey'
 
 export async function destroyProviderApiKey(
   providerApiKey: ProviderApiKey,
@@ -33,7 +34,7 @@ export async function destroyProviderApiKey(
         .returning()
       const deleted = result[0]!
 
-      return Result.ok(deleted)
+      return Result.ok(serializeProviderApiKey(deleted))
     },
     (apikey) => {
       publisher.publishLater({
