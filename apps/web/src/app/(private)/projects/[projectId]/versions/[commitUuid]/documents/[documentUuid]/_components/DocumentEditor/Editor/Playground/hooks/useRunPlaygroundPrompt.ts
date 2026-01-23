@@ -89,13 +89,13 @@ export function useRunPlaygroundPrompt({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ messages, toolCalls, trace }),
+          body: JSON.stringify({ messages, toolCalls, trace, mcpHeaders }),
         },
       )
 
       return createStreamHandler(response)
     },
-    [createStreamHandler],
+    [createStreamHandler, mcpHeaders],
   )
 
   return useMemo(
