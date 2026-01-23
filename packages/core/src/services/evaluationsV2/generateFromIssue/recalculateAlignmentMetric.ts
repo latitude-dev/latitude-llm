@@ -10,7 +10,6 @@ import {
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetric,
-  Span,
 } from '@latitude-data/constants'
 import { Issue } from '../../../schema/models/types/Issue'
 import { database } from '../../../client'
@@ -114,9 +113,7 @@ export async function recalculateAlignmentMetric(
       ? `day=${new Date().toISOString().split('T')[0]}`
       : `ts=${Date.now()}`
 
-  const recalculateAlignmentIdempotencyKey = `recalculateAlignmentMetricJob-evaluationUuid=${evaluationToEvaluate.uuid}-${idempotencySuffix}` // prettier-ignore
-  const runEvaluationV2JobIdempotencyKey = (span: Span) =>
-    `runEvaluationV2Job-evaluationUuid=${evaluationToEvaluate.uuid}-spanId=${span.id}-traceId=${span.traceId}-${idempotencySuffix}` // prettier-ignore
+  const recalculateAlignmentIdempotencyKey = `recalculateAlignmentMetricJob-eval=${evaluationToEvaluate.uuid}-${idempotencySuffix}` // prettier-ignore
 
   const { job: validationFlowJob } = await flowProducer.add({
     name: `recalculateAlignmentMetricJob`,
@@ -139,7 +136,7 @@ export async function recalculateAlignmentMetric(
         delay: 2000, // Need at least 2s for cases when runEval fails and we wait for the unprocessed children to finish
       },
     },
-    children: allSpans.map((span) => ({
+    children: allSpans.map((span, index) => ({
       name: `runEvaluationV2Job`,
       queueName: Queues.evaluationsQueue,
       data: {
@@ -151,7 +148,8 @@ export async function recalculateAlignmentMetric(
         dry: true,
       },
       opts: {
-        jobId: runEvaluationV2JobIdempotencyKey(span),
+        // Idempotency key using index since spans can have multiple evaluation results
+        jobId: `runEvaluationV2Job-eval=${evaluationToEvaluate.uuid}-${idempotencySuffix}-idx=${index}`,
         // Overriding eval queue options for faster retry policy to avoid user waiting too long for the evaluation to be generated
         attempts: 2,
         backoff: {

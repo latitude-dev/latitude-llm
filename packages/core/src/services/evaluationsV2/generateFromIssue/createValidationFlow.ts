@@ -109,7 +109,7 @@ export async function createValidationFlow(
         delay: 2000, // Need at least 2s for cases when runEval fails and we wait for the unprocessed children to finish
       },
     },
-    children: allSpans.map((span) => ({
+    children: allSpans.map((span, index) => ({
       name: `runEvaluationV2Job`,
       queueName: Queues.evaluationsQueue,
       data: {
@@ -122,7 +122,7 @@ export async function createValidationFlow(
       },
       opts: {
         // Idempotency key
-        jobId: `runEvaluationV2Job-wf=${workflowUuid}-generationAttempt=${generationAttempt}-spanId=${span.id}-traceId=${span.traceId}`,
+        jobId: `runEvaluationV2Job-wf=${workflowUuid}-gen=${generationAttempt}-idx=${index}`,
         // Overriding eval queue options for faster retry policy to avoid user waiting too long for the evaluation to be generated
         attempts: 2,
         backoff: {
