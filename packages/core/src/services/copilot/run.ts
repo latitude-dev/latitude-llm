@@ -28,7 +28,7 @@ export async function runCopilot<S extends z.ZodType = z.ZodType>({
   }
 
   const copilot = copilotResult.value
-  const rezult = await runDocumentAtCommit({
+  const result = await runDocumentAtCommit({
     context: BACKGROUND({ workspaceId: copilot.workspace.id }),
     workspace: copilot.workspace,
     commit: copilot.commit,
@@ -37,13 +37,13 @@ export async function runCopilot<S extends z.ZodType = z.ZodType>({
     source: LogSources.API,
     abortSignal: abortSignal,
   })
-  if (!Result.isOk(rezult)) return rezult
-  const result = rezult.value
+  if (!Result.isOk(result)) return result
+  const run = result.value
 
-  const error = await result.error
+  const error = await run.error
   if (error) return Result.error(error)
 
-  const response = await result.lastResponse
+  const response = await run.lastResponse
   if (response?.streamType !== 'object') {
     return Result.error(
       new UnprocessableEntityError('Copilot response is not an object'),
