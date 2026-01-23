@@ -19,7 +19,10 @@ import { documentVersions } from '../schema/models/documentVersions'
 import { evaluationVersions } from '../schema/models/evaluationVersions'
 import { projects } from '../schema/models/projects'
 import { providerApiKeys } from '../schema/models/providerApiKeys'
-import { decryptProviderToken } from '../services/providerApiKeys/helpers/tokenEncryption'
+import {
+  serializeProviderApiKey,
+  serializeProviderApiKeys,
+} from '../services/providerApiKeys/helpers/serializeProviderApiKey'
 import Repository, { QueryOptions } from './repositoryV2'
 
 const tt = getTableColumns(providerApiKeys)
@@ -40,27 +43,16 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
       .$dynamic()
   }
 
-  private decryptToken(apiKey: ProviderApiKey): ProviderApiKey {
-    return {
-      ...apiKey,
-      token: decryptProviderToken(apiKey.token),
-    }
-  }
-
-  private decryptTokens(apiKeys: ProviderApiKey[]): ProviderApiKey[] {
-    return apiKeys.map((apiKey) => this.decryptToken(apiKey))
-  }
-
   async findAll(opts: QueryOptions = {}) {
     const result = await super.findAll(opts)
     if (!Result.isOk(result)) return result
-    return Result.ok(this.decryptTokens(result.value))
+    return Result.ok(serializeProviderApiKeys(result.value))
   }
 
   async find(id: string | number | undefined | null) {
     const result = await super.find(id)
     if (!Result.isOk(result)) return result
-    return Result.ok(this.decryptToken(result.value))
+    return Result.ok(serializeProviderApiKey(result.value))
   }
 
   async findMany(
@@ -69,13 +61,13 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
   ) {
     const result = await super.findMany(ids, opts)
     if (!Result.isOk(result)) return result
-    return Result.ok(this.decryptTokens(result.value))
+    return Result.ok(serializeProviderApiKeys(result.value))
   }
 
   async findFirst() {
     const result = await super.findFirst()
     if (!Result.isOk(result)) return result
-    return Result.ok(result.value ? this.decryptToken(result.value) : undefined)
+    return Result.ok(result.value ? serializeProviderApiKey(result.value) : undefined)
   }
 
   async findByName(name: string) {
@@ -89,14 +81,14 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
       )
     }
 
-    return Result.ok(this.decryptToken(result[0]!))
+    return Result.ok(serializeProviderApiKey(result[0]!))
   }
 
   async findAllByNames(names: string[]) {
     const result = await this.scope.where(
       and(this.scopeFilter, inArray(providerApiKeys.name, names)),
     )
-    return this.decryptTokens(result)
+    return serializeProviderApiKeys(result)
   }
 
   async getUsage(name: string) {
