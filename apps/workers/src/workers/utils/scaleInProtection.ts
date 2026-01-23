@@ -1,4 +1,6 @@
 import { env } from '@latitude-data/env'
+import { captureException } from './captureException'
+import { BadRequestError } from '@latitude-data/core/lib/errors'
 
 /**
  * Utility for managing ECS Fargate task scale-in protection
@@ -43,8 +45,10 @@ export class ScaleInProtectionManager {
         this.protectionEnabled = true
         console.log('Scale-in protection enabled for ECS task')
       } else {
-        console.error(
-          `Failed to enable scale-in protection: ${response.status} ${response.statusText}`,
+        captureException(
+          new BadRequestError(
+            `Failed to enable scale-in protection: ${response.status} ${response.statusText}`,
+          ),
         )
       }
     } catch (error) {

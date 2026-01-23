@@ -54,7 +54,6 @@ export async function ingestSpans(
 
         // Note: We no longer skip Unknown spans to preserve trace hierarchy
         // (e.g., DSPy CHAIN spans that parent LLM completion spans)
-
         const extractingApiKeyAndWorkspace = await extractApiKeyAndWorkspace(
           { apiKeyId, workspaceId, attributes },
           db,
