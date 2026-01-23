@@ -17,6 +17,7 @@ const inputSchema = z.object({
       content: z.any(),
     }),
   ),
+  mcpHeaders: z.record(z.string(), z.record(z.string(), z.string())).optional(),
 })
 
 export const POST = errorHandler(
@@ -38,7 +39,7 @@ export const POST = errorHandler(
       const body = await req.json()
 
       try {
-        const { messages: response } = inputSchema.parse(body)
+        const { messages: response, mcpHeaders } = inputSchema.parse(body)
         const documentLogUuid = params.documentLogUuid
         const messages = response as Message[]
 
@@ -79,6 +80,7 @@ export const POST = errorHandler(
 
         sdk.prompts.chat(documentLogUuid, messages as Message[], {
           stream: true,
+          mcpHeaders,
           onEvent: async (event) => {
             await writer.write(
               encoder.encode(
