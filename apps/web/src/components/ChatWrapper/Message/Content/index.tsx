@@ -4,14 +4,14 @@ import {
   MessageContent,
   ToolContent,
 } from '@latitude-data/constants/legacyCompiler'
-import { ToolCallMessageContent } from './ToolCall'
-import { TextMessageContent } from './Text'
-import { ImageMessageContent } from './Image'
-import { FileMessageContent } from './File'
-import { ReasoningMessageContent } from './Reasoning'
-import { cn } from '@latitude-data/web-ui/utils'
-import { ProseColor, TextColor } from '@latitude-data/web-ui/tokens'
 import { MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
+import { ProseColor, TextColor } from '@latitude-data/web-ui/tokens'
+import { cn } from '@latitude-data/web-ui/utils'
+import { FileMessageContent } from './File'
+import { ImageMessageContent } from './Image'
+import { ReasoningMessageContent } from './Reasoning'
+import { TextMessageContent } from './Text'
+import { ToolCallMessageContent } from './ToolCall'
 
 export function Content<M extends MarkdownSize | 'none'>({
   content,
@@ -32,6 +32,10 @@ export function Content<M extends MarkdownSize | 'none'>({
   messageIndex?: number
 }) {
   const contentArr = useMemo<MessageContent[]>(() => {
+    if (content === undefined || content === null) {
+      return []
+    }
+
     if (typeof content === 'string') {
       return [{ type: 'text', text: content }]
     }

@@ -6,7 +6,7 @@ import { Content } from '../Content'
 import { ToolCardSkeleton } from '../Content/ToolCall/Skeleton'
 import { MessageProps } from '../types'
 
-const roleVariant = (role: string) => {
+const roleVariant = (role?: string) => {
   switch (role) {
     case 'user':
       return 'purple'
@@ -15,13 +15,14 @@ const roleVariant = (role: string) => {
     case 'assistant':
       return 'yellow'
     case 'tool':
-      return 'muted'
+      return 'secondary'
     default:
-      return 'default'
+      return 'secondary'
   }
 }
 
-const roleToString = (role: string) => {
+const roleToString = (role?: string) => {
+  if (!role) return 'Unknown'
   if (role === 'tool') return 'Tool response'
   return role.charAt(0).toUpperCase() + role.slice(1)
 }

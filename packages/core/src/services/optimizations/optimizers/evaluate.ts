@@ -398,6 +398,7 @@ async function evaluatePrompt<
     )
   }
 
+  // Note: not using enriched reason here because HITL evals are not really used for optimizations
   const specification = getEvaluationMetricSpecification(evaluation)
   const reason = specification.resultReason(
     result as EvaluationResultSuccessValue<T, M>,
