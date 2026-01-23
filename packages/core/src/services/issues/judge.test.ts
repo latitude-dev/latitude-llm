@@ -189,5 +189,157 @@ describe('judgeMergeCandidates', () => {
 
       expect(result).toEqual(candidates)
     })
+
+    it('handles partial LLM responses (missing decisions for some candidates)', async () => {
+      const anchor = createMockIssue({ id: 1, title: 'Issue A' })
+      const candidates = [
+        createMockIssue({ id: 2, title: 'Issue B' }),
+        createMockIssue({ id: 3, title: 'Issue C' }),
+        createMockIssue({ id: 4, title: 'Issue D' }),
+      ]
+
+      // LLM only returns decisions for 2 out of 3 candidates
+      mockRunCopilot.mockResolvedValue(
+        Result.ok({
+          decisions: [
+            { candidateId: 2, shouldMerge: true, reason: 'Same issue' },
+            { candidateId: 3, shouldMerge: false, reason: 'Different issue' },
+            // Missing decision for candidate 4 - should be implicitly rejected
+          ],
+        }),
+      )
+
+      const result = await judgeMergeCandidates({ anchor, candidates })
+
+      // Only candidate 2 should be approved, 3 and 4 are rejected
+      expect(result).toEqual([candidates[0]])
+    })
+
+    it('handles malformed LLM responses with wrong candidate IDs', async () => {
+      const anchor = createMockIssue({ id: 1, title: 'Issue A' })
+      const candidates = [
+        createMockIssue({ id: 2, title: 'Issue B' }),
+        createMockIssue({ id: 3, title: 'Issue C' }),
+      ]
+
+      // LLM returns decisions for IDs that don't exist in candidates
+      mockRunCopilot.mockResolvedValue(
+        Result.ok({
+          decisions: [
+            { candidateId: 2, shouldMerge: true, reason: 'Same issue' },
+            { candidateId: 999, shouldMerge: true, reason: 'Phantom issue' }, // Wrong ID
+            { candidateId: 888, shouldMerge: false, reason: 'Another phantom' }, // Wrong ID
+          ],
+        }),
+      )
+
+      const result = await judgeMergeCandidates({ anchor, candidates })
+
+      // Only candidate 2 should be approved (3 has no decision, 999 and 888 don't exist)
+      expect(result).toEqual([candidates[0]])
+    })
+
+    it('handles empty decisions array from LLM', async () => {
+      const anchor = createMockIssue({ id: 1, title: 'Issue A' })
+      const candidates = [
+        createMockIssue({ id: 2, title: 'Issue B' }),
+        createMockIssue({ id: 3, title: 'Issue C' }),
+      ]
+
+      mockRunCopilot.mockResolvedValue(
+        Result.ok({
+          decisions: [],
+        }),
+      )
+
+      const result = await judgeMergeCandidates({ anchor, candidates })
+
+      // All candidates implicitly rejected (no decisions = no approvals)
+      expect(result).toEqual([])
+    })
+
+    it('logs detailed audit trail of judge decisions', async () => {
+      const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation()
+      const anchor = createMockIssue({ id: 1, title: 'Issue A' })
+      const candidates = [
+        createMockIssue({ id: 2, title: 'Issue B' }),
+        createMockIssue({ id: 3, title: 'Issue C' }),
+      ]
+
+      mockRunCopilot.mockResolvedValue(
+        Result.ok({
+          decisions: [
+            { candidateId: 2, shouldMerge: true, reason: 'Same memory issue' },
+            { candidateId: 3, shouldMerge: false, reason: 'Different type' },
+          ],
+        }),
+      )
+
+      await judgeMergeCandidates({ anchor, candidates })
+
+      // Verify summary logging
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[Issue Judge] Anchor 1: approved 1/2'),
+      )
+
+      // Verify detailed decision logging
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
+        expect.stringContaining('APPROVED candidate 2'),
+      )
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
+        expect.stringContaining('REJECTED candidate 3'),
+      )
+
+      consoleInfoSpy.mockRestore()
+    })
+
+    it('logs warnings when LLM returns partial decisions', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation()
+      const anchor = createMockIssue({ id: 1, title: 'Issue A' })
+      const candidates = [
+        createMockIssue({ id: 2, title: 'Issue B' }),
+        createMockIssue({ id: 3, title: 'Issue C' }),
+      ]
+
+      mockRunCopilot.mockResolvedValue(
+        Result.ok({
+          decisions: [
+            { candidateId: 2, shouldMerge: true, reason: 'Same issue' },
+            // Missing decision for candidate 3
+          ],
+        }),
+      )
+
+      await judgeMergeCandidates({ anchor, candidates })
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('did not return decisions for 1/2 candidates'),
+      )
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('logs warnings when LLM returns decisions for unknown IDs', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation()
+      const anchor = createMockIssue({ id: 1, title: 'Issue A' })
+      const candidates = [createMockIssue({ id: 2, title: 'Issue B' })]
+
+      mockRunCopilot.mockResolvedValue(
+        Result.ok({
+          decisions: [
+            { candidateId: 2, shouldMerge: true, reason: 'Same issue' },
+            { candidateId: 999, shouldMerge: true, reason: 'Phantom' },
+          ],
+        }),
+      )
+
+      await judgeMergeCandidates({ anchor, candidates })
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('returned decisions for 1 unknown candidate'),
+      )
+
+      consoleWarnSpy.mockRestore()
+    })
   })
 })
