@@ -199,6 +199,7 @@ export const env = createEnv({
     COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH: z.string().optional(),
     COPILOT_PROMPT_ISSUE_DETAILS_GENERATOR_PATH: z.string().optional(),
     COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH: z.string().optional(),
+    COPILOT_PROMPT_ISSUE_MERGE_JUDGE_PATH: z.string().optional(),
     COPILOT_PROMPT_LATTE_PATH: z.string().optional(),
     COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH: z.string().optional(),
     COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH: z.string(),
