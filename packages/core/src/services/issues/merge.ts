@@ -80,11 +80,13 @@ export async function mergeIssues(
     workspaceId: workspace.id,
     issueIds: approvedSimilar.map(({ issue }) => issue.id),
   })
-  const { winner, mergedIssues } = pickWinner({
+  const res = pickWinner({
     anchorIssue: issue,
     candidates: approvedSimilar.map(({ issue }) => issue),
     totals,
   })
+  const winner = res.winner
+  let mergedIssues = res.mergedIssues
 
   if (mergedIssues.length === 0) {
     return Result.ok<MergeResult>({ winner, mergedIssues: [] })
@@ -96,21 +98,18 @@ export async function mergeIssues(
     documentUuid: issue.documentUuid,
     issueIds: mergedIssues.map((item) => item.id),
   })
-  const filteredMergedIssues = mergedIssues.filter(
+  mergedIssues = mergedIssues.filter(
     (item) => !issuesWithLinkedEvaluations.has(item.id),
   )
 
-  if (filteredMergedIssues.length === 0) {
+  if (mergedIssues.length === 0) {
     return Result.ok<MergeResult>({ winner, mergedIssues: [] })
   }
 
   return await transaction.call(
     async (tx) => {
       const issuesRepository = new IssuesRepository(workspace.id, tx)
-      const idsToLock = [
-        winner.id,
-        ...filteredMergedIssues.map((item) => item.id),
-      ]
+      const idsToLock = [winner.id, ...mergedIssues.map((item) => item.id)]
       for (const id of idsToLock) {
         const locking = await issuesRepository.lock({ id })
         if (!Result.isOk(locking)) return locking
@@ -126,7 +125,7 @@ export async function mergeIssues(
       }
 
       const refreshedMergedIssues: Issue[] = []
-      for (const merged of filteredMergedIssues) {
+      for (const merged of mergedIssues) {
         const refreshed = await issuesRepository.find(merged.id)
         if (!Result.isOk(refreshed)) return refreshed
 
