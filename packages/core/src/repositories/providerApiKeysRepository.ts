@@ -67,7 +67,9 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
   async findFirst() {
     const result = await super.findFirst()
     if (!Result.isOk(result)) return result
-    return Result.ok(result.value ? serializeProviderApiKey(result.value) : undefined)
+    return Result.ok(
+      result.value ? serializeProviderApiKey(result.value) : undefined,
+    )
   }
 
   async findByName(name: string) {

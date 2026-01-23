@@ -12,8 +12,6 @@ import { registerCommand } from '../utils/commandRegistrar'
  * Handles the initialization of a new Latitude project
  */
 export class InitCommand extends BaseCommand {
-  private isNpmProject: boolean = false
-
   /**
    * Execute the init command
    */
@@ -25,14 +23,6 @@ export class InitCommand extends BaseCommand {
 
       await this.getOrPromptForApiKey()
       await this.setClient()
-
-      // Check if we're in an npm project
-      this.isNpmProject = await this.projectManager.verifyNpmProject(
-        this.projectPath,
-      )
-      console.log(
-        `Detected ${this.isNpmProject ? 'npm' : 'non-npm'} project environment`,
-      )
 
       // Check if a latitude-lock.json file already exists
       const lockFileExists = await this.lockFileManager.exists(this.projectPath)
@@ -269,7 +259,6 @@ export class InitCommand extends BaseCommand {
         promptsRootFolder,
         this.projectPath,
         this.promptManager,
-        this.isNpmProject,
       )
 
       console.log(`✅ Successfully pulled ${prompts.length} prompts`)
@@ -297,7 +286,6 @@ export class InitCommand extends BaseCommand {
         projectId,
         rootFolder: promptsRootFolder,
         version: versionUuid,
-        npm: this.isNpmProject,
       }
 
       await this.lockFileManager.write(this.projectPath, lockFile)

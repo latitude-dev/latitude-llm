@@ -1,24 +1,9 @@
-import * as fs from 'fs/promises'
-import * as path from 'path'
 import { Latitude } from '@latitude-data/sdk'
 
 /**
  * Manages project operations for the Latitude CLI
  */
 export class ProjectManager {
-  /**
-   * Verify if the directory contains a valid npm project
-   */
-  async verifyNpmProject(projectPath: string): Promise<boolean> {
-    try {
-      const packageJsonPath = path.join(projectPath, 'package.json')
-      await fs.access(packageJsonPath)
-      return true
-    } catch (error) {
-      return false
-    }
-  }
-
   /**
    * Create a new Latitude project
    */

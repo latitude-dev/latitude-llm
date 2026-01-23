@@ -20,7 +20,7 @@ describe('PromptManager.savePromptToFile', () => {
     vi.clearAllMocks()
   })
 
-  it('writes ESM default export .js', async () => {
+  it('writes .promptl file with plain text content', async () => {
     const prompt = { path: 'emails/welcome', content: 'Hello' } as any
     const projectPath = '/project'
     const rootFolder = 'src/prompts'
@@ -28,17 +28,14 @@ describe('PromptManager.savePromptToFile', () => {
     const saved = await pm.savePromptToFile(prompt, rootFolder, projectPath)
 
     const dirPath = path.join(projectPath, rootFolder, 'emails')
-    const filePath = path.join(dirPath, 'welcome.js')
+    const filePath = path.join(dirPath, 'welcome.promptl')
 
     expect(mockFs.mkdir).toHaveBeenCalledWith(dirPath, { recursive: true })
-    expect(mockFs.writeFile).toHaveBeenCalledWith(
-      filePath,
-      `export default ${JSON.stringify('Hello')}\n`,
-    )
-    expect(saved).toBe(path.join(rootFolder, 'emails', 'welcome.js'))
+    expect(mockFs.writeFile).toHaveBeenCalledWith(filePath, 'Hello', 'utf-8')
+    expect(saved).toBe(path.join(rootFolder, 'emails', 'welcome.promptl'))
   })
 
-  it('cleans prompt path and writes default export .js', async () => {
+  it('cleans prompt path and writes .promptl file', async () => {
     const prompt = { path: '/greetings/hey', content: 'Hi' } as any
     const projectPath = '/project'
     const rootFolder = 'src/prompts'
@@ -46,13 +43,10 @@ describe('PromptManager.savePromptToFile', () => {
     const saved = await pm.savePromptToFile(prompt, rootFolder, projectPath)
 
     const dirPath = path.join(projectPath, rootFolder, 'greetings')
-    const filePath = path.join(dirPath, 'hey.js')
+    const filePath = path.join(dirPath, 'hey.promptl')
 
     expect(mockFs.mkdir).toHaveBeenCalledWith(dirPath, { recursive: true })
-    expect(mockFs.writeFile).toHaveBeenCalledWith(
-      filePath,
-      `export default ${JSON.stringify('Hi')}\n`,
-    )
-    expect(saved).toBe(path.join(rootFolder, 'greetings', 'hey.js'))
+    expect(mockFs.writeFile).toHaveBeenCalledWith(filePath, 'Hi', 'utf-8')
+    expect(saved).toBe(path.join(rootFolder, 'greetings', 'hey.promptl'))
   })
 })

@@ -6,7 +6,6 @@ export interface LatitudeLockFile {
   projectId: number
   rootFolder: string
   version: string
-  npm?: boolean
 }
 
 /**

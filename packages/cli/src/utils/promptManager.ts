@@ -47,7 +47,7 @@ export class PromptManager {
     }
   }
   /**
-   * Save a prompt to the filesystem
+   * Save a prompt to the filesystem as a .promptl text file
    */
   async savePromptToFile(
     prompt: Prompt,
@@ -62,37 +62,25 @@ export class PromptManager {
     // Create the full directory path
     const dirPath = path.join(projectPath, rootFolder, path.dirname(promptPath))
     await fs.mkdir(dirPath, { recursive: true })
-    // Create the file
-    const fileName = path.basename(promptPath) + '.js'
+    // Create the file with .promptl extension
+    const fileName = path.basename(promptPath) + '.promptl'
     const filePath = path.join(dirPath, fileName)
 
-    // Serialize content as a JSON string literal to avoid template issues
-    const jsonString = JSON.stringify(prompt.content)
-    // Create the content exporting default to avoid invalid identifiers
-    const content = `export default ${jsonString}\n`
-    await fs.writeFile(filePath, content)
+    // Write the prompt content directly to the file
+    await fs.writeFile(filePath, prompt.content, 'utf-8')
     // Return the relative path for logging
     return path.join(rootFolder, path.dirname(promptPath), fileName)
   }
   /**
    * Convert a prompt path to a filesystem path
    */
-  convertPromptPathToFilePath(
-    promptPath: string,
-    rootFolder: string,
-    isNpmProject: boolean = true,
-  ): string {
+  convertPromptPathToFilePath(promptPath: string, rootFolder: string): string {
     // Remove any leading slashes
     const normalizedPath = promptPath.startsWith('/')
       ? promptPath.slice(1)
       : promptPath
 
-    // Add appropriate extension based on project type
-    if (isNpmProject) {
-      return path.join(rootFolder, normalizedPath + '.js')
-    } else {
-      return path.join(rootFolder, normalizedPath + '.promptl')
-    }
+    return path.join(rootFolder, normalizedPath + '.promptl')
   }
   /**
    * Find all prompt files in the filesystem
@@ -100,12 +88,9 @@ export class PromptManager {
   findAllPromptFiles(
     rootFolder: string,
     projectPath: string,
-    isNpmProject: boolean = true,
   ): Promise<string[]> {
     return new Promise((resolve, reject) => {
-      // Set the file pattern based on whether it's an npm project
-      const filePattern = isNpmProject ? '*.{js,mjs,ts,cjs}' : '*.promptl'
-      const pattern = path.join(projectPath, rootFolder, '**', filePattern)
+      const pattern = path.join(projectPath, rootFolder, '**', '*.promptl')
 
       glob(pattern, (err, matches) => {
         if (err) {
@@ -128,14 +113,12 @@ export class PromptManager {
     prompts: Prompt[],
     rootFolder: string,
     projectPath: string,
-    isNpmProject: boolean = true,
   ): Promise<string[]> {
     try {
       // Get all prompt files in the filesystem
       const existingFiles = await this.findAllPromptFiles(
         rootFolder,
         projectPath,
-        isNpmProject,
       )
       // Create a set of files that should exist based on the prompts
       const shouldExist = new Set<string>()
@@ -145,13 +128,7 @@ export class PromptManager {
           ? prompt.path.slice(1)
           : prompt.path
 
-        // Add filename with appropriate extension
-        let fileName: string
-        if (isNpmProject) {
-          fileName = path.basename(promptPath) + '.js'
-        } else {
-          fileName = path.basename(promptPath) + '.promptl'
-        }
+        const fileName = path.basename(promptPath) + '.promptl'
 
         // Calculate relative path
         const relativePath = path.join(path.dirname(promptPath), fileName)
