@@ -4,42 +4,18 @@ import {
   countDistinct,
   desc,
   eq,
-  inArray,
   isNotNull,
   sql,
 } from 'drizzle-orm'
 import { LogStats } from '@latitude-data/emails/WeeklyEmailMailTypes'
 import { database } from '../../../client'
-import {
-  DateRange,
-  RUN_SOURCES,
-  RunSourceGroup,
-  SpanType,
-} from '../../../constants'
+import { DateRange, SpanType } from '../../../constants'
 import { spans } from '../../../schema/models/spans'
 import { projects } from '../../../schema/models/projects'
 import { Workspace } from '../../../schema/models/types/Workspace'
 import { SureDateRange } from '../../../constants'
 import { getDateRangeOrLastWeekRange } from '../utils'
-
-async function hasProductionSpans(
-  { workspace }: { workspace: Workspace },
-  db = database,
-): Promise<boolean> {
-  const result = await db
-    .select({ exists: sql<number>`1` })
-    .from(spans)
-    .where(
-      and(
-        eq(spans.workspaceId, workspace.id),
-        eq(spans.type, SpanType.Prompt),
-        inArray(spans.source, RUN_SOURCES[RunSourceGroup.Production]),
-      ),
-    )
-    .limit(1)
-
-  return result.length > 0
-}
+import { hasProductionTraces } from '../../traces/hasProductionTraces'
 
 async function getGlobalLogsStats(
   {
@@ -157,7 +133,10 @@ export async function getLogsData(
   },
   db = database,
 ): Promise<LogStats> {
-  const usedInProduction = await hasProductionSpans({ workspace }, db)
+  const usedInProduction = await hasProductionTraces(
+    { workspaceId: workspace.id },
+    db,
+  )
 
   const range = getDateRangeOrLastWeekRange(dateRange)
 

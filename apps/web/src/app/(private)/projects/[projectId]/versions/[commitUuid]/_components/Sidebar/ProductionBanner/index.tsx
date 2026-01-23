@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
-import { RunSourceGroup, SpanType } from '@latitude-data/constants'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
-import { mapSourceGroupToLogSources } from '@latitude-data/core/services/runs/mapSourceGroupToLogSources'
 import { IntegrationGalleryModal } from '$/components/IntegrationGallery'
 import { InviteMembersModal } from '$/components/InviteMembersModal'
 import useApiKeys from '$/stores/apiKeys'
+import useFetcher from '$/hooks/useFetcher'
+import { API_ROUTES } from '$/services/routes/api'
+import useSWR from 'swr'
+
+type HasProductionSpansResponse = { hasProductionSpans: boolean }
 
 export default function ProductionBanner({ project }: { project: Project }) {
   const [modalOpen, setModalOpen] = useState(false)
@@ -16,17 +18,17 @@ export default function ProductionBanner({ project }: { project: Project }) {
   const { data: apiKeys } = useApiKeys()
   const firstApiKey = apiKeys?.[0]
 
-  const { items, isLoading } = useSpansKeysetPaginationStore(
-    {
-      projectId: project.id.toString(),
-      types: [SpanType.Prompt, SpanType.External],
-      source: mapSourceGroupToLogSources(RunSourceGroup.Production),
-      limit: 1,
-    },
+  const fetcher = useFetcher<HasProductionSpansResponse>(
+    API_ROUTES.spans.hasProductionSpans.root,
+    { searchParams: { projectId: String(project.id) } },
+  )
+  const { data, isLoading } = useSWR<HasProductionSpansResponse>(
+    ['hasProductionSpans', project.id],
+    fetcher,
     { revalidateOnFocus: false },
   )
 
-  const hasProductionRuns = useMemo(() => items.length > 0, [items])
+  const hasProductionRuns = data?.hasProductionSpans ?? false
 
   const handleClick = useCallback(() => {
     setModalOpen(true)

@@ -306,6 +306,9 @@ export const API_ROUTES = {
     downloadSpans: {
       root: `/api/spans/download-spans`,
     },
+    hasProductionSpans: {
+      root: '/api/spans/has-production-spans',
+    },
   },
   workspaceFeatures: {
     root: '/api/workspaceFeatures',
