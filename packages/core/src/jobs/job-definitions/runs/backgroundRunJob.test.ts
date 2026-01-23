@@ -11,6 +11,7 @@ import * as factories from '../../../tests/factories'
 import { mockToolRequestsCopilot } from '../../../tests/helpers'
 import { RedisStream } from '../../../lib/redisStream'
 import { publisher } from '../../../events/publisher'
+import * as cancelJobsModule from '../../../lib/cancelJobs'
 import * as helpersModule from '../helpers'
 import * as startRunModule from '../../../services/runs/start'
 import * as endRunModule from '../../../services/runs/end'
@@ -23,6 +24,7 @@ import type {
 
 vi.mock('../../../lib/redisStream')
 vi.mock('../../../events/publisher')
+vi.mock('../../../lib/cancelJobs')
 
 describe('backgroundRunJob', () => {
   let mockJob: Job<BackgroundRunJobData, BackgroundRunJobResult>
@@ -64,9 +66,12 @@ describe('backgroundRunJob', () => {
     vi.mocked(RedisStream).mockImplementation(() => mockWriteStream)
 
     // Mock publisher
-    vi.mocked(publisher.subscribe).mockResolvedValue(undefined)
-    vi.mocked(publisher.unsubscribe).mockResolvedValue(undefined)
     vi.mocked(publisher.publishLater).mockResolvedValue(undefined)
+
+    // Mock cancellation utilities (O(1) polling-based cancellation)
+    vi.mocked(cancelJobsModule.createCancellationPoller).mockReturnValue(() => {})
+    vi.mocked(cancelJobsModule.clearCancelJobFlag).mockResolvedValue(undefined)
+    vi.mocked(cancelJobsModule.isJobCancelled).mockResolvedValue(false)
 
     // Create necessary resources using factories
     const setup = await factories.createProject({
@@ -164,7 +169,10 @@ describe('backgroundRunJob', () => {
   })
 
   describe('cleanup and resource management', () => {
-    it('should always cleanup stream and unsubscribe from events', async () => {
+    it('should always cleanup stream and cancel poller', async () => {
+      const mockStopPoller = vi.fn()
+      vi.mocked(cancelJobsModule.createCancellationPoller).mockReturnValue(mockStopPoller)
+
       const error = new Error('Test error')
       vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
         Result.error(error),
@@ -177,10 +185,8 @@ describe('backgroundRunJob', () => {
 
       // Always cleanup regardless of success or failure
       expect(mockWriteStream.cleanup).toHaveBeenCalled()
-      expect(publisher.unsubscribe).toHaveBeenCalledWith(
-        'cancelJob',
-        expect.any(Function),
-      )
+      expect(mockStopPoller).toHaveBeenCalled()
+      expect(cancelJobsModule.clearCancelJobFlag).toHaveBeenCalledWith('job-123')
     })
 
     it('should always attempt to end the run even if other operations fail', async () => {
@@ -393,7 +399,10 @@ describe('backgroundRunJob', () => {
       expect(mockWriteStream.cleanup).toHaveBeenCalled()
     })
 
-    it('should handle job cancellation correctly', async () => {
+    it('should handle job cancellation correctly using polling', async () => {
+      const mockStopPoller = vi.fn()
+      vi.mocked(cancelJobsModule.createCancellationPoller).mockReturnValue(mockStopPoller)
+
       vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
         // @ts-expect-error - mock
         Result.ok({ workspace, document, commit }),
@@ -437,44 +446,24 @@ describe('backgroundRunJob', () => {
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
 
-      let cancelCallback: Function
-      vi.mocked(publisher.subscribe).mockImplementation((event, callback) => {
-        if (event === 'cancelJob') {
-          cancelCallback = callback as Function
-        }
-        return Promise.resolve()
-      })
-
       const reader = mockReadStream.getReader()
-      let readCallCount = 0
-      vi.mocked(reader.read).mockImplementation(() => {
-        readCallCount++
-        if (readCallCount === 1) {
-          // Simulate cancellation during stream processing
-          if (cancelCallback) {
-            cancelCallback({ jobId: 'job-123' })
-          }
-          return Promise.resolve({
-            done: false,
-            value: { event: 'test', data: {} },
-          })
-        }
-        return Promise.resolve({ done: true })
-      })
+      vi.mocked(reader.read).mockResolvedValue({ done: true, value: undefined })
 
       const mod = await import('./backgroundRunJob')
       const backgroundRunJob = mod.backgroundRunJob
 
       await backgroundRunJob(mockJob)
 
-      expect(publisher.subscribe).toHaveBeenCalledWith(
-        'cancelJob',
-        expect.any(Function),
+      // Should create a cancellation poller with the job ID
+      expect(cancelJobsModule.createCancellationPoller).toHaveBeenCalledWith(
+        'job-123',
+        expect.any(AbortController),
+        1000,
       )
-      expect(publisher.unsubscribe).toHaveBeenCalledWith(
-        'cancelJob',
-        expect.any(Function),
-      )
+      // Should stop the poller during cleanup
+      expect(mockStopPoller).toHaveBeenCalled()
+      // Should clear the cancellation flag
+      expect(cancelJobsModule.clearCancelJobFlag).toHaveBeenCalledWith('job-123')
     })
 
     it('should handle timeout in stream processing', async () => {

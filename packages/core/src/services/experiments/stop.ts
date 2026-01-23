@@ -1,5 +1,5 @@
-import { publisher } from '../../events/publisher'
 import { queues } from '../../jobs/queues'
+import { setCancelJobFlag } from '../../lib/cancelJobs'
 import { ProgressTracker } from '../../jobs/utils/progressTracker'
 import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -25,7 +25,7 @@ async function cancelExperimentJobs(runUuids: string[]) {
       }
 
       if (state && !JOB_FINISHED_STATES.includes(state)) {
-        publisher.publish('cancelJob', { jobId: job.id })
+        await setCancelJobFlag(job.id)
       }
 
       await job.remove().catch(() => {})
