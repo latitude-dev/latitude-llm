@@ -90,7 +90,6 @@ export class PushCommand extends BaseCommand {
     return prompts
   }
 
-
   /**
    * Get diff results by comparing local prompts with remote
    */

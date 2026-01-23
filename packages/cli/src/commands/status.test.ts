@@ -254,5 +254,4 @@ describe('StatusCommand', () => {
       ).rejects.toThrow('Failed to compute diff: API error')
     })
   })
-
 })

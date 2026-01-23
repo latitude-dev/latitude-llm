@@ -133,7 +133,9 @@ export class PullCommand extends BaseCommand {
   /**
    * Read all local prompts from the filesystem
    */
-  private async readLocalPrompts(rootFolder: string): Promise<IncomingPrompt[]> {
+  private async readLocalPrompts(
+    rootFolder: string,
+  ): Promise<IncomingPrompt[]> {
     const prompts: IncomingPrompt[] = []
     const promptsDir = path.join(this.projectPath, rootFolder)
 
@@ -172,7 +174,6 @@ export class PullCommand extends BaseCommand {
 
     return prompts
   }
-
 
   /**
    * Pull all prompts from a project

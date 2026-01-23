@@ -14,7 +14,6 @@ latitude init [-p <path>] [--dev]
 ```
 
 - Prompts for your API key (or uses `latitude login`/`LATITUDE_API_KEY`)
-- Detects npm project setup
 - Lets you choose:
   - Create a new project (provide a name)
   - Use an existing project (enter `projectId`)
@@ -26,9 +25,8 @@ latitude init [-p <path>] [--dev]
 ```json
 {
   "projectId": 123,
-  "rootFolder": "src/prompts",
-  "version": "live",
-  "npm": true
+  "rootFolder": "prompts",
+  "version": "live"
 }
 ```
 
@@ -54,8 +52,7 @@ latitude pull [-p <path>] [-y] [--dev]
 - Computes local vs remote changes
 - Choose: Accept / Cancel / View details (opens pager for full diffs)
 - `-y` skips confirmation and applies changes
-- Saves prompts as `.js` files with a default export in npm projects
-- Preserves `.promptl` files for non-npm projects
+- Saves prompts as `.promptl` text files
 - Removes local files that no longer exist remotely
 
 ## push
@@ -66,10 +63,9 @@ Push local prompt changes to the current version.
 latitude push [-p <path>] [-y] [--dev]
 ```
 
-- Reads prompt files under `rootFolder`
+- Reads `.promptl` files under `rootFolder`
 - Shows a diff and asks for confirmation; `-y` skips confirmation
 - Sends only changed files to the server
-- Note: TypeScript prompt files (`.ts`) are not supported for reading content; use `.js` or `.promptl`
 
 ## checkout
 
@@ -102,20 +98,13 @@ Show CLI help.
 latitude help
 ```
 
-## Prompt file formats
+## Prompt file format
 
-- npm projects:
-  
-```js
-// src/prompts/welcome.js
-export default 'Welcome to Latitude!'
-```
-
-Latitude always writes prompts for npm projects as `.js` modules with a default export to match modern ESM tooling.
-
-- non-npm projects:
+Prompts are stored as plain `.promptl` text files:
 
 ```text
 # prompts/welcome.promptl
 Welcome to Latitude!
 ```
+
+Each file contains the raw prompt content using PromptL syntax.

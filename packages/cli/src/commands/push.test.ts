@@ -306,5 +306,4 @@ describe('PushCommand', () => {
       )
     })
   })
-
 })

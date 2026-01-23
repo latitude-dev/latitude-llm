@@ -116,7 +116,10 @@ export class PromptManager {
   ): Promise<string[]> {
     try {
       // Get all prompt files in the filesystem
-      const existingFiles = await this.findAllPromptFiles(rootFolder, projectPath)
+      const existingFiles = await this.findAllPromptFiles(
+        rootFolder,
+        projectPath,
+      )
       // Create a set of files that should exist based on the prompts
       const shouldExist = new Set<string>()
       for (const prompt of prompts) {
