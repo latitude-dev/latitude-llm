@@ -1,12 +1,16 @@
 import { env } from '@latitude-data/env'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { database } from '../../client'
-import { ISSUE_DISCOVERY_MIN_SIMILARITY, IssueCentroid } from '../../constants'
+import {
+  HEAD_COMMIT,
+  ISSUE_DISCOVERY_MIN_SIMILARITY,
+  IssueCentroid,
+} from '../../constants'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { UnprocessableEntityError } from '../../lib/errors'
-import { IssuesRepository } from '../../repositories'
+import { EvaluationsV2Repository, IssuesRepository } from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
 import { issueHistograms } from '../../schema/models/issueHistograms'
@@ -88,6 +92,8 @@ export async function mergeIssues(
 
   const issuesWithLinkedEvaluations = await getIssuesWithLinkedEvaluations({
     workspaceId: workspace.id,
+    projectId: issue.projectId,
+    documentUuid: issue.documentUuid,
     issueIds: mergedIssues.map((item) => item.id),
   })
   const filteredMergedIssues = mergedIssues.filter(
@@ -101,7 +107,10 @@ export async function mergeIssues(
   return await transaction.call(
     async (tx) => {
       const issuesRepository = new IssuesRepository(workspace.id, tx)
-      const idsToLock = [winner.id, ...filteredMergedIssues.map((item) => item.id)]
+      const idsToLock = [
+        winner.id,
+        ...filteredMergedIssues.map((item) => item.id),
+      ]
       for (const id of idsToLock) {
         const locking = await issuesRepository.lock({ id })
         if (!Result.isOk(locking)) return locking
@@ -317,30 +326,32 @@ function pickWinner({
  */
 async function getIssuesWithLinkedEvaluations({
   workspaceId,
+  projectId,
+  documentUuid,
   issueIds,
 }: {
   workspaceId: number
+  projectId: number
+  documentUuid: string
   issueIds: number[]
 }): Promise<Set<number>> {
   if (issueIds.length === 0) return new Set()
 
-  const linkedEvaluations = await database
-    .select({ issueId: evaluationVersions.issueId })
-    .from(evaluationVersions)
-    .where(
-      and(
-        eq(evaluationVersions.workspaceId, workspaceId),
-        inArray(evaluationVersions.issueId, issueIds),
-        isNull(evaluationVersions.deletedAt),
-        isNull(evaluationVersions.ignoredAt),
-      ),
-    )
+  const evalsRepo = new EvaluationsV2Repository(workspaceId)
+  const evaluations = await evalsRepo
+    .listAtCommitByDocument({
+      projectId,
+      documentUuid,
+      commitUuid: HEAD_COMMIT,
+    })
+    .then((r) => r.unwrap())
 
-  return new Set(
-    linkedEvaluations
-      .map((e) => e.issueId)
-      .filter((id): id is number => id !== null),
-  )
+  const linkedIssueIds = evaluations
+    .filter((evaluation) => evaluation.issueId && !evaluation.ignoredAt)
+    .map((evaluation) => evaluation.issueId!)
+    .filter((id) => issueIds.includes(id))
+
+  return new Set(linkedIssueIds)
 }
 
 function mergeIssueCentroids({
