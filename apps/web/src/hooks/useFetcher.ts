@@ -1,7 +1,6 @@
 import { ROUTES } from '$/services/routes'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback } from 'react'
-import { useCurrentUrl } from './useCurrentUrl'
 import { useNavigate } from './useNavigate'
 
 type ISearchParams =
@@ -177,10 +176,11 @@ export default function useFetcher<
 ) {
   const { toast } = useToast()
   const navigate = useNavigate()
-  const currentUrl = useCurrentUrl()
 
   return useCallback(async () => {
     if (!route) return fallback as R
+
+    const currentUrl = window.location.href
 
     const response = await executeFetch<R, I, Raw>({
       route,
@@ -201,7 +201,6 @@ export default function useFetcher<
     onFail,
     onSuccess,
     navigate,
-    currentUrl,
     fallback,
   ])
 }

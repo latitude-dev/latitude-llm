@@ -1,9 +1,14 @@
 'use client'
 
-import { createContext, ReactNode, useState, useCallback } from 'react'
-import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation'
+import {
+  createContext,
+  ReactNode,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react'
 import { parseSpansFilters } from '$/lib/schemas/filters'
-import { useNavigate } from '$/hooks/useNavigate'
 import { AssembledSpan, Span } from '@latitude-data/constants'
 import { ROUTES } from '$/services/routes'
 
@@ -32,6 +37,31 @@ export function buildTraceUrl({
   )
 }
 
+function syncUrlWithSelection(selection: SelectionState) {
+  const params = new URLSearchParams(window.location.search)
+
+  params.delete('documentLogUuid')
+  params.delete('spanId')
+  params.delete('activeRunUuid')
+  params.delete('expandedDocumentLogUuid')
+
+  if (selection.documentLogUuid) {
+    params.set('documentLogUuid', selection.documentLogUuid)
+  }
+  if (selection.spanId) {
+    params.set('spanId', selection.spanId)
+  }
+  if (selection.activeRunUuid) {
+    params.set('activeRunUuid', selection.activeRunUuid)
+  }
+  if (selection.expandedDocumentLogUuid) {
+    params.set('expandedDocumentLogUuid', selection.expandedDocumentLogUuid)
+  }
+
+  const newUrl = `${window.location.pathname}?${params.toString()}`
+  window.history.pushState(null, '', newUrl)
+}
+
 type SelectionState = {
   documentLogUuid: string | null
   spanId: string | null
@@ -47,21 +77,18 @@ type OnClickTraceRowFunction = <T extends RowType>(
   params: OnClickTraceRowParams<T>,
 ) => () => void
 
-type TraceSpanSelectionContextType = {
-  selection: SelectionState
+type TraceSpanSelectionActionsContextType = {
   onClickTraceRow: OnClickTraceRowFunction
   clearSelection: () => void
   selectSpan: (span?: AssembledSpan) => void
 }
 
-export const TraceSpanSelectionContext =
-  createContext<TraceSpanSelectionContextType>({
-    selection: {
-      documentLogUuid: null,
-      spanId: null,
-      activeRunUuid: null,
-      expandedDocumentLogUuid: null,
-    },
+type TraceSpanSelectionStateContextType = {
+  selection: SelectionState
+}
+
+export const TraceSpanSelectionActionsContext =
+  createContext<TraceSpanSelectionActionsContextType>({
     onClickTraceRow:
       <T extends RowType>(_args: OnClickTraceRowParams<T>) =>
       () => {},
@@ -69,11 +96,20 @@ export const TraceSpanSelectionContext =
     clearSelection: () => {},
   })
 
-function initialSelectionState({
-  params,
-}: {
-  params: ReadonlyURLSearchParams
-}): SelectionState {
+export const TraceSpanSelectionStateContext =
+  createContext<TraceSpanSelectionStateContextType>({
+    selection: {
+      documentLogUuid: null,
+      spanId: null,
+      activeRunUuid: null,
+      expandedDocumentLogUuid: null,
+    },
+  })
+
+function initialSelectionState(): SelectionState {
+  const params = new URLSearchParams(
+    typeof window !== 'undefined' ? window.location.search : '',
+  )
   const directDocumentLogUuid = params.get('documentLogUuid')
   const directSpanId = params.get('spanId')
   const directActiveRunUuid = params.get('activeRunUuid')
@@ -103,127 +139,121 @@ export function TraceSpanSelectionProvider({
 }: {
   children: ReactNode
 }) {
-  const params = useSearchParams()
-  const router = useNavigate()
-  const [selection, setSelection] = useState<SelectionState>(() =>
-    initialSelectionState({ params }),
+  const [selection, setSelection] = useState<SelectionState>(
+    initialSelectionState,
   )
+
+  const selectionRef = useRef(selection)
+  selectionRef.current = selection
+
   const clearSelection = useCallback(() => {
-    setSelection({
+    const newSelection: SelectionState = {
       documentLogUuid: null,
       spanId: null,
       activeRunUuid: null,
       expandedDocumentLogUuid: null,
-    })
-    const newParams = new URLSearchParams(params.toString())
-    newParams.delete('documentLogUuid')
-    newParams.delete('spanId')
-    newParams.delete('activeRunUuid')
-    newParams.delete('expandedDocumentLogUuid')
-    router.replace(`?${newParams.toString()}`)
-  }, [params, router])
+    }
+    setSelection(newSelection)
+    syncUrlWithSelection(newSelection)
+  }, [])
 
   const onClickTraceRow = useCallback(
     <T extends RowType>({ type, data }: OnClickTraceRowParams<T>) =>
       () => {
-        const newParams = new URLSearchParams(params.toString())
+        const currentSelection = selectionRef.current
+
         if (type === 'trace') {
           const isSelected =
-            data.documentLogUuid === selection.documentLogUuid &&
-            data.spanId === selection.spanId
+            data.documentLogUuid === currentSelection.documentLogUuid &&
+            data.spanId === currentSelection.spanId
           if (isSelected) {
             clearSelection()
             return
           }
-          newParams.set('documentLogUuid', data.documentLogUuid)
-          newParams.set('spanId', data.spanId)
-          newParams.delete('activeRunUuid')
-          setSelection({
+          const newSelection: SelectionState = {
             documentLogUuid: data.documentLogUuid,
             spanId: data.spanId,
             activeRunUuid: null,
-            expandedDocumentLogUuid: selection.expandedDocumentLogUuid,
-          })
+            expandedDocumentLogUuid: null,
+          }
+          setSelection(newSelection)
+          syncUrlWithSelection(newSelection)
         } else if (type === 'activeRun') {
-          const isSelected = data.runUuid === selection.activeRunUuid
+          const isSelected = data.runUuid === currentSelection.activeRunUuid
           if (isSelected) {
             clearSelection()
             return
           }
-          newParams.set('activeRunUuid', data.runUuid)
-          newParams.delete('documentLogUuid')
-          newParams.delete('spanId')
-          setSelection({
+          const newSelection: SelectionState = {
             documentLogUuid: null,
             spanId: null,
             activeRunUuid: data.runUuid,
             expandedDocumentLogUuid: null,
-          })
+          }
+          setSelection(newSelection)
+          syncUrlWithSelection(newSelection)
         }
-        router.replace(`?${newParams.toString()}`, { scroll: false })
       },
-    [selection, params, router, clearSelection],
+    [clearSelection],
   )
 
-  const selectSpan = useCallback(
-    (span?: AssembledSpan) => {
-      const spanId = span?.id
-      if (!spanId) return
+  const selectSpan = useCallback((span?: AssembledSpan) => {
+    const spanId = span?.id
+    if (!spanId) return
 
-      // When selecting from trace graph, always preserve the original parent's documentLogUuid
-      // Use expandedDocumentLogUuid if set (parent trace), otherwise use current documentLogUuid
-      // Only use span's documentLogUuid if we don't have one in selection at all
-      const parentDocumentLogUuid =
-        selection.expandedDocumentLogUuid ?? selection.documentLogUuid
-      const documentLogUuid = parentDocumentLogUuid ?? span.documentLogUuid
-      if (!documentLogUuid) return
+    const currentSelection = selectionRef.current
 
-      const newParams = new URLSearchParams(params.toString())
-      // Check if this is a subagent span by comparing to the original parent's documentLogUuid
-      const isSubagentSpan =
-        span.documentLogUuid && span.documentLogUuid !== parentDocumentLogUuid
+    // When selecting from trace graph, always preserve the original parent's documentLogUuid
+    // Use expandedDocumentLogUuid if set (parent trace), otherwise use current documentLogUuid
+    // Only use span's documentLogUuid if we don't have one in selection at all
+    const parentDocumentLogUuid =
+      currentSelection.expandedDocumentLogUuid ??
+      currentSelection.documentLogUuid
+    const documentLogUuid = parentDocumentLogUuid ?? span.documentLogUuid
+    if (!documentLogUuid) return
 
-      // For subagent spans, keep the parent trace expanded while selecting the subagent span
-      // Use the subagent's documentLogUuid for fetching its conversation, but preserve parent as expanded
-      if (isSubagentSpan) {
-        newParams.set('documentLogUuid', span.documentLogUuid!)
-        newParams.set('spanId', spanId)
-        if (parentDocumentLogUuid) newParams.set('expandedDocumentLogUuid', parentDocumentLogUuid) // prettier-ignore
-        setSelection({
+    const isSubagentSpan =
+      span.documentLogUuid && span.documentLogUuid !== parentDocumentLogUuid
+
+    const newSelection: SelectionState = isSubagentSpan
+      ? {
           documentLogUuid: span.documentLogUuid!,
           spanId,
           activeRunUuid: null,
           expandedDocumentLogUuid: parentDocumentLogUuid,
-        })
-        router.replace(`?${newParams.toString()}`, { scroll: false })
-        return
-      }
+        }
+      : {
+          documentLogUuid,
+          spanId,
+          activeRunUuid: null,
+          expandedDocumentLogUuid: currentSelection.expandedDocumentLogUuid,
+        }
 
-      // For spans within the same trace, preserve parent documentLogUuid and only update spanId
-      newParams.set('documentLogUuid', documentLogUuid)
-      newParams.set('spanId', spanId)
-      newParams.delete('activeRunUuid')
-      setSelection({
-        documentLogUuid,
-        spanId,
-        activeRunUuid: null,
-        expandedDocumentLogUuid: selection.expandedDocumentLogUuid,
-      })
-      router.replace(`?${newParams.toString()}`, { scroll: false })
-    },
-    [selection, params, router],
+    setSelection(newSelection)
+    syncUrlWithSelection(newSelection)
+  }, [])
+
+  const actionsValue = useMemo(
+    () => ({
+      onClickTraceRow,
+      selectSpan,
+      clearSelection,
+    }),
+    [onClickTraceRow, selectSpan, clearSelection],
+  )
+
+  const stateValue = useMemo(
+    () => ({
+      selection,
+    }),
+    [selection],
   )
 
   return (
-    <TraceSpanSelectionContext.Provider
-      value={{
-        selection,
-        onClickTraceRow,
-        selectSpan,
-        clearSelection,
-      }}
-    >
-      {children}
-    </TraceSpanSelectionContext.Provider>
+    <TraceSpanSelectionActionsContext.Provider value={actionsValue}>
+      <TraceSpanSelectionStateContext.Provider value={stateValue}>
+        {children}
+      </TraceSpanSelectionStateContext.Provider>
+    </TraceSpanSelectionActionsContext.Provider>
   )
 }

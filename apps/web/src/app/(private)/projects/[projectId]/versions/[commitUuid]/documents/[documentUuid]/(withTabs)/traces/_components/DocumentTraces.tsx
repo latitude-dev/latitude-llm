@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
-import { TraceSpanSelectionContext } from './TraceSpanSelectionContext'
+import { TraceSpanSelectionStateContext } from './TraceSpanSelectionContext'
 import { SpanRow } from './SpanRow'
 import { ActiveRunRow } from './ActiveRuns/ActiveRunRow'
 import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
@@ -16,11 +16,13 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
-import { ActiveRun, PromptSpan } from '@latitude-data/constants'
+import { ActiveRun, EvaluationResultV2, PromptSpan } from '@latitude-data/constants'
 import { type SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { useEvaluationResultsV2ByTraces } from '$/stores/evaluationResultsV2'
 import { useSpanCreatedListener } from './useSpanCreatedListener'
+
+const EMPTY_EVALUATION_RESULTS: EvaluationResultV2[] = []
 
 export function DocumentTraces({
   ref,
@@ -33,7 +35,7 @@ export function DocumentTraces({
   selectableState: SelectableRowsHook
   ref?: Ref<HTMLTableElement>
 }) {
-  const { selection } = use(TraceSpanSelectionContext)
+  const { selection } = use(TraceSpanSelectionStateContext)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
@@ -91,13 +93,15 @@ export function DocumentTraces({
             key={span.id}
             span={span as PromptSpan}
             toggleRow={selectableState.toggleRow}
-            isSelected={selectableState.isSelected}
+            isRowSelected={selectableState.isSelected(span.id)}
             isExpanded={
               selection.documentLogUuid !== null &&
               (selection.documentLogUuid === span.documentLogUuid ||
                 selection.expandedDocumentLogUuid === span.documentLogUuid)
             }
-            evaluationResults={evaluationResultsByTraceId[span.traceId] || []}
+            evaluationResults={
+              evaluationResultsByTraceId[span.traceId] ?? EMPTY_EVALUATION_RESULTS
+            }
             isEvaluationResultsLoading={isEvaluationResultsLoading}
           />
         ))}

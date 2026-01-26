@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useMemo, useState } from 'react'
+import { memo, use, useEffect, useMemo, useState } from 'react'
 import { ActiveRun } from '@latitude-data/constants'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -8,10 +8,14 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { cn } from '@latitude-data/web-ui/utils'
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { TraceSpanSelectionContext } from '../../TraceSpanSelectionContext'
+import { TraceSpanSelectionActionsContext } from '../../TraceSpanSelectionContext'
 
-export function ActiveRunRow({ run }: { run: ActiveRun }) {
-  const { onClickTraceRow } = use(TraceSpanSelectionContext)
+export const ActiveRunRow = memo(function ActiveRunRow({
+  run,
+}: {
+  run: ActiveRun
+}) {
+  const { onClickTraceRow } = use(TraceSpanSelectionActionsContext)
   const [duration, setDuration] = useState<number>(0)
 
   const message = useMemo(() => {
@@ -79,4 +83,4 @@ export function ActiveRunRow({ run }: { run: ActiveRun }) {
       </TableCell>
     </TableRow>
   )
-}
+})

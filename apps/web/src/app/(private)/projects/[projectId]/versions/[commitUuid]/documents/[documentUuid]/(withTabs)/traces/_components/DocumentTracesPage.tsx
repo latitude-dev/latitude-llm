@@ -24,7 +24,7 @@ import { SpanFilters } from './Filters'
 import { SelectionTracesBanner } from './SelectionTracesBanner'
 import { TracePanel } from './TracePanel'
 import { TracesOverTime } from './TracesOverTime'
-import { TraceSpanSelectionContext } from './TraceSpanSelectionContext'
+import { TraceSpanSelectionActionsContext } from './TraceSpanSelectionContext'
 import { useTraceSelection } from './useTraceSelection'
 
 export function DocumentTracesPage({
@@ -34,7 +34,7 @@ export function DocumentTracesPage({
   initialSpans: Span[]
   initialSpanFilterOptions: SpansFilters
 }) {
-  const { clearSelection } = use(TraceSpanSelectionContext)
+  const { clearSelection } = use(TraceSpanSelectionActionsContext)
   const panelContainerRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLTableElement>(null)
   const { document } = useCurrentDocument()

@@ -6,11 +6,11 @@ import { EvaluationResultV2, PromptSpan } from '@latitude-data/constants'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { Fragment, use, useMemo } from 'react'
+import { Fragment, memo, useContext, useMemo } from 'react'
 import { ConversationTimeline } from './ConversationTimeline'
-import { TraceSpanSelectionContext } from './TraceSpanSelectionContext'
-import { useCommits } from '$/stores/commitsStore'
+import { TraceSpanSelectionActionsContext } from './TraceSpanSelectionContext'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
+import { useCommits } from '$/stores/commitsStore'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
@@ -24,10 +24,10 @@ import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 type SpanRowProps = {
   span: PromptSpan
   toggleRow: ReturnType<typeof useSelectableRows>['toggleRow']
-  isSelected: ReturnType<typeof useSelectableRows>['isSelected']
+  isRowSelected: boolean
   isExpanded: boolean
-  evaluationResults?: EvaluationResultV2[]
-  isEvaluationResultsLoading?: boolean
+  evaluationResults: EvaluationResultV2[]
+  isEvaluationResultsLoading: boolean
 }
 
 function EvaluationsColumn({
@@ -95,15 +95,15 @@ function EvaluationsColumn({
   )
 }
 
-export function SpanRow({
+export const SpanRow = memo(function SpanRow({
   span,
   toggleRow,
-  isSelected,
+  isRowSelected,
   isExpanded,
-  evaluationResults = [],
-  isEvaluationResultsLoading = false,
+  evaluationResults,
+  isEvaluationResultsLoading,
 }: SpanRowProps) {
-  const { onClickTraceRow } = use(TraceSpanSelectionContext)
+  const { onClickTraceRow } = useContext(TraceSpanSelectionActionsContext)
   const { data: commits } = useCommits()
   const commit = commits?.find((c) => c.uuid === span.commitUuid)
   const hasError = span.status === 'error'
@@ -128,10 +128,10 @@ export function SpanRow({
           preventDefault
           align='left'
           onClick={() => {
-            toggleRow(span.id, !isSelected(span.id))
+            toggleRow(span.id, !isRowSelected)
           }}
         >
-          <Checkbox fullWidth={false} checked={isSelected(span.id)} />
+          <Checkbox fullWidth={false} checked={isRowSelected} />
         </TableCell>
         <TableCell>
           <Text.H5 noWrap color={textColor}>
@@ -175,4 +175,4 @@ export function SpanRow({
       )}
     </Fragment>
   )
-}
+})

@@ -33,13 +33,16 @@ const DocumentVersionProvider = ({
     [documents, fallbackDocument],
   )
 
+  const contextValue = useMemo(
+    () => ({
+      mutateDocumentUpdated,
+      document: document ?? fallbackDocument,
+    }),
+    [mutateDocumentUpdated, document, fallbackDocument],
+  )
+
   return (
-    <DocumentContext.Provider
-      value={{
-        mutateDocumentUpdated,
-        document: document ?? fallbackDocument,
-      }}
-    >
+    <DocumentContext.Provider value={contextValue}>
       {children}
     </DocumentContext.Provider>
   )
