@@ -112,6 +112,7 @@ const DefaultMultiSelectTrigger = forwardRef<
                         : undefined
                     }
                     onClick={(event) => {
+                      if (disabled) return
                       event.stopPropagation()
                       onToggleOption(value)
                     }}
@@ -150,6 +151,7 @@ const DefaultMultiSelectTrigger = forwardRef<
               <div
                 className='cursor-pointer text-muted-foreground'
                 onClick={(event) => {
+                  if (disabled) return
                   event.stopPropagation()
                   onClear()
                 }}

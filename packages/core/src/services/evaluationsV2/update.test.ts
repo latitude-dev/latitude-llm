@@ -11,6 +11,7 @@ import {
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
+import { documentVersions } from '../../schema/models/documentVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Project } from '../../schema/models/types/Project'
@@ -108,6 +109,31 @@ describe('updateEvaluationV2', () => {
         workspace: workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(new BadRequestError('Name is required'))
+
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
+  it('fails when updating the main evaluation directly', async () => {
+    // Set the evaluation as main evaluation
+    await database
+      .update(documentVersions)
+      .set({ mainEvaluationUuid: evaluation.uuid })
+      .where(eq(documentVersions.id, document.id))
+
+    mocks.publisher.mockClear()
+
+    await expect(
+      updateEvaluationV2({
+        evaluation: evaluation,
+        commit: commit,
+        settings: {
+          name: 'new name',
+        },
+        workspace: workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('The main evaluation cannot be updated manually'),
+    )
 
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
