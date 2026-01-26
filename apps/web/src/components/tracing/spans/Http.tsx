@@ -11,7 +11,7 @@ const specification = SPAN_SPECIFICATIONS[SpanType.Http]
 export default {
   ...specification,
   icon: 'globe' as IconName,
-  color: SPAN_COLORS.yellow,
+  color: SPAN_COLORS.gray,
   DetailsPanel: DetailsPanel,
 }
 

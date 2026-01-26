@@ -27,7 +27,7 @@ const specification = SPAN_SPECIFICATIONS[SpanType.Completion]
 export default {
   ...specification,
   icon: 'messageCircle',
-  color: SPAN_COLORS.blue,
+  color: SPAN_COLORS.green,
   DetailsPanel: DetailsPanel,
 } satisfies SpanFrontendSpecification<SpanType.Completion>
 
