@@ -6,17 +6,72 @@ import {
   buildOutputMessages,
   extractGenerateResultContent,
 } from './streamConsumer'
+import { LanguageModelV2Prompt } from '@ai-sdk/provider'
+import {
+  AssistantMessage,
+  Message,
+  MessageContent,
+  MessageRole,
+} from '@latitude-data/constants/legacyCompiler'
 
 function convertPromptToMessages(
-  prompt: unknown,
-): Record<string, unknown>[] | undefined {
-  if (!Array.isArray(prompt)) return undefined
+  vercelMessages: LanguageModelV2Prompt,
+): Message[] {
+  return vercelMessages.map((msg) => {
+    const finalMessage = {
+      role: msg.role as MessageRole,
+      content: [],
+      toolCalls: [],
+    } as AssistantMessage
 
-  return prompt.map((item) => {
-    if (typeof item === 'object' && item !== null) {
-      return item as Record<string, unknown>
+    if (typeof msg.content === 'string') {
+      finalMessage.content = [{ type: 'text', text: msg.content }]
+      return finalMessage
     }
-    return { content: String(item) }
+
+    const content: MessageContent[] = []
+
+    msg.content.map((c) => {
+      if (c.type === 'text') {
+        content.push({ type: 'text', text: c.text })
+      }
+
+      if (c.type === 'file') {
+        content.push({ type: 'file', file: c.data, mimeType: c.mediaType })
+      }
+
+      if (c.type === 'tool-call') {
+        content.push({
+          type: 'tool-call',
+          toolCallId: c.toolCallId,
+          toolName: c.toolName,
+          args: c.input as Record<string, unknown>,
+        })
+      }
+
+      if (c.type === 'tool-result') {
+        content.push({
+          type: 'tool-result',
+          toolCallId: c.toolCallId,
+          toolName: c.toolName,
+          result: c.output.value,
+          isError: ['error-json', 'error-text'].includes(c.output.type),
+        })
+      }
+
+      if (c.type === 'reasoning') {
+        content.push({ type: 'reasoning', text: c.text })
+      }
+
+      if (c.type === 'reasoning') {
+        content.push({ type: 'reasoning', text: c.text })
+      }
+
+      return content
+    })
+
+    finalMessage.content = content
+    return finalMessage
   })
 }
 
@@ -78,6 +133,7 @@ export function createTelemetryMiddleware({
     },
 
     wrapStream: async ({ doStream, params }) => {
+      console.log(params.prompt)
       const inputMessages = convertPromptToMessages(params.prompt)
 
       const $completion = telemetry.span.completion(
