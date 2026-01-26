@@ -14,6 +14,7 @@ import {
   SpansRepository,
 } from '../../../repositories'
 import { assignEvaluationResultV2ToIssue } from '../../../services/evaluationsV2/results/assign'
+import { updateEvaluationV2 } from '../../../services/evaluationsV2/update'
 import { discoverIssue } from '../../../services/issues/discover'
 import { generateIssue } from '../../../services/issues/generate'
 import { captureException } from '../../../utils/datadogCapture'
@@ -142,6 +143,20 @@ export const discoverResultIssueJob = async (
       : undefined,
     workspace: workspace,
   }).then((r) => r.unwrap())
+
+  if (!evaluation.issueId && updatedIssue) {
+    const updating = await updateEvaluationV2({
+      evaluation,
+      commit,
+      workspace,
+      issueId: updatedIssue.id,
+      force: true,
+    })
+
+    if (updating.error) {
+      captureException(updating.error)
+    }
+  }
 
   if (newIssue) {
     await publisher.publishLater({
