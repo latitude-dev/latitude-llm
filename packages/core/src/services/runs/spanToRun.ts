@@ -62,10 +62,25 @@ export async function spanToRun({
   const evalsRepo = new EvaluationsV2Repository(workspaceId)
   const repository = new EvaluationResultsV2Repository(workspaceId)
   const results = await repository.listBySpans([span]).then((r) => r.value)
+
+  if (!span.commitUuid || !span.documentUuid) {
+    // External spans may not have commitUuid/documentUuid
+    return {
+      uuid: span.documentLogUuid!,
+      queuedAt: span.startedAt,
+      startedAt: span.startedAt,
+      endedAt: span.endedAt,
+      caption,
+      annotations: [],
+      source: span.source!,
+      span: { ...span, metadata: mainSpanMetadata },
+    }
+  }
+
   const evaluations = await evalsRepo
     .listAtCommitByDocument({
-      commitUuid: span.commitUuid!,
-      documentUuid: span.documentUuid!,
+      commitUuid: span.commitUuid,
+      documentUuid: span.documentUuid,
     })
     .then((r) => r.unwrap())
   const annotations = results
