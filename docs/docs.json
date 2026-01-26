@@ -36,9 +36,7 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": [
-              "guides/getting-started/introduction"
-            ]
+            "pages": ["guides/getting-started/introduction"]
           },
           {
             "group": "Getting started",
