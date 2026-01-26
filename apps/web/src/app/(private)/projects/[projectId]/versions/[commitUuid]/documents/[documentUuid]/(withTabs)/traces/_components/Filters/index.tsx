@@ -3,7 +3,7 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DatePickerRange } from '@latitude-data/web-ui/atoms/DatePicker'
 import { SpansFilters } from '$/lib/schemas/filters'
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useState, ChangeEvent } from 'react'
 import { CommitFilterByUuid } from './CommitFilterByUuid'
 import { ExperimentFilterByUuid } from './ExperimentFilterByUuid'
 import { TestDeploymentFilter } from './TestDeploymentFilter'
@@ -29,10 +29,28 @@ export function SpanFilters({
     projectId: project.id,
   })
 
+  const [localDocumentLogUuid, setLocalDocumentLogUuid] = useState(
+    filterOptions.documentLogUuid ?? '',
+  )
   const filters = useProcessSpanFilters({
     onFiltersChanged,
     filterOptions,
   })
+
+  const onDocumentLogUuidChange = filters.onDocumentLogUuidChange
+
+  /**
+   * Local state managed in this component to reflect immediate changes in the input field
+   * while debouncing the actual filter update to avoid excessive re-renders.
+   */
+  const handleDocumentLogUuidChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value
+      setLocalDocumentLogUuid(value)
+      onDocumentLogUuidChange(value)
+    },
+    [onDocumentLogUuidChange],
+  )
 
   // Get selected commit UUIDs - empty array when no filter is set
   const selectedCommitUuids = useMemo(() => {
@@ -126,8 +144,8 @@ export function SpanFilters({
       <div className='max-w-40'>
         <Input
           placeholder='Conversation ID'
-          value={filterOptions.documentLogUuid ?? ''}
-          onChange={(e) => filters.onDocumentLogUuidChange(e.target.value)}
+          value={localDocumentLogUuid}
+          onChange={handleDocumentLogUuidChange}
         />
       </div>
     </>
