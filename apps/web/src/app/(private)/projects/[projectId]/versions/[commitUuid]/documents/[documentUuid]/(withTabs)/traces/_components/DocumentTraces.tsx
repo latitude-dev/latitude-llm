@@ -16,7 +16,11 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
-import { ActiveRun, EvaluationResultV2, PromptSpan } from '@latitude-data/constants'
+import {
+  ActiveRun,
+  EvaluationResultV2,
+  PromptSpan,
+} from '@latitude-data/constants'
 import { type SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { useEvaluationResultsV2ByTraces } from '$/stores/evaluationResultsV2'
@@ -100,7 +104,8 @@ export function DocumentTraces({
                 selection.expandedDocumentLogUuid === span.documentLogUuid)
             }
             evaluationResults={
-              evaluationResultsByTraceId[span.traceId] ?? EMPTY_EVALUATION_RESULTS
+              evaluationResultsByTraceId[span.traceId] ??
+              EMPTY_EVALUATION_RESULTS
             }
             isEvaluationResultsLoading={isEvaluationResultsLoading}
           />
