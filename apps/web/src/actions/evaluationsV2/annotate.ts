@@ -7,7 +7,8 @@ import { annotateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2
 import { z } from 'zod'
 import {
   EvaluationResultMetadata,
-  SpanType,
+  MAIN_SPAN_TYPES,
+  MainSpanType,
   SpanWithDetails,
 } from '@latitude-data/core/constants'
 import { withEvaluation, withEvaluationSchema } from '../procedures'
@@ -33,8 +34,9 @@ export const annotateEvaluationV2Action = withEvaluation
       })
       .then((r) => r.value)
     if (!span) throw new NotFoundError('Span not found')
-    if (span.type !== SpanType.Prompt)
+    if (!MAIN_SPAN_TYPES.has(span.type)) {
       throw new BadRequestError('Span is not of type prompt')
+    }
 
     const metadata = await spansMetadataRepo
       .get({ spanId: parsedInput.spanId, traceId: parsedInput.traceId })
@@ -45,7 +47,7 @@ export const annotateEvaluationV2Action = withEvaluation
       resultScore: parsedInput.resultScore,
       resultMetadata: parsedInput.resultMetadata,
       evaluation: ctx.evaluation,
-      span: { ...span, metadata } as SpanWithDetails<SpanType.Prompt>,
+      span: { ...span, metadata } as SpanWithDetails<MainSpanType>,
       commit: ctx.commit,
       workspace: ctx.workspace,
       currentUser: ctx.user,
