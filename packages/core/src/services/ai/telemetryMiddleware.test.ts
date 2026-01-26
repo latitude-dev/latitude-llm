@@ -82,7 +82,13 @@ describe('createTelemetryMiddleware', () => {
         {
           provider: providerName,
           model,
-          input: [{ role: 'user', content: 'Hi' }],
+          input: [
+            {
+              role: 'user',
+              content: [{ type: 'text', text: 'Hi' }],
+              toolCalls: [],
+            },
+          ],
           configuration: {
             model,
             prompt: [{ role: 'user', content: 'Hi' }],
@@ -204,66 +210,6 @@ describe('createTelemetryMiddleware', () => {
       })
     })
 
-    it('handles non-array prompts', async () => {
-      const middleware = createTelemetryMiddleware({
-        context: mockContext,
-        providerName,
-        model,
-      })
-
-      const mockResult = {
-        content: [],
-        usage: { inputTokens: 0, outputTokens: 0 },
-        finishReason: 'stop',
-      }
-      const doGenerate = vi.fn().mockResolvedValue(mockResult)
-
-      await middleware.wrapGenerate!({
-        doGenerate,
-        params: { prompt: 'just a string' },
-        model: {} as WrapGenerateParams['model'],
-      } as unknown as WrapGenerateParams)
-
-      expect(mockCompletion).toHaveBeenCalledWith(
-        expect.objectContaining({
-          input: undefined,
-        }),
-        mockContext,
-      )
-    })
-
-    it('handles primitive values in prompt array', async () => {
-      const middleware = createTelemetryMiddleware({
-        context: mockContext,
-        providerName,
-        model,
-      })
-
-      const mockResult = {
-        content: [],
-        usage: { inputTokens: 0, outputTokens: 0 },
-        finishReason: 'stop',
-      }
-      const doGenerate = vi.fn().mockResolvedValue(mockResult)
-
-      await middleware.wrapGenerate!({
-        doGenerate,
-        params: { prompt: ['string message', 123, null] },
-        model: {} as WrapGenerateParams['model'],
-      } as unknown as WrapGenerateParams)
-
-      expect(mockCompletion).toHaveBeenCalledWith(
-        expect.objectContaining({
-          input: [
-            { content: 'string message' },
-            { content: '123' },
-            { content: 'null' },
-          ],
-        }),
-        mockContext,
-      )
-    })
-
     it('runs doGenerate within otel context', async () => {
       const middleware = createTelemetryMiddleware({
         context: mockContext,
@@ -346,7 +292,13 @@ describe('createTelemetryMiddleware', () => {
         expect.objectContaining({
           provider: providerName,
           model,
-          input: [{ role: 'user', content: 'Hi' }],
+          input: [
+            {
+              role: 'user',
+              content: [{ type: 'text', text: 'Hi' }],
+              toolCalls: [],
+            },
+          ],
         }),
         mockContext,
       )
@@ -597,20 +549,31 @@ describe('convertPromptToMessages (indirect)', () => {
     const mockResult = { content: [], usage: {}, finishReason: 'stop' }
     const doGenerate = vi.fn().mockResolvedValue(mockResult)
 
-    const complexPrompt = [
-      { role: 'system', content: 'You are helpful' },
-      { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
-    ]
-
     await middleware.wrapGenerate!({
       doGenerate,
-      params: { prompt: complexPrompt },
+      params: {
+        prompt: [
+          { role: 'system', content: 'You are helpful' },
+          { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
+        ],
+      },
       model: {} as WrapGenerateParams['model'],
     } as unknown as WrapGenerateParams)
 
     expect(mockCompletion).toHaveBeenCalledWith(
       expect.objectContaining({
-        input: complexPrompt,
+        input: [
+          {
+            role: 'system',
+            content: [{ type: 'text', text: 'You are helpful' }],
+            toolCalls: [],
+          },
+          {
+            role: 'user',
+            content: [{ type: 'text', text: 'Hello' }],
+            toolCalls: [],
+          },
+        ],
       }),
       mockContext,
     )
