@@ -10,6 +10,8 @@ import { PromisedResult } from '../../../lib/Transaction'
 import { runAction } from '../pipedream/components/runAction'
 import { touchIntegration } from '../touch'
 
+const FIVE_MINUTES = 5 * 60 * 1000
+
 type ResultContent =
   | { type: 'text'; text: string }
   | { type: 'image'; data: string; mimeType: string }
@@ -72,10 +74,16 @@ export async function callIntegrationTool({
   const client = clientResult.unwrap()
 
   try {
-    const result = await client.callTool({
-      name: toolName,
-      arguments: args,
-    })
+    const result = await client.callTool(
+      {
+        name: toolName,
+        arguments: args,
+      },
+      undefined,
+      {
+        timeout: FIVE_MINUTES,
+      },
+    )
 
     const touchResult = await touchIntegration(integration.id)
     if (touchResult.error) {
