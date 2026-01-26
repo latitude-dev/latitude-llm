@@ -22,6 +22,19 @@ export type ProjectPageParams = {
   params: Promise<{ projectId: string }>
 }
 
+async function getLastSeenDataFromCookie(projectId: string) {
+  const cookieStore = await cookies()
+  const data = cookieStore.get(lastSeenCommitCookieName(Number(projectId)))
+  if (!data?.value) return {}
+
+  try {
+    const { commitUuid, documentUuid } = JSON.parse(data.value)
+    return { commitUuid, documentUuid }
+  } catch (_) {
+    return { commitUuid: data.value as string }
+  }
+}
+
 export default async function ProjectPage({ params }: ProjectPageParams) {
   const { projectId } = await params
   const { commitUuid: lastSeenCommitUuid, documentUuid: lastSeenDocumentUuid } =
@@ -40,6 +53,7 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
     const commits = await findCommitsByProjectCached({
       projectId: project.id,
     })
+
     url = getRedirectUrl({
       commits,
       projectId: project.id,
@@ -56,17 +70,4 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
   }
 
   return redirect(url)
-}
-
-async function getLastSeenDataFromCookie(projectId: string) {
-  const cookieStore = await cookies()
-  const data = cookieStore.get(lastSeenCommitCookieName(Number(projectId)))
-  if (!data?.value) return {}
-
-  try {
-    const { commitUuid, documentUuid } = JSON.parse(data.value)
-    return { commitUuid, documentUuid }
-  } catch (_) {
-    return { commitUuid: data.value as string }
-  }
 }

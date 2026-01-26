@@ -1,9 +1,7 @@
-import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ROUTES } from '$/services/routes'
-
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
-
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+
 type GetCommitUrlParams = {
   commits: Commit[]
   projectId: number
@@ -29,9 +27,9 @@ export function getRedirectUrl({
 
   if (!lastSeenDocumentUuid) {
     return url.home.root
-  } else {
-    return url.documents.detail({ uuid: lastSeenDocumentUuid }).root
   }
+
+  return url.documents.detail({ uuid: lastSeenDocumentUuid }).root
 }
 
 function getCommitUrl({
@@ -43,37 +41,32 @@ function getCommitUrl({
   const headCommit = commits.find((c) => c.mergedAt)
   const firstCommit = commits[0]
 
-  if (
-    lastSeenCommitUuid === HEAD_COMMIT ||
-    (lastSeenCommitUuid &&
-      !commits.some((c) => c.uuid === lastSeenCommitUuid) &&
-      headCommit)
-  ) {
-    return PROJECT_ROUTE({ id: projectId }).commits.detail({
-      uuid: HEAD_COMMIT,
-    })
+  const headCommitRoute = PROJECT_ROUTE({ id: projectId }).commits.detail({
+    uuid: HEAD_COMMIT,
+  })
+
+  const firstCommitRoute = PROJECT_ROUTE({ id: projectId }).commits.detail({
+    uuid: firstCommit.uuid,
+  })
+
+  const defaultCommitRoute = headCommit ? headCommitRoute : firstCommitRoute
+
+  if (lastSeenCommitUuid === HEAD_COMMIT) {
+    return defaultCommitRoute
   }
 
-  if (lastSeenCommitUuid) {
-    const commit = commits.find((c) => c.uuid === lastSeenCommitUuid)
-    if (commit) {
-      return PROJECT_ROUTE({ id: projectId }).commits.detail({
-        uuid: commit.uuid,
-      })
-    }
+  const lastSeenCommit = commits.find((c) => c.uuid === lastSeenCommitUuid)
+
+  if (!lastSeenCommit) {
+    return defaultCommitRoute
   }
 
-  if (headCommit) {
-    return PROJECT_ROUTE({ id: projectId }).commits.detail({
-      uuid: HEAD_COMMIT,
-    })
+  if (lastSeenCommit.mergedAt) {
+    // If last seen commit is merged, we redirect to the newest HEAD commit
+    return defaultCommitRoute
   }
 
-  if (firstCommit) {
-    return PROJECT_ROUTE({ id: projectId }).commits.detail({
-      uuid: firstCommit.uuid,
-    })
-  }
-
-  throw new NotFoundError('No commits found')
+  return PROJECT_ROUTE({ id: projectId }).commits.detail({
+    uuid: lastSeenCommit.uuid,
+  })
 }
