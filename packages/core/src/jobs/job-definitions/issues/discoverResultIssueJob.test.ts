@@ -16,6 +16,7 @@ import * as factories from '../../../tests/factories'
 import * as discoverIssueModule from '../../../services/issues/discover'
 import * as generateIssueModule from '../../../services/issues/generate'
 import * as assignModule from '../../../services/evaluationsV2/results/assign'
+import * as updateEvaluationModule from '../../../services/evaluationsV2/update'
 import { publisher } from '../../../events/publisher'
 import {
   discoverResultIssueJob,
@@ -46,6 +47,10 @@ const generateIssueSpy = vi.spyOn(generateIssueModule, 'generateIssue')
 const assignResultSpy = vi.spyOn(
   assignModule,
   'assignEvaluationResultV2ToIssue',
+)
+const updateEvaluationSpy = vi.spyOn(
+  updateEvaluationModule,
+  'updateEvaluationV2',
 )
 
 describe('discoverResultIssueJob', () => {
@@ -233,6 +238,16 @@ describe('discoverResultIssueJob', () => {
           create: undefined,
         }),
       )
+      expect(updateEvaluationSpy).toHaveBeenCalledTimes(1)
+      expect(updateEvaluationSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          evaluation: expect.objectContaining({
+            uuid: evaluation.uuid,
+          }),
+          issueId: existingIssue.id,
+          force: true,
+        }),
+      )
       expect(publisher.publishLater).not.toHaveBeenCalled()
     })
 
@@ -323,6 +338,16 @@ describe('discoverResultIssueJob', () => {
             title: newIssueData.title,
             description: newIssueData.description,
           }),
+        }),
+      )
+      expect(updateEvaluationSpy).toHaveBeenCalledTimes(1)
+      expect(updateEvaluationSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          evaluation: expect.objectContaining({
+            uuid: evaluation.uuid,
+          }),
+          issueId: createdIssue.id,
+          force: true,
         }),
       )
       expect(publisher.publishLater).toHaveBeenCalledWith({
