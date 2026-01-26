@@ -1,6 +1,5 @@
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import Link from 'next/link'
 import {
   asPromptLFile,
   PromptLFileParameter,
@@ -16,7 +15,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 
 export function SpanParameters({
   span,
@@ -90,14 +89,16 @@ export function SpanParameters({
 }
 
 function UseSpanInEditorButton({ span }: { span: SpanWithDetails }) {
-  const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const { document } = useCurrentDocument()
-  const url = ROUTES.projects
-    .detail({ id: project.id })
-    .commits.detail({ uuid: commit.uuid })
-    .documents.detail({ uuid: document.documentUuid }).root
+
   const route = useMemo(() => {
+    if (!span.documentUuid || !span.commitUuid) return null
+
+    const url = ROUTES.projects
+      .detail({ id: project.id })
+      .commits.detail({ uuid: span.commitUuid })
+      .documents.detail({ uuid: span.documentUuid }).root
+
     const params = new URLSearchParams({
       spanId: span.id,
       traceId: span.traceId,
@@ -111,34 +112,38 @@ function UseSpanInEditorButton({ span }: { span: SpanWithDetails }) {
       params.set('documentLogUuid', span.documentLogUuid)
     }
     return `${url}?${params.toString()}`
-  }, [url, span.id, span.traceId, span.source, span.documentLogUuid])
+  }, [
+    project.id,
+    span.commitUuid,
+    span.documentUuid,
+    span.id,
+    span.traceId,
+    span.source,
+    span.documentLogUuid,
+  ])
 
-  const handleClick = useCallback(() => {
-    if (!span.documentUuid) return
-    if (!span.documentLogUuid) return
-
-    window.open(route, '_blank')
-  }, [route, span.documentLogUuid, span.documentUuid])
+  if (!route) return null
 
   return (
     <Tooltip
       asChild
       trigger={
-        <Button
-          onClick={handleClick}
-          iconProps={{
-            name: 'arrowRight',
-            widthClass: 'w-4',
-            heightClass: 'h-4',
-            placement: 'right',
-          }}
-          variant='link'
-          size='none'
-          containerClassName='rounded-xl pointer-events-auto'
-          className='rounded-xl'
-        >
-          Use
-        </Button>
+        <Link href={route} target='_blank'>
+          <Button
+            iconProps={{
+              name: 'arrowRight',
+              widthClass: 'w-4',
+              heightClass: 'h-4',
+              placement: 'right',
+            }}
+            variant='link'
+            size='none'
+            containerClassName='rounded-xl pointer-events-auto'
+            className='rounded-xl'
+          >
+            Use
+          </Button>
+        </Link>
       }
     >
       Open editor with this span
