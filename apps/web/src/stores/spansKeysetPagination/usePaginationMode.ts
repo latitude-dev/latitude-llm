@@ -92,6 +92,10 @@ export function usePaginationMode(
     if (!params.realtime) reset()
   }, [params.realtime, reset])
 
+  useEffect(() => {
+    reset()
+  }, [filtersKey, reset])
+
   return useMemo(
     () => ({
       data,

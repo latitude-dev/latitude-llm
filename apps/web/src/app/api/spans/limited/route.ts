@@ -62,13 +62,15 @@ export const GET = errorHandler(
       const spansRepository = new SpansRepository(workspace.id)
 
       if (filters.documentLogUuid) {
-        const spansRepository = new SpansRepository(workspace.id)
         const spans = await spansRepository.listByDocumentLogUuid(
           filters.documentLogUuid,
         )
+        const filteredItems = spans.filter(
+          (span) => span.type === SpanType.Prompt,
+        )
         spansResult = {
-          items: spans.filter((span) => span.type === SpanType.Prompt),
-          count: spans.length,
+          items: filteredItems,
+          count: filteredItems.length,
           next: null,
         }
       } else {
