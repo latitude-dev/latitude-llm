@@ -77,6 +77,12 @@ export async function updateEvaluationV2<
         })
         .then((r) => r.unwrap())
 
+      if (!force && document.mainEvaluationUuid === evaluation.uuid) {
+        return Result.error(
+          new BadRequestError('The main evaluation cannot be updated manually'),
+        )
+      }
+
       if (!settings) settings = {}
       settings = compactObject(settings)
 

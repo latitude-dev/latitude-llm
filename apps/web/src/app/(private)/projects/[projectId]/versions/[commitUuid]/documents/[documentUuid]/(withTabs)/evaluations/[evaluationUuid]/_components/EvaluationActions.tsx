@@ -37,7 +37,7 @@ import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { useSearchParams } from 'next/navigation'
-import { RefObject, useCallback, useState } from 'react'
+import { RefObject, useCallback, useMemo, useState } from 'react'
 
 export function EvaluationActions<
   T extends EvaluationType = EvaluationType,
@@ -235,8 +235,15 @@ function EditEvaluation<
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   const metricSpecification = typeSpecification.metrics[evaluation.metric]
 
+  const isMainEvaluation = useMemo(
+    () => evaluation.uuid === document.mainEvaluationUuid,
+    [evaluation.uuid, document.mainEvaluationUuid],
+  )
+
   const onUpdate = useCallback(async () => {
     if (isUpdatingEvaluation) return
+    if (isMainEvaluation) return
+
     const [_, errors] = await updateEvaluation({
       documentUuid: document.documentUuid,
       evaluationUuid: evaluation.uuid,
@@ -252,6 +259,7 @@ function EditEvaluation<
     }
   }, [
     isUpdatingEvaluation,
+    isMainEvaluation,
     evaluation,
     settings,
     issueId,
@@ -286,7 +294,7 @@ function EditEvaluation<
         onCancel={() => setOpenUpdateModal(false)}
         confirm={{
           label: isUpdatingEvaluation ? 'Updating...' : 'Update evaluation',
-          disabled: isUpdatingEvaluation,
+          disabled: isMainEvaluation || isUpdatingEvaluation,
           isConfirming: isUpdatingEvaluation,
         }}
       >
@@ -308,8 +316,15 @@ function EditEvaluation<
           setOptions={setOptions}
           errors={errors}
           commit={commit}
-          disabled={isUpdatingEvaluation}
+          disabled={isUpdatingEvaluation || isMainEvaluation}
         />
+        {isMainEvaluation && (
+          <Alert
+            variant='warning'
+            title='This evaluation is automatically managed by the system and cannot be edited.'
+            description='This evaluation is automatically managed by the system and cannot be edited.'
+          />
+        )}
       </ConfirmModal>
     </>
   )
