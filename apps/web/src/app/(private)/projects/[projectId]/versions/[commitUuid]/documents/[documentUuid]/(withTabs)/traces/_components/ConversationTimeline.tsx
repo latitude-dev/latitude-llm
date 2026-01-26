@@ -168,6 +168,7 @@ function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
               selectedSpan={selectedSpan}
               selectSpan={selectSpan}
               collapsedSpans={collapsedSpans}
+              toggleCollapsed={toggleCollapsed}
             />
           </div>
         }

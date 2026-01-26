@@ -20,7 +20,7 @@ const specification = SPAN_SPECIFICATIONS[SpanType.External]
 export default {
   ...specification,
   icon: 'externalLink' as IconName,
-  color: SPAN_COLORS.purple,
+  color: SPAN_COLORS.blue,
   DetailsPanel: DetailsPanel,
 }
 

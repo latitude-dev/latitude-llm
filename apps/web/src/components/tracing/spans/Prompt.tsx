@@ -21,7 +21,7 @@ const specification = SPAN_SPECIFICATIONS[SpanType.Prompt]
 export default {
   ...specification,
   icon: 'bot' as IconName,
-  color: SPAN_COLORS.gray,
+  color: SPAN_COLORS.blue,
   DetailsPanel: DetailsPanel,
 }
 

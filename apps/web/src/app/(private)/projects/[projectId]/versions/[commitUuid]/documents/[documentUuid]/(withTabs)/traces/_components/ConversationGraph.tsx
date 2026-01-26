@@ -26,6 +26,7 @@ const GraphItem = memo(
     isSelected,
     isCollapsed,
     selectSpan,
+    toggleCollapsed,
   }: {
     span: AssembledSpan<T>
     cumulativeOffset: number
@@ -34,6 +35,7 @@ const GraphItem = memo(
     isSelected: boolean
     isCollapsed: boolean
     selectSpan: (span?: AssembledSpan) => void
+    toggleCollapsed: (spanId: string) => void
   }) => {
     const specification = SPAN_SPECIFICATIONS[span.type]
 
@@ -92,12 +94,14 @@ const GraphItem = memo(
         return {
           background: colors.backgrounds[SPAN_COLORS.red.background],
           border: colors.borderColors[SPAN_COLORS.red.border],
+          text: SPAN_COLORS.red.text,
         }
       }
 
       return {
         background: colors.backgrounds[specification.color.background],
         border: colors.borderColors[specification.color.border],
+        text: specification.color.text,
       }
     }, [span.status, specification.color])
 
@@ -107,14 +111,19 @@ const GraphItem = memo(
           className={cn(
             'absolute h-5 rounded-md cursor-pointer border top-1 hover:opacity-80 transition-opacity',
             colorScheme.background,
-            colorScheme.border + (isSelected ? ' border-2' : '/10'),
-            isCollapsed && 'border-dashed opacity-80',
+            {
+              'border-2': isSelected || isCollapsed,
+              'border-dashed': isCollapsed && span.children.length > 0,
+              [colorScheme.border]: isSelected,
+              [`${colorScheme.border}/10`]: !isSelected,
+            }
           )}
           style={barStyle}
           onClick={() => {
             if (isSelected) selectSpan(undefined)
             else selectSpan(span)
           }}
+          onDoubleClick={() => toggleCollapsed(span.id)}
         />
         <div
           className='absolute flex items-center top-1 h-5'
@@ -123,7 +132,7 @@ const GraphItem = memo(
           <Text.H6
             color={
               isSelected && labelStyle.isVisuallyInside
-                ? 'accentForeground'
+                ? colorScheme.text
                 : 'foregroundMuted'
             }
             userSelect={false}
@@ -145,6 +154,7 @@ export function ConversationGraph({
   selectedSpan,
   selectSpan,
   collapsedSpans,
+  toggleCollapsed,
 }: {
   sections: TraceSection[]
   totalDuration: number
@@ -153,6 +163,7 @@ export function ConversationGraph({
   selectedSpan?: AssembledSpan
   selectSpan: (span?: AssembledSpan) => void
   collapsedSpans: Set<string>
+  toggleCollapsed: (spanId: string) => void
 }) {
   const flattenedSpans = useMemo(() => {
     const result: Array<{
@@ -204,6 +215,7 @@ export function ConversationGraph({
                       isSelected={selectedSpan?.id === item.span.id}
                       isCollapsed={collapsedSpans.has(item.span.id)}
                       selectSpan={selectSpan}
+                      toggleCollapsed={toggleCollapsed}
                     />
                   </div>
                 </div>

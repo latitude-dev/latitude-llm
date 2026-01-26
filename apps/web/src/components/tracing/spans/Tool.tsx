@@ -15,7 +15,7 @@ const specification = SPAN_SPECIFICATIONS[SpanType.Tool]
 export default {
   ...specification,
   icon: 'wrench',
-  color: SPAN_COLORS.green,
+  color: SPAN_COLORS.yellow,
   DetailsPanel: DetailsPanel,
 } satisfies SpanFrontendSpecification<SpanType.Tool>
 

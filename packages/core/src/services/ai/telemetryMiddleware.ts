@@ -6,17 +6,63 @@ import {
   buildOutputMessages,
   extractGenerateResultContent,
 } from './streamConsumer'
+import { LanguageModelV2Prompt } from '@ai-sdk/provider'
+import {
+  AssistantMessage,
+  Message,
+  MessageContent,
+  MessageRole,
+} from '@latitude-data/constants/legacyCompiler'
 
 function convertPromptToMessages(
-  prompt: unknown,
-): Record<string, unknown>[] | undefined {
-  if (!Array.isArray(prompt)) return undefined
+  vercelMessages: LanguageModelV2Prompt,
+): Message[] {
+  return vercelMessages.map((msg) => {
+    const finalMessage = {
+      role: msg.role as MessageRole,
+      content: [],
+      toolCalls: [],
+    } as AssistantMessage
 
-  return prompt.map((item) => {
-    if (typeof item === 'object' && item !== null) {
-      return item as Record<string, unknown>
+    if (typeof msg.content === 'string') {
+      finalMessage.content = [{ type: 'text', text: msg.content }]
+      return finalMessage
     }
-    return { content: String(item) }
+
+    const content: MessageContent[] = []
+
+    msg.content.map((c) => {
+      switch (c.type) {
+        case 'file':
+          content.push({ type: 'file', file: c.data, mimeType: c.mediaType })
+          break
+        case 'tool-call':
+          content.push({
+            type: 'tool-call',
+            toolCallId: c.toolCallId,
+            toolName: c.toolName,
+            args: c.input as Record<string, unknown>,
+          })
+          break
+        case 'tool-result':
+          content.push({
+            type: 'tool-result',
+            toolCallId: c.toolCallId,
+            toolName: c.toolName,
+            result: c.output.value,
+            isError: ['error-json', 'error-text'].includes(c.output.type),
+          })
+          break
+        default:
+          content.push(c as MessageContent)
+          break
+      }
+
+      return content
+    })
+
+    finalMessage.content = content
+    return finalMessage
   })
 }
 
