@@ -4,6 +4,11 @@
 latitude-lock.json
 **/cli/prompts/test.js
 
+## IDEs
+.vscode
+.cursor
+.idea
+
 # Dependencies
 node_modules
 .pnp
@@ -71,8 +76,6 @@ tmp
 
 # Misc
 TODO.md
-.vscode/settings.json
-.vscode/tasks.json
 /acme
 
 # Sentry
