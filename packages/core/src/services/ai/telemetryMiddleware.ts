@@ -32,39 +32,30 @@ function convertPromptToMessages(
     const content: MessageContent[] = []
 
     msg.content.map((c) => {
-      if (c.type === 'text') {
-        content.push({ type: 'text', text: c.text })
-      }
-
-      if (c.type === 'file') {
-        content.push({ type: 'file', file: c.data, mimeType: c.mediaType })
-      }
-
-      if (c.type === 'tool-call') {
-        content.push({
-          type: 'tool-call',
-          toolCallId: c.toolCallId,
-          toolName: c.toolName,
-          args: c.input as Record<string, unknown>,
-        })
-      }
-
-      if (c.type === 'tool-result') {
-        content.push({
-          type: 'tool-result',
-          toolCallId: c.toolCallId,
-          toolName: c.toolName,
-          result: c.output.value,
-          isError: ['error-json', 'error-text'].includes(c.output.type),
-        })
-      }
-
-      if (c.type === 'reasoning') {
-        content.push({ type: 'reasoning', text: c.text })
-      }
-
-      if (c.type === 'reasoning') {
-        content.push({ type: 'reasoning', text: c.text })
+      switch (c.type) {
+        case 'file':
+          content.push({ type: 'file', file: c.data, mimeType: c.mediaType })
+          break
+        case 'tool-call':
+          content.push({
+            type: 'tool-call',
+            toolCallId: c.toolCallId,
+            toolName: c.toolName,
+            args: c.input as Record<string, unknown>,
+          })
+          break
+        case 'tool-result':
+          content.push({
+            type: 'tool-result',
+            toolCallId: c.toolCallId,
+            toolName: c.toolName,
+            result: c.output.value,
+            isError: ['error-json', 'error-text'].includes(c.output.type),
+          })
+          break
+        default:
+          content.push(c as MessageContent)
+          break
       }
 
       return content
@@ -133,7 +124,6 @@ export function createTelemetryMiddleware({
     },
 
     wrapStream: async ({ doStream, params }) => {
-      console.log(params.prompt)
       const inputMessages = convertPromptToMessages(params.prompt)
 
       const $completion = telemetry.span.completion(
