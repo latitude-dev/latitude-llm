@@ -32,7 +32,14 @@ export async function updateRun({
 
   await publisher.publishLater({
     type: 'documentRunProgress',
-    data: { projectId, workspaceId, documentUuid, commitUuid, run },
+    data: {
+      projectId,
+      workspaceId,
+      documentUuid,
+      commitUuid,
+      run,
+      eventContext: 'background',
+    },
   })
 
   return updateResult

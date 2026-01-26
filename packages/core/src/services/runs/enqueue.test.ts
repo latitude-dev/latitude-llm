@@ -378,6 +378,7 @@ describe('enqueueRun', () => {
           workspaceId: mockWorkspace.id,
           documentUuid: mockDocument.documentUuid,
           commitUuid: mockCommit.uuid,
+          eventContext: 'background',
         },
       })
     })

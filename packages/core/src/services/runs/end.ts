@@ -27,7 +27,14 @@ export async function endRun({
 
   await publisher.publishLater({
     type: 'documentRunEnded',
-    data: { projectId, workspaceId, documentUuid, commitUuid, run },
+    data: {
+      projectId,
+      workspaceId,
+      documentUuid,
+      commitUuid,
+      run,
+      eventContext: 'background',
+    },
   })
 
   return deleteResult

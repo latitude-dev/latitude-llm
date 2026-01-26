@@ -40,6 +40,7 @@ export async function startRun({
   await publisher.publishLater({
     type: 'documentRunStarted',
     data: {
+      eventContext: 'background',
       projectId,
       workspaceId,
       documentUuid,

@@ -78,6 +78,7 @@ export async function runForegroundDocument(
   await publisher.publishLater({
     type: 'documentRunStarted',
     data: {
+      eventContext: 'foreground',
       workspaceId: workspace.id,
       projectId: project.id,
       documentUuid: document.documentUuid,

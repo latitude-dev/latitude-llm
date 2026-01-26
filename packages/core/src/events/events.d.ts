@@ -643,6 +643,7 @@ type DocumentRunStatusEventData = {
   documentUuid: string
   commitUuid: string
   run: ActiveRun
+  eventContext: 'foreground' | 'background'
   activeDeploymentTest?: DeploymentTest
   parameters?: Record<string, unknown>
   customIdentifier?: string | null
