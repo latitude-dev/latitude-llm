@@ -13,7 +13,7 @@ import { CommitStatus } from '@latitude-data/core/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { setCommitMainDocumentAction } from '$/actions/commits/setCommitMainDocumentAction'
 import { useEvents } from '$/lib/events'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 
 type CommitOptions = SWRConfiguration & {
   onSuccessCreate?: (commit: Commit) => void
@@ -59,7 +59,9 @@ export function useCommitsFromProject(
   const {
     data = [],
     mutate,
-    ...rest
+    error,
+    isLoading,
+    isValidating,
   } = useSWR<Commit[]>(['commits', projectId, commitStatus], fetcher, opts)
 
   const { execute: createDraft, isPending: isCreating } = useLatitudeAction(
@@ -161,17 +163,36 @@ export function useCommitsFromProject(
     },
   })
 
-  return {
-    data: data ?? [],
-    mutate,
-    ...rest,
-    createDraft,
-    isCreating,
-    destroyDraft,
-    isDestroying,
-    publishDraft,
-    isPublishing,
-    setCommitMainDocument,
-    isSettingMainDocument,
-  }
+  return useMemo(
+    () => ({
+      data: data ?? [],
+      mutate,
+      error,
+      isLoading,
+      isValidating,
+      createDraft,
+      isCreating,
+      destroyDraft,
+      isDestroying,
+      publishDraft,
+      isPublishing,
+      setCommitMainDocument,
+      isSettingMainDocument,
+    }),
+    [
+      data,
+      mutate,
+      error,
+      isLoading,
+      isValidating,
+      createDraft,
+      isCreating,
+      destroyDraft,
+      isDestroying,
+      publishDraft,
+      isPublishing,
+      setCommitMainDocument,
+      isSettingMainDocument,
+    ],
+  )
 }

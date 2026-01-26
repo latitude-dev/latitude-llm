@@ -24,8 +24,10 @@ const ProjectProvider = ({
     return projects?.find((p) => p.id === serverProject.id) ?? serverProject
   }, [projects, serverProject])
 
+  const contextValue = useMemo(() => ({ project }), [project])
+
   return (
-    <ProjectContext.Provider value={{ project }}>
+    <ProjectContext.Provider value={contextValue}>
       {children}
     </ProjectContext.Provider>
   )

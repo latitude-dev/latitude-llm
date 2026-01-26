@@ -29,8 +29,10 @@ const CommitProvider = ({
     return commits?.find((c) => c.uuid === serverCommit.uuid) ?? serverCommit
   }, [commits, serverCommit])
 
+  const contextValue = useMemo(() => ({ commit, isHead }), [commit, isHead])
+
   return (
-    <CommitContext.Provider value={{ commit, isHead }}>
+    <CommitContext.Provider value={contextValue}>
       {children}
     </CommitContext.Provider>
   )

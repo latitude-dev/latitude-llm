@@ -7,7 +7,10 @@ import { AssembledSpan, AssembledTrace } from '@latitude-data/core/constants'
 import { useConversation } from '$/stores/conversations'
 import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TimelineScale } from '$/components/tracing/traces/Timeline/Scale'
-import { TraceSpanSelectionContext } from './TraceSpanSelectionContext'
+import {
+  TraceSpanSelectionActionsContext,
+  TraceSpanSelectionStateContext,
+} from './TraceSpanSelectionContext'
 import { ConversationTree } from './ConversationTree'
 import { ConversationGraph } from './ConversationGraph'
 
@@ -81,7 +84,8 @@ function findSpanByIdInTraces(
 }
 
 function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
-  const { selection, selectSpan } = use(TraceSpanSelectionContext)
+  const { selection } = use(TraceSpanSelectionStateContext)
+  const { selectSpan } = use(TraceSpanSelectionActionsContext)
   const selectedSpan = findSpanByIdInTraces(traces, selection.spanId)
   const treeRef = useRef<HTMLDivElement>(null)
   const [treeWidth, setTreeWidth] = useState(0)

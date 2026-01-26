@@ -41,7 +41,13 @@ export default function useEvaluationResultsV2ByTraces(
   }, [traceIds, project.id, commit.uuid, document?.documentUuid])
 
   const fetcher = useFetcher<EvaluationResultV2[]>(`${route}?${query}`)
-  const { data = [], ...rest } = useSWR<EvaluationResultV2[]>(
+  const {
+    data = [],
+    mutate,
+    error,
+    isLoading,
+    isValidating,
+  } = useSWR<EvaluationResultV2[]>(
     disabled
       ? null
       : compact(['evaluationResultsV2ByTraces', ...traceIds, query]),
@@ -55,9 +61,15 @@ export default function useEvaluationResultsV2ByTraces(
     [data],
   )
 
-  return {
-    data,
-    dataByTraceId,
-    ...rest,
-  }
+  return useMemo(
+    () => ({
+      data,
+      dataByTraceId,
+      mutate,
+      error,
+      isLoading,
+      isValidating,
+    }),
+    [data, dataByTraceId, mutate, error, isLoading, isValidating],
+  )
 }

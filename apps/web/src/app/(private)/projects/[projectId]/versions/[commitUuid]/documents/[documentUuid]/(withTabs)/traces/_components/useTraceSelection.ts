@@ -1,9 +1,9 @@
 import { use, useMemo } from 'react'
-import { TraceSpanSelectionContext } from './TraceSpanSelectionContext'
+import { TraceSpanSelectionStateContext } from './TraceSpanSelectionContext'
 import { ActiveRun } from '@latitude-data/constants'
 
 export function useTraceSelection(activeRuns: ActiveRun[] = []) {
-  const { selection } = use(TraceSpanSelectionContext)
+  const { selection } = use(TraceSpanSelectionStateContext)
 
   return useMemo(() => {
     const anySelection =
