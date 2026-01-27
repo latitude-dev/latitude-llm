@@ -50,9 +50,7 @@ export async function generateEvaluationFromIssue(
 ) {
   if (!isIssueActive(issue)) {
     return Result.error(
-      new BadRequestError(
-        'Cannot generate evaluation for an inactive issue',
-      ),
+      new BadRequestError('Cannot generate evaluation for an inactive issue'),
     )
   }
 

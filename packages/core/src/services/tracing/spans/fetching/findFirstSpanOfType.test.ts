@@ -226,4 +226,72 @@ describe('findFirstSpanOfType', () => {
 
     expect(result).toBe(comp1)
   })
+
+  describe('array of span types', () => {
+    it('finds first span matching any type in array', () => {
+      const tool = createMockSpan(SpanType.Tool, 'tool-1')
+      const completion = createMockSpan(SpanType.Completion, 'comp-1')
+      const http = createMockSpan(SpanType.Http, 'http-1')
+
+      const result = findFirstSpanOfType(
+        [tool, completion, http],
+        [SpanType.Completion, SpanType.Http],
+      )
+
+      expect(result).toBe(completion)
+    })
+
+    it('returns first match in order when multiple types match', () => {
+      const http = createMockSpan(SpanType.Http, 'http-1')
+      const completion = createMockSpan(SpanType.Completion, 'comp-1')
+
+      const result = findFirstSpanOfType(
+        [http, completion],
+        [SpanType.Completion, SpanType.Http],
+      )
+
+      expect(result).toBe(http)
+    })
+
+    it('returns undefined when no types match', () => {
+      const tool = createMockSpan(SpanType.Tool, 'tool-1')
+      const prompt = createMockSpan(SpanType.Prompt, 'prompt-1')
+
+      const result = findFirstSpanOfType(
+        [tool, prompt],
+        [SpanType.Completion, SpanType.Http],
+      )
+
+      expect(result).toBeUndefined()
+    })
+
+    it('finds matching type in nested children', () => {
+      const deepCompletion = createMockSpan(SpanType.Completion, 'deep')
+      const tool = createMockSpan(SpanType.Tool, 'tool', [deepCompletion])
+      const prompt = createMockSpan(SpanType.Prompt, 'prompt', [tool])
+
+      const result = findFirstSpanOfType(
+        [prompt],
+        [SpanType.Completion, SpanType.Http],
+      )
+
+      expect(result).toBe(deepCompletion)
+    })
+
+    it('works with single-element array', () => {
+      const completion = createMockSpan(SpanType.Completion, 'comp-1')
+
+      const result = findFirstSpanOfType([completion], [SpanType.Completion])
+
+      expect(result).toBe(completion)
+    })
+
+    it('returns undefined for empty type array', () => {
+      const completion = createMockSpan(SpanType.Completion, 'comp-1')
+
+      const result = findFirstSpanOfType([completion], [])
+
+      expect(result).toBeUndefined()
+    })
+  })
 })

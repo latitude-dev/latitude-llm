@@ -9,9 +9,11 @@ import { IntegrationsList } from './IntegrationsList'
 export function PromptIntegrations({
   prompt,
   disabled,
+  onChangePrompt,
 }: {
   prompt: string
   disabled?: boolean
+  onChangePrompt: (prompt: string) => void
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const { data: integrations } = useIntegrations({
@@ -25,6 +27,7 @@ export function PromptIntegrations({
     removeIntegrationTool,
   } = useActiveIntegrations({
     prompt,
+    onChangePrompt,
   })
 
   const isDisabled = disabled || !isInitialized

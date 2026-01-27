@@ -3,10 +3,11 @@ import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   EvaluatedDocumentLog,
   LLM_EVALUATION_PROMPT_PARAMETERS,
-  SpanType,
-  SpanWithDetails,
 } from '@latitude-data/core/constants'
 import { Message, ToolMessage } from '@latitude-data/constants/legacyCompiler'
+import { ExtractOutputResponse } from '$/app/api/evaluations/extract-output/route'
+
+type ExtractedOutputSuccess = Extract<ExtractOutputResponse, { ok: true }>
 
 export type LogInput = {
   value: string
@@ -138,13 +139,7 @@ type EvaluatedLogInputsState = {
   filteredParameters: Partial<EvaluatedLogParameters> | undefined
   metadataParameters: string[]
   expectedOutput: LogInput
-  mapLogParametersToInputs: ({
-    promptSpan,
-    completionSpan,
-  }: {
-    promptSpan: SpanWithDetails<SpanType.Prompt>
-    completionSpan: SpanWithDetails<SpanType.Completion>
-  }) => void
+  mapLogParametersToInputs: (data: ExtractedOutputSuccess) => void
   onMetadataChange: (metadata: ResolvedMetadata | undefined) => void
   setInputs: (inputs: Record<string, string>) => void
 }
@@ -157,34 +152,19 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
     parameters: {} as EvaluatedLogParameters,
     filteredParameters: {} as Partial<EvaluatedLogParameters>,
     metadataParameters: [],
-    mapLogParametersToInputs: ({
-      promptSpan,
-      completionSpan,
-    }: {
-      promptSpan: SpanWithDetails<SpanType.Prompt>
-      completionSpan: SpanWithDetails<SpanType.Completion>
-    }) => {
+    mapLogParametersToInputs: (data: ExtractedOutputSuccess) => {
       const { metadataParameters, expectedOutput } = get()
-      const conversation = [
-        ...(completionSpan.metadata?.input ?? []),
-        ...(completionSpan.metadata?.output ?? []),
-      ] as unknown as Message[]
-      const tokens =
-        (completionSpan.tokensCompletion ?? 0) +
-        (completionSpan.tokensCached ?? 0) +
-        (completionSpan.tokensPrompt ?? 0) +
-        (completionSpan.tokensReasoning ?? 0)
+      const conversation = data.conversation as unknown as Message[]
       const parameters = {
         conversation,
-        tokens,
-        // NOTE(tracing): This is probably wrong
-        actualOutput: (conversation.at(-1)?.content as string) ?? '',
+        tokens: data.tokens,
+        actualOutput: data.actualOutput,
         tools: conversation.filter((m) => m.role === 'tool'),
-        cost: completionSpan.cost ?? 0,
-        duration: promptSpan.duration,
-        prompt: promptSpan.metadata?.template ?? '',
-        config: completionSpan.metadata?.configuration ?? {},
-        parameters: promptSpan.metadata?.parameters ?? {},
+        cost: data.cost,
+        duration: data.duration,
+        prompt: data.prompt,
+        config: data.config,
+        parameters: data.parameters,
         expectedOutput: expectedOutput.value,
       }
 

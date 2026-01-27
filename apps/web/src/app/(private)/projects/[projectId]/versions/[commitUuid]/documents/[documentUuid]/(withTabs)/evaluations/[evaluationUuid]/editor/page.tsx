@@ -85,7 +85,7 @@ export default async function EvaluationEditorPage({
   }
 
   const selectedSpanId = queryParams.spanId
-  const selectedTraceId = queryParams.traceId
+  const selectedDocumentLogUuid = queryParams.documentLogUuid
   const freeRunsCount = await getFreeRuns(workspace.id)
 
   return (
@@ -95,7 +95,7 @@ export default async function EvaluationEditorPage({
       providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
       freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
       selectedSpanId={selectedSpanId as string | undefined}
-      selectedTraceId={selectedTraceId as string | undefined}
+      selectedDocumentLogUuid={selectedDocumentLogUuid as string | undefined}
       copilotEnabled={env.LATITUDE_CLOUD}
     />
   )

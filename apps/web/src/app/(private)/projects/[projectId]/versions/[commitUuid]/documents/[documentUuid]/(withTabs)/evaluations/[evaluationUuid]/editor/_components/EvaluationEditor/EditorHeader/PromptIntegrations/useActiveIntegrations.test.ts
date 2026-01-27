@@ -34,6 +34,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -46,6 +47,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -71,6 +73,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -95,6 +98,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -119,6 +123,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -144,6 +149,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -177,6 +183,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -205,6 +212,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -233,6 +241,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -269,6 +278,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -297,6 +307,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -326,6 +337,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -358,6 +370,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -380,6 +393,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -402,6 +416,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -426,6 +441,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -454,6 +470,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -482,6 +499,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -505,6 +523,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -528,6 +547,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
@@ -562,6 +582,7 @@ Hello world`
     const { result } = renderHook(() =>
       useActiveIntegrations({
         prompt: mockPrompt,
+        onChangePrompt: mockOnChangePrompt,
       }),
     )
 
