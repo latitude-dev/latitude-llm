@@ -1835,6 +1835,13 @@
       "when": 1768926353268,
       "tag": "0262_add_spans_index_workspace_and_started_at",
       "breakpoints": true
+    },
+    {
+      "idx": 263,
+      "version": "7",
+      "when": 1769510058860,
+      "tag": "0263_remove_issues_unlocked_column",
+      "breakpoints": true
     }
   ]
 }
