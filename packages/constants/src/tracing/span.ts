@@ -304,6 +304,11 @@ export const MAIN_SPAN_TYPES = new Set([
   SpanType.External,
 ])
 
+export type MainSpanMetadata =
+  | PromptSpanMetadata
+  | ChatSpanMetadata
+  | ExternalSpanMetadata
+
 export function isMainSpan(span: Span | SpanWithDetails | AssembledSpan) {
   return MAIN_SPAN_TYPES.has(span.type)
 }

@@ -1,9 +1,10 @@
 import {
   ACTIVE_RUNS_BY_DOCUMENT_CACHE_KEY,
   ActiveRun,
+  isMainSpan,
+  MainSpanType,
   Run,
   Span,
-  SpanType,
 } from '@latitude-data/constants'
 import { cache as redis, Cache } from '../../../../cache'
 import { NotFoundError } from '../../../../lib/errors'
@@ -35,11 +36,11 @@ export async function getRunByDocument({
   if (traceId) {
     const spans = await spansRepo.list({ traceId }).then((r) => r.value)
     if (spans) {
-      const promptSpan = spans.find((s) => s.type === 'prompt')
-      if (promptSpan) {
+      const mainSpan = spans.find(isMainSpan)
+      if (mainSpan) {
         const run = await spanToRun({
           workspaceId,
-          span: promptSpan as Span<SpanType.Prompt>,
+          span: mainSpan as Span<MainSpanType>,
         })
 
         return Result.ok(run)

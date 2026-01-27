@@ -4,7 +4,12 @@ import {
   CommitsRepository,
   SpansRepository,
 } from '@latitude-data/core/repositories'
-import { LogSources, SpanType } from '@latitude-data/constants'
+import {
+  isMainSpan,
+  LogSources,
+  MAIN_SPAN_TYPES,
+  SpanType,
+} from '@latitude-data/constants'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -44,10 +49,9 @@ export const GET = errorHandler(
       })
       const { projectId, commitUuid, documentUuid } = parsedParams
 
-      const types = (parsedParams.types?.split(',') as SpanType[]) ?? [
-        SpanType.Prompt,
-        SpanType.External,
-      ]
+      const types =
+        (parsedParams.types?.split(',') as SpanType[]) ??
+        Array.from(MAIN_SPAN_TYPES)
 
       // Parse filters if present
       const filters =
@@ -67,7 +71,7 @@ export const GET = errorHandler(
           filters.documentLogUuid,
         )
         spansResult = {
-          items: spans.filter((span) => span.type === SpanType.Prompt),
+          items: spans.filter(isMainSpan),
           count: spans.length,
           next: null,
         }

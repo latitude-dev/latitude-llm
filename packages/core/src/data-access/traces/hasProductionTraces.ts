@@ -1,6 +1,6 @@
 import { and, eq, inArray, sql, SQL } from 'drizzle-orm'
 import { database } from '../../client'
-import { RUN_SOURCES, RunSourceGroup, SpanType } from '../../constants'
+import { MAIN_SPAN_TYPES, RUN_SOURCES, RunSourceGroup } from '../../constants'
 import { spans } from '../../schema/models/spans'
 
 export async function hasProductionTraces(
@@ -15,7 +15,7 @@ export async function hasProductionTraces(
 ): Promise<boolean> {
   const conditions: SQL<unknown>[] = [
     eq(spans.workspaceId, workspaceId),
-    inArray(spans.type, [SpanType.Prompt, SpanType.External]),
+    inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),
     inArray(spans.source, RUN_SOURCES[RunSourceGroup.Production]),
   ]
 

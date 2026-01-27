@@ -1,4 +1,4 @@
-import { Span, SpanType } from '@latitude-data/constants'
+import { MainSpanType, Span } from '@latitude-data/constants'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import {
@@ -73,7 +73,7 @@ export async function getHITLSpansByDocument(
     await spansRepository.findByEvaluationResults(paginatedResults)
 
   return Result.ok({
-    spans: orderedSpans as Span<SpanType.Prompt>[],
+    spans: orderedSpans as Span<MainSpanType>[],
     evaluationResults: paginatedResults,
     hasNextPage,
   })

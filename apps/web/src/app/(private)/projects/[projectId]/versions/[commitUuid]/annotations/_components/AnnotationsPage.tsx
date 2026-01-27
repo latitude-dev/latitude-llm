@@ -9,6 +9,7 @@ import { useEvaluationResultsV2ByTraces } from '$/stores/evaluationResultsV2'
 import {
   EvaluationType,
   EvaluationV2,
+  MAIN_SPAN_TYPES,
   RunSourceGroup,
   Span,
   SpanType,
@@ -83,7 +84,7 @@ export function AnnotationsPage({
     {
       projectId: project.id.toString(),
       commitUuid: commit.uuid,
-      types: [SpanType.Prompt, SpanType.External],
+      types: Array.from(MAIN_SPAN_TYPES),
       initialItems: initialSpans,
       source: logSources,
       realtime: realtimeIsEnabled,

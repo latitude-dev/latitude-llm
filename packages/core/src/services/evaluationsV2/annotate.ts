@@ -6,7 +6,7 @@ import {
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
-  SpanType,
+  MainSpanType,
   SpanWithDetails,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
@@ -43,7 +43,7 @@ export async function annotateEvaluationV2<
     workspace: Workspace
     commit: Commit
     evaluation: EvaluationV2<T, M>
-    span: SpanWithDetails<SpanType.Prompt>
+    span: SpanWithDetails<MainSpanType>
     resultScore: number
     resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
     currentUser?: User

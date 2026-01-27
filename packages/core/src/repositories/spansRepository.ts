@@ -18,6 +18,7 @@ import { cache as redis } from '../cache'
 import {
   DEFAULT_PAGINATION_SIZE,
   LogSources,
+  MAIN_SPAN_TYPES,
   Span,
   SPAN_METADATA_CACHE_TTL,
   SPAN_METADATA_STORAGE_KEY,
@@ -429,7 +430,7 @@ export class SpansRepository extends Repository<Span> {
         and(
           this.scopeFilter,
           sql`(${spans.id}, ${spans.traceId}) IN (${sql.join(spanTraceIdPairs, sql`, `)})`,
-          eq(spans.type, SpanType.Prompt),
+          inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),
         ),
       )
 

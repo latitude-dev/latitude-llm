@@ -2,8 +2,8 @@
 
 import {
   DEFAULT_PAGINATION_SIZE,
+  MAIN_SPAN_TYPES,
   RunSourceGroup,
-  SpanType,
 } from '@latitude-data/core/constants'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { AnnotationsPage as ClientAnnotationsPage } from './_components/AnnotationsPage'
@@ -35,7 +35,7 @@ export default async function AnnotationsPage({
   const result = await spansRepo
     .findByProjectLimited({
       projectId,
-      types: [SpanType.Prompt, SpanType.External],
+      types: Array.from(MAIN_SPAN_TYPES),
       source: logSources,
       limit: DEFAULT_PAGINATION_SIZE,
     })

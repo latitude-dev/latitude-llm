@@ -13,8 +13,8 @@ import { NotFoundError } from '@latitude-data/constants/errors'
 import { serializeEvaluationResultV2 } from './serializeEvaluationResultV2'
 import {
   HEAD_COMMIT,
-  PromptSpanMetadata,
-  SpanType,
+  MainSpanMetadata,
+  MainSpanType,
   SpanWithDetails,
 } from '@latitude-data/core/constants'
 
@@ -39,16 +39,20 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
       traceId: span.traceId,
       spanId: span.id,
     })
-    .then((r) => r.value)) as PromptSpanMetadata
+    .then((r) => r.value)) as MainSpanMetadata
   if (!metadata) {
     throw new NotFoundError('Could not find metadata for this span')
+  }
+
+  if (!span.commitUuid || !span.documentUuid) {
+    throw new NotFoundError('Span is missing document or commit information')
   }
 
   const documentsRepo = new DocumentVersionsRepository(workspace.id)
   const document = await documentsRepo
     .getDocumentAtCommit({
-      commitUuid: metadata.versionUuid,
-      documentUuid: metadata.promptUuid,
+      commitUuid: span.commitUuid,
+      documentUuid: span.documentUuid,
     })
     .then((r) => r.value)
   if (!document) {
@@ -86,7 +90,7 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
   }
 
   const annotation = await annotateEvaluationV2({
-    span: { ...span, metadata } as SpanWithDetails<SpanType.Prompt>,
+    span: { ...span, metadata } as SpanWithDetails<MainSpanType>,
     evaluation,
     resultScore: score,
     resultMetadata: resultMetadata,

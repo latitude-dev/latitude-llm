@@ -10,7 +10,7 @@ import {
   sql,
 } from 'drizzle-orm'
 import { database } from '../../client'
-import { Span, SpanType } from '../../constants'
+import { MAIN_SPAN_TYPES, MainSpanType, Span } from '../../constants'
 import { Result } from '../../lib/Result'
 import { CommitsRepository } from '../../repositories'
 import { commits } from '../../schema/models/commits'
@@ -27,6 +27,8 @@ import { Cursor } from '../../schema/types'
 /**
  * Fetches spans associated with an issue through evaluation results,
  * filtered by specific commits.
+ *
+ * @param spanTypes - Array of span types to include. Defaults to all main span types.
  */
 export async function getSpansByIssue(
   {
@@ -34,6 +36,7 @@ export async function getSpansByIssue(
     commit,
     issue,
     includeExperiments = true,
+    spanTypes = Array.from(MAIN_SPAN_TYPES) as MainSpanType[],
     cursor,
     limit = 25,
   }: {
@@ -41,6 +44,7 @@ export async function getSpansByIssue(
     commit: Commit
     issue: Issue
     includeExperiments?: boolean
+    spanTypes?: MainSpanType[]
     cursor: Cursor<Date, number> | null
     limit?: number
   },
@@ -55,7 +59,7 @@ export async function getSpansByIssue(
   // Early return if no commits found (shouldn't happen, but defensive check)
   if (commitIds.length === 0) {
     return Result.ok({
-      spans: [] as Span<SpanType.Prompt>[],
+      spans: [] as Span<MainSpanType>[],
       next: null,
     })
   }
@@ -121,7 +125,7 @@ export async function getSpansByIssue(
     .where(
       and(
         eq(spans.workspaceId, workspace.id),
-        eq(spans.type, SpanType.Prompt),
+        inArray(spans.type, spanTypes),
         ...(!includeExperiments ? [isNull(spans.experimentUuid)] : []),
         cursorConditions,
       ),
@@ -148,7 +152,7 @@ export async function getSpansByIssue(
       : null
 
   return Result.ok({
-    spans: paginatedSpans.map((row) => row.span as Span<SpanType.Prompt>),
+    spans: paginatedSpans.map((row) => row.span as Span<MainSpanType>),
     next,
   })
 }

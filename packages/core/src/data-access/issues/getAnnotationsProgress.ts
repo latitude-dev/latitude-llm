@@ -3,6 +3,7 @@ import { isNull, eq, or, inArray, sql, count, and } from 'drizzle-orm'
 import {
   RUN_SOURCES,
   LogSources,
+  MAIN_SPAN_TYPES,
   RunSourceGroup,
   SpanType,
   EvaluationType,
@@ -144,7 +145,7 @@ export async function getAnnotationsProgress(
   const { commitUuids, commitIds } = commitsResult.value
   const conditions = [
     eq(spans.workspaceId, workspace.id),
-    eq(spans.type, SpanType.Prompt),
+    inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),
     or(inArray(spans.source, logSources), isNull(spans.source)),
     inArray(spans.commitUuid, commitUuids),
     sql`${spans.startedAt} >= ${fromDate}`,
