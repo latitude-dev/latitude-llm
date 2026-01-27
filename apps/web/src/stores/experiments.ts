@@ -3,18 +3,13 @@ import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
+import { useExperimentPolling } from '$/helpers/experimentPolling'
 
 import { Experiment } from '@latitude-data/core/schema/models/types/Experiment'
 const EMPTY_ARRAY: [] = []
-
-const POLLING_INTERVAL_MS = 5000
-
-function hasRunningExperiments(experiments: ExperimentDto[]): boolean {
-  return experiments.some((exp) => exp.startedAt && !exp.finishedAt)
-}
 
 export function useExperiments(
   {
@@ -45,13 +40,7 @@ export function useExperiments(
       .experiments.count,
   )
 
-  const refreshIntervalFn = useCallback(
-    (latestData: ExperimentDto[] | undefined) => {
-      if (!latestData) return 0
-      return hasRunningExperiments(latestData) ? POLLING_INTERVAL_MS : 0
-    },
-    [],
-  )
+  const refreshIntervalFn = useExperimentPolling<ExperimentDto>()
 
   const {
     data = EMPTY_ARRAY,
