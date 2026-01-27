@@ -30,7 +30,6 @@ export const workspaces = latitudeSchema.table('workspaces', {
     onDelete: 'set null',
   }),
   stripeCustomerId: varchar('stripe_customer_id', { length: 256 }),
-  issuesUnlocked: boolean('issues_unlocked').notNull().default(false),
   isBigAccount: boolean('is_big_account').notNull().default(false),
   ...timestamps(),
 })
