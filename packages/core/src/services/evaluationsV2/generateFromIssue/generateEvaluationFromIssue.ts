@@ -3,8 +3,10 @@ import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { EvaluationType, LlmEvaluationMetric } from '../../../constants'
+import { BadRequestError } from '../../../lib/errors'
 import Transaction from '../../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../../repositories'
+import { isIssueActive } from '../../issues/shared'
 import { updateActiveEvaluation } from '../active/update'
 import { createEvaluationV2 } from '../create'
 import { createValidationFlow } from './createValidationFlow'
@@ -46,6 +48,14 @@ export async function generateEvaluationFromIssue(
   },
   transaction = new Transaction(),
 ) {
+  if (!isIssueActive(issue)) {
+    return Result.error(
+      new BadRequestError(
+        'Cannot generate evaluation for an inactive issue',
+      ),
+    )
+  }
+
   const evaluationConfigResult =
     await generateEvaluationConfigFromIssueWithCopilot({
       issue,

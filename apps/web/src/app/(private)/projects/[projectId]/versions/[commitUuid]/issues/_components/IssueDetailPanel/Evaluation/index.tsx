@@ -45,6 +45,10 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     issueId: issue.id,
   })
 
+  const isIssueActive = useMemo(() => {
+    return !issue.resolvedAt && !issue.ignoredAt && !issue.mergedAt
+  }, [issue.resolvedAt, issue.ignoredAt, issue.mergedAt])
+
   const hasEnoughAnnotations = useMemo(() => {
     return (
       issueEvaluationStats?.negativeAnnotationsOfThisIssue! >=
@@ -215,7 +219,10 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
     )
   }
 
-  // If we have enough annotations, and the evaluation is not generating/generated yet, show the generate button
+  if (!isIssueActive) {
+    return null
+  }
+
   return (
     <GenerateEvaluationButton
       generateEvaluationFromIssue={(providerName, model) =>
