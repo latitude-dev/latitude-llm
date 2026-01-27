@@ -53,9 +53,13 @@ export type UserWithDetails = {
   id: string
   email: string
   name: string | null
+  confirmedAt: Date | null
+  createdAt: Date
+  admin: boolean
   workspaces: Array<{
     id: number
     name: string
+    plan: string
   }>
 }
 
@@ -249,12 +253,14 @@ export async function findUserByEmailForAdmin(
   if (!Result.isOk(assertResult)) return assertResult
 
   try {
-    // First get the user
     const userResult = await db
       .select({
         id: users.id,
         email: users.email,
         name: users.name,
+        confirmedAt: users.confirmedAt,
+        createdAt: users.createdAt,
+        admin: users.admin,
       })
       .from(users)
       .where(utils.eq(users.email, email))
@@ -265,14 +271,18 @@ export async function findUserByEmailForAdmin(
       return Result.error(new NotFoundError('User not found'))
     }
 
-    // Get user workspaces
     const userWorkspaces = await db
       .select({
         id: workspaces.id,
         name: workspaces.name,
+        plan: subscriptions.plan,
       })
       .from(memberships)
       .innerJoin(workspaces, utils.eq(memberships.workspaceId, workspaces.id))
+      .innerJoin(
+        subscriptions,
+        utils.eq(subscriptions.id, workspaces.currentSubscriptionId),
+      )
       .where(utils.eq(memberships.userId, user.id))
 
     const result: UserWithDetails = {

@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { useEffect } from 'react'
 
 import { ProjectWithDetails } from '$/data-access'
 import { ROUTES, BackofficeRoutes } from '$/services/routes'
@@ -10,12 +11,23 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { DashboardHeader } from '$/app/(admin)/backoffice/search/_components/DashboardHeader'
 import { BasicInfoList } from '$/app/(admin)/backoffice/search/_components/BasicInfoList'
+import { useRecentSearches } from '$/app/(admin)/backoffice/search/_hooks/useRecentSearches'
 
 type Props = {
   project: ProjectWithDetails
 }
 
 export function ProjectDashboard({ project }: Props) {
+  const { addRecentItem } = useRecentSearches()
+
+  useEffect(() => {
+    addRecentItem({
+      type: 'project',
+      id: project.id,
+      label: project.name,
+      sublabel: `#${project.id}`,
+    })
+  }, [project.id, project.name, addRecentItem])
   const basicInfo = [
     {
       label: 'Project ID',
