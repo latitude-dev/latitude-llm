@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from latitude_telemetry.util import Field, Model, StrEnum
 
@@ -37,8 +37,8 @@ class TelemetryAttributes(StrEnum):
 
 class SpanPrompt(Model):
     uuid: str
-    version_uuid: Optional[str] = Field(default=None, alias=str("versionUuid"))
-    parameters: Optional[Dict[str, Any]] = None
+    version_uuid: str | None = Field(default=None, alias=str("versionUuid"))
+    parameters: Dict[str, Any] | None = None
 
 
 SpanMetadata = Dict[str, Any]

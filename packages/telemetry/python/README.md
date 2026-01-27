@@ -4,7 +4,7 @@
 pip install latitude-telemetry
 ```
 
-Requires Python `3.9` or higher.
+Requires Python `3.11` through `3.14`.
 
 Go to the [documentation](https://docs.latitude.so/guides/sdk/python#telemetry) to learn more.
 

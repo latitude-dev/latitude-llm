@@ -2,6 +2,6 @@ import sys
 
 from sh import pytest  # type: ignore
 
-files = sys.argv[1:] or ["."]
+files = sys.argv[1:] or ["./tests"]
 
-pytest(*files, _out=sys.stdout)
+pytest("-rs", *files, _out=sys.stdout)

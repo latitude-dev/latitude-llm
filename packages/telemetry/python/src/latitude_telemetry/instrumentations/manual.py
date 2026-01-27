@@ -6,21 +6,22 @@ Mirrors the TypeScript implementation.
 import json
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, cast
 from urllib.parse import unquote
 
 from opentelemetry import context as otel_context
 from opentelemetry import trace
 from opentelemetry.baggage import set_baggage
 from opentelemetry.context import Context
-from opentelemetry.trace import Span, SpanKind as OtelSpanKind, StatusCode, Tracer
+from opentelemetry.trace import Span, StatusCode, Tracer
+from opentelemetry.trace import SpanKind as OtelSpanKind
 
 from latitude_telemetry.constants import (
     ATTRIBUTES,
     HEAD_COMMIT,
     SPAN_SPECIFICATIONS,
-    SpanType,
     LogSources,
+    SpanType,
 )
 from latitude_telemetry.instrumentations.base import BaseInstrumentation
 
@@ -30,29 +31,29 @@ class TraceContext:
     """Context for resuming a trace from external sources."""
 
     traceparent: str
-    baggage: Optional[str] = None
+    baggage: str | None = None
 
 
 @dataclass
 class StartSpanOptions:
     """Options for starting a span."""
 
-    name: Optional[str] = None
-    attributes: Optional[Dict[str, Any]] = None
+    name: str | None = None
+    attributes: Dict[str, Any] | None = None
 
 
 @dataclass
 class EndSpanOptions:
     """Options for ending a span."""
 
-    attributes: Optional[Dict[str, Any]] = None
+    attributes: Dict[str, Any] | None = None
 
 
 @dataclass
 class ErrorOptions:
     """Options for recording an error."""
 
-    attributes: Optional[Dict[str, Any]] = None
+    attributes: Dict[str, Any] | None = None
 
 
 @dataclass
@@ -76,15 +77,15 @@ class StartToolSpanOptions:
     """Options for starting a tool span."""
 
     name: str = ""
-    call: Optional[ToolCallInfo] = None
-    attributes: Optional[Dict[str, Any]] = None
+    call: ToolCallInfo | None = None
+    attributes: Dict[str, Any] | None = None
 
 
 @dataclass
 class EndToolSpanOptions(EndSpanOptions):
     """Options for ending a tool span."""
 
-    result: Optional[ToolResultInfo] = None
+    result: ToolResultInfo | None = None
 
 
 @dataclass
@@ -103,20 +104,20 @@ class StartCompletionSpanOptions(StartSpanOptions):
 
     provider: str = ""
     model: str = ""
-    configuration: Optional[Dict[str, Any]] = None
-    input: Optional[List[Dict[str, Any]]] = None
-    versionUuid: Optional[str] = None
-    promptUuid: Optional[str] = None
-    experimentUuid: Optional[str] = None
+    configuration: Dict[str, Any] | None = None
+    input: List[Dict[str, Any]] | None = None
+    versionUuid: str | None = None
+    promptUuid: str | None = None
+    experimentUuid: str | None = None
 
 
 @dataclass
 class EndCompletionSpanOptions(EndSpanOptions):
     """Options for ending a completion span."""
 
-    output: Optional[List[Dict[str, Any]]] = None
-    tokens: Optional[TokenUsage] = None
-    finishReason: Optional[str] = None
+    output: List[Dict[str, Any]] | None = None
+    tokens: TokenUsage | None = None
+    finishReason: str | None = None
 
 
 @dataclass
@@ -126,7 +127,7 @@ class HttpRequest:
     method: str
     url: str
     headers: Dict[str, str]
-    body: Union[str, Dict[str, Any]]
+    body: str | Dict[str, Any]
 
 
 @dataclass
@@ -135,21 +136,21 @@ class HttpResponse:
 
     status: int
     headers: Dict[str, str]
-    body: Union[str, Dict[str, Any]]
+    body: str | Dict[str, Any]
 
 
 @dataclass
 class StartHttpSpanOptions(StartSpanOptions):
     """Options for starting an HTTP span."""
 
-    request: Optional[HttpRequest] = None
+    request: HttpRequest | None = None
 
 
 @dataclass
 class EndHttpSpanOptions(EndSpanOptions):
     """Options for ending an HTTP span."""
 
-    response: Optional[HttpResponse] = None
+    response: HttpResponse | None = None
 
 
 @dataclass
@@ -157,15 +158,15 @@ class PromptSpanOptions(StartSpanOptions):
     """Options for a prompt span."""
 
     documentLogUuid: str = ""
-    versionUuid: Optional[str] = None
+    versionUuid: str | None = None
     promptUuid: str = ""
-    projectId: Optional[int] = None
-    experimentUuid: Optional[str] = None
-    testDeploymentId: Optional[int] = None
-    externalId: Optional[str] = None
+    projectId: int | None = None
+    experimentUuid: str | None = None
+    testDeploymentId: int | None = None
+    externalId: str | None = None
     template: str = ""
-    parameters: Optional[Dict[str, Any]] = None
-    source: Optional[LogSources] = None
+    parameters: Dict[str, Any] | None = None
+    source: LogSources | None = None
 
 
 @dataclass
@@ -174,7 +175,7 @@ class ChatSpanOptions(StartSpanOptions):
 
     documentLogUuid: str = ""
     previousTraceId: str = ""
-    source: Optional[LogSources] = None
+    source: LogSources | None = None
 
 
 @dataclass
@@ -183,9 +184,9 @@ class ExternalSpanOptions(StartSpanOptions):
 
     promptUuid: str = ""
     documentLogUuid: str = ""
-    source: Optional[LogSources] = None
-    versionUuid: Optional[str] = None
-    externalId: Optional[str] = None
+    source: LogSources | None = None
+    versionUuid: str | None = None
+    externalId: str | None = None
 
 
 @dataclass
@@ -194,8 +195,8 @@ class CaptureOptions(StartSpanOptions):
 
     path: str = ""
     projectId: int = 0
-    versionUuid: Optional[str] = None
-    conversationUuid: Optional[str] = None
+    versionUuid: str | None = None
+    conversationUuid: str | None = None
 
 
 @dataclass
@@ -203,8 +204,8 @@ class SpanHandle:
     """Handle for controlling a span."""
 
     context: Context
-    end: Callable[[Optional[EndSpanOptions]], None]
-    fail: Callable[[Exception, Optional[ErrorOptions]], None]
+    end: Callable[[EndSpanOptions | None], None]
+    fail: Callable[[Exception, ErrorOptions | None], None]
 
 
 @dataclass
@@ -213,7 +214,7 @@ class ToolSpanHandle:
 
     context: Context
     end: Callable[[EndToolSpanOptions], None]
-    fail: Callable[[Exception, Optional[ErrorOptions]], None]
+    fail: Callable[[Exception, ErrorOptions | None], None]
 
 
 @dataclass
@@ -221,8 +222,8 @@ class CompletionSpanHandle:
     """Handle for controlling a completion span."""
 
     context: Context
-    end: Callable[[Optional[EndCompletionSpanOptions]], None]
-    fail: Callable[[Exception, Optional[ErrorOptions]], None]
+    end: Callable[[EndCompletionSpanOptions | None], None]
+    fail: Callable[[Exception, ErrorOptions | None], None]
 
 
 @dataclass
@@ -231,7 +232,7 @@ class HttpSpanHandle:
 
     context: Context
     end: Callable[[EndHttpSpanOptions], None]
-    fail: Callable[[Exception, Optional[ErrorOptions]], None]
+    fail: Callable[[Exception, ErrorOptions | None], None]
 
 
 class ManualInstrumentation(BaseInstrumentation):
@@ -270,9 +271,7 @@ class ManualInstrumentation(BaseInstrumentation):
             trace_flags=trace.TraceFlags(int(flags, 16)),
         )
 
-        context = trace.set_span_in_context(
-            trace.NonRecordingSpan(span_context), otel_context.get_current()
-        )
+        context = trace.set_span_in_context(trace.NonRecordingSpan(span_context), otel_context.get_current())
 
         if ctx.baggage:
             for pair in ctx.baggage.split(","):
@@ -317,9 +316,7 @@ class ManualInstrumentation(BaseInstrumentation):
         except (TypeError, ValueError):
             return default
 
-    def _error(
-        self, span: Span, error: Exception, options: Optional[ErrorOptions] = None
-    ) -> None:
+    def _error(self, span: Span, error: Exception, options: ErrorOptions | None = None) -> None:
         options = options or ErrorOptions()
         span.record_exception(error)
         if options.attributes:
@@ -332,7 +329,7 @@ class ManualInstrumentation(BaseInstrumentation):
         ctx: Context,
         name: str,
         span_type: SpanType,
-        options: Optional[StartSpanOptions] = None,
+        options: StartSpanOptions | None = None,
     ) -> SpanHandle:
         """Create a generic span with the given type."""
         if not self._enabled:
@@ -366,14 +363,14 @@ class ManualInstrumentation(BaseInstrumentation):
 
         new_ctx = trace.set_span_in_context(span, ctx)
 
-        def end_span(end_options: Optional[EndSpanOptions] = None) -> None:
+        def end_span(end_options: EndSpanOptions | None = None) -> None:
             end_opts = end_options or EndSpanOptions()
             if end_opts.attributes:
                 span.set_attributes(end_opts.attributes)
             span.set_status(StatusCode.OK)
             span.end()
 
-        def fail_span(error: Exception, err_options: Optional[ErrorOptions] = None) -> None:
+        def fail_span(error: Exception, err_options: ErrorOptions | None = None) -> None:
             self._error(span, error, err_options)
 
         return SpanHandle(context=new_ctx, end=end_span, fail=fail_span)
@@ -409,12 +406,8 @@ class ManualInstrumentation(BaseInstrumentation):
 
             end_attrs: Dict[str, Any] = {}
             if end_options.result:
-                end_attrs[
-                    ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.result.value
-                ] = result_value
-                end_attrs[
-                    ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.result.isError
-                ] = end_options.result.isError
+                end_attrs[ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.result.value] = result_value
+                end_attrs[ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.result.isError] = end_options.result.isError
             if end_options.attributes:
                 end_attrs.update(end_options.attributes)
 
@@ -463,9 +456,7 @@ class ManualInstrumentation(BaseInstrumentation):
 
         return attributes
 
-    def _attribify_message_content(
-        self, prefix: str, index: int, content: Any
-    ) -> Dict[str, Any]:
+    def _attribify_message_content(self, prefix: str, index: int, content: Any) -> Dict[str, Any]:
         """Convert message content to span attributes."""
         attributes: Dict[str, Any] = {}
         content_key = f"{prefix}.{index}.content"
@@ -479,13 +470,12 @@ class ManualInstrumentation(BaseInstrumentation):
         if not isinstance(content, list):
             return attributes
 
-        # Check for tool calls in content (Anthropic / PromptL format)
-        content_list: List[Any] = content
+        content_list = cast(List[Any], content)
         tool_calls: List[Dict[str, Any]] = []
         for item in content_list:
             if not isinstance(item, dict):
                 continue
-            item_dict: Dict[str, Any] = item
+            item_dict = cast(Dict[str, Any], item)
             for key, value in item_dict.items():
                 if self._to_camel_case(key) == "type":
                     if isinstance(value, str) and value in ("tool-call", "tool_use"):
@@ -493,19 +483,13 @@ class ManualInstrumentation(BaseInstrumentation):
                         break
 
         if tool_calls:
-            attributes.update(
-                self._attribify_message_tool_calls(prefix, index, tool_calls)
-            )
+            attributes.update(self._attribify_message_tool_calls(prefix, index, tool_calls))
 
         return attributes
 
-    def _attribify_messages(
-        self, direction: str, messages: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def _attribify_messages(self, direction: str, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Convert messages to span attributes."""
-        prefix = (
-            "gen_ai.prompt" if direction == "input" else "gen_ai.completion"
-        )
+        prefix = "gen_ai.prompt" if direction == "input" else "gen_ai.completion"
 
         attributes: Dict[str, Any] = {}
 
@@ -524,14 +508,9 @@ class ManualInstrumentation(BaseInstrumentation):
 
                 elif field_name == "toolCalls":
                     if isinstance(value, list):
-                        # Cast to proper type for pyright
-                        value_list: List[Any] = value
-                        tool_calls_list: List[Dict[str, Any]] = [
-                            tc for tc in value_list if isinstance(tc, dict)
-                        ]
-                        attributes.update(
-                            self._attribify_message_tool_calls(prefix, i, tool_calls_list)
-                        )
+                        value_list = cast(List[Any], value)
+                        tool_calls_list: List[Dict[str, Any]] = [tc for tc in value_list if isinstance(tc, dict)]
+                        attributes.update(self._attribify_message_tool_calls(prefix, i, tool_calls_list))
 
                 elif field_name in ("toolCallId", "toolId", "toolUseId"):
                     if isinstance(value, str):
@@ -547,9 +526,7 @@ class ManualInstrumentation(BaseInstrumentation):
 
         return attributes
 
-    def _attribify_configuration(
-        self, direction: str, configuration: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _attribify_configuration(self, direction: str, configuration: Dict[str, Any]) -> Dict[str, Any]:
         """Convert configuration to span attributes."""
         prefix = "gen_ai.request" if direction == "input" else "gen_ai.response"
 
@@ -566,9 +543,7 @@ class ManualInstrumentation(BaseInstrumentation):
 
         return attributes
 
-    def completion(
-        self, ctx: Context, options: StartCompletionSpanOptions
-    ) -> CompletionSpanHandle:
+    def completion(self, ctx: Context, options: StartCompletionSpanOptions) -> CompletionSpanHandle:
         """Create a completion span."""
         configuration = {**(options.configuration or {}), "model": options.model}
         json_configuration = self._safe_json(configuration)
@@ -602,7 +577,7 @@ class ManualInstrumentation(BaseInstrumentation):
             StartSpanOptions(attributes=attributes),
         )
 
-        def end_completion(end_options: Optional[EndCompletionSpanOptions] = None) -> None:
+        def end_completion(end_options: EndCompletionSpanOptions | None = None) -> None:
             end_opts = end_options or EndCompletionSpanOptions()
 
             output_messages = end_opts.output or []
@@ -637,17 +612,13 @@ class ManualInstrumentation(BaseInstrumentation):
             fail=span_handle.fail,
         )
 
-    def embedding(
-        self, ctx: Context, options: Optional[StartSpanOptions] = None
-    ) -> SpanHandle:
+    def embedding(self, ctx: Context, options: StartSpanOptions | None = None) -> SpanHandle:
         """Create an embedding span."""
         opts = options or StartSpanOptions()
         name = opts.name or SPAN_SPECIFICATIONS[SpanType.Embedding].name
         return self._span(ctx, name, SpanType.Embedding, opts)
 
-    def _attribify_headers(
-        self, direction: str, headers: Dict[str, str]
-    ) -> Dict[str, Any]:
+    def _attribify_headers(self, direction: str, headers: Dict[str, str]) -> Dict[str, Any]:
         """Convert headers to span attributes."""
         prefix = (
             ATTRIBUTES.OPENTELEMETRY.HTTP.request.header
@@ -792,6 +763,4 @@ class ManualInstrumentation(BaseInstrumentation):
             attributes.update(options.attributes)
 
         name = options.name or f"capture-{options.path}"
-        return self._span(
-            ctx, name, SpanType.UnresolvedExternal, StartSpanOptions(attributes=attributes)
-        )
+        return self._span(ctx, name, SpanType.UnresolvedExternal, StartSpanOptions(attributes=attributes))

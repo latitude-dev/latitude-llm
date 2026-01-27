@@ -1,15 +1,15 @@
 from latitude_telemetry.telemetry.telemetry import (
-    Telemetry,
-    TelemetryOptions,
-    InternalOptions,
     BadRequestError,
     CaptureContext,
+    InternalOptions,
+    Telemetry,
+    TelemetryOptions,
 )
 from latitude_telemetry.telemetry.types import (
-    Instrumentors,
     GatewayOptions,
-    SpanPrompt,
+    Instrumentors,
     SpanMetadata,
+    SpanPrompt,
     TelemetryAttributes,
 )
 

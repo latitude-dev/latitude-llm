@@ -88,9 +88,15 @@ jobs:
         run: pnpm install
 
       # TODO: We should probably separate node from python jobs
-      - name: Install Python dependencies
+      - name: Install Python SDK dependencies
         run: |
           cd packages/sdks/python
+          uv venv
+          uv sync --all-extras --all-groups
+
+      - name: Install Python Telemetry dependencies
+        run: |
+          cd packages/telemetry/python
           uv venv
           uv sync --all-extras --all-groups
 
@@ -112,7 +118,12 @@ jobs:
           LATITUDE_API_KEY: fake-test-key # NOTE: Used by packages/cli
         run: pnpm test
 
-      - name: Python Test
+      - name: Python SDK Test
         run: |
           cd packages/sdks/python
+          uv run scripts/test.py
+
+      - name: Python Telemetry Test
+        run: |
+          cd packages/telemetry/python
           uv run scripts/test.py

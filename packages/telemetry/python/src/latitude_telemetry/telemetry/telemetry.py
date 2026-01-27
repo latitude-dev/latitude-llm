@@ -8,10 +8,11 @@ import warnings
 # Suppress Pydantic V2 deprecation warnings from OpenTelemetry instrumentation dependencies
 warnings.filterwarnings("ignore", message="Valid config keys have changed in V2")
 
-import asyncio
 import functools
+import inspect
 import re
-from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union
+from contextvars import Token
+from typing import Any, Callable, Dict, List, Sequence, TypeVar
 
 from opentelemetry import context as otel_context
 from opentelemetry.context import Context
@@ -46,7 +47,7 @@ from latitude_telemetry.util import Model, is_package_installed
 
 TELEMETRY_INSTRUMENTATION_NAME = "opentelemetry.instrumentation.latitude"
 SERVICE_NAME = "latitude-telemetry-python"
-SCOPE_VERSION = "1.0.0"
+SCOPE_VERSION = "2.0.1"
 
 _THREADING_INSTRUMENTOR = "Threading"
 
@@ -56,16 +57,16 @@ T = TypeVar("T")
 class InternalOptions(Model):
     """Internal gateway and timeout options."""
 
-    gateway: Optional[GatewayOptions] = None
-    timeout: Optional[float] = None
+    gateway: GatewayOptions | None = None
+    timeout: float | None = None
 
 
 class TelemetryOptions(Model):
     """Options for configuring the Telemetry SDK."""
 
-    instrumentors: Optional[Sequence[Instrumentors]] = None
-    disable_batch: Optional[bool] = None
-    internal: Optional[InternalOptions] = None
+    instrumentors: Sequence[Instrumentors] | None = None
+    disable_batch: bool | None = None
+    internal: InternalOptions | None = None
 
 
 DEFAULT_INTERNAL_OPTIONS = InternalOptions(
@@ -110,23 +111,21 @@ class CaptureContext:
         telemetry: "Telemetry",
         path: str,
         project_id: int,
-        version_uuid: Optional[str] = None,
-        conversation_uuid: Optional[str] = None,
+        version_uuid: str | None = None,
+        conversation_uuid: str | None = None,
     ):
         self._telemetry = telemetry
         self._path = path
         self._project_id = project_id
         self._version_uuid = version_uuid
         self._conversation_uuid = conversation_uuid
-        self._span: Optional[Any] = None
-        self._token: Optional[object] = None
+        self._span: Any | None = None
+        self._token: Token[Context] | None = None
 
     def _validate_path(self) -> None:
         """Validate the path format."""
         if not re.match(DOCUMENT_PATH_REGEXP, self._path):
-            raise BadRequestError(
-                "Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'"
-            )
+            raise BadRequestError("Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'")
 
     def _start_span(self) -> None:
         """Start the capture span and set it as the active context."""
@@ -137,13 +136,11 @@ class CaptureContext:
             versionUuid=self._version_uuid,
             conversationUuid=self._conversation_uuid,
         )
-        self._span = self._telemetry._manual_instrumentation.unresolved_external(
-            otel_context.get_current(), options
-        )
+        self._span = self._telemetry._manual_instrumentation.unresolved_external(otel_context.get_current(), options)
         # Set the span context as active so child spans are properly parented
         self._token = otel_context.attach(self._span.context)
 
-    def _end_span(self, error: Optional[Exception] = None) -> None:
+    def _end_span(self, error: Exception | None = None) -> None:
         """End the capture span and restore the previous context."""
         # Detach the context token first to restore the previous context
         if self._token is not None:
@@ -158,12 +155,12 @@ class CaptureContext:
 
     def __call__(self, fn: Callable[..., T]) -> Callable[..., T]:
         """Act as a decorator for both sync and async functions."""
-        if asyncio.iscoroutinefunction(fn):
+        if inspect.iscoroutinefunction(fn):
 
             @functools.wraps(fn)
             async def async_wrapper(*args: Any, **kwargs: Any) -> T:
                 self._start_span()
-                error: Optional[Exception] = None
+                error: Exception | None = None
                 try:
                     return await fn(*args, **kwargs)
                 except Exception as e:
@@ -178,7 +175,7 @@ class CaptureContext:
             @functools.wraps(fn)
             def sync_wrapper(*args: Any, **kwargs: Any) -> T:
                 self._start_span()
-                error: Optional[Exception] = None
+                error: Exception | None = None
                 try:
                     return fn(*args, **kwargs)
                 except Exception as e:
@@ -196,9 +193,9 @@ class CaptureContext:
 
     def __exit__(
         self,
-        exc_type: Optional[type],
-        exc_val: Optional[Exception],
-        exc_tb: Optional[Any],
+        exc_type: type | None,
+        exc_val: Exception | None,
+        exc_tb: Any | None,
     ) -> bool:
         """Exit the sync context manager."""
         self._end_span(exc_val)
@@ -211,9 +208,9 @@ class CaptureContext:
 
     async def __aexit__(
         self,
-        exc_type: Optional[type],
-        exc_val: Optional[Exception],
-        exc_tb: Optional[Any],
+        exc_type: type | None,
+        exc_val: Exception | None,
+        exc_tb: Any | None,
     ) -> bool:
         """Exit the async context manager."""
         self._end_span(exc_val)
@@ -250,7 +247,7 @@ class Telemetry:
 
     _options: TelemetryOptions
     _tracer_provider: TracerProvider
-    _instrumentors: Dict[Union[Instrumentors, str], BaseInstrumentor]
+    _instrumentors: Dict[Instrumentors | str, BaseInstrumentor]
     _instrumentations_list: List[BaseInstrumentation]
     _manual_instrumentation: ManualInstrumentation
 
@@ -260,7 +257,7 @@ class Telemetry:
     instrumentation: InstrumentationManager
     tracer: TracerManager
 
-    def __init__(self, api_key: str, options: Optional[TelemetryOptions] = None):
+    def __init__(self, api_key: str, options: TelemetryOptions | None = None):
         """
         Initialize the Telemetry SDK.
 
@@ -269,12 +266,8 @@ class Telemetry:
             options: Optional configuration options
         """
         # Merge options with defaults
-        options = TelemetryOptions(
-            **{**dict(DEFAULT_TELEMETRY_OPTIONS), **dict(options or {})}
-        )
-        options.internal = InternalOptions(
-            **{**dict(DEFAULT_INTERNAL_OPTIONS), **dict(options.internal or {})}
-        )
+        options = TelemetryOptions(**{**dict(DEFAULT_TELEMETRY_OPTIONS), **dict(options or {})})
+        options.internal = InternalOptions(**{**dict(DEFAULT_INTERNAL_OPTIONS), **dict(options.internal or {})})
         self._options = options
 
         assert self._options.internal is not None
@@ -330,16 +323,12 @@ class Telemetry:
         if is_package_installed("anthropic"):
             from opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
 
-            self._instrumentors[Instrumentors.Anthropic] = AnthropicInstrumentor(
-                enrich_token_usage=True
-            )
+            self._instrumentors[Instrumentors.Anthropic] = AnthropicInstrumentor(enrich_token_usage=True)
 
         if is_package_installed("boto3"):
             from opentelemetry.instrumentation.bedrock import BedrockInstrumentor
 
-            self._instrumentors[Instrumentors.Bedrock] = BedrockInstrumentor(
-                enrich_token_usage=True
-            )
+            self._instrumentors[Instrumentors.Bedrock] = BedrockInstrumentor(enrich_token_usage=True)
 
         if is_package_installed("cohere"):
             from opentelemetry.instrumentation.cohere import CohereInstrumentor
@@ -351,11 +340,7 @@ class Telemetry:
 
             self._instrumentors[Instrumentors.CrewAI] = CrewAIInstrumentor()
 
-        if (
-            is_package_installed("dspy")
-            or is_package_installed("dspy-ai")
-            or is_package_installed("dsp")
-        ):
+        if is_package_installed("dspy") or is_package_installed("dspy-ai") or is_package_installed("dsp"):
             from openinference.instrumentation.dspy import DSPyInstrumentor
 
             self._instrumentors[Instrumentors.DSPy] = DSPyInstrumentor()
@@ -365,9 +350,7 @@ class Telemetry:
                 GoogleGenerativeAiInstrumentor,
             )
 
-            self._instrumentors[Instrumentors.GoogleGenerativeAI] = (
-                GoogleGenerativeAiInstrumentor()
-            )
+            self._instrumentors[Instrumentors.GoogleGenerativeAI] = GoogleGenerativeAiInstrumentor()
 
         if is_package_installed("groq"):
             from opentelemetry.instrumentation.groq import GroqInstrumentor
@@ -434,9 +417,7 @@ class Telemetry:
 
             self._instrumentors[Instrumentors.VertexAI] = VertexAIInstrumentor()
 
-        if is_package_installed("ibm-watsonx-ai") or is_package_installed(
-            "ibm-watson-machine-learning"
-        ):
+        if is_package_installed("ibm-watsonx-ai") or is_package_installed("ibm-watson-machine-learning"):
             from opentelemetry.instrumentation.watsonx import WatsonxInstrumentor
 
             self._instrumentors[Instrumentors.Watsonx] = WatsonxInstrumentor()
@@ -455,7 +436,7 @@ class Telemetry:
         self.context = ContextManager(self._manual_instrumentation)
         self.instrumentation = InstrumentationManager(self._instrumentations_list)
 
-    def instrument(self, instrumentors: Optional[Sequence[Instrumentors]] = None) -> None:
+    def instrument(self, instrumentors: Sequence[Instrumentors] | None = None) -> None:
         """
         Enable specified instrumentors.
 
@@ -473,9 +454,7 @@ class Telemetry:
                 instrumentor in self._instrumentors
                 and not self._instrumentors[instrumentor].is_instrumented_by_opentelemetry
             ):
-                self._instrumentors[instrumentor].instrument(
-                    tracer_provider=self._tracer_provider
-                )
+                self._instrumentors[instrumentor].instrument(tracer_provider=self._tracer_provider)
 
     def uninstrument(self) -> None:
         """Disable all instrumentors."""
@@ -495,8 +474,8 @@ class Telemetry:
         self,
         path: str,
         project_id: int,
-        version_uuid: Optional[str] = None,
-        conversation_uuid: Optional[str] = None,
+        version_uuid: str | None = None,
+        conversation_uuid: str | None = None,
     ) -> CaptureContext:
         """
         Capture a feature execution with telemetry.
@@ -550,9 +529,9 @@ class Telemetry:
     def legacy_span(
         self,
         name: str,
-        prompt: Optional[SpanPrompt] = None,
-        distinct_id: Optional[str] = None,
-        metadata: Optional[SpanMetadata] = None,
+        prompt: SpanPrompt | None = None,
+        distinct_id: str | None = None,
+        metadata: SpanMetadata | None = None,
     ) -> Any:
         """
         Create a span using the legacy API.

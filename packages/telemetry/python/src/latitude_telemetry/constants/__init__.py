@@ -1,14 +1,14 @@
 from latitude_telemetry.constants.attributes import ATTRIBUTES, VALUES
-from latitude_telemetry.constants.span import (
-    SpanType,
-    SpanKind,
-    SpanStatus,
-    SPAN_SPECIFICATIONS,
-    LogSources,
-)
 from latitude_telemetry.constants.scope import (
     SCOPE_LATITUDE,
     InstrumentationScope,
+)
+from latitude_telemetry.constants.span import (
+    SPAN_SPECIFICATIONS,
+    LogSources,
+    SpanKind,
+    SpanStatus,
+    SpanType,
 )
 
 HEAD_COMMIT = "live"

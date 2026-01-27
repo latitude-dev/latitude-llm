@@ -2,7 +2,7 @@
 Manager classes for Latitude telemetry.
 """
 
-from typing import List, Optional
+from typing import List
 
 from opentelemetry import context as otel_context
 from opentelemetry.context import Context
@@ -11,19 +11,19 @@ from opentelemetry.sdk.trace import TracerProvider
 from latitude_telemetry.constants import SCOPE_LATITUDE
 from latitude_telemetry.instrumentations import (
     BaseInstrumentation,
+    ChatSpanOptions,
+    CompletionSpanHandle,
+    ExternalSpanOptions,
+    HttpSpanHandle,
     ManualInstrumentation,
-    TraceContext,
-    StartSpanOptions,
-    StartToolSpanOptions,
+    PromptSpanOptions,
+    SpanHandle,
     StartCompletionSpanOptions,
     StartHttpSpanOptions,
-    PromptSpanOptions,
-    ChatSpanOptions,
-    ExternalSpanOptions,
-    SpanHandle,
+    StartSpanOptions,
+    StartToolSpanOptions,
     ToolSpanHandle,
-    CompletionSpanHandle,
-    HttpSpanHandle,
+    TraceContext,
 )
 
 
@@ -41,45 +41,31 @@ class SpanFactory:
     def __init__(self, manual_instrumentation: ManualInstrumentation):
         self._manual = manual_instrumentation
 
-    def tool(
-        self, options: StartToolSpanOptions, ctx: Optional[Context] = None
-    ) -> ToolSpanHandle:
+    def tool(self, options: StartToolSpanOptions, ctx: Context | None = None) -> ToolSpanHandle:
         """Create a tool execution span."""
         return self._manual.tool(ctx or get_current_context(), options)
 
-    def completion(
-        self, options: StartCompletionSpanOptions, ctx: Optional[Context] = None
-    ) -> CompletionSpanHandle:
+    def completion(self, options: StartCompletionSpanOptions, ctx: Context | None = None) -> CompletionSpanHandle:
         """Create a completion span."""
         return self._manual.completion(ctx or get_current_context(), options)
 
-    def embedding(
-        self, options: Optional[StartSpanOptions] = None, ctx: Optional[Context] = None
-    ) -> SpanHandle:
+    def embedding(self, options: StartSpanOptions | None = None, ctx: Context | None = None) -> SpanHandle:
         """Create an embedding span."""
         return self._manual.embedding(ctx or get_current_context(), options)
 
-    def http(
-        self, options: StartHttpSpanOptions, ctx: Optional[Context] = None
-    ) -> HttpSpanHandle:
+    def http(self, options: StartHttpSpanOptions, ctx: Context | None = None) -> HttpSpanHandle:
         """Create an HTTP request span."""
         return self._manual.http(ctx or get_current_context(), options)
 
-    def prompt(
-        self, options: PromptSpanOptions, ctx: Optional[Context] = None
-    ) -> SpanHandle:
+    def prompt(self, options: PromptSpanOptions, ctx: Context | None = None) -> SpanHandle:
         """Create a prompt span."""
         return self._manual.prompt(ctx or get_current_context(), options)
 
-    def chat(
-        self, options: ChatSpanOptions, ctx: Optional[Context] = None
-    ) -> SpanHandle:
+    def chat(self, options: ChatSpanOptions, ctx: Context | None = None) -> SpanHandle:
         """Create a chat continuation span."""
         return self._manual.chat(ctx or get_current_context(), options)
 
-    def external(
-        self, options: ExternalSpanOptions, ctx: Optional[Context] = None
-    ) -> SpanHandle:
+    def external(self, options: ExternalSpanOptions, ctx: Context | None = None) -> SpanHandle:
         """Create an external span."""
         return self._manual.external(ctx or get_current_context(), options)
 

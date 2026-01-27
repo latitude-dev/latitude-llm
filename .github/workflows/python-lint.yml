@@ -24,13 +24,24 @@ jobs:
           version: '0.8.17'
           enable-cache: true
 
-      - name: Install dependencies
+      - name: Install SDK dependencies
         run: |
           cd packages/sdks/python
           uv venv
           uv sync --all-extras --all-groups
 
-      - name: Lint code
+      - name: Install Telemetry dependencies
+        run: |
+          cd packages/telemetry/python
+          uv venv
+          uv sync --all-extras --all-groups
+
+      - name: Lint SDK
         run: |
           cd packages/sdks/python
+          uv run scripts/lint.py
+
+      - name: Lint Telemetry
+        run: |
+          cd packages/telemetry/python
           uv run scripts/lint.py

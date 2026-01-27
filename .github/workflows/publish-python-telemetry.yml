@@ -1,0 +1,79 @@
+name: Publish Python Telemetry
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.14.x
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.8.17'
+          enable-cache: true
+
+      - name: Install Python dependencies
+        run: |
+          cd packages/telemetry/python
+          uv venv
+          uv sync --all-extras --all-groups
+
+      - name: Get current version
+        id: get_version
+        run: |
+          cd packages/telemetry/python
+          # Install toml package to read pyproject.toml
+          pip install toml
+          CURRENT_VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+      - name: Check version on pypi
+        id: check_version
+        run: |
+          cd packages/telemetry/python
+          CURRENT_VERSION="${{ steps.get_version.outputs.version }}"
+
+          # Check if version exists on PyPI using the PyPI API
+          if curl -s "https://pypi.org/pypi/latitude-telemetry/$CURRENT_VERSION/json" | grep -q '"version"'; then
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+            echo "Version $CURRENT_VERSION already exists on PyPI, skipping publish"
+          else
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+            echo "Version $CURRENT_VERSION not found on PyPI, will publish"
+          fi
+
+      - name: Build package (with workspace dependencies)
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/telemetry/python
+          uv build
+
+      - name: Publish to pypi
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/telemetry/python
+          # Try to publish, but don't fail if version already exists
+          uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }} || {
+            echo "Publish failed, checking if it's due to version already existing..."
+            if curl -s "https://pypi.org/pypi/latitude-telemetry/${{ steps.get_version.outputs.version }}/json" | grep -q '"version"'; then
+              echo "Version ${{ steps.get_version.outputs.version }} already exists on PyPI, treating as success"
+              exit 0
+            else
+              echo "Publish failed for unknown reason"
+              exit 1
+            fi
+          }
