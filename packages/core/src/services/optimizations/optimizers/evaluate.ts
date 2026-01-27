@@ -343,7 +343,7 @@ ${error.message}
     return Result.ok(LearnableTrajectory(example, { feedback }))
   }
 
-  const uuid = await run.uuid
+  const uuid = run.uuid
   const messages = await run.messages
   const duration = await run.duration
   const usage = await run.runUsage

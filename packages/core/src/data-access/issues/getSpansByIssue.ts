@@ -29,7 +29,6 @@ import { Cursor } from '../../schema/types'
  * filtered by specific commits.
  *
  * @param spanTypes - Array of span types to include. Defaults to all main span types.
- *                    Pass [SpanType.Prompt] for optimizer use cases.
  */
 export async function getSpansByIssue(
   {
