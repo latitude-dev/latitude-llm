@@ -7,6 +7,18 @@ import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 import { SpanWithDetails } from '@latitude-data/core/constants'
 
+export function getSpanKey(
+  documentLogUuid?: string | null,
+  spanId?: string | null,
+) {
+  const route =
+    spanId && documentLogUuid
+      ? ROUTES.api.conversations.detail(documentLogUuid).spans.detail(spanId)
+          .root
+      : undefined
+  return { route, key: compact(route) }
+}
+
 export function useSpan(
   {
     documentLogUuid,
@@ -17,11 +29,7 @@ export function useSpan(
   },
   opts?: SWRConfiguration,
 ) {
-  const route =
-    spanId && documentLogUuid
-      ? ROUTES.api.conversations.detail(documentLogUuid).spans.detail(spanId)
-          .root
-      : undefined
+  const { route, key } = getSpanKey(documentLogUuid, spanId)
   const fetcher = useFetcher<
     SpanWithDetails | undefined,
     SpanWithDetails | undefined
@@ -34,7 +42,7 @@ export function useSpan(
     data = undefined,
     mutate,
     isLoading,
-  } = useSWR<SpanWithDetails | undefined>(compact(route), fetcher, opts)
+  } = useSWR<SpanWithDetails | undefined>(key, fetcher, opts)
 
   return useMemo(() => ({ data, mutate, isLoading }), [data, mutate, isLoading])
 }

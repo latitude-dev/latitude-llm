@@ -3,7 +3,11 @@ import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { endOfDay } from 'date-fns'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
+import { z } from 'zod'
 import { SpansFilters } from '$/lib/schemas/filters'
+
+const documentLogUuidSchema = z.uuid()
 
 function useEditableSearchParams() {
   const router = useRouter()
@@ -165,12 +169,13 @@ export function useProcessSpanFilters({
     [onFiltersChanged, setSearchParams, filterOptions],
   )
 
-  const onDocumentLogUuidChange = useCallback(
+  const onDocumentLogUuidChange = useDebouncedCallback(
     (value: string) => {
       value = value?.trim()
 
       if (!value) {
         const { documentLogUuid: _, ...restFilters } = filterOptions
+
         onFiltersChanged(restFilters)
 
         if (Object.keys(restFilters).length === 0) {
@@ -178,20 +183,22 @@ export function useProcessSpanFilters({
         } else {
           setSearchParams('filters', JSON.stringify(restFilters))
         }
-      } else {
-        onFiltersChanged((currentFilters) => ({
-          ...currentFilters,
-          documentLogUuid: value,
-        }))
-
-        const updatedFilters: SpansFilters = {
-          ...filterOptions,
-          documentLogUuid: value,
-        }
-        setSearchParams('filters', JSON.stringify(updatedFilters))
+        return
       }
+
+      const parsed = documentLogUuidSchema.safeParse(value)
+      if (!parsed.success) return
+
+      const updatedFilters: SpansFilters = {
+        ...filterOptions,
+        documentLogUuid: parsed.data,
+      }
+
+      onFiltersChanged(updatedFilters)
+      setSearchParams('filters', JSON.stringify(updatedFilters))
     },
-    [onFiltersChanged, setSearchParams, filterOptions],
+    300,
+    { leading: false, trailing: true },
   )
 
   const onSelectTestDeployments = useCallback(

@@ -6,6 +6,12 @@ import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import { ConversationTracesResponse } from '$/app/api/conversations/[conversationId]/route'
 
+export function getConversationKey(conversationId?: string) {
+  return conversationId
+    ? ROUTES.api.conversations.detail(conversationId).root
+    : undefined
+}
+
 export function useConversation(
   {
     conversationId,
@@ -14,9 +20,7 @@ export function useConversation(
   },
   opts?: SWRConfiguration,
 ) {
-  const route = conversationId
-    ? ROUTES.api.conversations.detail(conversationId).root
-    : undefined
+  const route = getConversationKey(conversationId)
   const fetcher = useFetcher<ConversationTracesResponse>(route, {
     fallback: undefined,
   })

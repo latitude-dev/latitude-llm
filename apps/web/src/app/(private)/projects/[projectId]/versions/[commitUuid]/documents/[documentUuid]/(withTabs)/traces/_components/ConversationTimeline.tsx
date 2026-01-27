@@ -86,7 +86,15 @@ function findSpanByIdInTraces(
 function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
   const { selection } = use(TraceSpanSelectionStateContext)
   const { selectSpan } = use(TraceSpanSelectionActionsContext)
-  const selectedSpan = findSpanByIdInTraces(traces, selection.spanId)
+  const { selectedSpan, totalSpans, sections, totalDuration } = useMemo(() => {
+    const totalSpans = traces.reduce((sum, t) => sum + t.children.length, 0)
+    const totalDuration = traces.reduce((sum, t) => sum + t.duration, 0)
+    const sections = getTraceSections(traces)
+    const found = findSpanByIdInTraces(traces, selection.spanId)
+    const selectedSpan = found ?? traces[0]?.children[0] ?? null
+    return { selectedSpan, totalSpans, sections, totalDuration }
+  }, [traces, selection.spanId])
+
   const treeRef = useRef<HTMLDivElement>(null)
   const [treeWidth, setTreeWidth] = useState(0)
   const graphRef = useRef<HTMLDivElement>(null)
@@ -94,6 +102,7 @@ function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
 
   const updateWidth = useCallback(() => {
     if (!treeRef.current || !graphRef.current) return
+
     const treeRect = treeRef.current.getBoundingClientRect()
     const graphRect = graphRef.current.getBoundingClientRect()
     setTreeWidth(Math.max(treeRect.width, TREE_MIN_WIDTH) - 0.5)
@@ -102,6 +111,7 @@ function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
 
   useEffect(() => {
     if (!treeRef.current || !graphRef.current) return
+
     const resizeObserver = new ResizeObserver(updateWidth)
     resizeObserver.observe(treeRef.current)
     resizeObserver.observe(graphRef.current)
@@ -120,13 +130,6 @@ function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
     [setCollapsedSpans],
   )
 
-  const sections = useMemo(() => getTraceSections(traces), [traces])
-  const totalDuration = useMemo(
-    () => traces.reduce((sum, t) => sum + t.duration, 0),
-    [traces],
-  )
-
-  const totalSpans = traces.reduce((sum, t) => sum + t.children.length, 0)
   if (totalSpans < 1) {
     return (
       <div className='w-full h-full flex items-center justify-center gap-2 p-4'>
@@ -135,13 +138,7 @@ function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
     )
   }
 
-  if (!selectedSpan) {
-    const firstSpan = traces[0]?.children[0]
-    if (firstSpan) {
-      selectSpan(firstSpan)
-    }
-    return null
-  }
+  if (!selectedSpan) return null
 
   return (
     <div className='w-full h-full flex flex-col items-center justify-center relative'>

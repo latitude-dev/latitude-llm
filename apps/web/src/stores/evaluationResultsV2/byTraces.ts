@@ -2,6 +2,7 @@
 
 import useFetcher from '$/hooks/useFetcher'
 import { API_ROUTES } from '$/services/routes/api'
+import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { compact, groupBy } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -28,19 +29,22 @@ export default function useEvaluationResultsV2ByTraces(
   opts?: SWRConfiguration,
 ) {
   const route = API_ROUTES.evaluations.results.traces.root
-  const query = useMemo(() => {
-    const params = new URLSearchParams()
-    params.set('projectId', project.id.toString())
-    params.set('commitUuid', commit.uuid)
-    if (document?.documentUuid)
-      params.set('documentUuid', document.documentUuid)
-    if (traceIds.length > 0)
-      params.set('traceIds', [...new Set(traceIds)].join(','))
+  const uniqueTraceIds = useMemo(
+    () => [...new Set(traceIds)].sort().join(','),
+    [traceIds],
+  )
+  const searchParams = useMemo(
+    () =>
+      compactObject({
+        projectId: project.id.toString(),
+        commitUuid: commit.uuid,
+        documentUuid: document?.documentUuid,
+        traceIds: uniqueTraceIds || undefined,
+      }) as Record<string, string>,
+    [project.id, commit.uuid, document?.documentUuid, uniqueTraceIds],
+  )
 
-    return params.toString()
-  }, [traceIds, project.id, commit.uuid, document?.documentUuid])
-
-  const fetcher = useFetcher<EvaluationResultV2[]>(`${route}?${query}`)
+  const fetcher = useFetcher<EvaluationResultV2[]>(route, { searchParams })
   const {
     data = [],
     mutate,
@@ -50,7 +54,13 @@ export default function useEvaluationResultsV2ByTraces(
   } = useSWR<EvaluationResultV2[]>(
     disabled
       ? null
-      : compact(['evaluationResultsV2ByTraces', ...traceIds, query]),
+      : compact([
+          'evaluationResultsV2ByTraces',
+          project.id,
+          commit.uuid,
+          document?.documentUuid,
+          uniqueTraceIds,
+        ]),
     fetcher,
     opts,
   )

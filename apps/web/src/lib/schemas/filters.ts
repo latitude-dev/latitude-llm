@@ -2,7 +2,8 @@ import { z } from 'zod'
 
 export const spansFiltersSchema = z
   .object({
-    documentLogUuid: z.string().optional(),
+    // NOTE: documentLogUuid has to be a real `uuid` otherwise  the query fails in Drizzle
+    documentLogUuid: z.uuid().optional(),
     spanId: z.string().optional(),
     commitUuids: z.array(z.string()).optional(),
     experimentUuids: z.array(z.string()).optional(),
