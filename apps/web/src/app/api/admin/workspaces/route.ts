@@ -1,5 +1,5 @@
 import { findAllWorkspacesForAdmin } from '@latitude-data/core/services/workspaces/findAllForAdmin'
-import { searchWorkspacesForAdmin } from '@latitude-data/core/services/workspaces/searchForAdmin'
+import { searchWorkspacesForAdmin } from '$/data-access/admin'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { adminHandler } from '$/middlewares/adminHandler'
 import { NextRequest, NextResponse } from 'next/server'
