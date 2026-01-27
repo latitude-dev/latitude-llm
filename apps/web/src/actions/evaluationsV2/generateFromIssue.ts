@@ -1,7 +1,7 @@
 'use server'
 
 import { withDocument, withDocumentSchema } from '../procedures'
-import { LatitudeError } from '@latitude-data/core/lib/errors'
+import { BadRequestError, LatitudeError } from '@latitude-data/core/lib/errors'
 import { z } from 'zod'
 import { queues } from '@latitude-data/core/queues'
 import { CLOUD_MESSAGES } from '@latitude-data/core/constants'
@@ -12,6 +12,8 @@ import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { createActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/create'
 import { deleteActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/delete'
 import { publisher } from '@latitude-data/core/events/publisher'
+import { IssuesRepository } from '@latitude-data/core/repositories'
+import { isIssueActive } from '@latitude-data/core/services/issues/shared'
 
 export const generateEvaluationV2FromIssueAction = withDocument
   .inputSchema(
@@ -29,6 +31,15 @@ export const generateEvaluationV2FromIssueAction = withDocument
     assertCopilotIsSupported(
       CLOUD_MESSAGES.generateEvaluationIssueUsingCopilot,
     ).unwrap()
+
+    const issuesRepository = new IssuesRepository(workspace.id)
+    const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
+
+    if (!isIssueActive(issue)) {
+      throw new BadRequestError(
+        'Cannot generate evaluation for an inactive issue',
+      )
+    }
 
     if (!env.COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH) {
       throw new Error(

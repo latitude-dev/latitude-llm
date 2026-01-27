@@ -303,6 +303,81 @@ describe('generateEvaluationFromIssue', () => {
     expect(mockCreateValidationFlow).toHaveBeenCalled()
   })
 
+  it('returns error when issue is resolved', async () => {
+    const resolvedIssue = {
+      ...issue,
+      resolvedAt: new Date(),
+    }
+
+    const result = await generateEvaluationFromIssue({
+      issue: resolvedIssue,
+      workspace,
+      commit,
+      providerName: provider.name,
+      model: MODEL,
+      workflowUuid: TEST_WORKFLOW_UUID,
+      generationAttempt: 1,
+    })
+
+    expect(Result.isOk(result)).toBe(false)
+    expect(result.error?.message).toBe(
+      'Cannot generate evaluation for an inactive issue',
+    )
+    expect(
+      mockGenerateEvaluationConfigFromIssueWithCopilot,
+    ).not.toHaveBeenCalled()
+  })
+
+  it('returns error when issue is ignored', async () => {
+    const ignoredIssue = {
+      ...issue,
+      ignoredAt: new Date(),
+    }
+
+    const result = await generateEvaluationFromIssue({
+      issue: ignoredIssue,
+      workspace,
+      commit,
+      providerName: provider.name,
+      model: MODEL,
+      workflowUuid: TEST_WORKFLOW_UUID,
+      generationAttempt: 1,
+    })
+
+    expect(Result.isOk(result)).toBe(false)
+    expect(result.error?.message).toBe(
+      'Cannot generate evaluation for an inactive issue',
+    )
+    expect(
+      mockGenerateEvaluationConfigFromIssueWithCopilot,
+    ).not.toHaveBeenCalled()
+  })
+
+  it('returns error when issue is merged', async () => {
+    const mergedIssue = {
+      ...issue,
+      mergedAt: new Date(),
+    }
+
+    const result = await generateEvaluationFromIssue({
+      issue: mergedIssue,
+      workspace,
+      commit,
+      providerName: provider.name,
+      model: MODEL,
+      workflowUuid: TEST_WORKFLOW_UUID,
+      generationAttempt: 1,
+    })
+
+    expect(Result.isOk(result)).toBe(false)
+    expect(result.error?.message).toBe(
+      'Cannot generate evaluation for an inactive issue',
+    )
+    expect(
+      mockGenerateEvaluationConfigFromIssueWithCopilot,
+    ).not.toHaveBeenCalled()
+  })
+
   it('passes falsePositivesSpanAndTraceIdPairs, falseNegativesSpanAndTraceIdPairs, and previousEvaluationConfiguration to generateEvaluationConfigFromIssueWithCopilot', async () => {
     const falsePositives = [{ spanId: 'span-1', traceId: 'trace-1' }]
     const falseNegatives = [{ spanId: 'span-2', traceId: 'trace-2' }]
