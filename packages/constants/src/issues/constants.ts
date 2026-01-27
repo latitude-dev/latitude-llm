@@ -102,7 +102,8 @@ export const ISSUE_DISCOVERY_SEARCH_RATIO = 0.75 // 75% vector search, 25% keywo
 export const ISSUE_DISCOVERY_MIN_SIMILARITY = 0.8 // 80% similarity (broader score)
 export const ISSUE_DISCOVERY_MIN_KEYWORDS = 1 // At least 1 keyword match
 export const ISSUE_DISCOVERY_MIN_RELEVANCE = 0.3 // 30% relevance (narrower score)
-export const ISSUE_DISCOVERY_MAX_CANDIDATES = 20
+export const ISSUE_DISCOVERY_MAX_CANDIDATES = 1000 // Large pool to allow filtering merged issues
+export const ISSUE_DISCOVERY_RERANK_LIMIT = 20 // Max candidates to send to reranker after filtering
 
 export const ISSUE_GENERATION_RECENCY_RATIO = 0.8 // 80% more recent, 20% long-tail
 export const ISSUE_GENERATION_RECENCY_DAYS = 7
