@@ -106,11 +106,6 @@ async function ensureEventListener<Event extends PubSubEvent>(event: Event) {
   }
 
   await listenerPromises.get(event)
-
-  const listeners = getExistingListeners(event)
-  if (!listeners || listeners.size === 0) {
-    await detachEventListener(event)
-  }
 }
 
 async function detachEventListener<Event extends PubSubEvent>(event: Event) {
