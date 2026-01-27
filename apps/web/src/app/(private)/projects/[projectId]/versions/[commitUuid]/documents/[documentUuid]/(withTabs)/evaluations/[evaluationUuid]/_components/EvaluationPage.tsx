@@ -200,7 +200,11 @@ export function EvaluationPage<
       <div className='w-full flex items-end justify-between gap-x-2'>
         <EvaluationScaleInfo evaluation={evaluation} />
         <div className='flex items-center gap-4'>
-          <EvaluationFilters search={search} setSearch={setSearch} />
+          <EvaluationFilters
+            search={search}
+            setSearch={setSearch}
+            currentCommitId={commit.id}
+          />
           <RealtimeToggle
             enabled={realtimeEnabled}
             setEnabled={setRealtimeEnabled}
