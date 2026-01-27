@@ -2,7 +2,7 @@ import { ROUTES } from '$/services/routes'
 import useFetcher from '$/hooks/useFetcher'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useEvaluationsV2 } from './evaluationsV2'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   EventArgs,
   useSockets,
@@ -14,6 +14,14 @@ import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 const EMPTY_ARRAY: [] = []
+
+const POLLING_INTERVAL_MS = 5000
+
+function hasRunningExperiments(
+  experiments: (ExperimentWithScores | undefined)[],
+): boolean {
+  return experiments.some((exp) => exp && exp.startedAt && !exp.finishedAt)
+}
 
 export type BestLogsMetadata = {
   cost: string[]
@@ -142,6 +150,14 @@ export function useExperimentComparison(
       : undefined,
   )
 
+  const refreshIntervalFn = useCallback(
+    (latestData: ExperimentWithScores[] | undefined) => {
+      if (!latestData) return 0
+      return hasRunningExperiments(latestData) ? POLLING_INTERVAL_MS : 0
+    },
+    [],
+  )
+
   const { data = undefined, isLoading } = useSWR<ExperimentWithScores[]>(
     [
       'experimentsComparison',
@@ -151,7 +167,10 @@ export function useExperimentComparison(
       experimentUuids.join(','),
     ],
     dataFetcher,
-    opts,
+    {
+      ...opts,
+      refreshInterval: refreshIntervalFn,
+    },
   )
 
   const { data: evaluations, isLoading: isLoadingEvaluations } =

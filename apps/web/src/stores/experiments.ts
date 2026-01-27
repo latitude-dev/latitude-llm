@@ -3,12 +3,18 @@ import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
 
 import { Experiment } from '@latitude-data/core/schema/models/types/Experiment'
 const EMPTY_ARRAY: [] = []
+
+const POLLING_INTERVAL_MS = 5000
+
+function hasRunningExperiments(experiments: ExperimentDto[]): boolean {
+  return experiments.some((exp) => exp.startedAt && !exp.finishedAt)
+}
 
 export function useExperiments(
   {
@@ -24,6 +30,7 @@ export function useExperiments(
   },
   opts: SWRConfiguration & {
     onCreate?: (experiments: ExperimentDto[]) => void
+    fallbackData?: ExperimentDto[]
   } = {},
 ) {
   const dataFetcher = useFetcher<ExperimentDto[]>(
@@ -38,6 +45,14 @@ export function useExperiments(
       .experiments.count,
   )
 
+  const refreshIntervalFn = useCallback(
+    (latestData: ExperimentDto[] | undefined) => {
+      if (!latestData) return 0
+      return hasRunningExperiments(latestData) ? POLLING_INTERVAL_MS : 0
+    },
+    [],
+  )
+
   const {
     data = EMPTY_ARRAY,
     isLoading,
@@ -45,7 +60,10 @@ export function useExperiments(
   } = useSWR<ExperimentDto[]>(
     ['experiments', projectId, documentUuid, page, pageSize],
     dataFetcher,
-    opts,
+    {
+      ...opts,
+      refreshInterval: refreshIntervalFn,
+    },
   )
 
   const { data: count = undefined, mutate: mutateCount } = useSWR<number>(
