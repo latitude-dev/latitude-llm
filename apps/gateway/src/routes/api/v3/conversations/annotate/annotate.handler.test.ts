@@ -22,12 +22,14 @@ import { describe, expect, it, vi } from 'vitest'
 
 // Mock SpanMetadatasRepository
 const mockGet = vi.fn().mockResolvedValue(Result.ok(null))
+const mockGetBatch = vi.fn().mockResolvedValue(new Map())
 vi.mock('@latitude-data/core/repositories', async () => {
   const actual = await vi.importActual('@latitude-data/core/repositories')
   return {
     ...actual,
     SpanMetadatasRepository: vi.fn().mockImplementation(() => ({
       get: mockGet,
+      getBatch: mockGetBatch,
       invalidate: vi.fn().mockResolvedValue(Result.ok(null)),
     })),
   }
@@ -170,43 +172,59 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
       source: LogSources.API,
     }
 
+    const mockCompletionSpanMetadata = {
+      traceId,
+      spanId: 'completion-span-id',
+      type: 'completion' as const,
+      attributes: {},
+      events: [],
+      links: [],
+      provider: 'openai',
+      model: 'gpt-4o',
+      configuration: {},
+      input: [],
+      output: [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: 'Hello! How can I assist you today?',
+            },
+          ],
+        },
+      ],
+      tokens: {
+        prompt: 10,
+        cached: 0,
+        reasoning: 0,
+        completion: 15,
+      },
+    }
+
     // Mock the get method to return different metadata based on spanId
     mockGet.mockImplementation(({ spanId: requestedSpanId }) => {
       if (requestedSpanId === spanId) {
         return Promise.resolve(Result.ok(mockPromptSpanMetadata))
       }
-      // For completion spans, return completion metadata
-      const mockCompletionSpanMetadata = {
-        traceId,
-        spanId: requestedSpanId,
-        type: 'completion' as const,
-        attributes: {},
-        events: [],
-        links: [],
-        provider: 'openai',
-        model: 'gpt-4o',
-        configuration: {},
-        input: [],
-        output: [
-          {
-            role: 'assistant',
-            content: [
-              {
-                type: 'text',
-                text: 'Hello! How can I assist you today?',
-              },
-            ],
-          },
-        ],
-        tokens: {
-          prompt: 10,
-          cached: 0,
-          reasoning: 0,
-          completion: 15,
-        },
-      }
       return Promise.resolve(Result.ok(mockCompletionSpanMetadata))
     })
+
+    // Mock getBatch to return metadata for all completion spans
+    mockGetBatch.mockImplementation(
+      (spanIdentifiers: Array<{ traceId: string; spanId: string }>) => {
+        const resultMap = new Map()
+        for (const { traceId: tid, spanId: sid } of spanIdentifiers) {
+          const key = `${tid}:${sid}`
+          resultMap.set(key, {
+            ...mockCompletionSpanMetadata,
+            spanId: sid,
+            traceId: tid,
+          })
+        }
+        return Promise.resolve(resultMap)
+      },
+    )
   }
 
   // Helper function to make the annotate request
