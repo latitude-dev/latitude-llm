@@ -6,7 +6,12 @@ import {
   ToolSource,
   ToolSourceData,
 } from '@latitude-data/constants/toolSources'
-import { ToolCard, ToolCardIcon, ToolCardText } from './_components/ToolCard'
+import {
+  ToolCard,
+  ToolCardIcon,
+  ToolCardText,
+  ToolCallStatus,
+} from './_components/ToolCard'
 import { LatitudeTool } from '@latitude-data/constants'
 import { WebSearchLatitudeToolCard } from './LatitudeTools/Search'
 import { WebExtractLatitudeToolCard } from './LatitudeTools/Extract'
@@ -26,14 +31,13 @@ export function LatitudeToolCard({
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
-  status: 'pending' | 'success' | 'error'
+  status: ToolCallStatus
   sourceData: ToolSourceData<ToolSource.Latitude>
   debugMode?: boolean
   messageIndex?: number
   contentBlockIndex?: number
 }) {
   if (debugMode) {
-    // No custom UI
     return (
       <ToolCard
         toolRequest={toolRequest}
@@ -47,6 +51,7 @@ export function LatitudeToolCard({
         headerLabel={<ToolCardText>{toolRequest.toolName}</ToolCardText>}
         messageIndex={messageIndex}
         contentBlockIndex={contentBlockIndex}
+        status={status}
       />
     )
   }
@@ -116,6 +121,7 @@ export function LatitudeToolCard({
       headerLabel={<ToolCardText>{toolRequest.toolName}</ToolCardText>}
       messageIndex={messageIndex}
       contentBlockIndex={contentBlockIndex}
+      status={status}
     />
   )
 }

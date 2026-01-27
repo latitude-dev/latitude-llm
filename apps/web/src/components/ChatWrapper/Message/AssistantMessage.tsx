@@ -11,6 +11,7 @@ export function AssistantMessage({
   parameters,
   toolContentMap,
   isGeneratingToolCall,
+  isStreaming = false,
 }: Omit<MessageProps, 'debugMode' | 'role'>) {
   return (
     <div
@@ -30,6 +31,7 @@ export function AssistantMessage({
         parameters={parameters}
         debugMode={false}
         markdownSize='md'
+        isStreaming={isStreaming}
       />
       {isGeneratingToolCall && <ToolCardSkeleton />}
     </div>

@@ -37,6 +37,7 @@ export const DebugMessage = memo(
     toolContentMap,
     isGeneratingToolCall = false,
     messageIndex,
+    isStreaming = false,
   }: Omit<MessageProps, 'debugMode'>) => {
     const [collapsedMessage, setCollapseMessage] = useState(false)
 
@@ -74,6 +75,7 @@ export const DebugMessage = memo(
                 toolContentMap={toolContentMap}
                 markdownSize='sm'
                 messageIndex={messageIndex}
+                isStreaming={isStreaming}
               />
             )}
             {isGeneratingToolCall && <ToolCardSkeleton />}

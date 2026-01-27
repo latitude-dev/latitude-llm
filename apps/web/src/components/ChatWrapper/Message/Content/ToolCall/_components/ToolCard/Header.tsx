@@ -4,12 +4,14 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { ReactNode } from 'react'
 import { SimulationTag } from './SimulationTag'
 
-const statusIconColor = (
-  status: 'pending' | 'success' | 'error',
-): TextColor => {
+export type ToolCallStatus = 'running' | 'waiting' | 'success' | 'error'
+
+const statusIconColor = (status: ToolCallStatus): TextColor => {
   switch (status) {
-    case 'pending':
+    case 'running':
       return 'primaryForeground'
+    case 'waiting':
+      return 'foregroundMuted'
     case 'success':
       return 'successForeground'
     case 'error':
@@ -19,10 +21,12 @@ const statusIconColor = (
   }
 }
 
-const statusIcon = (status: 'pending' | 'success' | 'error'): IconName => {
+const statusIcon = (status: ToolCallStatus): IconName => {
   switch (status) {
-    case 'pending':
+    case 'running':
       return 'loader'
+    case 'waiting':
+      return 'clock'
     case 'success':
       return 'checkClean'
     case 'error':
@@ -40,7 +44,7 @@ export function ToolCardHeader({
 }: {
   icon: ReactNode
   label: ReactNode
-  status?: 'pending' | 'success' | 'error' | undefined
+  status?: ToolCallStatus
   isOpen: boolean
   onToggle?: () => void
   simulated?: boolean
@@ -57,7 +61,8 @@ export function ToolCardHeader({
             className={cn(
               'absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 p-0.5 rounded-full',
               {
-                'bg-primary': status === 'pending',
+                'bg-primary': status === 'running',
+                'bg-background': status === 'waiting',
                 'bg-success': status === 'success',
                 'bg-destructive': status === 'error',
               },
@@ -66,7 +71,7 @@ export function ToolCardHeader({
             <Icon
               name={statusIcon(status)}
               color={statusIconColor(status)}
-              spin={status === 'pending'}
+              spin={status === 'running'}
               size='small'
               strokeWidth={3}
             />

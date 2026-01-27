@@ -14,11 +14,13 @@ import {
   ToolCardIcon,
   ToolCardText,
   ToolCardWrapper,
+  ToolCallStatus,
 } from '../_components/ToolCard'
 import { ToolCardHeader } from '../_components/ToolCard/Header'
 import {
   ToolCardContentWrapper,
   ToolCardOutput,
+  ToolCardPendingState,
 } from '../_components/ToolCard/Content'
 
 function topicText({
@@ -132,9 +134,11 @@ const isExpectedOutput = (toolResponse: ToolContent | undefined) => {
 function WebSearchOutput({
   toolResponse,
   simulated,
+  status,
 }: {
   toolResponse: ToolContent | undefined
   simulated?: boolean
+  status: ToolCallStatus
 }) {
   const isExpectedResponse = useMemo(
     () => isExpectedOutput(toolResponse),
@@ -147,18 +151,17 @@ function WebSearchOutput({
   }, [toolResponse, isExpectedResponse])
 
   if (!toolResponse) {
-    return (
-      <ToolCardContentWrapper>
-        <div className='flex flex-row gap-2 items-center justify-center pb-3'>
-          <Icon name='loader' color='foregroundMuted' spin />
-          <Text.H5 color='foregroundMuted'>Searching...</Text.H5>
-        </div>
-      </ToolCardContentWrapper>
-    )
+    return <ToolCardPendingState status={status} loadingText='Searching...' />
   }
 
   if (!isExpectedResponse) {
-    return <ToolCardOutput toolResponse={toolResponse} simulated={simulated} />
+    return (
+      <ToolCardOutput
+        toolResponse={toolResponse}
+        simulated={simulated}
+        status={status}
+      />
+    )
   }
 
   return (
@@ -185,7 +188,7 @@ export function WebSearchLatitudeToolCard({
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
-  status: 'pending' | 'success' | 'error'
+  status: ToolCallStatus
   messageIndex?: number
   contentBlockIndex?: number
 }) {
@@ -214,6 +217,7 @@ export function WebSearchLatitudeToolCard({
         <WebSearchOutput
           toolResponse={toolResponse}
           simulated={toolRequest._sourceData?.simulated}
+          status={status}
         />
       )}
     </ToolCardWrapper>

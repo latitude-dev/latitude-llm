@@ -14,13 +14,14 @@ import {
   ToolCardIcon,
   ToolCardText,
   ToolCardWrapper,
+  ToolCallStatus,
 } from '../_components/ToolCard'
 import { ToolCardHeader } from '../_components/ToolCard/Header'
 import {
   ToolCardContentWrapper,
   ToolCardOutput,
+  ToolCardPendingState,
 } from '../_components/ToolCard/Content'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 
 const isExpectedOutput = (toolResponse: ToolContent | undefined) => {
   // Returns false if the tool response does not contain the expected output
@@ -41,9 +42,11 @@ const isExpectedOutput = (toolResponse: ToolContent | undefined) => {
 function WebExtractOutput({
   toolResponse,
   simulated,
+  status,
 }: {
   toolResponse: ToolContent | undefined
   simulated?: boolean
+  status: ToolCallStatus
 }) {
   const isExpectedResponse = useMemo(
     () => isExpectedOutput(toolResponse),
@@ -56,18 +59,17 @@ function WebExtractOutput({
   }, [toolResponse, isExpectedResponse])
 
   if (!toolResponse) {
-    return (
-      <ToolCardContentWrapper>
-        <div className='flex flex-row gap-2 items-center justify-center pb-3'>
-          <Icon name='loader' color='foregroundMuted' spin />
-          <Text.H5 color='foregroundMuted'>Loading page...</Text.H5>
-        </div>
-      </ToolCardContentWrapper>
-    )
+    return <ToolCardPendingState status={status} loadingText='Loading page...' />
   }
 
   if (!isExpectedResponse) {
-    return <ToolCardOutput toolResponse={toolResponse} simulated={simulated} />
+    return (
+      <ToolCardOutput
+        toolResponse={toolResponse}
+        simulated={simulated}
+        status={status}
+      />
+    )
   }
 
   return (
@@ -92,7 +94,7 @@ export function WebExtractLatitudeToolCard({
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
-  status: 'pending' | 'success' | 'error'
+  status: ToolCallStatus
   messageIndex?: number
   contentBlockIndex?: number
 }) {
@@ -116,6 +118,7 @@ export function WebExtractLatitudeToolCard({
         <WebExtractOutput
           toolResponse={toolResponse}
           simulated={toolRequest._sourceData?.simulated}
+          status={status}
         />
       )}
     </ToolCardWrapper>

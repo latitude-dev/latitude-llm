@@ -4,6 +4,7 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import { ReactNode, useMemo, useState } from 'react'
 import { ToolCardHeader } from './Header'
+import type { ToolCallStatus } from './Header'
 import { ToolCardInput, ToolCardOutput } from './Content'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { TextColor } from '@latitude-data/web-ui/tokens'
@@ -20,12 +21,14 @@ import {
   SpanWithDetails,
 } from '@latitude-data/constants'
 
-const statusColor = (
-  status: 'pending' | 'success' | 'error' | undefined,
-): TextColor => {
+export type { ToolCallStatus }
+
+const statusColor = (status: ToolCallStatus | undefined): TextColor => {
   switch (status) {
-    case 'pending':
+    case 'running':
       return 'primary'
+    case 'waiting':
+      return 'foregroundMuted'
     case 'success':
       return 'success'
     case 'error':
@@ -40,7 +43,7 @@ export function ToolCardIcon({
   status,
 }: {
   name: IconName
-  status?: 'pending' | 'success' | 'error'
+  status?: ToolCallStatus
 }) {
   return <Icon name={name} color={statusColor(status)} />
 }
@@ -139,6 +142,7 @@ export function ToolCard({
   headerLabel,
   messageIndex,
   contentBlockIndex,
+  status,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
@@ -146,14 +150,9 @@ export function ToolCard({
   headerLabel: ReactNode
   messageIndex?: number
   contentBlockIndex?: number
+  status: ToolCallStatus
 }) {
   const [isOpen, setIsOpen] = useState(false)
-
-  const status = useMemo(() => {
-    if (!toolResponse) return 'pending'
-    if (toolResponse.isError) return 'error'
-    return 'success'
-  }, [toolResponse])
 
   return (
     <ToolCardWrapper
@@ -173,6 +172,7 @@ export function ToolCard({
         <ToolCardOutput
           toolResponse={toolResponse}
           simulated={toolRequest._sourceData?.simulated}
+          status={status}
         />
       )}
     </ToolCardWrapper>

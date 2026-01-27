@@ -12,6 +12,7 @@ import { AgentToolCard } from './ToolCall/Agent'
 import { ProviderToolCard } from './ToolCall/Provider'
 import { LatitudeToolCard } from './ToolCall/LatitudeTool'
 import { ClientToolCard } from './ToolCall/Client'
+import { ToolCallStatus } from './ToolCall/_components/ToolCard'
 
 export function ToolCallMessageContent({
   toolRequest,
@@ -19,23 +20,25 @@ export function ToolCallMessageContent({
   debugMode,
   messageIndex,
   contentBlockIndex,
+  isStreaming = false,
 }: {
   toolRequest: ToolRequestContent
   toolContentMap?: Record<string, ToolContent>
   debugMode?: boolean
   messageIndex?: number
   contentBlockIndex?: number
+  isStreaming?: boolean
 }) {
   const toolResponse = useMemo(
     () => toolContentMap?.[toolRequest.toolCallId],
     [toolContentMap, toolRequest.toolCallId],
   )
   const sourceData = useMemo(() => toolRequest._sourceData, [toolRequest])
-  const status = useMemo(() => {
-    if (!toolResponse) return 'pending'
+  const status: ToolCallStatus = useMemo(() => {
+    if (!toolResponse) return isStreaming ? 'running' : 'waiting'
     if (toolResponse.isError) return 'error'
     return 'success'
-  }, [toolResponse])
+  }, [toolResponse, isStreaming])
 
   if (sourceData?.source === ToolSource.Latitude) {
     return (

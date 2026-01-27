@@ -15,4 +15,5 @@ export type MessageProps = {
   isGeneratingToolCall?: boolean
   additionalAssistantMessage?: boolean
   messageIndex?: number
+  isStreaming?: boolean
 }

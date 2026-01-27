@@ -7,7 +7,12 @@ import {
   ToolSource,
   ToolSourceData,
 } from '@latitude-data/constants/toolSources'
-import { ToolCard, ToolCardIcon, ToolCardText } from './_components/ToolCard'
+import {
+  ToolCard,
+  ToolCardIcon,
+  ToolCardText,
+  ToolCallStatus,
+} from './_components/ToolCard'
 import useIntegrations from '$/stores/integrations'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
@@ -24,7 +29,7 @@ export function IntegrationToolCard({
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
-  status: 'pending' | 'success' | 'error'
+  status: ToolCallStatus
   sourceData: ToolSourceData<ToolSource.Integration>
   messageIndex?: number
   contentBlockIndex?: number
@@ -74,6 +79,7 @@ export function IntegrationToolCard({
       }
       messageIndex={messageIndex}
       contentBlockIndex={contentBlockIndex}
+      status={status}
     />
   )
 }
