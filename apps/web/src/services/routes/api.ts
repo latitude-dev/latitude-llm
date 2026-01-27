@@ -84,6 +84,9 @@ export const API_ROUTES = {
         root: '/api/evaluations/results/traces',
       },
     },
+    extractOutput: {
+      root: '/api/evaluations/extract-output',
+    },
   },
   users: {
     root: '/api/users',

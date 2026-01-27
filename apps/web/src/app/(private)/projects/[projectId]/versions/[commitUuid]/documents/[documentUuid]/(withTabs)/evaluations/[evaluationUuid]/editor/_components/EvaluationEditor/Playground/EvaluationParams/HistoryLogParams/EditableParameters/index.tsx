@@ -12,6 +12,7 @@ import {
   LlmEvaluationMetricAnyCustom,
   LlmEvaluationPromptParameter,
 } from '@latitude-data/core/constants'
+import { useMemo } from 'react'
 
 const JSON_FIELDS = [
   'config',
@@ -44,6 +45,13 @@ export function EditableParameters({
     document,
     evaluation,
   })
+  const llmParams = useMemo(
+    () =>
+      LLM_EVALUATION_PROMPT_PARAMETERS.filter((param) => {
+        return param !== 'expectedOutput'
+      }),
+    [],
+  )
 
   return (
     <div className='grid grid-cols-[auto_1fr] gap-y-3'>
@@ -59,7 +67,7 @@ export function EditableParameters({
           minRows={3}
         />
       ) : null}
-      {LLM_EVALUATION_PROMPT_PARAMETERS.map((param, idx) => {
+      {llmParams.map((param, idx) => {
         if (isJsonField(param)) {
           return (
             <EditableJsonInput

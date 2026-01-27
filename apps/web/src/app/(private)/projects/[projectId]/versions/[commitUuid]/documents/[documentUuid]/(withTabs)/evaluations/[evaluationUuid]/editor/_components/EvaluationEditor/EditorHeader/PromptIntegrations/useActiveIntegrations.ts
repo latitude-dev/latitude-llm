@@ -3,15 +3,19 @@ import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSch
 import { useCallback, useState } from 'react'
 import { useEvents } from '$/lib/events'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
-import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import useIntegrations from '$/stores/integrations'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 
 export type ActiveIntegrations = Record<string, true | string[]> // true means '*'
 
-export function useActiveIntegrations({ prompt }: { prompt: string }) {
+export function useActiveIntegrations({
+  prompt,
+  onChangePrompt,
+}: {
+  prompt: string
+  onChangePrompt: (prompt: string) => void
+}) {
   const { data: integrations, isLoading } = useIntegrations()
-  const { updateDocumentContent } = useDocumentValue()
   const [promptConfig, setPromptConfig] = useState<LatitudePromptConfig>(
     {} as LatitudePromptConfig,
   )
@@ -37,9 +41,9 @@ export function useActiveIntegrations({ prompt }: { prompt: string }) {
           toolName,
         }),
       })
-      updateDocumentContent(updatedPrompt)
+      onChangePrompt(updatedPrompt)
     },
-    [promptConfig, prompt, updateDocumentContent],
+    [promptConfig, prompt, onChangePrompt],
   )
 
   const removeIntegrationTool = useCallback(
@@ -67,9 +71,9 @@ export function useActiveIntegrations({ prompt }: { prompt: string }) {
           integrationToolNames,
         }),
       })
-      updateDocumentContent(updatedPrompt)
+      onChangePrompt(updatedPrompt)
     },
-    [promptConfig, updateDocumentContent, prompt],
+    [promptConfig, onChangePrompt, prompt],
   )
 
   // Use the same event-driven pattern as ProviderModelSelector

@@ -89,6 +89,7 @@ export const EvaluationEditorHeader = memo(
               <PromptIntegrations
                 disabled={disabledMetadataSelectors}
                 prompt={prompt}
+                onChangePrompt={onChangePrompt}
               />
             </div>
             <PromptConfiguration

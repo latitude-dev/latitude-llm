@@ -3,7 +3,6 @@
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { MetadataProvider } from '$/components/MetadataProvider'
 import { DevModeProvider } from '$/hooks/useDevMode'
-import { DocumentValueProvider } from '$/hooks/useDocumentValueContext'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
 import { ROUTES } from '$/services/routes'
@@ -38,14 +37,12 @@ export function EvaluationEditor(props: {
   copilotEnabled: boolean
   freeRunsCount?: number
   selectedSpanId?: string
-  selectedTraceId?: string
+  selectedDocumentLogUuid?: string
 }) {
   return (
     <MetadataProvider>
       <DevModeProvider>
-        <DocumentValueProvider document={props.document}>
-          <EvaluationEditorContent {...props} />
-        </DocumentValueProvider>
+        <EvaluationEditorContent {...props} />
       </DevModeProvider>
     </MetadataProvider>
   )
@@ -58,7 +55,7 @@ function EvaluationEditorContent({
   freeRunsCount,
   copilotEnabled,
   selectedSpanId,
-  selectedTraceId,
+  selectedDocumentLogUuid,
 }: {
   document: DocumentVersion
   commit: Commit
@@ -66,7 +63,7 @@ function EvaluationEditorContent({
   copilotEnabled: boolean
   freeRunsCount?: number
   selectedSpanId?: string
-  selectedTraceId?: string
+  selectedDocumentLogUuid?: string
 }) {
   const { project } = useCurrentProject()
   const { evaluation } = useCurrentEvaluationV2<
@@ -206,7 +203,7 @@ function EvaluationEditorContent({
                 evaluation={evaluation}
                 metadata={metadata!}
                 selectedSpanId={selectedSpanId}
-                selectedTraceId={selectedTraceId}
+                selectedDocumentLogUuid={selectedDocumentLogUuid}
               />
             </div>
           </SplitPane.Pane>

@@ -13,7 +13,6 @@ import { type UseLogHistoryParams } from './useLogHistoryParams'
 import { EvaluationType } from '@latitude-data/core/constants'
 import { ROUTES } from '$/services/routes'
 import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
@@ -31,12 +30,12 @@ function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {
     .commits.detail({ uuid: commit.uuid })
     .documents.detail({ uuid: document.documentUuid }).traces.root
   const route = data.selectedPromptSpan
-    ? `${url}?spanId=${data.selectedPromptSpan.id}&traceId=${data.selectedPromptSpan.traceId}`
+    ? `${url}?spanId=${data.selectedPromptSpan.id}&documentLogUuid=${data.selectedPromptSpan.documentLogUuid}`
     : undefined
 
   return (
     <>
-      {data.isLoading || data.selectedPromptSpan || data.urlPromptSpan ? (
+      {data.isLoading || data.selectedPromptSpan ? (
         <>
           <div className='flex flex-grow min-w-0'>
             {data.isLoading ? (
@@ -66,19 +65,13 @@ function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {
               </Link>
             ) : null}
           </div>
-          {data.urlPromptSpan ? (
-            <Button variant='link' onClick={data.clearUrlSelection}>
-              Clear selection
-            </Button>
-          ) : (
-            <SimpleKeysetTablePaginationFooter
-              isLoading={data.isLoading}
-              hasNext={data.hasNext}
-              hasPrev={data.hasPrev}
-              setPrev={data.onPrevPage}
-              setNext={data.onNextPage}
-            />
-          )}
+          <SimpleKeysetTablePaginationFooter
+            isLoading={data.isLoading}
+            hasNext={data.hasNext}
+            hasPrev={data.hasPrev}
+            setPrev={data.onPrevPage}
+            setNext={data.onNextPage}
+          />
         </>
       ) : (
         <div className='w-full flex justify-center'>
@@ -116,6 +109,13 @@ export function HistoryLogParams({
           },
         )}
       >
+        {data.extractionError && (
+          <div className='p-3 bg-destructive/10 border border-destructive/20 rounded-md'>
+            <Text.H6 color='destructive'>
+              Error loading parameters: {data.extractionError}
+            </Text.H6>
+          </div>
+        )}
         <EditableParameters
           commit={commit}
           document={document}

@@ -39,14 +39,14 @@ export const Playground = memo(
     document,
     evaluation,
     metadata,
-    selectedTraceId,
+    selectedDocumentLogUuid,
   }: {
     commit: Commit
     document: DocumentVersion
     evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
     metadata: ResolvedMetadata
     selectedSpanId?: string
-    selectedTraceId?: string
+    selectedDocumentLogUuid?: string
   }) => {
     const { project } = useCurrentProject()
     const [mode, setMode] = useState<'preview' | 'chat'>('preview')
@@ -68,11 +68,12 @@ export const Playground = memo(
       document,
       evaluation,
     })
+
     const historyInfo = useLogHistoryParams({
       commitVersionUuid: commit.uuid,
       document,
       evaluation,
-      selectedTraceId,
+      selectedDocumentLogUuid,
     })
     const { runPromptFn, abortCurrentStream, hasActiveStream } =
       useRunEvaluationPlaygroundPrompt({

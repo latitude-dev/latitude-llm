@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { useEvaluationParameters } from '../../../hooks/useEvaluationParamaters/index'
 
@@ -6,15 +6,58 @@ import {
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetricAnyCustom,
-  SpanType,
 } from '@latitude-data/core/constants'
-import { useOnce } from '$/hooks/useMount'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useConversation } from '$/stores/conversations'
-import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findFirstSpanOfType'
 import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { findCompletionSpanFromTrace } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
+import useFetcher from '$/hooks/useFetcher'
+import useSWR from 'swr'
+import { ROUTES } from '$/services/routes'
+import { ExtractOutputResponse } from '$/app/api/evaluations/extract-output/route'
+
+function useExtractedParameters({
+  documentLogUuid,
+  evaluationUuid,
+  commitUuid,
+  documentUuid,
+}: {
+  documentLogUuid?: string
+  evaluationUuid: string
+  commitUuid: string
+  documentUuid: string
+}) {
+  const route = ROUTES.api.evaluations.extractOutput.root
+  const searchParams = useMemo(
+    () =>
+      documentLogUuid
+        ? {
+            documentLogUuid,
+            evaluationUuid,
+            commitUuid,
+            documentUuid,
+          }
+        : undefined,
+    [documentLogUuid, evaluationUuid, commitUuid, documentUuid],
+  )
+
+  const fetcher = useFetcher<ExtractOutputResponse>(
+    documentLogUuid ? route : undefined,
+    { searchParams },
+  )
+
+  const { data, isLoading } = useSWR<ExtractOutputResponse>(
+    documentLogUuid ? [route, searchParams] : null,
+    fetcher,
+  )
+
+  return useMemo(
+    () => ({
+      data: data ?? null,
+      isLoading,
+    }),
+    [data, isLoading],
+  )
+}
 
 /**
  * `selectedDocumentLogUuid` is the log that comes from
@@ -24,12 +67,12 @@ export function useLogHistoryParams({
   document,
   evaluation,
   commitVersionUuid,
-  selectedTraceId,
+  selectedDocumentLogUuid,
 }: {
   document: DocumentVersion
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
   commitVersionUuid: string
-  selectedTraceId?: string
+  selectedDocumentLogUuid?: string
 }) {
   const { project } = useCurrentProject()
   const {
@@ -40,18 +83,9 @@ export function useLogHistoryParams({
     commitVersionUuid,
   })
 
-  const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
-  const { traces, isLoading: isLoadingUrlSpan } = useConversation({
-    conversationId: selectedTraceId,
-  })
-  const trace = traces[0]
-  const urlPromptSpan = findFirstSpanOfType(
-    trace?.children ?? [],
-    SpanType.Prompt,
-  )
-  const urlCompletionSpan = findCompletionSpanFromTrace(trace)
+  const searchParams = useSearchParams()
 
   const {
     items: spans,
@@ -66,59 +100,46 @@ export function useLogHistoryParams({
     commitUuid: commitVersionUuid,
     limit: 1,
   })
-  const { traces: selectedTraces, isLoading: isLoadingSelectedSpan } =
-    useConversation({
-      conversationId: spans?.[0]?.documentLogUuid,
-    })
-  const selectedTrace = selectedTraces[0]
-  const promptSpan = findFirstSpanOfType(
-    selectedTrace?.children ?? [],
-    SpanType.Prompt,
-  )
-  useOnce(() => {
-    if (!urlPromptSpan || !urlCompletionSpan) return
-    if (!urlPromptSpan.metadata || !urlCompletionSpan.metadata) return
 
-    mapLogParametersToInputs({
-      promptSpan: urlPromptSpan,
-      completionSpan: urlCompletionSpan,
+  const currentDocumentLogUuid =
+    selectedDocumentLogUuid ?? spans?.[0]?.documentLogUuid
+  const { data: extractedResponse, isLoading: isLoadingParameters } =
+    useExtractedParameters({
+      documentLogUuid: currentDocumentLogUuid,
+      evaluationUuid: evaluation.uuid,
+      commitUuid: commitVersionUuid,
+      documentUuid: document.documentUuid,
     })
-  }, !!urlPromptSpan && !!urlCompletionSpan)
 
   useEffect(() => {
-    if (urlPromptSpan || urlCompletionSpan) return
-    if (!promptSpan || !promptSpan.metadata) return
+    if (!extractedResponse) return
+    if (!extractedResponse.ok) return
 
-    const completionSpan = findCompletionSpanFromTrace(selectedTrace)
-    if (!completionSpan || !completionSpan.metadata) return
-
-    mapLogParametersToInputs({
-      promptSpan,
-      completionSpan,
-    })
-    // TODO: mapLogParametersToInputs mutates on each call to itself, so we
-    // cannot add it to the deps array. Fix the underlying issue.
-    /* eslint-disable react-hooks/exhaustive-deps */
-  }, [urlPromptSpan, urlCompletionSpan, promptSpan])
+    mapLogParametersToInputs(extractedResponse)
+  }, [extractedResponse, mapLogParametersToInputs])
 
   const clearUrlSelection = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString())
     params.delete('spanId')
-    params.delete('traceId')
+    params.delete('documentLogUuid')
     router.push(`${pathname}?${params.toString()}`)
   }, [pathname, searchParams, router])
-  const isLoading = isLoadingUrlSpan || isLoadingSpans || isLoadingSelectedSpan
-  const selectedPromptSpan = urlPromptSpan || promptSpan
+
+  const isLoading = isLoadingSpans || isLoadingParameters
+  const extractionError =
+    extractedResponse && !extractedResponse.ok
+      ? extractedResponse.error
+      : undefined
 
   return {
-    urlPromptSpan,
-    selectedPromptSpan: selectedPromptSpan,
+    selectedPromptSpan: spans?.[0],
     onNextPage: goToNextPage,
     onPrevPage: goToPrevPage,
     isLoading,
     hasNext,
     hasPrev,
     clearUrlSelection,
+    extractionError,
   }
 }
 
