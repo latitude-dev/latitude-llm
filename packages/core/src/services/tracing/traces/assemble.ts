@@ -11,6 +11,7 @@ import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
 import { type Workspace } from '../../../schema/models/types/Workspace'
+import { findAllSpansOfType } from '../spans/fetching/findAllSpansOfType'
 import { findCompletionSpanFromTrace } from '../spans/fetching/findCompletionSpanFromTrace'
 import { findCompletionSpanForSpan } from '../spans/fetching/findCompletionSpanForSpan'
 import { findSpanById } from '../spans/fetching/findSpanById'
@@ -76,16 +77,16 @@ export async function assembleTraceStructure(
 }
 
 /**
- * Assembles a trace structure and fetches only the completion span's metadata.
+ * Assembles a trace structure and fetches metadata for ALL completion spans.
  * Use this when you need the trace structure plus the conversation messages.
- * The metadata is attached to both the returned completionSpan AND to the
- * completion span within the trace tree for backward compatibility.
+ * The metadata is attached to ALL completion spans within the trace tree,
+ * enabling proper aggregation of tokens and costs across all completions.
  *
- * The completion span is determined by finding the nearest parent span of type
- * Prompt, External, or Chat for the specified span, then finding that parent's
- * latest Completion child. This allows viewing span-specific conversations
- * (e.g., subagent conversations) rather than always showing the global trace
- * conversation.
+ * Additionally returns a "main" completion span which is determined by finding
+ * the nearest parent span of type Prompt, External, or Chat for the specified
+ * span, then finding that parent's latest Completion child. This allows viewing
+ * span-specific conversations (e.g., subagent conversations) rather than always
+ * showing the global trace conversation.
  */
 export async function assembleTraceWithMessages(
   {
@@ -110,36 +111,39 @@ export async function assembleTraceWithMessages(
 
   const { trace } = structureResult.unwrap()
 
-  // Find the target span in the trace
+  const allCompletionSpans = findAllSpansOfType(
+    trace.children,
+    SpanType.Completion,
+  )
+
+  if (allCompletionSpans.length > 0) {
+    const metadataRepo = new SpanMetadatasRepository(workspace.id)
+    const spanIdentifiers = allCompletionSpans.map((span) => ({
+      traceId: span.traceId,
+      spanId: span.id,
+    }))
+    const metadataMap =
+      await metadataRepo.getBatch<SpanType.Completion>(spanIdentifiers)
+
+    for (const span of allCompletionSpans) {
+      const key = `${span.traceId}:${span.id}`
+      const metadata = metadataMap.get(key)
+      if (metadata) {
+        span.metadata = metadata as CompletionSpanMetadata
+      }
+    }
+  }
+
   const targetSpan = findSpanById(trace.children, spanId)
 
-  // Find completion span for the specific span, or fallback to global completion span
   let completionSpan: AssembledSpan<SpanType.Completion> | undefined
   if (targetSpan) {
     completionSpan = findCompletionSpanForSpan(targetSpan, trace)
   }
 
-  // Fallback to global completion span if span-specific one not found
   if (!completionSpan) {
     completionSpan = findCompletionSpanFromTrace(trace)
   }
-
-  if (!completionSpan) {
-    return Result.ok({ trace, completionSpan: undefined })
-  }
-
-  const metadataRepo = new SpanMetadatasRepository(workspace.id)
-  const metadataResult = await metadataRepo.get({
-    spanId: completionSpan.id,
-    traceId: completionSpan.traceId,
-  })
-  if (!Result.isOk(metadataResult)) return metadataResult
-
-  // Attach metadata to the completion span in the tree for backward compatibility
-  // This mutates the span in place
-  completionSpan.metadata = metadataResult.unwrap() as
-    | CompletionSpanMetadata
-    | undefined
 
   return Result.ok({ trace, completionSpan })
 }
