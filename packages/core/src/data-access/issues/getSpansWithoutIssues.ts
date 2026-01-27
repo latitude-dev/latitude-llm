@@ -10,7 +10,12 @@ import {
   sql,
 } from 'drizzle-orm'
 import { database } from '../../client'
-import { MAIN_SPAN_TYPES, MainSpanType, Span, SpanStatus } from '../../constants'
+import {
+  MAIN_SPAN_TYPES,
+  MainSpanType,
+  Span,
+  SpanStatus,
+} from '../../constants'
 import { Result } from '../../lib/Result'
 import { CommitsRepository } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'

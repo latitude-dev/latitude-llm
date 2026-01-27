@@ -116,7 +116,7 @@ const GraphItem = memo(
               'border-dashed': isCollapsed && span.children.length > 0,
               [colorScheme.border]: isSelected,
               [`${colorScheme.border}/10`]: !isSelected,
-            }
+            },
           )}
           style={barStyle}
           onClick={() => {

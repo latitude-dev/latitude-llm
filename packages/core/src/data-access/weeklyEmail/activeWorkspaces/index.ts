@@ -26,7 +26,10 @@ export async function getActiveWorkspacesForWeeklyEmail(db = database) {
       SELECT 1
       FROM latitude.spans s
       WHERE s.workspace_id = w.id
-        AND s.type IN (${sql.join(mainSpanTypes.map((t) => sql`${t}`), sql`, `)})
+        AND s.type IN (${sql.join(
+          mainSpanTypes.map((t) => sql`${t}`),
+          sql`, `,
+        )})
         AND s.started_at >= ${fourWeeksAgo}
       LIMIT 1
     ) AS has_activity
