@@ -29,34 +29,33 @@ export default async function IssuesPageRoute({
 }) {
   let selectedIssue: IssueWithStats | null = null
   const session = await getCurrentUserOrRedirect()
-
-  if (!session.workspace.issuesUnlocked) {
-    return (
-      <LockedIssuesDashboard
-        isLocked
-        projectId={Number((await params).projectId)}
-        commitUuid={(await params).commitUuid}
-      />
-    )
-  }
-
   const queryParams = await searchParams
   const { projectId, commitUuid } = await params
   const project = await findProjectCached({
     workspaceId: session.workspace.id,
     projectId: Number(projectId),
   })
+  const issuesRepo = new IssuesRepository(session.workspace.id)
+
+  const absoluteCount = await issuesRepo.getAbsoluteIssuesCount({ project })
+  if (absoluteCount === 0) {
+    return (
+      <LockedIssuesDashboard
+        projectId={Number(projectId)}
+        commitUuid={commitUuid}
+      />
+    )
+  }
+
   const commit = await findCommitCached({
     uuid: commitUuid,
     projectId: Number(projectId),
   })
-  const issuesRepo = new IssuesRepository(session.workspace.id)
   const issueId = Number(String(queryParams.issueId))
   if (issueId) {
     selectedIssue = await issuesRepo.findWithStats({ project, issueId })
   }
 
-  // Filtering
   const parsedParams = parseIssuesQueryParams({
     params: queryParams,
   })
@@ -73,19 +72,6 @@ export default async function IssuesPageRoute({
       limit: parsedParams.limit,
     })
     .then((r) => r.unwrap())
-
-  if (serverResponse.totalCount === 0) {
-    const absoluteCount = await issuesRepo.getAbsoluteIssuesCount({ project })
-    if (absoluteCount === 0) {
-      return (
-        <LockedIssuesDashboard
-          isLocked={false}
-          projectId={Number(projectId)}
-          commitUuid={commitUuid}
-        />
-      )
-    }
-  }
 
   const key = buildIssuesCacheKey({
     projectId: project.id,

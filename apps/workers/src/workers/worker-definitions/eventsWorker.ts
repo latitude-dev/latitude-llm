@@ -44,7 +44,6 @@ const eventHandlersJobMappings = {
   removeMergedIssueVectors: jobs.removeMergedIssueVectors,
   generateDetailsForMergedIssue: jobs.generateDetailsForMergedIssue,
   notifyClientOfCommitUpdated: jobs.notifyClientOfCommitUpdated,
-  unlockIssuesDashboardOnAnnotation: jobs.unlockIssuesDashboardOnAnnotation,
   stopDeploymentTestsForCommitHandler: jobs.stopDeploymentTestsForCommitHandler,
   enqueueShadowTestChallengerHandler: jobs.enqueueShadowTestChallengerHandler,
   notifyClientOfEvaluationV2AlignmentUpdated:

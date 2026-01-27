@@ -22,7 +22,6 @@ export type WorkspaceWithDetails = {
   id: number
   name: string
   createdAt: Date
-  issuesUnlocked: boolean
   isBigAccount: boolean
   stripeCustomerId: string | null
   subscription: OkType<typeof findWorkspaceSubscription>
