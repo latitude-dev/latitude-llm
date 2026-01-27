@@ -13,6 +13,7 @@ import { subscriptions } from '@latitude-data/core/schema/models/subscriptions'
 import { users } from '@latitude-data/core/schema/models/users'
 import { workspaceFeatures } from '@latitude-data/core/schema/models/workspaceFeatures'
 import { workspaces } from '@latitude-data/core/schema/models/workspaces'
+import { ilike, isNull } from 'drizzle-orm'
 
 import { computeQuota } from '@latitude-data/core/services/grants/quota'
 import { findWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/data-access/find'
@@ -449,7 +450,7 @@ export async function searchWorkspacesForAdmin(query: string, db = database) {
     .from(workspaces)
     .where(
       utils.or(
-        utils.ilike(workspaces.name, searchTerm),
+        ilike(workspaces.name, searchTerm),
         utils.sql`CAST(${workspaces.id} AS TEXT) LIKE ${searchTerm}`,
       ),
     )
@@ -530,7 +531,7 @@ async function searchUsers(query: string, db = database, limit = 10) {
     })
     .from(users)
     .where(
-      utils.or(utils.ilike(users.email, searchTerm), utils.ilike(users.name, searchTerm)),
+      utils.or(ilike(users.email, searchTerm), ilike(users.name, searchTerm)),
     )
     .orderBy(users.email)
     .limit(limit)
@@ -554,7 +555,7 @@ async function searchWorkspacesForUnified(
     .from(workspaces)
     .where(
       utils.or(
-        utils.ilike(workspaces.name, searchTerm),
+        ilike(workspaces.name, searchTerm),
         utils.sql`CAST(${workspaces.id} AS TEXT) LIKE ${searchTerm}`,
       ),
     )
@@ -577,9 +578,9 @@ async function searchProjects(query: string, db = database, limit = 10) {
     .from(projects)
     .where(
       utils.and(
-        utils.isNull(projects.deletedAt),
+        isNull(projects.deletedAt),
         utils.or(
-          utils.ilike(projects.name, searchTerm),
+          ilike(projects.name, searchTerm),
           utils.sql`CAST(${projects.id} AS TEXT) LIKE ${searchTerm}`,
         ),
       ),
