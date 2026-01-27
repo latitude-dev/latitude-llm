@@ -9,6 +9,7 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
 import { EvaluationV2 } from '@latitude-data/core/constants'
+import { useExperimentPolling } from '$/helpers/experimentPolling'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
@@ -142,6 +143,8 @@ export function useExperimentComparison(
       : undefined,
   )
 
+  const refreshIntervalFn = useExperimentPolling<ExperimentWithScores>()
+
   const { data = undefined, isLoading } = useSWR<ExperimentWithScores[]>(
     [
       'experimentsComparison',
@@ -151,7 +154,10 @@ export function useExperimentComparison(
       experimentUuids.join(','),
     ],
     dataFetcher,
-    opts,
+    {
+      ...opts,
+      refreshInterval: refreshIntervalFn,
+    },
   )
 
   const { data: evaluations, isLoading: isLoadingEvaluations } =

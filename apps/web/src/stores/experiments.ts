@@ -6,6 +6,7 @@ import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
+import { useExperimentPolling } from '$/helpers/experimentPolling'
 
 import { Experiment } from '@latitude-data/core/schema/models/types/Experiment'
 const EMPTY_ARRAY: [] = []
@@ -24,6 +25,7 @@ export function useExperiments(
   },
   opts: SWRConfiguration & {
     onCreate?: (experiments: ExperimentDto[]) => void
+    fallbackData?: ExperimentDto[]
   } = {},
 ) {
   const dataFetcher = useFetcher<ExperimentDto[]>(
@@ -38,6 +40,8 @@ export function useExperiments(
       .experiments.count,
   )
 
+  const refreshIntervalFn = useExperimentPolling<ExperimentDto>()
+
   const {
     data = EMPTY_ARRAY,
     isLoading,
@@ -45,7 +49,10 @@ export function useExperiments(
   } = useSWR<ExperimentDto[]>(
     ['experiments', projectId, documentUuid, page, pageSize],
     dataFetcher,
-    opts,
+    {
+      ...opts,
+      refreshInterval: refreshIntervalFn,
+    },
   )
 
   const { data: count = undefined, mutate: mutateCount } = useSWR<number>(
