@@ -62,7 +62,9 @@
     "TEST_LATITUDE_API_KEY",
     "ECS_AGENT_URI",
     "RELEASE_VERSION",
-    "LATITUDE_ENTERPRISE_MODE"
+    "LATITUDE_ENTERPRISE_MODE",
+    "WORKSPACE_RATE_LIMIT",
+    "WORKSPACE_RATE_WINDOW_MS"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": [

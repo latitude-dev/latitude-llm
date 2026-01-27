@@ -458,7 +458,6 @@ describe('backgroundRunJob', () => {
       expect(cancelJobsModule.createCancellationPoller).toHaveBeenCalledWith(
         'job-123',
         expect.any(AbortController),
-        1000,
       )
       // Should stop the poller during cleanup
       expect(mockStopPoller).toHaveBeenCalled()
