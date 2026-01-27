@@ -13,15 +13,20 @@ export function EvaluationFilters({
   search,
   setSearch,
   isLoading,
+  currentCommitId,
 }: {
   search: EvaluationResultsV2Search
   setSearch: (search: EvaluationResultsV2Search) => void
   isLoading?: boolean
+  currentCommitId: number
 }) {
   const { data: commits, isLoading: isLoadingCommits } = useCommits()
   const defaultSelectedCommits = useMemo(
-    () => commits.map((c) => c.id),
-    [commits],
+    () =>
+      commits
+        .filter((c) => !!c.mergedAt || c.id === currentCommitId)
+        .map((c) => c.id),
+    [commits, currentCommitId],
   )
 
   return (
