@@ -1,6 +1,6 @@
 [project]
 name = "latitude-sdk"
-version = "5.5.0"
+version = "5.6.0"
 description = "Latitude SDK for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
@@ -9,7 +9,7 @@ license = "MIT"
 urls.repository = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/python"
 urls.homepage = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/python#readme"
 urls.documentation = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/python#readme"
-requires-python = ">=3.9, <3.14"
+requires-python = ">=3.9, <3.15"
 dependencies = [
     "httpx>=0.28.1",
     "httpx-sse>=0.4.1",
