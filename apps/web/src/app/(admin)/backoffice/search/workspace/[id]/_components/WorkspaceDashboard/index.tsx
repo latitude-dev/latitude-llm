@@ -16,7 +16,6 @@ import { DashboardHeader } from '$/app/(admin)/backoffice/search/_components/Das
 import { DataTable } from '$/app/(admin)/backoffice/search/_components/DataTable'
 import { ClearCacheButton } from '../ClearCacheButton'
 import { ChangePlanButton } from '../ChangePlanButton'
-import { ToggleIssuesUnlockedButton } from '../ToggleIssuesUnlockedButton'
 import { BigAccountBanner } from '../BigAccountBanner'
 import { DeleteWorkspaceButton } from '../DeleteWorkspaceButton'
 import { SubscriptionRow } from '$/components/Subscriptions/SubscriptionRow'
@@ -79,27 +78,21 @@ export function WorkspaceDashboard({ workspace }: Props) {
           isBigAccount={workspace.isBigAccount}
         />
 
-        <div className='flex justify-between gap-2'>
-          <ToggleIssuesUnlockedButton
+        <div className='flex justify-end gap-2'>
+          <Link
+            href={ROUTES.backoffice[BackofficeRoutes.weekly].withWorkspaceId(
+              workspace.id,
+            )}
+          >
+            <Button fancy variant='outline'>
+              <Text.H5B noWrap>See Weekly</Text.H5B>
+            </Button>
+          </Link>
+          <ChangePlanButton
             workspaceId={workspace.id}
-            issuesUnlocked={workspace.issuesUnlocked}
+            currentPlan={workspace.subscription.plan}
           />
-          <div className='flex gap-2'>
-            <Link
-              href={ROUTES.backoffice[BackofficeRoutes.weekly].withWorkspaceId(
-                workspace.id,
-              )}
-            >
-              <Button fancy variant='outline'>
-                <Text.H5B noWrap>See Weekly</Text.H5B>
-              </Button>
-            </Link>
-            <ChangePlanButton
-              workspaceId={workspace.id}
-              currentPlan={workspace.subscription.plan}
-            />
-            <ClearCacheButton workspaceId={workspace.id} />
-          </div>
+          <ClearCacheButton workspaceId={workspace.id} />
         </div>
 
         <SubscriptionRow

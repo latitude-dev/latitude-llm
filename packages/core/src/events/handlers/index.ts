@@ -30,7 +30,6 @@ import { stopDeploymentTestsForCommitHandler } from './stopDeploymentTestsForCom
 import { touchApiKeyJob } from './touchApiKeyJob'
 import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
 import { undeployDocumentTriggerJob } from './undeployDocumentTriggerJob'
-import { unlockIssuesDashboardOnAnnotation } from './unlockIssuesDashboardOnAnnotation'
 import { updateWebhookLastTriggeredAt } from './webhooks'
 import { unassignIssuesOnDocumentsDeleted } from './unassignIssuesOnDocumentsDeleted'
 
@@ -69,7 +68,7 @@ export const EventHandlers: IEventsHandlers = {
   evaluationV2AlignmentUpdated: [notifyClientOfEvaluationV2AlignmentUpdated],
   evaluationV2Deleted: [pingProjectUpdateJob],
   evaluationV2Ran: [],
-  evaluationV2Annotated: [unlockIssuesDashboardOnAnnotation],
+  evaluationV2Annotated: [],
   evaluationResultV2Created: [
     assignIssueToEvaluationResultV2Job,
     notifyClientOfEvaluationResultV2Created,

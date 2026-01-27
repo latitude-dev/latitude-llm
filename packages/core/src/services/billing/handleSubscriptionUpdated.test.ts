@@ -88,7 +88,6 @@ function buildWorkspaceDto(
     currentSubscriptionId: 100,
     creatorId: 'user-123',
     defaultProviderId: null,
-    issuesUnlocked: false,
     isBigAccount: false,
     createdAt: new Date(),
     updatedAt: new Date(),
