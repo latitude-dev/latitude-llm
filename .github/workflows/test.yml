@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         node-version: [22.x]
-        python-version: [3.13.x]
+        python-version: [3.14.x]
 
     services:
       redis:
