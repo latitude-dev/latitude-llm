@@ -81,7 +81,7 @@ from latitude_telemetry.managers import (
     TracerManager,
     get_current_context,
 )
-from latitude_telemetry.telemetry import (
+from latitude_telemetry.telemetry.telemetry import (
     BadRequestError,
     CaptureContext,
     InternalOptions,

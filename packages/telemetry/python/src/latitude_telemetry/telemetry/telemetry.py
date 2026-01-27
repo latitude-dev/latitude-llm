@@ -47,7 +47,7 @@ from latitude_telemetry.util import Model, is_package_installed
 
 TELEMETRY_INSTRUMENTATION_NAME = "opentelemetry.instrumentation.latitude"
 SERVICE_NAME = "latitude-telemetry-python"
-SCOPE_VERSION = "2.0.1"
+SCOPE_VERSION = "2.0.2"
 
 _THREADING_INSTRUMENTOR = "Threading"
 
