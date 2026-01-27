@@ -373,17 +373,17 @@ importers:
         specifier: 5.0.9
         version: 5.0.9
       next:
-        specifier: 15.5.9
-        version: 15.5.9(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
+        specifier: 15.5.10
+        version: 15.5.10(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
       next-safe-action:
         specifier: ^8.0.11
-        version: 8.0.11(next@15.5.9(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4))(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
+        version: 8.0.11(next@15.5.10(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4))(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
       next-themes:
         specifier: 0.3.0
         version: 0.3.0(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
       nextjs-toploader:
         specifier: 1.6.12
-        version: 1.6.12(next@15.5.9(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4))(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
+        version: 1.6.12(next@15.5.10(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4))(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
       nprogress:
         specifier: 0.2.0
         version: 0.2.0
@@ -3885,8 +3885,8 @@ packages:
   '@napi-rs/wasm-runtime@0.2.12':
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
 
-  '@next/env@15.5.9':
-    resolution: {integrity: sha512-4GlTZ+EJM7WaW2HEZcyU317tIQDjkQIyENDLxYJfSWlfqguN+dHkZgyQTV/7ykvobU7yEH5gKvreNrH4B6QgIg==}
+  '@next/env@15.5.10':
+    resolution: {integrity: sha512-plg+9A/KoZcTS26fe15LHg+QxReTazrIOoKKUC3Uz4leGGeNPgLHdevVraAAOX0snnUs3WkRx3eUQpj9mreG6A==}
 
   '@next/env@16.0.1':
     resolution: {integrity: sha512-LFvlK0TG2L3fEOX77OC35KowL8D7DlFF45C0OvKMC4hy8c/md1RC4UMNDlUGJqfCoCS2VWrZ4dSE6OjaX5+8mw==}
@@ -10981,8 +10981,8 @@ packages:
       react: ^16.8 || ^17 || ^18
       react-dom: ^16.8 || ^17 || ^18
 
-  next@15.5.9:
-    resolution: {integrity: sha512-agNLK89seZEtC5zUHwtut0+tNrc0Xw4FT/Dg+B/VLEo9pAcS9rtTKpek3V6kVcVwsB2YlqMaHdfZL4eLEVYuCg==}
+  next@15.5.10:
+    resolution: {integrity: sha512-r0X65PNwyDDyOrWNKpQoZvOatw7BcsTPRKdwEqtc9cj3wv7mbBIk9tKed4klRaFXJdX0rugpuMTHslDrAU1bBg==}
     engines: {node: ^18.18.0 || ^19.8.0 || >= 20.0.0}
     hasBin: true
     peerDependencies:
@@ -18061,7 +18061,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@next/env@15.5.9': {}
+  '@next/env@15.5.10': {}
 
   '@next/env@16.0.1': {}
 
@@ -26511,9 +26511,9 @@ snapshots:
       - supports-color
       - unified
 
-  next-safe-action@8.0.11(next@15.5.9(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4))(react-dom@19.1.4(react@19.1.4))(react@19.1.4):
+  next-safe-action@8.0.11(next@15.5.10(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4))(react-dom@19.1.4(react@19.1.4))(react@19.1.4):
     dependencies:
-      next: 15.5.9(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
+      next: 15.5.10(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
       react: 19.1.4
       react-dom: 19.1.4(react@19.1.4)
 
@@ -26522,9 +26522,9 @@ snapshots:
       react: 19.1.4
       react-dom: 19.1.4(react@19.1.4)
 
-  next@15.5.9(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4):
+  next@15.5.10(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4):
     dependencies:
-      '@next/env': 15.5.9
+      '@next/env': 15.5.10
       '@swc/helpers': 0.5.15
       caniuse-lite: 1.0.30001746
       postcss: 8.4.31
@@ -26570,9 +26570,9 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  nextjs-toploader@1.6.12(next@15.5.9(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4))(react-dom@19.1.4(react@19.1.4))(react@19.1.4):
+  nextjs-toploader@1.6.12(next@15.5.10(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4))(react-dom@19.1.4(react@19.1.4))(react@19.1.4):
     dependencies:
-      next: 15.5.9(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
+      next: 15.5.10(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
       nprogress: 0.2.0
       prop-types: 15.8.1
       react: 19.1.4
