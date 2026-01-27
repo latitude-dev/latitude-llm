@@ -1842,6 +1842,13 @@
       "when": 1769510058860,
       "tag": "0263_remove_issues_unlocked_column",
       "breakpoints": true
+    },
+    {
+      "idx": 264,
+      "version": "7",
+      "when": 1769531539755,
+      "tag": "0264_drop_issue_id_from_evaluation_results_v2",
+      "breakpoints": true
     }
   ]
 }
