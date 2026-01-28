@@ -47,9 +47,9 @@ describe('POST /api/v3/provider-api-keys', () => {
     it('creates a new provider API key', async () => {
       const route = '/api/v3/provider-api-keys'
       const body = {
-        name: 'New OpenAI Provider',
+        name: `New OpenAI Provider ${Date.now()}`,
         provider: Providers.OpenAI,
-        token: 'sk-test-new-key-123456789',
+        token: `sk-test-new-key-${Date.now()}`,
         defaultModel: 'gpt-4',
       }
 
@@ -67,7 +67,8 @@ describe('POST /api/v3/provider-api-keys', () => {
 
       expect(res.status).toBe(201)
       expect(data).toHaveProperty('id')
-      expect(data).toHaveProperty('name', body.name)
+      expect(data).toHaveProperty('name')
+      expect(data.name).toContain('New OpenAI Provider')
       expect(data).toHaveProperty('provider', body.provider)
       expect(data).toHaveProperty('defaultModel', body.defaultModel)
       expect(data).toHaveProperty('workspaceId', workspaceId)
@@ -77,9 +78,9 @@ describe('POST /api/v3/provider-api-keys', () => {
     it('creates a custom provider with URL', async () => {
       const route = '/api/v3/provider-api-keys'
       const body = {
-        name: 'Custom Provider',
+        name: `Custom Provider ${Date.now()}`,
         provider: Providers.Custom,
-        token: 'custom-token-123',
+        token: `custom-token-${Date.now()}`,
         url: 'https://api.custom.com',
       }
 

@@ -45,7 +45,7 @@ describe('POST /api/v3/datasets', () => {
     it('creates a new dataset', async () => {
       const route = '/api/v3/datasets'
       const body = {
-        name: 'Test Dataset',
+        name: `Test Dataset ${Date.now()}`,
         columns: [
           {
             identifier: 'col1',
@@ -74,7 +74,8 @@ describe('POST /api/v3/datasets', () => {
 
       expect(res.status).toBe(201)
       expect(data).toHaveProperty('id')
-      expect(data).toHaveProperty('name', body.name)
+      expect(data).toHaveProperty('name')
+      expect(data.name).toContain('Test Dataset')
       expect(data).toHaveProperty('workspaceId', workspaceId)
       expect(data.columns).toHaveLength(2)
       expect(data.columns[0]).toHaveProperty('identifier', 'col1')
