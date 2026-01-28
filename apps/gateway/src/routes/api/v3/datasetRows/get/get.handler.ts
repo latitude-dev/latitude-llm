@@ -5,9 +5,17 @@ export const getDatasetRowHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const { rowId } = c.req.param()
 
-  const datasetRowsRepository = new DatasetRowsRepository(workspace.id)
-  const rowResult = await datasetRowsRepository.find(Number(rowId))
-  const row = rowResult.unwrap()
+  try {
+    const datasetRowsRepository = new DatasetRowsRepository(workspace.id)
+    const rowResult = await datasetRowsRepository.find(Number(rowId))
 
-  return c.json(row, 200)
+    if (rowResult.error) {
+      return c.json({ error: 'Dataset row not found' }, 404)
+    }
+
+    return c.json(rowResult.value, 200)
+  } catch (error) {
+    console.error('Unexpected error:', error)
+    return c.json({ error: 'Unexpected error', details: String(error) }, 500)
+  }
 }

@@ -9,19 +9,33 @@ export const destroyDatasetRowHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const { rowId } = c.req.param()
 
-  const datasetRowsRepository = new DatasetRowsRepository(workspace.id)
-  const rowResult = await datasetRowsRepository.find(Number(rowId))
-  const row = rowResult.unwrap()
+  try {
+    const datasetRowsRepository = new DatasetRowsRepository(workspace.id)
+    const rowResult = await datasetRowsRepository.find(Number(rowId))
 
-  const datasetsRepository = new DatasetsRepository(workspace.id)
-  const datasetResult = await datasetsRepository.find(row.datasetId)
-  const dataset = datasetResult.unwrap()
+    if (rowResult.error) {
+      return c.json({ error: 'Dataset row not found' }, 404)
+    }
 
-  const result = await deleteManyRows({
-    dataset,
-    rows: [row],
-  })
+    const datasetsRepository = new DatasetsRepository(workspace.id)
+    const datasetResult = await datasetsRepository.find(rowResult.value.datasetId)
 
-  const deletedRows = result.unwrap()
-  return c.json(deletedRows[0], 200)
+    if (datasetResult.error) {
+      return c.json({ error: 'Dataset not found' }, 404)
+    }
+
+    const result = await deleteManyRows({
+      dataset: datasetResult.value,
+      rows: [rowResult.value],
+    })
+
+    if (result.error) {
+      return c.json({ error: result.error.message }, 400)
+    }
+
+    return c.json(result.value[0], 200)
+  } catch (error) {
+    console.error('Unexpected error:', error)
+    return c.json({ error: 'Unexpected error', details: String(error) }, 500)
+  }
 }

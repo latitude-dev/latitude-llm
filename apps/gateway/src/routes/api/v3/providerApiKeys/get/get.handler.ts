@@ -1,16 +1,28 @@
 import { Context } from 'hono'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
-import { serializeProviderApiKey } from '@latitude-data/core/services/providerApiKeys/helpers/serializeProviderApiKey'
 
 export const getProviderApiKeyHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const { providerApiKeyId } = c.req.param()
 
-  const providerApiKeysRepository = new ProviderApiKeysRepository(workspace.id)
-  const providerApiKeyResult = await providerApiKeysRepository.find(
-    Number(providerApiKeyId),
-  )
-  const providerApiKey = serializeProviderApiKey(providerApiKeyResult.unwrap())
+  try {
+    const providerApiKeysRepository = new ProviderApiKeysRepository(workspace.id)
+    const providerApiKeyResult = await providerApiKeysRepository.find(
+      Number(providerApiKeyId),
+    )
 
-  return c.json(providerApiKey, 200)
+    if (providerApiKeyResult.error) {
+      return c.json({ error: 'Provider API key not found' }, 404)
+    }
+
+    const providerApiKey = {
+      ...providerApiKeyResult.value,
+      token: '***masked***',
+    }
+
+    return c.json(providerApiKey, 200)
+  } catch (error) {
+    console.error('Unexpected error:', error)
+    return c.json({ error: 'Unexpected error', details: String(error) }, 500)
+  }
 }

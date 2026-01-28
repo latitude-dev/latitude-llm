@@ -6,14 +6,30 @@ export const destroyProviderApiKeyHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const { providerApiKeyId } = c.req.param()
 
-  const providerApiKeysRepository = new ProviderApiKeysRepository(workspace.id)
-  const providerApiKeyResult = await providerApiKeysRepository.find(
-    Number(providerApiKeyId),
-  )
-  const providerApiKey = providerApiKeyResult.unwrap()
+  try {
+    const providerApiKeysRepository = new ProviderApiKeysRepository(workspace.id)
+    const providerApiKeyResult = await providerApiKeysRepository.find(
+      Number(providerApiKeyId),
+    )
 
-  const result = await destroyProviderApiKey(providerApiKey)
-  const deletedProviderApiKey = result.unwrap()
+    if (providerApiKeyResult.error) {
+      return c.json({ error: 'Provider API key not found' }, 404)
+    }
 
-  return c.json(deletedProviderApiKey, 200)
+    const result = await destroyProviderApiKey(providerApiKeyResult.value)
+
+    if (result.error) {
+      return c.json({ error: result.error.message }, 400)
+    }
+
+    const deletedProviderApiKey = {
+      ...result.value,
+      token: '***masked***',
+    }
+
+    return c.json(deletedProviderApiKey, 200)
+  } catch (error) {
+    console.error('Unexpected error:', error)
+    return c.json({ error: 'Unexpected error', details: String(error) }, 500)
+  }
 }

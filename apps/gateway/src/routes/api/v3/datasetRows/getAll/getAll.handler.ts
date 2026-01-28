@@ -11,16 +11,28 @@ export const getAllDatasetRowsHandler = async (c: Context) => {
   const page = c.req.query('page') || '1'
   const pageSize = c.req.query('pageSize') || String(DEFAULT_PAGINATION_SIZE)
 
-  const datasetsRepository = new DatasetsRepository(workspace.id)
-  const datasetResult = await datasetsRepository.find(Number(datasetId))
-  const dataset = datasetResult.unwrap()
+  try {
+    if (!datasetId) {
+      return c.json({ error: 'datasetId query parameter is required' }, 400)
+    }
 
-  const datasetRowsRepository = new DatasetRowsRepository(workspace.id)
-  const rows = await datasetRowsRepository.findByDatasetPaginated({
-    datasetId: dataset.id,
-    page,
-    pageSize,
-  })
+    const datasetsRepository = new DatasetsRepository(workspace.id)
+    const datasetResult = await datasetsRepository.find(Number(datasetId))
 
-  return c.json(rows, 200)
+    if (datasetResult.error) {
+      return c.json({ error: 'Dataset not found' }, 404)
+    }
+
+    const datasetRowsRepository = new DatasetRowsRepository(workspace.id)
+    const rows = await datasetRowsRepository.findByDatasetPaginated({
+      datasetId: datasetResult.value.id,
+      page,
+      pageSize,
+    })
+
+    return c.json(rows, 200)
+  } catch (error) {
+    console.error('Unexpected error:', error)
+    return c.json({ error: 'Unexpected error', details: String(error) }, 500)
+  }
 }

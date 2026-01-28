@@ -57,7 +57,7 @@ describe('GET /api/v3/provider-api-keys', () => {
       expect(data[0]).toHaveProperty('workspaceId', workspaceId)
       expect(data[0]).toHaveProperty('token')
       // Token should be masked
-      expect(data[0].token).not.toContain('sk-')
+      expect(data[0].token).toBe('***masked***')
     })
   })
 })

@@ -54,7 +54,7 @@ describe('GET /api/v3/provider-api-keys/:providerApiKeyId', () => {
       expect(data).toHaveProperty('provider')
       expect(data).toHaveProperty('token')
       // Token should be masked
-      expect(data.token).not.toContain('sk-')
+      expect(data.token).toBe('***masked***')
     })
 
     it('returns 404 for non-existent provider API key', async () => {
