@@ -13,7 +13,6 @@ import {
   TelemetryContext,
 } from '../../telemetry'
 import { runChain } from '../chains/run'
-import { createDocumentLog } from '../documentLogs/create'
 import { getResolvedContent } from '../documents'
 import { ToolHandler } from '../documents/tools/clientTools/handlers'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
@@ -96,20 +95,6 @@ export async function runDocumentAtCommit(
   })
   const checkerResult = await checker.call()
   if (checkerResult.error) {
-    await createDocumentLog({
-      commit,
-      data: {
-        documentUuid: document.documentUuid,
-        customIdentifier,
-        duration: 0,
-        parameters,
-        resolvedContent: result.value,
-        uuid: errorableUuid,
-        source,
-        experimentId: experiment?.id,
-      },
-    }).then((r) => r.unwrap())
-
     $prompt.fail(checkerResult.error)
     return checkerResult
   }
@@ -146,21 +131,6 @@ export async function runDocumentAtCommit(
       } else {
         $prompt.end()
       }
-
-      const duration = await runResult.duration
-      await createDocumentLog({
-        commit,
-        data: {
-          customIdentifier,
-          documentUuid: document.documentUuid,
-          duration: duration ?? 0,
-          experimentId: experiment?.id,
-          parameters,
-          resolvedContent: result.value,
-          source,
-          uuid: errorableUuid,
-        },
-      }).then((r) => r.unwrap())
 
       return response
     }),
