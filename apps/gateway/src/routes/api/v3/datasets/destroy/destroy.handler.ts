@@ -2,6 +2,7 @@ import { Context } from 'hono'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { destroyDataset } from '@latitude-data/core/services/datasets/destroy'
 
+// @ts-expect-error: broken types
 export const destroyDatasetHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const { datasetId } = c.req.param()

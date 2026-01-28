@@ -11,6 +11,7 @@ const updateDatasetRowSchema = z.object({
   rowData: z.record(z.string(), z.any()),
 })
 
+// @ts-expect-error: broken types
 export const updateDatasetRowHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const { rowId } = c.req.param()

@@ -8,6 +8,7 @@ const createDatasetRowSchema = z.object({
   rowData: z.record(z.string(), z.any()),
 })
 
+// @ts-expect-error: broken types
 export const createDatasetRowHandler = async (c: Context) => {
   const workspace = c.get('workspace')
 

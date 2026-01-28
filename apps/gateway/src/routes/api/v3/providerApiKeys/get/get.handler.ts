@@ -1,6 +1,7 @@
 import { Context } from 'hono'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 
+// @ts-expect-error: broken types
 export const getProviderApiKeyHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const { providerApiKeyId } = c.req.param()

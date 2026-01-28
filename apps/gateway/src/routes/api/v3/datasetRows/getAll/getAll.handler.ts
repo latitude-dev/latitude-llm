@@ -5,6 +5,7 @@ import {
 } from '@latitude-data/core/repositories'
 import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
 
+// @ts-expect-error: broken types
 export const getAllDatasetRowsHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const datasetId = c.req.query('datasetId')

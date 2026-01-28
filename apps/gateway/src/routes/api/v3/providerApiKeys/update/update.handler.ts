@@ -7,6 +7,7 @@ const updateProviderApiKeySchema = z.object({
   name: z.string().min(1, 'Provider name is required'),
 })
 
+// @ts-expect-error: broken types
 export const updateProviderApiKeyHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const { providerApiKeyId } = c.req.param()

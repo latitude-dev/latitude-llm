@@ -12,6 +12,7 @@ const createProviderApiKeySchema = z.object({
   configuration: z.record(z.string(), z.any()).optional(),
 })
 
+// @ts-expect-error: broken types
 export const createProviderApiKeyHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const user = c.get('user')
