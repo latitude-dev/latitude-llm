@@ -50,12 +50,12 @@ describe('POST /api/v3/datasets', () => {
           {
             identifier: 'col1',
             name: 'Column 1',
-            role: 'input',
+            role: 'parameter',
           },
           {
             identifier: 'col2',
             name: 'Column 2',
-            role: 'output',
+            role: 'label',
           },
         ],
       }

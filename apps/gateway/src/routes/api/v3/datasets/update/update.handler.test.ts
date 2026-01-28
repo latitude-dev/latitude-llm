@@ -47,7 +47,7 @@ describe('PUT /api/v3/datasets/:datasetId', () => {
           {
             identifier: 'new_col',
             name: 'New Column',
-            role: 'input',
+            role: 'parameter',
           },
         ],
       }
