@@ -33,24 +33,34 @@ export const createProviderApiKeyHandler = async (c: Context) => {
     const { name, provider, token, url, defaultModel, configuration } =
       validation.data
 
-    const result = await createProviderApiKey({
-      workspace,
-      author: user,
-      name,
-      provider,
-      token,
-      url,
-      defaultModel,
-      configuration,
-    })
+    try {
+      const result = await createProviderApiKey({
+        workspace,
+        author: user,
+        name,
+        provider,
+        token,
+        url,
+        defaultModel,
+        configuration,
+      })
 
-    if (result.error) {
-      return c.json({ error: result.error.message }, 400)
+      if (result.error) {
+        return c.json({ error: result.error.message }, 400)
+      }
+
+      return c.json(result.value, 201)
+    } catch (serviceError) {
+      const errorMessage =
+        serviceError instanceof Error
+          ? serviceError.message
+          : String(serviceError || 'Unknown error')
+      return c.json({ error: errorMessage }, 400)
     }
-
-    return c.json(result.value, 201)
   } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : String(error || 'Unknown error')
     console.error('Unexpected error:', error)
-    return c.json({ error: 'Unexpected error', details: String(error) }, 500)
+    return c.json({ error: errorMessage }, 500)
   }
 }
