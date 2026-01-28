@@ -1,36 +1,20 @@
-import {
-  UsageIndicatorPopover,
-  type UsageSubscription,
-} from '$/components/UsageIndicatorPopover'
-import { calculateUsage } from '$/lib/usageUtils'
-import { computeWorkspaceUsage } from '@latitude-data/core/services/workspaces/usage'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import type { GetUsageOverviewRow } from '@latitude-data/core/services/workspaces/usageOverview/getUsageOverview'
 
-export async function UsageCell({
+export function UsageCell({
   usageOverview,
-  subscription,
 }: {
   usageOverview: GetUsageOverviewRow
-  subscription: UsageSubscription
 }) {
-  if (!usageOverview.subscriptionCreatedAt) {
-    throw new Error(
-      `Missing subscriptionCreatedAt for workspace ${usageOverview.workspaceId}`,
-    )
-  }
-
-  const usage = await computeWorkspaceUsage({
-    id: usageOverview.workspaceId!,
-    currentSubscriptionCreatedAt: new Date(usageOverview.subscriptionCreatedAt),
-    plan: usageOverview.subscriptionPlan,
-  }).then((r) => r.unwrap())
-  const calculatedUsage = calculateUsage(usage)
+  const lastMonth = usageOverview.lastMonthRuns ?? 0
+  const prevMonth = usageOverview.lastTwoMonthsRuns ?? 0
 
   return (
-    <UsageIndicatorPopover
-      workspaceUsage={usage}
-      calculatedUsage={calculatedUsage}
-      subscription={subscription}
-    />
+    <div className='flex flex-col gap-1'>
+      <Text.H5>{lastMonth.toLocaleString()} runs</Text.H5>
+      <Text.H6 color='foregroundMuted'>
+        {prevMonth.toLocaleString()} prev month
+      </Text.H6>
+    </div>
   )
 }

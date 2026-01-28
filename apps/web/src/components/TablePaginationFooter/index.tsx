@@ -1,3 +1,5 @@
+'use client'
+
 import { useMemo } from 'react'
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'

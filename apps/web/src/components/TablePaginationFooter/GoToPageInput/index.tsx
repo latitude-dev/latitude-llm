@@ -1,3 +1,5 @@
+'use client'
+
 import { FormEvent, useCallback } from 'react'
 
 import { buildPaginatedUrl } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'

@@ -19,17 +19,13 @@ export enum EvaluationRoutes {
 }
 
 export enum BackofficeRoutes {
-  rewards = 'rewards',
-  users = 'users',
-  usageOverview = 'usageOverview',
-  triggers = 'triggers',
-  features = 'features',
   search = 'search',
-  grants = 'grants',
+  usageOverview = 'usageOverview',
+  features = 'features',
   promocodes = 'promocodes',
-  integrations = 'integrations',
-  weekly = 'weekly',
   billing = 'billing',
+  integrations = 'integrations',
+  triggers = 'triggers',
 }
 
 const BACKOFFICE_ROOT = '/backoffice'
@@ -52,21 +48,6 @@ export const ROUTES = {
   },
   backoffice: {
     root: BACKOFFICE_ROOT,
-    [BackofficeRoutes.rewards]: {
-      root: `${BACKOFFICE_ROOT}/rewards`,
-    },
-    [BackofficeRoutes.users]: {
-      root: `${BACKOFFICE_ROOT}/users`,
-    },
-    [BackofficeRoutes.usageOverview]: {
-      root: `${BACKOFFICE_ROOT}/usage-overview`,
-    },
-    [BackofficeRoutes.triggers]: {
-      root: `${BACKOFFICE_ROOT}/triggers`,
-    },
-    [BackofficeRoutes.features]: {
-      root: `${BACKOFFICE_ROOT}/features`,
-    },
     [BackofficeRoutes.search]: {
       root: `${BACKOFFICE_ROOT}/search`,
       workspace: (id: number) => `${BACKOFFICE_ROOT}/search/workspace/${id}`,
@@ -74,22 +55,23 @@ export const ROUTES = {
         `${BACKOFFICE_ROOT}/search/user/${encodeURIComponent(email)}`,
       project: (id: number) => `${BACKOFFICE_ROOT}/search/project/${id}`,
     },
-    [BackofficeRoutes.grants]: {
-      root: `${BACKOFFICE_ROOT}/grants`,
+    [BackofficeRoutes.usageOverview]: {
+      root: `${BACKOFFICE_ROOT}/usage-overview`,
+    },
+    [BackofficeRoutes.features]: {
+      root: `${BACKOFFICE_ROOT}/features`,
     },
     [BackofficeRoutes.promocodes]: {
       root: `${BACKOFFICE_ROOT}/promocodes`,
     },
+    [BackofficeRoutes.billing]: {
+      root: `${BACKOFFICE_ROOT}/billing`,
+    },
     [BackofficeRoutes.integrations]: {
       root: `${BACKOFFICE_ROOT}/integrations`,
     },
-    [BackofficeRoutes.weekly]: {
-      root: `${BACKOFFICE_ROOT}/weekly`,
-      withWorkspaceId: (workspaceId: number) =>
-        `${BACKOFFICE_ROOT}/weekly?workspaceId=${workspaceId}`,
-    },
-    [BackofficeRoutes.billing]: {
-      root: `${BACKOFFICE_ROOT}/billing`,
+    [BackofficeRoutes.triggers]: {
+      root: `${BACKOFFICE_ROOT}/triggers`,
     },
   },
   noWorkspace: {

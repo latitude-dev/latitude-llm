@@ -28,6 +28,7 @@ export function BillingList({ workspaces }: Props) {
           workspaceName={workspace.name}
           stripeCustomerId={workspace.stripeCustomerId}
           subscription={workspace.subscription}
+          showWorkspaceInfo
         />
       ))}
     </div>

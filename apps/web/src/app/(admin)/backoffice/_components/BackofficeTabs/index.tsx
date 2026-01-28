@@ -22,24 +22,9 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               route: ROUTES.backoffice.search.root,
             },
             {
-              label: 'Rewards',
-              value: BackofficeRoutes.rewards,
-              route: ROUTES.backoffice.rewards.root,
-            },
-            {
-              label: 'Users',
-              value: BackofficeRoutes.users,
-              route: ROUTES.backoffice.users.root,
-            },
-            {
               label: 'Usage overview',
               value: BackofficeRoutes.usageOverview,
               route: ROUTES.backoffice.usageOverview.root,
-            },
-            {
-              label: 'Triggers',
-              value: BackofficeRoutes.triggers,
-              route: ROUTES.backoffice.triggers.root,
             },
             {
               label: 'Features',
@@ -47,14 +32,14 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               route: ROUTES.backoffice.features.root,
             },
             {
-              label: 'Grants',
-              value: BackofficeRoutes.grants,
-              route: ROUTES.backoffice.grants.root,
-            },
-            {
               label: 'Promocodes',
               value: BackofficeRoutes.promocodes,
               route: ROUTES.backoffice.promocodes.root,
+            },
+            {
+              label: 'Billing',
+              value: BackofficeRoutes.billing,
+              route: ROUTES.backoffice.billing.root,
             },
             {
               label: 'Integrations',
@@ -62,14 +47,9 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               route: ROUTES.backoffice.integrations.root,
             },
             {
-              label: 'Weekly',
-              value: BackofficeRoutes.weekly,
-              route: ROUTES.backoffice.weekly.root,
-            },
-            {
-              label: 'Billing',
-              value: BackofficeRoutes.billing,
-              route: ROUTES.backoffice.billing.root,
+              label: 'Triggers',
+              value: BackofficeRoutes.triggers,
+              route: ROUTES.backoffice.triggers.root,
             },
           ]}
           selected={selected}

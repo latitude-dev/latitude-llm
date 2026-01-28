@@ -1,8 +1,11 @@
 'use client'
 
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { useCallback, useState } from 'react'
+import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ToggleBigAccountButton } from '../ToggleBigAccountButton'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { toggleBigAccountAction } from '$/actions/admin/workspaces/toggleBigAccount'
 
 export function BigAccountBanner({
   workspaceId,
@@ -11,29 +14,46 @@ export function BigAccountBanner({
   workspaceId: number
   isBigAccount: boolean
 }) {
+  const { toast } = useToast()
+  const [enabled, setEnabled] = useState(isBigAccount)
+  const { execute, isPending } = useLatitudeAction(toggleBigAccountAction, {
+    onSuccess: ({ data }) => {
+      setEnabled(data.isBigAccount)
+      toast({
+        title: 'Success',
+        description: `Big account flag ${data.isBigAccount ? 'enabled' : 'disabled'} for this workspace`,
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+
+  const handleToggle = useCallback(
+    async (value: boolean) => {
+      setEnabled(value)
+      await execute({ workspaceId, enabled: value })
+    },
+    [execute, workspaceId],
+  )
+
   return (
-    <div className='bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6'>
-      <div className='flex items-start gap-3'>
-        <div className='p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg'>
-          <Icon name='database' size='normal' color='primary' />
-        </div>
-        <div className='flex-1 gap-y-1'>
-          <div className='mb-4'>
-            <Text.H4 display='block' weight='semibold'>
-              Big Account Settings
-            </Text.H4>
-            <Text.H5 color='foregroundMuted'>
-              Enable this checkbox to restrict data analytics on workspaces with
-              too many data. This is a temporary measure while we scale the
-              platform.
-            </Text.H5>
-          </div>
-          <ToggleBigAccountButton
-            workspaceId={workspaceId}
-            isBigAccount={isBigAccount}
-          />
-        </div>
+    <div className='flex flex-row items-center justify-between p-4 bg-muted/30 rounded-lg'>
+      <div className='flex flex-col gap-1'>
+        <Text.H5>Big Account</Text.H5>
+        <Text.H6 color='foregroundMuted'>
+          Restrict data analytics for workspaces with large amounts of data
+        </Text.H6>
       </div>
+      <SwitchInput
+        checked={enabled}
+        onCheckedChange={handleToggle}
+        disabled={isPending}
+      />
     </div>
   )
 }

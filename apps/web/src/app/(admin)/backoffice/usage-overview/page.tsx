@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { ROUTES } from '$/services/routes'
@@ -15,6 +14,7 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { ServerSideTableCell } from '@latitude-data/web-ui/atoms/Table'
@@ -22,12 +22,9 @@ import { SubscriptionBadge } from '$/components/UsageIndicatorPopover'
 import { buildUsageInformation } from '$/app/(admin)/backoffice/usage-overview/buildUsageInformation'
 import { TrendCell } from './_components/TrendCell'
 import { UsageCell } from './_components/UsageCell'
-import { EmailsCell } from '$/app/(admin)/backoffice/usage-overview/_components/EmailsCell'
+import { UsageDetailsButton } from './_components/UsageDetailsButton'
+import Link from 'next/link'
 
-/**
- * All workspaces should have subscription
- * this send to Sentry if there is a workspace without subscription
- */
 function formatSubscriptionDate(usage: GetUsageOverviewRow) {
   try {
     return format(usage.subscriptionCreatedAt!, 'yyyy-MM-dd HH:mm:ss')
@@ -47,7 +44,7 @@ export default async function AdminPage({
   const page = pageParam ? +pageParam : 1
   const pageSize = pageSizeParam ? +pageSizeParam : 25
   const pagination = buildPagination({
-    count: Infinity, // We avoid calculating the full amount of workspaces
+    count: Infinity,
     baseUrl: ROUTES.backoffice.usageOverview.root,
     page,
     pageSize,
@@ -70,12 +67,12 @@ export default async function AdminPage({
               >
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Last 30 days</TableHead>
+                    <TableHead>Trend</TableHead>
                     <TableHead>Last run</TableHead>
                     <TableHead>Workspace</TableHead>
-                    <TableHead>subscription</TableHead>
+                    <TableHead>Subscription</TableHead>
                     <TableHead>Usage</TableHead>
-                    <TableHead>Emails</TableHead>
+                    <TableHead>Details</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -99,14 +96,23 @@ export default async function AdminPage({
                           </Text.H6>
                         </ServerSideTableCell>
                         <ServerSideTableCell>
-                          <div className='flex flex-col gap-y-2 py-2'>
-                            <Text.H5M noWrap>{usage.name}</Text.H5M>
-                            <div className='flex gap-x-2 items-center'>
-                              <Text.H7 color='foregroundMuted'>
-                                ID: {usage.workspaceId}
-                              </Text.H7>
+                          <Link
+                            href={ROUTES.backoffice.search.workspace(
+                              usage.workspaceId!,
+                            )}
+                          >
+                            <div className='flex flex-col gap-y-2 py-2'>
+                              <div className='flex flex-row items-center gap-1'>
+                                <Text.H5M noWrap>{usage.name}</Text.H5M>
+                                <Icon name='externalLink' size='small' />
+                              </div>
+                              <div className='flex gap-x-2 items-center'>
+                                <Text.H7 color='foregroundMuted'>
+                                  ID: {usage.workspaceId}
+                                </Text.H7>
+                              </div>
                             </div>
-                          </div>
+                          </Link>
                         </ServerSideTableCell>
                         <ServerSideTableCell>
                           <div className='flex flex-col gap-y-2 py-2'>
@@ -124,15 +130,13 @@ export default async function AdminPage({
                           </div>
                         </ServerSideTableCell>
                         <ServerSideTableCell>
-                          <Suspense fallback={<Text.H6>Loading...</Text.H6>}>
-                            <UsageCell
-                              usageOverview={usage}
-                              subscription={usageInfo.plan}
-                            />
-                          </Suspense>
+                          <UsageCell usageOverview={usage} />
                         </ServerSideTableCell>
-                        <ServerSideTableCell className='max-w-40'>
-                          <EmailsCell {...usageInfo.emails} />
+                        <ServerSideTableCell>
+                          <UsageDetailsButton
+                            workspaceId={usage.workspaceId!}
+                            workspaceName={usage.name ?? 'Unknown'}
+                          />
                         </ServerSideTableCell>
                       </TableRow>
                     )
