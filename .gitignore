@@ -5,6 +5,7 @@ latitude-lock.json
 **/cli/prompts/test.js
 
 ## IDEs
+.cursor
 .vscode
 .idea
 
