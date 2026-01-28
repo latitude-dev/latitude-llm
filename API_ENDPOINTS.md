@@ -2,15 +2,23 @@
 
 This document describes the REST API endpoints for managing datasets, dataset rows, and provider API keys (models).
 
+## Base URL
+
+All endpoints are available through the Gateway API at `/api/v3/`.
+
 ## Authentication
 
-All endpoints require authentication via the workspace API key or user session. Include the appropriate authentication headers in your requests.
+All endpoints require authentication via Bearer token (API key). Include the authentication header in your requests:
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
 
 ## Datasets
 
 ### List Datasets
 ```
-GET /api/datasets
+GET /api/v3/datasets
 ```
 
 Query Parameters:
@@ -21,14 +29,14 @@ Response: Array of dataset objects
 
 ### Get Dataset by ID
 ```
-GET /api/datasets/:id
+GET /api/v3/datasets/:datasetId
 ```
 
 Response: Dataset object
 
 ### Create Dataset
 ```
-POST /api/datasets
+POST /api/v3/datasets
 ```
 
 Request Body:
@@ -49,7 +57,7 @@ Response: Created dataset object (201)
 
 ### Update Dataset
 ```
-PUT /api/datasets/:id
+PUT /api/v3/datasets/:datasetId
 ```
 
 Request Body:
@@ -69,7 +77,7 @@ Response: Updated dataset object
 
 ### Delete Dataset
 ```
-DELETE /api/datasets/:id
+DELETE /api/v3/datasets/:datasetId
 ```
 
 Response: Deleted dataset object (soft delete)
@@ -78,7 +86,7 @@ Response: Deleted dataset object (soft delete)
 
 ### List Dataset Rows
 ```
-GET /api/dataset-rows
+GET /api/v3/dataset-rows
 ```
 
 Query Parameters:
@@ -90,14 +98,14 @@ Response: Array of dataset row objects
 
 ### Get Dataset Row by ID
 ```
-GET /api/dataset-rows/:id
+GET /api/v3/dataset-rows/:rowId
 ```
 
 Response: Dataset row object
 
 ### Create Dataset Row
 ```
-POST /api/dataset-rows
+POST /api/v3/dataset-rows
 ```
 
 Request Body:
@@ -115,7 +123,7 @@ Response: Created dataset row object (201)
 
 ### Update Dataset Row
 ```
-PUT /api/dataset-rows/:id
+PUT /api/v3/dataset-rows/:rowId
 ```
 
 Request Body:
@@ -133,7 +141,7 @@ Response: Updated dataset row object
 
 ### Delete Dataset Row
 ```
-DELETE /api/dataset-rows/:id
+DELETE /api/v3/dataset-rows/:rowId
 ```
 
 Response: Deleted dataset row object
@@ -142,21 +150,21 @@ Response: Deleted dataset row object
 
 ### List Provider API Keys
 ```
-GET /api/providerApiKeys
+GET /api/v3/provider-api-keys
 ```
 
 Response: Array of provider API key objects (tokens are masked)
 
 ### Get Provider API Key by ID
 ```
-GET /api/providerApiKeys/:id
+GET /api/v3/provider-api-keys/:providerApiKeyId
 ```
 
 Response: Provider API key object (token is masked)
 
 ### Create Provider API Key
 ```
-POST /api/providerApiKeys
+POST /api/v3/provider-api-keys
 ```
 
 Request Body:
@@ -177,7 +185,7 @@ Response: Created provider API key object (201)
 
 ### Update Provider API Key
 ```
-PUT /api/providerApiKeys/:id
+PUT /api/v3/provider-api-keys/:providerApiKeyId
 ```
 
 Request Body:
@@ -193,7 +201,7 @@ Response: Updated provider API key object
 
 ### Delete Provider API Key
 ```
-DELETE /api/providerApiKeys/:id
+DELETE /api/v3/provider-api-keys/:providerApiKeyId
 ```
 
 Response: Deleted provider API key object (soft delete)
