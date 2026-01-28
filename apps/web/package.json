@@ -16,7 +16,7 @@
     "test": "TZ=UTC vitest --run",
     "test:watch": "TZ=UTC vitest",
     "datadog:normalize-sourcemaps": "./scripts/normalize-sourcemaps.sh .next/static",
-    "datadog:sourcemaps:client": "pnpm datadog:normalize-sourcemaps && datadog-ci sourcemaps upload .next --service=latitude-llm-web --minified-path-prefix=/_next/ --release-version=${RELEASE_VERSION:-unknown} --disable-git --max-concurrency=20",
+    "datadog:sourcemaps:client": "pnpm datadog:normalize-sourcemaps && datadog-ci sourcemaps upload .next/static --service=latitude-llm-web --minified-path-prefix=/_next/static/ --release-version=${RELEASE_VERSION:-unknown} --disable-git --max-concurrency=20",
     "datadog:sourcemaps:server": "datadog-ci sourcemaps upload .next/server --service=latitude-llm-web --minified-path-prefix=/app/apps/web/.next/server/ --release-version=${RELEASE_VERSION:-unknown} --disable-git --max-concurrency=20",
     "datadog:sourcemaps": "pnpm datadog:sourcemaps:client && pnpm datadog:sourcemaps:server"
   },
