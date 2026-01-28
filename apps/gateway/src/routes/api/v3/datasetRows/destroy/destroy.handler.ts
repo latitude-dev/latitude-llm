@@ -5,7 +5,6 @@ import {
 } from '@latitude-data/core/repositories'
 import { deleteManyRows } from '@latitude-data/core/services/datasetRows/deleteManyRows'
 
-// @ts-expect-error: broken types
 export const destroyDatasetRowHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const { rowId } = c.req.param()

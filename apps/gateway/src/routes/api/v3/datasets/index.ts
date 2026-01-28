@@ -11,8 +11,13 @@ import { destroyDatasetHandler } from './destroy/destroy.handler'
 import { destroyDatasetRoute } from './destroy/destroy.route'
 
 export const datasetsRouter = createRouter()
+  // @ts-expect-error: broken types
   .openapi(getAllDatasetsRoute, getAllDatasetsHandler)
+  // @ts-expect-error: broken types
   .openapi(getDatasetRoute, getDatasetHandler)
+  // @ts-expect-error: broken types
   .openapi(createDatasetRoute, createDatasetHandler)
+  // @ts-expect-error: broken types
   .openapi(updateDatasetRoute, updateDatasetHandler)
+  // @ts-expect-error: broken types
   .openapi(destroyDatasetRoute, destroyDatasetHandler)

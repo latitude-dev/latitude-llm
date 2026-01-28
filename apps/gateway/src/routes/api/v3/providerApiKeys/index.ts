@@ -11,8 +11,13 @@ import { destroyProviderApiKeyHandler } from './destroy/destroy.handler'
 import { destroyProviderApiKeyRoute } from './destroy/destroy.route'
 
 export const providerApiKeysRouter = createRouter()
+  // @ts-expect-error: broken types
   .openapi(getAllProviderApiKeysRoute, getAllProviderApiKeysHandler)
+  // @ts-expect-error: broken types
   .openapi(getProviderApiKeyRoute, getProviderApiKeyHandler)
+  // @ts-expect-error: broken types
   .openapi(createProviderApiKeyRoute, createProviderApiKeyHandler)
+  // @ts-expect-error: broken types
   .openapi(updateProviderApiKeyRoute, updateProviderApiKeyHandler)
+  // @ts-expect-error: broken types
   .openapi(destroyProviderApiKeyRoute, destroyProviderApiKeyHandler)

@@ -13,7 +13,6 @@ const updateDatasetSchema = z.object({
   ),
 })
 
-// @ts-expect-error: broken types
 export const updateDatasetHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const { datasetId } = c.req.param()

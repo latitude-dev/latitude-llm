@@ -1,7 +1,6 @@
 import { Context } from 'hono'
 import { DatasetRowsRepository } from '@latitude-data/core/repositories'
 
-// @ts-expect-error: broken types
 export const getDatasetRowHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const { rowId } = c.req.param()

@@ -2,7 +2,6 @@ import { Context } from 'hono'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
 
-// @ts-expect-error: broken types
 export const getAllDatasetsHandler = async (c: Context) => {
   const workspace = c.get('workspace')
   const page = c.req.query('page') || '1'
