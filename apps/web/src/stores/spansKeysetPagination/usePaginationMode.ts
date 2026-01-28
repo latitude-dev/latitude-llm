@@ -75,8 +75,11 @@ export function usePaginationMode(
           params.initialItems && params.initialItems.length > 0
             ? {
                 count: null,
-                items: params.initialItems,
-                next: params.initialItems.at(-1)!.startedAt.toISOString(),
+                items: serializeSpans(params.initialItems),
+                next:
+                  params.initialItems.at(-1)!.startedAt instanceof Date
+                    ? params.initialItems.at(-1)!.startedAt.toISOString()
+                    : String(params.initialItems.at(-1)!.startedAt),
               }
             : undefined,
       },

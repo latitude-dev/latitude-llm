@@ -110,7 +110,9 @@ export function HistoryLogParams({
                   className='flex-grow min-w-0 flex flex-row items-center gap-x-2'
                 >
                   <Text.H5 ellipsis noWrap>
-                    {span.startedAt.toISOString()}
+                    {span.startedAt instanceof Date
+                      ? span.startedAt.toISOString()
+                      : span.startedAt}
                   </Text.H5>
                   <Badge variant='accent'>{span.id.slice(0, 8)}</Badge>
                   <Icon
