@@ -10,7 +10,7 @@ Constraints:
 
 Output requirements:
 - Branch name: very short, lowercase, kebab-case, describing the intent or behavior change.
-- PR Title: one concise line describing the primary intent or behavioral change.
+- PR Title: one short and concise line (less than 72 characters) describing the primary intent or behavioral change.
 - PR Description: markdown-formatted and structured as specified below.
 
 Template:
