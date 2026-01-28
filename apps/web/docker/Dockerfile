@@ -150,7 +150,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 # Install AWS CLI v2 for S3 uploads
 RUN if [ -n "$S3_BUCKET" ] && [ -n "$BUILD_ID" ]; then \
   apk add --no-cache aws-cli; \
-fi
+  fi
 
 RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
   --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
@@ -161,45 +161,45 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
   chmod +x ./apps/web/scripts/upload-static-assets.sh && \
   cd apps/web && \
   ./scripts/upload-static-assets.sh; \
-else \
+  else \
   echo "Skipping S3 upload - S3_BUCKET or BUILD_ID not provided"; \
-fi
+  fi
 
 # Upload source maps to Datadog
 RUN --mount=type=secret,id=DATADOG_API_KEY \
   if [ -s /run/secrets/DATADOG_API_KEY ]; then \
-    echo "Uploading source maps to Datadog..."; \
-    export DATADOG_API_KEY="$(cat /run/secrets/DATADOG_API_KEY)" && \
-    export DD_SITE=${DD_SITE:-datadoghq.eu} && \
-    cd apps/web && \
-    echo "Current directory: $(pwd)" && \
-    echo "Absolute path: /app/apps/web" && \
-    echo "Release version: ${RELEASE_VERSION:-unknown}" && \
-    echo "Service: latitude-llm-web" && \
-    echo "DD Site: ${DD_SITE}" && \
-    echo "" && \
-    if [ -n "$NEXT_PUBLIC_STATIC_ASSETS_URL" ]; then \
-      CLIENT_MINIFIED_PREFIX="${NEXT_PUBLIC_STATIC_ASSETS_URL}/_next/"; \
-    else \
-      CLIENT_MINIFIED_PREFIX="/_next/"; \
-    fi && \
-    echo "Client minified path prefix: $CLIENT_MINIFIED_PREFIX" && \
-    echo "" && \
-    echo "=== CLIENT-SIDE SOURCE MAPS (web URLs) ===" && \
-    echo "Source map files in .next:" && \
-    find .next -name "*.map" -type f | head -10 && \
-    echo "" && \
-    echo "=== SERVER-SIDE SOURCE MAPS (filesystem paths) ===" && \
-    echo "Source map files in .next/server:" && \
-    find .next/server -name "*.map" -type f | head -10 && \
-    echo "" && \
-    echo "Uploading client-side source maps with prefix: $CLIENT_MINIFIED_PREFIX" && \
-    pnpm exec datadog-ci sourcemaps upload .next --service=latitude-llm-web --minified-path-prefix="$CLIENT_MINIFIED_PREFIX" --release-version="${RELEASE_VERSION:-unknown}" --disable-git --max-concurrency=20 && \
-    echo "" && \
-    echo "Uploading server-side source maps with prefix: /app/apps/web/.next/server/" && \
-    pnpm datadog:sourcemaps:server; \
+  echo "Uploading source maps to Datadog..."; \
+  export DATADOG_API_KEY="$(cat /run/secrets/DATADOG_API_KEY 2>/dev/null || echo '')" && \
+  export DD_SITE=${DD_SITE:-datadoghq.eu} && \
+  cd apps/web && \
+  echo "Current directory: $(pwd)" && \
+  echo "Absolute path: /app/apps/web" && \
+  echo "Release version: ${RELEASE_VERSION:-unknown}" && \
+  echo "Service: latitude-llm-web" && \
+  echo "DD Site: ${DD_SITE}" && \
+  echo "" && \
+  if [ -n "$NEXT_PUBLIC_STATIC_ASSETS_URL" ]; then \
+  CLIENT_MINIFIED_PREFIX="${NEXT_PUBLIC_STATIC_ASSETS_URL}/_next/"; \
   else \
-    echo "Skipping Datadog source map upload - DATADOG_API_KEY secret not provided"; \
+  CLIENT_MINIFIED_PREFIX="/_next/"; \
+  fi && \
+  echo "Client minified path prefix: $CLIENT_MINIFIED_PREFIX" && \
+  echo "" && \
+  echo "=== CLIENT-SIDE SOURCE MAPS (web URLs) ===" && \
+  echo "Source map files in .next:" && \
+  find .next -name "*.map" -type f | head -10 && \
+  echo "" && \
+  echo "=== SERVER-SIDE SOURCE MAPS (filesystem paths) ===" && \
+  echo "Source map files in .next/server:" && \
+  find .next/server -name "*.map" -type f | head -10 && \
+  echo "" && \
+  echo "Uploading client-side source maps with prefix: $CLIENT_MINIFIED_PREFIX" && \
+  pnpm exec datadog-ci sourcemaps upload .next --service=latitude-llm-web --minified-path-prefix="$CLIENT_MINIFIED_PREFIX" --release-version="${RELEASE_VERSION:-unknown}" --disable-git --max-concurrency=20 && \
+  echo "" && \
+  echo "Uploading server-side source maps with prefix: /app/apps/web/.next/server/" && \
+  pnpm datadog:sourcemaps:server; \
+  else \
+  echo "Skipping Datadog source map upload - DATADOG_API_KEY secret not provided"; \
   fi
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
