@@ -6,6 +6,7 @@ import {
   ToolCardIcon,
   ToolCardText,
   ToolCardWrapper,
+  ToolCallStatus,
 } from './_components/ToolCard'
 import {
   KeyboardEventHandler,
@@ -127,14 +128,15 @@ export function ClientToolCard({
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
-  status: 'pending' | 'success' | 'error'
+  status: ToolCallStatus
   messageIndex?: number
   contentBlockIndex?: number
 }) {
   const [_isOpen, setIsOpen] = useState(false)
+  const isPendingStatus = status === 'running' || status === 'waiting'
   const isOpen = useMemo(
-    () => status === 'pending' || _isOpen,
-    [_isOpen, status],
+    () => isPendingStatus || _isOpen,
+    [_isOpen, isPendingStatus],
   )
 
   return (
@@ -148,7 +150,7 @@ export function ClientToolCard({
         status={status}
         isOpen={isOpen}
         simulated={toolRequest._sourceData?.simulated}
-        onToggle={status === 'pending' ? undefined : () => setIsOpen(!isOpen)}
+        onToggle={isPendingStatus ? undefined : () => setIsOpen(!isOpen)}
       />
 
       {isOpen && (
@@ -159,7 +161,7 @@ export function ClientToolCard({
         </ToolCardContentWrapper>
       )}
       {isOpen &&
-        (status === 'pending' || !toolResponse ? (
+        (isPendingStatus || !toolResponse ? (
           <UnansweredClientToolContent
             toolCallId={toolRequest.toolCallId}
             simulated={toolRequest._sourceData?.simulated}

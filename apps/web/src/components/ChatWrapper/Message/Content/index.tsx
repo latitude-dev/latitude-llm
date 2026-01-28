@@ -18,6 +18,7 @@ export function Content<M extends MarkdownSize | 'none'>({
   debugMode,
   limitVerticalPadding = false,
   messageIndex,
+  isStreaming = false,
   ...rest
 }: {
   index?: number
@@ -30,6 +31,7 @@ export function Content<M extends MarkdownSize | 'none'>({
   markdownSize: M
   limitVerticalPadding?: boolean
   messageIndex?: number
+  isStreaming?: boolean
 }) {
   const contentArr = useMemo<MessageContent[]>(() => {
     if (content === undefined || content === null) {
@@ -80,6 +82,7 @@ export function Content<M extends MarkdownSize | 'none'>({
           value={c}
           messageIndex={messageIndex}
           contentBlockIndex={idx}
+          isStreaming={isStreaming}
           {...rest}
         />
       </div>
@@ -98,6 +101,7 @@ function ContentItem<M extends MarkdownSize | 'none'>({
   markdownSize,
   messageIndex,
   contentBlockIndex,
+  isStreaming = false,
 }: {
   index?: number
   color: M extends 'none' ? TextColor : Extract<TextColor, ProseColor>
@@ -109,6 +113,7 @@ function ContentItem<M extends MarkdownSize | 'none'>({
   markdownSize: M
   messageIndex?: number
   contentBlockIndex?: number
+  isStreaming?: boolean
 }) {
   if (value.type === 'text') {
     return (
@@ -174,6 +179,7 @@ function ContentItem<M extends MarkdownSize | 'none'>({
         debugMode={debugMode}
         messageIndex={messageIndex}
         contentBlockIndex={contentBlockIndex}
+        isStreaming={isStreaming}
       />
     )
   }

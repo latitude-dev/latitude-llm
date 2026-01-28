@@ -2,7 +2,12 @@ import {
   ToolRequestContent,
   ToolContent,
 } from '@latitude-data/constants/legacyCompiler'
-import { ToolCard, ToolCardIcon, ToolCardText } from './_components/ToolCard'
+import {
+  ToolCard,
+  ToolCardIcon,
+  ToolCardText,
+  ToolCallStatus,
+} from './_components/ToolCard'
 
 export function GenericToolCard({
   toolRequest,
@@ -13,7 +18,7 @@ export function GenericToolCard({
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
-  status: 'pending' | 'success' | 'error'
+  status: ToolCallStatus
   messageIndex?: number
   contentBlockIndex?: number
 }) {
@@ -25,6 +30,7 @@ export function GenericToolCard({
       headerLabel={<ToolCardText>{toolRequest.toolName}</ToolCardText>}
       messageIndex={messageIndex}
       contentBlockIndex={contentBlockIndex}
+      status={status}
     />
   )
 }

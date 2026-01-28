@@ -34,11 +34,13 @@ export const MessageList = memo(
     parameters,
     debugMode,
     toolContentMap: _toolContentMap,
+    isStreaming = false,
   }: {
     messages: ConversationMessage[]
     parameters?: string[]
     debugMode?: boolean
     toolContentMap?: Record<string, ToolContent>
+    isStreaming?: boolean
   }) => {
     const toolContentMap = useToolContentMap(messages, _toolContentMap)
     const displayableMessages = useMemo(
@@ -102,13 +104,13 @@ export const MessageList = memo(
                   message._isGeneratingToolCall
                 }
                 additionalAssistantMessage={
-                  // If this is an additional assistant message, added to a previous assistant message
                   displayIndex > 0 &&
                   message.role === MessageRole.assistant &&
                   displayableMessages[displayIndex - 1].role ===
                     MessageRole.assistant
                 }
                 messageIndex={originalIndex}
+                isStreaming={isStreaming}
               />
             </div>
           )

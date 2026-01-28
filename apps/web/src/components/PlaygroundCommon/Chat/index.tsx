@@ -125,6 +125,7 @@ function Messages({
         parameters={parameterKeys}
         debugMode={debugMode}
         toolContentMap={toolContentMap}
+        isStreaming={playground.isLoading}
       />
 
       {playground.error && <ErrorMessage error={playground.error} />}

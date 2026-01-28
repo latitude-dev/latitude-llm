@@ -6,7 +6,12 @@ import {
   ToolSource,
   ToolSourceData,
 } from '@latitude-data/constants/toolSources'
-import { ToolCard, ToolCardIcon, ToolCardText } from './_components/ToolCard'
+import {
+  ToolCard,
+  ToolCardIcon,
+  ToolCardText,
+  ToolCallStatus,
+} from './_components/ToolCard'
 
 export function AgentToolCard({
   toolRequest,
@@ -18,7 +23,7 @@ export function AgentToolCard({
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
-  status: 'pending' | 'success' | 'error'
+  status: ToolCallStatus
   sourceData: ToolSourceData<ToolSource.Agent>
   messageIndex?: number
   contentBlockIndex?: number
@@ -31,6 +36,7 @@ export function AgentToolCard({
       headerLabel={<ToolCardText>{sourceData.agentPath}</ToolCardText>}
       messageIndex={messageIndex}
       contentBlockIndex={contentBlockIndex}
+      status={status}
     />
   )
 }

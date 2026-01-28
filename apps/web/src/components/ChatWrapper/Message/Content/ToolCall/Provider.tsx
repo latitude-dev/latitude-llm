@@ -6,7 +6,12 @@ import {
   ToolSource,
   ToolSourceData,
 } from '@latitude-data/constants/toolSources'
-import { ToolCard, ToolCardIcon, ToolCardText } from './_components/ToolCard'
+import {
+  ToolCard,
+  ToolCardIcon,
+  ToolCardText,
+  ToolCallStatus,
+} from './_components/ToolCard'
 import { ICON_BY_LLM_PROVIDER } from '$/lib/providerIcons'
 
 export function ProviderToolCard({
@@ -19,7 +24,7 @@ export function ProviderToolCard({
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
-  status: 'pending' | 'success' | 'error'
+  status: ToolCallStatus
   sourceData: ToolSourceData<ToolSource.ProviderTool>
   messageIndex?: number
   contentBlockIndex?: number
@@ -37,6 +42,7 @@ export function ProviderToolCard({
       headerLabel={<ToolCardText>{toolRequest.toolName}</ToolCardText>}
       messageIndex={messageIndex}
       contentBlockIndex={contentBlockIndex}
+      status={status}
     />
   )
 }

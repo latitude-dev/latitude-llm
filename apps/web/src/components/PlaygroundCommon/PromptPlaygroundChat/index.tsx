@@ -34,6 +34,7 @@ export default function PromptPlaygroundChat({
         parameterKeys={parameterKeys}
         debugMode={debugMode ?? false}
         toolContentMap={toolContentMap}
+        isStreaming={playground.isLoading}
       />
     </div>
   )
@@ -54,12 +55,14 @@ const Messages = memo(function Messages({
   parameterKeys,
   debugMode,
   toolContentMap,
+  isStreaming,
 }: {
   messages: ReturnType<typeof usePlaygroundChat>['messages']
   error: ReturnType<typeof usePlaygroundChat>['error']
   parameterKeys: string[]
   debugMode: boolean
   toolContentMap: ReturnType<typeof useToolContentMap>
+  isStreaming: boolean
 }) {
   return (
     <div className='flex flex-col gap-3 flex-grow flex-shrink min-h-0'>
@@ -68,6 +71,7 @@ const Messages = memo(function Messages({
         parameters={parameterKeys}
         debugMode={debugMode}
         toolContentMap={toolContentMap}
+        isStreaming={isStreaming}
       />
 
       {error && <ErrorMessage error={error} />}

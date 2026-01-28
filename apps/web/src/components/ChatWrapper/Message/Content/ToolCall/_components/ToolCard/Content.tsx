@@ -12,6 +12,7 @@ import { stringifyUnknown } from '@latitude-data/web-ui/textUtils'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ReactNode } from 'react'
 import { SimulationTag } from './SimulationTag'
+import { ToolCallStatus } from './Header'
 
 export function ToolCardContentWrapper({
   badge,
@@ -42,6 +43,32 @@ export function ToolCardContentWrapper({
   )
 }
 
+export function ToolCardPendingState({
+  status,
+  loadingText,
+}: {
+  status: ToolCallStatus
+  loadingText: string
+}) {
+  return (
+    <ToolCardContentWrapper>
+      <div className='flex flex-row gap-2 items-center justify-center pb-3'>
+        {status === 'running' ? (
+          <>
+            <Icon name='loader' color='foregroundMuted' spin />
+            <Text.H5 color='foregroundMuted'>{loadingText}</Text.H5>
+          </>
+        ) : (
+          <>
+            <Icon name='clock' color='foregroundMuted' />
+            <Text.H5 color='foregroundMuted'>Tool not executed yet</Text.H5>
+          </>
+        )}
+      </div>
+    </ToolCardContentWrapper>
+  )
+}
+
 export function ToolCardInput({
   toolRequest,
 }: {
@@ -59,9 +86,11 @@ export function ToolCardInput({
 export function ToolCardOutput({
   toolResponse,
   simulated,
+  status,
 }: {
   toolResponse: ToolContent | undefined
   simulated?: boolean
+  status?: ToolCallStatus
 }) {
   return (
     <ToolCardContentWrapper badge='Output' simulated={simulated}>
@@ -79,10 +108,15 @@ export function ToolCardOutput({
             {stringifyUnknown(toolResponse.result)}
           </CodeBlock>
         )
-      ) : (
+      ) : status === 'running' ? (
         <div className='flex flex-row gap-2 items-center justify-center pb-3'>
           <Icon name='loader' color='foregroundMuted' spin />
           <Text.H6 color='foregroundMuted'>Running...</Text.H6>
+        </div>
+      ) : (
+        <div className='flex flex-row gap-2 items-center justify-center pb-3'>
+          <Icon name='clock' color='foregroundMuted' />
+          <Text.H6 color='foregroundMuted'>Tool not executed yet</Text.H6>
         </div>
       )}
     </ToolCardContentWrapper>
