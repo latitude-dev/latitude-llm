@@ -131,6 +131,9 @@ export async function prepareOptimization(
     const seenSpans = new Set<string>()
     const seenParameters = new Set<string>()
 
+    const targetRows =
+      optimization.configuration.targetRows ?? OPTIMIZATION_TARGET_ROWS
+
     const gettingne = await getNegativeExamples({
       trackedIssues: issues.tracked,
       otherIssues: issues.other,
@@ -139,6 +142,7 @@ export async function prepareOptimization(
       seenParameters: seenParameters,
       baselineCommit: baselineCommit,
       optimization: optimization,
+      targetRows: targetRows,
       workspace: workspace,
     })
     if (gettingne.error) {
@@ -153,6 +157,7 @@ export async function prepareOptimization(
       baselineCommit: baselineCommit,
       document: document,
       optimization: optimization,
+      targetRows: targetRows,
       workspace: workspace,
     })
     if (gettingpo.error) {
@@ -170,6 +175,7 @@ export async function prepareOptimization(
       positives: positives,
       baselineCommit: baselineCommit,
       optimization: optimization,
+      targetRows: targetRows,
       workspace: workspace,
     })
     if (creating.error) {
@@ -295,6 +301,7 @@ async function getNegativeExamples({
   seenSpans,
   seenParameters,
   baselineCommit,
+  targetRows,
   workspace,
 }: {
   trackedIssues: Issue[]
@@ -304,9 +311,10 @@ async function getNegativeExamples({
   seenParameters: Set<string>
   baselineCommit: Commit
   optimization: Optimization
+  targetRows: number
   workspace: Workspace
 }) {
-  const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
+  const halfLimit = Math.floor(targetRows / 2)
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
 
   const metadatasRepository = new SpanMetadatasRepository(workspace.id)
@@ -418,6 +426,7 @@ async function getPositiveExamples({
   seenParameters,
   document,
   baselineCommit,
+  targetRows,
   workspace,
 }: {
   parametersHash: string
@@ -426,9 +435,10 @@ async function getPositiveExamples({
   baselineCommit: Commit
   document: DocumentVersion
   optimization: Optimization
+  targetRows: number
   workspace: Workspace
 }) {
-  const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
+  const halfLimit = Math.floor(targetRows / 2)
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
 
   const metadatasRepository = new SpanMetadatasRepository(workspace.id)
@@ -558,6 +568,7 @@ async function createDatasets(
     positives,
     baselineCommit,
     optimization,
+    targetRows,
     workspace,
   }: {
     parameters: string[]
@@ -565,6 +576,7 @@ async function createDatasets(
     positives: SpanWithDetails<SpanType.Prompt>[]
     baselineCommit: Commit
     optimization: Optimization
+    targetRows: number
     workspace: Workspace
   },
   transaction = new Transaction(),
@@ -591,7 +603,7 @@ async function createDatasets(
   }
 
   const halfLimit = Math.floor(
-    Math.min(negativesLength, positives.length, OPTIMIZATION_TARGET_ROWS / 2),
+    Math.min(negativesLength, positives.length, targetRows / 2),
   )
   const split = Math.floor(halfLimit * OPTIMIZATION_TESTSET_SPLIT)
 
