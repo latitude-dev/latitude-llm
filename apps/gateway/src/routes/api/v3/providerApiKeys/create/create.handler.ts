@@ -1,6 +1,7 @@
 import { Context } from 'hono'
 import { z } from '@hono/zod-openapi'
 import { createProviderApiKey } from '@latitude-data/core/services/providerApiKeys/create'
+import { findFirstUserInWorkspace } from '@latitude-data/core/data-access/users'
 import { Providers } from '@latitude-data/constants'
 
 const createProviderApiKeySchema = z.object({
@@ -14,7 +15,6 @@ const createProviderApiKeySchema = z.object({
 
 export const createProviderApiKeyHandler = async (c: Context) => {
   const workspace = c.get('workspace')
-  const user = c.get('user')
 
   try {
     const body = await c.req.json()
@@ -32,6 +32,11 @@ export const createProviderApiKeyHandler = async (c: Context) => {
 
     const { name, provider, token, url, defaultModel, configuration } =
       validation.data
+
+    const user = await findFirstUserInWorkspace(workspace)
+    if (!user) {
+      return c.json({ error: 'No users found in workspace' }, 400)
+    }
 
     try {
       const result = await createProviderApiKey({

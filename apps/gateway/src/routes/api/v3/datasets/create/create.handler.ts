@@ -1,6 +1,7 @@
 import { Context } from 'hono'
 import { z } from '@hono/zod-openapi'
 import { createDataset } from '@latitude-data/core/services/datasets/create'
+import { findFirstUserInWorkspace } from '@latitude-data/core/data-access/users'
 import { DATASET_COLUMN_ROLES } from '@latitude-data/core/constants'
 import { Column } from '@latitude-data/core/schema/models/datasets'
 
@@ -21,7 +22,6 @@ const createDatasetSchema = z.object({
 
 export const createDatasetHandler = async (c: Context) => {
   const workspace = c.get('workspace')
-  const user = c.get('user')
 
   try {
     const body = await c.req.json()
@@ -38,6 +38,11 @@ export const createDatasetHandler = async (c: Context) => {
     }
 
     const { name, columns } = validation.data
+
+    const user = await findFirstUserInWorkspace(workspace)
+    if (!user) {
+      return c.json({ error: 'No users found in workspace' }, 400)
+    }
 
     try {
       const result = await createDataset({
