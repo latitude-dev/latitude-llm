@@ -1,7 +1,8 @@
 import { env } from '@latitude-data/env'
+import { and, inArray, isNull } from 'drizzle-orm'
 import { Bm25Operator } from 'weaviate-client'
 import { cache as getCache } from '../../cache'
-import { database } from '../../client'
+import { database, Database } from '../../client'
 import {
   CLOUD_MESSAGES,
   EvaluationMetric,
@@ -11,10 +12,12 @@ import {
   ISSUE_DISCOVERY_MIN_RELEVANCE,
   ISSUE_DISCOVERY_MIN_SIMILARITY,
   ISSUE_DISCOVERY_RERANK_CACHE_KEY,
+  ISSUE_DISCOVERY_RERANK_LIMIT,
   ISSUE_DISCOVERY_RERANK_MODEL,
   ISSUE_DISCOVERY_SEARCH_RATIO,
   IssueCandidate,
 } from '../../constants'
+import { issues } from '../../schema/models/issues'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result, TypedResult } from '../../lib/Result'
@@ -88,7 +91,13 @@ export async function discoverIssue<
 
   embedding = normalizeEmbedding(embedding)
 
-  const finding = await findCandidates({ reason, embedding, document, project })
+  const finding = await findCandidates({
+    reason,
+    embedding,
+    document,
+    project,
+    db,
+  })
   if (finding.error) {
     return Result.error(finding.error)
   }
@@ -118,17 +127,19 @@ async function findCandidates({
   embedding,
   document,
   project,
+  db,
 }: {
   reason: string
   embedding: number[]
   document: DocumentVersion
   project: Project
+  db: Database
 }) {
   try {
     const tenantName = ISSUES_COLLECTION_TENANT_NAME(project.workspaceId, project.id, document.documentUuid) // prettier-ignore
-    const issues = await getIssuesCollection({ tenantName })
+    const issuesCollection = await getIssuesCollection({ tenantName })
 
-    const { objects } = await issues.query.hybrid(reason, {
+    const { objects } = await issuesCollection.query.hybrid(reason, {
       vector: embedding,
       alpha: ISSUE_DISCOVERY_SEARCH_RATIO,
       maxVectorDistance: 1 - ISSUE_DISCOVERY_MIN_SIMILARITY,
@@ -141,14 +152,28 @@ async function findCandidates({
       returnMetadata: ['score'],
     })
 
+    if (objects.length === 0) {
+      return Result.ok<IssueCandidate[]>([])
+    }
+
+    const candidateUuids = objects.map((obj) => obj.uuid)
+
+    const nonMergedIssues = await db
+      .select({ uuid: issues.uuid })
+      .from(issues)
+      .where(and(inArray(issues.uuid, candidateUuids), isNull(issues.mergedAt)))
+
+    const nonMergedUuids = new Set(nonMergedIssues.map((i) => i.uuid))
+
     const candidates = objects
+      .filter((object) => nonMergedUuids.has(object.uuid))
       .map((object) => ({
         uuid: object.uuid,
         title: object.properties.title,
         description: object.properties.description,
         score: object.metadata!.score!,
       }))
-      .slice(0, ISSUE_DISCOVERY_MAX_CANDIDATES)
+      .slice(0, ISSUE_DISCOVERY_RERANK_LIMIT)
 
     return Result.ok<IssueCandidate[]>(candidates)
   } catch (error) {
@@ -206,7 +231,7 @@ async function rerankCandidates({
         ...candidates[item.index!],
         score: (candidates[item.index!].score + item.relevanceScore!) / 2,
       }))
-      .slice(0, ISSUE_DISCOVERY_MAX_CANDIDATES)
+      .slice(0, ISSUE_DISCOVERY_RERANK_LIMIT)
 
     try {
       const item = JSON.stringify(candidates)
