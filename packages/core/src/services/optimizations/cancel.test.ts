@@ -2,6 +2,7 @@ import { Providers } from '@latitude-data/constants'
 import { OPTIMIZATION_CANCELLED_ERROR } from '@latitude-data/constants/optimizations'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { publisher } from '../../events/publisher'
+import * as cancelJobs from '../../lib/cancelJobs'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Commit } from '../../schema/models/types/Commit'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -28,8 +29,11 @@ vi.mock('../../jobs/queues', () => ({
 vi.mock('../../events/publisher', () => ({
   publisher: {
     publishLater: vi.fn(),
-    publish: vi.fn(),
   },
+}))
+
+vi.mock('../../lib/cancelJobs', () => ({
+  setCancelJobFlag: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('../../redis', () => ({
@@ -202,9 +206,7 @@ describe('cancelOptimization', () => {
     expect(mocks.optimizationsQueue.getJob).toHaveBeenCalledWith(
       `${optimization.uuid}-prepareOptimizationJob`,
     )
-    expect(publisher.publish).toHaveBeenCalledWith('cancelJob', {
-      jobId: mockJob.id,
-    })
+    expect(cancelJobs.setCancelJobFlag).toHaveBeenCalledWith(mockJob.id)
   })
 
   it('attempts to stop the execute job when prepared but not executed', async () => {
@@ -241,9 +243,7 @@ describe('cancelOptimization', () => {
     expect(mocks.optimizationsQueue.getJob).toHaveBeenCalledWith(
       `${preparedOptimization.uuid}-executeOptimizationJob`,
     )
-    expect(publisher.publish).toHaveBeenCalledWith('cancelJob', {
-      jobId: mockJob.id,
-    })
+    expect(cancelJobs.setCancelJobFlag).toHaveBeenCalledWith(mockJob.id)
   })
 
   it('sets the correct error message when cancelled', async () => {

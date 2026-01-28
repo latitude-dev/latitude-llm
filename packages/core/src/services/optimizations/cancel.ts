@@ -4,8 +4,8 @@ import {
 } from '@latitude-data/constants/optimizations'
 import { env } from '@latitude-data/env'
 import { Queue, QueueEvents } from 'bullmq'
-import { publisher } from '../../events/publisher'
 import { queues } from '../../jobs/queues'
+import { setCancelJobFlag } from '../../lib/cancelJobs'
 import { Queues } from '../../jobs/queues/types'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -110,7 +110,7 @@ async function stopAndWaitJob({
   }
 
   if (state && !JOB_FINISHED_STATES.includes(state)) {
-    publisher.publish('cancelJob', { jobId: job.id })
+    await setCancelJobFlag(job.id)
 
     try {
       const subscription = await subscribeQueue()

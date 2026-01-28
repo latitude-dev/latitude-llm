@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { publisher } from '../../../../events/publisher'
 import { queues } from '../../../../jobs/queues'
+import * as cancelJobs from '../../../../lib/cancelJobs'
 import { UnprocessableEntityError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
 import { deleteActiveRunByDocument } from './delete'
@@ -10,7 +10,7 @@ import { type Workspace } from '../../../../schema/models/types/Workspace'
 import { stopRunByDocument } from './stop'
 
 vi.mock('../../../../jobs/queues')
-vi.mock('../../../../events/publisher')
+vi.mock('../../../../lib/cancelJobs')
 vi.mock('./delete')
 
 describe('stopRunByDocument', () => {
@@ -105,7 +105,7 @@ describe('stopRunByDocument', () => {
       mockQueue.getJob.mockResolvedValueOnce(mockJob)
     })
 
-    it('publishes cancelJob event when job is not finished', async () => {
+    it('sets cancel flag when job is not finished', async () => {
       mockJob.getState.mockResolvedValueOnce('active')
       mockJob.waitUntilFinished.mockResolvedValueOnce(undefined)
       mockJob.remove.mockResolvedValueOnce(undefined)
@@ -117,13 +117,11 @@ describe('stopRunByDocument', () => {
         documentUuid: mockDocumentUuid,
       })
 
-      expect(publisher.publish).toHaveBeenCalledWith('cancelJob', {
-        jobId: mockJob.id,
-      })
+      expect(cancelJobs.setCancelJobFlag).toHaveBeenCalledWith(mockJob.id)
       expect(result.ok).toBe(true)
     })
 
-    it('does not publish cancelJob event when job is already finished', async () => {
+    it('does not set cancel flag when job is already finished', async () => {
       mockJob.getState.mockResolvedValueOnce('completed')
       mockJob.remove.mockResolvedValueOnce(undefined)
 
@@ -134,7 +132,7 @@ describe('stopRunByDocument', () => {
         documentUuid: mockDocumentUuid,
       })
 
-      expect(publisher.publish).not.toHaveBeenCalled()
+      expect(cancelJobs.setCancelJobFlag).not.toHaveBeenCalled()
       expect(result.ok).toBe(true)
     })
 
@@ -149,7 +147,7 @@ describe('stopRunByDocument', () => {
         documentUuid: mockDocumentUuid,
       })
 
-      expect(publisher.publish).not.toHaveBeenCalled()
+      expect(cancelJobs.setCancelJobFlag).not.toHaveBeenCalled()
       expect(result.ok).toBe(true)
     })
 
@@ -165,9 +163,7 @@ describe('stopRunByDocument', () => {
         documentUuid: mockDocumentUuid,
       })
 
-      expect(publisher.publish).toHaveBeenCalledWith('cancelJob', {
-        jobId: mockJob.id,
-      })
+      expect(cancelJobs.setCancelJobFlag).toHaveBeenCalledWith(mockJob.id)
       expect(result.ok).toBe(true)
     })
 

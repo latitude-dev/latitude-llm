@@ -1,7 +1,10 @@
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { publisher } from '../../../events/publisher'
+import {
+  createCancellationPoller,
+  clearCancelJobFlag,
+} from '../../../lib/cancelJobs'
 import { AbortedError, NotFoundError } from '../../../lib/errors'
 import { OptimizationsRepository } from '../../../repositories'
 import { endOptimization } from '../../../services/optimizations/end'
@@ -36,11 +39,11 @@ export const validateOptimizationJob = async (
     .then((r) => r.unwrap())
 
   const abortController = new AbortController()
-  const cancelJob = ({ jobId }: { jobId: string }) => {
-    if (jobId !== job.id) return
-    abortController.abort()
-  }
-  publisher.subscribe('cancelJob', cancelJob)
+
+  // Use O(1) polling-based cancellation instead of O(n) pub/sub broadcast
+  const stopCancellationPoller = job.id
+    ? createCancellationPoller(job.id, abortController, 1000)
+    : () => {}
 
   try {
     await startValidateOptimization({
@@ -60,6 +63,9 @@ export const validateOptimizationJob = async (
       }).then((r) => r.unwrap())
     }
   } finally {
-    await publisher.unsubscribe('cancelJob', cancelJob)
+    stopCancellationPoller()
+    if (job.id) {
+      await clearCancelJobFlag(job.id).catch(() => {})
+    }
   }
 }

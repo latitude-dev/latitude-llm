@@ -1,7 +1,7 @@
 import { Providers } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { publisher } from '../../events/publisher'
 import { queues } from '../../jobs/queues'
+import * as cancelJobs from '../../lib/cancelJobs'
 import { ProgressTracker } from '../../jobs/utils/progressTracker'
 import type { Commit } from '../../schema/models/types/Commit'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -13,7 +13,7 @@ import { completeExperiment } from './complete'
 import { stopExperiment } from './stop'
 
 vi.mock('../../jobs/queues')
-vi.mock('../../events/publisher')
+vi.mock('../../lib/cancelJobs')
 vi.mock('../../websockets/workers')
 vi.mock('../../jobs/utils/progressTracker')
 
@@ -78,7 +78,7 @@ describe('stopExperiment', () => {
       () => mockProgressTracker as any,
     )
 
-    vi.mocked(publisher.publish).mockResolvedValue(undefined)
+    vi.mocked(cancelJobs.setCancelJobFlag).mockResolvedValue(undefined)
     vi.mocked(WebsocketClient.sendEvent).mockResolvedValue(undefined)
   })
 
@@ -193,14 +193,12 @@ describe('stopExperiment', () => {
 
       for (const mockJob of mockJobs) {
         expect(mockJob.getState).toHaveBeenCalled()
-        expect(publisher.publish).toHaveBeenCalledWith('cancelJob', {
-          jobId: mockJob.id,
-        })
+        expect(cancelJobs.setCancelJobFlag).toHaveBeenCalledWith(mockJob.id)
         expect(mockJob.remove).toHaveBeenCalled()
       }
     })
 
-    it('publishes cancelJob event for active jobs', async () => {
+    it('sets cancel flag for active jobs', async () => {
       const { experiment } = await createExperiment({
         document,
         commit,
@@ -223,12 +221,10 @@ describe('stopExperiment', () => {
         workspaceId: workspace.id,
       })
 
-      expect(publisher.publish).toHaveBeenCalledWith('cancelJob', {
-        jobId: 'run-1',
-      })
+      expect(cancelJobs.setCancelJobFlag).toHaveBeenCalledWith('run-1')
     })
 
-    it('does not publish cancelJob for completed jobs', async () => {
+    it('does not set cancel flag for completed jobs', async () => {
       const { experiment } = await createExperiment({
         document,
         commit,
@@ -251,9 +247,7 @@ describe('stopExperiment', () => {
         workspaceId: workspace.id,
       })
 
-      expect(publisher.publish).not.toHaveBeenCalledWith('cancelJob', {
-        jobId: 'run-1',
-      })
+      expect(cancelJobs.setCancelJobFlag).not.toHaveBeenCalledWith('run-1')
     })
 
     it('handles jobs that no longer exist in the queue', async () => {
@@ -279,9 +273,7 @@ describe('stopExperiment', () => {
       })
 
       expect(result.ok).toBe(true)
-      expect(publisher.publish).toHaveBeenCalledWith('cancelJob', {
-        jobId: 'run-2',
-      })
+      expect(cancelJobs.setCancelJobFlag).toHaveBeenCalledWith('run-2')
     })
 
     it('handles getState errors gracefully', async () => {
