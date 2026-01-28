@@ -123,7 +123,7 @@ function StartOptimization({
       </TableWithHeader.Button>
       <ConfirmModal
         dismissible
-        size='medium'
+        size='large'
         open={openStartModal}
         title='Start a new optimization'
         description='Optimizations help you improve the quality of your prompts'
