@@ -193,6 +193,10 @@ RUN --mount=type=secret,id=DATADOG_API_KEY \
   echo "Source map files in .next/server:" && \
   find .next/server -name "*.map" -type f | head -10 && \
   echo "" && \
+  echo "Normalizing Turbopack sourcemap names..." && \
+  chmod +x ./scripts/normalize-sourcemaps.sh && \
+  ./scripts/normalize-sourcemaps.sh .next/static && \
+  echo "" && \
   echo "Uploading client-side source maps with prefix: $CLIENT_MINIFIED_PREFIX" && \
   pnpm exec datadog-ci sourcemaps upload .next --service=latitude-llm-web --minified-path-prefix="$CLIENT_MINIFIED_PREFIX" --release-version="${RELEASE_VERSION:-unknown}" --disable-git --max-concurrency=20 && \
   echo "" && \
