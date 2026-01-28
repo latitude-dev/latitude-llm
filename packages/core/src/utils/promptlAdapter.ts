@@ -53,7 +53,9 @@ export function adaptPromptlMessageToLegacy(
   }
 
   // Convert promptl content array to legacy content array
-  const legacyContent = Array.isArray(message.content)
+  const legacyContent: LegacyMessageContent[] | string = Array.isArray(
+    message.content,
+  )
     ? message.content.map((contentItem): LegacyMessageContent => {
         switch (contentItem.type) {
           case PromptlContentType.text:
@@ -96,19 +98,21 @@ export function adaptPromptlMessageToLegacy(
   // Handle special cases for different message types
   if (message.role === PromptlMessageRole.assistant) {
     // For assistant messages, we need to extract tool calls and handle the special content format
-    const toolCalls = legacyContent
-      .filter(
-        (content): content is LegacyToolRequestContent =>
-          content.type === 'tool-call',
-      )
-      .map(
-        (toolCall): LegacyToolCall => ({
-          id: toolCall.toolCallId,
-          name: toolCall.toolName,
-          arguments: toolCall.args ?? {},
-          _sourceData: undefined, // promptl doesn't have source data
-        }),
-      )
+    const toolCalls = Array.isArray(legacyContent)
+      ? legacyContent
+          .filter(
+            (content): content is LegacyToolRequestContent =>
+              content.type === 'tool-call',
+          )
+          .map(
+            (toolCall): LegacyToolCall => ({
+              id: toolCall.toolCallId,
+              name: toolCall.toolName,
+              arguments: toolCall.args ?? {},
+              _sourceData: undefined, // promptl doesn't have source data
+            }),
+          )
+      : []
 
     return {
       role,
