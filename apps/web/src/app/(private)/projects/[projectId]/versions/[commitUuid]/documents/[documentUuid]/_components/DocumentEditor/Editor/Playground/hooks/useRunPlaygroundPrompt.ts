@@ -81,6 +81,8 @@ export function useRunPlaygroundPrompt({
       toolCalls?: ToolCall[]
       trace?: TraceContext
     }) => {
+      const signal = createAbortController()
+
       const response = await fetch(
         ROUTES.api.documents.logs.detail(documentLogUuid).chat,
         {
@@ -90,12 +92,13 @@ export function useRunPlaygroundPrompt({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ messages, toolCalls, trace, mcpHeaders }),
+          signal,
         },
       )
 
-      return createStreamHandler(response)
+      return createStreamHandler(response, signal)
     },
-    [createStreamHandler, mcpHeaders],
+    [createAbortController, createStreamHandler, mcpHeaders],
   )
 
   return useMemo(

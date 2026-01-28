@@ -1,7 +1,4 @@
-import {
-  unifiedSearchForAdmin,
-  SearchEntityType,
-} from '$/data-access/admin'
+import { unifiedSearchForAdmin, SearchEntityType } from '$/data-access/admin'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { adminHandler } from '$/middlewares/adminHandler'
 import { NextRequest, NextResponse } from 'next/server'

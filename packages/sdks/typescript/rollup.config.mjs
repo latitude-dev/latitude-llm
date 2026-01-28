@@ -26,7 +26,6 @@ const aliasEntries = {
 }
 const EXTERNALS = [
   'eventsource-parser/stream',
-  'node-fetch',
   'promptl-ai',
   'stream',
   'zod',

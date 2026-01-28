@@ -1,5 +1,3 @@
-import { Readable } from 'stream'
-
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { handleStream } from '$sdk/utils/handleStream'
 import { makeRequest } from '$sdk/utils/request'
@@ -55,13 +53,14 @@ export async function streamChat<
     }
 
     const finalResponse = await handleStream<S>({
-      body: response.body! as Readable,
+      body: response.body!,
       onEvent,
       onError,
       onToolCall: handleToolCallFactory({
         tools,
         options,
       }),
+      signal: options.signal,
     })
 
     if (!finalResponse) return

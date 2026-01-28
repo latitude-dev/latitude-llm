@@ -56,6 +56,7 @@ export function usePlaygroundLogic({
   const playground = usePlaygroundChat({
     runPromptFn,
     addMessagesFn,
+    abortCurrentStream,
   })
 
   const resetChat = useCallback(() => {

@@ -33,12 +33,7 @@ export const ChatInputBox = memo(function ChatInputBox({
         onSubmit={playground.submitUserMessage}
         onBack={onBack}
         onBackLabel={onBackLabel}
-        disabledSubmit={
-          playground.isLoading ||
-          playground.isStopping ||
-          !!playground.error ||
-          !hasActiveStream()
-        }
+        disabledSubmit={playground.isSubmitDisabled}
         disabledBack={playground.isLoading}
       />
     </div>
