@@ -67,6 +67,11 @@ describe('POST /api/v3/datasets', () => {
       })
       const data = await res.json()
 
+      if (res.status !== 201) {
+        console.error('Unexpected status:', res.status)
+        console.error('Response data:', data)
+      }
+
       expect(res.status).toBe(201)
       expect(data).toHaveProperty('id')
       expect(data).toHaveProperty('name', body.name)
