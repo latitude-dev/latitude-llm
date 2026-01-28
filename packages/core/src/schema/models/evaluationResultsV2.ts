@@ -1,6 +1,5 @@
 import { sql } from 'drizzle-orm'
 import {
-  AnyPgColumn,
   bigint,
   bigserial,
   boolean,
@@ -21,7 +20,6 @@ import { commits } from './commits'
 import { datasetRows } from './datasetRows'
 import { datasets } from './datasets'
 import { experiments } from './experiments'
-import { issues } from './issues'
 import { providerLogs } from './providerLogs'
 import { workspaces } from './workspaces'
 
@@ -57,11 +55,6 @@ export const evaluationResultsV2 = latitudeSchema.table(
     ),
     evaluatedSpanId: varchar('evaluated_span_id', { length: 16 }),
     evaluatedTraceId: varchar('evaluated_trace_id', { length: 32 }),
-    // TODO(AO): Remove `issueId` from result in favor of issue_evaluation_results table
-    issueId: bigint('issue_id', { mode: 'number' }).references(
-      (): AnyPgColumn => issues.id,
-      { onDelete: 'set null' },
-    ),
     score: bigint('score', { mode: 'number' }),
     normalizedScore: bigint('normalized_score', { mode: 'number' }),
     metadata: jsonb('metadata').$type<EvaluationResultMetadata>(),
@@ -86,8 +79,6 @@ export const evaluationResultsV2 = latitudeSchema.table(
       table.commitId,
       table.evaluationUuid,
     ),
-    // TODO(AO): Remove `issueId` from result
-    index('evaluation_results_v2_issue_id_idx').on(table.issueId),
     index('evaluation_results_v2_created_at_brin_idx')
       .using('brin', sql`${table.createdAt}`)
       .with({ pages_per_range: 32, autosummarize: true })
