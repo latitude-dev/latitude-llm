@@ -51,6 +51,11 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               value: BackofficeRoutes.triggers,
               route: ROUTES.backoffice.triggers.root,
             },
+            {
+              label: 'Error tests',
+              value: BackofficeRoutes.errorTests,
+              route: ROUTES.backoffice.errorTests.root,
+            },
           ]}
           selected={selected}
         />

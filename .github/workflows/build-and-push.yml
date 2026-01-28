@@ -198,6 +198,13 @@ jobs:
         with:
           registries: ${{ secrets.AWS_ACCOUNT_ID }}
 
+      # Compute static assets URL if host is configured
+      - name: Compute static assets URL
+        run: |
+          if [ -n "${{ vars.STATIC_ASSETS_HOST }}" ]; then
+            echo "NEXT_PUBLIC_STATIC_ASSETS_URL=https://${{ vars.STATIC_ASSETS_HOST }}/static-assets/${{ github.sha }}" >> $GITHUB_ENV
+          fi
+
       # Generate Docker metadata/tags based on Git context
       - name: Extract metadata
         id: meta
@@ -245,6 +252,7 @@ jobs:
             NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
             S3_BUCKET=${{ vars.STATIC_ASSETS_S3_BUCKET }}
             STATIC_ASSETS_HOST=${{ vars.STATIC_ASSETS_HOST }}
+            NEXT_PUBLIC_STATIC_ASSETS_URL=${{ env.NEXT_PUBLIC_STATIC_ASSETS_URL }}
   run-migrations:
     needs: [build-and-push-private]
     uses: ./.github/workflows/run-migrations.yml

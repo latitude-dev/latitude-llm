@@ -87,6 +87,7 @@ ARG NEXT_PUBLIC_POSTHOG_KEY
 
 ARG PROJECT
 ARG STATIC_ASSETS_HOST
+ARG NEXT_PUBLIC_STATIC_ASSETS_URL
 
 ENV AWS_REGION=${AWS_REGION:-}
 ENV S3_BUCKET=${S3_BUCKET:-}
@@ -106,6 +107,7 @@ ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
 ENV NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
 
 ENV STATIC_ASSETS_HOST=${STATIC_ASSETS_HOST:-}
+ENV NEXT_PUBLIC_STATIC_ASSETS_URL=${NEXT_PUBLIC_STATIC_ASSETS_URL:-}
 ENV RELEASE_VERSION=${DD_GIT_COMMIT_SHA:-unknown}
 
 WORKDIR /app
@@ -140,7 +142,6 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   RELEASE_VERSION=$RELEASE_VERSION && \
   NEXT_PUBLIC_RELEASE_VERSION=$RELEASE_VERSION && \
   STATIC_ASSETS_HOST=$STATIC_ASSETS_HOST && \
-  if [ -n "$STATIC_ASSETS_HOST" ] && [ -n "$BUILD_ID" ]; then NEXT_PUBLIC_STATIC_ASSETS_URL="https://$STATIC_ASSETS_HOST/static-assets/$BUILD_ID"; fi && \
   NODE_OPTIONS="--max-old-space-size=8192" && \
   pnpm turbo build --filter="${PROJECT}..."
 
@@ -178,22 +179,22 @@ RUN --mount=type=secret,id=DATADOG_API_KEY \
     echo "DD Site: ${DD_SITE}" && \
     echo "" && \
     if [ -n "$NEXT_PUBLIC_STATIC_ASSETS_URL" ]; then \
-      CLIENT_MINIFIED_PREFIX="${NEXT_PUBLIC_STATIC_ASSETS_URL}/_next/static/"; \
+      CLIENT_MINIFIED_PREFIX="${NEXT_PUBLIC_STATIC_ASSETS_URL}/_next/"; \
     else \
-      CLIENT_MINIFIED_PREFIX="/_next/static/"; \
+      CLIENT_MINIFIED_PREFIX="/_next/"; \
     fi && \
     echo "Client minified path prefix: $CLIENT_MINIFIED_PREFIX" && \
     echo "" && \
     echo "=== CLIENT-SIDE SOURCE MAPS (web URLs) ===" && \
-    echo "Source map files in .next/static:" && \
-    find .next/static -name "*.map" -type f | head -10 && \
+    echo "Source map files in .next:" && \
+    find .next -name "*.map" -type f | head -10 && \
     echo "" && \
     echo "=== SERVER-SIDE SOURCE MAPS (filesystem paths) ===" && \
     echo "Source map files in .next/server:" && \
     find .next/server -name "*.map" -type f | head -10 && \
     echo "" && \
     echo "Uploading client-side source maps with prefix: $CLIENT_MINIFIED_PREFIX" && \
-    pnpm exec datadog-ci sourcemaps upload .next/static --service=latitude-llm-web --minified-path-prefix="$CLIENT_MINIFIED_PREFIX" --release-version="${RELEASE_VERSION:-unknown}" --disable-git --max-concurrency=20 && \
+    pnpm exec datadog-ci sourcemaps upload .next --service=latitude-llm-web --minified-path-prefix="$CLIENT_MINIFIED_PREFIX" --release-version="${RELEASE_VERSION:-unknown}" --disable-git --max-concurrency=20 && \
     echo "" && \
     echo "Uploading server-side source maps with prefix: /app/apps/web/.next/server/" && \
     pnpm datadog:sourcemaps:server; \

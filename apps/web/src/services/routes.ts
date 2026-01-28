@@ -26,6 +26,7 @@ export enum BackofficeRoutes {
   billing = 'billing',
   integrations = 'integrations',
   triggers = 'triggers',
+  errorTests = 'errorTests',
 }
 
 const BACKOFFICE_ROOT = '/backoffice'
@@ -72,6 +73,10 @@ export const ROUTES = {
     },
     [BackofficeRoutes.triggers]: {
       root: `${BACKOFFICE_ROOT}/triggers`,
+    },
+    [BackofficeRoutes.errorTests]: {
+      root: `${BACKOFFICE_ROOT}/error-tests`,
+      server: `${BACKOFFICE_ROOT}/error-tests/server`,
     },
   },
   noWorkspace: {
