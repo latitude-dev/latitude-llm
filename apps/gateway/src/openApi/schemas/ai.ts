@@ -354,7 +354,7 @@ export const DatasetSchema = z.object({
   author: z
     .object({
       id: z.string(),
-      name: z.string(),
+      name: z.string().nullable(),
     })
     .nullable()
     .optional(),
