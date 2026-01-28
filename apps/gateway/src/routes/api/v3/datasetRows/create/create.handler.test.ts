@@ -1,6 +1,6 @@
 import app from '$/routes/app'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
-import { createDataset } from '@latitude-data/core/factories'
+import { createProject, createDataset } from '@latitude-data/core/factories'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 vi.mock('$/jobs', () => ({
@@ -28,7 +28,8 @@ describe('POST /api/v3/dataset-rows', () => {
     let workspaceId: number
 
     beforeAll(async () => {
-      const { dataset, workspace } = await createDataset({})
+      const { workspace, user } = await createProject()
+      const { dataset } = await createDataset({ workspace, author: user })
       datasetId = dataset.id
       workspaceId = workspace.id
 

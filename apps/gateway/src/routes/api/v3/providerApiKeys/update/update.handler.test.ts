@@ -1,6 +1,6 @@
 import app from '$/routes/app'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
-import { createProviderApiKey, createWorkspace } from '@latitude-data/core/factories'
+import { createProviderApiKey, createProject } from '@latitude-data/core/factories'
 import { Providers } from '@latitude-data/constants'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -25,11 +25,11 @@ describe('PUT /api/v3/provider-api-keys/:providerApiKeyId', () => {
     let providerApiKeyId: number
 
     beforeAll(async () => {
-      const { workspace, userData } = await createWorkspace()
+      const { workspace, user } = await createProject()
 
       const providerApiKey = await createProviderApiKey({
         workspace,
-        user: userData,
+        user,
         type: Providers.OpenAI,
         name: 'Original Name',
       })

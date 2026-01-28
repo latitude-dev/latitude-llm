@@ -1,6 +1,6 @@
 import app from '$/routes/app'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
-import { createDataset } from '@latitude-data/core/factories'
+import { createProject, createDataset } from '@latitude-data/core/factories'
 import { DatasetRowsRepository } from '@latitude-data/core/repositories'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -23,7 +23,8 @@ describe('GET /api/v3/dataset-rows/:rowId', () => {
     let datasetId: number
 
     beforeAll(async () => {
-      const { dataset, workspace } = await createDataset({})
+      const { workspace, user } = await createProject()
+      const { dataset } = await createDataset({ workspace, author: user })
       datasetId = dataset.id
 
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({

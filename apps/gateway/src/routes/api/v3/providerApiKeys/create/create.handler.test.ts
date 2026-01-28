@@ -1,6 +1,6 @@
 import app from '$/routes/app'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
-import { createWorkspace } from '@latitude-data/core/factories'
+import { createProject } from '@latitude-data/core/factories'
 import { Providers } from '@latitude-data/constants'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -29,7 +29,7 @@ describe('POST /api/v3/provider-api-keys', () => {
     let workspaceId: number
 
     beforeAll(async () => {
-      const { workspace } = await createWorkspace()
+      const { workspace } = await createProject()
       workspaceId = workspace.id
 
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({

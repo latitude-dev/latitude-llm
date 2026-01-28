@@ -1,6 +1,6 @@
 import app from '$/routes/app'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
-import { createWorkspace } from '@latitude-data/core/factories'
+import { createProject } from '@latitude-data/core/factories'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 vi.mock('$/jobs', () => ({
@@ -27,7 +27,7 @@ describe('POST /api/v3/datasets', () => {
     let workspaceId: number
 
     beforeAll(async () => {
-      const { workspace } = await createWorkspace()
+      const { workspace } = await createProject()
       workspaceId = workspace.id
 
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
