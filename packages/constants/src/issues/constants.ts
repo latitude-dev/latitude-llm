@@ -114,4 +114,5 @@ export const ISSUE_JOBS_MAX_ATTEMPTS = 3
 export const ISSUE_JOBS_GENERATE_DETAILS_THROTTLE = 6 * 60 * 60 * 1000 // 6 hours
 export const ISSUE_JOBS_MERGE_COMMON_THROTTLE = 24 * 60 * 60 * 1000 // 1 day
 export const ISSUE_JOBS_DISCOVER_RESULT_DELAY = 60 * 1000 // 1 minute
+export const ISSUE_JOBS_EXPERIMENT_RANDOM_DELAY_MAX = 30 * 1000 // 30 seconds max random delay for experiment results
 export const WHAT_ARE_ANNOTATIONS_VIDEO_ID = 'trOwCWaIAZk'

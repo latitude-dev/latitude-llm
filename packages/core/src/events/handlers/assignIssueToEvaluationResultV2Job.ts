@@ -1,6 +1,7 @@
 import {
   EvaluationType,
   ISSUE_JOBS_DISCOVER_RESULT_DELAY,
+  ISSUE_JOBS_EXPERIMENT_RANDOM_DELAY_MAX,
   ISSUE_JOBS_MAX_ATTEMPTS,
 } from '../../constants'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
@@ -17,7 +18,7 @@ export const assignIssueToEvaluationResultV2Job = async ({
 }: {
   data: EvaluationResultV2CreatedEvent
 }) => {
-  const { workspaceId, result, evaluation } = event.data
+  const { workspaceId, result, evaluation, experiment } = event.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
@@ -54,15 +55,17 @@ export const assignIssueToEvaluationResultV2Job = async ({
     const payload = { workspaceId: workspace.id, resultId: result.id }
     const { issuesQueue } = await queues()
 
+    let delay: number | undefined
+    if (evaluation.type === EvaluationType.Human) {
+      delay = ISSUE_JOBS_DISCOVER_RESULT_DELAY
+    } else if (experiment) {
+      delay = Math.floor(Math.random() * ISSUE_JOBS_EXPERIMENT_RANDOM_DELAY_MAX)
+    }
+
     await issuesQueue.add('discoverResultIssueJob', payload, {
       attempts: ISSUE_JOBS_MAX_ATTEMPTS,
       deduplication: { id: discoverResultIssueJobKey(payload) },
-      // Note: we leave a delay for human evaluations to
-      // allow the user time to update the annotation
-      delay:
-        evaluation.type === EvaluationType.Human
-          ? ISSUE_JOBS_DISCOVER_RESULT_DELAY
-          : undefined,
+      delay,
     })
   }
 }

@@ -13,6 +13,7 @@ import { EvaluationResultV2UpdatedEvent } from '../events'
 import { queues } from '../../jobs/queues'
 import {
   ISSUE_JOBS_DISCOVER_RESULT_DELAY,
+  ISSUE_JOBS_EXPERIMENT_RANDOM_DELAY_MAX,
   ISSUE_JOBS_MAX_ATTEMPTS,
 } from '../../constants'
 import { discoverResultIssueJobKey } from '../../jobs/job-definitions/issues/discoverResultIssueJob'
@@ -103,15 +104,17 @@ async function assignResultToIssueOnFail({
     const payload = { workspaceId: workspace.id, resultId: result.id }
     const { issuesQueue } = await queues()
 
+    let delay: number | undefined
+    if (evaluation.type === EvaluationType.Human) {
+      delay = ISSUE_JOBS_DISCOVER_RESULT_DELAY
+    } else if (result.experimentId) {
+      delay = Math.floor(Math.random() * ISSUE_JOBS_EXPERIMENT_RANDOM_DELAY_MAX)
+    }
+
     await issuesQueue.add('discoverResultIssueJob', payload, {
       attempts: ISSUE_JOBS_MAX_ATTEMPTS,
       deduplication: { id: discoverResultIssueJobKey(payload) },
-      // Note: we leave a delay for human evaluations to
-      // allow the user time to update the annotation
-      delay:
-        evaluation.type === EvaluationType.Human
-          ? ISSUE_JOBS_DISCOVER_RESULT_DELAY
-          : undefined,
+      delay,
     })
   }
 }
