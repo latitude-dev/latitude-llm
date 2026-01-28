@@ -300,6 +300,38 @@ export class IssuesRepository extends Repository<Issue> {
       .limit(20)
   }
 
+  async findByProjectDocumentAndStatus({
+    project,
+    documentUuid,
+    status,
+  }: {
+    project: Project
+    documentUuid: string
+    status: IssueGroup
+  }) {
+    // For inactive status, use a simpler condition that doesn't require histogramStats
+    // This is used by discoverIssue which doesn't have commit context
+    const statusCondition =
+      status === ISSUE_GROUP.inactive
+        ? or(
+            this.withIgnoredIssues(true),
+            this.withResolvedIssues(true),
+            this.withMergedIssues(true),
+          )!
+        : this.buildGroupConditions(status)
+    return this.db
+      .select({ uuid: issues.uuid })
+      .from(issues)
+      .where(
+        and(
+          this.scopeFilter,
+          eq(issues.projectId, project.id),
+          eq(issues.documentUuid, documentUuid),
+          statusCondition,
+        ),
+      )
+  }
+
   async fetchIssuesFiltered({
     project,
     commit,
