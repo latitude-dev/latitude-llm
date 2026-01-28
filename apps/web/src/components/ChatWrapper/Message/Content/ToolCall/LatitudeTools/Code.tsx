@@ -42,7 +42,9 @@ function RunCodeOutput({
   )
 
   if (!toolResponse) {
-    return <ToolCardPendingState status={status} loadingText='Running code...' />
+    return (
+      <ToolCardPendingState status={status} loadingText='Running code...' />
+    )
   }
 
   if (!isExpectedResponse) {

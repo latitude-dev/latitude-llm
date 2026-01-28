@@ -69,41 +69,61 @@ export const POST = errorHandler(
 
         const sdk = sdkResult.unwrap()
 
-        // Create a TransformStream to handle the streaming response
         const { readable, writable } = new TransformStream()
         const writer = writable.getWriter()
         const encoder = new TextEncoder()
+        let aborted = false
+
+        // Create our own AbortController to have explicit control
+        const abortController = new AbortController()
 
         req.signal.addEventListener('abort', () => {
-          writer.abort()
+          aborted = true
+          abortController.abort()
+          writer.close().catch(() => {})
         })
 
         sdk.prompts.chat(documentLogUuid, messages as Message[], {
           stream: true,
           mcpHeaders,
+          signal: abortController.signal,
           onEvent: async (event) => {
-            await writer.write(
-              encoder.encode(
-                `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
-              ),
-            )
+            if (aborted) return
+            try {
+              await writer.write(
+                encoder.encode(
+                  `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
+                ),
+              )
+            } catch {
+              // Writer closed or aborted, ignore
+            }
           },
           onError: async (error) => {
-            await writer.write(
-              encoder.encode(
-                `event: error\ndata: ${JSON.stringify({
-                  name: error.name,
-                  message: error.message,
-                  stack: error.stack,
-                })}\n\n`,
-              ),
-            )
-            writer.close()
+            if (aborted) return
+            try {
+              await writer.write(
+                encoder.encode(
+                  `event: error\ndata: ${JSON.stringify({
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                  })}\n\n`,
+                ),
+              )
+              await writer.close()
+            } catch {
+              // Writer closed or aborted, ignore
+            }
           },
-          onFinished: () => {
-            writer.close()
+          onFinished: async () => {
+            if (aborted) return
+            try {
+              await writer.close()
+            } catch {
+              // Writer already closed, ignore
+            }
           },
-          signal: req.signal,
         })
 
         return new NextResponse(readable, {

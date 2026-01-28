@@ -14,7 +14,8 @@ import { processResponse } from '../../../services/chains/ProviderProcessor'
 import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
 import { createProviderLog } from '../../../services/providerLogs/create'
 import { assertUsageWithinPlanLimits } from '../../../services/workspaces/usage'
-import { TelemetryContext } from '../../../telemetry'
+import { telemetry, TelemetryContext } from '../../../telemetry'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
 import { isAbortError } from '../../isAbortError'
@@ -106,6 +107,26 @@ export async function streamAIResponse({
         config,
         messages,
         startTime,
+      })
+
+      const $abortedCompletion = telemetry.span.completion(
+        {
+          provider: provider.provider,
+          model: config.model,
+          input: messages,
+          configuration: config,
+        },
+        context,
+      )
+      $abortedCompletion.end({
+        output: [
+          {
+            role: MessageRole.assistant,
+            content: [{ type: 'text', text: accumulatedText.text }],
+          },
+        ],
+        finishReason: 'stop',
+        tokens: {},
       })
     }
 

@@ -9,6 +9,7 @@
     "help": "tsx -r dotenv/config ./src/utils/help.ts",
     "tool:build_docs": "tsx ./scripts/docs/buildDocs.ts",
     "run:ts": "tsx -r dotenv/config",
+    "run:ts:ssl": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx -r dotenv/config",
     "ts:sdk:get_prompt": "npm run run:ts -- ./src/sdk/get-prompt/example.ts",
     "ts:sdk:get_all_prompts": "npm run run:ts -- ./src/sdk/get-all-prompts/example.ts",
     "ts:sdk:get_versions": "npm run run:ts -- ./src/sdk/get-versions/example.ts",

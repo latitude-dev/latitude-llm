@@ -21,13 +21,15 @@ export function AgentPageWrapper({
   const [parameters, setParameters] = useState<Record<string, unknown>>({})
   const [activeTrigger, setActiveTrigger] = useState<DocumentTrigger>()
 
-  const { runDocument, addMessages, hasActiveStream } = useRunDocument({
-    commit,
-  })
+  const { runDocument, addMessages, abortCurrentStream, hasActiveStream } =
+    useRunDocument({
+      commit,
+    })
 
   const playground = usePlaygroundChat({
     runPromptFn: runDocument,
     addMessagesFn: addMessages,
+    abortCurrentStream,
     onPromptRan: (documentLogUuid, error) => {
       if (!documentLogUuid || error) return
     },

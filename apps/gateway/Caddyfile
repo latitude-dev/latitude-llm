@@ -1,0 +1,13 @@
+# Local development Caddyfile for HTTP/2 support
+# Run with: caddy run --config Caddyfile
+# Gateway will be available at https://localhost:8443
+
+https://localhost:8443 {
+	reverse_proxy localhost:8787 {
+		flush_interval -1
+		transport http {
+			read_timeout 0
+			write_timeout 0
+		}
+	}
+}

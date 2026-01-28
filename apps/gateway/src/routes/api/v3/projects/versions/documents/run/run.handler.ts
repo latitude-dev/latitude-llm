@@ -2,6 +2,7 @@ import {
   getData,
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
+import { createRequestAbortSignal } from '$/common/createRequestAbortSignal'
 import { captureException } from '$/common/tracer'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
@@ -190,6 +191,8 @@ async function handleForegroundRun({
   mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
 }) {
+  const abortSignal = createRequestAbortSignal(c)
+
   const {
     stream: runStream,
     getFinalResponse,
@@ -201,7 +204,7 @@ async function handleForegroundRun({
     parameters,
     customIdentifier,
     source,
-    abortSignal: c.req.raw.signal, // FIXME: This does not seem to work
+    abortSignal,
     project,
     tools,
     mcpHeaders,
@@ -214,8 +217,7 @@ async function handleForegroundRun({
       async (stream) => {
         let id = 0
 
-        // FIXME: This does not seem to work
-        c.req.raw.signal.addEventListener(
+        abortSignal.addEventListener(
           'abort',
           () => {
             stream.close()
@@ -224,10 +226,7 @@ async function handleForegroundRun({
         )
 
         try {
-          for await (const event of streamToGenerator(
-            runStream,
-            c.req.raw.signal,
-          )) {
+          for await (const event of streamToGenerator(runStream, abortSignal)) {
             const data = event.data
 
             stream.writeSSE({

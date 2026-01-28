@@ -1,12 +1,9 @@
-import { Readable } from 'stream'
-
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   ApiErrorCodes,
   LatitudeApiError,
   RunErrorCodes,
 } from '$sdk/utils/errors'
-import { nodeFetchResponseToReadableStream } from '$sdk/utils/nodeFetchResponseToReadableStream'
 import { GenerationResponse, StreamResponseCallbacks } from '$sdk/utils/types'
 import {
   ChainCallResponseDto,
@@ -25,20 +22,31 @@ export async function handleStream<S extends AssertedStreamType = 'text'>({
   onEvent,
   onError,
   onToolCall,
+  signal,
 }: Omit<StreamResponseCallbacks, 'onFinished'> & {
-  body: Readable
+  body: ReadableStream<Uint8Array>
   onToolCall: (data: ProviderData) => Promise<void>
+  signal?: AbortSignal
 }): Promise<GenerationResponse<S> | undefined> {
   let conversation: Message[] = []
   let uuid: string | undefined
   let chainResponse: ChainCallResponseDto<S> | undefined
 
   const parser = new EventSourceParserStream()
-  const stream = nodeFetchResponseToReadableStream(body, onError)
-  const eventStream = stream
-    .pipeThrough(new TextDecoderStream())
-    .pipeThrough(parser)
+  const decoder = new TextDecoderStream() as TransformStream<Uint8Array, string>
+  const textStream = body.pipeThrough(decoder)
+  const eventStream = textStream.pipeThrough(parser)
   const reader = eventStream.getReader()
+
+  if (signal) {
+    signal.addEventListener(
+      'abort',
+      () => {
+        reader.cancel('Stream aborted by user').catch(() => { })
+      },
+      { once: true },
+    )
+  }
 
   try {
     while (true) {
