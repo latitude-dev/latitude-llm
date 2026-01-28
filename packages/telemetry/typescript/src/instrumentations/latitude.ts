@@ -26,8 +26,8 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   }
 
   enable() {
-    this.options.module.instrument(this)
     this.manualTelemetry.enable()
+    this.options.module.instrument(this)
   }
 
   disable() {

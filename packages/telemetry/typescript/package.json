@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/telemetry",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Latitude Telemetry for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -69,6 +69,7 @@
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/sdk": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
+    "@openai/agents": "^0.4.1",
     "@rollup/plugin-alias": "^6.0.0",
     "@rollup/plugin-replace": "^6.0.3",
     "@rollup/plugin-typescript": "^12.3.0",

@@ -1,3 +1,9 @@
+import {
+  BACKGROUND,
+  Instrumentation,
+  LifecycleManager,
+  TracerManager,
+} from '$telemetry/core'
 import { env } from '$telemetry/env'
 import {
   BaseInstrumentation,
@@ -7,6 +13,7 @@ import {
   LatitudeInstrumentation,
   LatitudeInstrumentationOptions,
   ManualInstrumentation,
+  OpenAIAgentsInstrumentation,
   PromptSpanOptions,
   StartCompletionSpanOptions,
   StartHttpSpanOptions,
@@ -17,9 +24,10 @@ import { DEFAULT_REDACT_SPAN_PROCESSOR } from '$telemetry/sdk/redact'
 import {
   DOCUMENT_PATH_REGEXP,
   InstrumentationScope,
-  SCOPE_LATITUDE,
   TraceContext,
 } from '@latitude-data/constants'
+import { BadRequestError } from '@latitude-data/constants/errors'
+import type * as latitude from '@latitude-data/sdk'
 import * as otel from '@opentelemetry/api'
 import { context, propagation, TextMapPropagator } from '@opentelemetry/api'
 import {
@@ -54,18 +62,23 @@ import {
   AIPlatformInstrumentation,
   VertexAIInstrumentation,
 } from '@traceloop/instrumentation-vertexai'
-import type * as latitude from '@latitude-data/sdk'
-import { BadRequestError } from '@latitude-data/constants/errors'
 
 const TRACES_URL = `${env.GATEWAY_BASE_URL}/api/v3/traces`
 const SERVICE_NAME = process.env.npm_package_name || 'unknown'
 const SCOPE_VERSION = process.env.npm_package_version || 'unknown'
 
 export type TelemetryContext = otel.Context
-export const BACKGROUND = () => otel.ROOT_CONTEXT
 
 class SpanFactory {
-  constructor(private telemetry: ManualInstrumentation) {}
+  private readonly telemetry: ManualInstrumentation
+
+  constructor(telemetry: ManualInstrumentation) {
+    this.telemetry = telemetry
+  }
+
+  unknown(options?: StartSpanOptions, ctx?: TelemetryContext) {
+    return this.telemetry.unknown(ctx ?? context.active(), options)
+  }
 
   tool(options: StartToolSpanOptions, ctx?: TelemetryContext) {
     return this.telemetry.tool(ctx ?? context.active(), options)
@@ -97,7 +110,11 @@ class SpanFactory {
 }
 
 class ContextManager {
-  constructor(private telemetry: ManualInstrumentation) {}
+  private readonly telemetry: ManualInstrumentation
+
+  constructor(telemetry: ManualInstrumentation) {
+    this.telemetry = telemetry
+  }
 
   resume(ctx: TraceContext) {
     return this.telemetry.resume(ctx)
@@ -109,7 +126,11 @@ class ContextManager {
 }
 
 class InstrumentationManager {
-  constructor(private instrumentations: BaseInstrumentation[]) {}
+  private readonly instrumentations: BaseInstrumentation[]
+
+  constructor(instrumentations: BaseInstrumentation[]) {
+    this.instrumentations = instrumentations
+  }
 
   enable() {
     this.instrumentations.forEach((instrumentation) => {
@@ -124,41 +145,6 @@ class InstrumentationManager {
   }
 }
 
-class TracerManager {
-  constructor(
-    private nodeProvider: NodeTracerProvider,
-    private scopeVersion: string,
-  ) {}
-
-  get(scope: Instrumentation) {
-    return this.provider(scope).getTracer('')
-  }
-
-  provider(scope: Instrumentation) {
-    return new ScopedTracerProvider(
-      `${SCOPE_LATITUDE}.${scope}`,
-      this.scopeVersion,
-      this.nodeProvider,
-    )
-  }
-}
-
-class ScopedTracerProvider implements otel.TracerProvider {
-  private readonly scope: string
-  private readonly version: string
-  private readonly provider: otel.TracerProvider
-
-  constructor(scope: string, version: string, provider: otel.TracerProvider) {
-    this.scope = scope
-    this.version = version
-    this.provider = provider
-  }
-
-  getTracer(_name: string, _version?: string, options?: otel.TracerOptions) {
-    return this.provider.getTracer(this.scope, this.version, options)
-  }
-}
-
 export const DEFAULT_SPAN_EXPORTER = (apiKey: string) =>
   new OTLPTraceExporter({
     url: TRACES_URL,
@@ -168,20 +154,6 @@ export const DEFAULT_SPAN_EXPORTER = (apiKey: string) =>
     },
     timeoutMillis: 30 * 1000,
   })
-
-// Note: Only exporting typescript instrumentations
-export enum Instrumentation {
-  Anthropic = InstrumentationScope.Anthropic,
-  AIPlatform = InstrumentationScope.AIPlatform,
-  Bedrock = InstrumentationScope.Bedrock,
-  Cohere = InstrumentationScope.Cohere,
-  Langchain = InstrumentationScope.Langchain,
-  Latitude = InstrumentationScope.Latitude,
-  LlamaIndex = InstrumentationScope.LlamaIndex,
-  OpenAI = InstrumentationScope.OpenAI,
-  TogetherAI = InstrumentationScope.TogetherAI,
-  VertexAI = InstrumentationScope.VertexAI,
-}
 
 export type TelemetryOptions = {
   disableBatch?: boolean
@@ -201,6 +173,7 @@ export type TelemetryOptions = {
     [Instrumentation.Bedrock]?: any
     [Instrumentation.Cohere]?: any
     [Instrumentation.OpenAI]?: any
+    [Instrumentation.OpenAIAgents]?: any
     [Instrumentation.LlamaIndex]?: any
     [Instrumentation.TogetherAI]?: any
     [Instrumentation.VertexAI]?: any
@@ -220,6 +193,7 @@ export class LatitudeTelemetry {
   readonly context: ContextManager
   readonly instrumentation: InstrumentationManager
   readonly tracer: TracerManager
+  private readonly lifecycle: LifecycleManager
 
   constructor(apiKey: string, options?: TelemetryOptions) {
     this.options = options || {}
@@ -245,6 +219,11 @@ export class LatitudeTelemetry {
     this.nodeProvider = new NodeTracerProvider({
       resource: new Resource({ [ATTR_SERVICE_NAME]: SERVICE_NAME }),
     })
+
+    this.lifecycle = new LifecycleManager(
+      this.nodeProvider,
+      this.options.exporter,
+    )
 
     // Note: important, must run before the exporter span processors
     this.nodeProvider.addSpanProcessor(
@@ -286,14 +265,11 @@ export class LatitudeTelemetry {
   }
 
   async flush() {
-    await this.nodeProvider.forceFlush()
-    await this.options.exporter!.forceFlush?.()
+    await this.lifecycle.flush()
   }
 
   async shutdown() {
-    await this.flush()
-    await this.nodeProvider.shutdown()
-    await this.options.exporter!.shutdown?.()
+    await this.lifecycle.shutdown()
   }
 
   // TODO(tracing): auto instrument outgoing HTTP requests
@@ -310,6 +286,17 @@ export class LatitudeTelemetry {
       const instrumentation = new LatitudeInstrumentation(
         tracer,
         typeof latitude === 'object' ? latitude : { module: latitude },
+      )
+      this.instrumentationsList.push(instrumentation)
+    }
+
+    const openaiAgents = this.options.instrumentations?.openaiAgents
+    if (openaiAgents) {
+      const tracer = this.tracer.get(Instrumentation.OpenAIAgents)
+      const instrumentation = new OpenAIAgentsInstrumentation(
+        tracer,
+        this.lifecycle,
+        { module: openaiAgents },
       )
       this.instrumentationsList.push(instrumentation)
     }
@@ -331,12 +318,12 @@ export class LatitudeTelemetry {
       instrumentationOptions?: { enrichTokens?: boolean },
     ) => {
       const providerPkg = this.options.instrumentations?.[instrumentationType]
+      if (!providerPkg) return
+
       const provider = this.tracer.provider(instrumentationType)
       const instrumentation = new InstrumentationConstructor(instrumentationOptions) // prettier-ignore
       instrumentation.setTracerProvider(provider)
-      if (providerPkg) {
-        instrumentation.manuallyInstrument(providerPkg)
-      }
+      instrumentation.manuallyInstrument(providerPkg)
       registerInstrumentations({
         instrumentations: [instrumentation],
         tracerProvider: provider,
@@ -365,36 +352,21 @@ export class LatitudeTelemetry {
       )
     }
 
-    const span = this.manualInstrumentation.unresolvedExternal(
-      otel.ROOT_CONTEXT,
-      options,
-    )
+    const span = this.manualInstrumentation.unresolvedExternal(BACKGROUND(), options) // prettier-ignore
 
+    let result
     try {
-      const result = await context.with(span.context, () => fn(span.context))
-      span.end()
-      return result
+      result = await context.with(
+        span.context,
+        async () => await fn(span.context),
+      )
     } catch (error) {
       span.fail(error as Error)
       throw error
-    } finally {
-      await this.flush()
     }
+
+    span.end()
+
+    return result
   }
 }
-
-export type {
-  CaptureOptions,
-  ChatSpanOptions,
-  EndCompletionSpanOptions,
-  EndHttpSpanOptions,
-  EndSpanOptions,
-  EndToolSpanOptions,
-  ErrorOptions,
-  ExternalSpanOptions,
-  PromptSpanOptions as PromptSegmentOptions,
-  StartCompletionSpanOptions,
-  StartHttpSpanOptions,
-  StartSpanOptions,
-  StartToolSpanOptions,
-} from '$telemetry/instrumentations'

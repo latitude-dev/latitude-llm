@@ -7,11 +7,11 @@ import {
   ToolCallContent,
   ToolMessage,
 } from 'promptl-ai'
+import { extractAttribute } from '../../../../../../../constants/src/tracing/attributes'
 import { CompletionSpanMetadata, SpanAttribute } from '../../../../../constants'
 import { UnprocessableEntityError } from '../../../../../lib/errors'
 import { Result, TypedResult } from '../../../../../lib/Result'
 import { setField, toCamelCase, validateUndefineds } from '../../shared'
-import { extractAttribute } from '../../../../../../../constants/src/tracing/attributes'
 
 function convertToolCalls(
   raws: Record<string, unknown>[],
@@ -22,6 +22,7 @@ function convertToolCalls(
     for (const raw of raws) {
       const toolCall = toCamelCase(raw)
 
+      // OpenAI Completions
       if (toolCall.function && typeof toolCall.function === 'object') {
         const func = toolCall.function as Record<string, unknown>
         toolCalls.push({
@@ -30,12 +31,14 @@ function convertToolCalls(
           toolName: String(func.name || ''),
           toolArguments: JSON.parse(String(func.arguments || '{}')),
         })
-      } else {
+      }
+      // The rest...
+      else {
         toolCalls.push({
           type: ContentType.toolCall,
-          toolCallId: String(toolCall.id || toolCall.toolCallId || toolCall.toolUseId || ''), // prettier-ignore
-          toolName: String(toolCall.name || toolCall.toolName || ''),
-          toolArguments: JSON.parse(String(toolCall.arguments || toolCall.toolArguments || toolCall.input || '{}')), // prettier-ignore
+          toolCallId: String(toolCall.callId || toolCall.toolCallId || toolCall.toolUseId || toolCall.id || ''), // prettier-ignore
+          toolName: String(toolCall.toolName || toolCall.name || ''),
+          toolArguments: JSON.parse(String( toolCall.toolArguments || toolCall.arguments  || toolCall.input || '{}')), // prettier-ignore
         })
       }
     }
@@ -48,7 +51,43 @@ function convertToolCalls(
   return Result.ok(toolCalls)
 }
 
+type ToolResultContent = {
+  type: 'tool-result'
+  toolCallId: string
+  toolName: string
+  result: unknown
+  isError: boolean
+}
+
+function convertToolResults(
+  raws: Record<string, unknown>[],
+): TypedResult<ToolResultContent[]> {
+  const toolResults: ToolResultContent[] = []
+
+  try {
+    for (const raw of raws) {
+      const toolResult = toCamelCase(raw)
+
+      toolResults.push({
+        type: 'tool-result',
+        toolCallId: String(toolResult.callId || toolResult.toolCallId || toolResult.toolUseId || toolResult.id || ''), // prettier-ignore
+        toolName: String(toolResult.toolName || toolResult.name || ''),
+        result: toolResult.result || toolResult.output || {},
+        isError: Boolean(toolResult.isError || false),
+      })
+    }
+  } catch {
+    return Result.error(
+      new UnprocessableEntityError('Invalid completion tool results'),
+    )
+  }
+
+  return Result.ok(toolResults)
+}
+
 const CONTENT_TYPE_TEXT = toCamelCase(ContentType.text)
+const CONTENT_TYPE_REASONING = toCamelCase('reasoning')
+const CONTENT_TYPE_REDACTED_REASONING = toCamelCase('redacted-reasoning')
 const CONTENT_TYPE_IMAGE = toCamelCase(ContentType.image)
 const CONTENT_TYPE_FILE = toCamelCase(ContentType.file)
 const CONTENT_TYPE_TOOL_CALL = toCamelCase(ContentType.toolCall)
@@ -57,15 +96,22 @@ const CONTENT_TYPE_TOOL_RESULT = toCamelCase('tool-result')
 function convertContentType(type: string): TypedResult<ContentType> {
   switch (toCamelCase(type)) {
     case CONTENT_TYPE_TEXT:
+    case 'output_text':
       return Result.ok(ContentType.text)
+    case CONTENT_TYPE_REASONING:
+      return Result.ok('reasoning' as ContentType)
+    case CONTENT_TYPE_REDACTED_REASONING:
+      return Result.ok('redacted-reasoning' as ContentType)
     case CONTENT_TYPE_IMAGE:
       return Result.ok(ContentType.image)
     case CONTENT_TYPE_FILE:
       return Result.ok(ContentType.file)
     case CONTENT_TYPE_TOOL_CALL:
     case 'toolUse':
+    case 'function_call':
       return Result.ok(ContentType.toolCall)
     case CONTENT_TYPE_TOOL_RESULT:
+    case 'function_call_result':
       return Result.ok('tool-result' as ContentType)
     default:
       return Result.error(new UnprocessableEntityError('Invalid content type'))
@@ -108,6 +154,18 @@ function convertMessageContent(
             text: String(item.text || ''),
           })
           break
+        case 'reasoning' as ContentType:
+          result.push({
+            type: 'reasoning',
+            text: String(item.text || ''),
+          } as unknown as MessageContent)
+          break
+        case 'redacted-reasoning' as ContentType:
+          result.push({
+            type: 'redacted-reasoning',
+            data: String(item.data || ''),
+          } as unknown as MessageContent)
+          break
         case ContentType.image:
           result.push({
             type: ContentType.image,
@@ -129,13 +187,11 @@ function convertMessageContent(
           }
           break
         case 'tool-result' as ContentType:
-          result.push({
-            type: 'tool-result',
-            toolCallId: String(item.toolId || item.toolCallId || item.toolUseId || ''), // prettier-ignore
-            toolName: String(item.toolName || ''),
-            result: item.result || {},
-            isError: Boolean(item.isError || false),
-          } as unknown as MessageContent)
+          {
+            const converting = convertToolResults([item])
+            if (converting.error) return Result.error(converting.error)
+            result.push(...(converting.value as unknown as MessageContent[]))
+          }
           break
       }
     }
