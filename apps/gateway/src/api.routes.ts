@@ -36,5 +36,26 @@ export const API_ROUTES = {
     traces: {
       ingest: '/api/v3/traces',
     },
+    datasets: {
+      getAll: '/api/v3/datasets',
+      get: '/api/v3/datasets/:datasetId',
+      create: '/api/v3/datasets',
+      update: '/api/v3/datasets/:datasetId',
+      destroy: '/api/v3/datasets/:datasetId',
+    },
+    datasetRows: {
+      getAll: '/api/v3/dataset-rows',
+      get: '/api/v3/dataset-rows/:rowId',
+      create: '/api/v3/dataset-rows',
+      update: '/api/v3/dataset-rows/:rowId',
+      destroy: '/api/v3/dataset-rows/:rowId',
+    },
+    providerApiKeys: {
+      getAll: '/api/v3/provider-api-keys',
+      get: '/api/v3/provider-api-keys/:providerApiKeyId',
+      create: '/api/v3/provider-api-keys',
+      update: '/api/v3/provider-api-keys/:providerApiKeyId',
+      destroy: '/api/v3/provider-api-keys/:providerApiKeyId',
+    },
   },
 }

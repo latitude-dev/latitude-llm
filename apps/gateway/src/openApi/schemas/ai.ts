@@ -334,3 +334,61 @@ export const ProjectSchema = z.object({
   lastEditedAt: z.iso.datetime().optional(),
   deletedAt: z.iso.datetime().nullable().optional(),
 })
+
+export const DatasetColumnSchema = z.object({
+  identifier: z.string(),
+  name: z.string(),
+  role: z.enum(['parameter', 'label', 'metadata']),
+})
+
+export const DatasetSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  workspaceId: z.number(),
+  authorId: z.string().nullable(),
+  tags: z.array(z.string()),
+  columns: z.array(DatasetColumnSchema),
+  deletedAt: z.iso.datetime().nullable().optional(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+  author: z
+    .object({
+      id: z.string(),
+      name: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
+})
+
+export const DatasetRowSchema = z.object({
+  id: z.number(),
+  workspaceId: z.number(),
+  datasetId: z.number(),
+  rowData: z.record(z.string(), z.any()).openapi({
+    type: 'object',
+    additionalProperties: true,
+    description: 'Row data as key-value pairs',
+  }),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+})
+
+export const ProviderApiKeySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  token: z.string(),
+  provider: z.string(),
+  url: z.string().nullable().optional(),
+  defaultModel: z.string().nullable().optional(),
+  authorId: z.string(),
+  workspaceId: z.number(),
+  lastUsedAt: z.iso.datetime().nullable().optional(),
+  deletedAt: z.iso.datetime().nullable().optional(),
+  configuration: z.record(z.string(), z.any()).nullable().optional().openapi({
+    type: 'object',
+    additionalProperties: true,
+    description: 'Provider configuration as key-value pairs',
+  }),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+})

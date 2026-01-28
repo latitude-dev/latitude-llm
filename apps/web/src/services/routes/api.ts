@@ -39,6 +39,7 @@ export const API_ROUTES = {
   providerApiKeys: {
     root: '/api/providerApiKeys',
     detail: (id: number) => ({
+      root: `/api/providerApiKeys/${id}`,
       usage: `/api/providerApiKeys/${id}/usage`,
     }),
   },
@@ -296,6 +297,10 @@ export const API_ROUTES = {
   datasetsRows: {
     root: '/api/dataset-rows',
     count: '/api/dataset-rows/count',
+    detail: (id: number) => ({
+      root: `/api/dataset-rows/${id}`,
+      position: `/api/dataset-rows/${id}/position`,
+    }),
     withPosition: (id: number) => {
       return {
         root: `/api/dataset-rows/${id}/position`,
