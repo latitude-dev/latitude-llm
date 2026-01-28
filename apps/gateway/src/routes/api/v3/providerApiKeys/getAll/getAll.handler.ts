@@ -7,17 +7,14 @@ export const getAllProviderApiKeysHandler = async (c: Context) => {
   try {
     const providerApiKeysRepository = new ProviderApiKeysRepository(workspace.id)
     const providerApiKeysResult = await providerApiKeysRepository.findAll()
+    const providerApiKeys = providerApiKeysResult.unwrap()
 
-    if (providerApiKeysResult.error) {
-      return c.json({ error: providerApiKeysResult.error.message }, 400)
-    }
-
-    const providerApiKeys = providerApiKeysResult.value.map((key) => ({
+    const maskedKeys = providerApiKeys.map((key) => ({
       ...key,
       token: '***masked***',
     }))
 
-    return c.json(providerApiKeys, 200)
+    return c.json(maskedKeys, 200)
   } catch (error) {
     console.error('Unexpected error:', error)
     return c.json({ error: 'Unexpected error', details: String(error) }, 500)

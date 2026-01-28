@@ -1,6 +1,8 @@
 import { Context } from 'hono'
 import { z } from '@hono/zod-openapi'
 import { createDataset } from '@latitude-data/core/services/datasets/create'
+import { DATASET_COLUMN_ROLES } from '@latitude-data/core/constants'
+import { Column } from '@latitude-data/core/schema/models/datasets'
 
 const createDatasetSchema = z.object({
   name: z.string().min(1, 'Dataset name is required'),
@@ -8,7 +10,11 @@ const createDatasetSchema = z.object({
     z.object({
       identifier: z.string(),
       name: z.string(),
-      role: z.string(),
+      role: z.enum([
+        DATASET_COLUMN_ROLES.parameter,
+        DATASET_COLUMN_ROLES.label,
+        DATASET_COLUMN_ROLES.metadata,
+      ]),
     }),
   ),
 })
@@ -38,7 +44,7 @@ export const createDatasetHandler = async (c: Context) => {
       workspace,
       data: {
         name,
-        columns,
+        columns: columns as Column[],
       },
     })
 

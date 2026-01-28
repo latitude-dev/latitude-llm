@@ -2,13 +2,19 @@ import { Context } from 'hono'
 import { z } from '@hono/zod-openapi'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { updateDataset } from '@latitude-data/core/services/datasets/update'
+import { DATASET_COLUMN_ROLES } from '@latitude-data/core/constants'
+import { Column } from '@latitude-data/core/schema/models/datasets'
 
 const updateDatasetSchema = z.object({
   columns: z.array(
     z.object({
       identifier: z.string(),
       name: z.string(),
-      role: z.string(),
+      role: z.enum([
+        DATASET_COLUMN_ROLES.parameter,
+        DATASET_COLUMN_ROLES.label,
+        DATASET_COLUMN_ROLES.metadata,
+      ]),
     }),
   ),
 })
@@ -42,7 +48,7 @@ export const updateDatasetHandler = async (c: Context) => {
 
     const result = await updateDataset({
       dataset: datasetResult.value,
-      data: { columns },
+      data: { columns: columns as Column[] },
     })
 
     if (result.error) {

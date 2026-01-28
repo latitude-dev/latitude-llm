@@ -338,7 +338,7 @@ export const ProjectSchema = z.object({
 export const DatasetColumnSchema = z.object({
   identifier: z.string(),
   name: z.string(),
-  role: z.string(),
+  role: z.enum(['parameter', 'label', 'metadata']),
 })
 
 export const DatasetSchema = z.object({
