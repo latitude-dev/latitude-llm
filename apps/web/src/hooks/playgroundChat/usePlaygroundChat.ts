@@ -347,7 +347,9 @@ export function usePlaygroundChat({
         return {
           ...msg,
           content: msg.content.map((c) =>
-            'isStreaming' in c && c.isStreaming ? { ...c, isStreaming: false } : c,
+            'isStreaming' in c && c.isStreaming
+              ? { ...c, isStreaming: false }
+              : c,
           ),
         } as Message
       }),
@@ -514,7 +516,14 @@ export function usePlaygroundChat({
     } else {
       await stopRun({ runUuid: documentLogUuid })
     }
-  }, [isLoading, documentLogUuid, stopRun, isStoppingRun, abortCurrentStream, cleanupStreamingState])
+  }, [
+    isLoading,
+    documentLogUuid,
+    stopRun,
+    isStoppingRun,
+    abortCurrentStream,
+    cleanupStreamingState,
+  ])
 
   const reset = useCallback(() => {
     setMode('preview')

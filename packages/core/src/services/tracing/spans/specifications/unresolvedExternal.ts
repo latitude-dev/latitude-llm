@@ -110,7 +110,9 @@ async function getResolvedData(
     uuid: HEAD_COMMIT,
     projectId: commit.projectId,
   })
+
   if (!Result.isOk(headCommitResult)) return headCommitResult
+
   const headCommit = headCommitResult.unwrap()
   return await getResolvedData({
     path,
@@ -158,7 +160,6 @@ async function process(
   const resolvedAttributes = {
     ...omit(attributes, [
       ATTRIBUTES.LATITUDE.promptPath,
-      ATTRIBUTES.LATITUDE.projectId,
       ATTRIBUTES.LATITUDE.commitUuid,
     ]),
     [ATTRIBUTES.LATITUDE.documentUuid]: documentVersion.documentUuid,

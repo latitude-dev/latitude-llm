@@ -187,6 +187,53 @@ That's it — prompts do **not** need to be created ahead of time.
 
 ---
 
+## Streaming responses
+
+When using streaming, consume the stream inside your capture block so the span covers the entire operation.
+
+<Tabs>
+  <Tab title="TypeScript">
+    **Consume the stream inside** your `capture()` callback:
+
+    ```typescript
+    async function streamSupportReply(input: string, res: Response) {
+      await telemetry.capture(
+        { projectId: 123, path: 'generate-support-reply' },
+        async () => {
+          const google = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+          const stream = await google.models.generateContentStream({
+            model: 'gemini-2.0-flash',
+            contents: input,
+          })
+
+          for await (const chunk of stream) {
+            const text = chunk.text()
+            if (text) {
+              res.write(text)
+            }
+          }
+          res.end()
+        }
+      )
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    **Use a generator function** with the decorator:
+
+    ```python
+    @telemetry.capture(project_id=123, path="generate-support-reply")
+    async def stream_support_reply(input: str):
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(input, stream=True)
+        for chunk in response:
+            yield chunk.text
+    ```
+  </Tab>
+</Tabs>
+
+---
+
 ## Seeing your logs in Latitude
 
 Once your feature is wrapped, logs will appear automatically.

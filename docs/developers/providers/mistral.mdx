@@ -123,6 +123,25 @@ That's it — prompts do **not** need to be created ahead of time.
 
 ---
 
+## Streaming responses
+
+When using streaming, use a generator function with the decorator. The SDK keeps the span open until all chunks are yielded:
+
+```python
+@telemetry.capture(project_id=123, path="generate-support-reply")
+async def stream_support_reply(input: str):
+    client = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
+    stream = client.chat.stream(
+        model="mistral-small-latest",
+        messages=[UserMessage(role="user", content=input)],
+    )
+    for event in stream:
+        if event.data.choices[0].delta.content:
+            yield event.data.choices[0].delta.content
+```
+
+---
+
 ## Seeing your logs in Latitude
 
 Once your feature is wrapped, logs will appear automatically.

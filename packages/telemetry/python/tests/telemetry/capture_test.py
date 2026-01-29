@@ -1,7 +1,8 @@
 """Tests for the capture decorator and context manager patterns."""
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
+from typing import Generator, AsyncGenerator
 
 from latitude_telemetry import Telemetry, TelemetryOptions, BadRequestError, CaptureContext
 
@@ -195,3 +196,176 @@ class TestCaptureValidation:
         ctx = telemetry.capture(path="my@feature!", project_id=123)
         with pytest.raises(BadRequestError):
             ctx._validate_path()
+
+
+class TestCaptureGenerators:
+    """Tests for the capture decorator with generator functions."""
+
+    @pytest.fixture
+    def telemetry(self):
+        """Create a telemetry instance with mocked exporter."""
+        with patch("latitude_telemetry.telemetry.telemetry.create_exporter"):
+            t = Telemetry("test-api-key", TelemetryOptions(disable_batch=True))
+            t._manual_instrumentation = MagicMock()
+            mock_span = MagicMock()
+            mock_span.context = MagicMock()
+            t._manual_instrumentation.unresolved_external.return_value = mock_span
+            return t
+
+    def test_decorator_sync_generator(self, telemetry):
+        """Test decorator with a sync generator function."""
+
+        @telemetry.capture(path="test-path", project_id=123)
+        def my_generator(items: list) -> Generator[str, None, None]:
+            for item in items:
+                yield item
+
+        items = ["a", "b", "c"]
+        result = list(my_generator(items))
+
+        assert result == items
+        telemetry._manual_instrumentation.unresolved_external.assert_called_once()
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
+        span.end.assert_called_once()
+
+    def test_decorator_sync_generator_keeps_span_open_during_iteration(self, telemetry):
+        """Test that span stays open until generator is fully consumed."""
+
+        @telemetry.capture(path="test-path", project_id=123)
+        def my_generator() -> Generator[int, None, None]:
+            yield 1
+            yield 2
+            yield 3
+
+        gen = my_generator()
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
+
+        next(gen)
+        span.end.assert_not_called()
+
+        next(gen)
+        span.end.assert_not_called()
+
+        next(gen)
+        span.end.assert_not_called()
+
+        with pytest.raises(StopIteration):
+            next(gen)
+
+        span.end.assert_called_once()
+
+    def test_decorator_sync_generator_with_exception(self, telemetry):
+        """Test decorator handles exceptions in sync generators."""
+
+        @telemetry.capture(path="test-path", project_id=123)
+        def my_generator() -> Generator[str, None, None]:
+            yield "first"
+            raise ValueError("Generator error")
+
+        gen = my_generator()
+        assert next(gen) == "first"
+
+        with pytest.raises(ValueError, match="Generator error"):
+            next(gen)
+
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
+        span.fail.assert_called_once()
+
+    def test_decorator_sync_generator_early_exit(self, telemetry):
+        """Test that span ends when generator is abandoned early."""
+
+        @telemetry.capture(path="test-path", project_id=123)
+        def my_generator() -> Generator[int, None, None]:
+            yield 1
+            yield 2
+            yield 3
+
+        gen = my_generator()
+        next(gen)
+
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
+        span.end.assert_not_called()
+
+        gen.close()
+        span.end.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_decorator_async_generator(self, telemetry):
+        """Test decorator with an async generator function."""
+
+        @telemetry.capture(path="test-path", project_id=123)
+        async def my_async_generator(items: list) -> AsyncGenerator[str, None]:
+            for item in items:
+                yield item
+
+        items = ["a", "b", "c"]
+        result = [item async for item in my_async_generator(items)]
+
+        assert result == items
+        telemetry._manual_instrumentation.unresolved_external.assert_called_once()
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
+        span.end.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_decorator_async_generator_keeps_span_open_during_iteration(self, telemetry):
+        """Test that span stays open until async generator is fully consumed."""
+
+        @telemetry.capture(path="test-path", project_id=123)
+        async def my_async_generator() -> AsyncGenerator[int, None]:
+            yield 1
+            yield 2
+            yield 3
+
+        gen = my_async_generator()
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
+
+        await gen.__anext__()
+        span.end.assert_not_called()
+
+        await gen.__anext__()
+        span.end.assert_not_called()
+
+        await gen.__anext__()
+        span.end.assert_not_called()
+
+        with pytest.raises(StopAsyncIteration):
+            await gen.__anext__()
+
+        span.end.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_decorator_async_generator_with_exception(self, telemetry):
+        """Test decorator handles exceptions in async generators."""
+
+        @telemetry.capture(path="test-path", project_id=123)
+        async def my_async_generator() -> AsyncGenerator[str, None]:
+            yield "first"
+            raise ValueError("Async generator error")
+
+        gen = my_async_generator()
+        assert await gen.__anext__() == "first"
+
+        with pytest.raises(ValueError, match="Async generator error"):
+            await gen.__anext__()
+
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
+        span.fail.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_decorator_async_generator_early_exit(self, telemetry):
+        """Test that span ends when async generator is abandoned early."""
+
+        @telemetry.capture(path="test-path", project_id=123)
+        async def my_async_generator() -> AsyncGenerator[int, None]:
+            yield 1
+            yield 2
+            yield 3
+
+        gen = my_async_generator()
+        await gen.__anext__()
+
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
+        span.end.assert_not_called()
+
+        await gen.aclose()
+        span.end.assert_called_once()
