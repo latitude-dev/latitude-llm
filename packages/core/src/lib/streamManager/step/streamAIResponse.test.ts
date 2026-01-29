@@ -16,7 +16,6 @@ import * as processResponseModule from '../../../services/chains/ProviderProcess
 import * as consumeStreamModule from '../ChainStreamConsumer/consumeStream'
 import * as factories from '../../../tests/factories'
 import * as usageModule from '../../../services/workspaces/usage'
-import * as createFakeProviderLogModule from '../utils/createFakeProviderLog'
 import * as recordAbortedCompletionModule from './recordAbortedCompletion'
 import { streamAIResponse } from './streamAIResponse'
 import * as handleAIErrorModule from './handleAIError'
@@ -151,10 +150,6 @@ describe('streamAIResponse', () => {
     })
     vi.spyOn(consumeStreamModule, 'consumeStream').mockRejectedValue(abortError)
 
-    const createFakeProviderLogSpy = vi
-      .spyOn(createFakeProviderLogModule, 'createFakeProviderLog')
-      .mockResolvedValue(undefined)
-
     const recordAbortedCompletionSpy = vi
       .spyOn(recordAbortedCompletionModule, 'recordAbortedCompletion')
       .mockImplementation(() => {})
@@ -190,16 +185,6 @@ describe('streamAIResponse', () => {
         documentLogUuid,
       }),
     ).rejects.toThrow(abortError)
-
-    expect(createFakeProviderLogSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        documentLogUuid,
-        workspace,
-        provider,
-        config,
-        messages,
-      }),
-    )
 
     expect(recordAbortedCompletionSpy).toHaveBeenCalledWith({
       context,
@@ -255,6 +240,10 @@ describe('streamAIResponse', () => {
         toolCalls: [],
         output: [],
         reasoning: undefined,
+        input: [],
+        model: 'gpt-4o',
+        provider: Providers.OpenAI,
+        cost: 0,
         usage: {
           inputTokens: 10,
           outputTokens: 20,

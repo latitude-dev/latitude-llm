@@ -17,7 +17,6 @@ import { TelemetryContext } from '../../../telemetry'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
 import { isAbortError } from '../../isAbortError'
-import { createFakeProviderLog } from '../utils/createFakeProviderLog'
 import { handleAIError } from './handleAIError'
 import { recordAbortedCompletion } from './recordAbortedCompletion'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
@@ -90,15 +89,6 @@ export async function streamAIResponse({
     chunkError = resultStream.error
   } catch (error) {
     if (isAbortError(error)) {
-      await createFakeProviderLog({
-        documentLogUuid,
-        accumulatedText,
-        conversationContext,
-        workspace,
-        provider,
-        messages,
-      })
-
       recordAbortedCompletion({
         context,
         provider,
@@ -117,6 +107,9 @@ export async function streamAIResponse({
     aiResult,
     documentLogUuid,
     resolvedTools,
+    input: messages,
+    model: config.model,
+    provider: provider.provider,
   })
 
   let finishReason
