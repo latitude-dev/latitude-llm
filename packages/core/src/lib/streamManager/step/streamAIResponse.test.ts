@@ -13,7 +13,6 @@ import { LogSources } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import * as aiModule from '../../../services/ai'
 import * as processResponseModule from '../../../services/chains/ProviderProcessor'
-import * as createProviderLogModule from '../../../services/providerLogs/create'
 import * as consumeStreamModule from '../ChainStreamConsumer/consumeStream'
 import * as factories from '../../../tests/factories'
 import * as usageModule from '../../../services/workspaces/usage'
@@ -21,7 +20,7 @@ import * as createFakeProviderLogModule from '../utils/createFakeProviderLog'
 import * as recordAbortedCompletionModule from './recordAbortedCompletion'
 import { streamAIResponse } from './streamAIResponse'
 import * as handleAIErrorModule from './handleAIError'
-import { ProviderLog } from '../../../schema/models/types/ProviderLog'
+import * as cacheModule from '../../../services/conversations/cache'
 
 describe('streamAIResponse', () => {
   it('calls handleAIError when streaming encounters an error', async () => {
@@ -267,40 +266,6 @@ describe('streamAIResponse', () => {
         },
         documentLogUuid: randomUUID(),
       })
-      vi.spyOn(createProviderLogModule, 'createProviderLog').mockResolvedValue(
-        Result.ok({
-          id: 1,
-          uuid: randomUUID(),
-          workspaceId: 1,
-          providerId: 1,
-          providerType: Providers.OpenAI,
-          model: 'gpt-4',
-          config: { model: 'gpt-4' },
-          messages: [],
-          responseText: 'test response',
-          responseObject: null,
-          responseReasoning: null,
-          toolCalls: [],
-          usage: {
-            inputTokens: 10,
-            outputTokens: 20,
-            promptTokens: 10,
-            completionTokens: 20,
-            totalTokens: 30,
-            cachedInputTokens: 0,
-            reasoningTokens: 0,
-          },
-          duration: 100,
-          source: LogSources.API,
-          costInMillicents: 0,
-          documentLogUuid: null,
-          finishReason: 'stop',
-          output: null,
-          generatedAt: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as unknown as ProviderLog),
-      )
       vi.spyOn(consumeStreamModule, 'consumeStream').mockResolvedValue({
         error: undefined,
       })
@@ -433,6 +398,102 @@ describe('streamAIResponse', () => {
         workspace,
       )
       expect(aiModule.ai).toHaveBeenCalled()
+    })
+
+    it('writes to conversation cache when conversationContext is provided', async () => {
+      const writeCacheSpy = vi.spyOn(cacheModule, 'writeConversationCache')
+      writeCacheSpy.mockResolvedValue(Result.nil())
+
+      const { workspace } = await factories.createWorkspace()
+      const context = factories.createTelemetryContext({ workspace })
+      const provider = await factories.createProviderApiKey({
+        workspace,
+        type: Providers.OpenAI,
+        name: 'test-provider',
+        user: await factories.createUser(),
+      })
+
+      vi.spyOn(usageModule, 'assertUsageWithinPlanLimits').mockResolvedValue(
+        Result.ok(undefined),
+      )
+
+      const controller = createMockController()
+      const documentLogUuid = randomUUID()
+      const commitUuid = randomUUID()
+      const documentUuid = randomUUID()
+
+      await streamAIResponse({
+        context,
+        controller,
+        workspace,
+        provider,
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: 'text', text: 'Hello' }],
+          },
+        ],
+        config: {
+          model: 'gpt-4',
+          provider: provider.name,
+        },
+        source: LogSources.API,
+        documentLogUuid,
+        conversationContext: {
+          commitUuid,
+          documentUuid,
+        },
+      })
+
+      expect(writeCacheSpy).toHaveBeenCalledWith({
+        documentLogUuid,
+        workspaceId: workspace.id,
+        commitUuid,
+        documentUuid,
+        providerId: provider.id,
+        messages: expect.any(Array),
+      })
+    })
+
+    it('does not write to conversation cache when conversationContext is not provided', async () => {
+      const writeCacheSpy = vi.spyOn(cacheModule, 'writeConversationCache')
+      writeCacheSpy.mockResolvedValue(Result.nil())
+
+      const { workspace } = await factories.createWorkspace()
+      const context = factories.createTelemetryContext({ workspace })
+      const provider = await factories.createProviderApiKey({
+        workspace,
+        type: Providers.OpenAI,
+        name: 'test-provider',
+        user: await factories.createUser(),
+      })
+
+      vi.spyOn(usageModule, 'assertUsageWithinPlanLimits').mockResolvedValue(
+        Result.ok(undefined),
+      )
+
+      const controller = createMockController()
+
+      await streamAIResponse({
+        context,
+        controller,
+        workspace,
+        provider,
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: 'text', text: 'Hello' }],
+          },
+        ],
+        config: {
+          model: 'gpt-4',
+          provider: provider.name,
+        },
+        source: LogSources.API,
+        documentLogUuid: randomUUID(),
+      })
+
+      expect(writeCacheSpy).not.toHaveBeenCalled()
     })
   })
 })

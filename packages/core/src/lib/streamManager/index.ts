@@ -31,6 +31,7 @@ import { ToolHandler } from '../../services/documents/tools/clientTools/handlers
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { createPromiseWithResolver } from './utils/createPromiseResolver'
 import { CompletionTelemetryOptions } from '../../services/ai'
+import { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 
 const addTokens = ({
   attr,
@@ -114,6 +115,8 @@ export abstract class StreamManager {
   private resolveResponse?: (
     response: ChainStepResponse<StreamType> | undefined,
   ) => void
+  protected provider?: ProviderApiKey
+  private resolveProvider?: (provider: ProviderApiKey | undefined) => void
 
   constructor({
     workspace,
@@ -219,6 +222,7 @@ export abstract class StreamManager {
       duration,
       logUsage,
       runUsage,
+      provider,
     } = this.initializePromisedValues()
 
     return {
@@ -229,6 +233,7 @@ export abstract class StreamManager {
       duration,
       logUsage,
       runUsage,
+      provider,
       stream: this.stream,
       start: this.start.bind(this),
     }
@@ -249,7 +254,10 @@ export abstract class StreamManager {
   protected endStream() {
     this.endTime = Date.now()
 
-    const toolCalls = this.response?.providerLog?.toolCalls ?? []
+    const toolCalls =
+      this.response && 'toolCalls' in this.response
+        ? (this.response.toolCalls ?? [])
+        : []
     const tokenUsage = this.logUsage ?? EMPTY_USAGE()
     const duration = this.endTime! - this.startTime!
     const finishReason = this.finishReason ?? 'stop'
@@ -276,13 +284,17 @@ export abstract class StreamManager {
     this.resolveDuration?.(duration)
     this.resolveLogUsage?.(logUsage)
     this.resolveRunUsage?.(runUsage)
+    this.resolveProvider?.(this.provider)
   }
 
-  protected startProviderStep({
+  protected async startProviderStep({
     config,
+    provider,
   }: {
     config: ValidatedChainStep['config']
+    provider: ValidatedChainStep['provider']
   }) {
+    this.provider = provider
     this.sendEvent({ type: ChainEventTypes.ProviderStarted, config })
   }
 
@@ -297,7 +309,6 @@ export abstract class StreamManager {
   }) {
     this.sendEvent({
       type: ChainEventTypes.ProviderCompleted,
-      providerLogUuid: response.providerLog!.uuid,
       tokenUsage,
       finishReason,
       response,
@@ -331,6 +342,17 @@ export abstract class StreamManager {
       ...omit(config, 'tools', 'latitudeTools', 'agents'),
       ...(Object.keys(tools).length ? { tools } : {}),
     } as VercelConfig
+  }
+
+  protected getConversationContext() {
+    if ('commit' in this.promptSource) {
+      return {
+        commitUuid: this.promptSource.commit.uuid,
+        documentUuid: this.promptSource.document.documentUuid,
+      }
+    }
+
+    return undefined
   }
 
   protected sendEvent(event: OmittedLatitudeEventData) {
@@ -390,6 +412,9 @@ export abstract class StreamManager {
       createPromiseWithResolver<LanguageModelUsage>()
     const [runUsage, resolveRunUsage] =
       createPromiseWithResolver<LanguageModelUsage>()
+    const [provider, resolveProvider] = createPromiseWithResolver<
+      ProviderApiKey | undefined
+    >()
     this.resolveToolCalls = resolveToolCalls
     this.resolveMessages = resolveMessages
     this.resolveError = resolveError
@@ -397,6 +422,7 @@ export abstract class StreamManager {
     this.resolveDuration = resolveDuration
     this.resolveLogUsage = resolveLogUsage
     this.resolveRunUsage = resolveRunUsage
+    this.resolveProvider = resolveProvider
 
     return {
       messages,
@@ -406,6 +432,7 @@ export abstract class StreamManager {
       duration,
       logUsage,
       runUsage,
+      provider,
     }
   }
 

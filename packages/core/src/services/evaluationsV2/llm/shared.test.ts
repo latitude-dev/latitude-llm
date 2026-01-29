@@ -8,10 +8,10 @@ import {
   LLM_EVALUATION_PROMPT_PARAMETERS,
   LlmEvaluationMetric,
 } from '../../../constants'
+import { estimateCost } from '../../ai'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
-import { type ProviderLog } from '../../../schema/models/types/ProviderLog'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import * as factories from '../../../tests/factories'
 import {
@@ -34,7 +34,7 @@ describe('runPrompt', () => {
   let resultUuid: string
   let prompt: string
   let parameters: Record<string, unknown>
-  let providerLog: ProviderLog
+  const totalTokens = 20
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -82,30 +82,6 @@ describe('runPrompt', () => {
     parameters = Object.fromEntries(
       LLM_EVALUATION_PROMPT_PARAMETERS.map((p) => [p, p]),
     )
-
-    await factories.createProviderLog({
-      documentLogUuid: resultUuid,
-      providerId: provider.id,
-      providerType: provider.provider,
-      model: 'gpt-4o',
-      tokens: 31,
-      duration: 1000,
-      source: LogSources.Evaluation,
-      costInMillicents: 500,
-      workspace: workspace,
-    })
-    providerLog = await factories.createProviderLog({
-      documentLogUuid: resultUuid,
-      providerId: provider.id,
-      providerType: provider.provider,
-      model: 'gpt-4o',
-      tokens: 31,
-      duration: 1000,
-      source: LogSources.Evaluation,
-      costInMillicents: 500,
-      workspace: workspace,
-    })
-
     mocks = {
       runChain: vi.spyOn(chains, 'runChain').mockImplementation((args) => {
         ;(args.chain as any)._completed = true
@@ -120,11 +96,11 @@ describe('runPrompt', () => {
             usage: {
               promptTokens: 10,
               completionTokens: 10,
-              totalTokens: 20,
+              totalTokens,
             },
-            documentLogUuid: providerLog.documentLogUuid,
-            providerLog: providerLog,
+            documentLogUuid: resultUuid,
           }),
+          duration: Promise.resolve(2000),
         } as any
       }),
     }
@@ -203,11 +179,11 @@ describe('runPrompt', () => {
           usage: {
             promptTokens: 10,
             completionTokens: 10,
-            totalTokens: 20,
+            totalTokens,
           },
-          documentLogUuid: providerLog.documentLogUuid,
-          providerLog: providerLog,
+          documentLogUuid: resultUuid,
         }),
+        duration: Promise.resolve(2000),
       } as any
     })
 
@@ -246,11 +222,11 @@ describe('runPrompt', () => {
           usage: {
             promptTokens: 10,
             completionTokens: 10,
-            totalTokens: 20,
+            totalTokens,
           },
-          documentLogUuid: providerLog.documentLogUuid,
-          providerLog: providerLog,
+          documentLogUuid: resultUuid,
         }),
+        duration: Promise.resolve(2000),
       } as any
     })
 
@@ -289,28 +265,38 @@ describe('runPrompt', () => {
       prompt: prompt,
       parameters: parameters,
       schema: promptSchema,
-      resultUuid: 'resultUuid',
+      resultUuid: resultUuid,
       evaluation: evaluation,
       providers: new Map([[provider.name, provider]]),
       commit: commit,
       workspace: workspace,
     })
     const chain = mocks.runChain.mock.calls[0][0].chain as Chain
+    const expectedCost = Math.floor(
+      estimateCost({
+        provider: provider.provider,
+        model: 'gpt-4o',
+        usage: {
+          promptTokens: 10,
+          completionTokens: 10,
+          totalTokens,
+        } as any,
+      }) * 100_000,
+    )
 
     expect(result).toEqual({
       response: {
         streamType: 'object',
         object: { passed: true, reason: 'reason' },
         text: 'text',
-        usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+        usage: { promptTokens: 10, completionTokens: 10, totalTokens },
         documentLogUuid: resultUuid,
-        providerLog: providerLog,
       },
       stats: {
         documentLogUuid: resultUuid,
-        tokens: 62,
+        tokens: totalTokens,
         duration: 2000,
-        costInMillicents: 1000,
+        costInMillicents: expectedCost,
       },
       verdict: { passed: true, reason: 'reason' },
     })
