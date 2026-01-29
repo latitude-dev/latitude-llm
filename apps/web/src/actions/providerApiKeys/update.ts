@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { authProcedure } from '../procedures'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
-import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
+import { providerApiKeyPresenter } from '@latitude-data/core/services/providerApiKeys/helpers/presenter'
 import { updateProviderApiKeyName } from '@latitude-data/core/services/providerApiKeys/updateName'
 
 export const updateProviderApiKeyAction = authProcedure

@@ -11,7 +11,6 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import Link from 'next/link'
 
 export default function SetupForm({
   email,
@@ -89,7 +88,7 @@ export default function SetupForm({
           </div>
 
           <Button variant='outline' fullWidth asChild>
-            <Link
+            <a
               href={
                 '/api/auth/google/start' +
                 (returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '')
@@ -98,7 +97,7 @@ export default function SetupForm({
             >
               <Icon name='googleWorkspace' />
               <Text.H5>Continue with Google</Text.H5>
-            </Link>
+            </a>
           </Button>
         </div>
 
