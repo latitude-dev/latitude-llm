@@ -441,6 +441,51 @@ The TypeScript SDK is automatically published to npm and GitHub releases via `.g
 - Only publishes if versions differ
 - Supports prerelease detection (beta, alpha, rc) for GitHub release flags
 
+## Job Patterns (`packages/core/src/jobs/`)
+
+### Job Structure
+
+Jobs are BullMQ workers that process background tasks. They should follow these patterns:
+
+1. **Never return `Result.error`**: Jobs should not use the Result pattern for error handling
+2. **Throw for retryable errors**: Unhandled exceptions trigger automatic retries via BullMQ
+3. **Use `captureException` for non-retryable errors**: Log errors that shouldn't cause a retry
+4. **Return void or undefined**: Jobs don't need to return values
+
+### Error Handling Patterns
+
+```typescript
+// CORRECT: Throw for retryable errors (job will be retried)
+export async function myJob(_: Job<MyJobData>) {
+  const result = await someOperation()
+  if (result.error) {
+    throw result.error // Will trigger retry
+  }
+}
+
+// CORRECT: Capture non-retryable errors and continue
+export async function myJob(_: Job<MyJobData>) {
+  const results = await Promise.all(items.map(processItem))
+  const errors = results.filter((r) => r.error)
+  errors.forEach((r) => captureException(r.error))
+  // Job continues/completes despite individual item failures
+}
+
+// INCORRECT: Never return Result objects from jobs
+export async function myJob(_: Job<MyJobData>) {
+  try {
+    await someOperation()
+    return Result.nil() // DON'T DO THIS
+  } catch (error) {
+    return captureException(error) // DON'T DO THIS
+  }
+}
+```
+
+### Job Registration
+
+Jobs are registered in `packages/core/src/jobs/index.ts` and scheduled via BullMQ queues.
+
 ## Event System Patterns
 
 ### Event Declaration (`packages/core/src/events/events.d.ts`)
