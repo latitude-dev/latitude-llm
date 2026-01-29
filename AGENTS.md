@@ -20,6 +20,8 @@ Fight entropy. Leave the codebase better than you found it.
 - `pnpm --filter @latitude-data/core db:generate` - Generate database migrations
 - `pnpm prettier` - Format code
 - NEVER build packages with `pnpm build` unless specifically asked to
+- NEVER use the vitest command directly, always try pnpm test or implement a
+  pnpm test script in the relevant package.json if it does not exist
 
 ## Code Style
 
@@ -352,6 +354,7 @@ The system automatically selects based on `CLICKHOUSE_CLUSTER_ENABLED` environme
 Files follow the convention: `NNNN_description.{up,down}.sql`
 
 Example:
+
 ```
 0001_create_events.up.sql
 0001_create_events.down.sql
@@ -362,6 +365,7 @@ Example:
 **Always create both clustered and unclustered versions.** They must be kept in sync.
 
 Unclustered example (`unclustered/0001_create_events.up.sql`):
+
 ```sql
 CREATE TABLE events (
     id String,
@@ -372,6 +376,7 @@ ORDER BY (workspace_id, timestamp, id);
 ```
 
 Clustered example (`clustered/0001_create_events.up.sql`):
+
 ```sql
 CREATE TABLE events ON CLUSTER default (
     id String,
@@ -383,11 +388,11 @@ ORDER BY (workspace_id, timestamp, id);
 
 #### Key Differences
 
-| Aspect | Unclustered | Clustered |
-|--------|-------------|-----------|
-| DDL clause | None | `ON CLUSTER default` |
-| Engine | `MergeTree`, `ReplacingMergeTree` | `ReplicatedMergeTree`, `ReplicatedReplacingMergeTree` |
-| Use case | Dev, self-hosted single-node | Production HA |
+| Aspect     | Unclustered                       | Clustered                                             |
+| ---------- | --------------------------------- | ----------------------------------------------------- |
+| DDL clause | None                              | `ON CLUSTER default`                                  |
+| Engine     | `MergeTree`, `ReplacingMergeTree` | `ReplicatedMergeTree`, `ReplicatedReplacingMergeTree` |
+| Use case   | Dev, self-hosted single-node      | Production HA                                         |
 
 #### Migration Rules
 
