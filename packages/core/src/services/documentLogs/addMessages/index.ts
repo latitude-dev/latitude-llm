@@ -51,15 +51,15 @@ export async function addMessages(
   }: AddMessagesArgs,
   telemetry: LatitudeTelemetry = realTelemetry,
 ) {
-  if (!documentLogUuid) {
+  if (!documentLogUuid)
     return Result.error(new Error('documentLogUuid is required'))
-  }
 
   const dataResult = await retrieveData({
     workspace,
     documentLogUuid,
   })
   if (dataResult.error) return dataResult
+
   const {
     document,
     commit,
@@ -68,9 +68,7 @@ export async function addMessages(
     previousSpan,
     previousMessages,
   } = dataResult.unwrap()
-
   const effectiveContext = context ?? BACKGROUND({ workspaceId: workspace.id })
-
   const $chat = telemetry.span.chat(
     {
       documentLogUuid,

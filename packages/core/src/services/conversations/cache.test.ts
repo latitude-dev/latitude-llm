@@ -197,13 +197,17 @@ describe('conversationCache', () => {
 
       const putCall = mockDisk.put.mock.calls[0]
       expect(putCall[0]).toMatch(
-        new RegExp(`^${CONVERSATION_CACHE_PREFIX}/\\d+/doc-log-uuid-123.json.gz$`),
+        new RegExp(
+          `^${CONVERSATION_CACHE_PREFIX}/\\d+/doc-log-uuid-123.json.gz$`,
+        ),
       )
 
       expect(mockCache.set).toHaveBeenCalledWith(
         `${CONVERSATION_CACHE_PREFIX}:lookup:doc-log-uuid-123`,
         expect.stringMatching(
-          new RegExp(`^${CONVERSATION_CACHE_PREFIX}/\\d+/doc-log-uuid-123.json.gz$`),
+          new RegExp(
+            `^${CONVERSATION_CACHE_PREFIX}/\\d+/doc-log-uuid-123.json.gz$`,
+          ),
         ),
         'PX',
         CONVERSATION_CACHE_TTL_MS,
@@ -232,7 +236,9 @@ describe('conversationCache', () => {
       expect(mockCache.zadd).toHaveBeenCalledWith(
         CONVERSATION_CACHE_BUCKET_INDEX_KEY,
         expect.any(Number),
-        expect.stringMatching(new RegExp(`^${CONVERSATION_CACHE_PREFIX}/\\d+$`)),
+        expect.stringMatching(
+          new RegExp(`^${CONVERSATION_CACHE_PREFIX}/\\d+$`),
+        ),
       )
     })
 
@@ -281,7 +287,9 @@ describe('conversationCache', () => {
       mockDisk.put.mockResolvedValueOnce(Result.nil())
       const now = Date.now()
       const expectedExpiresAt = now + CONVERSATION_CACHE_TTL_MS
-      const expectedBucketId = Math.floor(expectedExpiresAt / CONVERSATION_CACHE_BUCKET_MS)
+      const expectedBucketId = Math.floor(
+        expectedExpiresAt / CONVERSATION_CACHE_BUCKET_MS,
+      )
 
       await writeConversationCache(mockEntry)
 
@@ -329,7 +337,9 @@ describe('conversationCache', () => {
 
     it('returns true when decompression fails', async () => {
       mockDisk.exists.mockResolvedValueOnce(true)
-      mockDisk.get.mockResolvedValueOnce('invalid-base64-data-that-is-not-gzipped')
+      mockDisk.get.mockResolvedValueOnce(
+        'invalid-base64-data-that-is-not-gzipped',
+      )
 
       const result = await isCacheEntryExpired('some-key')
 
