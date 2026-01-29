@@ -50,6 +50,7 @@ export function runPresenter({
       text: response.text,
       object: type === 'object' ? response.object : undefined,
       toolCalls: type === 'text' ? response.toolCalls : [],
+      output: response.output,
       cost: cost,
     },
     source,

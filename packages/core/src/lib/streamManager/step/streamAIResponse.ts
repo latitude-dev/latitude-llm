@@ -149,7 +149,6 @@ export async function streamAIResponse({
 
   return {
     response,
-    // FIXME: Make response.output non optional when we remove `__deprecated`
     messages: response.output ?? [],
     tokenUsage: response.usage,
     finishReason,

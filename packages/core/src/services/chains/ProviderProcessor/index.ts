@@ -62,7 +62,7 @@ export async function processResponse({
   })
 
   return {
-    output,
+    output: output ?? [],
     reasoning,
     documentLogUuid,
     streamType: aiResult.type,

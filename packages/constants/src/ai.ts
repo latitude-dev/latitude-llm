@@ -94,7 +94,7 @@ type BaseResponse = {
   usage: LanguageModelUsage
   documentLogUuid?: string
   providerLog?: ProviderLog
-  output?: LegacyResponseMessage[] // TODO: Make this non-optional when we remove __deprecated
+  output: LegacyResponseMessage[]
 }
 
 export type ChainStepTextResponse = BaseResponse & {

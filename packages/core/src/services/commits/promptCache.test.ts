@@ -35,6 +35,7 @@ describe('promptCache', async () => {
       cachedInputTokens: 0,
     },
     toolCalls: [],
+    output: [],
     // This should not be cached
     documentLogUuid: 'document-log-uuid',
     providerLog: {

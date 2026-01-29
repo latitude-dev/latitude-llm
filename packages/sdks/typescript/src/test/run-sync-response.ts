@@ -14,5 +14,6 @@ export const RUN_TEXT_RESPONSE = {
       cachedInputTokens: 0,
     },
     toolCalls: [],
+    output: [],
   },
 }

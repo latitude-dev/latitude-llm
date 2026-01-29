@@ -207,6 +207,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
               },
             },
           ],
+          output: [],
         },
         providerLogUuid: '123',
         tokenUsage: {
@@ -985,6 +986,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
               },
             },
           ],
+          output: [],
         },
         providerLogUuid: '456',
         tokenUsage: {
@@ -2166,6 +2168,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             cachedInputTokens: 0,
           },
           toolCalls: [],
+          output: [],
         },
         providerLogUuid: '789',
         finishReason: 'stop',
