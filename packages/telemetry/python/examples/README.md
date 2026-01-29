@@ -6,7 +6,29 @@ Manual test examples for each instrumented provider against a local Latitude ins
 
 1. Start your local Latitude instance at `localhost:8787`
 
-2. Set required environment variables:
+2. Set up environment variables using one of these methods:
+
+**Option A: Using .env file (recommended)**
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit .env with your actual values
+```
+
+Then load it before running tests:
+
+```bash
+# Using dotenv
+uv run --env-file .env python examples/test_openai.py
+
+# Or source it manually
+set -a && source examples/.env && set +a
+uv run python examples/test_openai.py
+```
+
+**Option B: Export in shell**
 
 ```bash
 export LATITUDE_API_KEY="your-latitude-api-key"

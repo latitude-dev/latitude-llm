@@ -178,6 +178,57 @@ That's it — prompts do **not** need to be created ahead of time.
 
 ---
 
+## Streaming responses
+
+When using streaming, consume the stream inside your capture block so the span covers the entire operation.
+
+<Tabs>
+  <Tab title="TypeScript">
+    **Consume the stream inside** your `capture()` callback:
+
+    ```typescript
+    async function streamSupportReply(input: string, res: Response) {
+      await telemetry.capture(
+        { projectId: 123, path: 'generate-support-reply' },
+        async () => {
+          const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+          const stream = client.messages.stream({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1024,
+            messages: [{ role: 'user', content: input }],
+          })
+
+          for await (const event of stream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              res.write(event.delta.text)
+            }
+          }
+          res.end()
+        }
+      )
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    **Use a generator function** with the decorator:
+
+    ```python
+    @telemetry.capture(project_id=123, path="generate-support-reply")
+    async def stream_support_reply(input: str):
+        client = Anthropic()
+        with client.messages.stream(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": input}],
+        ) as stream:
+            for text in stream.text_stream:
+                yield text
+    ```
+  </Tab>
+</Tabs>
+
+---
+
 ## Seeing your logs in Latitude
 
 Once your feature is wrapped, logs will appear automatically.

@@ -13,7 +13,12 @@
     "dark": "/logo/dark.svg"
   },
   "contextual": {
-    "options": ["copy", "view", "chatgpt", "claude"]
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
   },
   "navbar": {
     "primary": {
@@ -36,18 +41,24 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["guides/getting-started/introduction"]
+            "pages": [
+              "guides/getting-started/introduction"
+            ]
           },
           {
             "group": "Getting started",
             "pages": [
               {
                 "group": "Developers",
-                "pages": ["guides/getting-started/quick-start-dev"]
+                "pages": [
+                  "guides/getting-started/quick-start-dev"
+                ]
               },
               {
                 "group": "No-code",
-                "pages": ["guides/getting-started/quick-start-pm"]
+                "pages": [
+                  "guides/getting-started/quick-start-pm"
+                ]
               }
             ]
           },
@@ -98,14 +109,19 @@
           },
           {
             "group": "Experiments",
-            "pages": ["guides/experiments/overview"]
+            "pages": [
+              "guides/experiments/overview"
+            ]
           },
           {
             "group": "Deployment",
             "pages": [
               {
                 "group": "Latitude SDK",
-                "pages": ["guides/sdk/typescript", "guides/sdk/python"]
+                "pages": [
+                  "guides/sdk/typescript",
+                  "guides/sdk/python"
+                ]
               },
               {
                 "group": "HTTP API",
@@ -134,7 +150,9 @@
           },
           {
             "group": "Support",
-            "pages": ["guides/integration/community-support"]
+            "pages": [
+              "guides/integration/community-support"
+            ]
           }
         ]
       },
@@ -143,7 +161,9 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["promptl/getting-started/introduction"]
+            "pages": [
+              "promptl/getting-started/introduction"
+            ]
           },
           {
             "group": "Syntax",
@@ -185,7 +205,9 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["developers/overview"]
+            "pages": [
+              "developers/overview"
+            ]
           },
           {
             "group": "Providers",
