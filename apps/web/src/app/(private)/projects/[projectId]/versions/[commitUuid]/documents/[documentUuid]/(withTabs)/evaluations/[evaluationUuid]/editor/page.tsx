@@ -5,7 +5,7 @@ import {
   getEvaluationV2AtCommitByDocumentCached,
   getProviderApiKeysCached,
 } from '$/app/(private)/_data-access'
-import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
+import { providerApiKeyPresenter } from '@latitude-data/core/services/providerApiKeys/helpers/presenter'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { NotFoundError } from '@latitude-data/core/lib/errors'

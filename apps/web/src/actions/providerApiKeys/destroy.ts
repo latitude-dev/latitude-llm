@@ -2,7 +2,7 @@
 
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 import { destroyProviderApiKey } from '@latitude-data/core/services/providerApiKeys/destroy'
-import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
+import { providerApiKeyPresenter } from '@latitude-data/core/services/providerApiKeys/helpers/presenter'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
