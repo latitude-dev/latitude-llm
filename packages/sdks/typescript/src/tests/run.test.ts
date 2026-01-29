@@ -325,6 +325,28 @@ data: ${JSON.stringify({
         expect(onFinishMock).not.toHaveBeenCalled()
       }),
     )
+
+    it(
+      'accepts abort signal option without error',
+      server.boundary(async () => {
+        mockStreamResponse({
+          server,
+          apiVersion: 'v3',
+        })
+
+        const abortController = new AbortController()
+
+        // Run with signal (verify it's accepted and doesn't break streaming)
+        const result = await sdk.prompts.run('path/to/document', {
+          projectId,
+          parameters: { foo: 'bar' },
+          stream: true,
+          signal: abortController.signal,
+        })
+
+        expect(result).toEqual(FINAL_RESPONSE)
+      }),
+    )
   })
 
   describe('without streaming', () => {

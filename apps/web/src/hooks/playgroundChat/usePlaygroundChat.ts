@@ -52,10 +52,12 @@ export type AddMessagesFn = ({
 export function usePlaygroundChat({
   runPromptFn,
   addMessagesFn,
+  abortCurrentStream,
   onPromptRan,
 }: {
   runPromptFn: RunPromptFn
   addMessagesFn?: AddMessagesFn
+  abortCurrentStream?: () => boolean
   onPromptRan?: (documentLogUuid?: string, error?: Error) => void
 }) {
   const isChat = useRef(false)
@@ -328,6 +330,30 @@ export function usePlaygroundChat({
     [setDocumentLogUuid],
   )
 
+  /**
+   * Ensures all streaming content blocks have isStreaming set to false.
+   * This is called when a stream ends (either normally or via abort) to
+   * clean up any content that might still be marked as streaming due to
+   * race conditions or abrupt termination.
+   */
+  const cleanupStreamingState = useCallback(() => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (!Array.isArray(msg.content)) return msg
+        const hasStreaming = msg.content.some(
+          (c) => 'isStreaming' in c && c.isStreaming,
+        )
+        if (!hasStreaming) return msg
+        return {
+          ...msg,
+          content: msg.content.map((c) =>
+            'isStreaming' in c && c.isStreaming ? { ...c, isStreaming: false } : c,
+          ),
+        } as Message
+      }),
+    )
+  }, [setMessages])
+
   const handleStream = useCallback(
     async ({
       stream,
@@ -360,6 +386,10 @@ export function usePlaygroundChat({
           handleGenericStreamError(parsedEvent, data as Error)
         }
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          cleanupStreamingState()
+          return
+        }
         setError(error as Error)
         runError = error as Error
       } finally {
@@ -377,6 +407,7 @@ export function usePlaygroundChat({
       parseEvent,
       setError,
       setIsLoading,
+      cleanupStreamingState,
     ],
   )
 
@@ -428,8 +459,12 @@ export function usePlaygroundChat({
 
         await handleStream({ stream })
       } catch (error) {
-        setIsLoading(false)
+        if (error instanceof Error && error.name === 'AbortError') {
+          return
+        }
         setError(error as Error)
+      } finally {
+        setIsLoading(false)
       }
     },
     [
@@ -473,8 +508,13 @@ export function usePlaygroundChat({
     if (!documentLogUuid) return
     if (isStoppingRun) return
 
-    await stopRun({ runUuid: documentLogUuid })
-  }, [isLoading, documentLogUuid, stopRun, isStoppingRun])
+    if (isChat.current && abortCurrentStream) {
+      abortCurrentStream()
+      cleanupStreamingState()
+    } else {
+      await stopRun({ runUuid: documentLogUuid })
+    }
+  }, [isLoading, documentLogUuid, stopRun, isStoppingRun, abortCurrentStream, cleanupStreamingState])
 
   const reset = useCallback(() => {
     setMode('preview')
@@ -489,6 +529,7 @@ export function usePlaygroundChat({
     setProvider(undefined)
     setModel(undefined)
     resetTimer()
+    isChat.current = false
   }, [
     setMode,
     setMessages,
@@ -504,6 +545,9 @@ export function usePlaygroundChat({
     resetTimer,
   ])
 
+  const isSubmitDisabled =
+    isLoading || isStoppingRun || !!error || mode === 'preview'
+
   return useMemo(
     () => ({
       mode,
@@ -511,6 +555,7 @@ export function usePlaygroundChat({
       error,
       isLoading,
       isStopping: isStoppingRun,
+      isSubmitDisabled,
       messages,
       runningLatitudeTools,
       start,
@@ -533,6 +578,7 @@ export function usePlaygroundChat({
       error,
       isLoading,
       isStoppingRun,
+      isSubmitDisabled,
       documentLogUuid,
       messages,
       runningLatitudeTools,

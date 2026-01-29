@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.0] - 2026-01-28
+
+### Changed
+
+- Replaced `node-fetch` with native `fetch`. This reduces bundle size and improves abort signal handling. Requires Node.js 18+ (which has been the minimum supported version since Node.js 16 and 17 reached EOL).
+
+### Fixed
+
+- Fixed abort signal propagation when cancelling streaming requests. The SDK now properly cancels in-flight requests when the abort signal is triggered.
+
 ## [5.3.1] - 2026-01-19
 
 - Quick fix: move constants dependency to dev dependency since it's transpiled at build time and it cannot be required at runtime because we do not publish it.

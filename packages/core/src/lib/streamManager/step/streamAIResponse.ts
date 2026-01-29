@@ -20,6 +20,7 @@ import { checkValidStream } from '../checkValidStream'
 import { isAbortError } from '../../isAbortError'
 import { createFakeProviderLog } from '../utils/createFakeProviderLog'
 import { handleAIError } from './handleAIError'
+import { recordAbortedCompletion } from './recordAbortedCompletion'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 
 export type Output = 'object' | 'array' | 'no-schema'
@@ -106,6 +107,14 @@ export async function streamAIResponse({
         config,
         messages,
         startTime,
+      })
+
+      recordAbortedCompletion({
+        context,
+        provider,
+        config,
+        messages,
+        accumulatedText: accumulatedText.text,
       })
     }
 

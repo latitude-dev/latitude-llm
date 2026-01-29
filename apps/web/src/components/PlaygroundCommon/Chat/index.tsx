@@ -47,6 +47,7 @@ export default function Chat({
   const playground = usePlaygroundChat({
     runPromptFn,
     addMessagesFn,
+    abortCurrentStream,
     onPromptRan,
   })
 
@@ -164,12 +165,7 @@ function ChatInputBox({
         placeholder='Ask anything'
         onSubmit={playground.submitUserMessage}
         onClear={clearChat}
-        disabledSubmit={
-          playground.isLoading ||
-          playground.isStopping ||
-          !!playground.error ||
-          !hasActiveStream()
-        }
+        disabledSubmit={playground.isSubmitDisabled}
         disabledClear={playground.isLoading}
       />
     </div>

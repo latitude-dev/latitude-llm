@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/sdk",
-  "version": "5.3.1",
+  "version": "5.4.0",
   "description": "Latitude SDK for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -44,7 +44,6 @@
   },
   "dependencies": {
     "eventsource-parser": "^2.0.1",
-    "node-fetch": "2.7.0",
     "promptl-ai": "catalog:",
     "zod": "catalog:",
     "@opentelemetry/semantic-conventions": "catalog:"
@@ -58,14 +57,15 @@
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/eventsource": "^1.1.15",
     "@types/node": "^22.7.5",
-    "@types/node-fetch": "^2.6.11",
     "msw": "^2.3.5",
-    "node-fetch": "2.7.0",
     "rollup": "^4.21.1",
     "rollup-plugin-dts": "^6.1.1",
     "vitest": "^3.1.4"
   },
   "peerDependencies": {
     "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
