@@ -54,6 +54,7 @@ export interface LatitudeProviderStartedEventData
 export interface LatitudeProviderCompletedEventData
   extends GenericLatitudeEventData {
   type: ChainEventTypes.ProviderCompleted
+  providerLogUuid: string
   tokenUsage: LegacyVercelSDKVersion4Usage
   finishReason: FinishReason
   response: ChainStepResponse<StreamType>

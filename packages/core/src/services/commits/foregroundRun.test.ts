@@ -10,16 +10,17 @@ import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { runForegroundDocument } from './foregroundRun'
 import * as runDocumentAtCommitModule from './runDocumentAtCommit'
 import * as publisherModule from '../../events/publisher'
+import { ProviderApiKeysRepository } from '../../repositories'
 
 vi.spyOn(runDocumentAtCommitModule, 'runDocumentAtCommit')
 vi.spyOn(publisherModule.publisher, 'publishLater')
+vi.spyOn(ProviderApiKeysRepository.prototype, 'find')
 
 describe('runForegroundDocument', () => {
   let workspace: WorkspaceDto
   let project: Project
   let commit: Commit
   let document: DocumentVersion
-  let provider: { id: number; name: string }
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -29,7 +30,6 @@ describe('runForegroundDocument', () => {
       project: createdProject,
       commit: createdCommit,
       documents,
-      providers,
     } = await createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
@@ -44,7 +44,6 @@ describe('runForegroundDocument', () => {
     project = createdProject
     commit = createdCommit
     document = documents[0]!
-    provider = providers[0] ?? { id: 0, name: 'openai' }
 
     const mockStream = {
       [Symbol.asyncIterator]: async function* () {
@@ -70,10 +69,13 @@ describe('runForegroundDocument', () => {
             providerId: 1,
           },
         }),
-        provider: Promise.resolve({
-          id: provider.id,
-          name: provider.name,
-        }),
+      }) as any,
+    )
+
+    vi.mocked(ProviderApiKeysRepository.prototype.find).mockResolvedValue(
+      Result.ok({
+        id: 1,
+        name: 'openai',
       }) as any,
     )
 
@@ -223,12 +225,7 @@ describe('runForegroundDocument', () => {
           totalCost: 0.01,
         }),
       )
-      expect(finalResponse.provider).toEqual(
-        expect.objectContaining({
-          id: provider.id,
-          name: provider.name,
-        }),
-      )
+      expect(finalResponse.provider).toEqual({ id: 1, name: 'openai' })
     })
 
     it('should throw error if stream error occurs', async () => {

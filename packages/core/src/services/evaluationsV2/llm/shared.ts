@@ -8,6 +8,7 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Adapters, Chain, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
+import { database } from '../../../client'
 import {
   EvaluationType,
   EvaluationV2,
@@ -20,6 +21,7 @@ import {
 import { formatConversation } from '../../../helpers'
 import { Result } from '../../../lib/Result'
 import { updatePromptMetadata } from '../../../lib/updatePromptMetadata'
+import { ProviderLogsRepository } from '../../../repositories'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
@@ -30,9 +32,6 @@ import {
 } from '../../../telemetry'
 import { runChain } from '../../chains/run'
 import { parsePrompt } from '../../documents/parse'
-import { estimateCost } from '../../ai'
-
-const TO_MILLICENTS_FACTOR = 100_000
 
 export function promptTask() {
   return `
@@ -173,37 +172,39 @@ export async function buildLlmEvaluationRunFunction<
 export async function runPrompt<
   M extends LlmEvaluationMetric,
   S extends z.ZodType = z.ZodType,
->({
-  prompt,
-  parameters,
-  schema,
-  resultUuid,
-  evaluation,
-  providers,
-  commit,
-  workspace,
-  telemetry = realTelemetry,
-}: {
-  prompt: string
-  parameters?: Record<string, unknown>
-  schema?: S
-  resultUuid: string
-  evaluation: EvaluationV2<EvaluationType.Llm, M>
-  providers: Map<string, ProviderApiKey>
-  commit: Commit
-  workspace: WorkspaceDto
-  telemetry?: LatitudeTelemetry
-}) {
-  const { promptChain, promptConfig, runArgs } =
-    await buildLlmEvaluationRunFunction({
-      resultUuid,
-      workspace,
-      providers,
-      evaluation,
-      prompt,
-      parameters,
-      schema,
-    }).then((r) => r.unwrap())
+>(
+  {
+    prompt,
+    parameters,
+    schema,
+    resultUuid,
+    evaluation,
+    providers,
+    commit,
+    workspace,
+    telemetry = realTelemetry,
+  }: {
+    prompt: string
+    parameters?: Record<string, unknown>
+    schema?: S
+    resultUuid: string
+    evaluation: EvaluationV2<EvaluationType.Llm, M>
+    providers: Map<string, ProviderApiKey>
+    commit: Commit
+    workspace: WorkspaceDto
+    telemetry?: LatitudeTelemetry
+  },
+  db = database,
+) {
+  const { promptChain, runArgs } = await buildLlmEvaluationRunFunction({
+    resultUuid,
+    workspace,
+    providers,
+    evaluation,
+    prompt,
+    parameters,
+    schema,
+  }).then((r) => r.unwrap())
 
   const $prompt = telemetry.span.prompt(
     {
@@ -219,14 +220,12 @@ export async function runPrompt<
   )
 
   let response
-  let duration: number | undefined
   try {
     const result = runChain({ context: $prompt.context, ...runArgs })
     const error = await result.error
     if (error) throw error
 
     response = await result.response
-    duration = await result.duration
 
     $prompt.end()
   } catch (error) {
@@ -251,34 +250,18 @@ export async function runPrompt<
     })
   }
 
-  if (!response) {
+  if (!response?.providerLog?.documentLogUuid) {
     throw new ChainError({
       code: RunErrorCodes.AIRunError,
-      message: 'Evaluation conversation response missing',
+      message: 'Evaluation conversation log not created',
     })
   }
 
   const verdict = parseVerdict({ response, schema })
-  const provider = providers.get(promptConfig.provider)
-  const tokenUsage = response.usage
-  const totalTokens = tokenUsage?.totalTokens ?? 0
-  const costInMillicents =
-    provider && promptConfig.model && tokenUsage
-      ? Math.floor(
-          estimateCost({
-            provider: provider.provider,
-            model: promptConfig.model as string,
-            usage: tokenUsage,
-          }) * TO_MILLICENTS_FACTOR,
-        )
-      : 0
-
-  const stats = {
-    documentLogUuid: resultUuid,
-    tokens: totalTokens,
-    duration: duration ?? 0,
-    costInMillicents,
-  }
+  const repository = new ProviderLogsRepository(workspace.id, db)
+  const stats = await repository
+    .statsByDocumentLogUuid(response.providerLog.documentLogUuid)
+    .then((r) => r.unwrap())
 
   return { response, stats, verdict }
 }

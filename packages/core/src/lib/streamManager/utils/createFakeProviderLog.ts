@@ -1,39 +1,52 @@
+import { VercelConfig } from '@latitude-data/constants'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import { LogSources } from '../../../constants'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { fakeResponse } from '../../../services/chains/ProviderProcessor'
-import { writeConversationCache } from '../../../services/conversations/cache'
+import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
+import { createProviderLog } from '../../../services/providerLogs/create'
 
 /**
- * When a assistant message is stopped by the user, cache the partial response to keep the message chain alive.
+ * When a assistant message is stopped by the user, we must create a uncomplete provider log with the information we
+ * have to keep the message chain alive
  **/
 export async function createFakeProviderLog({
   documentLogUuid,
   accumulatedText,
-  conversationContext,
   workspace,
+  source,
   provider,
+  config,
   messages,
+  startTime,
 }: {
   documentLogUuid: string
   accumulatedText: { text: string }
-  conversationContext?: { commitUuid: string; documentUuid: string }
   workspace: Workspace
+  source: LogSources
   provider: ProviderApiKey
+  config: VercelConfig
   messages: LegacyMessage[]
+  startTime: number
 }) {
   const response = await fakeResponse({
     documentLogUuid,
     accumulatedText,
   })
-  if (!conversationContext) return
-
-  await writeConversationCache({
-    documentLogUuid,
-    workspaceId: workspace.id,
-    commitUuid: conversationContext.commitUuid,
-    documentUuid: conversationContext.documentUuid,
-    providerId: provider.id,
-    messages: [...messages, ...(response.output ?? [])],
+  await createProviderLog({
+    workspace,
+    ...buildProviderLogDto({
+      workspace,
+      source,
+      provider,
+      conversation: {
+        messages,
+        config,
+      },
+      stepStartTime: startTime,
+      errorableUuid: documentLogUuid,
+      response: response,
+    }),
   }).then((r) => r.unwrap())
 }

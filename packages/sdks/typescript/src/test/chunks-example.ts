@@ -145,6 +145,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
         cachedInputTokens: 0,
       },
       finishReason: 'stop',
+      providerLogUuid: '456',
       response: {
         streamType: 'text',
         text: '9.9 is bigger than 9.11',
@@ -271,6 +272,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
         cachedInputTokens: 0,
       },
       finishReason: 'stop',
+      providerLogUuid: '789',
       response: {
         streamType: 'text',
         text: "Sure, let's break it down step by step to understand why 9.9 is greater than 9.11",

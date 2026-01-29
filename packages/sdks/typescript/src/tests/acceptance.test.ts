@@ -1,4 +1,3 @@
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { Latitude } from '../../dist/index.js'
 
@@ -295,90 +294,6 @@ Location: {{ location }}
         expect(error).toBeDefined()
       }
     })
-
-    it('should run prompt and continue with chat follow-up', async () => {
-      try {
-        // First, run the prompt to get a conversation UUID
-        const getWeatherMock = vi
-          .fn()
-          .mockResolvedValue('Temperature is 18°C and windy')
-
-        const firstResult = await sdk.prompts.run(promptPath, {
-          parameters: { location: 'Berlin' },
-          stream: true,
-          tools: {
-            get_weather: getWeatherMock,
-          },
-        })
-
-        // Verify first response
-        expect(firstResult).toBeDefined()
-        expect(firstResult?.uuid).toBeDefined()
-        expect(typeof firstResult?.uuid).toBe('string')
-        expect(firstResult?.response?.text).toBeDefined()
-        expect(firstResult?.response?.text.length).toBeGreaterThan(0)
-
-        const conversationUuid = firstResult?.uuid
-
-        // Now do a chat follow-up with the same tool handler
-        const chatResult = await sdk.prompts.chat(
-          conversationUuid!,
-          [
-            {
-              role: MessageRole.user,
-              content: [
-                {
-                  type: 'text',
-                  text: 'What should I wear for this weather?',
-                },
-              ],
-            },
-          ],
-          {
-            stream: true,
-            tools: {
-              get_weather: getWeatherMock,
-            },
-          },
-        )
-
-        // Verify chat response
-        expect(chatResult).toBeDefined()
-        expect(chatResult?.uuid).toBeDefined()
-        expect(typeof chatResult?.uuid).toBe('string')
-        expect(chatResult?.response).toBeDefined()
-        expect(chatResult?.response?.text).toBeDefined()
-        expect(typeof chatResult?.response?.text).toBe('string')
-        expect(chatResult?.response?.text.length).toBeGreaterThan(0)
-
-        // The chat should have the same conversation UUID
-        expect(chatResult?.uuid).toBe(conversationUuid)
-
-        // Verify the response contains clothing advice (related to the follow-up question)
-        expect(chatResult?.response?.text.toLowerCase()).toMatch(
-          /jacket|sweater|coat|umbrella|clothing|wear|dress/i,
-        )
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
-          throw new Error(
-            'Latitude service is not running on localhost:8787. Please start the service before running E2E tests.',
-          )
-        }
-
-        if (
-          error instanceof Error &&
-          error.message.includes('Failed query') &&
-          apiKey === 'test-api-key'
-        ) {
-          console.warn(
-            '⚠️  Using test API key. Set LATITUDE_API_KEY environment variable with a valid API key for full E2E testing.',
-          )
-          return
-        }
-
-        throw error
-      }
-    })
   },
-  { timeout: 30000 },
+  { timeout: 15000 },
 )
