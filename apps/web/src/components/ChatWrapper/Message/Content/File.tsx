@@ -105,13 +105,14 @@ export const FileMessageContent = memo(
                 initialExpanded={false}
               />
             ))}
-            {!blockAnnotations.length &&
+            {blockAnnotations.length === 0 &&
               evaluation &&
-              messageIndex &&
-              contentBlockIndex &&
+              messageIndex !== undefined &&
+              contentBlockIndex !== undefined &&
               span !== undefined &&
               isMainSpan(span) && (
                 <AnnotationForm
+                  key={`${evaluation.uuid}-${messageIndex}-${contentBlockIndex}`}
                   evaluation={evaluation}
                   span={span as SpanWithDetails<MainSpanType>}
                   initialExpanded={false}
