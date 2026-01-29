@@ -1,8 +1,8 @@
 import { Run } from '@latitude-data/constants'
-import { publisher } from '../../../../events/publisher'
 import { queues } from '../../../../jobs/queues'
 import { UnprocessableEntityError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
+import { setCancelJobFlag } from '../../../../lib/cancelJobs'
 import { deleteActiveRunByDocument } from './delete'
 import { type Project } from '../../../../schema/models/types/Project'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
@@ -49,7 +49,7 @@ export async function stopRunByDocument({
   }
 
   if (state && !JOB_FINISHED_STATES.includes(state)) {
-    publisher.publish('cancelJob', { jobId: job.id })
+    await setCancelJobFlag(job.id)
 
     try {
       const subscription = await subscribeQueue()

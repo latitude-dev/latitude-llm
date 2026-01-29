@@ -10,8 +10,11 @@ import {
 } from '@latitude-data/constants'
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
-import { publisher } from '../../../events/publisher'
 import { RedisStream } from '../../../lib/redisStream'
+import {
+  createCancellationPoller,
+  clearCancelJobFlag,
+} from '../../../lib/cancelJobs'
 import { OkType } from '../../../lib/Result'
 import { buildClientToolHandlersMap } from '../../../services/documents/tools/clientTools/handlers'
 import { ExperimentsRepository } from '../../../repositories'
@@ -93,10 +96,9 @@ export const backgroundRunJob = async (
     cap: ACTIVE_RUN_STREAM_CAP,
   })
   const abortController = new AbortController()
-  const cancelJob = ({ jobId }: { jobId: string }) => {
-    if (jobId !== job.id) return
-    abortController.abort()
-  }
+  const stopPolling = job.id
+    ? createCancellationPoller(job.id, abortController)
+    : () => {}
 
   let experiment: Experiment | undefined = undefined
 
@@ -126,8 +128,6 @@ export const backgroundRunJob = async (
       tools,
       userMessage,
     }).then((r) => r.unwrap())
-
-    publisher.subscribe('cancelJob', cancelJob)
 
     const result = await runDocumentAtCommit({
       workspace,
@@ -189,7 +189,10 @@ export const backgroundRunJob = async (
       // Silently ignore close errors to not mask the original error
     })
     await writeStream.cleanup()
-    await publisher.unsubscribe('cancelJob', cancelJob)
+    stopPolling()
+    if (job.id) {
+      await clearCancelJobFlag(job.id)
+    }
 
     try {
       const endResult = await endRun({

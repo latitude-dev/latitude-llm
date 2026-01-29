@@ -41,7 +41,8 @@ export async function pubSub() {
 }
 
 // PubSub events
-export type PubSubEvent = 'clientToolResultReceived' | 'cancelJob'
+// Note: cancelJob was removed and replaced with O(1) Redis key polling in lib/cancelJobs.ts
+export type PubSubEvent = 'clientToolResultReceived'
 
 // PubSub handlers
 export interface PubSubHandler {
@@ -50,11 +51,9 @@ export interface PubSubHandler {
     result: unknown
     isError?: string
   }) => void
-  cancelJob: (args: { jobId: string }) => void
 }
 
 // PubSub listeners
 export interface PubSubListener extends QueueEventsListener {
   clientToolResultReceived: PubSubHandler['clientToolResultReceived']
-  cancelJob: PubSubHandler['cancelJob']
 }
