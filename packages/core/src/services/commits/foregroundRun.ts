@@ -3,7 +3,6 @@ import { LatitudeError } from '../../lib/errors'
 import { BACKGROUND } from '../../telemetry'
 import { buildClientToolHandlersMap } from '../documents/tools/clientTools/handlers'
 import { runDocumentAtCommit } from './runDocumentAtCommit'
-import { ProviderApiKeysRepository } from '../../repositories'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import type { WorkspaceDto } from '../../schema/models/types/Workspace'
 import type { Commit } from '../../schema/models/types/Commit'
@@ -32,11 +31,7 @@ export type RunForegroundDocumentResult = {
   error: RunResult['error']
   getFinalResponse: () => Promise<{
     response: Awaited<RunResult['lastResponse']>
-    provider: Awaited<ReturnType<ProviderApiKeysRepository['find']>> extends {
-      unwrap: () => infer R
-    }
-      ? R
-      : never
+    provider: Awaited<RunResult['provider']>
   }>
 }
 
@@ -108,10 +103,10 @@ export async function runForegroundDocument(
       if (!response)
         throw new LatitudeError('Stream ended with no error and no content')
 
-      const providerScope = new ProviderApiKeysRepository(workspace.id)
-      const provider = await providerScope
-        .find(response.providerLog?.providerId)
-        .then((r) => r.unwrap())
+      const provider = await result.provider
+      if (!provider) {
+        throw new LatitudeError('Provider not found in stream result')
+      }
 
       return { response, provider }
     },
