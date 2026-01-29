@@ -13,7 +13,6 @@ import {
   ApiErrorCodes,
   ApiErrorJsonResponse,
 } from '@latitude-data/constants/errors'
-import { Readable } from 'stream'
 import { handleToolCallFactory } from './streamRun'
 
 function handleError(
@@ -62,10 +61,11 @@ export async function streamAttach<
     }
 
     const finalResponse = await handleStream<S>({
-      body: response.body! as Readable,
+      body: response.body!,
       onEvent,
       onError,
       onToolCall: handleToolCallFactory({ tools, options }),
+      signal: options.signal,
     })
 
     if (!finalResponse) return

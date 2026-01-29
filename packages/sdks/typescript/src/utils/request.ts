@@ -6,11 +6,9 @@ import {
 } from '$sdk/utils/types'
 import { SDK_VERSION } from '$sdk/utils/version'
 
-import nodeFetch, { Response } from 'node-fetch'
-
 const MAX_RETRIES = 2
 
-function getAuthHeader(apiKey: string) {
+function getAuthHeader(apiKey: string): Record<string, string> {
   return {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
@@ -21,6 +19,7 @@ function getAuthHeader(apiKey: string) {
 function bodyToString(body: object = {}) {
   return JSON.stringify(body)
 }
+
 export async function makeRequest<H extends HandlerType>({
   method,
   handler,
@@ -39,7 +38,7 @@ export async function makeRequest<H extends HandlerType>({
   const { routeResolver, apiKey, source, retryMs } = options
   const url = routeResolver.resolve({ handler, params })
 
-  const response = await nodeFetch(url, {
+  const response = await fetch(url, {
     method,
     headers: getAuthHeader(apiKey),
     body:

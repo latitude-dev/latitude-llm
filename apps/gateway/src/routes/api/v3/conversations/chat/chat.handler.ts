@@ -1,4 +1,5 @@
 import { captureException } from '$/common/tracer'
+import { createRequestAbortSignal } from '$/common/createRequestAbortSignal'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
 import { ChatRoute } from '$/routes/api/v3/conversations/chat/chat.route'
@@ -27,6 +28,8 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
     throw new BadRequestError('You must enable Stream to use custom tools')
   }
 
+  const abortSignal = createRequestAbortSignal(c)
+
   const result = (
     await addMessages({
       workspace,
@@ -35,7 +38,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
       documentLogUuid: conversationUuid,
       messages: messages as LegacyMessage[],
       source: __internal?.source ?? LogSources.API,
-      abortSignal: c.req.raw.signal,
+      abortSignal,
     })
   ).unwrap()
 
@@ -44,8 +47,8 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
       c,
       async (stream) => {
         let id = 0
-        // Add explicit connection close handling
-        c.req.raw.signal.addEventListener(
+
+        abortSignal.addEventListener(
           'abort',
           () => {
             stream.close()

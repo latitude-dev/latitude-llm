@@ -453,7 +453,7 @@ export function InfoSearchDashboard() {
                   entityType={entityType}
                   onClear={clearRecentItems}
                 />
-              )               : (
+              ) : (
                 <SearchResults
                   results={results}
                   entityType={entityType}

@@ -73,6 +73,8 @@ export function useRunDocument({
       toolCalls?: ToolCall[]
       trace?: TraceContext
     }) => {
+      const signal = createAbortController()
+
       const response = await fetch(
         ROUTES.api.documents.logs.detail(documentLogUuid).chat,
         {
@@ -82,12 +84,13 @@ export function useRunDocument({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ messages, toolCalls, trace }),
+          signal,
         },
       )
 
-      return createStreamHandler(response)
+      return createStreamHandler(response, signal)
     },
-    [createStreamHandler],
+    [createAbortController, createStreamHandler],
   )
 
   return useMemo(

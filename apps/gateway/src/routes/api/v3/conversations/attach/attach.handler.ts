@@ -1,4 +1,5 @@
 import { captureException } from '$/common/tracer'
+import { createRequestAbortSignal } from '$/common/createRequestAbortSignal'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
 import { unsafelyFindActiveRun } from '@latitude-data/core/data-access/runs'
@@ -89,7 +90,7 @@ async function handleNonStreamingMode(
   ctx: Parameters<AppRouteHandler<AttachRoute>>[0],
   args: Parameters<typeof attachRun>[0],
 ) {
-  const abortSignal = ctx.req.raw.signal // FIXME: this is not working
+  const abortSignal = createRequestAbortSignal(ctx)
   const result = await attachRun({ ...args, abortSignal }).then((r) => r.unwrap()) // prettier-ignore
   const workspace = ctx.get('workspace')
 
