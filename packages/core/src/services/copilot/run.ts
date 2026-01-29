@@ -27,12 +27,12 @@ export async function runCopilot<S extends z.ZodType = z.ZodType>({
     )
   }
 
-  const copilot = copilotResult.value
+  const { workspace, commit, document } = copilotResult.unwrap()
   const result = await runDocumentAtCommit({
-    context: BACKGROUND({ workspaceId: copilot.workspace.id }),
-    workspace: copilot.workspace,
-    commit: copilot.commit,
-    document: copilot.document,
+    context: BACKGROUND({ workspaceId: workspace.id }),
+    workspace,
+    commit,
+    document,
     parameters: parameters,
     source: LogSources.API,
     abortSignal: abortSignal,
