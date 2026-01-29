@@ -63,7 +63,9 @@ export async function clearConversationCacheJob(
       }
 
       const errorResult = deleteResults.find(({ result }) => result.error)
-      if (!Result.isOk(errorResult?.result)) errorResult.result.unwrap()
+      if (errorResult?.result && !Result.isOk(errorResult?.result)) {
+        errorResult.result.unwrap()
+      }
     }
   } catch (error) {
     captureException(error as Error, { job: 'clearConversationCacheJob' })
