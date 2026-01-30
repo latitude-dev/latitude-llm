@@ -36,8 +36,8 @@ class TestEndToEnd(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.maxDiff = None
 
-        self.api_key = os.getenv("TEST_LATITUDE_API_KEY")
-        if RUN_ACCEPTANCE_TESTS and not self.api_key:
+        self.api_key = os.getenv("TEST_LATITUDE_API_KEY") or "test-api-key"
+        if RUN_ACCEPTANCE_TESTS and self.api_key == "test-api-key":
             raise RuntimeError("TEST_LATITUDE_API_KEY is required when RUN_ACCEPTANCE_TESTS=1")
         self.prompt_path = "weather-assistant"
         self.simple_prompt_path = "echo-assistant"
