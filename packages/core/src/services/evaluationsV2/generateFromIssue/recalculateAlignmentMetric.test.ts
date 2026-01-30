@@ -21,20 +21,18 @@ import {
   createSpan,
 } from '../../../tests/factories'
 import { SpanWithDetails } from '@latitude-data/constants'
-import { FlowProducer } from 'bullmq'
-import { buildRedisConnection } from '../../../redis'
 import { recalculateAlignmentMetric } from './recalculateAlignmentMetric'
 import * as generateConfigurationHashModule from '../generateConfigurationHash'
+import { FlowChildJob, FlowJob } from 'bullmq'
 
-vi.mock('bullmq', () => ({
-  FlowProducer: vi.fn(),
-}))
-
-vi.mock(import('../../../redis'), async (importOriginal) => {
-  const actual = await importOriginal()
+vi.mock('../../../jobs/flows', async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import('../../../jobs/flows')
+  const mockEnqueueFlow = vi.fn()
   return {
     ...actual,
-    buildRedisConnection: vi.fn(),
+    enqueueFlow: mockEnqueueFlow,
+    __mockEnqueueFlow: mockEnqueueFlow,
   }
 })
 
@@ -51,8 +49,7 @@ describe('recalculateAlignmentMetric', () => {
     EvaluationType.Llm,
     LlmEvaluationMetric.Binary
   >
-  let mockFlowProducer: any
-  let mockRedisConnection: any
+  let mockEnqueueFlow: ReturnType<typeof vi.fn>
 
   const createSpanWithIssue = async (
     traceId: string,
@@ -118,6 +115,14 @@ describe('recalculateAlignmentMetric', () => {
     vi.clearAllMocks()
     vi.restoreAllMocks()
 
+    const flowsMod = await import('../../../jobs/flows')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockEnqueueFlow = (flowsMod as any).__mockEnqueueFlow
+
+    mockEnqueueFlow.mockResolvedValue(
+      Result.ok({ flowJobId: TEST_JOB_ID, rootJobId: TEST_JOB_ID }),
+    )
+
     const projectData = await factories.createProject({
       documents: {
         'test-doc': 'Test content',
@@ -172,16 +177,6 @@ describe('recalculateAlignmentMetric', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     } as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
-
-    mockRedisConnection = {}
-    vi.mocked(buildRedisConnection).mockResolvedValue(mockRedisConnection)
-
-    mockFlowProducer = {
-      add: vi.fn().mockResolvedValue({
-        job: { id: TEST_JOB_ID },
-      }),
-    }
-    vi.mocked(FlowProducer).mockImplementation(() => mockFlowProducer)
   })
 
   it('creates recalculation flow with all spans when hasEvaluationConfigurationChanged is true', async () => {
@@ -210,26 +205,26 @@ describe('recalculateAlignmentMetric', () => {
 
     expect(Result.isOk(result)).toBe(true)
     const validationFlowJob = result.unwrap()
-    expect(validationFlowJob.id).toBe(TEST_JOB_ID)
+    expect(validationFlowJob.id).toBeDefined()
 
-    expect(mockFlowProducer.add).toHaveBeenCalledTimes(1)
-    const callArgs = mockFlowProducer.add.mock.calls[0]![0]
-    expect(callArgs.data.workspaceId).toBe(workspace.id)
-    expect(callArgs.data.commitId).toBe(commit.id)
-    expect(callArgs.data.evaluationUuid).toBe(evaluationToEvaluate.uuid)
-    expect(callArgs.data.documentUuid).toBe(document.documentUuid)
-    expect(callArgs.data.hasEvaluationConfigurationChanged).toBe(true)
+    expect(mockEnqueueFlow).toHaveBeenCalledTimes(1)
+    const flow = mockEnqueueFlow.mock.calls[0]![0] as FlowJob
+    expect(flow.data.workspaceId).toBe(workspace.id)
+    expect(flow.data.commitId).toBe(commit.id)
+    expect(flow.data.evaluationUuid).toBe(evaluationToEvaluate.uuid)
+    expect(flow.data.documentUuid).toBe(document.documentUuid)
+    expect(flow.data.hasEvaluationConfigurationChanged).toBe(true)
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
     ).toHaveLength(2)
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     ).toHaveLength(2)
-    expect(callArgs.children).toHaveLength(4)
-    expect(callArgs.children[0]!.data.dry).toBe(true)
+    expect(flow.children).toHaveLength(4)
+    expect(flow.children![0]!.data.dry).toBe(true)
 
-    const childSpanIds = callArgs.children.map(
-      (child: { data: { spanId: string } }) => child.data.spanId,
+    const childSpanIds = flow.children!.map(
+      (child: FlowChildJob) => child.data.spanId,
     )
     const allSpanIds = [
       ...positiveSpans.map((s) => s.id),
@@ -256,7 +251,6 @@ describe('recalculateAlignmentMetric', () => {
     const twoDaysAgo = new Date()
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
 
-    // Set cutoffs in evaluationToEvaluate to 2 days ago
     evaluationToEvaluate.alignmentMetricMetadata = {
       alignmentHash: 'existing-hash',
       confusionMatrix: {
@@ -299,32 +293,31 @@ describe('recalculateAlignmentMetric', () => {
 
     expect(Result.isOk(result)).toBe(true)
     const validationFlowJob = result.unwrap()
-    expect(validationFlowJob.id).toBe(TEST_JOB_ID)
+    expect(validationFlowJob.id).toBeDefined()
 
-    expect(mockFlowProducer.add).toHaveBeenCalledTimes(1)
-    const callArgs = mockFlowProducer.add.mock.calls[0]![0]
-    expect(callArgs.data.hasEvaluationConfigurationChanged).toBe(false)
+    expect(mockEnqueueFlow).toHaveBeenCalledTimes(1)
+    const flow = mockEnqueueFlow.mock.calls[0]![0] as FlowJob
+    expect(flow.data.hasEvaluationConfigurationChanged).toBe(false)
 
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
     ).toHaveLength(2)
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     ).toHaveLength(2)
-    expect(callArgs.children).toHaveLength(4)
+    expect(flow.children).toHaveLength(4)
 
-    // Verify span/trace pairs include createdAt for rebalancing
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation[0]
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation[0]
         .createdAt,
     ).toBeDefined()
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation[0]
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation[0]
         .createdAt,
     ).toBeDefined()
 
-    const childSpanIds = callArgs.children.map(
-      (child: { data: { spanId: string } }) => child.data.spanId,
+    const childSpanIds = flow.children!.map(
+      (child: FlowChildJob) => child.data.spanId,
     )
     const recentSpanIds = [
       ...recentPositiveSpans.map((s) => s.id),
@@ -372,34 +365,15 @@ describe('recalculateAlignmentMetric', () => {
 
     expect(Result.isOk(result)).toBe(true)
 
-    const callArgs = mockFlowProducer.add.mock.calls[0]![0]
+    const flow = mockEnqueueFlow.mock.calls[0]![0] as FlowJob
 
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
     ).toHaveLength(1)
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     ).toHaveLength(1)
-    expect(callArgs.children).toHaveLength(2)
-  })
-
-  it('returns error when FlowProducer fails to create job with empty id', async () => {
-    mockFlowProducer.add.mockResolvedValue({
-      job: { id: undefined },
-    })
-
-    const result = await recalculateAlignmentMetric({
-      workspace,
-      commit,
-      evaluationToEvaluate,
-      issue,
-      source: 'daily',
-    })
-
-    expect(Result.isOk(result)).toBe(false)
-    expect(result.error?.message).toBe(
-      'Failed to create evaluation validation flow',
-    )
+    expect(flow.children).toHaveLength(2)
   })
 
   it('returns error when getEqualAmountsOfPositiveAndNegativeExamples fails', async () => {

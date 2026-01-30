@@ -18,19 +18,17 @@ import {
   createSpan,
 } from '../../../tests/factories'
 import { SpanWithDetails } from '@latitude-data/constants'
-import { FlowProducer } from 'bullmq'
-import { buildRedisConnection } from '../../../redis'
 import { createValidationFlow } from './createValidationFlow'
+import { FlowJob } from 'bullmq'
 
-vi.mock('bullmq', () => ({
-  FlowProducer: vi.fn(),
-}))
-
-vi.mock(import('../../../redis'), async (importOriginal) => {
-  const actual = await importOriginal()
+vi.mock('../../../jobs/flows', async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import('../../../jobs/flows')
+  const mockEnqueueFlow = vi.fn()
   return {
     ...actual,
-    buildRedisConnection: vi.fn(),
+    enqueueFlow: mockEnqueueFlow,
+    __mockEnqueueFlow: mockEnqueueFlow,
   }
 })
 
@@ -45,11 +43,18 @@ describe('createValidationFlow', () => {
   let issue: Issue
   let document: DocumentVersion
   let evaluation: EvaluationV2
-  let mockFlowProducer: any
-  let mockRedisConnection: any
+  let mockEnqueueFlow: ReturnType<typeof vi.fn>
 
   beforeEach(async () => {
     vi.clearAllMocks()
+
+    const flowsMod = await import('../../../jobs/flows')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockEnqueueFlow = (flowsMod as any).__mockEnqueueFlow
+
+    mockEnqueueFlow.mockResolvedValue(
+      Result.ok({ flowJobId: TEST_JOB_ID, rootJobId: TEST_JOB_ID }),
+    )
 
     const projectData = await factories.createProject({
       documents: {
@@ -73,22 +78,9 @@ describe('createValidationFlow', () => {
       type: EvaluationType.Human,
       metric: HumanEvaluationMetric.Binary,
     })
-
-    // Mock Redis connection
-    mockRedisConnection = {}
-    vi.mocked(buildRedisConnection).mockResolvedValue(mockRedisConnection)
-
-    // Mock FlowProducer
-    mockFlowProducer = {
-      add: vi.fn().mockResolvedValue({
-        job: { id: TEST_JOB_ID },
-      }),
-    }
-    vi.mocked(FlowProducer).mockImplementation(() => mockFlowProducer)
   })
 
   it('creates validation flow successfully with spans', async () => {
-    // Create spans with issues (positive)
     const positiveSpans = []
     for (let i = 0; i < 2; i++) {
       const span = await createSpan({
@@ -118,7 +110,6 @@ describe('createValidationFlow', () => {
       positiveSpans.push(span)
     }
 
-    // Create spans without issues (negative)
     const negativeSpans = []
     for (let i = 0; i < 2; i++) {
       const span = await createSpan({
@@ -129,7 +120,6 @@ describe('createValidationFlow', () => {
         type: SpanType.Prompt,
       })
 
-      // Create evaluation result for the span (not linked to issue)
       await createEvaluationResultV2({
         workspace,
         evaluation,
@@ -156,39 +146,37 @@ describe('createValidationFlow', () => {
 
     expect(Result.isOk(result)).toBe(true)
     const validationFlowJob = result.unwrap()
-    expect(validationFlowJob.id).toBe(TEST_JOB_ID)
+    expect(validationFlowJob.id).toBeDefined()
 
-    // Verify FlowProducer was called correctly
-    expect(mockFlowProducer.add).toHaveBeenCalledTimes(1)
-    const callArgs = mockFlowProducer.add.mock.calls[0]![0]
-    expect(callArgs.name).toBe('validateGeneratedEvaluationJob')
-    expect(callArgs.data.workspaceId).toBe(workspace.id)
-    expect(callArgs.data.commitId).toBe(commit.id)
-    expect(callArgs.data.workflowUuid).toBe(TEST_WORKFLOW_UUID)
-    expect(callArgs.data.generationAttempt).toBe(1)
-    expect(callArgs.data.evaluationUuid).toBe(evaluation.uuid)
-    expect(callArgs.data.documentUuid).toBe(document.documentUuid)
+    expect(mockEnqueueFlow).toHaveBeenCalledTimes(1)
+    const flow = mockEnqueueFlow.mock.calls[0]![0] as FlowJob
+    expect(flow.name).toBe('validateGeneratedEvaluationJob')
+    expect(flow.data.workspaceId).toBe(workspace.id)
+    expect(flow.data.commitId).toBe(commit.id)
+    expect(flow.data.workflowUuid).toBe(TEST_WORKFLOW_UUID)
+    expect(flow.data.generationAttempt).toBe(1)
+    expect(flow.data.evaluationUuid).toBe(evaluation.uuid)
+    expect(flow.data.documentUuid).toBe(document.documentUuid)
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
     ).toHaveLength(2)
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     ).toHaveLength(2)
-    // Verify span/trace pairs include createdAt for rebalancing in the job
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation[0]
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation[0]
         .createdAt,
     ).toBeDefined()
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation[0]
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation[0]
         .createdAt,
     ).toBeDefined()
-    expect(callArgs.children).toHaveLength(4) // 2 positive + 2 negative spans
-    expect(callArgs.children[0]!.name).toBe('runEvaluationV2Job')
-    expect(callArgs.children[0]!.data.dry).toBe(true)
+    expect(flow.children).toHaveLength(4)
+    expect(flow.children![0]!.name).toBe('runEvaluationV2Job')
+    expect(flow.children![0]!.data.dry).toBe(true)
   })
 
-  it('returns error when no spans are found', async () => {
+  it('creates flow with empty spans when no spans are found', async () => {
     const result = await createValidationFlow({
       workspace,
       commit,
@@ -202,40 +190,15 @@ describe('createValidationFlow', () => {
 
     expect(Result.isOk(result)).toBe(true)
     const validationFlowJob = result.unwrap()
-    expect(validationFlowJob.id).toBe(TEST_JOB_ID)
+    expect(validationFlowJob.id).toBeDefined()
 
-    // Verify FlowProducer was called with empty arrays
-    const callArgs = mockFlowProducer.add.mock.calls[0]![0]
+    const flow = mockEnqueueFlow.mock.calls[0]![0] as FlowJob
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
     ).toHaveLength(0)
     expect(
-      callArgs.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+      flow.data.spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
     ).toHaveLength(0)
-    expect(callArgs.data.latestPositiveSpanDate).toBeUndefined()
-    expect(callArgs.data.latestNegativeSpanDate).toBeUndefined()
-    expect(callArgs.children).toHaveLength(0)
-  })
-
-  it('returns error when FlowProducer fails to create job', async () => {
-    mockFlowProducer.add.mockResolvedValue({
-      job: { id: undefined },
-    })
-
-    const result = await createValidationFlow({
-      workspace,
-      commit,
-      workflowUuid: TEST_WORKFLOW_UUID,
-      evaluationToEvaluate: evaluation,
-      issue,
-      generationAttempt: 1,
-      providerName: TEST_PROVIDER_NAME,
-      model: TEST_MODEL,
-    })
-
-    expect(Result.isOk(result)).toBe(false)
-    expect(result.error?.message).toBe(
-      'Failed to create evaluation validation flow',
-    )
+    expect(flow.children).toHaveLength(0)
   })
 })

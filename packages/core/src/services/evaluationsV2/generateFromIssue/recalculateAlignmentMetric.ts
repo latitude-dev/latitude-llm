@@ -1,20 +1,21 @@
-import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { FlowProducer } from 'bullmq'
-import { REDIS_KEY_PREFIX } from '@latitude-data/core/redis'
-import { buildRedisConnection } from '@latitude-data/core/redis'
-import { env } from '@latitude-data/env'
-import { Queues } from '../../../jobs/queues/types'
-import { Result } from '@latitude-data/core/lib/Result'
 import {
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetric,
 } from '@latitude-data/constants'
-import { Issue } from '../../../schema/models/types/Issue'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { Result } from '@latitude-data/core/lib/Result'
 import { database } from '../../../client'
-import { getEqualAmountsOfPositiveAndNegativeExamples } from './getEqualAmountsOfPositiveAndNegativeExamples'
+import {
+  createSequentialFlow,
+  enqueueFlow,
+  FlowStep,
+} from '../../../jobs/flows'
+import { Queues } from '../../../jobs/queues/types'
+import { Issue } from '../../../schema/models/types/Issue'
 import { generateConfigurationHash } from '../generateConfigurationHash'
+import { getEqualAmountsOfPositiveAndNegativeExamples } from './getEqualAmountsOfPositiveAndNegativeExamples'
 
 export type RecalculationSource = 'daily' | 'configChange'
 
@@ -51,7 +52,6 @@ export async function recalculateAlignmentMetric(
     evaluationHash !==
     evaluationToEvaluate.alignmentMetricMetadata?.alignmentHash
 
-  // If config is unchanged, we don't need to recalculate the alignment metric, we can just append the new results from the new spans to the existing confusion matrix
   const positiveSpanCutoffDate = hasEvaluationConfigurationChanged
     ? undefined
     : evaluationToEvaluate.alignmentMetricMetadata
@@ -99,73 +99,67 @@ export async function recalculateAlignmentMetric(
     ...examplesThatShouldPassTheEvaluationSliced,
   ]
 
-  const flowProducer = new FlowProducer({
-    prefix: REDIS_KEY_PREFIX,
-    connection: await buildRedisConnection({
-      host: env.QUEUE_HOST,
-      port: env.QUEUE_PORT,
-      password: env.QUEUE_PASSWORD,
-    }),
-  })
-
   const idempotencySuffix =
     source === 'daily'
       ? `day=${new Date().toISOString().split('T')[0]}`
       : `ts=${Date.now()}`
 
-  const recalculateAlignmentIdempotencyKey = `recalculateAlignmentMetricJob-eval=${evaluationToEvaluate.uuid}-${idempotencySuffix}` // prettier-ignore
+  const flowId = `recalculateAlignmentMetricJob-eval=${evaluationToEvaluate.uuid}-${idempotencySuffix}`
 
-  const { job: validationFlowJob } = await flowProducer.add({
-    name: `recalculateAlignmentMetricJob`,
-    queueName: Queues.generateEvaluationsQueue,
+  const parallelEvaluationSteps: FlowStep[] = allSpans.map((span, index) => ({
+    name: 'runEvaluationV2Job',
+    queue: Queues.evaluationsQueue,
     data: {
       workspaceId: workspace.id,
       commitId: commit.id,
       evaluationUuid: evaluationToEvaluate.uuid,
-      documentUuid: issue.documentUuid,
-      spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
-      spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
-      hasEvaluationConfigurationChanged,
+      spanId: span.id,
+      traceId: span.traceId,
+      dry: true,
     },
     opts: {
-      jobId: recalculateAlignmentIdempotencyKey,
-      // FlowProducer does not inherit
-      attempts: 3,
+      jobId: `runEvaluationV2Job-eval=${evaluationToEvaluate.uuid}-${idempotencySuffix}-idx=${index}`,
+      attempts: 2,
       backoff: {
-        type: 'exponential',
-        delay: 2000, // Need at least 2s for cases when runEval fails and we wait for the unprocessed children to finish
+        type: 'fixed' as const,
+        delay: 1000,
       },
+      continueParentOnFailure: true,
     },
-    children: allSpans.map((span, index) => ({
-      name: `runEvaluationV2Job`,
-      queueName: Queues.evaluationsQueue,
-      data: {
-        workspaceId: workspace.id,
-        commitId: commit.id,
-        evaluationUuid: evaluationToEvaluate.uuid,
-        spanId: span.id,
-        traceId: span.traceId,
-        dry: true,
-      },
-      opts: {
-        // Idempotency key using index since spans can have multiple evaluation results
-        jobId: `runEvaluationV2Job-eval=${evaluationToEvaluate.uuid}-${idempotencySuffix}-idx=${index}`,
-        // Overriding eval queue options for faster retry policy to avoid user waiting too long for the evaluation to be generated
-        attempts: 2,
-        backoff: {
-          type: 'fixed',
-          delay: 1000,
+  }))
+
+  const flow = createSequentialFlow({
+    flowId,
+    steps: [
+      parallelEvaluationSteps,
+      {
+        name: 'recalculateAlignmentMetricJob',
+        queue: Queues.generateEvaluationsQueue,
+        data: {
+          workspaceId: workspace.id,
+          commitId: commit.id,
+          evaluationUuid: evaluationToEvaluate.uuid,
+          documentUuid: issue.documentUuid,
+          spanAndTraceIdPairsOfExamplesThatShouldPassTheEvaluation,
+          spanAndTraceIdPairsOfExamplesThatShouldFailTheEvaluation,
+          hasEvaluationConfigurationChanged,
         },
-        continueParentOnFailure: true,
+        opts: {
+          jobId: flowId,
+          attempts: 3,
+          backoff: {
+            type: 'exponential' as const,
+            delay: 2000,
+          },
+        },
       },
-    })),
+    ],
   })
 
-  if (!validationFlowJob.id) {
-    return Result.error(
-      new Error('Failed to create evaluation validation flow'),
-    )
+  const result = await enqueueFlow(flow)
+  if (!Result.isOk(result)) {
+    return result
   }
 
-  return Result.ok(validationFlowJob)
+  return Result.ok({ id: result.value.rootJobId })
 }
