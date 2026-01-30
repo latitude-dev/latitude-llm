@@ -6,7 +6,18 @@ Manual test examples for each instrumented provider against a local Latitude ins
 
 1. Start your local Latitude instance at `localhost:8787`
 
-2. Set required environment variables:
+2. Set up environment variables using one of these methods:
+
+**Option A: Using .env file (recommended)**
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit .env with your actual values
+```
+
+**Option B: Export in shell**
 
 ```bash
 export LATITUDE_API_KEY="your-latitude-api-key"
@@ -50,6 +61,10 @@ npm install llamaindex
 4. Run an example:
 
 ```bash
+# If using .env file (Node 20+)
+npx tsx --env-file=examples/.env examples/test_openai.ts
+
+# If you exported env vars in shell
 npx tsx examples/test_openai.ts
 ```
 
@@ -90,17 +105,21 @@ Check the Latitude dashboard to verify:
 To run all available tests:
 
 ```bash
+# With .env file
+npx tsx --env-file=examples/.env examples/run_all.ts
+
+# Or if env vars are exported
 npx tsx examples/run_all.ts
 ```
 
 To run specific tests:
 
 ```bash
-npx tsx examples/run_all.ts openai anthropic
+npx tsx --env-file=examples/.env examples/run_all.ts openai anthropic
 ```
 
 To list all available tests:
 
 ```bash
-npx tsx examples/run_all.ts --list
+npx tsx --env-file=examples/.env examples/run_all.ts --list
 ```

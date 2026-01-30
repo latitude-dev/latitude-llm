@@ -28,6 +28,7 @@ async function process(
     externalId: attributes[ATTRIBUTES.LATITUDE.externalId] as
       | string
       | undefined,
+    projectId: attributes[ATTRIBUTES.LATITUDE.projectId] as number,
     name: attributes[ATTRIBUTES.LATITUDE.name] as string | undefined,
   })
 }
