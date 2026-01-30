@@ -1,6 +1,6 @@
 [project]
 name = "latitude-sdk"
-version = "5.6.0"
+version = "5.6.1"
 description = "Latitude SDK for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]

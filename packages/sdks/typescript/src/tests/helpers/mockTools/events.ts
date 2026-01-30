@@ -1,6 +1,7 @@
 import {
   ChainEvent,
   ChainEventTypes,
+  Providers,
   StreamEventTypes,
 } from '@latitude-data/constants'
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
@@ -95,6 +96,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         type: ChainEventTypes.ProviderCompleted,
         timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
+        providerLogUuid: '',
         messages: [
           {
             role: MessageRole.system,
@@ -175,6 +177,10 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           streamType: 'text',
           documentLogUuid: TOOLS_DOCUMENT_UUID,
           text: '',
+          input: [],
+          model: 'gpt-4o',
+          provider: Providers.OpenAI,
+          cost: 0,
           usage: {
             inputTokens: 251,
             outputTokens: 59,
@@ -208,7 +214,6 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             },
           ],
         },
-        providerLogUuid: '123',
         tokenUsage: {
           inputTokens: 251,
           outputTokens: 59,
@@ -758,6 +763,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         type: ChainEventTypes.ProviderCompleted,
         timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
+        providerLogUuid: '',
         messages: [
           {
             role: MessageRole.system,
@@ -950,6 +956,10 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           streamType: 'text',
           documentLogUuid: TOOLS_DOCUMENT_UUID,
           text: '',
+          input: [],
+          model: 'gpt-4o',
+          provider: Providers.OpenAI,
+          cost: 0,
           usage: {
             inputTokens: 391,
             outputTokens: 91,
@@ -986,7 +996,6 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             },
           ],
         },
-        providerLogUuid: '456',
         tokenUsage: {
           inputTokens: 391,
           outputTokens: 91,
@@ -1900,6 +1909,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         type: ChainEventTypes.ProviderCompleted,
         timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
+        providerLogUuid: '',
         messages: [
           {
             role: MessageRole.system,
@@ -2156,6 +2166,10 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           streamType: 'text',
           documentLogUuid: TOOLS_DOCUMENT_UUID,
           text: "- **Barcelona**: It's 24°C, so I recommend wearing light layers, like a t-shirt with a light jacket or cardigan, especially if you're going to be out in the evening.\n\n- **Miami**: It's hot at 30°C! Make sure to wear light, breathable clothing, and don't forget sunscreen and a hat to protect yourself from the sun.\n\n- **Boston**: It's quite chilly at 10°C. Please wear warm clothes, like a sweater or a jacket, and consider a scarf and gloves if you'll be outside for a while.",
+          input: [],
+          model: 'gpt-4o',
+          provider: Providers.OpenAI,
+          cost: 0,
           usage: {
             inputTokens: 523,
             outputTokens: 115,
@@ -2167,7 +2181,6 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           },
           toolCalls: [],
         },
-        providerLogUuid: '789',
         finishReason: 'stop',
         tokenUsage: {
           inputTokens: 523,

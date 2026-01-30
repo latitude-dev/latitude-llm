@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as cacheModule from '../../cache'
-import { LogSources } from '../../constants'
 import { createProject } from '../../tests/factories'
 import { getCachedResponse, setCachedResponse } from './promptCache'
-import { ChainStepResponse, StreamType } from '@latitude-data/constants'
+import {
+  ChainStepResponse,
+  Providers,
+  StreamType,
+} from '@latitude-data/constants'
 
 describe('promptCache', async () => {
   const mockCache = {
@@ -25,6 +28,10 @@ describe('promptCache', async () => {
     streamType: 'text' as const,
     text: 'cached response',
     reasoning: undefined,
+    input: [],
+    model: 'gpt-4o-mini',
+    provider: Providers.OpenAI,
+    cost: 0,
     usage: {
       inputTokens: 0,
       outputTokens: 0,
@@ -35,33 +42,9 @@ describe('promptCache', async () => {
       cachedInputTokens: 0,
     },
     toolCalls: [],
-    // This should not be cached
     documentLogUuid: 'document-log-uuid',
-    providerLog: {
-      messages: [],
-      id: 2565,
-      workspaceId: 1,
-      uuid: '0df332f6-8c70-4888-a381-63114818d7bf',
-      documentLogUuid: 'c242aee1-084e-4b52-b837-06e6983fcc4b',
-      experimentId: null,
-      providerId: 2,
-      model: 'gpt-4o-mini',
-      finishReason: 'stop',
-      config: { provider: 'openai', model: 'gpt-4o-mini' },
-      responseObject: null,
-      responseText: 'We do not care',
-      responseReasoning: null,
-      toolCalls: [],
-      tokens: 399,
-      costInMillicents: 13,
-      duration: 2392,
-      source: LogSources.SharedPrompt,
-      apiKeyId: null,
-      generatedAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
   }
+  const { documentLogUuid: _documentLogUuid, ...cachedResponse } = response
 
   describe('getCachedResponse', () => {
     it('returns undefined when temperature is not 0', async () => {
@@ -76,7 +59,7 @@ describe('promptCache', async () => {
     })
 
     it('returns cached response when available', async () => {
-      mockCache.get.mockResolvedValueOnce(JSON.stringify(response))
+      mockCache.get.mockResolvedValueOnce(JSON.stringify(cachedResponse))
 
       const result = await getCachedResponse({
         workspace,
@@ -84,15 +67,7 @@ describe('promptCache', async () => {
         conversation,
       })
 
-      expect(result).toEqual({
-        ...response,
-        providerLog: {
-          ...response.providerLog,
-          generatedAt: response.providerLog.generatedAt.toISOString(),
-          createdAt: response.providerLog.createdAt.toISOString(),
-          updatedAt: response.providerLog.updatedAt.toISOString(),
-        },
-      })
+      expect(result).toEqual(cachedResponse)
       expect(mockCache.get).toHaveBeenCalledTimes(1)
     })
 
@@ -135,6 +110,10 @@ describe('promptCache', async () => {
         JSON.stringify({
           streamType: 'text',
           text: 'cached response',
+          input: [],
+          model: 'gpt-4o-mini',
+          provider: Providers.OpenAI,
+          cost: 0,
           usage: {
             inputTokens: 0,
             outputTokens: 0,

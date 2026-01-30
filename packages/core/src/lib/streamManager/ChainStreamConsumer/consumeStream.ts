@@ -3,12 +3,13 @@ import { capitalize } from 'lodash-es'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError, RetryError } from 'ai'
 
-import { ProviderData, VercelChunk } from '@latitude-data/constants'
 import {
   LegacyChainEvent,
+  ProviderData,
   StreamEventTypes,
   StreamType,
-} from '../../../constants'
+  VercelChunk,
+} from '@latitude-data/constants'
 import { Providers } from '@latitude-data/constants'
 import { AIReturn } from '../../../services/ai'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'

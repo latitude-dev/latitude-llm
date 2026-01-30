@@ -2,15 +2,12 @@ import { NotFoundError } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { type Message } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '../../../constants'
-import { buildConversation } from '../../../helpers'
 import { isRetryableError } from '../../../lib/isRetryableError'
 import { Result } from '../../../lib/Result'
 import { DefaultStreamManager } from '../../../lib/streamManager/defaultStreamManager'
 import {
   CommitsRepository,
-  DocumentLogsRepository,
   DocumentVersionsRepository,
-  ProviderLogsRepository,
   SpansRepository,
 } from '../../../repositories'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
@@ -23,8 +20,11 @@ import {
 import { getInputSchema, getOutputType } from '../../chains/ChainValidator'
 import { scanDocumentContent } from '../../documents'
 import { ToolHandler } from '../../documents/tools/clientTools/handlers'
-import serializeProviderLog from '../../providerLogs/serialize'
 import { unsafelyFindProviderApiKey } from '../../providerApiKeys/data-access/providerApiKeys'
+import { readConversationCache } from '../../conversations/cache'
+import { buildProvidersMap } from '../../providerApiKeys/buildMap'
+import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
+import { adaptCompletionSpanMessagesToLegacy } from '../../tracing/spans/fetching/findCompletionSpanFromTrace'
 
 type AddMessagesArgs = {
   workspace: WorkspaceDto
@@ -38,18 +38,6 @@ type AddMessagesArgs = {
   testDeploymentId?: number
 }
 
-/**
- * TODO(LegacyProviderLogs) BIG BEAUTIFUL REFACTOR NEEDED
- *
- * We migrated from documentLogs and providerLogs
- * long time ago. But we're still using it for doing chat
- *
- * I guess this is related with the async nature of traces.
- * We need to address this at some point.
- *
- * Look for other related todos. The main AI streaming is still
- * creating `providerLogs`.
- */
 export async function addMessages(
   {
     workspace,
@@ -63,20 +51,24 @@ export async function addMessages(
   }: AddMessagesArgs,
   telemetry: LatitudeTelemetry = realTelemetry,
 ) {
-  if (!documentLogUuid) {
+  if (!documentLogUuid)
     return Result.error(new Error('documentLogUuid is required'))
-  }
 
   const dataResult = await retrieveData({
     workspace,
     documentLogUuid,
   })
   if (dataResult.error) return dataResult
-  const { document, commit, providerLog, globalConfig, previousSpan } =
-    dataResult.unwrap()
 
+  const {
+    document,
+    commit,
+    provider,
+    globalConfig,
+    previousSpan,
+    previousMessages,
+  } = dataResult.unwrap()
   const effectiveContext = context ?? BACKGROUND({ workspaceId: workspace.id })
-
   const $chat = telemetry.span.chat(
     {
       documentLogUuid,
@@ -89,26 +81,6 @@ export async function addMessages(
     effectiveContext,
   )
 
-  if (!providerLog.providerId) {
-    const error = new NotFoundError(
-      'Cannot add messages to a conversation that has no associated provider',
-    )
-    $chat.fail(error)
-    return Result.error(error)
-  }
-
-  const provider = await unsafelyFindProviderApiKey(providerLog.providerId)
-  if (!provider) {
-    const error = new NotFoundError(
-      `Could not find provider API key with id ${providerLog.providerId}`,
-    )
-    $chat.fail(error)
-    return Result.error(error)
-  }
-
-  // TODO: store messages in provider log and forget about manually handling
-  // response messages
-  const previousMessages = buildConversation(serializeProviderLog(providerLog))
   const conversation = {
     config: globalConfig,
     messages: [...previousMessages, ...messages],
@@ -116,7 +88,7 @@ export async function addMessages(
 
   const streamManager = new DefaultStreamManager({
     context: $chat.context,
-    uuid: providerLog.documentLogUuid!,
+    uuid: documentLogUuid,
     config: conversation.config,
     provider,
     output: getOutputType(conversation)!,
@@ -156,31 +128,47 @@ async function retrieveData({
   documentLogUuid,
 }: {
   workspace: WorkspaceDto
-  documentLogUuid: string | undefined
+  documentLogUuid: string
 }) {
-  const logsRepo = new DocumentLogsRepository(workspace.id)
-  const logResult = await logsRepo.findByUuid(documentLogUuid)
-  if (logResult.error) return logResult
-  const documentLog = logResult.value
+  const spansRepo = new SpansRepository(workspace.id)
+  const previousSpan = documentLogUuid
+    ? await spansRepo.findLastMainSpanByDocumentLogUuid(documentLogUuid)
+    : undefined
+
+  const cacheResult = await readConversationCache({
+    workspaceId: workspace.id,
+    documentLogUuid,
+  })
+  if (cacheResult.error) return cacheResult
+
+  const cachedConversation = cacheResult.value
+
+  const commitUuid = cachedConversation?.commitUuid ?? previousSpan?.commitUuid
+  const documentUuid =
+    cachedConversation?.documentUuid ?? previousSpan?.documentUuid
+
+  if (!commitUuid || !documentUuid) {
+    return Result.error(
+      new NotFoundError(
+        'Cannot add messages to a conversation without commit or document details',
+      ),
+    )
+  }
 
   const commitsRepo = new CommitsRepository(workspace.id)
-  const commitResult = await commitsRepo.find(documentLog.commitId)
+  const commitResult = await commitsRepo.getCommitByUuid({
+    uuid: commitUuid,
+  })
   if (commitResult.error) return commitResult
   const commit = commitResult.value
 
   const documentsRepo = new DocumentVersionsRepository(workspace.id)
   const documentResult = await documentsRepo.getDocumentAtCommit({
-    commitUuid: commit?.uuid,
-    documentUuid: documentLog.documentUuid,
+    commitUuid: commit.uuid,
+    documentUuid,
   })
   if (documentResult.error) return documentResult
   const document = documentResult.value
-
-  const providerLogRepo = new ProviderLogsRepository(workspace.id)
-  const providerLogResult =
-    await providerLogRepo.findLastByDocumentLogUuid(documentLogUuid)
-  if (providerLogResult.error) return providerLogResult
-  const providerLog = providerLogResult.value
 
   const metadataResult = await scanDocumentContent({
     document,
@@ -189,17 +177,84 @@ async function retrieveData({
   if (metadataResult.error) return metadataResult
   const globalConfig = metadataResult.value.config as LatitudePromptConfig
 
-  const spansRepo = new SpansRepository(workspace.id)
-  const previousSpan = documentLogUuid
-    ? await spansRepo.findLastMainSpanByDocumentLogUuid(documentLogUuid)
-    : undefined
+  const provider = await resolveProvider({
+    workspace,
+    providerId: cachedConversation?.providerId,
+    config: globalConfig,
+  })
+  if (provider.error) return provider
+
+  const previousMessages =
+    cachedConversation?.messages ??
+    (await getMessagesFromSpan({
+      workspace,
+      span: previousSpan,
+    }))
 
   return Result.ok({
     commit,
     document,
-    documentLog,
-    providerLog,
+    provider: provider.unwrap(),
     globalConfig,
     previousSpan,
+    previousMessages,
   })
+}
+
+async function resolveProvider({
+  workspace,
+  providerId,
+  config,
+}: {
+  workspace: WorkspaceDto
+  providerId?: number
+  config: LatitudePromptConfig
+}) {
+  if (providerId) {
+    const provider = await unsafelyFindProviderApiKey(providerId)
+    if (!provider) {
+      return Result.error(
+        new NotFoundError(
+          `Could not find provider API key with id ${providerId}`,
+        ),
+      )
+    }
+
+    return Result.ok(provider)
+  }
+
+  const providersMap = await buildProvidersMap({
+    workspaceId: workspace.id,
+  })
+  const provider = providersMap.get(config.provider)
+  if (!provider) {
+    return Result.error(
+      new NotFoundError(
+        `Could not find provider API key for ${config.provider}`,
+      ),
+    )
+  }
+
+  return Result.ok(provider)
+}
+
+async function getMessagesFromSpan({
+  workspace,
+  span,
+}: {
+  workspace: WorkspaceDto
+  span: Awaited<
+    ReturnType<SpansRepository['findLastMainSpanByDocumentLogUuid']>
+  >
+}) {
+  if (!span?.traceId) return []
+
+  const traceResult = await assembleTraceWithMessages({
+    traceId: span.traceId,
+    workspace,
+  })
+  if (traceResult.error) return []
+
+  const { completionSpan } = traceResult.value
+  return adaptCompletionSpanMessagesToLegacy(completionSpan)
 }

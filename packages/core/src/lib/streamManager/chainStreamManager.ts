@@ -60,7 +60,8 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
 
       this.setMessages(chain.messages)
       this.startStep()
-      this.startProviderStep({
+      await this.startProviderStep({
+        provider: chain.provider,
         config: chain.config,
       })
 
@@ -83,6 +84,7 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         abortSignal: this.abortSignal,
         controller: this.controller!,
         documentLogUuid: this.uuid,
+        conversationContext: this.getConversationContext(),
         messages: chain.messages,
         output: chain.output,
         provider: chain.provider,

@@ -3,9 +3,9 @@ import {
   LegacyChainEvent,
   LegacyChainEventTypes,
   StreamEventTypes,
+  StreamType,
 } from '@latitude-data/constants'
 import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
-import { StreamType } from '../../../constants'
 import {
   Message,
   MessageRole,

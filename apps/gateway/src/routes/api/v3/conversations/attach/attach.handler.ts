@@ -6,10 +6,7 @@ import { unsafelyFindActiveRun } from '@latitude-data/core/data-access/runs'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
-import {
-  ProjectsRepository,
-  ProviderApiKeysRepository,
-} from '@latitude-data/core/repositories'
+import { ProjectsRepository } from '@latitude-data/core/repositories'
 import { attachRun } from '@latitude-data/core/services/runs/attach'
 import { streamSSE } from 'hono/streaming'
 import { AttachRoute } from './attach.route'
@@ -92,21 +89,14 @@ async function handleNonStreamingMode(
 ) {
   const abortSignal = createRequestAbortSignal(ctx)
   const result = await attachRun({ ...args, abortSignal }).then((r) => r.unwrap()) // prettier-ignore
-  const workspace = ctx.get('workspace')
 
   // Wait for stream to finish
   const error = result.error
   if (error) throw error
 
   const response = result.lastResponse!
-  const providerScope = new ProviderApiKeysRepository(workspace.id)
-  const providerUsed = await providerScope
-    .find(response.providerLog?.providerId)
-    .then((r) => r.unwrap())
-
   const body = runPresenter({
     response,
-    provider: providerUsed,
     source: undefined,
   }).unwrap()
 

@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 from unittest import IsolatedAsyncioTestCase
 
 import httpx
@@ -24,6 +24,7 @@ from latitude_sdk import InternalOptions, Latitude, LatitudeOptions, LogSources,
 
 class TestCase(IsolatedAsyncioTestCase):
     sdk: Latitude
+    gateway_mock: Any
 
     def setUp(self):
         self.maxDiff = None
@@ -49,7 +50,8 @@ class TestCase(IsolatedAsyncioTestCase):
         self.version_uuid = "fake-version-uuid"
         self.base_url = "https://fake-host.com/api/v3"
 
-        self.gateway_mock = respx.MockRouter(
+        respx_module = cast(Any, respx)
+        self.gateway_mock = respx_module.MockRouter(
             assert_all_called=False,
             assert_all_mocked=True,
             base_url=self.base_url,

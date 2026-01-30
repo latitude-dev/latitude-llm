@@ -54,6 +54,8 @@ export interface LatitudeProviderStartedEventData
 export interface LatitudeProviderCompletedEventData
   extends GenericLatitudeEventData {
   type: ChainEventTypes.ProviderCompleted
+  // TODO: DEPRECATED, keeping it around for backwards compatibliity purposes
+  // but it's not used for anything. Remove after March 2026.
   providerLogUuid: string
   tokenUsage: LegacyVercelSDKVersion4Usage
   finishReason: FinishReason
