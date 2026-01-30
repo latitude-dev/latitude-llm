@@ -186,6 +186,7 @@ export const env = createEnv({
     COPILOT_LATTE_CHANGES_FEEDBACK_HITL_EVALUATION_UUID: z.string().optional(),
     // Copilot cloud
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
+    COPILOT_VERSION_UUID: z.string().optional(),
     COPILOT_WORKSPACE_API_KEY: z.string().optional(),
     // Copilot enterprise
     ENTERPRISE_COPILOT_PROJECT_NAME: z.string().optional(),
@@ -203,6 +204,7 @@ export const env = createEnv({
     COPILOT_PROMPT_LATTE_PATH: z.string().optional(),
     COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH: z.string().optional(),
     COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH: z.string(),
+    COPILOT_PROMPT_SIMULATE_USER_RESPONSE_PATH: z.string().optional(),
 
     // Are we in enterprise mode?
     LATITUDE_ENTERPRISE_MODE: z.coerce.boolean().optional().default(false),
@@ -334,6 +336,8 @@ export const env = createEnv({
     COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH:
       process.env.COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH ??
       'tool-responses-generator',
+    COPILOT_PROMPT_SIMULATE_USER_RESPONSE_PATH:
+      process.env.COPILOT_PROMPT_SIMULATE_USER_RESPONSE_PATH,
     DEFAULT_PROVIDER_API_KEY:
       process.env.DEFAULT_PROVIDER_API_KEY ?? 'default_api_key',
     ECS_AGENT_URI: process.env.ECS_AGENT_URI,

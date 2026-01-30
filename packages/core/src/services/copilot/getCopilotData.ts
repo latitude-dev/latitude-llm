@@ -9,13 +9,16 @@ import {
   unsafelyGetFirstApiKeyByWorkspaceId,
 } from '../../data-access/apiKeys'
 import { Result, TypedResult } from '../../lib/Result'
-import { ProjectsRepository } from '../../repositories'
+import { CommitsRepository, ProjectsRepository } from '../../repositories'
 import { type Project } from '../../schema/models/types/Project'
 import { type WorkspaceDto } from '../../schema/models/types/Workspace'
+import { Commit } from '../../schema/models/types/Commit'
+import { HEAD_COMMIT } from '@latitude-data/constants'
 
 export type CopilotData = {
   workspace: WorkspaceDto
   project: Project
+  commit: Commit
   apiKeyToken: string
 }
 
@@ -50,6 +53,13 @@ export async function getCopilotData(
     if (projectResult.error) {
       return Result.error(new Error('Copilot project not found'))
     }
+    const project = projectResult.unwrap()
+
+    const commitsRepository = new CommitsRepository(workspace.id, db)
+    const commit = await commitsRepository.getHeadCommit(project.id)
+    if (!commit) {
+      return Result.error(new Error('Copilot commit not found'))
+    }
 
     const apiKeyResult = await unsafelyGetFirstApiKeyByWorkspaceId(
       {
@@ -63,13 +73,15 @@ export async function getCopilotData(
 
     return Result.ok({
       workspace,
-      project: projectResult.value,
+      project,
+      commit,
       apiKeyToken: apiKeyResult.value.token,
     })
   }
 
   const apiKeyToken = env.COPILOT_WORKSPACE_API_KEY
   const projectId = env.COPILOT_PROJECT_ID
+  const versionUuid = env.COPILOT_VERSION_UUID
 
   if (!apiKeyToken) {
     return Result.error(new Error('COPILOT_WORKSPACE_API_KEY is not set'))
@@ -102,9 +114,21 @@ export async function getCopilotData(
     return Result.error(new Error('Copilot project not found'))
   }
 
+  const commitsRepository = new CommitsRepository(workspace.id, db)
+  const commitResult = await commitsRepository.getCommitByUuid({
+    projectId,
+    uuid: versionUuid ?? HEAD_COMMIT,
+    includeInitialDraft: true,
+  })
+  if (commitResult.error) {
+    return Result.error(new Error('Copilot commit not found'))
+  }
+  const commit = commitResult.unwrap()
+
   return Result.ok({
     workspace,
     project: projectResult.value,
+    commit,
     apiKeyToken,
   })
 }
