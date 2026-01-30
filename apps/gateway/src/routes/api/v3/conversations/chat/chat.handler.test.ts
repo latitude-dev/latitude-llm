@@ -1,4 +1,4 @@
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainError,
   LatitudeError,
@@ -14,15 +14,17 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import app from '$/routes/app'
-import { ChainEventTypes, Providers } from '@latitude-data/constants'
+import {
+  ChainEventTypes,
+  ChainStepResponse,
+  Providers,
+} from '@latitude-data/constants'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import {
-  ChainStepResponse,
   LegacyChainEventTypes,
   LogSources,
   StreamEventTypes,
 } from '@latitude-data/core/constants'
-import { ProviderLog } from '@latitude-data/core/schema/models/types/ProviderLog'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
@@ -72,6 +74,19 @@ let headers: Record<string, string>
 let workspace: Workspace
 let provider: ProviderApiKey
 
+const stepMessages: Message[] = [
+  {
+    role: MessageRole.assistant,
+    toolCalls: [],
+    content: [
+      {
+        type: 'text',
+        text: 'fake-assistant-content',
+      },
+    ],
+  },
+]
+
 const step: ChainStepResponse<'text'> = {
   streamType: 'text',
   text: 'fake-response-text',
@@ -87,16 +102,22 @@ const step: ChainStepResponse<'text'> = {
   },
   toolCalls: [],
   documentLogUuid: generateUUIDIdentifier(),
-  providerLog: {
+  input: stepMessages,
+  model: MODEL,
+  provider: Providers.OpenAI,
+  cost: estimateCost({
+    provider: Providers.OpenAI,
     model: MODEL,
-    messages: [
-      {
-        role: MessageRole.assistant,
-        toolCalls: [],
-        content: 'fake-assistant-content',
-      },
-    ],
-  } as unknown as ProviderLog,
+    usage: {
+      inputTokens: 4,
+      outputTokens: 6,
+      promptTokens: 4,
+      completionTokens: 6,
+      totalTokens: 10,
+      reasoningTokens: 0,
+      cachedInputTokens: 0,
+    },
+  }),
 }
 
 describe('POST /chat', () => {
@@ -177,7 +198,7 @@ describe('POST /chat', () => {
                     event: StreamEventTypes.Latitude,
                     data: {
                       type: ChainEventTypes.ChainCompleted,
-                      messages: step.providerLog?.messages,
+                      messages: step.input,
                     },
                   })
                   controller.close()
@@ -208,7 +229,7 @@ describe('POST /chat', () => {
         event: StreamEventTypes.Latitude,
         data: {
           type: ChainEventTypes.ChainCompleted,
-          messages: step.providerLog?.messages,
+          messages: step.input,
         },
       })
     })
@@ -233,7 +254,7 @@ describe('POST /chat', () => {
                     event: StreamEventTypes.Latitude,
                     data: {
                       type: ChainEventTypes.ChainCompleted,
-                      messages: step.providerLog?.messages,
+                      messages: step.input,
                     },
                   })
                   controller.close()
@@ -283,7 +304,7 @@ describe('POST /chat', () => {
                     event: StreamEventTypes.Latitude,
                     data: {
                       type: ChainEventTypes.ChainCompleted,
-                      messages: step.providerLog?.messages,
+                      messages: step.input,
                     },
                   })
                   controller.close()
@@ -335,7 +356,7 @@ describe('POST /chat', () => {
                     event: StreamEventTypes.Latitude,
                     data: {
                       type: ChainEventTypes.ChainCompleted,
-                      messages: step.providerLog?.messages,
+                      messages: step.input,
                     },
                   })
                   controller.close()
@@ -458,11 +479,9 @@ describe('POST /chat', () => {
         providerId: provider.id,
         providerType: provider.provider,
         model: MODEL,
-        messages: step.providerLog?.messages ?? [],
+        messages: step.input,
         tokens: step.usage?.totalTokens,
       })
-
-      step.providerLog!.providerId = provider.id
 
       token = apikey.token
       route = `/api/v3/conversations/${step.documentLogUuid}/chat`
@@ -502,12 +521,6 @@ describe('POST /chat', () => {
         }),
       )
 
-      const expectedCost = estimateCost({
-        provider: provider.provider,
-        model: MODEL,
-        usage: step.usage,
-      })
-
       const res = await app.request(route, {
         method: 'POST',
         body: JSON.stringify(body),
@@ -518,13 +531,16 @@ describe('POST /chat', () => {
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({
         uuid: step.documentLogUuid,
-        conversation: step.providerLog?.messages,
+        conversation: step.input,
         response: {
           streamType: step.streamType,
           text: step.text,
           usage: step.usage,
           toolCalls: step.toolCalls,
-          cost: expectedCost,
+          input: step.input,
+          model: step.model,
+          provider: step.provider,
+          cost: step.cost,
         },
       })
     })

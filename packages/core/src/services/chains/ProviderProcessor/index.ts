@@ -3,14 +3,16 @@ import {
   EMPTY_USAGE,
   StreamType,
 } from '@latitude-data/constants/ai'
-import { AIReturn } from '../../ai'
+import { AIReturn, estimateCost } from '../../ai'
 import {
   AssistantMessage,
+  Message,
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
 import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
 import { convertResponseMessages } from '../../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
+import { Providers } from '@latitude-data/constants'
 
 function parseObject(text: string) {
   const parsed = text
@@ -28,13 +30,19 @@ export async function processResponse({
   aiResult,
   documentLogUuid,
   resolvedTools,
+  model,
+  provider,
+  input,
 }: {
   aiResult: Awaited<AIReturn<StreamType>>
   documentLogUuid?: string
   resolvedTools?: ResolvedToolsDict
+  model: string
+  provider: Providers
+  input: Message[]
 }): Promise<ChainStepResponse<StreamType>> {
   const isObject = aiResult.type === 'object'
-  let text, response, reasoning, output, usage, toolCalls
+  let text, response, reasoning, output, usage, toolCalls, cost
   try {
     reasoning = await aiResult.reasoning
     response = await aiResult.response
@@ -45,12 +53,16 @@ export async function processResponse({
       messages: response.messages,
       resolvedTools,
     })
+    cost = estimateCost({
+      model,
+      provider,
+      usage: await vercelSdkFromV5ToV4.convertTokenUsage(usage),
+    })
   } catch (_) {
     // do nothing
   }
 
   const v4ToolCalls = await vercelSdkFromV5ToV4.convertToolCalls(toolCalls)
-
   const toolCallsWithSourceData = v4ToolCalls?.map((toolCall) => {
     const resolvedTool = resolvedTools?.[toolCall.name]
     if (!resolvedTool) return toolCall
@@ -62,14 +74,18 @@ export async function processResponse({
   })
 
   return {
+    cost: cost ?? 0,
+    model,
+    provider,
+    input,
     output,
     reasoning,
     documentLogUuid,
-    streamType: aiResult.type,
     text: text ?? '',
+    streamType: aiResult.type,
+    toolCalls: toolCallsWithSourceData,
     object: isObject ? parseObject(text ?? '') : undefined,
     usage: await vercelSdkFromV5ToV4.convertTokenUsage(usage),
-    toolCalls: toolCallsWithSourceData,
   }
 }
 
@@ -88,8 +104,22 @@ export async function fakeResponse({
     streamType: 'text',
     documentLogUuid,
     text: accumulatedText.text,
+    input: [
+      {
+        role: MessageRole.user,
+        content: [
+          {
+            type: 'text',
+            text: 'How u doing',
+          },
+        ],
+      },
+    ],
     output: [fakeAssistantMessage(accumulatedText.text)],
     usage: EMPTY_USAGE(),
+    model: 'gpt-3.5-turbo',
+    provider: Providers.OpenAI,
+    cost: 14,
     reasoning: undefined,
     toolCalls: [],
   }
