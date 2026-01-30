@@ -5,9 +5,10 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Providers } from '@latitude-data/constants'
 import { LogSources, StreamEventTypes } from '../../constants'
 import { publisher } from '../../events/publisher'
+import { ProviderLogsRepository } from '../../repositories'
 import { createProject, createTelemetryContext } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
-import { Result } from './../../lib/Result'
+import { Ok, Result } from './../../lib/Result'
 import { runDocumentAtCommit } from './index'
 import {
   telemetry as realTelemetry,
@@ -80,6 +81,10 @@ const publisherSpy = vi.spyOn(
   'publishLater',
 )
 const aiSpy = vi.spyOn(await import('../ai'), 'ai')
+const createDocumentLogSpy = vi.spyOn(
+  await import('../documentLogs/create'),
+  'createDocumentLog',
+)
 
 describe('runDocumentAtCommit', () => {
   beforeEach(() => {
@@ -163,40 +168,59 @@ model: gpt-4o
       const { context, workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
-      const { lastResponse, duration, stream, uuid } =
-        await runDocumentAtCommit({
-          context,
-          workspace,
-          document,
-          commit,
-          parameters: {},
-          source: LogSources.API,
-        }).then((r) => r.unwrap())
+      const { lastResponse, duration, stream } = await runDocumentAtCommit({
+        context,
+        workspace,
+        document,
+        commit,
+        parameters: {},
+        source: LogSources.API,
+      }).then((r) => r.unwrap())
 
       await lastResponse
       await duration
 
       const { value } = await testConsumeStream(stream)
+      const repo = new ProviderLogsRepository(workspace.id)
+      const logs = await repo.findAll().then((r) => r.unwrap())
 
-      const chainStarted = value.find(
-        (e) => e.data.type === ChainEventTypes.ChainStarted,
-      )
-      expect(chainStarted?.event).toBe(StreamEventTypes.Latitude)
-      expect(chainStarted?.data.type).toBe(ChainEventTypes.ChainStarted)
-
-      const providerCompleted = value.find(
-        (e) => e.data.type === ChainEventTypes.ProviderCompleted,
-      )
-      expect(providerCompleted?.event).toBe(StreamEventTypes.Latitude)
-      expect(providerCompleted?.data.type).toBe(
-        ChainEventTypes.ProviderCompleted,
+      expect(value).toEqual(
+        expect.arrayContaining([
+          {
+            event: StreamEventTypes.Latitude,
+            data: expect.objectContaining({
+              type: ChainEventTypes.ChainStarted,
+            }),
+          },
+          {
+            event: StreamEventTypes.Latitude,
+            data: expect.objectContaining({
+              type: ChainEventTypes.ProviderCompleted,
+              providerLogUuid: logs[0]!.uuid,
+            }),
+          },
+          {
+            event: StreamEventTypes.Latitude,
+            data: expect.objectContaining({
+              type: ChainEventTypes.ProviderCompleted,
+              providerLogUuid: logs[0]!.uuid,
+            }),
+          },
+          {
+            event: StreamEventTypes.Latitude,
+            data: expect.objectContaining({
+              type: ChainEventTypes.ProviderCompleted,
+              providerLogUuid: logs[1]!.uuid,
+            }),
+          },
+        ]),
       )
 
       expect(value.at(-1)).toEqual({
         event: StreamEventTypes.Latitude,
         data: expect.objectContaining({
           type: ChainEventTypes.ChainCompleted,
-          uuid,
+          uuid: logs[0]!.documentLogUuid,
           messages: expect.any(Array),
         }),
       })
@@ -221,6 +245,50 @@ model: gpt-4o
       await duration
 
       expect(publisher.publishLater).toHaveBeenCalled()
+    })
+
+    it('creates a document log', async () => {
+      const { context, workspace, document, commit } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
+      const { lastResponse } = await runDocumentAtCommit({
+        context,
+        workspace,
+        document,
+        commit,
+        parameters: {},
+        source: LogSources.API,
+      }).then((r) => r.unwrap())
+
+      await lastResponse
+
+      expect(createDocumentLogSpy).toHaveResolvedWith(expect.any(Ok))
+    })
+
+    it('creates a document log with custom identifier', async () => {
+      const { context, workspace, document, commit } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
+      const parameters = { testParam: 'testValue' }
+      const { lastResponse } = await runDocumentAtCommit({
+        context,
+        workspace,
+        document,
+        commit,
+        parameters,
+        customIdentifier: 'custom-identifier',
+        source: LogSources.API,
+      }).then((r) => r.unwrap())
+
+      // Wait for the lastResponse promise to resolve
+      await lastResponse
+
+      expect(createDocumentLogSpy).toHaveResolvedWith(expect.any(Ok))
+      expect(
+        createDocumentLogSpy.mock.calls[
+          createDocumentLogSpy.mock.calls.length - 1
+        ]![0].data.customIdentifier,
+      ).toEqual('custom-identifier')
     })
 
     it('calls telemetry.span.prompt with all required parameters', async () => {
@@ -278,7 +346,7 @@ model: gpt-4o
       )
     })
 
-    it('handles rate limit errors', async () => {
+    it('Does not create a document log when rate limited', async () => {
       const streamAIResponseSpy = vi.spyOn(
         await import('../../lib/streamManager/step/streamAIResponse'),
         'streamAIResponse',
@@ -307,6 +375,8 @@ model: gpt-4o
 
       // Wait for the lastResponse promise to resolve
       await lastResponse
+
+      expect(createDocumentLogSpy).not.toHaveBeenCalled()
 
       // Restore the spy
       streamAIResponseSpy.mockRestore()

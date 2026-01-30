@@ -83,10 +83,7 @@ describe('handleStream', () => {
 
     const { stream } = createMockStream(chunks)
     const abortController = new AbortController()
-    const addEventListenerSpy = vi.spyOn(
-      abortController.signal,
-      'addEventListener',
-    )
+    const addEventListenerSpy = vi.spyOn(abortController.signal, 'addEventListener')
 
     await handleStream({
       body: stream,

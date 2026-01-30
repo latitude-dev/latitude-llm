@@ -32,7 +32,7 @@ export class DefaultStreamManager
   implements StreamManager
 {
   private config: ValidatedChainStep['config']
-  protected provider: ProviderApiKey
+  private provider: ProviderApiKey
   private output: Output
   private schema: JSONSchema7
 
@@ -61,9 +61,8 @@ export class DefaultStreamManager
     try {
       this.setMessages(this.messages)
       this.startStep()
-      await this.startProviderStep({
+      this.startProviderStep({
         config: this.config,
-        provider: this.provider,
       })
 
       const toolsBySource = await this.getToolsBySource().then((r) =>
@@ -81,7 +80,6 @@ export class DefaultStreamManager
           abortSignal: this.abortSignal,
           controller: this.controller!,
           documentLogUuid: this.uuid,
-          conversationContext: this.getConversationContext(),
           messages: this.messages,
           output: this.output,
           provider: this.provider,

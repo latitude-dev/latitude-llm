@@ -11,18 +11,29 @@ import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { ai, AIReturn, CompletionTelemetryOptions } from '../../../services/ai'
 import { processResponse } from '../../../services/chains/ProviderProcessor'
-import { writeConversationCache } from '../../../services/conversations/cache'
+import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
+import { createProviderLog } from '../../../services/providerLogs/create'
 import { assertUsageWithinPlanLimits } from '../../../services/workspaces/usage'
 import { TelemetryContext } from '../../../telemetry'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
 import { isAbortError } from '../../isAbortError'
+import { createFakeProviderLog } from '../utils/createFakeProviderLog'
 import { handleAIError } from './handleAIError'
 import { recordAbortedCompletion } from './recordAbortedCompletion'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 
 export type Output = 'object' | 'array' | 'no-schema'
 
+/**
+ * TODO(LegacyProviderLogs) BIG BEAUTIFUL REFACTOR NEEDED
+ *
+ * We migrated from documentLogs and providerLogs
+ * long time ago. But we're still using it for doing chat
+ *
+ * I guess this is related with the async nature of traces.
+ * We need to address this at some point.
+ */
 export async function streamAIResponse({
   context,
   controller,
@@ -32,7 +43,6 @@ export async function streamAIResponse({
   config,
   source,
   documentLogUuid,
-  conversationContext,
   schema,
   output,
   abortSignal,
@@ -47,7 +57,6 @@ export async function streamAIResponse({
   config: VercelConfig
   source: LogSources
   documentLogUuid: string
-  conversationContext?: { commitUuid: string; documentUuid: string }
   schema?: JSONSchema7
   output?: Output
   abortSignal?: AbortSignal
@@ -59,9 +68,9 @@ export async function streamAIResponse({
   tokenUsage: Awaited<LanguageModelUsage>
   finishReason: Awaited<AIReturn<StreamType>['finishReason']> | undefined
 }> {
-  void source
   await assertUsageWithinPlanLimits(workspace).then((r) => r.unwrap())
 
+  const startTime = Date.now()
   const aiResult = await ai({
     context,
     messages,
@@ -89,6 +98,17 @@ export async function streamAIResponse({
     chunkError = resultStream.error
   } catch (error) {
     if (isAbortError(error)) {
+      await createFakeProviderLog({
+        documentLogUuid,
+        accumulatedText,
+        workspace,
+        source,
+        provider,
+        config,
+        messages,
+        startTime,
+      })
+
       recordAbortedCompletion({
         context,
         provider,
@@ -107,9 +127,6 @@ export async function streamAIResponse({
     aiResult,
     documentLogUuid,
     resolvedTools,
-    input: messages,
-    model: config.model,
-    provider: provider.provider,
   })
 
   let finishReason
@@ -119,18 +136,25 @@ export async function streamAIResponse({
     // do nothing
   }
 
-  const response = processedResponse
+  const providerLog = await createProviderLog({
+    workspace,
+    finishReason,
+    ...buildProviderLogDto({
+      workspace,
+      source,
+      provider,
+      conversation: {
+        messages,
+        config,
+      },
+      stepStartTime: startTime,
+      errorableUuid: documentLogUuid,
+      response: processedResponse,
+    }),
+  }).then((r) => r.unwrap())
 
-  if (conversationContext) {
-    await writeConversationCache({
-      documentLogUuid,
-      workspaceId: workspace.id,
-      commitUuid: conversationContext.commitUuid,
-      documentUuid: conversationContext.documentUuid,
-      providerId: provider.id,
-      messages: [...messages, ...(response.output ?? [])],
-    }).then((r) => r.unwrap())
-  }
+  const response = processedResponse
+  response.providerLog = providerLog
 
   return {
     response,

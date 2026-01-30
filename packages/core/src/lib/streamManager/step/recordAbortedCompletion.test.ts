@@ -122,8 +122,7 @@ describe('recordAbortedCompletion', () => {
     const provider = createMockProvider(Providers.OpenAI)
     const config = createMockConfig('gpt-4o')
     const messages = createMockMessages('Write a poem')
-    const accumulatedText =
-      'Roses are red,\nViolets are blue,\nThis poem was cut'
+    const accumulatedText = 'Roses are red,\nViolets are blue,\nThis poem was cut'
 
     recordAbortedCompletion({
       context,
@@ -137,12 +136,7 @@ describe('recordAbortedCompletion', () => {
       output: [
         {
           role: MessageRole.assistant,
-          content: [
-            {
-              type: 'text',
-              text: 'Roses are red,\nViolets are blue,\nThis poem was cut',
-            },
-          ],
+          content: [{ type: 'text', text: 'Roses are red,\nViolets are blue,\nThis poem was cut' }],
         },
       ],
       finishReason: 'stop',

@@ -1,15 +1,9 @@
-import { Providers } from '@latitude-data/constants'
-
 export const RUN_TEXT_RESPONSE = {
   uuid: 'a8f2e5d8-4c72-48c7-a6e0-23df3f1cbe2a', // Random
   conversation: [],
   response: {
     streamType: 'text' as const,
     text: 'some-text',
-    input: [],
-    model: 'gpt-4o',
-    provider: Providers.OpenAI,
-    cost: 0,
     usage: {
       inputTokens: 0,
       outputTokens: 0,

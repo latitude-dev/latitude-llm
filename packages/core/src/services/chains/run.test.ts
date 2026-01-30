@@ -22,6 +22,7 @@ import {
   StreamEventTypes,
 } from '../../constants'
 import * as consumeStreamModule from '../../lib/streamManager/ChainStreamConsumer/consumeStream'
+import * as createFakeProviderLogModule from '../../lib/streamManager/utils/createFakeProviderLog'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
@@ -355,6 +356,11 @@ describe('runChain', () => {
 
     const controller = new AbortController()
 
+    vi.spyOn(
+      createFakeProviderLogModule,
+      'createFakeProviderLog',
+    ).mockResolvedValue()
+
     vi.spyOn(consumeStreamModule, 'consumeStream').mockImplementation(() => {
       throw new DOMException('Operation aborted', 'AbortError')
     })
@@ -380,5 +386,6 @@ describe('runChain', () => {
     expect(run).toBeDefined()
     await run.response
     expect(consumeStreamModule.consumeStream).toHaveBeenCalled()
+    expect(createFakeProviderLogModule.createFakeProviderLog).toHaveBeenCalled()
   })
 })

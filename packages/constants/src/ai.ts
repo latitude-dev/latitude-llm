@@ -10,7 +10,7 @@ import {
 import { ParameterType } from './config'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
 import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
-import { Providers } from '.'
+import { ProviderLog } from './models'
 
 export type PromptSource = {
   commitUuid?: string
@@ -93,10 +93,7 @@ type BaseResponse = {
   text: string
   usage: LanguageModelUsage
   documentLogUuid?: string
-  model: string
-  provider: Providers
-  cost: number
-  input: Message[]
+  providerLog?: ProviderLog
   output?: LegacyResponseMessage[] // TODO: Make this non-optional when we remove __deprecated
 }
 

@@ -1,6 +1,6 @@
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
-import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainError,
   LatitudeError,
@@ -35,19 +35,6 @@ import { Providers } from '@latitude-data/constants'
 import { createProviderLog } from '@latitude-data/core/factories'
 
 const MODEL = 'gpt-4o'
-
-const responseMessages: Message[] = [
-  {
-    role: MessageRole.assistant,
-    toolCalls: [],
-    content: [
-      {
-        type: 'text',
-        text: 'Hello',
-      },
-    ],
-  },
-]
 
 const mocks = vi.hoisted(() => ({
   runForegroundDocument: vi.fn(),
@@ -637,19 +624,19 @@ describe('POST /run', () => {
         cachedInputTokens: 0,
       }
 
-      const expectedCost = estimateCost({
-        provider: provider.provider,
-        model: MODEL,
-        usage,
-      })
-
       await createProviderLog({
         documentLogUuid,
         workspace,
         providerId: provider.id,
         providerType: provider.provider,
         model: MODEL,
-        messages: responseMessages,
+        messages: [
+          {
+            role: MessageRole.assistant,
+            toolCalls: [],
+            content: 'Hello',
+          },
+        ],
         tokens: usage.totalTokens,
       })
 
@@ -694,15 +681,28 @@ describe('POST /run', () => {
               text: 'Hello',
               usage,
               documentLogUuid,
-              input: responseMessages,
-              model: MODEL,
-              provider: Providers.OpenAI,
-              cost: expectedCost,
+              providerLog: {
+                providerId: provider.id,
+                model: MODEL,
+                messages: [
+                  {
+                    role: MessageRole.assistant,
+                    toolCalls: [],
+                    content: 'Hello',
+                  },
+                ],
+              },
             },
             provider: provider,
           }),
         }),
       )
+
+      const expectedCost = estimateCost({
+        provider: provider.provider,
+        model: MODEL,
+        usage,
+      })
 
       const res = await app.request(route, {
         method: 'POST',
@@ -713,16 +713,19 @@ describe('POST /run', () => {
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({
         uuid: documentLogUuid,
-        conversation: responseMessages,
+        conversation: [
+          {
+            role: MessageRole.assistant,
+            toolCalls: [],
+            content: 'Hello',
+          },
+        ],
         response: {
           streamType: 'object',
           usage,
           text: 'Hello',
-          toolCalls: [],
           object: { something: { else: 'here' } },
-          input: responseMessages,
-          model: MODEL,
-          provider: Providers.OpenAI,
+          toolCalls: [],
           cost: expectedCost,
         },
         source: {
@@ -793,10 +796,17 @@ describe('POST /run', () => {
               object: { something: { else: 'here' } },
               text: 'Hello',
               usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
-              input: responseMessages,
-              model: MODEL,
-              provider: Providers.OpenAI,
-              cost: 0,
+              providerLog: {
+                providerId: provider.id,
+                model: MODEL,
+                messages: [
+                  {
+                    role: MessageRole.assistant,
+                    toolCalls: [],
+                    content: 'Hello',
+                  },
+                ],
+              },
             },
             provider: provider,
           }),
@@ -821,7 +831,7 @@ describe('POST /run', () => {
       )
     })
 
-    it('returns error if runForegroundDocument has no input', async () => {
+    it('returns error if runForegroundDocument has not providerLog', async () => {
       mocks.resolveAbTestRouting.mockResolvedValue({
         abTest: null,
         effectiveCommit: commit,
@@ -840,9 +850,11 @@ describe('POST /run', () => {
               text: 'Hello',
               usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
               documentLogUuid: 'fake-document-log-uuid',
-              model: MODEL,
-              provider: Providers.OpenAI,
-              cost: 0,
+              providerLog: {
+                providerId: provider.id,
+                model: MODEL,
+                messages: undefined,
+              },
             },
             provider: provider,
           }),
@@ -1192,7 +1204,9 @@ describe('POST /run', () => {
         providerId: provider.id,
         providerType: provider.provider,
         model: MODEL,
-        messages: responseMessages,
+        messages: [
+          { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+        ],
         tokens: usage.totalTokens,
       })
 
@@ -1202,22 +1216,18 @@ describe('POST /run', () => {
         },
       })
 
-      const expectedCost = estimateCost({
-        provider: provider.provider,
-        model: MODEL,
-        usage,
-      })
-
       const lastResponse = Promise.resolve({
         streamType: 'text',
         text: 'Hello',
         usage,
         documentLogUuid,
-        toolCalls: [],
-        input: responseMessages,
-        model: MODEL,
-        provider: Providers.OpenAI,
-        cost: expectedCost,
+        providerLog: {
+          providerId: provider.id,
+          model: MODEL,
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
+        },
       })
 
       mocks.resolveAbTestRouting.mockResolvedValue({
@@ -1238,6 +1248,12 @@ describe('POST /run', () => {
         }),
       )
 
+      const expectedCost = estimateCost({
+        provider: provider.provider,
+        model: MODEL,
+        usage,
+      })
+
       const res = await app.request(route, {
         method: 'POST',
         body: JSON.stringify({
@@ -1251,15 +1267,13 @@ describe('POST /run', () => {
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({
         uuid: documentLogUuid,
-        conversation: responseMessages,
+        conversation: [
+          { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+        ],
         response: {
           streamType: 'text',
           usage,
           text: 'Hello',
-          toolCalls: [],
-          input: responseMessages,
-          model: MODEL,
-          provider: Providers.OpenAI,
           cost: expectedCost,
         },
         source: {
@@ -1348,7 +1362,9 @@ describe('POST /run', () => {
         providerId: provider.id,
         providerType: provider.provider,
         model: MODEL,
-        messages: responseMessages,
+        messages: [
+          { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+        ],
         tokens: usage.totalTokens,
       })
 
@@ -1358,22 +1374,18 @@ describe('POST /run', () => {
         },
       })
 
-      const expectedCost = estimateCost({
-        provider: provider.provider,
-        model: MODEL,
-        usage,
-      })
-
       const lastResponse = Promise.resolve({
         streamType: 'text',
         text: 'Hello',
         usage,
         documentLogUuid,
-        toolCalls: [],
-        input: responseMessages,
-        model: MODEL,
-        provider: Providers.OpenAI,
-        cost: expectedCost,
+        providerLog: {
+          providerId: provider.id,
+          model: MODEL,
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
+        },
       })
       mocks.runForegroundDocument.mockReturnValue(
         Promise.resolve({
@@ -1385,6 +1397,12 @@ describe('POST /run', () => {
           }),
         }),
       )
+
+      const expectedCost = estimateCost({
+        provider: provider.provider,
+        model: MODEL,
+        usage,
+      })
 
       const res = await app.request(route, {
         method: 'POST',
@@ -1399,15 +1417,13 @@ describe('POST /run', () => {
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({
         uuid: documentLogUuid,
-        conversation: responseMessages,
+        conversation: [
+          { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+        ],
         response: {
           streamType: 'text',
           usage,
           text: 'Hello',
-          toolCalls: [],
-          input: responseMessages,
-          model: MODEL,
-          provider: Providers.OpenAI,
           cost: expectedCost,
         },
         source: {
@@ -1523,7 +1539,9 @@ describe('POST /run', () => {
           providerId: provider.id,
           providerType: provider.provider,
           model: MODEL,
-          messages: responseMessages,
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
           tokens: usage.totalTokens,
         })
 
@@ -1543,11 +1561,17 @@ describe('POST /run', () => {
                 text: 'Hello',
                 usage,
                 documentLogUuid,
-                toolCalls: [],
-                input: responseMessages,
-                model: MODEL,
-                provider: Providers.OpenAI,
-                cost: 0,
+                providerLog: {
+                  providerId: provider.id,
+                  model: MODEL,
+                  messages: [
+                    {
+                      role: MessageRole.assistant,
+                      content: 'Hello',
+                      toolCalls: [],
+                    },
+                  ],
+                },
               },
               provider: provider,
             }),
@@ -1624,7 +1648,9 @@ describe('POST /run', () => {
           providerId: provider.id,
           providerType: provider.provider,
           model: MODEL,
-          messages: responseMessages,
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
           tokens: usage.totalTokens,
         })
 
@@ -1644,11 +1670,17 @@ describe('POST /run', () => {
                 text: 'Hello',
                 usage,
                 documentLogUuid,
-                toolCalls: [],
-                input: responseMessages,
-                model: MODEL,
-                provider: Providers.OpenAI,
-                cost: 0,
+                providerLog: {
+                  providerId: provider.id,
+                  model: MODEL,
+                  messages: [
+                    {
+                      role: MessageRole.assistant,
+                      content: 'Hello',
+                      toolCalls: [],
+                    },
+                  ],
+                },
               },
               provider: provider,
             }),
@@ -1719,7 +1751,9 @@ describe('POST /run', () => {
           providerId: provider.id,
           providerType: provider.provider,
           model: MODEL,
-          messages: responseMessages,
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
           tokens: usage.totalTokens,
         })
 
@@ -1739,11 +1773,17 @@ describe('POST /run', () => {
                 text: 'Hello',
                 usage,
                 documentLogUuid,
-                toolCalls: [],
-                input: responseMessages,
-                model: MODEL,
-                provider: Providers.OpenAI,
-                cost: 0,
+                providerLog: {
+                  providerId: provider.id,
+                  model: MODEL,
+                  messages: [
+                    {
+                      role: MessageRole.assistant,
+                      content: 'Hello',
+                      toolCalls: [],
+                    },
+                  ],
+                },
               },
               provider: provider,
             }),
@@ -1814,7 +1854,9 @@ describe('POST /run', () => {
           providerId: provider.id,
           providerType: provider.provider,
           model: MODEL,
-          messages: responseMessages,
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
           tokens: usage.totalTokens,
         })
 
@@ -1834,11 +1876,17 @@ describe('POST /run', () => {
                 text: 'Hello',
                 usage,
                 documentLogUuid,
-                toolCalls: [],
-                input: responseMessages,
-                model: MODEL,
-                provider: Providers.OpenAI,
-                cost: 0,
+                providerLog: {
+                  providerId: provider.id,
+                  model: MODEL,
+                  messages: [
+                    {
+                      role: MessageRole.assistant,
+                      content: 'Hello',
+                      toolCalls: [],
+                    },
+                  ],
+                },
               },
               provider: provider,
             }),

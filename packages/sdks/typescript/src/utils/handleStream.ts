@@ -42,7 +42,7 @@ export async function handleStream<S extends AssertedStreamType = 'text'>({
     signal.addEventListener(
       'abort',
       () => {
-        reader.cancel('Stream aborted by user').catch(() => {})
+        reader.cancel('Stream aborted by user').catch(() => { })
       },
       { once: true },
     )

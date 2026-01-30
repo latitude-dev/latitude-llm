@@ -68,7 +68,7 @@ export function buildAllMessagesFromResponse<T extends StreamType>({
 }: {
   response: ChainStepResponse<T>
 }) {
-  const previousMessages = response.input
+  const previousMessages = response.providerLog?.messages ?? []
   const messages = buildMessagesFromResponse({ response })
 
   return [...previousMessages, ...messages]

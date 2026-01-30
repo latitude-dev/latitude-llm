@@ -7,9 +7,10 @@ import { Config, Conversation } from 'promptl-ai'
 import { type Workspace } from '../../schema/models/types/Workspace'
 
 function cleanResponse<T extends StreamType>(response: ChainStepResponse<T>) {
-  return omit<ChainStepResponse<T>, ['documentLogUuid']>(
+  return omit<ChainStepResponse<T>, ['documentLogUuid', 'providerLog']>(
     response,
     'documentLogUuid',
+    'providerLog',
   )
 }
 
