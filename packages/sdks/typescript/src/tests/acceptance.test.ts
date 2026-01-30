@@ -2,20 +2,46 @@ import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { Latitude } from '../../dist/index.js'
 
+const shouldRunAcceptance = process.env.RUN_ACCEPTANCE_TESTS === '1'
+const describeAcceptance = shouldRunAcceptance ? describe : describe.skip
+const apiKey = process.env.TEST_LATITUDE_API_KEY ?? ''
+if (shouldRunAcceptance && !apiKey) {
+  throw new Error(
+    'TEST_LATITUDE_API_KEY is required when RUN_ACCEPTANCE_TESTS=1',
+  )
+}
+
+const gatewayUrl =
+  process.env.TEST_GATEWAY_URL ??
+  process.env.GATEWAY_URL ??
+  'http://localhost:8787'
+
+const gatewayConfig = (() => {
+  const url = new URL(gatewayUrl)
+  const port =
+    url.port.length > 0
+      ? Number(url.port)
+      : url.protocol === 'https:'
+        ? 443
+        : 80
+  return { host: url.hostname, port, ssl: url.protocol === 'https:' }
+})()
+const gatewayUnavailableMessage = `Latitude service is not running at ${gatewayUrl}. Please start the service before running E2E tests.`
+
 // HOW TO RUN THESE TESTS:
 //
-// 1. Start the latitude services locally
-// 2. Remove the `.skip` from the describe block
+// 1. Start the latitude services locally (or set TEST_GATEWAY_URL)
+// 2. Set RUN_ACCEPTANCE_TESTS=1
 // 3. Set the TEST_LATITUDE_API_KEY environment variable with a valid API key
 // 4. Ensure a provider with valid api key that matches the promptContent :point_down: is available
 // 5. Build the sdk package with `pnpm build`
-// 6. Run the test `TEST_LATITUDE_API_KEY={your_key} pnpm test ./tests/acceptance.test.ts`
+// 6. Run the test `RUN_ACCEPTANCE_TESTS=1 TEST_LATITUDE_API_KEY={your_key} pnpm test ./src/tests/acceptance.test.ts`
 
-describe.skip(
+describeAcceptance(
   'SDK Integration Tests (E2E)',
   () => {
-    const apiKey = process.env.TEST_LATITUDE_API_KEY!
     const promptPath = 'weather-assistant'
+    const simplePromptPath = 'echo-assistant'
     const promptContent = `
 ---
 provider: openai
@@ -47,6 +73,14 @@ Location: {{ location }}
   You must use the search tool for your research! Make sure you call it once before answering!
 </step>
 `.trim()
+    const simplePromptContent = `
+---
+provider: openai
+model: gpt-4.1-mini
+---
+
+You are a helpful assistant. Reply with a short acknowledgement.
+`.trim()
 
     let sdk: Latitude
 
@@ -54,11 +88,7 @@ Location: {{ location }}
       // Setup SDK for creating project and prompt
       const setupSdk = new Latitude(apiKey, {
         __internal: {
-          gateway: {
-            host: 'localhost',
-            port: 8787,
-            ssl: false,
-          },
+          gateway: gatewayConfig,
         },
       })
 
@@ -74,22 +104,22 @@ Location: {{ location }}
           prompt: promptContent,
         })
 
+        await setupSdk.prompts.getOrCreate(simplePromptPath, {
+          projectId: project.id,
+          versionUuid: version.uuid,
+          prompt: simplePromptContent,
+        })
+
         sdk = new Latitude(apiKey, {
           projectId: project.id,
           versionUuid: version.uuid,
           __internal: {
-            gateway: {
-              host: 'localhost',
-              port: 8787,
-              ssl: false,
-            },
+            gateway: gatewayConfig,
           },
         })
       } catch (error) {
         if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
-          throw new Error(
-            'Latitude service is not running on localhost:8787. Please start the service before running E2E tests.',
-          )
+          throw new Error(gatewayUnavailableMessage)
         }
 
         throw error
@@ -130,9 +160,7 @@ Location: {{ location }}
         expect(getWeatherTool).toBeDefined()
       } catch (error) {
         if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
-          throw new Error(
-            'Latitude service is not running on localhost:8787. Please start the service before running E2E tests.',
-          )
+          throw new Error(gatewayUnavailableMessage)
         }
 
         // If authentication fails with test API key, skip test with warning
@@ -188,9 +216,7 @@ Location: {{ location }}
         }
       } catch (error) {
         if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
-          throw new Error(
-            'Latitude service is not running on localhost:8787. Please start the service before running E2E tests.',
-          )
+          throw new Error(gatewayUnavailableMessage)
         }
 
         // If authentication fails with test API key, skip test with warning
@@ -251,9 +277,7 @@ Location: {{ location }}
         )
       } catch (error) {
         if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
-          throw new Error(
-            'Latitude service is not running on localhost:8787. Please start the service before running E2E tests.',
-          )
+          throw new Error(gatewayUnavailableMessage)
         }
 
         // If authentication fails with test API key, skip test with warning
@@ -285,14 +309,102 @@ Location: {{ location }}
         // This is still a valid test result
       } catch (error) {
         if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
-          throw new Error(
-            'Latitude service is not running on localhost:8787. Please start the service before running E2E tests.',
-          )
+          throw new Error(gatewayUnavailableMessage)
         }
 
         // Authentication errors are expected with invalid API key
         // This confirms the service is properly validating authentication
         expect(error).toBeDefined()
+      }
+    })
+
+    it('should run prompt without streaming', async () => {
+      try {
+        const result = await sdk.prompts.run(simplePromptPath, {
+          stream: false,
+          parameters: {},
+        })
+
+        expect(result).toBeDefined()
+        expect(result?.uuid).toBeDefined()
+        expect(typeof result?.uuid).toBe('string')
+        expect(result?.response).toBeDefined()
+        expect(result?.response?.text).toBeDefined()
+        expect(typeof result?.response?.text).toBe('string')
+        expect(result?.response?.text.length).toBeGreaterThan(0)
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+          throw new Error(gatewayUnavailableMessage)
+        }
+
+        if (
+          error instanceof Error &&
+          error.message.includes('Failed query') &&
+          apiKey === 'test-api-key'
+        ) {
+          console.warn(
+            '⚠️  Using test API key. Set LATITUDE_API_KEY environment variable with a valid API key for full E2E testing.',
+          )
+          return
+        }
+
+        throw error
+      }
+    })
+
+    it('should chat without streaming after a run', async () => {
+      try {
+        const runResult = await sdk.prompts.run(simplePromptPath, {
+          stream: false,
+          parameters: {},
+        })
+
+        expect(runResult).toBeDefined()
+        expect(runResult?.uuid).toBeDefined()
+
+        const chatResult = await sdk.prompts.chat(
+          runResult!.uuid,
+          [
+            {
+              role: MessageRole.user,
+              content: [
+                {
+                  type: 'text',
+                  text: 'Can you acknowledge this?',
+                },
+              ],
+            },
+          ],
+          {
+            stream: false,
+          },
+        )
+
+        expect(chatResult).toBeDefined()
+        expect(chatResult?.uuid).toBeDefined()
+        expect(typeof chatResult?.uuid).toBe('string')
+        expect(chatResult?.response).toBeDefined()
+        expect(chatResult?.response?.text).toBeDefined()
+        expect(typeof chatResult?.response?.text).toBe('string')
+        expect(chatResult?.response?.text.length).toBeGreaterThan(0)
+        expect(chatResult?.uuid).toBe(runResult?.uuid)
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+          throw new Error(gatewayUnavailableMessage)
+        }
+
+        if (
+          error instanceof Error &&
+          error.message.includes('Failed query') &&
+          apiKey === 'test-api-key'
+        ) {
+          console.warn(
+            '⚠️  Using test API key. Set LATITUDE_API_KEY environment variable with a valid API key for full E2E testing.',
+          )
+          return
+        }
+
+        throw error
       }
     })
 

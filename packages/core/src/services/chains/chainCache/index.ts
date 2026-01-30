@@ -6,7 +6,7 @@ import {
 
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { cache } from '../../../cache'
-import { ChainStepResponse, StreamType } from '../../../constants'
+import { ChainStepResponse, StreamType } from '@latitude-data/constants'
 
 type CachedChain = {
   chain: PromptlChain<Message>

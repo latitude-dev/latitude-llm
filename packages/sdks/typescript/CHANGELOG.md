@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.1] - 2026-01-30
+
+### Fixed
+
+- Re-exported `LogSources` from shared constants to keep SDK log source values aligned with the API.
+
 ## [5.4.0] - 2026-01-28
 
 ### Changed

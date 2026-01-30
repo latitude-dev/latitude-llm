@@ -131,6 +131,7 @@
     "test": "pnpm run db:migrate:test && vitest run --pool=forks",
     "test:watch": "vitest",
     "scripts:setup": "tsx scripts/setup.ts",
+    "scripts:seed:acceptance": "tsx scripts/seedAcceptance.ts",
     "backgroundRun:stressTest": "tsx scripts/background-run/stress-test.ts",
     "maintenance:testDailyAlignment": "tsx scripts/maintenance/test-daily-alignment-job.ts",
     "update:models-dev": "tsx scripts/updateModelsDevData.ts"

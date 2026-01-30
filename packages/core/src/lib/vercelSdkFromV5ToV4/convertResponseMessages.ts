@@ -17,8 +17,8 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { AIReturn } from '../../services/ai'
-import { StreamType } from '../../constants'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
+import { StreamType } from '@latitude-data/constants'
 
 type NormalizedToolResult = string | Record<string, unknown> | MessageContent[]
 
