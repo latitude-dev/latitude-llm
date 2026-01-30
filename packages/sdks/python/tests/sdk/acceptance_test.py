@@ -21,15 +21,12 @@ from latitude_sdk import (
 )
 
 RUN_ACCEPTANCE_TESTS = os.getenv("RUN_ACCEPTANCE_TESTS") == "1"
-GATEWAY_URL = (
-    os.getenv("TEST_GATEWAY_URL")
-    or os.getenv("GATEWAY_URL")
-    or "http://localhost:8787"
-)
+GATEWAY_URL = os.getenv("TEST_GATEWAY_URL") or os.getenv("GATEWAY_URL") or "http://localhost:8787"
 parsed_gateway_url = urlparse(GATEWAY_URL)
 GATEWAY_HOST = parsed_gateway_url.hostname or "localhost"
 GATEWAY_SSL = parsed_gateway_url.scheme == "https"
 GATEWAY_PORT = parsed_gateway_url.port or (443 if GATEWAY_SSL else 80)
+
 
 @pytest.mark.skipif(
     not RUN_ACCEPTANCE_TESTS,
@@ -41,9 +38,7 @@ class TestEndToEnd(IsolatedAsyncioTestCase):
 
         self.api_key = os.getenv("TEST_LATITUDE_API_KEY")
         if RUN_ACCEPTANCE_TESTS and not self.api_key:
-            raise RuntimeError(
-                "TEST_LATITUDE_API_KEY is required when RUN_ACCEPTANCE_TESTS=1"
-            )
+            raise RuntimeError("TEST_LATITUDE_API_KEY is required when RUN_ACCEPTANCE_TESTS=1")
         self.prompt_path = "weather-assistant"
         self.simple_prompt_path = "echo-assistant"
         self.prompt_content = """
