@@ -67,6 +67,9 @@
     "./queues/types": {
       "import": "./src/jobs/queues/types.ts"
     },
+    "./flows": {
+      "import": "./src/jobs/flows/index.ts"
+    },
     "./redis": {
       "import": "./src/redis/index.ts"
     },
