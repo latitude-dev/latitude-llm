@@ -91,17 +91,25 @@ class StreamTypes(StrEnum):
     Object = "object"
 
 
-class ChainTextResponse(Model):
-    type: Literal[StreamTypes.Text] = Field(default=StreamTypes.Text, alias=str("streamType"))
+class BaseChainResponse(Model):
     text: str
-    tool_calls: List[ToolCall] = Field(alias=str("toolCalls"))
     usage: ModelUsage
+    document_log_uuid: Optional[str] = Field(default=None, alias=str("documentLogUuid"))
+    model: str
+    provider: Providers
+    cost: float
+    input: List[Message]
+    output: Optional[List[Any]] = None
 
 
-class ChainObjectResponse(Model):
+class ChainTextResponse(BaseChainResponse, Model):
+    type: Literal[StreamTypes.Text] = Field(default=StreamTypes.Text, alias=str("streamType"))
+    tool_calls: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
+
+
+class ChainObjectResponse(BaseChainResponse, Model):
     type: Literal[StreamTypes.Object] = Field(default=StreamTypes.Object, alias=str("streamType"))
     object: Any
-    usage: ModelUsage
 
 
 ChainResponse = Union[ChainTextResponse, ChainObjectResponse]
@@ -172,7 +180,6 @@ class ChainEventProviderStarted(GenericChainEvent, Model):
 
 class ChainEventProviderCompleted(GenericChainEvent, Model):
     type: Literal[ChainEvents.ProviderCompleted] = ChainEvents.ProviderCompleted
-    provider_log_uuid: str = Field(alias=str("providerLogUuid"))
     token_usage: ModelUsage = Field(alias=str("tokenUsage"))
     finish_reason: FinishReason = Field(alias=str("finishReason"))
     response: ChainResponse
