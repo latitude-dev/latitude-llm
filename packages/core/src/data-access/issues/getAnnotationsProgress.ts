@@ -163,7 +163,5 @@ export async function getAnnotationsProgress(
     fromDate,
   })
 
-  console.log('Annotations progress:', { totalRuns, currentAnnotations })
-
   return Result.ok({ totalRuns, currentAnnotations })
 }

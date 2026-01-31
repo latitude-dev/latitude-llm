@@ -5,7 +5,7 @@ import {
 } from '$/services/auth/constants'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Set current url in headers so downstream components can
   // use it (yes, this is the only way to do it, Next is...)
   const currentUrl = request.nextUrl.pathname + request.nextUrl.search
