@@ -37,7 +37,7 @@ export function runPresenter({
   const cost = estimateCost({
     usage: response.usage,
     provider: provider.provider,
-    model: response.providerLog?.model!,
+    model: response.providerLog?.model ?? '',
   })
 
   const type = response.streamType

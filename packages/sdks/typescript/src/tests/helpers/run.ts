@@ -60,7 +60,7 @@ export function mockStreamResponse({
         stream = new ReadableStream({
           start(controller) {
             chunks.forEach((chunk, index) => {
-              // @ts-expect-error
+              // @ts-expect-error - TextEncoder is available in the environment
               const { event, data } = parseSSE(chunk)
               controller.enqueue(
                 encoder.encode(`event: ${event}\ndata: ${data}\n\n`),

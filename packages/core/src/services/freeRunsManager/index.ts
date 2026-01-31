@@ -15,7 +15,7 @@ export async function getFreeRuns(workspaceId: number) {
 
   try {
     return await c.get(key)
-  } catch (e) {
+  } catch (_e) {
     // do nothing
   }
 }
@@ -26,7 +26,7 @@ export async function incrFreeRuns(workspaceId: number) {
 
   try {
     return await c.incr(key)
-  } catch (e) {
+  } catch (_e) {
     // do nothing
   }
 }

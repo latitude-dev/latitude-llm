@@ -47,7 +47,7 @@ describe('GET documents', () => {
           content: 'Hello {{name}}',
           extraConfig: {
             parameters: {
-              // @ts-ignore
+              // @ts-expect-error - testing purposes
               myFile: { type: 'file' },
             },
           },

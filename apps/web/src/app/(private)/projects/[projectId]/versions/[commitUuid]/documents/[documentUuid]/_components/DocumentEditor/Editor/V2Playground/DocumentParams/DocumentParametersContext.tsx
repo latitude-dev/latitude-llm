@@ -215,7 +215,7 @@ export function useFormattedParameters() {
       Object.entries(sourceValues).map(([key, value]) => {
         try {
           return [key, JSON.parse(value)]
-        } catch (e) {
+        } catch (_e) {
           return [key, value]
         }
       }),

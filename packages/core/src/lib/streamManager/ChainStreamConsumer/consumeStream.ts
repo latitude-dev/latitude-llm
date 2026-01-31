@@ -100,7 +100,7 @@ export async function consumeStream({
     if (reader) {
       try {
         reader.releaseLock()
-      } catch (e) {
+      } catch (_e) {
         // Ignore errors during cleanup - lock may already be released
       }
     }
@@ -168,7 +168,7 @@ function getErrorMessage({
           return item.error.message
         })
         .join(', ')}`
-    } catch (e) {
+    } catch (_e) {
       return `${intro}: ${error.message}`
     }
   }
@@ -179,7 +179,7 @@ function getErrorMessage({
 
   try {
     return `${intro}: ${JSON.stringify(error)}`
-  } catch (e) {
+  } catch (_e) {
     return `${intro}: Unknown error`
   }
 }

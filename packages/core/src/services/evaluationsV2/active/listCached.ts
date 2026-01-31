@@ -60,7 +60,7 @@ export async function listCachedEvaluations({
             error,
           })
         }
-      } catch (parseError) {
+      } catch (_parseError) {
         continue
       }
     }

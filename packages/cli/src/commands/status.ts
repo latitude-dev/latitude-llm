@@ -59,7 +59,7 @@ export class StatusCommand extends BaseCommand {
 
         // Display diff summary
         this.showChangesSummary(diffResults)
-      } catch (error) {
+      } catch (_error) {
         console.log(
           `${chalk.yellow('Prompt Files:')}     ${chalk.red('Unable to determine')}`,
         )

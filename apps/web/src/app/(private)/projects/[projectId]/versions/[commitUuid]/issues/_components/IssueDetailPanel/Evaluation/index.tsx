@@ -51,9 +51,9 @@ export function IssueEvaluation({ issue }: { issue: Issue }) {
 
   const hasEnoughAnnotations = useMemo(() => {
     return (
-      issueEvaluationStats?.negativeAnnotationsOfThisIssue! >=
+      (issueEvaluationStats?.negativeAnnotationsOfThisIssue ?? 0) >=
         MINIMUM_NEGATIVE_ANNOTATIONS_FOR_THIS_ISSUE &&
-      issueEvaluationStats?.passedEvaluationResults! >=
+      (issueEvaluationStats?.passedEvaluationResults ?? 0) >=
         MINIMUM_POSITIVE_OR_OTHER_NEGATIVE_ANNOTATIONS_FOR_OTHER_ISSUES
     )
   }, [

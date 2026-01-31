@@ -8,9 +8,9 @@ import {
   mockCreatePromptError,
 } from './helpers/prompts'
 
-let FAKE_API_KEY = 'fake-api-key'
-let projectId = 123
-let promptPath = 'test-prompt'
+const FAKE_API_KEY = 'fake-api-key'
+const projectId = 123
+const promptPath = 'test-prompt'
 let sdk: Latitude
 
 const server = setupServer()

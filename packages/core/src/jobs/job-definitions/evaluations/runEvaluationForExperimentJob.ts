@@ -31,7 +31,7 @@ const MAX_ATTEMPTS = 120
  */
 export async function runEvaluationForExperimentJob(
   job: Job<RunEvaluationForExperimentJobData>,
-  token: string,
+  token?: string,
 ) {
   const { conversationUuid, workspaceId, experimentUuid, ...rest } = job.data
 

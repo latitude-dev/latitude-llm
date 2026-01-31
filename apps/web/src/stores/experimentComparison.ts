@@ -259,7 +259,6 @@ export function useExperimentComparison(
     event: 'evaluationResultV2Created',
     onMessage: (message: EventArgs<'evaluationResultV2Created'>) => {
       if (!message) return
-      message.result.experimentId
       const { result } = message
 
       if (

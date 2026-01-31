@@ -37,7 +37,6 @@ export function CircularProgress({
   // prop wherever it is set
   useEffect(() => {
     setValue(valueProp)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valueProp])
 
   const radius = (size - strokeWidth) / 2

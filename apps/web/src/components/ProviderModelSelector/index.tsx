@@ -286,7 +286,7 @@ export function ProviderModelSelector({
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>
+      <Popover.Trigger asChild suppressHydrationWarning>
         <Button
           variant='outline'
           fancy={fancyButton}

@@ -1,4 +1,4 @@
-import { memo, LegacyRef, ReactNode, useMemo } from 'react'
+import { memo, Ref, ReactNode, useMemo } from 'react'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Markdown } from '@latitude-data/web-ui/atoms/Markdown'
@@ -56,7 +56,7 @@ export const MarkdownResponse = memo(
           <LatteLink href={href ?? '#'}>{children}</LatteLink>
         ),
 
-        // @ts-ignore: react-markdown passes an `inline` prop even though it’s not on HTMLElement attributes
+        // @ts-expect-error - react-markdown passes an `inline` prop even though it’s not on HTMLElement attributes
         code: ({ inline, className, children, ...props }) => {
           const content = String(children)
           if (inline || isCodeBlockInline(content, className)) {
@@ -64,7 +64,7 @@ export const MarkdownResponse = memo(
             return (
               <div
                 {...restProps}
-                ref={ref as LegacyRef<HTMLDivElement>}
+                ref={ref as Ref<HTMLDivElement>}
                 className='bg-latte-background rounded-sm px-1 py-0.5 inline-flex flex-wrap'
               >
                 <Text.H6M color='latteInputForeground'>{content}</Text.H6M>

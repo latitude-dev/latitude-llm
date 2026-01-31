@@ -12,9 +12,9 @@ import {
   mockVersionsError,
 } from './helpers/versions'
 
-let FAKE_API_KEY = 'fake-api-key'
-let projectId = 123
-let versionUuid = 'test-version-uuid'
+const FAKE_API_KEY = 'fake-api-key'
+const projectId = 123
+const versionUuid = 'test-version-uuid'
 let sdk: Latitude
 
 const server = setupServer()

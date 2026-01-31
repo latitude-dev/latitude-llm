@@ -50,7 +50,7 @@ maxTokens: 100
 `,
 }
 
-let FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
+const FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
 let sdk: Latitude
 
 describe('render', () => {

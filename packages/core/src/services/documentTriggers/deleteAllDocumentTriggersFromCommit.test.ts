@@ -33,7 +33,7 @@ describe('deleting documents...', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     vi.resetAllMocks()
-    await vi.resetModules()
+    vi.resetModules()
     const deleteModule = await import('./deleteDocumentTriggersFromDocuments')
     deleteDocumentTriggersFromDocuments =
       deleteModule.deleteDocumentTriggersFromDocuments
@@ -249,7 +249,7 @@ describe('deleting documents...', () => {
         })
         .then((r) => r.unwrap())
       // None should be deleted since the operation should have aborted on error
-      expect(triggers.find((t) => t.uuid === created1.uuid)).toBeTruthy
+      expect(triggers.find((t) => t.uuid === created1.uuid)).toBeTruthy()
     })
   })
 })

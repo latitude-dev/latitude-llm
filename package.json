@@ -4,7 +4,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
-    "lint": "turbo lint",
+    "lint": "./bin/check-eslint-coverage.sh && turbo lint",
     "buildExamples": "tsx ./examples/scripts/docs/buildDocs.ts",
     "watch:buildExamples": "chokidar 'examples/src/**/*' -c 'pnpm buildExamples'",
     "mintlify_docs": "cd docs && mintlify dev",
@@ -24,7 +24,7 @@
     "@types/node": "^22.13.10",
     "chokidar-cli": "^3.0.0",
     "concurrently": "^9.1.2",
-    "eslint": "^8.57.1",
+    "eslint": "^9.18.0",
     "glob": "^11.0.1",
     "mintlify": "4.1.98",
     "prettier": "^3.5.3",
@@ -45,7 +45,7 @@
       "allowedVersions": {
         "react": ">=19.x",
         "react-dom": ">=19.x",
-        "eslint": ">=8.x"
+        "eslint": ">=9.x"
       }
     }
   },

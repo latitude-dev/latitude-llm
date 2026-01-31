@@ -54,7 +54,7 @@ export function LatteUsageInfo({
   return (
     <div className='w-full flex items-center justify-center gap-2'>
       <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
-        <Popover.Trigger asChild>
+        <Popover.Trigger asChild suppressHydrationWarning>
           <span
             className='flex items-center justify-center gap-2 select-none cursor-pointer truncate hover:opacity-60 transition-opacity'
             onClick={() => {
