@@ -53,6 +53,7 @@ const EXTERNALS = [
   'langchain',
   'llamaindex',
   'openai',
+  '@openai/agents',
   'together-ai',
   'promptl-ai',
   'zod',
