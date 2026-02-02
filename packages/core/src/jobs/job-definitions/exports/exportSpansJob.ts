@@ -37,7 +37,10 @@ export type ExportSpansJobData = {
     commitUuids?: string[]
     experimentUuids?: string[]
     testDeploymentIds?: number[]
-    createdAt?: { from?: Date; to?: Date }
+    createdAt?: {
+      from?: Date | string | number | null
+      to?: Date | string | number | null
+    }
   }
 }
 
@@ -74,6 +77,13 @@ type FixedColumnsByName = {
   cost: Column
 }
 
+type NormalizedExportSpansFilters = Omit<
+  ExportSpansJobData['filters'],
+  'createdAt'
+> & {
+  createdAt?: { from?: Date; to?: Date }
+}
+
 async function* iterateSpans({
   repo,
   documentUuid,
@@ -84,7 +94,7 @@ async function* iterateSpans({
 }: {
   repo: SpansRepository
   documentUuid: string
-  filters: ExportSpansJobData['filters']
+  filters: NormalizedExportSpansFilters
   excludedIds: Set<string>
   selectionMode: 'ALL' | 'ALL_EXCEPT' | 'PARTIAL'
   selectedSpanIds?: Set<string>
@@ -130,6 +140,23 @@ async function* iterateSpans({
     if (!next) break
     cursor = next
   }
+}
+
+function parseDateValue(value?: Date | string | number | null) {
+  if (value === null || value === undefined) return undefined
+  const parsed = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(parsed.getTime())) return undefined
+  return parsed
+}
+
+function normalizeCreatedAt(
+  createdAt?: ExportSpansJobData['filters']['createdAt'],
+): NormalizedExportSpansFilters['createdAt'] | undefined {
+  if (!createdAt) return undefined
+  const from = parseDateValue(createdAt.from)
+  const to = parseDateValue(createdAt.to)
+  if (!from && !to) return undefined
+  return { from, to }
 }
 
 async function buildRowsForBatch({
@@ -325,6 +352,12 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
       buildExportColumns(nanoidHashAlgorithm)
 
     const fileKey = exportRecord.fileKey
+    const normalizedFilters: NormalizedExportSpansFilters = {
+      commitUuids: filters.commitUuids,
+      experimentUuids: filters.experimentUuids,
+      testDeploymentIds: filters.testDeploymentIds,
+      createdAt: normalizeCreatedAt(filters.createdAt),
+    }
 
     const allCsvRows: string[][] = []
     let batch: Span[] = []
@@ -332,7 +365,7 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
     for await (const span of iterateSpans({
       repo,
       documentUuid,
-      filters,
+      filters: normalizedFilters,
       excludedIds,
       selectionMode,
       selectedSpanIds,
