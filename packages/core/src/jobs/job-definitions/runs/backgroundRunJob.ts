@@ -179,7 +179,7 @@ export const backgroundRunJob = async (
         commitUuid,
         runUuid,
         initialMessages: await result.conversation.messages,
-      })
+      }).then((r) => r.unwrap())
     }
 
     if (experiment) {

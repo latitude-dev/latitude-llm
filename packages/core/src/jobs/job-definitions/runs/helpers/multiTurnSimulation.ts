@@ -13,6 +13,7 @@ import { generateSimulatedUserAction } from '../../../../services/simulation/sim
 import { captureException } from '../../../../utils/datadogCapture'
 import { forwardStreamEvents } from './streamManagement'
 import { RunIdentifiers } from './types'
+import { PromisedResult } from '../../../../lib/Transaction'
 
 /**
  * Determines if multi-turn simulation should be run based on the simulation settings
@@ -71,7 +72,7 @@ async function executeSingleTurn({
   documentUuid,
   commitUuid,
   runUuid,
-}: ExecuteSingleTurnArgs): Promise<TurnResult> {
+}: ExecuteSingleTurnArgs): PromisedResult<TurnResult, Error> {
   const userActionResult = await generateSimulatedUserAction({
     messages,
     simulationInstructions: undefined,
@@ -82,13 +83,13 @@ async function executeSingleTurn({
 
   if (!Result.isOk(userActionResult)) {
     captureException(userActionResult.error)
-    return { shouldContinue: false, messages }
+    return userActionResult
   }
 
   const userAction = userActionResult.value
 
   if (userAction.action === 'end') {
-    return { shouldContinue: false, messages }
+    return Result.ok({ shouldContinue: false, messages })
   }
 
   const addMessagesResult = await addMessages({
@@ -108,7 +109,7 @@ async function executeSingleTurn({
 
   if (!Result.isOk(addMessagesResult)) {
     captureException(addMessagesResult.error)
-    return { shouldContinue: false, messages }
+    return addMessagesResult
   }
 
   const result = addMessagesResult.unwrap()
@@ -125,10 +126,10 @@ async function executeSingleTurn({
 
   const updatedMessages = await result.messages
 
-  return {
+  return Result.ok({
     shouldContinue: true,
     messages: updatedMessages,
-  }
+  })
 }
 
 type SimulateUserResponsesArgs = RunIdentifiers & {
@@ -166,11 +167,13 @@ export async function simulateUserResponses({
   documentUuid,
   commitUuid,
   runUuid,
-}: SimulateUserResponsesArgs): Promise<void> {
-  if (!shouldRunMultiTurnSimulation(simulationSettings)) return
+}: SimulateUserResponsesArgs): PromisedResult<undefined, Error> {
+  if (!shouldRunMultiTurnSimulation(simulationSettings)) {
+    return Result.ok(undefined)
+  }
 
   const maxTurns = calculateMaxTurns(simulationSettings.maxTurns)
-  if (maxTurns <= 1) return
+  if (maxTurns <= 1) return Result.ok(undefined)
 
   let messages: Message[] = initialMessages
   let currentTurn = 2
@@ -195,9 +198,14 @@ export async function simulateUserResponses({
       runUuid,
     })
 
-    if (!turnResult.shouldContinue) break
+    if (!Result.isOk(turnResult)) return turnResult
+    const { shouldContinue, messages: updatedMessages } = turnResult.unwrap()
 
-    messages = turnResult.messages
+    if (!shouldContinue) break
+
+    messages = updatedMessages
     currentTurn++
   }
+
+  return Result.ok(undefined)
 }
