@@ -5,6 +5,7 @@ import { Latitude } from '../../dist/index.js'
 const shouldRunAcceptance = process.env.RUN_ACCEPTANCE_TESTS === '1'
 const describeAcceptance = shouldRunAcceptance ? describe : describe.skip
 const apiKey = process.env.TEST_LATITUDE_API_KEY ?? ''
+const shouldDebugAcceptance = process.env.DEBUG_ACCEPTANCE_TESTS === '1'
 if (shouldRunAcceptance && !apiKey) {
   throw new Error(
     'TEST_LATITUDE_API_KEY is required when RUN_ACCEPTANCE_TESTS=1',
@@ -123,7 +124,7 @@ You are a helpful assistant. Reply with a short acknowledgement.
     }
   })
 
-  it.skip('should instantiate SDK targeting localhost:8787 with no SSL and run prompt with tool handler', async () => {
+  it('should instantiate SDK targeting localhost:8787 with no SSL and run prompt with tool handler', async () => {
     // Create the get_weather tool handler
     const getWeatherTool = vi
       .fn()
@@ -134,7 +135,22 @@ You are a helpful assistant. Reply with a short acknowledgement.
       const result = await sdk.prompts.run(promptPath, {
         parameters: { location: 'Barcelona' },
         stream: true,
-        onError: (err) => console.log('onError: ', err),
+        onEvent: shouldDebugAcceptance
+          ? (event) =>
+              console.log(
+                '[acceptance][event]',
+                event.event,
+                event.data?.type ?? 'unknown',
+              )
+          : undefined,
+        onFinished: shouldDebugAcceptance
+          ? (finalResponse) =>
+              console.log(
+                '[acceptance][finished]',
+                finalResponse?.uuid ?? 'unknown',
+              )
+          : undefined,
+        onError: (err) => console.log('[acceptance][error]', err),
         tools: {
           get_weather: getWeatherTool,
         },

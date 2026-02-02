@@ -29,6 +29,7 @@ jobs:
       GATEWAY_URL: http://127.0.0.1:8787
       TEST_LATITUDE_API_KEY: 709a3398-ed26-4e77-beef-90ed288cdd0a
       LATITUDE_API_KEY: 709a3398-ed26-4e77-beef-90ed288cdd0a
+      DEBUG_ACCEPTANCE_TESTS: '1'
       ACCEPTANCE_PROVIDER_API_KEY: ${{ secrets.ACCEPTANCE_PROVIDER_API_KEY }}
       DEFAULT_PROVIDER_API_KEY: ${{ secrets.ACCEPTANCE_PROVIDER_API_KEY }}
       NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: openai
@@ -130,6 +131,16 @@ jobs:
 
       - name: Run TypeScript SDK acceptance tests
         run: pnpm --filter @latitude-data/sdk test -- src/tests/acceptance.test.ts
+
+      - name: Dump gateway log after TypeScript test failure
+        if: failure()
+        run: |
+          echo "Gateway log after TypeScript tests failure:"
+          if [ -f gateway.log ]; then
+            cat gateway.log
+          else
+            echo "gateway.log not found"
+          fi
 
       - name: Install Python SDK dependencies
         run: |
