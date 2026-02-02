@@ -13,9 +13,8 @@ import {
   StreamTextOnErrorCallback,
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
-import { VercelConfig } from '@latitude-data/constants'
+import { StreamType, VercelConfig } from '@latitude-data/constants'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
-import { StreamType } from '../../constants'
 import { Result, TypedResult } from '../../lib/Result'
 import { TelemetryContext } from '../../telemetry'
 import { buildTools } from './buildTools'

@@ -18,6 +18,7 @@ import {
   ParameterType,
   Providers,
   RunSyncAPIResponse,
+  LogSources,
   StreamEventTypes,
 } from '@latitude-data/constants'
 import type {
@@ -30,6 +31,8 @@ import {
   ProviderAdapter,
   type Message as PromptlMessage,
 } from 'promptl-ai'
+
+export { LogSources } from '@latitude-data/constants'
 
 export type GetAllDocumentsParams = {
   projectId: number
@@ -238,12 +241,6 @@ export type StreamResponseCallbacks<S extends AssertedStreamType = 'text'> = {
   }) => void
   onFinished?: (data: GenerationResponse<S>) => void
   onError?: (error: LatitudeApiError) => void
-}
-
-export enum LogSources {
-  API = 'api',
-  Playground = 'playground',
-  Evaluation = 'evaluation',
 }
 
 export type RenderToolCallDetails = {

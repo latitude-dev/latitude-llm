@@ -1,6 +1,5 @@
 import {
   EvaluationV2,
-  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
   LatitudeTool,
   LatitudeToolInternalName,
   LogSources,
@@ -21,14 +20,13 @@ import {
   ConfigurePropResponse,
   PropOption,
 } from '@pipedream/sdk'
-import { FinishReason, Tool, ToolResultPart } from 'ai'
+import { Tool } from 'ai'
 import { z } from 'zod'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
 import { type ApiKey } from './schema/models/types/ApiKey'
 import { type Commit } from './schema/models/types/Commit'
 import { type DocumentVersion } from './schema/models/types/DocumentVersion'
-import { type ProviderLog } from './schema/models/types/ProviderLog'
 import { type Workspace } from './schema/models/types/Workspace'
 
 export {
@@ -77,36 +75,6 @@ export type Message = CompilerMessage
 export const HELP_CENTER = {
   commitVersions: `${LATITUDE_DOCS_URL}/not-found`,
 }
-
-export type StreamType = 'object' | 'text'
-type BaseResponse = {
-  text: string
-  usage: LanguageModelUsage
-  finishReason?: FinishReason
-  chainCompleted?: boolean
-  documentLogUuid?: string
-  providerLog?: ProviderLog
-  // TODO(promptl): move this message type to promptl and call it ToolResultMessage
-  output?: (AssistantMessage | { role: 'tool'; content: ToolResultPart[] })[]
-}
-
-export type ChainStepTextResponse = BaseResponse & {
-  streamType: 'text'
-  reasoning: string | undefined
-  toolCalls: ToolCall[]
-}
-
-export type ChainStepObjectResponse = BaseResponse & {
-  streamType: 'object'
-  object: any
-}
-
-export type ChainStepResponse<T extends StreamType = StreamType> =
-  T extends 'text'
-    ? ChainStepTextResponse
-    : T extends 'object'
-      ? ChainStepObjectResponse
-      : never
 
 export const LOG_SOURCES = Object.values(LogSources)
 
@@ -160,10 +128,6 @@ export type WorkspaceUsage = {
   members: number
   maxMembers: Quota
 }
-
-export type ChainCallResponseDto =
-  | Omit<ChainStepResponse<'object'>, 'documentLogUuid' | 'providerLog'>
-  | Omit<ChainStepResponse<'text'>, 'documentLogUuid' | 'providerLog'>
 
 export type SerializedConversation = {
   all: Message[]

@@ -80,8 +80,15 @@ describe('ProviderProcessor', () => {
   })
 
   it('process AI provider result', async () => {
+    const model = 'gpt-4o'
+    const provider = Providers.OpenAI
     const result = await processResponse({
       documentLogUuid: data.documentLogUuid!,
+      model,
+      provider,
+      input: [
+        { role: MessageRole.user, content: [{ type: 'text', text: 'Hello' }] },
+      ],
       // @ts-expect-error - mock implementation
       aiResult: {
         type: 'text' as const,
@@ -114,7 +121,13 @@ describe('ProviderProcessor', () => {
           arguments: { param1: 'abc' },
         },
       ],
+      cost: expect.any(Number),
       object: undefined,
+      model,
+      provider,
+      input: [
+        { role: MessageRole.user, content: [{ type: 'text', text: 'Hello' }] },
+      ],
       output: [],
       reasoning: undefined,
       usage: {

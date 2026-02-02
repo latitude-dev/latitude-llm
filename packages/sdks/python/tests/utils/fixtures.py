@@ -410,7 +410,6 @@ data: {
                 "timestamp": 965044800000,
                 "type": "provider-completed",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
-                "providerLogUuid": "456",
                 "tokenUsage": {"promptTokens": 31, "completionTokens": 9, "totalTokens": 40},
                 "finishReason": "stop",
                 "messages": [
@@ -436,6 +435,23 @@ data: {
                         "completionTokens": 9,
                         "totalTokens": 40,
                     },
+                    "model": "gpt-4o-mini",
+                    "provider": "openai",
+                    "cost": 0.001,
+                    "input": [
+                        {
+                            "role": "system",
+                            "content": [{"type": "text", "text": "Reason before answering."}],
+                        },
+                        {
+                            "role": "user",
+                            "content": [{"type": "text", "text": "My question was: Is 9.9 greater than 9.11?"}],
+                        },
+                        {
+                            "role": "assistant",
+                            "content": [{"type": "text", "text": "I should look at their decimals."}],
+                        },
+                    ],
                 },
             },
         )
@@ -642,7 +658,6 @@ data: {
                 "timestamp": 965044800000,
                 "type": "provider-completed",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
-                "providerLogUuid": "456",
                 "finishReason": "stop",
                 "tokenUsage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
                 "response": {
@@ -661,6 +676,31 @@ data: {
                         },
                     ],
                     "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
+                    "model": "gpt-4o-mini",
+                    "provider": "openai",
+                    "cost": 0.002,
+                    "input": [
+                        {
+                            "role": "system",
+                            "content": [{"type": "text", "text": "Reason before answering."}],
+                        },
+                        {
+                            "role": "user",
+                            "content": [{"type": "text", "text": "My question is: Is 9.9 greater than 9.11?"}],
+                        },
+                        {
+                            "role": "assistant",
+                            "content": [{"type": "text", "text": "I should look at their decimals."}],
+                        },
+                        {
+                            "role": "system",
+                            "content": [{"type": "text", "text": "Now answer succinctly."}],
+                        },
+                        {
+                            "role": "user",
+                            "content": [{"type": "text", "text": "My question was: Is 9.9 greater than 9.11?"}],
+                        },
+                    ],
                 },
                 "messages": [
                     {
@@ -884,7 +924,6 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
         event=StreamEvents.Latitude,
         timestamp=965044800000,
         type=ChainEvents.ProviderCompleted,
-        provider_log_uuid="456",
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         token_usage=ModelUsage(prompt_tokens=31, completion_tokens=9, total_tokens=40),
         finish_reason=FinishReason.Stop,
@@ -892,6 +931,14 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
             text="I should look at their decimals.",
             tool_calls=[],
             usage=ModelUsage(prompt_tokens=31, completion_tokens=9, total_tokens=40),
+            model="gpt-4o-mini",
+            provider=Providers.OpenAI,
+            cost=0.001,
+            input=[
+                SystemMessage(content=[TextContent(text="Reason before answering.")]),
+                UserMessage(content=[TextContent(text="My question was: Is 9.9 greater than 9.11?")]),
+                AssistantMessage(content=[TextContent(text="I should look at their decimals.")]),
+            ],
         ),
         messages=[
             SystemMessage(content=[TextContent(text="Reason before answering.")]),
@@ -1002,7 +1049,6 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
         event=StreamEvents.Latitude,
         timestamp=965044800000,
         type=ChainEvents.ProviderCompleted,
-        provider_log_uuid="456",
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         token_usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
         finish_reason=FinishReason.Stop,
@@ -1021,6 +1067,16 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
                 ),
             ],
             usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
+            model="gpt-4o-mini",
+            provider=Providers.OpenAI,
+            cost=0.002,
+            input=[
+                SystemMessage(content=[TextContent(text="Reason before answering.")]),
+                UserMessage(content=[TextContent(text="My question is: Is 9.9 greater than 9.11?")]),
+                AssistantMessage(content=[TextContent(text="I should look at their decimals.")]),
+                SystemMessage(content=[TextContent(text="Now answer succinctly.")]),
+                UserMessage(content=[TextContent(text="My question was: Is 9.9 greater than 9.11?")]),
+            ],
         ),
         messages=[
             SystemMessage(content=[TextContent(text="Reason before answering.")]),
@@ -1227,6 +1283,31 @@ CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
             },
         ],
         "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
+        "model": "gpt-4o-mini",
+        "provider": "openai",
+        "cost": 0.002,
+        "input": [
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": "Reason before answering."}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "My question is: Is 9.9 greater than 9.11?"}],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "text", "text": "I should look at their decimals."}],
+            },
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": "Now answer succinctly."}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "My question was: Is 9.9 greater than 9.11?"}],
+            },
+        ],
     },
 }
 
@@ -1271,6 +1352,16 @@ CONVERSATION_FINISHED_RESULT = FinishedResult(
             ),
         ],
         usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
+        model="gpt-4o-mini",
+        provider=Providers.OpenAI,
+        cost=0.002,
+        input=[
+            SystemMessage(content=[TextContent(text="Reason before answering.")]),
+            UserMessage(content=[TextContent(text="My question is: Is 9.9 greater than 9.11?")]),
+            AssistantMessage(content=[TextContent(text="I should look at their decimals.")]),
+            SystemMessage(content=[TextContent(text="Now answer succinctly.")]),
+            UserMessage(content=[TextContent(text="My question was: Is 9.9 greater than 9.11?")]),
+        ],
     ),
 )
 
