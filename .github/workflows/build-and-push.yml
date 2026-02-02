@@ -60,7 +60,7 @@ jobs:
               - 'packages/**'
 
   build-and-push-public:
-    needs: [check-changes]
+    needs: [check-changes, acceptance-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -149,7 +149,7 @@ jobs:
           cache-to: type=inline
 
   build-and-push-private:
-    needs: [check-changes]
+    needs: [check-changes, acceptance-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: read
