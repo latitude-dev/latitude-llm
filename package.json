@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@babel/parser": "^7.28.4",
+    "@next/eslint-plugin-next": "16.1.6",
     "@types/heapdump": "^0.3.4",
     "@types/node": "^22.13.10",
     "chokidar-cli": "^3.0.0",
