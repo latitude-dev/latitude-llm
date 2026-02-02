@@ -90,7 +90,7 @@ jobs:
           enable-cache: true
 
       - name: Install Node.js dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile --shamefully-hoist
 
       - name: Wait for PostgreSQL to start
         run: until pg_isready -h localhost -p 5432; do sleep 1; done
