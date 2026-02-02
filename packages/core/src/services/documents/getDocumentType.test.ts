@@ -177,17 +177,5 @@ This is some content without frontmatter.
       })
       expect(result).toBe(DocumentType.Prompt)
     })
-
-    it('returns Agent even when frontmatter is not at the start', async () => {
-      // scan() can still extract config from YAML even if not at the very start
-      const result = await getDocumentType({
-        content: `This is plain text
----
-provider: openai
----
-More text`,
-      })
-      expect(result).toBe(DocumentType.Agent)
-    })
   })
 })

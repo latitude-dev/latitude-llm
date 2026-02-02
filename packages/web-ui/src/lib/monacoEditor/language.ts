@@ -5,14 +5,45 @@ import { type languages } from 'monaco-editor'
 import { useTheme } from 'next-themes'
 
 export const tokenizer = {
+  // Initial state where config is still possible
   root: [
+    // Whitespace - stay in root (doesn't count as content)
+    [/[ \t\r\n]+/, ''],
+
+    // Escaped sequences - this is content, go to afterConfig
+    [/\\\{\{/, { token: 'text', next: '@afterConfig' }],
+    [/\\</, { token: 'text', next: '@afterConfig' }],
+    [/\\\/\*/, { token: 'text', next: '@afterConfig' }],
+    [/\\---/, { token: 'text', next: '@afterConfig' }],
+
+    // YAML initial config - only possible in root state at start of line
+    [/^---$/, { token: 'yaml-delimiter', next: '@yaml' }],
+
+    // Multiline comments - return to root (comments don't count as content)
+    [/\/\*/, { token: 'comment', next: '@comment_root' }],
+
+    // Content that transitions to afterConfig (these mean config is no longer possible)
+    [/\{\{/, { token: 'js-open', next: '@js_toAfterConfig' }],
+    [/<[\w-]+/, { token: 'tag-open', next: '@tag_toAfterConfig' }],
+    [/<\/[\w-]+/, { token: 'tag-open', next: '@tag_toAfterConfig' }],
+    [/#.*$/, { token: 'header', next: '@afterConfig' }],
+    [/\*\*[^*]+\*\*/, { token: 'bold', next: '@afterConfig' }],
+    [/\*[^*]+\*/, { token: 'italic', next: '@afterConfig' }],
+    [/\[[^\]]+\]\([^)]+\)/, { token: 'link', next: '@afterConfig' }],
+
+    // Any other non-whitespace character is content - go to afterConfig
+    [/./, { token: '', next: '@afterConfig' }],
+  ],
+
+  // State after config is closed or after substantive content (--- is just text here)
+  afterConfig: [
     // Escaped sequences
     [/\\\{\{/, 'text'],
     [/\\</, 'text'],
     [/\\\/\*/, 'text'],
+    [/\\---/, 'text'],
 
-    // YAML initial config
-    [/^---$/, { token: 'yaml-delimiter', next: '@yaml' }],
+    // --- is NOT config here, just regular text (no rule needed, falls through)
 
     // Multiline comments
     [/\/\*/, { token: 'comment', next: '@comment' }],
@@ -32,16 +63,46 @@ export const tokenizer = {
   ],
 
   yaml: [
-    [/^---$/, { token: 'yaml-delimiter', next: '@pop' }],
-    [/[^]+/, 'yaml'],
+    // Closing --- transitions to afterConfig (config is done)
+    [/^---$/, { token: 'yaml-delimiter', next: '@afterConfig' }],
+    [/.+/, 'yaml'],
+    [/\n/, ''],
   ],
 
+  // Comment that returns to root (used when config is still possible)
+  comment_root: [
+    [/\*\//, { token: 'comment', next: '@root' }],
+    [/[^*]+/, 'comment'],
+    [/./, 'comment'],
+  ],
+
+  // Comment that returns to afterConfig (normal case)
   comment: [
     [/\*\//, { token: 'comment', next: '@pop' }],
     [/[^*]+/, 'comment'],
     [/./, 'comment'],
   ],
 
+  // Tag that returns to afterConfig (used from root to transition)
+  tag_toAfterConfig: [
+    [/>/, { token: 'tag-close', next: '@afterConfig' }],
+    [
+      /[\w-]+=/,
+      { token: 'attribute.name', next: '@tagAttribute_toAfterConfig' },
+    ],
+    [/[\w-]+/, 'attribute.name'],
+    [/\s+/, { token: '' }],
+  ],
+
+  tagAttribute_toAfterConfig: [
+    [/\{\{/, { token: 'js-open', next: '@js' }],
+    [/"([^"\\]|\\.)*$/, 'string.invalid'],
+    [/"/, 'attribute.quote', '@attribute_string'],
+    [/\s+/, { token: '', next: '@pop' }],
+    [/>/, { token: 'tag-close', next: '@afterConfig' }],
+  ],
+
+  // Normal tag (used in afterConfig)
   tag: [
     [/>/, { token: 'tag-close', next: '@pop' }],
     [/[\w-]+=/, { token: 'attribute.name', next: '@tagAttribute' }],
@@ -83,9 +144,17 @@ export const tokenizer = {
     [/`/, 'string', '@pop'],
   ],
 
-  js: [
-    [/\}\}/, { token: 'js-close', next: '@pop' }],
+  // JS that transitions to afterConfig (used from root)
+  js_toAfterConfig: [
+    [/\}\}/, { token: 'js-close', next: '@afterConfig' }],
+    { include: '@jsRules' },
+  ],
 
+  // Normal JS (used in afterConfig, pops back)
+  js: [[/\}\}/, { token: 'js-close', next: '@pop' }], { include: '@jsRules' }],
+
+  // Shared JS rules
+  jsRules: [
     // equal
     [/=/, 'delimiter.equal'],
 
@@ -140,7 +209,7 @@ export const tokenizer = {
   bracketCounting: [
     [/\{/, 'delimiter.bracket', '@bracketCounting'],
     [/\}/, 'delimiter.bracket', '@pop'],
-    { include: 'js' },
+    { include: 'jsRules' },
   ],
 
   whitespace: [
