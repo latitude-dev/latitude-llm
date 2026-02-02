@@ -69,7 +69,7 @@
     "LATITUDE_ENTERPRISE_MODE"
   ],
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": ["**/.env.*local", "eslint.config.mjs"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
