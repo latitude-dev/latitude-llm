@@ -141,7 +141,11 @@ class CaptureContext:
         self._token = otel_context.attach(self._span.context)
 
     def _end_span(self, error: Exception | None = None) -> None:
-        """End the capture span and restore the previous context."""
+        """End the capture span and restore the previous context.
+
+        Note: Spans are batched and sent automatically by the BatchSpanProcessor.
+        Call `telemetry.flush()` explicitly if you need to ensure spans are sent immediately.
+        """
         # Detach the context token first to restore the previous context
         if self._token is not None:
             otel_context.detach(self._token)
@@ -151,15 +155,60 @@ class CaptureContext:
                 self._span.fail(error, None)
             else:
                 self._span.end(None)
-        self._telemetry.flush()
+
+    def _create_new_context(self) -> "CaptureContext":
+        """Create a new CaptureContext with the same configuration for each invocation."""
+        return CaptureContext(
+            telemetry=self._telemetry,
+            path=self._path,
+            project_id=self._project_id,
+            version_uuid=self._version_uuid,
+            conversation_uuid=self._conversation_uuid,
+        )
 
     def __call__(self, fn: Callable[..., T]) -> Callable[..., T]:
-        """Act as a decorator for both sync and async functions."""
-        if inspect.iscoroutinefunction(fn):
+        """Act as a decorator for both sync and async functions, including generators."""
+        if inspect.isasyncgenfunction(fn):
+
+            @functools.wraps(fn)
+            async def async_gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+                ctx = self._create_new_context()
+                ctx._start_span()
+                error: Exception | None = None
+                try:
+                    async for item in fn(*args, **kwargs):
+                        yield item
+                except Exception as e:
+                    error = e
+                    raise
+                finally:
+                    ctx._end_span(error)
+
+            return async_gen_wrapper  # type: ignore[return-value]
+
+        elif inspect.isgeneratorfunction(fn):
+
+            @functools.wraps(fn)
+            def sync_gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+                ctx = self._create_new_context()
+                ctx._start_span()
+                error: Exception | None = None
+                try:
+                    yield from fn(*args, **kwargs)
+                except Exception as e:
+                    error = e
+                    raise
+                finally:
+                    ctx._end_span(error)
+
+            return sync_gen_wrapper  # type: ignore[return-value]
+
+        elif inspect.iscoroutinefunction(fn):
 
             @functools.wraps(fn)
             async def async_wrapper(*args: Any, **kwargs: Any) -> T:
-                self._start_span()
+                ctx = self._create_new_context()
+                ctx._start_span()
                 error: Exception | None = None
                 try:
                     return await fn(*args, **kwargs)
@@ -167,14 +216,15 @@ class CaptureContext:
                     error = e
                     raise
                 finally:
-                    self._end_span(error)
+                    ctx._end_span(error)
 
             return async_wrapper  # type: ignore[return-value]
         else:
 
             @functools.wraps(fn)
             def sync_wrapper(*args: Any, **kwargs: Any) -> T:
-                self._start_span()
+                ctx = self._create_new_context()
+                ctx._start_span()
                 error: Exception | None = None
                 try:
                     return fn(*args, **kwargs)
@@ -182,7 +232,7 @@ class CaptureContext:
                     error = e
                     raise
                 finally:
-                    self._end_span(error)
+                    ctx._end_span(error)
 
             return sync_wrapper  # type: ignore[return-value]
 

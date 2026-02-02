@@ -176,6 +176,58 @@ That's it — prompts do **not** need to be created ahead of time.
 
 ---
 
+## Streaming responses
+
+When using streaming, consume the stream inside your capture block so the span covers the entire operation.
+
+<Tabs>
+  <Tab title="TypeScript">
+    **Consume the stream inside** your `capture()` callback:
+
+    ```typescript
+    async function streamSupportReply(input: string, res: Response) {
+      await telemetry.capture(
+        { projectId: 123, path: 'generate-support-reply' },
+        async () => {
+          const client = new Cohere.CohereClient({
+            token: process.env.COHERE_API_KEY,
+          })
+          const stream = client.chatStream({
+            model: 'command-a-03-2025',
+            message: input,
+          })
+
+          for await (const event of stream) {
+            if (event.eventType === 'text-generation') {
+              res.write(event.text)
+            }
+          }
+          res.end()
+        }
+      )
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    **Use a generator function** with the decorator:
+
+    ```python
+    @telemetry.capture(project_id=123, path="generate-support-reply")
+    async def stream_support_reply(input: str):
+        client = cohere.Client(api_key=os.environ["COHERE_API_KEY"])
+        stream = client.chat_stream(
+            model="command-a-03-2025",
+            message=input,
+        )
+        for event in stream:
+            if event.event_type == "text-generation":
+                yield event.text
+    ```
+  </Tab>
+</Tabs>
+
+---
+
 ## Seeing your logs in Latitude
 
 Once your feature is wrapped, logs will appear automatically.

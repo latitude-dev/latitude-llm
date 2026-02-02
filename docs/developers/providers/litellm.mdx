@@ -121,6 +121,25 @@ That's it — prompts do **not** need to be created ahead of time.
 
 ---
 
+## Streaming responses
+
+When using streaming (`stream=True`), use a generator function with the decorator. The SDK keeps the span open until all chunks are yielded:
+
+```python
+@telemetry.capture(project_id=123, path="generate-support-reply")
+async def stream_support_reply(input: str):
+    response = litellm.completion(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": input}],
+        stream=True,
+    )
+    for chunk in response:
+        if chunk.choices[0].delta.content:
+            yield chunk.choices[0].delta.content
+```
+
+---
+
 ## Seeing your logs in Latitude
 
 Once your feature is wrapped, logs will appear automatically.

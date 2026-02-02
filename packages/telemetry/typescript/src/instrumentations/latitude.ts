@@ -1,14 +1,14 @@
 import { BaseInstrumentation } from '$telemetry/instrumentations/base'
 import { ManualInstrumentation } from '$telemetry/instrumentations/manual'
 import { VALUES } from '@latitude-data/constants'
-import type * as latitude from '@latitude-data/sdk'
-import * as otel from '@opentelemetry/api'
+import type { Latitude } from '@latitude-data/sdk'
+import type { Tracer } from '@opentelemetry/api'
 import { context } from '@opentelemetry/api'
-import type * as promptl from 'promptl-ai'
+import type { AdapterMessageType } from 'promptl-ai'
 import { v4 as uuid } from 'uuid'
 
 export type LatitudeInstrumentationOptions = {
-  module: typeof latitude.Latitude
+  module: typeof Latitude
   completions?: boolean
 }
 
@@ -16,7 +16,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   private readonly options: LatitudeInstrumentationOptions
   private readonly manualTelemetry: ManualInstrumentation
 
-  constructor(tracer: otel.Tracer, options: LatitudeInstrumentationOptions) {
+  constructor(tracer: Tracer, options: LatitudeInstrumentationOptions) {
     this.manualTelemetry = new ManualInstrumentation(tracer)
     this.options = options
   }
@@ -35,7 +35,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     this.options.module.uninstrument()
   }
 
-  private countTokens<M extends promptl.AdapterMessageType>(messages: M[]) {
+  private countTokens<M extends AdapterMessageType>(messages: M[]) {
     let length = 0
 
     for (const message of messages) {
@@ -55,7 +55,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     return Math.ceil(length / 4)
   }
 
-  async wrapRenderChain<F extends latitude.Latitude['renderChain']>(
+  async wrapRenderChain<F extends Latitude['renderChain']>(
     fn: F,
     ...args: Parameters<F>
   ): Promise<Awaited<ReturnType<F>>> {
@@ -85,7 +85,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     return result
   }
 
-  async wrapRenderCompletion<F extends latitude.Latitude['renderCompletion']>(
+  async wrapRenderCompletion<F extends Latitude['renderCompletion']>(
     fn: F,
     ...args: Parameters<F>
   ): Promise<Awaited<ReturnType<F>>> {
@@ -136,7 +136,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     return result
   }
 
-  async wrapRenderTool<F extends latitude.Latitude['renderTool']>(
+  async wrapRenderTool<F extends Latitude['renderTool']>(
     fn: F,
     ...args: Parameters<F>
   ): Promise<Awaited<ReturnType<F>>> {

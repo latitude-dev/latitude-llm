@@ -350,8 +350,9 @@ export class LatitudeTelemetry {
     configureInstrumentation(Instrumentation.Cohere, CohereInstrumentation) // prettier-ignore
     configureInstrumentation(Instrumentation.Langchain, LangChainInstrumentation) // prettier-ignore
     configureInstrumentation(Instrumentation.LlamaIndex, LlamaIndexInstrumentation) // prettier-ignore
-    configureInstrumentation(Instrumentation.OpenAI, OpenAIInstrumentation, { enrichTokens: true }) // prettier-ignore
-    configureInstrumentation(Instrumentation.TogetherAI, TogetherInstrumentation, { enrichTokens: true }) // prettier-ignore
+    // NOTE: `stream: true` in OpenAI make enrichTokens fail, so disabling.
+    configureInstrumentation(Instrumentation.OpenAI, OpenAIInstrumentation, { enrichTokens: false }) // prettier-ignore
+    configureInstrumentation(Instrumentation.TogetherAI, TogetherInstrumentation, { enrichTokens: false }) // prettier-ignore
     configureInstrumentation(Instrumentation.VertexAI, VertexAIInstrumentation) // prettier-ignore
   }
 

@@ -30,6 +30,84 @@ With Telemetry you can:
 
 All of this works **on top of your existing stack** — you keep calling OpenAI, Anthropic, Bedrock, etc. directly, and Telemetry observes those calls.
 
+## Using `capture()`
+
+The `capture()` method wraps your code and manages the telemetry span lifecycle automatically. The span starts when capture begins and ends when your code completes.
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```typescript
+    await telemetry.capture(
+      { projectId: 123, path: 'my-feature' },
+      async () => {
+        // Your LLM code here - span ends when callback completes
+        const response = await openai.chat.completions.create({ ... })
+        return response.choices[0].message.content
+      }
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    @telemetry.capture(project_id=123, path="my-feature")
+    def my_feature():
+        # Your LLM code here - span ends when function returns
+        response = openai.chat.completions.create(...)
+        return response.choices[0].message.content
+    ```
+  </Tab>
+</Tabs>
+
+### Streaming responses
+
+For streaming responses, **consume the stream inside your capture block** so the span covers the entire operation:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```typescript
+    await telemetry.capture(
+      { projectId: 123, path: 'my-feature' },
+      async () => {
+        const stream = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [{ role: 'user', content: input }],
+          stream: true,
+        })
+
+        // Consume stream inside capture - span stays open until done
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content
+          if (content) {
+            res.write(content)
+          }
+        }
+        res.end()
+      }
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    Use a generator function with the decorator — the span stays open until all items are yielded:
+
+    ```python
+    @telemetry.capture(project_id=123, path="my-feature")
+    async def stream_response(input: str):
+        stream = openai.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": input}],
+            stream=True,
+        )
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+    ```
+  </Tab>
+</Tabs>
+
+<Info>
+  **Why consume inside capture?** When you consume the stream inside the capture block, the span duration accurately reflects the total time of the operation (including streaming). All child spans from provider instrumentation are properly nested under your capture span.
+</Info>
+
 ## How Telemetry fits into your stack (high level)
 
 At a high level, integrating Telemetry looks like this:

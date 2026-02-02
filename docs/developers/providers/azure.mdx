@@ -186,6 +186,67 @@ That's it — prompts do **not** need to be created ahead of time.
 
 ---
 
+## Streaming responses
+
+When using streaming (`stream: true`), consume the stream inside your capture block so the span covers the entire operation.
+
+<Tabs>
+  <Tab title="TypeScript">
+    **Consume the stream inside** your `capture()` callback:
+
+    ```typescript
+    async function streamSupportReply(input: string, res: Response) {
+      await telemetry.capture(
+        { projectId: 123, path: 'generate-support-reply' },
+        async () => {
+          const client = new AzureOpenAI({
+            endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+            apiKey: process.env.AZURE_OPENAI_API_KEY,
+            apiVersion: '2024-02-01',
+          })
+          const stream = await client.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [{ role: 'user', content: input }],
+            stream: true,
+          })
+
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content
+            if (content) {
+              res.write(content)
+            }
+          }
+          res.end()
+        }
+      )
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    **Use a generator function** with the decorator:
+
+    ```python
+    @telemetry.capture(project_id=123, path="generate-support-reply")
+    async def stream_support_reply(input: str):
+        client = AzureOpenAI(
+            azure_endpoint="https://your-resource.openai.azure.com/",
+            api_key=os.environ["AZURE_OPENAI_API_KEY"],
+            api_version="2024-02-01",
+        )
+        stream = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": input}],
+            stream=True,
+        )
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+    ```
+  </Tab>
+</Tabs>
+
+---
+
 ## Seeing your logs in Latitude
 
 Once your feature is wrapped, logs will appear automatically.

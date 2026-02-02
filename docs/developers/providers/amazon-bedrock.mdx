@@ -190,6 +190,68 @@ That's it — prompts do **not** need to be created ahead of time.
 
 ---
 
+## Streaming responses
+
+When using streaming (`InvokeModelWithResponseStreamCommand`), consume the stream inside your capture block so the span covers the entire operation.
+
+<Tabs>
+  <Tab title="TypeScript">
+    **Consume the stream inside** your `capture()` callback:
+
+    ```typescript
+    async function streamSupportReply(input: string, res: Response) {
+      await telemetry.capture(
+        { projectId: 123, path: 'generate-support-reply' },
+        async () => {
+          const client = new Bedrock.BedrockRuntimeClient({ region: 'us-east-1' })
+          const response = await client.send(
+            new Bedrock.InvokeModelWithResponseStreamCommand({
+              modelId: 'anthropic.claude-v2',
+              body: JSON.stringify({
+                prompt: `\n\nHuman: ${input}\n\nAssistant:`,
+                max_tokens_to_sample: 1024,
+              }),
+            })
+          )
+
+          for await (const event of response.body) {
+            if (event.chunk?.bytes) {
+              const chunk = JSON.parse(new TextDecoder().decode(event.chunk.bytes))
+              if (chunk.completion) {
+                res.write(chunk.completion)
+              }
+            }
+          }
+          res.end()
+        }
+      )
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    **Use a generator function** with the decorator:
+
+    ```python
+    @telemetry.capture(project_id=123, path="generate-support-reply")
+    async def stream_support_reply(input: str):
+        client = boto3.client("bedrock-runtime", region_name="us-east-1")
+        response = client.invoke_model_with_response_stream(
+            modelId="anthropic.claude-v2",
+            body=json.dumps({
+                "prompt": f"\n\nHuman: {input}\n\nAssistant:",
+                "max_tokens_to_sample": 1024,
+            }),
+        )
+        for event in response["body"]:
+            chunk = json.loads(event["chunk"]["bytes"])
+            if "completion" in chunk:
+                yield chunk["completion"]
+    ```
+  </Tab>
+</Tabs>
+
+---
+
 ## Seeing your logs in Latitude
 
 Once your feature is wrapped, logs will appear automatically.
