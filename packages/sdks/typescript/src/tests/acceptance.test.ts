@@ -37,7 +37,7 @@ const gatewayUnavailableMessage = `Latitude service is not running at ${gatewayU
 // 5. Build the sdk package with `pnpm build`
 // 6. Run the test `RUN_ACCEPTANCE_TESTS=1 TEST_LATITUDE_API_KEY={your_key} pnpm test ./src/tests/acceptance.test.ts`
 
-describeAcceptance('SDK Integration Tests (E2E)', { timeout: 30000 }, () => {
+describeAcceptance('SDK Integration Tests (E2E)', { timeout: 90000 }, () => {
   const promptPath = 'weather-assistant'
   const simplePromptPath = 'echo-assistant'
   const promptContent = `
