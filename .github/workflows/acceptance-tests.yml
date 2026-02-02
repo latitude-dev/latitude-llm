@@ -101,6 +101,9 @@ jobs:
       - name: Seed acceptance workspace
         run: pnpm --filter @latitude-data/core scripts:seed:acceptance
 
+      - name: Use Turbo to build affected packages
+        run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
+
       - name: Build Gateway
         run: pnpm --filter @latitude-data/gateway build
 
