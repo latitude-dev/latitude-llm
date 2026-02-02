@@ -126,9 +126,12 @@ You are a helpful assistant. Reply with a short acknowledgement.
 
   it('should instantiate SDK targeting localhost:8787 with no SSL and run prompt with tool handler', async () => {
     // Create the get_weather tool handler
-    const getWeatherTool = vi
-      .fn()
-      .mockImplementation(async () => 'Temperature is 25°C and sunny')
+    const getWeatherTool = vi.fn().mockImplementation(async (args) => {
+      if (shouldDebugAcceptance) {
+        console.log('[acceptance][tool]', 'get_weather', args ?? null)
+      }
+      return 'Temperature is 25°C and sunny'
+    })
 
     try {
       // Run prompt with get_weather tool - this makes a real API call
@@ -136,12 +139,24 @@ You are a helpful assistant. Reply with a short acknowledgement.
         parameters: { location: 'Barcelona' },
         stream: true,
         onEvent: shouldDebugAcceptance
-          ? (event) =>
+          ? (event) => {
               console.log(
                 '[acceptance][event]',
                 event.event,
                 event.data?.type ?? 'unknown',
               )
+              if (
+                event.event === 'provider-event' &&
+                event.data?.type === 'tool-call'
+              ) {
+                console.log(
+                  '[acceptance][tool-call]',
+                  event.data.toolName ?? 'unknown',
+                  event.data.toolCallId ?? 'unknown',
+                  event.data.args ?? null,
+                )
+              }
+            }
           : undefined,
         onFinished: shouldDebugAcceptance
           ? (finalResponse) =>
