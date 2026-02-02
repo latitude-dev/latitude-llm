@@ -9,6 +9,8 @@ jobs:
   publish:
     name: Build and Publish
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -115,3 +117,56 @@ jobs:
           # Cleanup
           cd -
           rm -rf "$TEST_DIR"
+
+      - name: Extract changelog for current version
+        if: steps.check_version.outputs.should_publish == 'true'
+        id: extract_changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          CHANGELOG_FILE="packages/telemetry/typescript/CHANGELOG.md"
+
+          if [ ! -f "$CHANGELOG_FILE" ]; then
+            echo "## What's Changed" > release_notes.md
+            echo "" >> release_notes.md
+            echo "- Package updates and improvements" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "**Note**: Please update the CHANGELOG.md file for future releases" >> release_notes.md
+          else
+            # Extract the changelog section for the current version
+            # Look for the version header and extract until the next version or end of file
+            awk -v version="$VERSION" '
+              BEGIN { found=0; content="" }
+              /^## \[/ {
+                if (found) exit
+                if ($0 ~ "\\[" version "\\]") {
+                  found=1
+                  next
+                }
+              }
+              found && /^## \[/ { exit }
+              found { content = content $0 "\n" }
+              END {
+                if (content == "") {
+                  print "## What'\''s Changed\n\n- Package updates and improvements\n"
+                } else {
+                  print content
+                }
+              }
+            ' "$CHANGELOG_FILE" > release_notes.md
+          fi
+
+          # Read changelog content for use in release
+          CHANGELOG_CONTENT=$(cat release_notes.md)
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: steps.check_version.outputs.should_publish == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: typescript-telemetry-${{ steps.get_version.outputs.version }}
+          name: TypeScript Telemetry v${{ steps.get_version.outputs.version }}
+          body: ${{ steps.extract_changelog.outputs.changelog }}
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'rc') }}
