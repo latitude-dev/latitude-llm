@@ -92,7 +92,13 @@ export function ToolCardWrapper({
   }, [messageIndex, contentBlockIndex, getAnnotationsForBlock, span])
 
   const evaluation = evaluations[0]
-
+  const canAnnotate =
+    !blockAnnotations.length &&
+    evaluation &&
+    messageIndex !== undefined &&
+    contentBlockIndex !== undefined &&
+    span !== undefined &&
+    isMainSpan(span)
   return (
     <div
       className={cn(
@@ -101,7 +107,7 @@ export function ToolCardWrapper({
       )}
     >
       {children}
-      {(blockAnnotations.length > 0 || evaluation) && span && (
+      {canAnnotate ? (
         <div className='flex flex-col gap-y-4 border-t pt-4 px-4 pb-4'>
           {blockAnnotations.map((annotation: AnnotatedTextRange) => (
             <AnnotationForm
@@ -112,25 +118,20 @@ export function ToolCardWrapper({
               initialExpanded={false}
             />
           ))}
-          {!blockAnnotations.length &&
-            evaluation &&
-            messageIndex !== undefined &&
-            contentBlockIndex !== undefined &&
-            span !== undefined &&
-            isMainSpan(span) && (
-              <AnnotationForm
-                evaluation={evaluation}
-                span={span as SpanWithDetails<MainSpanType>}
-                initialExpanded={false}
-                selectedContext={{
-                  messageIndex,
-                  contentBlockIndex,
-                  contentType: 'tool-call',
-                }}
-              />
-            )}
+          {canAnnotate ? (
+            <AnnotationForm
+              evaluation={evaluation}
+              span={span as SpanWithDetails<MainSpanType>}
+              initialExpanded={false}
+              selectedContext={{
+                messageIndex,
+                contentBlockIndex,
+                contentType: 'tool-call',
+              }}
+            />
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

@@ -10,6 +10,7 @@ import { MarkdownContent } from './_components/MarkdownContent'
 import { MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
 import { AnnotatedTextRange, useAnnotations } from '../../AnnotationsContext'
 import { cn } from '@latitude-data/web-ui/utils'
+import { isMainSpan } from '@latitude-data/constants'
 
 const ContentJson = memo(({ json }: { json: string }) => {
   return (
@@ -47,37 +48,31 @@ const ContentText = memo(
       onAnnotationClick,
       currentSelection,
       clickedAnnotation,
+      span,
     } = useAnnotations()
-    const blockAnnotations = useMemo(() => {
-      if (
-        messageIndex === undefined ||
-        contentBlockIndex === undefined ||
-        !getAnnotationsForBlock ||
-        !text
-      ) {
-        return []
-      }
 
-      return getAnnotationsForBlock(messageIndex, contentBlockIndex).filter(
+    const hasBlockIndices =
+      messageIndex !== undefined && contentBlockIndex !== undefined
+    const isAnnotationEnabled =
+      hasBlockIndices && !!getAnnotationsForBlock && !!span && isMainSpan(span)
+
+    const blockAnnotations = useMemo(() => {
+      if (!isAnnotationEnabled || !text) return []
+
+      return getAnnotationsForBlock!(messageIndex!, contentBlockIndex!).filter(
         (ann) => ann.context.contentType === 'text',
       )
-    }, [messageIndex, contentBlockIndex, getAnnotationsForBlock, text])
+    }, [isAnnotationEnabled, messageIndex, contentBlockIndex, getAnnotationsForBlock, text])
 
-    // Check if current selection matches this block
     const isCurrentBlockSelected = useMemo(() => {
-      if (
-        !currentSelection ||
-        messageIndex === undefined ||
-        contentBlockIndex === undefined
-      ) {
-        return false
-      }
+      if (!isAnnotationEnabled || !currentSelection) return false
+
       return (
         currentSelection.context.messageIndex === messageIndex &&
         currentSelection.context.contentBlockIndex === contentBlockIndex &&
         currentSelection.context.contentType === 'text'
       )
-    }, [currentSelection, messageIndex, contentBlockIndex])
+    }, [isAnnotationEnabled, currentSelection, messageIndex, contentBlockIndex])
 
     const segments = useMemo(
       () => computeSegments('text', text, sourceMap, parameters),
@@ -95,9 +90,8 @@ const ContentText = memo(
       [onAnnotationClick],
     )
 
-    // Build sorted list of annotation ranges and current selection
     const sortedRanges = useMemo(() => {
-      if (!text) return []
+      if (!isAnnotationEnabled || !text) return []
       const ranges: Array<{
         start: number
         end: number
@@ -124,9 +118,9 @@ const ContentText = memo(
         !blockAnnotations.some(
           (ann) =>
             ann.context.textRange?.start ===
-              currentSelection.context.textRange?.start &&
+            currentSelection.context.textRange?.start &&
             ann.context.textRange?.end ===
-              currentSelection.context.textRange?.end,
+            currentSelection.context.textRange?.end,
         )
       ) {
         ranges.push({
@@ -137,7 +131,7 @@ const ContentText = memo(
       }
 
       return ranges.sort((a, b) => a.start - b.start)
-    }, [text, blockAnnotations, isCurrentBlockSelected, currentSelection])
+    }, [isAnnotationEnabled, text, blockAnnotations, isCurrentBlockSelected, currentSelection])
 
     const renderSegmentWithAnnotations = useCallback(
       (segment: string | Reference, segmentStart: number): React.ReactNode => {
@@ -201,9 +195,9 @@ const ContentText = memo(
               clickedAnnotation &&
               clickedAnnotation.result.uuid === part.annotation.result.uuid &&
               clickedAnnotation.context.textRange?.start ===
-                part.annotation.context.textRange?.start &&
+              part.annotation.context.textRange?.start &&
               clickedAnnotation.context.textRange?.end ===
-                part.annotation.context.textRange?.end
+              part.annotation.context.textRange?.end
             return (
               <span
                 key={`part-${partIndex}`}

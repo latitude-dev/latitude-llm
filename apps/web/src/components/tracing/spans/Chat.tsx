@@ -29,10 +29,14 @@ export default {
 
 function DetailsPanel({ span }: DetailsPanelProps<SpanType.Chat>) {
   const { data: trace } = useTrace({ traceId: span.traceId })
-  const completionSpan = useMemo(
-    () => findLastSpanOfType(trace?.children ?? [], SpanType.Completion),
-    [trace],
-  )
+  const completionSpan = useMemo(() => {
+    if (!trace) return undefined
+
+    return findLastSpanOfType({
+      children: trace.children,
+      spanType: SpanType.Completion,
+    })
+  }, [trace])
   const completionSpans = useMemo(
     () => findAllSpansOfType(trace?.children ?? [], SpanType.Completion),
     [trace],
