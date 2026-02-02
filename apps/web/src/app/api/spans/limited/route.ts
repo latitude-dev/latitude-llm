@@ -4,12 +4,7 @@ import {
   CommitsRepository,
   SpansRepository,
 } from '@latitude-data/core/repositories'
-import {
-  isMainSpan,
-  LogSources,
-  MAIN_SPAN_TYPES,
-  SpanType,
-} from '@latitude-data/constants'
+import { LogSources, MAIN_SPAN_TYPES, SpanType } from '@latitude-data/constants'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -67,12 +62,12 @@ export const GET = errorHandler(
 
       if (filters.documentLogUuid) {
         const spansRepository = new SpansRepository(workspace.id)
-        const spans = await spansRepository.listByDocumentLogUuid(
+        const span = await spansRepository.findLastMainSpanByDocumentLogUuid(
           filters.documentLogUuid,
         )
         spansResult = {
-          items: spans.filter(isMainSpan),
-          count: spans.length,
+          items: span ? [span] : span,
+          count: 1,
           next: null,
         }
       } else {

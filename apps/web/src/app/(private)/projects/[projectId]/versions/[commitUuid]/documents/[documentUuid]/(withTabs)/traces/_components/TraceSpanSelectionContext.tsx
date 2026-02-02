@@ -9,7 +9,7 @@ import {
   useRef,
 } from 'react'
 import { preload } from 'swr'
-import { parseSpansFilters } from '$/lib/schemas/filters'
+import { parseSpansFilters, SpansFilters } from '$/lib/schemas/filters'
 import { AssembledSpan, Span } from '@latitude-data/constants'
 import { ROUTES } from '$/services/routes'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
@@ -78,10 +78,13 @@ export function buildTraceUrl({
   span: Pick<Span, 'id' | 'documentLogUuid'>
 }) {
   const params = new URLSearchParams()
-  if (span.documentLogUuid) {
-    params.set('documentLogUuid', span.documentLogUuid)
+  const filters: SpansFilters = {
+    spanId: span.id,
   }
-  params.set('spanId', span.id)
+  if (span.documentLogUuid) {
+    filters.documentLogUuid = span.documentLogUuid
+  }
+  params.set('filters', JSON.stringify(filters))
   return (
     ROUTES.projects
       .detail({ id: projectId })

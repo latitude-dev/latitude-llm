@@ -9,6 +9,7 @@ import { DocumentTracesPage } from './_components/DocumentTracesPage'
 import { SpanType, Span } from '@latitude-data/constants'
 import { parseSpansFilters, SpansFilters } from '$/lib/schemas/filters'
 import { buildCommitFilter } from '$/app/api/spans/limited/route'
+import { compact } from 'lodash-es'
 
 export const metadata: Promise<Metadata> = buildMetatags({
   locationDescription: 'Document Traces Page',
@@ -45,7 +46,11 @@ export default async function TracesPage({
     .getCommitByUuid({ uuid: commitUuid, projectId: Number(projectId) })
     .then((r) => r.unwrap())
   const initialSpans: Span[] = documentLogUuid
-    ? await spansRepository.listByDocumentLogUuid(documentLogUuid)
+    ? compact([
+        await spansRepository.findLastMainSpanByDocumentLogUuid(
+          documentLogUuid,
+        ),
+      ])
     : await spansRepository
         .findByDocumentAndCommitLimited({
           documentUuid,
