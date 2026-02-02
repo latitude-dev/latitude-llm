@@ -24,13 +24,15 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
     score,
     metadata: resultMetadata,
     versionUuid = HEAD_COMMIT,
+    context,
   } = c.req.valid('json')
   const { conversationUuid, evaluationUuid } = c.req.valid('param')
   const workspace = c.get('workspace')
   const evaluationsRepo = new EvaluationsV2Repository(workspace.id)
   const spansRepo = new SpansRepository(workspace.id)
   const spanMetadataRepo = new SpanMetadatasRepository(workspace.id)
-  const span = await spansRepo.findByDocumentLogUuid(conversationUuid)
+  const span =
+    await spansRepo.findLastMainSpanByDocumentLogUuid(conversationUuid)
   if (!span) {
     throw new NotFoundError('Could not find span with uuid ${conversationUuid}')
   }
@@ -93,7 +95,10 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
     span: { ...span, metadata } as SpanWithDetails<MainSpanType>,
     evaluation,
     resultScore: score,
-    resultMetadata: resultMetadata,
+    resultMetadata: {
+      ...resultMetadata,
+      selectedContexts: context ? [context] : undefined,
+    },
     commit,
     workspace: workspace,
   }).then((r) => r.unwrap())
