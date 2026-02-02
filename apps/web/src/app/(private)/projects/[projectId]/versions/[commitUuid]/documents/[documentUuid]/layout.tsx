@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-
+import { Metadata } from 'next'
 import {
   getApiKeysCached,
   getDocumentByUuidCached,
@@ -14,7 +14,7 @@ import DocumentationModal, {
 } from './_components/DocumentationModal'
 import buildMetatags from '$/app/_lib/buildMetatags'
 
-export const metadata = buildMetatags({
+export const metadata: Promise<Metadata> = buildMetatags({
   locationDescription: 'Prompt Editor and Playground',
 })
 
@@ -63,7 +63,7 @@ export default async function DocumentPage({
         </ProjectLayout>
       </DocumentVersionProvider>
     )
-  } catch (error) {
+  } catch (_error) {
     return redirect(
       ROUTES.projects
         .detail({ id: Number(projectId) })

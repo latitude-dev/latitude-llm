@@ -279,7 +279,6 @@ describe('astToSimpleBlocks with errors', () => {
         'User message validation failed',
       )
 
-      // @ts-ignore
       const imageBlock = userBlock.children[1].children[0] as ImageBlock
       expect(imageBlock).toBeDefined()
       expect(imageBlock.errors).toBeDefined()
@@ -321,7 +320,6 @@ Then call this tool:
       expect(userBlock.role).toBe('user')
       expect(userBlock.errors).toBeUndefined()
 
-      // @ts-ignore
       const fileBlock = userBlock.children[1].children[0] as FileBlock
       expect(fileBlock).toBeDefined()
       expect(fileBlock.type).toBe('content_file')
@@ -331,13 +329,11 @@ Then call this tool:
         'Content file must have name attribute',
       )
 
-      // @ts-ignore
       const imageBlock = userBlock.children[4].children[0] as ImageBlock
       expect(imageBlock).toBeDefined()
       expect(imageBlock.type).toBe('content_image')
       expect(imageBlock.errors).toBeUndefined() // No error for image
 
-      // @ts-ignore
       const toolCallBlock = userBlock.children[7] as CodeBlock
       expect(toolCallBlock).toBeDefined()
       expect(toolCallBlock.type).toBe('code')

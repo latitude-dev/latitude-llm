@@ -21,7 +21,7 @@ export async function hydrateProviderLog(providerLog: Partial<ProviderLog>) {
       ...providerLog,
       ...fileData,
     } as HydratedProviderLog)
-  } catch (error) {
+  } catch (_error) {
     // Fallback to existing columns if file storage fails
     return Result.ok({
       ...providerLog,

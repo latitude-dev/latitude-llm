@@ -18,7 +18,7 @@ import {
   mockProjectsError,
 } from './helpers/projects'
 
-let FAKE_API_KEY = 'fake-api-key'
+const FAKE_API_KEY = 'fake-api-key'
 let sdk: Latitude
 
 const server = setupServer()

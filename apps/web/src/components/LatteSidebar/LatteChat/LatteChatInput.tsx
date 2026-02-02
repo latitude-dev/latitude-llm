@@ -120,9 +120,9 @@ export function LatteChatInput({
           .detail({ id: project.id })
           .commits.detail({ uuid: commit.uuid }).documents.root,
       )
-    } else if (updateDocumentContent) {
+    } else if (updateDocumentContent && checkpoint?.data?.content) {
       // Optimistically update the document value to the previous value
-      updateDocumentContent(checkpoint?.data?.content!, {
+      updateDocumentContent(checkpoint.data.content, {
         origin: 'latteCopilot',
       })
     }

@@ -102,7 +102,7 @@
     "@faker-js/faker": "^8.4.1",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
-    "@next/eslint-plugin-next": "^15.3.4",
+    "@next/eslint-plugin-next": "^15.5.10",
     "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^15.3.0",

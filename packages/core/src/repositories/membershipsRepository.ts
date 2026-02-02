@@ -5,10 +5,10 @@ import { Result } from '../lib/Result'
 import { memberships } from '../schema/models/memberships'
 import RepositoryLegacy from './repository'
 
-const tt = getTableColumns(memberships)
+const _tt = getTableColumns(memberships)
 
 export class MembershipsRepository extends RepositoryLegacy<
-  typeof tt,
+  typeof _tt,
   Membership
 > {
   get scope() {

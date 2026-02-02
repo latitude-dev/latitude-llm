@@ -232,27 +232,29 @@ function NodeHeaderWrapper({
         )}
         {showActions && isHovered ? (
           <div className={cn('flex items-center gap-x-2')}>
-            {actions.map((action, index) => (
-              <Tooltip
-                key={index}
-                asChild
-                trigger={
-                  <Button
-                    variant='ghost'
-                    size='none'
-                    lookDisabled={action.lookDisabled}
-                    disabled={action.disabled}
-                    onClick={action.onClick}
-                    iconProps={{
-                      color: 'foregroundMuted',
-                      name: action.iconProps?.name!,
-                    }}
-                  />
-                }
-              >
-                {action.label}
-              </Tooltip>
-            ))}
+            {actions.map((action, index) =>
+              action.iconProps?.name ? (
+                <Tooltip
+                  key={index}
+                  asChild
+                  trigger={
+                    <Button
+                      variant='ghost'
+                      size='none'
+                      lookDisabled={action.lookDisabled}
+                      disabled={action.disabled}
+                      onClick={action.onClick}
+                      iconProps={{
+                        color: 'foregroundMuted',
+                        name: action.iconProps?.name,
+                      }}
+                    />
+                  }
+                >
+                  {action.label}
+                </Tooltip>
+              ) : null,
+            )}
           </div>
         ) : null}
         {changeIcon && (

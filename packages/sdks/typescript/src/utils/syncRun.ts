@@ -73,7 +73,7 @@ export async function syncRun<
     let json: ApiErrorJsonResponse | undefined
     try {
       json = (await response.json()) as ApiErrorJsonResponse
-    } catch (error) {
+    } catch (_error) {
       // Do nothing, sometimes gateway returns html instead of json (502/504 errors)
     }
 

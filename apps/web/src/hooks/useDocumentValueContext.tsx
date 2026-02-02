@@ -231,7 +231,9 @@ export function useRefreshPromptMetadata({
   useEffect(() => {
     if (!document) return
 
-    devMode // Note: This is a hack to force the metadata to be updated when the dev mode is switched
+    // NOTE: This is a hack to force the metadata to be updated when the dev mode is switched
+    // eslint-disable-next-line
+    devMode
 
     updateMetadata({
       prompt: value,

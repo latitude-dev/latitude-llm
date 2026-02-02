@@ -58,7 +58,7 @@ export const MarkdownContent = memo(
           <MarkdownLink href={href ?? '#'}>{children}</MarkdownLink>
         ),
 
-        // @ts-ignore: react-markdown passes an `inline` prop even though it’s not on HTMLElement attributes
+        // @ts-expect-error - react-markdown passes an `inline` prop even though it’s not on HTMLElement attributes
         code: ({ inline, className, children, ...props }) => {
           const content = String(children)
           if (inline || isCodeBlockInline(content, className)) {

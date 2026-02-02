@@ -1,6 +1,8 @@
 import localFont from 'next/font/local'
 
 export const fontSans = localFont({
+  preload: true,
+  display: 'swap',
   src: [
     {
       path: '../assets/fonts/Inter-ExtraLight.woff2',
@@ -153,6 +155,8 @@ export const fontDisplay = localFont({
 })
 
 export const fontMono = localFont({
+  preload: true,
+  display: 'swap',
   src: [
     {
       path: '../assets/fonts/JetBrainsMono-ExtraLight.ttf',

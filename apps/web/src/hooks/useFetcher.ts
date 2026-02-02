@@ -10,14 +10,13 @@ type ISearchParams =
   | URLSearchParams
   | undefined
 
-type ConditionalResponse<
-  R extends unknown,
-  Raw extends boolean,
-> = Raw extends true ? Response | void : R | void
+type ConditionalResponse<R, Raw extends boolean> = Raw extends true
+  ? Response | void
+  : R | void
 
 export async function handleResponse<
-  R extends unknown = unknown,
-  I extends unknown = unknown,
+  R = unknown,
+  I = unknown,
   Raw extends boolean = false,
 >({
   response,
@@ -87,8 +86,8 @@ export async function handleResponse<
 }
 
 export async function executeFetch<
-  R extends unknown = unknown,
-  I extends unknown = unknown,
+  R = unknown,
+  I = unknown,
   Raw extends boolean = false,
 >({
   route,
@@ -155,8 +154,8 @@ export async function executeFetch<
 }
 
 export default function useFetcher<
-  R extends unknown = unknown,
-  I extends unknown = unknown,
+  R = unknown,
+  I = unknown,
   Raw extends boolean = false,
 >(
   route?: string,

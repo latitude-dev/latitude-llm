@@ -111,7 +111,7 @@ function extractToolCallArguments(
     serializer: (value) => {
       try {
         return JSON.parse(String(value)) as Record<string, unknown>
-      } catch (error) {
+      } catch (_error) {
         return undefined
       }
     },
@@ -136,7 +136,7 @@ function extractToolResultValue(
     serializer: (value) => {
       try {
         return JSON.parse(String(value)) as Record<string, unknown>
-      } catch (error) {
+      } catch (_error) {
         return String(value)
       }
     },

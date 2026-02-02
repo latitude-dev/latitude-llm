@@ -25,7 +25,7 @@ function stringifyData({
   try {
     csvString = stringify([headerRow, ...dataRows])
     return Result.ok(csvString)
-  } catch (error) {
+  } catch (_error) {
     return Result.error(new Error('Error generating CSV from spans'))
   }
 }

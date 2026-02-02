@@ -22,7 +22,7 @@ export class LockFileManager {
       const lockFilePath = path.join(projectPath, this.lockFileName)
       await fs.access(lockFilePath)
       return true
-    } catch (error) {
+    } catch (_error) {
       return false
     }
   }
@@ -35,7 +35,7 @@ export class LockFileManager {
       const lockFilePath = path.join(projectPath, this.lockFileName)
       const fileContent = await fs.readFile(lockFilePath, 'utf-8')
       return JSON.parse(fileContent) as LatitudeLockFile
-    } catch (error) {
+    } catch (_error) {
       return null
     }
   }

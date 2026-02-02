@@ -14,7 +14,11 @@ export default function NotificationsModal({ route }: { route?: string }) {
       open
       onOpenChange={(open) => {
         if (!open) {
-          route ? router.push(route) : router.back()
+          if (route) {
+            router.push(route)
+          } else {
+            router.back()
+          }
         }
       }}
       title='Email Notifications'

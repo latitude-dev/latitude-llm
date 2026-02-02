@@ -41,7 +41,7 @@ async function webExtract({
   let url: URL
   try {
     url = new URL(_url)
-  } catch (error) {
+  } catch (_error) {
     return Result.error(new BadRequestError('Invalid URL'))
   }
 

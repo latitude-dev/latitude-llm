@@ -6,14 +6,14 @@ export const INPUT_SOURCE = {
   datasetV2: 'datasetV2',
   history: 'history',
 } as const
-const LOCAL_INPUT_SOURCE = {
+const _LOCAL_INPUT_SOURCE = {
   manual: 'manual',
   history: 'history',
   dataset: 'dataset',
   datasetV2: 'datasetV2',
 } as const
 export type LocalInputSource =
-  (typeof LOCAL_INPUT_SOURCE)[keyof typeof LOCAL_INPUT_SOURCE]
+  (typeof _LOCAL_INPUT_SOURCE)[keyof typeof _LOCAL_INPUT_SOURCE]
 
 export type InputSource = (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
 type PlaygroundInputMetadata = {
