@@ -90,7 +90,7 @@ jobs:
           enable-cache: true
 
       - name: Install Node.js dependencies
-        run: pnpm install --frozen-lockfile --shamefully-hoist
+        run: pnpm install --frozen-lockfile --shamefully-hoist --ignore-scripts
 
       - name: Wait for PostgreSQL to start
         run: until pg_isready -h localhost -p 5432; do sleep 1; done
@@ -127,9 +127,6 @@ jobs:
             echo "gateway.log not found"
           fi
           exit 1
-
-      - name: Build TypeScript SDK
-        run: pnpm --filter @latitude-data/sdk build
 
       - name: Run TypeScript SDK acceptance tests
         run: pnpm --filter @latitude-data/sdk test -- src/tests/acceptance.test.ts
