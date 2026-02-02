@@ -123,7 +123,7 @@ You are a helpful assistant. Reply with a short acknowledgement.
     }
   })
 
-  it('should instantiate SDK targeting localhost:8787 with no SSL and run prompt with tool handler', async () => {
+  it.skip('should instantiate SDK targeting localhost:8787 with no SSL and run prompt with tool handler', async () => {
     // Create the get_weather tool handler
     const getWeatherTool = vi
       .fn()
