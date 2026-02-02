@@ -55,7 +55,7 @@ catalogs:
       specifier: 8.16.0
       version: 8.16.0
     promptl-ai:
-      specifier: ^0.9.5
+      specifier: 0.9.5
       version: 0.9.5
     react:
       specifier: 19.2.4
@@ -66,6 +66,9 @@ catalogs:
     react-dom:
       specifier: 19.2.4
       version: 19.2.4
+    rosetta-ai:
+      specifier: 1.3.1
+      version: 1.3.1
     zod:
       specifier: 4.1.8
       version: 4.1.8
@@ -948,6 +951,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.4(react@19.2.4)
+      rosetta-ai:
+        specifier: 'catalog:'
+        version: 1.3.1
       safe-regex:
         specifier: 2.1.1
         version: 2.1.1
@@ -7489,8 +7495,8 @@ packages:
   caniuse-lite@1.0.30001746:
     resolution: {integrity: sha512-eA7Ys/DGw+pnkWWSE/id29f2IcPHVoE8wxtvE5JdvD2V28VTDPy1yEeo11Guz0sJ4ZeGRcm3uaTcAqK1LXaphA==}
 
-  caniuse-lite@1.0.30001767:
-    resolution: {integrity: sha512-34+zUAMhSH+r+9eKmYG+k2Rpt8XttfE4yXAjoZvkAPs15xcYQhyBYdalJ65BzivAvGRMViEjy6oKr/S91loekQ==}
+  caniuse-lite@1.0.30001766:
+    resolution: {integrity: sha512-4C0lfJ0/YPjJQHagaE9x2Elb69CIqEPZeG0anQt9SIvIoOH4a4uaRl73IavyO+0qZh6MDLH//DrXThEYKHkmYA==}
 
   cardinal@2.1.1:
     resolution: {integrity: sha512-JSr5eOgoEymtYHBjNWyjrMqet9Am2miJhlfKNdqLp6zoeAh0KN5dRAcxlecj5mAJrmQomgiOBj35xHLrFjqBpw==}
@@ -12346,6 +12352,10 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
+  rosetta-ai@1.3.1:
+    resolution: {integrity: sha512-p9JeIoYc/3TyKYCZ3776GsuFz+a79AZECFEQDPtjw5xLldIRxWbn5X1JxyJT32huVCGYHBcfk04Ul494Xm+hsg==}
+    engines: {node: '>=20.0.0'}
+
   router@2.2.0:
     resolution: {integrity: sha512-nLTrUKm2UyiL7rlhapu/Zl45FwNgkZGaCpZbIHajDYgwlJCOzLSk+cIPAnsEqV955GjILJnKbdQC1nVPz+gAYQ==}
     engines: {node: '>= 18'}
@@ -16032,8 +16042,8 @@ snapshots:
 
   '@babel/generator@7.28.3':
     dependencies:
-      '@babel/parser': 7.28.6
-      '@babel/types': 7.28.6
+      '@babel/parser': 7.28.4
+      '@babel/types': 7.28.4
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
       jsesc: 3.1.0
@@ -16098,7 +16108,7 @@ snapshots:
 
   '@babel/helper-optimise-call-expression@7.27.1':
     dependencies:
-      '@babel/types': 7.28.6
+      '@babel/types': 7.28.4
 
   '@babel/helper-plugin-utils@7.28.6': {}
 
@@ -16184,8 +16194,8 @@ snapshots:
   '@babel/template@7.27.2':
     dependencies:
       '@babel/code-frame': 7.27.1
-      '@babel/parser': 7.28.6
-      '@babel/types': 7.28.6
+      '@babel/parser': 7.28.4
+      '@babel/types': 7.28.4
 
   '@babel/template@7.28.6':
     dependencies:
@@ -16402,7 +16412,7 @@ snapshots:
       '@azure/arm-appservice': 16.0.0
       '@azure/arm-resources': 6.1.0
       '@azure/identity': 4.12.0
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       chalk: 3.0.0
       fast-deep-equal: 3.1.3
     transitivePeerDependencies:
@@ -16444,7 +16454,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-deployment@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
       simple-git: 3.16.0
@@ -16454,7 +16464,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-dora@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
       simple-git: 3.16.0
@@ -16464,7 +16474,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-gate@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       '@types/uuid': 9.0.8
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
@@ -16516,7 +16526,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-sarif@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       ajv: 8.17.1
       ajv-formats: 2.1.1(ajv@8.17.1)
       axios: 1.12.2(debug@4.4.3)
@@ -16531,7 +16541,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-sbom@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       ajv: 8.17.1
       ajv-formats: 2.1.1(ajv@8.17.1)
       axios: 1.12.2(debug@4.4.3)
@@ -16548,14 +16558,14 @@ snapshots:
       '@aws-sdk/client-cloudwatch-logs': 3.901.0
       '@aws-sdk/client-iam': 3.901.0
       '@aws-sdk/client-sfn': 3.901.0
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       deep-object-diff: 1.1.9
     transitivePeerDependencies:
       - aws-crt
 
   '@datadog/datadog-ci-plugin-synthetics@3.21.4(@datadog/datadog-ci-base@3.21.4)(bufferutil@4.0.9)(utf-8-validate@6.0.5)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
       debug: 4.4.3
@@ -17115,7 +17125,7 @@ snapshots:
       '@babel/traverse': 7.28.6
       '@babel/types': 7.28.6
       prettier: 3.6.2
-      semver: 7.7.2
+      semver: 7.7.3
     optionalDependencies:
       '@vue/compiler-sfc': 3.5.22
     transitivePeerDependencies:
@@ -18675,7 +18685,7 @@ snapshots:
       '@types/shimmer': 1.2.0
       import-in-the-middle: 1.14.4
       require-in-the-middle: 7.5.2
-      semver: 7.7.2
+      semver: 7.7.3
       shimmer: 1.2.1
     transitivePeerDependencies:
       - supports-color
@@ -18866,7 +18876,7 @@ snapshots:
       extract-zip: 2.0.1
       progress: 2.0.3
       proxy-agent: 6.5.0
-      semver: 7.7.2
+      semver: 7.7.3
       tar-fs: 3.1.1
       unbzip2-stream: 1.4.3
       yargs: 17.7.2
@@ -21185,7 +21195,7 @@ snapshots:
 
   '@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3)':
     dependencies:
-      '@eslint-community/regexpp': 4.12.1
+      '@eslint-community/regexpp': 4.12.2
       '@typescript-eslint/parser': 7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3)
       '@typescript-eslint/scope-manager': 7.18.0
       '@typescript-eslint/type-utils': 7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3)
@@ -21307,7 +21317,7 @@ snapshots:
       debug: 4.4.3
       globby: 11.1.0
       is-glob: 4.0.3
-      semver: 7.7.2
+      semver: 7.7.3
       tsutils: 3.21.0(typescript@5.9.3)
     optionalDependencies:
       typescript: 5.9.3
@@ -21322,7 +21332,7 @@ snapshots:
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.5
-      semver: 7.7.2
+      semver: 7.7.3
       ts-api-utils: 1.4.3(typescript@5.9.3)
     optionalDependencies:
       typescript: 5.9.3
@@ -21346,7 +21356,7 @@ snapshots:
 
   '@typescript-eslint/utils@5.62.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3)':
     dependencies:
-      '@eslint-community/eslint-utils': 4.9.0(eslint@9.39.2(jiti@2.4.2))
+      '@eslint-community/eslint-utils': 4.9.1(eslint@9.39.2(jiti@2.4.2))
       '@types/json-schema': 7.0.15
       '@types/semver': 7.7.1
       '@typescript-eslint/scope-manager': 5.62.0
@@ -21354,14 +21364,14 @@ snapshots:
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.9.3)
       eslint: 9.39.2(jiti@2.4.2)
       eslint-scope: 5.1.1
-      semver: 7.7.2
+      semver: 7.7.3
     transitivePeerDependencies:
       - supports-color
       - typescript
 
   '@typescript-eslint/utils@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3)':
     dependencies:
-      '@eslint-community/eslint-utils': 4.9.0(eslint@9.39.2(jiti@2.4.2))
+      '@eslint-community/eslint-utils': 4.9.1(eslint@9.39.2(jiti@2.4.2))
       '@typescript-eslint/scope-manager': 7.18.0
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.9.3)
@@ -21491,10 +21501,10 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3)
       '@typescript-eslint/parser': 7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3)
       eslint-config-prettier: 9.1.2(eslint@9.39.2(jiti@2.4.2))
-      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2)))
+      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2)))
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2))
       eslint-plugin-eslint-comments: 3.2.0(eslint@9.39.2(jiti@2.4.2))
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.2(jiti@2.4.2))
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2))
       eslint-plugin-jest: 27.9.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3)
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.39.2(jiti@2.4.2))
       eslint-plugin-playwright: 1.8.3(eslint-plugin-jest@27.9.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2))
@@ -21629,7 +21639,7 @@ snapshots:
 
   '@vue/compiler-core@3.5.22':
     dependencies:
-      '@babel/parser': 7.28.6
+      '@babel/parser': 7.28.4
       '@vue/shared': 3.5.22
       entities: 4.5.0
       estree-walker: 2.0.2
@@ -22177,7 +22187,7 @@ snapshots:
   browserslist@4.28.1:
     dependencies:
       baseline-browser-mapping: 2.9.19
-      caniuse-lite: 1.0.30001767
+      caniuse-lite: 1.0.30001766
       electron-to-chromium: 1.5.283
       node-releases: 2.0.27
       update-browserslist-db: 1.2.3(browserslist@4.28.1)
@@ -22274,7 +22284,7 @@ snapshots:
 
   caniuse-lite@1.0.30001746: {}
 
-  caniuse-lite@1.0.30001767: {}
+  caniuse-lite@1.0.30001766: {}
 
   cardinal@2.1.1:
     dependencies:
@@ -23420,9 +23430,9 @@ snapshots:
       eslint-plugin-turbo: 2.8.1(eslint@9.39.2(jiti@2.4.2))(turbo@2.5.8)
       turbo: 2.5.8
 
-  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2))):
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2))):
     dependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.2(jiti@2.4.2))
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2))
 
   eslint-import-resolver-node@0.3.9:
     dependencies:
@@ -23443,7 +23453,7 @@ snapshots:
       tinyglobby: 0.2.15
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.2(jiti@2.4.2))
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2))
     transitivePeerDependencies:
       - supports-color
 
@@ -23468,7 +23478,7 @@ snapshots:
       eslint: 9.39.2(jiti@2.4.2)
       ignore: 5.3.2
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.2(jiti@2.4.2)):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2)))(eslint@9.39.2(jiti@2.4.2)):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -23509,7 +23519,7 @@ snapshots:
 
   eslint-plugin-jest@28.14.0(@typescript-eslint/eslint-plugin@8.54.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3):
     dependencies:
-      '@typescript-eslint/utils': 7.18.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3)
+      '@typescript-eslint/utils': 8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3)
       eslint: 9.39.2(jiti@2.4.2)
     optionalDependencies:
       '@typescript-eslint/eslint-plugin': 8.54.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3))(eslint@9.39.2(jiti@2.4.2))(typescript@5.9.3)
@@ -23604,7 +23614,7 @@ snapshots:
   eslint-plugin-unicorn@51.0.1(eslint@9.39.2(jiti@2.4.2)):
     dependencies:
       '@babel/helper-validator-identifier': 7.28.5
-      '@eslint-community/eslint-utils': 4.9.0(eslint@9.39.2(jiti@2.4.2))
+      '@eslint-community/eslint-utils': 4.9.1(eslint@9.39.2(jiti@2.4.2))
       '@eslint/eslintrc': 2.1.4
       ci-info: 4.4.0
       clean-regexp: 1.0.0
@@ -23618,7 +23628,7 @@ snapshots:
       read-pkg-up: 7.0.1
       regexp-tree: 0.1.27
       regjsparser: 0.10.0
-      semver: 7.7.2
+      semver: 7.7.3
       strip-indent: 3.0.0
     transitivePeerDependencies:
       - supports-color
@@ -25101,7 +25111,7 @@ snapshots:
 
   is-bun-module@2.0.0:
     dependencies:
-      semver: 7.7.2
+      semver: 7.7.3
 
   is-callable@1.2.7: {}
 
@@ -25539,7 +25549,7 @@ snapshots:
       console-table-printer: 2.14.6
       p-queue: 6.6.2
       p-retry: 4.6.2
-      semver: 7.7.2
+      semver: 7.7.3
       uuid: 10.0.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
@@ -26560,8 +26570,8 @@ snapshots:
     dependencies:
       '@next/env': 16.1.6
       '@swc/helpers': 0.5.15
-      baseline-browser-mapping: 2.8.10
-      caniuse-lite: 1.0.30001746
+      baseline-browser-mapping: 2.9.19
+      caniuse-lite: 1.0.30001766
       postcss: 8.4.31
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
@@ -27087,7 +27097,7 @@ snapshots:
 
   parse-json@5.2.0:
     dependencies:
-      '@babel/code-frame': 7.28.6
+      '@babel/code-frame': 7.27.1
       error-ex: 1.3.4
       json-parse-even-better-errors: 2.3.1
       lines-and-columns: 1.2.4
@@ -28231,6 +28241,10 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.53.3
       fsevents: 2.3.3
 
+  rosetta-ai@1.3.1:
+    dependencies:
+      zod: 4.1.8
+
   router@2.2.0:
     dependencies:
       debug: 4.4.3
@@ -28452,7 +28466,7 @@ snapshots:
     dependencies:
       '@img/colour': 1.0.0
       detect-libc: 2.1.1
-      semver: 7.7.2
+      semver: 7.7.3
     optionalDependencies:
       '@img/sharp-darwin-arm64': 0.34.4
       '@img/sharp-darwin-x64': 0.34.4
@@ -28663,7 +28677,7 @@ snapshots:
       detect-newline: 4.0.1
       git-hooks-list: 4.1.1
       is-plain-obj: 4.1.0
-      semver: 7.7.2
+      semver: 7.7.3
       sort-object-keys: 1.1.3
       tinyglobby: 0.2.15
 

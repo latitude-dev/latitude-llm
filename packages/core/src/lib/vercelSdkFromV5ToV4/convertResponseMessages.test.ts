@@ -1,22 +1,22 @@
-import { describe, it, expect } from 'vitest'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import {
+  AssistantMessage,
+  MessageContent,
+  MessageRole,
+  ToolContent,
+  ToolMessage,
+  ToolRequestContent,
+} from '@latitude-data/constants/legacyCompiler'
 import {
   AssistantModelMessage,
+  FilePart,
+  TextPart,
+  ToolCallPart,
   ToolModelMessage,
   ToolResultPart,
-  TextPart,
-  FilePart,
-  ToolCallPart,
 } from 'ai'
-import {
-  MessageRole,
-  ToolMessage,
-  AssistantMessage,
-  ToolContent,
-  ToolRequestContent,
-  MessageContent,
-} from '@latitude-data/constants/legacyCompiler'
+import { describe, expect, it } from 'vitest'
 import { convertResponseMessages } from './convertResponseMessages'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 // Local stub since SDK doesn’t export ReasoningPart
 type ReasoningPart = {
@@ -97,12 +97,14 @@ describe('convertResponseMessages (integration)', () => {
 
     const out = convertResponseMessages({ messages: [msg] })
     const assistant = out[0] as AssistantMessage
-    expect(assistant.content).toContainEqual({
-      type: 'tool-call',
-      toolCallId: 'id1',
-      toolName: 'T',
-      args: { a: 1 },
-    })
+    expect(assistant.content).toContainEqual(
+      expect.objectContaining({
+        type: 'tool-call',
+        toolCallId: 'id1',
+        toolName: 'T',
+        args: { a: 1 },
+      }),
+    )
     expect(assistant.toolCalls).toEqual([
       { id: 'id1', name: 'T', arguments: { a: 1 } },
     ])
@@ -153,7 +155,7 @@ describe('convertResponseMessages (integration)', () => {
       result: { k: 1 },
       isError: false,
     })
-    expect(out[0].content).toContainEqual({
+    expect(out[1].content).toContainEqual({
       type: 'tool-result',
       toolCallId: 'b',
       toolName: 'B',
@@ -193,9 +195,9 @@ describe('convertResponseMessages (integration)', () => {
     expect(toolResult).toBeDefined()
     expect(toolResult?.result).toContainEqual({ type: 'text', text: 'hey' })
     expect(toolResult?.result).toContainEqual({
-      type: 'file',
-      file: 'filebytes',
-      mimeType: 'image/jpeg',
+      type: 'media',
+      data: 'filebytes',
+      mediaType: 'image/jpeg',
     })
   })
 
