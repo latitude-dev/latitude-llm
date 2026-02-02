@@ -11,16 +11,13 @@ const nextConfig = {
   transpilePackages: INTERNAL_PACKAGES,
   serverExternalPackages: [
     '@latitude-data/sdk',
+    '@latitude-data/telemetry',
     '@napi-rs/canvas',
     'bullmq',
     'openid-client',
     'pdfjs-dist',
     'promptl-ai',
   ],
-  eslint: {
-    // Fine because we do the linter pass in CI before building
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     // Fine because we do the TS pass in CI before building
     ignoreBuildErrors: true,

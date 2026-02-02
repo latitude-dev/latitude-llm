@@ -23,6 +23,68 @@ Fight entropy. Leave the codebase better than you found it.
 - NEVER use the vitest command directly, always try pnpm test or implement a
   pnpm test script in the relevant package.json if it does not exist
 
+## Docker Production Builds
+
+The project uses Docker Compose for production builds. There are three compose files:
+
+- `docker-compose.yml` - Production deployment using pre-built images from GHCR
+- `docker-compose.local.yml` - Local development builds from source
+- `docker-compose.prod.yml` - Production deployment with Traefik reverse proxy
+
+### Building Locally
+
+To build and test the web application Docker image locally:
+
+```bash
+# Start dependencies (database, redis, weaviate)
+docker compose -f docker-compose.local.yml up db redis weaviate -d
+
+# Build the web container
+docker compose -f docker-compose.local.yml build web
+
+# Run the web container
+docker compose -f docker-compose.local.yml up web
+```
+
+The web app will be available at `http://localhost:3000`.
+
+### Build Configuration
+
+The web Dockerfile (`apps/web/docker/Dockerfile`) uses:
+
+- **Base image**: `node:22-alpine`
+- **Build tool**: Turbopack (`next build --turbopack`)
+- **Output mode**: Standalone (`output: 'standalone'` in `next.config.mjs`)
+- **Multi-stage build**: Pruner → Builder → Runner stages for minimal image size
+
+### Key Build Args
+
+Pass these as build arguments or environment variables:
+
+- `NEXT_PUBLIC_*` - Client-side environment variables (baked into the build)
+- `AWS_REGION`, `S3_BUCKET`, `BUILD_ID` - For static asset uploads to S3
+- `DD_GIT_COMMIT_SHA` - For Datadog source map uploads
+
+### Testing the Built Image
+
+```bash
+# Run the built image directly
+docker run --rm --network llm_default --env-file .env -p 3000:8080 llm-web
+
+# Or use docker compose
+docker compose -f docker-compose.local.yml up web
+```
+
+### Building Other Services
+
+```bash
+# Build all services
+docker compose -f docker-compose.local.yml build
+
+# Build specific services
+docker compose -f docker-compose.local.yml build gateway workers websockets
+```
+
 ## Code Style
 
 - Use TypeScript for all code, prefer types over interfaces
