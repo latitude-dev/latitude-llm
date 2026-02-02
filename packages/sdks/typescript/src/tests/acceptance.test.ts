@@ -46,7 +46,6 @@ provider: openai
 model: gpt-4.1-mini
 type: agent
 tools:
-  - latitude/search
   - get_weather:
       description: Obtains the weather temperature from a given location.
       parameters:
@@ -68,7 +67,7 @@ Location: {{ location }}
 
 <step>
   Finally, create a mother-like recommendation based on the weather report.
-  You must use the search tool for your research! Make sure you call it once before answering!
+  Call the get_weather tool exactly once before answering.
 </step>
 `.trim()
   const simplePromptContent = `
