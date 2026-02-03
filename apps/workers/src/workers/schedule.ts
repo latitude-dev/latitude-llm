@@ -37,6 +37,13 @@ export async function setupSchedules() {
     { opts: { attempts: 1 } },
   )
 
+  // Every day at 2 AM - Notify workspaces whose free trial ends in exactly 10 days
+  await maintenanceQueue.upsertJobScheduler(
+    'notifyWorkspacesFinishingFreeTrialJob',
+    { pattern: '0 0 2 * * *' },
+    { opts: { attempts: 1 } },
+  )
+
   // Every day at 3 AM - Process cancelled subscriptions and downgrade workspaces
   await maintenanceQueue.upsertJobScheduler(
     'processCancelledSubscriptionsJob',
