@@ -8,10 +8,7 @@ import {
 import {
   isEncodedImage,
   isInlineImage,
-  isMainSpan,
   isSafeUrl,
-  MainSpanType,
-  SpanWithDetails,
 } from '@latitude-data/constants'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Image } from '@latitude-data/web-ui/atoms/Image'
@@ -19,8 +16,8 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { computeSegments } from './helpers'
 import { ReferenceComponent } from './_components/Reference'
-import { useAnnotations } from '../../AnnotationsContext'
-import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
+import { AnnotationSection } from './_components/AnnotationSection'
+import { useBlockAnnotations } from './_hooks/useBlockAnnotations'
 
 export const ImageMessageContent = memo(
   ({
@@ -42,28 +39,17 @@ export const ImageMessageContent = memo(
     messageIndex?: number
     contentBlockIndex?: number
   }) => {
-    const { getAnnotationsForBlock, evaluations = [], span } = useAnnotations()
     const TextComponent = size === 'small' ? Text.H5 : Text.H4
+    const { blockAnnotations, evaluation, span } = useBlockAnnotations({
+      contentType: 'image',
+      messageIndex,
+      contentBlockIndex,
+      requireMainSpan: true,
+    })
     const segment = useMemo(
       () => computeSegments('image', image.toString(), sourceMap, parameters),
       [image, sourceMap, parameters],
     )[0]
-
-    // Get annotations for this specific block
-    const blockAnnotations = useMemo(() => {
-      if (
-        messageIndex === undefined ||
-        contentBlockIndex === undefined ||
-        !getAnnotationsForBlock ||
-        !span ||
-        !isMainSpan(span)
-      ) {
-        return []
-      }
-      return getAnnotationsForBlock(messageIndex, contentBlockIndex).filter(
-        (ann) => ann.context.contentType === 'image',
-      )
-    }, [messageIndex, contentBlockIndex, getAnnotationsForBlock, span])
 
     const imageContent = (() => {
       if (!isSafeUrl(image)) {
@@ -124,41 +110,17 @@ export const ImageMessageContent = memo(
       )
     })()
 
-    const evaluation = evaluations[0]
-
     return (
       <div className='flex flex-col gap-4'>
         {imageContent}
-        {(blockAnnotations.length > 0 || evaluation) && span && (
-          <div className='flex flex-col gap-y-4 border-t pt-4'>
-            {blockAnnotations.map((annotation) => (
-              <AnnotationForm
-                key={`${annotation.result.uuid}-${annotation.evaluation.uuid}`}
-                evaluation={annotation.evaluation}
-                result={annotation.result}
-                selectedContext={annotation.context}
-                span={span as SpanWithDetails<MainSpanType>}
-              />
-            ))}
-            {blockAnnotations.length === 0 &&
-              evaluation &&
-              messageIndex !== undefined &&
-              contentBlockIndex !== undefined &&
-              span !== undefined &&
-              isMainSpan(span) && (
-                <AnnotationForm
-                  key={`${evaluation.uuid}-${messageIndex}-${contentBlockIndex}`}
-                  evaluation={evaluation}
-                  selectedContext={{
-                    messageIndex,
-                    contentBlockIndex,
-                    contentType: 'image',
-                  }}
-                  span={span as SpanWithDetails<MainSpanType>}
-                />
-              )}
-          </div>
-        )}
+        <AnnotationSection
+          blockAnnotations={blockAnnotations}
+          evaluation={evaluation}
+          span={span}
+          messageIndex={messageIndex}
+          contentBlockIndex={contentBlockIndex}
+          contentType='image'
+        />
       </div>
     )
   },

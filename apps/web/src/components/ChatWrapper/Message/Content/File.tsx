@@ -7,16 +7,11 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { memo, useMemo } from 'react'
 import { computeSegments } from './helpers'
-import {
-  isMainSpan,
-  isSafeUrl,
-  MainSpanType,
-  SpanWithDetails,
-} from '@latitude-data/constants'
+import { isSafeUrl } from '@latitude-data/constants'
 import { ReferenceComponent } from './_components/Reference'
 import { FileComponent } from './_components/FileComponent'
-import { useAnnotations } from '../../AnnotationsContext'
-import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
+import { AnnotationSection } from './_components/AnnotationSection'
+import { useBlockAnnotations } from './_hooks/useBlockAnnotations'
 
 export const FileMessageContent = memo(
   ({
@@ -38,28 +33,17 @@ export const FileMessageContent = memo(
     messageIndex?: number
     contentBlockIndex?: number
   }) => {
-    const { getAnnotationsForBlock, evaluations = [], span } = useAnnotations()
     const TextComponent = size === 'small' ? Text.H6 : Text.H5
+    const { blockAnnotations, evaluation, span } = useBlockAnnotations({
+      contentType: 'file',
+      messageIndex,
+      contentBlockIndex,
+      requireMainSpan: true,
+    })
     const segment = useMemo(
       () => computeSegments('file', file.toString(), sourceMap, parameters),
       [file, sourceMap, parameters],
     )[0]
-
-    // Get annotations for this specific block
-    const blockAnnotations = useMemo(() => {
-      if (
-        messageIndex === undefined ||
-        contentBlockIndex === undefined ||
-        !getAnnotationsForBlock ||
-        !span ||
-        !isMainSpan(span)
-      ) {
-        return []
-      }
-      return getAnnotationsForBlock(messageIndex, contentBlockIndex).filter(
-        (ann) => ann.context.contentType === 'file',
-      )
-    }, [messageIndex, contentBlockIndex, getAnnotationsForBlock, span])
 
     const fileContent = (() => {
       if (!isSafeUrl(file)) {
@@ -89,42 +73,19 @@ export const FileMessageContent = memo(
       )
     })()
 
-    const evaluation = evaluations[0]
-
     return (
       <div className='flex flex-col gap-4'>
         {fileContent}
-        {(blockAnnotations.length > 0 || evaluation) && span && (
-          <div className='flex flex-col gap-y-4 border-t pt-4'>
-            {blockAnnotations.map((annotation) => (
-              <AnnotationForm
-                key={`${annotation.result.uuid}-${annotation.evaluation.uuid}`}
-                evaluation={annotation.evaluation}
-                span={span as SpanWithDetails<MainSpanType>}
-                result={annotation.result}
-                initialExpanded={false}
-              />
-            ))}
-            {blockAnnotations.length === 0 &&
-              evaluation &&
-              messageIndex !== undefined &&
-              contentBlockIndex !== undefined &&
-              span !== undefined &&
-              isMainSpan(span) && (
-                <AnnotationForm
-                  key={`${evaluation.uuid}-${messageIndex}-${contentBlockIndex}`}
-                  evaluation={evaluation}
-                  span={span as SpanWithDetails<MainSpanType>}
-                  initialExpanded={false}
-                  selectedContext={{
-                    messageIndex,
-                    contentBlockIndex,
-                    contentType: 'file',
-                  }}
-                />
-              )}
-          </div>
-        )}
+        <AnnotationSection
+          blockAnnotations={blockAnnotations}
+          evaluation={evaluation}
+          span={span}
+          messageIndex={messageIndex}
+          contentBlockIndex={contentBlockIndex}
+          contentType='file'
+          initialExpanded={false}
+          includeSelectedContextForExisting={false}
+        />
       </div>
     )
   },
