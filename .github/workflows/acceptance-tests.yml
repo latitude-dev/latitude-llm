@@ -129,7 +129,7 @@ jobs:
           exit 1
 
       - name: Run TypeScript SDK acceptance tests
-        run: pnpm --filter @latitude-data/sdk test -- src/tests/acceptance.test.ts
+        run: pnpm --filter @latitude-data/sdk test --allowOnly -- src/tests/acceptance.test.ts
 
       - name: Install Python SDK dependencies
         run: |
