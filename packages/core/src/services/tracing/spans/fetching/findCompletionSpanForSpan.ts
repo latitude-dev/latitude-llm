@@ -1,10 +1,10 @@
 import {
   AssembledSpan,
   AssembledTrace,
-  isCompletionSpan,
   isMainSpan,
   SpanType,
 } from '../../../../constants'
+import { findLastSpanOfType } from './findLastSpanOfType'
 
 /**
  * Builds a parent map by traversing the trace tree.
@@ -58,23 +58,6 @@ function findNearestMainSpan(
   return undefined
 }
 
-function findLatestCompletionSpan(
-  span: AssembledSpan,
-): AssembledSpan<SpanType.Completion> | undefined {
-  if (!span.children) return undefined
-  const reversedChildren = [...span.children].reverse()
-
-  for (const child of reversedChildren) {
-    if (isMainSpan(child)) continue
-    if (isCompletionSpan(child)) return child
-
-    const innerCompletion = findLatestCompletionSpan(child)
-    if (innerCompletion) return innerCompletion
-  }
-
-  return undefined
-}
-
 /**
  * Finds the completion span containing the conversation for a specific span.
  *
@@ -103,5 +86,9 @@ export function findCompletionSpanForSpan(
   const mainSpan = findNearestMainSpan(span, trace)
   if (!mainSpan) return undefined
 
-  return findLatestCompletionSpan(mainSpan)
+  return findLastSpanOfType({
+    children: mainSpan.children,
+    spanType: SpanType.Completion,
+    searchNestedAgents: false,
+  })
 }
