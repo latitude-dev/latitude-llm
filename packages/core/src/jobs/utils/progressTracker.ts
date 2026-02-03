@@ -83,9 +83,9 @@ export class ProgressTracker {
     const evaluationsPerRow = await this.getEvaluationsPerRow(redis)
     const incrementCount = success ? 1 : 1 + evaluationsPerRow // If failed, evaluations will be marked as done too since they will not run
 
-    if (!success && evaluationsPerRow > 0) {
-      // Mark this row's evaluations as errors
-      await redis.incrby(this.getKey('errors'), evaluationsPerRow)
+    if (!success) {
+      // Mark this row as an error (1 for the failed document run + evaluations that won't run)
+      await redis.incrby(this.getKey('errors'), 1 + evaluationsPerRow)
     }
 
     return this.incrementRow(redis, uuid, incrementCount)

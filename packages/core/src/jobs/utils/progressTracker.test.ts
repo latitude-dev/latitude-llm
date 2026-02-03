@@ -106,13 +106,23 @@ describe('ProgressTracker', () => {
       expect(progress.completed).toBe(1)
     })
 
-    it('marks evaluations as errors when document run fails', async () => {
+    it('marks run and evaluations as errors when document run fails', async () => {
       await tracker.initializeProgress(['uuid-1'], 2)
 
       await tracker.documentRunFinished('uuid-1', false)
 
       const progress = await tracker.getProgress()
-      expect(progress.errors).toBe(2)
+      expect(progress.errors).toBe(3)
+      expect(progress.completed).toBe(1)
+    })
+
+    it('marks run as error when document run fails with no evaluations', async () => {
+      await tracker.initializeProgress(['uuid-1'], 0)
+
+      await tracker.documentRunFinished('uuid-1', false)
+
+      const progress = await tracker.getProgress()
+      expect(progress.errors).toBe(1)
       expect(progress.completed).toBe(1)
     })
   })
