@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
 
-import { MessageContent, ToolResultContent } from '@latitude-data/constants/messages'
+import {
+  MessageContent,
+  ToolResultContent,
+} from '@latitude-data/constants/messages'
 import { MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
 import { ProseColor, TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'

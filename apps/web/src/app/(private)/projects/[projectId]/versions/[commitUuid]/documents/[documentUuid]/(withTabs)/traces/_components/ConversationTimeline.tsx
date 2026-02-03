@@ -43,7 +43,7 @@ export function ConversationTimeline({
     )
   }
 
-  return <UnifiedTimeline traces={traces} />
+  return <UnifiedTimeline traces={traces} documentLogUuid={documentLogUuid} />
 }
 
 export type TraceSection = {
@@ -83,15 +83,32 @@ function findSpanByIdInTraces(
   return null
 }
 
-function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
+function UnifiedTimeline({
+  traces,
+  documentLogUuid: _documentLogUuid,
+}: {
+  traces: AssembledTrace[]
+  documentLogUuid: string
+}) {
   const { selection } = use(TraceSpanSelectionStateContext)
   const { selectSpan } = use(TraceSpanSelectionActionsContext)
+
+  const isConversationSelected = !selection.spanId && traces.length > 1
+  const onSelectConversation = useCallback(() => {
+    if (traces.length === 1 && traces[0]?.children[0]) {
+      selectSpan(traces[0].children[0])
+      return
+    }
+
+    selectSpan()
+  }, [traces, selectSpan])
+
   const { selectedSpan, totalSpans, sections, totalDuration } = useMemo(() => {
     const totalSpans = traces.reduce((sum, t) => sum + t.children.length, 0)
     const totalDuration = traces.reduce((sum, t) => sum + t.duration, 0)
     const sections = getTraceSections(traces)
     const found = findSpanByIdInTraces(traces, selection.spanId)
-    const selectedSpan = found ?? traces[0]?.children[0] ?? null
+    const selectedSpan = found ?? null
     return { selectedSpan, totalSpans, sections, totalDuration }
   }, [traces, selection.spanId])
 
@@ -130,6 +147,30 @@ function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
     [setCollapsedSpans],
   )
 
+  const allSpanIds = useMemo(() => {
+    const ids: string[] = []
+    const collectIds = (span: AssembledSpan) => {
+      if (span.children.length > 0) {
+        ids.push(span.id)
+        span.children.forEach(collectIds)
+      }
+    }
+    sections.forEach((section) => section.trace.children.forEach(collectIds))
+    return ids
+  }, [sections])
+
+  const isConversationCollapsed =
+    allSpanIds.length > 0 && allSpanIds.every((id) => collapsedSpans.has(id))
+
+  const toggleCollapseAll = useCallback(() => {
+    setCollapsedSpans(() => {
+      if (isConversationCollapsed) {
+        return new Set()
+      }
+      return new Set(allSpanIds)
+    })
+  }, [allSpanIds, isConversationCollapsed])
+
   if (totalSpans < 1) {
     return (
       <div className='w-full h-full flex items-center justify-center gap-2 p-4'>
@@ -137,8 +178,6 @@ function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
       </div>
     )
   }
-
-  if (!selectedSpan) return null
 
   return (
     <div className='w-full h-full flex flex-col items-center justify-center relative'>
@@ -152,10 +191,15 @@ function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
               sections={sections}
               width={treeWidth}
               minWidth={TREE_MIN_WIDTH}
-              selectedSpan={selectedSpan}
+              selectedSpan={selectedSpan ?? undefined}
               selectSpan={selectSpan}
               collapsedSpans={collapsedSpans}
               toggleCollapsed={toggleCollapsed}
+              isConversationSelected={isConversationSelected}
+              onSelectConversation={onSelectConversation}
+              isConversationCollapsed={isConversationCollapsed}
+              toggleCollapseAll={toggleCollapseAll}
+              setCollapsedSpans={setCollapsedSpans}
             />
           </div>
         }
@@ -166,10 +210,16 @@ function UnifiedTimeline({ traces }: { traces: AssembledTrace[] }) {
               totalDuration={totalDuration}
               width={graphWidth}
               minWidth={GRAPH_MIN_WIDTH}
-              selectedSpan={selectedSpan}
+              selectedSpan={selectedSpan ?? undefined}
               selectSpan={selectSpan}
               collapsedSpans={collapsedSpans}
               toggleCollapsed={toggleCollapsed}
+              setCollapsedSpans={setCollapsedSpans}
+              showConversationSpacer={sections.length > 1}
+              isConversationCollapsed={isConversationCollapsed}
+              isConversationSelected={isConversationSelected}
+              onSelectConversation={onSelectConversation}
+              toggleCollapseAll={toggleCollapseAll}
             />
           </div>
         }

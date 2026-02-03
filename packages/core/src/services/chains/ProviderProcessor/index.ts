@@ -4,10 +4,7 @@ import {
   StreamType,
 } from '@latitude-data/constants/ai'
 import { AIReturn, estimateCost } from '../../ai'
-import {
-  AssistantMessage,
-  Message,
-} from '@latitude-data/constants/messages'
+import { AssistantMessage, Message } from '@latitude-data/constants/messages'
 import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
 import { convertResponseMessages } from '../../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'

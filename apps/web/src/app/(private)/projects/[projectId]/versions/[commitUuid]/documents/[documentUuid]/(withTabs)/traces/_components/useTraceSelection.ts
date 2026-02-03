@@ -6,19 +6,26 @@ export function useTraceSelection(activeRuns: ActiveRun[] = []) {
   const { selection } = use(TraceSpanSelectionStateContext)
 
   return useMemo(() => {
-    const anySelection =
-      (!!selection.spanId && !!selection.documentLogUuid) ||
-      !!selection.activeRunUuid
+    const hasConversation = !!selection.documentLogUuid
+    const hasSpan = !!selection.spanId
+    const hasActiveRun = !!selection.activeRunUuid
+
+    const anySelection = hasConversation || hasActiveRun
+
+    const conversationSelection =
+      hasConversation && !hasSpan
+        ? { documentLogUuid: selection.documentLogUuid! }
+        : null
 
     const traceSelection =
-      selection.documentLogUuid && selection.spanId
+      hasConversation && hasSpan
         ? {
-            spanId: selection.spanId,
-            documentLogUuid: selection.documentLogUuid,
+            spanId: selection.spanId!,
+            documentLogUuid: selection.documentLogUuid!,
           }
         : null
 
-    const run = selection.activeRunUuid
+    const run = hasActiveRun
       ? activeRuns.find((r) => r.uuid === selection.activeRunUuid)
       : null
 
@@ -26,6 +33,7 @@ export function useTraceSelection(activeRuns: ActiveRun[] = []) {
 
     return {
       any: anySelection,
+      conversation: conversationSelection,
       trace: traceSelection,
       active: activeRunSelection,
     }

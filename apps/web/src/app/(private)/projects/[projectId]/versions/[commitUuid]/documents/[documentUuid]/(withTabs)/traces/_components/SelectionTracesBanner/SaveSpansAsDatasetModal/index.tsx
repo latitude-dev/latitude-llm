@@ -1,11 +1,11 @@
-import { FormEvent, useCallback, useMemo, useState } from 'react'
+import { SubmitEventHandler, useCallback, useMemo, useState } from 'react'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { RadioButtonsInput } from '@latitude-data/web-ui/atoms/RadioButtonsInput'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
-import { type PreviewSpansState as Props } from './useSelectedSpans'
+import { type PreviewConversationsState as Props } from './useSelectedSpans'
 import { PreviewTable } from './PreviewTable'
 import useDatasets from '$/stores/datasets'
 import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
@@ -61,7 +61,6 @@ export function SaveSpansAsDatasetModal({
   setSelectedDataset,
   isLoadingPreview,
   fetchPreview,
-  selectedCount,
   selectionMode,
   error,
 }: Props) {
@@ -90,8 +89,8 @@ export function SaveSpansAsDatasetModal({
     },
     [previewModalState, setSelectedDataset, setShowDatasetSelector],
   )
-  const onSubmit = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = useCallback<SubmitEventHandler<HTMLFormElement>>(
+    (event) => {
       event.preventDefault()
 
       const form = new FormData(event.currentTarget)
@@ -156,7 +155,6 @@ export function SaveSpansAsDatasetModal({
         <PreviewTable
           previewData={previewData}
           isLoading={isLoadingPreview}
-          selectedCount={selectedCount}
           selectionMode={selectionMode}
         />
       </div>

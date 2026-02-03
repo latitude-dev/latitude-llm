@@ -1,9 +1,6 @@
 import { EMPTY_USAGE, LogSources } from '@latitude-data/constants'
 import { LatitudeError } from '@latitude-data/constants/errors'
-import {
-  Message,
-  UserMessage,
-} from '@latitude-data/constants/messages'
+import { Message, UserMessage } from '@latitude-data/constants/messages'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type User } from '../../../schema/models/types/User'

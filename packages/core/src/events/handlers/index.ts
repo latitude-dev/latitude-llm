@@ -19,6 +19,7 @@ import { notifyClientOfExportReady } from './notifyClientOfExportReady'
 import { notifyClientOfOptimizationStatus } from './notifyClientOfOptimizationStatus'
 import { notifyClientOfRunStatusByDocument } from './notifyClientOfRunStatusByDocument'
 import { notifyClientOfSpanCreated } from './notifyClientOfSpanCreated'
+import { notifyClientOfConversationUpdated } from './notifyClientOfConversationUpdated'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { pingProjectUpdateJob } from './pingProjectUpdateJob'
 import { removeMergedIssueVectors } from './removeMergedIssueVectors'
@@ -76,7 +77,11 @@ export const EventHandlers: IEventsHandlers = {
   ],
   evaluationResultV2Updated: [handleEvaluationResultV2Updated],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],
-  spanCreated: [evaluateLiveLogJob, notifyClientOfSpanCreated],
+  spanCreated: [
+    evaluateLiveLogJob,
+    notifyClientOfSpanCreated,
+    notifyClientOfConversationUpdated,
+  ],
   segmentCreated: [],
   segmentUpdated: [],
   actionExecuted: [],

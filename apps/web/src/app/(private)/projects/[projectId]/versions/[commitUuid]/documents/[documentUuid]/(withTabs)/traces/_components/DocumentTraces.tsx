@@ -9,52 +9,26 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { TraceSpanSelectionStateContext } from './TraceSpanSelectionContext'
-import { SpanRow } from './SpanRow'
+import { ConversationRow } from './ConversationRow'
 import { ActiveRunRow } from './ActiveRuns/ActiveRunRow'
 import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
-import {
-  ActiveRun,
-  EvaluationResultV2,
-  PromptSpan,
-} from '@latitude-data/constants'
+import { ActiveRun } from '@latitude-data/constants'
 import { type SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
-import { useEvaluationResultsV2ByTraces } from '$/stores/evaluationResultsV2'
-import { useSpanCreatedListener } from './useSpanCreatedListener'
-
-const EMPTY_EVALUATION_RESULTS: EvaluationResultV2[] = []
+import { UseConversationsReturn } from '$/stores/conversations'
 
 export function DocumentTraces({
   ref,
   activeRuns,
-  spans,
+  conversations,
   selectableState,
 }: {
   activeRuns: ActiveRun[]
-  spans: ReturnType<typeof useSpansKeysetPaginationStore>
+  conversations: UseConversationsReturn
   selectableState: SelectableRowsHook
   ref?: Ref<HTMLTableElement>
 }) {
   const { selection } = use(TraceSpanSelectionStateContext)
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-  const { document } = useCurrentDocument()
-  const {
-    dataByTraceId: evaluationResultsByTraceId,
-    isLoading: isEvaluationResultsLoading,
-  } = useEvaluationResultsV2ByTraces({
-    project,
-    commit,
-    document,
-    traceIds: spans.items.map((span) => span.traceId),
-  })
-
-  // Updates span store paginated state with realtime spans
-  useSpanCreatedListener(spans)
 
   return (
     <Table
@@ -62,13 +36,11 @@ export function DocumentTraces({
       className='table-auto'
       externalFooter={
         <SimpleKeysetTablePaginationFooter
-          setNext={spans.goToNextPage}
-          setPrev={spans.goToPrevPage}
-          hasNext={spans.hasNext}
-          hasPrev={spans.hasPrev}
-          count={spans.count}
-          countLabel={(count) => `${count} traces`}
-          isLoading={spans.isLoading}
+          setNext={conversations.goToNextPage}
+          setPrev={conversations.goToPrevPage}
+          hasNext={conversations.hasNext}
+          hasPrev={conversations.hasPrev}
+          isLoading={conversations.isLoading}
         />
       }
     >
@@ -85,6 +57,7 @@ export function DocumentTraces({
           <TableHead>Source</TableHead>
           <TableHead>Duration</TableHead>
           <TableHead>Evaluations</TableHead>
+          <TableHead>Traces</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -92,22 +65,18 @@ export function DocumentTraces({
           <ActiveRunRow key={run.uuid} run={run} />
         ))}
 
-        {spans.items.map((span) => (
-          <SpanRow
-            key={span.id}
-            span={span as PromptSpan}
+        {conversations.items.map((conversation) => (
+          <ConversationRow
+            key={conversation.documentLogUuid}
+            conversation={conversation}
             toggleRow={selectableState.toggleRow}
-            isRowSelected={selectableState.isSelected(span.id)}
+            isRowSelected={selectableState.isSelected(
+              conversation.documentLogUuid ?? undefined,
+            )}
             isExpanded={
               selection.documentLogUuid !== null &&
-              (selection.documentLogUuid === span.documentLogUuid ||
-                selection.expandedDocumentLogUuid === span.documentLogUuid)
+              selection.documentLogUuid === conversation.documentLogUuid
             }
-            evaluationResults={
-              evaluationResultsByTraceId[span.traceId] ??
-              EMPTY_EVALUATION_RESULTS
-            }
-            isEvaluationResultsLoading={isEvaluationResultsLoading}
           />
         ))}
       </TableBody>

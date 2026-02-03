@@ -10,8 +10,7 @@ import { SpansFilters, parseSpansFilters } from '$/lib/schemas/filters'
 import useDocumentTracesAggregations from '$/stores/documentTracesAggregations'
 import useDocumentTracesDailyCount from '$/stores/documentTracesDailyCount'
 import { useActiveRunsByDocument } from '$/stores/runs/activeRunsByDocument'
-import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
-import { Span } from '@latitude-data/constants'
+import { useConversationsStore } from '$/stores/conversations'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
@@ -21,17 +20,20 @@ import { ActiveRunPanel } from './ActiveRuns/ActiveRunPanel'
 import { AggregationPanels } from './AggregationPanels'
 import { DocumentTraces } from './DocumentTraces'
 import { SpanFilters } from './Filters'
-import { SelectionTracesBanner } from './SelectionTracesBanner'
 import { TracePanel } from './TracePanel'
 import { TracesOverTime } from './TracesOverTime'
 import { TraceSpanSelectionActionsContext } from './TraceSpanSelectionContext'
 import { useTraceSelection } from './useTraceSelection'
+import { useConversationUpdatedListener } from './useConversationUpdatedListener'
+import { ConversationPanel } from '$/components/ConversationPanel'
+import { ConversationsResponse } from '$/app/api/conversations/route'
+import { SelectionTracesBanner } from './SelectionTracesBanner'
 
 export function DocumentTracesPage({
-  initialSpans,
+  initialConversations,
   initialSpanFilterOptions,
 }: {
-  initialSpans: Span[]
+  initialConversations: ConversationsResponse
   initialSpanFilterOptions: SpansFilters
 }) {
   const { clearSelection } = use(TraceSpanSelectionActionsContext)
@@ -61,17 +63,23 @@ export function DocumentTracesPage({
   })
   const searchParams = useSearchParams()
   const filtersParam = searchParams.get('filters')
-  const filters = parseSpansFilters(filtersParam, 'DocumentTracesPage') ?? {}
-  const spans = useSpansKeysetPaginationStore({
-    projectId: String(project.id),
-    commitUuid: commit.uuid,
-    documentUuid: document.documentUuid,
-    initialItems: initialSpans,
-    filters,
-  })
+  const urlFilters = parseSpansFilters(filtersParam, 'DocumentTracesPage')
+  const filters = urlFilters ?? initialSpanFilterOptions
+  const conversations = useConversationsStore(
+    {
+      projectId: project.id,
+      commitUuid: commit.uuid,
+      documentUuid: document.documentUuid,
+      filters,
+    },
+    {
+      fallbackData: initialConversations,
+    },
+  )
+
   const selectableState = useSelectableRows({
-    rowIds: spans.items.map((span) => span.id),
-    totalRowCount: spans.count ?? spans.items.length,
+    rowIds: conversations.items.map((c) => c.documentLogUuid!),
+    totalRowCount: conversations.items.length,
   })
   const {
     data: activeRuns,
@@ -88,6 +96,8 @@ export function DocumentTracesPage({
   })
   const selection = useTraceSelection(activeRuns)
 
+  useConversationUpdatedListener(conversations)
+
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-4 min-w-0'>
       <TableWithHeader
@@ -103,7 +113,7 @@ export function DocumentTracesPage({
           />
         }
         table={
-          initialSpans.length === 0 ? (
+          conversations.items.length === 0 ? (
             <TableBlankSlate description='No traces found for this prompt.' />
           ) : (
             <div className='flex flex-col gap-4 w-full'>
@@ -124,14 +134,13 @@ export function DocumentTracesPage({
                 leftPane={
                   <DocumentTraces
                     ref={panelRef}
-                    spans={spans}
+                    conversations={conversations}
                     activeRuns={activeRuns}
                     selectableState={selectableState}
                   />
                 }
                 floatingPanel={
                   <SelectionTracesBanner
-                    spans={spans.items}
                     selectableState={selectableState}
                     filters={filters}
                   />
@@ -151,6 +160,14 @@ export function DocumentTracesPage({
                             stopRun={stopRun}
                             isAttachingRun={isAttachingRun}
                             isStoppingRun={isStoppingRun}
+                          />
+                        ) : selection.conversation ? (
+                          <ConversationPanel
+                            ref={ref}
+                            documentLogUuid={
+                              selection.conversation.documentLogUuid
+                            }
+                            documentUuid={document.documentUuid}
                           />
                         ) : selection.trace ? (
                           <TraceInfoPanel

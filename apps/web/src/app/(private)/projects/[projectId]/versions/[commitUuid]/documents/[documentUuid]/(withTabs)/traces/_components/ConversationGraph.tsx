@@ -1,10 +1,11 @@
-'use client'
-
+import { memo, useCallback, useMemo } from 'react'
 import { formatDuration } from '$/app/_lib/formatUtils'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { colors } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
-import { memo, useMemo } from 'react'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { SPAN_COLORS } from '$/components/tracing/spans/shared'
 import { SPAN_SPECIFICATIONS } from '$/components/tracing/spans/specifications'
 import {
@@ -17,6 +18,18 @@ import { TraceSection } from './ConversationTimeline'
 const BAR_MIN_WIDTH = 0.5
 const LABEL_MIN_WIDTH = 60
 
+function getAllDescendantIds(span: AssembledSpan): string[] {
+  const ids: string[] = []
+  const collect = (s: AssembledSpan) => {
+    if (s.children.length > 0) {
+      ids.push(s.id)
+      s.children.forEach(collect)
+    }
+  }
+  collect(span)
+  return ids
+}
+
 const GraphItem = memo(
   <T extends SpanType>({
     span,
@@ -27,6 +40,7 @@ const GraphItem = memo(
     isCollapsed,
     selectSpan,
     toggleCollapsed,
+    setCollapsedSpans,
   }: {
     span: AssembledSpan<T>
     cumulativeOffset: number
@@ -36,6 +50,7 @@ const GraphItem = memo(
     isCollapsed: boolean
     selectSpan: (span?: AssembledSpan) => void
     toggleCollapsed: (spanId: string) => void
+    setCollapsedSpans: ReactStateDispatch<Set<string>>
   }) => {
     const specification = SPAN_SPECIFICATIONS[span.type]
 
@@ -105,6 +120,29 @@ const GraphItem = memo(
       }
     }, [span.status, specification.color])
 
+    const handleClick = useCallback(
+      (e: React.MouseEvent) => {
+        if (e.metaKey || e.ctrlKey) {
+          const descendantIds = getAllDescendantIds(span)
+          if (descendantIds.length === 0) return
+
+          setCollapsedSpans((prev) => {
+            const allCollapsed = descendantIds.every((id) => prev.has(id))
+            const newSet = new Set(prev)
+            if (allCollapsed) {
+              descendantIds.forEach((id) => newSet.delete(id))
+            } else {
+              descendantIds.forEach((id) => newSet.add(id))
+            }
+            return newSet
+          })
+        } else {
+          if (!isSelected) selectSpan(span)
+        }
+      },
+      [span, isSelected, selectSpan, setCollapsedSpans],
+    )
+
     return (
       <div className='relative w-full h-full'>
         <div
@@ -119,14 +157,11 @@ const GraphItem = memo(
             },
           )}
           style={barStyle}
-          onClick={() => {
-            if (isSelected) selectSpan(undefined)
-            else selectSpan(span)
-          }}
+          onClick={handleClick}
           onDoubleClick={() => toggleCollapsed(span.id)}
         />
         <div
-          className='absolute flex items-center top-1 h-5'
+          className='absolute flex items-center top-1 h-5 pointer-events-none'
           style={labelStyle}
         >
           <Text.H6
@@ -146,6 +181,75 @@ const GraphItem = memo(
   },
 )
 
+const ConversationGraphItem = memo(
+  ({
+    isSelected,
+    isCollapsed,
+    onClick,
+    onToggleCollapse,
+  }: {
+    isSelected: boolean
+    isCollapsed: boolean
+    onClick: () => void
+    onToggleCollapse: () => void
+  }) => {
+    const handleClick = useCallback(
+      (e: React.MouseEvent) => {
+        if (e.metaKey || e.ctrlKey) {
+          onToggleCollapse()
+        } else {
+          onClick()
+        }
+      },
+      [onClick, onToggleCollapse],
+    )
+
+    const handleButtonClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation()
+        onToggleCollapse()
+      },
+      [onToggleCollapse],
+    )
+
+    return (
+      <div className='h-7 flex items-center mb-1'>
+        <div className='relative w-full h-full px-2'>
+          <div
+            className={cn(
+              'absolute h-5 rounded-md cursor-pointer border top-1 hover:opacity-80 transition-opacity bg-muted left-2 right-2 flex items-center justify-end pr-1',
+              {
+                'border-2 border-primary': isSelected,
+                'border-dashed border-2 border-border': isCollapsed,
+                'border-border/10': !isSelected && !isCollapsed,
+              },
+            )}
+            onClick={handleClick}
+          >
+            <Tooltip
+              trigger={
+                <Button
+                  variant='ghost'
+                  size='none'
+                  className='h-4 w-4 opacity-50 hover:opacity-100'
+                  iconProps={{
+                    name: 'chevronsUpDown',
+                    size: 'small',
+                    color: 'foregroundMuted',
+                  }}
+                  onClick={handleButtonClick}
+                />
+              }
+            >
+              {isCollapsed ? 'Expand all' : 'Collapse all'}
+            </Tooltip>
+          </div>
+        </div>
+      </div>
+    )
+  },
+)
+
 export function ConversationGraph({
   sections,
   totalDuration,
@@ -155,6 +259,12 @@ export function ConversationGraph({
   selectSpan,
   collapsedSpans,
   toggleCollapsed,
+  setCollapsedSpans,
+  showConversationSpacer,
+  isConversationCollapsed,
+  isConversationSelected,
+  onSelectConversation,
+  toggleCollapseAll,
 }: {
   sections: TraceSection[]
   totalDuration: number
@@ -164,12 +274,18 @@ export function ConversationGraph({
   selectSpan: (span?: AssembledSpan) => void
   collapsedSpans: Set<string>
   toggleCollapsed: (spanId: string) => void
+  setCollapsedSpans: ReactStateDispatch<Set<string>>
+  showConversationSpacer: boolean
+  isConversationCollapsed: boolean
+  isConversationSelected: boolean
+  onSelectConversation: () => void
+  toggleCollapseAll: () => void
 }) {
   const flattenedSpans = useMemo(() => {
-    const result: Array<{
+    const result: {
       span: AssembledSpan
       cumulativeOffset: number
-    }> = []
+    }[] = []
 
     sections.forEach((section) => {
       const flatten = (span: AssembledSpan) => {
@@ -200,6 +316,14 @@ export function ConversationGraph({
           style={{ minWidth: `${minWidth}px` }}
         >
           <div className='flex-1'>
+            {showConversationSpacer && (
+              <ConversationGraphItem
+                isSelected={isConversationSelected}
+                isCollapsed={isConversationCollapsed}
+                onClick={onSelectConversation}
+                onToggleCollapse={toggleCollapseAll}
+              />
+            )}
             <div className='relative w-full'>
               {flattenedSpans.map((item) => (
                 <div
@@ -216,6 +340,7 @@ export function ConversationGraph({
                       isCollapsed={collapsedSpans.has(item.span.id)}
                       selectSpan={selectSpan}
                       toggleCollapsed={toggleCollapsed}
+                      setCollapsedSpans={setCollapsedSpans}
                     />
                   </div>
                 </div>

@@ -15,18 +15,15 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { Span } from '@latitude-data/constants'
 import { downloadSpansAction } from '$/actions/spans/downloadSpans'
 
 const MAX_IMMEDIATE_DOWNLOAD = 25
 
-export function DownloadSpansButton({
+export function DownloadConversationsButton({
   selectableState,
-  spans,
   filters,
 }: {
   selectableState: SelectableRowsHook
-  spans: Span[]
   filters: SpansFilters
 }) {
   const { document: latitudeDocument } = useCurrentDocument()
@@ -50,16 +47,11 @@ export function DownloadSpansButton({
     })
 
   const handleImmediateDownload = useCallback(async () => {
-    const selectedSpans = spans.filter((span) =>
-      selectableState.selectedRowIds.includes(span.id),
-    )
-    const spanIdentifiers = selectedSpans.map((span) => ({
-      traceId: span.traceId,
-      spanId: span.id,
-    }))
-
     const formData = new FormData()
-    formData.append('spanIdentifiers', JSON.stringify(spanIdentifiers))
+    formData.append(
+      'documentLogUuids',
+      JSON.stringify([...selectableState.selectedRowIds]),
+    )
 
     const rawResponse = await fetch(ROUTES.api.spans.downloadSpans.root, {
       method: 'POST',
@@ -86,7 +78,6 @@ export function DownloadSpansButton({
     window.URL.revokeObjectURL(url)
   }, [
     selectableState.selectedRowIds,
-    spans,
     latitudeDocument.path,
     navigate,
     currentUrl,
@@ -101,22 +92,19 @@ export function DownloadSpansButton({
     setIsDownloading(true)
 
     try {
-      const selectedSpanIdentifiers = spans
-        .filter((span) => selectableState.selectedRowIds.includes(span.id))
-        .map((span) => ({ traceId: span.traceId, spanId: span.id }))
-
-      const excludedSpanIdentifiers = Array.from(selectableState.excludedIds)
-        .map((id) => spans.find((span) => span.id === id))
-        .filter((span): span is Span => span !== undefined)
-        .map((span) => ({ traceId: span.traceId, spanId: span.id }))
+      const selectedDocumentLogUuids =
+        selectableState.selectedRowIds.map(String)
+      const excludedDocumentLogUuids = Array.from(
+        selectableState.excludedIds,
+      ).map(String)
 
       const [data, error] = await executeDownloadAction({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: latitudeDocument.documentUuid,
         selectionMode: selectableState.selectionMode,
-        selectedSpanIdentifiers,
-        excludedSpanIdentifiers,
+        selectedDocumentLogUuids,
+        excludedDocumentLogUuids,
         filters,
       })
 
@@ -137,7 +125,6 @@ export function DownloadSpansButton({
     }
   }, [
     selectableState,
-    spans,
     project.id,
     commit.uuid,
     latitudeDocument.documentUuid,
@@ -161,15 +148,15 @@ export function DownloadSpansButton({
 
     if (isAsyncDownload) {
       const description = isSelectAll
-        ? `You are about to export all ${selectedCount} spans matching the current filter.`
-        : `You are about to export ${selectedCount} spans.`
+        ? `You are about to export all spans from ${selectedCount} conversations matching the current filter.`
+        : `You are about to export all spans from ${selectedCount} conversations.`
       return `${description} This will be processed in the background and you will receive an email when your export is ready.`
     }
 
     if (isSelectAll) {
-      return `Are you sure you want to download all spans matching the current filter?`
+      return `Are you sure you want to download all spans from conversations matching the current filter?`
     }
-    return `Are you sure you want to download ${selectedCount} spans?`
+    return `Are you sure you want to download all spans from ${selectedCount} conversations?`
   }
 
   const getButtonText = () => {
@@ -177,12 +164,12 @@ export function DownloadSpansButton({
 
     const count = selectableState.selectedCount
     if (selectableState.selectionMode === 'ALL') {
-      return `Download all spans`
+      return `Download all`
     }
     if (selectableState.selectionMode === 'ALL_EXCEPT') {
-      return `Download spans`
+      return `Download`
     }
-    return `Download ${count} spans`
+    return `Download ${count}`
   }
 
   return (
@@ -199,7 +186,7 @@ export function DownloadSpansButton({
       <ConfirmModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
-        title='Download Spans'
+        title='Download Conversations'
         confirm={{
           label: isAsyncDownload ? 'Start Export' : 'Download',
           isConfirming: isProcessing,

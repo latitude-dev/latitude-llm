@@ -68,14 +68,8 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
         name: 'Workspace Two',
       })
       const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
-      await setTrialEndsAt(
-        workspace1.currentSubscriptionId!,
-        trialEndInTenDays,
-      )
-      await setTrialEndsAt(
-        workspace2.currentSubscriptionId!,
-        trialEndInTenDays,
-      )
+      await setTrialEndsAt(workspace1.currentSubscriptionId!, trialEndInTenDays)
+      await setTrialEndsAt(workspace2.currentSubscriptionId!, trialEndInTenDays)
 
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 

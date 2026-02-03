@@ -79,8 +79,12 @@ function StatusBadge({
 
 export function DetailsPanel<T extends SpanType>({
   span,
+  documentLogUuid,
   hideMetadataWarning = false,
-}: DetailsPanelProps<T> & { hideMetadataWarning?: boolean }) {
+}: DetailsPanelProps<T> & {
+  documentLogUuid?: string
+  hideMetadataWarning?: boolean
+}) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const specification = SPAN_SPECIFICATIONS[span.type]
@@ -115,11 +119,11 @@ export function DetailsPanel<T extends SpanType>({
             </Text.H5>
           </ClickToCopy>
         </MetadataItem>
-        {span.conversationId && (
+        {documentLogUuid && (
           <MetadataItem label='Conversation id'>
-            <ClickToCopy copyValue={span.conversationId}>
+            <ClickToCopy copyValue={documentLogUuid}>
               <Text.H5 align='right' color='foregroundMuted'>
-                {span.conversationId.slice(0, 8)}
+                {documentLogUuid.slice(0, 8)}
               </Text.H5>
             </ClickToCopy>
           </MetadataItem>

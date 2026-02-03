@@ -1,8 +1,6 @@
 import { Providers } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import {
-  type Message,
-} from '@latitude-data/constants/messages'
+import { type Message } from '@latitude-data/constants/messages'
 import { APICallError } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'

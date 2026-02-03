@@ -1,5 +1,3 @@
-'use client'
-
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import { compact } from 'lodash-es'
@@ -23,9 +21,11 @@ export function useSpan(
   {
     documentLogUuid,
     spanId,
+    onSuccess,
   }: {
     documentLogUuid?: string | null
     spanId?: string | null
+    onSuccess?: (span: void | SpanWithDetails | undefined) => void
   },
   opts?: SWRConfiguration,
 ) {
@@ -36,6 +36,7 @@ export function useSpan(
   >(route, {
     fallback: null,
     serializer: (span) => serializeSpan(span),
+    onSuccess,
   })
 
   const {

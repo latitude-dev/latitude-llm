@@ -49,10 +49,7 @@ export async function generateSimulatedUserAction({
   }
 
   const messageSample = messages.filter(
-    (m) =>
-      m.role === 'user' ||
-      m.role === 'assistant' ||
-      m.role === 'tool',
+    (m) => m.role === 'user' || m.role === 'assistant' || m.role === 'tool',
   )
 
   return runCopilot({

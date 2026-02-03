@@ -1,140 +1,111 @@
-'use client'
-
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
-import { memo, useCallback, useMemo } from 'react'
+import { MouseEvent, memo, useCallback, useMemo } from 'react'
 import { SPAN_COLORS } from '$/components/tracing/spans/shared'
 import { SPAN_SPECIFICATIONS } from '$/components/tracing/spans/specifications'
+import { IndentationBar } from '$/components/Sidebar/Files/IndentationBar'
+import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
 import {
   AssembledSpan,
   SpanStatus,
   SpanType,
 } from '@latitude-data/core/constants'
 import { TraceSection } from './ConversationTimeline'
+import { getModifierKey } from '$/lib/browserUtils'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
-const IndentationLine = memo(
+const MODIFIER_KEY = getModifierKey()
+
+const CollapseButton = memo(
   ({
-    showCurve,
-    isSelected,
-    isParentSelected,
+    isCollapsed,
+    onClick,
+    variant,
   }: {
-    showCurve: boolean
-    isSelected: boolean
-    isParentSelected: boolean
+    isCollapsed: boolean
+    onClick: (e: React.MouseEvent) => void
+    variant: 'conversation' | 'trace'
   }) => {
-    const [borderColor, backgroundColor] = useMemo(() => {
-      if (isSelected) {
-        return ['border-border', 'bg-border']
-      }
-      if (isParentSelected) {
-        return ['border-accent-foreground', 'bg-accent-foreground']
-      }
-      return ['border-border', 'bg-border']
-    }, [isSelected, isParentSelected])
+    const itemType = variant === 'conversation' ? 'traces' : 'spans'
+    const tooltipText = `${MODIFIER_KEY.symbol}+Click to ${isCollapsed ? 'expand' : 'collapse'} all ${itemType}`
 
     return (
-      <div className='relative w-4 h-full flex justify-center'>
-        {showCurve ? (
-          <div className='relative -mt-1 -ml-3'>
-            <div className={cn('border-l h-2.5', borderColor)} />
-            <div
-              className={cn(
-                'absolute top-2.5 border-l border-b h-2 w-2 rounded-bl-sm',
-                borderColor,
-              )}
-            />
-          </div>
-        ) : (
-          <div className={cn('w-px h-7 -mt-1 -ml-3', backgroundColor)} />
-        )}
-      </div>
+      <Tooltip
+        trigger={
+          <Button
+            variant='ghost'
+            size='none'
+            className='opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-opacity flex items-center gap-1 px-1'
+            onClick={onClick}
+            iconProps={{
+              name: 'chevronsUpDown',
+              size: 'small',
+              color: 'foregroundMuted',
+              placement: 'right',
+            }}
+          >
+            <Text.H7 color='foregroundMuted' noWrap>
+              {isCollapsed ? 'EXPAND' : 'COLLAPSE'}
+            </Text.H7>
+          </Button>
+        }
+      >
+        {tooltipText}
+      </Tooltip>
     )
   },
 )
 
-const IndentationBar = memo(
-  ({
-    depth,
-    isLast,
-    isSelected,
-    isParentSelected,
-    selectedSpanDepth,
-    ancestorEndedLevels = new Set(),
-  }: {
-    depth: number
-    isLast: boolean
-    isSelected: boolean
-    isParentSelected: boolean
-    selectedSpanDepth?: number
-    ancestorEndedLevels?: Set<number>
-  }) => {
-    return (
-      <div className='flex -mr-3'>
-        {Array.from({ length: depth }).map((_, index) => {
-          const currentLevel = index + 1
-          const isCurrentLevel = currentLevel === depth
-          const hasEndedAtThisLevel = ancestorEndedLevels.has(currentLevel)
-          const showCurve = isCurrentLevel && isLast
-          const shouldShowLine =
-            !hasEndedAtThisLevel && (isCurrentLevel || currentLevel < depth)
-
-          const isThisLevelSelected = isSelected && isCurrentLevel
-          const isThisLevelFromSelectedSpan =
-            selectedSpanDepth !== undefined &&
-            currentLevel > selectedSpanDepth &&
-            isParentSelected
-
-          return (
-            <div key={index} className='h-7 w-4'>
-              {shouldShowLine && (
-                <IndentationLine
-                  showCurve={showCurve}
-                  isSelected={isThisLevelSelected}
-                  isParentSelected={isThisLevelFromSelectedSpan}
-                />
-              )}
-            </div>
-          )
-        })}
-      </div>
-    )
-  },
-)
+function getAllDescendantIds(span: AssembledSpan): string[] {
+  const ids: string[] = []
+  const collect = (s: AssembledSpan) => {
+    if (s.children.length > 0) {
+      ids.push(s.id)
+      s.children.forEach(collect)
+    }
+  }
+  collect(span)
+  return ids
+}
 
 const TreeItem = memo(
   <T extends SpanType>({
     span,
-    ancestorEndedLevels = new Set(),
+    indentation,
     isLast,
     isSelected,
-    isParentSelected,
     selectedSpan,
     selectSpan,
     collapsedSpans,
     toggleCollapsed,
+    setCollapsedSpans,
+    startOnIndex = 1,
+    isTopLevel = false,
   }: {
     span: AssembledSpan<T>
-    ancestorEndedLevels?: Set<number>
-    isFirst: boolean
+    indentation: IndentType[]
     isLast: boolean
     isSelected: boolean
-    isParentSelected: boolean
     selectedSpan?: AssembledSpan
     selectSpan: (span?: AssembledSpan) => void
     collapsedSpans: Set<string>
     toggleCollapsed: (spanId: string) => void
+    setCollapsedSpans: ReactStateDispatch<Set<string>>
+    startOnIndex?: number
+    isTopLevel?: boolean
   }) => {
     const specification = SPAN_SPECIFICATIONS[span.type]
     const isExpanded = !collapsedSpans.has(span.id)
-    const currentEndedLevels = useMemo(() => {
-      if (!isLast) return ancestorEndedLevels
-      const newSet = new Set(ancestorEndedLevels)
-      newSet.add(span.depth)
-      return newSet
-    }, [ancestorEndedLevels, isLast, span.depth])
+    const hasChildren = span.children.length > 0
+
+    const currentIndentation = useMemo(
+      () => [...indentation, { isLast }],
+      [indentation, isLast],
+    )
 
     const colorScheme = useMemo(() => {
       if (isSelected) {
@@ -146,16 +117,83 @@ const TreeItem = memo(
       return { icon: specification.color.text, text: 'foreground' }
     }, [isSelected, span.status, specification.color])
 
-    const handleClick = useCallback(() => {
-      if (isSelected) selectSpan(undefined)
-      else selectSpan(span)
-    }, [isSelected, selectSpan, span])
+    const descendantIds = useMemo(() => getAllDescendantIds(span), [span])
+    const allDescendantsCollapsed = useMemo(
+      () =>
+        descendantIds.length > 0 &&
+        descendantIds.every((id) => collapsedSpans.has(id)),
+      [descendantIds, collapsedSpans],
+    )
+
+    const handleClick = useCallback(
+      (e: MouseEvent) => {
+        if (e.metaKey || e.ctrlKey) {
+          if (descendantIds.length === 0) return
+
+          setCollapsedSpans((prev) => {
+            const allCollapsed = descendantIds.every((id) => prev.has(id))
+            const newSet = new Set(prev)
+            if (allCollapsed) {
+              descendantIds.forEach((id) => newSet.delete(id))
+            } else {
+              descendantIds.forEach((id) => newSet.add(id))
+            }
+            return newSet
+          })
+        } else {
+          if (!isSelected) selectSpan(span)
+        }
+      },
+      [span, isSelected, selectSpan, setCollapsedSpans, descendantIds],
+    )
+
+    const handleChevronClick = useCallback(
+      (e: MouseEvent) => {
+        e.stopPropagation()
+        if (span.children.length === 0) return
+
+        if (e.metaKey || e.ctrlKey) {
+          setCollapsedSpans((prev) => {
+            const allCollapsed = descendantIds.every((id) => prev.has(id))
+            const newSet = new Set(prev)
+            if (allCollapsed) {
+              descendantIds.forEach((id) => newSet.delete(id))
+            } else {
+              descendantIds.forEach((id) => newSet.add(id))
+            }
+            return newSet
+          })
+        } else {
+          toggleCollapsed(span.id)
+        }
+      },
+      [span, toggleCollapsed, setCollapsedSpans, descendantIds],
+    )
+
+    const handleCollapseButtonClick = useCallback(
+      (e: MouseEvent) => {
+        e.stopPropagation()
+        if (descendantIds.length === 0) return
+
+        setCollapsedSpans((prev) => {
+          const allCollapsed = descendantIds.every((id) => prev.has(id))
+          const newSet = new Set(prev)
+          if (allCollapsed) {
+            descendantIds.forEach((id) => newSet.delete(id))
+          } else {
+            descendantIds.forEach((id) => newSet.add(id))
+          }
+          return newSet
+        })
+      },
+      [descendantIds, setCollapsedSpans],
+    )
 
     return (
       <div className='w-full h-full flex flex-col items-start justify-center'>
         <div
           className={cn(
-            'w-full h-7 flex items-center justify-start gap-2 py-1 px-2 rounded-md cursor-pointer',
+            'group w-full h-7 flex items-center justify-between py-1 px-2 rounded-md cursor-pointer',
             {
               'bg-transparent hover:bg-secondary text-foreground': !isSelected,
               'bg-accent hover:bg-accent/80 text-accent-foreground': isSelected,
@@ -163,66 +201,155 @@ const TreeItem = memo(
           )}
           onClick={handleClick}
         >
-          <IndentationBar
-            depth={span.depth}
-            isLast={isLast}
-            isSelected={isSelected}
-            isParentSelected={isParentSelected}
-            selectedSpanDepth={selectedSpan?.depth}
-            ancestorEndedLevels={ancestorEndedLevels}
-          />
-          {span.children.length > 0 ? (
-            <Button
-              variant='ghost'
-              size='none'
-              iconProps={{
-                name: isExpanded ? 'chevronDown' : 'chevronRight',
-                color: isSelected ? 'accentForeground' : 'foregroundMuted',
-                className: 'flex-shrink-0',
-              }}
-              className='w-4 h-7'
-              onClick={(e) => {
-                e.stopPropagation()
-                if (span.children.length > 0) toggleCollapsed(span.id)
-              }}
+          <div className='flex items-center gap-2'>
+            <IndentationBar
+              indentation={indentation}
+              hasChildren={isExpanded && hasChildren}
+              startOnIndex={startOnIndex}
             />
-          ) : (
-            <div className='-ml-1.5' />
+            {span.children.length > 0 ? (
+              <Button
+                variant='ghost'
+                size='none'
+                iconProps={{
+                  name: isExpanded ? 'chevronDown' : 'chevronRight',
+                  color: isSelected ? 'accentForeground' : 'foregroundMuted',
+                  className: 'flex-shrink-0',
+                }}
+                className='w-4 h-7'
+                onClick={handleChevronClick}
+              />
+            ) : (
+              <div className='-ml-1.5' />
+            )}
+            <Icon
+              name={specification.icon}
+              size='small'
+              color={colorScheme.icon as TextColor}
+              className='flex-shrink-0'
+            />
+            <Text.H6
+              color={colorScheme.text as TextColor}
+              weight={isSelected || !isExpanded ? 'semibold' : 'normal'}
+              userSelect={false}
+              noWrap
+              ellipsis
+            >
+              {span.name}
+            </Text.H6>
+          </div>
+          {isTopLevel && descendantIds.length > 0 && (
+            <CollapseButton
+              isCollapsed={allDescendantsCollapsed}
+              onClick={handleCollapseButtonClick}
+              variant='trace'
+            />
           )}
-          <Icon
-            name={specification.icon}
-            size='small'
-            color={colorScheme.icon as TextColor}
-            className='flex-shrink-0'
-          />
-          <Text.H6
-            color={colorScheme.text as TextColor}
-            weight={isSelected || !isExpanded ? 'semibold' : 'normal'}
-            userSelect={false}
-            noWrap
-            ellipsis
-          >
-            {span.name}
-          </Text.H6>
         </div>
         {isExpanded &&
           span.children.map((child, index) => (
             <TreeItem
               key={`${child.traceId}-${child.id}`}
               span={child}
-              isFirst={index === 0}
+              indentation={currentIndentation}
               isLast={index === span.children.length - 1}
               isSelected={selectedSpan?.id === child.id}
-              isParentSelected={
-                isParentSelected || selectedSpan?.id === span.id
-              }
               selectedSpan={selectedSpan}
               selectSpan={selectSpan}
               collapsedSpans={collapsedSpans}
               toggleCollapsed={toggleCollapsed}
-              ancestorEndedLevels={currentEndedLevels}
+              setCollapsedSpans={setCollapsedSpans}
+              startOnIndex={startOnIndex}
             />
           ))}
+      </div>
+    )
+  },
+)
+
+const ConversationItem = memo(
+  ({
+    isSelected,
+    onClick,
+    isCollapsed,
+    toggleCollapseAll,
+  }: {
+    isSelected: boolean
+    onClick: () => void
+    isCollapsed: boolean
+    toggleCollapseAll: () => void
+  }) => {
+    const handleClick = useCallback(
+      (e: MouseEvent) => {
+        if (e.metaKey || e.ctrlKey) {
+          toggleCollapseAll()
+        } else {
+          onClick()
+        }
+      },
+      [onClick, toggleCollapseAll],
+    )
+
+    const handleChevronClick = useCallback(
+      (e: MouseEvent) => {
+        e.stopPropagation()
+        toggleCollapseAll()
+      },
+      [toggleCollapseAll],
+    )
+
+    const handleButtonClick = useCallback(
+      (e: MouseEvent) => {
+        e.stopPropagation()
+        toggleCollapseAll()
+      },
+      [toggleCollapseAll],
+    )
+
+    return (
+      <div
+        className={cn(
+          'group w-full h-7 flex items-center justify-between py-1 px-2 rounded-md cursor-pointer mb-1',
+          {
+            'bg-transparent hover:bg-secondary text-foreground': !isSelected,
+            'bg-accent hover:bg-accent/80 text-accent-foreground': isSelected,
+          },
+        )}
+        onClick={handleClick}
+      >
+        <div className='flex items-center gap-2'>
+          <Button
+            variant='ghost'
+            size='none'
+            iconProps={{
+              name: isCollapsed ? 'chevronRight' : 'chevronDown',
+              color: isSelected ? 'accentForeground' : 'foregroundMuted',
+              className: 'flex-shrink-0',
+            }}
+            className='w-4 h-7'
+            onClick={handleChevronClick}
+          />
+          <Icon
+            name='messagesSquare'
+            size='small'
+            color={isSelected ? 'accentForeground' : 'foregroundMuted'}
+            className='flex-shrink-0'
+          />
+          <Text.H6
+            color={isSelected ? 'accentForeground' : 'foreground'}
+            weight='semibold'
+            userSelect={false}
+            noWrap
+            ellipsis
+          >
+            Conversation
+          </Text.H6>
+        </div>
+        <CollapseButton
+          isCollapsed={isCollapsed}
+          onClick={handleButtonClick}
+          variant='conversation'
+        />
       </div>
     )
   },
@@ -234,6 +361,11 @@ export function ConversationTree({
   selectSpan,
   collapsedSpans,
   toggleCollapsed,
+  isConversationSelected,
+  onSelectConversation,
+  isConversationCollapsed,
+  toggleCollapseAll,
+  setCollapsedSpans,
 }: {
   sections: TraceSection[]
   width: number
@@ -242,27 +374,53 @@ export function ConversationTree({
   selectSpan: (span?: AssembledSpan) => void
   collapsedSpans: Set<string>
   toggleCollapsed: (spanId: string) => void
+  isConversationSelected: boolean
+  onSelectConversation: () => void
+  isConversationCollapsed: boolean
+  toggleCollapseAll: () => void
+  setCollapsedSpans: ReactStateDispatch<Set<string>>
 }) {
+  const showConversationItem = sections.length > 1
+
   return (
     <div className='flex-1 flex-col items-center justify-center p-2 pb-0'>
-      {sections.map((section) => (
-        <div key={section.trace.id}>
-          {section.trace.children.map((span, index) => (
-            <TreeItem
-              key={`${span.traceId}-${span.id}`}
-              span={span}
-              isFirst={index === 0}
-              isLast={index === section.trace.children.length - 1}
-              isSelected={selectedSpan?.id === span.id}
-              isParentSelected={selectedSpan?.id === span.parentId}
-              selectedSpan={selectedSpan}
-              selectSpan={selectSpan}
-              collapsedSpans={collapsedSpans}
-              toggleCollapsed={toggleCollapsed}
-            />
-          ))}
-        </div>
-      ))}
+      {showConversationItem && (
+        <ConversationItem
+          isSelected={isConversationSelected}
+          onClick={onSelectConversation}
+          isCollapsed={isConversationCollapsed}
+          toggleCollapseAll={toggleCollapseAll}
+        />
+      )}
+      <div>
+        {sections.map((section, sectionIndex) => {
+          const isLastSection = sectionIndex === sections.length - 1
+          const baseIndentation: IndentType[] = showConversationItem
+            ? [{ isLast: isLastSection }]
+            : []
+
+          return (
+            <div key={section.trace.id}>
+              {section.trace.children.map((span, index) => (
+                <TreeItem
+                  key={`${span.traceId}-${span.id}`}
+                  span={span}
+                  indentation={baseIndentation}
+                  isLast={index === section.trace.children.length - 1}
+                  isSelected={selectedSpan?.id === span.id}
+                  selectedSpan={selectedSpan}
+                  selectSpan={selectSpan}
+                  collapsedSpans={collapsedSpans}
+                  toggleCollapsed={toggleCollapsed}
+                  setCollapsedSpans={setCollapsedSpans}
+                  isTopLevel={showConversationItem}
+                  startOnIndex={showConversationItem ? 0 : 1}
+                />
+              ))}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
