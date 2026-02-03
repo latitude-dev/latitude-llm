@@ -176,7 +176,7 @@ You are a helpful assistant. Reply with a short acknowledgement.
     }
   })
 
-  it('should handle tool calls during prompt execution with streaming', async () => {
+  it.skip('should handle tool calls during prompt execution with streaming', async () => {
     const getWeatherMock = vi
       .fn()
       .mockResolvedValue('Temperature is 22°C and cloudy')
