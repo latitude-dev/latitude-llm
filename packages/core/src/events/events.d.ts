@@ -32,6 +32,7 @@ export type Events =
   | 'experimentVariantsCreated'
   | 'providerLogCreated'
   | 'workspaceCreated'
+  | 'workspaceFinishingFreeTrial'
   | 'projectCreated'
   | 'documentLogCreated'
   | 'sendReferralInvitation'
@@ -609,6 +610,11 @@ export type SubscriptionUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type WorkspaceFinishingFreeTrialEvent = LatitudeEventGeneric<
+  'workspaceFinishingFreeTrial',
+  { workspaceId: number; workspaceName: string }
+>
+
 export type SubscriptionEnqueuedForCancellationEvent = LatitudeEventGeneric<
   'subscriptionEnqueuedForCancellation',
   {
@@ -978,6 +984,7 @@ export type LatitudeEvent =
   | ProviderLogCreatedEvent
   | ExperimentVariantsCreatedEvent
   | WorkspaceCreatedEvent
+  | WorkspaceFinishingFreeTrialEvent
   | ProjectCreatedEvent
   | DocumentLogCreatedEvent
   | SendReferralInvitationEvent
@@ -1070,6 +1077,7 @@ export interface IEventsHandlers {
   providerLogCreated: EventHandler<ProviderLogCreatedEvent>[]
   experimentVariantsCreated: EventHandler<ExperimentVariantsCreatedEvent>[]
   workspaceCreated: EventHandler<WorkspaceCreatedEvent>[]
+  workspaceFinishingFreeTrial: EventHandler<WorkspaceFinishingFreeTrialEvent>[]
   projectCreated: EventHandler<ProjectCreatedEvent>[]
   documentLogCreated: EventHandler<DocumentLogCreatedEvent>[]
   sendReferralInvitation: EventHandler<SendReferralInvitationEvent>[]

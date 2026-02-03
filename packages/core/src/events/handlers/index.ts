@@ -56,6 +56,7 @@ export const EventHandlers: IEventsHandlers = {
   userOnboardingInfoUpdated: [updateLoopsContact],
   userInvited: [],
   workspaceCreated: [],
+  workspaceFinishingFreeTrial: [],
   documentRunRequested: [],
   publicDocumentRunRequested: [],
   chatMessageRequested: [],
