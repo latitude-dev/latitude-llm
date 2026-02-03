@@ -231,6 +231,8 @@ export const env = createEnv({
     SMTP_SECURE: z.string().optional().default('true'),
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
+    MAILPIT_HOST: z.string().optional().default('localhost'),
+    MAILPIT_PORT: z.coerce.number().optional().default(1025),
     MAIL_TRANSPORT: z
       .enum(['mailpit', 'mailgun', 'smtp'])
       .optional()
