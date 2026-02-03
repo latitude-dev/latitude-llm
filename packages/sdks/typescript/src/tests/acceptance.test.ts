@@ -299,7 +299,7 @@ You are a helpful assistant. Reply with a short acknowledgement.
     }
   })
 
-  it.only('should ensure tool handler gets called when tools are requested', async () => {
+  it('should ensure tool handler gets called when tools are requested', async () => {
     log('test:start', 'tool-handler-called')
     const getWeatherMock = vi
       .fn()
