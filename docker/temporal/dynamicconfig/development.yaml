@@ -1,0 +1,22 @@
+# Temporal dynamic configuration for development
+# See: https://docs.temporal.io/references/dynamic-configuration
+
+frontend.keepAliveMaxConnectionAge:
+  - value: 5m
+frontend.keepAliveMaxConnectionAgeGrace:
+  - value: 70s
+frontend.keepAliveTime:
+  - value: 1m
+frontend.keepAliveTimeout:
+  - value: 10s
+
+system.forceSearchAttributesCacheRefreshOnRead:
+  - value: true
+
+# Relaxed limits for development
+limit.maxIDLength:
+  - value: 1000
+    constraints: {}
+history.maximumSignalNameLength:
+  - value: 1000
+    constraints: {}

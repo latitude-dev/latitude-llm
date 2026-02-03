@@ -9,6 +9,11 @@ services:
     volumes:
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER:-latitude}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -34,6 +39,36 @@ services:
     ports:
       - '8025:8025'
       - '1025:1025'
+
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    restart: always
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-latitude}
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:-secret}
+      - POSTGRES_SEEDS=db
+      - DBNAME=temporal
+      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/dynamicconfig/development.yaml
+    ports:
+      - '7233:7233'
+    volumes:
+      - ./docker/temporal/dynamicconfig:/etc/temporal/dynamicconfig
+    depends_on:
+      db:
+        condition: service_healthy
+
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    restart: always
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - '8088:8080'
+    depends_on:
+      - temporal
 
   # Local build services - build from source instead of using pre-built images
   web:
@@ -102,6 +137,26 @@ services:
       - redis
       - weaviate
 
+  temporal-workers:
+    build:
+      context: .
+      dockerfile: apps/temporal-workers/docker/Dockerfile
+      args:
+        PROJECT: '@latitude-data/temporal-workers'
+        PROJECT_PATH: 'apps/temporal-workers'
+    restart: on-failure
+    env_file:
+      - .env
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    volumes:
+      - shared-storage:/app/storage/files
+      - shared-storage:/app/apps/web/public/files
+    depends_on:
+      - temporal
+      - db
+      - redis
+
   websockets:
     build:
       context: .
@@ -135,7 +190,12 @@ services:
       - shared-storage:/app/apps/web/public/files
     depends_on:
       - db
-    command: ['sh', '-c', 'pnpm --filter @latitude-data/core db:migrate && pnpm --filter @latitude-data/core scripts:setup']
+    command:
+      [
+        'sh',
+        '-c',
+        'pnpm --filter @latitude-data/core db:migrate && pnpm --filter @latitude-data/core scripts:setup',
+      ]
 
 volumes:
   db-data:

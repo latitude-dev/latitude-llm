@@ -314,6 +314,18 @@ export const env = createEnv({
     CLICKHOUSE_CLUSTER_ENABLED: z.string().optional().default('false'),
     CLICKHOUSE_CLUSTER_NAME: z.string().optional().default('default'),
     CLICKHOUSE_MIGRATION_SSL: z.string().optional().default('false'),
+
+    // Temporal
+    TEMPORAL_ADDRESS: z.string().optional().default('localhost:7233'),
+    TEMPORAL_NAMESPACE: z.string().optional().default('default'),
+    TEMPORAL_TASK_QUEUE: z.string().optional().default('latitude-workflows'),
+    TEMPORAL_API_KEY: z.string().optional(),
+    TEMPORAL_TLS: z.coerce.boolean().optional().default(false),
+    TEMPORAL_TLS_CERT_PATH: z.string().optional(),
+    TEMPORAL_TLS_KEY_PATH: z.string().optional(),
+    TEMPORAL_TLS_SERVER_NAME: z.string().optional(),
+    TEMPORAL_WORKERS_HOST: z.string().optional(),
+    TEMPORAL_WORKERS_PORT: z.coerce.number().optional(),
   },
   runtimeEnv: {
     ...process.env,
