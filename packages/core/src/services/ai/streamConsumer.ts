@@ -10,7 +10,7 @@ import {
   MessageContent,
   MessageRole,
   ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 
 /**
  * Represents a tool call captured from the stream

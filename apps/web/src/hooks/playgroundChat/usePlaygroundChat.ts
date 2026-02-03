@@ -15,7 +15,7 @@ import {
   MessageRole,
   ToolCall,
   ToolMessage,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'

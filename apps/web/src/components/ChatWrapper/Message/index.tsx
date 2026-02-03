@@ -1,6 +1,6 @@
 import { memo } from 'react'
 
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/messages'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import type { MessageProps } from './types'

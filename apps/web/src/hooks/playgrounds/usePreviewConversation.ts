@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Conversation,
   Message as ConversationMessage,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { Adapters, Chain as PromptlChain } from 'promptl-ai'
 import { ResolvedMetadata } from '$/workers/readMetadata'
 import useProviderApiKeys from '$/stores/providerApiKeys'

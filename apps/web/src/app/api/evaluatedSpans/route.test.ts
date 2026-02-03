@@ -12,7 +12,7 @@ import {
 } from '@latitude-data/constants'
 import { diskFactory } from '@latitude-data/core/lib/disk'
 import { cache as redis } from '@latitude-data/core/cache'
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/messages'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Project } from '@latitude-data/core/schema/models/types/Project'

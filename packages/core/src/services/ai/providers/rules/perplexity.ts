@@ -1,4 +1,4 @@
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import { Message } from '@latitude-data/constants/messages'
 import { AppliedRules } from './types'
 
 export function applyPerplexityRules(appliedRule: AppliedRules): AppliedRules {

@@ -1,7 +1,7 @@
 import {
   type Message,
   MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { PartialConfig } from '../../helpers'

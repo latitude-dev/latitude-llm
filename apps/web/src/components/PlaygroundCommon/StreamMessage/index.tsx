@@ -1,7 +1,7 @@
 import {
   Message as ConversationMessage,
   MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { Message } from '$/components/ChatWrapper'
 
 export function StreamMessage({

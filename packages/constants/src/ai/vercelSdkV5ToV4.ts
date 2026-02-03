@@ -1,5 +1,5 @@
 import { ToolResultPart, ModelMessage as VercelV5Message } from 'ai'
-import { AssistantMessage, ToolMessage } from '../legacyCompiler'
+import { AssistantMessage, ToolMessage } from '../messages'
 import { ToolSourceData } from '../toolSources'
 
 export type ReplaceTextDelta<T> = T extends {

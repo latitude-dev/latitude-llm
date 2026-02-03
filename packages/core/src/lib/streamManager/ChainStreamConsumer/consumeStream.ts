@@ -2,9 +2,8 @@ import { capitalize } from 'lodash-es'
 
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError, RetryError } from 'ai'
-
 import {
-  LegacyChainEvent,
+  ChainEvent,
   ProviderData,
   StreamEventTypes,
   StreamType,
@@ -130,7 +129,7 @@ function getErrorCode(error: unknown) {
 
 function enqueueChainEvent(
   controller: ReadableStreamDefaultController,
-  event: LegacyChainEvent,
+  event: ChainEvent,
 ) {
   controller.enqueue(event)
 }

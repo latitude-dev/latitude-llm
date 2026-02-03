@@ -3,7 +3,7 @@ import { ROUTES } from '$/services/routes'
 import {
   Message as ConversationMessage,
   ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { TraceContext } from '@latitude-data/constants'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 

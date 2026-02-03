@@ -2,7 +2,7 @@ import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import {
   internalInfoSchema,
-  legacyChainEventDtoSchema,
+  chainEventDtoSchema,
   runBackgroundAPIResponseSchema,
   runSyncAPIResponseSchema,
 } from '$/openApi/schemas'
@@ -62,7 +62,7 @@ export const runRoute = createRoute({
         [http.MediaTypes.JSON]: {
           schema: runSyncAPIResponseSchema.or(runBackgroundAPIResponseSchema),
         },
-        [http.MediaTypes.SSE]: { schema: legacyChainEventDtoSchema },
+        [http.MediaTypes.SSE]: { schema: chainEventDtoSchema },
       },
     },
   },

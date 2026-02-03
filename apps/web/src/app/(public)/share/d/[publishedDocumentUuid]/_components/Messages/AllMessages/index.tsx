@@ -4,7 +4,7 @@ import { MessageSkeleton } from '$/components/ChatWrapper'
 import {
   Conversation,
   Message as ConversationMessage,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { ExpandMessages } from '../ExpandMessages'
 import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'

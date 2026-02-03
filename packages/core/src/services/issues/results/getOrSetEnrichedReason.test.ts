@@ -9,7 +9,7 @@ import {
   SpanType,
   SPAN_METADATA_STORAGE_KEY,
 } from '@latitude-data/constants'
-import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { Message, MessageRole } from '@latitude-data/constants/messages'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'

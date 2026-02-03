@@ -10,7 +10,7 @@ import {
   ReasoningContent,
   ToolCall,
   ToolRequestContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import {
   ToolSource,
   ToolSourceData,

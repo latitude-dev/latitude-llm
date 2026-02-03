@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Providers } from '@latitude-data/constants'
 import { LogSources } from '../../../constants'
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/messages'
 import { Result } from '../../../lib/Result'
 import { createProject } from '../../../tests/factories'
 import {

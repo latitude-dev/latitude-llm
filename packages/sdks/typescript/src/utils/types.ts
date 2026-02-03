@@ -11,9 +11,7 @@ import { LatitudeApiError } from '$sdk/utils/errors'
 import {
   AssertedStreamType,
   ChainCallResponseDto,
-  LegacyChainEvent as ChainEvent,
   ChainEventDto,
-  LegacyChainEventTypes as ChainEventTypes,
   ChatSyncAPIResponse,
   ParameterType,
   Providers,
@@ -22,10 +20,14 @@ import {
   StreamEventTypes,
 } from '@latitude-data/constants'
 import type {
+  ChainEvent,
+  ChainEventTypes,
+} from '@latitude-data/constants/events'
+import type {
   Config,
   Message,
   ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import {
   AdapterMessageType,
   ProviderAdapter,

@@ -1,4 +1,4 @@
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/messages'
 import { describe, expect, it } from 'vitest'
 
 import { type ProviderLog } from '../../schema/models/types/ProviderLog'

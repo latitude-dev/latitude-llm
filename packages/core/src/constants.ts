@@ -12,7 +12,7 @@ import type {
   SystemMessage,
   ToolCall,
   UserMessage,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { TelemetryContext } from '@latitude-data/telemetry'
 import type { Component, App as PipedreamApp } from '@pipedream/sdk'
 import {
@@ -38,7 +38,6 @@ export {
   isLatitudeUrl,
   isSafeUrl,
   languageModelUsageSchema,
-  LegacyChainEventTypes,
   LogSources,
   ModifiedDocumentType,
   StreamEventTypes,
@@ -46,7 +45,6 @@ export {
   type DocumentLogWithMetadata,
   type DocumentLogWithMetadataAndError,
   type LegacyVercelSDKVersion4Usage as LanguageModelUsage,
-  type LegacyChainEvent,
 } from '@latitude-data/constants'
 export * from '@latitude-data/constants/actions'
 export * from '@latitude-data/constants/evaluations'

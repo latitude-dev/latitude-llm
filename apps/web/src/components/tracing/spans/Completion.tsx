@@ -4,7 +4,7 @@ import {
   MessageList,
 } from '$/components/ChatWrapper'
 import { MetadataItem } from '$/components/MetadataItem'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import { Message } from '@latitude-data/constants/messages'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'

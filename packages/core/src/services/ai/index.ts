@@ -1,6 +1,6 @@
 import { omit } from 'lodash-es'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import type { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import {
   jsonSchema,
   ObjectStreamPart,

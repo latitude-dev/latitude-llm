@@ -6,7 +6,7 @@ import { type Commit } from '../../../../schema/models/types/Commit'
 import { type DocumentTrigger } from '../../../../schema/models/types/DocumentTrigger'
 import { type DocumentTriggerEvent } from '../../../../schema/models/types/DocumentTriggerEvent'
 import { DocumentTriggerMailer } from '../../../../mailer/mailers/documentEmailTrigger/DocumentTriggerMailer'
-import type { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
+import type { AssistantMessage } from '@latitude-data/constants/messages'
 import { Result, TypedResult } from '../../../../lib/Result'
 import { PromisedResult } from '../../../../lib/Transaction'
 import {

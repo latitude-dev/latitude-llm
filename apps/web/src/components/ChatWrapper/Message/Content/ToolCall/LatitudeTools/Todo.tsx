@@ -1,5 +1,5 @@
 import type { TodoToolArgs } from '@latitude-data/core/services/latitudeTools/todo/types'
-import { ToolRequestContent } from '@latitude-data/constants/legacyCompiler'
+import { ToolRequestContent } from '@latitude-data/constants/messages'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { useMemo, useState } from 'react'

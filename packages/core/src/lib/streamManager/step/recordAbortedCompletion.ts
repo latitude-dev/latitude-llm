@@ -1,5 +1,5 @@
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
+import { MessageRole } from '@latitude-data/constants/messages'
 import { VercelConfig } from '@latitude-data/constants'
 import { ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { telemetry, TelemetryContext } from '../../../telemetry'
@@ -19,7 +19,7 @@ export function recordAbortedCompletion({
   context: TelemetryContext
   provider: ProviderApiKey
   config: VercelConfig
-  messages: LegacyMessage[]
+  messages: Message[]
   accumulatedText: string
 }): void {
   const $abortedCompletion = telemetry.span.completion(

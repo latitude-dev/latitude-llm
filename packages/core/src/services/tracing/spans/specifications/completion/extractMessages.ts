@@ -1,12 +1,13 @@
 import { ATTRIBUTES } from '@latitude-data/constants'
 import {
-  ContentType,
+  AssistantMessage,
   Message,
   MessageContent,
   MessageRole,
-  ToolCallContent,
+  ToolContent,
   ToolMessage,
-} from 'promptl-ai'
+  ToolRequestContent,
+} from '@latitude-data/constants/messages'
 import { CompletionSpanMetadata, SpanAttribute } from '../../../../../constants'
 import { UnprocessableEntityError } from '../../../../../lib/errors'
 import { Result, TypedResult } from '../../../../../lib/Result'
@@ -15,8 +16,8 @@ import { extractAttribute } from '../../../../../../../constants/src/tracing/att
 
 function convertToolCalls(
   raws: Record<string, unknown>[],
-): TypedResult<ToolCallContent[]> {
-  const toolCalls: ToolCallContent[] = []
+): TypedResult<ToolRequestContent[]> {
+  const toolCalls: ToolRequestContent[] = []
 
   try {
     for (const raw of raws) {
@@ -25,17 +26,17 @@ function convertToolCalls(
       if (toolCall.function && typeof toolCall.function === 'object') {
         const func = toolCall.function as Record<string, unknown>
         toolCalls.push({
-          type: ContentType.toolCall,
+          type: 'tool-call',
           toolCallId: String(toolCall.id || ''),
           toolName: String(func.name || ''),
-          toolArguments: JSON.parse(String(func.arguments || '{}')),
+          args: JSON.parse(String(func.arguments || '{}')),
         })
       } else {
         toolCalls.push({
-          type: ContentType.toolCall,
+          type: 'tool-call',
           toolCallId: String(toolCall.id || toolCall.toolCallId || toolCall.toolUseId || ''), // prettier-ignore
           toolName: String(toolCall.name || toolCall.toolName || ''),
-          toolArguments: JSON.parse(String(toolCall.arguments || toolCall.toolArguments || toolCall.input || '{}')), // prettier-ignore
+          args: JSON.parse(String(toolCall.arguments || toolCall.toolArguments || toolCall.input || '{}')), // prettier-ignore
         })
       }
     }
@@ -48,25 +49,27 @@ function convertToolCalls(
   return Result.ok(toolCalls)
 }
 
-const CONTENT_TYPE_TEXT = toCamelCase(ContentType.text)
-const CONTENT_TYPE_IMAGE = toCamelCase(ContentType.image)
-const CONTENT_TYPE_FILE = toCamelCase(ContentType.file)
-const CONTENT_TYPE_TOOL_CALL = toCamelCase(ContentType.toolCall)
+type LegacyContentType = 'text' | 'image' | 'file' | 'tool-call' | 'tool-result'
+
+const CONTENT_TYPE_TEXT = toCamelCase('text')
+const CONTENT_TYPE_IMAGE = toCamelCase('image')
+const CONTENT_TYPE_FILE = toCamelCase('file')
+const CONTENT_TYPE_TOOL_CALL = toCamelCase('tool-call')
 const CONTENT_TYPE_TOOL_RESULT = toCamelCase('tool-result')
 
-function convertContentType(type: string): TypedResult<ContentType> {
+function convertContentType(type: string): TypedResult<LegacyContentType> {
   switch (toCamelCase(type)) {
     case CONTENT_TYPE_TEXT:
-      return Result.ok(ContentType.text)
+      return Result.ok('text')
     case CONTENT_TYPE_IMAGE:
-      return Result.ok(ContentType.image)
+      return Result.ok('image')
     case CONTENT_TYPE_FILE:
-      return Result.ok(ContentType.file)
+      return Result.ok('file')
     case CONTENT_TYPE_TOOL_CALL:
     case 'toolUse':
-      return Result.ok(ContentType.toolCall)
+      return Result.ok('tool-call')
     case CONTENT_TYPE_TOOL_RESULT:
-      return Result.ok('tool-result' as ContentType)
+      return Result.ok('tool-result')
     default:
       return Result.error(new UnprocessableEntityError('Invalid content type'))
   }
@@ -76,7 +79,7 @@ function convertMessageContent(
   content: unknown | Record<string, unknown>[],
 ): TypedResult<MessageContent[]> {
   if (typeof content === 'string') {
-    return Result.ok([{ type: ContentType.text, text: content }])
+    return Result.ok([{ type: 'text', text: content }])
   }
 
   if (Array.isArray(content)) {
@@ -102,40 +105,40 @@ function convertMessageContent(
       const type = convertingt.value
 
       switch (type) {
-        case ContentType.text:
+        case 'text':
           result.push({
-            type: ContentType.text,
+            type: 'text',
             text: String(item.text || ''),
           })
           break
-        case ContentType.image:
+        case 'image':
           result.push({
-            type: ContentType.image,
+            type: 'image',
             image: String(item.image || ''),
           })
           break
-        case ContentType.file:
+        case 'file':
           result.push({
-            type: ContentType.file,
+            type: 'file',
             file: String(item.file || ''),
             mimeType: String(item.mimeType || ''),
           })
           break
-        case ContentType.toolCall:
+        case 'tool-call':
           {
             const converting = convertToolCalls([item])
             if (converting.error) return Result.error(converting.error)
             result.push(...converting.value)
           }
           break
-        case 'tool-result' as ContentType:
+        case 'tool-result':
           result.push({
             type: 'tool-result',
             toolCallId: String(item.toolId || item.toolCallId || item.toolUseId || ''), // prettier-ignore
             toolName: String(item.toolName || ''),
             result: item.result || {},
             isError: Boolean(item.isError || false),
-          } as unknown as MessageContent)
+          } as ToolContent)
           break
       }
     }
@@ -144,9 +147,7 @@ function convertMessageContent(
   }
 
   try {
-    return Result.ok([
-      { type: ContentType.text, text: JSON.stringify(content) },
-    ])
+    return Result.ok([{ type: 'text', text: JSON.stringify(content) }])
   } catch {
     return Result.error(new UnprocessableEntityError('Invalid message content'))
   }
@@ -155,7 +156,7 @@ function convertMessageContent(
 const MESSAGE_ROLE_SYSTEM = toCamelCase(MessageRole.system)
 const MESSAGE_ROLE_USER = toCamelCase(MessageRole.user)
 const MESSAGE_ROLE_ASSISTANT = toCamelCase(MessageRole.assistant)
-const MESSAGE_ROLE_DEVELOPER = toCamelCase(MessageRole.developer)
+const MESSAGE_ROLE_DEVELOPER = toCamelCase('developer')
 const MESSAGE_ROLE_TOOL = toCamelCase(MessageRole.tool)
 
 function convertMessageRole(role: string): TypedResult<MessageRole> {
@@ -308,7 +309,7 @@ export function extractInput(
   if (system) {
     messages.push({
       role: MessageRole.system,
-      content: [{ type: ContentType.text, text: system }],
+      content: [{ type: 'text', text: system }],
     })
   }
 
@@ -433,18 +434,22 @@ export function extractOutput(
   })
 
   if (responseText || responseObject || responseToolCalls) {
-    const message: Message = { role: MessageRole.assistant, content: [] }
+    const content: MessageContent[] = []
+    const message: AssistantMessage = {
+      role: MessageRole.assistant,
+      content,
+    }
 
     if (responseText) {
-      message.content.push({
-        type: ContentType.text,
+      content.push({
+        type: 'text',
         text: responseText,
       })
     }
 
     if (responseObject) {
-      message.content.push({
-        type: ContentType.text,
+      content.push({
+        type: 'text',
         text: responseObject,
       })
     }
@@ -460,7 +465,7 @@ export function extractOutput(
 
         const converting = convertToolCalls(payload)
         if (converting.error) return Result.error(converting.error)
-        message.content.push(...converting.value)
+        content.push(...converting.value)
       } catch {
         return Result.error(
           new UnprocessableEntityError('Invalid output tool calls'),
@@ -468,7 +473,7 @@ export function extractOutput(
       }
     }
 
-    if (message.content.length > 0) return Result.ok([message])
+    if (content.length > 0) return Result.ok([message])
   }
 
   return Result.ok([])

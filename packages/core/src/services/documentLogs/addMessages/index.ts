@@ -1,6 +1,6 @@
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { type Message } from '@latitude-data/constants/legacyCompiler'
+import { type Message } from '@latitude-data/constants/messages'
 import { LogSources } from '../../../constants'
 import { isRetryableError } from '../../../lib/isRetryableError'
 import { Result } from '../../../lib/Result'

@@ -1,4 +1,4 @@
-import type { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import {
   ApiErrorCodes,
   LatitudeApiError,

@@ -2,7 +2,7 @@ import {
   Message,
   MessageRole,
   TextContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_DATASET_LABEL } from '../../../constants'
 import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'

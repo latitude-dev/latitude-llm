@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useCallback } from 'react'
-import { PromptlSourceRef } from '@latitude-data/constants/legacyCompiler'
+import { PromptlSourceRef } from '@latitude-data/constants/messages'
 
 import { AnnotatedTextRange, useAnnotations } from '../../AnnotationsContext'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'

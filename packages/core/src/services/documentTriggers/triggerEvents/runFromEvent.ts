@@ -12,7 +12,7 @@ import {
 import { runDocumentAtCommit } from '../../commits'
 import { BACKGROUND } from '../../../telemetry'
 import { sendEmailResponse } from '../handlers/email/sendResponse'
-import { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
+import { AssistantMessage } from '@latitude-data/constants/messages'
 import { getDocumentTriggerEventRunParameters } from './getDocumentTriggerRunParameters'
 
 function getRunSource(

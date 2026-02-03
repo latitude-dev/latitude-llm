@@ -3,7 +3,7 @@ import {
   Message as ConversationMessage,
   MessageContent,
   MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { ExpandMessages } from '../ExpandMessages'
 import { ErrorMessage, Message } from '$/components/ChatWrapper'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'

@@ -1,5 +1,5 @@
 import app from '$/routes/app'
-import { Message } from 'promptl-ai'
+import { Message, MessageRole } from '@latitude-data/constants/messages'
 import { LogSources, SpanType } from '@latitude-data/core/constants'
 import { Providers, CompletionSpanMetadata } from '@latitude-data/constants'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
@@ -78,7 +78,7 @@ describe('GET /conversations/:conversationUuid', () => {
 
       inputMessages = [
         {
-          role: 'user',
+          role: MessageRole.user,
           content: [
             {
               type: 'text',
@@ -86,17 +86,17 @@ describe('GET /conversations/:conversationUuid', () => {
             },
           ],
         },
-      ] as Message[]
+      ]
 
-      const outputMessages = [
+      const outputMessages: Message[] = [
         {
-          role: 'assistant',
+          role: MessageRole.assistant,
           content: [
             { type: 'text', text: 'I am doing well, thank you for asking!' },
           ],
           toolCalls: [],
         },
-      ] as Message[]
+      ]
 
       const promptSpan = await createSpan({
         workspaceId: workspace.id,
@@ -160,7 +160,7 @@ describe('GET /conversations/:conversationUuid', () => {
           content: [
             { type: 'text', text: 'I am doing well, thank you for asking!' },
           ],
-          toolCalls: null,
+          toolCalls: [],
         },
       ]
       expect(messagesResponse).toEqual(completeMessages)
@@ -195,7 +195,7 @@ describe('GET /conversations/:conversationUuid', () => {
               text: 'I cannot check the weather, but I hope it is nice!',
             },
           ],
-          toolCalls: null,
+          toolCalls: [],
         },
       ] as Message[]
 

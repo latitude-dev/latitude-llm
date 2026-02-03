@@ -2,10 +2,11 @@ import { LegacyVercelSDKToolResultPart as ToolResultPart } from './ai'
 import { ToolSourceData } from './toolSources'
 
 export enum MessageRole {
-  system = 'system',
-  user = 'user',
   assistant = 'assistant',
+  system = 'system',
   tool = 'tool',
+  user = 'user',
+  developer = 'developer',
 }
 
 export type PromptlSourceRef = {
@@ -80,7 +81,8 @@ export type UserMessage = IMessage & {
 export type AssistantMessage = {
   role: MessageRole.assistant
   content: string | ToolRequestContent[] | MessageContent[]
-  toolCalls: ToolCall[] | null
+  // DEPRECATED but keeping around for backwards compatibility
+  toolCalls?: ToolCall[] | null
   _isGeneratingToolCall?: boolean
 }
 export type ToolMessage = {

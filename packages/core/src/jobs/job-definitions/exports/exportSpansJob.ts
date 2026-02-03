@@ -16,7 +16,7 @@ import { findByUuid } from '../../../data-access/exports/findByUuid'
 import { markExportReady } from '../../../services/exports/markExportReady'
 import { queues } from '../../queues'
 import { formatMessage } from '../../../helpers'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import { Message } from '@latitude-data/constants/messages'
 import {
   buildColumns as buildColumnsFn,
   nanoidHashAlgorithm,

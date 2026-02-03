@@ -4,7 +4,7 @@ import {
   EvaluatedDocumentLog,
   LLM_EVALUATION_PROMPT_PARAMETERS,
 } from '@latitude-data/core/constants'
-import { Message, ToolMessage } from '@latitude-data/constants/legacyCompiler'
+import { Message, ToolMessage } from '@latitude-data/constants/messages'
 import { ExtractOutputResponse } from '$/app/api/evaluations/extract-output/route'
 
 type ExtractedOutputSuccess = Extract<ExtractOutputResponse, { ok: true }>

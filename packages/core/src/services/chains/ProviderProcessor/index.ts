@@ -8,7 +8,7 @@ import {
   AssistantMessage,
   Message,
   MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
 import { convertResponseMessages } from '../../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
@@ -78,7 +78,7 @@ export async function processResponse({
     model,
     provider,
     input,
-    output,
+    output: output ?? [],
     reasoning,
     documentLogUuid,
     text: text ?? '',

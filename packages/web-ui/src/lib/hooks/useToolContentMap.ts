@@ -7,7 +7,7 @@ import {
   MessageRole,
   ToolContent,
   ToolRequestContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { useMemo } from 'react'
 
 export function useToolContentMap(

@@ -4,7 +4,7 @@ import {
   VercelConfig,
   LegacyVercelSDKVersion4Usage as LanguageModelUsage,
 } from '@latitude-data/constants'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import { JSONSchema7 } from 'json-schema'
 import { LogSources } from '../../../constants'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
@@ -43,7 +43,7 @@ export async function streamAIResponse({
   controller: ReadableStreamDefaultController
   workspace: WorkspaceDto
   provider: ProviderApiKey
-  messages: LegacyMessage[]
+  messages: Message[]
   config: VercelConfig
   source: LogSources
   documentLogUuid: string
@@ -55,7 +55,7 @@ export async function streamAIResponse({
   telemetryOptions?: CompletionTelemetryOptions
 }): Promise<{
   response: ChainStepResponse<StreamType>
-  messages: LegacyMessage[]
+  messages: Message[]
   tokenUsage: Awaited<LanguageModelUsage>
   finishReason: Awaited<AIReturn<StreamType>['finishReason']> | undefined
 }> {

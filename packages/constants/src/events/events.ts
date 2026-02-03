@@ -1,8 +1,4 @@
-import {
-  Config,
-  Message,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
+import { Config, Message, ToolCall } from '@latitude-data/constants/messages'
 import { FinishReason } from 'ai'
 import {
   ChainStepResponse,

@@ -1,7 +1,4 @@
-import type {
-  Message,
-  MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+import type { Message, MessageRole } from '@latitude-data/constants/messages'
 
 import { AppliedRules, ProviderRules } from '../types'
 

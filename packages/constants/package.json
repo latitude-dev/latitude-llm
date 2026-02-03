@@ -13,7 +13,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./ai": "./src/ai.ts",
-    "./legacyCompiler": "./src/legacyCompiler.ts",
+    "./messages": "./src/messages.ts",
     "./errors": "./src/errors/index.ts",
     "./evaluations": "./src/evaluations/index.ts",
     "./experiments": "./src/experiments.ts",

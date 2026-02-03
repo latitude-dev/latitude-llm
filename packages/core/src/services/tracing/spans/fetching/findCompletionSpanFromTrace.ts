@@ -4,7 +4,6 @@ import {
   isMainSpan,
   SpanType,
 } from '../../../../constants'
-import { adaptPromptlMessageToLegacy } from '../../../../utils/promptlAdapter'
 
 function findRootSpans(trace: AssembledTrace): AssembledSpan[] {
   return trace.children
@@ -61,8 +60,5 @@ export function findCompletionSpanFromTrace(trace: AssembledTrace | undefined) {
 export function adaptCompletionSpanMessagesToLegacy(
   span: AssembledSpan<SpanType.Completion> | undefined,
 ) {
-  return [
-    ...(span?.metadata?.input || []).map(adaptPromptlMessageToLegacy),
-    ...(span?.metadata?.output || []).map(adaptPromptlMessageToLegacy),
-  ]
+  return [...(span?.metadata?.input || []), ...(span?.metadata?.output || [])]
 }

@@ -1,5 +1,5 @@
 import { Span, EvaluationResultV2, EvaluationV2 } from '../../constants'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import { Result, TypedResult } from '../../lib/Result'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Workspace } from '../../schema/models/types/Workspace'
@@ -9,7 +9,7 @@ import { getEvaluationMetricSpecification } from '../evaluationsV2/specification
 import { EvaluationResultSuccessValue } from '../../constants'
 
 export type SpanMessagesWithReason = {
-  messages: LegacyMessage[]
+  messages: Message[]
   reason: string
 }
 

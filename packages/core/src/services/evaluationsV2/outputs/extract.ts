@@ -1,4 +1,4 @@
-import type { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import stringify from 'fast-json-stable-stringify'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,

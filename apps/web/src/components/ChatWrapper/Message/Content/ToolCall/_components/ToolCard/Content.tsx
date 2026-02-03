@@ -2,7 +2,7 @@ import { MaxHeightWindow } from '$/components/MaxHeightWindow'
 import {
   ToolContent,
   ToolRequestContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'

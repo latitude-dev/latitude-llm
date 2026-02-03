@@ -1,7 +1,7 @@
 import {
   ToolRequestContent,
   ToolContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { ReactNode, useMemo, useState } from 'react'
 import { ToolCardHeader } from './Header'
 import type { ToolCallStatus } from './Header'

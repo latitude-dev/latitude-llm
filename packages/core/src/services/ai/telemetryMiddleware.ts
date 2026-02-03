@@ -12,7 +12,7 @@ import {
   Message,
   MessageContent,
   MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 
 function convertPromptToMessages(
   vercelMessages: LanguageModelV2Prompt,

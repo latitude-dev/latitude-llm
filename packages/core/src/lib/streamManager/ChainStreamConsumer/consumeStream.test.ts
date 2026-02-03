@@ -2,8 +2,7 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LanguageModelUsage, TextStreamPart, Tool } from 'ai'
 import { vi, describe, expect, it } from 'vitest'
 
-import { Providers, StreamType } from '@latitude-data/constants'
-import { LegacyChainEvent } from '../../../constants'
+import { ChainEvent, Providers, StreamType } from '@latitude-data/constants'
 import { AIReturn } from '../../../services/ai'
 import { consumeStream } from './consumeStream'
 import { StreamEventTypes, VercelChunk } from '@latitude-data/constants'
@@ -45,7 +44,7 @@ export const PARTIAL_FINISH_CHUNK = {
 export type TOOLS = Record<string, Tool>
 
 type BuildChainCallback = (
-  controller: ReadableStreamDefaultController<LegacyChainEvent>,
+  controller: ReadableStreamDefaultController<ChainEvent>,
   result: AIReturn<StreamType>,
   accumulatedText: { text: string },
 ) => Promise<void>
@@ -96,7 +95,7 @@ function buildFakeChain({
   } as unknown as AIReturn<'text'>
   const accumulatedText = { text: '' }
   return new Promise<void>((resolve) => {
-    new ReadableStream<LegacyChainEvent>({
+    new ReadableStream<ChainEvent>({
       start(controller) {
         callback(controller, result, accumulatedText).then(() => {
           resolve()

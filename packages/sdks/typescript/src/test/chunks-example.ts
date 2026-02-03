@@ -5,7 +5,7 @@ import {
   Providers,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/messages'
 
 const CHUNK_EVENTS: ChainEvent[] = [
   {
@@ -151,6 +151,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
         streamType: 'text',
         text: '9.9 is bigger than 9.11',
         input: [],
+        output: [],
         model: 'gpt-4o',
         provider: Providers.OpenAI,
         cost: 0,
@@ -282,6 +283,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
         streamType: 'text',
         text: "Sure, let's break it down step by step to understand why 9.9 is greater than 9.11",
         input: [],
+        output: [],
         model: 'gpt-4o',
         provider: Providers.OpenAI,
         cost: 0,

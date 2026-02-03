@@ -1,7 +1,7 @@
 import {
   ToolRequestContent,
   ToolContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { useMemo } from 'react'
 import {
   ToolSource,

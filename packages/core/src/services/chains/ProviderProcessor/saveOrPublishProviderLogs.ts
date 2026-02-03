@@ -1,4 +1,4 @@
-import { Conversation } from '@latitude-data/constants/legacyCompiler'
+import { Conversation } from '@latitude-data/constants/messages'
 import { FinishReason } from 'ai'
 
 import {

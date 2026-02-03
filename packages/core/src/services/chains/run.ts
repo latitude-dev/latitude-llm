@@ -6,7 +6,7 @@ import {
 } from '@latitude-data/constants'
 import type { SimulationSettings } from '@latitude-data/constants/simulation'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import { Chain as PromptlChain } from 'promptl-ai'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
@@ -35,7 +35,7 @@ type CommonArgs<C extends PromptlChain = PromptlChain> = {
 
   context: TelemetryContext
   uuid?: string
-  messages?: LegacyMessage[]
+  messages?: Message[]
   pausedTokenUsage?: LanguageModelUsage
 
   tools?: Record<string, ToolHandler>

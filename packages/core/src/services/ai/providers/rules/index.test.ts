@@ -8,7 +8,7 @@ import {
   TextContent,
   ToolContent,
   ToolRequestContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { describe, expect, it } from 'vitest'
 import { applyAllRules } from './index'
 

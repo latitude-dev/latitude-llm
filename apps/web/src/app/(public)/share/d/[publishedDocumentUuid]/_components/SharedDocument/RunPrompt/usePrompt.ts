@@ -2,7 +2,7 @@ import { Dispatch, useCallback, useRef, useState } from 'react'
 import {
   Conversation,
   Message as ConversationMessage,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { runSharedPromptAction } from '$/actions/sdk/runSharedPromptAction'
 import { readStreamableValue } from '@ai-sdk/rsc'
 import { SetStateAction } from '@latitude-data/web-ui/commonTypes'

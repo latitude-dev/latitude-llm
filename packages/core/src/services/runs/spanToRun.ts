@@ -1,4 +1,4 @@
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import { Message } from '@latitude-data/constants/messages'
 import {
   CompletedRun,
   CompletionSpanMetadata,

@@ -1,4 +1,4 @@
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/messages'
 
 import { objectToString } from '@latitude-data/constants'
 import {

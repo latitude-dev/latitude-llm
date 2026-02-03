@@ -3,7 +3,7 @@ import { createRequestAbortSignal } from '$/common/createRequestAbortSignal'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
 import { ChatRoute } from '$/routes/api/v3/conversations/chat/chat.route'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import { Message } from '@latitude-data/constants/messages'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { buildClientToolHandlersMap } from '@latitude-data/core/services/documents/tools/clientTools/handlers'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
@@ -35,7 +35,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
       tools: buildClientToolHandlersMap(tools),
       mcpHeaders,
       documentLogUuid: conversationUuid,
-      messages: messages as LegacyMessage[],
+      messages: messages as Message[],
       source: __internal?.source ?? LogSources.API,
       abortSignal,
     })

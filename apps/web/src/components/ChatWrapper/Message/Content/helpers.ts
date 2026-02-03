@@ -1,4 +1,4 @@
-import type { PromptlSourceRef } from '@latitude-data/constants/legacyCompiler'
+import type { PromptlSourceRef } from '@latitude-data/constants/messages'
 
 export type Reference = {
   identifier?: string

@@ -1,5 +1,5 @@
 import { StreamManager, StreamManagerProps } from '.'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import { Output, streamAIResponse } from './step/streamAIResponse'
 import {
   applyAgentRule,
@@ -47,7 +47,7 @@ export class DefaultStreamManager
     provider: ProviderApiKey
     output: Output
     schema: JSONSchema7
-    messages: LegacyMessage[]
+    messages: Message[]
   }) {
     super(rest)
 
