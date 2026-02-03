@@ -30,7 +30,6 @@ export const GET = errorHandler(
       },
     ) => {
       const { traceId, spanId } = params
-
       const result = await assembleTraceWithMessages({
         traceId,
         workspace,

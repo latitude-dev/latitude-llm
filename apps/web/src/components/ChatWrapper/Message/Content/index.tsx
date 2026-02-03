@@ -157,6 +157,21 @@ function ContentItem<M extends MarkdownSize | 'none'>({
   }
 
   if (value.type === 'file') {
+    if (value.mimeType.includes('image')) {
+      return (
+        <ImageMessageContent
+          index={index}
+          color={color}
+          size={size}
+          image={value.file}
+          parameters={parameters}
+          sourceMap={value._promptlSourceMap}
+          messageIndex={messageIndex}
+          contentBlockIndex={contentBlockIndex}
+        />
+      )
+    }
+
     return (
       <FileMessageContent
         index={index}

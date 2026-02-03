@@ -1,6 +1,7 @@
 import React, { memo, useMemo, useCallback } from 'react'
-
 import { PromptlSourceRef } from '@latitude-data/constants/legacyCompiler'
+
+import { AnnotatedTextRange, useAnnotations } from '../../AnnotationsContext'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ProseColor, TextColor } from '@latitude-data/web-ui/tokens'
@@ -8,9 +9,9 @@ import { computeSegments, groupSegments, type Reference } from './helpers'
 import { ReferenceComponent } from './_components/Reference'
 import { MarkdownContent } from './_components/MarkdownContent'
 import { MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
-import { AnnotatedTextRange, useAnnotations } from '../../AnnotationsContext'
 import { cn } from '@latitude-data/web-ui/utils'
-import { isMainSpan } from '@latitude-data/constants'
+import { AnnotationSection } from './_components/AnnotationSection'
+import { useBlockAnnotations } from './_hooks/useBlockAnnotations'
 
 const ContentJson = memo(({ json }: { json: string }) => {
   return (
@@ -43,36 +44,43 @@ const ContentText = memo(
     contentBlockIndex?: number
   }) => {
     const TextComponent = size === 'small' ? Text.H5 : Text.H4
+    const { onAnnotationClick, currentSelection, clickedAnnotation } =
+      useAnnotations()
     const {
-      getAnnotationsForBlock,
-      onAnnotationClick,
-      currentSelection,
-      clickedAnnotation,
+      blockAnnotations: rawBlockAnnotations,
+      evaluation,
       span,
-    } = useAnnotations()
+    } = useBlockAnnotations({
+      contentType: 'text',
+      messageIndex,
+      contentBlockIndex,
+    })
+    const blockAnnotations = useMemo(
+      () => (text ? rawBlockAnnotations : []),
+      [text, rawBlockAnnotations],
+    )
 
-    const hasBlockIndices =
-      messageIndex !== undefined && contentBlockIndex !== undefined
-    const isAnnotationEnabled =
-      hasBlockIndices && !!getAnnotationsForBlock && !!span && isMainSpan(span)
-
-    const blockAnnotations = useMemo(() => {
-      if (!isAnnotationEnabled || !text) return []
-
-      return getAnnotationsForBlock!(messageIndex!, contentBlockIndex!).filter(
-        (ann) => ann.context.contentType === 'text',
+    const textRangeAnnotations = useMemo(() => {
+      return blockAnnotations.filter(
+        (ann) => ann.context.textRange !== undefined,
       )
-    }, [isAnnotationEnabled, messageIndex, contentBlockIndex, getAnnotationsForBlock, text])
+    }, [blockAnnotations])
+
+    const fullBlockAnnotations = useMemo(() => {
+      return blockAnnotations.filter(
+        (ann) => ann.context.textRange === undefined,
+      )
+    }, [blockAnnotations])
 
     const isCurrentBlockSelected = useMemo(() => {
-      if (!isAnnotationEnabled || !currentSelection) return false
+      if (!currentSelection) return false
 
       return (
         currentSelection.context.messageIndex === messageIndex &&
         currentSelection.context.contentBlockIndex === contentBlockIndex &&
         currentSelection.context.contentType === 'text'
       )
-    }, [isAnnotationEnabled, currentSelection, messageIndex, contentBlockIndex])
+    }, [currentSelection, messageIndex, contentBlockIndex])
 
     const segments = useMemo(
       () => computeSegments('text', text, sourceMap, parameters),
@@ -91,7 +99,8 @@ const ContentText = memo(
     )
 
     const sortedRanges = useMemo(() => {
-      if (!isAnnotationEnabled || !text) return []
+      if (!text) return []
+
       const ranges: Array<{
         start: number
         end: number
@@ -99,8 +108,8 @@ const ContentText = memo(
         annotation?: AnnotatedTextRange
       }> = []
 
-      // Add annotation ranges
-      for (const ann of blockAnnotations) {
+      // Add annotation ranges (only those with text ranges)
+      for (const ann of textRangeAnnotations) {
         if (ann.context.textRange) {
           ranges.push({
             start: ann.context.textRange.start,
@@ -115,12 +124,12 @@ const ContentText = memo(
       if (
         isCurrentBlockSelected &&
         currentSelection?.context.textRange &&
-        !blockAnnotations.some(
+        !textRangeAnnotations.some(
           (ann) =>
             ann.context.textRange?.start ===
-            currentSelection.context.textRange?.start &&
+              currentSelection.context.textRange?.start &&
             ann.context.textRange?.end ===
-            currentSelection.context.textRange?.end,
+              currentSelection.context.textRange?.end,
         )
       ) {
         ranges.push({
@@ -131,7 +140,7 @@ const ContentText = memo(
       }
 
       return ranges.sort((a, b) => a.start - b.start)
-    }, [isAnnotationEnabled, text, blockAnnotations, isCurrentBlockSelected, currentSelection])
+    }, [text, isCurrentBlockSelected, currentSelection, textRangeAnnotations])
 
     const renderSegmentWithAnnotations = useCallback(
       (segment: string | Reference, segmentStart: number): React.ReactNode => {
@@ -195,9 +204,9 @@ const ContentText = memo(
               clickedAnnotation &&
               clickedAnnotation.result.uuid === part.annotation.result.uuid &&
               clickedAnnotation.context.textRange?.start ===
-              part.annotation.context.textRange?.start &&
+                part.annotation.context.textRange?.start &&
               clickedAnnotation.context.textRange?.end ===
-              part.annotation.context.textRange?.end
+                part.annotation.context.textRange?.end
             return (
               <span
                 key={`part-${partIndex}`}
@@ -205,9 +214,9 @@ const ContentText = memo(
                 data-annotation-key={annotationKey}
                 onClick={(e) => handleAnnotationClick(e, part.annotation!)}
                 className={cn('cursor-pointer', {
-                  'bg-destructive-muted dark:bg-destructive-muted/50':
+                  'bg-destructive-muted dark:bg-destructive/30':
                     part.annotation.result.hasPassed === false,
-                  'bg-success-muted dark:bg-success-muted/50':
+                  'bg-success-muted dark:bg-success/30':
                     part.annotation.result.hasPassed,
                   'border-b-2 border-destructive/50 dark:border-destructive/50':
                     part.annotation.result.hasPassed === false && isClicked,
@@ -224,7 +233,7 @@ const ContentText = memo(
               <span
                 key={`part-${partIndex}`}
                 data-selected-text
-                className='bg-yellow-100 border-b-2 border-yellow-300 dark:bg-yellow-900/30 cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                className='bg-yellow-100 border-b-2 border-yellow-300 dark:bg-yellow-500/30 dark:border-yellow-500 cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-500/40'
               >
                 {part.text}
               </span>
@@ -278,6 +287,15 @@ const ContentText = memo(
     return (
       <div className='flex flex-col gap-4'>
         <div className='flex flex-col gap-y-1'>{messagesList}</div>
+        <AnnotationSection
+          blockAnnotations={fullBlockAnnotations}
+          evaluation={evaluation}
+          span={span}
+          messageIndex={messageIndex}
+          contentBlockIndex={contentBlockIndex}
+          contentType='text'
+          requireMainSpan
+        />
       </div>
     )
   },
