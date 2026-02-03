@@ -8,82 +8,19 @@ You are not just writing code. You are shaping the future of this project. The p
 
 Fight entropy. Leave the codebase better than you found it.
 
+## Required Skills
+
+Before writing any code, load the `coding-standards` skill (`/coding-standards`). This skill contains essential principles for writing maintainable code.
+
 ## Build/Test Commands
 
+- `pnpm --filter @latitude-data/core db:generate` - Generate database migrations
+- `pnpm --filter @latitude-data/core db:migrate` - Run database migrations
 - `pnpm build` - Build all packages
-- `pnpm dev` - Start development servers
 - `pnpm lint` - Lint all packages
+- `pnpm prettier` - Format code
 - `pnpm tc` - Type check all packages
 - `pnpm test` - Run all tests
-- `pnpm test:watch` - Run tests in watch mode (specific packages)
-- `pnpm --filter @latitude-data/core db:migrate` - Run database migrations
-- `pnpm --filter @latitude-data/core db:generate` - Generate database migrations
-- `pnpm prettier` - Format code
-- NEVER build packages with `pnpm build` unless specifically asked to
-- NEVER use the vitest command directly, always try pnpm test or implement a
-  pnpm test script in the relevant package.json if it does not exist
-
-## Docker Production Builds
-
-The project uses Docker Compose for production builds. There are three compose files:
-
-- `docker-compose.yml` - Production deployment using pre-built images from GHCR
-- `docker-compose.local.yml` - Local development builds from source
-- `docker-compose.prod.yml` - Production deployment with Traefik reverse proxy
-
-### Building Locally
-
-To build and test the web application Docker image locally:
-
-```bash
-# Start dependencies (database, redis, weaviate)
-docker compose -f docker-compose.local.yml up db redis weaviate -d
-
-# Build the web container
-docker compose -f docker-compose.local.yml build web
-
-# Run the web container
-docker compose -f docker-compose.local.yml up web
-```
-
-The web app will be available at `http://localhost:3000`.
-
-### Build Configuration
-
-The web Dockerfile (`apps/web/docker/Dockerfile`) uses:
-
-- **Base image**: `node:22-alpine`
-- **Build tool**: Turbopack (`next build --turbopack`)
-- **Output mode**: Standalone (`output: 'standalone'` in `next.config.mjs`)
-- **Multi-stage build**: Pruner → Builder → Runner stages for minimal image size
-
-### Key Build Args
-
-Pass these as build arguments or environment variables:
-
-- `NEXT_PUBLIC_*` - Client-side environment variables (baked into the build)
-- `AWS_REGION`, `S3_BUCKET`, `BUILD_ID` - For static asset uploads to S3
-- `DD_GIT_COMMIT_SHA` - For Datadog source map uploads
-
-### Testing the Built Image
-
-```bash
-# Run the built image directly
-docker run --rm --network llm_default --env-file .env -p 3000:8080 llm-web
-
-# Or use docker compose
-docker compose -f docker-compose.local.yml up web
-```
-
-### Building Other Services
-
-```bash
-# Build all services
-docker compose -f docker-compose.local.yml build
-
-# Build specific services
-docker compose -f docker-compose.local.yml build gateway workers websockets
-```
 
 ## Code Style
 
@@ -94,128 +31,25 @@ docker compose -f docker-compose.local.yml build gateway workers websockets
 - Event handlers prefixed with "handle" (handleClick, handleSubmit)
 - Directories use lowercase with dashes (auth-wizard)
 - Avoid enums, use const maps or type unions instead
-- Use JSDoc comments for functions and classes that are exported. You can skip
-  JSDoc for internal functions that are simple and self-explanatory.
 - Exports go top of file, internal methods at the bottom
-- If possible, use the instrumentation's captureException method rather than logging errors with console.error
+- Always use packages/core's captureException method rather than logging errors with console.error
 - **DO NOT** add comments unless they are JSDocs or you are explicitely asked to.
+- Use JSDoc comments for exported functions and classes. You can skip
+  JSDocs for internal functions that are simple and self-explanatory.
 
 ## Architecture
 
 - Monorepo with pnpm workspaces and Turborepo
 - Core business logic in `packages/core`, UI components in `packages/web-ui`
-- Services use functional approach, return Result abstraction for error handling
-- Database operations use Transaction abstraction, models in `packages/core`
-- Write operations receive optional `db` parameter defaulting to `database`
-- Update/Delete services receive model instances, not IDs
+- Services return Result abstraction for error handling
+- Database operations use Transaction abstraction
+- models are in `packages/core`
+- Write operations receive optional `transaction` parameter defaulting to `new Transaction()`
+- Write services receive model instances, not IDs
 
 ## Testing
 
-- Use factories extensively, minimize mocks for integration tests
-- Tests located alongside source files with `.test.ts` extension
-- To run tests for a specific package, `cd` into the package directory and run:
-  - `pnpm test -- "path/to/file.test.ts"` - Run a specific test file
-  - `pnpm test -- "path/to/directory"` - Run all tests in a directory
-  - `pnpm test` - Run all tests in the package
-
-### Unit Test Patterns
-
-When writing unit tests for services that depend on external modules (disk, cache, database):
-
-1. **Use `vi.spyOn` for module mocking**: Import modules with `* as moduleAlias` and spy on specific functions
-
-   ```typescript
-   import * as cacheModule from '../../cache'
-   import * as diskModule from '../../lib/disk'
-
-   beforeEach(() => {
-     vi.spyOn(diskModule, 'diskFactory').mockReturnValue(mockDisk as any)
-     vi.spyOn(cacheModule, 'cache').mockResolvedValue(mockCache as any)
-   })
-   ```
-
-2. **Create mock objects with `vi.fn()`**: Define mock implementations for all methods used by the code under test
-
-   ```typescript
-   const mockDisk = {
-     exists: vi.fn(),
-     get: vi.fn(),
-     put: vi.fn(),
-     delete: vi.fn(),
-   }
-
-   const mockCache = {
-     get: vi.fn(),
-     set: vi.fn(),
-     del: vi.fn(),
-   }
-   ```
-
-3. **Clear mocks between tests**: Use `beforeEach` to reset mock state
-
-   ```typescript
-   beforeEach(() => {
-     vi.clearAllMocks()
-     // Re-apply spies after clearing
-   })
-   ```
-
-4. **Test Result pattern responses**: Services return `Result` objects, check both success and error cases
-
-   ```typescript
-   // Success case
-   expect(result.ok).toBe(true)
-   expect(result.value).toEqual(expectedValue)
-
-   // Error case
-   expect(result.ok).toBe(false)
-   expect(result.error?.message).toBe('Expected error message')
-   ```
-
-5. **Test edge cases and error paths**: Include tests for:
-   - Missing data (cache miss, file not found)
-   - Expired/stale entries
-   - External service failures (disk errors, cache errors)
-   - Silent error handling (when errors are caught and swallowed)
-
-6. **Use `@ts-expect-error` for intentional type violations**: When testing with incomplete mocks
-
-   ```typescript
-   // @ts-expect-error - mock
-   vi.spyOn(cacheModule, 'cache').mockResolvedValue(mockCache)
-   ```
-
-### Test Structure
-
-Follow this structure for test files:
-
-```typescript
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-
-describe('moduleName', () => {
-  // Mock setup
-  const mockDependency = { method: vi.fn() }
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    // Apply spies
-  })
-
-  describe('functionName', () => {
-    it('describes expected behavior', async () => {
-      // Arrange - set up mock return values
-      mockDependency.method.mockResolvedValueOnce(value)
-
-      // Act - call the function under test
-      const result = await functionUnderTest(args)
-
-      // Assert - verify the result and mock interactions
-      expect(result).toEqual(expected)
-      expect(mockDependency.method).toHaveBeenCalledWith(expectedArgs)
-    })
-  })
-})
-```
+Before writing tests, load the `testing` skill (`/testing`) for detailed patterns and guidelines.
 
 ## CRUD Operations Pattern
 

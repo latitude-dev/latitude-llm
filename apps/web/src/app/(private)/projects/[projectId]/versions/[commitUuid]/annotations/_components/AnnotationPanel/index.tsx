@@ -8,41 +8,52 @@ import {
   SpanType,
   SpanWithDetails,
   EvaluationType,
+  MainSpanType,
 } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import Link from 'next/link'
-import { useTraceWithMessages } from '$/stores/traces'
+import { useTrace, useTraceWithMessages } from '$/stores/traces'
 import { adaptCompletionSpanMessagesToLegacy } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { sum } from 'lodash-es'
 import { RunPanelStats } from '$/components/RunPanelStats'
 import { AnnotationFormWithoutContext } from '$/components/ChatWrapper/AnnotationFormWithoutContext'
 import { buildTraceUrl } from '../../../documents/[documentUuid]/(withTabs)/traces/_components/TraceSpanSelectionContext'
+import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findFirstSpanOfType'
 
 export function AnnotationsPanel({
   span,
   onAnnotate,
 }: {
-  span: SpanWithDetails<SpanType.Prompt>
+  span: SpanWithDetails<MainSpanType>
   onAnnotate: (
     result: EvaluationResultV2<EvaluationType.Human, HumanEvaluationMetric>,
   ) => void
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
+  const { data: trace } = useTrace({ traceId: span.traceId })
   const { completionSpan, isLoading: isLoadingTrace } = useTraceWithMessages({
     traceId: span.traceId,
     spanId: span.id,
   })
+  const mainSpan = useMemo(
+    () =>
+      findFirstSpanOfType(trace?.children ?? [], [
+        SpanType.Prompt,
+        SpanType.External,
+      ]),
+    [trace?.children],
+  )
+  const documentUuid = mainSpan?.documentUuid
   const conversation = useMemo(
     () => adaptCompletionSpanMessagesToLegacy(completionSpan ?? undefined),
     [completionSpan],
   )
   const toolContentMap = useToolContentMap(conversation as unknown as Message[])
-
   const isLoading = isLoadingTrace
   if (isLoading) {
     return (
@@ -56,6 +67,8 @@ export function AnnotationsPanel({
       </div>
     )
   }
+
+  const spanMetadata = span.metadata
 
   return (
     <div className='w-full flex flex-col gap-6 p-6 overflow-hidden overflow-y-auto custom-scrollbar relative'>
@@ -72,29 +85,31 @@ export function AnnotationsPanel({
             isRunning={false}
           />
         )}
-        <div className='w-full flex justify-center items-center'>
-          <Link
-            href={buildTraceUrl({
-              projectId: project.id,
-              commitUuid: commit.uuid,
-              documentUuid: span.documentUuid!,
-              span,
-            })}
-            target='_blank'
-          >
-            <Button
-              variant='link'
-              iconProps={{
-                name: 'arrowUpRight',
-                widthClass: 'w-4',
-                heightClass: 'h-4',
-                placement: 'right',
-              }}
+        {documentUuid && (
+          <div className='w-full flex justify-center items-center'>
+            <Link
+              href={buildTraceUrl({
+                projectId: project.id,
+                commitUuid: commit.uuid,
+                documentUuid,
+                span,
+              })}
+              target='_blank'
             >
-              See complete log
-            </Button>
-          </Link>
-        </div>
+              <Button
+                variant='link'
+                iconProps={{
+                  name: 'arrowUpRight',
+                  widthClass: 'w-4',
+                  heightClass: 'h-4',
+                  placement: 'right',
+                }}
+              >
+                See complete log
+              </Button>
+            </Link>
+          </div>
+        )}
         {conversation.length > 0 ? (
           <div className='w-full flex flex-col'>
             <div className='flex flex-row items-center justify-between w-full pb-2'>
@@ -110,7 +125,11 @@ export function AnnotationsPanel({
               <MessageList
                 debugMode
                 messages={conversation as unknown as Message[]}
-                parameters={Object.keys(span.metadata?.parameters ?? {})}
+                parameters={
+                  spanMetadata && 'parameters' in spanMetadata
+                    ? Object.keys(spanMetadata.parameters)
+                    : []
+                }
                 toolContentMap={toolContentMap}
               />
               <AnnotationFormWithoutContext />

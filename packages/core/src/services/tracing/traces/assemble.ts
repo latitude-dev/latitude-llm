@@ -77,16 +77,17 @@ export async function assembleTraceStructure(
 }
 
 /**
- * Assembles a trace structure and fetches metadata for ALL completion spans.
- * Use this when you need the trace structure plus the conversation messages.
- * The metadata is attached to ALL completion spans within the trace tree,
- * enabling proper aggregation of tokens and costs across all completions.
+ * Assemble the trace structure and attach metadata to all completion spans.
+ * This includes conversation messages and enables aggregation of tokens and
+ * costs across completions. Also selects a main completion span scoped to the
+ * nearest Prompt/External/Chat ancestor of the provided span.
  *
- * Additionally returns a "main" completion span which is determined by finding
- * the nearest parent span of type Prompt, External, or Chat for the specified
- * span, then finding that parent's latest Completion child. This allows viewing
- * span-specific conversations (e.g., subagent conversations) rather than always
- * showing the global trace conversation.
+ * @param params - Trace lookup parameters.
+ * @param params.traceId - Trace identifier to assemble.
+ * @param params.workspace - Workspace owning the trace.
+ * @param params.spanId - Span used to scope the main completion selection.
+ * @param db - Database connection override.
+ * @returns Result with the assembled trace and optional main completion span.
  */
 export async function assembleTraceWithMessages(
   {

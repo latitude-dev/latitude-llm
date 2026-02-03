@@ -3,10 +3,7 @@
 import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
 import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SpanParameters'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import {
-  useCurrentProject,
-  type IProjectContextType,
-} from '$/app/providers/ProjectProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MetadataInfoTabs } from '$/components/MetadataInfoTabs'
 import { MetadataItem } from '$/components/MetadataItem'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
@@ -26,10 +23,8 @@ import {
   SpanWithDetails,
 } from '@latitude-data/core/constants'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
@@ -44,6 +39,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
+import { buildTraceUrl } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/TraceSpanSelectionContext'
 
 const DataGrid = dynamic(
   () =>
@@ -324,31 +320,6 @@ export function ResultPanelMetadata<
   )
 }
 
-function EvaluatedTraceLink({
-  project,
-  commit,
-  document,
-  traceId,
-  spanId,
-}: {
-  project: IProjectContextType['project']
-  commit: Commit
-  document: DocumentVersion
-  traceId: string
-  spanId: string
-}) {
-  const query = new URLSearchParams({
-    filters: JSON.stringify({ traceId, spanId }),
-  })
-
-  return `${
-    ROUTES.projects
-      .detail({ id: project.id })
-      .commits.detail({ uuid: commit.uuid })
-      .documents.detail({ uuid: document.documentUuid }).traces.root
-  }?${query.toString()}`
-}
-
 export function ResultPanelLoading() {
   return (
     <div className='flex flex-col gap-4'>
@@ -395,6 +366,10 @@ export function ResultPanel<
 
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
+  const { data: evaluatedSpan } = useSpanByTraceId({
+    traceId: evaluatedTraceId,
+    spanId: evaluatedSpanId,
+  })
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
@@ -439,30 +414,31 @@ export function ResultPanel<
                 {...rest}
               />
             )}
-            <div className='w-full flex justify-center pt-4'>
-              <Link
-                href={EvaluatedTraceLink({
-                  project: project,
-                  commit: commit,
-                  document: document,
-                  traceId: result.evaluatedTraceId!,
-                  spanId: result.evaluatedSpanId!,
-                })}
-                target='_blank'
-              >
-                <Button
-                  variant='link'
-                  iconProps={{
-                    name: 'arrowRight',
-                    widthClass: 'w-4',
-                    heightClass: 'h-4',
-                    placement: 'right',
-                  }}
+            {evaluatedSpan?.documentLogUuid && (
+              <div className='w-full flex justify-center pt-4'>
+                <Link
+                  href={buildTraceUrl({
+                    projectId: project.id,
+                    commitUuid: commit.uuid,
+                    documentUuid: document.documentUuid,
+                    span: evaluatedSpan,
+                  })}
+                  target='_blank'
                 >
-                  Check evaluated log
-                </Button>
-              </Link>
-            </div>
+                  <Button
+                    variant='link'
+                    iconProps={{
+                      name: 'arrowRight',
+                      widthClass: 'w-4',
+                      heightClass: 'h-4',
+                      placement: 'right',
+                    }}
+                  >
+                    Check evaluated log
+                  </Button>
+                </Link>
+              </div>
+            )}
           </>
         )}
       </MetadataInfoTabs>
