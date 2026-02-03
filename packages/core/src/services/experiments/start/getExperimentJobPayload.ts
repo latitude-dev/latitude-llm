@@ -7,6 +7,7 @@ import {
   lt,
   notInArray,
 } from 'drizzle-orm'
+import { SimulatedUserGoalSource } from '@latitude-data/constants/simulation'
 import { database } from '../../../client'
 import { EvaluationV2, LogSources } from '../../../constants'
 import { Result } from '../../../lib/Result'
@@ -35,6 +36,27 @@ export type ExperimentRow = {
   uuid: string
   parameters: Record<string, unknown>
   datasetRowId?: number
+  simulatedUserGoal?: string
+}
+
+export function resolveGoalFromSource(
+  goalSource: SimulatedUserGoalSource | undefined,
+  dataset: Dataset,
+  rowValues: Record<string, unknown>,
+): string | undefined {
+  if (!goalSource) return undefined
+
+  if (goalSource.type === 'global') {
+    return goalSource.value || undefined
+  }
+
+  if (goalSource.type === 'column') {
+    const column = dataset.columns[goalSource.columnIndex]
+    if (!column) return undefined
+    return rowValues[column.identifier] as string | undefined
+  }
+
+  return undefined
 }
 
 async function getExperimentRows(
@@ -43,11 +65,13 @@ async function getExperimentRows(
     parametersMap,
     fromRow,
     toRow,
+    simulatedUserGoalSource,
   }: {
     dataset: Dataset
     parametersMap: Record<string, number>
     fromRow?: number
     toRow?: number
+    simulatedUserGoalSource?: SimulatedUserGoalSource
   },
   db = database,
 ): Promise<ExperimentRow[]> {
@@ -73,6 +97,11 @@ async function getExperimentRows(
 
           return [parameter, value]
         }),
+      ),
+      simulatedUserGoal: resolveGoalFromSource(
+        simulatedUserGoalSource,
+        dataset,
+        datasetRow.values,
       ),
     }
   })
@@ -250,12 +279,14 @@ export async function getExperimentJobPayload(
   if (datasetResult.error) return datasetResult
   const dataset = datasetResult.unwrap()
 
+  const simulationSettings = experiment.metadata.simulationSettings
   const rows = await getExperimentRows(
     {
       dataset,
       parametersMap: parametersSource.parametersMap,
       fromRow: parametersSource.fromRow,
       toRow: parametersSource.toRow,
+      simulatedUserGoalSource: simulationSettings?.simulatedUserGoalSource,
     },
     db,
   )

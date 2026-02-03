@@ -3,9 +3,11 @@
 import useFeature from '$/stores/useFeature'
 import {
   MAX_SIMULATION_TURNS,
+  SimulatedUserGoalSource,
   SimulationSettings,
 } from '@latitude-data/constants/simulation'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Slider } from '@latitude-data/web-ui/atoms/Slider'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -15,7 +17,82 @@ import { useCallback, useMemo } from 'react'
 
 const DEFAULT_MAX_TURNS = 4
 
-function GoalSetting() {
+const CUSTOM_GOAL_VALUE = '__custom__'
+
+type GoalSelectValue = typeof CUSTOM_GOAL_VALUE | number
+
+function GoalSetting({
+  value,
+  onChange,
+  disabled,
+  isDatasetSource,
+  datasetColumns,
+}: {
+  value: SimulatedUserGoalSource | undefined
+  onChange: (value: SimulatedUserGoalSource | undefined) => void
+  disabled?: boolean
+  isDatasetSource?: boolean
+  datasetColumns?: SelectOption<number>[]
+}) {
+  const hasDatasetColumns = datasetColumns && datasetColumns.length > 0
+  const showColumnSelector = isDatasetSource === true
+
+  const selectOptions: SelectOption<GoalSelectValue>[] = useMemo(() => {
+    const customOption: SelectOption<GoalSelectValue> = {
+      label: 'Write custom goal...',
+      value: CUSTOM_GOAL_VALUE,
+      icon: 'pencil',
+    }
+
+    if (!hasDatasetColumns) {
+      const infoOption: SelectOption<GoalSelectValue> = {
+        label: 'Select a dataset to use column values',
+        value: '__info__' as GoalSelectValue,
+        disabled: true,
+      }
+      return [customOption, infoOption]
+    }
+
+    const columnOptions: SelectOption<GoalSelectValue>[] = datasetColumns.map(
+      (col) => ({
+        label: col.label,
+        value: col.value,
+        icon: col.icon,
+      }),
+    )
+
+    return [customOption, ...columnOptions]
+  }, [hasDatasetColumns, datasetColumns])
+
+  const selectedValue: GoalSelectValue = useMemo(() => {
+    if (!value || value.type === 'global') return CUSTOM_GOAL_VALUE
+    return value.columnIndex
+  }, [value])
+
+  const isCustomSelected =
+    !showColumnSelector || selectedValue === CUSTOM_GOAL_VALUE
+
+  const handleSelectChange = useCallback(
+    (newValue: GoalSelectValue) => {
+      if (newValue === CUSTOM_GOAL_VALUE) {
+        const currentGlobalValue = value?.type === 'global' ? value.value : ''
+        onChange({ type: 'global', value: currentGlobalValue })
+      } else {
+        onChange({ type: 'column', columnIndex: newValue as number })
+      }
+    },
+    [onChange, value],
+  )
+
+  const handleTextChange = useCallback(
+    (newValue: string) => {
+      onChange({ type: 'global', value: newValue })
+    },
+    [onChange],
+  )
+
+  const globalValue = value?.type === 'global' ? value.value : ''
+
   return (
     <div className='w-full h-full flex flex-col gap-2'>
       <Text.H5M>User goal and behaviour</Text.H5M>
@@ -24,13 +101,27 @@ function GoalSetting() {
         to guide the simulated user's behaviour, and to help the simulation
         decide when to stop.
       </Text.H6>
-      <TextArea
-        disabled={true}
-        minRows={3}
-        maxRows={10}
-        autoGrow={true}
-        placeholder='WIP'
-      />
+      {showColumnSelector && (
+        <Select
+          name='goalSource'
+          options={selectOptions}
+          value={selectedValue}
+          onChange={handleSelectChange}
+          placeholder='Select goal source'
+          disabled={disabled}
+        />
+      )}
+      {isCustomSelected && (
+        <TextArea
+          minRows={3}
+          maxRows={10}
+          autoGrow={true}
+          placeholder='Describe the goal and behaviour for the simulated user...'
+          value={globalValue}
+          onChange={(e) => handleTextChange(e.target.value)}
+          disabled={disabled}
+        />
+      )}
     </div>
   )
 }
@@ -75,10 +166,14 @@ export function ConversationSimulationSettings({
   value = {},
   onChange,
   disabled,
+  isDatasetSource,
+  datasetColumns,
 }: {
   value?: SimulationSettings
   onChange: (settings: SimulationSettings) => void
   disabled?: boolean
+  isDatasetSource?: boolean
+  datasetColumns?: SelectOption<number>[]
 }) {
   const { isEnabled: isMultiTurnSimulationsEnabled } = useFeature(
     'multiTurnSimulations',
@@ -129,7 +224,15 @@ export function ConversationSimulationSettings({
           scrollable={false}
           expandedContent={
             <div className='w-full h-full flex flex-col gap-4'>
-              <GoalSetting />
+              <GoalSetting
+                value={value.simulatedUserGoalSource}
+                onChange={(goalSource) =>
+                  onChange({ ...value, simulatedUserGoalSource: goalSource })
+                }
+                disabled={disabled}
+                isDatasetSource={isDatasetSource}
+                datasetColumns={datasetColumns}
+              />
               <ConversationTurnsSetting
                 value={value.maxTurns ?? DEFAULT_MAX_TURNS}
                 onChange={(maxTurns) => onChange({ ...value, maxTurns })}
