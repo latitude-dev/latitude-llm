@@ -8,6 +8,7 @@ latitude-lock.json
 .cursor
 .vscode
 .idea
+.claude
 
 # Dependencies
 node_modules

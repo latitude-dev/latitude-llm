@@ -27,6 +27,8 @@ const gatewayConfig = (() => {
   return { host: url.hostname, port, ssl: url.protocol === 'https:' }
 })()
 const gatewayUnavailableMessage = `Latitude service is not running at ${gatewayUrl}. Please start the service before running E2E tests.`
+const log = (...args: unknown[]) =>
+  console.log('[sdk-acceptance]', new Date().toISOString(), ...args)
 
 // HOW TO RUN THESE TESTS:
 //
@@ -82,6 +84,12 @@ You are a helpful assistant. Reply with a short acknowledgement.
   let sdk: Latitude
 
   beforeAll(async () => {
+    log('beforeAll:start', {
+      shouldRunAcceptance,
+      gatewayUrl,
+      gatewayConfig,
+      hasApiKey: Boolean(apiKey),
+    })
     // Setup SDK for creating project and prompt
     const setupSdk = new Latitude(apiKey, {
       __internal: {
@@ -90,21 +98,37 @@ You are a helpful assistant. Reply with a short acknowledgement.
     })
 
     try {
+      const setupStart = Date.now()
       // Create project
       const { project, version } =
         await setupSdk.projects.create('End to End Test')
+      log('beforeAll:project-created', {
+        projectId: project.id,
+        versionUuid: version.uuid,
+        durationMs: Date.now() - setupStart,
+      })
 
       // Create or get prompt with weather content
+      const weatherStart = Date.now()
       await setupSdk.prompts.getOrCreate(promptPath, {
         projectId: project.id,
         versionUuid: version.uuid,
         prompt: promptContent,
       })
+      log('beforeAll:prompt-ready', {
+        promptPath,
+        durationMs: Date.now() - weatherStart,
+      })
 
+      const simpleStart = Date.now()
       await setupSdk.prompts.getOrCreate(simplePromptPath, {
         projectId: project.id,
         versionUuid: version.uuid,
         prompt: simplePromptContent,
+      })
+      log('beforeAll:simple-prompt-ready', {
+        promptPath: simplePromptPath,
+        durationMs: Date.now() - simpleStart,
       })
 
       sdk = new Latitude(apiKey, {
@@ -114,7 +138,12 @@ You are a helpful assistant. Reply with a short acknowledgement.
           gateway: gatewayConfig,
         },
       })
+      log('beforeAll:sdk-ready', {
+        projectId: project.id,
+        versionUuid: version.uuid,
+      })
     } catch (error) {
+      log('beforeAll:error', error)
       if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
         throw new Error(gatewayUnavailableMessage)
       }
@@ -123,21 +152,36 @@ You are a helpful assistant. Reply with a short acknowledgement.
     }
   })
 
-  it.skip('should instantiate SDK targeting localhost:8787 with no SSL and run prompt with tool handler', async () => {
+  it('should instantiate SDK targeting localhost:8787 with no SSL and run prompt with tool handler', async () => {
+    log('test:start', 'run-with-tool-handler')
     // Create the get_weather tool handler
     const getWeatherTool = vi
       .fn()
-      .mockImplementation(async () => 'Temperature is 25°C and sunny')
+      .mockImplementation(async (...args: unknown[]) => {
+        log('tool:get_weather:called', ...args)
+        return 'Temperature is 25°C and sunny'
+      })
 
     try {
+      const runStart = Date.now()
       // Run prompt with get_weather tool - this makes a real API call
       const result = await sdk.prompts.run(promptPath, {
         parameters: { location: 'Barcelona' },
         stream: true,
-        onError: (err) => console.log('onError: ', err),
+        onError: (err) => log('run-with-tool-handler:onError', err),
+        onFinished: (data) =>
+          log('run-with-tool-handler:onFinished', {
+            uuid: data?.uuid,
+            responseLength: data?.response?.text?.length,
+          }),
         tools: {
           get_weather: getWeatherTool,
         },
+      })
+      log('run-with-tool-handler:result', {
+        durationMs: Date.now() - runStart,
+        uuid: result?.uuid,
+        responseLength: result?.response?.text?.length,
       })
 
       // Assertions for real response
@@ -155,7 +199,9 @@ You are a helpful assistant. Reply with a short acknowledgement.
 
       // Verify tool handler is available (may or may not be called depending on prompt)
       expect(getWeatherTool).toBeDefined()
+      log('test:finish', 'run-with-tool-handler')
     } catch (error) {
+      log('run-with-tool-handler:error', error)
       if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
         throw new Error(gatewayUnavailableMessage)
       }
@@ -176,15 +222,20 @@ You are a helpful assistant. Reply with a short acknowledgement.
     }
   })
 
-  it.skip('should handle tool calls during prompt execution with streaming', async () => {
+  it('should handle tool calls during prompt execution with streaming', async () => {
+    log('test:start', 'tool-calls-streaming')
     const getWeatherMock = vi
       .fn()
-      .mockResolvedValue('Temperature is 22°C and cloudy')
+      .mockImplementation(async (...args: unknown[]) => {
+        log('tool:get_weather:called', ...args)
+        return 'Temperature is 22°C and cloudy'
+      })
 
     const onFinishedMock = vi.fn()
     const onErrorMock = vi.fn()
 
     try {
+      const runStart = Date.now()
       // Make real streaming API call
       const result = await sdk.prompts.run(promptPath, {
         parameters: { location: 'Madrid' },
@@ -192,8 +243,22 @@ You are a helpful assistant. Reply with a short acknowledgement.
         tools: {
           get_weather: getWeatherMock,
         },
-        onFinished: onFinishedMock,
-        onError: onErrorMock,
+        onFinished: (data) => {
+          onFinishedMock(data)
+          log('tool-calls-streaming:onFinished', {
+            uuid: data?.uuid,
+            responseLength: data?.response?.text?.length,
+          })
+        },
+        onError: (err) => {
+          onErrorMock(err)
+          log('tool-calls-streaming:onError', err)
+        },
+      })
+      log('tool-calls-streaming:result', {
+        durationMs: Date.now() - runStart,
+        uuid: result?.uuid,
+        responseLength: result?.response?.text?.length,
       })
 
       // Verify no errors occurred (unless using test API key)
@@ -211,7 +276,9 @@ You are a helpful assistant. Reply with a short acknowledgement.
           expect(onFinishedMock).toHaveBeenCalled()
         }
       }
+      log('test:finish', 'tool-calls-streaming')
     } catch (error) {
+      log('tool-calls-streaming:error', error)
       if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
         throw new Error(gatewayUnavailableMessage)
       }
@@ -232,12 +299,17 @@ You are a helpful assistant. Reply with a short acknowledgement.
     }
   })
 
-  it('should ensure tool handler gets called when tools are requested', async () => {
+  it.only('should ensure tool handler gets called when tools are requested', async () => {
+    log('test:start', 'tool-handler-called')
     const getWeatherMock = vi
       .fn()
-      .mockResolvedValue('Temperature is 20°C and rainy')
+      .mockImplementation(async (...args: unknown[]) => {
+        log('tool:get_weather:called', ...args)
+        return 'Temperature is 20°C and rainy'
+      })
 
     try {
+      const runStart = Date.now()
       // Make real API call
       const result = await sdk.prompts.run(promptPath, {
         parameters: { location: 'Paris' },
@@ -245,6 +317,17 @@ You are a helpful assistant. Reply with a short acknowledgement.
         tools: {
           get_weather: getWeatherMock,
         },
+        onFinished: (data) =>
+          log('tool-handler-called:onFinished', {
+            uuid: data?.uuid,
+            responseLength: data?.response?.text?.length,
+          }),
+        onError: (err) => log('tool-handler-called:onError', err),
+      })
+      log('tool-handler-called:result', {
+        durationMs: Date.now() - runStart,
+        uuid: result?.uuid,
+        responseLength: result?.response?.text?.length,
       })
 
       // Verify the tool handler was available
@@ -272,7 +355,9 @@ You are a helpful assistant. Reply with a short acknowledgement.
           arguments: { location: 'Paris' },
         },
       )
+      log('test:finish', 'tool-handler-called')
     } catch (error) {
+      log('tool-handler-called:error', error)
       if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
         throw new Error(gatewayUnavailableMessage)
       }
@@ -294,17 +379,24 @@ You are a helpful assistant. Reply with a short acknowledgement.
   })
 
   it('should handle authentication and project validation', async () => {
+    log('test:start', 'auth-project-validation')
     try {
+      const runStart = Date.now()
       await sdk.prompts.run(promptPath, {
         parameters: { location: 'London' },
         tools: {
           get_weather: vi.fn().mockResolvedValue('test'),
         },
       })
+      log('auth-project-validation:result', {
+        durationMs: Date.now() - runStart,
+      })
 
       // If we get here without error, the service might not be validating auth
       // This is still a valid test result
+      log('test:finish', 'auth-project-validation')
     } catch (error) {
+      log('auth-project-validation:error', error)
       if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
         throw new Error(gatewayUnavailableMessage)
       }
@@ -312,14 +404,22 @@ You are a helpful assistant. Reply with a short acknowledgement.
       // Authentication errors are expected with invalid API key
       // This confirms the service is properly validating authentication
       expect(error).toBeDefined()
+      log('test:finish', 'auth-project-validation')
     }
   })
 
   it('should run prompt without streaming', async () => {
+    log('test:start', 'run-without-streaming')
     try {
+      const runStart = Date.now()
       const result = await sdk.prompts.run(simplePromptPath, {
         stream: false,
         parameters: {},
+      })
+      log('run-without-streaming:result', {
+        durationMs: Date.now() - runStart,
+        uuid: result?.uuid,
+        responseLength: result?.response?.text?.length,
       })
 
       expect(result).toBeDefined()
@@ -329,7 +429,9 @@ You are a helpful assistant. Reply with a short acknowledgement.
       expect(result?.response?.text).toBeDefined()
       expect(typeof result?.response?.text).toBe('string')
       expect(result?.response?.text.length).toBeGreaterThan(0)
+      log('test:finish', 'run-without-streaming')
     } catch (error) {
+      log('run-without-streaming:error', error)
       if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
         throw new Error(gatewayUnavailableMessage)
       }
@@ -350,15 +452,23 @@ You are a helpful assistant. Reply with a short acknowledgement.
   })
 
   it('should chat without streaming after a run', async () => {
+    log('test:start', 'chat-without-streaming')
     try {
+      const runStart = Date.now()
       const runResult = await sdk.prompts.run(simplePromptPath, {
         stream: false,
         parameters: {},
+      })
+      log('chat-without-streaming:run-result', {
+        durationMs: Date.now() - runStart,
+        uuid: runResult?.uuid,
+        responseLength: runResult?.response?.text?.length,
       })
 
       expect(runResult).toBeDefined()
       expect(runResult?.uuid).toBeDefined()
 
+      const chatStart = Date.now()
       const chatResult = await sdk.prompts.chat(
         runResult!.uuid,
         [
@@ -376,6 +486,11 @@ You are a helpful assistant. Reply with a short acknowledgement.
           stream: false,
         },
       )
+      log('chat-without-streaming:chat-result', {
+        durationMs: Date.now() - chatStart,
+        uuid: chatResult?.uuid,
+        responseLength: chatResult?.response?.text?.length,
+      })
 
       expect(chatResult).toBeDefined()
       expect(chatResult?.uuid).toBeDefined()
@@ -385,7 +500,9 @@ You are a helpful assistant. Reply with a short acknowledgement.
       expect(typeof chatResult?.response?.text).toBe('string')
       expect(chatResult?.response?.text.length).toBeGreaterThan(0)
       expect(chatResult?.uuid).toBe(runResult?.uuid)
+      log('test:finish', 'chat-without-streaming')
     } catch (error) {
+      log('chat-without-streaming:error', error)
       if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
         throw new Error(gatewayUnavailableMessage)
       }
@@ -406,18 +523,34 @@ You are a helpful assistant. Reply with a short acknowledgement.
   })
 
   it('should run prompt and continue with chat follow-up', async () => {
+    log('test:start', 'run-and-chat-followup')
     try {
       // First, run the prompt to get a conversation UUID
       const getWeatherMock = vi
         .fn()
-        .mockResolvedValue('Temperature is 18°C and windy')
+        .mockImplementation(async (...args: unknown[]) => {
+          log('tool:get_weather:called', ...args)
+          return 'Temperature is 18°C and windy'
+        })
 
+      const runStart = Date.now()
       const firstResult = await sdk.prompts.run(promptPath, {
         parameters: { location: 'Berlin' },
         stream: true,
         tools: {
           get_weather: getWeatherMock,
         },
+        onFinished: (data) =>
+          log('run-and-chat-followup:onFinished', {
+            uuid: data?.uuid,
+            responseLength: data?.response?.text?.length,
+          }),
+        onError: (err) => log('run-and-chat-followup:onError', err),
+      })
+      log('run-and-chat-followup:run-result', {
+        durationMs: Date.now() - runStart,
+        uuid: firstResult?.uuid,
+        responseLength: firstResult?.response?.text?.length,
       })
 
       // Verify first response
@@ -430,6 +563,7 @@ You are a helpful assistant. Reply with a short acknowledgement.
       const conversationUuid = firstResult?.uuid
 
       // Now do a chat follow-up with the same tool handler
+      const chatStart = Date.now()
       const chatResult = await sdk.prompts.chat(
         conversationUuid!,
         [
@@ -448,8 +582,19 @@ You are a helpful assistant. Reply with a short acknowledgement.
           tools: {
             get_weather: getWeatherMock,
           },
+          onFinished: (data) =>
+            log('run-and-chat-followup:chat:onFinished', {
+              uuid: data?.uuid,
+              responseLength: data?.response?.text?.length,
+            }),
+          onError: (err) => log('run-and-chat-followup:chat:onError', err),
         },
       )
+      log('run-and-chat-followup:chat-result', {
+        durationMs: Date.now() - chatStart,
+        uuid: chatResult?.uuid,
+        responseLength: chatResult?.response?.text?.length,
+      })
 
       // Verify chat response
       expect(chatResult).toBeDefined()
@@ -467,7 +612,9 @@ You are a helpful assistant. Reply with a short acknowledgement.
       expect(chatResult?.response?.text.toLowerCase()).toMatch(
         /jacket|sweater|coat|umbrella|clothing|wear|dress/i,
       )
+      log('test:finish', 'run-and-chat-followup')
     } catch (error) {
+      log('run-and-chat-followup:error', error)
       if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
         throw new Error(
           'Latitude service is not running on localhost:8787. Please start the service before running E2E tests.',
