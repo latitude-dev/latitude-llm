@@ -1,0 +1,69 @@
+{
+  "name": "@latitude-data/agent-sdk",
+  "version": "0.0.1",
+  "description": "Latitude Agent SDK",
+  "author": "Latitude Data SL <hello@latitude.so>",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "lint": "eslint src",
+    "tc": "tsc --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "@latitude-data/eslint-config": "workspace:*",
+    "@latitude-data/typescript-config": "workspace:*",
+    "@ai-sdk/anthropic": "catalog:",
+    "@ai-sdk/deepseek": "catalog:",
+    "@ai-sdk/google": "catalog:",
+    "@ai-sdk/mistral": "catalog:",
+    "@ai-sdk/openai": "catalog:",
+    "@ai-sdk/openai-compatible": "catalog:",
+    "@ai-sdk/perplexity": "catalog:",
+    "@ai-sdk/xai": "catalog:"
+  },
+  "dependencies": {
+    "@latitude-data/constants": "workspace:*",
+    "ai": "catalog:",
+    "promptl-ai": "catalog:"
+  },
+  "peerDependencies": {
+    "@ai-sdk/anthropic": "*",
+    "@ai-sdk/deepseek": "*",
+    "@ai-sdk/google": "*",
+    "@ai-sdk/mistral": "*",
+    "@ai-sdk/openai": "*",
+    "@ai-sdk/openai-compatible": "*",
+    "@ai-sdk/perplexity": "*",
+    "@ai-sdk/xai": "*"
+  },
+  "peerDependenciesMeta": {
+    "@ai-sdk/anthropic": {
+      "optional": true
+    },
+    "@ai-sdk/deepseek": {
+      "optional": true
+    },
+    "@ai-sdk/google": {
+      "optional": true
+    },
+    "@ai-sdk/mistral": {
+      "optional": true
+    },
+    "@ai-sdk/openai": {
+      "optional": true
+    },
+    "@ai-sdk/openai-compatible": {
+      "optional": true
+    },
+    "@ai-sdk/perplexity": {
+      "optional": true
+    },
+    "@ai-sdk/xai": {
+      "optional": true
+    }
+  }
+}
