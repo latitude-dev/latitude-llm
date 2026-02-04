@@ -6,10 +6,9 @@ import {
   isNotNull,
   isNull,
   lte,
-  max,
-  notInArray,
   sql,
 } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 
 import { database } from '../../client'
 import {
@@ -24,7 +23,7 @@ import { projects } from '../../schema/models/projects'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { CommitsRepository } from '../commitsRepository'
-import RepositoryLegacy from '../repository'
+import Repository from '../repositoryV2'
 
 function mergeDocuments(
   ...documentsArr: DocumentVersion[][]
@@ -56,19 +55,10 @@ type DocumentVersionDto = DocumentVersion & {
 const tt = {
   ...getTableColumns(documentVersions),
   mergedAt: commits.mergedAt,
-  // Dear developer,
-  //
-  // This is the way to select columns from a table with an alias in
-  // drizzle-orm, which is hot garbage, but it works. We need it otherwise the
-  // resulting subquery returns two columns with the same name id and we can't
-  // use it in a join.
   projectId: sql<number>`${projects.id}::int`.as('projectId'),
 }
 
-export class DocumentVersionsRepository extends RepositoryLegacy<
-  typeof tt,
-  DocumentVersionDto
-> {
+export class DocumentVersionsRepository extends Repository<DocumentVersionDto> {
   private opts: DocumentVersionsRepositoryOptions
 
   constructor(
@@ -80,20 +70,25 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     this.opts = opts
   }
 
+  get scopeFilter() {
+    if (this.opts.includeDeleted) {
+      return eq(projects.workspaceId, this.workspaceId)
+    }
+
+    return and(
+      eq(projects.workspaceId, this.workspaceId),
+      isNull(commits.deletedAt),
+    )
+  }
+
   get scope() {
     return this.db
       .select(tt)
       .from(documentVersions)
-      .innerJoin(
-        commits,
-        and(
-          eq(commits.id, documentVersions.commitId),
-          this.opts.includeDeleted ? undefined : isNull(commits.deletedAt),
-        ),
-      )
+      .innerJoin(commits, eq(commits.id, documentVersions.commitId))
       .innerJoin(projects, eq(projects.id, commits.projectId))
-      .where(eq(projects.workspaceId, this.workspaceId))
-      .as('documentVersionsScope')
+      .where(this.scopeFilter)
+      .$dynamic()
   }
 
   async lock({
@@ -147,20 +142,19 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
       return false
     }
 
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.documentUuid, documentUuid))
+    const result = await this.scope
+      .where(
+        and(this.scopeFilter, eq(documentVersions.documentUuid, documentUuid)),
+      )
       .limit(1)
 
     return result.length > 0
   }
 
   async getDocumentById(documentId: number) {
-    const res = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.id, documentId))
+    const res = await this.scope.where(
+      and(this.scopeFilter, eq(documentVersions.id, documentId)),
+    )
 
     // NOTE: I hate this
     const document = res[0]
@@ -176,15 +170,13 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     commitId: number
     documentUuid: string
   }) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(
-        and(
-          eq(this.scope.commitId, commitId),
-          eq(this.scope.documentUuid, documentUuid),
-        ),
-      )
+    const result = await this.scope.where(
+      and(
+        this.scopeFilter,
+        eq(documentVersions.commitId, commitId),
+        eq(documentVersions.documentUuid, documentUuid),
+      ),
+    )
 
     const document = result[0]
     if (!document) return Result.error(new NotFoundError('Document not found'))
@@ -199,13 +191,12 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     projectId: number
     documentUuid: string
   }) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
+    const result = await this.scope
       .where(
         and(
-          eq(this.scope.projectId, projectId),
-          eq(this.scope.documentUuid, documentUuid),
+          this.scopeFilter,
+          eq(commits.projectId, projectId),
+          eq(documentVersions.documentUuid, documentUuid),
         ),
       )
       .limit(1)
@@ -223,25 +214,22 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     commitUuid?: string
     documentUuid: string
   }) {
-    const conditions = [eq(this.scope.documentUuid, documentUuid)]
+    const conditions = [eq(documentVersions.documentUuid, documentUuid)]
 
-    let document
+    let document: DocumentVersionDto | undefined
     if (commitUuid) {
       conditions.push(eq(commits.uuid, commitUuid))
 
-      document = await this.db
-        .select(this.scope._.selectedFields)
-        .from(this.scope)
-        .innerJoin(commits, eq(this.scope.commitId, commits.id))
-        .where(and(...conditions))
+      document = await this.scope
+        .where(and(this.scopeFilter, ...conditions))
         .limit(1)
         .then((docs) => docs[0])
     } else {
-      document = await this.db
-        .select()
-        .from(this.scope)
-        .where(and(...conditions, isNotNull(this.scope.mergedAt)))
-        .orderBy(desc(this.scope.mergedAt))
+      document = await this.scope
+        .where(
+          and(this.scopeFilter, ...conditions, isNotNull(commits.mergedAt)),
+        )
+        .orderBy(desc(commits.mergedAt))
         .limit(1)
         .then((docs) => docs[0])
     }
@@ -304,7 +292,7 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
   }) {
     const commitsScope = new CommitsRepository(this.workspaceId, this.db)
 
-    let commit
+    let commit: Commit
     if (commitId) {
       const commitResult = await commitsScope.getCommitById(commitId)
       if (commitResult.error) return commitResult
@@ -347,7 +335,7 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
   }) {
     const commitsScope = new CommitsRepository(this.workspaceId, this.db)
 
-    let commit
+    let commit: Commit
     if (commitId) {
       const commitResult = await commitsScope.getCommitById(commitId)
       if (commitResult.error) return commitResult
@@ -361,13 +349,12 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
       commit = commitResult.unwrap()
     }
 
-    const documentInCommit = await this.db
-      .select()
-      .from(this.scope)
+    const documentInCommit = await this.scope
       .where(
         and(
-          eq(this.scope.commitId, commit.id),
-          eq(this.scope.documentUuid, documentUuid),
+          this.scopeFilter,
+          eq(documentVersions.commitId, commit.id),
+          eq(documentVersions.documentUuid, documentUuid),
         ),
       )
       .limit(1)
@@ -386,10 +373,9 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
   }
 
   async listCommitChanges(commit: Commit) {
-    const changedDocuments = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.commitId, commit.id))
+    const changedDocuments = await this.scope.where(
+      and(this.scopeFilter, eq(documentVersions.commitId, commit.id)),
+    )
 
     return Result.ok(changedDocuments)
   }
@@ -407,10 +393,9 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
       return Result.ok(documentsFromMergedCommits)
     }
 
-    const documentsFromDraft = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.commitId, commit.id))
+    const documentsFromDraft = await this.scope.where(
+      and(this.scopeFilter, eq(documentVersions.commitId, commit.id)),
+    )
 
     const totalDocuments = mergeDocuments(
       documentsFromMergedCommits,
@@ -428,66 +413,66 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     maxMergedAt?: Date | null
   } = {}) {
     const filterByMaxMergedAt = () => {
-      const mergedAtNotNull = isNotNull(this.scope.mergedAt)
+      const mergedAtNotNull = isNotNull(commits.mergedAt)
       if (!maxMergedAt) return mergedAtNotNull
 
-      return and(mergedAtNotNull, lte(this.scope.mergedAt, maxMergedAt))
+      return and(mergedAtNotNull, lte(commits.mergedAt, maxMergedAt))
     }
 
     const filterByProject = () =>
-      projectId ? eq(this.scope.projectId, projectId) : undefined
-
-    const lastVersionOfEachDocument = this.db
-      .$with('lastVersionOfDocuments')
-      .as(
-        this.db
-          .select({
-            documentUuid: this.scope.documentUuid,
-            mergedAt: max(this.scope.mergedAt).as('maxMergedAt'),
-          })
-          .from(this.scope)
-          .where(and(filterByMaxMergedAt(), filterByProject()))
-          .groupBy(this.scope.documentUuid),
-      )
+      projectId ? eq(commits.projectId, projectId) : undefined
 
     const documentsFromMergedCommits = await this.db
-      .with(lastVersionOfEachDocument)
-      .select(this.scope._.selectedFields)
-      .from(this.scope)
-      .innerJoin(
-        lastVersionOfEachDocument,
-        and(
-          eq(this.scope.documentUuid, lastVersionOfEachDocument.documentUuid),
-          eq(this.scope.mergedAt, lastVersionOfEachDocument.mergedAt),
-        ),
-      )
-      .where(isNotNull(this.scope.mergedAt))
+      .selectDistinctOn([documentVersions.documentUuid], tt)
+      .from(documentVersions)
+      .innerJoin(commits, eq(commits.id, documentVersions.commitId))
+      .innerJoin(projects, eq(projects.id, commits.projectId))
+      .where(and(this.scopeFilter, filterByMaxMergedAt(), filterByProject()))
+      .orderBy(desc(documentVersions.documentUuid), desc(commits.mergedAt))
 
     return Result.ok(documentsFromMergedCommits)
   }
 
   async getDocumentsForImport(projectId: number) {
+    const deletedDocumentVersions = alias(
+      documentVersions,
+      'deletedDocumentVersions',
+    )
+    const deletedCommits = alias(commits, 'deletedCommits')
+
     const documents = await this.db
       .selectDistinct({
-        documentUuid: this.scope.documentUuid,
-        path: this.scope.path,
+        documentUuid: documentVersions.documentUuid,
+        path: documentVersions.path,
       })
-      .from(this.scope)
+      .from(documentVersions)
+      .innerJoin(commits, eq(commits.id, documentVersions.commitId))
+      .innerJoin(projects, eq(projects.id, commits.projectId))
+      .leftJoin(
+        deletedDocumentVersions,
+        and(
+          eq(
+            deletedDocumentVersions.documentUuid,
+            documentVersions.documentUuid,
+          ),
+          isNotNull(deletedDocumentVersions.deletedAt),
+        ),
+      )
+      .leftJoin(
+        deletedCommits,
+        and(
+          eq(deletedCommits.id, deletedDocumentVersions.commitId),
+          eq(deletedCommits.projectId, projectId),
+          this.opts.includeDeleted
+            ? undefined
+            : isNull(deletedCommits.deletedAt),
+        ),
+      )
       .where(
         and(
-          eq(this.scope.projectId, projectId),
-          notInArray(
-            this.scope.documentUuid,
-            this.db
-              .select({ documentUuid: this.scope.documentUuid })
-              .from(this.scope)
-              .where(
-                and(
-                  eq(this.scope.projectId, projectId),
-                  isNotNull(this.scope.deletedAt),
-                ),
-              ),
-          ),
+          this.scopeFilter,
+          eq(commits.projectId, projectId),
+          isNull(deletedCommits.id),
         ),
       )
 
