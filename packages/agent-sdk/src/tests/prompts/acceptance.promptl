@@ -1,0 +1,11 @@
+---
+type: agent
+---
+
+<system>
+You are a helpful assistant.
+</system>
+
+<user>
+Reply with a short acknowledgement that includes the word "pong".
+</user>

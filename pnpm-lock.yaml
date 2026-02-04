@@ -6,6 +6,30 @@ settings:
 
 catalogs:
   default:
+    '@ai-sdk/anthropic':
+      specifier: 2.0.17
+      version: 2.0.17
+    '@ai-sdk/deepseek':
+      specifier: 1.0.17
+      version: 1.0.17
+    '@ai-sdk/google':
+      specifier: 2.0.14
+      version: 2.0.14
+    '@ai-sdk/mistral':
+      specifier: 2.0.14
+      version: 2.0.14
+    '@ai-sdk/openai':
+      specifier: 2.0.30
+      version: 2.0.30
+    '@ai-sdk/openai-compatible':
+      specifier: 1.0.17
+      version: 1.0.17
+    '@ai-sdk/perplexity':
+      specifier: 2.0.9
+      version: 2.0.9
+    '@ai-sdk/xai':
+      specifier: 2.0.18
+      version: 2.0.18
     '@datadog/datadog-ci':
       specifier: ^3.0.0
       version: 3.21.4
@@ -637,6 +661,49 @@ importers:
       tsx:
         specifier: ^4.16.2
         version: 4.20.6
+
+  packages/agent-sdk:
+    dependencies:
+      '@latitude-data/constants':
+        specifier: workspace:*
+        version: link:../constants
+      ai:
+        specifier: 'catalog:'
+        version: 5.0.44(zod@4.1.8)
+      promptl-ai:
+        specifier: 'catalog:'
+        version: 0.10.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+    devDependencies:
+      '@ai-sdk/anthropic':
+        specifier: 'catalog:'
+        version: 2.0.17(zod@4.1.8)
+      '@ai-sdk/deepseek':
+        specifier: 'catalog:'
+        version: 1.0.17(zod@4.1.8)
+      '@ai-sdk/google':
+        specifier: 'catalog:'
+        version: 2.0.14(zod@4.1.8)
+      '@ai-sdk/mistral':
+        specifier: 'catalog:'
+        version: 2.0.14(zod@4.1.8)
+      '@ai-sdk/openai':
+        specifier: 'catalog:'
+        version: 2.0.30(zod@4.1.8)
+      '@ai-sdk/openai-compatible':
+        specifier: 'catalog:'
+        version: 1.0.17(zod@4.1.8)
+      '@ai-sdk/perplexity':
+        specifier: 'catalog:'
+        version: 2.0.9(zod@4.1.8)
+      '@ai-sdk/xai':
+        specifier: 'catalog:'
+        version: 2.0.18(zod@4.1.8)
+      '@latitude-data/eslint-config':
+        specifier: workspace:*
+        version: link:../../tools/eslint
+      '@latitude-data/typescript-config':
+        specifier: workspace:*
+        version: link:../../tools/typescript
 
   packages/cli:
     dependencies:

@@ -8,12 +8,15 @@
   "main": "index.ts",
   "scripts": {
     "lint": "eslint src",
-    "tc": "tsc --noEmit"
+    "tc": "tsc --noEmit",
+    "test": "vitest run --pool=forks"
   },
   "exports": {
     ".": "./src/index.ts"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "^3.1.4",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@ai-sdk/anthropic": "catalog:",

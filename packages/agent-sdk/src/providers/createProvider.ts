@@ -103,7 +103,11 @@ export async function createLanguageModel(
   apiKey?: string,
 ): Promise<LanguageModel> {
   const npm = provider.npm ?? provider.id
-  const factory = PROVIDER_FACTORIES[npm]
+  const factory =
+    PROVIDER_FACTORIES[npm] ??
+    (provider.id === 'openrouter'
+      ? PROVIDER_FACTORIES['@ai-sdk/openai-compatible']
+      : undefined)
 
   if (!factory) {
     throw new UnsupportedProviderError(
