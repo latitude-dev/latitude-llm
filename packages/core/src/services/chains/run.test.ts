@@ -14,7 +14,7 @@ vi.mock('uuid', async (importOriginal) => ({
 import { ChainEventTypes, Providers } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { Chain, MessageRole } from 'promptl-ai'
+import { Chain } from 'promptl-ai'
 import {
   ErrorableEntity,
   LogSources,
@@ -103,26 +103,23 @@ describe('runChain', () => {
         completed: false,
         messages: [
           {
-            role: MessageRole.user,
-            // @ts-expect-error - TODO(compiler): fix types
+            role: 'user',
             content: [{ type: 'text', text: 'Step 1' }],
           },
-        ],
+        ] as any,
         config: { provider: 'openai', model: 'gpt-3.5-turbo' },
       })
       .mockResolvedValueOnce({
         completed: false,
         messages: [
           {
-            role: MessageRole.user,
-            // @ts-expect-error - TODO(compiler): fix types
+            role: 'user',
             content: [{ type: 'text', text: 'Step 1' }],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
-                // @ts-expect-error - TODO(compiler): fix types
                 type: 'text',
                 text: 'AI response 1',
               },
@@ -130,11 +127,10 @@ describe('runChain', () => {
             toolCalls: [],
           },
           {
-            role: MessageRole.user,
-            // @ts-expect-error - TODO(compiler): fix types
+            role: 'user',
             content: [{ type: 'text', text: 'Step 2' }],
           },
-        ],
+        ] as any,
         config: { provider: 'openai', model: 'gpt-3.5-turbo' },
       })
       .mockResolvedValueOnce({
@@ -182,11 +178,10 @@ describe('runChain', () => {
       completed: false,
       messages: [
         {
-          role: MessageRole.user,
-          // @ts-expect-error - TODO(compiler): fix types
+          role: 'user',
           content: [{ type: 'text', text: 'user message' }],
         },
-      ],
+      ] as any,
       config: { provider: 'openai', model: 'gpt-3.5-turbo' },
     })
 
@@ -250,11 +245,10 @@ describe('runChain', () => {
         completed: false,
         messages: [
           {
-            role: MessageRole.user,
-            // @ts-expect-error - TODO(compiler): fix types
+            role: 'user',
             content: [{ type: 'text', text: 'user message' }],
           },
-        ],
+        ] as any,
         config: { provider: 'openai', model: 'gpt-3.5-turbo' },
       })
       .mockResolvedValueOnce({
@@ -340,11 +334,10 @@ describe('runChain', () => {
         completed: false,
         messages: [
           {
-            role: MessageRole.user,
-            // @ts-expect-error - TODO(compiler): fix types
+            role: 'user',
             content: [{ type: 'text', text: 'Step 1' }],
           },
-        ],
+        ] as any,
         config: { provider: 'openai', model: 'gpt-3.5-turbo' },
       })
       .mockResolvedValueOnce({

@@ -8,7 +8,6 @@ import type { LanguageModelV2StreamPart } from '@ai-sdk/provider'
 import {
   Message,
   MessageContent,
-  MessageRole,
   ToolCall,
 } from '@latitude-data/constants/messages'
 
@@ -185,7 +184,7 @@ export function buildOutputMessages(result: CapturedStreamResult): Message[] {
     arguments: tc.args as Record<string, unknown>,
   }))
 
-  return [{ role: MessageRole.assistant, content, toolCalls }]
+  return [{ role: 'assistant', content, toolCalls }]
 }
 
 /**

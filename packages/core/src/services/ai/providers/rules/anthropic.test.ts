@@ -1,6 +1,5 @@
 import {
   type Message,
-  MessageRole,
 } from '@latitude-data/constants/messages'
 import { beforeAll, describe, expect, it } from 'vitest'
 
@@ -62,12 +61,12 @@ describe('applyAnthropicRules', () => {
       expect(appliedMessages[1]).toEqual(messages[1])
       expect(appliedMessages[2]).toEqual(messages[2])
       expect(appliedMessages[3]).toEqual({
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: messages[3]!.content }],
       })
       expect(appliedMessages[4]).toEqual(messages[4])
       expect(appliedMessages[5]).toEqual({
-        role: MessageRole.user,
+        role: 'user',
         content: [
           { type: 'text', text: 'Use a short response' },
           { type: 'text', text: 'Second a short response' },
@@ -91,11 +90,11 @@ describe('applyAnthropicRules', () => {
   it('Warns when only system messages are present', () => {
     const theMessages = [
       {
-        role: MessageRole.system,
+        role: 'system',
         content: [{ type: 'text', text: 'You are a helpful chatbot' }],
       },
       {
-        role: MessageRole.system,
+        role: 'system',
         content: [{ type: 'text', text: 'Respond to the user' }],
       },
     ] as Message[]

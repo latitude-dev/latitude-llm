@@ -25,7 +25,7 @@ import type { EvaluationV2 } from '../../constants'
 import { diskFactory } from '../../lib/disk'
 import { cache as redis } from '../../cache'
 import { CompletionSpanMetadata, Span } from '@latitude-data/constants'
-import { Message, MessageRole } from '@latitude-data/constants/messages'
+import { Message } from '@latitude-data/constants/messages'
 import { database } from '../../client'
 import { spans } from '../../schema/models/spans'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
@@ -81,13 +81,13 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     traceId,
     input = [
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text' as const, text: 'Test question' }],
       },
     ],
     output = [
       {
-        role: MessageRole.assistant,
+        role: 'assistant',
         content: [{ type: 'text' as const, text: 'Test answer' }],
         toolCalls: [],
       },
@@ -197,13 +197,13 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       traceId: 'trace-1',
       input: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello, how are you?' }],
         },
       ],
       output: [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: 'I am doing well, thank you!' }],
           toolCalls: [],
         },
@@ -230,11 +230,11 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     const data = result.value!
     expect(data).toHaveLength(1)
     expect(data[0]!.messages).toHaveLength(2)
-    expect(data[0]!.messages[0]!.role).toBe(MessageRole.user)
+    expect(data[0]!.messages[0]!.role).toBe('user')
     expect(data[0]!.messages[0]!.content).toEqual([
       { type: 'text', text: 'Hello, how are you?' },
     ])
-    expect(data[0]!.messages[1]!.role).toBe(MessageRole.assistant)
+    expect(data[0]!.messages[1]!.role).toBe('assistant')
     expect(data[0]!.messages[1]!.content).toEqual([
       { type: 'text', text: 'I am doing well, thank you!' },
     ])
@@ -400,22 +400,22 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
       traceId: 'trace-7',
       input: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'First question' }],
         },
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Second question' }],
         },
       ],
       output: [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: 'First answer' }],
           toolCalls: [],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: 'Second answer' }],
           toolCalls: [],
         },
@@ -442,10 +442,10 @@ describe('getSpanMessagesAndEvaluationResultsByIssue', () => {
     const data = result.value!
     expect(data).toHaveLength(1)
     expect(data[0]!.messages).toHaveLength(4) // 2 input + 2 output
-    expect(data[0]!.messages[0]!.role).toBe(MessageRole.user)
-    expect(data[0]!.messages[1]!.role).toBe(MessageRole.user)
-    expect(data[0]!.messages[2]!.role).toBe(MessageRole.assistant)
-    expect(data[0]!.messages[3]!.role).toBe(MessageRole.assistant)
+    expect(data[0]!.messages[0]!.role).toBe('user')
+    expect(data[0]!.messages[1]!.role).toBe('user')
+    expect(data[0]!.messages[2]!.role).toBe('assistant')
+    expect(data[0]!.messages[3]!.role).toBe('assistant')
   })
 
   describe('commit history filtering', () => {

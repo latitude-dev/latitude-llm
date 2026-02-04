@@ -1,6 +1,6 @@
 import {
   MessageContent,
-  ToolContent,
+  ToolResultContent,
 } from '@latitude-data/constants/messages'
 
 export type MessageProps = {
@@ -11,7 +11,7 @@ export type MessageProps = {
   animatePulse?: boolean
   parameters?: string[]
   debugMode?: boolean
-  toolContentMap?: Record<string, ToolContent>
+  toolContentMap?: Record<string, ToolResultContent>
   isGeneratingToolCall?: boolean
   additionalAssistantMessage?: boolean
   messageIndex?: number

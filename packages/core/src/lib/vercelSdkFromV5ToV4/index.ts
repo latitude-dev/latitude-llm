@@ -4,7 +4,7 @@ import { LegacyVercelSDKVersion4Usage } from '@latitude-data/constants'
 import { AIReturn } from '../../services/ai'
 import { ToolContent } from 'ai'
 
-type LegacyToolContent = Array<
+type LegacyToolResultContent = Array<
   Omit<ToolContent[number], 'output'> & {
     result: ToolContent[number]['output']
   }
@@ -51,9 +51,9 @@ export async function convertToolCalls(
  * Now `output` has `type` (text, json, text-error, json-error, content)
  * and the value. I think is fine to let both.
  */
-export function convertMessageToolContent(
+export function convertMessageToolResultContent(
   toolContent: ToolContent,
-): LegacyToolContent {
+): LegacyToolResultContent {
   return toolContent.map((c) => ({
     ...c,
     ...omit(c, 'output'),

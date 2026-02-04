@@ -1,6 +1,6 @@
 import {
   ToolRequestContent,
-  ToolContent,
+  ToolResultContent,
 } from '@latitude-data/constants/messages'
 import {
   ToolCard,
@@ -17,7 +17,7 @@ export function GenericToolCard({
   contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
-  toolResponse: ToolContent | undefined
+  toolResponse: ToolResultContent | undefined
   status: ToolCallStatus
   messageIndex?: number
   contentBlockIndex?: number

@@ -6,7 +6,6 @@ import {
   ImageContent,
   Message,
   MessageContent,
-  MessageRole,
   ReasoningContent,
   ToolCall,
   ToolRequestContent,
@@ -52,7 +51,7 @@ export function useProviderEventHandler({
   const handleStepStart = useCallback(() => {
     addMessages([
       {
-        role: MessageRole.assistant,
+        role: 'assistant',
         toolCalls: [],
         content: [],
       },
@@ -66,11 +65,11 @@ export function useProviderEventHandler({
         const lastMessage = messages.at(-1)
 
         // If the last message is not of assistant role, add a new assistant message
-        if (!lastMessage || lastMessage.role !== MessageRole.assistant) {
+        if (!lastMessage || lastMessage.role !== 'assistant') {
           return [
             ...messages,
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: data.textDelta }],
               toolCalls: [],
             },
@@ -120,11 +119,11 @@ export function useProviderEventHandler({
         const lastMessage = messages.at(-1)
 
         // If the last message is not of assistant role, add a new assistant message
-        if (!lastMessage || lastMessage.role !== MessageRole.assistant) {
+        if (!lastMessage || lastMessage.role !== 'assistant') {
           return [
             ...messages,
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [],
               toolCalls: [],
               _isGeneratingToolCall: true,
@@ -171,11 +170,11 @@ export function useProviderEventHandler({
         const lastMessage = messages.at(-1)
 
         // If the last message is not of assistant role, add a new assistant message
-        if (!lastMessage || lastMessage.role !== MessageRole.assistant) {
+        if (!lastMessage || lastMessage.role !== 'assistant') {
           return [
             ...messages,
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [data],
               toolCalls: [
                 {
@@ -234,7 +233,7 @@ export function useProviderEventHandler({
     }) => {
       setMessages((messages) => {
         const lastMessage = messages.at(-1)!
-        if (lastMessage.role === MessageRole.assistant) {
+        if (lastMessage.role === 'assistant') {
           return [
             ...messages.slice(0, -1),
             {
@@ -376,7 +375,7 @@ export function useProviderEventHandler({
 
       setMessages((messages) => {
         const lastMessage = messages.at(-1)!
-        if (lastMessage.role === MessageRole.assistant) {
+        if (lastMessage.role === 'assistant') {
           return [
             ...messages.slice(0, -1),
             {

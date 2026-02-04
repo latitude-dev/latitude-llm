@@ -1,23 +1,23 @@
-import { LegacyVercelSDKToolResultPart as ToolResultPart } from './ai'
 import { ToolSourceData } from './toolSources'
 
-export enum MessageRole {
-  assistant = 'assistant',
-  system = 'system',
-  tool = 'tool',
-  user = 'user',
-  developer = 'developer',
-}
+export type ContentType =
+  | 'file'
+  | 'image'
+  | 'reasoning'
+  | 'redacted-reasoning'
+  | 'text'
+  | 'tool-call'
+  | 'tool-result'
+
+export type MessageRole = 'assistant' | 'developer' | 'system' | 'tool' | 'user'
 
 export type PromptlSourceRef = {
   start: number
   end: number
   identifier?: string
 }
-interface IMessageContent {
-  type: string
+type IMessageContent = {
   _promptlSourceMap?: PromptlSourceRef[]
-  [key: string]: unknown
 }
 export type ReasoningContent = IMessageContent & {
   type: 'reasoning'
@@ -42,13 +42,6 @@ export type FileContent = IMessageContent & {
   file: string | Uint8Array | Buffer | ArrayBuffer | URL
   mimeType: string
 }
-export type ToolContent = {
-  type: 'tool-result'
-  toolCallId: string
-  toolName: string
-  result: unknown
-  isError?: boolean
-}
 export type ToolRequestContent = {
   type: 'tool-call'
   toolCallId: string
@@ -56,46 +49,49 @@ export type ToolRequestContent = {
   args: Record<string, unknown>
   _sourceData?: ToolSourceData
 }
+export type ToolResultContent = {
+  type: 'tool-result'
+  toolCallId: string
+  toolName: string
+  result: unknown
+  isError?: boolean
+}
+
 export type MessageContent =
   | FileContent
   | ImageContent
   | ReasoningContent
   | RedactedReasoningContent
   | TextContent
-  | ToolContent
+  | ToolResultContent
   | ToolRequestContent
 
-interface IMessage {
-  role: MessageRole
-  content: MessageContent[]
-  [key: string]: unknown
+type IMessage = {
+  name?: string
+  _promptlSourceMap?: PromptlSourceRef[]
 }
 
 export type SystemMessage = IMessage & {
-  role: MessageRole.system
+  role: 'system'
+  content: MessageContent[]
 }
+
 export type UserMessage = IMessage & {
-  role: MessageRole.user
-  name?: string
+  role: 'user'
+  content: MessageContent[]
 }
-export type AssistantMessage = {
-  role: MessageRole.assistant
-  content: string | ToolRequestContent[] | MessageContent[]
+
+export type AssistantMessage = IMessage & {
+  role: 'assistant'
+  content: MessageContent[]
   // DEPRECATED but keeping around for backwards compatibility
   toolCalls?: ToolCall[] | null
   _isGeneratingToolCall?: boolean
 }
-export type ToolMessage = {
-  role: MessageRole.tool
-  content: (TextContent | ToolContent | ToolResultPart)[]
-  [key: string]: unknown
-}
 
-export type ToolCall = {
-  id: string
-  name: string
-  arguments: Record<string, unknown>
-  _sourceData?: ToolSourceData
+export type ToolMessage = IMessage & {
+  role: 'tool'
+  content: (TextContent | ToolResultContent)[]
 }
 
 export type Message =
@@ -103,6 +99,13 @@ export type Message =
   | SystemMessage
   | ToolMessage
   | UserMessage
+
+export type ToolCall = {
+  id: string
+  name: string
+  arguments: Record<string, unknown>
+  _sourceData?: ToolSourceData
+}
 
 export type Config = Record<string, unknown>
 export type Conversation = {

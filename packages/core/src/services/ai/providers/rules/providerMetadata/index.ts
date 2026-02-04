@@ -1,7 +1,7 @@
 import type { Message } from '@latitude-data/constants/messages'
-
 import { Providers } from '@latitude-data/constants'
 import { toCamelCaseDeep } from '../../../../../lib/camelCaseRecursive'
+import { omit } from 'lodash-es'
 
 export const PROVIDER_TO_METADATA_KEY: Record<Providers, string> = {
   [Providers.OpenAI]: 'openai',
@@ -110,7 +110,8 @@ export function extractMessageMetadata({
   message: Message
   provider: Providers
 }): MessageWithMetadata {
-  const { role, content, toolCalls, ...rest } = message
+  const { role, content, ...rest } = message
+  const toolCalls = 'toolCalls' in message ? message.toolCalls : undefined
 
   let common = removeUndefinedValues({
     role,
@@ -118,10 +119,7 @@ export function extractMessageMetadata({
     toolCalls,
   }) as Message & { name?: string }
 
-  if (Object.keys(rest).length === 0) return common
-
   if (role === 'user' && Object.hasOwnProperty.call(rest, 'name')) {
-    // @ts-expect-error - name is not in Message type
     const name = rest.name
     common = {
       ...common,
@@ -130,17 +128,12 @@ export function extractMessageMetadata({
     }
   }
 
-  const {
-    name: _name,
-    toolName: _toolName,
-    toolId: _toolId,
-    _promptlSourceMap,
-    ...attributes
-  } = rest as {
-    name?: string
-    [key: string]: unknown
-  }
-
+  const attributes = omit(rest, [
+    'name',
+    '_promptlSourceMap',
+    'providerOptions',
+    'toolCalls',
+  ])
   if (!Object.keys(attributes).length) return common
 
   return {

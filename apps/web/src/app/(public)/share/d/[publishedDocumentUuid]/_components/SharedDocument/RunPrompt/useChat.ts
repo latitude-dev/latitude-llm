@@ -1,8 +1,5 @@
 import { addSharedMessagesAction } from '$/actions/sdk/addSharedMessagesAction'
-import {
-  Message as ConversationMessage,
-  MessageRole,
-} from '@latitude-data/constants/messages'
+import { Message as ConversationMessage } from '@latitude-data/constants/messages'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCallback } from 'react'
 import { readStreamableValue } from '@ai-sdk/rsc'
@@ -29,7 +26,7 @@ export function useChat({
       if (!documentLogUuid) return // This should not happen
 
       const message: ConversationMessage = {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: input }],
       }
 

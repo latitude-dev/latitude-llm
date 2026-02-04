@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Providers } from '@latitude-data/constants'
 import { LogSources } from '../../../constants'
-import { MessageRole } from '@latitude-data/constants/messages'
 import { Result } from '../../../lib/Result'
 import { createProject } from '../../../tests/factories'
 import {
@@ -72,7 +71,7 @@ Hello world
       providerId: provider.id,
       messages: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello' }],
         },
       ],
@@ -101,7 +100,7 @@ Hello world
         documentLogUuid,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -134,7 +133,7 @@ Hello world
         documentLogUuid: undefined,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -159,7 +158,7 @@ Hello world
         documentLogUuid,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -183,7 +182,7 @@ Hello world
         documentLogUuid,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -224,7 +223,7 @@ Hello world
         providerId: provider.id,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -240,7 +239,7 @@ Hello world
         documentLogUuid,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -276,7 +275,7 @@ Hello world
         providerId: 99999,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -287,7 +286,7 @@ Hello world
         documentLogUuid,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -324,7 +323,7 @@ Hello world
         documentUuid: document.documentUuid,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -335,7 +334,7 @@ Hello world
         documentLogUuid,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -369,7 +368,7 @@ Hello world
         documentUuid: document.documentUuid,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -385,7 +384,7 @@ Hello world
         documentLogUuid,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],

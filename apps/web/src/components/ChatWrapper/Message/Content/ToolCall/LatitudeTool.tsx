@@ -1,6 +1,6 @@
 import {
   ToolRequestContent,
-  ToolContent,
+  ToolResultContent,
 } from '@latitude-data/constants/messages'
 import {
   ToolSource,
@@ -30,7 +30,7 @@ export function LatitudeToolCard({
   contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
-  toolResponse: ToolContent | undefined
+  toolResponse: ToolResultContent | undefined
   status: ToolCallStatus
   sourceData: ToolSourceData<ToolSource.Latitude>
   debugMode?: boolean

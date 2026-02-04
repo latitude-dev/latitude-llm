@@ -9,7 +9,7 @@ import {
   sendSignedWebhook,
 } from '../../../services/webhooks'
 import { Result } from './../../../lib/Result'
-import { Message, MessageRole } from '@latitude-data/constants/messages'
+import { Message } from '@latitude-data/constants/messages'
 import { Providers } from '@latitude-data/constants'
 
 // Mock the services
@@ -324,10 +324,10 @@ describe('processIndividualWebhookJob', () => {
     })
 
     const messages = [
-      { role: MessageRole.user, content: 'Hello, how are you?' },
+      { role: 'user', content: [{ type: 'text', text: 'Hello, how are you?' }] },
       {
-        role: MessageRole.assistant,
-        content: 'I am doing well, thank you for asking!',
+        role: 'assistant',
+        content: [{ type: 'text', text: 'I am doing well, thank you for asking!' }],
       },
     ]
 
@@ -336,7 +336,7 @@ describe('processIndividualWebhookJob', () => {
       providerId: provider.id,
       providerType: Providers.OpenAI,
       workspace,
-      messages: messages as Message[],
+      messages: messages as unknown as Message[],
       responseText: 'I am doing well, thank you for asking!',
       model: 'gpt-4',
       duration: 1000,

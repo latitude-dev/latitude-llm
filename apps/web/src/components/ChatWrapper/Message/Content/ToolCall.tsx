@@ -1,7 +1,7 @@
 'use client'
 
 import {
-  ToolContent,
+  ToolResultContent,
   ToolRequestContent,
 } from '@latitude-data/constants/messages'
 import { ToolSource } from '@latitude-data/constants/toolSources'
@@ -23,7 +23,7 @@ export function ToolCallMessageContent({
   isStreaming = false,
 }: {
   toolRequest: ToolRequestContent
-  toolContentMap?: Record<string, ToolContent>
+  toolContentMap?: Record<string, ToolResultContent>
   debugMode?: boolean
   messageIndex?: number
   contentBlockIndex?: number

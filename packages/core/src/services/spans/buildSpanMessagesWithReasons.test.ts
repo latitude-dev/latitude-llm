@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Result } from '../../lib/Result'
-import { MessageRole } from '@latitude-data/constants/messages'
 import {
   buildSpanMessagesWithReasons,
   getReasonFromEvaluationResult,
@@ -57,12 +56,12 @@ describe('buildSpanMessagesWithReasons', () => {
     ]
 
     const messages1 = [
-      { role: MessageRole.user, content: 'Hello' },
-      { role: MessageRole.assistant, content: 'Hi there!', toolCalls: [] },
+      { role: 'user', content: 'Hello' },
+      { role: 'assistant', content: 'Hi there!', toolCalls: [] },
     ]
     const messages2 = [
-      { role: MessageRole.user, content: 'Goodbye' },
-      { role: MessageRole.assistant, content: 'Bye!', toolCalls: [] },
+      { role: 'user', content: 'Goodbye' },
+      { role: 'assistant', content: 'Bye!', toolCalls: [] },
     ]
 
     mockAssembleTraceWithMessages
@@ -147,8 +146,8 @@ describe('buildSpanMessagesWithReasons', () => {
     const evaluations = [{ uuid: 'eval-uuid-1' }] as EvaluationV2[]
 
     const messages = [
-      { role: MessageRole.user, content: 'Test' },
-      { role: MessageRole.assistant, content: 'Response', toolCalls: [] },
+      { role: 'user', content: 'Test' },
+      { role: 'assistant', content: 'Response', toolCalls: [] },
     ]
 
     mockAssembleTraceWithMessages.mockResolvedValueOnce(

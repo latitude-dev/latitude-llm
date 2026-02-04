@@ -2,7 +2,6 @@ import { Providers } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   type Message,
-  MessageRole,
 } from '@latitude-data/constants/messages'
 import { APICallError } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
@@ -46,11 +45,11 @@ describe('ai function', () => {
 
     const messages: Message[] = [
       {
-        role: MessageRole.system,
+        role: 'system',
         content: [{ type: 'text', text: 'System message' }],
       },
       {
-        role: MessageRole.assistant,
+        role: 'assistant',
         toolCalls: [],
         content: [{ type: 'image', image: 'https://example.com/image.png' }],
       },

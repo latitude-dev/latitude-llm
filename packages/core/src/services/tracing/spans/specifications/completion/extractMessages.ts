@@ -4,7 +4,7 @@ import {
   Message,
   MessageContent,
   MessageRole,
-  ToolContent,
+  ToolResultContent,
   ToolMessage,
   ToolRequestContent,
 } from '@latitude-data/constants/messages'
@@ -138,7 +138,7 @@ function convertMessageContent(
             toolName: String(item.toolName || ''),
             result: item.result || {},
             isError: Boolean(item.isError || false),
-          } as ToolContent)
+          } as ToolResultContent)
           break
       }
     }
@@ -153,27 +153,27 @@ function convertMessageContent(
   }
 }
 
-const MESSAGE_ROLE_SYSTEM = toCamelCase(MessageRole.system)
-const MESSAGE_ROLE_USER = toCamelCase(MessageRole.user)
-const MESSAGE_ROLE_ASSISTANT = toCamelCase(MessageRole.assistant)
+const MESSAGE_ROLE_SYSTEM = toCamelCase('system')
+const MESSAGE_ROLE_USER = toCamelCase('user')
+const MESSAGE_ROLE_ASSISTANT = toCamelCase('assistant')
 const MESSAGE_ROLE_DEVELOPER = toCamelCase('developer')
-const MESSAGE_ROLE_TOOL = toCamelCase(MessageRole.tool)
+const MESSAGE_ROLE_TOOL = toCamelCase('tool')
 
 function convertMessageRole(role: string): TypedResult<MessageRole> {
   switch (toCamelCase(role)) {
     case MESSAGE_ROLE_SYSTEM:
-      return Result.ok(MessageRole.system)
+      return Result.ok('system')
     case MESSAGE_ROLE_USER:
-      return Result.ok(MessageRole.user)
+      return Result.ok('user')
     case MESSAGE_ROLE_ASSISTANT:
-      return Result.ok(MessageRole.assistant)
+      return Result.ok('assistant')
     case MESSAGE_ROLE_DEVELOPER:
-      return Result.ok(MessageRole.developer)
+      return Result.ok('developer')
     case MESSAGE_ROLE_TOOL:
-      return Result.ok(MessageRole.tool)
+      return Result.ok('tool')
     default:
       // Default to assistant for unknown roles (common in completion responses)
-      return Result.ok(MessageRole.assistant)
+      return Result.ok('assistant')
   }
 }
 
@@ -210,7 +210,7 @@ function convertMessages(
         content.push(...converting.value)
       }
 
-      if (role !== MessageRole.tool) {
+      if (role !== 'tool') {
         messages.push({ role, content } as Message)
       } else {
         const toolName = String(message.toolName || '')
@@ -308,7 +308,7 @@ export function extractInput(
 
   if (system) {
     messages.push({
-      role: MessageRole.system,
+      role: 'system',
       content: [{ type: 'text', text: system }],
     })
   }
@@ -436,7 +436,7 @@ export function extractOutput(
   if (responseText || responseObject || responseToolCalls) {
     const content: MessageContent[] = []
     const message: AssistantMessage = {
-      role: MessageRole.assistant,
+      role: 'assistant',
       content,
     }
 

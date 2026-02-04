@@ -2,7 +2,6 @@ import { EMPTY_USAGE, LogSources } from '@latitude-data/constants'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import {
   Message,
-  MessageRole,
   UserMessage,
 } from '@latitude-data/constants/messages'
 import { type Commit } from '../../../schema/models/types/Commit'
@@ -94,7 +93,7 @@ export async function addMessageToExistingLatte({
   debugVersionUuid?: string
 }): PromisedResult<undefined> {
   const userMessage: UserMessage = {
-    role: MessageRole.user,
+    role: 'user',
     content: [
       {
         type: 'text',

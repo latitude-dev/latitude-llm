@@ -19,7 +19,7 @@ import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/Pro
 import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import * as getSpanMessagesAndEvaluationResultsByIssue from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
-import { Message, MessageRole } from '@latitude-data/constants/messages'
+import { Message } from '@latitude-data/constants/messages'
 import * as getSpanMessagesByIssueDocument from '../../../data-access/issues/getSpanMessagesByIssueDocument'
 import {
   CommitsRepository,
@@ -142,11 +142,11 @@ describe('generateFromIssue', () => {
 
     messages = [
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: 'Test question' }],
       },
       {
-        role: MessageRole.assistant,
+        role: 'assistant',
         content: [{ type: 'text', text: 'Test answer' }],
         toolCalls: [],
       },
@@ -342,13 +342,13 @@ describe('generateFromIssue', () => {
 
     const falsePositiveMessages = [
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: 'False positive message' }],
       },
     ] as Message[]
     const falseNegativeMessages = [
       {
-        role: MessageRole.assistant,
+        role: 'assistant',
         content: [{ type: 'text', text: 'False negative message' }],
         toolCalls: [],
       },

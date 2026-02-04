@@ -1,6 +1,6 @@
 import {
   ToolRequestContent,
-  ToolContent,
+  ToolResultContent,
 } from '@latitude-data/constants/messages'
 import {
   ToolCardIcon,
@@ -31,7 +31,7 @@ import { stringifyUnknown } from '@latitude-data/web-ui/textUtils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
-function UnansweredClientToolContent({
+function UnansweredClientToolResultContent({
   toolCallId,
   simulated,
 }: {
@@ -93,11 +93,11 @@ function UnansweredClientToolContent({
   )
 }
 
-function AnsweredClientToolContent({
+function AnsweredClientToolResultContent({
   toolResponse,
   simulated,
 }: {
-  toolResponse: ToolContent
+  toolResponse: ToolResultContent
   simulated?: boolean
 }) {
   return (
@@ -127,7 +127,7 @@ export function ClientToolCard({
   contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
-  toolResponse: ToolContent | undefined
+  toolResponse: ToolResultContent | undefined
   status: ToolCallStatus
   messageIndex?: number
   contentBlockIndex?: number
@@ -162,12 +162,12 @@ export function ClientToolCard({
       )}
       {isOpen &&
         (isPendingStatus || !toolResponse ? (
-          <UnansweredClientToolContent
+          <UnansweredClientToolResultContent
             toolCallId={toolRequest.toolCallId}
             simulated={toolRequest._sourceData?.simulated}
           />
         ) : (
-          <AnsweredClientToolContent
+          <AnsweredClientToolResultContent
             toolResponse={toolResponse}
             simulated={toolRequest._sourceData?.simulated}
           />

@@ -1,5 +1,5 @@
 import app from '$/routes/app'
-import { Message, MessageRole } from '@latitude-data/constants/messages'
+import { Message } from '@latitude-data/constants/messages'
 import { LogSources, SpanType } from '@latitude-data/core/constants'
 import { Providers, CompletionSpanMetadata } from '@latitude-data/constants'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
@@ -78,7 +78,7 @@ describe('GET /conversations/:conversationUuid', () => {
 
       inputMessages = [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [
             {
               type: 'text',
@@ -90,7 +90,7 @@ describe('GET /conversations/:conversationUuid', () => {
 
       const outputMessages: Message[] = [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [
             { type: 'text', text: 'I am doing well, thank you for asking!' },
           ],

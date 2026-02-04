@@ -1,6 +1,6 @@
 import {
   ToolRequestContent,
-  ToolContent,
+  ToolResultContent,
 } from '@latitude-data/constants/messages'
 import { useMemo } from 'react'
 import {
@@ -28,7 +28,7 @@ export function IntegrationToolCard({
   contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
-  toolResponse: ToolContent | undefined
+  toolResponse: ToolResultContent | undefined
   status: ToolCallStatus
   sourceData: ToolSourceData<ToolSource.Integration>
   messageIndex?: number

@@ -1,4 +1,3 @@
-import { MessageRole } from '@latitude-data/constants/messages'
 import { describe, expect, it } from 'vitest'
 
 import { type ProviderLog } from '../../schema/models/types/ProviderLog'
@@ -7,56 +6,60 @@ import { formatContext, formatConversation } from './serializeForEvaluation'
 
 describe('serialize', () => {
   it('should format a ProviderLogDto with response correctly', () => {
-    // @ts-expect-error
-    const providerLogDto: ProviderLogDto = {
+    const providerLogDto = {
       messages: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello' }],
         },
-        { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
+        { role: 'assistant', content: 'Hi there', toolCalls: [] },
       ],
       response: 'How can I help you?',
       toolCalls: [],
-    }
+    } as unknown as ProviderLogDto
 
     const result = formatConversation(providerLogDto)
 
     expect(result).toEqual({
       all: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello' }],
         },
-        { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
+        { role: 'assistant', content: 'Hi there', toolCalls: [] },
         {
-          role: MessageRole.assistant,
-          content: 'How can I help you?',
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: 'How can I help you?',
+            },
+          ],
           toolCalls: [],
         },
       ],
       first: {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: 'Hello' }],
       },
       last: {
-        role: MessageRole.assistant,
-        content: 'How can I help you?',
+        role: 'assistant',
+        content: [{ type: 'text', text: 'How can I help you?' }],
         toolCalls: [],
       },
       user: {
         all: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
         first: {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello' }],
         },
         last: {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello' }],
         },
       },
@@ -67,21 +70,31 @@ describe('serialize', () => {
       },
       assistant: {
         all: [
-          { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
+          { role: 'assistant', content: 'Hi there', toolCalls: [] },
           {
-            role: MessageRole.assistant,
-            content: 'How can I help you?',
+            role: 'assistant',
+            content: [
+              {
+                type: 'text',
+                text: 'How can I help you?',
+              },
+            ],
             toolCalls: [],
           },
         ],
         first: {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: 'Hi there',
           toolCalls: [],
         },
         last: {
-          role: MessageRole.assistant,
-          content: 'How can I help you?',
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: 'How can I help you?',
+            },
+          ],
           toolCalls: [],
         },
       },
@@ -89,97 +102,96 @@ describe('serialize', () => {
   })
 
   it('should format a ProviderLog with responseText correctly', () => {
-    // @ts-expect-error
-    const providerLog: ProviderLog = {
+    const providerLog = {
       messages: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: 'You are an AI assistant' }],
         },
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: "What's the weather like?" }],
         },
       ],
       responseText: 'The weather is sunny today.',
       toolCalls: [],
-    }
+    } as unknown as ProviderLog
 
     const result = formatConversation(providerLog)
 
     expect(result).toEqual({
       all: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: 'You are an AI assistant' }],
         },
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: "What's the weather like?" }],
         },
         {
-          role: MessageRole.assistant,
-          content: 'The weather is sunny today.',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'The weather is sunny today.' }],
           toolCalls: [],
         },
       ],
       first: {
-        role: MessageRole.system,
+        role: 'system',
         content: [{ type: 'text', text: 'You are an AI assistant' }],
       },
       last: {
-        role: MessageRole.assistant,
-        content: 'The weather is sunny today.',
+        role: 'assistant',
+        content: [{ type: 'text', text: 'The weather is sunny today.' }],
         toolCalls: [],
       },
       user: {
         all: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: "What's the weather like?" }],
           },
         ],
         first: {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: "What's the weather like?" }],
         },
         last: {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: "What's the weather like?" }],
         },
       },
       system: {
         all: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [{ type: 'text', text: 'You are an AI assistant' }],
           },
         ],
         first: {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: 'You are an AI assistant' }],
         },
         last: {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: 'You are an AI assistant' }],
         },
       },
       assistant: {
         all: [
           {
-            role: MessageRole.assistant,
-            content: 'The weather is sunny today.',
+            role: 'assistant',
+            content: [{ type: 'text', text: 'The weather is sunny today.' }],
             toolCalls: [],
           },
         ],
         first: {
-          role: MessageRole.assistant,
-          content: 'The weather is sunny today.',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'The weather is sunny today.' }],
           toolCalls: [],
         },
         last: {
-          role: MessageRole.assistant,
-          content: 'The weather is sunny today.',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'The weather is sunny today.' }],
           toolCalls: [],
         },
       },
@@ -189,54 +201,53 @@ describe('serialize', () => {
   it('should format a ProviderLog with responseObject correctly', () => {
     const obj = { key: 'value', number: 42 }
     const objStr = JSON.stringify(obj, null, 2)
-    // @ts-expect-error
-    const providerLog: ProviderLog = {
+    const providerLog = {
       messages: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Give me a JSON object' }],
         },
       ],
       responseObject: obj,
       toolCalls: [],
-    }
+    } as unknown as ProviderLog
 
     const result = formatConversation(providerLog)
 
     expect(result).toEqual({
       all: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Give me a JSON object' }],
         },
         {
-          role: MessageRole.assistant,
-          content: objStr,
+          role: 'assistant',
+          content: [{ type: 'text', text: objStr }],
           toolCalls: [],
         },
       ],
       first: {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: 'Give me a JSON object' }],
       },
       last: {
-        role: MessageRole.assistant,
-        content: objStr,
+        role: 'assistant',
+        content: [{ type: 'text', text: objStr }],
         toolCalls: [],
       },
       user: {
         all: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Give me a JSON object' }],
           },
         ],
         first: {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Give me a JSON object' }],
         },
         last: {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Give me a JSON object' }],
         },
       },
@@ -248,19 +259,19 @@ describe('serialize', () => {
       assistant: {
         all: [
           {
-            role: MessageRole.assistant,
-            content: objStr,
+            role: 'assistant',
+            content: [{ type: 'text', text: objStr }],
             toolCalls: [],
           },
         ],
         first: {
-          role: MessageRole.assistant,
-          content: objStr,
+          role: 'assistant',
+          content: [{ type: 'text', text: objStr }],
           toolCalls: [],
         },
         last: {
-          role: MessageRole.assistant,
-          content: objStr,
+          role: 'assistant',
+          content: [{ type: 'text', text: objStr }],
           toolCalls: [],
         },
       },
@@ -268,19 +279,32 @@ describe('serialize', () => {
   })
 
   it('should handle empty messages array', () => {
-    // @ts-expect-error
-    const providerLog: ProviderLog = {
+    const providerLog = {
       messages: [],
       responseText: 'Hello!',
       toolCalls: [],
-    }
+    } as unknown as ProviderLog
 
     const result = formatConversation(providerLog)
 
     expect(result).toEqual({
-      all: [{ role: MessageRole.assistant, content: 'Hello!', toolCalls: [] }],
-      first: { role: MessageRole.assistant, content: 'Hello!', toolCalls: [] },
-      last: { role: MessageRole.assistant, content: 'Hello!', toolCalls: [] },
+      all: [
+        {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Hello!' }],
+          toolCalls: [],
+        },
+      ],
+      first: {
+        role: 'assistant',
+        content: [{ type: 'text', text: 'Hello!' }],
+        toolCalls: [],
+      },
+      last: {
+        role: 'assistant',
+        content: [{ type: 'text', text: 'Hello!' }],
+        toolCalls: [],
+      },
       user: {
         all: [],
         first: null,
@@ -293,24 +317,31 @@ describe('serialize', () => {
       },
       assistant: {
         all: [
-          { role: MessageRole.assistant, content: 'Hello!', toolCalls: [] },
+          {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Hello!' }],
+            toolCalls: [],
+          },
         ],
         first: {
-          role: MessageRole.assistant,
-          content: 'Hello!',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Hello!' }],
           toolCalls: [],
         },
-        last: { role: MessageRole.assistant, content: 'Hello!', toolCalls: [] },
+        last: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Hello!' }],
+          toolCalls: [],
+        },
       },
     })
   })
 
   it('should format a ProviderLogDto removing source map correctly', () => {
-    // @ts-expect-error
-    const providerLogDto: ProviderLogDto = {
+    const providerLogDto = {
       messages: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [
             {
               type: 'text',
@@ -319,49 +350,54 @@ describe('serialize', () => {
             },
           ],
         },
-        { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
+        { role: 'assistant', content: 'Hi there', toolCalls: [] },
       ],
       response: 'How can I help you?',
       toolCalls: [],
-    }
+    } as unknown as ProviderLogDto
 
     const result = formatConversation(providerLogDto)
 
     expect(result).toEqual({
       all: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello' }],
         },
-        { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
+        { role: 'assistant', content: 'Hi there', toolCalls: [] },
         {
-          role: MessageRole.assistant,
-          content: 'How can I help you?',
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: 'How can I help you?',
+            },
+          ],
           toolCalls: [],
         },
       ],
       first: {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: 'Hello' }],
       },
       last: {
-        role: MessageRole.assistant,
-        content: 'How can I help you?',
+        role: 'assistant',
+        content: [{ type: 'text', text: 'How can I help you?' }],
         toolCalls: [],
       },
       user: {
         all: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
         first: {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello' }],
         },
         last: {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello' }],
         },
       },
@@ -372,21 +408,31 @@ describe('serialize', () => {
       },
       assistant: {
         all: [
-          { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
+          { role: 'assistant', content: 'Hi there', toolCalls: [] },
           {
-            role: MessageRole.assistant,
-            content: 'How can I help you?',
+            role: 'assistant',
+            content: [
+              {
+                type: 'text',
+                text: 'How can I help you?',
+              },
+            ],
             toolCalls: [],
           },
         ],
         first: {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: 'Hi there',
           toolCalls: [],
         },
         last: {
-          role: MessageRole.assistant,
-          content: 'How can I help you?',
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: 'How can I help you?',
+            },
+          ],
           toolCalls: [],
         },
       },
@@ -396,29 +442,28 @@ describe('serialize', () => {
 
 describe('formatContext', () => {
   it('should format a conversation with text content correctly', () => {
-    // @ts-expect-error
-    const providerLog: ProviderLog = {
+    const providerLog = {
       messages: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [
             { type: 'text', text: 'You are an AI assistant' },
             { type: 'text', text: 'Answer succinctly yet complete' },
           ],
         },
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: "What's the weather like?" }],
         },
         {
-          role: MessageRole.assistant,
-          content: 'The weather is sunny today.',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'The weather is sunny today.' }],
           toolCalls: [],
         },
       ],
       responseText: 'Is there anything else I can help you with?',
       toolCalls: [],
-    }
+    } as unknown as ProviderLog
 
     const result = formatContext(providerLog)
 
@@ -430,11 +475,10 @@ describe('formatContext', () => {
   })
 
   it('should handle image content in messages', () => {
-    // @ts-expect-error
-    const providerLog: ProviderLog = {
+    const providerLog = {
       messages: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [
             { type: 'text', text: 'What can you see in this image?' },
             {
@@ -444,14 +488,14 @@ describe('formatContext', () => {
           ],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: 'I see a beautiful landscape.',
           toolCalls: [],
         },
       ],
       responseText: 'Would you like me to describe it in more detail?',
       toolCalls: [],
-    }
+    } as unknown as ProviderLog
 
     const result = formatContext(providerLog)
 
@@ -462,11 +506,10 @@ describe('formatContext', () => {
   })
 
   it('should handle file content in messages', () => {
-    // @ts-expect-error
-    const providerLog: ProviderLog = {
+    const providerLog = {
       messages: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [
             { type: 'text', text: 'Summarize this file' },
             {
@@ -477,14 +520,14 @@ describe('formatContext', () => {
           ],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: 'No.',
           toolCalls: [],
         },
       ],
       responseText: 'Ask me again.',
       toolCalls: [],
-    }
+    } as unknown as ProviderLog
 
     const result = formatContext(providerLog)
 
@@ -494,12 +537,11 @@ describe('formatContext', () => {
   })
 
   it('should handle empty messages array', () => {
-    // @ts-expect-error
-    const providerLog: ProviderLog = {
+    const providerLog = {
       messages: [],
       responseText: 'Hello! How can I assist you today?',
       toolCalls: [],
-    }
+    } as unknown as ProviderLog
 
     const result = formatContext(providerLog)
 
@@ -507,26 +549,25 @@ describe('formatContext', () => {
   })
 
   it('should handle messages with string content', () => {
-    // @ts-expect-error
-    const providerLogDto: ProviderLogDto = {
+    const providerLogDto = {
       messages: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Tell me a joke' }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: 'Why did the chicken cross the road?',
           toolCalls: [],
         },
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: "I don't know, why?" }],
         },
       ],
       response: 'To get to the other side!',
       toolCalls: [],
-    }
+    } as unknown as ProviderLogDto
 
     const result = formatContext(providerLogDto)
 
@@ -538,17 +579,16 @@ describe('formatContext', () => {
   })
 
   it('should return an empty speaker response if message without content', async () => {
-    // @ts-expect-error
-    const providerLogDto: ProviderLogDto = {
+    const providerLogDto = {
       messages: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [],
         },
       ],
       response: 'To get to the other side!',
       toolCalls: [],
-    }
+    } as unknown as ProviderLogDto
 
     const result = formatContext(providerLogDto)
 

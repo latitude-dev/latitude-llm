@@ -12,9 +12,7 @@ export function tokenizeMessages(messages: Message[]) {
   let length = 0
 
   for (const message of messages) {
-    if (typeof message.content === 'string') {
-      length += message.content.length
-    } else if (Array.isArray(message.content)) {
+    if (Array.isArray(message.content)) {
       for (const content of message.content) {
         switch (content.type) {
           case 'text':

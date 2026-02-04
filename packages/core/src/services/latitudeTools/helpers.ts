@@ -3,7 +3,7 @@ import {
   LatitudeToolInternalName,
 } from '@latitude-data/constants'
 import { ToolModelMessage, Tool, ToolResultPart, JSONValue } from 'ai'
-import { AssistantMessage, MessageRole } from 'promptl-ai'
+import { AssistantMessage } from 'promptl-ai'
 import { LatitudeToolCall } from '../../constants'
 import { TypedResult } from '../../lib/Result'
 import { TelemetryContext } from '../../telemetry'
@@ -76,7 +76,7 @@ export function buildToolMessage({
     }
   }
   return {
-    role: MessageRole.tool,
+    role: 'tool',
     content: [
       {
         type: 'tool-result',

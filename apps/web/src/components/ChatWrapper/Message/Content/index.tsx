@@ -1,9 +1,6 @@
 import { useMemo } from 'react'
 
-import {
-  MessageContent,
-  ToolContent,
-} from '@latitude-data/constants/messages'
+import { MessageContent, ToolResultContent } from '@latitude-data/constants/messages'
 import { MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
 import { ProseColor, TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -27,7 +24,7 @@ export function Content<M extends MarkdownSize | 'none'>({
   size?: 'default' | 'small'
   parameters?: string[]
   debugMode?: boolean
-  toolContentMap?: Record<string, ToolContent>
+  toolContentMap?: Record<string, ToolResultContent>
   markdownSize: M
   limitVerticalPadding?: boolean
   messageIndex?: number
@@ -109,7 +106,7 @@ function ContentItem<M extends MarkdownSize | 'none'>({
   size?: 'default' | 'small'
   parameters?: string[]
   debugMode?: boolean
-  toolContentMap?: Record<string, ToolContent>
+  toolContentMap?: Record<string, ToolResultContent>
   markdownSize: M
   messageIndex?: number
   contentBlockIndex?: number
