@@ -3,7 +3,7 @@ import { createRequestAbortSignal } from '$/common/createRequestAbortSignal'
 import { captureException } from '$/common/tracer'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
-import { LogSources } from '@latitude-data/constants'
+import { LogSources, Message } from '@latitude-data/constants'
 import { BadRequestError, LatitudeError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
@@ -41,6 +41,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     stream: useSSE,
     background,
     userMessage,
+    messages,
     __internal,
   } = c.req.valid('json')
 
@@ -102,6 +103,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       tools,
       mcpHeaders,
       userMessage,
+      messages,
       source: effectiveSource,
       abTest,
     })
@@ -120,6 +122,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     tools,
     mcpHeaders,
     userMessage: userMessage || undefined,
+    messages,
   })
 }
 
@@ -134,6 +137,7 @@ async function handleBackgroundRun({
   tools,
   mcpHeaders,
   userMessage,
+  messages,
   source,
   abTest,
 }: {
@@ -147,6 +151,7 @@ async function handleBackgroundRun({
   tools: string[]
   mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
+  messages?: Message[]
   source: LogSources
   abTest: DeploymentTest | null
 }) {
@@ -160,6 +165,7 @@ async function handleBackgroundRun({
     tools,
     mcpHeaders,
     userMessage,
+    messages,
     source,
     activeDeploymentTest: abTest || undefined,
   }).then((r) => r.unwrap())
@@ -180,6 +186,7 @@ async function handleForegroundRun({
   tools,
   mcpHeaders,
   userMessage,
+  messages,
 }: {
   c: Context
   workspace: WorkspaceDto
@@ -193,6 +200,7 @@ async function handleForegroundRun({
   tools: string[]
   mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
+  messages?: Message[]
 }) {
   const abortSignal = createRequestAbortSignal(c)
 
@@ -212,6 +220,7 @@ async function handleForegroundRun({
     tools,
     mcpHeaders,
     userMessage,
+    messages,
   })
 
   if (useSSE) {

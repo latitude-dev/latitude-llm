@@ -304,6 +304,11 @@ export type RunPromptOptions<
    * @deprecated Use the `messages` parameter instead. This parameter will be removed in a future version.
    */
   userMessage?: string
+  /**
+   * Messages to append to the conversation after the compiled prompt.
+   * Note: This is not compatible with the <step> feature of PromptL.
+   */
+  messages?: Message[]
   mcpHeaders?: Record<string, Record<string, string>>
 } & (Background extends true
     ? { background: Background }
@@ -411,6 +416,11 @@ type RunDocumentBodyParams = {
    * @deprecated Use the `messages` parameter instead. This parameter will be removed in a future version.
    */
   userMessage?: string
+  /**
+   * Messages to append to the conversation after the compiled prompt.
+   * Note: This is not compatible with the <step> feature of PromptL.
+   */
+  messages?: Message[]
   mcpHeaders?: Record<string, Record<string, string>>
 }
 

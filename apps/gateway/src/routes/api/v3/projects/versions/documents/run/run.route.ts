@@ -3,6 +3,7 @@ import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import {
   internalInfoSchema,
   chainEventDtoSchema,
+  messageSchema,
   runBackgroundAPIResponseSchema,
   runSyncAPIResponseSchema,
 } from '$/openApi/schemas'
@@ -51,6 +52,12 @@ export const runRoute = createRoute({
               .optional()
               .describe(
                 '@deprecated Use the `messages` parameter instead. This parameter will be removed in a future version.',
+              ),
+            messages: z
+              .array(messageSchema)
+              .optional()
+              .describe(
+                'Messages to append to the conversation after the compiled prompt. Note: This is not compatible with the <step> feature of PromptL.',
               ),
             background: z.boolean().optional(),
           }),
