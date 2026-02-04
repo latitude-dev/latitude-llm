@@ -2,7 +2,6 @@ import { LastMessage } from '../../SharedDocument/RunPrompt/usePrompt'
 import {
   Message as ConversationMessage,
   MessageContent,
-  MessageRole,
 } from '@latitude-data/constants/messages'
 import { ExpandMessages } from '../ExpandMessages'
 import { ErrorMessage, Message } from '$/components/ChatWrapper'
@@ -70,7 +69,7 @@ function ChainResponseMessage<L extends boolean>({
   if (isLoading) {
     return (
       <DebugMessage
-        role={MessageRole.assistant}
+        role='assistant'
         content={[
           ...(reasoningStream
             ? [

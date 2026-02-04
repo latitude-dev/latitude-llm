@@ -4,9 +4,8 @@ import {
   FileContent,
   ImageContent,
   Message,
-  MessageRole,
   TextContent,
-  ToolContent,
+  ToolResultContent,
   ToolRequestContent,
 } from '@latitude-data/constants/messages'
 import { describe, expect, it } from 'vitest'
@@ -97,7 +96,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('joins multiple text parts with newline', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [
             { type: 'text', text: 'part1' } as TextContent,
             { type: 'text', text: 'part2' } as TextContent,
@@ -122,7 +121,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts single text to string', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello' } as TextContent],
         },
       ]
@@ -142,7 +141,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts multiple parts to array', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [
             { type: 'text', text: 'Hello' } as TextContent,
             {
@@ -171,7 +170,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts file message', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [
             {
               type: 'file',
@@ -199,8 +198,13 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('keeps string content as string', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.assistant,
-          content: 'Hello from assistant',
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: 'Hello from assistant',
+            },
+          ],
           toolCalls: null,
         } as AssistantMessage,
       ]
@@ -220,7 +224,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts text and file content', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [
             { type: 'text', text: 'thinking' },
             {
@@ -251,7 +255,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts reasoning content', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [
             { type: 'reasoning', text: 'Let me think...' },
             { type: 'text', text: 'The answer is 42' },
@@ -278,7 +282,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts redacted-reasoning to reasoning type without prefix', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [
             { type: 'redacted-reasoning', data: 'hidden' },
             { type: 'text', text: 'The answer' },
@@ -304,8 +308,13 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('filters empty assistant messages', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.assistant,
-          content: '',
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: '',
+            },
+          ],
           toolCalls: null,
         } as AssistantMessage,
       ]
@@ -324,7 +333,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts tool-call in content', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [
             {
               type: 'tool-call',
@@ -359,7 +368,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts legacy toolCalls property', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: 'Let me search' }],
           toolCalls: [{ id: '1', name: 'search', arguments: { query: 'hi' } }],
         } as AssistantMessage,
@@ -388,7 +397,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('deduplicates tool calls from content and toolCalls property', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [
             { type: 'text', text: 'I will help you' },
             {
@@ -435,7 +444,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts string result with typed output', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.tool,
+          role: 'tool',
           content: [
             {
               type: 'tool-result',
@@ -443,7 +452,7 @@ describe('message translation (Promptl to VercelAI)', () => {
               toolName: 'calc',
               result: '42',
               isError: false,
-            } as ToolContent,
+            } as ToolResultContent,
           ],
         },
       ]
@@ -470,7 +479,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts JSON result with typed output', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.tool,
+          role: 'tool',
           content: [
             {
               type: 'tool-result',
@@ -478,7 +487,7 @@ describe('message translation (Promptl to VercelAI)', () => {
               toolName: 'calc',
               result: { value: 123 },
               isError: false,
-            } as ToolContent,
+            } as ToolResultContent,
           ],
         },
       ]
@@ -505,7 +514,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts error JSON result', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.tool,
+          role: 'tool',
           content: [
             {
               type: 'tool-result',
@@ -513,7 +522,7 @@ describe('message translation (Promptl to VercelAI)', () => {
               toolName: 'calc',
               result: { error: 'bad' },
               isError: true,
-            } as ToolContent,
+            } as ToolResultContent,
           ],
         },
       ]
@@ -540,7 +549,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('converts error text result', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.tool,
+          role: 'tool',
           content: [
             {
               type: 'tool-result',
@@ -548,7 +557,7 @@ describe('message translation (Promptl to VercelAI)', () => {
               toolName: 'calc',
               result: 'oops',
               isError: true,
-            } as ToolContent,
+            } as ToolResultContent,
           ],
         },
       ]
@@ -575,7 +584,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('preserves toolName', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.tool,
+          role: 'tool',
           content: [
             {
               type: 'tool-result',
@@ -583,7 +592,7 @@ describe('message translation (Promptl to VercelAI)', () => {
               toolName: 'calculator',
               result: '42',
               isError: false,
-            } as ToolContent,
+            } as ToolResultContent,
           ],
         },
       ]
@@ -603,7 +612,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('extracts provider-specific attributes to providerOptions on messages', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello' } as TextContent],
           cache_control: { type: 'ephemeral' },
         } as Message & { cache_control: unknown },
@@ -627,7 +636,7 @@ describe('message translation (Promptl to VercelAI)', () => {
     it('handles full conversation with tools', () => {
       const messages: Message[] = [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [
             {
               type: 'text',
@@ -636,11 +645,11 @@ describe('message translation (Promptl to VercelAI)', () => {
           ],
         },
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'What is 2+2?' } as TextContent],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [
             { type: 'text', text: 'Let me calculate.' },
             {
@@ -653,7 +662,7 @@ describe('message translation (Promptl to VercelAI)', () => {
           toolCalls: null,
         } as AssistantMessage,
         {
-          role: MessageRole.tool,
+          role: 'tool',
           content: [
             {
               type: 'tool-result',
@@ -661,12 +670,17 @@ describe('message translation (Promptl to VercelAI)', () => {
               toolName: 'calculator',
               result: '4',
               isError: false,
-            } as ToolContent,
+            } as ToolResultContent,
           ],
         },
         {
-          role: MessageRole.assistant,
-          content: 'The answer is 4!',
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: 'The answer is 4!',
+            },
+          ],
           toolCalls: null,
         } as AssistantMessage,
       ]

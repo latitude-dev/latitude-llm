@@ -1,4 +1,3 @@
-import { MessageRole } from '@latitude-data/constants/messages'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { Latitude } from '../../dist/index.js'
 
@@ -473,7 +472,7 @@ You are a helpful assistant. Reply with a short acknowledgement.
         runResult!.uuid,
         [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -568,7 +567,7 @@ You are a helpful assistant. Reply with a short acknowledgement.
         conversationUuid!,
         [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',

@@ -1,4 +1,3 @@
-import { MessageRole } from '@latitude-data/constants/messages'
 import { Latitude, LogSources } from '$sdk/index'
 import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'
@@ -52,7 +51,7 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
                   type: 'text',
@@ -75,7 +74,7 @@ describe('/chat', () => {
             __internal: { source: LogSources.API },
             messages: [
               {
-                role: MessageRole.user,
+                role: 'user',
                 content: [
                   {
                     type: 'text',
@@ -104,7 +103,7 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
                   type: 'text',
@@ -127,7 +126,7 @@ describe('/chat', () => {
             __internal: { source: LogSources.API },
             messages: [
               {
-                role: MessageRole.user,
+                role: 'user',
                 content: [
                   {
                     type: 'text',
@@ -163,7 +162,7 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
                   type: 'text',
@@ -206,7 +205,7 @@ describe('/chat', () => {
         conversationUuid,
         [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -246,7 +245,7 @@ describe('/chat', () => {
         conversationUuid,
         [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -286,7 +285,7 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
                   type: 'text',
@@ -330,7 +329,7 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
                   type: 'text',
@@ -353,7 +352,7 @@ describe('/chat', () => {
             __internal: { source: LogSources.API },
             messages: [
               {
-                role: MessageRole.user,
+                role: 'user',
                 content: [
                   {
                     type: 'text',
@@ -384,7 +383,7 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
                   type: 'text',
@@ -420,7 +419,7 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
                   type: 'text',
@@ -442,7 +441,7 @@ describe('/chat', () => {
             __internal: { source: LogSources.API },
             messages: [
               {
-                role: MessageRole.user,
+                role: 'user',
                 content: [
                   {
                     type: 'text',
@@ -473,7 +472,7 @@ describe('/chat', () => {
         conversationUuid,
         [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -513,7 +512,7 @@ describe('/chat', () => {
         conversationUuid,
         [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -553,7 +552,7 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
                   type: 'text',

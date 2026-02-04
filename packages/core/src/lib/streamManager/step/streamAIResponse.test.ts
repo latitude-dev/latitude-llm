@@ -8,7 +8,7 @@ import {
   PaymentRequiredError,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
-import { Message, MessageRole } from '@latitude-data/constants/messages'
+import { Message } from '@latitude-data/constants/messages'
 import { LogSources } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import * as aiModule from '../../../services/ai'
@@ -89,7 +89,7 @@ describe('streamAIResponse', () => {
       provider,
       messages: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Hello' }],
         },
       ],
@@ -163,7 +163,7 @@ describe('streamAIResponse', () => {
 
     const messages = [
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text' as const, text: 'Hello' }],
       },
     ] as unknown as Message[]
@@ -288,7 +288,7 @@ describe('streamAIResponse', () => {
           provider,
           messages: [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [{ type: 'text', text: 'Hello' }],
             },
           ],
@@ -330,7 +330,7 @@ describe('streamAIResponse', () => {
         provider,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -371,7 +371,7 @@ describe('streamAIResponse', () => {
         provider,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -418,7 +418,7 @@ describe('streamAIResponse', () => {
         provider,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],
@@ -470,7 +470,7 @@ describe('streamAIResponse', () => {
         provider,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'Hello' }],
           },
         ],

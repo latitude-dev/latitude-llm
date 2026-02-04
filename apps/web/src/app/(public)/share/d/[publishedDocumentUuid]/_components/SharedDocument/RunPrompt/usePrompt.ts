@@ -43,6 +43,8 @@ function getDeltas({
     if (typeof content === 'string') return splitInWords(content)
 
     return content.flatMap((c) => {
+      if (c.type === 'reasoning') return []
+      if (c.type === 'redacted-reasoning') return []
       if (c.type === 'image') return []
       if (c.type === 'file') return []
       if (c.type === 'tool-call') return splitInWords(JSON.stringify(c))

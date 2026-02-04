@@ -1,8 +1,5 @@
 import { env } from '@latitude-data/env'
-import {
-  MessageRole,
-  type Message,
-} from '@latitude-data/constants/messages'
+import type { Message } from '@latitude-data/constants/messages'
 import { z } from 'zod'
 import { Result, TypedResult } from '../../lib/Result'
 import { runCopilot } from '../copilot/run'
@@ -53,9 +50,9 @@ export async function generateSimulatedUserAction({
 
   const messageSample = messages.filter(
     (m) =>
-      m.role === MessageRole.user ||
-      m.role === MessageRole.assistant ||
-      m.role === MessageRole.tool,
+      m.role === 'user' ||
+      m.role === 'assistant' ||
+      m.role === 'tool',
   )
 
   return runCopilot({

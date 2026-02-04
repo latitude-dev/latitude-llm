@@ -42,14 +42,12 @@ describe('conversationCache', () => {
     providerId: 42,
     messages: [
       {
-        // @ts-expect-error - intentionally testing invalid data
         role: 'user',
-        content: 'Hello',
+        content: [{ type: 'text', text: 'Hello' }],
       },
       {
-        // @ts-expect-error - intentionally testing invalid data
         role: 'assistant',
-        content: 'Hi there!',
+        content: [{ type: 'text', text: 'Hi there!' }],
       },
     ],
   }

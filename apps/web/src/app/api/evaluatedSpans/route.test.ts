@@ -12,7 +12,6 @@ import {
 } from '@latitude-data/constants'
 import { diskFactory } from '@latitude-data/core/lib/disk'
 import { cache as redis } from '@latitude-data/core/cache'
-import { MessageRole } from '@latitude-data/constants/messages'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
@@ -79,13 +78,13 @@ describe('GET handler for evaluatedSpans', () => {
     spanType = SpanType.Prompt,
     input = [
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text' as const, text: 'Test question' }],
       },
     ],
     output = [
       {
-        role: MessageRole.assistant,
+        role: 'assistant',
         content: [{ type: 'text' as const, text: 'Test answer' }],
         toolCalls: [],
       },
@@ -288,12 +287,12 @@ describe('GET handler for evaluatedSpans', () => {
           traceId: 'trace-last-string',
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'First response' }],
               toolCalls: [],
             },
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'Last response' }],
               toolCalls: [],
             },
@@ -326,12 +325,12 @@ describe('GET handler for evaluatedSpans', () => {
           traceId: 'trace-all-string',
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'First response' }],
               toolCalls: [],
             },
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'Second response' }],
               toolCalls: [],
             },
@@ -366,7 +365,7 @@ describe('GET handler for evaluatedSpans', () => {
           traceId: 'trace-json-format',
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: jsonContent }],
               toolCalls: [],
             },
@@ -399,13 +398,13 @@ describe('GET handler for evaluatedSpans', () => {
           traceId: 'trace-with-messages',
           input: [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [{ type: 'text', text: 'User question' }],
             },
           ],
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'Assistant answer' }],
               toolCalls: [],
             },
@@ -425,8 +424,8 @@ describe('GET handler for evaluatedSpans', () => {
         const data = await response.json()
         expect(data.items).toHaveLength(1)
         expect(data.items[0].messages).toHaveLength(2)
-        expect(data.items[0].messages[0].role).toBe(MessageRole.user)
-        expect(data.items[0].messages[1].role).toBe(MessageRole.assistant)
+        expect(data.items[0].messages[0].role).toBe('user')
+        expect(data.items[0].messages[1].role).toBe('assistant')
       })
     })
 
@@ -581,7 +580,7 @@ describe('GET handler for evaluatedSpans', () => {
           traceId: 'trace-page-1',
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'Response 1' }],
               toolCalls: [],
             },
@@ -595,7 +594,7 @@ describe('GET handler for evaluatedSpans', () => {
           traceId: 'trace-page-2',
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'Response 2' }],
               toolCalls: [],
             },
@@ -643,7 +642,7 @@ describe('GET handler for evaluatedSpans', () => {
           spanType: SpanType.Prompt,
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'Prompt response' }],
               toolCalls: [],
             },
@@ -674,7 +673,7 @@ describe('GET handler for evaluatedSpans', () => {
           spanType: SpanType.External,
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'External response' }],
               toolCalls: [],
             },
@@ -705,7 +704,7 @@ describe('GET handler for evaluatedSpans', () => {
           spanType: SpanType.Chat,
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'Chat response' }],
               toolCalls: [],
             },
@@ -736,7 +735,7 @@ describe('GET handler for evaluatedSpans', () => {
           spanType: SpanType.Prompt,
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'Prompt mixed' }],
               toolCalls: [],
             },
@@ -751,7 +750,7 @@ describe('GET handler for evaluatedSpans', () => {
           spanType: SpanType.External,
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'External mixed' }],
               toolCalls: [],
             },
@@ -766,7 +765,7 @@ describe('GET handler for evaluatedSpans', () => {
           spanType: SpanType.Chat,
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'Chat mixed' }],
               toolCalls: [],
             },
@@ -919,7 +918,7 @@ describe('GET handler for evaluatedSpans', () => {
           traceId: 'trace-correct-doc',
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'Correct document' }],
               toolCalls: [],
             },
@@ -933,7 +932,7 @@ describe('GET handler for evaluatedSpans', () => {
           traceId: 'trace-other-doc',
           output: [
             {
-              role: MessageRole.assistant,
+              role: 'assistant',
               content: [{ type: 'text', text: 'Other document' }],
               toolCalls: [],
             },

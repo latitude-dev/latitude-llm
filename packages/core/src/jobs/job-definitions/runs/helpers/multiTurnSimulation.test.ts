@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Message, MessageRole } from '@latitude-data/constants/messages'
+import { Message } from '@latitude-data/constants/messages'
 import {
   MAX_SIMULATION_TURNS,
   SimulationSettings,
@@ -87,7 +87,7 @@ describe('multiTurnSimulation', () => {
       baseArgs = {
         initialMessages: [
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [{ type: 'text', text: 'Hello, how can I help?' }],
             toolCalls: null,
           },
@@ -136,11 +136,11 @@ describe('multiTurnSimulation', () => {
       const updatedMessages = [
         ...baseArgs.initialMessages,
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ type: 'text', text: 'Simulated response' }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: 'Assistant reply' }],
         },
       ]
@@ -347,7 +347,7 @@ describe('multiTurnSimulation', () => {
         documentLogUuid: 'doc-log-123',
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [{ type: 'text', text: 'User message' }],
           },
         ],
@@ -395,17 +395,17 @@ describe('multiTurnSimulation', () => {
       const mockStream = new ReadableStream()
       const turn1Messages = [
         ...baseArgs.initialMessages,
-        { role: MessageRole.user, content: [{ type: 'text', text: 'Turn 1' }] },
+        { role: 'user', content: [{ type: 'text', text: 'Turn 1' }] },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: 'Reply 1' }],
         },
       ]
       const turn2Messages = [
         ...turn1Messages,
-        { role: MessageRole.user, content: [{ type: 'text', text: 'Turn 2' }] },
+        { role: 'user', content: [{ type: 'text', text: 'Turn 2' }] },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: 'Reply 2' }],
         },
       ]

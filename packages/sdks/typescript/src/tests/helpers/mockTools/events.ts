@@ -4,7 +4,6 @@ import {
   Providers,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { MessageRole } from '@latitude-data/constants/messages'
 
 export const TOOLS_DOCUMENT_UUID = '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b'
 type ToolsEventsObject<T> = {
@@ -32,7 +31,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -45,7 +44,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -64,7 +63,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -77,7 +76,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -99,7 +98,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         providerLogUuid: '',
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -112,7 +111,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -121,7 +120,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -235,7 +234,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -248,7 +247,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -257,7 +256,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -319,7 +318,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -332,7 +331,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -341,7 +340,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -405,7 +404,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -418,7 +417,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -427,7 +426,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -489,7 +488,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -502,7 +501,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -511,7 +510,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -563,7 +562,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -578,7 +577,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -593,7 +592,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -608,7 +607,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -627,7 +626,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -640,7 +639,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -649,7 +648,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -701,7 +700,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -716,7 +715,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -731,7 +730,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -746,7 +745,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -767,7 +766,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         providerLogUuid: '',
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -780,7 +779,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -789,7 +788,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -841,7 +840,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -856,7 +855,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -871,7 +870,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -886,7 +885,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -895,7 +894,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -1018,7 +1017,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -1031,7 +1030,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -1040,7 +1039,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -1092,7 +1091,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1107,7 +1106,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1122,7 +1121,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1137,7 +1136,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -1146,7 +1145,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -1216,7 +1215,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -1229,7 +1228,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -1238,7 +1237,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -1290,7 +1289,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1305,7 +1304,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1320,7 +1319,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1335,7 +1334,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -1344,7 +1343,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -1412,7 +1411,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -1425,7 +1424,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -1434,7 +1433,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -1486,7 +1485,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1501,7 +1500,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1516,7 +1515,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1531,7 +1530,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -1540,7 +1539,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -1598,7 +1597,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1613,7 +1612,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1628,7 +1627,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1643,7 +1642,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -1662,7 +1661,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -1675,7 +1674,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -1684,7 +1683,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -1736,7 +1735,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1751,7 +1750,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1766,7 +1765,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1781,7 +1780,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -1790,7 +1789,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -1848,7 +1847,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1863,7 +1862,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1878,7 +1877,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -1893,7 +1892,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -1914,7 +1913,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         providerLogUuid: '',
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -1927,7 +1926,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -1936,7 +1935,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -1988,7 +1987,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2003,7 +2002,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2018,7 +2017,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2033,7 +2032,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -2042,7 +2041,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -2100,7 +2099,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2115,7 +2114,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2130,7 +2129,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2145,7 +2144,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -2154,7 +2153,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'text',
@@ -2204,7 +2203,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -2217,7 +2216,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -2226,7 +2225,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -2278,7 +2277,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2293,7 +2292,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2308,7 +2307,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2323,7 +2322,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -2332,7 +2331,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -2390,7 +2389,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2405,7 +2404,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2420,7 +2419,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2435,7 +2434,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -2444,7 +2443,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'text',
@@ -2476,7 +2475,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
         finishReason: 'stop',
         messages: [
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -2489,7 +2488,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -2498,7 +2497,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -2550,7 +2549,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2565,7 +2564,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2580,7 +2579,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2595,7 +2594,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -2604,7 +2603,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'tool-call',
@@ -2662,7 +2661,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2677,7 +2676,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2692,7 +2691,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.tool,
+            role: 'tool',
             content: [
               {
                 type: 'tool-result',
@@ -2707,7 +2706,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.system,
+            role: 'system',
             content: [
               {
                 type: 'text',
@@ -2716,7 +2715,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
           {
-            role: MessageRole.assistant,
+            role: 'assistant',
             content: [
               {
                 type: 'text',

@@ -5,7 +5,7 @@ import type {
 } from '@latitude-data/core/services/latitudeTools/webExtract/types'
 import { useMemo, useState } from 'react'
 import {
-  ToolContent,
+  ToolResultContent,
   ToolRequestContent,
 } from '@latitude-data/constants/messages'
 import { Markdown } from '@latitude-data/web-ui/atoms/Markdown'
@@ -23,7 +23,7 @@ import {
   ToolCardPendingState,
 } from '../_components/ToolCard/Content'
 
-const isExpectedOutput = (toolResponse: ToolContent | undefined) => {
+const isExpectedOutput = (toolResponse: ToolResultContent | undefined) => {
   // Returns false if the tool response does not contain the expected output
   if (!toolResponse) return false
   if (toolResponse.isError) return false
@@ -44,7 +44,7 @@ function WebExtractOutput({
   simulated,
   status,
 }: {
-  toolResponse: ToolContent | undefined
+  toolResponse: ToolResultContent | undefined
   simulated?: boolean
   status: ToolCallStatus
 }) {
@@ -95,7 +95,7 @@ export function WebExtractLatitudeToolCard({
   contentBlockIndex,
 }: {
   toolRequest: ToolRequestContent
-  toolResponse: ToolContent | undefined
+  toolResponse: ToolResultContent | undefined
   status: ToolCallStatus
   messageIndex?: number
   contentBlockIndex?: number

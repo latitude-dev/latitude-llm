@@ -2,8 +2,7 @@
 
 import {
   Message,
-  MessageRole,
-  ToolContent,
+  ToolResultContent,
   ToolMessage,
 } from '@latitude-data/constants/messages'
 
@@ -17,7 +16,7 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
  */
 function isToolMessageResolved(
   message: ToolMessage,
-  toolContentMap: Record<string, ToolContent>,
+  toolContentMap: Record<string, ToolResultContent>,
 ) {
   const toolResponses = message.content.filter(
     (content) => content.type === 'tool-result',
@@ -39,7 +38,7 @@ export const MessageList = memo(
     messages: Message[]
     parameters?: string[]
     debugMode?: boolean
-    toolContentMap?: Record<string, ToolContent>
+    toolContentMap?: Record<string, ToolResultContent>
     isStreaming?: boolean
   }) => {
     const toolContentMap = useToolContentMap(messages, _toolContentMap)
@@ -48,7 +47,7 @@ export const MessageList = memo(
         messages.filter((message) => {
           if (
             toolContentMap &&
-            message.role === MessageRole.tool &&
+            message.role === 'tool' &&
             isToolMessageResolved(message, toolContentMap)
           ) {
             // If a tool message comes from an existing tool request, we won't render the tool
@@ -72,7 +71,7 @@ export const MessageList = memo(
           if (
             !(
               toolContentMap &&
-              message.role === MessageRole.tool &&
+              message.role === 'tool' &&
               isToolMessageResolved(message, toolContentMap)
             )
           ) {
@@ -100,14 +99,14 @@ export const MessageList = memo(
                 debugMode={debugMode}
                 toolContentMap={toolContentMap}
                 isGeneratingToolCall={
-                  message.role === MessageRole.assistant &&
+                  message.role === 'assistant' &&
                   message._isGeneratingToolCall
                 }
                 additionalAssistantMessage={
                   displayIndex > 0 &&
-                  message.role === MessageRole.assistant &&
+                  message.role === 'assistant' &&
                   displayableMessages[displayIndex - 1].role ===
-                    MessageRole.assistant
+                    'assistant'
                 }
                 messageIndex={originalIndex}
                 isStreaming={isStreaming}

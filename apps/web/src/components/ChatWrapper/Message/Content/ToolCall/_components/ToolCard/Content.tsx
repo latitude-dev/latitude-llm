@@ -1,6 +1,6 @@
 import { MaxHeightWindow } from '$/components/MaxHeightWindow'
 import {
-  ToolContent,
+  ToolResultContent,
   ToolRequestContent,
 } from '@latitude-data/constants/messages'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
@@ -88,7 +88,7 @@ export function ToolCardOutput({
   simulated,
   status,
 }: {
-  toolResponse: ToolContent | undefined
+  toolResponse: ToolResultContent | undefined
   simulated?: boolean
   status?: ToolCallStatus
 }) {

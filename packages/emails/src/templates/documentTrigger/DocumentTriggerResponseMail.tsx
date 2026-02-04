@@ -77,6 +77,6 @@ DocumentTriggerResponseMail.PreviewProps = {
   error: undefined,
   message: {
     role: 'assistant',
-    content: 'Hello, world!',
+    content: [{ type: 'text', text: 'Hello, world!' }],
   } as AssistantMessage,
 } satisfies Props

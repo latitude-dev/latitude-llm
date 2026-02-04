@@ -7,7 +7,6 @@ import { AIReturn, estimateCost } from '../../ai'
 import {
   AssistantMessage,
   Message,
-  MessageRole,
 } from '@latitude-data/constants/messages'
 import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
 import { convertResponseMessages } from '../../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
@@ -106,7 +105,7 @@ export async function fakeResponse({
     text: accumulatedText.text,
     input: [
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [
           {
             type: 'text',
@@ -127,7 +126,7 @@ export async function fakeResponse({
 
 const fakeAssistantMessage = (accumulatedText: string): AssistantMessage => {
   return {
-    role: MessageRole.assistant,
+    role: 'assistant',
     content: [
       {
         type: 'text',

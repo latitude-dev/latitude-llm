@@ -1,5 +1,5 @@
 import { LogSources } from '@latitude-data/constants'
-import { Message, MessageRole } from '@latitude-data/constants/messages'
+import { Message } from '@latitude-data/constants/messages'
 import {
   MAX_SIMULATION_TURNS,
   SimulationSettings,
@@ -97,7 +97,7 @@ async function executeSingleTurn({
     documentLogUuid,
     messages: [
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: userAction.message }],
       },
     ],

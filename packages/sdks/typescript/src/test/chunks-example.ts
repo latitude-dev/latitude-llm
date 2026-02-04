@@ -5,7 +5,6 @@ import {
   Providers,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { MessageRole } from '@latitude-data/constants/messages'
 
 const CHUNK_EVENTS: ChainEvent[] = [
   {
@@ -25,7 +24,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
       uuid: '123',
       messages: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
       ],
@@ -39,7 +38,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
       uuid: '123',
       messages: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
       ],
@@ -128,11 +127,11 @@ const CHUNK_EVENTS: ChainEvent[] = [
       providerLogUuid: '',
       messages: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
@@ -176,11 +175,11 @@ const CHUNK_EVENTS: ChainEvent[] = [
       uuid: '123',
       messages: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
@@ -195,16 +194,16 @@ const CHUNK_EVENTS: ChainEvent[] = [
       uuid: '123',
       messages: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: 'Expand your answer' }],
         },
       ],
@@ -218,16 +217,16 @@ const CHUNK_EVENTS: ChainEvent[] = [
       uuid: '123',
       messages: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: 'Expand your answer' }],
         },
       ],
@@ -246,20 +245,20 @@ const CHUNK_EVENTS: ChainEvent[] = [
       providerLogUuid: '',
       messages: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: 'Expand your answer' }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [
             {
               type: 'text',
@@ -308,20 +307,20 @@ const CHUNK_EVENTS: ChainEvent[] = [
       uuid: '123',
       messages: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: 'Expand your answer' }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [
             {
               type: 'text',
@@ -341,20 +340,20 @@ const CHUNK_EVENTS: ChainEvent[] = [
       uuid: '123',
       messages: [
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
         {
-          role: MessageRole.system,
+          role: 'system',
           content: [{ type: 'text', text: 'Expand your answer' }],
         },
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [
             {
               type: 'text',

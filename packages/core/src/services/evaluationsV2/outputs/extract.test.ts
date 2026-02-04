@@ -1,6 +1,5 @@
 import {
   Message,
-  MessageRole,
   TextContent,
 } from '@latitude-data/constants/messages'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -17,7 +16,7 @@ describe('extractActualOutput', () => {
   beforeEach(async () => {
     conversation = [
       {
-        role: MessageRole.system,
+        role: 'system',
         content: [
           {
             type: 'text',
@@ -26,7 +25,7 @@ describe('extractActualOutput', () => {
         ],
       },
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [
           {
             type: 'text',
@@ -39,7 +38,7 @@ describe('extractActualOutput', () => {
         ],
       },
       {
-        role: MessageRole.assistant,
+        role: 'assistant',
         toolCalls: [],
         content: [
           {

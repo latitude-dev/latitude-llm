@@ -1,6 +1,6 @@
 import {
   ToolRequestContent,
-  ToolContent,
+  ToolResultContent,
 } from '@latitude-data/constants/messages'
 import { ReactNode, useMemo, useState } from 'react'
 import { ToolCardHeader } from './Header'
@@ -146,7 +146,7 @@ export function ToolCard({
   status,
 }: {
   toolRequest: ToolRequestContent
-  toolResponse: ToolContent | undefined
+  toolResponse: ToolResultContent | undefined
   headerIcon: ReactNode
   headerLabel: ReactNode
   messageIndex?: number

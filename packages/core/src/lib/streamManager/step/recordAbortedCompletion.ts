@@ -1,5 +1,4 @@
 import type { Message } from '@latitude-data/constants/messages'
-import { MessageRole } from '@latitude-data/constants/messages'
 import { VercelConfig } from '@latitude-data/constants'
 import { ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { telemetry, TelemetryContext } from '../../../telemetry'
@@ -34,7 +33,7 @@ export function recordAbortedCompletion({
   $abortedCompletion.end({
     output: [
       {
-        role: MessageRole.assistant,
+        role: 'assistant',
         content: [{ type: 'text', text: accumulatedText }],
       },
     ],

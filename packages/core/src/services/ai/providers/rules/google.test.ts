@@ -88,8 +88,8 @@ describe('applyGoogleRules', () => {
   describe('when no user message is present', () => {
     beforeAll(() => {
       messages = [
-        { role: 'system', content: 'System only' },
-        { role: 'assistant', content: 'Hello' },
+        { role: 'system', content: [{ type: 'text', text: 'System only' }] },
+        { role: 'assistant', content: [{ type: 'text', text: 'Hello' }] },
       ] as Message[]
     })
 

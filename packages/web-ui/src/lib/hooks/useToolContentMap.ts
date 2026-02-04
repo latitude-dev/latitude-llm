@@ -4,36 +4,36 @@ import { ToolResultPayload } from '@latitude-data/constants/ai'
 import {
   Message,
   MessageContent,
-  MessageRole,
-  ToolContent,
-  ToolRequestContent,
+  ToolResultContent,
 } from '@latitude-data/constants/messages'
 import { useMemo } from 'react'
 
 export function useToolContentMap(
   messages: Message[],
-  toolContentMap?: Record<string, ToolContent>,
+  toolContentMap?: Record<string, ToolResultContent>,
 ) {
   return useMemo(() => {
     if (toolContentMap) return toolContentMap
 
-    const res = messages.reduce((acc: Record<string, ToolContent>, message) => {
-      if (typeof message.content === 'string') return acc
-      if (![MessageRole.assistant, MessageRole.tool].includes(message.role))
-        return acc
+    const res = messages.reduce(
+      (acc: Record<string, ToolResultContent>, message) => {
+        if (typeof message.content === 'string') return acc
+        if (message.role !== 'assistant' && message.role !== 'tool') return acc
 
-      return Object.assign(
-        acc,
-        Object.fromEntries(
-          (message.content as MessageContent[] | ToolRequestContent[])
-            .filter((content) => content.type === 'tool-result')
-            .map((content) => [
-              content.toolCallId,
-              transformContent(content as ToolContent),
-            ]),
-        ),
-      )
-    }, {})
+        return Object.assign(
+          acc,
+          Object.fromEntries(
+            (message.content as MessageContent[])
+              .filter((content) => content.type === 'tool-result')
+              .map((content) => [
+                content.toolCallId,
+                transformContent(content as ToolResultContent),
+              ]),
+          ),
+        )
+      },
+      {},
+    )
 
     return res
   }, [messages, toolContentMap])
@@ -49,7 +49,7 @@ export function useToolContentMap(
  * @param content - The tool content to transform
  * @returns The transformed tool content with normalized result and error state
  */
-function transformContent(content: ToolContent): ToolContent {
+function transformContent(content: ToolResultContent): ToolResultContent {
   const result = content.result
   if (
     result &&

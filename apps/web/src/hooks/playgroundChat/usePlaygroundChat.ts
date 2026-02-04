@@ -12,7 +12,6 @@ import {
 } from '@latitude-data/constants'
 import {
   Message,
-  MessageRole,
   ToolCall,
   ToolMessage,
 } from '@latitude-data/constants/messages'
@@ -30,7 +29,7 @@ function buildMessage({ input }: { input: string | ToolMessage[] }) {
   if (typeof input === 'string') {
     return [
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: input }],
       } as Message,
     ]
@@ -434,7 +433,7 @@ export function usePlaygroundChat({
       } else {
         // Remove unresponded tool calls
         const respondedToolCallIds = newMessages.reduce((acc, message) => {
-          if (message.role !== MessageRole.tool) return acc
+          if (message.role !== 'tool') return acc
           const toolResponseContents = message.content.filter(
             (c) => c.type === 'tool-result',
           )

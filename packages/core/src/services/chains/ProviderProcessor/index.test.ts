@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { LanguageModelUsage } from 'ai'
-import { MessageRole } from '@latitude-data/constants/messages'
 import * as factories from '../../../tests/factories'
 
 import { StreamType, LogSources, Providers } from '@latitude-data/constants'
@@ -61,7 +60,7 @@ describe('ProviderProcessor', () => {
       },
       messages: [
         {
-          role: MessageRole.user,
+          role: 'user',
           content: [{ text: 'Hello', type: 'text' }],
         },
       ],
@@ -87,7 +86,7 @@ describe('ProviderProcessor', () => {
       model,
       provider,
       input: [
-        { role: MessageRole.user, content: [{ type: 'text', text: 'Hello' }] },
+        { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
       ],
       // @ts-expect-error - mock implementation
       aiResult: {
@@ -126,7 +125,7 @@ describe('ProviderProcessor', () => {
       model,
       provider,
       input: [
-        { role: MessageRole.user, content: [{ type: 'text', text: 'Hello' }] },
+        { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
       ],
       output: [],
       reasoning: undefined,

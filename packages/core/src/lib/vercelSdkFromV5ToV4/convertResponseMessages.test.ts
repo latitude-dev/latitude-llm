@@ -2,10 +2,8 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   AssistantMessage,
   MessageContent,
-  MessageRole,
-  ToolContent,
+  ToolResultContent,
   ToolMessage,
-  ToolRequestContent,
 } from '@latitude-data/constants/messages'
 import {
   AssistantModelMessage,
@@ -34,7 +32,7 @@ describe('convertResponseMessages (integration)', () => {
     const out = convertResponseMessages({ messages: [msg] })
 
     const assistant = out[0] as AssistantMessage
-    expect(assistant.role).toBe(MessageRole.assistant)
+    expect(assistant.role).toBe('assistant')
     expect(assistant.content).toEqual([{ type: 'text', text: 'hello' }])
     expect(assistant.toolCalls).toBeNull()
   })
@@ -184,13 +182,13 @@ describe('convertResponseMessages (integration)', () => {
       throw new Error('Expected array content for assistant message')
     }
 
-    const isToolContent = (c: MessageContent | ToolRequestContent) =>
-      c.type === 'tool-result'
+    const isToolResultContent = (c: MessageContent) => c.type === 'tool-result'
 
     const toolResult = assistant.content.find(
-      (c): c is ToolContent =>
-        isToolContent(c as MessageContent) && c.toolCallId === 'z',
-    ) as ToolContent
+      (c): c is ToolResultContent =>
+        isToolResultContent(c as MessageContent) &&
+        (c as ToolResultContent).toolCallId === 'z',
+    ) as ToolResultContent
 
     expect(toolResult).toBeDefined()
     expect(toolResult?.result).toContainEqual({ type: 'text', text: 'hey' })
@@ -212,7 +210,7 @@ describe('convertResponseMessages (integration)', () => {
 
     const out = convertResponseMessages({ messages: [msg] })
     const toolMsg = out[0] as ToolMessage
-    expect(toolMsg.role).toBe(MessageRole.tool)
+    expect(toolMsg.role).toBe('tool')
     expect(toolMsg.content).toContainEqual({
       type: 'tool-result',
       toolCallId: 'tid',

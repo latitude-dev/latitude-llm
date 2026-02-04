@@ -1,6 +1,6 @@
-import { MessageRole } from '@latitude-data/constants/messages'
 
 import { objectToString } from '@latitude-data/constants'
+import type { MessageRole } from '@latitude-data/constants/messages'
 import {
   Message,
   SerializedConversation,
@@ -19,20 +19,20 @@ export function formatConversation(
     messages.push(...(providerLog.output as Message[]))
   } else if ((providerLog as ProviderLogDto).response) {
     messages.push({
-      role: MessageRole.assistant,
-      content: (providerLog as ProviderLogDto).response,
+      role: 'assistant',
+      content: [{ type: 'text', text: (providerLog as ProviderLogDto).response }],
       toolCalls: providerLog.toolCalls,
     })
   } else if ((providerLog as ProviderLog).responseText) {
     messages.push({
-      role: MessageRole.assistant,
-      content: (providerLog as ProviderLog).responseText!,
+      role: 'assistant',
+      content: [{ type: 'text', text: (providerLog as ProviderLog).responseText! }],
       toolCalls: providerLog.toolCalls,
     })
   } else if ((providerLog as ProviderLog).responseObject) {
     messages.push({
-      role: MessageRole.assistant,
-      content: objectToString((providerLog as ProviderLog).responseObject),
+      role: 'assistant',
+      content: [{ type: 'text', text: objectToString((providerLog as ProviderLog).responseObject) }],
       toolCalls: [],
     })
   }
@@ -78,7 +78,7 @@ function formatMessages(messages: Message[]) {
       message.content = message.content.map((content) => {
         delete (content as any)?._promptlSourceMap
         return content
-      })
+      }) as typeof message.content
     }
     return message
   })
@@ -99,9 +99,9 @@ function formatMessages(messages: Message[]) {
     all: messages,
     first: messages[0] || null,
     last: messages[messages.length - 1] || null,
-    user: formatRoleMessages(MessageRole.user),
-    system: formatRoleMessages(MessageRole.system),
-    assistant: formatRoleMessages(MessageRole.assistant),
+    user: formatRoleMessages('user'),
+    system: formatRoleMessages('system'),
+    assistant: formatRoleMessages('assistant'),
   }
 }
 

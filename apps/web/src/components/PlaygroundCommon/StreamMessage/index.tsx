@@ -1,6 +1,7 @@
 import {
   Message as ConversationMessage,
-  MessageRole,
+  ReasoningContent,
+  TextContent,
 } from '@latitude-data/constants/messages'
 import { Message } from '$/components/ChatWrapper'
 
@@ -17,34 +18,25 @@ export function StreamMessage({
 }) {
   if (responseStream === undefined && reasoningStream === undefined) return null
 
-  if (messages.length < chainLength - 1) {
-    return (
-      <Message
-        role={MessageRole.assistant}
-        content={[
+  const content = [
+    ...(reasoningStream !== undefined
+      ? [
           {
-            type: 'text',
-            reasoning: reasoningStream,
-            isReasoning: true,
-            text: responseStream,
-          },
-        ]}
-        animatePulse
-      />
-    )
+            type: 'reasoning',
+            text: reasoningStream,
+            isStreaming: true,
+          } as ReasoningContent,
+        ]
+      : []),
+    {
+      type: 'text',
+      text: responseStream,
+    } as TextContent,
+  ]
+
+  if (messages.length < chainLength - 1) {
+    return <Message role='assistant' content={content} animatePulse />
   }
 
-  return (
-    <Message
-      role={MessageRole.assistant}
-      content={[
-        {
-          type: 'text',
-          reasoning: reasoningStream,
-          isReasoning: true,
-          text: responseStream,
-        },
-      ]}
-    />
-  )
+  return <Message role='assistant' content={content} />
 }

@@ -1,6 +1,6 @@
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
-import { Message, MessageRole } from '@latitude-data/constants/messages'
+import { Message } from '@latitude-data/constants/messages'
 import {
   ChainError,
   LatitudeError,
@@ -34,7 +34,7 @@ const MODEL = 'gpt-4o'
 
 const responseMessages: Message[] = [
   {
-    role: MessageRole.assistant,
+    role: 'assistant',
     toolCalls: [],
     content: [
       {
@@ -437,7 +437,7 @@ describe('POST /run', () => {
               type: ChainEventTypes.ChainCompleted,
               messages: [
                 {
-                  role: MessageRole.assistant,
+                  role: 'assistant',
                   toolCalls: [
                     {
                       id: 'fake-tool-call-id',

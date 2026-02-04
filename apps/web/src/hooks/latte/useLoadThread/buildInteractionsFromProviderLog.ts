@@ -49,8 +49,8 @@ function applyToolResult(
   return [...interactions.slice(0, -1), lastInteraction]
 }
 
-type AssitantToolContent = ToolRequestContent
-function buildStepGroup(content: AssitantToolContent) {
+type AssitantToolResultContent = ToolRequestContent
+function buildStepGroup(content: AssitantToolResultContent) {
   const toolCallId = content.toolCallId
   const toolName = content.toolName
   const args = content.args

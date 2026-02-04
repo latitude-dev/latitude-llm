@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { Providers, VercelConfig } from '@latitude-data/constants'
-import { Message, MessageRole } from '@latitude-data/constants/messages'
+import { Message } from '@latitude-data/constants/messages'
 import * as telemetryModule from '../../../telemetry'
 import { TelemetryContext } from '../../../telemetry'
 import { ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
@@ -22,7 +22,7 @@ function createMockConfig(model: string): VercelConfig {
 }
 
 function createMockMessages(content: string): Message[] {
-  return [{ role: MessageRole.user, content }] as unknown as Message[]
+  return [{ role: 'user', content }] as unknown as Message[]
 }
 
 describe('recordAbortedCompletion', () => {
@@ -81,7 +81,7 @@ describe('recordAbortedCompletion', () => {
     expect(endMock).toHaveBeenCalledWith({
       output: [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: 'This is the partial response' }],
         },
       ],
@@ -108,7 +108,7 @@ describe('recordAbortedCompletion', () => {
     expect(endMock).toHaveBeenCalledWith({
       output: [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [{ type: 'text', text: '' }],
         },
       ],
@@ -136,7 +136,7 @@ describe('recordAbortedCompletion', () => {
     expect(endMock).toHaveBeenCalledWith({
       output: [
         {
-          role: MessageRole.assistant,
+          role: 'assistant',
           content: [
             {
               type: 'text',

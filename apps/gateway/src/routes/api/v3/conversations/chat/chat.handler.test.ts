@@ -1,4 +1,4 @@
-import { Message, MessageRole } from '@latitude-data/constants/messages'
+import { Message } from '@latitude-data/constants/messages'
 import {
   ChainError,
   LatitudeError,
@@ -72,7 +72,7 @@ let provider: ProviderApiKey
 
 const stepMessages: Message[] = [
   {
-    role: MessageRole.assistant,
+    role: 'assistant',
     toolCalls: [],
     content: [
       {
@@ -128,7 +128,7 @@ describe('POST /chat', () => {
             stream: true,
             messages: [
               {
-                role: MessageRole.user,
+                role: 'user',
                 content: 'fake-user-content',
               },
             ],
@@ -158,7 +158,7 @@ describe('POST /chat', () => {
         stream: true,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',
@@ -490,7 +490,7 @@ describe('POST /chat', () => {
         stream: false,
         messages: [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
                 type: 'text',

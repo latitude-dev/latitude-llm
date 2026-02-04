@@ -1,6 +1,5 @@
 import { memo } from 'react'
 
-import { MessageRole } from '@latitude-data/constants/messages'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import type { MessageProps } from './types'
@@ -15,15 +14,15 @@ export const Message = memo(
       return <DebugMessage role={role} isStreaming={isStreaming} {...rest} />
     }
 
-    if (role === MessageRole.assistant) {
+    if (role === 'assistant') {
       return <AssistantMessage isStreaming={isStreaming} {...rest} />
     }
 
-    if (role === MessageRole.user) {
+    if (role === 'user') {
       return <UserMessage {...rest} />
     }
 
-    if (role === MessageRole.system) {
+    if (role === 'system') {
       return <SystemMessage {...rest} />
     }
 

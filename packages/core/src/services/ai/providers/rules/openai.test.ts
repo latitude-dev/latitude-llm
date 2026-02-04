@@ -1,6 +1,5 @@
 import {
   type Message,
-  MessageRole,
 } from '@latitude-data/constants/messages'
 import { describe, expect, it } from 'vitest'
 
@@ -14,11 +13,11 @@ describe('applyOpenAIRules', () => {
   it('Warns when model is in the o1 family and has system messages', () => {
     const messages = [
       {
-        role: MessageRole.system,
+        role: 'system',
         content: [{ type: 'text', text: 'You are a helpful chatbot' }],
       },
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: 'Respond to the user' }],
       },
     ] as Message[]
@@ -41,7 +40,7 @@ describe('applyOpenAIRules', () => {
   it('convert system messages to user messages when model is an old version in the o1 family', () => {
     const messages = [
       {
-        role: MessageRole.system,
+        role: 'system',
         content: [{ type: 'text', text: 'You are a helpful chatbot' }],
       },
     ] as Message[]
@@ -54,7 +53,7 @@ describe('applyOpenAIRules', () => {
 
     expect(rules.messages).toEqual([
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: 'You are a helpful chatbot' }],
       },
     ])
@@ -66,11 +65,11 @@ describe('applyOpenAIRules', () => {
 
     const messages = [
       {
-        role: MessageRole.system,
+        role: 'system',
         content: [{ type: 'text', text: 'You are a helpful chatbot' }],
       },
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: 'Respond to the user' }],
       },
     ] as Message[]
@@ -90,11 +89,11 @@ describe('applyOpenAIRules', () => {
 
     const messages = [
       {
-        role: MessageRole.system,
+        role: 'system',
         content: [{ type: 'text', text: 'You are a helpful chatbot' }],
       },
       {
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: 'Respond to the user' }],
       },
     ] as Message[]

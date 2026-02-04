@@ -48,7 +48,7 @@ export type LegacyVercelSDKToolResultPart = Omit<ToolResultPart, 'output'> & {
   result: string | ToolResultPart['output']
 }
 
-export type LegacyVercelSDKVersion4ToolContent =
+export type LegacyVercelSDKVersion4ToolResultContent =
   Array<LegacyVercelSDKToolResultPart>
 export type LegacyResponseMessage = AssistantMessage | ToolMessage
 export type LegacyVercelSDKVersion4Usage = {

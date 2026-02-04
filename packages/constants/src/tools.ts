@@ -3,8 +3,7 @@ import {
   MessageContent,
   ToolCall,
   ToolRequestContent,
-  ToolContent,
-  MessageRole,
+  ToolResultContent,
   ToolMessage,
 } from './messages'
 import { ToolCallContent as ToolRequest } from 'promptl-ai'
@@ -189,11 +188,11 @@ function buildToolResultMessage(toolCallResponses: ToolCallResponse[]) {
           ? parseToolResponseResult(toolCallResponse.result)
           : toolCallResponse.result,
       isError: toolCallResponse.isError || false,
-    } as ToolContent
+    } as ToolResultContent
   })
 
   return {
-    role: MessageRole.tool,
+    role: 'tool',
     content: toolResults,
   } as ToolMessage
 }
