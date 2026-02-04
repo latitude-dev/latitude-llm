@@ -1,4 +1,4 @@
-import { LogSources } from '@latitude-data/constants'
+import { LogSources, Message } from '@latitude-data/constants'
 import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants/ai'
 import { SimulationSettings } from '@latitude-data/constants/simulation'
 import { LanguageModelUsage as LanguageModelUsageType } from '../../../../constants'
@@ -30,6 +30,7 @@ export type BackgroundRunJobData = {
   tools?: string[]
   mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
+  messages?: Message[]
   source?: LogSources
   simulationSettings?: SimulationSettings
   activeDeploymentTest?: DeploymentTest

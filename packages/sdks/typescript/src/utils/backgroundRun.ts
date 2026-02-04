@@ -27,6 +27,7 @@ export async function backgroundRun<
     tools,
     customIdentifier,
     userMessage,
+    messages,
     mcpHeaders,
     onError,
     options,
@@ -63,6 +64,7 @@ export async function backgroundRun<
       customIdentifier,
       tools: waitForTools(tools),
       userMessage,
+      messages,
       mcpHeaders,
     },
   })

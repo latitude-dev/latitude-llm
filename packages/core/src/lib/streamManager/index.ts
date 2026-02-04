@@ -74,6 +74,7 @@ export type StreamManagerProps = {
   abortSignal?: AbortSignal
   uuid?: string
   messages?: Message[]
+  appendMessages?: Message[]
   tokenUsage?: LanguageModelUsage
   tools?: Record<string, ToolHandler>
   mcpHeaders?: Record<string, Record<string, string>>
