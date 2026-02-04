@@ -1,7 +1,7 @@
 import {
   MessageContent,
   ToolContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 
 export type MessageProps = {
   role: string

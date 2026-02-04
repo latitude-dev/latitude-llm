@@ -3,7 +3,7 @@
 import {
   ToolContent,
   ToolRequestContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { ToolSource } from '@latitude-data/constants/toolSources'
 import { useMemo } from 'react'
 import { IntegrationToolCard } from './ToolCall/Integration'

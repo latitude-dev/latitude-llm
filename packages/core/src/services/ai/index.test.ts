@@ -3,7 +3,7 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   type Message,
   MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { APICallError } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'

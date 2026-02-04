@@ -1,6 +1,6 @@
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
-import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { Message, MessageRole } from '@latitude-data/constants/messages'
 import {
   ChainError,
   LatitudeError,
@@ -19,11 +19,7 @@ import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChainEventTypes } from '@latitude-data/constants'
-import {
-  LegacyChainEventTypes,
-  LogSources,
-  StreamEventTypes,
-} from '@latitude-data/core/constants'
+import { LogSources, StreamEventTypes } from '@latitude-data/core/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
@@ -201,7 +197,7 @@ describe('POST /run', () => {
           controller.enqueue({
             event: StreamEventTypes.Latitude,
             data: {
-              type: LegacyChainEventTypes.Complete,
+              type: ChainEventTypes.ChainCompleted,
               response: {
                 text: 'Hello',
                 usage: {},
@@ -571,7 +567,7 @@ describe('POST /run', () => {
           controller.enqueue({
             event: StreamEventTypes.Latitude,
             data: {
-              type: LegacyChainEventTypes.Complete,
+              type: ChainEventTypes.ChainCompleted,
               response: {
                 text: 'Hello',
                 usage: {},

@@ -8,7 +8,7 @@ import {
   PaymentRequiredError,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
-import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { Message, MessageRole } from '@latitude-data/constants/messages'
 import { LogSources } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import * as aiModule from '../../../services/ai'

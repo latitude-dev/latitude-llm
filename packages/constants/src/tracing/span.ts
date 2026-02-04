@@ -1,7 +1,7 @@
 import { FinishReason } from 'ai'
-import { Message } from 'promptl-ai'
 import { LogSources } from '../models'
 import { AssembledSpan } from './trace'
+import { Message } from '../messages'
 
 export enum SpanKind {
   Internal = 'internal',

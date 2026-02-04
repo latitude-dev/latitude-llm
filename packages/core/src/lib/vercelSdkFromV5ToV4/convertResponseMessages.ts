@@ -3,7 +3,7 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   AssistantMessage,
   ToolMessage,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { Provider, Translator } from 'rosetta-ai'
 import { AIReturn } from '../../services/ai'

@@ -1,5 +1,5 @@
 import type { ThinkToolArgs } from '@latitude-data/core/services/latitudeTools/think/types'
-import { ToolRequestContent } from '@latitude-data/constants/legacyCompiler'
+import { ToolRequestContent } from '@latitude-data/constants/messages'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useState } from 'react'
 import {

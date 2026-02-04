@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import {
   MessageContent,
   ToolContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
 import { ProseColor, TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'

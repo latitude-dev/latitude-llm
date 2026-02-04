@@ -1,4 +1,4 @@
-import type { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import { Database } from '../../client'
 import {
   EVALUATION_SCORE_SCALE,

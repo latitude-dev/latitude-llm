@@ -16,7 +16,7 @@ import { createProviderLog } from '../../services/providerLogs/create'
 import { helpers } from './helpers'
 import { createChain } from 'promptl-ai'
 import { PartialConfig } from '../../services/ai'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import { Message } from '@latitude-data/constants/messages'
 
 export type IDocumentLogData = {
   document: DocumentVersion

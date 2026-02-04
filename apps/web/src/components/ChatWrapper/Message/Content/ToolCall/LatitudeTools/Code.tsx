@@ -2,7 +2,7 @@ import { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode
 import {
   ToolContent,
   ToolRequestContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { useMemo, useState } from 'react'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { LanguageModelUsage } from 'ai'
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/messages'
 import * as factories from '../../../tests/factories'
 
 import { StreamType, LogSources, Providers } from '@latitude-data/constants'

@@ -17,7 +17,7 @@ import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap
 import Link from 'next/link'
 import { useTrace, useTraceWithMessages } from '$/stores/traces'
 import { adaptCompletionSpanMessagesToLegacy } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import { Message } from '@latitude-data/constants/messages'
 import { sum } from 'lodash-es'
 import { RunPanelStats } from '$/components/RunPanelStats'
 import { AnnotationFormWithoutContext } from '$/components/ChatWrapper/AnnotationFormWithoutContext'

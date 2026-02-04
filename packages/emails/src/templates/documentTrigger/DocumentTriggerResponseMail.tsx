@@ -2,7 +2,7 @@ import React from 'react'
 import {
   type AssistantMessage,
   type MessageContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { Column, Img, Row } from '@react-email/components'
 import { Text } from '../../components/Text'
 import ContainerLayout from '../../components/ContainerLayout'

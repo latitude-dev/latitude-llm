@@ -3,7 +3,7 @@ import {
   PaymentRequiredError,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import { JSONSchema7 } from 'json-schema'
 import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
 import { z } from 'zod'
@@ -29,14 +29,14 @@ type ValidatorContext = {
   workspace: WorkspaceDto
   providersMap: CachedApiKeys
   chain: PromptlChain
-  newMessages: LegacyMessage[] | undefined
+  newMessages: Message[] | undefined
   configOverrides?: ConfigOverrides
 }
 
 export type ValidatedChainStep = {
   provider: ProviderApiKey
   config: LatitudePromptConfig
-  messages: LegacyMessage[]
+  messages: Message[]
   chainCompleted: boolean
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema'
@@ -106,7 +106,7 @@ export const validateChain = async ({
     const rule = applyProviderRules({
       providerType: provider.provider,
       // TODO(compiler): review this casting
-      messages: conversation.messages as unknown as LegacyMessage[],
+      messages: conversation.messages as unknown as Message[],
       config,
     })
 
@@ -166,7 +166,7 @@ async function getChainNextStep({
   newMessages,
 }: {
   chain: PromptlChain
-  newMessages: LegacyMessage[] | undefined
+  newMessages: Message[] | undefined
 }) {
   try {
     const { completed, messages, config } = await (chain as PromptlChain).step(

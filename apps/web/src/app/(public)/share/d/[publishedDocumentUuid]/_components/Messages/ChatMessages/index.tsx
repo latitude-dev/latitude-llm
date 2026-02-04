@@ -1,4 +1,4 @@
-import { Conversation } from '@latitude-data/constants/legacyCompiler'
+import { Conversation } from '@latitude-data/constants/messages'
 import { ErrorMessage, MessageList } from '$/components/ChatWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'

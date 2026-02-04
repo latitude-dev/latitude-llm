@@ -3,7 +3,7 @@ import { memo, useMemo } from 'react'
 import {
   ImageContent,
   PromptlSourceRef,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 
 import {
   isEncodedImage,

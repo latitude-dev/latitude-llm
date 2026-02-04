@@ -1,5 +1,5 @@
 import { streamAIResponse } from './step/streamAIResponse'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import { Chain } from 'promptl-ai'
 import {
   validateChain,
@@ -48,7 +48,7 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
     this.providersMap = providersMap
   }
 
-  async step(messages?: LegacyMessage[]): Promise<void> {
+  async step(messages?: Message[]): Promise<void> {
     try {
       const chain = await validateChain({
         workspace: this.workspace,

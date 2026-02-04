@@ -4,7 +4,7 @@ import {
   Message,
   MessageRole,
   UserMessage,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type User } from '../../../schema/models/types/User'

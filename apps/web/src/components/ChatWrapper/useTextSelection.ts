@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import { Message } from '@latitude-data/constants/messages'
 import { SelectedContext } from '@latitude-data/constants'
 
 export type TextSelection = {

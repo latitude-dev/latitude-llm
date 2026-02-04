@@ -14,7 +14,6 @@ import { findLastSpanOfType } from '@latitude-data/core/services/tracing/spans/f
 import { useMemo } from 'react'
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { MessageList } from '$/components/ChatWrapper'
-import { adaptPromptlMessageToLegacy } from '@latitude-data/core/utils/promptlAdapter'
 import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SpanParameters'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Prompt]
@@ -27,7 +26,6 @@ export default {
 
 function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
   const { data: trace } = useTrace({ traceId: span.traceId })
-
 
   const completionSpan = useMemo(() => {
     if (!trace) return undefined
@@ -178,12 +176,7 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
           {completionSpanMetadata?.output && (
             <div className='flex flex-col gap-y-1'>
               <Text.H5M color='foreground'>Last output</Text.H5M>
-              <MessageList
-                debugMode
-                messages={completionSpanMetadata.output.map(
-                  adaptPromptlMessageToLegacy,
-                )}
-              />
+              <MessageList debugMode messages={completionSpanMetadata.output} />
             </div>
           )}
         </>

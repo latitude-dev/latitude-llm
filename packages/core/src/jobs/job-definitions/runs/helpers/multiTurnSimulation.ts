@@ -1,5 +1,5 @@
 import { LogSources } from '@latitude-data/constants'
-import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { Message, MessageRole } from '@latitude-data/constants/messages'
 import {
   MAX_SIMULATION_TURNS,
   SimulationSettings,

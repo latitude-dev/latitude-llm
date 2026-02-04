@@ -2,7 +2,7 @@ import { addSharedMessagesAction } from '$/actions/sdk/addSharedMessagesAction'
 import {
   Message as ConversationMessage,
   MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCallback } from 'react'
 import { readStreamableValue } from '@ai-sdk/rsc'

@@ -4,7 +4,7 @@ import {
   ToolRequestContent,
   MessageContent,
   ToolMessage,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 
 import { getDescriptionFromToolCall } from '$/hooks/latte/helpers'
 import { ProviderLogDto } from '@latitude-data/core/schema/types'

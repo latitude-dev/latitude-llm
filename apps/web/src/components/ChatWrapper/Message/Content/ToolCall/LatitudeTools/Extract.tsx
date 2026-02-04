@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react'
 import {
   ToolContent,
   ToolRequestContent,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 import { Markdown } from '@latitude-data/web-ui/atoms/Markdown'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {

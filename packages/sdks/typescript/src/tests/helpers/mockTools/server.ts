@@ -7,7 +7,7 @@ import {
   LatitudeProviderCompletedEventData,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { type Message } from '@latitude-data/constants/legacyCompiler'
+import { type Message } from '@latitude-data/constants/messages'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { vi } from 'vitest'

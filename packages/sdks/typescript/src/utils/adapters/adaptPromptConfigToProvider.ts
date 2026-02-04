@@ -1,6 +1,6 @@
 import { getOpenAIResponseTools } from '$sdk/utils/adapters/openai/getFunctionTools'
 import { ToolInputMap } from '$sdk/utils/adapters/types'
-import type { Config } from '@latitude-data/constants/legacyCompiler'
+import type { Config } from '@latitude-data/constants/messages'
 import { Adapters, ProviderAdapter } from 'promptl-ai'
 import { getAIProviderTools } from './getProviderTools'
 

@@ -19,7 +19,7 @@ import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/Pro
 import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import * as getSpanMessagesAndEvaluationResultsByIssue from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
-import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { Message, MessageRole } from '@latitude-data/constants/messages'
 import * as getSpanMessagesByIssueDocument from '../../../data-access/issues/getSpanMessagesByIssueDocument'
 import {
   CommitsRepository,

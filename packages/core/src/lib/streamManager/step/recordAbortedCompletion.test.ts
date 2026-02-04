@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { Providers, VercelConfig } from '@latitude-data/constants'
-import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { Message, MessageRole } from '@latitude-data/constants/messages'
 import * as telemetryModule from '../../../telemetry'
 import { TelemetryContext } from '../../../telemetry'
 import { ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'

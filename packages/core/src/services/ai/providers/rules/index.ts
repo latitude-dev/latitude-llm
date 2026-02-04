@@ -1,5 +1,5 @@
 import { Providers, VercelConfig } from '@latitude-data/constants'
-import type { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import { JSONValue, ModelMessage } from 'ai'
 import { Provider, Translator } from 'rosetta-ai'
 import { toCamelCaseDeep } from '../../../../lib/camelCaseRecursive'

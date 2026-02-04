@@ -10,7 +10,7 @@ import {
   SpanMetadatasRepository,
   SpansRepository,
 } from '@latitude-data/core/repositories'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import { Message } from '@latitude-data/constants/messages'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { extractActualOutput } from '@latitude-data/core/services/evaluationsV2/outputs/extract'
 import { assembleTraceWithMessages } from '@latitude-data/core/services/tracing/traces/assemble'

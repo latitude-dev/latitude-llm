@@ -10,10 +10,7 @@ import {
   VercelConfig,
 } from '@latitude-data/constants'
 import type { SimulationSettings } from '@latitude-data/constants/simulation'
-import {
-  Message as LegacyMessage,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
+import type { Message, ToolCall } from '@latitude-data/constants/messages'
 import { FinishReason } from 'ai'
 import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants/ai'
 import { omit } from 'lodash-es'
@@ -76,7 +73,7 @@ export type StreamManagerProps = {
   context: TelemetryContext
   abortSignal?: AbortSignal
   uuid?: string
-  messages?: LegacyMessage[]
+  messages?: Message[]
   tokenUsage?: LanguageModelUsage
   tools?: Record<string, ToolHandler>
   mcpHeaders?: Record<string, Record<string, string>>
@@ -105,7 +102,7 @@ export abstract class StreamManager {
 
   public $context: TelemetryContext
 
-  protected messages: LegacyMessage[]
+  protected messages: Message[]
   protected error: ChainError<RunErrorCodes> | undefined
 
   private startTime: number | undefined
@@ -118,7 +115,7 @@ export abstract class StreamManager {
   private resolveRunUsage?: (usage: LanguageModelUsage) => void
   private response: ChainStepResponse<StreamType> | undefined
   private finishReason?: FinishReason
-  private resolveMessages?: (messages: LegacyMessage[]) => void
+  private resolveMessages?: (messages: Message[]) => void
   private resolveError?: (error: ChainError<RunErrorCodes> | undefined) => void
   private resolveResponse?: (
     response: ChainStepResponse<StreamType> | undefined,
@@ -252,7 +249,7 @@ export abstract class StreamManager {
     this.step()
   }
 
-  abstract step(messages?: LegacyMessage[]): Promise<void>
+  abstract step(messages?: Message[]): Promise<void>
 
   protected startStream() {
     this.startTime = Date.now()
@@ -406,8 +403,7 @@ export abstract class StreamManager {
   }
 
   protected initializePromisedValues() {
-    const [messages, resolveMessages] =
-      createPromiseWithResolver<LegacyMessage[]>()
+    const [messages, resolveMessages] = createPromiseWithResolver<Message[]>()
     const [error, resolveError] = createPromiseWithResolver<
       ChainError<RunErrorCodes> | undefined
     >()
@@ -460,7 +456,7 @@ export abstract class StreamManager {
     finishReason,
   }: {
     response: ChainStepResponse<StreamType>
-    messages: LegacyMessage[]
+    messages: Message[]
     tokenUsage: LanguageModelUsage
     finishReason?: FinishReason
   }) {
@@ -471,9 +467,7 @@ export abstract class StreamManager {
     this.incrementRunUsage(tokenUsage)
   }
 
-  protected setMessages(messages: LegacyMessage[]) {
+  protected setMessages(messages: Message[]) {
     this.messages = messages
   }
 }
-
-export { convertToLegacyChainStream } from './legacyStreamConverter'

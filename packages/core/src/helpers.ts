@@ -3,7 +3,7 @@ import {
   ChainStepResponse,
   StreamType,
 } from '@latitude-data/constants'
-import type { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import { env } from '@latitude-data/env'
 import type { ConfigurableProp, ConfigurePropOptions } from '@pipedream/sdk'
 import { parseISO } from 'date-fns'

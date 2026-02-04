@@ -7,6 +7,7 @@ export const RUN_TEXT_RESPONSE = {
     streamType: 'text' as const,
     text: 'some-text',
     input: [],
+    output: [],
     model: 'gpt-4o',
     provider: Providers.OpenAI,
     cost: 0,

@@ -1,6 +1,6 @@
 import { MessageList } from '$/components/ChatWrapper'
 import DebugToggle from '$/components/DebugToggle'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import { Message } from '@latitude-data/constants/messages'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   AppLocalStorage,

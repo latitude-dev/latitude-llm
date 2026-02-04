@@ -9,7 +9,7 @@ import {
   sendSignedWebhook,
 } from '../../../services/webhooks'
 import { Result } from './../../../lib/Result'
-import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { Message, MessageRole } from '@latitude-data/constants/messages'
 import { Providers } from '@latitude-data/constants'
 
 // Mock the services

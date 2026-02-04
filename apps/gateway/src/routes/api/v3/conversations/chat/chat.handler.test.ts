@@ -1,4 +1,4 @@
-import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { Message, MessageRole } from '@latitude-data/constants/messages'
 import {
   ChainError,
   LatitudeError,
@@ -20,11 +20,7 @@ import {
   Providers,
 } from '@latitude-data/constants'
 import { parseSSEvent } from '$/common/parseSSEEvent'
-import {
-  LegacyChainEventTypes,
-  LogSources,
-  StreamEventTypes,
-} from '@latitude-data/core/constants'
+import { LogSources, StreamEventTypes } from '@latitude-data/core/constants'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
@@ -91,6 +87,7 @@ const step: ChainStepResponse<'text'> = {
   streamType: 'text',
   text: 'fake-response-text',
   reasoning: undefined,
+  output: [],
   usage: {
     inputTokens: 4,
     outputTokens: 6,
@@ -438,7 +435,7 @@ describe('POST /chat', () => {
         id: 0,
         event: StreamEventTypes.Latitude,
         data: {
-          type: LegacyChainEventTypes.Error,
+          type: ChainEventTypes.ChainError,
           error: {
             details: {
               errorCode: RunErrorCodes.AIRunError,
@@ -545,6 +542,7 @@ describe('POST /chat', () => {
           model: step.model,
           provider: step.provider,
           cost: step.cost,
+          output: step.output,
         },
       })
     })

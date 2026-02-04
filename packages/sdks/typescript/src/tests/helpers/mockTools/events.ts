@@ -4,7 +4,7 @@ import {
   Providers,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/messages'
 
 export const TOOLS_DOCUMENT_UUID = '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b'
 type ToolsEventsObject<T> = {
@@ -178,6 +178,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           documentLogUuid: TOOLS_DOCUMENT_UUID,
           text: '',
           input: [],
+          output: [],
           model: 'gpt-4o',
           provider: Providers.OpenAI,
           cost: 0,
@@ -957,6 +958,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           documentLogUuid: TOOLS_DOCUMENT_UUID,
           text: '',
           input: [],
+          output: [],
           model: 'gpt-4o',
           provider: Providers.OpenAI,
           cost: 0,
@@ -2167,6 +2169,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           documentLogUuid: TOOLS_DOCUMENT_UUID,
           text: "- **Barcelona**: It's 24°C, so I recommend wearing light layers, like a t-shirt with a light jacket or cardigan, especially if you're going to be out in the evening.\n\n- **Miami**: It's hot at 30°C! Make sure to wear light, breathable clothing, and don't forget sunscreen and a hat to protect yourself from the sun.\n\n- **Boston**: It's quite chilly at 10°C. Please wear warm clothes, like a sweater or a jacket, and consider a scarf and gloves if you'll be outside for a while.",
           input: [],
+          output: [],
           model: 'gpt-4o',
           provider: Providers.OpenAI,
           cost: 0,

@@ -1,4 +1,4 @@
-import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import { Message, ToolCall } from '@latitude-data/constants/messages'
 import { FinishReason, TextStreamPart, Tool } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
@@ -8,7 +8,7 @@ import {
   type ReplaceTextDelta,
 } from './ai/vercelSdkV5ToV4'
 import { ParameterType } from './config'
-import { LatitudeEventData, LegacyChainEventTypes } from './events'
+import { LatitudeEventData } from './events'
 import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
 import { Providers } from '.'
 
@@ -97,7 +97,7 @@ type BaseResponse = {
   provider: Providers
   cost: number
   input: Message[]
-  output?: LegacyResponseMessage[] // TODO: Make this non-optional when we remove __deprecated
+  output: LegacyResponseMessage[]
 }
 
 export type ChainStepTextResponse = BaseResponse & {
@@ -122,51 +122,6 @@ export enum StreamEventTypes {
   Latitude = 'latitude-event',
   Provider = 'provider-event',
 }
-
-export type LegacyChainEvent =
-  | {
-      data: LegacyLatitudeEventData
-      event: StreamEventTypes.Latitude
-    }
-  | {
-      data: ProviderData
-      event: StreamEventTypes.Provider
-    }
-
-export type LegacyLatitudeStepEventData = {
-  type: LegacyChainEventTypes.Step
-  config: LatitudePromptConfig
-  isLastStep: boolean
-  messages: Message[]
-  documentLogUuid?: string
-}
-
-export type LegacyLatitudeStepCompleteEventData = {
-  type: LegacyChainEventTypes.StepComplete
-  response: ChainStepResponse<StreamType>
-  documentLogUuid?: string
-}
-
-export type LegacyLatitudeChainCompleteEventData = {
-  type: LegacyChainEventTypes.Complete
-  config: LatitudePromptConfig
-  messages?: Message[]
-  object?: any
-  response: ChainStepResponse<StreamType>
-  finishReason: FinishReason
-  documentLogUuid?: string
-}
-
-export type LegacyLatitudeChainErrorEventData = {
-  type: LegacyChainEventTypes.Error
-  error: Error
-}
-
-export type LegacyLatitudeEventData =
-  | LegacyLatitudeStepEventData
-  | LegacyLatitudeStepCompleteEventData
-  | LegacyLatitudeChainCompleteEventData
-  | LegacyLatitudeChainErrorEventData
 
 export type RunSyncAPIResponse<S extends AssertedStreamType = 'text'> = {
   uuid: string

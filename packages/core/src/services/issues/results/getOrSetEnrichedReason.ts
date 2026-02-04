@@ -19,7 +19,7 @@ import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { findCommitById } from '../../../data-access/commits'
 import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
 import { adaptCompletionSpanMessagesToLegacy } from '../../tracing/spans/fetching/findCompletionSpanFromTrace'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import { Message } from '@latitude-data/constants/messages'
 
 /**
  * Builds a reason for an evaluation result, optionally generalizing it based on selected contexts.

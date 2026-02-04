@@ -11,7 +11,7 @@ import {
   type Message,
   type MessageRole,
   type ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'

@@ -1,4 +1,4 @@
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/messages'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { Latitude } from '../../dist/index.js'
 

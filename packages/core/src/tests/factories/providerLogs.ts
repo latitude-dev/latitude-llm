@@ -5,7 +5,7 @@ import { LogSources, Providers } from '@latitude-data/constants'
 import { type ProviderLog } from '../../schema/models/types/ProviderLog'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { createProviderLog as createProviderLogService } from '../../services/providerLogs/create'
-import type { ToolCall, Message } from '@latitude-data/constants/legacyCompiler'
+import type { ToolCall, Message } from '@latitude-data/constants/messages'
 
 export type IProviderLogData = {
   documentLogUuid: string

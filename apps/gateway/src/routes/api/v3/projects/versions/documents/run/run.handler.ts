@@ -1,7 +1,4 @@
-import {
-  getData,
-  publishDocumentRunRequestedEvent,
-} from '$/common/documents/getData'
+import { getData } from '$/common/documents/getData'
 import { createRequestAbortSignal } from '$/common/createRequestAbortSignal'
 import { captureException } from '$/common/tracer'
 import { AppRouteHandler } from '$/openApi/types'
@@ -18,11 +15,17 @@ import { streamSSE } from 'hono/streaming'
 import type { Context } from 'hono'
 import { RunRoute } from './run.route'
 import { resolveAbTestRouting } from '@latitude-data/core/services/deploymentTests/resolveAbTestRouting'
-import { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
+import {
+  Workspace,
+  WorkspaceDto,
+} from '@latitude-data/core/schema/models/types/Workspace'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
+import { findFirstUserInWorkspace } from '@latitude-data/core/data-access/users'
+import { CommitsRepository } from '@latitude-data/core/repositories'
+import { publisher } from '@latitude-data/core/events/publisher'
 
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
@@ -313,4 +316,38 @@ async function shouldRunInBackgroundMode({
   ).then((r) => r.unwrap())
 
   return backgroundRunsFeatureEnabled
+}
+
+async function publishDocumentRunRequestedEvent({
+  workspace,
+  project,
+  commit,
+  document,
+  parameters,
+}: {
+  workspace: Workspace
+  project: Project
+  commit: Commit
+  document: DocumentVersion
+  parameters: Record<string, any>
+}) {
+  const user = await findFirstUserInWorkspace(workspace)
+
+  const commitsScope = new CommitsRepository(workspace.id)
+  const headCommit = await commitsScope.getHeadCommit(project.id)
+
+  if (user) {
+    publisher.publishLater({
+      type: 'documentRunRequested',
+      data: {
+        parameters,
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        isLiveCommit: headCommit?.uuid === commit.uuid,
+        documentPath: document.path,
+        workspaceId: workspace.id,
+        userEmail: user.email,
+      },
+    })
+  }
 }

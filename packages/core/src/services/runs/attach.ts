@@ -21,7 +21,7 @@ import { Result } from '../../lib/Result'
 import { type Project } from '../../schema/models/types/Project'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { RedisStream } from '../../lib/redisStream'
-import { ToolCall } from '@latitude-data/constants/legacyCompiler'
+import { ToolCall } from '@latitude-data/constants/messages'
 
 export async function attachRun({
   run,

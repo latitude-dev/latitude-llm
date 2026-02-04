@@ -1,14 +1,14 @@
 'use client'
 
 import {
-  Message as ConversationMessage,
+  Message,
   MessageRole,
   ToolContent,
   ToolMessage,
-} from '@latitude-data/constants/legacyCompiler'
+} from '@latitude-data/constants/messages'
 
 import { memo, useMemo } from 'react'
-import { Message } from '..'
+import { Message as MessageComponent } from '..'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 
@@ -36,7 +36,7 @@ export const MessageList = memo(
     toolContentMap: _toolContentMap,
     isStreaming = false,
   }: {
-    messages: ConversationMessage[]
+    messages: Message[]
     parameters?: string[]
     debugMode?: boolean
     toolContentMap?: Record<string, ToolContent>
@@ -93,7 +93,7 @@ export const MessageList = memo(
             originalIndexMap.get(displayIndex) ?? displayIndex
           return (
             <div key={displayIndex} data-message-index={originalIndex}>
-              <Message
+              <MessageComponent
                 role={message.role}
                 content={message.content}
                 parameters={parameters}

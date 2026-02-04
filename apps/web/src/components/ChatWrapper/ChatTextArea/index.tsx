@@ -1,6 +1,6 @@
 'use client'
 
-import { ToolMessage } from '@latitude-data/constants/legacyCompiler'
+import { ToolMessage } from '@latitude-data/constants/messages'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { cn } from '@latitude-data/web-ui/utils'
 import { KeyboardEvent, useCallback, useState } from 'react'

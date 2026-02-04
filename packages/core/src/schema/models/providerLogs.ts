@@ -1,4 +1,4 @@
-import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import type { Message, ToolCall } from '@latitude-data/constants/messages'
 import {
   bigint,
   bigserial,

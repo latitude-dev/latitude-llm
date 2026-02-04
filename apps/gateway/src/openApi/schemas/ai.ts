@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi'
 import {
-  LegacyChainEventTypes,
+  ChainEventTypes,
   StreamEventTypes,
   traceContextSchema,
 } from '@latitude-data/constants'
@@ -256,7 +256,79 @@ export const chainEventDtoResponseSchema = z
     discriminator: { propertyName: 'streamType' },
   })
 
-export const legacyChainEventDtoSchema = z
+const promptSourceSchema = z.object({
+  commitUuid: z.string().optional(),
+  documentUuid: z.string().optional(),
+  evaluationUuid: z.string().optional(),
+})
+
+const latitudeEventBaseSchema = z.object({
+  timestamp: z.number(),
+  messages: messagesSchema,
+  uuid: z.string(),
+  source: promptSourceSchema.optional(),
+})
+
+const chainErrorSchema = z.object({
+  name: z.string(),
+  message: z.string(),
+  stack: z.string().optional(),
+  code: z.string().optional(),
+  status: z.number().optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
+})
+
+const latitudeEventDataSchema = z
+  .discriminatedUnion('type', [
+    latitudeEventBaseSchema.extend({
+      type: z.literal(ChainEventTypes.ChainStarted),
+    }),
+    latitudeEventBaseSchema.extend({
+      type: z.literal(ChainEventTypes.StepStarted),
+    }),
+    latitudeEventBaseSchema.extend({
+      type: z.literal(ChainEventTypes.ProviderStarted),
+      config: configSchema,
+    }),
+    latitudeEventBaseSchema.extend({
+      type: z.literal(ChainEventTypes.ProviderCompleted),
+      providerLogUuid: z.string(),
+      tokenUsage: languageModelUsageSchema,
+      finishReason: z.string(),
+      response: chainEventDtoResponseSchema,
+    }),
+    latitudeEventBaseSchema.extend({
+      type: z.literal(ChainEventTypes.ToolsStarted),
+      tools: z.array(toolCallSchema),
+    }),
+    latitudeEventBaseSchema.extend({
+      type: z.literal(ChainEventTypes.ToolCompleted),
+    }),
+    latitudeEventBaseSchema.extend({
+      type: z.literal(ChainEventTypes.StepCompleted),
+    }),
+    latitudeEventBaseSchema.extend({
+      type: z.literal(ChainEventTypes.ChainCompleted),
+      response: chainEventDtoResponseSchema.optional(),
+      toolCalls: z.array(toolCallSchema),
+      tokenUsage: languageModelUsageSchema,
+      finishReason: z.string(),
+    }),
+    latitudeEventBaseSchema.extend({
+      type: z.literal(ChainEventTypes.ChainError),
+      error: chainErrorSchema,
+    }),
+    latitudeEventBaseSchema.extend({
+      type: z.literal(ChainEventTypes.IntegrationWakingUp),
+      integrationName: z.string(),
+    }),
+  ])
+  .openapi({
+    description: 'Latitude event data',
+    discriminator: { propertyName: 'type' },
+  })
+
+export const chainEventDtoSchema = z
   .discriminatedUnion('event', [
     z.object({
       event: z.literal(StreamEventTypes.Provider),
@@ -268,45 +340,7 @@ export const legacyChainEventDtoSchema = z
     }),
     z.object({
       event: z.literal(StreamEventTypes.Latitude),
-      data: z
-        .discriminatedUnion('type', [
-          z.object({
-            type: z.literal(LegacyChainEventTypes.Step),
-            config: configSchema,
-            isLastStep: z.boolean(),
-            messages: z.array(messageSchema),
-            uuid: z.string().optional(),
-          }),
-          z.object({
-            type: z.literal(LegacyChainEventTypes.StepComplete),
-            response: chainEventDtoResponseSchema,
-            uuid: z.string().optional(),
-          }),
-          z.object({
-            type: z.literal(LegacyChainEventTypes.Complete),
-            config: configSchema,
-            messages: z.array(messageSchema).optional(),
-            object: z.record(z.string(), z.any()).optional().openapi({
-              type: 'object',
-              additionalProperties: true,
-              description: 'Complete event object data as key-value pairs',
-            }),
-            response: chainEventDtoResponseSchema,
-            uuid: z.string().optional(),
-          }),
-          z.object({
-            type: z.literal(LegacyChainEventTypes.Error),
-            error: z.object({
-              name: z.string(),
-              message: z.string(),
-              stack: z.string().optional(),
-            }),
-          }),
-        ])
-        .openapi({
-          description: 'Latitude event data',
-          discriminator: { propertyName: 'type' },
-        }),
+      data: latitudeEventDataSchema,
     }),
   ])
   .openapi({

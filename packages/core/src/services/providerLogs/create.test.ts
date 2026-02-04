@@ -4,7 +4,7 @@ import * as factories from '../../tests/factories'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { Providers, LogSources } from '@latitude-data/constants'
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/messages'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { createProviderLog, type CreateProviderLogProps } from './create'
 

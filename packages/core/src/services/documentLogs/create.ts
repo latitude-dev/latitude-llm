@@ -1,4 +1,4 @@
-import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import type { Message, ToolCall } from '@latitude-data/constants/messages'
 
 import { type Commit } from '../../schema/models/types/Commit'
 import { LogSources } from '../../constants'

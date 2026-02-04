@@ -1,4 +1,4 @@
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole } from '@latitude-data/constants/messages'
 import { Latitude, LogSources } from '$sdk/index'
 import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'

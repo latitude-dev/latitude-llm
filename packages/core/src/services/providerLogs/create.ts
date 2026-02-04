@@ -1,7 +1,4 @@
-import type {
-  Message as LegacyMessage,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
+import type { Message, ToolCall } from '@latitude-data/constants/messages'
 import { FinishReason } from 'ai'
 
 import { LogSources, Providers } from '@latitude-data/constants'
@@ -56,7 +53,7 @@ export type CreateProviderLogProps = {
   providerType?: Providers
   model?: string
   config?: PartialConfig
-  messages: LegacyMessage[]
+  messages: Message[]
   usage?: LanguageModelUsage
   duration?: number
   source: LogSources

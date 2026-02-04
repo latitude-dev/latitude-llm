@@ -1,4 +1,4 @@
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/messages'
 import { promisify } from 'node:util'
 import { gzip, gunzip } from 'node:zlib'
 import { cache } from '../../cache'
@@ -13,7 +13,7 @@ export type ConversationCacheEntry = {
   commitUuid: string
   documentUuid: string
   providerId?: number
-  messages: LegacyMessage[]
+  messages: Message[]
 }
 
 /** Internal type that wraps the entry with TTL metadata */
