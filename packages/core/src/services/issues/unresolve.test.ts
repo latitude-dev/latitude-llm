@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { Providers } from '@latitude-data/constants'
 import { database } from '../../client'
-import { EvaluationType, LlmEvaluationMetric } from '../../constants'
+import {
+  EvaluationType,
+  EvaluationTriggerMode,
+  LlmEvaluationMetric,
+} from '../../constants'
 import { createEvaluationV2 } from '../../tests/factories/evaluationsV2'
 import { createIssue } from '../../tests/factories/issues'
 import { createProject } from '../../tests/factories/projects'
@@ -202,7 +206,9 @@ describe('unresolveIssue', () => {
         passDescription: 'Pass',
         failDescription: 'Fail',
       },
-      evaluateLiveLogs: false, // Start with live logs disabled
+      trigger: {
+        mode: EvaluationTriggerMode.Disabled,
+      },
     })
 
     // Link evaluation to issue and mark as ignored
@@ -228,7 +234,7 @@ describe('unresolveIssue', () => {
       .where(eq(evaluationVersions.id, evaluation.versionId))
 
     expect(updatedEval!.ignoredAt).toBeNull()
-    expect(updatedEval!.evaluateLiveLogs).toBe(true)
+    expect(updatedEval!.configuration.trigger?.mode).toBe(EvaluationTriggerMode.EveryInteraction)
   })
 
   it('unignores evaluations even if they were not ignored during resolve', async () => {
@@ -275,7 +281,9 @@ describe('unresolveIssue', () => {
         passDescription: 'Pass',
         failDescription: 'Fail',
       },
-      evaluateLiveLogs: false, // Start with live logs disabled but not ignored
+      trigger: {
+        mode: EvaluationTriggerMode.Disabled,
+      },
     })
 
     // Link evaluation to issue (not ignored)
@@ -301,6 +309,6 @@ describe('unresolveIssue', () => {
       .where(eq(evaluationVersions.id, evaluation.versionId))
 
     expect(updatedEval!.ignoredAt).toBeNull()
-    expect(updatedEval!.evaluateLiveLogs).toBe(true)
+    expect(updatedEval!.configuration.trigger?.mode).toBe(EvaluationTriggerMode.EveryInteraction)
   })
 })

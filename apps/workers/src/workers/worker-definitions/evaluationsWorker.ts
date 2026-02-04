@@ -6,6 +6,7 @@ import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 const jobMappings = {
   runEvaluationV2Job: jobs.runEvaluationV2Job,
   runEvaluationForExperimentJob: jobs.runEvaluationForExperimentJob,
+  debouncedEvaluationJob: jobs.debouncedEvaluationJob,
 }
 
 export function startEvaluationsWorker() {

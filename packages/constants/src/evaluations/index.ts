@@ -190,7 +190,6 @@ export type EvaluationV2<
   metric: M
   alignmentMetricMetadata?: AlignmentMetricMetadata | null
   configuration: EvaluationConfiguration<T, M>
-  evaluateLiveLogs?: boolean | null
   createdAt: Date
   updatedAt: Date
   ignoredAt?: Date | null
@@ -270,12 +269,6 @@ export const EvaluationSettingsSchema = z.object({
   type: EvaluationTypeSchema,
   metric: EvaluationMetricSchema,
   configuration: EvaluationConfigurationSchema,
-})
-
-export type EvaluationOptions = Pick<EvaluationV2, 'evaluateLiveLogs'>
-
-export const EvaluationOptionsSchema = z.object({
-  evaluateLiveLogs: z.boolean().nullable().optional(),
 })
 
 export const EVALUATION_SCORE_SCALE = 100

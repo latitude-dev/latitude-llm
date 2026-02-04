@@ -3,9 +3,9 @@ import { desc, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { database } from '../../client'
 import {
-  EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
+  EvaluationTriggerMode,
   RuleEvaluationMetric,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
@@ -31,7 +31,6 @@ describe('createEvaluationV2', () => {
     EvaluationType.Rule,
     RuleEvaluationMetric.ExactMatch
   >
-  let options: EvaluationOptions
   let issueId: number | null
   let settingsLLMasJudgeBinary: EvaluationSettings<
     EvaluationType.Llm,
@@ -78,10 +77,10 @@ describe('createEvaluationV2', () => {
           parsingFormat: 'string',
         },
         caseInsensitive: false,
+        trigger: {
+          mode: EvaluationTriggerMode.Disabled,
+        },
       },
-    }
-    options = {
-      evaluateLiveLogs: false,
     }
     issueId = null
 
@@ -104,6 +103,9 @@ describe('createEvaluationV2', () => {
         criteria: 'criteria',
         passDescription: 'pass',
         failDescription: 'fail',
+        trigger: {
+          mode: EvaluationTriggerMode.Disabled,
+        },
       },
     }
 
@@ -125,7 +127,6 @@ describe('createEvaluationV2', () => {
           ...settings,
           name: '',
         },
-        options: options,
         issueId,
         workspace: workspace,
       }).then((r) => r.unwrap()),
@@ -149,7 +150,6 @@ describe('createEvaluationV2', () => {
       document: document,
       commit: commit,
       settings: settingsLLMasJudgeBinary,
-      options: options,
       issueId,
       workspace: workspace,
     }).then((r) => r.unwrap())
@@ -161,7 +161,6 @@ describe('createEvaluationV2', () => {
         documentUuid: document.documentUuid,
         issueId,
         ...settingsLLMasJudgeBinary,
-        ...options,
       }),
     )
     expect(
@@ -176,7 +175,6 @@ describe('createEvaluationV2', () => {
         commitId: commit.id,
         issueId,
         ...settingsLLMasJudgeBinary,
-        ...options,
         createdAt: expect.any(Date),
       }),
     ])

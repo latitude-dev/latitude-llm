@@ -4,6 +4,7 @@ import {
   EvaluationMetric,
   EvaluationType,
   EvaluationV2,
+  EvaluationTriggerMode,
 } from '@latitude-data/constants'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -40,16 +41,36 @@ export default function EvaluateLiveLogsSwitch<
     isUpdatingEvaluation ||
     !metricSpecification?.supportsLiveEvaluation
 
-  const setEvaluateLiveLogs = useCallback(
+  const currentSettings = evaluation.configuration.trigger
+
+  const setLiveEvaluationEnabled = useCallback(
     async (value: boolean) => {
       if (isDisabled) return
       await updateEvaluation({
         documentUuid: document.documentUuid,
         evaluationUuid: evaluation.uuid,
-        options: { evaluateLiveLogs: value },
+        settings: {
+          configuration: {
+            ...evaluation.configuration,
+            trigger: {
+              ...currentSettings,
+              mode: value
+                ? (currentSettings?.mode && currentSettings.mode !== EvaluationTriggerMode.Disabled
+                    ? currentSettings.mode
+                    : EvaluationTriggerMode.EveryInteraction)
+                : EvaluationTriggerMode.Disabled,
+            },
+          },
+        },
       })
     },
-    [isDisabled, evaluation, updateEvaluation, document.documentUuid],
+    [
+      isDisabled,
+      evaluation,
+      updateEvaluation,
+      document.documentUuid,
+      currentSettings,
+    ],
   )
 
   if (!metricSpecification?.supportsLiveEvaluation) {
@@ -70,14 +91,18 @@ export default function EvaluateLiveLogsSwitch<
     )
   }
 
+  const isEnabled =
+    currentSettings?.mode !== undefined &&
+    currentSettings.mode !== EvaluationTriggerMode.Disabled
+
   return (
     <Tooltip
       asChild
       trigger={
         <div>
           <SwitchToggle
-            checked={!!evaluation.evaluateLiveLogs}
-            onCheckedChange={setEvaluateLiveLogs}
+            checked={isEnabled}
+            onCheckedChange={setLiveEvaluationEnabled}
             disabled={isDisabled}
           />
         </div>
@@ -85,7 +110,7 @@ export default function EvaluateLiveLogsSwitch<
       align='center'
       side='top'
     >
-      {evaluation.evaluateLiveLogs ? 'Disable' : 'Enable'} live evaluation
+      {isEnabled ? 'Disable' : 'Enable'} live evaluation
     </Tooltip>
   )
 }

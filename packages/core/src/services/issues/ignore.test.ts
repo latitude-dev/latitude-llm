@@ -5,6 +5,7 @@ import { database } from '../../client'
 import {
   EvaluationType,
   LlmEvaluationMetric,
+  EvaluationTriggerMode,
   RuleEvaluationMetric,
 } from '../../constants'
 import { createEvaluationV2 } from '../../tests/factories/evaluationsV2'
@@ -158,7 +159,7 @@ describe('ignoreIssue', () => {
     })
   })
 
-  it('sets ignoredAt and disables evaluateLiveLogs on associated live evaluations', async () => {
+  it('sets ignoredAt and disables trigger on associated live evaluations', async () => {
     const { workspace, project, commit, documents, user } = await createProject(
       {
         documents: { 'test-doc': 'Hello world' },
@@ -205,7 +206,9 @@ describe('ignoreIssue', () => {
         passDescription: 'Pass',
         failDescription: 'Fail',
       },
-      evaluateLiveLogs: true,
+      trigger: {
+        mode: EvaluationTriggerMode.EveryInteraction,
+      },
     })
 
     // Link evaluation to issue
@@ -224,7 +227,7 @@ describe('ignoreIssue', () => {
       .where(eq(evaluationVersions.id, evaluation.versionId))
 
     expect(updatedEval!.ignoredAt).not.toBeNull()
-    expect(updatedEval!.evaluateLiveLogs).toBe(false)
+    expect(updatedEval!.configuration.trigger?.mode).toBe(EvaluationTriggerMode.Disabled)
   })
 
   it('does not affect evaluations that do not support live evaluation', async () => {

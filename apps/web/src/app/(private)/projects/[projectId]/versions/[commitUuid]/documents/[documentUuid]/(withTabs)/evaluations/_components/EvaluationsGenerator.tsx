@@ -14,14 +14,7 @@ import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback, useMemo, useState } from 'react'
-import {
-  EvaluationOptions,
-  EvaluationSettings,
-} from '@latitude-data/core/constants'
-
-const DEFAULT_EVALUATION_OPTIONS = {
-  evaluateLiveLogs: true,
-}
+import { EvaluationSettings } from '@latitude-data/core/constants'
 
 export function EvaluationsGenerator({
   open,
@@ -46,9 +39,6 @@ export function EvaluationsGenerator({
   const { document } = useCurrentDocument()
   const [instructions, setInstructions] = useState<string>()
   const [settings, setSettings] = useState<EvaluationSettings>()
-  const [options, setOptions] = useState<Partial<EvaluationOptions>>(
-    DEFAULT_EVALUATION_OPTIONS,
-  )
   const [errors, setErrors] = useState<EvaluationV2FormErrors>()
 
   const onGenerate = useCallback(async () => {
@@ -59,8 +49,12 @@ export function EvaluationsGenerator({
     })
     if (errors) return
     setInstructions(undefined)
-    setSettings(result.settings)
-    setOptions(DEFAULT_EVALUATION_OPTIONS)
+    setSettings({
+      ...result.settings,
+      configuration: {
+        ...result.settings.configuration,
+      },
+    })
     setErrors(undefined)
   }, [
     isGeneratingEvaluation,
@@ -68,7 +62,6 @@ export function EvaluationsGenerator({
     instructions,
     setInstructions,
     setSettings,
-    setOptions,
     setErrors,
     document.documentUuid,
   ])
@@ -78,7 +71,6 @@ export function EvaluationsGenerator({
     const [result, errors] = await createEvaluation({
       documentUuid: document.documentUuid,
       settings,
-      options,
     })
     if (errors) {
       setErrors(errors)
@@ -86,7 +78,6 @@ export function EvaluationsGenerator({
       setOpen(false)
       setInstructions(undefined)
       setSettings(undefined)
-      setOptions(DEFAULT_EVALUATION_OPTIONS)
       setErrors(undefined)
 
       const { evaluation } = result
@@ -102,10 +93,8 @@ export function EvaluationsGenerator({
     isCreatingEvaluation,
     createEvaluation,
     settings,
-    options,
     setInstructions,
     setSettings,
-    setOptions,
     setErrors,
     setOpen,
     project,
@@ -185,8 +174,6 @@ export function EvaluationsGenerator({
           mode='create'
           settings={settings}
           setSettings={setSettings}
-          options={options}
-          setOptions={setOptions}
           errors={errors}
           commit={commit}
           disabled={isCreatingEvaluation}
@@ -198,12 +185,10 @@ export function EvaluationsGenerator({
     isGeneratingEvaluation,
     instructions,
     settings,
-    options,
     errors,
     commit,
     setInstructions,
     setSettings,
-    setOptions,
     onGenerate,
     onCreate,
   ])

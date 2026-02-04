@@ -43,6 +43,22 @@ export function runEvaluationV2JobKey({
   return `runEvaluationV2Job-${workspaceId}-${commitId}-${evaluationUuid}-${spanId}-${traceId}-${experimentUuid}-${datasetId}-${datasetLabel}-${datasetRowId}`
 }
 
+export type DebouncedEvaluationJobData = {
+  workspaceId: number
+  commitId: number
+  evaluationUuid: string
+  spanId: string
+  traceId: string
+}
+
+export function debouncedEvaluationJobKey({
+  workspaceId,
+  evaluationUuid,
+  traceId,
+}: DebouncedEvaluationJobData) {
+  return `debouncedEvaluationJob-${workspaceId}-${evaluationUuid}-${traceId}`
+}
+
 export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
   const {
     workspaceId,

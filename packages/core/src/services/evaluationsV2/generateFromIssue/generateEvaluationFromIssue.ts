@@ -2,7 +2,11 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { EvaluationType, LlmEvaluationMetric } from '../../../constants'
+import {
+  EvaluationType,
+  EvaluationTriggerMode,
+  LlmEvaluationMetric,
+} from '../../../constants'
 import { BadRequestError } from '../../../lib/errors'
 import Transaction from '../../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../../repositories'
@@ -89,10 +93,12 @@ export async function generateEvaluationFromIssue(
           description: evaluationConfig.description,
           type: EvaluationType.Llm,
           metric: LlmEvaluationMetric.Binary,
-          configuration: evaluationConfig,
-        },
-        options: {
-          evaluateLiveLogs: true,
+          configuration: {
+            ...evaluationConfig,
+            trigger: {
+              mode: EvaluationTriggerMode.EveryInteraction,
+            },
+          },
         },
         issueId: issue.id,
         document: document,

@@ -4,6 +4,7 @@ import { Providers } from '@latitude-data/constants'
 import { database } from '../../client'
 import {
   EvaluationType,
+  EvaluationTriggerMode,
   LlmEvaluationMetric,
   RuleEvaluationMetric,
 } from '../../constants'
@@ -162,7 +163,7 @@ describe('unignoreIssue', () => {
     })
   })
 
-  it('clears ignoredAt and re-enables evaluateLiveLogs on associated live evaluations', async () => {
+  it('clears ignoredAt and re-enables trigger on associated live evaluations', async () => {
     const { workspace, project, commit, documents, user } = await createProject(
       {
         documents: { 'test-doc': 'Hello world' },
@@ -206,7 +207,9 @@ describe('unignoreIssue', () => {
         passDescription: 'Pass',
         failDescription: 'Fail',
       },
-      evaluateLiveLogs: false, // Start with live logs disabled
+      trigger: {
+        mode: EvaluationTriggerMode.Disabled,
+      },
     })
 
     // Link evaluation to issue and set as ignored
@@ -232,7 +235,7 @@ describe('unignoreIssue', () => {
       .where(eq(evaluationVersions.id, evaluation.versionId))
 
     expect(updatedEval!.ignoredAt).toBeNull()
-    expect(updatedEval!.evaluateLiveLogs).toBe(true)
+    expect(updatedEval!.configuration.trigger?.mode).toBe(EvaluationTriggerMode.EveryInteraction)
   })
 
   it('does not affect evaluations that do not support live evaluation', async () => {
@@ -286,7 +289,6 @@ describe('unignoreIssue', () => {
       .from(evaluationVersions)
       .where(eq(evaluationVersions.id, evaluation.versionId))
 
-    // evaluateLiveLogs should remain as it was (null/undefined for rule evals)
     expect(updatedEval!.ignoredAt).toBeNull()
   })
 })

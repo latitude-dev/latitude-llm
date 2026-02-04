@@ -2,7 +2,6 @@ import {
   AnyPgColumn,
   bigint,
   bigserial,
-  boolean,
   index,
   jsonb,
   text,
@@ -52,8 +51,6 @@ export const evaluationVersions = latitudeSchema.table(
     alignmentMetricMetadata: jsonb(
       'alignment_metric_metadata',
     ).$type<AlignmentMetricMetadata>(),
-    // Denormalized configuration fields - create indexes if necessary
-    evaluateLiveLogs: boolean('evaluate_live_logs'),
     ...timestamps(),
     deletedAt: timestamp('deleted_at'),
     ignoredAt: timestamp('ignored_at'),

@@ -4,6 +4,7 @@ import { cache as getCache } from '../../cache'
 import { database } from '../../client'
 import {
   CLOUD_MESSAGES,
+  DEFAULT_EVALUATION_TRIGGER_SETTINGS,
   EvaluationSettings,
   EvaluationType,
   LlmEvaluationMetric,
@@ -118,6 +119,7 @@ export async function generateEvaluationV2(
       maxRating: 5,
       maxRatingDescription: result.maxRatingDescription,
       minThreshold: 3,
+      trigger: DEFAULT_EVALUATION_TRIGGER_SETTINGS,
     },
   }
 

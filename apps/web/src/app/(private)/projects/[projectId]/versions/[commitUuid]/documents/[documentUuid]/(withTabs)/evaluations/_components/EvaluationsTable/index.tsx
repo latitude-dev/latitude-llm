@@ -1,7 +1,11 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { EvaluationType, EvaluationV2 } from '@latitude-data/core/constants'
+import {
+  EvaluationType,
+  EvaluationV2,
+  EvaluationTriggerMode,
+} from '@latitude-data/core/constants'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -132,10 +136,24 @@ export function EvaluationsTable({
   const onToggleLiveEvaluation = useCallback(
     async (evaluation: EvaluationV2) => {
       if (isUpdatingEvaluation) return
+      const currentSettings = evaluation.configuration.trigger
+      const isCurrentlyEnabled =
+        currentSettings?.mode !== undefined &&
+        currentSettings.mode !== EvaluationTriggerMode.Disabled
       return await updateEvaluation({
         documentUuid: document.documentUuid,
         evaluationUuid: evaluation.uuid,
-        options: { evaluateLiveLogs: !evaluation.evaluateLiveLogs },
+        settings: {
+          configuration: {
+            ...evaluation.configuration,
+            trigger: {
+              ...currentSettings,
+              mode: isCurrentlyEnabled
+                ? EvaluationTriggerMode.Disabled
+                : EvaluationTriggerMode.EveryInteraction,
+            },
+          },
+        },
       })
     },
     [document, isUpdatingEvaluation, updateEvaluation],

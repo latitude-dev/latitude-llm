@@ -3,12 +3,14 @@ import { database } from '../../client'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
   ActualOutputConfiguration,
+  DEFAULT_EVALUATION_TRIGGER_SETTINGS,
   EvaluationMetric,
-  EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
   ExpectedOutputConfiguration,
+  EvaluationTriggerMode,
+  EvaluationTriggerSettings,
 } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -28,7 +30,6 @@ export async function validateEvaluationV2<
     mode,
     evaluation,
     settings,
-    options,
     document,
     commit,
     workspace,
@@ -37,7 +38,6 @@ export async function validateEvaluationV2<
     mode: 'create' | 'update'
     evaluation?: EvaluationV2<T, M>
     settings: EvaluationSettings<T, M>
-    options: EvaluationOptions
     document: DocumentVersion
     commit: Commit
     workspace: Workspace
@@ -123,11 +123,15 @@ export async function validateEvaluationV2<
   if (typeMetricValidation.error) {
     return Result.error(typeMetricValidation.error)
   }
+  const trigger: EvaluationTriggerSettings =
+    settings.configuration.trigger ?? DEFAULT_EVALUATION_TRIGGER_SETTINGS
+
   settings.configuration = {
     ...typeMetricValidation.value,
     reverseScale: settings.configuration.reverseScale,
     actualOutput: settings.configuration.actualOutput,
     expectedOutput: settings.configuration.expectedOutput,
+    trigger,
   }
 
   if (evaluations.find((e) => e.name === settings.name)) {
@@ -143,9 +147,34 @@ export async function validateEvaluationV2<
     )
   }
 
-  if (options.evaluateLiveLogs && !metricSpecification.supportsLiveEvaluation) {
+  if (
+    trigger.mode !== EvaluationTriggerMode.Disabled &&
+    !metricSpecification.supportsLiveEvaluation
+  ) {
     return Result.error(
       new BadRequestError('This metric does not support live evaluation'),
+    )
+  }
+
+  if (
+    trigger.debounceSeconds !== undefined &&
+    trigger.mode !== EvaluationTriggerMode.Debounced
+  ) {
+    return Result.error(
+      new BadRequestError(
+        'Debounce seconds can only be set when mode is debounced',
+      ),
+    )
+  }
+
+  if (
+    trigger.mode === EvaluationTriggerMode.Debounced &&
+    !trigger.debounceSeconds
+  ) {
+    return Result.error(
+      new BadRequestError(
+        'Debounce seconds is required when mode is debounced',
+      ),
     )
   }
 
@@ -192,8 +221,8 @@ export async function validateEvaluationV2<
     }
   }
 
-  // Note: all settings and options are explicitly returned to ensure we don't
-  // carry dangling fields from the original settings and options object
+  // Note: all settings are explicitly returned to ensure we don't
+  // carry dangling fields from the original settings object
   return Result.ok({
     settings: {
       name: settings.name,
@@ -201,9 +230,6 @@ export async function validateEvaluationV2<
       type: settings.type,
       metric: settings.metric,
       configuration: settings.configuration,
-    },
-    options: {
-      evaluateLiveLogs: options.evaluateLiveLogs,
     },
   })
 }

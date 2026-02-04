@@ -4,6 +4,7 @@ import {
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
+  EvaluationTriggerMode,
 } from '../../constants'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -95,13 +96,19 @@ async function createCompositeEvaluation(
   transaction: Transaction,
 ): PromisedResult<CompositeTarget> {
   return await transaction.call(async () => {
+    const compositeSettings = generateCompositeEvaluationSettings(evaluations)
     const createResult = await createEvaluationV2(
       {
         document,
         commit,
-        settings: generateCompositeEvaluationSettings(evaluations),
-        options: {
-          evaluateLiveLogs: false,
+        settings: {
+          ...compositeSettings,
+          configuration: {
+            ...compositeSettings.configuration,
+            trigger: {
+              mode: EvaluationTriggerMode.Disabled,
+            },
+          },
         },
         workspace,
       },

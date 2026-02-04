@@ -2,11 +2,16 @@ import {
   ChatSpanMetadata,
   ExternalSpanMetadata,
   LIVE_EVALUABLE_SPAN_TYPES,
+  EvaluationTriggerMode,
   LogSources,
   PromptSpanMetadata,
+  SpanType,
 } from '../../constants'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
-import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
+import {
+  debouncedEvaluationJobKey,
+  runEvaluationV2JobKey,
+} from '../../jobs/job-definitions'
 import { queues } from '../../jobs/queues'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -88,7 +93,7 @@ export const evaluateLiveLogJob = async ({
 
   evaluations = evaluations.filter(
     (evaluation) =>
-      evaluation.evaluateLiveLogs &&
+      evaluation.configuration.trigger?.mode !== EvaluationTriggerMode.Disabled &&
       getEvaluationMetricSpecification(evaluation).supportsLiveEvaluation,
   )
 
@@ -101,11 +106,18 @@ export const evaluateLiveLogJob = async ({
 
   const evaluationsDisabled = evaluationsDisabledResult.unwrap()
   if (evaluationsDisabled) {
-    // Evaluations are disabled for this workspace, skip enqueueing
     return
   }
 
+  const { evaluationsQueue } = await queues()
+
   for (const evaluation of evaluations) {
+    const liveSettings = evaluation.configuration.trigger
+    if (!liveSettings) continue
+
+    const shouldEvaluate = shouldEvaluateForMode(liveSettings.mode, span.type)
+    if (!shouldEvaluate) continue
+
     const payload = {
       workspaceId: workspace.id,
       commitId: commit.id,
@@ -114,9 +126,34 @@ export const evaluateLiveLogJob = async ({
       spanId: span.id,
     }
 
-    const { evaluationsQueue } = await queues()
-    evaluationsQueue.add('runEvaluationV2Job', payload, {
-      deduplication: { id: runEvaluationV2JobKey(payload) },
-    })
+    if (liveSettings.mode === EvaluationTriggerMode.Debounced) {
+      const debounceSeconds = liveSettings.debounceSeconds ?? 60
+      evaluationsQueue.add('debouncedEvaluationJob', payload, {
+        deduplication: { id: debouncedEvaluationJobKey(payload) },
+        delay: debounceSeconds * 1000,
+      })
+    } else {
+      evaluationsQueue.add('runEvaluationV2Job', payload, {
+        deduplication: { id: runEvaluationV2JobKey(payload) },
+      })
+    }
+  }
+}
+
+function shouldEvaluateForMode(
+  mode: EvaluationTriggerMode,
+  spanType: SpanType,
+): boolean {
+  switch (mode) {
+    case EvaluationTriggerMode.Disabled:
+      return false
+    case EvaluationTriggerMode.FirstInteraction:
+      return spanType === SpanType.Prompt || spanType === SpanType.External
+    case EvaluationTriggerMode.EveryInteraction:
+      return true
+    case EvaluationTriggerMode.Debounced:
+      return true
+    default:
+      return false
   }
 }

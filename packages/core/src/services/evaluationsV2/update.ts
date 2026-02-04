@@ -2,14 +2,12 @@ import { isEqual } from 'lodash-es'
 import {
   AlignmentMetricMetadata,
   EvaluationMetric,
-  EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
-import { compactObject } from '../../lib/compactObject'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -34,7 +32,6 @@ export async function updateEvaluationV2<
     evaluation,
     commit,
     settings,
-    options,
     issueId,
     workspace,
     alignmentMetricMetadata,
@@ -44,7 +41,6 @@ export async function updateEvaluationV2<
     commit: Commit
     workspace: Workspace
     settings?: Partial<Omit<EvaluationSettings<T, M>, 'type' | 'metric'>>
-    options?: Partial<EvaluationOptions>
     issueId?: number | null
     alignmentMetricMetadata?: AlignmentMetricMetadata
     force?: boolean
@@ -83,12 +79,6 @@ export async function updateEvaluationV2<
         )
       }
 
-      if (!settings) settings = {}
-      settings = compactObject(settings)
-
-      if (!options) options = {}
-      options = compactObject(options)
-
       let issue: Issue | null = null
       if (issueId) {
         const issuesRepository = new IssuesRepository(workspace.id, tx)
@@ -107,12 +97,20 @@ export async function updateEvaluationV2<
         }
       }
 
+      const mergedSettings = {
+        ...evaluation,
+        ...settings,
+        configuration: {
+          ...evaluation.configuration,
+          ...settings?.configuration,
+        },
+      }
+
       const validating = await validateEvaluationV2(
         {
           mode: 'update',
           evaluation: evaluation,
-          settings: { ...evaluation, ...settings },
-          options: { ...evaluation, ...options },
+          settings: mergedSettings,
           document: document,
           commit: commit,
           workspace: workspace,
@@ -121,8 +119,7 @@ export async function updateEvaluationV2<
         tx,
       )
       if (validating.error) return Result.error(validating.error)
-      settings = validating.value.settings
-      options = validating.value.options
+      const validatedSettings = validating.value.settings
 
       const result = await tx
         .insert(evaluationVersions)
@@ -132,8 +129,7 @@ export async function updateEvaluationV2<
           commitId: commit.id,
           issueId: issueId !== undefined ? issueId : evaluation.issueId,
           alignmentMetricMetadata,
-          ...settings,
-          ...options,
+          ...validatedSettings,
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
@@ -142,8 +138,7 @@ export async function updateEvaluationV2<
             evaluationVersions.evaluationUuid,
           ],
           set: {
-            ...settings,
-            ...options,
+            ...validatedSettings,
             updatedAt: new Date(),
             issueId: issueId !== undefined ? issueId : evaluation.issueId,
             alignmentMetricMetadata,

@@ -2,11 +2,12 @@ import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import {
   CompositeEvaluationMetric,
+  DEFAULT_EVALUATION_TRIGGER_SETTINGS,
   EvaluationMetric,
-  EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   HumanEvaluationMetric,
+  EvaluationTriggerMode,
   LlmEvaluationMetric,
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
@@ -14,8 +15,8 @@ import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
-import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
@@ -26,6 +27,25 @@ import {
   ConfigurationSimpleForm,
 } from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
+
+const LIVE_EVALUATION_MODE_OPTIONS = [
+  {
+    label: 'Only on selected Experiments',
+    value: EvaluationTriggerMode.Disabled,
+  },
+  {
+    label: 'First interaction only',
+    value: EvaluationTriggerMode.FirstInteraction,
+  },
+  {
+    label: 'Every interaction',
+    value: EvaluationTriggerMode.EveryInteraction,
+  },
+  {
+    label: 'After inactivity period',
+    value: EvaluationTriggerMode.Debounced,
+  },
+]
 
 /**
  * This can be improved by passing specific schemas per type/metric
@@ -38,7 +58,6 @@ type EvaluationV2FormSchema = StandardSchemaV1<{
   metric: string
   options: string
   settings: string
-  evaluateLiveLogs: string
 }>
 
 export type EvaluationV2FormErrors = ActionErrors<EvaluationV2FormSchema>
@@ -110,8 +129,6 @@ export default function EvaluationV2Form<
   setSettings,
   issueId,
   setIssueId,
-  options,
-  setOptions,
   errors: actionErrors,
   commit,
   disabled,
@@ -122,8 +139,6 @@ export default function EvaluationV2Form<
   setSettings: (settings: EvaluationSettings<T, M>) => void
   issueId?: number | null
   setIssueId?: (issueId: number | null) => void
-  options: Partial<EvaluationOptions>
-  setOptions: (options: Partial<EvaluationOptions>) => void
   errors?: EvaluationV2FormErrors
   commit: ICommitContextType['commit']
   disabled?: boolean
@@ -149,14 +164,42 @@ export default function EvaluationV2Form<
   useEffect(() => {
     if (mode === 'update') return
     if (!metricSpecification) return
-    // FIXME: use proper callback setState so that you don't depend on options
-    // in the useEffect hook
-    setOptions({
-      ...options,
-      evaluateLiveLogs: !!metricSpecification.supportsLiveEvaluation,
+    setSettings({
+      ...settings,
+      configuration: {
+        ...settings.configuration,
+        trigger: {
+          mode: metricSpecification.supportsLiveEvaluation
+            ? EvaluationTriggerMode.EveryInteraction
+            : EvaluationTriggerMode.Disabled,
+        },
+      },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metricSpecification?.supportsLiveEvaluation])
+
+  const trigger =
+    settings.configuration?.trigger ?? DEFAULT_EVALUATION_TRIGGER_SETTINGS
+
+  const currentTriggerMode: EvaluationTriggerMode =
+    trigger.mode ?? EvaluationTriggerMode.Disabled
+
+  const handleLiveEvaluationModeChange = (value: string) => {
+    const newMode = value as EvaluationTriggerMode
+    setSettings({
+      ...settings,
+      configuration: {
+        ...settings.configuration,
+        trigger: {
+          mode: newMode,
+          debounceSeconds:
+            newMode === EvaluationTriggerMode.Debounced
+              ? (trigger.debounceSeconds ?? 60)
+              : undefined,
+        },
+      },
+    })
+  }
 
   const commitMerged = mode === 'update' && !!commit.mergedAt
 
@@ -239,6 +282,44 @@ export default function EvaluationV2Form<
           errors={errors}
           disabled={disabled || commitMerged}
         />
+        {metricSpecification?.supportsLiveEvaluation &&
+          settings.type !== EvaluationType.Composite && (
+            <FormFieldGroup layout='vertical'>
+              <Select
+                value={currentTriggerMode}
+                name='liveEvaluationMode'
+                label='When to evaluate'
+                description='Choose when this evaluation will run automatically on logs'
+                options={LIVE_EVALUATION_MODE_OPTIONS}
+                onChange={handleLiveEvaluationModeChange}
+                disabled={disabled || commitMerged}
+              />
+              {currentTriggerMode === EvaluationTriggerMode.Debounced && (
+                <NumberInput
+                  value={trigger.debounceSeconds ?? 60}
+                  name='debounceSeconds'
+                  label='Inactivity period (seconds)'
+                  description='Wait this many seconds after the last message before evaluating'
+                  min={1}
+                  max={3600}
+                  onChange={(value) => {
+                    if (value === undefined) return
+                    setSettings({
+                      ...settings,
+                      configuration: {
+                        ...settings.configuration,
+                        trigger: {
+                          ...trigger,
+                          debounceSeconds: value,
+                        },
+                      },
+                    })
+                  }}
+                  disabled={disabled || commitMerged}
+                />
+              )}
+            </FormFieldGroup>
+          )}
         {mode === 'create' && metricSpecification?.requiresExpectedOutput && (
           <Alert
             variant='default'
@@ -278,23 +359,6 @@ export default function EvaluationV2Form<
                   errors={errors}
                   disabled={disabled || commitMerged}
                 />
-                <FormFieldGroup label='Options' layout='vertical'>
-                  {metricSpecification?.supportsLiveEvaluation && (
-                    <SwitchInput
-                      checked={!!options.evaluateLiveLogs}
-                      name='evaluateLiveLogs'
-                      label='Evaluate live logs'
-                      description='Evaluate production and playground logs automatically'
-                      onCheckedChange={(value) =>
-                        setOptions({ ...options, evaluateLiveLogs: value })
-                      }
-                      errors={errors?.evaluateLiveLogs}
-                      disabled={
-                        disabled || !metricSpecification?.supportsLiveEvaluation
-                      }
-                    />
-                  )}
-                </FormFieldGroup>
               </FormWrapper>
             }
           />

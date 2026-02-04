@@ -1,10 +1,12 @@
 import { env } from '@latitude-data/env'
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { database } from '../../client'
 import {
   HEAD_COMMIT,
   ISSUE_DISCOVERY_MIN_SIMILARITY,
   IssueCentroid,
+  EvaluationTriggerMode,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
@@ -447,7 +449,7 @@ async function ignoreEvaluations({
     await tx
       .update(evaluationVersions)
       .set({
-        evaluateLiveLogs: false,
+        configuration: sql`${evaluationVersions.configuration} || jsonb_build_object('trigger', jsonb_build_object('mode', ${sql.raw(`'${EvaluationTriggerMode.Disabled}'`)}))`,
         ignoredAt: timestamp,
         updatedAt: timestamp,
       })

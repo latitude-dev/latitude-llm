@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   EvaluationType,
   EvaluationV2,
+  EvaluationTriggerMode,
   LlmEvaluationMetric,
 } from '../../../constants'
 import * as unsafelyFindWorkspaceModule from '../../../data-access/workspaces'
@@ -167,7 +168,9 @@ describe('recalculateAlignmentMetricJob', () => {
         passDescription: 'pass',
         failDescription: 'fail',
       },
-      evaluateLiveLogs: true,
+      trigger: {
+        mode: EvaluationTriggerMode.EveryInteraction,
+      },
       issueId: issue.id,
     })) as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
 

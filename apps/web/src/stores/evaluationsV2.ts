@@ -14,7 +14,6 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import {
   EvaluationMetric,
-  EvaluationOptions,
   EvaluationResultMetadata,
   EvaluationSettings,
   EvaluationType,
@@ -105,12 +104,10 @@ export function useEvaluationsV2(
     async ({
       documentUuid,
       settings,
-      options,
       issueId,
     }: {
       documentUuid: string
       settings: EvaluationSettings
-      options?: Partial<EvaluationOptions>
       issueId?: number | null
     }) => {
       return await executeCreateEvaluationV2({
@@ -118,7 +115,6 @@ export function useEvaluationsV2(
         commitUuid: commit.uuid,
         documentUuid,
         settings: settings,
-        options: options,
         issueId: issueId,
       })
     },
@@ -168,13 +164,11 @@ export function useEvaluationsV2(
       evaluationUuid,
       documentUuid,
       settings,
-      options,
       issueId,
     }: {
       evaluationUuid: string
       documentUuid: string
       settings?: Partial<Omit<EvaluationSettings, 'type' | 'metric'>>
-      options?: Partial<EvaluationOptions>
       issueId?: number | null
     }) => {
       return await executeUpdateEvaluationV2({
@@ -183,7 +177,6 @@ export function useEvaluationsV2(
         documentUuid,
         evaluationUuid: evaluationUuid,
         settings: settings,
-        options: options,
         issueId: issueId,
       })
     },

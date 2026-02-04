@@ -1,10 +1,17 @@
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import {
+  EVALUATION_TRIGGER_MODE_INFO,
+  getEvaluationMetricSpecification,
+} from '$/components/evaluations'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { EvaluationType, EvaluationV2 } from '@latitude-data/core/constants'
+import {
+  EvaluationType,
+  EvaluationV2,
+  EvaluationTriggerMode,
+} from '@latitude-data/core/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import {
   DropdownMenu,
@@ -74,9 +81,11 @@ export function EvaluationTableItem({
       ...(specification.supportsLiveEvaluation
         ? [
             {
-              label: evaluation.evaluateLiveLogs
-                ? 'Disable live evaluation'
-                : 'Enable live evaluation',
+              label:
+                evaluation.configuration.trigger?.mode !==
+                EvaluationTriggerMode.Disabled
+                  ? 'Disable live evaluation'
+                  : 'Enable live evaluation',
               onElementClick: (e: MouseEvent) => e.stopPropagation(),
               onClick: () => onToggleLiveEvaluation(evaluation),
               disabled: isUpdatingEvaluation,
@@ -135,17 +144,41 @@ export function EvaluationTableItem({
           <Text.H5 noWrap ellipsis>
             {evaluation.name}
           </Text.H5>
-          {!!evaluation.evaluateLiveLogs && (
-            <Tooltip
-              asChild
-              trigger={<Badge variant='accent'>Live</Badge>}
-              align='center'
-              side='top'
-              maxWidth='max-w-[400px]'
-            >
-              This evaluation is running on live logs
-            </Tooltip>
-          )}
+          {evaluation.configuration.trigger?.mode &&
+            evaluation.configuration.trigger.mode !==
+              EvaluationTriggerMode.Disabled && (
+              <Tooltip
+                asChild
+                trigger={
+                  <Badge variant='accent'>
+                    <div className='flex items-center gap-1'>
+                      {
+                        EVALUATION_TRIGGER_MODE_INFO[
+                          evaluation.configuration.trigger.mode
+                        ].label
+                      }
+                      <Icon
+                        name={
+                          EVALUATION_TRIGGER_MODE_INFO[
+                            evaluation.configuration.trigger.mode
+                          ].icon ?? 'radio'
+                        }
+                        size='small'
+                      />
+                    </div>
+                  </Badge>
+                }
+                align='center'
+                side='top'
+                maxWidth='max-w-[400px]'
+              >
+                {
+                  EVALUATION_TRIGGER_MODE_INFO[
+                    evaluation.configuration.trigger.mode
+                  ].description
+                }
+              </Tooltip>
+            )}
           {evaluation.uuid === annotationsEvaluation?.uuid && (
             <Tooltip
               trigger={<Icon name='thumbsUp' color='primary' />}

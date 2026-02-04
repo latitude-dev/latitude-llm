@@ -1,12 +1,10 @@
 import {
   EvaluationMetric,
-  EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { compactObject } from '../../lib/compactObject'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -27,22 +25,18 @@ export async function createEvaluationV2<
     document,
     commit,
     settings,
-    options,
     issueId,
     workspace,
   }: {
     document: DocumentVersion
     commit: Commit
     settings: EvaluationSettings<T, M>
-    options?: Partial<EvaluationOptions>
     issueId?: number | null
     workspace: Workspace
   },
   transaction = new Transaction(),
 ): Promise<TypedResult<{ evaluation: EvaluationV2<T, M> }>> {
   return await transaction.call(async (tx) => {
-    if (!options) options = {}
-    options = compactObject(options)
 
     let issue: Issue | null = null
     if (issueId) {
@@ -66,7 +60,6 @@ export async function createEvaluationV2<
       {
         mode: 'create',
         settings,
-        options,
         document,
         commit,
         workspace,
@@ -78,7 +71,6 @@ export async function createEvaluationV2<
       return Result.error(validation.error)
     }
     settings = validation.value.settings
-    options = validation.value.options
 
     const result = await tx
       .insert(evaluationVersions)
@@ -88,7 +80,6 @@ export async function createEvaluationV2<
         documentUuid: document.documentUuid,
         issueId,
         ...settings,
-        ...options,
       })
       .returning()
       .then((r) => r[0]!)

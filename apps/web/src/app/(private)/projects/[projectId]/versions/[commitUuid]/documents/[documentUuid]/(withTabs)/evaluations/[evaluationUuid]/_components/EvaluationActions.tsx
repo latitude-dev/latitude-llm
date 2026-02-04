@@ -23,7 +23,6 @@ import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationMetric,
-  EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
@@ -229,7 +228,6 @@ function EditEvaluation<
   const [issueId, setIssueId] = useState<number | null>(
     evaluation.issueId ?? null,
   )
-  const [options, setOptions] = useState<EvaluationOptions>(evaluation)
   const [errors, setErrors] = useState<EvaluationV2FormErrors>()
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
@@ -249,7 +247,6 @@ function EditEvaluation<
       evaluationUuid: evaluation.uuid,
       settings: settings,
       issueId: issueId,
-      options: options,
     })
     if (errors) {
       setErrors(errors)
@@ -263,7 +260,6 @@ function EditEvaluation<
     evaluation,
     settings,
     issueId,
-    options,
     updateEvaluation,
     setErrors,
     setOpenUpdateModal,
@@ -312,8 +308,6 @@ function EditEvaluation<
           setSettings={setSettings}
           issueId={issueId}
           setIssueId={setIssueId}
-          options={options}
-          setOptions={setOptions}
           errors={errors}
           commit={commit}
           disabled={isUpdatingEvaluation || isMainEvaluation}

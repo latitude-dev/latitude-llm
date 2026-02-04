@@ -2,7 +2,11 @@ import { env } from '@latitude-data/env'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { EvaluationType, HumanEvaluationMetric } from '../../constants'
+import {
+  EvaluationType,
+  HumanEvaluationMetric,
+  EvaluationTriggerMode,
+} from '../../constants'
 import { findFirstModelForProvider } from '../ai/providers/models'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -57,10 +61,10 @@ export async function createDemoEvaluation(
               'Assess how well the response follows the expected behavior.',
             passDescription: 'Perfect response, does follow the instructions.',
             failDescription: "Poor response, doesn't follow the instructions.",
+            trigger: {
+              mode: EvaluationTriggerMode.Disabled,
+            },
           },
-        },
-        options: {
-          evaluateLiveLogs: false,
         },
         workspace,
       },

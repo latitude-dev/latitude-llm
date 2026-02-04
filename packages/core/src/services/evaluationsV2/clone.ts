@@ -1,4 +1,9 @@
-import { EvaluationMetric, EvaluationType, EvaluationV2 } from '../../constants'
+import {
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+  EvaluationTriggerMode,
+} from '../../constants'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -71,6 +76,11 @@ export async function cloneEvaluationV2<
       name.startsWith(evaluation.name),
     ).length
 
+    const supportsLiveEvaluation =
+      // @ts-expect-error seems TypeScript is not able to infer the type
+      !!EVALUATION_SPECIFICATIONS[settings.type].metrics[settings.metric]
+        .supportsLiveEvaluation
+
     const { evaluation: clonedEvaluation } = await createEvaluationV2(
       {
         document: document,
@@ -79,13 +89,14 @@ export async function cloneEvaluationV2<
           ...evaluation,
           ...settings,
           name: `${evaluation.name} (${existing})`,
-        },
-        options: {
-          ...evaluation,
-          evaluateLiveLogs:
-            // @ts-expect-error seems TypeScript is not able to infer the type
-            !!EVALUATION_SPECIFICATIONS[settings.type].metrics[settings.metric]
-              .supportsLiveEvaluation,
+          configuration: {
+            ...settings.configuration,
+            trigger: {
+              mode: supportsLiveEvaluation
+                ? EvaluationTriggerMode.EveryInteraction
+                : EvaluationTriggerMode.Disabled,
+            },
+          },
         },
         workspace: workspace,
       },

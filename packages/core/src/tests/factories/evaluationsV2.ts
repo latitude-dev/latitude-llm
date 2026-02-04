@@ -3,10 +3,11 @@ import { eq } from 'drizzle-orm'
 import { database } from '../../client'
 import {
   EvaluationMetric,
-  EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
+  EvaluationTriggerMode,
+  EvaluationTriggerSettings,
   RuleEvaluationMetric,
 } from '../../constants'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
@@ -24,8 +25,8 @@ type CreateEvaluationV2Args<
   workspace: Workspace
   createdAt?: Date
   issueId?: number
-} & Partial<EvaluationSettings<T, M>> &
-  Partial<EvaluationOptions>
+  trigger?: Partial<EvaluationTriggerSettings>
+} & Partial<EvaluationSettings<T, M>>
 
 // prettier-ignore
 // eslint-disable-next-line no-redeclare
@@ -44,6 +45,26 @@ export async function createEvaluationV2<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
 >(args: CreateEvaluationV2Args<T, M>): Promise<EvaluationV2<T, M>> {
+  const trigger: EvaluationTriggerSettings = {
+    mode: args.trigger?.mode ?? EvaluationTriggerMode.Disabled,
+    ...(args.trigger?.debounceSeconds !== undefined
+      ? { debounceSeconds: args.trigger.debounceSeconds }
+      : {}),
+  }
+
+  const defaultConfiguration = {
+    reverseScale: false,
+    actualOutput: {
+      messageSelection: 'last' as const,
+      parsingFormat: 'string' as const,
+    },
+    expectedOutput: {
+      parsingFormat: 'string' as const,
+    },
+    caseInsensitive: false,
+    trigger,
+  }
+
   const { evaluation } = await createEvaluationSvc({
     document: args.document,
     commit: args.commit,
@@ -52,20 +73,9 @@ export async function createEvaluationV2<
       description: args.description ?? faker.lorem.sentence(),
       type: args.type ?? EvaluationType.Rule,
       metric: args.metric ?? RuleEvaluationMetric.ExactMatch,
-      configuration: args.configuration ?? {
-        reverseScale: false,
-        actualOutput: {
-          messageSelection: 'last',
-          parsingFormat: 'string',
-        },
-        expectedOutput: {
-          parsingFormat: 'string',
-        },
-        caseInsensitive: false,
-      },
-    },
-    options: {
-      evaluateLiveLogs: args.evaluateLiveLogs,
+      configuration: args.configuration
+        ? { ...args.configuration, trigger }
+        : defaultConfiguration,
     },
     workspace: args.workspace,
     issueId: args.issueId,

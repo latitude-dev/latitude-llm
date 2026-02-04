@@ -1,5 +1,36 @@
 import { z } from 'zod'
 
+export const EvaluationTriggerMode = {
+  Disabled: 'disabled',
+  FirstInteraction: 'first_interaction',
+  EveryInteraction: 'every_interaction',
+  Debounced: 'debounced',
+} as const
+
+export type EvaluationTriggerMode =
+  (typeof EvaluationTriggerMode)[keyof typeof EvaluationTriggerMode]
+
+export const EvaluationTriggerModeSchema = z.enum([
+  EvaluationTriggerMode.Disabled,
+  EvaluationTriggerMode.FirstInteraction,
+  EvaluationTriggerMode.EveryInteraction,
+  EvaluationTriggerMode.Debounced,
+])
+
+export type EvaluationTriggerSettings = {
+  mode: EvaluationTriggerMode
+  debounceSeconds?: number
+}
+
+export const EvaluationTriggerSettingsSchema = z.object({
+  mode: EvaluationTriggerModeSchema,
+  debounceSeconds: z.number().int().min(1).max(3600).optional(),
+})
+
+export const DEFAULT_EVALUATION_TRIGGER_SETTINGS: EvaluationTriggerSettings = {
+  mode: EvaluationTriggerMode.Disabled,
+}
+
 const actualOutputConfiguration = z.object({
   messageSelection: z.enum(['last', 'all']), // Which assistant messages to select
   contentFilter: z
@@ -26,6 +57,7 @@ export const baseEvaluationConfiguration = z.object({
   reverseScale: z.boolean(), // If true, lower is better, otherwise, higher is better
   actualOutput: actualOutputConfiguration,
   expectedOutput: expectedOutputConfiguration.optional(),
+  trigger: EvaluationTriggerSettingsSchema.optional(),
 })
 export const baseEvaluationResultMetadata = z.object({
   // configuration: Configuration snapshot is defined in every metric specification

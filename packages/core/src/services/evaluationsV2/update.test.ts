@@ -5,6 +5,7 @@ import { database } from '../../client'
 import {
   EvaluationType,
   EvaluationV2,
+  EvaluationTriggerMode,
   LlmEvaluationMetric,
   RuleEvaluationMetric,
 } from '../../constants'
@@ -147,7 +148,6 @@ describe('updateEvaluationV2', () => {
       settings: {
         name: 'new name',
       },
-      options: {},
       workspace: workspace,
     }).then((r) => r.unwrap())
 
@@ -189,7 +189,6 @@ describe('updateEvaluationV2', () => {
     const { evaluation: updatedEvaluation } = await updateEvaluationV2({
       evaluation: evaluation,
       commit: commit,
-      options: {},
       workspace: workspace,
     }).then((r) => r.unwrap())
 
@@ -234,7 +233,6 @@ describe('updateEvaluationV2', () => {
       settings: {
         name: 'new name',
       },
-      options: {},
       workspace: workspace,
     }).then((r) => r.unwrap())
 
@@ -310,10 +308,10 @@ describe('updateEvaluationV2', () => {
           criteria: 'test criteria',
           passDescription: 'pass',
           failDescription: 'fail',
+          trigger: {
+            mode: EvaluationTriggerMode.EveryInteraction,
+          },
         },
-      },
-      options: {
-        evaluateLiveLogs: true,
       },
       issueId: issue.id,
     }).then((r) => r.unwrap())
@@ -384,10 +382,10 @@ describe('updateEvaluationV2', () => {
           criteria: 'test criteria',
           passDescription: 'pass',
           failDescription: 'fail',
+          trigger: {
+            mode: EvaluationTriggerMode.EveryInteraction,
+          },
         },
-      },
-      options: {
-        evaluateLiveLogs: true,
       },
       issueId: issue1.id,
     }).then((r) => r.unwrap())
@@ -450,10 +448,10 @@ describe('updateEvaluationV2', () => {
           criteria: 'test criteria',
           passDescription: 'pass',
           failDescription: 'fail',
+          trigger: {
+            mode: EvaluationTriggerMode.EveryInteraction,
+          },
         },
-      },
-      options: {
-        evaluateLiveLogs: true,
       },
       issueId: issue.id,
     }).then((r) => r.unwrap())

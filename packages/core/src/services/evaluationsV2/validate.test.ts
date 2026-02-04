@@ -9,9 +9,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ZodError } from 'zod'
 import { database } from '../../client'
 import {
-  EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
+  EvaluationTriggerMode,
   RuleEvaluationMetric,
 } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
@@ -31,7 +31,6 @@ describe('validateEvaluationV2', () => {
     EvaluationType.Rule,
     RuleEvaluationMetric.ExactMatch
   >
-  let options: EvaluationOptions
   let settingsLLMasJudgeBinary: EvaluationSettings<
     EvaluationType.Llm,
     LlmEvaluationMetric.Binary
@@ -75,10 +74,10 @@ describe('validateEvaluationV2', () => {
           parsingFormat: 'string',
         },
         caseInsensitive: false,
+        trigger: {
+          mode: EvaluationTriggerMode.Disabled,
+        },
       },
-    }
-    options = {
-      evaluateLiveLogs: false,
     }
 
     settingsLLMasJudgeBinary = {
@@ -109,7 +108,6 @@ describe('validateEvaluationV2', () => {
       validateEvaluationV2({
         mode: 'update',
         settings: settings,
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -128,7 +126,6 @@ describe('validateEvaluationV2', () => {
           ...settings,
           name: '',
         },
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -145,7 +142,6 @@ describe('validateEvaluationV2', () => {
           ...settings,
           type: 'invalid' as any,
         },
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -162,7 +158,6 @@ describe('validateEvaluationV2', () => {
           ...settings,
           metric: 'invalid' as any,
         },
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -179,7 +174,6 @@ describe('validateEvaluationV2', () => {
           ...settings,
           configuration: {} as any,
         },
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -202,7 +196,6 @@ describe('validateEvaluationV2', () => {
             },
           },
         },
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -224,7 +217,6 @@ describe('validateEvaluationV2', () => {
             expectedOutput: undefined,
           },
         },
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -252,7 +244,6 @@ describe('validateEvaluationV2', () => {
             },
           },
         },
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -271,7 +262,6 @@ describe('validateEvaluationV2', () => {
       validateEvaluationV2({
         mode: 'create',
         settings: settings,
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -292,7 +282,6 @@ describe('validateEvaluationV2', () => {
       validateEvaluationV2({
         mode: 'create',
         settings: settings,
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -314,10 +303,14 @@ describe('validateEvaluationV2', () => {
     await expect(
       validateEvaluationV2({
         mode: 'create',
-        settings: settings,
-        options: {
-          ...options,
-          evaluateLiveLogs: true,
+        settings: {
+          ...settings,
+          configuration: {
+            ...settings.configuration,
+            trigger: {
+              mode: EvaluationTriggerMode.EveryInteraction,
+            },
+          },
         },
         document: document,
         commit: commit,
@@ -330,19 +323,16 @@ describe('validateEvaluationV2', () => {
   })
 
   it('succeeds when validating an evaluation from create', async () => {
-    const { settings: validatedSettings, options: validatedOptions } =
-      await validateEvaluationV2({
-        mode: 'create',
-        settings: settings,
-        options: options,
-        document: document,
-        commit: commit,
-        workspace: workspace,
-        issue: null,
-      }).then((r) => r.unwrap())
+    const { settings: validatedSettings } = await validateEvaluationV2({
+      mode: 'create',
+      settings: settings,
+      document: document,
+      commit: commit,
+      workspace: workspace,
+      issue: null,
+    }).then((r) => r.unwrap())
 
     expect(validatedSettings).toEqual(settings)
-    expect(validatedOptions).toEqual(options)
   })
 
   it('succeeds when validating an evaluation from update', async () => {
@@ -352,23 +342,19 @@ describe('validateEvaluationV2', () => {
       workspace: workspace,
       ...settings,
       name: 'old name',
-      ...options,
     })
 
-    const { settings: validatedSettings, options: validatedOptions } =
-      await validateEvaluationV2({
-        mode: 'update',
-        evaluation: evaluation,
-        settings: settings,
-        options: options,
-        document: document,
-        commit: commit,
-        workspace: workspace,
-        issue: null,
-      }).then((r) => r.unwrap())
+    const { settings: validatedSettings } = await validateEvaluationV2({
+      mode: 'update',
+      evaluation: evaluation,
+      settings: settings,
+      document: document,
+      commit: commit,
+      workspace: workspace,
+      issue: null,
+    }).then((r) => r.unwrap())
 
     expect(validatedSettings).toEqual(settings)
-    expect(validatedOptions).toEqual(options)
   })
 
   it('fails when linking issue to composite evaluation', async () => {
@@ -425,7 +411,6 @@ describe('validateEvaluationV2', () => {
       validateEvaluationV2({
         mode: 'create',
         settings: compositeSettings,
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -446,7 +431,6 @@ describe('validateEvaluationV2', () => {
       validateEvaluationV2({
         mode: 'create',
         settings: settings,
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -488,7 +472,6 @@ describe('validateEvaluationV2', () => {
       validateEvaluationV2({
         mode: 'create',
         settings: humanRatingSettings,
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -522,7 +505,6 @@ describe('validateEvaluationV2', () => {
       validateEvaluationV2({
         mode: 'create',
         settings: settingsLLMasJudgeBinary,
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -554,7 +536,6 @@ describe('validateEvaluationV2', () => {
       validateEvaluationV2({
         mode: 'create',
         settings: settingsLLMasJudgeBinary,
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,
@@ -586,7 +567,6 @@ describe('validateEvaluationV2', () => {
       validateEvaluationV2({
         mode: 'create',
         settings: settingsLLMasJudgeBinary,
-        options: options,
         document: document,
         commit: commit,
         workspace: workspace,

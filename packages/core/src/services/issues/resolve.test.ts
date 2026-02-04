@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { Providers } from '@latitude-data/constants'
 import { database } from '../../client'
-import { EvaluationType, LlmEvaluationMetric } from '../../constants'
+import {
+  EvaluationType,
+  EvaluationTriggerMode,
+  LlmEvaluationMetric,
+} from '../../constants'
 import { createEvaluationV2 } from '../../tests/factories/evaluationsV2'
 import { createIssue } from '../../tests/factories/issues'
 import { createProject } from '../../tests/factories/projects'
@@ -244,7 +248,9 @@ describe('resolveIssue', () => {
         passDescription: 'Pass',
         failDescription: 'Fail',
       },
-      evaluateLiveLogs: true,
+      trigger: {
+        mode: EvaluationTriggerMode.EveryInteraction,
+      },
     })
 
     await database
@@ -274,7 +280,9 @@ describe('resolveIssue', () => {
         passDescription: 'Pass',
         failDescription: 'Fail',
       },
-      evaluateLiveLogs: true,
+      trigger: {
+        mode: EvaluationTriggerMode.EveryInteraction,
+      },
     })
 
     await database
@@ -304,7 +312,9 @@ describe('resolveIssue', () => {
         passDescription: 'Pass',
         failDescription: 'Fail',
       },
-      evaluateLiveLogs: true,
+      trigger: {
+        mode: EvaluationTriggerMode.EveryInteraction,
+      },
     })
 
     await database
@@ -327,7 +337,7 @@ describe('resolveIssue', () => {
       .where(eq(evaluationVersions.id, eval1.versionId))
 
     expect(updatedEval1!.ignoredAt).not.toBeNull()
-    expect(updatedEval1!.evaluateLiveLogs).toBe(false)
+    expect(updatedEval1!.configuration.trigger?.mode).toBe(EvaluationTriggerMode.Disabled)
 
     // Check eval2 was NOT updated (different issue, same workspace)
     const [updatedEval2] = await database
@@ -336,7 +346,7 @@ describe('resolveIssue', () => {
       .where(eq(evaluationVersions.id, eval2.versionId))
 
     expect(updatedEval2!.ignoredAt).toBeNull()
-    expect(updatedEval2!.evaluateLiveLogs).toBe(true)
+    expect(updatedEval2!.configuration.trigger?.mode).toBe(EvaluationTriggerMode.EveryInteraction)
 
     // Check eval3 was NOT updated (different workspace)
     const [updatedEval3] = await database
@@ -345,6 +355,6 @@ describe('resolveIssue', () => {
       .where(eq(evaluationVersions.id, eval3.versionId))
 
     expect(updatedEval3!.ignoredAt).toBeNull()
-    expect(updatedEval3!.evaluateLiveLogs).toBe(true)
+    expect(updatedEval3!.configuration.trigger?.mode).toBe(EvaluationTriggerMode.EveryInteraction)
   })
 })

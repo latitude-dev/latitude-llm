@@ -131,6 +131,30 @@ export class SpansRepository extends Repository<Span> {
     return Result.ok<Span[]>(result as Span[])
   }
 
+  async getLatestInTrace({
+    traceId,
+    types,
+  }: {
+    traceId: string
+    types?: SpanType[]
+  }) {
+    const conditions = [this.scopeFilter, eq(spans.traceId, traceId)]
+    if (types && types.length > 0) {
+      conditions.push(inArray(spans.type, types))
+    }
+
+    const result = await this.db
+      .select(tt)
+      .from(spans)
+      .where(and(...conditions))
+      .orderBy(desc(spans.startedAt), desc(spans.id))
+      .limit(1)
+      .then((r) => r[0])
+
+    if (!result) return Result.nil()
+    return Result.ok<Span>(result as Span)
+  }
+
   async getLastTraceByLogUuid(logUuid: string) {
     return await this.db
       .select({ traceId: spans.traceId })

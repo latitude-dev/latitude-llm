@@ -15,7 +15,7 @@ import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   CompositeEvaluationMetric,
-  EvaluationOptions,
+  DEFAULT_EVALUATION_TRIGGER_SETTINGS,
   EvaluationSettings,
   EvaluationType,
   RuleEvaluationMetric,
@@ -41,11 +41,8 @@ const DEFAULT_EVALUATION_SETTINGS = {
       parsingFormat: 'string' as const,
     },
     caseInsensitive: false,
+    trigger: DEFAULT_EVALUATION_TRIGGER_SETTINGS,
   },
-}
-
-const DEFAULT_EVALUATION_OPTIONS = {
-  evaluateLiveLogs: true,
 }
 
 const DEFAULT_COMPOSITE_SETTINGS = {
@@ -64,11 +61,11 @@ const DEFAULT_COMPOSITE_SETTINGS = {
     },
     evaluationUuids: [],
     minThreshold: 75,
+    trigger: {
+      ...DEFAULT_EVALUATION_TRIGGER_SETTINGS,
+      enabled: false,
+    },
   },
-}
-
-const DEFAULT_COMPOSITE_OPTIONS = {
-  evaluateLiveLogs: false,
 }
 
 export function EvaluationsActions({
@@ -172,9 +169,6 @@ function AddEvaluation({
   const [settings, setSettings] = useState<EvaluationSettings>(
     DEFAULT_EVALUATION_SETTINGS,
   )
-  const [options, setOptions] = useState<Partial<EvaluationOptions>>(
-    DEFAULT_EVALUATION_OPTIONS,
-  )
   const [issueId, setIssueId] = useState<number | null>(null)
   const [errors, setErrors] = useState<EvaluationV2FormErrors>()
 
@@ -183,7 +177,6 @@ function AddEvaluation({
     const [result, errors] = await createEvaluation({
       documentUuid: document.documentUuid,
       settings,
-      options,
       issueId,
     })
 
@@ -191,7 +184,6 @@ function AddEvaluation({
       setErrors(errors)
     } else if (result?.evaluation) {
       setSettings(DEFAULT_EVALUATION_SETTINGS)
-      setOptions(DEFAULT_EVALUATION_OPTIONS)
       setErrors(undefined)
       setOpenCreateModal(false)
 
@@ -208,10 +200,8 @@ function AddEvaluation({
     isCreatingEvaluation,
     createEvaluation,
     settings,
-    options,
     issueId,
     setSettings,
-    setOptions,
     setErrors,
     setOpenCreateModal,
     project,
@@ -249,8 +239,6 @@ function AddEvaluation({
           setSettings={setSettings}
           issueId={issueId}
           setIssueId={setIssueId}
-          options={options}
-          setOptions={setOptions}
           errors={errors}
           commit={commit}
           disabled={isCreatingEvaluation}
@@ -279,16 +267,12 @@ function CombineEvaluations({
   const [settings, setSettings] = useState<
     EvaluationSettings<EvaluationType.Composite>
   >(DEFAULT_COMPOSITE_SETTINGS)
-  const [options, setOptions] = useState<Partial<EvaluationOptions>>(
-    DEFAULT_COMPOSITE_OPTIONS,
-  )
   const [errors, setErrors] = useState<EvaluationV2FormErrors>()
 
   const onCreate = useCallback(async () => {
     if (isCreatingEvaluation) return
     const [result, errors] = await createEvaluation({
       settings,
-      options,
       documentUuid: document.documentUuid,
     })
 
@@ -296,7 +280,6 @@ function CombineEvaluations({
       setErrors(errors)
     } else if (result?.evaluation) {
       setSettings(DEFAULT_COMPOSITE_SETTINGS)
-      setOptions(DEFAULT_COMPOSITE_OPTIONS)
       setErrors(undefined)
       setOpenCreateModal(false)
 
@@ -313,9 +296,7 @@ function CombineEvaluations({
     isCreatingEvaluation,
     createEvaluation,
     settings,
-    options,
     setSettings,
-    setOptions,
     setErrors,
     setOpenCreateModal,
     project,
@@ -354,11 +335,8 @@ function CombineEvaluations({
       >
         <EvaluationV2Form
           mode='create'
-          // No issueId/setIssueId because composite evals have no issue linking
           settings={settings}
           setSettings={setSettings}
-          options={options}
-          setOptions={setOptions}
           errors={errors}
           commit={commit}
           disabled={isCreatingEvaluation}

@@ -1,14 +1,11 @@
-import { inArray } from 'drizzle-orm'
+import { inArray, sql } from 'drizzle-orm'
+import { EvaluationTriggerMode } from '../../../constants'
 import { evaluationVersions } from '../../../schema/models/evaluationVersions'
 import { Issue } from '../../../schema/models/types/Issue'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import { database, Database } from '../../../client'
 import { EvaluationsV2Repository } from '../../../repositories/evaluationsV2Repository'
 
-/**
- * Sets ignoredAt and disables live evaluation for evaluations associated with an issue
- * that support live evaluation.
- */
 export async function ignoreIssueEvaluations(
   { issue }: { issue: Issue },
   db: Database = database,
@@ -37,7 +34,7 @@ export async function ignoreIssueEvaluations(
     .update(evaluationVersions)
     .set({
       ignoredAt: now,
-      evaluateLiveLogs: false,
+      configuration: sql`${evaluationVersions.configuration} || jsonb_build_object('trigger', jsonb_build_object('mode', ${sql.raw(`'${EvaluationTriggerMode.Disabled}'`)}))`,
       updatedAt: now,
     })
     .where(inArray(evaluationVersions.id, ids))

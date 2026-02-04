@@ -7,6 +7,7 @@ import {
   EvaluationSpecification,
   EvaluationType,
   EvaluationV2,
+  EvaluationTriggerMode,
 } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
@@ -192,4 +193,33 @@ export function getEvaluationMetricSpecification<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 >(evaluation: EvaluationV2<T, M>) {
   return EVALUATION_SPECIFICATIONS[evaluation.type].metrics[evaluation.metric]
+}
+
+export const EVALUATION_TRIGGER_MODE_INFO: Record<
+  EvaluationTriggerMode,
+  { label: string; description: string; icon?: IconName }
+> = {
+  [EvaluationTriggerMode.Disabled]: {
+    label: 'Manual Only',
+    description:
+      'The evaluation will only run on specified experiments and simulations.',
+  },
+  [EvaluationTriggerMode.FirstInteraction]: {
+    label: 'First Interaction',
+    description:
+      'The evaluation will run automatically when the prompt is first executed, but not when additional messages are added to the conversation.',
+    icon: 'messageSquareText',
+  },
+  [EvaluationTriggerMode.EveryInteraction]: {
+    label: 'Every Interaction',
+    description:
+      'The evaluation will run automatically on every user interaction.',
+    icon: 'messages',
+  },
+  [EvaluationTriggerMode.Debounced]: {
+    label: 'After Inactivity Period',
+    description:
+      'The evaluation will run automatically after a period of inactivity since the last user message.',
+    icon: 'messageSquareDashed',
+  },
 }
