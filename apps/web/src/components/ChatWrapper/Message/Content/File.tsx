@@ -1,3 +1,4 @@
+import { isSafeUrl } from '@latitude-data/constants'
 import {
   FileContent,
   PromptlSourceRef,
@@ -6,12 +7,11 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { memo, useMemo } from 'react'
-import { computeSegments } from './helpers'
-import { isSafeUrl } from '@latitude-data/constants'
-import { ReferenceComponent } from './_components/Reference'
-import { FileComponent } from './_components/FileComponent'
 import { AnnotationSection } from './_components/AnnotationSection'
+import { FileComponent } from './_components/FileComponent'
+import { ReferenceComponent } from './_components/Reference'
 import { useBlockAnnotations } from './_hooks/useBlockAnnotations'
+import { computeSegments } from './helpers'
 
 export const FileMessageContent = memo(
   ({
@@ -19,7 +19,6 @@ export const FileMessageContent = memo(
     color,
     size,
     file,
-    parameters = [],
     sourceMap = [],
     messageIndex,
     contentBlockIndex,
@@ -28,7 +27,6 @@ export const FileMessageContent = memo(
     color: TextColor
     size?: 'default' | 'small'
     file: FileContent['file']
-    parameters?: string[]
     sourceMap?: PromptlSourceRef[]
     messageIndex?: number
     contentBlockIndex?: number
@@ -41,8 +39,8 @@ export const FileMessageContent = memo(
       requireMainSpan: true,
     })
     const segment = useMemo(
-      () => computeSegments('file', file.toString(), sourceMap, parameters),
-      [file, sourceMap, parameters],
+      () => computeSegments('file', file.toString(), sourceMap),
+      [file, sourceMap],
     )[0]
 
     const fileContent = (() => {

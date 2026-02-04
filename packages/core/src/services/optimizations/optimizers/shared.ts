@@ -1,7 +1,7 @@
-import { Message } from 'promptl-ai'
 import {
   EMPTY_USAGE,
   LanguageModelUsage,
+  Message,
   OPTIMIZATION_SCORE_SCALE,
 } from '../../../constants'
 import { DatasetRow } from '../../../schema/models/types/DatasetRow'

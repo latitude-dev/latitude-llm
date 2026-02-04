@@ -8,7 +8,6 @@ export function AssistantMessage({
   className,
   size,
   animatePulse,
-  parameters,
   toolContentMap,
   isGeneratingToolCall,
   isStreaming = false,
@@ -28,7 +27,6 @@ export function AssistantMessage({
         toolContentMap={toolContentMap}
         color='foreground'
         size={size}
-        parameters={parameters}
         debugMode={false}
         markdownSize='md'
         isStreaming={isStreaming}

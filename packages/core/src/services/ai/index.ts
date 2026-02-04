@@ -1,27 +1,27 @@
-import { omit } from 'lodash-es'
+import { Providers, StreamType, VercelConfig } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import type { Message } from '@latitude-data/constants/messages'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import {
   jsonSchema,
   ObjectStreamPart,
   streamText as originalStreamText,
-  stepCountIs,
   Output,
+  stepCountIs,
+  StreamTextOnErrorCallback,
   StreamTextResult,
   TextStreamPart,
   Tool,
-  StreamTextOnErrorCallback,
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
-import { StreamType, VercelConfig } from '@latitude-data/constants'
-import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { omit } from 'lodash-es'
 import { Result, TypedResult } from '../../lib/Result'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { TelemetryContext } from '../../telemetry'
 import { buildTools } from './buildTools'
 import { getLanguageModel } from './getLanguageModel'
 import { handleAICallAPIError } from './handleError'
 import { createProvider } from './helpers'
-import { Providers } from '@latitude-data/constants'
 import { applyAllRules } from './providers/rules'
 
 const DEFAULT_AI_SDK_PROVIDER = {
@@ -83,6 +83,7 @@ export async function ai({
   output,
   aiSdkProvider,
   abortSignal,
+  resolvedTools,
 }: {
   context: TelemetryContext
   provider: ProviderApiKey
@@ -93,6 +94,7 @@ export async function ai({
   output?: ObjectOutput
   aiSdkProvider?: Partial<AISDKProvider>
   abortSignal?: AbortSignal
+  resolvedTools?: ResolvedToolsDict
 }): Promise<
   TypedResult<
     AIReturn<StreamType>,
@@ -145,6 +147,7 @@ export async function ai({
       config,
       model,
       context,
+      resolvedTools,
     })
 
     const toolsResult = buildTools(tools)

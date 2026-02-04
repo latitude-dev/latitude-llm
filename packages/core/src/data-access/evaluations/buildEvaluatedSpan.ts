@@ -1,15 +1,13 @@
 import {
   ActualOutputConfiguration,
-  Span,
   EvaluableSpanType,
+  Span,
 } from '@latitude-data/constants'
-import { extractActualOutput } from '../../services/evaluationsV2/outputs/extract'
 import { BadRequestError } from '@latitude-data/constants/errors'
-import { LegacyMessage } from '../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
-import { assembleTraceWithMessages } from '../../services/tracing/traces/assemble'
 import { Result, TypedResult } from '../../lib/Result'
 import { Workspace } from '../../schema/models/types/Workspace'
-import { Message } from 'promptl-ai'
+import { extractActualOutput } from '../../services/evaluationsV2/outputs/extract'
+import { assembleTraceWithMessages } from '../../services/tracing/traces/assemble'
 
 function isValidConfiguration(
   configuration: object,
@@ -78,14 +76,11 @@ export async function buildEvaluatedSpan({
   if (!completionSpan) {
     return Result.error(new BadRequestError('Could not find completion span'))
   }
-  const metadata = completionSpan.metadata ?? {
-    input: [] as Message[],
-    output: [] as Message[],
-  }
+
   const messages = [
-    ...metadata.input,
-    ...(metadata.output ?? []),
-  ] as unknown as LegacyMessage[]
+    ...(completionSpan.metadata?.input ?? []),
+    ...(completionSpan.metadata?.output ?? []),
+  ]
 
   const actualOutputResult = extractActualOutput({
     conversation: messages,

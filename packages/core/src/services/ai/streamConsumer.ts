@@ -4,49 +4,37 @@
  * without consuming it, passing through all chunks unchanged.
  */
 
-import type { LanguageModelV2StreamPart } from '@ai-sdk/provider'
-import {
-  Message,
-  MessageContent,
-  ToolCall,
-} from '@latitude-data/constants/messages'
+import type {
+  LanguageModelV2,
+  LanguageModelV2FilePart,
+  LanguageModelV2FinishReason,
+  LanguageModelV2ReasoningPart,
+  LanguageModelV2StreamPart,
+  LanguageModelV2TextPart,
+  LanguageModelV2ToolCallPart,
+  LanguageModelV2ToolResultPart,
+  LanguageModelV2Usage,
+} from '@ai-sdk/provider'
+import { Message } from '@latitude-data/constants/messages'
+import { Provider, Translator } from 'rosetta-ai'
 
-/**
- * Represents a tool call captured from the stream
- */
-export type CapturedToolCall = {
-  type: 'tool-call'
-  toolCallId: string
-  toolName: string
-  args: unknown
-}
-
-export type CapturedFile = {
-  type: 'file'
-  mediaType: string
-  data: string | Uint8Array | ArrayBuffer
-}
-
-/**
- * Token usage information captured from the stream
- */
-export type CapturedTokenUsage = {
-  prompt?: number
-  completion?: number
-  cached?: number
-  reasoning?: number
-}
+const translator = new Translator({
+  filterEmptyMessages: true,
+  providerMetadata: 'strip',
+})
 
 /**
  * Complete stream result captured from consuming the stream
  */
 export type CapturedStreamResult = {
-  text: string
-  reasoning: string
-  files: CapturedFile[]
-  toolCalls: CapturedToolCall[]
+  output: Message[]
   finishReason: string
-  tokens: CapturedTokenUsage
+  tokens: {
+    prompt?: number
+    cached?: number
+    reasoning?: number
+    completion?: number
+  }
 }
 
 /**
@@ -60,8 +48,10 @@ export type StreamConsumedCallback = (result: CapturedStreamResult) => void
  *
  * Captures:
  * - text-delta: Accumulated into full text
- * - reasoning: Accumulated into full reasoning text
+ * - reasoning-delta: Accumulated into full reasoning text
+ * - file: Complete files with mediaType and data
  * - tool-call: Complete tool calls with id, name, and args
+ * - tool-result: Complete tool results with id, name, and result
  * - finish: finishReason and token usage (including cached and reasoning tokens)
  *
  * @param onConsumed - Callback invoked when the stream is fully consumed (in flush)
@@ -70,51 +60,49 @@ export type StreamConsumedCallback = (result: CapturedStreamResult) => void
 export function createStreamConsumer(
   onConsumed: StreamConsumedCallback,
 ): TransformStream<LanguageModelV2StreamPart, LanguageModelV2StreamPart> {
-  let finishReason: string | undefined
-  let promptTokens: number | undefined
-  let completionTokens: number | undefined
-  let cachedTokens: number | undefined
-  let reasoningTokens: number | undefined
+  let usage: LanguageModelV2Usage | undefined
+  let finishReason: LanguageModelV2FinishReason | undefined
 
-  const textParts: string[] = []
-  const reasoningParts: string[] = []
-  const files: CapturedFile[] = []
-  const toolCalls: CapturedToolCall[] = []
+  let text: LanguageModelV2TextPart | undefined
+  let reasoning: LanguageModelV2ReasoningPart | undefined
+  const files: LanguageModelV2FilePart[] = []
+  const toolCalls: LanguageModelV2ToolCallPart[] = []
+  const toolResults: LanguageModelV2ToolResultPart[] = []
 
   return new TransformStream({
     transform(chunk, controller) {
       switch (chunk.type) {
+        case 'text-start':
+          text = { type: 'text', text: '' }
+          break
+
         case 'text-delta':
-          textParts.push(chunk.delta)
+          text!.text += chunk.delta
+          break
+
+        case 'reasoning-start':
+          reasoning = { type: 'reasoning', text: '' }
           break
 
         case 'reasoning-delta':
-          reasoningParts.push(chunk.delta)
+          reasoning!.text += chunk.delta
           break
 
         case 'file':
-          files.push({
-            type: 'file',
-            mediaType: chunk.mediaType,
-            data: chunk.data,
-          })
+          files.push(chunk)
           break
 
         case 'tool-call':
-          toolCalls.push({
-            type: 'tool-call',
-            toolCallId: chunk.toolCallId,
-            toolName: chunk.toolName,
-            args: chunk.input,
-          })
+          toolCalls.push(chunk)
+          break
+
+        case 'tool-result':
+          toolResults.push(chunk as any)
           break
 
         case 'finish':
+          usage = chunk.usage
           finishReason = chunk.finishReason
-          promptTokens = chunk.usage?.inputTokens
-          completionTokens = chunk.usage?.outputTokens
-          cachedTokens = chunk.usage?.cachedInputTokens
-          reasoningTokens = chunk.usage?.reasoningTokens
           break
       }
 
@@ -122,17 +110,30 @@ export function createStreamConsumer(
     },
 
     flush() {
+      const content = []
+      if (reasoning) content.push(reasoning)
+      if (text) content.push(text)
+      if (files.length > 0) content.push(...files)
+      if (toolCalls.length > 0) content.push(...toolCalls)
+      if (toolResults.length > 0) content.push(...toolResults)
+
+      const translated = translator.translate(
+        [{ role: 'assistant', content }],
+        {
+          from: Provider.VercelAI,
+          to: Provider.Promptl,
+          direction: 'output',
+        },
+      )
+
       onConsumed({
-        text: textParts.join(''),
-        reasoning: reasoningParts.join(''),
-        files,
-        toolCalls,
+        output: translated.messages as Message[],
         finishReason: finishReason ?? 'unknown',
         tokens: {
-          prompt: promptTokens,
-          completion: completionTokens,
-          cached: cachedTokens,
-          reasoning: reasoningTokens,
+          prompt: usage?.inputTokens,
+          cached: usage?.cachedInputTokens,
+          reasoning: usage?.reasoningTokens,
+          completion: usage?.outputTokens,
         },
       })
     },
@@ -140,124 +141,24 @@ export function createStreamConsumer(
 }
 
 /**
- * Builds output messages array from captured stream result.
- * Formats the result into the message structure expected by telemetry.
- */
-export function buildOutputMessages(result: CapturedStreamResult): Message[] {
-  const content: MessageContent[] = []
-
-  if (result.reasoning) {
-    content.push({ type: 'reasoning', text: result.reasoning })
-  }
-
-  if (result.text) {
-    content.push({ type: 'text', text: result.text })
-  }
-
-  for (const file of result.files) {
-    if (file.mediaType.startsWith('image/')) {
-      content.push({
-        type: 'image',
-        image: file.data,
-      })
-    } else {
-      content.push({
-        type: 'file',
-        file: file.data,
-        mimeType: file.mediaType,
-      })
-    }
-  }
-
-  for (const tc of result.toolCalls) {
-    content.push({
-      type: 'tool-call',
-      toolCallId: tc.toolCallId,
-      toolName: tc.toolName,
-      args: tc.args as Record<string, unknown>,
-    })
-  }
-
-  const toolCalls: ToolCall[] = result.toolCalls.map((tc) => ({
-    id: tc.toolCallId,
-    name: tc.toolName,
-    arguments: tc.args as Record<string, unknown>,
-  }))
-
-  return [{ role: 'assistant', content, toolCalls }]
-}
-
-/**
  * Extracts content from a non-streaming (generate) result.
  * Handles text, reasoning, and tool calls from the result content array.
  */
-export function extractGenerateResultContent(result: {
-  content: unknown
-  finishReason: string
-  usage?: {
-    inputTokens?: number
-    outputTokens?: number
-    cachedInputTokens?: number
-    reasoningTokens?: number
-  }
-}): CapturedStreamResult {
-  const textParts: string[] = []
-  const reasoningParts: string[] = []
-  const files: CapturedFile[] = []
-  const toolCalls: CapturedToolCall[] = []
-
-  if (Array.isArray(result.content)) {
-    for (const part of result.content) {
-      if (typeof part !== 'object' || part === null) continue
-
-      const partType = (part as Record<string, unknown>).type
-
-      switch (partType) {
-        case 'text':
-          if ('text' in part && typeof part.text === 'string') {
-            textParts.push(part.text)
-          }
-          break
-
-        case 'reasoning':
-          if ('text' in part && typeof part.text === 'string') {
-            reasoningParts.push(part.text)
-          }
-          break
-
-        case 'file':
-          files.push({
-            type: 'file',
-            mediaType: part.mediaType,
-            data: part.data,
-          })
-          break
-
-        case 'tool-call':
-          if (
-            'toolCallId' in part &&
-            'toolName' in part &&
-            typeof part.toolCallId === 'string' &&
-            typeof part.toolName === 'string'
-          ) {
-            toolCalls.push({
-              type: 'tool-call',
-              toolCallId: part.toolCallId,
-              toolName: part.toolName,
-              args: 'args' in part ? part.args : undefined,
-            })
-          }
-          break
-      }
-    }
-  }
+export function extractGenerateResultContent(
+  result: Awaited<ReturnType<LanguageModelV2['doGenerate']>>,
+): CapturedStreamResult {
+  const translated = translator.translate(
+    [{ role: 'assistant', content: result.content }],
+    {
+      from: Provider.VercelAI,
+      to: Provider.Promptl,
+      direction: 'output',
+    },
+  )
 
   return {
-    text: textParts.join(''),
-    reasoning: reasoningParts.join(''),
-    files,
-    toolCalls,
-    finishReason: result.finishReason,
+    output: translated.messages as Message[],
+    finishReason: result.finishReason ?? 'unknown',
     tokens: {
       prompt: result.usage?.inputTokens,
       completion: result.usage?.outputTokens,

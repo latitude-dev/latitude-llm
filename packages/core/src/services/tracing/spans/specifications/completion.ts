@@ -1,4 +1,11 @@
 import { ATTRIBUTES, Providers } from '@latitude-data/constants'
+import { Message } from '@latitude-data/constants/messages'
+import { Provider, Translator } from 'rosetta-ai'
+import {
+  extractAllAttributes,
+  extractAttribute,
+  VALUES,
+} from '../../../../../../constants/src/tracing/attributes'
 import { database } from '../../../../client'
 import {
   CompletionSpanMetadata,
@@ -12,19 +19,23 @@ import { Result, TypedResult } from '../../../../lib/Result'
 import { ProviderApiKeysRepository } from '../../../../repositories'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
 import { estimateCost } from '../../../ai/estimateCost'
-import { SpanProcessArgs, toCamelCase } from '../shared'
 import {
-  extractAllAttributes,
-  extractAttribute,
-  VALUES,
-} from '../../../../../../constants/src/tracing/attributes'
-import { extractInput, extractOutput } from './completion/extractMessages'
+  setField,
+  SpanProcessArgs,
+  toCamelCase,
+  validateUndefineds,
+} from '../shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Completion]
 export const CompletionSpanSpecification = {
   ...specification,
   process: process,
 }
+
+const translator = new Translator({
+  filterEmptyMessages: true,
+  providerMetadata: 'passthrough',
+})
 
 async function process(
   { attributes, status, workspace }: SpanProcessArgs<SpanType.Completion>,
@@ -398,4 +409,254 @@ function extractFinishReason(
   }
 
   return Result.ok('unknown')
+}
+
+function extractNested(
+  attributes: Record<string, SpanAttribute>,
+  key: string,
+): TypedResult<Record<string, unknown>[]> {
+  let messages: Record<string, unknown>[] = []
+
+  try {
+    const attribute = String(attributes[key] ?? '')
+    if (attribute) {
+      const value = JSON.parse(attribute)
+      if (!Array.isArray(value)) {
+        return Result.error(
+          new UnprocessableEntityError('Invalid nested messages'),
+        )
+      }
+      messages = value
+    }
+  } catch {
+    return Result.error(new UnprocessableEntityError('Invalid nested messages'))
+  }
+
+  if (!validateUndefineds(messages)) {
+    return Result.error(new UnprocessableEntityError('Invalid nested messages'))
+  }
+
+  return Result.ok(messages)
+}
+
+function extractFlattened(
+  attributes: Record<string, SpanAttribute>,
+  prefix: string,
+): TypedResult<Record<string, unknown>[]> {
+  let messages: Record<string, unknown>[] = []
+
+  try {
+    for (const key in attributes) {
+      if (!key.startsWith(prefix)) continue
+      const field = key.replace(prefix + '.', '')
+      setField(messages, field, attributes[key])
+    }
+  } catch {
+    return Result.error(
+      new UnprocessableEntityError('Invalid flattened messages'),
+    )
+  }
+
+  if (!validateUndefineds(messages)) {
+    return Result.error(
+      new UnprocessableEntityError('Invalid flattened messages'),
+    )
+  }
+
+  // Unwrap the nested `.message` structure from OpenInference format
+  // e.g., { message: { role: "user", content: "..." } } -> { role: "user", content: "..." }
+  messages = messages.map((item) => {
+    if (
+      item &&
+      typeof item === 'object' &&
+      'message' in item &&
+      item.message &&
+      typeof item.message === 'object'
+    ) {
+      return item.message as Record<string, unknown>
+    }
+    return item
+  })
+
+  return Result.ok(messages)
+}
+
+export function extractInput(
+  attributes: Record<string, SpanAttribute>,
+): TypedResult<CompletionSpanMetadata['input']> {
+  const messages: Message[] = []
+
+  const system = extractAttribute({
+    attributes,
+    keys: [
+      ATTRIBUTES.OPENTELEMETRY.GEN_AI.systemInstructions,
+      ATTRIBUTES.LATITUDE.request.systemPrompt,
+    ],
+  })
+  if (system) {
+    try {
+      const translated = translator.translate([], {
+        from: Provider.GenAI,
+        to: Provider.Promptl,
+        direction: 'input',
+        system: JSON.parse(system),
+      }).messages as Message[]
+
+      messages.push(...translated)
+    } catch {
+      return Result.error(
+        new UnprocessableEntityError('Invalid system instructions'),
+      )
+    }
+  }
+
+  for (const /* prettier-ignore */ [ key, structure, provider ] of /* prettier-ignore */ [
+    [ATTRIBUTES.OPENTELEMETRY.GEN_AI.input.messages, 'nested', Provider.GenAI],
+    [ATTRIBUTES.LATITUDE.request.messages, 'nested', Provider.Promptl],
+    [ATTRIBUTES.AI_SDK.prompt.messages, 'nested', Provider.VercelAI],
+    [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.prompt._root, 'flattened', Provider.Compat],
+    [ATTRIBUTES.OPENINFERENCE.llm.inputMessages, 'flattened', Provider.Compat],
+    [ATTRIBUTES.OPENINFERENCE.llm.prompts, 'flattened', Provider.Compat],
+  ] as const) {
+    try {
+      let payload
+      if (structure === 'nested') {
+        const extracting = extractNested(attributes, key)
+        if (extracting.error) return Result.error(extracting.error)
+        payload = extracting.value
+      } else if (structure === 'flattened') {
+        const extracting = extractFlattened(attributes, key)
+        if (extracting.error) return Result.error(extracting.error)
+        payload = extracting.value
+      } else {
+        return Result.error(
+          new UnprocessableEntityError('Invalid input messages'),
+        )
+      }
+
+      if (payload.length < 1) continue
+
+      // Note: we translate GenAI system and messages at the same time
+      // to have chance of reordering the system messages correctly
+      const translated = translator.translate(payload, {
+        from: provider,
+        to: Provider.Promptl,
+        direction: 'input',
+        system: (provider === Provider.GenAI && system) ? JSON.parse(system) : undefined, // prettier-ignore
+      }).messages as Message[]
+
+      if (provider === Provider.GenAI) return Result.ok(translated)
+      return Result.ok([...messages, ...translated])
+    } catch {
+      return Result.error(
+        new UnprocessableEntityError('Invalid input messages'),
+      )
+    }
+  }
+
+  return Result.ok(messages)
+}
+
+export function extractOutput(
+  attributes: Record<string, SpanAttribute>,
+): TypedResult<Required<CompletionSpanMetadata>['output']> {
+  for (const /* prettier-ignore */ [ key, structure, provider ] of /* prettier-ignore */ [
+    [ATTRIBUTES.OPENTELEMETRY.GEN_AI.output.messages, 'nested', Provider.GenAI],
+    [ATTRIBUTES.LATITUDE.response.messages, 'nested', Provider.Promptl],
+    [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.completion._root, 'flattened', Provider.Compat],
+    [ATTRIBUTES.OPENINFERENCE.llm.outputMessages, 'flattened', Provider.Compat],
+    [ATTRIBUTES.OPENINFERENCE.llm.completions, 'flattened', Provider.Compat],
+  ] as const) {
+    try {
+      let payload
+      if (structure === 'nested') {
+        const extracting = extractNested(attributes, key)
+        if (extracting.error) return Result.error(extracting.error)
+        payload = extracting.value
+      } else if (structure === 'flattened') {
+        const extracting = extractFlattened(attributes, key)
+        if (extracting.error) return Result.error(extracting.error)
+        payload = extracting.value
+      } else {
+        return Result.error(
+          new UnprocessableEntityError('Invalid output messages'),
+        )
+      }
+
+      if (payload.length < 1) continue
+
+      const translated = translator.translate(payload, {
+        from: provider,
+        to: Provider.Promptl,
+        direction: 'output',
+      }).messages as Message[]
+
+      return Result.ok(translated)
+    } catch {
+      return Result.error(
+        new UnprocessableEntityError('Invalid output messages'),
+      )
+    }
+  }
+
+  const responseText = extractAttribute({
+    attributes,
+    keys: [ATTRIBUTES.AI_SDK.response.text],
+  })
+  const responseObject = extractAttribute({
+    attributes,
+    keys: [ATTRIBUTES.AI_SDK.response.object],
+  })
+  const responseToolCalls = extractAttribute({
+    attributes,
+    keys: [ATTRIBUTES.AI_SDK.response.toolCalls],
+  })
+  if (responseText || responseObject || responseToolCalls) {
+    const message = {
+      role: 'assistant',
+      content: [] as Record<string, unknown>[],
+    }
+
+    if (responseText) {
+      message.content.push({ type: 'text', text: responseText })
+    }
+
+    if (responseObject) {
+      message.content.push({ type: 'text', text: responseObject })
+    }
+
+    if (responseToolCalls) {
+      try {
+        const toolCalls = JSON.parse(responseToolCalls)
+        if (!Array.isArray(toolCalls)) {
+          return Result.error(
+            new UnprocessableEntityError('Invalid output tool calls'),
+          )
+        }
+        message.content.push(...toolCalls)
+      } catch {
+        return Result.error(
+          new UnprocessableEntityError('Invalid output tool calls'),
+        )
+      }
+    }
+
+    if (message.content.length > 0) {
+      try {
+        const translated = translator.translate([message], {
+          from: Provider.VercelAI,
+          to: Provider.Promptl,
+          direction: 'output',
+        }).messages as Message[]
+
+        return Result.ok(translated)
+      } catch {
+        return Result.error(
+          new UnprocessableEntityError('Invalid output messages'),
+        )
+      }
+    }
+  }
+
+  return Result.ok([])
 }

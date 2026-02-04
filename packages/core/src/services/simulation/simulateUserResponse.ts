@@ -1,5 +1,5 @@
+import { type Message } from '@latitude-data/constants/messages'
 import { env } from '@latitude-data/env'
-import type { Message } from '@latitude-data/constants/messages'
 import { z } from 'zod'
 import { Result, TypedResult } from '../../lib/Result'
 import { runCopilot } from '../copilot/run'

@@ -1,17 +1,17 @@
-import React, { memo, useMemo, useCallback } from 'react'
 import { PromptlSourceRef } from '@latitude-data/constants/messages'
+import React, { memo, useCallback, useMemo } from 'react'
 
-import { AnnotatedTextRange, useAnnotations } from '../../AnnotationsContext'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ProseColor, TextColor } from '@latitude-data/web-ui/tokens'
-import { computeSegments, groupSegments, type Reference } from './helpers'
-import { ReferenceComponent } from './_components/Reference'
-import { MarkdownContent } from './_components/MarkdownContent'
-import { MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
 import { cn } from '@latitude-data/web-ui/utils'
+import { AnnotatedTextRange, useAnnotations } from '../../AnnotationsContext'
 import { AnnotationSection } from './_components/AnnotationSection'
+import { MarkdownContent } from './_components/MarkdownContent'
+import { ReferenceComponent } from './_components/Reference'
 import { useBlockAnnotations } from './_hooks/useBlockAnnotations'
+import { computeSegments, groupSegments, type Reference } from './helpers'
 
 const ContentJson = memo(({ json }: { json: string }) => {
   return (
@@ -29,7 +29,6 @@ const ContentText = memo(
     color,
     size,
     text,
-    parameters = [],
     sourceMap = [],
     messageIndex,
     contentBlockIndex,
@@ -38,7 +37,6 @@ const ContentText = memo(
     color: TextColor
     size?: 'default' | 'small'
     text: string | undefined
-    parameters?: string[]
     sourceMap?: PromptlSourceRef[]
     messageIndex?: number
     contentBlockIndex?: number
@@ -83,8 +81,8 @@ const ContentText = memo(
     }, [currentSelection, messageIndex, contentBlockIndex])
 
     const segments = useMemo(
-      () => computeSegments('text', text, sourceMap, parameters),
-      [text, sourceMap, parameters],
+      () => computeSegments('text', text, sourceMap),
+      [text, sourceMap],
     )
     const groups = useMemo(() => groupSegments(segments), [segments])
 
@@ -307,7 +305,6 @@ export function TextMessageContent<M extends MarkdownSize | 'none'>({
   debugMode,
   color,
   size,
-  parameters = [],
   sourceMap = [],
   markdownSize,
   messageIndex,
@@ -317,7 +314,6 @@ export function TextMessageContent<M extends MarkdownSize | 'none'>({
   text: string | undefined
   color: M extends 'none' ? TextColor : Extract<TextColor, ProseColor>
   size?: 'default' | 'small'
-  parameters?: string[]
   debugMode?: boolean
   sourceMap?: PromptlSourceRef[]
   markdownSize: M
@@ -354,7 +350,6 @@ export function TextMessageContent<M extends MarkdownSize | 'none'>({
       color={color}
       size={size}
       text={text}
-      parameters={parameters}
       sourceMap={debugMode ? sourceMap : undefined}
       messageIndex={messageIndex}
       contentBlockIndex={contentBlockIndex}

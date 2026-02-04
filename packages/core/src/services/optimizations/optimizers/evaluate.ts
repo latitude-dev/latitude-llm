@@ -1,4 +1,3 @@
-import { Message } from 'promptl-ai'
 import { database } from '../../../client'
 import {
   EvaluationMetric,
@@ -144,7 +143,7 @@ export async function evaluateFactory<
 
     return Result.ok(
       LearnableTrajectory(example, {
-        trace: messages as unknown as Message[],
+        trace: messages,
         usage: usage, // BONUS(AO/OPT): Take into account evaluation usage
         duration: duration,
         score: score,

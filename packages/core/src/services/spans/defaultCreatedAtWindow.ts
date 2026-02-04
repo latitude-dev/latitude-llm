@@ -50,4 +50,3 @@ export function shouldFallbackToAllTime({
 }): boolean {
   return !hasCursor && normalizedCreatedAt === undefined && itemCount === 0
 }
-

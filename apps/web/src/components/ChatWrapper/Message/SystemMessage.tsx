@@ -1,16 +1,15 @@
-import { Content } from './Content'
-import { MessageProps } from './types'
-import { useState } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
+import { useState } from 'react'
+import { Content } from './Content'
+import { MessageProps } from './types'
 
 export function SystemMessage({
   content,
   className,
   size,
-  parameters,
   toolContentMap,
 }: Omit<MessageProps, 'debugMode' | 'role'>) {
   const [collapsed, setCollapsed] = useState(true)
@@ -34,7 +33,6 @@ export function SystemMessage({
               content={content}
               color='foregroundMuted'
               size={size}
-              parameters={parameters}
               toolContentMap={toolContentMap}
               debugMode={false}
               markdownSize='sm'

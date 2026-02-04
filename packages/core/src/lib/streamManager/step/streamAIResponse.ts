@@ -1,10 +1,11 @@
 import {
   ChainStepResponse,
+  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
   StreamType,
   VercelConfig,
-  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
 } from '@latitude-data/constants'
 import type { Message } from '@latitude-data/constants/messages'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { JSONSchema7 } from 'json-schema'
 import { LogSources } from '../../../constants'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
@@ -14,12 +15,11 @@ import { processResponse } from '../../../services/chains/ProviderProcessor'
 import { writeConversationCache } from '../../../services/conversations/cache'
 import { assertUsageWithinPlanLimits } from '../../../services/workspaces/usage'
 import { TelemetryContext } from '../../../telemetry'
+import { isAbortError } from '../../isAbortError'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
-import { isAbortError } from '../../isAbortError'
 import { handleAIError } from './handleAIError'
 import { recordAbortedCompletion } from './recordAbortedCompletion'
-import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 
 export type Output = 'object' | 'array' | 'no-schema'
 
@@ -69,11 +69,13 @@ export async function streamAIResponse({
     output,
     abortSignal,
     onError: handleAIError,
+    resolvedTools,
   }).then((r) => r.unwrap())
 
   const checkResult = checkValidStream({ type: aiResult.type })
   if (checkResult.error) throw checkResult.error
-  const accumulatedText = { text: '' }
+  const accumulatedText = { text: null }
+  const accumulatedReasoning = { text: null }
 
   let chunkError
   try {
@@ -81,6 +83,7 @@ export async function streamAIResponse({
       controller,
       result: aiResult,
       accumulatedText,
+      accumulatedReasoning,
       resolvedTools,
     })
     chunkError = resultStream.error
@@ -92,6 +95,7 @@ export async function streamAIResponse({
         config,
         messages,
         accumulatedText: accumulatedText.text,
+        accumulatedReasoning: accumulatedReasoning.text,
       })
     }
 

@@ -1,22 +1,23 @@
 import { capitalize } from 'lodash-es'
 
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { APICallError, RetryError } from 'ai'
 import {
   ChainEvent,
   ProviderData,
+  Providers,
   StreamEventTypes,
   StreamType,
   VercelChunk,
 } from '@latitude-data/constants'
-import { Providers } from '@latitude-data/constants'
-import { AIReturn } from '../../../services/ai'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
+import { APICallError, RetryError } from 'ai'
+import { AIReturn } from '../../../services/ai'
 
 type ConsumeStreamParams = {
   result: AIReturn<StreamType>
   controller: ReadableStreamDefaultController
-  accumulatedText: { text: string }
+  accumulatedText: { text: string | null }
+  accumulatedReasoning: { text: string | null }
   resolvedTools?: ResolvedToolsDict
 }
 
@@ -31,6 +32,7 @@ export async function consumeStream({
   controller,
   result,
   accumulatedText: _accumulatedText,
+  accumulatedReasoning: _accumulatedReasoning,
   resolvedTools,
 }: ConsumeStreamParams): Promise<ConsumeStreamResult> {
   let error: ChainError<PosibleErrorCode, NoRunError> | undefined
@@ -48,15 +50,20 @@ export async function consumeStream({
       const vercelChunk = value as VercelChunk
       let chunk = value as ProviderData
 
-      if (vercelChunk.type === 'text-delta') {
+      if (vercelChunk.type === 'text-start') {
+        _accumulatedText.text = ''
+      } else if (vercelChunk.type === 'text-delta') {
         chunk = {
           type: 'text-delta',
           id: vercelChunk.id,
           textDelta: vercelChunk.text,
           providerMetadata: vercelChunk.providerMetadata,
         } as ProviderData
-
         _accumulatedText.text += vercelChunk.text
+      } else if (vercelChunk.type === 'reasoning-start') {
+        _accumulatedReasoning.text = ''
+      } else if (vercelChunk.type === 'reasoning-delta') {
+        _accumulatedReasoning.text += vercelChunk.text
       } else if (vercelChunk.type === 'tool-call') {
         const resolvedTool = resolvedTools?.[vercelChunk.toolName]
         chunk = {

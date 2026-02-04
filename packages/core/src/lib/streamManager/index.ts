@@ -9,15 +9,18 @@ import {
   StreamType,
   VercelConfig,
 } from '@latitude-data/constants'
-import type { SimulationSettings } from '@latitude-data/constants/simulation'
-import type { Message, ToolCall } from '@latitude-data/constants/messages'
-import { FinishReason } from 'ai'
 import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants/ai'
+import type { Message, ToolCall } from '@latitude-data/constants/messages'
+import type { SimulationSettings } from '@latitude-data/constants/simulation'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
+import { FinishReason } from 'ai'
 import { omit } from 'lodash-es'
-import { WorkspaceDto } from '../../schema/models/types/Workspace'
-import { IntegrationDto } from '../../schema/models/types/Integration'
 import { LogSources, PromptSource } from '../../constants'
+import { IntegrationDto } from '../../schema/models/types/Integration'
+import { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { ValidatedChainStep } from '../../services/chains/ChainValidator'
+import { ToolHandler } from '../../services/documents/tools/clientTools/handlers'
 import {
   createMcpClientManager,
   McpClientManager,
@@ -25,10 +28,7 @@ import {
 import { TelemetryContext } from '../../telemetry'
 import { ChainError, RunErrorCodes } from '../errors'
 import { generateUUIDIdentifier } from '../generateUUID'
-import { ToolHandler } from '../../services/documents/tools/clientTools/handlers'
-import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { createPromiseWithResolver } from './utils/createPromiseResolver'
-import { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 
 const addTokens = ({
   attr,
