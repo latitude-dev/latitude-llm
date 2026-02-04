@@ -46,7 +46,12 @@ export const runRoute = createRoute({
                 description:
                   'Custom headers to pass to MCP servers at runtime, keyed by integration name (e.g., { "myMcp": { "customer-id": "abc123" } })',
               }),
-            userMessage: z.string().optional(),
+            userMessage: z
+              .string()
+              .optional()
+              .describe(
+                '@deprecated Use the `messages` parameter instead. This parameter will be removed in a future version.',
+              ),
             background: z.boolean().optional(),
           }),
         },

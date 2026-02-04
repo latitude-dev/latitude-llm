@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+- The `userMessage` parameter in `prompts.run()` is now deprecated. Use the `messages` parameter instead (coming soon). The `userMessage` parameter will be removed in a future version.
+
 ## [5.4.1] - 2026-01-30
 
 ### Fixed
