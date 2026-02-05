@@ -27,6 +27,7 @@ import {
 } from '../constants'
 import { diskFactory, DiskWrapper } from '../lib/disk'
 import { Result } from '../lib/Result'
+import { applyDefaultSpansCreatedAtRange } from '../services/spans/defaultCreatedAtWindow'
 import { spans } from '../schema/models/spans'
 import Repository from './repositoryV2'
 import { EvaluationResultV2 } from '@latitude-data/constants'
@@ -81,6 +82,90 @@ export class SpansRepository extends Repository<Span> {
     }
 
     return conditions
+  }
+
+  private normalizeCreatedAtRange(
+    createdAt?: { from?: Date; to?: Date },
+  ): { from?: Date; to?: Date } | undefined {
+    if (!createdAt?.from && !createdAt?.to) return undefined
+    return createdAt
+  }
+
+  private buildCursorCondition(from?: { startedAt: string; id: string }) {
+    if (!from) return undefined
+    return sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
+  }
+
+  private async executeLimitedQuery({
+    conditions,
+    from,
+    limit,
+  }: {
+    conditions: SQL<unknown>[]
+    from?: { startedAt: string; id: string }
+    limit: number
+  }) {
+    const cursorCondition = this.buildCursorCondition(from)
+    const whereConditions = [...conditions, cursorCondition].filter(
+      Boolean,
+    ) as SQL<unknown>[]
+
+    const result = await this.db
+      .select(tt)
+      .from(spans)
+      .where(and(...whereConditions))
+      .orderBy(desc(spans.startedAt), desc(spans.id))
+      .limit(limit + 1)
+
+    const hasMore = result.length > limit
+    const items = hasMore ? result.slice(0, limit) : result
+    const next = hasMore
+      ? {
+          startedAt: items[items.length - 1]!.startedAt.toISOString(),
+          id: items[items.length - 1]!.id,
+        }
+      : null
+
+    return { items: items as Span[], next }
+  }
+
+  private async executeWithDefaultCreatedAtAndFallback({
+    createdAt,
+    from,
+    limit,
+    buildConditions,
+  }: {
+    createdAt?: { from?: Date; to?: Date }
+    from?: { startedAt: string; id: string }
+    limit: number
+    buildConditions: (createdAt?: { from?: Date; to?: Date }) => SQL<unknown>[]
+  }) {
+    const normalizedCreatedAt = this.normalizeCreatedAtRange(createdAt)
+    const defaultCreatedAt = applyDefaultSpansCreatedAtRange({
+      createdAt: normalizedCreatedAt,
+      hasCursor: Boolean(from),
+    })
+
+    const firstPage = await this.executeLimitedQuery({
+      conditions: buildConditions(defaultCreatedAt),
+      from,
+      limit,
+    })
+
+    const shouldFallbackToAllTime =
+      !from && normalizedCreatedAt === undefined && firstPage.items.length === 0
+
+    if (!shouldFallbackToAllTime) {
+      return { ...firstPage, didFallbackToAllTime: undefined }
+    }
+
+    const allTime = await this.executeLimitedQuery({
+      conditions: buildConditions(undefined),
+      from: undefined,
+      limit,
+    })
+
+    return { ...allTime, didFallbackToAllTime: true }
   }
 
   async get({ spanId, traceId }: { spanId: string; traceId: string }) {
@@ -219,62 +304,34 @@ export class SpansRepository extends Repository<Span> {
     testDeploymentIds?: number[]
     createdAt?: { from?: Date; to?: Date }
   }) {
-    const conditions = [
-      ...this.buildFilterConditions({
-        types,
-        source,
-        experimentUuids,
-        createdAt,
-      }),
-      eq(spans.documentUuid, documentUuid),
-    ]
+    const result = await this.executeWithDefaultCreatedAtAndFallback({
+      createdAt,
+      from,
+      limit,
+      buildConditions: (queryCreatedAt) => {
+        const conditions = [
+          ...this.buildFilterConditions({
+            types,
+            source,
+            experimentUuids,
+            createdAt: queryCreatedAt,
+          }),
+          eq(spans.documentUuid, documentUuid),
+        ]
 
-    // Add commit filter if provided - filter by commit UUIDs directly
-    if (commitUuids && commitUuids.length > 0) {
-      conditions.push(inArray(spans.commitUuid, commitUuids))
-    }
-
-    // Add experiment filter if provided - filter by experiment UUIDs directly
-    if (experimentUuids && experimentUuids.length > 0) {
-      conditions.push(inArray(spans.experimentUuid, experimentUuids))
-    }
-
-    // Add test deployment filter if provided - filter by test deployment IDs directly
-    if (testDeploymentIds && testDeploymentIds.length > 0) {
-      conditions.push(inArray(spans.testDeploymentId, testDeploymentIds))
-    }
-
-    // Filter by cursor if provided (same pattern as document logs)
-    const cursorConditions = [
-      ...conditions,
-      from
-        ? sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
-        : undefined,
-    ].filter(Boolean) as SQL<unknown>[]
-
-    const result = await this.db
-      .select(tt)
-      .from(spans)
-      .where(and(...cursorConditions))
-      .orderBy(desc(spans.startedAt), desc(spans.id))
-      .limit(limit + 1)
-
-    const hasMore = result.length > limit
-    const items = hasMore ? result.slice(0, limit) : result
-    const next = hasMore
-      ? {
-          startedAt: result[limit - 1].startedAt.toISOString(),
-          id: result[limit - 1].id,
+        if (commitUuids && commitUuids.length > 0) {
+          conditions.push(inArray(spans.commitUuid, commitUuids))
         }
-      : null
 
-    return Result.ok<{
-      items: Span[]
-      next: { startedAt: string; id: string } | null
-    }>({
-      items: items as Span[],
-      next,
+        if (testDeploymentIds && testDeploymentIds.length > 0) {
+          conditions.push(inArray(spans.testDeploymentId, testDeploymentIds))
+        }
+
+        return conditions
+      },
     })
+
+    return Result.ok(result)
   }
 
   async findByProjectLimited({
@@ -294,41 +351,22 @@ export class SpansRepository extends Repository<Span> {
     experimentUuids?: string[]
     createdAt?: { from?: Date; to?: Date }
   }) {
-    const conditions = [
-      ...this.buildFilterConditions({
-        types,
-        source,
-        experimentUuids,
-        createdAt,
-      }),
-      from
-        ? sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
-        : undefined,
-    ].filter(Boolean) as SQL<unknown>[]
-
-    const result = await this.db
-      .select(tt)
-      .from(spans)
-      .where(and(...conditions, eq(spans.projectId, projectId)))
-      .orderBy(desc(spans.startedAt), desc(spans.id))
-      .limit(limit + 1)
-
-    const hasMore = result.length > limit
-    const items = hasMore ? result.slice(0, limit) : result
-    const next = hasMore
-      ? {
-          startedAt: items[items.length - 1].startedAt.toISOString(),
-          id: items[items.length - 1].id,
-        }
-      : null
-
-    return Result.ok<{
-      items: Span[]
-      next: { startedAt: string; id: string } | null
-    }>({
-      items: items as Span[],
-      next,
+    const result = await this.executeWithDefaultCreatedAtAndFallback({
+      createdAt,
+      from,
+      limit,
+      buildConditions: (queryCreatedAt) => [
+        ...this.buildFilterConditions({
+          types,
+          source,
+          experimentUuids,
+          createdAt: queryCreatedAt,
+        }),
+        eq(spans.projectId, projectId),
+      ],
     })
+
+    return Result.ok(result)
   }
 
   async findByParentAndType({

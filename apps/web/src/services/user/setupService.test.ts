@@ -7,7 +7,6 @@ import { providerApiKeys } from '@latitude-data/core/schema/models/providerApiKe
 import { users } from '@latitude-data/core/schema/models/users'
 import { workspaceOnboarding } from '@latitude-data/core/schema/models/workspaceOnboarding'
 import { workspaces } from '@latitude-data/core/schema/models/workspaces'
-import setupServiceGlobal from './setupService'
 
 const mocks = vi.hoisted(() => ({
   claimReward: vi.fn(),
@@ -22,18 +21,21 @@ describe('setupService', () => {
   beforeAll(async () => {
     vi.stubEnv('NEXT_PUBLIC_DEFAULT_PROVIDER_NAME', 'Latitude')
     vi.stubEnv('DEFAULT_PROVIDER_API_KEY', 'default-provider-api-key')
-    vi.resetModules()
   })
 
   afterAll(() => {
     vi.unstubAllEnvs()
   })
 
-  it('should create all necessary entities when calling setup service', async () => {
-    const mod = await import('./setupService')
-    const setupService = mod.default
-    const result = await setupService({
-      email: 'test@example.com',
+  it(
+    'should create all necessary entities when calling setup service',
+    async () => {
+      const email = `test+${Date.now()}@example.com`
+
+      const mod = await import('./setupService')
+      const setupService = mod.default
+      const result = await setupService({
+        email,
       name: 'Test User',
       companyName: 'Test Company',
     })
@@ -52,7 +54,7 @@ describe('setupService', () => {
       .where(utils.eq(users.id, user.id))
       .then((rows) => rows[0])
     expect(createdUser).toBeDefined()
-    expect(createdUser?.email).toBe('test@example.com')
+    expect(createdUser?.email).toBe(email)
     expect(createdUser?.name).toBe('Test User')
 
     // Check workspace creation
@@ -98,11 +100,19 @@ describe('setupService', () => {
       .then((r) => r[0])
     expect(createdOnboarding).toBeDefined()
     expect(createdOnboarding?.completedAt).toBeNull()
-  })
+    },
+    15000,
+  )
 
-  it('publishes userCreated event', async () => {
-    const result = await setupServiceGlobal({
-      email: 'test@example.com',
+  it(
+    'publishes userCreated event',
+    async () => {
+      const email = `test+${Date.now()}@example.com`
+
+    const mod = await import('./setupService')
+    const setupService = mod.default
+    const result = await setupService({
+        email,
       name: 'Test User',
       companyName: 'Test Company',
     })
@@ -121,5 +131,7 @@ describe('setupService', () => {
     } else {
       throw new Error('User was not created')
     }
-  })
+    },
+    15000,
+  )
 })

@@ -76,9 +76,13 @@ export default async function setupService(
       r.unwrap(),
     )
 
-    await createDatasetOnboarding({ workspace, user }, transaction).then((r) =>
-      r.unwrap(),
+    const datasetOnboardingResult = await createDatasetOnboarding(
+      { workspace, user },
+      transaction,
     )
+    if (datasetOnboardingResult.error) {
+      captureException?.(datasetOnboardingResult.error)
+    }
 
     publisher.publishLater({
       type: 'userCreated',
