@@ -1856,6 +1856,13 @@
       "when": 1770283978826,
       "tag": "0265_minor_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 266,
+      "version": "7",
+      "when": 1770308262917,
+      "tag": "0266_lovely_talon",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,24 @@
+COMMIT;
+--> statement-breakpoint
+
+DO $$
+DECLARE
+  deleted_count INTEGER;
+  total_deleted INTEGER := 0;
+BEGIN
+  LOOP
+    WITH del AS (
+      SELECT ctid
+      FROM spans
+      WHERE workspace_id = 13605
+      LIMIT 10000
+    )
+    DELETE FROM spans
+    WHERE ctid IN (SELECT ctid FROM del);
+
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    total_deleted := total_deleted + deleted_count;
+    RAISE NOTICE 'Deleted % rows (total: %)', deleted_count, total_deleted;
+    EXIT WHEN deleted_count = 0;
+  END LOOP;
+END $$;
