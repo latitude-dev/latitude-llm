@@ -99,8 +99,17 @@ async function registerClientWithPathSupport(
   })
 
   if (!response.ok) {
+    let errorDetails = ''
+    try {
+      const errorBody = await response.json()
+      errorDetails = errorBody.error
+        ? ` - ${errorBody.error}: ${errorBody.errorDescription || errorBody.error_description || ''}`
+        : ` - ${JSON.stringify(errorBody)}`
+    } catch {
+      // Response body is not JSON, ignore
+    }
     throw new Error(
-      `Dynamic client registration failed: HTTP ${response.status}`,
+      `Dynamic client registration failed: HTTP ${response.status}${errorDetails}`,
     )
   }
 
