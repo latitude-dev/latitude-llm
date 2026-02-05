@@ -12,7 +12,8 @@
     "test": "vitest run --pool=forks"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./edge": "./src/edge/index.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",
