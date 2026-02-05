@@ -58,6 +58,7 @@ RUN rm -fr node_modules
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --prod \
   --frozen-lockfile \
+  --ignore-scripts \
   --shamefully-hoist \
   --filter "${PROJECT}..."
 

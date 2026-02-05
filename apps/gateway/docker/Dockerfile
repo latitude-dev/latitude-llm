@@ -89,6 +89,7 @@ RUN rm -fr node_modules
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --prod \
   --frozen-lockfile \
+  --ignore-scripts \
   # This flag produces a single flat node_moduels directory ensuring the app
   # has access to packages' dependencies (e.g think the dependencies of
   # packages/core) without having to bundle packages with the output build

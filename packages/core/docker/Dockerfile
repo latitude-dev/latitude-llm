@@ -27,7 +27,8 @@ COPY packages/ ./packages/
 COPY tools/ ./tools/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
-  --frozen-lockfile
+  --frozen-lockfile \
+  --ignore-scripts
 
 RUN pnpm build --filter='@latitude-data/telemetry' --filter='@latitude-data/constants'
 
