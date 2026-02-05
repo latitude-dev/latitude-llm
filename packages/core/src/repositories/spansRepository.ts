@@ -27,7 +27,6 @@ import {
 } from '../constants'
 import { diskFactory, DiskWrapper } from '../lib/disk'
 import { Result } from '../lib/Result'
-import { commits } from '../schema/models/commits'
 import { spans } from '../schema/models/spans'
 import Repository from './repositoryV2'
 import { EvaluationResultV2 } from '@latitude-data/constants'
@@ -295,16 +294,6 @@ export class SpansRepository extends Repository<Span> {
     experimentUuids?: string[]
     createdAt?: { from?: Date; to?: Date }
   }) {
-    // Fetch commit UUIDs - this should be fast with proper commit indexes
-    // FIXME: This is wrong use CommitRepository.getCommitsHistory
-    const commitUuids = await this.db
-      .select({ uuid: commits.uuid })
-      .from(commits)
-      .where(eq(commits.projectId, projectId))
-      .then((r) => r.map((c) => c.uuid))
-
-    if (commitUuids.length === 0) return Result.ok({ items: [], next: null })
-
     const conditions = [
       ...this.buildFilterConditions({
         types,
@@ -320,7 +309,7 @@ export class SpansRepository extends Repository<Span> {
     const result = await this.db
       .select(tt)
       .from(spans)
-      .where(and(...conditions, inArray(spans.commitUuid, commitUuids)))
+      .where(and(...conditions, eq(spans.projectId, projectId)))
       .orderBy(desc(spans.startedAt), desc(spans.id))
       .limit(limit + 1)
 
