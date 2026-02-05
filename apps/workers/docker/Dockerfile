@@ -88,10 +88,12 @@ FROM node:22-alpine AS runner
 # Required for the health check
 RUN apk add --update --no-cache curl
 
-# Install uv and Python 3.13 (standalone build - self-contained, no system deps)
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Install uv and Python (standalone build - self-contained, no system deps)
+# Copy .python-version first so we install the exact version needed
+COPY apps/engine/.python-version /tmp/.python-version
+COPY --from=ghcr.io/astral-sh/uv:0.9.30 /uv /usr/local/bin/uv
 ENV UV_PYTHON_INSTALL_DIR="/opt/python"
-RUN uv python install 3.13
+RUN uv python install $(cat /tmp/.python-version) && chown -R 1001:1001 /opt/python
 
 ARG PROJECT_PATH
 ARG DD_GIT_REPOSITORY_URL
