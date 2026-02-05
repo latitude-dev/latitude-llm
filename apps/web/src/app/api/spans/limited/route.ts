@@ -83,6 +83,11 @@ export const GET = errorHandler(
           const currentCommit = await commitsRepo
             .getCommitByUuid({ uuid: commitUuid, projectId: Number(projectId) })
             .then((r) => r.unwrap())
+          const commitUuids = await buildCommitFilter({
+            filters,
+            currentCommit,
+            commitsRepo,
+          })
           result = await spansRepository
             .findByDocumentAndCommitLimited({
               documentUuid,
@@ -91,11 +96,7 @@ export const GET = errorHandler(
                 ? { startedAt: fromCursor.value, id: fromCursor.id }
                 : undefined,
               limit: parsedParams.limit,
-              commitUuids: await buildCommitFilter({
-                filters,
-                currentCommit,
-                commitsRepo,
-              }),
+              commitUuids,
               experimentUuids: filters.experimentUuids,
               createdAt: filters.createdAt,
             })
