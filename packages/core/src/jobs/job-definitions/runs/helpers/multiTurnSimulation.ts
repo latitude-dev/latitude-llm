@@ -37,6 +37,7 @@ type ExecuteSingleTurnArgs = RunIdentifiers & {
   messages: Message[]
   currentTurn: number
   maxTurns: number
+  simulationInstructions?: string
   workspace: WorkspaceDto
   documentLogUuid: string
   tools: Record<string, ToolHandler>
@@ -58,9 +59,10 @@ type TurnResult = {
  * - "respond": Continue with the generated message, then get the assistant's reply
  */
 async function executeSingleTurn({
-  messages,
+  simulationInstructions,
   currentTurn,
   maxTurns,
+  messages,
   workspace,
   documentLogUuid,
   tools,
@@ -75,7 +77,7 @@ async function executeSingleTurn({
 }: ExecuteSingleTurnArgs): PromisedResult<TurnResult, Error> {
   const userActionResult = await generateSimulatedUserAction({
     messages,
-    simulationInstructions: undefined,
+    simulationInstructions,
     currentTurn,
     maxTurns,
     abortSignal,
@@ -182,9 +184,10 @@ export async function simulateUserResponses({
     if (abortSignal?.aborted) break
 
     const turnResult = await executeSingleTurn({
-      messages,
+      simulationInstructions: simulationSettings.simulatedUserGoal,
       currentTurn,
       maxTurns,
+      messages,
       workspace,
       documentLogUuid,
       tools,

@@ -24,6 +24,7 @@ export type SelectOption<V extends unknown = unknown> = {
   value: V
   icon?: ReactNode | IconName
   hoverDescription?: string
+  disabled?: boolean
 }
 
 export type SelectOptionGroup<V extends unknown = unknown> = {
@@ -32,7 +33,12 @@ export type SelectOptionGroup<V extends unknown = unknown> = {
 }
 export function Options({ options }: { options: SelectOption[] }) {
   return options.map((option, key) => (
-    <SelectItem key={key} value={String(option.value)} icon={option.icon}>
+    <SelectItem
+      key={key}
+      value={String(option.value)}
+      icon={option.icon}
+      disabled={option.disabled}
+    >
       {option.label}
     </SelectItem>
   ))

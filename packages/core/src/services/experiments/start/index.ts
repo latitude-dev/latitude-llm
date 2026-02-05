@@ -3,12 +3,39 @@ import { LatitudeError } from '../../../lib/errors'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { experiments } from '../../../schema/models/experiments'
 import { eq } from 'drizzle-orm'
-import { getExperimentJobPayload } from './getExperimentJobPayload'
+import {
+  ExperimentRow,
+  getExperimentJobPayload,
+} from './getExperimentJobPayload'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'
 import { enqueueRun } from '../../runs/enqueue'
 import { LogSources } from '@latitude-data/constants'
+import { SimulationSettings } from '@latitude-data/constants/simulation'
 import { initializeExperimentStatus } from '../updateStatus'
+
+function buildRowSimulationSettings(
+  baseSettings: SimulationSettings | undefined,
+  row: ExperimentRow,
+): SimulationSettings {
+  const settings = baseSettings ?? { simulateToolResponses: true }
+
+  if (row.simulatedUserGoal !== undefined) {
+    return {
+      ...settings,
+      simulatedUserGoal: row.simulatedUserGoal,
+    }
+  }
+
+  if (settings.simulatedUserGoalSource?.type === 'global') {
+    return {
+      ...settings,
+      simulatedUserGoal: settings.simulatedUserGoalSource.value,
+    }
+  }
+
+  return settings
+}
 
 export async function startExperiment(
   {
@@ -74,9 +101,10 @@ export async function startExperiment(
       parameters: row.parameters,
       datasetRowId: row.datasetRowId,
       source: LogSources.Experiment,
-      simulationSettings: experiment.metadata.simulationSettings ?? {
-        simulateToolResponses: true,
-      },
+      simulationSettings: buildRowSimulationSettings(
+        experiment.metadata.simulationSettings,
+        row,
+      ),
     })
   }
 
