@@ -173,6 +173,7 @@ import {
   CreditCardIcon,
   KeyRound,
   MessageCircle,
+  MessageSquareDashedIcon,
   MessagesSquareIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
@@ -270,6 +271,7 @@ const Icons = {
   chat: MessageCircleIcon,
   messageSquareText: MessageSquareTextIcon,
   messagesSquare: MessagesSquareIcon,
+  messageSquareDashed: MessageSquareDashedIcon,
   check: CheckCircle2,
   checkCheck: CheckCheck,
   checkClean: CheckIcon,

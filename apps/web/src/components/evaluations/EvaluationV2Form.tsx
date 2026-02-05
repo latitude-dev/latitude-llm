@@ -2,11 +2,15 @@ import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import {
   CompositeEvaluationMetric,
+  DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
+  EvaluationTriggerTarget,
   EvaluationType,
   HumanEvaluationMetric,
+  LAST_INTERACTION_DEBOUNCE_MAX_SECONDS,
+  LAST_INTERACTION_DEBOUNCE_MIN_SECONDS,
   LlmEvaluationMetric,
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
@@ -26,6 +30,7 @@ import {
   ConfigurationSimpleForm,
 } from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 
 /**
  * This can be improved by passing specific schemas per type/metric
@@ -39,6 +44,8 @@ type EvaluationV2FormSchema = StandardSchemaV1<{
   options: string
   settings: string
   evaluateLiveLogs: string
+  'trigger.target': string
+  'trigger.lastInteractionDebounce': string
 }>
 
 export type EvaluationV2FormErrors = ActionErrors<EvaluationV2FormSchema>
@@ -253,6 +260,17 @@ export default function EvaluationV2Form<
             description='You will be able to manually evaluate responses in the runs/logs dashboard or via the API/SDK'
           />
         )}
+
+        <TriggerSettings
+          configuration={settings.configuration}
+          setConfiguration={(value) =>
+            setSettings({ ...settings, configuration: value })
+          }
+          evaluateLiveLogs={!!options.evaluateLiveLogs}
+          errors={errors}
+          disabled={disabled || commitMerged}
+        />
+
         {settings.type !== EvaluationType.Composite && (
           <CollapsibleBox
             title='Advanced configuration'
@@ -295,11 +313,122 @@ export default function EvaluationV2Form<
                     />
                   )}
                 </FormFieldGroup>
+                {metricSpecification?.supportsLiveEvaluation &&
+                  !!options.evaluateLiveLogs &&
+                  settings.configuration.trigger?.target === 'last' && (
+                    <FormFieldGroup
+                      label='Response timeout'
+                      description='How many seconds to wait after a response has been added to the conversation before considering it the "last response". Used only when evaluating the last response in Live Evaluation mode.'
+                      layout='horizontal'
+                    >
+                      <Input
+                        value={
+                          settings.configuration.trigger?.lastInteractionDebounce?.toString() ??
+                          ''
+                        }
+                        name='lastInteractionDebounce'
+                        type='number'
+                        min={LAST_INTERACTION_DEBOUNCE_MIN_SECONDS}
+                        max={LAST_INTERACTION_DEBOUNCE_MAX_SECONDS}
+                        placeholder={DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS.toString()}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value, 10)
+                          setSettings({
+                            ...settings,
+                            configuration: {
+                              ...settings.configuration,
+                              trigger: {
+                                ...settings.configuration.trigger,
+                                lastInteractionDebounce: isNaN(value)
+                                  ? DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS
+                                  : value,
+                              },
+                            },
+                          })
+                        }}
+                        className='w-full'
+                        disabled={disabled}
+                        errors={errors?.['trigger.lastInteractionDebounce']}
+                      />
+                    </FormFieldGroup>
+                  )}
               </FormWrapper>
             }
           />
         )}
       </FormWrapper>
     </form>
+  )
+}
+
+const TRIGGER_TARGET_OPTIONS: Record<
+  EvaluationTriggerTarget,
+  {
+    label: string
+    icon?: IconName
+  }
+> = {
+  first: {
+    label: 'First response only',
+    icon: 'messageSquareText',
+  },
+  every: {
+    label: 'Every response',
+    icon: 'messagesSquare',
+  },
+  last: {
+    label: 'Last response only',
+    icon: 'messageSquareDashed',
+  },
+}
+
+function TriggerSettings<
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>({
+  configuration,
+  setConfiguration,
+  errors,
+  disabled,
+}: {
+  configuration: EvaluationSettings<T, M>['configuration']
+  setConfiguration: (
+    configuration: EvaluationSettings<T, M>['configuration'],
+  ) => void
+  evaluateLiveLogs: boolean
+  errors?: Record<string, string[] | undefined>
+  disabled?: boolean
+}) {
+  const triggerTarget = configuration.trigger?.target ?? 'every'
+
+  return (
+    <FormFieldGroup
+      label='Evaluated responses'
+      description='Which assistant responses from the conversation will be evaluated'
+      layout='horizontal'
+    >
+      <Select
+        value={triggerTarget}
+        name='triggerTarget'
+        placeholder='Select responses'
+        options={Object.entries(TRIGGER_TARGET_OPTIONS).map(
+          ([value, { label, icon }]) => ({
+            label,
+            value,
+            icon,
+          }),
+        )}
+        onChange={(value) =>
+          setConfiguration({
+            ...configuration,
+            trigger: {
+              target: value as EvaluationTriggerTarget,
+            },
+          })
+        }
+        errors={errors?.['trigger.target']}
+        disabled={disabled}
+      />
+    </FormFieldGroup>
   )
 }

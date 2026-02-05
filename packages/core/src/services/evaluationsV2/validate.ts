@@ -9,6 +9,8 @@ import {
   EvaluationType,
   EvaluationV2,
   ExpectedOutputConfiguration,
+  LAST_INTERACTION_DEBOUNCE_MAX_SECONDS,
+  LAST_INTERACTION_DEBOUNCE_MIN_SECONDS,
 } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -128,6 +130,7 @@ export async function validateEvaluationV2<
     reverseScale: settings.configuration.reverseScale,
     actualOutput: settings.configuration.actualOutput,
     expectedOutput: settings.configuration.expectedOutput,
+    trigger: settings.configuration.trigger,
   }
 
   if (evaluations.find((e) => e.name === settings.name)) {
@@ -147,6 +150,24 @@ export async function validateEvaluationV2<
     return Result.error(
       new BadRequestError('This metric does not support live evaluation'),
     )
+  }
+
+  const debounce = settings.configuration.trigger?.lastInteractionDebounce
+  if (debounce !== undefined) {
+    if (debounce < LAST_INTERACTION_DEBOUNCE_MIN_SECONDS) {
+      return Result.error(
+        new BadRequestError(
+          `lastInteractionDebounce must be at least ${LAST_INTERACTION_DEBOUNCE_MIN_SECONDS} seconds`,
+        ),
+      )
+    }
+    if (debounce > LAST_INTERACTION_DEBOUNCE_MAX_SECONDS) {
+      return Result.error(
+        new BadRequestError(
+          `lastInteractionDebounce must be at most ${LAST_INTERACTION_DEBOUNCE_MAX_SECONDS} seconds`,
+        ),
+      )
+    }
   }
 
   // ISSUE VALIDATIONS

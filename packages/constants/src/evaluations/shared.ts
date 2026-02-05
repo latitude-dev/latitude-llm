@@ -22,10 +22,30 @@ export type ExpectedOutputConfiguration = z.infer<
 
 export const ACCESSIBLE_OUTPUT_FORMATS = ['json']
 
+export const EVALUATION_TRIGGER_TARGETS = ['first', 'every', 'last'] as const
+export type EvaluationTriggerTarget =
+  (typeof EVALUATION_TRIGGER_TARGETS)[number]
+
+export const DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS = 120
+export const LAST_INTERACTION_DEBOUNCE_MIN_SECONDS = 30
+export const LAST_INTERACTION_DEBOUNCE_MAX_SECONDS = 60 * 60 * 24 // 1 day
+
+const triggerConfiguration = z.object({
+  target: z.enum(EVALUATION_TRIGGER_TARGETS),
+  lastInteractionDebounce: z
+    .number()
+    .min(LAST_INTERACTION_DEBOUNCE_MIN_SECONDS)
+    .max(LAST_INTERACTION_DEBOUNCE_MAX_SECONDS)
+    .optional()
+    .default(DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS),
+})
+export type TriggerConfiguration = z.infer<typeof triggerConfiguration>
+
 export const baseEvaluationConfiguration = z.object({
   reverseScale: z.boolean(), // If true, lower is better, otherwise, higher is better
   actualOutput: actualOutputConfiguration,
   expectedOutput: expectedOutputConfiguration.optional(),
+  trigger: triggerConfiguration.optional(),
 })
 export const baseEvaluationResultMetadata = z.object({
   // configuration: Configuration snapshot is defined in every metric specification

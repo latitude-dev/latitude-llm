@@ -12,6 +12,8 @@ import {
   EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
+  LAST_INTERACTION_DEBOUNCE_MAX_SECONDS,
+  LAST_INTERACTION_DEBOUNCE_MIN_SECONDS,
   RuleEvaluationMetric,
 } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
@@ -327,6 +329,54 @@ describe('validateEvaluationV2', () => {
     ).rejects.toThrowError(
       new BadRequestError('This metric does not support live evaluation'),
     )
+  })
+
+  it('fails when lastInteractionDebounce is below minimum', async () => {
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: {
+          ...settings,
+          configuration: {
+            ...settings.configuration,
+            trigger: {
+              target: 'every',
+              lastInteractionDebounce:
+                LAST_INTERACTION_DEBOUNCE_MIN_SECONDS - 1,
+            },
+          },
+        },
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: null,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(expect.any(ZodError))
+  })
+
+  it('fails when lastInteractionDebounce is above maximum', async () => {
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: {
+          ...settings,
+          configuration: {
+            ...settings.configuration,
+            trigger: {
+              target: 'every',
+              lastInteractionDebounce:
+                LAST_INTERACTION_DEBOUNCE_MAX_SECONDS + 1,
+            },
+          },
+        },
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: null,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(expect.any(ZodError))
   })
 
   it('succeeds when validating an evaluation from create', async () => {
