@@ -44,11 +44,6 @@ const GOAL_OPTIONS: GoalOption[] = [
     icon: 'circleCheck',
   },
   {
-    value: LatitudeGoal.ImprovingLatency,
-    label: 'Scaling (latency / cost)',
-    icon: 'zap',
-  },
-  {
     value: LatitudeGoal.JustExploring,
     label: 'Just exploring',
     icon: 'search',
