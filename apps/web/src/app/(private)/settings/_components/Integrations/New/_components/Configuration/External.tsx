@@ -18,6 +18,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
 
 type HeaderEntry = { key: string; value: string }
 
@@ -25,6 +26,8 @@ type AuthDetection = {
   checked: boolean
   requiresOAuth: boolean
 }
+
+type AuthMethod = 'oauth' | 'bearer'
 
 export const ExternalIntegrationConfiguration = forwardRef<
   {
@@ -41,6 +44,8 @@ export const ExternalIntegrationConfiguration = forwardRef<
     checked: false,
     requiresOAuth: false,
   })
+  const [authMethod, setAuthMethod] = useState<AuthMethod>('oauth')
+  const [bearerToken, setBearerToken] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isValidUrl = useCallback((urlString: string): boolean => {
@@ -137,14 +142,24 @@ export const ExternalIntegrationConfiguration = forwardRef<
         if (!url) throw new Error('URL is required')
 
         // Use cached detection if available, otherwise probe again
-        let requiresOAuth = authDetection.requiresOAuth
+        let serverRequiresOAuth = authDetection.requiresOAuth
         if (!authDetection.checked) {
           const [probeResult] = await probeAuth({ url })
-          requiresOAuth = probeResult?.requiresOAuth ?? false
+          serverRequiresOAuth = probeResult?.requiresOAuth ?? false
         }
 
-        if (!requiresOAuth) {
-          const [_, error] = await execute({ url, headers: headersRecord })
+        // If user chose bearer token auth, merge it with other headers and skip OAuth
+        const useBearerToken =
+          serverRequiresOAuth && authMethod === 'bearer' && bearerToken.trim()
+        const finalHeaders = useBearerToken
+          ? { ...headersRecord, Authorization: `Bearer ${bearerToken.trim()}` }
+          : headersRecord
+
+        // Use OAuth flow only if server requires it AND user didn't choose bearer token
+        const useOAuth = serverRequiresOAuth && !useBearerToken
+
+        if (!useOAuth) {
+          const [_, error] = await execute({ url, headers: finalHeaders })
           if (error) throw error
         }
 
@@ -152,14 +167,22 @@ export const ExternalIntegrationConfiguration = forwardRef<
           type: IntegrationType.ExternalMCP,
           configuration: {
             url,
-            useOAuth: requiresOAuth,
+            useOAuth,
             headers:
-              Object.keys(headersRecord).length > 0 ? headersRecord : undefined,
+              Object.keys(finalHeaders).length > 0 ? finalHeaders : undefined,
           },
         }
       },
     }),
-    [url, headersRecord, authDetection, execute, probeAuth],
+    [
+      url,
+      headersRecord,
+      authDetection,
+      authMethod,
+      bearerToken,
+      execute,
+      probeAuth,
+    ],
   )
 
   return (
@@ -185,11 +208,39 @@ export const ExternalIntegrationConfiguration = forwardRef<
         </div>
       )}
       {authDetection.checked && authDetection.requiresOAuth && (
-        <Alert
-          variant='default'
-          title='OAuth Authentication Required'
-          description="You'll be redirected to authorize after creating the integration."
-        />
+        <>
+          <Alert
+            variant='default'
+            title='Authentication Required'
+            description='This server requires authentication. Choose how you want to authenticate.'
+          />
+          <TabSelect
+            value={authMethod}
+            options={[
+              { value: 'oauth', label: 'OAuth' },
+              { value: 'bearer', label: 'Bearer token' },
+            ]}
+            onChange={setAuthMethod}
+          />
+          {authMethod === 'oauth' && (
+            <Text.H6 color='foregroundMuted'>
+              You&apos;ll be redirected to authorize after creating the
+              integration.
+            </Text.H6>
+          )}
+          {authMethod === 'bearer' && (
+            <Input
+              required
+              name='bearerToken'
+              label='Bearer Token'
+              description="Enter the access token from the server's dashboard or API."
+              placeholder='Your access token'
+              type='password'
+              value={bearerToken}
+              onChange={(e) => setBearerToken(e.target.value)}
+            />
+          )}
+        </>
       )}
       {authDetection.checked && !authDetection.requiresOAuth && (
         <CollapsibleBox
