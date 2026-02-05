@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { Providers } from '@latitude-data/constants'
 import { CommitsRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { deleteCommitDraft } from './delete'
@@ -29,33 +28,13 @@ describe('deleteCommitDraft', () => {
   })
 
   it('removes a draft with content', async () => {
-    const { workspace, project, user, providers } =
-      await factories.createProject({ skipMerge: true })
+    const { workspace, project, user } = await factories.createProject({
+      skipMerge: true,
+    })
 
-    const provider = providers[0]!
     const { commit: draft } = await factories.createDraft({
       project,
       user,
-    })
-
-    const { documentVersion } = await factories.createDocumentVersion({
-      workspace,
-      user,
-      commit: draft,
-      path: 'patata/doc1',
-      content: factories.helpers.createPrompt({ provider: provider.name }),
-    })
-
-    const { documentLog } = await factories.createDocumentLog({
-      document: documentVersion,
-      commit: draft,
-    })
-
-    await factories.createProviderLog({
-      workspace,
-      documentLogUuid: documentLog.uuid,
-      providerId: provider.id,
-      providerType: Providers.OpenAI,
     })
 
     const commitsRepository = new CommitsRepository(workspace.id)

@@ -9,7 +9,7 @@ import {
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { documentLogs } from './documentLogs'
+import { documentLogs } from '../legacyModels/documentLogs'
 import { workspaces } from './workspaces'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTriggerEventPayload } from '@latitude-data/constants/documentTriggers'
@@ -29,6 +29,7 @@ export const documentTriggerEvents = latitudeSchema.table(
       jsonb('payload').$type<
         DocumentTriggerEventPayload<DocumentTriggerType>
       >(),
+    // FIXME: Remove dependency with documentLogs table
     documentLogUuid: uuid('document_log_uuid').references(
       () => documentLogs.uuid,
       { onDelete: 'set null' },

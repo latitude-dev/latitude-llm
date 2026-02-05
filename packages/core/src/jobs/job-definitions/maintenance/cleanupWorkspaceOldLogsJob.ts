@@ -1,4 +1,4 @@
-import { providerLogs } from '../../../schema/models/providerLogs'
+import { providerLogs } from '../../../schema/legacyModels/providerLogs'
 import { spans } from '../../../schema/models/spans'
 import { Job } from 'bullmq'
 import { and, eq, inArray, isNotNull, lt } from 'drizzle-orm'
@@ -15,6 +15,8 @@ export type CleanupWorkspaceOldLogsJobData = {
 
 const DEFAULT_BATCH_SIZE = 1000
 /**
+ * FIXME: Should we remove this job already?
+ *
  * Job that deletes document logs, provider logs, and spans older than the
  * plan's retention period for a specific workspace.
  *

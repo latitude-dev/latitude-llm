@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Providers } from '@latitude-data/constants'
-import { LogSources } from '../../../constants'
-import { Result } from '../../../lib/Result'
-import { createProject } from '../../../tests/factories'
+import { LogSources } from '../../constants'
+import { Result } from '../../lib/Result'
+import { createProject } from '../../tests/factories'
 import {
   telemetry as realTelemetry,
   type LatitudeTelemetry,
-} from '../../../telemetry'
+} from '../../telemetry'
 import { addMessages } from './index'
-import { writeConversationCache } from '../../conversations/cache'
-import * as cacheModule from '../../conversations/cache'
-import * as providerApiKeysDataAccess from '../../providerApiKeys/data-access/providerApiKeys'
+import { writeConversationCache } from '../conversations/cache'
+import * as cacheModule from '../conversations/cache'
+import * as providerApiKeysDataAccess from '../providerApiKeys/data-access/providerApiKeys'
 
 const mocks = {
   runAi: vi.fn(async () => {
@@ -37,7 +37,7 @@ const mocks = {
   }),
 }
 
-const aiSpy = vi.spyOn(await import('../../ai'), 'ai')
+const aiSpy = vi.spyOn(await import('../ai'), 'ai')
 
 describe('addMessages', () => {
   beforeEach(() => {
@@ -375,7 +375,7 @@ Hello world
       }).then((r) => r.unwrap())
 
       vi.spyOn(
-        await import('../../providerApiKeys/buildMap'),
+        await import('../providerApiKeys/buildMap'),
         'buildProvidersMap',
       ).mockResolvedValue(new Map())
 

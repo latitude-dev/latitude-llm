@@ -8,6 +8,9 @@ import useSWR, { SWRConfiguration } from 'swr'
 import { WorkspaceUsage } from '@latitude-data/core/constants'
 import { useDebouncedCallback } from 'use-debounce'
 
+/**
+ * FIXME: this is broken. We removed `documentLogCreated` but we're not listening for spans created.
+ */
 export default function useWorkspaceUsage(opts?: SWRConfiguration) {
   const { data: users } = useUsers()
   const fetcher = useFetcher<WorkspaceUsage | undefined>(
@@ -37,7 +40,6 @@ export default function useWorkspaceUsage(opts?: SWRConfiguration) {
   }, 500)
 
   useSockets({ event: 'evaluationResultV2Created', onMessage })
-  useSockets({ event: 'documentLogCreated', onMessage })
   useEffect(() => {
     if (isLoading || !data?.members || !users.length) return
     if (data.members === users.length) return

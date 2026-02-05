@@ -238,7 +238,6 @@ export type EvaluationResultV2<
   experimentId?: number | null
   datasetId?: number | null
   evaluatedRowId?: number | null
-  evaluatedLogId?: number | null
   evaluatedSpanId?: string | null
   evaluatedTraceId?: string | null
   createdAt: Date

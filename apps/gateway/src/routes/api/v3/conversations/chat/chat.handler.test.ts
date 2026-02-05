@@ -7,7 +7,6 @@ import {
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import {
   createProject,
-  createProviderLog,
   createTelemetryTrace,
 } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
@@ -22,7 +21,6 @@ import {
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import { LogSources, StreamEventTypes } from '@latitude-data/core/constants'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
 
@@ -39,7 +37,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock(
-  '@latitude-data/core/services/documentLogs/addMessages/index',
+  '@latitude-data/core/services/addMessages/index',
   async (importOriginal) => {
     const original = (await importOriginal()) as typeof importOriginal
 
@@ -68,7 +66,6 @@ let route: string
 let body: Record<string, any>
 let headers: Record<string, string>
 let workspace: Workspace
-let provider: ProviderApiKey
 
 const stepMessages: Message[] = [
   {
@@ -466,23 +463,12 @@ describe('POST /chat', () => {
         ],
       })
       workspace = project.workspace
-      provider = project.providers[0]!
 
       const apikey = (
         await unsafelyGetFirstApiKeyByWorkspaceId({
           workspaceId: workspace.id,
         })
       ).unwrap()
-
-      await createProviderLog({
-        documentLogUuid: step.documentLogUuid!,
-        workspace,
-        providerId: provider.id,
-        providerType: provider.provider,
-        model: MODEL,
-        messages: step.input,
-        tokens: step.usage?.totalTokens,
-      })
 
       token = apikey.token
       route = `/api/v3/conversations/${step.documentLogUuid}/chat`

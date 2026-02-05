@@ -2,30 +2,30 @@ import { NotFoundError } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { type Message } from '@latitude-data/constants/messages'
 import { SimulationSettings } from '@latitude-data/constants/simulation'
-import { LogSources } from '../../../constants'
-import { isRetryableError } from '../../../lib/isRetryableError'
-import { Result } from '../../../lib/Result'
-import { DefaultStreamManager } from '../../../lib/streamManager/defaultStreamManager'
+import { LogSources } from '../../constants'
+import { isRetryableError } from '../../lib/isRetryableError'
+import { Result } from '../../lib/Result'
+import { DefaultStreamManager } from '../../lib/streamManager/defaultStreamManager'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
   SpansRepository,
-} from '../../../repositories'
-import { WorkspaceDto } from '../../../schema/models/types/Workspace'
+} from '../../repositories'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import {
   BACKGROUND,
   type LatitudeTelemetry,
   telemetry as realTelemetry,
   TelemetryContext,
-} from '../../../telemetry'
-import { getInputSchema, getOutputType } from '../../chains/ChainValidator'
-import { scanDocumentContent } from '../../documents'
-import { ToolHandler } from '../../documents/tools/clientTools/handlers'
-import { unsafelyFindProviderApiKey } from '../../providerApiKeys/data-access/providerApiKeys'
-import { readConversationCache } from '../../conversations/cache'
-import { buildProvidersMap } from '../../providerApiKeys/buildMap'
-import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
-import { adaptCompletionSpanMessagesToLegacy } from '../../tracing/spans/fetching/findCompletionSpanFromTrace'
+} from '../../telemetry'
+import { getInputSchema, getOutputType } from '../chains/ChainValidator'
+import { scanDocumentContent } from '../documents'
+import { ToolHandler } from '../documents/tools/clientTools/handlers'
+import { unsafelyFindProviderApiKey } from '../providerApiKeys/data-access/providerApiKeys'
+import { readConversationCache } from '../conversations/cache'
+import { buildProvidersMap } from '../providerApiKeys/buildMap'
+import { assembleTraceWithMessages } from '../tracing/traces/assemble'
+import { adaptCompletionSpanMessagesToLegacy } from '../tracing/spans/fetching/findCompletionSpanFromTrace'
 
 type AddMessagesArgs = {
   workspace: WorkspaceDto

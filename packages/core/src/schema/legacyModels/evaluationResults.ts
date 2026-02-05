@@ -2,8 +2,8 @@ import { bigint, bigserial, index, text, uuid } from 'drizzle-orm/pg-core'
 
 import { LogSources } from '../../constants'
 import { latitudeSchema } from '../db-schema'
-import { documentLogs } from '../models/documentLogs'
-import { logSourcesEnum, providerLogs } from '../models/providerLogs'
+import { documentLogs } from './documentLogs'
+import { logSourcesEnum, providerLogs } from './providerLogs'
 import { timestamps } from '../schemaHelpers'
 import { evaluations } from './evaluations'
 

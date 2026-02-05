@@ -28,7 +28,6 @@ import { DocumentVersion } from '@latitude-data/core/schema/models/types/Documen
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
 import { Providers } from '@latitude-data/constants'
-import { createProviderLog } from '@latitude-data/core/factories'
 
 const MODEL = 'gpt-4o'
 
@@ -698,16 +697,6 @@ describe('POST /run', () => {
         usage,
       })
 
-      await createProviderLog({
-        documentLogUuid,
-        workspace,
-        providerId: provider.id,
-        providerType: provider.provider,
-        model: MODEL,
-        messages: responseMessages,
-        tokens: usage.totalTokens,
-      })
-
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue({
@@ -1241,16 +1230,6 @@ describe('POST /run', () => {
         cachedInputTokens: 0,
       }
 
-      await createProviderLog({
-        documentLogUuid,
-        workspace,
-        providerId: provider.id,
-        providerType: provider.provider,
-        model: MODEL,
-        messages: responseMessages,
-        tokens: usage.totalTokens,
-      })
-
       const stream = new ReadableStream({
         start(controller) {
           controller.close()
@@ -1396,16 +1375,6 @@ describe('POST /run', () => {
         reasoningTokens: 0,
         cachedInputTokens: 0,
       }
-
-      await createProviderLog({
-        documentLogUuid,
-        workspace,
-        providerId: provider.id,
-        providerType: provider.provider,
-        model: MODEL,
-        messages: responseMessages,
-        tokens: usage.totalTokens,
-      })
 
       const stream = new ReadableStream({
         start(controller) {
@@ -1572,16 +1541,6 @@ describe('POST /run', () => {
           cachedInputTokens: 0,
         }
 
-        await createProviderLog({
-          documentLogUuid,
-          workspace,
-          providerId: provider.id,
-          providerType: provider.provider,
-          model: MODEL,
-          messages: responseMessages,
-          tokens: usage.totalTokens,
-        })
-
         const stream = new ReadableStream({
           start(controller) {
             controller.close()
@@ -1673,16 +1632,6 @@ describe('POST /run', () => {
           cachedInputTokens: 0,
         }
 
-        await createProviderLog({
-          documentLogUuid,
-          workspace,
-          providerId: provider.id,
-          providerType: provider.provider,
-          model: MODEL,
-          messages: responseMessages,
-          tokens: usage.totalTokens,
-        })
-
         const stream = new ReadableStream({
           start(controller) {
             controller.close()
@@ -1768,16 +1717,6 @@ describe('POST /run', () => {
           cachedInputTokens: 0,
         }
 
-        await createProviderLog({
-          documentLogUuid,
-          workspace,
-          providerId: provider.id,
-          providerType: provider.provider,
-          model: MODEL,
-          messages: responseMessages,
-          tokens: usage.totalTokens,
-        })
-
         const stream = new ReadableStream({
           start(controller) {
             controller.close()
@@ -1862,16 +1801,6 @@ describe('POST /run', () => {
           reasoningTokens: 0,
           cachedInputTokens: 0,
         }
-
-        await createProviderLog({
-          documentLogUuid,
-          workspace,
-          providerId: provider.id,
-          providerType: provider.provider,
-          model: MODEL,
-          messages: responseMessages,
-          tokens: usage.totalTokens,
-        })
 
         const stream = new ReadableStream({
           start(controller) {

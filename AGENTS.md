@@ -667,7 +667,6 @@ Events trigger asynchronous processing via registered handlers:
 ```typescript
 export const EventHandlers: IEventsHandlers = {
   spanCreated: [evaluateLiveLogJob],
-  providerLogCreated: [touchApiKeyJob, touchProviderApiKeyJob],
   evaluationResultV2Created: [assignIssueToEvaluationResultV2Job, ...],
   documentRunQueued: [notifyClientOfRunStatusByDocument],
   // ... many more event handlers

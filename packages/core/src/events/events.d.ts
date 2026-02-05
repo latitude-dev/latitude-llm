@@ -15,12 +15,10 @@ import { type MagicLinkToken } from '../schema/models/types/MagicLinkTokens'
 import { type Membership } from '../schema/models/types/Membership'
 import { type Project } from '../schema/models/types/Project'
 import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
-import { type ProviderLog } from '../schema/models/types/ProviderLog'
 import { type User } from '../schema/models/types/User'
 import { type Workspace } from '../schema/models/types/Workspace'
 import {
   DatasetV2,
-  DocumentLog,
   EvaluationResultV2,
   EvaluationV2,
   Message,
@@ -32,11 +30,9 @@ export type Events =
   | 'userOnboardingInfoUpdated'
   | 'membershipCreated'
   | 'experimentVariantsCreated'
-  | 'providerLogCreated'
   | 'workspaceCreated'
   | 'workspaceFinishingFreeTrial'
   | 'projectCreated'
-  | 'documentLogCreated'
   | 'sendReferralInvitation'
   | 'claimReferralInvitations'
   | 'datasetCreated'
@@ -150,11 +146,6 @@ export type ExperimentVariantsCreatedEvent = LatitudeEventGeneric<
   }
 >
 
-export type ProviderLogCreatedEvent = LatitudeEventGeneric<
-  'providerLogCreated',
-  Pick<ProviderLog, 'id'> & { workspaceId: number }
->
-
 type StreamTextData = {
   toolCalls: {
     id: string
@@ -194,11 +185,6 @@ export type CommitCreatedEvent = LatitudeEventGeneric<
     userEmail: string
     workspaceId: number
   }
->
-
-export type DocumentLogCreatedEvent = LatitudeEventGeneric<
-  'documentLogCreated',
-  Pick<DocumentLog, 'id'> & { workspaceId: number }
 >
 
 export type SendReferralInvitationEvent = LatitudeEventGeneric<
@@ -1007,12 +993,10 @@ export type LatitudeEvent =
   | UserCreatedEvent
   | UserOnboardingInfoUpdatedEvent
   | MagicLinkTokenCreated
-  | ProviderLogCreatedEvent
   | ExperimentVariantsCreatedEvent
   | WorkspaceCreatedEvent
   | WorkspaceFinishingFreeTrialEvent
   | ProjectCreatedEvent
-  | DocumentLogCreatedEvent
   | SendReferralInvitationEvent
   | ClaimReferralInvitationEvent
   | DatasetCreatedEvent
@@ -1100,12 +1084,10 @@ export interface IEventsHandlers {
   membershipCreated: EventHandler<MembershipCreatedEvent>[]
   userCreated: EventHandler<UserCreatedEvent>[]
   userOnboardingInfoUpdated: EventHandler<UserOnboardingInfoUpdatedEvent>[]
-  providerLogCreated: EventHandler<ProviderLogCreatedEvent>[]
   experimentVariantsCreated: EventHandler<ExperimentVariantsCreatedEvent>[]
   workspaceCreated: EventHandler<WorkspaceCreatedEvent>[]
   workspaceFinishingFreeTrial: EventHandler<WorkspaceFinishingFreeTrialEvent>[]
   projectCreated: EventHandler<ProjectCreatedEvent>[]
-  documentLogCreated: EventHandler<DocumentLogCreatedEvent>[]
   sendReferralInvitation: EventHandler<SendReferralInvitationEvent>[]
   claimReferralInvitations: EventHandler<ClaimReferralInvitationEvent>[]
   datasetCreated: EventHandler<DatasetCreatedEvent>[]

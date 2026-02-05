@@ -20,7 +20,6 @@ import { notifyClientOfOptimizationStatus } from './notifyClientOfOptimizationSt
 import { notifyClientOfRunStatusByDocument } from './notifyClientOfRunStatusByDocument'
 import { notifyClientOfSpanCreated } from './notifyClientOfSpanCreated'
 import { notifyClientOfConversationUpdated } from './notifyClientOfConversationUpdated'
-import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { pingProjectUpdateJob } from './pingProjectUpdateJob'
 import { removeMergedIssueVectors } from './removeMergedIssueVectors'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
@@ -28,8 +27,6 @@ import { sendIssueEscalatingHandler } from './sendIssueEscalatingHandler'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { stopDeploymentTestsForCommitHandler } from './stopDeploymentTestsForCommitHandler'
-import { touchApiKeyJob } from './touchApiKeyJob'
-import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
 import { undeployDocumentTriggerJob } from './undeployDocumentTriggerJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
 import { unassignIssuesOnDocumentsDeleted } from './unassignIssuesOnDocumentsDeleted'
@@ -42,7 +39,6 @@ export const EventHandlers: IEventsHandlers = {
   datasetUploaded: [createDatasetRowsJob],
   documentCreated: [],
   documentsDeleted: [unassignIssuesOnDocumentsDeleted],
-  documentLogCreated: [notifyToClientDocumentLogCreatedJob],
   experimentVariantsCreated: [],
   exportReady: [notifyClientOfExportReady],
   magicLinkTokenCreated: [sendMagicLinkJob],
@@ -51,7 +47,6 @@ export const EventHandlers: IEventsHandlers = {
   providerApiKeyCreated: [clearProviderApiKeysCache],
   providerApiKeyDestroyed: [clearProviderApiKeysCache],
   providerApiKeyUpdated: [clearProviderApiKeysCache],
-  providerLogCreated: [touchApiKeyJob, touchProviderApiKeyJob],
   sendReferralInvitation: [sendReferralInvitationJob],
   userCreated: [createLoopsContact],
   userOnboardingInfoUpdated: [updateLoopsContact],

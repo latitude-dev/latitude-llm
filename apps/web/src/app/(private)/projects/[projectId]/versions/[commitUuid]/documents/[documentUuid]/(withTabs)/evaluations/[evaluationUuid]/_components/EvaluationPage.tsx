@@ -67,7 +67,6 @@ const useEvaluationResultsV2Socket = <
             commit: args.commit,
             dataset: args.dataset,
             evaluatedRow: args.datasetRow,
-            evaluatedLog: args.providerLog,
             realtimeAdded: true,
           } as unknown as EvaluationResultV2WithDetails<T, M>,
           ...(prev ?? []),

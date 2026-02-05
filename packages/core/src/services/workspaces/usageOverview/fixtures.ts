@@ -1,7 +1,7 @@
 import { subDays, subMonths } from 'date-fns'
 import { SubscriptionPlan } from '../../../plans'
 
-type RunnableType = 'documentLog' | 'evaluationResult' | 'evaluationResultV2'
+type RunnableType = 'span' | 'evaluationResult' | 'evaluationResultV2'
 export type RunnableEntity<T extends RunnableType> = {
   type: T
   createdAt: Date
@@ -24,7 +24,7 @@ export const FixtureSubscriptionPlans = {
 
 export type WorkspaceInfo = {
   name: string
-  logs: RunnableEntity<'documentLog'>[]
+  spans: RunnableEntity<'span'>[]
   results: RunnableEntity<'evaluationResult'>[]
   resultsV2: RunnableEntity<'evaluationResultV2'>[]
   subscription: SubscriptionInfo
@@ -41,27 +41,27 @@ export const generateWorkspaceFixtures = (
   /* console.log('subscriptionCreatedAt', subscriptionCreatedAt.toDateString()) */
 
   // Workspace A
-  /* const documentLog0 = subDays(currentDate, 7) */
-  /* const documentLog1 = subDays(currentDate, 8) */
-  /* const documentLog2 = subDays(currentDate, 37) */
-  /* const documentLog3 = subDays(currentDate, 76) */
-  /* const documentLog4 = subDays(currentDate, 75) */
+  /* const span0 = subDays(currentDate, 7) */
+  /* const span1 = subDays(currentDate, 8) */
+  /* const span2 = subDays(currentDate, 37) */
+  /* const span3 = subDays(currentDate, 76) */
+  /* const span4 = subDays(currentDate, 75) */
   /* const evaluationResult1 = subDays(currentDate, 7) */
   /* const evaluationResult2 = subDays(currentDate, 9) */
 
   // Workspace B
-  /* const documentLog1 = subDays(currentDate, 8) */
-  /* const documentLog2 = subDays(currentDate, 25) */
-  /* const documentLog3 = subDays(currentDate, 37) */
+  /* const span1 = subDays(currentDate, 8) */
+  /* const span2 = subDays(currentDate, 25) */
+  /* const span3 = subDays(currentDate, 37) */
   /* const evaluationResult1 = subDays(currentDate, 10) */
   /* const evaluationResult2 = subDays(currentDate, 50) */
   /* const evaluationResult3 = subDays(currentDate, 80) */
 
-  /* console.log('documentLog0', documentLog0.toDateString()) */
-  /* console.log('documentLog1', documentLog1.toDateString()) */
-  /* console.log('documentLog2', documentLog2.toDateString()) */
-  /* console.log('documentLog3', documentLog3.toDateString()) */
-  /* console.log('documentLog3', documentLog4.toDateString()) */
+  /* console.log('span0', span0.toDateString()) */
+  /* console.log('span1', span1.toDateString()) */
+  /* console.log('span2', span2.toDateString()) */
+  /* console.log('span3', span3.toDateString()) */
+  /* console.log('span3', span4.toDateString()) */
 
   /* console.log('evaluationResult1', evaluationResult1.toDateString()) */
   /* console.log('evaluationResult2', evaluationResult2.toDateString()) */
@@ -69,12 +69,12 @@ export const generateWorkspaceFixtures = (
   return {
     overview__workspaceA: {
       name: 'overview__workspaceA',
-      logs: [
-        { type: 'documentLog', createdAt: subDays(currentDate, 7) },
-        { type: 'documentLog', createdAt: subDays(currentDate, 8) },
-        { type: 'documentLog', createdAt: subDays(currentDate, 37) },
-        { type: 'documentLog', createdAt: subDays(currentDate, 75) },
-        { type: 'documentLog', createdAt: subDays(currentDate, 74) },
+      spans: [
+        { type: 'span', createdAt: subDays(currentDate, 7) },
+        { type: 'span', createdAt: subDays(currentDate, 8) },
+        { type: 'span', createdAt: subDays(currentDate, 37) },
+        { type: 'span', createdAt: subDays(currentDate, 75) },
+        { type: 'span', createdAt: subDays(currentDate, 74) },
       ],
       results: [
         { type: 'evaluationResult', createdAt: subDays(currentDate, 7) },
@@ -92,10 +92,10 @@ export const generateWorkspaceFixtures = (
     },
     overview__workspaceB: {
       name: 'overview__workspaceB',
-      logs: [
-        { type: 'documentLog', createdAt: subDays(currentDate, 8) },
-        { type: 'documentLog', createdAt: subDays(currentDate, 25) },
-        { type: 'documentLog', createdAt: subDays(currentDate, 37) },
+      spans: [
+        { type: 'span', createdAt: subDays(currentDate, 8) },
+        { type: 'span', createdAt: subDays(currentDate, 25) },
+        { type: 'span', createdAt: subDays(currentDate, 37) },
       ],
       results: [
         { type: 'evaluationResult', createdAt: subDays(currentDate, 10) },

@@ -3,14 +3,12 @@ import { relations } from 'drizzle-orm'
 import { apiKeys } from './models/apiKeys'
 import { commits } from './models/commits'
 import { datasets } from './models/datasets'
-import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
 import { events } from './models/events'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
 import { providerApiKeys } from './models/providerApiKeys'
-import { providerLogs } from './models/providerLogs'
 import { sessions } from './models/sessions'
 import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
@@ -83,13 +81,6 @@ export const commitRelations = relations(commits, ({ one }) => ({
   }),
 }))
 
-export const documentLogsRelations = relations(documentLogs, ({ one }) => ({
-  commit: one(commits, {
-    fields: [documentLogs.commitId],
-    references: [commits.id],
-  }),
-}))
-
 export const documentVersionRelations = relations(
   documentVersions,
   ({ one }) => ({
@@ -124,17 +115,6 @@ export const providerApiKeysRelations = relations(
     }),
   }),
 )
-
-export const providerLogsRelations = relations(providerLogs, ({ one }) => ({
-  provider: one(providerApiKeys, {
-    fields: [providerLogs.providerId],
-    references: [providerApiKeys.id],
-  }),
-  apiKey: one(apiKeys, {
-    fields: [providerLogs.apiKeyId],
-    references: [apiKeys.id],
-  }),
-}))
 
 export const magicLinkTokensRelations = relations(
   magicLinkTokens,

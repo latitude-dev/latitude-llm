@@ -34,7 +34,7 @@ vi.mock('../../simulation/simulateUserResponse', () => ({
   generateSimulatedUserAction: mocks.generateSimulatedUserAction,
 }))
 
-vi.mock('../../documentLogs/addMessages', () => ({
+vi.mock('../../addMessages', () => ({
   addMessages: mocks.addMessages,
 }))
 

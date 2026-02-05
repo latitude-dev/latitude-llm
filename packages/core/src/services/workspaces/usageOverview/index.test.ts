@@ -1,13 +1,11 @@
-import { DocumentLog } from '@latitude-data/constants'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { SpanStatus } from '@latitude-data/constants'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import { ErrorableEntity } from '../../../constants'
-import * as factories from '../../../tests/factories'
 import { getUsageOverview } from './getUsageOverview'
 import { buildAllData, onlyOverviewWorkspaces } from './testHelper'
 import { database } from '../../../client'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
-import { inArray } from 'drizzle-orm'
+import { spans } from '../../../schema/models/spans'
+import { eq, inArray } from 'drizzle-orm'
 
 let targetDate: Date
 let data: Awaited<ReturnType<typeof buildAllData>>
@@ -50,16 +48,12 @@ describe('getUsageOverview', () => {
     ])
   })
 
-  it('filter logs with errors', async () => {
-    const { documentLog } = data.workspaces.workspaceB.info.logs[0] as {
-      documentLog: DocumentLog
-    }
-    await factories.createRunError({
-      errorableType: ErrorableEntity.DocumentLog,
-      errorableUuid: documentLog.uuid,
-      code: RunErrorCodes.Unknown,
-      message: 'Error message',
-    })
+  it('filter spans with errors', async () => {
+    const span = data.workspaces.workspaceB.info.spans[0]!
+    await database
+      .update(spans)
+      .set({ status: SpanStatus.Error })
+      .where(eq(spans.id, span.id))
 
     const result = await getUsageOverview({
       page: 1,
@@ -79,7 +73,7 @@ describe('getUsageOverview', () => {
         ...data.workspaces.workspaceB.expectedData,
         emails: expect.any(String),
         name: data.workspaces.workspaceB.expectedData.name,
-        lastMonthRuns: '3',
+        lastMonthRuns: '2',
         lastTwoMonthsRuns: '2',
         latestRunAt: expect.any(String),
       },

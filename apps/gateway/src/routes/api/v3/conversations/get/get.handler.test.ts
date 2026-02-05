@@ -5,7 +5,6 @@ import { Providers, CompletionSpanMetadata } from '@latitude-data/constants'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import {
   createProject,
-  createDocumentLog,
   createSpan,
   helpers,
 } from '@latitude-data/core/factories'
@@ -66,15 +65,7 @@ describe('GET /conversations/:conversationUuid', () => {
         'Content-Type': 'application/json',
       }
 
-      const { documentLog } = await createDocumentLog({
-        document: documents[0]!,
-        commit,
-        parameters: {},
-        source: LogSources.API,
-        skipProviderLogs: true,
-      })
-
-      conversationUuid = documentLog.uuid
+      conversationUuid = generateUUIDIdentifier()
 
       inputMessages = [
         {
@@ -254,14 +245,6 @@ describe('GET /conversations/:conversationUuid', () => {
     })
 
     it('returns conversation with response text when available', async () => {
-      const { documentLog: testDocumentLog } = await createDocumentLog({
-        document: documents[0]!,
-        commit,
-        parameters: {},
-        source: LogSources.API,
-        skipProviderLogs: true,
-      })
-
       const testResponseText = 'This is a test response'
       const testInputMessages = [
         {
@@ -283,9 +266,10 @@ describe('GET /conversations/:conversationUuid', () => {
         },
       ] as Message[]
 
+      const documentLogUuid = generateUUIDIdentifier()
       const promptSpan = await createSpan({
         workspaceId: workspace.id,
-        documentLogUuid: testDocumentLog.uuid,
+        documentLogUuid,
         documentUuid: documents[0]!.documentUuid,
         commitUuid: commit.uuid,
         type: SpanType.Prompt,
@@ -319,7 +303,7 @@ describe('GET /conversations/:conversationUuid', () => {
       )
 
       const res = await app.request(
-        `/api/v3/conversations/${testDocumentLog.uuid}`,
+        `/api/v3/conversations/${documentLogUuid}`,
         {
           method: 'GET',
           headers,

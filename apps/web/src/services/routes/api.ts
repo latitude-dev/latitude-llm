@@ -71,12 +71,6 @@ export const API_ROUTES = {
   claimedRewards: {
     root: '/api/claimedRewards',
   },
-  providerLogs: {
-    root: '/api/providerLogs',
-    detail: (providerLogId: string | number) => ({
-      root: `/api/providerLogs/${providerLogId}`,
-    }),
-  },
   evaluations: {
     root: '/api/evaluations',
     results: {
