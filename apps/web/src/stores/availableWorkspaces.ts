@@ -2,20 +2,16 @@ import { useCallback } from 'react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { switchWorkspaceAction } from '$/actions/workspaces/switch'
 import useFetcher from '$/hooks/useFetcher'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { ROUTES } from '$/services/routes'
 import useSWR from 'swr'
-import { useNavigate } from '$/hooks/useNavigate'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export default function useAvailableWorkspaces() {
   const { toast } = useToast()
-  const navigate = useNavigate()
   const fetcher = useFetcher<Workspace[]>(ROUTES.api.workspaces.available)
 
-  const { mutate: refreshCurrentWorkspace } = useCurrentWorkspace()
   const { data, ...rest } = useSWR<Workspace[], Error>(
     'api/workspaces/available',
     fetcher,
@@ -40,10 +36,9 @@ export default function useAvailableWorkspaces() {
         return
       }
 
-      navigate.push(ROUTES.root)
-      refreshCurrentWorkspace()
+      window.location.href = ROUTES.root
     },
-    [switchWorkspace, toast, refreshCurrentWorkspace, navigate],
+    [switchWorkspace, toast],
   )
 
   return {

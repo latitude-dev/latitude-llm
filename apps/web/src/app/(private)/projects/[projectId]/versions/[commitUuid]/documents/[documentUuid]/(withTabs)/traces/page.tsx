@@ -58,7 +58,9 @@ export default async function TracesPage({
     ...baseSpanFilterOptions,
     createdAt:
       requestedCreatedAt ??
-      (conversationsResponse.didFallbackToAllTime ? undefined : defaultCreatedAt),
+      (conversationsResponse.didFallbackToAllTime
+        ? undefined
+        : defaultCreatedAt),
   }
 
   return (

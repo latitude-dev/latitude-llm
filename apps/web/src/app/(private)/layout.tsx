@@ -32,10 +32,13 @@ export default async function PrivateLayout({
 }>) {
   const { workspace, user, subscriptionPlan } = await getCurrentUserOrRedirect()
 
-  const completed = await isOnboardingCompleted()
+  const trialEnded = subscriptionPlan.trialInfo?.trialEnded === true
 
-  if (!completed) {
-    redirect(ROUTES.onboarding.root)
+  if (!trialEnded) {
+    const completed = await isOnboardingCompleted()
+    if (!completed) {
+      redirect(ROUTES.onboarding.root)
+    }
   }
 
   const supportIdentity = createSupportUserIdentity(user)
