@@ -346,6 +346,15 @@ export const API_ROUTES = {
         root: '/api/admin/rewards/pending',
       },
     },
+    workers: {
+      root: '/api/admin/workers',
+      detail: (queueName: string) => ({
+        root: `/api/admin/workers/${queueName}`,
+      }),
+      workspace: (workspaceId: number) => ({
+        root: `/api/admin/workers/workspace/${workspaceId}`,
+      }),
+    },
   },
   conversations: {
     root: '/api/conversations',

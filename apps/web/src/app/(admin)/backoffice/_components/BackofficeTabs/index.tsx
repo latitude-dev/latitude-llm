@@ -52,6 +52,11 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               route: ROUTES.backoffice.triggers.root,
             },
             {
+              label: 'Workers',
+              value: BackofficeRoutes.workers,
+              route: ROUTES.backoffice.workers.root,
+            },
+            {
               label: 'Error tests',
               value: BackofficeRoutes.errorTests,
               route: ROUTES.backoffice.errorTests.root,
