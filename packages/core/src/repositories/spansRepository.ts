@@ -27,7 +27,11 @@ import {
 } from '../constants'
 import { diskFactory, DiskWrapper } from '../lib/disk'
 import { Result } from '../lib/Result'
-import { applyDefaultSpansCreatedAtRange } from '../services/spans/defaultCreatedAtWindow'
+import {
+  applyDefaultSpansCreatedAtRange,
+  normalizeCreatedAtRange,
+  shouldFallbackToAllTime,
+} from '../services/spans/defaultCreatedAtWindow'
 import { spans } from '../schema/models/spans'
 import Repository from './repositoryV2'
 import { EvaluationResultV2 } from '@latitude-data/constants'
@@ -84,13 +88,6 @@ export class SpansRepository extends Repository<Span> {
     return conditions
   }
 
-  private normalizeCreatedAtRange(
-    createdAt?: { from?: Date; to?: Date },
-  ): { from?: Date; to?: Date } | undefined {
-    if (!createdAt?.from && !createdAt?.to) return undefined
-    return createdAt
-  }
-
   private buildCursorCondition(from?: { startedAt: string; id: string }) {
     if (!from) return undefined
     return sql`(${spans.startedAt}, ${spans.id}) < (${from.startedAt}, ${from.id})`
@@ -140,7 +137,7 @@ export class SpansRepository extends Repository<Span> {
     limit: number
     buildConditions: (createdAt?: { from?: Date; to?: Date }) => SQL<unknown>[]
   }) {
-    const normalizedCreatedAt = this.normalizeCreatedAtRange(createdAt)
+    const normalizedCreatedAt = normalizeCreatedAtRange(createdAt)
     const defaultCreatedAt = applyDefaultSpansCreatedAtRange({
       createdAt: normalizedCreatedAt,
       hasCursor: Boolean(from),
@@ -152,10 +149,13 @@ export class SpansRepository extends Repository<Span> {
       limit,
     })
 
-    const shouldFallbackToAllTime =
-      !from && normalizedCreatedAt === undefined && firstPage.items.length === 0
-
-    if (!shouldFallbackToAllTime) {
+    if (
+      !shouldFallbackToAllTime({
+        hasCursor: Boolean(from),
+        normalizedCreatedAt,
+        itemCount: firstPage.items.length,
+      })
+    ) {
       return { ...firstPage, didFallbackToAllTime: undefined }
     }
 
@@ -240,6 +240,20 @@ export class SpansRepository extends Repository<Span> {
       .from(spans)
       .where(inArray(spans.documentLogUuid, documentLogUuids))
       .then((r) => r as Span[])
+  }
+
+  async getSpanIdentifiersByDocumentLogUuids(documentLogUuids: string[]) {
+    if (documentLogUuids.length === 0) return []
+
+    return this.db
+      .select({ traceId: spans.traceId, spanId: spans.id })
+      .from(spans)
+      .where(
+        and(this.scopeFilter, inArray(spans.documentLogUuid, documentLogUuids)),
+      )
+      .then((r) =>
+        r.map((row) => ({ traceId: row.traceId, spanId: row.spanId })),
+      )
   }
 
   async findByDocumentLogUuid(documentLogUuid: string) {

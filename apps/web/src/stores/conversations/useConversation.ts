@@ -31,7 +31,21 @@ export function useConversation(
   } = useSWR<ConversationTracesResponse>(route, fetcher, opts)
 
   return useMemo(
-    () => ({ traces: data?.traces ?? [], mutate, isLoading }),
+    () => ({
+      traces: data?.traces ?? [],
+      messages: data?.messages ?? [],
+      totalTokens: data?.totalTokens ?? 0,
+      totalDuration: data?.totalDuration ?? 0,
+      totalCost: data?.totalCost ?? 0,
+      traceCount: data?.traceCount ?? 0,
+      documentLogUuid: data?.documentLogUuid ?? null,
+      commitUuid: data?.commitUuid ?? null,
+      promptName: data?.promptName ?? null,
+      parameters: data?.parameters ?? null,
+      startedAt: data?.startedAt ?? null,
+      mutate,
+      isLoading,
+    }),
     [data, mutate, isLoading],
   )
 }

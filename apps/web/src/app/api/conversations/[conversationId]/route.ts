@@ -1,13 +1,23 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { AssembledTrace } from '@latitude-data/core/constants'
-import { SpansRepository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { assembleTraceStructure } from '@latitude-data/core/services/tracing/traces/assemble'
+import { fetchConversationWithMessages } from '@latitude-data/core/data-access/conversations/fetchConversationWithMessages'
 import { NextRequest, NextResponse } from 'next/server'
+import { Message } from 'promptl-ai'
 
 export type ConversationTracesResponse = {
   traces: AssembledTrace[]
+  messages: Message[]
+  totalTokens: number
+  totalDuration: number
+  totalCost: number
+  traceCount: number
+  documentLogUuid: string | null
+  commitUuid: string | null
+  promptName: string | null
+  parameters: Record<string, unknown> | null
+  startedAt: string | null
 }
 
 export const GET = errorHandler(
@@ -26,25 +36,48 @@ export const GET = errorHandler(
     ) => {
       const { conversationId } = params
 
-      const repository = new SpansRepository(workspace.id)
-      const traceIds = await repository.listTraceIdsByLogUuid(conversationId)
+      const result = await fetchConversationWithMessages({
+        workspace,
+        documentLogUuid: conversationId,
+      })
 
-      if (traceIds.length === 0) {
-        return NextResponse.json({ traces: [] }, { status: 200 })
+      if (!result.ok || !result.value) {
+        return NextResponse.json(
+          {
+            traces: [],
+            messages: [],
+            totalTokens: 0,
+            totalDuration: 0,
+            totalCost: 0,
+            traceCount: 0,
+            documentLogUuid: null,
+            commitUuid: null,
+            promptName: null,
+            parameters: null,
+            startedAt: null,
+          },
+          { status: 200 },
+        )
       }
 
-      const traces: AssembledTrace[] = []
-      for (const traceId of traceIds) {
-        const result = await assembleTraceStructure({ traceId, workspace })
-        if (result.ok && result.value) {
-          traces.push(result.value.trace)
-        }
-      }
+      const conversation = result.value
 
-      // Sort by startedAt
-      traces.sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
-
-      return NextResponse.json({ traces }, { status: 200 })
+      return NextResponse.json(
+        {
+          traces: conversation.traces,
+          messages: conversation.messages,
+          totalTokens: conversation.totalTokens,
+          totalDuration: conversation.totalDuration,
+          totalCost: conversation.totalCost,
+          traceCount: conversation.traceCount,
+          documentLogUuid: conversation.documentLogUuid,
+          commitUuid: conversation.commitUuid,
+          promptName: conversation.promptName,
+          parameters: conversation.parameters,
+          startedAt: conversation.startedAt,
+        },
+        { status: 200 },
+      )
     },
   ),
 )

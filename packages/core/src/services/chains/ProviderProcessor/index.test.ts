@@ -85,9 +85,7 @@ describe('ProviderProcessor', () => {
       documentLogUuid: data.documentLogUuid!,
       model,
       provider,
-      input: [
-        { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
-      ],
+      input: [{ role: 'user', content: [{ type: 'text', text: 'Hello' }] }],
       // @ts-expect-error - mock implementation
       aiResult: {
         type: 'text' as const,
@@ -124,9 +122,7 @@ describe('ProviderProcessor', () => {
       object: undefined,
       model,
       provider,
-      input: [
-        { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
-      ],
+      input: [{ role: 'user', content: [{ type: 'text', text: 'Hello' }] }],
       output: [],
       reasoning: undefined,
       usage: {

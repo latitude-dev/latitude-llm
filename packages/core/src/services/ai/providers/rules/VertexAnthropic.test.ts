@@ -1,6 +1,4 @@
-import {
-  type Message,
-} from '@latitude-data/constants/messages'
+import { type Message } from '@latitude-data/constants/messages'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { Providers } from '@latitude-data/constants'

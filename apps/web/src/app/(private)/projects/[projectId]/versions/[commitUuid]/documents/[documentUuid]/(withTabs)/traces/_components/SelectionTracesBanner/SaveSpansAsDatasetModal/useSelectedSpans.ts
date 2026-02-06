@@ -14,7 +14,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 import { parseRowCell } from '@latitude-data/core/services/datasetRows/utils'
-import { Span } from '@latitude-data/constants'
 
 type InputItem = {
   columns: Dataset['columns']
@@ -56,10 +55,10 @@ const EMPTY_DATA = {
 function usePreviewRowsStore(
   {
     dataset,
-    spanIdentifiers,
+    documentLogUuids,
   }: {
     dataset?: Dataset
-    spanIdentifiers: Array<{ traceId: string; spanId: string }>
+    documentLogUuids: string[]
   },
   opts?: SWRConfiguration,
 ) {
@@ -67,16 +66,16 @@ function usePreviewRowsStore(
     serializer: serializeRows,
     searchParams: compactObject({
       name: dataset?.name,
-      spanIdentifiers:
-        spanIdentifiers.length > 0
-          ? JSON.stringify(spanIdentifiers)
+      documentLogUuids:
+        documentLogUuids.length > 0
+          ? JSON.stringify(documentLogUuids)
           : undefined,
     }) as Record<string, string>,
   })
   const cacheKey = [
     'previewSpansForDataset',
     dataset?.id ?? 'no_dataset',
-    spanIdentifiers,
+    documentLogUuids,
   ]
   const {
     data = EMPTY_DATA,
@@ -93,20 +92,18 @@ function usePreviewRowsStore(
   return { previewData: data, fetchPreview, isLoading }
 }
 
-export function useSelectedSpans({
+export function useSelectedConversations({
   selectableState,
-  spans,
 }: {
   selectableState: SelectableRowsHook
-  spans: Span[]
 }) {
   const { toast } = useToast()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const previewModalState = useToggleModal()
-  const [selectedSpanIdentifiers, setSelectedSpanIdentifiers] = useState<
-    Array<{ traceId: string; spanId: string }>
+  const [selectedDocumentLogUuids, setSelectedDocumentLogUuids] = useState<
+    string[]
   >([])
   const [selectedCount, setSelectedCount] = useState(0)
   const [selectionMode, setSelectionMode] =
@@ -114,35 +111,26 @@ export function useSelectedSpans({
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
   const { previewData, fetchPreview, isLoading } = usePreviewRowsStore({
     dataset: selectedDataset,
-    spanIdentifiers: selectedSpanIdentifiers,
+    documentLogUuids: selectedDocumentLogUuids,
   })
   const onClickShowPreview = useCallback(() => {
     previewModalState.onOpen()
-    const selectedSpans = spans.filter((span) =>
-      selectableState.selectedRowIds.includes(span.id),
-    )
-    const identifiers = selectedSpans.map((span) => ({
-      traceId: span.traceId,
-      spanId: span.id,
-    }))
-    setSelectedSpanIdentifiers(identifiers)
+    setSelectedDocumentLogUuids(selectableState.selectedRowIds.map(String))
     setSelectedCount(selectableState.selectedCount)
     setSelectionMode(selectableState.selectionMode)
   }, [
     previewModalState,
-    setSelectedSpanIdentifiers,
+    setSelectedDocumentLogUuids,
     selectableState.selectedRowIds,
     selectableState.selectedCount,
     selectableState.selectionMode,
-    spans,
   ])
 
-  // Fetch preview when selectedSpanIdentifiers changes and modal is open
   useEffect(() => {
-    if (previewModalState.open && selectedSpanIdentifiers.length > 0) {
+    if (previewModalState.open && selectedDocumentLogUuids.length > 0) {
       fetchPreview()
     }
-  }, [previewModalState.open, selectedSpanIdentifiers, fetchPreview])
+  }, [previewModalState.open, selectedDocumentLogUuids, fetchPreview])
 
   const {
     execute: createDatasetFromSpans,
@@ -169,7 +157,7 @@ export function useSelectedSpans({
       }
 
       setSelectedDataset(undefined)
-      setSelectedSpanIdentifiers([])
+      setSelectedDocumentLogUuids([])
       setSelectedCount(0)
       setSelectionMode('NONE')
       selectableState.clearSelections()
@@ -185,7 +173,7 @@ export function useSelectedSpans({
   })
   const saveDataset = useCallback(
     async ({ name }: { name: string }) => {
-      if (selectableState.selectionMode === 'NONE') return // invalid state
+      if (selectableState.selectionMode === 'NONE') return
 
       await createDatasetFromSpans({
         projectId: project.id,
@@ -193,14 +181,9 @@ export function useSelectedSpans({
         documentUuid: document.documentUuid,
         name,
         selectionMode: selectableState.selectionMode,
-        selectedSpanIdentifiers: selectedSpanIdentifiers,
-        excludedSpanIdentifiers: Array.from(selectableState.excludedIds).map(
-          (spanId) => {
-            const span = spans.find((s) => s.id === spanId)
-            return span
-              ? { traceId: span.traceId, spanId: span.id }
-              : { traceId: '', spanId: spanId.toString() }
-          },
+        selectedDocumentLogUuids,
+        excludedDocumentLogUuids: Array.from(selectableState.excludedIds).map(
+          String,
         ),
       })
     },
@@ -211,8 +194,7 @@ export function useSelectedSpans({
       project.id,
       selectableState.excludedIds,
       selectableState.selectionMode,
-      selectedSpanIdentifiers,
-      spans,
+      selectedDocumentLogUuids,
     ],
   )
   return useMemo(
@@ -247,4 +229,6 @@ export function useSelectedSpans({
   )
 }
 
-export type PreviewSpansState = ReturnType<typeof useSelectedSpans>
+export type PreviewConversationsState = ReturnType<
+  typeof useSelectedConversations
+>

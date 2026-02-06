@@ -132,12 +132,14 @@ async function findCompletionOutputs({
 
 function buildRow({
   span,
+  completionSpan,
   metadata,
   output,
   parametersByName,
   fixedColumnsByName,
 }: {
   span: Span<SpanType.Prompt>
+  completionSpan?: Span<SpanType.Completion>
   metadata?: SpanMetadata<SpanType.Prompt>
   output?: string
   parametersByName: Record<string, Column>
@@ -155,11 +157,12 @@ function buildRow({
       value !== undefined ? (value as DatasetRowData[keyof DatasetRowData]) : ''
   }
 
+  const tokenSource = completionSpan ?? span
   const tokens =
-    ((span as any).tokensPrompt ?? 0) +
-    ((span as any).tokensCompletion ?? 0) +
-    ((span as any).tokensCached ?? 0) +
-    ((span as any).tokensReasoning ?? 0)
+    ((tokenSource as any).tokensPrompt ?? 0) +
+    ((tokenSource as any).tokensCompletion ?? 0) +
+    ((tokenSource as any).tokensCached ?? 0) +
+    ((tokenSource as any).tokensReasoning ?? 0)
 
   return {
     ...spanParameterColumns,
@@ -213,8 +216,10 @@ export async function buildSpanDatasetRows({
       const key = `${span.traceId}:${span.id}`
       const metadata = metadatas.get(key)
       const output = outputs.get(key)
+      const completionSpan = completionSpans.get(key)
       return buildRow({
         span: span as Span<SpanType.Prompt>,
+        completionSpan,
         metadata,
         output,
         parametersByName: columns.parametersByName,

@@ -34,20 +34,12 @@ export const annotateRoute = createRoute({
               .optional(),
             context: z
               .object({
-                messageIndex: z
-                  .number()
-                  .int()
-                  .nonnegative()
-                  .openapi({
-                    description: 'Index of the message in the conversation',
-                  }),
-                contentBlockIndex: z
-                  .number()
-                  .int()
-                  .nonnegative()
-                  .openapi({
-                    description: 'Index of the content block within the message',
-                  }),
+                messageIndex: z.number().int().nonnegative().openapi({
+                  description: 'Index of the message in the conversation',
+                }),
+                contentBlockIndex: z.number().int().nonnegative().openapi({
+                  description: 'Index of the content block within the message',
+                }),
                 contentType: z
                   .enum([
                     'text',

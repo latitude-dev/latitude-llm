@@ -356,6 +356,9 @@ export const API_ROUTES = {
         traceIds: {
           root: `${conversationRoot}/trace-ids`,
         },
+        evaluations: {
+          root: `${conversationRoot}/evaluations`,
+        },
         spans: {
           detail: (spanId: string) => ({
             root: `${conversationRoot}/spans/${spanId}`,

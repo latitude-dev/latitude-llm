@@ -16,9 +16,20 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { executeFetch } from '$/hooks/useFetcher'
-import { getConversationKey } from '$/stores/conversations'
+import { Conversation, getConversationKey } from '$/stores/conversations'
 import { getSpanKey } from '$/stores/spans'
 import { getEvaluationResultsV2BySpansKey } from '$/stores/evaluationResultsV2/bySpans'
+
+export const TRACE_SPAN_SELECTION_PARAM_KEYS = {
+  documentLogUuid: 'documentLogUuid',
+  spanId: 'spanId',
+  activeRunUuid: 'activeRunUuid',
+  expandedDocumentLogUuid: 'expandedDocumentLogUuid',
+} as const
+
+export const TRACE_SPAN_SELECTION_PARAMS = Object.values(
+  TRACE_SPAN_SELECTION_PARAM_KEYS,
+)
 
 function preloadTraceData({
   projectId,
@@ -96,23 +107,29 @@ export function buildTraceUrl({
 
 function syncUrlWithSelection(selection: SelectionState) {
   const params = new URLSearchParams(window.location.search)
+  const {
+    documentLogUuid: documentLogUuidParam,
+    spanId: spanIdParam,
+    activeRunUuid: activeRunUuidParam,
+    expandedDocumentLogUuid: expandedDocumentLogUuidParam,
+  } = TRACE_SPAN_SELECTION_PARAM_KEYS
 
-  params.delete('documentLogUuid')
-  params.delete('spanId')
-  params.delete('activeRunUuid')
-  params.delete('expandedDocumentLogUuid')
+  params.delete(documentLogUuidParam)
+  params.delete(spanIdParam)
+  params.delete(activeRunUuidParam)
+  params.delete(expandedDocumentLogUuidParam)
 
   if (selection.documentLogUuid) {
-    params.set('documentLogUuid', selection.documentLogUuid)
+    params.set(documentLogUuidParam, selection.documentLogUuid)
   }
   if (selection.spanId) {
-    params.set('spanId', selection.spanId)
+    params.set(spanIdParam, selection.spanId)
   }
   if (selection.activeRunUuid) {
-    params.set('activeRunUuid', selection.activeRunUuid)
+    params.set(activeRunUuidParam, selection.activeRunUuid)
   }
   if (selection.expandedDocumentLogUuid) {
-    params.set('expandedDocumentLogUuid', selection.expandedDocumentLogUuid)
+    params.set(expandedDocumentLogUuidParam, selection.expandedDocumentLogUuid)
   }
 
   const newUrl = `${window.location.pathname}?${params.toString()}`
@@ -134,8 +151,11 @@ type OnClickTraceRowFunction = <T extends RowType>(
   params: OnClickTraceRowParams<T>,
 ) => () => void
 
+type OnClickConversationRowFunction = (conversation: Conversation) => () => void
+
 type TraceSpanSelectionActionsContextType = {
   onClickTraceRow: OnClickTraceRowFunction
+  onClickConversationRow: OnClickConversationRowFunction
   clearSelection: () => void
   selectSpan: (span?: AssembledSpan) => void
 }
@@ -149,6 +169,7 @@ export const TraceSpanSelectionActionsContext =
     onClickTraceRow:
       <T extends RowType>(_args: OnClickTraceRowParams<T>) =>
       () => {},
+    onClickConversationRow: (_conversation: Conversation) => async () => {},
     selectSpan: (_span?: AssembledSpan) => {},
     clearSelection: () => {},
   })
@@ -167,10 +188,16 @@ function initialSelectionState(): SelectionState {
   const params = new URLSearchParams(
     typeof window !== 'undefined' ? window.location.search : '',
   )
-  const directDocumentLogUuid = params.get('documentLogUuid')
-  const directSpanId = params.get('spanId')
-  const directActiveRunUuid = params.get('activeRunUuid')
-  const directExpandedDocumentLogUuid = params.get('expandedDocumentLogUuid')
+  const {
+    documentLogUuid: documentLogUuidParam,
+    spanId: spanIdParam,
+    activeRunUuid: activeRunUuidParam,
+    expandedDocumentLogUuid: expandedDocumentLogUuidParam,
+  } = TRACE_SPAN_SELECTION_PARAM_KEYS
+  const directDocumentLogUuid = params.get(documentLogUuidParam)
+  const directSpanId = params.get(spanIdParam)
+  const directActiveRunUuid = params.get(activeRunUuidParam)
+  const directExpandedDocumentLogUuid = params.get(expandedDocumentLogUuidParam)
   let initialDocumentLogUuid = directDocumentLogUuid
   let initialSpanId = directSpanId
 
@@ -268,15 +295,82 @@ export function TraceSpanSelectionProvider({
     [clearSelection, commit.id, commit.uuid, document.documentUuid, project.id],
   )
 
+  const onClickConversationRow = useCallback(
+    (conversation: Conversation) => async () => {
+      const { documentLogUuid, traceCount } = conversation
+      const currentSelection = selectionRef.current
+
+      const isExpanded = documentLogUuid === currentSelection.documentLogUuid
+      if (isExpanded) {
+        clearSelection()
+        return
+      }
+
+      const conversationKey = getConversationKey(documentLogUuid!)
+
+      if (traceCount === 1 && conversationKey) {
+        const data = await executeFetch<{
+          traces: { children: { id: string }[] }[]
+        }>({
+          route: conversationKey,
+        })
+        const firstSpanId = data?.traces?.[0]?.children?.[0]?.id
+        if (firstSpanId) {
+          preloadTraceData({
+            documentLogUuid: documentLogUuid!,
+            spanId: firstSpanId,
+            projectId: project.id,
+            commitUuid: commit.uuid,
+            commitId: commit.id,
+            documentUuid: document.documentUuid,
+          })
+          const newSelection: SelectionState = {
+            documentLogUuid,
+            spanId: firstSpanId,
+            activeRunUuid: null,
+            expandedDocumentLogUuid: null,
+          }
+          setSelection(newSelection)
+          syncUrlWithSelection(newSelection)
+          return
+        }
+      }
+
+      if (conversationKey) {
+        preload(conversationKey, () => executeFetch({ route: conversationKey }))
+      }
+
+      const newSelection: SelectionState = {
+        documentLogUuid,
+        spanId: null,
+        activeRunUuid: null,
+        expandedDocumentLogUuid: null,
+      }
+      setSelection(newSelection)
+      syncUrlWithSelection(newSelection)
+    },
+    [clearSelection, project.id, commit.uuid, commit.id, document.documentUuid],
+  )
+
   const selectSpan = useCallback((span?: AssembledSpan) => {
-    const spanId = span?.id
-    if (!spanId) return
-
     const currentSelection = selectionRef.current
+    const spanId = span?.id
 
-    // When selecting from trace graph, always preserve the original parent's documentLogUuid
-    // Use expandedDocumentLogUuid if set (parent trace), otherwise use current documentLogUuid
-    // Only use span's documentLogUuid if we don't have one in selection at all
+    if (!spanId) {
+      if (!currentSelection.documentLogUuid) return
+      if (!currentSelection.spanId) return
+
+      const newSelection: SelectionState = {
+        documentLogUuid: currentSelection.documentLogUuid,
+        spanId: null,
+        activeRunUuid: null,
+        expandedDocumentLogUuid: currentSelection.expandedDocumentLogUuid,
+      }
+      setSelection(newSelection)
+      syncUrlWithSelection(newSelection)
+      return
+    }
+
     const parentDocumentLogUuid =
       currentSelection.expandedDocumentLogUuid ??
       currentSelection.documentLogUuid
@@ -307,10 +401,11 @@ export function TraceSpanSelectionProvider({
   const actionsValue = useMemo(
     () => ({
       onClickTraceRow,
+      onClickConversationRow,
       selectSpan,
       clearSelection,
     }),
-    [onClickTraceRow, selectSpan, clearSelection],
+    [onClickTraceRow, onClickConversationRow, selectSpan, clearSelection],
   )
 
   const stateValue = useMemo(

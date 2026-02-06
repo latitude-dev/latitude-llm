@@ -3,9 +3,9 @@ import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { endOfDay } from 'date-fns'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
-import { useDebouncedCallback } from 'use-debounce'
 import { z } from 'zod'
 import { SpansFilters } from '$/lib/schemas/filters'
+import { TRACE_SPAN_SELECTION_PARAMS } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/TraceSpanSelectionContext'
 
 const documentLogUuidSchema = z.uuid()
 
@@ -13,10 +13,18 @@ function useEditableSearchParams() {
   const router = useRouter()
   const pathname = usePathname()
 
-  const setSearchParam = (key: string, value?: string | string[]) => {
+  const setSearchParam = (
+    key: string,
+    value?: string | string[],
+    keysToRemove?: string[],
+  ) => {
     const prevParams = window.location.search
     const urlParams = new URLSearchParams(prevParams)
     const params = Object.fromEntries(urlParams.entries())
+
+    if (keysToRemove) {
+      keysToRemove.forEach((k) => delete params[k])
+    }
 
     let newParams = undefined
 
@@ -169,7 +177,7 @@ export function useProcessSpanFilters({
     [onFiltersChanged, setSearchParams, filterOptions],
   )
 
-  const onDocumentLogUuidChange = useDebouncedCallback(
+  const onDocumentLogUuidChange = useCallback(
     (value: string) => {
       value = value?.trim()
 
@@ -179,7 +187,7 @@ export function useProcessSpanFilters({
         onFiltersChanged(restFilters)
 
         if (Object.keys(restFilters).length === 0) {
-          setSearchParams('filters', undefined)
+          setSearchParams('filters', undefined, TRACE_SPAN_SELECTION_PARAMS)
         } else {
           setSearchParams('filters', JSON.stringify(restFilters))
         }
@@ -195,10 +203,13 @@ export function useProcessSpanFilters({
       }
 
       onFiltersChanged(updatedFilters)
-      setSearchParams('filters', JSON.stringify(updatedFilters))
+      setSearchParams(
+        'filters',
+        JSON.stringify(updatedFilters),
+        TRACE_SPAN_SELECTION_PARAMS,
+      )
     },
-    300,
-    { leading: false, trailing: true },
+    [filterOptions, onFiltersChanged, setSearchParams],
   )
 
   const onSelectTestDeployments = useCallback(

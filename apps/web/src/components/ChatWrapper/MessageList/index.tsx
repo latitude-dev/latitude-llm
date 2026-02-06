@@ -99,14 +99,12 @@ export const MessageList = memo(
                 debugMode={debugMode}
                 toolContentMap={toolContentMap}
                 isGeneratingToolCall={
-                  message.role === 'assistant' &&
-                  message._isGeneratingToolCall
+                  message.role === 'assistant' && message._isGeneratingToolCall
                 }
                 additionalAssistantMessage={
                   displayIndex > 0 &&
                   message.role === 'assistant' &&
-                  displayableMessages[displayIndex - 1].role ===
-                    'assistant'
+                  displayableMessages[displayIndex - 1].role === 'assistant'
                 }
                 messageIndex={originalIndex}
                 isStreaming={isStreaming}

@@ -42,34 +42,34 @@ function PreviewCell({
 }
 
 function getDescriptionText({
-  selectedCount,
+  previewRowCount,
   selectionMode,
   isExistingDataset,
 }: {
-  selectedCount: number
+  previewRowCount: number
   selectionMode: SelectionMode
   isExistingDataset: boolean
 }) {
   const datasetText = isExistingDataset ? 'the dataset' : 'a new dataset'
+  const note =
+    'Only the initial prompt span from each conversation is included in datasets.'
 
   if (selectionMode === 'ALL') {
-    return `All matching spans will be added to ${datasetText}. Here's a preview of some of them.`
+    return `All matching prompt spans will be added to ${datasetText}. ${note}`
   }
 
   if (selectionMode === 'ALL_EXCEPT') {
-    return `All matching spans (except excluded) will be added to ${datasetText}. Here's a preview of some of them.`
+    return `All matching prompt spans (except excluded) will be added to ${datasetText}. ${note}`
   }
 
-  return `${selectedCount} spans will be added to ${datasetText}. Here's a preview.`
+  return `${previewRowCount} prompt spans will be added to ${datasetText}. ${note}`
 }
 
 export function PreviewTable({
-  selectedCount,
   selectionMode,
   previewData,
   isLoading,
 }: {
-  selectedCount: number
   selectionMode: SelectionMode
   previewData: OutputItem
   isLoading: boolean
@@ -77,7 +77,7 @@ export function PreviewTable({
   const { backgroundCssClasses } = useDatasetRole()
   const isExistingDataset = previewData.datasetRows.length > 0
   const description = getDescriptionText({
-    selectedCount,
+    previewRowCount: previewData.previewRows.length,
     selectionMode,
     isExistingDataset,
   })

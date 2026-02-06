@@ -1,4 +1,3 @@
-
 import { objectToString } from '@latitude-data/constants'
 import type { MessageRole } from '@latitude-data/constants/messages'
 import {
@@ -20,19 +19,28 @@ export function formatConversation(
   } else if ((providerLog as ProviderLogDto).response) {
     messages.push({
       role: 'assistant',
-      content: [{ type: 'text', text: (providerLog as ProviderLogDto).response }],
+      content: [
+        { type: 'text', text: (providerLog as ProviderLogDto).response },
+      ],
       toolCalls: providerLog.toolCalls,
     })
   } else if ((providerLog as ProviderLog).responseText) {
     messages.push({
       role: 'assistant',
-      content: [{ type: 'text', text: (providerLog as ProviderLog).responseText! }],
+      content: [
+        { type: 'text', text: (providerLog as ProviderLog).responseText! },
+      ],
       toolCalls: providerLog.toolCalls,
     })
   } else if ((providerLog as ProviderLog).responseObject) {
     messages.push({
       role: 'assistant',
-      content: [{ type: 'text', text: objectToString((providerLog as ProviderLog).responseObject) }],
+      content: [
+        {
+          type: 'text',
+          text: objectToString((providerLog as ProviderLog).responseObject),
+        },
+      ],
       toolCalls: [],
     })
   }

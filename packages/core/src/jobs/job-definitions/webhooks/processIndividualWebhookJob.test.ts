@@ -324,10 +324,15 @@ describe('processIndividualWebhookJob', () => {
     })
 
     const messages = [
-      { role: 'user', content: [{ type: 'text', text: 'Hello, how are you?' }] },
+      {
+        role: 'user',
+        content: [{ type: 'text', text: 'Hello, how are you?' }],
+      },
       {
         role: 'assistant',
-        content: [{ type: 'text', text: 'I am doing well, thank you for asking!' }],
+        content: [
+          { type: 'text', text: 'I am doing well, thank you for asking!' },
+        ],
       },
     ]
 

@@ -3,7 +3,13 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DatePickerRange } from '@latitude-data/web-ui/atoms/DatePicker'
 import { SpansFilters } from '$/lib/schemas/filters'
-import { useMemo, useCallback, useState, ChangeEvent } from 'react'
+import {
+  useMemo,
+  useCallback,
+  useState,
+  ChangeEvent,
+  KeyboardEvent,
+} from 'react'
 import { CommitFilterByUuid } from './CommitFilterByUuid'
 import { ExperimentFilterByUuid } from './ExperimentFilterByUuid'
 import { TestDeploymentFilter } from './TestDeploymentFilter'
@@ -11,6 +17,7 @@ import { useExperiments } from '$/stores/experiments'
 import useDeploymentTests from '$/stores/deploymentTests'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 
 export function SpanFilters({
   filterOptions,
@@ -37,19 +44,33 @@ export function SpanFilters({
     filterOptions,
   })
 
-  const onDocumentLogUuidChange = filters.onDocumentLogUuidChange
+  const committedValue = filterOptions.documentLogUuid ?? ''
+  const hasUncommittedChanges = localDocumentLogUuid !== committedValue
 
-  /**
-   * Local state managed in this component to reflect immediate changes in the input field
-   * while debouncing the actual filter update to avoid excessive re-renders.
-   */
   const handleDocumentLogUuidChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value
-      setLocalDocumentLogUuid(value)
-      onDocumentLogUuidChange(value)
+      setLocalDocumentLogUuid(e.target.value)
     },
-    [onDocumentLogUuidChange],
+    [],
+  )
+
+  const onDocumentLogUuidChange = filters.onDocumentLogUuidChange
+  const handleDocumentLogUuidSubmit = useCallback(() => {
+    onDocumentLogUuidChange(localDocumentLogUuid)
+  }, [onDocumentLogUuidChange, localDocumentLogUuid])
+
+  const handleDocumentLogUuidClear = useCallback(() => {
+    setLocalDocumentLogUuid('')
+    onDocumentLogUuidChange('')
+  }, [onDocumentLogUuidChange])
+
+  const handleDocumentLogUuidKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        handleDocumentLogUuidSubmit()
+      }
+    },
+    [handleDocumentLogUuidSubmit],
   )
 
   // Get selected commit UUIDs - empty array when no filter is set
@@ -141,12 +162,38 @@ export function SpanFilters({
           tests={deploymentTests}
         />
       )}
-      <div className='max-w-40'>
+      <div className='max-w-48 relative'>
         <Input
           placeholder='Conversation ID'
           value={localDocumentLogUuid}
           onChange={handleDocumentLogUuidChange}
+          onKeyDown={handleDocumentLogUuidKeyDown}
+          className='pr-14'
         />
+        <div className='absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1'>
+          {hasUncommittedChanges && localDocumentLogUuid && (
+            <Button
+              title='Search'
+              type='button'
+              variant='ghost'
+              size='icon'
+              onClick={handleDocumentLogUuidSubmit}
+              iconProps={{ name: 'search' }}
+            />
+          )}
+          {localDocumentLogUuid && (
+            <Button
+              title='Clear'
+              type='button'
+              variant='ghost'
+              size='icon'
+              onClick={handleDocumentLogUuidClear}
+              iconProps={{
+                name: 'close',
+              }}
+            />
+          )}
+        </div>
       </div>
     </>
   )

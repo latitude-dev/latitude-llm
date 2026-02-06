@@ -1,10 +1,9 @@
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { DownloadSpansButton } from './DownloadSpansButton'
+import { DownloadConversationsButton } from './DownloadSpansButton'
 import { SaveSpansAsDatasetModal } from './SaveSpansAsDatasetModal'
-import { Span } from '@latitude-data/constants'
-import { useSelectedSpans } from './SaveSpansAsDatasetModal/useSelectedSpans'
+import { useSelectedConversations } from './SaveSpansAsDatasetModal/useSelectedSpans'
 import { SelectableRowsHook, SelectionMode } from '$/hooks/useSelectableRows'
 import { SpansFilters } from '$/lib/schemas/filters'
 import { useMemo } from 'react'
@@ -17,26 +16,23 @@ function getButtonText({
   selectedCount: number
 }) {
   if (selectionMode === 'ALL') {
-    return 'Add all spans to dataset'
+    return 'Add all conversations to dataset'
   }
   if (selectionMode === 'ALL_EXCEPT') {
-    return 'Add all spans (except excluded) to dataset'
+    return 'Add all conversations (except excluded) to dataset'
   }
-  return `Add ${selectedCount} spans to dataset`
+  return `Add ${selectedCount} conversations to dataset`
 }
 
 export function SelectionTracesBanner({
   selectableState,
-  spans,
   filters,
 }: {
   selectableState: SelectableRowsHook
-  spans: Span[]
   filters: SpansFilters
 }) {
-  const previewSpansState = useSelectedSpans({
+  const previewState = useSelectedConversations({
     selectableState,
-    spans,
   })
   const buttonText = useMemo(
     () =>
@@ -56,13 +52,12 @@ export function SelectionTracesBanner({
                 <Button
                   fancy
                   disabled={selectableState.selectedCount === 0}
-                  onClick={previewSpansState.onClickShowPreview}
+                  onClick={previewState.onClickShowPreview}
                 >
                   {buttonText}
                 </Button>
-                <DownloadSpansButton
+                <DownloadConversationsButton
                   selectableState={selectableState}
-                  spans={spans}
                   filters={filters}
                 />
               </div>
@@ -85,7 +80,7 @@ export function SelectionTracesBanner({
           </FloatingPanel>
         </div>
       </div>
-      <SaveSpansAsDatasetModal {...previewSpansState} />
+      <SaveSpansAsDatasetModal {...previewState} />
     </>
   )
 }
