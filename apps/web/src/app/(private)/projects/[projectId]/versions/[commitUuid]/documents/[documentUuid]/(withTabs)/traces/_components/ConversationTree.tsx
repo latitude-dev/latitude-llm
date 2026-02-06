@@ -39,7 +39,7 @@ const CollapseButton = memo(
           <Button
             variant='ghost'
             size='none'
-            className='opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-opacity flex items-center gap-1 px-1'
+            className='opacity-0 group-hover/row:opacity-70 hover:!opacity-100 transition-opacity flex items-center gap-1 px-1'
             onClick={onClick}
             iconProps={{
               name: 'chevronsUpDown',
@@ -84,7 +84,6 @@ const TreeItem = memo(
     toggleCollapsed,
     setCollapsedSpans,
     startOnIndex = 1,
-    isTopLevel = false,
   }: {
     span: AssembledSpan<T>
     indentation: IndentType[]
@@ -96,7 +95,6 @@ const TreeItem = memo(
     toggleCollapsed: (spanId: string) => void
     setCollapsedSpans: ReactStateDispatch<Set<string>>
     startOnIndex?: number
-    isTopLevel?: boolean
   }) => {
     const specification = SPAN_SPECIFICATIONS[span.type]
     const isExpanded = !collapsedSpans.has(span.id)
@@ -193,7 +191,7 @@ const TreeItem = memo(
       <div className='w-full h-full flex flex-col items-start justify-center'>
         <div
           className={cn(
-            'group w-full h-7 flex items-center justify-between py-1 px-2 rounded-md cursor-pointer',
+            'group/row w-full h-7 flex items-center justify-between py-1 px-2 rounded-md cursor-pointer',
             {
               'bg-transparent hover:bg-secondary text-foreground': !isSelected,
               'bg-accent hover:bg-accent/80 text-accent-foreground': isSelected,
@@ -238,7 +236,7 @@ const TreeItem = memo(
               {span.name}
             </Text.H6>
           </div>
-          {isTopLevel && descendantIds.length > 0 && (
+          {descendantIds.length > 0 && (
             <CollapseButton
               isCollapsed={allDescendantsCollapsed}
               onClick={handleCollapseButtonClick}
@@ -309,7 +307,7 @@ const ConversationItem = memo(
     return (
       <div
         className={cn(
-          'group w-full h-7 flex items-center justify-between py-1 px-2 rounded-md cursor-pointer mb-1',
+          'group/row w-full h-7 flex items-center justify-between py-1 px-2 rounded-md cursor-pointer mb-1',
           {
             'bg-transparent hover:bg-secondary text-foreground': !isSelected,
             'bg-accent hover:bg-accent/80 text-accent-foreground': isSelected,
@@ -413,7 +411,6 @@ export function ConversationTree({
                   collapsedSpans={collapsedSpans}
                   toggleCollapsed={toggleCollapsed}
                   setCollapsedSpans={setCollapsedSpans}
-                  isTopLevel={showConversationItem}
                   startOnIndex={showConversationItem ? 0 : 1}
                 />
               ))}

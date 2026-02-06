@@ -74,8 +74,7 @@ export function DocumentTraces({
               conversation.documentLogUuid ?? undefined,
             )}
             isExpanded={
-              selection.documentLogUuid !== null &&
-              selection.documentLogUuid === conversation.documentLogUuid
+              selection.expandedDocumentLogUuid === conversation.documentLogUuid
             }
           />
         ))}

@@ -300,7 +300,8 @@ export function TraceSpanSelectionProvider({
       const { documentLogUuid, traceCount } = conversation
       const currentSelection = selectionRef.current
 
-      const isExpanded = documentLogUuid === currentSelection.documentLogUuid
+      const isExpanded =
+        documentLogUuid === currentSelection.expandedDocumentLogUuid
       if (isExpanded) {
         clearSelection()
         return
@@ -328,7 +329,7 @@ export function TraceSpanSelectionProvider({
             documentLogUuid,
             spanId: firstSpanId,
             activeRunUuid: null,
-            expandedDocumentLogUuid: null,
+            expandedDocumentLogUuid: documentLogUuid,
           }
           setSelection(newSelection)
           syncUrlWithSelection(newSelection)
@@ -344,7 +345,7 @@ export function TraceSpanSelectionProvider({
         documentLogUuid,
         spanId: null,
         activeRunUuid: null,
-        expandedDocumentLogUuid: null,
+        expandedDocumentLogUuid: documentLogUuid,
       }
       setSelection(newSelection)
       syncUrlWithSelection(newSelection)
@@ -355,44 +356,36 @@ export function TraceSpanSelectionProvider({
   const selectSpan = useCallback((span?: AssembledSpan) => {
     const currentSelection = selectionRef.current
     const spanId = span?.id
+    const expandedDocumentLogUuid = currentSelection.expandedDocumentLogUuid
 
     if (!spanId) {
-      if (!currentSelection.documentLogUuid) return
+      if (!expandedDocumentLogUuid) return
       if (!currentSelection.spanId) return
 
       const newSelection: SelectionState = {
-        documentLogUuid: currentSelection.documentLogUuid,
+        documentLogUuid: expandedDocumentLogUuid,
         spanId: null,
         activeRunUuid: null,
-        expandedDocumentLogUuid: currentSelection.expandedDocumentLogUuid,
+        expandedDocumentLogUuid,
       }
       setSelection(newSelection)
       syncUrlWithSelection(newSelection)
       return
     }
 
-    const parentDocumentLogUuid =
-      currentSelection.expandedDocumentLogUuid ??
-      currentSelection.documentLogUuid
-    const documentLogUuid = parentDocumentLogUuid ?? span.documentLogUuid
-    if (!documentLogUuid) return
+    if (!expandedDocumentLogUuid) return
 
     const isSubagentSpan =
-      span.documentLogUuid && span.documentLogUuid !== parentDocumentLogUuid
+      span.documentLogUuid && span.documentLogUuid !== expandedDocumentLogUuid
 
-    const newSelection: SelectionState = isSubagentSpan
-      ? {
-          documentLogUuid: span.documentLogUuid!,
-          spanId,
-          activeRunUuid: null,
-          expandedDocumentLogUuid: parentDocumentLogUuid,
-        }
-      : {
-          documentLogUuid,
-          spanId,
-          activeRunUuid: null,
-          expandedDocumentLogUuid: currentSelection.expandedDocumentLogUuid,
-        }
+    const newSelection: SelectionState = {
+      documentLogUuid: isSubagentSpan
+        ? span.documentLogUuid!
+        : expandedDocumentLogUuid,
+      spanId,
+      activeRunUuid: null,
+      expandedDocumentLogUuid,
+    }
 
     setSelection(newSelection)
     syncUrlWithSelection(newSelection)
