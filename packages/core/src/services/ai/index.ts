@@ -73,12 +73,6 @@ function getStopWhen({ maxSteps }: { maxSteps?: number | undefined }) {
 
 export type OnErrorParameters = Parameters<StreamTextOnErrorCallback>[0]
 
-export type CompletionTelemetryOptions = {
-  promptUuid?: string
-  versionUuid?: string
-  experimentUuid?: string
-}
-
 export async function ai({
   context,
   provider,
@@ -89,7 +83,6 @@ export async function ai({
   output,
   aiSdkProvider,
   abortSignal,
-  telemetryOptions,
 }: {
   context: TelemetryContext
   provider: ProviderApiKey
@@ -100,7 +93,6 @@ export async function ai({
   output?: ObjectOutput
   aiSdkProvider?: Partial<AISDKProvider>
   abortSignal?: AbortSignal
-  telemetryOptions?: CompletionTelemetryOptions
 }): Promise<
   TypedResult<
     AIReturn<StreamType>,
@@ -153,7 +145,6 @@ export async function ai({
       config,
       model,
       context,
-      telemetryOptions,
     })
 
     const toolsResult = buildTools(tools)

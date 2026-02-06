@@ -70,16 +70,10 @@ export function createTelemetryMiddleware({
   context,
   providerName,
   model,
-  promptUuid,
-  versionUuid,
-  experimentUuid,
 }: {
   context: TelemetryContext
   providerName: string
   model: string
-  promptUuid?: string
-  versionUuid?: string
-  experimentUuid?: string
 }): LanguageModelMiddleware {
   return {
     wrapGenerate: async ({ doGenerate, params }) => {
@@ -94,9 +88,6 @@ export function createTelemetryMiddleware({
             model,
             ...((params as Record<string, unknown>) ?? {}),
           },
-          promptUuid,
-          versionUuid,
-          experimentUuid,
         },
         context,
       )
@@ -135,9 +126,6 @@ export function createTelemetryMiddleware({
             model,
             ...((params as Record<string, unknown>) ?? {}),
           },
-          promptUuid,
-          versionUuid,
-          experimentUuid,
         },
         context,
       )

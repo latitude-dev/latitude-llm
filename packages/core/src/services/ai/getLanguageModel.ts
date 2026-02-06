@@ -8,7 +8,6 @@ import { LlmProvider } from './helpers'
 import { VercelConfigWithProviderRules } from './providers/rules'
 import { createTelemetryMiddleware } from './telemetryMiddleware'
 import { TelemetryContext } from '@latitude-data/telemetry'
-import { CompletionTelemetryOptions } from '.'
 
 // FIXME: Is this doing anything? There are no options available here.
 function buildGenericLanguageModel({
@@ -36,7 +35,6 @@ export function getLanguageModel({
   llmProvider,
   customLanguageModel,
   context,
-  telemetryOptions,
 }: {
   model: string
   config: VercelConfigWithProviderRules
@@ -44,7 +42,6 @@ export function getLanguageModel({
   llmProvider: LlmProvider
   customLanguageModel?: LanguageModel
   context: TelemetryContext
-  telemetryOptions?: CompletionTelemetryOptions
 }): LanguageModel {
   if (customLanguageModel) {
     return wrapCompletionTelemetry({
@@ -52,7 +49,6 @@ export function getLanguageModel({
       provider,
       model,
       context,
-      telemetryOptions,
     })
   }
 
@@ -63,7 +59,6 @@ export function getLanguageModel({
       provider,
       model,
       context,
-      telemetryOptions,
     })
   }
 
@@ -87,7 +82,6 @@ export function getLanguageModel({
     provider,
     model,
     context,
-    telemetryOptions,
   })
 }
 
@@ -96,16 +90,12 @@ function wrapCompletionTelemetry({
   provider,
   model,
   context,
-  telemetryOptions,
 }: {
   languageModel: LanguageModel
   provider: ProviderApiKey
   model: string
   context: TelemetryContext
-  telemetryOptions?: CompletionTelemetryOptions
 }): LanguageModel {
-  if (!telemetryOptions) return languageModel
-
   // wrapLanguageModel expects a LanguageModelV2 object, not a string model identifier.
   // Since buildGenericLanguageModel always returns a LanguageModelV2 object, we can safely cast.
   if (typeof languageModel === 'string') {
@@ -119,7 +109,6 @@ function wrapCompletionTelemetry({
       context,
       providerName: provider.provider,
       model,
-      ...telemetryOptions,
     }),
   })
 }

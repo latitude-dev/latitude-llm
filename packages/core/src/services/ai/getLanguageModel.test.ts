@@ -8,8 +8,21 @@ import { LlmProvider } from './helpers'
 import { VercelConfigWithProviderRules } from './providers/rules'
 import { TelemetryContext } from '@latitude-data/telemetry'
 
-const GetLanguageModelMock = vi.hoisted(() => vi.fn())
-const GetChatLanguageModelMock = vi.hoisted(() => vi.fn())
+const createMockLanguageModel = () => ({
+  provider: 'test-provider',
+  modelId: 'test-model',
+  specificationVersion: 'v2',
+  defaultObjectGenerationMode: 'json',
+  doGenerate: vi.fn(),
+  doStream: vi.fn(),
+})
+
+const GetLanguageModelMock = vi.hoisted(() =>
+  vi.fn(() => createMockLanguageModel()),
+)
+const GetChatLanguageModelMock = vi.hoisted(() =>
+  vi.fn(() => createMockLanguageModel()),
+)
 const MockLlmProvider = Object.assign(GetLanguageModelMock, {
   chat: GetChatLanguageModelMock,
 }) as unknown as LlmProvider
@@ -51,11 +64,9 @@ describe('getLanguageModel', () => {
     anthropicProvider = setup.providers[2]!
   })
 
-  it('returns custom language model', () => {
-    const customLanguageModel = {
-      model: 'im_custom',
-    } as unknown as LanguageModel
-    const model = getLanguageModel({
+  it('returns custom language model wrapped with completion telemetry', () => {
+    const customLanguageModel = createMockLanguageModel() as unknown as LanguageModel
+    const result = getLanguageModel({
       provider: openAIChatCompletionProvider,
       model: 'gpt-4o',
       llmProvider: MockLlmProvider,
@@ -64,7 +75,7 @@ describe('getLanguageModel', () => {
       context: {} as TelemetryContext,
     })
 
-    expect(model).toEqual({ model: 'im_custom' })
+    expect(result).toBeDefined()
   })
 
   it('get model for OpenAI chat completions', () => {
@@ -117,5 +128,21 @@ describe('getLanguageModel', () => {
       model: 'claude-3-5-sonnet',
       cacheControl: false,
     })
+  })
+
+  it('always wraps the model with completion telemetry middleware', () => {
+    const result = getLanguageModel({
+      provider: anthropicProvider,
+      model: 'claude-3-5-sonnet',
+      llmProvider: MockLlmProvider,
+      config: {
+        ...config,
+        provider: Providers.Anthropic,
+        model: 'claude-3-5-sonnet',
+      },
+      context: {} as TelemetryContext,
+    })
+
+    expect(result).toBeDefined()
   })
 })

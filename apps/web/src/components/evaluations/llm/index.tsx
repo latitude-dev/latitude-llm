@@ -5,8 +5,9 @@ import { MetadataItem } from '$/components/MetadataItem'
 import useModelOptions from '$/hooks/useModelOptions'
 import { formatCount } from '@latitude-data/constants/formatCount'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
+import { useConversation } from '$/stores/conversations'
 import useProviders from '$/stores/providerApiKeys'
-import { useProviderLog } from '$/stores/providerLogs'
+import { useTraceWithMessages } from '$/stores/traces'
 import { Providers } from '@latitude-data/constants'
 import {
   EvaluationResultV2,
@@ -15,7 +16,7 @@ import {
   LlmEvaluationMetric,
   LlmEvaluationSpecification,
 } from '@latitude-data/core/constants'
-import { buildConversation } from '@latitude-data/core/helpers'
+import { adaptCompletionSpanMessagesToLegacy } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -355,22 +356,33 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
 }: {
   result: EvaluationResultV2<EvaluationType.Llm, M>
 }) {
-  const { data: providerLog, isLoading: isLoadingProviderLog } = useProviderLog(
-    result.metadata?.evaluationLogId,
+  const { traces, isLoading: isLoadingTraces } = useConversation({
+    conversationId: result.uuid,
+  })
+
+  const { traceId, spanId } = useMemo(() => {
+    const trace = traces[0]
+    if (!trace) return { traceId: null, spanId: null }
+    const firstSpan = trace.children[0]
+    return { traceId: trace.id, spanId: firstSpan?.id ?? null }
+  }, [traces])
+
+  const { completionSpan, isLoading: isLoadingMessages } = useTraceWithMessages(
+    { traceId, spanId },
   )
 
-  const conversation = useMemo(() => {
-    if (!providerLog) return []
-    return buildConversation(providerLog)
-  }, [providerLog])
+  const messages = useMemo(
+    () => adaptCompletionSpanMessagesToLegacy(completionSpan ?? undefined),
+    [completionSpan],
+  )
 
   const sourceMapAvailable = useMemo(
     () =>
-      conversation.some((message) => {
+      messages.some((message) => {
         if (typeof message.content !== 'object') return false
         return message.content.some((content) => '_promptlSourceMap' in content)
       }),
-    [conversation],
+    [messages],
   )
 
   const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
@@ -388,7 +400,7 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
     )
   }
 
-  if (isLoadingProviderLog) {
+  if (isLoadingTraces || isLoadingMessages) {
     return (
       <div className='w-full flex flex-col items-center justify-center gap-2'>
         <div className='w-full flex items-center justify-between'>
@@ -400,7 +412,7 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
     )
   }
 
-  if (!conversation.length) {
+  if (!messages.length) {
     return (
       <div className='w-full flex items-center justify-center'>
         <Text.H5 color='foregroundMuted' centered>
@@ -421,7 +433,7 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
         )}
       </div>
       <MessageList
-        messages={conversation}
+        messages={messages}
         parameters={LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]}
         debugMode={debugMode}
       />
