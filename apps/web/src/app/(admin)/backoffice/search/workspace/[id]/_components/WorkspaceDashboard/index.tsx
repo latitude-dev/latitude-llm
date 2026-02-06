@@ -25,6 +25,7 @@ import { BigAccountBanner } from '../BigAccountBanner'
 import { DeleteWorkspaceButton } from '../DeleteWorkspaceButton'
 import { IssueGrantModal } from '../IssueGrantModal'
 import { WeeklyEmailModal } from '../WeeklyEmailModal'
+import { WorkspaceWorkersUsage } from '../WorkspaceWorkersUsage'
 import { SubscriptionRow } from '$/components/Subscriptions/SubscriptionRow'
 import { useRecentSearches } from '$/app/(admin)/backoffice/search/_hooks/useRecentSearches'
 
@@ -600,7 +601,10 @@ export function WorkspaceDashboard({ workspace }: Props) {
           </div>
         </Card>
 
-        {/* Section 5: Admin Tools */}
+        {/* Section 5: Workers Usage */}
+        <WorkspaceWorkersUsage workspaceId={workspace.id} />
+
+        {/* Section 6: Admin Tools */}
         <Card className='p-6'>
           <div className='flex flex-col gap-4'>
             <button
