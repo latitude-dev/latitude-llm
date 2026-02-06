@@ -58,12 +58,13 @@ describe('notifyClientOfRunStatusByDocument', () => {
         workspaceId: baseEventData.workspaceId,
         data: {
           event: 'documentRunQueued',
-          eventContext: 'background',
           workspaceId: baseEventData.workspaceId,
           projectId: baseEventData.projectId,
           documentUuid: baseEventData.documentUuid,
           commitUuid: baseEventData.commitUuid,
           run: baseEventData.run,
+          metrics: undefined,
+          experimentId: undefined,
         },
       },
     )
@@ -90,12 +91,13 @@ describe('notifyClientOfRunStatusByDocument', () => {
         workspaceId: eventData.workspaceId,
         data: {
           event: 'documentRunStarted',
-          eventContext: 'background',
           workspaceId: eventData.workspaceId,
           projectId: eventData.projectId,
           documentUuid: eventData.documentUuid,
           commitUuid: eventData.commitUuid,
           run: eventData.run,
+          metrics: undefined,
+          experimentId: undefined,
         },
       },
     )
@@ -123,12 +125,13 @@ describe('notifyClientOfRunStatusByDocument', () => {
         workspaceId: eventData.workspaceId,
         data: {
           event: 'documentRunProgress',
-          eventContext: 'background',
           workspaceId: eventData.workspaceId,
           projectId: eventData.projectId,
           documentUuid: eventData.documentUuid,
           commitUuid: eventData.commitUuid,
           run: eventData.run,
+          metrics: undefined,
+          experimentId: undefined,
         },
       },
     )
@@ -156,12 +159,13 @@ describe('notifyClientOfRunStatusByDocument', () => {
         workspaceId: eventData.workspaceId,
         data: {
           event: 'documentRunEnded',
-          eventContext: 'background',
           workspaceId: eventData.workspaceId,
           projectId: eventData.projectId,
           documentUuid: eventData.documentUuid,
           commitUuid: eventData.commitUuid,
           run: eventData.run,
+          metrics: undefined,
+          experimentId: undefined,
         },
       },
     )
@@ -188,12 +192,130 @@ describe('notifyClientOfRunStatusByDocument', () => {
         workspaceId: eventData.workspaceId,
         data: {
           event: 'documentRunQueued',
-          eventContext: 'background',
           workspaceId: eventData.workspaceId,
           projectId: eventData.projectId,
           documentUuid: eventData.documentUuid,
           commitUuid: eventData.commitUuid,
           run: eventData.run,
+          metrics: undefined,
+          experimentId: undefined,
+        },
+      },
+    )
+  })
+
+  it('should include metrics when provided', async () => {
+    const metrics = {
+      runUsage: {
+        inputTokens: 100,
+        outputTokens: 50,
+        promptTokens: 100,
+        completionTokens: 50,
+        totalTokens: 150,
+        reasoningTokens: 10,
+        cachedInputTokens: 5,
+      },
+      runCost: 0.01,
+      duration: 1500,
+    }
+    const eventData = {
+      ...baseEventData,
+      metrics,
+    }
+    const event = {
+      type: 'documentRunEnded',
+      data: eventData,
+    } as DocumentRunStatusEvent
+
+    await notifyClientOfRunStatusByDocument({ data: event })
+
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
+      'documentRunStatus',
+      {
+        workspaceId: eventData.workspaceId,
+        data: {
+          event: 'documentRunEnded',
+          workspaceId: eventData.workspaceId,
+          projectId: eventData.projectId,
+          documentUuid: eventData.documentUuid,
+          commitUuid: eventData.commitUuid,
+          run: eventData.run,
+          metrics,
+          experimentId: undefined,
+        },
+      },
+    )
+  })
+
+  it('should include experimentId when provided', async () => {
+    const eventData = {
+      ...baseEventData,
+      experimentId: 42,
+    }
+    const event = {
+      type: 'documentRunEnded',
+      data: eventData,
+    } as DocumentRunStatusEvent
+
+    await notifyClientOfRunStatusByDocument({ data: event })
+
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
+      'documentRunStatus',
+      {
+        workspaceId: eventData.workspaceId,
+        data: {
+          event: 'documentRunEnded',
+          workspaceId: eventData.workspaceId,
+          projectId: eventData.projectId,
+          documentUuid: eventData.documentUuid,
+          commitUuid: eventData.commitUuid,
+          run: eventData.run,
+          metrics: undefined,
+          experimentId: 42,
+        },
+      },
+    )
+  })
+
+  it('should include both metrics and experimentId when provided', async () => {
+    const metrics = {
+      runUsage: {
+        inputTokens: 200,
+        outputTokens: 100,
+        promptTokens: 200,
+        completionTokens: 100,
+        totalTokens: 300,
+        reasoningTokens: 20,
+        cachedInputTokens: 10,
+      },
+      runCost: 0.025,
+      duration: 2500,
+    }
+    const eventData = {
+      ...baseEventData,
+      metrics,
+      experimentId: 123,
+    }
+    const event = {
+      type: 'documentRunEnded',
+      data: eventData,
+    } as DocumentRunStatusEvent
+
+    await notifyClientOfRunStatusByDocument({ data: event })
+
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
+      'documentRunStatus',
+      {
+        workspaceId: eventData.workspaceId,
+        data: {
+          event: 'documentRunEnded',
+          workspaceId: eventData.workspaceId,
+          projectId: eventData.projectId,
+          documentUuid: eventData.documentUuid,
+          commitUuid: eventData.commitUuid,
+          run: eventData.run,
+          metrics,
+          experimentId: 123,
         },
       },
     )

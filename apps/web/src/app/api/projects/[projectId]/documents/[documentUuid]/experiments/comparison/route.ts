@@ -29,14 +29,14 @@ export const GET = errorHandler(
           await Promise.all([experimentResult, scoresResult])
           const experiment = await experimentResult.then((r) => r.unwrap())
           const scores = await scoresResult.then((r) => r.unwrap())
-          const logsMetadata = await scope
-            .getLogsMetadata(uuid)
+          const runMetadata = await scope
+            .getRunMetadata(uuid)
             .then((r) => r.unwrap())
 
           return {
             ...experiment,
             scores,
-            logsMetadata,
+            runMetadata,
           } as ExperimentWithScores
         }),
       )

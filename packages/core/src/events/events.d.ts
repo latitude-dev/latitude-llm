@@ -643,6 +643,20 @@ export type StripeCustomerIdUnassignedEvent = LatitudeEventGeneric<
   }
 >
 
+type DocumentRunMetrics = {
+  runUsage: {
+    inputTokens: number
+    outputTokens: number
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+    reasoningTokens: number
+    cachedInputTokens: number
+  }
+  runCost: number
+  duration: number
+}
+
 type DocumentRunStatusEventData = {
   workspaceId: number
   projectId: number
@@ -655,6 +669,8 @@ type DocumentRunStatusEventData = {
   customIdentifier?: string | null
   tools?: string[]
   userMessage?: string
+  metrics?: DocumentRunMetrics
+  experimentId?: number
 }
 
 export type DocumentRunQueuedEvent = LatitudeEventGeneric<

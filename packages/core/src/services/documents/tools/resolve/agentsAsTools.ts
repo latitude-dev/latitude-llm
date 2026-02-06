@@ -84,7 +84,7 @@ export async function resolveAgentAsToolDefinition({
 
       try {
         // prettier-ignore
-        const { response, stream, error, runUsage } = await runDocumentAtCommit({
+        const { response, stream, error, runUsage, runCost } = await runDocumentAtCommit({
         context: $tool.context,
         workspace,
         commit,
@@ -111,7 +111,9 @@ export async function resolveAgentAsToolDefinition({
         })
 
         const usage = await runUsage
+        const cost = await runCost
         streamManager.incrementRunUsage(usage)
+        streamManager.incrementRunCost(cost)
 
         const res = await response
         if (!res) {

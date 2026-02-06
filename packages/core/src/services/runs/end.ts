@@ -1,6 +1,9 @@
 import { publisher } from '../../events/publisher'
+import { RunMetrics } from '../../jobs/job-definitions/runs/helpers/types'
 import { Result } from '../../lib/Result'
 import { deleteActiveRunByDocument } from './active/byDocument/delete'
+
+export type { RunMetrics }
 
 export async function endRun({
   workspaceId,
@@ -8,12 +11,16 @@ export async function endRun({
   documentUuid,
   commitUuid,
   runUuid,
+  metrics,
+  experimentId,
 }: {
   workspaceId: number
   projectId: number
   documentUuid: string
   commitUuid: string
   runUuid: string
+  metrics?: RunMetrics
+  experimentId?: number
 }) {
   const deleteResult = await deleteActiveRunByDocument({
     workspaceId,
@@ -21,6 +28,7 @@ export async function endRun({
     documentUuid,
     runUuid,
   })
+
   if (!Result.isOk(deleteResult)) return deleteResult
 
   const run = deleteResult.unwrap()
@@ -34,6 +42,8 @@ export async function endRun({
       commitUuid,
       run,
       eventContext: 'background',
+      metrics,
+      experimentId,
     },
   })
 

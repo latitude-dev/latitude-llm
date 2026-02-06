@@ -27,6 +27,20 @@ type SimulatedUserAction =
   | { action: 'end' }
   | { action: 'respond'; message: string }
 
+const createEmptyMockMetrics = () => ({
+  runUsage: Promise.resolve({
+    inputTokens: 0,
+    outputTokens: 0,
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    reasoningTokens: 0,
+    cachedInputTokens: 0,
+  }),
+  runCost: Promise.resolve(0),
+  duration: Promise.resolve(0),
+})
+
 type SimulateUserResponsesArgs = {
   initialMessages: Message[]
   workspace: WorkspaceDto
@@ -158,6 +172,7 @@ describe('multiTurnSimulation', () => {
         Result.ok({
           stream: mockStream,
           messages: Promise.resolve(updatedMessages),
+          ...createEmptyMockMetrics(),
         }) as any,
       )
 
@@ -215,6 +230,7 @@ describe('multiTurnSimulation', () => {
         Result.ok({
           stream: mockStream,
           messages: Promise.resolve(updatedMessages),
+          ...createEmptyMockMetrics(),
         }) as any,
       )
 
@@ -281,6 +297,7 @@ describe('multiTurnSimulation', () => {
         Result.ok({
           stream: mockStream,
           messages: Promise.resolve(updatedMessages),
+          ...createEmptyMockMetrics(),
         }) as any,
       )
 
@@ -334,6 +351,7 @@ describe('multiTurnSimulation', () => {
         Result.ok({
           stream: mockStream,
           messages: Promise.resolve(updatedMessages),
+          ...createEmptyMockMetrics(),
         }) as any,
       )
 
@@ -375,6 +393,7 @@ describe('multiTurnSimulation', () => {
         Result.ok({
           stream: mockStream,
           messages: Promise.resolve(updatedMessages),
+          ...createEmptyMockMetrics(),
         }) as any,
       )
 
@@ -418,6 +437,7 @@ describe('multiTurnSimulation', () => {
         return Result.ok({
           stream: mockStream,
           messages: Promise.resolve(messages),
+          ...createEmptyMockMetrics(),
         }) as any
       })
 
@@ -457,6 +477,7 @@ describe('multiTurnSimulation', () => {
         Result.ok({
           stream: mockStream,
           messages: Promise.resolve(updatedMessages),
+          ...createEmptyMockMetrics(),
         }) as any,
       )
 
@@ -487,6 +508,213 @@ describe('multiTurnSimulation', () => {
 
       expect(addMessagesModule.addMessages).not.toHaveBeenCalled()
       expect(streamManagementModule.forwardStreamEvents).not.toHaveBeenCalled()
+    })
+
+    describe('metrics aggregation', () => {
+      const createMockMetrics = (multiplier: number) => ({
+        runUsage: Promise.resolve({
+          inputTokens: 100 * multiplier,
+          outputTokens: 50 * multiplier,
+          promptTokens: 100 * multiplier,
+          completionTokens: 50 * multiplier,
+          totalTokens: 150 * multiplier,
+          reasoningTokens: 10 * multiplier,
+          cachedInputTokens: 5 * multiplier,
+        }),
+        runCost: Promise.resolve(0.01 * multiplier),
+        duration: Promise.resolve(1000 * multiplier),
+      })
+
+      it('returns empty metrics when maxTurns is 1', async () => {
+        const result = await simulateUserResponses({
+          ...baseArgs,
+          simulationSettings: { maxTurns: 1 },
+        })
+
+        expect(Result.isOk(result)).toBe(true)
+        const metrics = result.unwrap()
+        expect(metrics.runUsage.totalTokens).toBe(0)
+        expect(metrics.runCost).toBe(0)
+        expect(metrics.duration).toBe(0)
+      })
+
+      it('returns empty metrics when simulation ends immediately', async () => {
+        vi.mocked(
+          simulateUserResponseModule.generateSimulatedUserAction,
+        ).mockResolvedValue(Result.ok({ action: 'end' } as SimulatedUserAction))
+
+        const result = await simulateUserResponses(baseArgs)
+
+        expect(Result.isOk(result)).toBe(true)
+        const metrics = result.unwrap()
+        expect(metrics.runUsage.totalTokens).toBe(0)
+        expect(metrics.runCost).toBe(0)
+        expect(metrics.duration).toBe(0)
+      })
+
+      it('aggregates metrics from a single turn', async () => {
+        const mockStream = new ReadableStream()
+        const updatedMessages = [...baseArgs.initialMessages]
+
+        vi.mocked(simulateUserResponseModule.generateSimulatedUserAction)
+          .mockResolvedValueOnce(
+            Result.ok({
+              action: 'respond',
+              message: 'Response',
+            } as SimulatedUserAction),
+          )
+          .mockResolvedValueOnce(
+            Result.ok({ action: 'end' } as SimulatedUserAction),
+          )
+
+        vi.mocked(addMessagesModule.addMessages).mockResolvedValue(
+          Result.ok({
+            stream: mockStream,
+            messages: Promise.resolve(updatedMessages),
+            ...createMockMetrics(1),
+          }) as any,
+        )
+
+        const result = await simulateUserResponses(baseArgs)
+
+        expect(Result.isOk(result)).toBe(true)
+        const metrics = result.unwrap()
+        expect(metrics.runUsage.totalTokens).toBe(150)
+        expect(metrics.runCost).toBeCloseTo(0.01)
+        expect(metrics.duration).toBe(1000)
+      })
+
+      it('aggregates metrics from multiple turns', async () => {
+        const mockStream = new ReadableStream()
+        const updatedMessages = [...baseArgs.initialMessages]
+
+        vi.mocked(
+          simulateUserResponseModule.generateSimulatedUserAction,
+        ).mockResolvedValue(
+          Result.ok({
+            action: 'respond',
+            message: 'Response',
+          } as SimulatedUserAction),
+        )
+
+        let callCount = 0
+        vi.mocked(addMessagesModule.addMessages).mockImplementation(
+          async () => {
+            callCount++
+            return Result.ok({
+              stream: mockStream,
+              messages: Promise.resolve(updatedMessages),
+              ...createMockMetrics(callCount),
+            }) as any
+          },
+        )
+
+        const result = await simulateUserResponses({
+          ...baseArgs,
+          simulationSettings: { maxTurns: 4 },
+        })
+
+        expect(Result.isOk(result)).toBe(true)
+        const metrics = result.unwrap()
+        expect(metrics.runUsage.totalTokens).toBe(150 + 300 + 450)
+        expect(metrics.runCost).toBeCloseTo(0.01 + 0.02 + 0.03)
+        expect(metrics.duration).toBe(1000 + 2000 + 3000)
+      })
+
+      it('returns partial metrics when simulation ends early', async () => {
+        const mockStream = new ReadableStream()
+        const updatedMessages = [...baseArgs.initialMessages]
+
+        vi.mocked(simulateUserResponseModule.generateSimulatedUserAction)
+          .mockResolvedValueOnce(
+            Result.ok({
+              action: 'respond',
+              message: 'Response 1',
+            } as SimulatedUserAction),
+          )
+          .mockResolvedValueOnce(
+            Result.ok({ action: 'end' } as SimulatedUserAction),
+          )
+
+        vi.mocked(addMessagesModule.addMessages).mockResolvedValue(
+          Result.ok({
+            stream: mockStream,
+            messages: Promise.resolve(updatedMessages),
+            ...createMockMetrics(1),
+          }) as any,
+        )
+
+        const result = await simulateUserResponses({
+          ...baseArgs,
+          simulationSettings: { maxTurns: 5 },
+        })
+
+        expect(Result.isOk(result)).toBe(true)
+        const metrics = result.unwrap()
+        expect(metrics.runUsage.totalTokens).toBe(150)
+        expect(metrics.runCost).toBeCloseTo(0.01)
+        expect(metrics.duration).toBe(1000)
+      })
+
+      it('returns error result when addMessages fails', async () => {
+        const error = new LatitudeError('Failed to add messages')
+
+        vi.mocked(
+          simulateUserResponseModule.generateSimulatedUserAction,
+        ).mockResolvedValue(
+          Result.ok({
+            action: 'respond',
+            message: 'Response',
+          } as SimulatedUserAction),
+        )
+
+        vi.mocked(addMessagesModule.addMessages).mockResolvedValue(
+          Result.error(error),
+        )
+
+        const result = await simulateUserResponses(baseArgs)
+
+        expect(Result.isOk(result)).toBe(false)
+      })
+
+      it('aggregates all token types correctly', async () => {
+        const mockStream = new ReadableStream()
+        const updatedMessages = [...baseArgs.initialMessages]
+
+        vi.mocked(
+          simulateUserResponseModule.generateSimulatedUserAction,
+        ).mockResolvedValue(
+          Result.ok({
+            action: 'respond',
+            message: 'Response',
+          } as SimulatedUserAction),
+        )
+
+        vi.mocked(addMessagesModule.addMessages).mockResolvedValue(
+          Result.ok({
+            stream: mockStream,
+            messages: Promise.resolve(updatedMessages),
+            ...createMockMetrics(1),
+          }) as any,
+        )
+
+        const result = await simulateUserResponses({
+          ...baseArgs,
+          simulationSettings: { maxTurns: 3 },
+        })
+
+        expect(Result.isOk(result)).toBe(true)
+        const metrics = result.unwrap()
+        expect(metrics.runUsage).toEqual({
+          inputTokens: 200,
+          outputTokens: 100,
+          promptTokens: 200,
+          completionTokens: 100,
+          totalTokens: 300,
+          reasoningTokens: 20,
+          cachedInputTokens: 10,
+        })
+      })
     })
   })
 })

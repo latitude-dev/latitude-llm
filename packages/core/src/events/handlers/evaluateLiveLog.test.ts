@@ -217,8 +217,7 @@ describe('evaluateLiveLogJob', () => {
           caseInsensitive: false,
           trigger: {
             target: 'every',
-            lastInteractionDebounce:
-              DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
           },
         },
       })
@@ -254,8 +253,7 @@ describe('evaluateLiveLogJob', () => {
           caseInsensitive: false,
           trigger: {
             target: 'first',
-            lastInteractionDebounce:
-              DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
           },
         },
       })
@@ -286,8 +284,7 @@ describe('evaluateLiveLogJob', () => {
           caseInsensitive: false,
           trigger: {
             target: 'first',
-            lastInteractionDebounce:
-              DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
           },
         },
       })
@@ -381,8 +378,7 @@ describe('evaluateLiveLogJob', () => {
           caseInsensitive: false,
           trigger: {
             target: 'last',
-            lastInteractionDebounce:
-              DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
           },
         },
       })

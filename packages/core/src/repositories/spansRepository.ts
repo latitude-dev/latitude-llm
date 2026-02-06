@@ -324,7 +324,8 @@ export class SpansRepository extends Repository<Span> {
     spanId: string,
     traceId: string,
   ): Promise<boolean> {
-    const firstSpan = await this.findFirstMainSpanByDocumentLogUuid(documentLogUuid)
+    const firstSpan =
+      await this.findFirstMainSpanByDocumentLogUuid(documentLogUuid)
     return firstSpan?.id === spanId && firstSpan?.traceId === traceId
   }
 
@@ -585,6 +586,10 @@ export class SpanMetadatasRepository {
     this.disk = disk
   }
 
+  static buildKey(span: { traceId: string; id: string }) {
+    return `${span.traceId}:${span.id}`
+  }
+
   async get<T extends SpanType = SpanType>({
     spanId,
     traceId,
@@ -638,7 +643,7 @@ export class SpanMetadatasRepository {
       spanIdentifiers.map(async ({ traceId, spanId }) => {
         const result = await this.get<T>({ traceId, spanId })
         return {
-          key: `${traceId}:${spanId}`,
+          key: SpanMetadatasRepository.buildKey({ traceId, id: spanId }),
           metadata: result.ok ? result.value : undefined,
         }
       }),

@@ -1,4 +1,4 @@
-import { Providers } from '@latitude-data/constants'
+import { LogSources, Providers, SpanType } from '@latitude-data/constants'
 import { SimulatedUserGoalSource } from '@latitude-data/constants/simulation'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { EvaluationV2 } from '../../../constants'
@@ -6,6 +6,7 @@ import { type Commit } from '../../../schema/models/types/Commit'
 import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../../schema/models/types/Workspace'
+import { type Project } from '../../../schema/models/types/Project'
 import * as factories from '../../../tests/factories'
 import { createExperiment } from '../create'
 import {
@@ -15,6 +16,7 @@ import {
 
 describe('getExperimentJobPayload', () => {
   let workspace: Workspace
+  let project: Project
   let document: DocumentVersion
   let commit: Commit
   let dataset: Dataset
@@ -32,6 +34,7 @@ describe('getExperimentJobPayload', () => {
       user,
       workspace: createdWorkspace,
       commit: createdCommit,
+      project: createdProject,
       documents,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
@@ -43,6 +46,7 @@ describe('getExperimentJobPayload', () => {
       },
     })
     workspace = createdWorkspace
+    project = createdProject
     document = documents[0]!
     commit = createdCommit
     author = user
@@ -294,6 +298,434 @@ describe('getExperimentJobPayload', () => {
     expect(rows).toHaveLength(2)
     rows.forEach((row) => {
       expect(row.simulatedUserGoal).toBeUndefined()
+    })
+  })
+
+  describe('logs source', () => {
+    it('Returns rows from existing Prompt spans with their parameters', async () => {
+      const baseDate = new Date()
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 3000),
+        parameters: { foo: 'bar1', baz: 'qux1' },
+      })
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 2000),
+        parameters: { foo: 'bar2', baz: 'qux2' },
+      })
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 1000),
+        parameters: { foo: 'bar3', baz: 'qux3' },
+      })
+
+      const experiment = await createExperiment({
+        name: 'experiment-from-logs',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'logs',
+          count: 3,
+        },
+        evaluations: [],
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { rows } = await getExperimentJobPayload({
+        experiment,
+        workspace,
+      }).then((r) => r.unwrap())
+
+      expect(rows).toHaveLength(3)
+      rows.forEach((row) => {
+        expect(row.uuid).toBeDefined()
+        expect(row.parameters).toBeDefined()
+        expect(row.datasetRowId).toBeUndefined()
+      })
+
+      const allParams = rows.map((r) => r.parameters)
+      expect(allParams).toContainEqual({ foo: 'bar1', baz: 'qux1' })
+      expect(allParams).toContainEqual({ foo: 'bar2', baz: 'qux2' })
+      expect(allParams).toContainEqual({ foo: 'bar3', baz: 'qux3' })
+    })
+
+    it('Limits rows to the requested count', async () => {
+      const baseDate = new Date()
+
+      for (let i = 0; i < 10; i++) {
+        await factories.createPromptSpan({
+          workspaceId: workspace.id,
+          documentUuid: document.documentUuid,
+          commitUuid: commit.uuid,
+          projectId: project.id,
+          source: LogSources.API,
+          startedAt: new Date(baseDate.getTime() - (10 - i) * 1000),
+          parameters: { index: i.toString() },
+        })
+      }
+
+      const experiment = await createExperiment({
+        name: 'experiment-from-logs-limited',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'logs',
+          count: 5,
+        },
+        evaluations: [],
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { rows } = await getExperimentJobPayload({
+        experiment,
+        workspace,
+      }).then((r) => r.unwrap())
+
+      expect(rows).toHaveLength(5)
+    })
+
+    it('Returns most recent spans first (ordered by startedAt desc)', async () => {
+      const baseDate = new Date()
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 3000),
+        parameters: { order: 'oldest' },
+      })
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 1000),
+        parameters: { order: 'newest' },
+      })
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 2000),
+        parameters: { order: 'middle' },
+      })
+
+      const experiment = await createExperiment({
+        name: 'experiment-from-logs-ordered',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'logs',
+          count: 2,
+        },
+        evaluations: [],
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { rows } = await getExperimentJobPayload({
+        experiment,
+        workspace,
+      }).then((r) => r.unwrap())
+
+      expect(rows).toHaveLength(2)
+      expect(rows[0]!.parameters).toEqual({ order: 'newest' })
+      expect(rows[1]!.parameters).toEqual({ order: 'middle' })
+    })
+
+    it('Only includes spans created before the experiment', async () => {
+      const baseDate = new Date()
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 1000),
+        parameters: { timing: 'before' },
+      })
+
+      const experiment = await createExperiment({
+        name: 'experiment-from-logs-timing',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'logs',
+          count: 10,
+        },
+        evaluations: [],
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(),
+        parameters: { timing: 'after' },
+      })
+
+      const { rows } = await getExperimentJobPayload({
+        experiment,
+        workspace,
+      }).then((r) => r.unwrap())
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0]!.parameters).toEqual({ timing: 'before' })
+    })
+
+    it('Only includes spans without an experimentUuid', async () => {
+      const baseDate = new Date()
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 2000),
+        parameters: { hasExperiment: 'no' },
+        experimentUuid: undefined,
+      })
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 1000),
+        parameters: { hasExperiment: 'yes' },
+        experimentUuid: '00000000-0000-0000-0000-000000000001',
+      })
+
+      const experiment = await createExperiment({
+        name: 'experiment-from-logs-no-experiment',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'logs',
+          count: 10,
+        },
+        evaluations: [],
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { rows } = await getExperimentJobPayload({
+        experiment,
+        workspace,
+      }).then((r) => r.unwrap())
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0]!.parameters).toEqual({ hasExperiment: 'no' })
+    })
+
+    it('Only includes spans for the same document', async () => {
+      const baseDate = new Date()
+
+      const { documents: otherDocuments } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'openai-other' }],
+        documents: {
+          otherdoc: factories.helpers.createPrompt({
+            provider: 'openai-other',
+            content: 'other content',
+          }),
+        },
+      })
+      const otherDocument = otherDocuments[0]!
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 2000),
+        parameters: { doc: 'correct' },
+      })
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: otherDocument.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 1000),
+        parameters: { doc: 'wrong' },
+      })
+
+      const experiment = await createExperiment({
+        name: 'experiment-from-logs-same-doc',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'logs',
+          count: 10,
+        },
+        evaluations: [],
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { rows } = await getExperimentJobPayload({
+        experiment,
+        workspace,
+      }).then((r) => r.unwrap())
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0]!.parameters).toEqual({ doc: 'correct' })
+    })
+
+    it('Returns empty array when no matching spans exist', async () => {
+      const experiment = await createExperiment({
+        name: 'experiment-from-logs-empty',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'logs',
+          count: 5,
+        },
+        evaluations: [],
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { rows } = await getExperimentJobPayload({
+        experiment,
+        workspace,
+      }).then((r) => r.unwrap())
+
+      expect(rows).toHaveLength(0)
+    })
+
+    it('Returns empty parameters when span metadata is missing', async () => {
+      const baseDate = new Date()
+
+      await factories.createSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 1000),
+        type: SpanType.Prompt,
+      })
+
+      const experiment = await createExperiment({
+        name: 'experiment-from-logs-no-metadata',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'logs',
+          count: 5,
+        },
+        evaluations: [],
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { rows } = await getExperimentJobPayload({
+        experiment,
+        workspace,
+      }).then((r) => r.unwrap())
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0]!.parameters).toEqual({})
+    })
+
+    it('Does not include spans from other workspaces', async () => {
+      const baseDate = new Date()
+      const { workspace: otherWorkspace } = await factories.createWorkspace()
+
+      await factories.createPromptSpan({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 2000),
+        parameters: { workspace: 'correct' },
+      })
+
+      await factories.createPromptSpan({
+        workspaceId: otherWorkspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        source: LogSources.API,
+        startedAt: new Date(baseDate.getTime() - 1000),
+        parameters: { workspace: 'wrong' },
+      })
+
+      const experiment = await createExperiment({
+        name: 'experiment-from-logs-workspace',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'logs',
+          count: 10,
+        },
+        evaluations: [],
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const { rows } = await getExperimentJobPayload({
+        experiment,
+        workspace,
+      }).then((r) => r.unwrap())
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0]!.parameters).toEqual({ workspace: 'correct' })
     })
   })
 })

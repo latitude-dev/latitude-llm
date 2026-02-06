@@ -3,31 +3,36 @@ import { Job } from 'bullmq'
 import { publisher } from '../../../events/publisher'
 import { RedisStream } from '../../../lib/redisStream'
 import { Result } from '../../../lib/Result'
-import { buildClientToolHandlersMap } from '../../../services/documents/tools/clientTools/handlers'
-import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtCommit'
-import { startRun } from '../../../services/runs/start'
-import { endRun } from '../../../services/runs/end'
-import { BACKGROUND } from '../../../telemetry'
-import { getJobDocumentData } from '../helpers'
+import { incrementTokens } from '../../../lib/streamManager'
 import { Experiment } from '../../../schema/models/types/Experiment'
+import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtCommit'
+import { buildClientToolHandlersMap } from '../../../services/documents/tools/clientTools/handlers'
+import { endRun } from '../../../services/runs/end'
+import { startRun } from '../../../services/runs/start'
+import { BACKGROUND } from '../../../telemetry'
 import { captureException } from '../../../utils/datadogCapture'
+import { getJobDocumentData } from '../helpers'
 import {
   fetchExperiment,
   handleExperimentSuccess,
   markExperimentFailure,
 } from './helpers/experimentHandler'
 import {
+  shouldRunMultiTurnSimulation,
+  simulateUserResponses,
+} from './helpers/multiTurnSimulation'
+import {
   createCancelHandler,
   createWriteStream,
   forwardStreamEvents,
 } from './helpers/streamManagement'
 import {
-  shouldRunMultiTurnSimulation,
-  simulateUserResponses,
-} from './helpers/multiTurnSimulation'
-import { BackgroundRunJobData, BackgroundRunJobResult } from './helpers/types'
+  BackgroundRunJobData,
+  BackgroundRunJobResult,
+  RunMetrics,
+} from './helpers/types'
 
-export type { BackgroundRunJobData, BackgroundRunJobResult }
+export type { BackgroundRunJobData, BackgroundRunJobResult, RunMetrics }
 
 type CleanupResourcesArgs = {
   writeStream: RedisStream
@@ -37,6 +42,8 @@ type CleanupResourcesArgs = {
   documentUuid: string
   commitUuid: string
   runUuid: string
+  metrics?: RunMetrics
+  experimentId?: number
 }
 
 async function cleanupResources({
@@ -47,6 +54,8 @@ async function cleanupResources({
   documentUuid,
   commitUuid,
   runUuid,
+  metrics,
+  experimentId,
 }: CleanupResourcesArgs) {
   await writeStream.close().catch(() => {})
   await writeStream.cleanup()
@@ -59,6 +68,8 @@ async function cleanupResources({
       documentUuid,
       commitUuid,
       runUuid,
+      metrics,
+      experimentId,
     })
     if (!Result.isOk(endResult)) {
       captureException(new Error(`[BackgroundRunJob] Failed to end run`))
@@ -66,6 +77,29 @@ async function cleanupResources({
   } catch (_error) {
     captureException(new Error(`[BackgroundRunJob] Failed to end run`))
   }
+}
+
+function aggregateMetrics(iterations: RunMetrics[]): RunMetrics {
+  return iterations.reduce(
+    (acc, curr) => ({
+      runUsage: incrementTokens({ prev: acc.runUsage, next: curr.runUsage }),
+      runCost: acc.runCost + curr.runCost,
+      duration: acc.duration + curr.duration,
+    }),
+    {
+      runUsage: {
+        inputTokens: 0,
+        outputTokens: 0,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        reasoningTokens: 0,
+        cachedInputTokens: 0,
+      },
+      runCost: 0,
+      duration: 0,
+    },
+  )
 }
 
 /**
@@ -106,6 +140,7 @@ export const backgroundRunJob = async (
   const cancelJob = createCancelHandler(job.id, abortController)
 
   let experiment: Experiment | undefined = undefined
+  const metricsIterations: RunMetrics[] = []
 
   try {
     const { workspace, document, commit } = await getJobDocumentData({
@@ -164,8 +199,17 @@ export const backgroundRunJob = async (
       readStream: result.stream,
     })
 
+    const [initialRunUsage, initialRunCost, initialDuration] =
+      await Promise.all([result.runUsage, result.runCost, result.duration])
+
+    metricsIterations.push({
+      runUsage: initialRunUsage,
+      runCost: initialRunCost,
+      duration: initialDuration,
+    })
+
     if (shouldRunMultiTurnSimulation(simulationSettings)) {
-      await simulateUserResponses({
+      const simulationMetrics = await simulateUserResponses({
         workspace,
         documentLogUuid: result.uuid,
         simulationSettings,
@@ -180,6 +224,8 @@ export const backgroundRunJob = async (
         runUuid,
         initialMessages: await result.conversation.messages,
       }).then((r) => r.unwrap())
+
+      metricsIterations.push(simulationMetrics)
     }
 
     if (experiment) {
@@ -205,6 +251,11 @@ export const backgroundRunJob = async (
 
     captureException(error as Error)
   } finally {
+    const aggregatedMetrics =
+      metricsIterations.length > 0
+        ? aggregateMetrics(metricsIterations)
+        : undefined
+
     await cleanupResources({
       writeStream,
       cancelJob,
@@ -213,6 +264,8 @@ export const backgroundRunJob = async (
       documentUuid,
       commitUuid,
       runUuid,
+      metrics: aggregatedMetrics,
+      experimentId,
     })
   }
 }

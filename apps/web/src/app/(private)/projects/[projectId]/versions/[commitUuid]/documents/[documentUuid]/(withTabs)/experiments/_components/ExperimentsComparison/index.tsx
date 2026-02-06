@@ -24,13 +24,14 @@ export function ExperimentComparison({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
-  const { experiments, evaluations, bestLogsMetadata } =
-    useExperimentComparison({
+  const { experiments, evaluations, bestRunMetadata } = useExperimentComparison(
+    {
       project: project as Project,
       commit: commit as Commit,
       document,
       experimentUuids: selectedExperimentUuids,
-    })
+    },
+  )
 
   const [isComparing, setIsComparing] = useState(false)
   const baseline = useMemo(() => experiments?.[0], [experiments])
@@ -66,7 +67,7 @@ export function ExperimentComparison({
                   }
                 : undefined
             }
-            bestLogsMetadata={bestLogsMetadata}
+            bestRunMetadata={bestRunMetadata}
           />
         )
       })}

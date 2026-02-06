@@ -247,6 +247,8 @@ describe('backgroundRunJob', () => {
             reasoningTokens: 0,
             cachedInputTokens: 0,
           }),
+          logCost: Promise.resolve(0),
+          runCost: Promise.resolve(0),
         }),
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
@@ -306,6 +308,8 @@ describe('backgroundRunJob', () => {
             reasoningTokens: 0,
             cachedInputTokens: 0,
           }),
+          logCost: Promise.resolve(0),
+          runCost: Promise.resolve(0),
         }),
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
@@ -377,6 +381,8 @@ describe('backgroundRunJob', () => {
             reasoningTokens: 0,
             cachedInputTokens: 0,
           }),
+          logCost: Promise.resolve(0),
+          runCost: Promise.resolve(0),
         }),
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(
@@ -437,6 +443,8 @@ describe('backgroundRunJob', () => {
             reasoningTokens: 0,
             cachedInputTokens: 0,
           }),
+          logCost: Promise.resolve(0),
+          runCost: Promise.resolve(0),
         }),
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
@@ -522,6 +530,8 @@ describe('backgroundRunJob', () => {
             reasoningTokens: 0,
             cachedInputTokens: 0,
           }),
+          logCost: Promise.resolve(0),
+          runCost: Promise.resolve(0),
         }),
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
@@ -559,6 +569,140 @@ describe('backgroundRunJob', () => {
       })
       expect(mockWriteStream.cleanup).toHaveBeenCalled()
       expect(endRunModule.endRun).toHaveBeenCalled()
+    })
+  })
+
+  describe('metrics aggregation', () => {
+    it('should pass metrics from runDocumentAtCommit to endRun', async () => {
+      const expectedUsage = {
+        inputTokens: 100,
+        outputTokens: 50,
+        totalTokens: 150,
+        promptTokens: 100,
+        completionTokens: 50,
+        reasoningTokens: 10,
+        cachedInputTokens: 5,
+      }
+      const expectedCost = 0.005
+      const expectedDuration = 1500
+
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        // @ts-expect-error - mock
+        Result.ok({ workspace, document, commit }),
+      )
+      vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(
+        runDocumentAtCommitModule.runDocumentAtCommit,
+      ).mockResolvedValue(
+        Result.ok({
+          stream: mockReadStream,
+          errorableUuid: 'run-123',
+          resolvedContent: 'content',
+          error: Promise.resolve(undefined),
+          lastResponse: Promise.resolve(undefined),
+          toolCalls: Promise.resolve([]),
+          uuid: 'run-123',
+          response: Promise.resolve(undefined),
+          duration: Promise.resolve(expectedDuration),
+          provider: Promise.resolve(undefined),
+          providerLog: Promise.resolve({ uuid: 'log-123' }),
+          conversation: { messages: Promise.resolve([]) },
+          messages: Promise.resolve([]),
+          logUsage: Promise.resolve(expectedUsage),
+          runUsage: Promise.resolve(expectedUsage),
+          logCost: Promise.resolve(expectedCost),
+          runCost: Promise.resolve(expectedCost),
+        }),
+      )
+      vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
+
+      const reader = mockReadStream.getReader()
+      vi.mocked(reader.read).mockResolvedValue({ done: true, value: undefined })
+
+      const mod = await import('./backgroundRunJob')
+      const backgroundRunJob = mod.backgroundRunJob
+
+      await backgroundRunJob(mockJob)
+
+      expect(endRunModule.endRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metrics: {
+            runUsage: expectedUsage,
+            runCost: expectedCost,
+            duration: expectedDuration,
+          },
+        }),
+      )
+    })
+
+    it('should pass experimentId to endRun when present in job data', async () => {
+      const jobWithExperiment = {
+        ...mockJob,
+        data: {
+          ...mockJob.data,
+          experimentId: 42,
+        },
+      } as Job<any>
+
+      vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
+        // @ts-expect-error - mock
+        Result.ok({ workspace, document, commit }),
+      )
+      vi.mocked(startRunModule.startRun).mockResolvedValue(Result.ok({} as any))
+      vi.mocked(
+        runDocumentAtCommitModule.runDocumentAtCommit,
+      ).mockResolvedValue(
+        Result.ok({
+          stream: mockReadStream,
+          errorableUuid: 'run-123',
+          resolvedContent: 'content',
+          error: Promise.resolve(undefined),
+          lastResponse: Promise.resolve(undefined),
+          toolCalls: Promise.resolve([]),
+          uuid: 'run-123',
+          response: Promise.resolve(undefined),
+          duration: Promise.resolve(1000),
+          provider: Promise.resolve(undefined),
+          providerLog: Promise.resolve({ uuid: 'log-123' }),
+          conversation: { messages: Promise.resolve([]) },
+          messages: Promise.resolve([]),
+          logUsage: Promise.resolve({
+            inputTokens: 0,
+            outputTokens: 0,
+            totalTokens: 0,
+            promptTokens: 0,
+            completionTokens: 0,
+            reasoningTokens: 0,
+            cachedInputTokens: 0,
+          }),
+          runUsage: Promise.resolve({
+            inputTokens: 0,
+            outputTokens: 0,
+            totalTokens: 0,
+            promptTokens: 0,
+            completionTokens: 0,
+            reasoningTokens: 0,
+            cachedInputTokens: 0,
+          }),
+          logCost: Promise.resolve(0),
+          runCost: Promise.resolve(0),
+        }),
+      )
+      vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
+
+      const reader = mockReadStream.getReader()
+      vi.mocked(reader.read).mockResolvedValue({ done: true, value: undefined })
+
+      const mod = await import('./backgroundRunJob')
+      const backgroundRunJob = mod.backgroundRunJob
+
+      await backgroundRunJob(jobWithExperiment)
+
+      expect(endRunModule.endRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          experimentId: 42,
+        }),
+      )
     })
   })
 })

@@ -114,7 +114,7 @@ export function ActionButtons({
             placement: 'right',
           }}
         >
-          See {experiment.logsMetadata.count} Logs
+          See {experiment.runMetadata.count} Logs
         </Button>
       </Link>
     </div>

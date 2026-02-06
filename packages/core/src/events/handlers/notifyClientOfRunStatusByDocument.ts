@@ -17,6 +17,8 @@ export const notifyClientOfRunStatusByDocument = async ({
     commitUuid,
     run,
     eventContext,
+    metrics,
+    experimentId,
   } = event.data
 
   if (eventContext === 'foreground') return
@@ -30,7 +32,8 @@ export const notifyClientOfRunStatusByDocument = async ({
       documentUuid,
       commitUuid,
       run,
-      eventContext,
+      metrics,
+      experimentId,
     },
   })
 }
