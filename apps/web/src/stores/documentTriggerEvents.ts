@@ -54,8 +54,15 @@ export default function useDocumentTriggerEvents(
 
   useSockets({
     event: 'triggerEventCreated',
-    onMessage: ({ triggerEvent }) => {
-      if (triggerEvent.triggerUuid !== triggerUuid) return
+    onMessage: (payload) => {
+      // Datadog: "Right side of assignment cannot be destructured"
+      // Socket payload can be undefined/null (or missing triggerEvent).
+      const triggerEvent = payload?.triggerEvent
+      if (!triggerEvent) return
+
+      // If this hook is scoped to a specific trigger, only accept events for it.
+      if (triggerUuid && triggerEvent.triggerUuid !== triggerUuid) return
+
       onRealtimeTriggerEventCreated?.(triggerEvent)
       mutate((prev) => [triggerEvent, ...(prev ?? [])], {
         revalidate: false,
