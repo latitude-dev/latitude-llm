@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { Latitude } from '../../dist/index.js'
+import { Latitude } from '../index'
 
 const shouldRunAcceptance = process.env.RUN_ACCEPTANCE_TESTS === '1'
 // const describeAcceptance = shouldRunAcceptance ? describe : describe.skip
