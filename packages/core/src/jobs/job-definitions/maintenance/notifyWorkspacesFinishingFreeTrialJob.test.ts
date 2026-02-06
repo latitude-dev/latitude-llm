@@ -40,7 +40,7 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
 
   describe('publishes workspaceFinishingFreeTrial for workspaces in 10-day window', () => {
     it('publishes event for workspace whose trial ends exactly 10 days from now', async () => {
-      const { workspace } = await createWorkspace({
+      const { workspace, userData } = await createWorkspace({
         subscriptionPlan: SubscriptionPlan.HobbyV3,
       })
       const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
@@ -54,28 +54,25 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
         data: {
           workspaceId: workspace.id,
           workspaceName: workspace.name,
+          userEmail: userData.email,
         },
       })
     })
 
     it('publishes event once per workspace when multiple workspaces in window', async () => {
-      const { workspace: workspace1 } = await createWorkspace({
-        subscriptionPlan: SubscriptionPlan.HobbyV3,
-        name: 'Workspace One',
-      })
-      const { workspace: workspace2 } = await createWorkspace({
-        subscriptionPlan: SubscriptionPlan.HobbyV3,
-        name: 'Workspace Two',
-      })
+      const { workspace: workspace1, userData: userData1 } =
+        await createWorkspace({
+          subscriptionPlan: SubscriptionPlan.HobbyV3,
+          name: 'Workspace One',
+        })
+      const { workspace: workspace2, userData: userData2 } =
+        await createWorkspace({
+          subscriptionPlan: SubscriptionPlan.HobbyV3,
+          name: 'Workspace Two',
+        })
       const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
-      await setTrialEndsAt(
-        workspace1.currentSubscriptionId!,
-        trialEndInTenDays,
-      )
-      await setTrialEndsAt(
-        workspace2.currentSubscriptionId!,
-        trialEndInTenDays,
-      )
+      await setTrialEndsAt(workspace1.currentSubscriptionId!, trialEndInTenDays)
+      await setTrialEndsAt(workspace2.currentSubscriptionId!, trialEndInTenDays)
 
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
@@ -85,6 +82,7 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
         data: {
           workspaceId: workspace1.id,
           workspaceName: 'Workspace One',
+          userEmail: userData1.email,
         },
       })
       expect(publisher.publishLater).toHaveBeenCalledWith({
@@ -92,6 +90,7 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
         data: {
           workspaceId: workspace2.id,
           workspaceName: 'Workspace Two',
+          userEmail: userData2.email,
         },
       })
     })

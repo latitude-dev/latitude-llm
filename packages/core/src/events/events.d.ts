@@ -612,7 +612,7 @@ export type SubscriptionUpdatedEvent = LatitudeEventGeneric<
 
 export type WorkspaceFinishingFreeTrialEvent = LatitudeEventGeneric<
   'workspaceFinishingFreeTrial',
-  { workspaceId: number; workspaceName: string }
+  { workspaceId: number; workspaceName: string; userEmail: string }
 >
 
 export type SubscriptionEnqueuedForCancellationEvent = LatitudeEventGeneric<
