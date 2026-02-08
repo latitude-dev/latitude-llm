@@ -51,7 +51,14 @@ export function getIntegrationData({
     }
   }
 
-  const { icon } = INTEGRATION_TYPE_VALUES[integration.type]
+  const icon =
+    // Some integration types are not part of ActiveIntegrationType (or may be added before web is updated).
+    // Avoid crashing the editor UI and fall back to a generic icon.
+    INTEGRATION_TYPE_VALUES[
+      integration.type as keyof typeof INTEGRATION_TYPE_VALUES
+    ]?.icon ??
+    ({ type: 'icon', name: 'unplug' as IconName } as const)
+
   return {
     ...commonData,
     icon,

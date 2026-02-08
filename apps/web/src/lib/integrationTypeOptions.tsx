@@ -58,5 +58,12 @@ export function integrationOptions(
     }
   }
 
-  return INTEGRATION_TYPE_VALUES[integration.type]
+  return (
+    INTEGRATION_TYPE_VALUES[
+      integration.type as keyof typeof INTEGRATION_TYPE_VALUES
+    ] ?? {
+      label: integration.name,
+      icon: { type: 'icon' as const, name: 'unplug' },
+    }
+  )
 }

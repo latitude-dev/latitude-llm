@@ -57,7 +57,11 @@ export function IntegrationIcon({
   }
 
   // Standard integration types: use INTEGRATION_TYPE_VALUES
-  const { icon } = INTEGRATION_TYPE_VALUES[integration.type]
+  const icon =
+    INTEGRATION_TYPE_VALUES[
+      integration.type as keyof typeof INTEGRATION_TYPE_VALUES
+    ]?.icon ??
+    ({ type: 'icon', name: 'unplug' } as const)
 
   if (icon.type === 'image') {
     return (
