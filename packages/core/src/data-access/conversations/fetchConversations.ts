@@ -37,7 +37,9 @@ export type FetchConversationsParams = {
   limit?: number
 }
 
-type ConversationQueryResult = Awaited<ReturnType<typeof fetchConversationsQuery>>
+type ConversationQueryResult = Awaited<
+  ReturnType<typeof fetchConversationsQuery>
+>
 
 export type FetchConversationsResult = {
   items: ConversationQueryResult['items']

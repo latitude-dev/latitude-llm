@@ -26,6 +26,7 @@ import { DeleteWorkspaceButton } from '../DeleteWorkspaceButton'
 import { IssueGrantModal } from '../IssueGrantModal'
 import { WeeklyEmailModal } from '../WeeklyEmailModal'
 import { WorkspaceWorkersUsage } from '../WorkspaceWorkersUsage'
+import { ChangeTrialEndDateButton } from '../ChangeTrialEndDateButton'
 import { SubscriptionRow } from '$/components/Subscriptions/SubscriptionRow'
 import { useRecentSearches } from '$/app/(admin)/backoffice/search/_hooks/useRecentSearches'
 
@@ -201,14 +202,18 @@ export function WorkspaceDashboard({ workspace }: Props) {
                     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
                     .join(' ')}
                 </Badge>
-                {isInTrial && (
+                {workspace.subscription.trialEndsAt && (
                   <Text.H6 color='foregroundMuted'>
-                    Trial ends{' '}
+                    Trial {isInTrial ? 'ends' : 'ended'}{' '}
                     {new Date(
-                      workspace.subscription.trialEndsAt!,
+                      workspace.subscription.trialEndsAt,
                     ).toLocaleDateString()}
                   </Text.H6>
                 )}
+                <ChangeTrialEndDateButton
+                  workspaceId={workspace.id}
+                  currentTrialEndsAt={workspace.subscription.trialEndsAt}
+                />
               </div>
               <ClickToCopy copyValue={String(workspace.id)}>
                 <Text.H6 color='foregroundMuted' monospace>
