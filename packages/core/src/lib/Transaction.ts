@@ -45,7 +45,10 @@ export default class Transaction {
             ((e as any).cause as unknown)
           : undefined
 
-      return (cause as DatabaseError | undefined)?.code
+      return (
+        (cause as DatabaseError | undefined)?.code ??
+        (e as DatabaseError | undefined)?.code
+      )
     }
 
     // Deadlocks are retryable.
