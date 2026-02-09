@@ -4,8 +4,12 @@ import { type DocumentTrigger } from '../../../schema/models/types/DocumentTrigg
 import { type DocumentTriggerEvent } from '../../../schema/models/types/DocumentTriggerEvent'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { Result, TypedResult } from '../../../lib/Result'
-import { NotImplementedError } from '@latitude-data/constants/errors'
 import {
+  NotFoundError,
+  NotImplementedError,
+} from '@latitude-data/constants/errors'
+import {
+  CommitsRepository,
   DocumentTriggersRepository,
   DocumentVersionsRepository,
 } from '../../../repositories'
@@ -45,13 +49,20 @@ export async function runDocumentFromTriggerEvent<
   documentTriggerEvent: DocumentTriggerEvent<T>
   commit: Commit
 }) {
+  const effectiveCommit = await resolveEffectiveCommit({
+    workspace,
+    commit,
+  })
+  if (effectiveCommit.error) return effectiveCommit
+  const resolvedCommit = effectiveCommit.unwrap()
+
   const documentTriggersRepository = new DocumentTriggersRepository(
     workspace.id,
   )
   const documentTriggerResult =
     await documentTriggersRepository.getTriggerByUuid({
       uuid: documentTriggerEvent.triggerUuid,
-      commit,
+      commit: resolvedCommit,
     })
   if (!Result.isOk(documentTriggerResult)) return documentTriggerResult
   const documentTrigger = documentTriggerResult.unwrap()
@@ -59,7 +70,7 @@ export async function runDocumentFromTriggerEvent<
   const documentsScope = new DocumentVersionsRepository(workspace.id)
   const documentResult = await documentsScope.getDocumentAtCommit({
     projectId: documentTrigger.projectId,
-    commitUuid: commit.uuid,
+    commitUuid: resolvedCommit.uuid,
     documentUuid: documentTrigger.documentUuid,
   })
   if (!Result.isOk(documentResult)) return documentResult
@@ -87,7 +98,7 @@ export async function runDocumentFromTriggerEvent<
     workspace,
     document,
     parameters,
-    commit,
+    commit: resolvedCommit,
     source,
   })
 
@@ -119,4 +130,26 @@ export async function runDocumentFromTriggerEvent<
   if (!Result.isOk(runResult)) return runResult
 
   return Result.nil()
+}
+
+async function resolveEffectiveCommit({
+  workspace,
+  commit,
+}: {
+  workspace: WorkspaceDto
+  commit: Commit
+}): Promise<TypedResult<Commit>> {
+  if (!commit.mergedAt) return Result.ok(commit)
+
+  const commitsRepo = new CommitsRepository(workspace.id)
+  const liveCommit = await commitsRepo.getHeadCommit(commit.projectId)
+  if (!liveCommit) {
+    return Result.error(
+      new NotFoundError(
+        `Live commit not found in project ${commit.projectId}`,
+      ),
+    )
+  }
+
+  return Result.ok(liveCommit)
 }
