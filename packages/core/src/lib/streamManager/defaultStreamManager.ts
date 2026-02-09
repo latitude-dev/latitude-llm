@@ -89,7 +89,6 @@ export class DefaultStreamManager
           source: this.source,
           workspace: this.workspace,
           resolvedTools: toolsBySource,
-          telemetryOptions: this.telemetryOptions,
         })
 
       this.updateStateFromResponse({

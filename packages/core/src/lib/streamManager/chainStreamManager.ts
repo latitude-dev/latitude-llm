@@ -92,7 +92,6 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         source: this.source,
         workspace: this.workspace,
         resolvedTools: toolsBySource,
-        telemetryOptions: this.telemetryOptions,
       })
 
       this.updateStateFromResponse({

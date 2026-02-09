@@ -28,7 +28,6 @@ import { generateUUIDIdentifier } from '../generateUUID'
 import { ToolHandler } from '../../services/documents/tools/clientTools/handlers'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { createPromiseWithResolver } from './utils/createPromiseResolver'
-import { CompletionTelemetryOptions } from '../../services/ai'
 import { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 
 const addTokens = ({
@@ -91,7 +90,6 @@ export abstract class StreamManager {
   public mcpClientManager: McpClientManager
   public mcpHeaders?: Record<string, Record<string, string>>
   public promptSource: PromptSource
-  public telemetryOptions?: CompletionTelemetryOptions
   public source: LogSources
   public stream: ReadableStream<ChainEvent>
   public tools: Record<string, ToolHandler>
@@ -151,14 +149,6 @@ export abstract class StreamManager {
         this.controller = controller
       },
     })
-
-    this.telemetryOptions =
-      promptSource && 'document' in promptSource
-        ? {
-            promptUuid: promptSource.document.documentUuid,
-            versionUuid: promptSource.commit.uuid,
-          }
-        : undefined
 
     this.handleAbortSignal(abortSignal)
   }

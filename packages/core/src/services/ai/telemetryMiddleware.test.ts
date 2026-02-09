@@ -93,9 +93,6 @@ describe('createTelemetryMiddleware', () => {
             model,
             prompt: [{ role: 'user', content: 'Hi' }],
           },
-          promptUuid: undefined,
-          versionUuid: undefined,
-          experimentUuid: undefined,
         },
         mockContext,
       )
@@ -117,43 +114,6 @@ describe('createTelemetryMiddleware', () => {
         finishReason: 'stop',
       })
       expect(result).toBe(mockResult)
-    })
-
-    it('passes optional uuids to completion span', async () => {
-      const promptUuid = 'prompt-123'
-      const versionUuid = 'version-456'
-      const experimentUuid = 'experiment-789'
-
-      const middleware = createTelemetryMiddleware({
-        context: mockContext,
-        providerName,
-        model,
-        promptUuid,
-        versionUuid,
-        experimentUuid,
-      })
-
-      const mockResult = {
-        content: [],
-        usage: { inputTokens: 0, outputTokens: 0 },
-        finishReason: 'stop',
-      }
-      const doGenerate = vi.fn().mockResolvedValue(mockResult)
-
-      await middleware.wrapGenerate!({
-        doGenerate,
-        params: { prompt: [] },
-        model: {} as WrapGenerateParams['model'],
-      } as unknown as WrapGenerateParams)
-
-      expect(mockCompletion).toHaveBeenCalledWith(
-        expect.objectContaining({
-          promptUuid,
-          versionUuid,
-          experimentUuid,
-        }),
-        mockContext,
-      )
     })
 
     it('handles errors and fails the span', async () => {
@@ -418,46 +378,6 @@ describe('createTelemetryMiddleware', () => {
 
       expect(mockSpanFail).toHaveBeenCalledWith(error)
       expect(mockSpanEnd).not.toHaveBeenCalled()
-    })
-
-    it('passes optional uuids to completion span for streams', async () => {
-      const promptUuid = 'prompt-123'
-      const versionUuid = 'version-456'
-      const experimentUuid = 'experiment-789'
-
-      const middleware = createTelemetryMiddleware({
-        context: mockContext,
-        providerName,
-        model,
-        promptUuid,
-        versionUuid,
-        experimentUuid,
-      })
-
-      const mockStream = createMockStream([
-        { type: 'finish', finishReason: 'stop', usage: {} },
-      ])
-      const doStream = vi.fn().mockResolvedValue({ stream: mockStream })
-
-      const result = await middleware.wrapStream!({
-        doStream,
-        params: { prompt: [] },
-        model: {} as WrapStreamParams['model'],
-      } as unknown as WrapStreamParams)
-
-      await consumeStream(result.stream)
-
-      // Wait a bit for the stream consumer callback to be invoked
-      await new Promise((resolve) => setTimeout(resolve, 10))
-
-      expect(mockCompletion).toHaveBeenCalledWith(
-        expect.objectContaining({
-          promptUuid,
-          versionUuid,
-          experimentUuid,
-        }),
-        mockContext,
-      )
     })
 
     it('runs doStream within otel context', async () => {
