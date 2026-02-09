@@ -1,5 +1,3 @@
-import { useMemo } from 'react'
-
 import {
   MessageContent,
   ToolResultContent,
@@ -7,6 +5,7 @@ import {
 import { MarkdownSize } from '@latitude-data/web-ui/atoms/Markdown'
 import { ProseColor, TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
+import { useMemo } from 'react'
 import { FileMessageContent } from './File'
 import { ImageMessageContent } from './Image'
 import { ReasoningMessageContent } from './Reasoning'
@@ -25,7 +24,6 @@ export function Content<M extends MarkdownSize | 'none'>({
   color: M extends 'none' ? TextColor : Extract<TextColor, ProseColor>
   content: MessageContent[] | MessageContent | string
   size?: 'default' | 'small'
-  parameters?: string[]
   debugMode?: boolean
   toolContentMap?: Record<string, ToolResultContent>
   markdownSize: M
@@ -96,7 +94,6 @@ function ContentItem<M extends MarkdownSize | 'none'>({
   debugMode,
   color,
   size,
-  parameters = [],
   toolContentMap,
   markdownSize,
   messageIndex,
@@ -107,7 +104,6 @@ function ContentItem<M extends MarkdownSize | 'none'>({
   color: M extends 'none' ? TextColor : Extract<TextColor, ProseColor>
   value: MessageContent
   size?: 'default' | 'small'
-  parameters?: string[]
   debugMode?: boolean
   toolContentMap?: Record<string, ToolResultContent>
   markdownSize: M
@@ -123,7 +119,6 @@ function ContentItem<M extends MarkdownSize | 'none'>({
         size={size}
         markdownSize={markdownSize}
         text={value.text}
-        parameters={parameters}
         sourceMap={value._promptlSourceMap}
         debugMode={debugMode}
         messageIndex={messageIndex}
@@ -148,7 +143,6 @@ function ContentItem<M extends MarkdownSize | 'none'>({
         color={color}
         size={size}
         image={value.image}
-        parameters={parameters}
         sourceMap={value._promptlSourceMap}
         messageIndex={messageIndex}
         contentBlockIndex={contentBlockIndex}
@@ -164,7 +158,6 @@ function ContentItem<M extends MarkdownSize | 'none'>({
           color={color}
           size={size}
           image={value.file}
-          parameters={parameters}
           sourceMap={value._promptlSourceMap}
           messageIndex={messageIndex}
           contentBlockIndex={contentBlockIndex}
@@ -178,7 +171,6 @@ function ContentItem<M extends MarkdownSize | 'none'>({
         color={color}
         size={size}
         file={value.file}
-        parameters={parameters}
         sourceMap={value._promptlSourceMap}
         messageIndex={messageIndex}
         contentBlockIndex={contentBlockIndex}

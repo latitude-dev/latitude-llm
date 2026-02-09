@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-02-04
+
+### Added
+
+- Manually instrumented completions now support any provider messages
+- The manual instrumentation now exports compliant GenAI messages
+
 ## [1.1.1] - 2026-02-02
 
 ### Fixed

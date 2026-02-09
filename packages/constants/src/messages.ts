@@ -63,12 +63,11 @@ export type MessageContent =
   | ReasoningContent
   | RedactedReasoningContent
   | TextContent
-  | ToolResultContent
   | ToolRequestContent
+  | ToolResultContent
 
 type IMessage = {
   name?: string
-  _promptlSourceMap?: PromptlSourceRef[]
 }
 
 export type SystemMessage = IMessage & {

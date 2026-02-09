@@ -471,6 +471,13 @@ describe('message translation (Promptl to VercelAI)', () => {
             toolCallId: '1',
             toolName: 'calc',
             output: { type: 'text', value: '42' },
+            providerOptions: {
+              promptl: {
+                _providerMetadata: {
+                  _knownFields: { toolName: 'calc' },
+                },
+              },
+            },
           },
         ],
       })
@@ -506,6 +513,13 @@ describe('message translation (Promptl to VercelAI)', () => {
             toolCallId: '5',
             toolName: 'calc',
             output: { type: 'json', value: { value: 123 } },
+            providerOptions: {
+              promptl: {
+                _providerMetadata: {
+                  _knownFields: { toolName: 'calc' },
+                },
+              },
+            },
           },
         ],
       })
@@ -541,6 +555,13 @@ describe('message translation (Promptl to VercelAI)', () => {
             toolCallId: '2',
             toolName: 'calc',
             output: { type: 'error-json', value: { error: 'bad' } },
+            providerOptions: {
+              promptl: {
+                _providerMetadata: {
+                  _knownFields: { toolName: 'calc', isError: true },
+                },
+              },
+            },
           },
         ],
       })
@@ -576,6 +597,13 @@ describe('message translation (Promptl to VercelAI)', () => {
             toolCallId: '3',
             toolName: 'calc',
             output: { type: 'error-text', value: 'oops' },
+            providerOptions: {
+              promptl: {
+                _providerMetadata: {
+                  _knownFields: { toolName: 'calc', isError: true },
+                },
+              },
+            },
           },
         ],
       })
@@ -729,6 +757,13 @@ describe('message translation (Promptl to VercelAI)', () => {
             toolCallId: 'calc-1',
             toolName: 'calculator',
             output: { type: 'text', value: '4' },
+            providerOptions: {
+              promptl: {
+                _providerMetadata: {
+                  _knownFields: { toolName: 'calculator' },
+                },
+              },
+            },
           },
         ],
       })

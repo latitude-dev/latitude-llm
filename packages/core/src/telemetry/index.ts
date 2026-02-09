@@ -1,5 +1,6 @@
 import {
   DEFAULT_REDACT_SPAN_PROCESSOR,
+  Instrumentation,
   LatitudeTelemetry,
   BACKGROUND as ROOT,
 } from '@latitude-data/telemetry'
@@ -11,10 +12,11 @@ import {
 } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
 import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-node'
-import { captureException } from '../utils/datadogCapture'
+import { Provider } from 'rosetta-ai'
 import { z } from 'zod'
 import { ATTRIBUTES, Otlp } from '../constants'
 import { enqueueSpans } from '../services/tracing/spans/ingestion/enqueue'
+import { captureException } from '../utils/datadogCapture'
 
 export type * from '@latitude-data/telemetry'
 
@@ -148,7 +150,11 @@ const processors = [DEFAULT_REDACT_SPAN_PROCESSOR()]
 const exporter = new InternalExporter()
 
 export const telemetry = new LatitudeTelemetry('internal', {
-  instrumentations: {},
+  instrumentations: {
+    [Instrumentation.Manual]: {
+      provider: Provider.Promptl,
+    },
+  },
   disableBatch: false,
   exporter: exporter,
   processors: processors,

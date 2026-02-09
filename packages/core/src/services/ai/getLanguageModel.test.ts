@@ -65,7 +65,8 @@ describe('getLanguageModel', () => {
   })
 
   it('returns custom language model wrapped with completion telemetry', () => {
-    const customLanguageModel = createMockLanguageModel() as unknown as LanguageModel
+    const customLanguageModel =
+      createMockLanguageModel() as unknown as LanguageModel
     const result = getLanguageModel({
       provider: openAIChatCompletionProvider,
       model: 'gpt-4o',

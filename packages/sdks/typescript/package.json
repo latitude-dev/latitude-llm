@@ -57,7 +57,7 @@
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/eventsource": "^1.1.15",
     "@types/node": "^22.7.5",
-    "msw": "^2.3.5",
+    "msw": "^2.12.7",
     "rollup": "^4.21.1",
     "rollup-plugin-dts": "^6.1.1",
     "vitest": "^3.1.4"

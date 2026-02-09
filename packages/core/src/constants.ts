@@ -8,7 +8,7 @@ import {
 } from '@latitude-data/constants'
 import type {
   AssistantMessage,
-  Message as CompilerMessage,
+  Message,
   SystemMessage,
   ToolCall,
   UserMessage,
@@ -51,6 +51,7 @@ export * from '@latitude-data/constants/evaluations'
 export * from '@latitude-data/constants/grants'
 export * from '@latitude-data/constants/issues'
 export * from '@latitude-data/constants/latte'
+export * from '@latitude-data/constants/messages'
 export * from '@latitude-data/constants/optimizations'
 export * from '@latitude-data/constants/runs'
 export * from '@latitude-data/constants/tracing'
@@ -67,8 +68,6 @@ export enum CommitStatus {
   Merged = 'merged',
   Draft = 'draft',
 }
-
-export type Message = CompilerMessage
 
 export const HELP_CENTER = {
   commitVersions: `${LATITUDE_DOCS_URL}/not-found`,

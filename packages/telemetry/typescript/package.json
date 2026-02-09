@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/telemetry",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "Latitude Telemetry for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -80,6 +80,7 @@
     "msw": "^2.12.3",
     "openai": "^6.17.0",
     "promptl-ai": "catalog:",
+    "rosetta-ai": "catalog:",
     "rollup": "^4.53.3",
     "rollup-plugin-dts": "^6.3.0",
     "vitest": "^4.0.15"

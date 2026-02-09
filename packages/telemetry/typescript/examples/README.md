@@ -22,6 +22,7 @@ cp .env.example .env
 ```bash
 export LATITUDE_API_KEY="your-latitude-api-key"
 export LATITUDE_PROJECT_ID="your-project-id"
+export GATEWAY_BASE_URL="http://localhost:8787"
 
 # Provider-specific API keys (set the ones you want to test)
 export OPENAI_API_KEY="your-openai-key"
@@ -83,6 +84,7 @@ npx tsx examples/test_openai.ts
 | Vertex AI    | `test_vertex.ts`     | `@google-cloud/vertexai`                            |
 | LangChain    | `test_langchain.ts`  | `langchain`, `@langchain/openai`, `@langchain/core` |
 | LlamaIndex   | `test_llamaindex.ts` | `llamaindex`                                        |
+| Manual       | `test_manual.ts`     |                                                     |
 
 ## Expected Behavior
 
@@ -99,27 +101,3 @@ Check the Latitude dashboard to verify:
 - Input/output messages are captured
 - Token usage is recorded (where supported)
 - Model information is correct
-
-## Running All Examples
-
-To run all available tests:
-
-```bash
-# With .env file
-npx tsx --env-file=examples/.env examples/run_all.ts
-
-# Or if env vars are exported
-npx tsx examples/run_all.ts
-```
-
-To run specific tests:
-
-```bash
-npx tsx --env-file=examples/.env examples/run_all.ts openai anthropic
-```
-
-To list all available tests:
-
-```bash
-npx tsx --env-file=examples/.env examples/run_all.ts --list
-```

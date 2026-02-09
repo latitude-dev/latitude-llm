@@ -1,83 +1,41 @@
-import type { LanguageModelMiddleware } from 'ai'
+import { Message } from '@latitude-data/constants/messages'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { context as otelContext } from '@opentelemetry/api'
+import type { LanguageModelMiddleware } from 'ai'
+import { Provider, Translator } from 'rosetta-ai'
 import { telemetry, TelemetryContext } from '../../telemetry'
+import { unwrapProviderMetadata } from './metadata'
 import {
   createStreamConsumer,
-  buildOutputMessages,
   extractGenerateResultContent,
 } from './streamConsumer'
-import { LanguageModelV2Prompt } from '@ai-sdk/provider'
-import {
-  AssistantMessage,
-  Message,
-  MessageContent,
-  MessageRole,
-} from '@latitude-data/constants/messages'
 
-function convertPromptToMessages(
-  vercelMessages: LanguageModelV2Prompt,
-): Message[] {
-  return vercelMessages.map((msg) => {
-    const finalMessage = {
-      role: msg.role as MessageRole,
-      content: [],
-      toolCalls: [],
-    } as AssistantMessage
-
-    if (typeof msg.content === 'string') {
-      finalMessage.content = [{ type: 'text', text: msg.content }]
-      return finalMessage
-    }
-
-    const content: MessageContent[] = []
-
-    msg.content.map((c) => {
-      switch (c.type) {
-        case 'file':
-          content.push({ type: 'file', file: c.data, mimeType: c.mediaType })
-          break
-        case 'tool-call':
-          content.push({
-            type: 'tool-call',
-            toolCallId: c.toolCallId,
-            toolName: c.toolName,
-            args: c.input as Record<string, unknown>,
-          })
-          break
-        case 'tool-result':
-          content.push({
-            type: 'tool-result',
-            toolCallId: c.toolCallId,
-            toolName: c.toolName,
-            result: c.output.value,
-            isError: ['error-json', 'error-text'].includes(c.output.type),
-          })
-          break
-        default:
-          content.push(c as MessageContent)
-          break
-      }
-
-      return content
-    })
-
-    finalMessage.content = content
-    return finalMessage
-  })
-}
+const translator = new Translator({
+  filterEmptyMessages: true,
+  providerMetadata: 'passthrough',
+})
 
 export function createTelemetryMiddleware({
   context,
   providerName,
   model,
+  resolvedTools,
 }: {
   context: TelemetryContext
   providerName: string
   model: string
+  resolvedTools?: ResolvedToolsDict
 }): LanguageModelMiddleware {
   return {
     wrapGenerate: async ({ doGenerate, params }) => {
-      const inputMessages = convertPromptToMessages(params.prompt)
+      const unwrappedPrompt = unwrapProviderMetadata(params.prompt)
+
+      const translated = translator.translate(unwrappedPrompt, {
+        from: Provider.VercelAI,
+        to: Provider.Promptl,
+        direction: 'input',
+      }).messages as Message[]
+      const inputMessages = addToolSourceData(translated, resolvedTools)
 
       const $completion = telemetry.span.completion(
         {
@@ -99,7 +57,7 @@ export function createTelemetryMiddleware({
         )
 
         const captured = extractGenerateResultContent(result)
-        const outputMessages = buildOutputMessages(captured)
+        const outputMessages = addToolSourceData(captured.output, resolvedTools)
 
         $completion.end({
           output: outputMessages,
@@ -115,7 +73,14 @@ export function createTelemetryMiddleware({
     },
 
     wrapStream: async ({ doStream, params }) => {
-      const inputMessages = convertPromptToMessages(params.prompt)
+      const unwrappedPrompt = unwrapProviderMetadata(params.prompt)
+
+      const translated = translator.translate(unwrappedPrompt, {
+        from: Provider.VercelAI,
+        to: Provider.Promptl,
+        direction: 'input',
+      }).messages as Message[]
+      const inputMessages = addToolSourceData(translated, resolvedTools)
 
       const $completion = telemetry.span.completion(
         {
@@ -138,8 +103,10 @@ export function createTelemetryMiddleware({
 
         const wrappedStream = result.stream.pipeThrough(
           createStreamConsumer((captured) => {
-            const outputMessages = buildOutputMessages(captured)
-
+            const outputMessages = addToolSourceData(
+              captured.output,
+              resolvedTools,
+            )
             $completion.end({
               output: outputMessages,
               tokens: captured.tokens,
@@ -155,4 +122,22 @@ export function createTelemetryMiddleware({
       }
     },
   }
+}
+
+function addToolSourceData(
+  messages: Message[],
+  resolvedTools?: ResolvedToolsDict,
+) {
+  return messages.map((message) => {
+    if (message.role !== 'assistant') return message
+    if (!Array.isArray(message.content)) return message
+
+    for (const content of message.content) {
+      if (content.type !== 'tool-call') continue
+      if (content._sourceData) continue
+      content._sourceData = resolvedTools?.[content.toolName]?.sourceData
+    }
+
+    return message
+  })
 }

@@ -55,6 +55,7 @@ const EXTERNALS = [
   'openai',
   'together-ai',
   'promptl-ai',
+  'rosetta-ai',
   'zod',
   'uuid',
 ]

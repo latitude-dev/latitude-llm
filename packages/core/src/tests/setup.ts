@@ -2,8 +2,10 @@
 
 import {
   DEFAULT_REDACT_SPAN_PROCESSOR,
+  Instrumentation,
   LatitudeTelemetry,
 } from '@latitude-data/telemetry'
+import { Provider } from 'rosetta-ai'
 import { afterAll, beforeEach, expect, vi } from 'vitest'
 import * as telemetry from '../telemetry'
 import * as factories from './factories'
@@ -18,7 +20,11 @@ setupTestDatabase()
 const exporter = new MockSpanExporter()
 const processor = new MockSpanProcessor()
 const telemetryInstance = new LatitudeTelemetry('internal', {
-  instrumentations: {},
+  instrumentations: {
+    [Instrumentation.Manual]: {
+      provider: Provider.Promptl,
+    },
+  },
   disableBatch: true,
   exporter: exporter,
   processors: [processor, DEFAULT_REDACT_SPAN_PROCESSOR()],

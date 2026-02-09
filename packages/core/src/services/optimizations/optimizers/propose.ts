@@ -1,9 +1,9 @@
 import { env } from '@latitude-data/env'
 import { omit } from 'lodash-es'
-import { Message, MessageContent } from 'promptl-ai'
 import { z } from 'zod'
 import { cache as getCache } from '../../../cache'
 import { database } from '../../../client'
+import { Message, MessageContent } from '../../../constants'
 import { hashObject } from '../../../lib/hashObject'
 import { Result } from '../../../lib/Result'
 import { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
@@ -21,18 +21,25 @@ const proposerSchema = z.object({
 })
 type ProposerSchema = z.infer<typeof proposerSchema>
 
+const METADATA_KEYS = [
+  '_promptlSourceMap',
+  '_providerMetadata',
+  '_provider_metadata',
+  'providerOptions',
+]
+
 function sanitizeContent(content: MessageContent[]): MessageContent[] {
   return content.map((item) => {
-    return omit(item, '_promptlSourceMap') as MessageContent
+    return omit(item, ...METADATA_KEYS) as MessageContent
   })
 }
 
 function sanitizeTrace(trace: Message[]): Message[] {
   return trace.map((message) => {
-    if (Array.isArray(message.content)) {
-      return { ...message, content: sanitizeContent(message.content) }
-    }
-    return message
+    const base = Array.isArray(message.content)
+      ? { ...message, content: sanitizeContent(message.content) }
+      : message
+    return omit(base, ...METADATA_KEYS) as Message
   })
 }
 

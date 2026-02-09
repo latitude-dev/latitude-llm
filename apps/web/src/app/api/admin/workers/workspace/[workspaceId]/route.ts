@@ -6,10 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   adminHandler(
-    async (
-      _: NextRequest,
-      { params }: { params: { workspaceId: string } },
-    ) => {
+    async (_: NextRequest, { params }: { params: { workspaceId: string } }) => {
       const workspaceId = parseInt(params.workspaceId)
       if (isNaN(workspaceId)) {
         return NextResponse.json(

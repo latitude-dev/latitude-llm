@@ -42,14 +42,14 @@ describe('recordAbortedCompletion', () => {
     const provider = createMockProvider(Providers.OpenAI)
     const config = createMockConfig('gpt-4o')
     const messages = createMockMessages('Hello')
-    const accumulatedText = 'Partial response text'
 
     recordAbortedCompletion({
       context,
       provider,
       config,
       messages,
-      accumulatedText,
+      accumulatedText: 'Partial response text',
+      accumulatedReasoning: null,
     })
 
     expect(telemetryModule.telemetry.span.completion).toHaveBeenCalledWith(
@@ -68,14 +68,14 @@ describe('recordAbortedCompletion', () => {
     const provider = createMockProvider(Providers.OpenAI)
     const config = createMockConfig('gpt-4o')
     const messages = createMockMessages('Hello')
-    const accumulatedText = 'This is the partial response'
 
     recordAbortedCompletion({
       context,
       provider,
       config,
       messages,
-      accumulatedText,
+      accumulatedText: 'This is the partial response',
+      accumulatedReasoning: null,
     })
 
     expect(endMock).toHaveBeenCalledWith({
@@ -95,14 +95,14 @@ describe('recordAbortedCompletion', () => {
     const provider = createMockProvider(Providers.Anthropic)
     const config = createMockConfig('claude-3')
     const messages = createMockMessages('Test')
-    const accumulatedText = ''
 
     recordAbortedCompletion({
       context,
       provider,
       config,
       messages,
-      accumulatedText,
+      accumulatedText: '',
+      accumulatedReasoning: null,
     })
 
     expect(endMock).toHaveBeenCalledWith({
@@ -122,15 +122,14 @@ describe('recordAbortedCompletion', () => {
     const provider = createMockProvider(Providers.OpenAI)
     const config = createMockConfig('gpt-4o')
     const messages = createMockMessages('Write a poem')
-    const accumulatedText =
-      'Roses are red,\nViolets are blue,\nThis poem was cut'
 
     recordAbortedCompletion({
       context,
       provider,
       config,
       messages,
-      accumulatedText,
+      accumulatedText: 'Roses are red,\nViolets are blue,\nThis poem was cut',
+      accumulatedReasoning: null,
     })
 
     expect(endMock).toHaveBeenCalledWith({
@@ -143,6 +142,90 @@ describe('recordAbortedCompletion', () => {
               text: 'Roses are red,\nViolets are blue,\nThis poem was cut',
             },
           ],
+        },
+      ],
+      finishReason: 'stop',
+      tokens: {},
+    })
+  })
+
+  it('includes reasoning content when accumulatedReasoning is provided', () => {
+    const context = createMockContext()
+    const provider = createMockProvider(Providers.OpenAI)
+    const config = createMockConfig('gpt-4o')
+    const messages = createMockMessages('Solve this problem')
+
+    recordAbortedCompletion({
+      context,
+      provider,
+      config,
+      messages,
+      accumulatedText: 'The answer is 42',
+      accumulatedReasoning: 'Let me think step by step...',
+    })
+
+    expect(endMock).toHaveBeenCalledWith({
+      output: [
+        {
+          role: 'assistant',
+          content: [
+            { type: 'reasoning', text: 'Let me think step by step...' },
+            { type: 'text', text: 'The answer is 42' },
+          ],
+        },
+      ],
+      finishReason: 'stop',
+      tokens: {},
+    })
+  })
+
+  it('handles only reasoning without text', () => {
+    const context = createMockContext()
+    const provider = createMockProvider(Providers.OpenAI)
+    const config = createMockConfig('gpt-4o')
+    const messages = createMockMessages('Think about this')
+
+    recordAbortedCompletion({
+      context,
+      provider,
+      config,
+      messages,
+      accumulatedText: null,
+      accumulatedReasoning: 'Hmm, this is interesting...',
+    })
+
+    expect(endMock).toHaveBeenCalledWith({
+      output: [
+        {
+          role: 'assistant',
+          content: [{ type: 'reasoning', text: 'Hmm, this is interesting...' }],
+        },
+      ],
+      finishReason: 'stop',
+      tokens: {},
+    })
+  })
+
+  it('handles both text and reasoning as null', () => {
+    const context = createMockContext()
+    const provider = createMockProvider(Providers.OpenAI)
+    const config = createMockConfig('gpt-4o')
+    const messages = createMockMessages('Hello')
+
+    recordAbortedCompletion({
+      context,
+      provider,
+      config,
+      messages,
+      accumulatedText: null,
+      accumulatedReasoning: null,
+    })
+
+    expect(endMock).toHaveBeenCalledWith({
+      output: [
+        {
+          role: 'assistant',
+          content: [],
         },
       ],
       finishReason: 'stop',

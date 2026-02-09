@@ -46,7 +46,8 @@ export type TOOLS = Record<string, Tool>
 type BuildChainCallback = (
   controller: ReadableStreamDefaultController<ChainEvent>,
   result: AIReturn<StreamType>,
-  accumulatedText: { text: string },
+  accumulatedText: { text: string | null },
+  accumulatedReasoning: { text: string | null },
 ) => Promise<void>
 
 function buildFakeResult({
@@ -93,11 +94,17 @@ function buildFakeChain({
     fullStream,
     providerMetadata: new Promise<undefined>(() => undefined),
   } as unknown as AIReturn<'text'>
-  const accumulatedText = { text: '' }
+  const accumulatedText = { text: null }
+  const accumulatedReasoning = { text: null }
   return new Promise<void>((resolve) => {
     new ReadableStream<ChainEvent>({
       start(controller) {
-        callback(controller, result, accumulatedText).then(() => {
+        callback(
+          controller,
+          result,
+          accumulatedText,
+          accumulatedReasoning,
+        ).then(() => {
           resolve()
         })
       },
@@ -110,6 +117,7 @@ describe('consumeStream', () => {
     const expectedAccumulatedText = 'This is a test'
     await buildFakeChain({
       chunks: [
+        { type: 'text-start', id: '0' },
         { type: 'text-delta', id: '1', text: 'This' },
         { type: 'text-delta', id: '2', text: ' is' },
         { type: 'text-delta', id: '3', text: ' a' },
@@ -120,11 +128,17 @@ describe('consumeStream', () => {
           finishReason: 'stop',
         },
       ],
-      callback: async (controller, result, accumulatedText) => {
+      callback: async (
+        controller,
+        result,
+        accumulatedText,
+        accumulatedReasoning,
+      ) => {
         const data = await consumeStream({
           controller,
           result,
           accumulatedText,
+          accumulatedReasoning,
         })
 
         expect(data).toEqual({
@@ -138,6 +152,7 @@ describe('consumeStream', () => {
   it('return error when finishReason is error', async () => {
     await buildFakeChain({
       chunks: [
+        { type: 'text-start', id: '0' },
         { type: 'text-delta', id: '123', text: 'a' },
         {
           ...PARTIAL_FINISH_CHUNK,
@@ -145,11 +160,17 @@ describe('consumeStream', () => {
           finishReason: 'error',
         },
       ],
-      callback: async (controller, result, accumulatedText) => {
+      callback: async (
+        controller,
+        result,
+        accumulatedText,
+        accumulatedReasoning,
+      ) => {
         const data = await consumeStream({
           controller,
           result,
           accumulatedText,
+          accumulatedReasoning,
         })
         expect(data).toEqual({
           error: new ChainError({
@@ -165,6 +186,7 @@ describe('consumeStream', () => {
   it('return error when type is error', async () => {
     await buildFakeChain({
       chunks: [
+        { type: 'text-start', id: '0' },
         { type: 'text-delta', id: '123', text: 'a' },
         {
           type: 'error',
@@ -172,11 +194,17 @@ describe('consumeStream', () => {
         },
         { type: 'text-delta', id: '456', text: 'b' },
       ],
-      callback: async (controller, result, accumulatedText) => {
+      callback: async (
+        controller,
+        result,
+        accumulatedText,
+        accumulatedReasoning,
+      ) => {
         const data = await consumeStream({
           controller,
           result,
           accumulatedText,
+          accumulatedReasoning,
         })
         expect(data).toEqual({
           error: new ChainError({
@@ -190,8 +218,6 @@ describe('consumeStream', () => {
     })
   })
 
-  // This is done to keep compatibility with Vercel SDK v4 which is used in our streaming
-  // in our gateway and SDK
   it('transform text-delta chunks from Vercel SDK v5 to v4', async () => {
     const mockEnqueue = vi.fn()
     const fakeController = {
@@ -211,6 +237,7 @@ describe('consumeStream', () => {
       controller: fakeController,
       result: buildFakeResult({ fullStream: mockStream }),
       accumulatedText: { text: '' },
+      accumulatedReasoning: { text: null },
     })
 
     expect(mockEnqueue).toHaveBeenCalledWith({
@@ -261,6 +288,7 @@ describe('consumeStream', () => {
       controller: fakeController,
       result: buildFakeResult({ fullStream: mockStream }),
       accumulatedText: { text: '' },
+      accumulatedReasoning: { text: null },
       resolvedTools,
     })
 
@@ -299,6 +327,7 @@ describe('consumeStream', () => {
       controller: fakeController,
       result: buildFakeResult({ fullStream: mockStream }),
       accumulatedText: { text: '' },
+      accumulatedReasoning: { text: null },
     })
 
     expect(mockEnqueue).toHaveBeenCalledWith({
@@ -349,6 +378,7 @@ describe('consumeStream', () => {
       controller: fakeController,
       result: buildFakeResult({ fullStream: mockStream }),
       accumulatedText: { text: '' },
+      accumulatedReasoning: { text: null },
       resolvedTools,
     })
 
@@ -403,6 +433,7 @@ describe('consumeStream', () => {
       controller: fakeController,
       result: buildFakeResult({ fullStream: mockStream }),
       accumulatedText: { text: '' },
+      accumulatedReasoning: { text: null },
       resolvedTools,
     })
 
@@ -463,6 +494,7 @@ describe('consumeStream', () => {
       controller: fakeController,
       result: buildFakeResult({ fullStream: mockStream }),
       accumulatedText: { text: '' },
+      accumulatedReasoning: { text: null },
       resolvedTools,
     })
 
@@ -483,5 +515,75 @@ describe('consumeStream', () => {
     })
   })
 
-  // TODO: Review if we need to parse diferently reasoning chunks.
+  it('accumulates reasoning text with reasoning-start and reasoning-delta', async () => {
+    const expectedAccumulatedReasoning = 'Let me think about this'
+    await buildFakeChain({
+      chunks: [
+        { type: 'reasoning-start', id: '0' },
+        { type: 'reasoning-delta', id: '1', text: 'Let me' },
+        { type: 'reasoning-delta', id: '2', text: ' think' },
+        { type: 'reasoning-delta', id: '3', text: ' about' },
+        { type: 'reasoning-delta', id: '4', text: ' this' },
+        { type: 'text-start', id: '5' },
+        { type: 'text-delta', id: '6', text: 'The answer is 42' },
+        {
+          ...PARTIAL_FINISH_CHUNK,
+          type: 'finish',
+          finishReason: 'stop',
+        },
+      ],
+      callback: async (
+        controller,
+        result,
+        accumulatedText,
+        accumulatedReasoning,
+      ) => {
+        const data = await consumeStream({
+          controller,
+          result,
+          accumulatedText,
+          accumulatedReasoning,
+        })
+
+        expect(data).toEqual({
+          error: undefined,
+        })
+        expect(accumulatedText).toEqual({ text: 'The answer is 42' })
+        expect(accumulatedReasoning).toEqual({
+          text: expectedAccumulatedReasoning,
+        })
+      },
+    })
+  })
+
+  it('handles text-start initializing accumulated text', async () => {
+    await buildFakeChain({
+      chunks: [
+        { type: 'text-start', id: '0' },
+        { type: 'text-delta', id: '1', text: 'Hello' },
+        {
+          ...PARTIAL_FINISH_CHUNK,
+          type: 'finish',
+          finishReason: 'stop',
+        },
+      ],
+      callback: async (
+        controller,
+        result,
+        accumulatedText,
+        accumulatedReasoning,
+      ) => {
+        expect(accumulatedText).toEqual({ text: null })
+
+        await consumeStream({
+          controller,
+          result,
+          accumulatedText,
+          accumulatedReasoning,
+        })
+
+        expect(accumulatedText).toEqual({ text: 'Hello' })
+      },
+    })
+  })
 })
