@@ -87,6 +87,10 @@ export const evaluationResultsV2 = latitudeSchema.table(
       table.evaluatedSpanId,
       table.evaluatedTraceId,
     ),
+    index('evaluation_results_v2_workspace_trace_id_idx').on(
+      table.workspaceId,
+      table.evaluatedTraceId,
+    ),
     index('evaluation_results_v2_type_workspace_idx').on(
       table.type,
       table.workspaceId,

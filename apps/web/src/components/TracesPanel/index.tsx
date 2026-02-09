@@ -1,4 +1,4 @@
-import { Ref, use, useCallback, useMemo } from 'react'
+import { Ref, useMemo } from 'react'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MetadataInfoTabs } from '../MetadataInfoTabs'
@@ -18,7 +18,6 @@ import { TraceEvaluationsTab } from './TraceEvaluations'
 import { useTraceWithMessages } from '$/stores/traces'
 import { adaptCompletionSpanMessagesToLegacy } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { AnnotationFormWithoutContext } from '../ChatWrapper/AnnotationFormWithoutContext'
-import { TraceSpanSelectionActionsContext } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/TraceSpanSelectionContext'
 
 const TRACE_TABS = [
   { label: 'Metadata', value: 'metadata' },
@@ -39,23 +38,9 @@ export function TraceInfoPanel({
   insideOtherPanel?: boolean
   ref?: Ref<HTMLDivElement>
 }) {
-  const { clearSelection } = use(TraceSpanSelectionActionsContext)
-  const onSuccess = useCallback(
-    (fetchedSpan: SpanWithDetails | undefined | void) => {
-      if (!fetchedSpan) return
-      if (
-        fetchedSpan.documentUuid &&
-        fetchedSpan.documentUuid !== documentUuid
-      ) {
-        clearSelection()
-      }
-    },
-    [documentUuid, clearSelection],
-  )
   const { data: span, isLoading } = useSpan({
     spanId,
     documentLogUuid,
-    onSuccess,
   })
 
   return (

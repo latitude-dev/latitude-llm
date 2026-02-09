@@ -21,11 +21,9 @@ export function useSpan(
   {
     documentLogUuid,
     spanId,
-    onSuccess,
   }: {
     documentLogUuid?: string | null
     spanId?: string | null
-    onSuccess?: (span: void | SpanWithDetails | undefined) => void
   },
   opts?: SWRConfiguration,
 ) {
@@ -36,7 +34,6 @@ export function useSpan(
   >(route, {
     fallback: null,
     serializer: (span) => serializeSpan(span),
-    onSuccess,
   })
 
   const {

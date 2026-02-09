@@ -521,16 +521,11 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     }
 
     const results = await this.db
-      .select({
-        ...tt,
-        commitUuid: commits.uuid,
-      })
+      .select(tt)
       .from(evaluationResultsV2)
-      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .where(
         and(
           this.scopeFilter,
-          isNull(commits.deletedAt),
           inArray(evaluationResultsV2.evaluatedTraceId, traceIds),
         ),
       )
@@ -539,7 +534,23 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         desc(evaluationResultsV2.id),
       )
 
-    return Result.ok(results)
+    if (results.length === 0) {
+      return Result.ok([])
+    }
+
+    const commitIds = [...new Set(results.map((r) => r.commitId))]
+    const commitsData = await this.db
+      .select({ id: commits.id, uuid: commits.uuid })
+      .from(commits)
+      .where(and(inArray(commits.id, commitIds), isNull(commits.deletedAt)))
+
+    const commitMap = new Map(commitsData.map((c) => [c.id, c.uuid]))
+
+    const resultsWithCommit = results
+      .filter((r) => commitMap.has(r.commitId))
+      .map((r) => ({ ...r, commitUuid: commitMap.get(r.commitId)! }))
+
+    return Result.ok(resultsWithCommit)
   }
 
   // Be careful using this with merged issues, as there will be multiple evaluation results for the same issue
