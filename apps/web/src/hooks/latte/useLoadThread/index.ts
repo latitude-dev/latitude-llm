@@ -2,22 +2,15 @@ import { useEffect, useRef } from 'react'
 import { useLatteStore } from '$/stores/latte/index'
 
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { buildInteractionsFromProviderLog } from './buildInteractionsFromProviderLog'
-import { type ProviderLogDto } from '@latitude-data/core/schema/types'
+import { buildInteractionsFromMessages } from './buildInteractionsFromMessages'
+import type { Message } from '@latitude-data/constants/messages'
 
-/**
- * Hook to load and initialize a thread in the Latte store based on the current project.
- * It sets the thread UUID and builds interactions from the initial provider log if provided.
- * @param initialThreadUuid - Optional UUID of the thread to load
- * @param initialProviderLog - Optional provider log to build interactions from
- * @returns Always returns false (placeholder for future loading state)
- */
 export function useLoadThread({
   initialThreadUuid,
-  initialProviderLog,
+  initialMessages,
 }: {
   initialThreadUuid?: string
-  initialProviderLog?: ProviderLogDto
+  initialMessages?: Message[]
 }) {
   const { project } = useCurrentProject()
   const projectId = project.id
@@ -44,16 +37,18 @@ export function useLoadThread({
 
     if (initialThreadUuid) setThreadUuid(initialThreadUuid)
 
-    if (initialProviderLog && interactions.length === 0) {
-      const built = buildInteractionsFromProviderLog({
-        providerLog: initialProviderLog,
-      })
+    if (
+      initialMessages &&
+      initialMessages.length > 0 &&
+      interactions.length === 0
+    ) {
+      const built = buildInteractionsFromMessages(initialMessages)
       if (built.length > 0) setInteractions(built)
     }
   }, [
     projectId,
     initialThreadUuid,
-    initialProviderLog,
+    initialMessages,
     setThreadUuid,
     interactions.length,
     setInteractions,

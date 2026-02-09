@@ -5,8 +5,8 @@ import * as dataAccess from '../../../data-access/workspaces'
 import * as dataAccessProjects from '../../../data-access/projects'
 import {
   CommitsRepository,
-  DocumentLogsRepository,
   ProjectsRepository,
+  SpansRepository,
   UsersRepository,
 } from '../../../repositories'
 import * as addMessageLatte from '../../../services/copilot/latte/addMessage'
@@ -69,9 +69,10 @@ describe('runLatteJob', () => {
         document: { uuid: 'doc-123' },
       }),
     } as any)
-    vi.spyOn(DocumentLogsRepository.prototype, 'findByUuid').mockResolvedValue({
-      ok: false,
-    } as any)
+    vi.spyOn(
+      SpansRepository.prototype,
+      'findByDocumentLogUuid',
+    ).mockResolvedValue(undefined)
     vi.spyOn(WebsocketClient, 'sendEvent').mockResolvedValue({
       emit: vi.fn(),
     } as any)
@@ -107,11 +108,10 @@ describe('runLatteJob', () => {
     expect(addMessageLatte.addMessageToExistingLatte).not.toHaveBeenCalled()
   })
 
-  it('creates a new chat when no document log exists', async () => {
-    // ensure findByUuid returns ok: false
-    ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce(
-      { ok: false },
-    )
+  it('creates a new chat when no span exists', async () => {
+    ;(
+      SpansRepository.prototype.findByDocumentLogUuid as any
+    ).mockResolvedValueOnce(undefined)
     const projectOk = { ok: true, value: project }
     ;(ProjectsRepository.prototype.find as any).mockResolvedValueOnce(projectOk)
 
@@ -134,10 +134,10 @@ describe('runLatteJob', () => {
     expect(addMessageLatte.addMessageToExistingLatte).not.toHaveBeenCalled()
   })
 
-  it('appends a message when the document log already exists', async () => {
-    ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce(
-      { ok: true },
-    )
+  it('appends a message when a span already exists', async () => {
+    ;(
+      SpansRepository.prototype.findByDocumentLogUuid as any
+    ).mockResolvedValueOnce({ id: 'span-123', traceId: 'trace-123' })
     const projectOk = { ok: true, value: project }
     ;(ProjectsRepository.prototype.find as any).mockResolvedValueOnce(projectOk)
     await runLatteJob(mockJob)

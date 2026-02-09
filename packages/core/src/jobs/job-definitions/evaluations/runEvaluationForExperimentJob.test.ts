@@ -334,7 +334,9 @@ describe('runEvaluationForExperimentJob', () => {
       const job = createMockJob(createJobData())
       await runEvaluationForExperimentJob(job)
 
-      expect(mockEvaluationsV2RepositoryGetAtCommitByDocument).not.toHaveBeenCalled()
+      expect(
+        mockEvaluationsV2RepositoryGetAtCommitByDocument,
+      ).not.toHaveBeenCalled()
       expect(mockEvaluationsQueue.add).not.toHaveBeenCalled()
     })
 
