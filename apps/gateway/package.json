@@ -33,6 +33,7 @@
     "lodash-es": "4.17.21",
     "promptl-ai": "catalog:",
     "rate-limiter-flexible": "5.0.3",
+    "uuid": "11.1.0",
     "zod": "catalog:"
   },
   "devDependencies": {
