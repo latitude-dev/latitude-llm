@@ -1,5 +1,6 @@
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
+import { validate as isValidUuid } from 'uuid'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -10,12 +11,6 @@ import { Providers } from '@latitude-data/constants'
 import { getDocumentMetadata } from '@latitude-data/core/services/documents/scan'
 import { documentPresenterWithProviderAndMetadata } from '$/presenters/documentPresenter'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-    value,
-  )
-}
 
 async function getProjectByVersionData({
   workspace,
@@ -40,7 +35,7 @@ async function getProjectByVersionData({
 
   // 'live' is accepted in some routes as a special identifier.
   // Anything else must be a UUID to avoid Drizzle/pg throwing on malformed values.
-  if (commitUuid !== 'live' && !isUuid(commitUuid)) {
+  if (commitUuid !== 'live' && !isValidUuid(commitUuid)) {
     return Result.error(new BadRequestError(`Invalid version uuid ${commitUuid}`))
   }
 
