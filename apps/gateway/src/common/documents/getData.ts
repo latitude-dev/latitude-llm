@@ -1,5 +1,6 @@
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
+import { validate as isValidUuid } from 'uuid'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -31,6 +32,12 @@ async function getProjectByVersionData({
   const projectResult = await projectsScope.getProjectById(pid)
   if (projectResult.error) return projectResult
   const project = projectResult.value
+
+  // 'live' is accepted in some routes as a special identifier.
+  // Anything else must be a UUID to avoid Drizzle/pg throwing on malformed values.
+  if (commitUuid !== 'live' && !isValidUuid(commitUuid)) {
+    return Result.error(new BadRequestError(`Invalid version uuid ${commitUuid}`))
+  }
 
   const commitResult = await commitsScope.getCommitByUuid({
     projectId: project.id,

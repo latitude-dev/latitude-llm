@@ -20,11 +20,11 @@
     "@hono/swagger-ui": "0.4.1",
     "@hono/zod-openapi": "1.1.1",
     "@latitude-data/constants": "workspace:^",
-    "@opentelemetry/otlp-transformer": "catalog:",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/sdk": "workspace:^",
     "@latitude-data/telemetry": "workspace:*",
+    "@opentelemetry/otlp-transformer": "catalog:",
     "@t3-oss/env-core": "0.13.8",
     "dd-trace": "catalog:",
     "drizzle-orm": "catalog:",
@@ -33,7 +33,7 @@
     "lodash-es": "4.17.21",
     "promptl-ai": "catalog:",
     "rate-limiter-flexible": "5.0.3",
-    "uuid": "11.1.0",
+    "uuid": "^13.0.0",
     "zod": "catalog:"
   },
   "devDependencies": {
