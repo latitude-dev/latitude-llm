@@ -96,6 +96,7 @@ export const backgroundRunJob = async (
     tools = [],
     mcpHeaders,
     userMessage,
+    messages,
     source = LogSources.API,
     simulationSettings,
     activeDeploymentTest,
@@ -151,6 +152,7 @@ export const backgroundRunJob = async (
       tools: buildClientToolHandlersMap(tools),
       mcpHeaders,
       userMessage,
+      messages,
       simulationSettings,
     }).then((r) => r.unwrap())
 

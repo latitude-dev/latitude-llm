@@ -1,4 +1,4 @@
-import { LogSources } from '@latitude-data/constants'
+import { LogSources, Message } from '@latitude-data/constants'
 import { publisher } from '../../events/publisher'
 import { BackgroundRunJobData } from '../../jobs/job-definitions/runs/backgroundRunJob'
 import { queues } from '../../jobs/queues'
@@ -25,6 +25,7 @@ export type EnqueueRunProps = {
   document: DocumentVersion
   experiment?: Experiment
   mcpHeaders?: Record<string, Record<string, string>>
+  messages?: Message[]
   parameters?: Record<string, unknown>
   project: Project
   runUuid?: string
@@ -44,6 +45,7 @@ export async function enqueueRun({
   document,
   experiment,
   mcpHeaders,
+  messages,
   parameters,
   project,
   runUuid,
@@ -88,6 +90,7 @@ export async function enqueueRun({
       tools: tools,
       mcpHeaders: mcpHeaders,
       userMessage: userMessage,
+      messages: messages,
       source: source,
       simulationSettings,
       activeDeploymentTest,

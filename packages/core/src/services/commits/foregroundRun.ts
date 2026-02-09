@@ -1,4 +1,4 @@
-import { LogSources } from '@latitude-data/constants'
+import { LogSources, Message } from '@latitude-data/constants'
 import { LatitudeError } from '../../lib/errors'
 import { BACKGROUND } from '../../telemetry'
 import { buildClientToolHandlersMap } from '../documents/tools/clientTools/handlers'
@@ -23,6 +23,7 @@ export type RunForegroundDocumentParams = {
   tools: string[]
   mcpHeaders?: Record<string, Record<string, string>>
   userMessage?: string
+  messages?: Message[]
   abortSignal?: AbortSignal
 }
 
@@ -52,6 +53,7 @@ export async function runForegroundDocument(
     tools,
     mcpHeaders,
     userMessage,
+    messages,
     project,
   } = params
 
@@ -67,6 +69,7 @@ export async function runForegroundDocument(
     tools: buildClientToolHandlersMap(tools ?? []),
     mcpHeaders,
     userMessage: userMessage ?? undefined,
+    messages,
   }).then((r) => r.unwrap())
 
   const runUuid = result.uuid

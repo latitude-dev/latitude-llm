@@ -36,6 +36,7 @@ type CommonArgs<C extends PromptlChain = PromptlChain> = {
   context: TelemetryContext
   uuid?: string
   messages?: Message[]
+  appendMessages?: Message[]
   pausedTokenUsage?: LanguageModelUsage
 
   tools?: Record<string, ToolHandler>
@@ -53,6 +54,7 @@ export function runChain<C extends PromptlChain>({
   source,
   chain,
   messages,
+  appendMessages,
   pausedTokenUsage,
   promptSource,
   abortSignal,
@@ -66,6 +68,7 @@ export function runChain<C extends PromptlChain>({
     uuid,
     workspace,
     messages,
+    appendMessages,
     tokenUsage: pausedTokenUsage,
     promptSource,
     providersMap,
