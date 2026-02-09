@@ -14,6 +14,7 @@ const DB_ERROR_CODES = {
   UNIQUE_VIOLATION: '23505',
   INPUT_SYNTAX_ERROR: '22P02',
   TRANSACTION_ABORTED: '25P02',
+  DEADLOCK_DETECTED: '40P01',
 }
 
 export default class Transaction {
@@ -35,7 +36,27 @@ export default class Transaction {
       if (callback) this.callbacks.push(callback.bind(null, result.value))
 
       return result
-    } else {
+    }
+
+    const getPgErrorCode = (e: unknown) => {
+      const cause =
+        typeof e === 'object' && e && 'cause' in e
+          ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ((e as any).cause as unknown)
+          : undefined
+
+      return (
+        (cause as DatabaseError | undefined)?.code ??
+        (e as DatabaseError | undefined)?.code
+      )
+    }
+
+    // Deadlocks are retryable.
+    // We only retry when this Transaction instance created the DB transaction
+    // (i.e. not when `this.db` is already set / nested transaction).
+    const maxAttempts = 3
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         await database.transaction(async (trx) => {
           this.db = trx
@@ -59,11 +80,27 @@ export default class Transaction {
         // @ts-expect-error - result is defined if we've reached this point but TS can't see that
         return result
       } catch (error) {
+        const code = getPgErrorCode(error)
+        const isDeadlock = code === DB_ERROR_CODES.DEADLOCK_DETECTED
+
+        if (isDeadlock && attempt < maxAttempts) {
+          // small exponential backoff with a bit of jitter
+          const base = 50
+          const backoffMs = Math.round(base * 2 ** (attempt - 1) + Math.random() * 50)
+          await new Promise((r) => setTimeout(r, backoffMs))
+          continue
+        }
+
         return Transaction.toResultError(error)
       } finally {
+        // Ensure we don't leak a transaction handle across retries/calls
+        this.db = undefined
         this.callbacks = []
       }
     }
+
+    // Unreachable, but TS doesn't know.
+    return Result.error(new Error('Transaction failed'))
   }
 
   /**

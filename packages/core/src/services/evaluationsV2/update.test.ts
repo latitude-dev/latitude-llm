@@ -18,6 +18,7 @@ import { type Project } from '../../schema/models/types/Project'
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
+import { waitForTransactionCallbacks } from '../../tests/helpers'
 import { mergeCommit } from '../commits'
 import { updateEvaluationV2 } from './update'
 
@@ -79,6 +80,7 @@ describe('updateEvaluationV2', () => {
 
   it('fails when settings are changed in a merged commit', async () => {
     commit = await mergeCommit(commit).then((r) => r.unwrap())
+    await waitForTransactionCallbacks()
 
     mocks.publisher.mockClear()
 
@@ -183,6 +185,7 @@ describe('updateEvaluationV2', () => {
 
   it('succeeds when updating an evaluation in merged commit', async () => {
     commit = await mergeCommit(commit).then((r) => r.unwrap())
+    await waitForTransactionCallbacks()
 
     mocks.publisher.mockClear()
 
@@ -224,6 +227,7 @@ describe('updateEvaluationV2', () => {
 
   it('succeeds when updating an evaluation in other commit', async () => {
     commit = await mergeCommit(commit).then((r) => r.unwrap())
+    await waitForTransactionCallbacks()
     const { commit: draft } = await factories.createDraft({ project, user })
 
     mocks.publisher.mockClear()
