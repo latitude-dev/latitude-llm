@@ -1,5 +1,8 @@
-import type { Message } from '@latitude-data/constants/messages'
 import { VercelConfig } from '@latitude-data/constants'
+import type {
+  AssistantMessage,
+  Message,
+} from '@latitude-data/constants/messages'
 import { ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { telemetry, TelemetryContext } from '../../../telemetry'
 
@@ -14,12 +17,14 @@ export function recordAbortedCompletion({
   config,
   messages,
   accumulatedText,
+  accumulatedReasoning,
 }: {
   context: TelemetryContext
   provider: ProviderApiKey
   config: VercelConfig
   messages: Message[]
-  accumulatedText: string
+  accumulatedText: string | null
+  accumulatedReasoning: string | null
 }): void {
   const $abortedCompletion = telemetry.span.completion(
     {
@@ -30,13 +35,17 @@ export function recordAbortedCompletion({
     },
     context,
   )
+
+  const output: AssistantMessage = { role: 'assistant', content: [] }
+  if (accumulatedReasoning !== null) {
+    output.content.push({ type: 'reasoning', text: accumulatedReasoning })
+  }
+  if (accumulatedText !== null) {
+    output.content.push({ type: 'text', text: accumulatedText })
+  }
+
   $abortedCompletion.end({
-    output: [
-      {
-        role: 'assistant',
-        content: [{ type: 'text', text: accumulatedText }],
-      },
-    ],
+    output: [output],
     finishReason: 'stop',
     tokens: {},
   })

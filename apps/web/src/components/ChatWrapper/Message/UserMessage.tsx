@@ -8,7 +8,6 @@ export function UserMessage({
   className,
   size,
   animatePulse,
-  parameters,
   toolContentMap,
   isGeneratingToolCall,
 }: Omit<MessageProps, 'debugMode' | 'role'>) {
@@ -30,7 +29,6 @@ export function UserMessage({
           content={content}
           color='accentForeground'
           size={size}
-          parameters={parameters}
           toolContentMap={toolContentMap}
           debugMode={false}
           markdownSize='none'

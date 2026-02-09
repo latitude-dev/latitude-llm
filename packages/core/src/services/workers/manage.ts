@@ -21,7 +21,7 @@ export async function removeWorkspaceJobs({
 }) {
   const qs = await queues()
   const queueList = queueName
-    ? [await findQueue(queueName)].filter(Boolean) as Queue[]
+    ? ([await findQueue(queueName)].filter(Boolean) as Queue[])
     : (Object.values(qs) as Queue[])
 
   let totalRemoved = 0
@@ -49,7 +49,10 @@ export async function removeWorkspaceJobs({
 function extractWorkspaceId(job: Job, queueName: string): number | null {
   const data = job.data as Record<string, unknown>
 
-  if (queueName === Queues.eventHandlersQueue || queueName === Queues.eventsQueue) {
+  if (
+    queueName === Queues.eventHandlersQueue ||
+    queueName === Queues.eventsQueue
+  ) {
     const eventData = data.data as Record<string, unknown> | undefined
     if (eventData && typeof eventData.workspaceId === 'number') {
       return eventData.workspaceId

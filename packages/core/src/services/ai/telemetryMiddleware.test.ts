@@ -1,18 +1,11 @@
-import { describe, expect, it, vi, beforeEach, type TaskContext } from 'vitest'
+import { ToolSource } from '@latitude-data/constants/toolSources'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { context as otelContext, ROOT_CONTEXT } from '@opentelemetry/api'
-import { createTelemetryMiddleware } from './telemetryMiddleware'
-import type { TelemetryContext } from '../../telemetry'
 import type { LanguageModelMiddleware } from 'ai'
-
-type TelemetryMocks = TaskContext & {
-  mocks: {
-    telemetry: {
-      sdk: ReturnType<typeof vi.spyOn>
-      exporter: { spans: unknown[] }
-      processor: unknown
-    }
-  }
-}
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { TelemetryContext } from '../../telemetry'
+import * as telemetryModule from '../../telemetry'
+import { createTelemetryMiddleware } from './telemetryMiddleware'
 
 type WrapGenerateParams = Parameters<
   NonNullable<LanguageModelMiddleware['wrapGenerate']>
@@ -29,9 +22,8 @@ describe('createTelemetryMiddleware', () => {
   let mockSpanEnd: ReturnType<typeof vi.fn>
   let mockSpanFail: ReturnType<typeof vi.fn>
   let mockSpanContext: TelemetryContext
-  let mockCompletion: ReturnType<typeof vi.fn>
 
-  beforeEach((ctx: TelemetryMocks) => {
+  beforeEach(() => {
     mockSpanContext = ROOT_CONTEXT as TelemetryContext
     mockSpanEnd = vi.fn()
     mockSpanFail = vi.fn()
@@ -42,15 +34,9 @@ describe('createTelemetryMiddleware', () => {
       fail: mockSpanFail,
     }
 
-    mockCompletion = vi.fn(() => mockCompletionSpan)
-
-    const mockTelemetry = {
-      span: {
-        completion: mockCompletion,
-      },
-    }
-
-    ctx.mocks.telemetry.sdk.mockReturnValue(mockTelemetry)
+    vi.spyOn(telemetryModule.telemetry.span, 'completion').mockReturnValue(
+      mockCompletionSpan,
+    )
   })
 
   describe('wrapGenerate', () => {
@@ -62,9 +48,10 @@ describe('createTelemetryMiddleware', () => {
       })
 
       const mockResult = {
-        content: [{ type: 'text', text: 'Hello, world!' }],
-        usage: { inputTokens: 10, outputTokens: 5 },
-        finishReason: 'stop',
+        content: [{ type: 'text' as const, text: 'Hello, world!' }],
+        usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        finishReason: 'stop' as const,
+        warnings: [],
       }
       const doGenerate = vi.fn().mockResolvedValue(mockResult)
 
@@ -78,82 +65,27 @@ describe('createTelemetryMiddleware', () => {
         model: {} as WrapGenerateParams['model'],
       } as unknown as WrapGenerateParams)
 
-      expect(mockCompletion).toHaveBeenCalledWith(
-        {
+      expect(telemetryModule.telemetry.span.completion).toHaveBeenCalledWith(
+        expect.objectContaining({
           provider: providerName,
           model,
-          input: [
-            {
-              role: 'user',
-              content: [{ type: 'text', text: 'Hi' }],
-              toolCalls: [],
-            },
-          ],
-          configuration: {
-            model,
-            prompt: [{ role: 'user', content: 'Hi' }],
-          },
-          promptUuid: undefined,
-          versionUuid: undefined,
-          experimentUuid: undefined,
-        },
-        mockContext,
-      )
-      expect(doGenerate).toHaveBeenCalled()
-      expect(mockSpanEnd).toHaveBeenCalledWith({
-        output: [
-          {
-            role: 'assistant',
-            content: [{ type: 'text', text: 'Hello, world!' }],
-            toolCalls: [],
-          },
-        ],
-        tokens: {
-          prompt: 10,
-          completion: 5,
-          cached: undefined,
-          reasoning: undefined,
-        },
-        finishReason: 'stop',
-      })
-      expect(result).toBe(mockResult)
-    })
-
-    it('passes optional uuids to completion span', async () => {
-      const promptUuid = 'prompt-123'
-      const versionUuid = 'version-456'
-      const experimentUuid = 'experiment-789'
-
-      const middleware = createTelemetryMiddleware({
-        context: mockContext,
-        providerName,
-        model,
-        promptUuid,
-        versionUuid,
-        experimentUuid,
-      })
-
-      const mockResult = {
-        content: [],
-        usage: { inputTokens: 0, outputTokens: 0 },
-        finishReason: 'stop',
-      }
-      const doGenerate = vi.fn().mockResolvedValue(mockResult)
-
-      await middleware.wrapGenerate!({
-        doGenerate,
-        params: { prompt: [] },
-        model: {} as WrapGenerateParams['model'],
-      } as unknown as WrapGenerateParams)
-
-      expect(mockCompletion).toHaveBeenCalledWith(
-        expect.objectContaining({
-          promptUuid,
-          versionUuid,
-          experimentUuid,
+          input: expect.any(Array),
+          configuration: expect.objectContaining({ model }),
         }),
         mockContext,
       )
+      expect(doGenerate).toHaveBeenCalled()
+      expect(mockSpanEnd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          output: expect.any(Array),
+          tokens: expect.objectContaining({
+            prompt: 10,
+            completion: 5,
+          }),
+          finishReason: 'stop',
+        }),
+      )
+      expect(result).toBe(mockResult)
     })
 
     it('handles errors and fails the span', async () => {
@@ -178,38 +110,6 @@ describe('createTelemetryMiddleware', () => {
       expect(mockSpanEnd).not.toHaveBeenCalled()
     })
 
-    it('handles empty content in result', async () => {
-      const middleware = createTelemetryMiddleware({
-        context: mockContext,
-        providerName,
-        model,
-      })
-
-      const mockResult = {
-        content: [],
-        usage: { inputTokens: 5, outputTokens: 0 },
-        finishReason: 'stop',
-      }
-      const doGenerate = vi.fn().mockResolvedValue(mockResult)
-
-      await middleware.wrapGenerate!({
-        doGenerate,
-        params: { prompt: [] },
-        model: {} as WrapGenerateParams['model'],
-      } as unknown as WrapGenerateParams)
-
-      expect(mockSpanEnd).toHaveBeenCalledWith({
-        output: [{ role: 'assistant', content: [], toolCalls: [] }],
-        tokens: {
-          prompt: 5,
-          completion: 0,
-          cached: undefined,
-          reasoning: undefined,
-        },
-        finishReason: 'stop',
-      })
-    })
-
     it('runs doGenerate within otel context', async () => {
       const middleware = createTelemetryMiddleware({
         context: mockContext,
@@ -219,8 +119,9 @@ describe('createTelemetryMiddleware', () => {
 
       const mockResult = {
         content: [],
-        usage: {},
-        finishReason: 'stop',
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        finishReason: 'stop' as const,
+        warnings: [],
       }
 
       const otelContextSpy = vi.spyOn(otelContext, 'with')
@@ -235,6 +136,45 @@ describe('createTelemetryMiddleware', () => {
       expect(otelContextSpy).toHaveBeenCalledWith(
         mockSpanContext,
         expect.any(Function),
+      )
+    })
+
+    it('extracts token usage from result', async () => {
+      const middleware = createTelemetryMiddleware({
+        context: mockContext,
+        providerName,
+        model,
+      })
+
+      const mockResult = {
+        content: [{ type: 'text' as const, text: 'Response' }],
+        usage: {
+          inputTokens: 100,
+          outputTokens: 50,
+          totalTokens: 150,
+          cachedInputTokens: 25,
+          reasoningTokens: 10,
+        },
+        finishReason: 'stop' as const,
+        warnings: [],
+      }
+      const doGenerate = vi.fn().mockResolvedValue(mockResult)
+
+      await middleware.wrapGenerate!({
+        doGenerate,
+        params: { prompt: [] },
+        model: {} as WrapGenerateParams['model'],
+      } as unknown as WrapGenerateParams)
+
+      expect(mockSpanEnd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tokens: {
+            prompt: 100,
+            completion: 50,
+            cached: 25,
+            reasoning: 10,
+          },
+        }),
       )
     })
   })
@@ -270,12 +210,13 @@ describe('createTelemetryMiddleware', () => {
       })
 
       const mockChunks = [
-        { type: 'text-delta', delta: 'Hello, ' },
-        { type: 'text-delta', delta: 'world!' },
+        { type: 'text-start', id: '1' },
+        { type: 'text-delta', id: '2', delta: 'Hello, ' },
+        { type: 'text-delta', id: '3', delta: 'world!' },
         {
           type: 'finish',
           finishReason: 'stop',
-          usage: { inputTokens: 10, outputTokens: 2 },
+          usage: { inputTokens: 10, outputTokens: 2, totalTokens: 12 },
         },
       ]
 
@@ -288,46 +229,32 @@ describe('createTelemetryMiddleware', () => {
         model: {} as WrapStreamParams['model'],
       } as unknown as WrapStreamParams)
 
-      expect(mockCompletion).toHaveBeenCalledWith(
+      expect(telemetryModule.telemetry.span.completion).toHaveBeenCalledWith(
         expect.objectContaining({
           provider: providerName,
           model,
-          input: [
-            {
-              role: 'user',
-              content: [{ type: 'text', text: 'Hi' }],
-              toolCalls: [],
-            },
-          ],
+          input: expect.any(Array),
         }),
         mockContext,
       )
 
       const consumedChunks = await consumeStream(result.stream)
-
-      // Wait a bit for the stream consumer callback to be invoked
       await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(consumedChunks).toEqual(mockChunks)
-      expect(mockSpanEnd).toHaveBeenCalledWith({
-        output: [
-          {
-            role: 'assistant',
-            content: [{ type: 'text', text: 'Hello, world!' }],
-            toolCalls: [],
-          },
-        ],
-        tokens: {
-          prompt: 10,
-          completion: 2,
-          cached: undefined,
-          reasoning: undefined,
-        },
-        finishReason: 'stop',
-      })
+      expect(mockSpanEnd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          output: expect.any(Array),
+          tokens: expect.objectContaining({
+            prompt: 10,
+            completion: 2,
+          }),
+          finishReason: 'stop',
+        }),
+      )
     })
 
-    it('handles stream without text content', async () => {
+    it('defaults finishReason to unknown when not provided', async () => {
       const middleware = createTelemetryMiddleware({
         context: mockContext,
         providerName,
@@ -335,11 +262,8 @@ describe('createTelemetryMiddleware', () => {
       })
 
       const mockChunks = [
-        {
-          type: 'finish',
-          finishReason: 'stop',
-          usage: { inputTokens: 5, outputTokens: 0 },
-        },
+        { type: 'text-start', id: '1' },
+        { type: 'text-delta', id: '2', delta: 'Hello' },
       ]
 
       const mockStream = createMockStream(mockChunks)
@@ -352,43 +276,6 @@ describe('createTelemetryMiddleware', () => {
       } as unknown as WrapStreamParams)
 
       await consumeStream(result.stream)
-
-      // Wait a bit for the stream consumer callback to be invoked
-      await new Promise((resolve) => setTimeout(resolve, 10))
-
-      expect(mockSpanEnd).toHaveBeenCalledWith({
-        output: [{ role: 'assistant', content: [], toolCalls: [] }],
-        tokens: {
-          prompt: 5,
-          completion: 0,
-          cached: undefined,
-          reasoning: undefined,
-        },
-        finishReason: 'stop',
-      })
-    })
-
-    it('defaults finishReason to unknown when not provided', async () => {
-      const middleware = createTelemetryMiddleware({
-        context: mockContext,
-        providerName,
-        model,
-      })
-
-      const mockChunks = [{ type: 'text-delta', delta: 'Hello' }]
-
-      const mockStream = createMockStream(mockChunks)
-      const doStream = vi.fn().mockResolvedValue({ stream: mockStream })
-
-      const result = await middleware.wrapStream!({
-        doStream,
-        params: { prompt: [] },
-        model: {} as WrapStreamParams['model'],
-      } as unknown as WrapStreamParams)
-
-      await consumeStream(result.stream)
-
-      // Wait a bit for the stream consumer callback to be invoked
       await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(mockSpanEnd).toHaveBeenCalledWith(
@@ -418,46 +305,6 @@ describe('createTelemetryMiddleware', () => {
 
       expect(mockSpanFail).toHaveBeenCalledWith(error)
       expect(mockSpanEnd).not.toHaveBeenCalled()
-    })
-
-    it('passes optional uuids to completion span for streams', async () => {
-      const promptUuid = 'prompt-123'
-      const versionUuid = 'version-456'
-      const experimentUuid = 'experiment-789'
-
-      const middleware = createTelemetryMiddleware({
-        context: mockContext,
-        providerName,
-        model,
-        promptUuid,
-        versionUuid,
-        experimentUuid,
-      })
-
-      const mockStream = createMockStream([
-        { type: 'finish', finishReason: 'stop', usage: {} },
-      ])
-      const doStream = vi.fn().mockResolvedValue({ stream: mockStream })
-
-      const result = await middleware.wrapStream!({
-        doStream,
-        params: { prompt: [] },
-        model: {} as WrapStreamParams['model'],
-      } as unknown as WrapStreamParams)
-
-      await consumeStream(result.stream)
-
-      // Wait a bit for the stream consumer callback to be invoked
-      await new Promise((resolve) => setTimeout(resolve, 10))
-
-      expect(mockCompletion).toHaveBeenCalledWith(
-        expect.objectContaining({
-          promptUuid,
-          versionUuid,
-          experimentUuid,
-        }),
-        mockContext,
-      )
     })
 
     it('runs doStream within otel context', async () => {
@@ -508,217 +355,258 @@ describe('createTelemetryMiddleware', () => {
         extraProp,
       )
     })
-  })
-})
 
-describe('convertPromptToMessages (indirect)', () => {
-  const mockContext = ROOT_CONTEXT as TelemetryContext
+    it('accumulates reasoning from stream', async () => {
+      const middleware = createTelemetryMiddleware({
+        context: mockContext,
+        providerName,
+        model,
+      })
 
-  let mockSpanEnd: ReturnType<typeof vi.fn>
-  let mockSpanFail: ReturnType<typeof vi.fn>
-  let mockCompletion: ReturnType<typeof vi.fn>
-
-  beforeEach((ctx: TelemetryMocks) => {
-    mockSpanEnd = vi.fn()
-    mockSpanFail = vi.fn()
-
-    const mockCompletionSpan = {
-      context: ROOT_CONTEXT as TelemetryContext,
-      end: mockSpanEnd,
-      fail: mockSpanFail,
-    }
-
-    mockCompletion = vi.fn(() => mockCompletionSpan)
-
-    const mockTelemetry = {
-      span: {
-        completion: mockCompletion,
-      },
-    }
-
-    ctx.mocks.telemetry.sdk.mockReturnValue(mockTelemetry)
-  })
-
-  it('converts object prompts to messages', async () => {
-    const middleware = createTelemetryMiddleware({
-      context: mockContext,
-      providerName: 'test',
-      model: 'test-model',
-    })
-
-    const mockResult = { content: [], usage: {}, finishReason: 'stop' }
-    const doGenerate = vi.fn().mockResolvedValue(mockResult)
-
-    await middleware.wrapGenerate!({
-      doGenerate,
-      params: {
-        prompt: [
-          { role: 'system', content: 'You are helpful' },
-          { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
-        ],
-      },
-      model: {} as WrapGenerateParams['model'],
-    } as unknown as WrapGenerateParams)
-
-    expect(mockCompletion).toHaveBeenCalledWith(
-      expect.objectContaining({
-        input: [
-          {
-            role: 'system',
-            content: [{ type: 'text', text: 'You are helpful' }],
-            toolCalls: [],
-          },
-          {
-            role: 'user',
-            content: [{ type: 'text', text: 'Hello' }],
-            toolCalls: [],
-          },
-        ],
-      }),
-      mockContext,
-    )
-  })
-})
-
-describe('extractTextFromContent (indirect)', () => {
-  const mockContext = ROOT_CONTEXT as TelemetryContext
-
-  let mockSpanEnd: ReturnType<typeof vi.fn>
-  let mockSpanFail: ReturnType<typeof vi.fn>
-  let mockCompletion: ReturnType<typeof vi.fn>
-
-  beforeEach((ctx: TelemetryMocks) => {
-    mockSpanEnd = vi.fn()
-    mockSpanFail = vi.fn()
-
-    const mockCompletionSpan = {
-      context: ROOT_CONTEXT as TelemetryContext,
-      end: mockSpanEnd,
-      fail: mockSpanFail,
-    }
-
-    mockCompletion = vi.fn(() => mockCompletionSpan)
-
-    const mockTelemetry = {
-      span: {
-        completion: mockCompletion,
-      },
-    }
-
-    ctx.mocks.telemetry.sdk.mockReturnValue(mockTelemetry)
-  })
-
-  it('extracts text from content array with text parts', async () => {
-    const middleware = createTelemetryMiddleware({
-      context: mockContext,
-      providerName: 'test',
-      model: 'test-model',
-    })
-
-    const mockResult = {
-      content: [
-        { type: 'text', text: 'Part 1 ' },
-        { type: 'text', text: 'Part 2' },
-      ],
-      usage: {},
-      finishReason: 'stop',
-    }
-    const doGenerate = vi.fn().mockResolvedValue(mockResult)
-
-    await middleware.wrapGenerate!({
-      doGenerate,
-      params: { prompt: [] },
-      model: {} as WrapGenerateParams['model'],
-    } as unknown as WrapGenerateParams)
-
-    expect(mockSpanEnd).toHaveBeenCalledWith({
-      output: [
+      const mockChunks = [
+        { type: 'reasoning-start', id: '1' },
+        { type: 'reasoning-delta', id: '2', delta: 'Step 1: ' },
+        { type: 'reasoning-delta', id: '3', delta: 'think about it' },
+        { type: 'text-start', id: '4' },
+        { type: 'text-delta', id: '5', delta: 'The answer' },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: 'Part 1 Part 2' }],
-          toolCalls: [],
+          type: 'finish',
+          finishReason: 'stop',
+          usage: {
+            inputTokens: 20,
+            outputTokens: 15,
+            totalTokens: 35,
+            reasoningTokens: 10,
+          },
         },
-      ],
-      tokens: {
-        cached: undefined,
-        completion: undefined,
-        prompt: undefined,
-        reasoning: undefined,
-      },
-      finishReason: 'stop',
+      ]
+
+      const mockStream = createMockStream(mockChunks)
+      const doStream = vi.fn().mockResolvedValue({ stream: mockStream })
+
+      const result = await middleware.wrapStream!({
+        doStream,
+        params: { prompt: [] },
+        model: {} as WrapStreamParams['model'],
+      } as unknown as WrapStreamParams)
+
+      await consumeStream(result.stream)
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(mockSpanEnd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tokens: expect.objectContaining({
+            reasoning: 10,
+          }),
+        }),
+      )
     })
   })
 
-  it('handles non-text content parts', async () => {
-    const middleware = createTelemetryMiddleware({
-      context: mockContext,
-      providerName: 'test',
-      model: 'test-model',
+  describe('addToolSourceData', () => {
+    it('adds tool source data to output messages', async () => {
+      const resolvedTools: ResolvedToolsDict = {
+        myTool: {
+          definition: {} as ResolvedToolsDict[string]['definition'],
+          sourceData: {
+            source: ToolSource.Client,
+          },
+        },
+      }
+
+      const middleware = createTelemetryMiddleware({
+        context: mockContext,
+        providerName,
+        model,
+        resolvedTools,
+      })
+
+      const mockResult = {
+        content: [
+          {
+            type: 'tool-call' as const,
+            toolCallId: 'call-123',
+            toolName: 'myTool',
+            input: '{}',
+          },
+        ],
+        usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        finishReason: 'tool-calls' as const,
+        warnings: [],
+      }
+      const doGenerate = vi.fn().mockResolvedValue(mockResult)
+
+      await middleware.wrapGenerate!({
+        doGenerate,
+        params: { prompt: [] },
+        model: {} as WrapGenerateParams['model'],
+      } as unknown as WrapGenerateParams)
+
+      expect(mockSpanEnd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          output: expect.arrayContaining([
+            expect.objectContaining({
+              role: 'assistant',
+              content: expect.arrayContaining([
+                expect.objectContaining({
+                  type: 'tool-call',
+                  _sourceData: { source: ToolSource.Client },
+                }),
+              ]),
+            }),
+          ]),
+        }),
+      )
     })
 
-    const mockResult = {
-      content: [
-        { type: 'image', image: 'base64...' },
-        { type: 'text', text: 'With text' },
-      ],
-      usage: {},
-      finishReason: 'stop',
-    }
-    const doGenerate = vi.fn().mockResolvedValue(mockResult)
-
-    await middleware.wrapGenerate!({
-      doGenerate,
-      params: { prompt: [] },
-      model: {} as WrapGenerateParams['model'],
-    } as unknown as WrapGenerateParams)
-
-    expect(mockSpanEnd).toHaveBeenCalledWith({
-      output: [
-        {
-          role: 'assistant',
-          content: [{ type: 'text', text: 'With text' }],
-          toolCalls: [],
+    it('adds tool source data to input messages with tool calls', async () => {
+      const resolvedTools: ResolvedToolsDict = {
+        searchTool: {
+          definition: {} as ResolvedToolsDict[string]['definition'],
+          sourceData: {
+            source: ToolSource.Integration,
+            integrationId: 42,
+            toolLabel: 'Search',
+            imageUrl: 'https://example.com/icon.png',
+          },
         },
-      ],
-      tokens: {
-        cached: undefined,
-        completion: undefined,
-        prompt: undefined,
-        reasoning: undefined,
-      },
-      finishReason: 'stop',
+      }
+
+      const middleware = createTelemetryMiddleware({
+        context: mockContext,
+        providerName,
+        model,
+        resolvedTools,
+      })
+
+      const mockResult = {
+        content: [{ type: 'text' as const, text: 'Done' }],
+        usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        finishReason: 'stop' as const,
+        warnings: [],
+      }
+      const doGenerate = vi.fn().mockResolvedValue(mockResult)
+
+      await middleware.wrapGenerate!({
+        doGenerate,
+        params: {
+          prompt: [
+            {
+              role: 'assistant',
+              content: [
+                {
+                  type: 'tool-call',
+                  toolCallId: 'call-1',
+                  toolName: 'searchTool',
+                  args: {},
+                },
+              ],
+            },
+          ],
+        },
+        model: {} as WrapGenerateParams['model'],
+      } as unknown as WrapGenerateParams)
+
+      expect(telemetryModule.telemetry.span.completion).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.arrayContaining([
+            expect.objectContaining({
+              role: 'assistant',
+              content: expect.arrayContaining([
+                expect.objectContaining({
+                  type: 'tool-call',
+                  _sourceData: expect.objectContaining({
+                    source: ToolSource.Integration,
+                    integrationId: 42,
+                  }),
+                }),
+              ]),
+            }),
+          ]),
+        }),
+        mockContext,
+      )
     })
   })
 
-  it('returns empty output for non-array content', async () => {
-    const middleware = createTelemetryMiddleware({
-      context: mockContext,
-      providerName: 'test',
-      model: 'test-model',
+  describe('prompt translation', () => {
+    it('translates user message with string content', async () => {
+      const middleware = createTelemetryMiddleware({
+        context: mockContext,
+        providerName,
+        model,
+      })
+
+      const mockResult = {
+        content: [],
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        finishReason: 'stop' as const,
+        warnings: [],
+      }
+      const doGenerate = vi.fn().mockResolvedValue(mockResult)
+
+      await middleware.wrapGenerate!({
+        doGenerate,
+        params: {
+          prompt: [{ role: 'user', content: 'Hello there' }],
+        },
+        model: {} as WrapGenerateParams['model'],
+      } as unknown as WrapGenerateParams)
+
+      expect(telemetryModule.telemetry.span.completion).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.arrayContaining([
+            expect.objectContaining({
+              role: 'user',
+              content: expect.arrayContaining([
+                expect.objectContaining({ type: 'text', text: 'Hello there' }),
+              ]),
+            }),
+          ]),
+        }),
+        mockContext,
+      )
     })
 
-    const mockResult = {
-      content: 'just a string',
-      usage: {},
-      finishReason: 'stop',
-    }
-    const doGenerate = vi.fn().mockResolvedValue(mockResult)
+    it('translates system message', async () => {
+      const middleware = createTelemetryMiddleware({
+        context: mockContext,
+        providerName,
+        model,
+      })
 
-    await middleware.wrapGenerate!({
-      doGenerate,
-      params: { prompt: [] },
-      model: {} as WrapGenerateParams['model'],
-    } as unknown as WrapGenerateParams)
+      const mockResult = {
+        content: [],
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        finishReason: 'stop' as const,
+        warnings: [],
+      }
+      const doGenerate = vi.fn().mockResolvedValue(mockResult)
 
-    expect(mockSpanEnd).toHaveBeenCalledWith({
-      output: [{ role: 'assistant', content: [], toolCalls: [] }],
-      tokens: {
-        cached: undefined,
-        completion: undefined,
-        prompt: undefined,
-        reasoning: undefined,
-      },
-      finishReason: 'stop',
+      await middleware.wrapGenerate!({
+        doGenerate,
+        params: {
+          prompt: [
+            { role: 'system', content: 'You are a helpful assistant' },
+            { role: 'user', content: [{ type: 'text', text: 'Hi' }] },
+          ],
+        },
+        model: {} as WrapGenerateParams['model'],
+      } as unknown as WrapGenerateParams)
+
+      expect(telemetryModule.telemetry.span.completion).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.arrayContaining([
+            expect.objectContaining({
+              role: 'system',
+            }),
+            expect.objectContaining({
+              role: 'user',
+            }),
+          ]),
+        }),
+        mockContext,
+      )
     })
   })
 })

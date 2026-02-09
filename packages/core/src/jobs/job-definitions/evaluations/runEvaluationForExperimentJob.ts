@@ -1,7 +1,16 @@
 import { DelayedError, Job } from 'bullmq'
-import { SpanType } from '../../../constants'
+import {
+  EvaluationTriggerTarget,
+  isMainSpan,
+  Span,
+  TriggerConfiguration,
+} from '../../../constants'
 import { SpansRepository } from '../../../repositories/spansRepository'
-import { ExperimentsRepository } from '../../../repositories'
+import {
+  CommitsRepository,
+  EvaluationsV2Repository,
+  ExperimentsRepository,
+} from '../../../repositories'
 import { updateExperimentStatus } from '../../../services/experiments/updateStatus'
 import { captureException } from '../../../utils/datadogCapture'
 import { queues } from '../../queues'
@@ -25,15 +34,41 @@ export type RunEvaluationForExperimentJobData = {
 const INITIAL_DELAY_MS = 1000
 const MAX_ATTEMPTS = 120
 
-/**
- * Wait for trace and span to appear, then enqueue evaluation job
- * Retries with exponential backoff for up to ~2 minutes before marking as error
- */
+function getTriggerTarget(
+  trigger?: TriggerConfiguration,
+): EvaluationTriggerTarget {
+  return trigger?.target ?? 'every'
+}
+
+function selectSpansForTrigger(
+  spans: Span[],
+  triggerTarget: EvaluationTriggerTarget,
+): Span[] {
+  if (spans.length === 0) return []
+
+  switch (triggerTarget) {
+    case 'first':
+      return [spans[0]!]
+    case 'last':
+      return [spans[spans.length - 1]!]
+    case 'every':
+    default:
+      return spans
+  }
+}
+
 export async function runEvaluationForExperimentJob(
   job: Job<RunEvaluationForExperimentJobData>,
   token?: string,
 ) {
-  const { conversationUuid, workspaceId, experimentUuid, ...rest } = job.data
+  const {
+    conversationUuid,
+    workspaceId,
+    experimentUuid,
+    evaluationUuid,
+    commitId,
+    ...rest
+  } = job.data
 
   const experimentsRepository = new ExperimentsRepository(workspaceId)
   const experiment = await experimentsRepository
@@ -42,25 +77,44 @@ export async function runEvaluationForExperimentJob(
 
   if (experiment.finishedAt) return
 
+  const commitsRepository = new CommitsRepository(workspaceId)
+  const commit = await commitsRepository
+    .getCommitById(commitId)
+    .then((r) => r.unwrap())
+
+  const evaluationsRepository = new EvaluationsV2Repository(workspaceId)
+  const evaluation = await evaluationsRepository
+    .getAtCommitByDocument({
+      commitUuid: commit.uuid,
+      documentUuid: experiment.documentUuid,
+      evaluationUuid,
+    })
+    .then((r) => r.unwrap())
+
+  const triggerTarget = getTriggerTarget(evaluation.configuration.trigger)
+
   const spansRepo = new SpansRepository(workspaceId)
 
-  const traceId = await spansRepo.getLastTraceByLogUuid(conversationUuid)
-  if (!traceId) {
-    if (shouldRetry(job.attemptsStarted)) {
-      const delay = calculateExponentialBackoff(job.attemptsStarted)
-      job.moveToDelayed(Date.now() + delay, token)
-      throw new DelayedError('Waiting for trace to show up')
+  const allSpans = await spansRepo.listByDocumentLogUuid(conversationUuid)
+  const mainSpans = allSpans.filter(isMainSpan)
+
+  if (mainSpans.length === 0) {
+    const traceId = await spansRepo.getLastTraceByLogUuid(conversationUuid)
+    if (!traceId) {
+      if (shouldRetry(job.attemptsStarted)) {
+        const delay = calculateExponentialBackoff(job.attemptsStarted)
+        job.moveToDelayed(Date.now() + delay, token)
+        throw new DelayedError('Waiting for trace to show up')
+      }
+
+      await markEvaluationAsError(
+        workspaceId,
+        experimentUuid,
+        rest.datasetRowId,
+      )
+      return
     }
 
-    await markEvaluationAsError(workspaceId, experimentUuid, rest.datasetRowId)
-    return
-  }
-
-  const spans = await spansRepo
-    .list({ traceId })
-    .then((r) => r.unwrap().filter((span) => span.type === SpanType.Prompt))
-  const span = spans[0]
-  if (!span) {
     if (shouldRetry(job.attemptsStarted)) {
       const delay = calculateExponentialBackoff(job.attemptsStarted)
       job.moveToDelayed(Date.now() + delay, token)
@@ -71,18 +125,25 @@ export async function runEvaluationForExperimentJob(
     return
   }
 
-  const { evaluationsQueue } = await queues()
-  const payload: RunEvaluationV2JobData = {
-    workspaceId,
-    spanId: span.id,
-    traceId: span.traceId,
-    experimentUuid,
-    ...rest,
-  }
+  const selectedSpans = selectSpansForTrigger(mainSpans, triggerTarget)
 
-  evaluationsQueue.add('runEvaluationV2Job', payload, {
-    deduplication: { id: runEvaluationV2JobKey(payload) },
-  })
+  const { evaluationsQueue } = await queues()
+
+  for (const span of selectedSpans) {
+    const payload: RunEvaluationV2JobData = {
+      workspaceId,
+      commitId,
+      evaluationUuid,
+      spanId: span.id,
+      traceId: span.traceId,
+      experimentUuid,
+      ...rest,
+    }
+
+    await evaluationsQueue.add('runEvaluationV2Job', payload, {
+      deduplication: { id: runEvaluationV2JobKey(payload) },
+    })
+  }
 }
 
 /**

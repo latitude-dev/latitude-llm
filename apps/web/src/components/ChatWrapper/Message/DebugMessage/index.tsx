@@ -33,7 +33,6 @@ export const DebugMessage = memo(
     content,
     animatePulse = false,
     size = 'default',
-    parameters = [],
     toolContentMap,
     isGeneratingToolCall = false,
     messageIndex,
@@ -71,7 +70,6 @@ export const DebugMessage = memo(
                 content={content}
                 color='foregroundMuted'
                 size={size}
-                parameters={parameters}
                 toolContentMap={toolContentMap}
                 markdownSize='sm'
                 messageIndex={messageIndex}

@@ -191,7 +191,204 @@ describe('streamAIResponse', () => {
       provider,
       config,
       messages,
-      accumulatedText: '',
+      accumulatedText: null,
+      accumulatedReasoning: null,
+    })
+  })
+
+  it('calls recordAbortedCompletion with accumulated text and reasoning when stream is aborted mid-stream', async () => {
+    const { workspace } = await factories.createWorkspace()
+    const context = factories.createTelemetryContext({ workspace })
+    const provider = await factories.createProviderApiKey({
+      workspace,
+      type: Providers.OpenAI,
+      name: 'test-provider',
+      user: await factories.createUser(),
+    })
+
+    vi.spyOn(usageModule, 'assertUsageWithinPlanLimits').mockResolvedValue(
+      Result.ok(undefined),
+    )
+
+    vi.spyOn(aiModule, 'ai').mockResolvedValue(
+      Result.ok({
+        type: 'text',
+        text: Promise.resolve(''),
+        reasoning: Promise.resolve(undefined),
+        usage: Promise.resolve({
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
+        }),
+        toolCalls: Promise.resolve([]),
+        fullStream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: 'text-delta', id: '1', text: 'Hello' })
+            controller.close()
+          },
+        }),
+        providerName: Providers.OpenAI,
+        providerMetadata: Promise.resolve(undefined),
+        finishReason: Promise.resolve('stop'),
+        response: Promise.resolve({ messages: [] }),
+      } as unknown as aiModule.AIReturn<'text'>),
+    )
+
+    const abortError = new ChainError({
+      code: RunErrorCodes.AbortError,
+      message: 'Stream aborted by user',
+    })
+
+    vi.spyOn(consumeStreamModule, 'consumeStream').mockImplementation(
+      async ({ accumulatedText, accumulatedReasoning }) => {
+        accumulatedText.text = 'Partial response'
+        accumulatedReasoning.text = 'Partial reasoning'
+        throw abortError
+      },
+    )
+
+    const recordAbortedCompletionSpy = vi
+      .spyOn(recordAbortedCompletionModule, 'recordAbortedCompletion')
+      .mockImplementation(() => {})
+
+    let controller: ReadableStreamDefaultController
+    new ReadableStream({
+      start(ctrl) {
+        controller = ctrl
+      },
+    })
+
+    const messages = [
+      {
+        role: 'user',
+        content: [{ type: 'text' as const, text: 'Hello' }],
+      },
+    ] as unknown as Message[]
+    const config = {
+      model: 'gpt-4',
+      provider: provider.name,
+    }
+    const documentLogUuid = randomUUID()
+
+    await expect(
+      streamAIResponse({
+        context,
+        controller: controller!,
+        workspace,
+        provider,
+        messages,
+        config,
+        source: LogSources.API,
+        documentLogUuid,
+      }),
+    ).rejects.toThrow(abortError)
+
+    expect(recordAbortedCompletionSpy).toHaveBeenCalledWith({
+      context,
+      provider,
+      config,
+      messages,
+      accumulatedText: 'Partial response',
+      accumulatedReasoning: 'Partial reasoning',
+    })
+  })
+
+  it('calls recordAbortedCompletion with only accumulated reasoning when no text was generated', async () => {
+    const { workspace } = await factories.createWorkspace()
+    const context = factories.createTelemetryContext({ workspace })
+    const provider = await factories.createProviderApiKey({
+      workspace,
+      type: Providers.OpenAI,
+      name: 'test-provider',
+      user: await factories.createUser(),
+    })
+
+    vi.spyOn(usageModule, 'assertUsageWithinPlanLimits').mockResolvedValue(
+      Result.ok(undefined),
+    )
+
+    vi.spyOn(aiModule, 'ai').mockResolvedValue(
+      Result.ok({
+        type: 'text',
+        text: Promise.resolve(''),
+        reasoning: Promise.resolve(undefined),
+        usage: Promise.resolve({
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
+        }),
+        toolCalls: Promise.resolve([]),
+        fullStream: new ReadableStream({
+          start(controller) {
+            controller.close()
+          },
+        }),
+        providerName: Providers.OpenAI,
+        providerMetadata: Promise.resolve(undefined),
+        finishReason: Promise.resolve('stop'),
+        response: Promise.resolve({ messages: [] }),
+      } as unknown as aiModule.AIReturn<'text'>),
+    )
+
+    const abortError = new ChainError({
+      code: RunErrorCodes.AbortError,
+      message: 'Stream aborted by user',
+    })
+
+    vi.spyOn(consumeStreamModule, 'consumeStream').mockImplementation(
+      async ({ accumulatedReasoning }) => {
+        accumulatedReasoning.text = 'Only reasoning was generated before abort'
+        throw abortError
+      },
+    )
+
+    const recordAbortedCompletionSpy = vi
+      .spyOn(recordAbortedCompletionModule, 'recordAbortedCompletion')
+      .mockImplementation(() => {})
+
+    let controller: ReadableStreamDefaultController
+    new ReadableStream({
+      start(ctrl) {
+        controller = ctrl
+      },
+    })
+
+    const messages = [
+      {
+        role: 'user',
+        content: [{ type: 'text' as const, text: 'Solve this problem' }],
+      },
+    ] as unknown as Message[]
+    const config = {
+      model: 'gpt-4',
+      provider: provider.name,
+    }
+    const documentLogUuid = randomUUID()
+
+    await expect(
+      streamAIResponse({
+        context,
+        controller: controller!,
+        workspace,
+        provider,
+        messages,
+        config,
+        source: LogSources.API,
+        documentLogUuid,
+      }),
+    ).rejects.toThrow(abortError)
+
+    expect(recordAbortedCompletionSpy).toHaveBeenCalledWith({
+      context,
+      provider,
+      config,
+      messages,
+      accumulatedText: null,
+      accumulatedReasoning: 'Only reasoning was generated before abort',
     })
   })
 

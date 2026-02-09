@@ -1,14 +1,14 @@
 import { OpenAIProvider } from '@ai-sdk/openai'
 import { Providers } from '@latitude-data/constants'
+import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { LanguageModel, wrapLanguageModel } from 'ai'
 import { omit } from 'lodash-es'
 import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { TelemetryContext } from '../../telemetry'
 import { LlmProvider } from './helpers'
 import { VercelConfigWithProviderRules } from './providers/rules'
 import { createTelemetryMiddleware } from './telemetryMiddleware'
-import { TelemetryContext } from '@latitude-data/telemetry'
-import { CompletionTelemetryOptions } from '.'
 
 // FIXME: Is this doing anything? There are no options available here.
 function buildGenericLanguageModel({
@@ -36,7 +36,7 @@ export function getLanguageModel({
   llmProvider,
   customLanguageModel,
   context,
-  telemetryOptions,
+  resolvedTools,
 }: {
   model: string
   config: VercelConfigWithProviderRules
@@ -44,7 +44,7 @@ export function getLanguageModel({
   llmProvider: LlmProvider
   customLanguageModel?: LanguageModel
   context: TelemetryContext
-  telemetryOptions?: CompletionTelemetryOptions
+  resolvedTools?: ResolvedToolsDict
 }): LanguageModel {
   if (customLanguageModel) {
     return wrapCompletionTelemetry({
@@ -52,7 +52,7 @@ export function getLanguageModel({
       provider,
       model,
       context,
-      telemetryOptions,
+      resolvedTools,
     })
   }
 
@@ -63,7 +63,7 @@ export function getLanguageModel({
       provider,
       model,
       context,
-      telemetryOptions,
+      resolvedTools,
     })
   }
 
@@ -87,7 +87,7 @@ export function getLanguageModel({
     provider,
     model,
     context,
-    telemetryOptions,
+    resolvedTools,
   })
 }
 
@@ -96,16 +96,14 @@ function wrapCompletionTelemetry({
   provider,
   model,
   context,
-  telemetryOptions,
+  resolvedTools,
 }: {
   languageModel: LanguageModel
   provider: ProviderApiKey
   model: string
   context: TelemetryContext
-  telemetryOptions?: CompletionTelemetryOptions
+  resolvedTools?: ResolvedToolsDict
 }): LanguageModel {
-  if (!telemetryOptions) return languageModel
-
   // wrapLanguageModel expects a LanguageModelV2 object, not a string model identifier.
   // Since buildGenericLanguageModel always returns a LanguageModelV2 object, we can safely cast.
   if (typeof languageModel === 'string') {
@@ -119,7 +117,7 @@ function wrapCompletionTelemetry({
       context,
       providerName: provider.provider,
       model,
-      ...telemetryOptions,
+      resolvedTools,
     }),
   })
 }

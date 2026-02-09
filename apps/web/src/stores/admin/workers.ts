@@ -18,15 +18,16 @@ export function useQueueStats(opts?: SWRConfiguration) {
   const route = ROUTES.api.admin.workers.root
   const fetcher = useFetcher<QueueStats[]>(route)
 
-  const { data = [], mutate, ...rest } = useSWR<QueueStats[]>(route, fetcher, {
+  const {
+    data = [],
+    mutate,
+    ...rest
+  } = useSWR<QueueStats[]>(route, fetcher, {
     refreshInterval: 5000,
     ...opts,
   })
 
-  return useMemo(
-    () => ({ data, mutate, ...rest }),
-    [data, mutate, rest],
-  )
+  return useMemo(() => ({ data, mutate, ...rest }), [data, mutate, rest])
 }
 
 export function useQueueDetail(
@@ -38,19 +39,12 @@ export function useQueueDetail(
     : null
   const fetcher = useFetcher<QueueDetail>(route ?? undefined)
 
-  const { data, mutate, ...rest } = useSWR<QueueDetail>(
-    route,
-    fetcher,
-    {
-      refreshInterval: 5000,
-      ...opts,
-    },
-  )
+  const { data, mutate, ...rest } = useSWR<QueueDetail>(route, fetcher, {
+    refreshInterval: 5000,
+    ...opts,
+  })
 
-  return useMemo(
-    () => ({ data, mutate, ...rest }),
-    [data, mutate, rest],
-  )
+  return useMemo(() => ({ data, mutate, ...rest }), [data, mutate, rest])
 }
 
 export function useWorkspaceWorkerUsage(
@@ -60,19 +54,16 @@ export function useWorkspaceWorkerUsage(
   const route = ROUTES.api.admin.workers.workspace(workspaceId).root
   const fetcher = useFetcher<WorkspaceQueueUsage[]>(route)
 
-  const { data = [], mutate, ...rest } = useSWR<WorkspaceQueueUsage[]>(
-    route,
-    fetcher,
-    {
-      refreshInterval: 10000,
-      ...opts,
-    },
-  )
+  const {
+    data = [],
+    mutate,
+    ...rest
+  } = useSWR<WorkspaceQueueUsage[]>(route, fetcher, {
+    refreshInterval: 10000,
+    ...opts,
+  })
 
-  return useMemo(
-    () => ({ data, mutate, ...rest }),
-    [data, mutate, rest],
-  )
+  return useMemo(() => ({ data, mutate, ...rest }), [data, mutate, rest])
 }
 
 export function useWorkerActions() {
@@ -121,11 +112,6 @@ export function useWorkerActions() {
       removeWorkspaceJobs,
       isRemovingWorkspaceJobs,
     }),
-    [
-      drainQueue,
-      isDrainingQueue,
-      removeWorkspaceJobs,
-      isRemovingWorkspaceJobs,
-    ],
+    [drainQueue, isDrainingQueue, removeWorkspaceJobs, isRemovingWorkspaceJobs],
   )
 }

@@ -1,21 +1,21 @@
-import { StreamManager, StreamManagerProps } from '.'
+import { isAbortError } from '@ai-sdk/provider-utils'
+import { ResolvedToolsDict } from '@latitude-data/constants'
 import type { Message } from '@latitude-data/constants/messages'
-import { Output, streamAIResponse } from './step/streamAIResponse'
+import { JSONSchema7 } from 'json-schema'
+import { StreamManager, StreamManagerProps } from '.'
+import { DocumentVersionsRepository } from '../../repositories'
+import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import {
   applyAgentRule,
   ValidatedChainStep,
 } from '../../services/chains/ChainValidator'
-import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
-import { JSONSchema7 } from 'json-schema'
-import { isAbortError } from '@ai-sdk/provider-utils'
 import { lookupTools } from '../../services/documents/tools/lookup'
 import { resolveTools } from '../../services/documents/tools/resolve'
-import { DocumentVersionsRepository } from '../../repositories'
-import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { LatitudeError } from '../errors'
 import { Result } from '../Result'
 import { PromisedResult } from '../Transaction'
-import { ResolvedToolsDict } from '@latitude-data/constants'
-import { LatitudeError } from '../errors'
+import { Output, streamAIResponse } from './step/streamAIResponse'
 
 /**
  * DefaultStreamManager implements a simple single-step streaming strategy.
@@ -89,7 +89,6 @@ export class DefaultStreamManager
           source: this.source,
           workspace: this.workspace,
           resolvedTools: toolsBySource,
-          telemetryOptions: this.telemetryOptions,
         })
 
       this.updateStateFromResponse({

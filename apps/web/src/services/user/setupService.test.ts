@@ -27,15 +27,13 @@ describe('setupService', () => {
     vi.unstubAllEnvs()
   })
 
-  it(
-    'should create all necessary entities when calling setup service',
-    async () => {
-      const email = `test+${Date.now()}@example.com`
+  it('should create all necessary entities when calling setup service', async () => {
+    const email = `test+${Date.now()}@example.com`
 
-      const mod = await import('./setupService')
-      const setupService = mod.default
-      const result = await setupService({
-        email,
+    const mod = await import('./setupService')
+    const setupService = mod.default
+    const result = await setupService({
+      email,
       name: 'Test User',
       companyName: 'Test Company',
     })
@@ -100,19 +98,15 @@ describe('setupService', () => {
       .then((r) => r[0])
     expect(createdOnboarding).toBeDefined()
     expect(createdOnboarding?.completedAt).toBeNull()
-    },
-    15000,
-  )
+  }, 15000)
 
-  it(
-    'publishes userCreated event',
-    async () => {
-      const email = `test+${Date.now()}@example.com`
+  it('publishes userCreated event', async () => {
+    const email = `test+${Date.now()}@example.com`
 
     const mod = await import('./setupService')
     const setupService = mod.default
     const result = await setupService({
-        email,
+      email,
       name: 'Test User',
       companyName: 'Test Company',
     })
@@ -131,7 +125,5 @@ describe('setupService', () => {
     } else {
       throw new Error('User was not created')
     }
-    },
-    15000,
-  )
+  }, 15000)
 })

@@ -1,22 +1,22 @@
-import { streamAIResponse } from './step/streamAIResponse'
+import { ResolvedToolsDict } from '@latitude-data/constants'
 import type { Message } from '@latitude-data/constants/messages'
+import type { SimulationSettings } from '@latitude-data/constants/simulation'
 import { Chain } from 'promptl-ai'
+import { StreamManager, StreamManagerProps } from '.'
+import { DocumentVersionsRepository } from '../../repositories'
+import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import {
   validateChain,
   ValidatedChainStep,
 } from '../../services/chains/ChainValidator'
-import { StreamManager, StreamManagerProps } from '.'
 import { CachedApiKeys } from '../../services/chains/run'
-import { isAbortError } from '../isAbortError'
-import type { SimulationSettings } from '@latitude-data/constants/simulation'
 import { lookupTools } from '../../services/documents/tools/lookup'
-import { DocumentVersionsRepository } from '../../repositories'
-import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { resolveTools } from '../../services/documents/tools/resolve'
-import { PromisedResult } from '../Transaction'
-import { ResolvedToolsDict } from '@latitude-data/constants'
 import { LatitudeError } from '../errors'
+import { isAbortError } from '../isAbortError'
 import { Result } from '../Result'
+import { PromisedResult } from '../Transaction'
+import { streamAIResponse } from './step/streamAIResponse'
 
 /**
  * ChainStreamManager extends StreamManager to handle streaming for multi-step AI chains.
@@ -92,7 +92,6 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         source: this.source,
         workspace: this.workspace,
         resolvedTools: toolsBySource,
-        telemetryOptions: this.telemetryOptions,
       })
 
       this.updateStateFromResponse({

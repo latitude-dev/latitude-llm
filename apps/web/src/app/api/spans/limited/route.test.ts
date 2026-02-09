@@ -236,4 +236,3 @@ describe('GET handler for spans/limited', () => {
     })
   })
 })
-

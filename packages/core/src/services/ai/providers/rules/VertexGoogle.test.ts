@@ -1,8 +1,8 @@
 import { type Message } from '@latitude-data/constants/messages'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { PartialConfig } from '../../helpers'
 import { Providers } from '@latitude-data/constants'
+import { PartialConfig } from '../../helpers'
 import { applyProviderRules } from './index'
 import { ProviderRules } from './types'
 

@@ -11,7 +11,6 @@ export function computeSegments(
   type: string,
   source: string | undefined,
   sourceMap: PromptlSourceRef[],
-  parameters: string[],
 ): Segment[] {
   const segments: Segment[] = []
   if (!source) return segments
@@ -28,12 +27,10 @@ export function computeSegments(
   if (firstSegment.length > 0) segments.push(firstSegment)
 
   for (let i = 0; i < sourceMap.length; i++) {
+    // Note: although the best logic would be to check whether the identifier is a parameter,
+    // in reality this is not ergonomic, because we would need to pass always the parameters
     segments.push({
-      identifier:
-        sourceMap[i]!.identifier &&
-        parameters.includes(sourceMap[i]!.identifier!)
-          ? sourceMap[i]!.identifier!
-          : undefined,
+      identifier: sourceMap[i]!.identifier,
       content: source.slice(sourceMap[i]!.start, sourceMap[i]!.end),
       type: type,
     })

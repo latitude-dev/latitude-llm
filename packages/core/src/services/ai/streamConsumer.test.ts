@@ -1,758 +1,603 @@
+import type {
+  LanguageModelV2FinishReason,
+  LanguageModelV2StreamPart,
+  LanguageModelV2Usage,
+} from '@ai-sdk/provider'
 import { describe, expect, it, vi } from 'vitest'
+
 import {
-  createStreamConsumer,
-  buildOutputMessages,
-  extractGenerateResultContent,
   CapturedStreamResult,
+  createStreamConsumer,
+  extractGenerateResultContent,
 } from './streamConsumer'
 
+type StreamChunk = {
+  type: string
+  id?: string
+  delta?: string
+  mediaType?: string
+  data?: string
+  toolCallId?: string
+  toolName?: string
+  input?: string
+  result?: unknown
+  finishReason?: LanguageModelV2FinishReason
+  usage?: Partial<LanguageModelV2Usage>
+}
+
+function chunk(c: StreamChunk): LanguageModelV2StreamPart {
+  return c as unknown as LanguageModelV2StreamPart
+}
+
+function chunks(...cs: StreamChunk[]): LanguageModelV2StreamPart[] {
+  return cs.map(chunk)
+}
+
+async function consumeTransformStream(
+  streamChunks: LanguageModelV2StreamPart[],
+  onConsumed: (result: CapturedStreamResult) => void,
+): Promise<LanguageModelV2StreamPart[]> {
+  const consumer = createStreamConsumer(onConsumed)
+
+  const readable = new ReadableStream<LanguageModelV2StreamPart>({
+    start(controller) {
+      streamChunks.forEach((c) => controller.enqueue(c))
+      controller.close()
+    },
+  })
+
+  const passedThrough: LanguageModelV2StreamPart[] = []
+  const writable = new WritableStream<LanguageModelV2StreamPart>({
+    write(c) {
+      passedThrough.push(c)
+    },
+  })
+
+  await readable.pipeThrough(consumer).pipeTo(writable)
+
+  return passedThrough
+}
+
 describe('createStreamConsumer', () => {
-  function createMockStream(chunks: unknown[]) {
-    return new ReadableStream({
-      start(controller) {
-        for (const chunk of chunks) {
-          controller.enqueue(chunk)
-        }
-        controller.close()
-      },
+  describe('pass-through behavior', () => {
+    it('passes through all chunks unchanged', async () => {
+      const testChunks = chunks(
+        { type: 'text-start', id: '1' },
+        { type: 'text-delta', id: '2', delta: 'Hello' },
+        { type: 'text-delta', id: '3', delta: ' world' },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        },
+      )
+
+      const onConsumed = vi.fn()
+      const passedThrough = await consumeTransformStream(testChunks, onConsumed)
+
+      expect(passedThrough).toEqual(testChunks)
     })
-  }
 
-  async function consumeStream(stream: ReadableStream) {
-    const reader = stream.getReader()
-    const chunks: unknown[] = []
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      chunks.push(value)
-    }
-    return chunks
-  }
+    it('passes through reasoning chunks unchanged', async () => {
+      const testChunks = chunks(
+        { type: 'reasoning-start', id: '1' },
+        { type: 'reasoning-delta', id: '2', delta: 'Let me think' },
+        { type: 'text-start', id: '3' },
+        { type: 'text-delta', id: '4', delta: 'Answer' },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        },
+      )
 
-  it('captures text-delta chunks', async () => {
-    const onConsumed = vi.fn()
-    const mockChunks = [
-      { type: 'text-delta', delta: 'Hello, ' },
-      { type: 'text-delta', delta: 'world!' },
-      {
-        type: 'finish',
-        finishReason: 'stop',
-        usage: { inputTokens: 10, outputTokens: 5 },
-      },
-    ]
+      const onConsumed = vi.fn()
+      const passedThrough = await consumeTransformStream(testChunks, onConsumed)
 
-    const stream = createMockStream(mockChunks)
-    const wrappedStream = stream.pipeThrough(createStreamConsumer(onConsumed))
-    const consumedChunks = await consumeStream(wrappedStream)
+      expect(passedThrough).toEqual(testChunks)
+    })
+  })
 
-    expect(consumedChunks).toEqual(mockChunks)
-    expect(onConsumed).toHaveBeenCalledWith({
-      text: 'Hello, world!',
-      reasoning: '',
-      files: [],
-      toolCalls: [],
-      finishReason: 'stop',
-      tokens: {
+  describe('text accumulation', () => {
+    it('accumulates text from text-start and text-delta chunks', async () => {
+      const testChunks = chunks(
+        { type: 'text-start', id: '1' },
+        { type: 'text-delta', id: '2', delta: 'Hello' },
+        { type: 'text-delta', id: '3', delta: ' world' },
+        { type: 'text-delta', id: '4', delta: '!' },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      expect(onConsumed).toHaveBeenCalledTimes(1)
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.output).toHaveLength(1)
+      expect(result.output[0]).toEqual({
+        role: 'assistant',
+        content: [{ type: 'text', text: 'Hello world!' }],
+      })
+    })
+
+    it('handles empty text', async () => {
+      const testChunks = chunks(
+        { type: 'text-start', id: '1' },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: { inputTokens: 10, outputTokens: 0, totalTokens: 10 },
+        },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.output).toHaveLength(0)
+    })
+  })
+
+  describe('reasoning accumulation', () => {
+    it('accumulates reasoning from reasoning-start and reasoning-delta chunks', async () => {
+      const testChunks = chunks(
+        { type: 'reasoning-start', id: '1' },
+        { type: 'reasoning-delta', id: '2', delta: 'Step 1: ' },
+        { type: 'reasoning-delta', id: '3', delta: 'analyze the problem' },
+        { type: 'text-start', id: '4' },
+        { type: 'text-delta', id: '5', delta: 'The answer is 42' },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: {
+            inputTokens: 20,
+            outputTokens: 15,
+            totalTokens: 35,
+            reasoningTokens: 10,
+          },
+        },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.output[0]).toEqual({
+        role: 'assistant',
+        content: [
+          { type: 'reasoning', text: 'Step 1: analyze the problem' },
+          { type: 'text', text: 'The answer is 42' },
+        ],
+      })
+    })
+
+    it('handles only reasoning without text', async () => {
+      const testChunks = chunks(
+        { type: 'reasoning-start', id: '1' },
+        { type: 'reasoning-delta', id: '2', delta: 'Thinking...' },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.output[0]).toEqual({
+        role: 'assistant',
+        content: [{ type: 'reasoning', text: 'Thinking...' }],
+      })
+    })
+  })
+
+  describe('file handling', () => {
+    it('captures file chunks', async () => {
+      const testChunks = chunks(
+        {
+          type: 'file',
+          mediaType: 'image/png',
+          data: 'base64encodeddata',
+        },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.output[0]!.content).toContainEqual({
+        type: 'image',
+        image: 'base64encodeddata',
+      })
+    })
+
+    it('captures multiple files', async () => {
+      const testChunks = chunks(
+        { type: 'file', mediaType: 'image/png', data: 'image1' },
+        { type: 'file', mediaType: 'image/jpeg', data: 'image2' },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.output[0]!.content).toHaveLength(2)
+    })
+  })
+
+  describe('tool call handling', () => {
+    it('captures tool-call chunks', async () => {
+      const testChunks = chunks(
+        {
+          type: 'tool-call',
+          toolCallId: 'call-123',
+          toolName: 'get_weather',
+          input: '{"location":"London"}',
+        },
+        {
+          type: 'finish',
+          finishReason: 'tool-calls',
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.output[0]!.content).toContainEqual({
+        type: 'tool-call',
+        toolCallId: 'call-123',
+        toolName: 'get_weather',
+        toolArguments: { location: 'London' },
+        args: { location: 'London' },
+      })
+      expect(result.finishReason).toBe('tool-calls')
+    })
+
+    it('captures multiple tool calls', async () => {
+      const testChunks = chunks(
+        {
+          type: 'tool-call',
+          toolCallId: 'call-1',
+          toolName: 'tool_a',
+          input: '{}',
+        },
+        {
+          type: 'tool-call',
+          toolCallId: 'call-2',
+          toolName: 'tool_b',
+          input: '{}',
+        },
+        {
+          type: 'finish',
+          finishReason: 'tool-calls',
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      const toolCalls = result.output[0]!.content.filter(
+        (c: { type: string }) => c.type === 'tool-call',
+      )
+      expect(toolCalls).toHaveLength(2)
+    })
+  })
+
+  describe('tool result handling', () => {
+    it('captures tool-result chunks', async () => {
+      const testChunks = chunks(
+        {
+          type: 'tool-result',
+          toolCallId: 'call-123',
+          toolName: 'get_weather',
+          result: { temperature: 20 },
+        },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.output[0]!.content).toContainEqual({
+        type: 'tool-result',
+        toolCallId: 'call-123',
+        toolName: 'get_weather',
+        result: { temperature: 20 },
+        isError: false,
+      })
+    })
+  })
+
+  describe('finish and usage handling', () => {
+    it('captures finish reason', async () => {
+      const finishReasons: LanguageModelV2FinishReason[] = [
+        'stop',
+        'length',
+        'tool-calls',
+        'content-filter',
+        'error',
+        'other',
+      ]
+
+      for (const finishReason of finishReasons) {
+        const testChunks = chunks(
+          { type: 'text-start', id: '1' },
+          { type: 'text-delta', id: '2', delta: 'test' },
+          {
+            type: 'finish',
+            finishReason,
+            usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+          },
+        )
+
+        const onConsumed = vi.fn()
+        await consumeTransformStream(testChunks, onConsumed)
+
+        const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+        expect(result.finishReason).toBe(finishReason)
+      }
+    })
+
+    it('captures token usage', async () => {
+      const usage = {
+        inputTokens: 100,
+        outputTokens: 50,
+        totalTokens: 150,
+        cachedInputTokens: 25,
+        reasoningTokens: 30,
+      }
+
+      const testChunks = chunks(
+        { type: 'text-start', id: '1' },
+        { type: 'text-delta', id: '2', delta: 'test' },
+        { type: 'finish', finishReason: 'stop', usage },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.tokens).toEqual({
+        prompt: 100,
+        completion: 50,
+        cached: 25,
+        reasoning: 30,
+      })
+    })
+
+    it('handles missing usage values', async () => {
+      const testChunks = chunks(
+        { type: 'text-start', id: '1' },
+        { type: 'text-delta', id: '2', delta: 'test' },
+        {
+          type: 'finish',
+          finishReason: 'stop',
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.tokens).toEqual({
         prompt: 10,
         completion: 5,
         cached: undefined,
         reasoning: undefined,
-      },
+      })
+    })
+
+    it('defaults to unknown finish reason when not provided', async () => {
+      const testChunks = chunks(
+        { type: 'text-start', id: '1' },
+        { type: 'text-delta', id: '2', delta: 'test' },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.finishReason).toBe('unknown')
     })
   })
 
-  it('captures reasoning chunks', async () => {
-    const onConsumed = vi.fn()
-    const mockChunks = [
-      { type: 'reasoning-delta', delta: 'Let me think...' },
-      { type: 'reasoning-delta', delta: ' I should respond with hello.' },
-      { type: 'text-delta', delta: 'Hello!' },
-      {
-        type: 'finish',
-        finishReason: 'stop',
-        usage: { inputTokens: 10, outputTokens: 8 },
-      },
-    ]
-
-    const stream = createMockStream(mockChunks)
-    const wrappedStream = stream.pipeThrough(createStreamConsumer(onConsumed))
-    await consumeStream(wrappedStream)
-
-    expect(onConsumed).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: 'Hello!',
-        reasoning: 'Let me think... I should respond with hello.',
-        files: [],
-      }),
-    )
-  })
-
-  it('captures tool-call chunks', async () => {
-    const onConsumed = vi.fn()
-    const mockChunks = [
-      { type: 'text-delta', delta: 'Let me search...' },
-      {
-        type: 'tool-call',
-        toolCallId: 'call-123',
-        toolName: 'web_search',
-        input: { query: 'latest news' },
-      },
-      {
-        type: 'tool-call',
-        toolCallId: 'call-456',
-        toolName: 'calculator',
-        input: { expression: '2 + 2' },
-      },
-      {
-        type: 'finish',
-        finishReason: 'tool-calls',
-        usage: { inputTokens: 15, outputTokens: 10 },
-      },
-    ]
-
-    const stream = createMockStream(mockChunks)
-    const wrappedStream = stream.pipeThrough(createStreamConsumer(onConsumed))
-    await consumeStream(wrappedStream)
-
-    expect(onConsumed).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: 'Let me search...',
-        files: [],
-        toolCalls: [
-          {
-            type: 'tool-call',
-            toolCallId: 'call-123',
-            toolName: 'web_search',
-            args: { query: 'latest news' },
-          },
-          {
-            type: 'tool-call',
-            toolCallId: 'call-456',
-            toolName: 'calculator',
-            args: { expression: '2 + 2' },
-          },
-        ],
-        finishReason: 'tool-calls',
-      }),
-    )
-  })
-
-  it('captures cached and reasoning tokens', async () => {
-    const onConsumed = vi.fn()
-    const mockChunks = [
-      { type: 'text-delta', delta: 'Hello' },
-      {
-        type: 'finish',
-        finishReason: 'stop',
-        usage: {
-          inputTokens: 10,
-          outputTokens: 5,
-          cachedInputTokens: 8,
-          reasoningTokens: 3,
-        },
-      },
-    ]
-
-    const stream = createMockStream(mockChunks)
-    const wrappedStream = stream.pipeThrough(createStreamConsumer(onConsumed))
-    await consumeStream(wrappedStream)
-
-    expect(onConsumed).toHaveBeenCalledWith(
-      expect.objectContaining({
-        files: [],
-        tokens: {
-          prompt: 10,
-          completion: 5,
-          cached: 8,
-          reasoning: 3,
-        },
-      }),
-    )
-  })
-
-  it('defaults finishReason to unknown when no finish chunk', async () => {
-    const onConsumed = vi.fn()
-    const mockChunks = [{ type: 'text-delta', delta: 'Hello' }]
-
-    const stream = createMockStream(mockChunks)
-    const wrappedStream = stream.pipeThrough(createStreamConsumer(onConsumed))
-    await consumeStream(wrappedStream)
-
-    expect(onConsumed).toHaveBeenCalledWith(
-      expect.objectContaining({
-        files: [],
-        finishReason: 'unknown',
-      }),
-    )
-  })
-
-  it('ignores unknown chunk types', async () => {
-    const onConsumed = vi.fn()
-    const mockChunks = [
-      { type: 'unknown-type', data: 'whatever' },
-      { type: 'text-delta', delta: 'Hello' },
-      { type: 'another-unknown', foo: 'bar' },
-      { type: 'finish', finishReason: 'stop', usage: {} },
-    ]
-
-    const stream = createMockStream(mockChunks)
-    const wrappedStream = stream.pipeThrough(createStreamConsumer(onConsumed))
-    const consumedChunks = await consumeStream(wrappedStream)
-
-    expect(consumedChunks).toEqual(mockChunks)
-    expect(onConsumed).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: 'Hello',
-        files: [],
-      }),
-    )
-  })
-
-  it('captures file chunks', async () => {
-    const onConsumed = vi.fn()
-    const imageData = new Uint8Array([1, 2, 3, 4])
-    const pdfData = new ArrayBuffer(8)
-    const mockChunks = [
-      { type: 'text-delta', delta: 'Here is an image: ' },
-      {
-        type: 'file',
-        mediaType: 'image/png',
-        data: imageData,
-      },
-      { type: 'text-delta', delta: ' and a PDF: ' },
-      {
-        type: 'file',
-        mediaType: 'application/pdf',
-        data: pdfData,
-      },
-      {
-        type: 'finish',
-        finishReason: 'stop',
-        usage: { inputTokens: 10, outputTokens: 5 },
-      },
-    ]
-
-    const stream = createMockStream(mockChunks)
-    const wrappedStream = stream.pipeThrough(createStreamConsumer(onConsumed))
-    await consumeStream(wrappedStream)
-
-    expect(onConsumed).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: 'Here is an image:  and a PDF: ',
-        files: [
-          {
-            type: 'file',
-            mediaType: 'image/png',
-            data: imageData,
-          },
-          {
-            type: 'file',
-            mediaType: 'application/pdf',
-            data: pdfData,
-          },
-        ],
-      }),
-    )
-  })
-})
-
-describe('buildOutputMessages', () => {
-  it('builds message with text content', () => {
-    const result: CapturedStreamResult = {
-      text: 'Hello, world!',
-      reasoning: '',
-      files: [],
-      toolCalls: [],
-      finishReason: 'stop',
-      tokens: { prompt: 10, completion: 5 },
-    }
-
-    const messages = buildOutputMessages(result)
-
-    expect(messages).toEqual([
-      {
-        role: 'assistant',
-        content: [{ type: 'text', text: 'Hello, world!' }],
-        toolCalls: [],
-      },
-    ])
-  })
-
-  it('builds message with text and reasoning', () => {
-    const result: CapturedStreamResult = {
-      text: 'The answer is 42.',
-      reasoning: 'Let me calculate...',
-      files: [],
-      toolCalls: [],
-      finishReason: 'stop',
-      tokens: { prompt: 10, completion: 15 },
-    }
-
-    const messages = buildOutputMessages(result)
-
-    expect(messages).toEqual([
-      {
-        role: 'assistant',
-        content: [
-          { type: 'reasoning', text: 'Let me calculate...' },
-          { type: 'text', text: 'The answer is 42.' },
-        ],
-        toolCalls: [],
-      },
-    ])
-  })
-
-  it('builds message with tool calls', () => {
-    const result: CapturedStreamResult = {
-      text: 'I will search for that.',
-      reasoning: '',
-      files: [],
-      toolCalls: [
-        {
-          type: 'tool-call',
-          toolCallId: 'call-123',
-          toolName: 'web_search',
-          args: { query: 'news' },
-        },
-      ],
-      finishReason: 'tool-calls',
-      tokens: { prompt: 10, completion: 8 },
-    }
-
-    const messages = buildOutputMessages(result)
-
-    expect(messages).toEqual([
-      {
-        role: 'assistant',
-        content: [
-          { type: 'text', text: 'I will search for that.' },
-          {
-            type: 'tool-call',
-            toolCallId: 'call-123',
-            toolName: 'web_search',
-            args: { query: 'news' },
-          },
-        ],
-        toolCalls: [
-          {
-            id: 'call-123',
-            name: 'web_search',
-            arguments: { query: 'news' },
-          },
-        ],
-      },
-    ])
-  })
-
-  it('builds message with text, reasoning, and tool calls', () => {
-    const result: CapturedStreamResult = {
-      text: 'Searching now.',
-      reasoning: 'The user wants current news.',
-      files: [],
-      toolCalls: [
-        {
-          type: 'tool-call',
-          toolCallId: 'call-789',
-          toolName: 'web_search',
-          args: { query: 'latest news' },
-        },
-      ],
-      finishReason: 'tool-calls',
-      tokens: { prompt: 15, completion: 20 },
-    }
-
-    const messages = buildOutputMessages(result)
-
-    expect(messages).toEqual([
-      {
-        role: 'assistant',
-        content: [
-          { type: 'reasoning', text: 'The user wants current news.' },
-          { type: 'text', text: 'Searching now.' },
-          {
-            type: 'tool-call',
-            toolCallId: 'call-789',
-            toolName: 'web_search',
-            args: { query: 'latest news' },
-          },
-        ],
-        toolCalls: [
-          {
-            id: 'call-789',
-            name: 'web_search',
-            arguments: { query: 'latest news' },
-          },
-        ],
-      },
-    ])
-  })
-
-  it('returns empty array when no content', () => {
-    const result: CapturedStreamResult = {
-      text: '',
-      reasoning: '',
-      files: [],
-      toolCalls: [],
-      finishReason: 'stop',
-      tokens: { prompt: 5, completion: 0 },
-    }
-
-    const messages = buildOutputMessages(result)
-
-    expect(messages).toEqual([
-      {
-        role: 'assistant',
-        content: [],
-        toolCalls: [],
-      },
-    ])
-  })
-
-  it('builds message with image files', () => {
-    const imageData = new Uint8Array([1, 2, 3, 4])
-    const result: CapturedStreamResult = {
-      text: 'Here is an image.',
-      reasoning: '',
-      files: [
-        {
-          type: 'file',
-          mediaType: 'image/png',
-          data: imageData,
-        },
-        {
-          type: 'file',
-          mediaType: 'image/jpeg',
-          data: imageData,
-        },
-      ],
-      toolCalls: [],
-      finishReason: 'stop',
-      tokens: { prompt: 10, completion: 5 },
-    }
-
-    const messages = buildOutputMessages(result)
-
-    expect(messages).toEqual([
-      {
-        role: 'assistant',
-        content: [
-          { type: 'text', text: 'Here is an image.' },
-          { type: 'image', image: imageData },
-          { type: 'image', image: imageData },
-        ],
-        toolCalls: [],
-      },
-    ])
-  })
-
-  it('builds message with non-image files', () => {
-    const pdfData = new ArrayBuffer(8)
-    const result: CapturedStreamResult = {
-      text: 'Here is a PDF.',
-      reasoning: '',
-      files: [
-        {
-          type: 'file',
-          mediaType: 'application/pdf',
-          data: pdfData,
-        },
-        {
-          type: 'file',
-          mediaType: 'text/plain',
-          data: 'text content',
-        },
-      ],
-      toolCalls: [],
-      finishReason: 'stop',
-      tokens: { prompt: 10, completion: 5 },
-    }
-
-    const messages = buildOutputMessages(result)
-
-    expect(messages).toEqual([
-      {
-        role: 'assistant',
-        content: [
-          { type: 'text', text: 'Here is a PDF.' },
-          { type: 'file', file: pdfData, mimeType: 'application/pdf' },
-          { type: 'file', file: 'text content', mimeType: 'text/plain' },
-        ],
-        toolCalls: [],
-      },
-    ])
-  })
-
-  it('builds message with mixed content including files', () => {
-    const imageData = new Uint8Array([1, 2, 3])
-    const pdfData = new ArrayBuffer(4)
-    const result: CapturedStreamResult = {
-      text: 'Mixed content.',
-      reasoning: 'Some reasoning.',
-      files: [
-        {
-          type: 'file',
-          mediaType: 'image/png',
-          data: imageData,
-        },
-        {
-          type: 'file',
-          mediaType: 'application/pdf',
-          data: pdfData,
-        },
-      ],
-      toolCalls: [
+  describe('mixed content', () => {
+    it('handles stream with text, reasoning, and tool calls', async () => {
+      const testChunks = chunks(
+        { type: 'reasoning-start', id: '1' },
+        { type: 'reasoning-delta', id: '2', delta: 'I need to call a tool' },
+        { type: 'text-start', id: '3' },
+        { type: 'text-delta', id: '4', delta: 'Let me check' },
         {
           type: 'tool-call',
           toolCallId: 'call-1',
           toolName: 'search',
-          args: { query: 'test' },
+          input: '{"query": "test"}',
         },
-      ],
-      finishReason: 'tool-calls',
-      tokens: { prompt: 15, completion: 10 },
-    }
-
-    const messages = buildOutputMessages(result)
-
-    expect(messages).toEqual([
-      {
-        role: 'assistant',
-        content: [
-          { type: 'reasoning', text: 'Some reasoning.' },
-          { type: 'text', text: 'Mixed content.' },
-          { type: 'image', image: imageData },
-          { type: 'file', file: pdfData, mimeType: 'application/pdf' },
-          {
-            type: 'tool-call',
-            toolCallId: 'call-1',
-            toolName: 'search',
-            args: { query: 'test' },
+        {
+          type: 'finish',
+          finishReason: 'tool-calls',
+          usage: {
+            inputTokens: 50,
+            outputTokens: 30,
+            totalTokens: 80,
+            reasoningTokens: 10,
           },
-        ],
-        toolCalls: [
-          {
-            id: 'call-1',
-            name: 'search',
-            arguments: { query: 'test' },
-          },
-        ],
-      },
-    ])
+        },
+      )
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.output[0]!.content).toHaveLength(3)
+      expect(result.finishReason).toBe('tool-calls')
+      expect(result.tokens.reasoning).toBe(10)
+    })
+  })
+
+  describe('empty stream', () => {
+    it('handles stream with only finish chunk', async () => {
+      const testChunks = chunks({
+        type: 'finish',
+        finishReason: 'stop',
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      })
+
+      const onConsumed = vi.fn()
+      await consumeTransformStream(testChunks, onConsumed)
+
+      const result = onConsumed.mock.calls[0]![0] as CapturedStreamResult
+      expect(result.output).toHaveLength(0)
+      expect(result.finishReason).toBe('stop')
+    })
   })
 })
 
 describe('extractGenerateResultContent', () => {
-  it('extracts text from content array', () => {
-    const result = {
-      content: [
-        { type: 'text', text: 'Hello ' },
-        { type: 'text', text: 'world!' },
-      ],
-      finishReason: 'stop',
-      usage: { inputTokens: 10, outputTokens: 5 },
-    }
+  type GenerateResult = Parameters<typeof extractGenerateResultContent>[0]
 
-    const captured = extractGenerateResultContent(result)
-
-    expect(captured).toEqual({
-      text: 'Hello world!',
-      reasoning: '',
-      files: [],
-      toolCalls: [],
+  function generateResult(
+    partial: Partial<GenerateResult> & Pick<GenerateResult, 'content'>,
+  ): GenerateResult {
+    return {
       finishReason: 'stop',
-      tokens: {
-        prompt: 10,
-        completion: 5,
-        cached: undefined,
-        reasoning: undefined,
-      },
+      usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+      warnings: [],
+      ...partial,
+    } as GenerateResult
+  }
+
+  it('extracts text content from generate result', () => {
+    const result = generateResult({
+      content: [{ type: 'text', text: 'Hello world' }],
+      finishReason: 'stop',
+      usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
     })
-  })
 
-  it('extracts reasoning from content array', () => {
-    const result = {
-      content: [
-        { type: 'reasoning', text: 'Thinking...' },
-        { type: 'text', text: 'Answer.' },
-      ],
-      finishReason: 'stop',
-      usage: { inputTokens: 15, outputTokens: 10, reasoningTokens: 5 },
-    }
+    const extracted = extractGenerateResultContent(result)
 
-    const captured = extractGenerateResultContent(result)
-
-    expect(captured).toEqual(
-      expect.objectContaining({
-        text: 'Answer.',
-        reasoning: 'Thinking...',
-        files: [],
-        tokens: expect.objectContaining({
-          reasoning: 5,
-        }),
-      }),
-    )
-  })
-
-  it('extracts tool calls from content array', () => {
-    const result = {
-      content: [
-        { type: 'text', text: 'Calling tool.' },
-        {
-          type: 'tool-call',
-          toolCallId: 'call-abc',
-          toolName: 'calculator',
-          args: { expression: '1+1' },
-        },
-      ],
-      finishReason: 'tool-calls',
-      usage: { inputTokens: 12, outputTokens: 8 },
-    }
-
-    const captured = extractGenerateResultContent(result)
-
-    expect(captured).toEqual(
-      expect.objectContaining({
-        text: 'Calling tool.',
-        files: [],
-        toolCalls: [
-          {
-            type: 'tool-call',
-            toolCallId: 'call-abc',
-            toolName: 'calculator',
-            args: { expression: '1+1' },
-          },
-        ],
-        finishReason: 'tool-calls',
-      }),
-    )
-  })
-
-  it('handles non-array content', () => {
-    const result = {
-      content: 'just a string',
-      finishReason: 'stop',
-      usage: {},
-    }
-
-    const captured = extractGenerateResultContent(result)
-
-    expect(captured).toEqual({
-      text: '',
-      reasoning: '',
-      files: [],
-      toolCalls: [],
-      finishReason: 'stop',
-      tokens: {
-        prompt: undefined,
-        completion: undefined,
-        cached: undefined,
-        reasoning: undefined,
-      },
+    expect(extracted.output[0]).toEqual({
+      role: 'assistant',
+      content: [{ type: 'text', text: 'Hello world' }],
     })
-  })
-
-  it('handles cached input tokens', () => {
-    const result = {
-      content: [{ type: 'text', text: 'Cached response.' }],
-      finishReason: 'stop',
-      usage: {
-        inputTokens: 10,
-        outputTokens: 5,
-        cachedInputTokens: 8,
-      },
-    }
-
-    const captured = extractGenerateResultContent(result)
-
-    expect(captured.files).toEqual([])
-    expect(captured.tokens).toEqual({
+    expect(extracted.finishReason).toBe('stop')
+    expect(extracted.tokens).toEqual({
       prompt: 10,
       completion: 5,
-      cached: 8,
+      cached: undefined,
       reasoning: undefined,
     })
   })
 
-  it('extracts files from content array', () => {
-    const imageData = new Uint8Array([1, 2, 3])
-    const pdfData = new ArrayBuffer(4)
-    const result = {
+  it('extracts reasoning content from generate result', () => {
+    const result = generateResult({
       content: [
-        { type: 'text', text: 'With files.' },
-        {
-          type: 'file',
-          mediaType: 'image/png',
-          data: imageData,
-        },
-        {
-          type: 'file',
-          mediaType: 'application/pdf',
-          data: pdfData,
-        },
+        { type: 'reasoning', text: 'Let me think' },
+        { type: 'text', text: 'The answer' },
       ],
       finishReason: 'stop',
-      usage: { inputTokens: 20, outputTokens: 10 },
-    }
-
-    const captured = extractGenerateResultContent(result)
-
-    expect(captured.text).toBe('With files.')
-    expect(captured.files).toEqual([
-      {
-        type: 'file',
-        mediaType: 'image/png',
-        data: imageData,
+      usage: {
+        inputTokens: 20,
+        outputTokens: 10,
+        totalTokens: 30,
+        reasoningTokens: 5,
       },
-      {
-        type: 'file',
-        mediaType: 'application/pdf',
-        data: pdfData,
-      },
-    ])
-    expect(captured.toolCalls).toEqual([])
+    })
+
+    const extracted = extractGenerateResultContent(result)
+
+    expect(extracted.output[0]!.content).toContainEqual({
+      type: 'reasoning',
+      text: 'Let me think',
+    })
+    expect(extracted.tokens.reasoning).toBe(5)
   })
 
-  it('ignores unknown content types', () => {
-    const result = {
-      content: [
-        { type: 'image', image: 'base64...' },
-        { type: 'text', text: 'With text.' },
-        { type: 'unknown', data: 'whatever' },
-      ],
-      finishReason: 'stop',
-      usage: { inputTokens: 20, outputTokens: 10 },
-    }
-
-    const captured = extractGenerateResultContent(result)
-
-    expect(captured.text).toBe('With text.')
-    expect(captured.files).toEqual([])
-    expect(captured.toolCalls).toEqual([])
-  })
-
-  it('handles tool-call missing args', () => {
-    const result = {
+  it('extracts tool calls from generate result', () => {
+    const result = generateResult({
       content: [
         {
           type: 'tool-call',
-          toolCallId: 'call-xyz',
-          toolName: 'no_args_tool',
+          toolCallId: 'call-123',
+          toolName: 'get_weather',
+          input: '{"location":"London"}',
         },
       ],
       finishReason: 'tool-calls',
-      usage: {},
-    }
+      usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+    })
 
-    const captured = extractGenerateResultContent(result)
+    const extracted = extractGenerateResultContent(result)
 
-    expect(captured.files).toEqual([])
-    expect(captured.toolCalls).toEqual([
-      {
-        type: 'tool-call',
-        toolCallId: 'call-xyz',
-        toolName: 'no_args_tool',
-        args: undefined,
+    expect(extracted.output[0]!.content).toContainEqual({
+      type: 'tool-call',
+      toolCallId: 'call-123',
+      toolName: 'get_weather',
+      toolArguments: { location: 'London' },
+      args: { location: 'London' },
+    })
+    expect(extracted.finishReason).toBe('tool-calls')
+  })
+
+  it('handles cached tokens in usage', () => {
+    const result = generateResult({
+      content: [{ type: 'text', text: 'test' }],
+      finishReason: 'stop',
+      usage: {
+        inputTokens: 100,
+        outputTokens: 50,
+        totalTokens: 150,
+        cachedInputTokens: 25,
+        reasoningTokens: 10,
       },
-    ])
+    })
+
+    const extracted = extractGenerateResultContent(result)
+
+    expect(extracted.tokens).toEqual({
+      prompt: 100,
+      completion: 50,
+      cached: 25,
+      reasoning: 10,
+    })
+  })
+
+  it('defaults to unknown finish reason when not provided', () => {
+    const result = generateResult({
+      content: [{ type: 'text', text: 'test' }],
+      finishReason: undefined as unknown as LanguageModelV2FinishReason,
+      usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+    })
+
+    const extracted = extractGenerateResultContent(result)
+
+    expect(extracted.finishReason).toBe('unknown')
   })
 })

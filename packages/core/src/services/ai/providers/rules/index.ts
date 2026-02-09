@@ -3,6 +3,7 @@ import type { Message } from '@latitude-data/constants/messages'
 import { JSONValue, ModelMessage } from 'ai'
 import { Provider, Translator } from 'rosetta-ai'
 import { toCamelCaseDeep } from '../../../../lib/camelCaseRecursive'
+import { wrapProviderMetadata } from '../../metadata'
 import { applyAnthropicRules } from './anthropic'
 import { applyCustomRules } from './custom'
 import { applyGoogleRules } from './google'
@@ -61,7 +62,7 @@ export type VercelConfigWithProviderRules = VercelConfig & {
 
 const translator = new Translator({
   filterEmptyMessages: true,
-  providerMetadata: 'passthrough',
+  providerMetadata: 'preserve',
 })
 
 function convertLatitudeMessagesToVercelFormat({
@@ -71,17 +72,19 @@ function convertLatitudeMessagesToVercelFormat({
   messages: Message[]
   provider: Providers
 }): ModelMessage[] {
-  const messagesWithMetadata = messages.map((message) =>
+  const metadated = messages.map((message) =>
     extractMessageMetadata({ message, provider }),
   )
 
-  const translated = translator.translate(messagesWithMetadata, {
+  const translated = translator.translate(metadated, {
     from: Provider.Promptl,
     to: Provider.VercelAI,
     direction: 'input',
-  })
+  }).messages as ModelMessage[]
 
-  return translated.messages as ModelMessage[]
+  const wrapped = wrapProviderMetadata(translated)
+
+  return wrapped
 }
 
 export function applyAllRules({ providerType, messages, config }: Props) {

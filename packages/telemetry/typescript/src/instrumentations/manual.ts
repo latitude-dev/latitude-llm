@@ -1,4 +1,5 @@
 import { BaseInstrumentation } from '$telemetry/instrumentations/base'
+import { toKebabCase, toSnakeCase } from '$telemetry/utils'
 import {
   ATTRIBUTES,
   HEAD_COMMIT,
@@ -10,6 +11,12 @@ import {
 } from '@latitude-data/constants'
 import * as otel from '@opentelemetry/api'
 import { propagation, trace } from '@opentelemetry/api'
+import { Provider, Translator } from 'rosetta-ai'
+
+const translator = new Translator({
+  filterEmptyMessages: true,
+  providerMetadata: 'preserve',
+})
 
 export type StartSpanOptions = {
   name?: string
@@ -43,14 +50,14 @@ export type StartCompletionSpanOptions = StartSpanOptions & {
   provider: string
   model: string
   configuration?: Record<string, unknown>
-  input?: Record<string, unknown>[]
+  input?: string | Record<string, unknown>[]
   versionUuid?: string
   promptUuid?: string
   experimentUuid?: string
 }
 
 export type EndCompletionSpanOptions = EndSpanOptions & {
-  output?: Record<string, unknown>[]
+  output?: string | Record<string, unknown>[]
   tokens?: {
     prompt?: number
     cached?: number
@@ -113,19 +120,19 @@ export type CaptureOptions = StartSpanOptions & {
   conversationUuid?: string // Optional, if provided, will be used as the documentLogUuid
 }
 
-type OtelGenAiField =
-  | typeof ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.prompt
-  | typeof ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.completion
-
-type OtelGenAiMessageField = ReturnType<OtelGenAiField['index']>
+export type ManualInstrumentationOptions = {
+  provider?: Provider
+}
 
 export class ManualInstrumentation implements BaseInstrumentation {
   private enabled: boolean
   private readonly tracer: otel.Tracer
+  private readonly options: ManualInstrumentationOptions
 
-  constructor(tracer: otel.Tracer) {
+  constructor(tracer: otel.Tracer, options?: ManualInstrumentationOptions) {
     this.enabled = false
     this.tracer = tracer
+    this.options = options ?? {}
   }
 
   isEnabled() {
@@ -173,39 +180,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
 
     return context
-  }
-
-  private capitalize(str: string) {
-    if (str.length === 0) return str
-    return str.charAt(0).toUpperCase() + str.toLowerCase().slice(1)
-  }
-
-  private toCamelCase(str: string) {
-    return str
-      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-      .replace(/[^A-Za-z0-9]+/g, ' ')
-      .trim()
-      .split(' ')
-      .map((w, i) => (i ? this.capitalize(w) : w.toLowerCase()))
-      .join('')
-  }
-
-  private toSnakeCase(str: string) {
-    return str
-      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-      .replace(/[^A-Za-z0-9]+/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .toLowerCase()
-  }
-
-  private toKebabCase(input: string) {
-    return input
-      .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-      .replace(/[^A-Za-z0-9]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .toLowerCase()
   }
 
   private error(span: otel.Span, error: Error, options?: ErrorOptions) {
@@ -273,6 +247,15 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
   }
 
+  unknown(ctx: otel.Context, options?: StartSpanOptions) {
+    return this.span(
+      ctx,
+      options?.name || SPAN_SPECIFICATIONS[SpanType.Unknown].name,
+      SpanType.Unknown,
+      options,
+    )
+  }
+
   tool(ctx: otel.Context, options: StartToolSpanOptions) {
     const start = options
 
@@ -295,7 +278,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     })
 
     return {
-      context: span.context,
+      ...span,
       end: (options: EndToolSpanOptions) => {
         const end = options
 
@@ -320,182 +303,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
           },
         })
       },
-      fail: span.fail,
     }
-  }
-
-  private attribifyMessageToolCalls(
-    otelMessageField: OtelGenAiMessageField,
-    toolCalls: Record<string, unknown>[],
-  ) {
-    const attributes: otel.Attributes = {}
-
-    for (let i = 0; i < toolCalls.length; i++) {
-      for (const key in toolCalls[i]!) {
-        const field = this.toCamelCase(key)
-        const value = toolCalls[i]![key]
-        if (value === null || value === undefined) continue
-
-        switch (field) {
-          case 'id':
-          case 'toolCallId':
-          case 'toolUseId': {
-            if (typeof value !== 'string') continue
-            attributes[otelMessageField.toolCalls(i).id] = value
-            break
-          }
-
-          case 'name':
-          case 'toolName': {
-            if (typeof value !== 'string') continue
-            attributes[otelMessageField.toolCalls(i).name] = value
-            break
-          }
-
-          case 'arguments':
-          case 'toolArguments':
-          case 'input': {
-            if (typeof value === 'string') {
-              attributes[otelMessageField.toolCalls(i).arguments] = value
-            } else {
-              try {
-                attributes[otelMessageField.toolCalls(i).arguments] =
-                  JSON.stringify(value)
-              } catch (_error) {
-                attributes[otelMessageField.toolCalls(i).arguments] = '{}'
-              }
-            }
-            break
-          }
-
-          /* OpenAI function calls */
-          case 'function': {
-            if (typeof value !== 'object') continue
-            if (!('name' in value)) continue
-            if (typeof value.name !== 'string') continue
-            if (!('arguments' in value)) continue
-            if (typeof value.arguments !== 'string') continue
-            attributes[otelMessageField.toolCalls(i).name] = value.name
-            attributes[otelMessageField.toolCalls(i).arguments] =
-              value.arguments
-            break
-          }
-        }
-      }
-    }
-
-    return attributes
-  }
-
-  private attribifyMessageContent(
-    otelMessageField: OtelGenAiMessageField,
-    content: unknown,
-  ) {
-    let attributes: otel.Attributes = {}
-
-    if (typeof content === 'string') {
-      return attributes
-    }
-
-    try {
-      attributes[otelMessageField.content] = JSON.stringify(content)
-    } catch (_error) {
-      attributes[otelMessageField.content] = '[]'
-    }
-
-    if (!Array.isArray(content)) return attributes
-
-    /* Tool calls for Anthropic and PromptL are in the content */
-    const toolCalls = []
-    for (const item of content) {
-      for (const key in item) {
-        if (this.toCamelCase(key) !== 'type') continue
-        if (typeof item[key] !== 'string') continue
-        if (item[key] !== 'tool-call' && item[key] !== 'tool_use') continue
-        toolCalls.push(item)
-      }
-    }
-
-    if (toolCalls.length > 0) {
-      attributes = {
-        ...attributes,
-        ...this.attribifyMessageToolCalls(otelMessageField, toolCalls),
-      }
-    }
-
-    return attributes
-  }
-
-  private attribifyMessages(
-    direction: 'input' | 'output',
-    messages: Record<string, unknown>[],
-  ) {
-    const otelField =
-      direction === 'input'
-        ? ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.prompt
-        : ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.completion
-
-    let attributes: otel.Attributes = {}
-    for (let i = 0; i < messages.length; i++) {
-      for (const key in messages[i]!) {
-        const field = this.toCamelCase(key)
-        const value = messages[i]![key]
-        if (value === null || value === undefined) continue
-
-        switch (field) {
-          case 'role': {
-            if (typeof value !== 'string') continue
-            attributes[otelField.index(i).role] = value
-            break
-          }
-
-          /* Tool calls for Anthropic and PromptL are in the content */
-          case 'content': {
-            attributes = {
-              ...attributes,
-              ...this.attribifyMessageContent(otelField.index(i), value),
-            }
-            break
-          }
-
-          /* Tool calls for OpenAI */
-          case 'toolCalls': {
-            if (!Array.isArray(value)) continue
-            attributes = {
-              ...attributes,
-              ...this.attribifyMessageToolCalls(otelField.index(i), value),
-            }
-            break
-          }
-
-          /* Tool result for OpenAI / Anthropic / PromptL */
-
-          case 'toolCallId':
-          case 'toolId':
-          case 'toolUseId': {
-            if (typeof value !== 'string') continue
-            attributes[otelField.index(i).tool.callId] = value
-            break
-          }
-
-          case 'toolName': {
-            if (typeof value !== 'string') continue
-            attributes[otelField.index(i).tool.toolName] = value
-            break
-          }
-
-          // Note: 'toolResult' is 'content' itself
-
-          case 'isError': {
-            if (typeof value !== 'boolean') continue
-            attributes[otelField.index(i).tool.isError] = value
-            break
-          }
-        }
-      }
-    }
-
-    return attributes
   }
 
   private attribifyConfiguration(
@@ -509,7 +317,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     const attributes: otel.Attributes = {}
     for (const key in configuration) {
-      const field = this.toSnakeCase(key)
+      const field = toSnakeCase(key)
       let value = configuration[key]
       if (value === null || value === undefined) continue
       if (typeof value === 'object' && !Array.isArray(value)) {
@@ -545,13 +353,21 @@ export class ManualInstrumentation implements BaseInstrumentation {
     )
 
     const input = start.input ?? []
+    let jsonSystem = ''
     let jsonInput = ''
     try {
-      jsonInput = JSON.stringify(input)
+      const translated = translator.translate(input, {
+        from: this.options.provider,
+        to: Provider.GenAI,
+        direction: 'input',
+      })
+      jsonSystem = JSON.stringify(translated.system ?? [])
+      jsonInput = JSON.stringify(translated.messages ?? [])
     } catch (_error) {
+      jsonSystem = '[]'
       jsonInput = '[]'
     }
-    const attrInput = this.attribifyMessages('input', input)
+
     const span = this.span(
       ctx,
       start.name || `${start.provider} / ${start.model}`,
@@ -561,8 +377,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
           [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system]: start.provider,
           [ATTRIBUTES.LATITUDE.request.configuration]: jsonConfiguration,
           ...attrConfiguration,
-          [ATTRIBUTES.LATITUDE.request.messages]: jsonInput,
-          ...attrInput,
+          [ATTRIBUTES.OPENTELEMETRY.GEN_AI.systemInstructions]: jsonSystem,
+          [ATTRIBUTES.OPENTELEMETRY.GEN_AI.input.messages]: jsonInput,
           ...(start.attributes || {}),
           [ATTRIBUTES.LATITUDE.commitUuid]: start.versionUuid,
           [ATTRIBUTES.LATITUDE.documentUuid]: start.promptUuid,
@@ -572,18 +388,22 @@ export class ManualInstrumentation implements BaseInstrumentation {
     )
 
     return {
-      context: span.context,
+      ...span,
       end: (options?: EndCompletionSpanOptions) => {
         const end = options ?? {}
 
         const output = end.output ?? []
         let jsonOutput = ''
         try {
-          jsonOutput = JSON.stringify(output)
+          const translated = translator.translate(output, {
+            from: this.options.provider,
+            to: Provider.GenAI,
+            direction: 'output',
+          })
+          jsonOutput = JSON.stringify(translated.messages ?? [])
         } catch (_error) {
           jsonOutput = '[]'
         }
-        const attrOutput = this.attribifyMessages('output', output)
 
         const tokens = {
           prompt: end.tokens?.prompt ?? 0,
@@ -597,8 +417,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
         span.end({
           attributes: {
-            [ATTRIBUTES.LATITUDE.response.messages]: jsonOutput,
-            ...attrOutput,
+            [ATTRIBUTES.OPENTELEMETRY.GEN_AI.output.messages]: jsonOutput,
             [ATTRIBUTES.OPENTELEMETRY.GEN_AI.usage.inputTokens]: inputTokens,
             [ATTRIBUTES.OPENTELEMETRY.GEN_AI.usage.outputTokens]: outputTokens,
             [ATTRIBUTES.LATITUDE.usage.promptTokens]: tokens.prompt,
@@ -613,7 +432,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
           },
         })
       },
-      fail: span.fail,
     }
   }
 
@@ -637,7 +455,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     const attributes: otel.Attributes = {}
     for (const key in headers) {
-      const field = this.toKebabCase(key)
+      const field = toKebabCase(key)
       const value = headers[key]
       if (value === null || value === undefined) continue
 
@@ -682,7 +500,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     )
 
     return {
-      context: span.context,
+      ...span,
       end: (options: EndHttpSpanOptions) => {
         const end = options
 
@@ -713,7 +531,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
           },
         })
       },
-      fail: span.fail,
     }
   }
 
@@ -744,7 +561,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const attributes = {
       [ATTRIBUTES.LATITUDE.request.template]: template,
       [ATTRIBUTES.LATITUDE.request.parameters]: jsonParameters,
-
       [ATTRIBUTES.LATITUDE.commitUuid]: versionUuid || HEAD_COMMIT,
       [ATTRIBUTES.LATITUDE.documentUuid]: promptUuid,
       [ATTRIBUTES.LATITUDE.projectId]: projectId,
@@ -786,7 +602,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
       ...(rest.attributes || {}),
     }
 
-    return this.span(ctx, name || 'chat', SpanType.Chat, { attributes })
+    return this.span(ctx, name || `chat-${documentLogUuid}`, SpanType.Chat, {
+      attributes,
+    })
   }
 
   external(

@@ -2,8 +2,8 @@ import { type Message } from '@latitude-data/constants/messages'
 import { describe, expect, it } from 'vitest'
 
 import { Providers } from '@latitude-data/constants'
-import { AppliedRules, ProviderRules } from './types'
 import { applyProviderRules } from '.'
+import { AppliedRules, ProviderRules } from './types'
 
 let model = 'o1-mini'
 let config = { model } as AppliedRules['config']

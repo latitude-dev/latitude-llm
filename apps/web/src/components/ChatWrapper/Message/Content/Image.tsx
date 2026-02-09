@@ -14,10 +14,10 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Image } from '@latitude-data/web-ui/atoms/Image'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextColor } from '@latitude-data/web-ui/tokens'
-import { computeSegments } from './helpers'
-import { ReferenceComponent } from './_components/Reference'
 import { AnnotationSection } from './_components/AnnotationSection'
+import { ReferenceComponent } from './_components/Reference'
 import { useBlockAnnotations } from './_hooks/useBlockAnnotations'
+import { computeSegments } from './helpers'
 
 export const ImageMessageContent = memo(
   ({
@@ -25,7 +25,6 @@ export const ImageMessageContent = memo(
     color,
     size,
     image,
-    parameters = [],
     sourceMap = [],
     messageIndex,
     contentBlockIndex,
@@ -34,7 +33,6 @@ export const ImageMessageContent = memo(
     color: TextColor
     size?: 'default' | 'small'
     image: ImageContent['image']
-    parameters?: string[]
     sourceMap?: PromptlSourceRef[]
     messageIndex?: number
     contentBlockIndex?: number
@@ -47,8 +45,8 @@ export const ImageMessageContent = memo(
       requireMainSpan: true,
     })
     const segment = useMemo(
-      () => computeSegments('image', image.toString(), sourceMap, parameters),
-      [image, sourceMap, parameters],
+      () => computeSegments('image', image.toString(), sourceMap),
+      [image, sourceMap],
     )[0]
 
     const imageContent = (() => {

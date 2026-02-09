@@ -1,15 +1,28 @@
-import { LatitudeTool } from '@latitude-data/constants'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { ToolManifestDict } from '@latitude-data/constants/tools'
-import { ToolSource } from '@latitude-data/constants/toolSources'
-import { LATITUDE_TOOLS } from '../../../latitudeTools/tools'
-import { getLatitudeToolInternalName } from '../../../latitudeTools/helpers'
-import { Result, TypedResult } from '../../../../lib/Result'
+import {
+  LatitudeTool,
+  LatitudeToolInternalName,
+} from '@latitude-data/constants'
 import {
   BadRequestError,
   LatitudeError,
   NotFoundError,
 } from '@latitude-data/constants/errors'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { ToolManifestDict } from '@latitude-data/constants/tools'
+import { ToolSource } from '@latitude-data/constants/toolSources'
+import { Result, TypedResult } from '../../../../lib/Result'
+import { LATITUDE_TOOLS } from '../../../latitudeTools/tools'
+
+const getLatitudeToolInternalName = (
+  tool: LatitudeTool,
+): LatitudeToolInternalName => {
+  const toolKey = Object.entries(LatitudeTool).find(
+    ([_, val]) => val === tool,
+  )![0]!
+  return LatitudeToolInternalName[
+    toolKey as keyof typeof LatitudeToolInternalName
+  ]
+}
 
 const lookupAllLatitudeTools = () =>
   Object.fromEntries(

@@ -1,8 +1,8 @@
 import { type Message } from '@latitude-data/constants/messages'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { applyProviderRules } from '.'
 import { Providers } from '@latitude-data/constants'
+import { applyProviderRules } from '.'
 import { AppliedRules, ProviderRules } from './types'
 
 const providerType = Providers.Anthropic
