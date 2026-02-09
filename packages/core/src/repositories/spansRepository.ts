@@ -297,6 +297,37 @@ export class SpansRepository extends Repository<Span> {
     return result as Span | undefined
   }
 
+  async findFirstMainSpanByDocumentLogUuid(documentLogUuid: string) {
+    const result = await this.db
+      .select()
+      .from(spans)
+      .where(
+        and(
+          this.scopeFilter,
+          eq(spans.documentLogUuid, documentLogUuid),
+          or(
+            eq(spans.type, SpanType.Prompt),
+            eq(spans.type, SpanType.Chat),
+            eq(spans.type, SpanType.External),
+          ),
+        ),
+      )
+      .orderBy(asc(spans.startedAt))
+      .limit(1)
+      .then((r) => r[0])
+
+    return result as Span | undefined
+  }
+
+  async isFirstMainSpanInConversation(
+    documentLogUuid: string,
+    spanId: string,
+    traceId: string,
+  ): Promise<boolean> {
+    const firstSpan = await this.findFirstMainSpanByDocumentLogUuid(documentLogUuid)
+    return firstSpan?.id === spanId && firstSpan?.traceId === traceId
+  }
+
   async findByDocumentAndCommitLimited({
     documentUuid,
     types,

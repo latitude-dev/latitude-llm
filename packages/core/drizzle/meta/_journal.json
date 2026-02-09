@@ -1863,6 +1863,13 @@
       "when": 1770308262917,
       "tag": "0266_lovely_talon",
       "breakpoints": true
+    },
+    {
+      "idx": 267,
+      "version": "7",
+      "when": 1770377812992,
+      "tag": "0267_evaluation_trigger_options",
+      "breakpoints": true
     }
   ]
 }

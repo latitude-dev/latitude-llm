@@ -1,12 +1,18 @@
 import {
   ChatSpanMetadata,
+  DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+  EvaluationV2,
   ExternalSpanMetadata,
   LIVE_EVALUABLE_SPAN_TYPES,
   LogSources,
   PromptSpanMetadata,
+  TriggerConfiguration,
 } from '../../constants'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
-import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
+import {
+  runEvaluationV2JobKey,
+  RunEvaluationV2JobData,
+} from '../../jobs/job-definitions'
 import { queues } from '../../jobs/queues'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -27,6 +33,22 @@ const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
     source !== LogSources.Experiment &&
     source !== LogSources.Optimization,
 ) as LogSources[]
+
+function getTriggerConfig(evaluation: EvaluationV2): TriggerConfiguration {
+  return (
+    evaluation.configuration.trigger ?? {
+      target: 'last',
+      lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+    }
+  )
+}
+
+function debouncedEvaluationJobKey(
+  documentLogUuid: string,
+  evaluationUuid: string,
+): string {
+  return `debouncedEvaluation-${documentLogUuid}-${evaluationUuid}`
+}
 
 export const evaluateLiveLogJob = async ({
   data: event,
@@ -69,7 +91,7 @@ export const evaluateLiveLogJob = async ({
     return
   }
 
-  if (!span.commitUuid || !span.documentUuid) {
+  if (!span.commitUuid || !span.documentUuid || !span.documentLogUuid) {
     return
   }
 
@@ -92,7 +114,6 @@ export const evaluateLiveLogJob = async ({
       getEvaluationMetricSpecification(evaluation).supportsLiveEvaluation,
   )
 
-  // TODO(): This is temporary while we think of a more long lasting solution to ban/rate limit users
   const evaluationsDisabledResult = await isFeatureEnabledByName(
     workspace.id,
     'evaluationsDisabled',
@@ -101,12 +122,24 @@ export const evaluateLiveLogJob = async ({
 
   const evaluationsDisabled = evaluationsDisabledResult.unwrap()
   if (evaluationsDisabled) {
-    // Evaluations are disabled for this workspace, skip enqueueing
     return
   }
 
+  const { evaluationsQueue } = await queues()
+
   for (const evaluation of evaluations) {
-    const payload = {
+    const triggerConfig = getTriggerConfig(evaluation)
+
+    if (triggerConfig.target === 'first') {
+      const isFirst = await repo.isFirstMainSpanInConversation(
+        span.documentLogUuid,
+        span.id,
+        span.traceId,
+      )
+      if (!isFirst) continue
+    }
+
+    const payload: RunEvaluationV2JobData = {
       workspaceId: workspace.id,
       commitId: commit.id,
       evaluationUuid: evaluation.uuid,
@@ -114,9 +147,29 @@ export const evaluateLiveLogJob = async ({
       spanId: span.id,
     }
 
-    const { evaluationsQueue } = await queues()
-    evaluationsQueue.add('runEvaluationV2Job', payload, {
-      deduplication: { id: runEvaluationV2JobKey(payload) },
-    })
+    if (triggerConfig.target === 'last') {
+      const debounceJobId = debouncedEvaluationJobKey(
+        span.documentLogUuid,
+        evaluation.uuid,
+      )
+      const debounceMs =
+        (triggerConfig.lastInteractionDebounce ??
+          DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS) * 1000
+
+      const existingJob = await evaluationsQueue.getJob(debounceJobId)
+      if (existingJob) {
+        await existingJob.remove()
+      }
+
+      await evaluationsQueue.add('runEvaluationV2Job', payload, {
+        jobId: debounceJobId,
+        delay: debounceMs,
+        deduplication: { id: runEvaluationV2JobKey(payload) },
+      })
+    } else {
+      await evaluationsQueue.add('runEvaluationV2Job', payload, {
+        deduplication: { id: runEvaluationV2JobKey(payload) },
+      })
+    }
   }
 }
