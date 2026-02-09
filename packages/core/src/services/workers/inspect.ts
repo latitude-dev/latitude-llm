@@ -204,7 +204,10 @@ export async function getWorkspaceQueueUsage({
 function extractWorkspaceId(job: Job, queueName: string): number | null {
   const data = job.data as Record<string, unknown>
 
-  if (queueName === Queues.eventHandlersQueue || queueName === Queues.eventsQueue) {
+  if (
+    queueName === Queues.eventHandlersQueue ||
+    queueName === Queues.eventsQueue
+  ) {
     const eventData = data.data as Record<string, unknown> | undefined
     if (eventData && typeof eventData.workspaceId === 'number') {
       return eventData.workspaceId
@@ -218,11 +221,11 @@ function extractWorkspaceId(job: Job, queueName: string): number | null {
   return null
 }
 
-function buildJobBreakdown(
-  jobs: Job[],
-  queueName: string,
-): QueueJobSummary[] {
-  const map = new Map<string, { count: number; workspaces: Record<number, number> }>()
+function buildJobBreakdown(jobs: Job[], queueName: string): QueueJobSummary[] {
+  const map = new Map<
+    string,
+    { count: number; workspaces: Record<number, number> }
+  >()
 
   for (const job of jobs) {
     const entry = map.get(job.name) ?? { count: 0, workspaces: {} }

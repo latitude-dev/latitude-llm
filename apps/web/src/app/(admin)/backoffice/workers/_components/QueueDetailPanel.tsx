@@ -268,7 +268,9 @@ function MiniStat({
   variant: 'accent' | 'default' | 'warningMuted'
 }) {
   return (
-    <div className={`flex flex-col gap-1 p-3 bg-muted/30 rounded-lg ${MINI_STAT_STYLES[variant]}`}>
+    <div
+      className={`flex flex-col gap-1 p-3 bg-muted/30 rounded-lg ${MINI_STAT_STYLES[variant]}`}
+    >
       <Text.H6 color='foregroundMuted'>{label}</Text.H6>
       <Text.H4>{value.toLocaleString()}</Text.H4>
     </div>
