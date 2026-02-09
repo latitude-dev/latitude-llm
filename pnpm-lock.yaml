@@ -203,6 +203,9 @@ importers:
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
+      uuid:
+        specifier: 11.1.0
+        version: 11.1.0
       zod:
         specifier: 'catalog:'
         version: 4.1.8
