@@ -11,6 +11,12 @@ import { getDocumentMetadata } from '@latitude-data/core/services/documents/scan
 import { documentPresenterWithProviderAndMetadata } from '$/presenters/documentPresenter'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value,
+  )
+}
+
 async function getProjectByVersionData({
   workspace,
   projectId,
@@ -31,6 +37,12 @@ async function getProjectByVersionData({
   const projectResult = await projectsScope.getProjectById(pid)
   if (projectResult.error) return projectResult
   const project = projectResult.value
+
+  // 'live' is accepted in some routes as a special identifier.
+  // Anything else must be a UUID to avoid Drizzle/pg throwing on malformed values.
+  if (commitUuid !== 'live' && !isUuid(commitUuid)) {
+    return Result.error(new BadRequestError(`Invalid version uuid ${commitUuid}`))
+  }
 
   const commitResult = await commitsScope.getCommitByUuid({
     projectId: project.id,
