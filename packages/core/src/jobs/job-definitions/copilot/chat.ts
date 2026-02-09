@@ -4,8 +4,8 @@ import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { clearCancelJobFlag, isJobCancelled } from '../../../lib/cancelJobs'
 import { LatitudeError } from '../../../lib/errors'
 import {
-  DocumentLogsRepository,
   ProjectsRepository,
+  SpansRepository,
   UsersRepository,
 } from '../../../repositories'
 import {
@@ -101,10 +101,9 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
       document: copilotDocument,
     } = copilotResult.unwrap()
 
-    const documentLogsScope = new DocumentLogsRepository(copilotWorkspace.id)
-    const documentLogResult = await documentLogsScope.findByUuid(threadUuid)
-    if (!documentLogResult.ok) {
-      // Chat still does not exist, we create a new one
+    const spansRepo = new SpansRepository(copilotWorkspace.id)
+    const existingSpan = await spansRepo.findByDocumentLogUuid(threadUuid)
+    if (!existingSpan) {
       const runResult = await runNewLatte({
         copilotWorkspace,
         copilotCommit,

@@ -11,7 +11,7 @@ import {
 } from 'react'
 import { LatteChat } from '$/components/LatteSidebar/LatteChat'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
-import type { ProviderLogDto } from '@latitude-data/core/schema/types'
+import type { Message } from '@latitude-data/constants/messages'
 import { cn } from '@latitude-data/web-ui/utils'
 import { zIndex } from '@latitude-data/web-ui/tokens'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -31,11 +31,11 @@ const MIN_WIDTH = 400
 
 function LatteLayoutContent({
   initialThreadUuid,
-  initialProviderLog,
+  initialMessages,
   containerRef,
 }: {
   initialThreadUuid?: string
-  initialProviderLog?: ProviderLogDto
+  initialMessages?: Message[]
   containerRef?: RefObject<HTMLDivElement | null>
 }) {
   const {
@@ -141,7 +141,7 @@ function LatteLayoutContent({
           <ClientOnly>
             <LatteChat
               initialThreadUuid={initialThreadUuid}
-              initialProviderLog={initialProviderLog}
+              initialMessages={initialMessages}
               inputRef={inputRef as RefObject<HTMLTextAreaElement>}
             />
           </ClientOnly>
@@ -205,11 +205,11 @@ function LatteLayoutContent({
 export function LatteLayout({
   children,
   initialThreadUuid,
-  initialProviderLog,
+  initialMessages,
 }: {
   children: ReactNode
   initialThreadUuid?: string
-  initialProviderLog?: ProviderLogDto
+  initialMessages?: Message[]
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -222,7 +222,7 @@ export function LatteLayout({
         {children}
         <LatteLayoutContent
           initialThreadUuid={initialThreadUuid}
-          initialProviderLog={initialProviderLog}
+          initialMessages={initialMessages}
           containerRef={containerRef}
         />
       </div>

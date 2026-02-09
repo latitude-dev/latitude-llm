@@ -4,10 +4,10 @@ import {
   ToolRequestContent,
   MessageContent,
   ToolMessage,
+  Message,
 } from '@latitude-data/constants/messages'
 
 import { getDescriptionFromToolCall } from '$/hooks/latte/helpers'
-import { ProviderLogDto } from '@latitude-data/core/schema/types'
 
 function isToolCall(m: MessageContent): m is ToolRequestContent {
   return m.type === 'tool-call'
@@ -74,17 +74,7 @@ function buildStepGroup(content: AssitantToolResultContent) {
   } as LatteToolStep
 }
 
-/**
- * iterate over provider log messages and transform them to an array of interactions.
- * Interactors are input/output pairs input defined as any message from a user and outputs
- * defined as all messages not from user until the next user message.
- */
-export function buildInteractionsFromProviderLog({
-  providerLog,
-}: {
-  providerLog: ProviderLogDto
-}) {
-  const messages = providerLog.messages || []
+export function buildInteractionsFromMessages(messages: Message[]) {
   const interactions = messages.reduce((interactions, message) => {
     if (message.role === 'user') {
       const input = Array.isArray(message.content)
@@ -133,15 +123,6 @@ export function buildInteractionsFromProviderLog({
     }
     return interactions
   }, [] as LatteInteraction[])
-
-  const lastInteraction = interactions.at(-1) ?? null
-
-  if (lastInteraction && providerLog.response) {
-    lastInteraction.steps.push({
-      type: 'text',
-      text: providerLog.response,
-    })
-  }
 
   return interactions
 }

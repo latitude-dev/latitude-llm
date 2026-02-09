@@ -19,7 +19,7 @@ import { LatteRealtimeUpdatesProvider } from './providers/LatteRealtimeUpdatesPr
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 import { LatteLayout } from '$/components/LatteSidebar/LatteLayout'
-import { findLatteThreadProviderLog } from '@latitude-data/core/services/providerLogs/findLatteThreadProviderLog'
+import { fetchConversationWithMessages } from '@latitude-data/core/data-access/conversations/fetchConversationWithMessages'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { ProjectProvider } from '$/app/providers/ProjectProvider'
@@ -76,9 +76,13 @@ export default async function CommitLayout({
   const lastThreadUuid = await getLastLatteThreadUuidCached({
     projectId: project.id,
   })
-  const initialProviderLog = await findLatteThreadProviderLog({
-    lastThreadUuid,
-  })
+  const conversationResult = lastThreadUuid
+    ? await fetchConversationWithMessages({
+        workspace: session.workspace,
+        documentLogUuid: lastThreadUuid,
+      })
+    : undefined
+  const initialMessages = conversationResult?.value?.messages
 
   return (
     <ProjectProvider project={project}>
@@ -86,7 +90,7 @@ export default async function CommitLayout({
         <LatteRealtimeUpdatesProvider>
           <LatteLayout
             initialThreadUuid={lastThreadUuid}
-            initialProviderLog={initialProviderLog}
+            initialMessages={initialMessages}
           >
             {children}
           </LatteLayout>

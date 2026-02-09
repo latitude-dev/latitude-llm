@@ -30,18 +30,18 @@ import { LatteMessageList } from './_components/MessageList'
 import { PaymentRequiredAlert } from './_components/PaymentRequiredAlert'
 import { LatteUnconfiguredIntegrations } from './_components/UnconfiguredIntegrations'
 import { LatteChatInput } from './LatteChatInput'
-import { type ProviderLogDto } from '@latitude-data/core/schema/types'
+import type { Message } from '@latitude-data/constants/messages'
 
 export function LatteChat({
   initialThreadUuid,
-  initialProviderLog,
+  initialMessages,
   inputRef,
 }: {
   initialThreadUuid?: string
-  initialProviderLog?: ProviderLogDto
+  initialMessages?: Message[]
   inputRef?: RefObject<HTMLTextAreaElement>
 }) {
-  const isLoading = useLoadThread({ initialThreadUuid, initialProviderLog })
+  const isLoading = useLoadThread({ initialThreadUuid, initialMessages })
 
   if (isLoading)
     return (
