@@ -4220,6 +4220,29 @@
           "output": 65536
         }
       },
+      "qwen3-coder-next": {
+        "id": "qwen3-coder-next",
+        "name": "qwen3-coder-next",
+        "family": "qwen",
+        "attachment": false,
+        "reasoning": false,
+        "tool_call": true,
+        "release_date": "2026-02-02",
+        "last_updated": "2026-02-08",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "limit": {
+          "context": 262144,
+          "output": 65536
+        }
+      },
       "gemma3:12b": {
         "id": "gemma3:12b",
         "name": "gemma3:12b",
@@ -40718,7 +40741,8 @@
         "limit": {
           "context": 262144,
           "output": 65536
-        }
+        },
+        "status": "deprecated"
       },
       "claude-opus-4-1": {
         "id": "claude-opus-4-1",
@@ -41428,7 +41452,8 @@
         "limit": {
           "context": 204800,
           "output": 131072
-        }
+        },
+        "status": "deprecated"
       },
       "grok-code": {
         "id": "grok-code",
@@ -49272,6 +49297,36 @@
           "output": 32768
         }
       },
+      "xiaomi/mimo-v2-flash": {
+        "id": "xiaomi/mimo-v2-flash",
+        "name": "MiMo-V2-Flash",
+        "family": "mimo",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2024-12",
+        "release_date": "2025-12-14",
+        "last_updated": "2025-12-14",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0.1,
+          "output": 0.3,
+          "cache_read": 0.01
+        },
+        "limit": {
+          "context": 262144,
+          "output": 65536
+        }
+      },
       "nousresearch/hermes-4-70b": {
         "id": "nousresearch/hermes-4-70b",
         "name": "Hermes 4 70B",
@@ -52216,6 +52271,35 @@
           "output": 0
         }
       },
+      "openrouter/pony-alpha": {
+        "id": "openrouter/pony-alpha",
+        "name": "Pony Alpha",
+        "family": "pony",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "structured_output": true,
+        "temperature": true,
+        "release_date": "2026-02-06",
+        "last_updated": "2026-02-06",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "cost": {
+          "input": 0,
+          "output": 0
+        },
+        "limit": {
+          "context": 200000,
+          "output": 131000
+        }
+      },
       "openrouter/sherlock-dash-alpha": {
         "id": "openrouter/sherlock-dash-alpha",
         "name": "Sherlock Dash Alpha",
@@ -54112,6 +54196,45 @@
           "output": 64000
         }
       },
+      "anthropic/claude-opus-4.6": {
+        "id": "anthropic/claude-opus-4.6",
+        "name": "Claude Opus 4.6",
+        "family": "claude-opus",
+        "attachment": true,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2025-05-30",
+        "release_date": "2026-02-05",
+        "last_updated": "2026-02-05",
+        "modalities": {
+          "input": [
+            "text",
+            "image",
+            "pdf"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "cost": {
+          "input": 5,
+          "output": 25,
+          "cache_read": 0.5,
+          "cache_write": 6.25,
+          "context_over_200k": {
+            "input": 10,
+            "output": 37.5,
+            "cache_read": 1,
+            "cache_write": 12.5
+          }
+        },
+        "limit": {
+          "context": 1000000,
+          "output": 128000
+        }
+      },
       "sarvamai/sarvam-m:free": {
         "id": "sarvamai/sarvam-m:free",
         "name": "Sarvam-M (free)",
@@ -54338,7 +54461,7 @@
         "id": "stepfun/step-3.5-flash",
         "name": "Step 3.5 Flash",
         "attachment": false,
-        "reasoning": true,
+        "reasoning": false,
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-01-01",
@@ -54397,6 +54520,9 @@
         "attachment": true,
         "reasoning": true,
         "tool_call": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
         "temperature": true,
         "knowledge": "2025-01-01",
         "release_date": "2026-01-27",
@@ -55066,7 +55192,7 @@
         "attachment": true,
         "reasoning": true,
         "tool_call": true,
-        "temperature": true,
+        "temperature": false,
         "knowledge": "2025-01-01",
         "release_date": "2026-01-15",
         "last_updated": "2026-01-15",
@@ -55280,7 +55406,7 @@
         "attachment": true,
         "reasoning": true,
         "tool_call": true,
-        "temperature": true,
+        "temperature": false,
         "knowledge": "2025-01-01",
         "release_date": "2025-12-11",
         "last_updated": "2025-12-11",
@@ -55604,6 +55730,9 @@
         "attachment": false,
         "reasoning": true,
         "tool_call": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
         "temperature": true,
         "knowledge": "2025-01-01",
         "release_date": "2026-01-19",
@@ -56057,6 +56186,37 @@
         "limit": {
           "context": 1000000,
           "output": 64000
+        }
+      },
+      "anthropic/claude-opus-4.6": {
+        "id": "anthropic/claude-opus-4.6",
+        "name": "Claude Opus 4.6",
+        "attachment": true,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2025-01-01",
+        "release_date": "2026-02-06",
+        "last_updated": "2026-02-06",
+        "modalities": {
+          "input": [
+            "image",
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "cost": {
+          "input": 5,
+          "output": 25,
+          "cache_read": 0.5,
+          "cache_write": 6.25
+        },
+        "limit": {
+          "context": 1000000,
+          "output": 128000
         }
       }
     }
@@ -57831,6 +57991,41 @@
         },
         "limit": {
           "context": 131072,
+          "output": 32768
+        }
+      },
+      "moonshotai/Kimi-K2.5": {
+        "id": "moonshotai/Kimi-K2.5",
+        "name": "Kimi K2.5",
+        "family": "kimi",
+        "attachment": true,
+        "reasoning": true,
+        "tool_call": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
+        "structured_output": true,
+        "temperature": true,
+        "knowledge": "2025-01",
+        "release_date": "2026-01-27",
+        "last_updated": "2026-01-27",
+        "modalities": {
+          "input": [
+            "text",
+            "image",
+            "video"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "cost": {
+          "input": 0.5,
+          "output": 2.8
+        },
+        "limit": {
+          "context": 262144,
           "output": 32768
         }
       },
@@ -61889,7 +62084,7 @@
           }
         },
         "limit": {
-          "context": 1000000,
+          "context": 200000,
           "output": 128000
         }
       },
@@ -63723,6 +63918,39 @@
           "context": 400000,
           "input": 272000,
           "output": 128000
+        }
+      },
+      "duo-chat-opus-4-6": {
+        "id": "duo-chat-opus-4-6",
+        "name": "Agentic Chat (Claude Opus 4.6)",
+        "family": "claude-opus",
+        "attachment": true,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2025-03-31",
+        "release_date": "2026-02-05",
+        "last_updated": "2026-02-05",
+        "modalities": {
+          "input": [
+            "text",
+            "image",
+            "pdf"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_write": 0
+        },
+        "limit": {
+          "context": 200000,
+          "output": 64000
         }
       },
       "duo-chat-gpt-5-2": {
