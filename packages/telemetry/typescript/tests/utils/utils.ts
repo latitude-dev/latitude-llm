@@ -4,6 +4,85 @@ import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { expect, vi } from 'vitest'
 
+type OtlpBody = {
+  resourceSpans: Array<{
+    resource: {
+      attributes: Array<{ key: string; value: Record<string, unknown> }>
+      droppedAttributesCount: number
+    }
+    scopeSpans: Array<{
+      scope: { name: string; version: string }
+      spans: Array<{
+        traceId: string
+        spanId: string
+        parentSpanId?: string
+        name: string
+        kind: number
+        startTimeUnixNano: string
+        endTimeUnixNano: string
+        attributes: Array<{ key: string; value: Record<string, unknown> }>
+        droppedAttributesCount: number
+        events: Array<{
+          name: string
+          timeUnixNano: string
+          droppedAttributesCount: number
+          attributes: Array<{ key: string; value: Record<string, unknown> }>
+        }>
+        droppedEventsCount: number
+        status: { code: number; message?: string }
+        links: unknown[]
+        droppedLinksCount: number
+      }>
+    }>
+  }>
+}
+
+export function normalizeBody(body: OtlpBody): OtlpBody {
+  const clone: OtlpBody = JSON.parse(JSON.stringify(body))
+  let counter = 0
+  const idMap = new Map<string, string>()
+
+  function mapId(id: string): string {
+    if (!idMap.has(id)) {
+      idMap.set(id, `ID_${counter++}`)
+    }
+    return idMap.get(id)!
+  }
+
+  for (const rs of clone.resourceSpans) {
+    for (const attr of rs.resource.attributes) {
+      if (attr.key === 'telemetry.sdk.version') {
+        attr.value = { stringValue: 'SDK_VERSION' } as any
+      }
+    }
+    for (const ss of rs.scopeSpans) {
+      for (const span of ss.spans) {
+        span.traceId = mapId(span.traceId)
+        span.spanId = mapId(span.spanId)
+        if (span.parentSpanId) {
+          span.parentSpanId = mapId(span.parentSpanId)
+        }
+        span.startTimeUnixNano = 'TIME'
+        span.endTimeUnixNano = 'TIME'
+        for (const event of span.events || []) {
+          if (event.timeUnixNano) event.timeUnixNano = 'TIME'
+          for (const attr of event.attributes || []) {
+            if (attr.key === 'exception.stacktrace') {
+              attr.value = { stringValue: 'STACKTRACE' } as any
+            }
+          }
+        }
+        for (const attr of span.attributes || []) {
+          if (attr.key === 'latitude.document_log_uuid') {
+            attr.value = { stringValue: 'DOC_LOG_UUID' } as any
+          }
+        }
+      }
+    }
+  }
+  return clone
+}
+
 export function mockRequest({
   server,
   method,

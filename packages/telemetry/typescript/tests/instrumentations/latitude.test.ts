@@ -11,12 +11,10 @@ import {
   vi,
 } from 'vitest'
 import * as fixtures from '../fixtures'
-import { mockRequest } from '../utils'
+import { mockRequest, normalizeBody } from '../utils'
 
 vi.hoisted(() => {
-  process.env.GATEWAY_HOSTNAME = 'fake-host.com'
-  process.env.GATEWAY_PORT = '443'
-  process.env.GATEWAY_SSL = 'true'
+  process.env.GATEWAY_BASE_URL = 'https://fake-host.com'
   process.env.npm_package_name = 'fake-service-name'
   process.env.npm_package_version = 'fake-scope-version'
 })
@@ -37,8 +35,7 @@ describe('latitude', () => {
     gatewayMock.close()
   })
 
-  // TODO(tracing): review this test
-  it.skip(
+  it(
     'succeeds when instrumenting latitude renders',
     gatewayMock.boundary(async () => {
       const { bodyMock } = mockRequest({
@@ -72,7 +69,8 @@ describe('latitude', () => {
 
       await sdk.shutdown()
 
-      expect(bodyMock).toHaveBeenCalledWith(fixtures.LATITUDE_RENDERING_SPANS)
+      const body = bodyMock.mock.calls[0]![0]
+      expect(normalizeBody(body)).toEqual(fixtures.LATITUDE_RENDERING_SPANS)
     }),
   )
 })
