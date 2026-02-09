@@ -8,6 +8,7 @@ import {
 import { createMiddleware } from 'hono/factory'
 import { ReplyError } from 'ioredis'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
+import { validate as isValidUuid } from 'uuid'
 import { getFromTokenCache, setToTokenCache } from './tokenCache'
 import { getRateLimiterForRateLimit } from './rateLimiterCache'
 import { SubscriptionPlans } from '@latitude-data/core/plans'
@@ -51,21 +52,16 @@ async function getTokenRateLimit(token: string): Promise<{
   }
 }
 
-function isUuid(value: string) {
-  // api_keys.token is stored as a Postgres UUID.
-  // Validate before hitting the DB so malformed values (or odd proxy/header bugs)
-  // don't blow up the rate limit middleware.
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-    value,
-  )
-}
-
 export const rateLimitMiddleware = () =>
   createMiddleware(async (c, next) => {
     const authorization = c.req.header('Authorization')
     const token = authorization?.split(' ')[1]
     if (!token) throw new UnauthorizedError('Authorization token required')
-    if (!isUuid(token)) throw new UnauthorizedError('Invalid authorization token')
+    // api_keys.token is stored as a Postgres UUID.
+    // Validate before hitting the DB so malformed values (or odd proxy/header bugs)
+    // don't blow up the rate limit middleware.
+    if (!isValidUuid(token))
+      throw new UnauthorizedError('Invalid authorization token')
 
     const { workspaceId, rateLimit, rateLimiter } =
       await getTokenRateLimit(token)
