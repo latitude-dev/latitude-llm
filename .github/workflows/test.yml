@@ -12,12 +12,12 @@ on:
         default: false
 
 jobs:
-  test:
+  core-tests:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [22.x]
-        python-version: [3.14.x]
+        shard: [1, 2, 3, 4]
 
     services:
       redis:
@@ -52,12 +52,70 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install Node.js dependencies
+        run: pnpm install
+
+      - name: Use Turbo to build affected packages
+        run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
+
+      - name: Wait for PostgreSQL to start
+        run: until pg_isready -h localhost -p 5432; do sleep 1; done
+
+      - name: Run Server migrations
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgres://latitude:secret@localhost:5432/latitude_test
+        run: cd packages/core && pnpm db:migrate:test
+
+      - name: Core Tests (Shard ${{ matrix.shard }}/4)
+        env:
+          NODE_ENV: test
+        run: cd packages/core && vitest run --pool=threads --shard=${{ matrix.shard }}/4
+
+  other-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpixman-1-dev libcairo2-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
 
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.14.x
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -87,7 +145,6 @@ jobs:
       - name: Install Node.js dependencies
         run: pnpm install
 
-      # TODO: We should probably separate node from python jobs
       - name: Install Python SDK dependencies
         run: |
           cd packages/sdks/python
@@ -103,20 +160,11 @@ jobs:
       - name: Use Turbo to build affected packages
         run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
 
-      - name: Wait for PostgreSQL to start
-        run: until pg_isready -h localhost -p 5432; do sleep 1; done
-
-      - name: Run Server migrations
-        env:
-          NODE_ENV: test
-          DATABASE_URL: postgres://latitude:secret@localhost:5432/latitude_test
-        run: cd packages/core && pnpm db:migrate:test
-
-      - name: Node.js Test
+      - name: Node.js Tests (non-core)
         env:
           NODE_ENV: test
           LATITUDE_API_KEY: fake-test-key # NOTE: Used by packages/cli
-        run: pnpm test
+        run: pnpm turbo test --filter='!@latitude-data/core'
 
       - name: Python SDK Test
         run: |

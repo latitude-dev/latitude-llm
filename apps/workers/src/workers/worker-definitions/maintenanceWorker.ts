@@ -11,6 +11,8 @@ const jobMappings = {
   destroyWorkspaceJob: jobs.destroyWorkspaceJob,
   scheduleWeeklyEmailJobs: jobs.scheduleWeeklyEmailJobs,
   dailyAlignmentMetricUpdateJob: jobs.dailyAlignmentMetricUpdateJob,
+  manageEvaluationResultsPartitionsJob:
+    jobs.manageEvaluationResultsPartitionsJob,
   notifyWorkspacesFinishingFreeTrialJob:
     jobs.notifyWorkspacesFinishingFreeTrialJob,
   updateEvaluationAlignmentJob: jobs.updateEvaluationAlignmentJob,
