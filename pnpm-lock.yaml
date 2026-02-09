@@ -67,8 +67,8 @@ catalogs:
       specifier: 19.2.4
       version: 19.2.4
     rosetta-ai:
-      specifier: 1.6.1
-      version: 1.6.1
+      specifier: 1.6.2
+      version: 1.6.2
     zod:
       specifier: 4.1.8
       version: 4.1.8
@@ -956,7 +956,7 @@ importers:
         version: 19.2.4(react@19.2.4)
       rosetta-ai:
         specifier: 'catalog:'
-        version: 1.6.1
+        version: 1.6.2
       safe-regex:
         specifier: 2.1.1
         version: 2.1.1
@@ -1257,7 +1257,7 @@ importers:
         version: 4.1.0
       rosetta-ai:
         specifier: 'catalog:'
-        version: 1.6.1
+        version: 1.6.2
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
@@ -12345,8 +12345,8 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
-  rosetta-ai@1.6.1:
-    resolution: {integrity: sha512-Hl2GKlcvRHEkpdFjztKVIIevPOs7Y4eM28Xf3XbFFjMoc8Mxq/a7RHmO82Ec7N8VDeLpiSF7Fn2WDGaGQdT5iw==}
+  rosetta-ai@1.6.2:
+    resolution: {integrity: sha512-ISlqdb15FFpoRGkK/f/rti0c1eoMywbsZaLNDqhoipXH5UsWSDAwQOCozC7hUv24r3Hd+a0vhfQQaLAig/Jc4w==}
     engines: {node: '>=20.0.0'}
 
   router@2.2.0:
@@ -28215,7 +28215,7 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.53.3
       fsevents: 2.3.3
 
-  rosetta-ai@1.6.1:
+  rosetta-ai@1.6.2:
     dependencies:
       zod: 4.1.8
 
