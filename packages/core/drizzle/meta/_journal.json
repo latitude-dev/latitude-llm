@@ -1877,6 +1877,20 @@
       "when": 1770633568138,
       "tag": "0268_add_workspace_trace_id_index_to_eval_results",
       "breakpoints": true
+    },
+    {
+      "idx": 269,
+      "version": "7",
+      "when": 1770645508746,
+      "tag": "0269_partition_spans",
+      "breakpoints": true
+    },
+    {
+      "idx": 270,
+      "version": "7",
+      "when": 1770722617430,
+      "tag": "0270_create_spans_indexes_concurrently",
+      "breakpoints": true
     }
   ]
 }

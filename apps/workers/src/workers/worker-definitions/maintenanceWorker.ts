@@ -9,6 +9,7 @@ const jobMappings = {
   clearConversationCacheJob: jobs.clearConversationCacheJob,
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
   destroyWorkspaceJob: jobs.destroyWorkspaceJob,
+  manageSpansPartitionsJob: jobs.manageSpansPartitionsJob,
   scheduleWeeklyEmailJobs: jobs.scheduleWeeklyEmailJobs,
   dailyAlignmentMetricUpdateJob: jobs.dailyAlignmentMetricUpdateJob,
   notifyWorkspacesFinishingFreeTrialJob:

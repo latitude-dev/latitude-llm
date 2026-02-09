@@ -50,4 +50,11 @@ export async function setupSchedules() {
     { pattern: '0 0 3 * * *' },
     { opts: { attempts: 1 } },
   )
+
+  // Every day at 4 AM - Manage weekly partitions for spans table
+  await maintenanceQueue.upsertJobScheduler(
+    'manageSpansPartitionsJob',
+    { pattern: '0 0 4 * * *' },
+    { opts: { attempts: 1 } },
+  )
 }
