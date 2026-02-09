@@ -1,54 +1,35 @@
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
-import { ActionErrors } from '$/hooks/useLatitudeAction'
 import {
   CompositeEvaluationMetric,
-  DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
-  EvaluationTriggerTarget,
   EvaluationType,
   HumanEvaluationMetric,
-  LAST_INTERACTION_DEBOUNCE_MAX_SECONDS,
-  LAST_INTERACTION_DEBOUNCE_MIN_SECONDS,
   LlmEvaluationMetric,
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
-import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
-import { StandardSchemaV1 } from '@standard-schema/spec'
 import { useEffect, useMemo, useState } from 'react'
-import {
-  ConfigurationAdvancedForm,
-  ConfigurationSimpleForm,
-} from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { LinkedIssueSelect } from './ConfigurationForm/LinkedIssueSelect'
+import { LiveEvaluationToggle } from './ConfigurationForm/LiveEvaluationToggle'
+import { OutputConfiguration } from './ConfigurationForm/OutputConfiguration'
+import { ScoringDirection } from './ConfigurationForm/ScoringDirection'
+import { TriggerConfiguration } from './ConfigurationForm/TriggerConfiguration'
 
 /**
  * This can be improved by passing specific schemas per type/metric
  * But I'm fed up of fixing zod errors sorry
  */
-type EvaluationV2FormSchema = StandardSchemaV1<{
-  type: string
-  name: string
-  description: string
-  metric: string
-  options: string
-  settings: string
-  evaluateLiveLogs: string
-  'trigger.target': string
-  'trigger.lastInteractionDebounce': string
-}>
-
-export type EvaluationV2FormErrors = ActionErrors<EvaluationV2FormSchema>
+type EvaluationV2FormSchema = Record<string, string[]>
+export type EvaluationV2FormErrors = { fieldErrors?: EvaluationV2FormSchema }
 
 /**
  * Helper: normalize validation errors into a flat map
@@ -166,6 +147,13 @@ export default function EvaluationV2Form<
   }, [metricSpecification?.supportsLiveEvaluation])
 
   const commitMerged = mode === 'update' && !!commit.mergedAt
+  const isDisabled = disabled || commitMerged
+
+  const canAssignIssue =
+    !!metricSpecification &&
+    settings.type !== EvaluationType.Composite &&
+    !metricSpecification.requiresExpectedOutput &&
+    metricSpecification.supportsLiveEvaluation
 
   return (
     <form className='min-w-0' id='evaluationV2Form'>
@@ -179,7 +167,7 @@ export default function EvaluationV2Form<
             onChange={(value) => setSettings({ ...settings, type: value as T })}
             errors={errors?.type}
             fancy
-            disabled={disabled || commitMerged}
+            disabled={isDisabled}
             required
           />
         )}
@@ -191,7 +179,7 @@ export default function EvaluationV2Form<
           onChange={(e) => setSettings({ ...settings, name: e.target.value })}
           errors={errors?.name}
           className='w-full'
-          disabled={disabled || commitMerged}
+          disabled={isDisabled}
           required
         />
         <TextArea
@@ -206,7 +194,7 @@ export default function EvaluationV2Form<
           }
           errors={errors?.description}
           className='w-full'
-          disabled={disabled || commitMerged}
+          disabled={isDisabled}
           required
         />
         {mode === 'create' && (
@@ -226,26 +214,29 @@ export default function EvaluationV2Form<
               setSettings({ ...settings, metric: value as M })
             }
             errors={errors?.metric}
-            disabled={disabled || commitMerged}
+            disabled={isDisabled}
             required
           />
         )}
-        <ConfigurationSimpleForm
-          mode={mode}
-          uuid={uuid}
-          type={settings.type}
-          metric={settings.metric}
-          configuration={settings.configuration}
-          setConfiguration={(value) =>
-            setSettings({ ...settings, configuration: value })
-          }
-          issueId={issueId}
-          setIssueId={setIssueId}
-          settings={settings}
-          setSettings={setSettings}
-          errors={errors}
-          disabled={disabled || commitMerged}
-        />
+        {typeSpecification?.ConfigurationSimpleForm && (
+          <typeSpecification.ConfigurationSimpleForm
+            metric={settings.metric}
+            mode={mode}
+            uuid={uuid}
+            configuration={settings.configuration}
+            setConfiguration={(value) =>
+              setSettings({ ...settings, configuration: value })
+            }
+            issueId={issueId}
+            setIssueId={setIssueId}
+            options={options}
+            setOptions={setOptions}
+            settings={settings}
+            setSettings={setSettings}
+            errors={errors}
+            disabled={isDisabled}
+          />
+        )}
         {mode === 'create' && metricSpecification?.requiresExpectedOutput && (
           <Alert
             variant='default'
@@ -261,14 +252,12 @@ export default function EvaluationV2Form<
           />
         )}
 
-        <TriggerSettings
-          configuration={settings.configuration}
-          setConfiguration={(value) =>
-            setSettings({ ...settings, configuration: value })
-          }
+        <TriggerConfiguration
+          settings={settings}
+          setSettings={setSettings}
           evaluateLiveLogs={!!options.evaluateLiveLogs}
           errors={errors}
-          disabled={disabled || commitMerged}
+          disabled={isDisabled}
         />
 
         {settings.type !== EvaluationType.Composite && (
@@ -280,155 +269,66 @@ export default function EvaluationV2Form<
             scrollable={false}
             expandedContent={
               <FormWrapper>
-                <ConfigurationAdvancedForm
-                  mode={mode}
-                  uuid={uuid}
-                  type={settings.type}
-                  metric={settings.metric}
+                {typeSpecification?.ConfigurationAdvancedForm && (
+                  <typeSpecification.ConfigurationAdvancedForm
+                    metric={settings.metric}
+                    mode={mode}
+                    uuid={uuid}
+                    configuration={settings.configuration}
+                    setConfiguration={(value) =>
+                      setSettings({ ...settings, configuration: value })
+                    }
+                    issueId={issueId}
+                    setIssueId={setIssueId}
+                    options={options}
+                    setOptions={setOptions}
+                    settings={settings}
+                    setSettings={setSettings}
+                    errors={errors}
+                    disabled={isDisabled}
+                  />
+                )}
+                <ScoringDirection
                   configuration={settings.configuration}
                   setConfiguration={(value) =>
                     setSettings({ ...settings, configuration: value })
                   }
-                  issueId={issueId}
-                  setIssueId={setIssueId}
-                  settings={settings}
-                  setSettings={setSettings}
                   errors={errors}
-                  disabled={disabled || commitMerged}
+                  disabled={isDisabled}
                 />
-                <FormFieldGroup label='Options' layout='vertical'>
-                  {metricSpecification?.supportsLiveEvaluation && (
-                    <SwitchInput
-                      checked={!!options.evaluateLiveLogs}
-                      name='evaluateLiveLogs'
-                      label='Evaluate live logs'
-                      description='Evaluate production and playground logs automatically'
-                      onCheckedChange={(value) =>
-                        setOptions({ ...options, evaluateLiveLogs: value })
-                      }
-                      errors={errors?.evaluateLiveLogs}
-                      disabled={
-                        disabled || !metricSpecification?.supportsLiveEvaluation
-                      }
-                    />
-                  )}
-                </FormFieldGroup>
-                {metricSpecification?.supportsLiveEvaluation &&
-                  !!options.evaluateLiveLogs &&
-                  settings.configuration.trigger?.target === 'last' && (
-                    <FormFieldGroup
-                      label='Response timeout'
-                      description='How many seconds to wait after a response has been added to the conversation before considering it the "last response". Used only when evaluating the last response in Live Evaluation mode.'
-                      layout='horizontal'
-                    >
-                      <Input
-                        value={
-                          settings.configuration.trigger?.lastInteractionDebounce?.toString() ??
-                          ''
-                        }
-                        name='lastInteractionDebounce'
-                        type='number'
-                        min={LAST_INTERACTION_DEBOUNCE_MIN_SECONDS}
-                        max={LAST_INTERACTION_DEBOUNCE_MAX_SECONDS}
-                        placeholder={DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS.toString()}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value, 10)
-                          setSettings({
-                            ...settings,
-                            configuration: {
-                              ...settings.configuration,
-                              trigger: {
-                                ...settings.configuration.trigger,
-                                lastInteractionDebounce: isNaN(value)
-                                  ? DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS
-                                  : value,
-                              },
-                            },
-                          })
-                        }}
-                        className='w-full'
-                        disabled={disabled}
-                        errors={errors?.['trigger.lastInteractionDebounce']}
-                      />
-                    </FormFieldGroup>
-                  )}
+                <OutputConfiguration
+                  configuration={settings.configuration}
+                  setConfiguration={(value) =>
+                    setSettings({ ...settings, configuration: value })
+                  }
+                  requiresExpectedOutput={
+                    !!metricSpecification?.requiresExpectedOutput
+                  }
+                  errors={errors}
+                  disabled={isDisabled}
+                />
+                {canAssignIssue && (
+                  <LinkedIssueSelect
+                    issueId={issueId}
+                    setIssueId={setIssueId}
+                    errors={errors}
+                    disabled={isDisabled}
+                  />
+                )}
+                <LiveEvaluationToggle
+                  options={options}
+                  setOptions={setOptions}
+                  supportsLiveEvaluation={
+                    !!metricSpecification?.supportsLiveEvaluation
+                  }
+                  errors={errors}
+                  disabled={isDisabled}
+                />
               </FormWrapper>
             }
           />
         )}
       </FormWrapper>
     </form>
-  )
-}
-
-const TRIGGER_TARGET_OPTIONS: Record<
-  EvaluationTriggerTarget,
-  {
-    label: string
-    icon?: IconName
-  }
-> = {
-  first: {
-    label: 'First response only',
-    icon: 'messageSquareText',
-  },
-  every: {
-    label: 'Every response',
-    icon: 'messagesSquare',
-  },
-  last: {
-    label: 'Last response only',
-    icon: 'messageSquareDashed',
-  },
-}
-
-function TriggerSettings<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({
-  configuration,
-  setConfiguration,
-  errors,
-  disabled,
-}: {
-  configuration: EvaluationSettings<T, M>['configuration']
-  setConfiguration: (
-    configuration: EvaluationSettings<T, M>['configuration'],
-  ) => void
-  evaluateLiveLogs: boolean
-  errors?: Record<string, string[] | undefined>
-  disabled?: boolean
-}) {
-  const triggerTarget = configuration.trigger?.target ?? 'every'
-
-  return (
-    <FormFieldGroup
-      label='Evaluated responses'
-      description='Which assistant responses from the conversation will be evaluated'
-      layout='horizontal'
-    >
-      <Select
-        value={triggerTarget}
-        name='triggerTarget'
-        placeholder='Select responses'
-        options={Object.entries(TRIGGER_TARGET_OPTIONS).map(
-          ([value, { label, icon }]) => ({
-            label,
-            value,
-            icon,
-          }),
-        )}
-        onChange={(value) =>
-          setConfiguration({
-            ...configuration,
-            trigger: {
-              target: value as EvaluationTriggerTarget,
-            },
-          })
-        }
-        errors={errors?.['trigger.target']}
-        disabled={disabled}
-      />
-    </FormFieldGroup>
   )
 }

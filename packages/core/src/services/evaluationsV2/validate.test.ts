@@ -1,5 +1,7 @@
 import {
   CompositeEvaluationMetric,
+  DEFAULT_EVALUATION_SAMPLE_RATE,
+  DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
   HumanEvaluationMetric,
   LlmEvaluationMetric,
   Providers,
@@ -14,6 +16,8 @@ import {
   EvaluationType,
   LAST_INTERACTION_DEBOUNCE_MAX_SECONDS,
   LAST_INTERACTION_DEBOUNCE_MIN_SECONDS,
+  MAX_EVALUATION_SAMPLE_RATE,
+  MIN_EVALUATION_SAMPLE_RATE,
   RuleEvaluationMetric,
 } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
@@ -343,6 +347,7 @@ describe('validateEvaluationV2', () => {
               target: 'every',
               lastInteractionDebounce:
                 LAST_INTERACTION_DEBOUNCE_MIN_SECONDS - 1,
+              sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
             },
           },
         },
@@ -367,6 +372,7 @@ describe('validateEvaluationV2', () => {
               target: 'every',
               lastInteractionDebounce:
                 LAST_INTERACTION_DEBOUNCE_MAX_SECONDS + 1,
+              sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
             },
           },
         },
@@ -377,6 +383,80 @@ describe('validateEvaluationV2', () => {
         issue: null,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(expect.any(ZodError))
+  })
+
+  it('fails when sampleRate is below minimum', async () => {
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: {
+          ...settings,
+          configuration: {
+            ...settings.configuration,
+            trigger: {
+              target: 'every',
+              sampleRate: MIN_EVALUATION_SAMPLE_RATE - 1,
+              lastInteractionDebounce:
+                DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            },
+          },
+        },
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: null,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(expect.any(ZodError))
+  })
+
+  it('fails when sampleRate is above maximum', async () => {
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: {
+          ...settings,
+          configuration: {
+            ...settings.configuration,
+            trigger: {
+              target: 'every',
+              sampleRate: MAX_EVALUATION_SAMPLE_RATE + 1,
+              lastInteractionDebounce:
+                DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            },
+          },
+        },
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+        issue: null,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(expect.any(ZodError))
+  })
+
+  it('succeeds with valid sampleRate', async () => {
+    const { settings: validatedSettings } = await validateEvaluationV2({
+      mode: 'create',
+      settings: {
+        ...settings,
+        configuration: {
+          ...settings.configuration,
+          trigger: {
+            target: 'every',
+            sampleRate: 50,
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+          },
+        },
+      },
+      options: options,
+      document: document,
+      commit: commit,
+      workspace: workspace,
+      issue: null,
+    }).then((r) => r.unwrap())
+
+    expect(validatedSettings.configuration.trigger?.sampleRate).toBe(50)
   })
 
   it('succeeds when validating an evaluation from create', async () => {

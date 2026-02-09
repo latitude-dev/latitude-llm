@@ -1,6 +1,7 @@
 import {
   ChatSpanMetadata,
   DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+  DEFAULT_EVALUATION_SAMPLE_RATE,
   EvaluationV2,
   ExternalSpanMetadata,
   LIVE_EVALUABLE_SPAN_TYPES,
@@ -39,6 +40,7 @@ function getTriggerConfig(evaluation: EvaluationV2): TriggerConfiguration {
     evaluation.configuration.trigger ?? {
       target: 'last',
       lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+      sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
     }
   )
 }
@@ -137,6 +139,14 @@ export const evaluateLiveLogJob = async ({
         span.traceId,
       )
       if (!isFirst) continue
+    }
+
+    const sampleRate =
+      triggerConfig.sampleRate ?? DEFAULT_EVALUATION_SAMPLE_RATE
+
+    if (Math.random() * 100 > sampleRate) {
+      // Skip evaluation
+      continue
     }
 
     const payload: RunEvaluationV2JobData = {

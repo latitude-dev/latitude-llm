@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+  DEFAULT_EVALUATION_SAMPLE_RATE,
   EvaluationType,
   EvaluationV2,
   LogSources,
@@ -218,6 +219,7 @@ describe('evaluateLiveLogJob', () => {
           trigger: {
             target: 'every',
             lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
           },
         },
       })
@@ -254,6 +256,7 @@ describe('evaluateLiveLogJob', () => {
           trigger: {
             target: 'first',
             lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
           },
         },
       })
@@ -285,6 +288,7 @@ describe('evaluateLiveLogJob', () => {
           trigger: {
             target: 'first',
             lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
           },
         },
       })
@@ -313,6 +317,7 @@ describe('evaluateLiveLogJob', () => {
           trigger: {
             target: 'last',
             lastInteractionDebounce: debounceSeconds,
+            sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
           },
         },
       })
@@ -345,6 +350,7 @@ describe('evaluateLiveLogJob', () => {
           trigger: {
             target: 'last',
             lastInteractionDebounce: 120,
+            sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
           },
         },
       })
@@ -379,6 +385,7 @@ describe('evaluateLiveLogJob', () => {
           trigger: {
             target: 'last',
             lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
           },
         },
       })
@@ -407,7 +414,11 @@ describe('evaluateLiveLogJob', () => {
           reverseScale: false,
           actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
           caseInsensitive: false,
-          trigger: { target: 'every', lastInteractionDebounce: 120 },
+          trigger: {
+            target: 'every',
+            lastInteractionDebounce: 120,
+            sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
+          },
         },
       })
       const firstEvaluation = createEvaluation({
@@ -416,7 +427,11 @@ describe('evaluateLiveLogJob', () => {
           reverseScale: false,
           actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
           caseInsensitive: false,
-          trigger: { target: 'first', lastInteractionDebounce: 120 },
+          trigger: {
+            target: 'first',
+            lastInteractionDebounce: 120,
+            sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
+          },
         },
       })
       const lastEvaluation = createEvaluation({
@@ -425,7 +440,11 @@ describe('evaluateLiveLogJob', () => {
           reverseScale: false,
           actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
           caseInsensitive: false,
-          trigger: { target: 'last', lastInteractionDebounce: 60 },
+          trigger: {
+            target: 'last',
+            lastInteractionDebounce: 60,
+            sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
+          },
         },
       })
 
@@ -456,6 +475,224 @@ describe('evaluateLiveLogJob', () => {
     })
   })
 
+  describe('sampling rate', () => {
+    it('should always enqueue when sampleRate is 100 (default)', async () => {
+      const evaluation = createEvaluation({
+        configuration: {
+          reverseScale: false,
+          actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
+          caseInsensitive: false,
+          trigger: {
+            target: 'every',
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: 100,
+          },
+        },
+      })
+      mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
+        Result.ok([evaluation]),
+      )
+
+      await evaluateLiveLogJob(createEvent())
+
+      expect(mockEvaluationsQueue.add).toHaveBeenCalledTimes(1)
+    })
+
+    it('should skip evaluation when random value exceeds sampleRate', async () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0.5)
+
+      const evaluation = createEvaluation({
+        configuration: {
+          reverseScale: false,
+          actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
+          caseInsensitive: false,
+          trigger: {
+            target: 'every',
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: 20,
+          },
+        },
+      })
+      mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
+        Result.ok([evaluation]),
+      )
+
+      await evaluateLiveLogJob(createEvent())
+
+      expect(mockEvaluationsQueue.add).not.toHaveBeenCalled()
+    })
+
+    it('should enqueue evaluation when random value is below sampleRate', async () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0.1)
+
+      const evaluation = createEvaluation({
+        configuration: {
+          reverseScale: false,
+          actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
+          caseInsensitive: false,
+          trigger: {
+            target: 'every',
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: 20,
+          },
+        },
+      })
+      mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
+        Result.ok([evaluation]),
+      )
+
+      await evaluateLiveLogJob(createEvent())
+
+      expect(mockEvaluationsQueue.add).toHaveBeenCalledTimes(1)
+    })
+
+    it('should apply sampling independently per evaluation', async () => {
+      let callCount = 0
+      vi.spyOn(Math, 'random').mockImplementation(() => {
+        callCount++
+        return callCount === 1 ? 0.1 : 0.9
+      })
+
+      const evaluation1 = createEvaluation({
+        uuid: 'eval-sampled',
+        configuration: {
+          reverseScale: false,
+          actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
+          caseInsensitive: false,
+          trigger: {
+            target: 'every',
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: 50,
+          },
+        },
+      })
+      const evaluation2 = createEvaluation({
+        uuid: 'eval-skipped',
+        configuration: {
+          reverseScale: false,
+          actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
+          caseInsensitive: false,
+          trigger: {
+            target: 'every',
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: 50,
+          },
+        },
+      })
+      mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
+        Result.ok([evaluation1, evaluation2]),
+      )
+
+      await evaluateLiveLogJob(createEvent())
+
+      expect(mockEvaluationsQueue.add).toHaveBeenCalledTimes(1)
+      expect(mockEvaluationsQueue.add).toHaveBeenCalledWith(
+        'runEvaluationV2Job',
+        expect.objectContaining({ evaluationUuid: 'eval-sampled' }),
+        expect.any(Object),
+      )
+    })
+
+    it('should not apply sampling when sampleRate is not set (defaults to 100)', async () => {
+      const evaluation = createEvaluation({
+        configuration: {
+          reverseScale: false,
+          actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
+          caseInsensitive: false,
+          trigger: {
+            target: 'every',
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
+          },
+        },
+      })
+      mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
+        Result.ok([evaluation]),
+      )
+
+      await evaluateLiveLogJob(createEvent())
+
+      expect(mockEvaluationsQueue.add).toHaveBeenCalledTimes(1)
+    })
+
+    it('should apply sampling with "last" trigger target', async () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0.9)
+
+      const evaluation = createEvaluation({
+        configuration: {
+          reverseScale: false,
+          actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
+          caseInsensitive: false,
+          trigger: {
+            target: 'last',
+            lastInteractionDebounce: 60,
+            sampleRate: 50,
+          },
+        },
+      })
+      mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
+        Result.ok([evaluation]),
+      )
+      mockEvaluationsQueue.getJob.mockResolvedValue(null)
+
+      await evaluateLiveLogJob(createEvent())
+
+      expect(mockEvaluationsQueue.add).not.toHaveBeenCalled()
+    })
+
+    it('should apply sampling after "first" trigger check passes', async () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0.9)
+
+      const evaluation = createEvaluation({
+        configuration: {
+          reverseScale: false,
+          actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
+          caseInsensitive: false,
+          trigger: {
+            target: 'first',
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: 50,
+          },
+        },
+      })
+      mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
+        Result.ok([evaluation]),
+      )
+      mockSpansRepositoryIsFirstMainSpanInConversation.mockResolvedValue(true)
+
+      await evaluateLiveLogJob(createEvent())
+
+      expect(
+        mockSpansRepositoryIsFirstMainSpanInConversation,
+      ).toHaveBeenCalled()
+      expect(mockEvaluationsQueue.add).not.toHaveBeenCalled()
+    })
+
+    it('should enqueue at sampleRate boundary (random exactly at threshold)', async () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0.199999)
+
+      const evaluation = createEvaluation({
+        configuration: {
+          reverseScale: false,
+          actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
+          caseInsensitive: false,
+          trigger: {
+            target: 'every',
+            lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
+            sampleRate: 20,
+          },
+        },
+      })
+      mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
+        Result.ok([evaluation]),
+      )
+
+      await evaluateLiveLogJob(createEvent())
+
+      expect(mockEvaluationsQueue.add).toHaveBeenCalledTimes(1)
+    })
+  })
+
   describe('edge cases', () => {
     it('should return early if span has no documentLogUuid', async () => {
       const spanWithoutDocLogUuid = { ...mockSpan, documentLogUuid: null }
@@ -475,7 +712,11 @@ describe('evaluateLiveLogJob', () => {
           reverseScale: false,
           actualOutput: { messageSelection: 'last', parsingFormat: 'string' },
           caseInsensitive: false,
-          trigger: { target: 'every', lastInteractionDebounce: 120 },
+          trigger: {
+            target: 'every',
+            lastInteractionDebounce: 120,
+            sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
+          },
         },
       })
       mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
