@@ -27,7 +27,28 @@ function unprocessableExtraParameters(error: UnprocessableEntityError) {
 }
 
 const errorHandlerMiddleware = (err: Error) => {
+  const normalizedError =
+    err instanceof Error
+      ? err
+      : new Error(typeof err === 'string' ? err : 'Unknown error')
+
+  if (!(err instanceof Error)) {
+    normalizedError.cause = err
+  }
+
+  const shouldCapture =
+    process.env.NODE_ENV !== 'test' &&
+    (err instanceof HTTPException
+      ? err.status >= 500
+      : err instanceof UnprocessableEntityError || err instanceof LatitudeError
+        ? err.statusCode >= 500
+        : true)
+
   if (err instanceof HTTPException) {
+    if (shouldCapture) {
+      captureException(normalizedError)
+    }
+
     return Response.json(
       {
         name: ApiErrorCodes.HTTPException,
@@ -38,6 +59,10 @@ const errorHandlerMiddleware = (err: Error) => {
       { status: err.status, headers: err.res?.headers },
     )
   } else if (err instanceof UnprocessableEntityError) {
+    if (shouldCapture) {
+      captureException(normalizedError)
+    }
+
     return Response.json(
       {
         ...unprocessableExtraParameters(err),
@@ -47,6 +72,10 @@ const errorHandlerMiddleware = (err: Error) => {
       { status: err.statusCode },
     )
   } else if (err instanceof LatitudeError) {
+    if (shouldCapture) {
+      captureException(normalizedError)
+    }
+
     return Response.json(
       {
         name: err.name,
@@ -57,16 +86,16 @@ const errorHandlerMiddleware = (err: Error) => {
       { status: err.statusCode, headers: err.headers },
     )
   } else {
-    if (process.env.NODE_ENV !== 'test') {
-      captureException(err)
+    if (shouldCapture) {
+      captureException(normalizedError)
     }
 
     return Response.json(
       {
         name: 'InternalServerError',
         errorCode: ApiErrorCodes.InternalServerError,
-        message: err.message,
-        details: { cause: err.cause },
+        message: normalizedError.message,
+        details: { cause: normalizedError.cause },
       },
       { status: http.Status.INTERNAL_SERVER_ERROR },
     )

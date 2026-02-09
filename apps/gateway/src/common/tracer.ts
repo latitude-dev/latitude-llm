@@ -16,10 +16,11 @@ tracer.use('ioredis', {
 export default tracer
 
 export function captureException(error: Error) {
-  const span = tracer.scope().active()
-  if (span) {
-    span.setTag('error.type', error.name)
-    span.setTag('error.message', error.message)
-    span.setTag('error.stack', error.stack)
-  }
+  const activeSpan = tracer.scope().active()
+  const span = activeSpan ?? tracer.startSpan('gateway.error')
+  span.setTag('error', error)
+  span.setTag('error.type', error.name)
+  span.setTag('error.message', error.message)
+  span.setTag('error.stack', error.stack)
+  if (!activeSpan) span.finish()
 }

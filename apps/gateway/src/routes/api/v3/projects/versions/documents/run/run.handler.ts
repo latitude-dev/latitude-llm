@@ -5,7 +5,6 @@ import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
 import { LogSources } from '@latitude-data/constants'
 import { BadRequestError, LatitudeError } from '@latitude-data/core/lib/errors'
-import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runForegroundDocument } from '@latitude-data/core/services/commits/foregroundRun'
@@ -255,11 +254,12 @@ async function handleForegroundRun({
           return Promise.resolve()
         }
 
-        const unknownError = getUnknownError(error)
+        const normalizedError =
+          error instanceof Error
+            ? error
+            : new Error(typeof error === 'string' ? error : 'Unknown error')
 
-        if (unknownError) {
-          captureException(error)
-        }
+        captureException(normalizedError)
 
         return Promise.resolve()
       },
