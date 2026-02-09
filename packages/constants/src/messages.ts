@@ -90,7 +90,7 @@ export type AssistantMessage = IMessage & {
 
 export type ToolMessage = IMessage & {
   role: 'tool'
-  content: (TextContent | ToolResultContent)[]
+  content: ToolResultContent[]
 }
 
 export type Message =

@@ -324,7 +324,8 @@ export class SpansRepository extends Repository<Span> {
     spanId: string,
     traceId: string,
   ): Promise<boolean> {
-    const firstSpan = await this.findFirstMainSpanByDocumentLogUuid(documentLogUuid)
+    const firstSpan =
+      await this.findFirstMainSpanByDocumentLogUuid(documentLogUuid)
     return firstSpan?.id === spanId && firstSpan?.traceId === traceId
   }
 

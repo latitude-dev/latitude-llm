@@ -13,6 +13,11 @@ import { LatitudeTelemetry } from '../src'
 
 const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, {
   disableBatch: true,
+  instrumentations: {
+    manual: {
+      provider: 'promptl',
+    },
+  },
 })
 
 function sleep(ms: number): Promise<void> {
@@ -54,37 +59,39 @@ async function simulateHttpRequest(
   })
 }
 
+const INITIAL_MESSAGES: Message[] = [
+  {
+    role: MessageRole.system,
+    content: [
+      {
+        type: ContentType.text,
+        text: 'You are an advanced AI assistant with vision capabilities, access to tools, and the ability to process files. You help users with complex multi-modal tasks.',
+      },
+    ],
+  },
+  {
+    role: MessageRole.user,
+    content: [
+      {
+        type: ContentType.text,
+        text: 'Hello! I have an image of a document and a CSV file with some data. Can you analyze both and tell me what you see?',
+      },
+      {
+        type: ContentType.image,
+        image:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOYAAAA0CAYAAACenESfAAAAuUlEQVR4nO3TMQHAIADAsDH/wrjxws0ETAA9EgV9OvZc5wFS3tsBwJ8xIciYEGRMCDImBBkTgowJQcaEIGNCkDEhyJgQZEwIMiYEGROCjAlBxoQgY0KQMSHImBBkTAgyJgQZE4KMCUHGhCBjQpAxIciYEGRMCDImBBkTgowJQcaEIGNCkDEhyJgQZEwIMiYEGROCjAlBxoQgY0KQMSHImBBkTAgyJgQZE4KMCUHGhCBjQpAxIciYEPQB3HYD9hsfPO4AAAAASUVORK5CYII=',
+      },
+      {
+        type: ContentType.file,
+        file: 'data:text/csv;base64,bmFtZSxhZ2UsY2l0eQpBbGljZSwzMCxOZXcgWW9yawpCb2IsMjUsU2FuIEZyYW5jaXNjbwpDaGFybGllLDM1LExvcyBBbmdlbGVz',
+        mimeType: 'text/csv',
+      },
+    ],
+  },
+]
+
 async function runFirstCompletion(): Promise<Message[]> {
-  const input: Message[] = [
-    {
-      role: MessageRole.system,
-      content: [
-        {
-          type: ContentType.text,
-          text: 'You are an advanced AI assistant with vision capabilities, access to tools, and the ability to process files. You help users with complex multi-modal tasks.',
-        },
-      ],
-    },
-    {
-      role: MessageRole.user,
-      content: [
-        {
-          type: ContentType.text,
-          text: 'Hello! I have an image of a document and a CSV file with some data. Can you analyze both and tell me what you see?',
-        },
-        {
-          type: ContentType.image,
-          image:
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-        },
-        {
-          type: ContentType.file,
-          file: 'data:text/csv;base64,bmFtZSxhZ2UsY2l0eQpBbGljZSwzMCxOZXcgWW9yawpCb2IsMjUsU2FuIEZyYW5jaXNjbwpDaGFybGllLDM1LExvcyBBbmdlbGVz',
-          mimeType: 'text/csv',
-        },
-      ],
-    },
-  ]
+  const input: Message[] = [...INITIAL_MESSAGES]
 
   const output: Message[] = [
     {
@@ -177,8 +184,6 @@ async function runToolExecutions(): Promise<Message[]> {
     },
   })
 
-  await sleep(500)
-
   const csvResult = {
     rows: 3,
     columns: ['name', 'age', 'city'],
@@ -193,20 +198,6 @@ async function runToolExecutions(): Promise<Message[]> {
     ],
   }
 
-  csvToolSpan.end({
-    result: {
-      value: csvResult,
-      isError: false,
-    },
-  })
-
-  toolMessages.push({
-    role: MessageRole.tool,
-    content: JSON.stringify(csvResult),
-    toolCallId: 'call_parse_csv_001',
-    toolName: 'parse_csv',
-  } as unknown as Message)
-
   const weatherToolSpan = telemetry.span.tool({
     name: 'get_weather',
     call: {
@@ -217,63 +208,45 @@ async function runToolExecutions(): Promise<Message[]> {
     },
   })
 
-  await sleep(750)
-
   const weatherError = new Error(
     'Weather API rate limit exceeded. Please try again in 60 seconds.',
   )
+
+  await sleep(500)
+
+  csvToolSpan.end({ result: { value: csvResult, isError: false } })
 
   weatherToolSpan.fail(weatherError)
 
   toolMessages.push({
     role: MessageRole.tool,
-    content: JSON.stringify({
-      error: weatherError.message,
-      isError: true,
-    }),
-    toolCallId: 'call_get_weather_002',
+    content: [{ type: ContentType.text, text: JSON.stringify(csvResult) }],
+    toolId: 'call_parse_csv_001',
+    toolName: 'parse_csv',
+  })
+
+  toolMessages.push({
+    role: MessageRole.tool,
+    content: [
+      {
+        type: ContentType.text,
+        text: JSON.stringify({
+          error: weatherError.message,
+          isError: true, // Note: actually, isError is not supported by Promptl yet...
+        }),
+      },
+    ],
+    toolId: 'call_get_weather_002',
     toolName: 'get_weather',
-  } as unknown as Message)
+  })
 
   return toolMessages
 }
 
 async function runSecondCompletion(
-  previousOutput: Message[],
-  toolMessages: Message[],
+  conversationHistory: Message[],
 ): Promise<Message[]> {
-  const input: Message[] = [
-    {
-      role: MessageRole.system,
-      content: [
-        {
-          type: ContentType.text,
-          text: 'You are an advanced AI assistant with vision capabilities, access to tools, and the ability to process files. You help users with complex multi-modal tasks.',
-        },
-      ],
-    },
-    {
-      role: MessageRole.user,
-      content: [
-        {
-          type: ContentType.text,
-          text: 'Hello! I have an image of a document and a CSV file with some data. Can you analyze both and tell me what you see?',
-        },
-        {
-          type: ContentType.image,
-          image:
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-        },
-        {
-          type: ContentType.file,
-          file: 'data:text/csv;base64,bmFtZSxhZ2UsY2l0eQpBbGljZSwzMCxOZXcgWW9yawpCb2IsMjUsU2FuIEZyYW5jaXNjbwpDaGFybGllLDM1LExvcyBBbmdlbGVz',
-          mimeType: 'text/csv',
-        },
-      ],
-    },
-    ...previousOutput,
-    ...toolMessages,
-  ]
+  const input: Message[] = [...conversationHistory]
 
   const output: Message[] = [
     {
@@ -328,18 +301,10 @@ async function runSecondCompletion(
   return output
 }
 
-async function runThirdCompletionWithMultipleToolCalls(): Promise<Message[]> {
-  const input: Message[] = [
-    {
-      role: MessageRole.user,
-      content: [
-        {
-          type: ContentType.text,
-          text: 'Can you search the web for the latest news about AI and also calculate some statistics for me?',
-        },
-      ],
-    },
-  ]
+async function runThirdCompletionWithMultipleToolCalls(
+  conversationHistory: Message[],
+): Promise<Message[]> {
+  const input: Message[] = [...conversationHistory]
 
   const output: Message[] = [
     {
@@ -474,10 +439,10 @@ async function runMultipleToolExecutions(): Promise<Message[]> {
 
   toolMessages.push({
     role: MessageRole.tool,
-    content: JSON.stringify(searchResults),
-    toolCallId: 'call_web_search_003',
+    content: [{ type: ContentType.text, text: JSON.stringify(searchResults) }],
+    toolId: 'call_web_search_003',
     toolName: 'web_search',
-  } as unknown as Message)
+  })
 
   const calculatorSpan = telemetry.span.tool({
     name: 'calculator',
@@ -510,10 +475,10 @@ async function runMultipleToolExecutions(): Promise<Message[]> {
 
   toolMessages.push({
     role: MessageRole.tool,
-    content: JSON.stringify(statsResult),
-    toolCallId: 'call_calculator_004',
+    content: [{ type: ContentType.text, text: JSON.stringify(statsResult) }],
+    toolId: 'call_calculator_004',
     toolName: 'calculator',
-  } as unknown as Message)
+  })
 
   const chartSpan = telemetry.span.tool({
     name: 'generate_chart',
@@ -549,19 +514,18 @@ async function runMultipleToolExecutions(): Promise<Message[]> {
 
   toolMessages.push({
     role: MessageRole.tool,
-    content: JSON.stringify(chartResult),
-    toolCallId: 'call_generate_chart_005',
+    content: [{ type: ContentType.text, text: JSON.stringify(chartResult) }],
+    toolId: 'call_generate_chart_005',
     toolName: 'generate_chart',
-  } as unknown as Message)
+  })
 
   return toolMessages
 }
 
 async function runFinalCompletion(
-  previousMessages: Message[],
-  toolMessages: Message[],
+  conversationHistory: Message[],
 ): Promise<Message[]> {
-  const input: Message[] = [...previousMessages, ...toolMessages]
+  const input: Message[] = [...conversationHistory]
 
   const output: Message[] = [
     {
@@ -574,7 +538,7 @@ async function runFinalCompletion(
         {
           type: ContentType.image,
           image:
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNk+M9QzwAEjDAGQzQCAALvB/EtL4P1AAAAAElFTkSuQmCC',
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOYAAAA0CAYAAACenESfAAAAuUlEQVR4nO3TMQHAIADAsDH/wrjxws0ETAA9EgV9Otae5wFS3tsBwJ8xIciYEGRMCDImBBkTgowJQcaEIGNCkDEhyJgQZEwIMiYEGROCjAlBxoQgY0KQMSHImBBkTAgyJgQZE4KMCUHGhCBjQpAxIciYEGRMCDImBBkTgowJQcaEIGNCkDEhyJgQZEwIMiYEGROCjAlBxoQgY0KQMSHImBBkTAgyJgQZE4KMCUHGhCBjQpAxIciYEPQB3F0D9icuN58AAAAASUVORK5CYII=',
         },
         {
           type: ContentType.text,
@@ -627,18 +591,10 @@ async function runFinalCompletion(
   return output
 }
 
-async function runConversationWithAssistantFile(): Promise<Message[]> {
-  const input: Message[] = [
-    {
-      role: MessageRole.user,
-      content: [
-        {
-          type: ContentType.text,
-          text: 'Can you generate a PDF report of all the analysis we did?',
-        },
-      ],
-    },
-  ]
+async function runConversationWithAssistantFile(
+  conversationHistory: Message[],
+): Promise<Message[]> {
+  const input: Message[] = [...conversationHistory]
 
   const output: Message[] = [
     {
@@ -703,28 +659,58 @@ async function runConversationWithAssistantFile(): Promise<Message[]> {
 }
 
 async function testComplexMultiTurnConversation(): Promise<string> {
+  const conversationHistory: Message[] = [...INITIAL_MESSAGES]
+
   console.log('  Turn 1: Initial analysis request with image and file...')
   const turn1Output = await runFirstCompletion()
+  conversationHistory.push(...turn1Output)
 
   console.log(
     '  Turn 2: Executing tools (CSV parsing success, weather API failure)...',
   )
   const turn2ToolMessages = await runToolExecutions()
+  conversationHistory.push(...turn2ToolMessages)
 
   console.log('  Turn 3: Response with tool results...')
-  await runSecondCompletion(turn1Output, turn2ToolMessages)
+  const turn3Output = await runSecondCompletion([...conversationHistory])
+  conversationHistory.push(...turn3Output)
 
   console.log('  Turn 4: Multi-tool request (web search, calculator, chart)...')
-  const turn4Output = await runThirdCompletionWithMultipleToolCalls()
+  conversationHistory.push({
+    role: MessageRole.user,
+    content: [
+      {
+        type: ContentType.text,
+        text: 'Can you search the web for the latest news about AI and also calculate some statistics for me?',
+      },
+    ],
+  })
+  const turn4Output = await runThirdCompletionWithMultipleToolCalls([
+    ...conversationHistory,
+  ])
+  conversationHistory.push(...turn4Output)
 
   console.log('  Turn 5: Executing multiple tools...')
   const turn5ToolMessages = await runMultipleToolExecutions()
+  conversationHistory.push(...turn5ToolMessages)
 
   console.log('  Turn 6: Final summary with image in response...')
-  await runFinalCompletion(turn4Output, turn5ToolMessages)
+  const turn6Output = await runFinalCompletion([...conversationHistory])
+  conversationHistory.push(...turn6Output)
 
   console.log('  Turn 7: PDF report generation with file in response...')
-  const finalOutput = await runConversationWithAssistantFile()
+  conversationHistory.push({
+    role: MessageRole.user,
+    content: [
+      {
+        type: ContentType.text,
+        text: 'Can you generate a PDF report of all the analysis we did?',
+      },
+    ],
+  })
+  const finalOutput = await runConversationWithAssistantFile([
+    ...conversationHistory,
+  ])
 
   const finalContent = finalOutput[0]?.content
   if (Array.isArray(finalContent)) {

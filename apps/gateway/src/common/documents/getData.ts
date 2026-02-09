@@ -36,7 +36,9 @@ async function getProjectByVersionData({
   // 'live' is accepted in some routes as a special identifier.
   // Anything else must be a UUID to avoid Drizzle/pg throwing on malformed values.
   if (commitUuid !== 'live' && !isValidUuid(commitUuid)) {
-    return Result.error(new BadRequestError(`Invalid version uuid ${commitUuid}`))
+    return Result.error(
+      new BadRequestError(`Invalid version uuid ${commitUuid}`),
+    )
   }
 
   const commitResult = await commitsScope.getCommitByUuid({

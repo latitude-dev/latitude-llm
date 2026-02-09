@@ -151,7 +151,7 @@ function ContentItem<M extends MarkdownSize | 'none'>({
   }
 
   if (value.type === 'file') {
-    if (value.mimeType.includes('image')) {
+    if (value.mimeType.startsWith('image')) {
       return (
         <ImageMessageContent
           index={index}
