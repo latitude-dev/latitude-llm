@@ -2,6 +2,7 @@ import {
   EvaluationConfiguration,
   EvaluationMetric,
   EvaluationMetricSpecification,
+  EvaluationOptions,
   EvaluationResultV2,
   EvaluationSettings,
   EvaluationSpecification,
@@ -30,6 +31,8 @@ export type ConfigurationFormProps<
   setConfiguration: (configuration: EvaluationConfiguration<T, M>) => void // Note: remove and just use setSettings
   issueId?: number | null
   setIssueId?: (issueId: number | null) => void
+  options: Partial<EvaluationOptions>
+  setOptions: (options: Partial<EvaluationOptions>) => void
   settings: EvaluationSettings<T, M>
   setSettings: (settings: EvaluationSettings<T, M>) => void
   errors?: Record<string, string[]>

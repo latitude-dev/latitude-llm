@@ -11,6 +11,8 @@ import {
   ExpectedOutputConfiguration,
   LAST_INTERACTION_DEBOUNCE_MAX_SECONDS,
   LAST_INTERACTION_DEBOUNCE_MIN_SECONDS,
+  MAX_EVALUATION_SAMPLE_RATE,
+  MIN_EVALUATION_SAMPLE_RATE,
 } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -165,6 +167,24 @@ export async function validateEvaluationV2<
       return Result.error(
         new BadRequestError(
           `lastInteractionDebounce must be at most ${LAST_INTERACTION_DEBOUNCE_MAX_SECONDS} seconds`,
+        ),
+      )
+    }
+  }
+
+  const sampleRate = settings.configuration.trigger?.sampleRate
+  if (sampleRate !== undefined) {
+    if (sampleRate < MIN_EVALUATION_SAMPLE_RATE) {
+      return Result.error(
+        new BadRequestError(
+          `sampleRate must be at least ${MIN_EVALUATION_SAMPLE_RATE}`,
+        ),
+      )
+    }
+    if (sampleRate > MAX_EVALUATION_SAMPLE_RATE) {
+      return Result.error(
+        new BadRequestError(
+          `sampleRate must be at most ${MAX_EVALUATION_SAMPLE_RATE}`,
         ),
       )
     }

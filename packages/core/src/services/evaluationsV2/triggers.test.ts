@@ -22,21 +22,15 @@ describe('getTriggerTarget', () => {
   })
 
   it('returns first when configured', () => {
-    expect(
-      getTriggerTarget({ target: 'first', lastInteractionDebounce: 60 }),
-    ).toBe('first')
+    expect(getTriggerTarget({ target: 'first' })).toBe('first')
   })
 
   it('returns last when configured', () => {
-    expect(
-      getTriggerTarget({ target: 'last', lastInteractionDebounce: 60 }),
-    ).toBe('last')
+    expect(getTriggerTarget({ target: 'last' })).toBe('last')
   })
 
   it('returns every when configured', () => {
-    expect(
-      getTriggerTarget({ target: 'every', lastInteractionDebounce: 60 }),
-    ).toBe('every')
+    expect(getTriggerTarget({ target: 'every' })).toBe('every')
   })
 })
 

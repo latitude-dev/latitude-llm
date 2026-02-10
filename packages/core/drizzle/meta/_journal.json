@@ -1877,6 +1877,13 @@
       "when": 1770633568138,
       "tag": "0268_add_workspace_trace_id_index_to_eval_results",
       "breakpoints": true
+    },
+    {
+      "idx": 269,
+      "version": "7",
+      "when": 1770644173781,
+      "tag": "0269_evaluation_trigger_sample_rate",
+      "breakpoints": true
     }
   ]
 }
