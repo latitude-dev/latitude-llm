@@ -623,6 +623,47 @@ describe('POST /run', () => {
       )
     })
 
+
+
+    it('returns 499 when request is aborted and no final response is produced', async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveDocument: document,
+        effectiveSource: LogSources.API,
+      })
+
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            // Simulate an empty final response (seen in Datadog) when the client disconnects
+            // before any content is produced.
+            response: undefined as any,
+            provider: provider,
+          }),
+        }),
+      )
+
+      const ac = new AbortController()
+      ac.abort()
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body,
+        headers,
+        signal: ac.signal,
+      })
+
+      expect(res.status).toBe(499)
+    })
     it('returns response', async () => {
       const documentLogUuid = generateUUIDIdentifier()
       const usage = {
