@@ -681,7 +681,7 @@ describe('evaluateFactory', () => {
       expect(mocks.generateSimulatedUserAction).not.toHaveBeenCalled()
     })
 
-    it('returns learnable trajectory on simulation error', async () => {
+    it('returns error on simulation error', async () => {
       const evaluation = createEvaluation('last')
       mockRunDocumentAtCommit()
 
@@ -703,9 +703,8 @@ describe('evaluateFactory', () => {
         example: baseExample,
       })
 
-      expect(result.ok).toBe(true)
-      expect(result.value!.feedback).toContain('multi-turn simulation')
-      expect(result.value!.feedback).toContain('Simulation failed')
+      expect(result.ok).toBe(false)
+      expect(result.error!.message).toContain('Simulation failed')
     })
   })
 
