@@ -635,6 +635,7 @@ async function simulateConversation({
       ],
       source: LogSources.Optimization,
       abortSignal,
+      simulationSettings,
     })
     if (addResult.error) {
       return Result.error(addResult.error)
