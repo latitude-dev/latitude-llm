@@ -147,6 +147,77 @@ describe('processSpansBulk', () => {
             spanId: span1.spanId,
             traceId: span1.traceId,
             workspaceId: workspace.id,
+            spanType: SpanType.Completion,
+            isConversationRoot: false,
+          }),
+        }),
+      )
+    })
+
+    it('publishes spanCreated with isConversationRoot true for root Prompt spans', async () => {
+      const promptSpan = createOtlpSpan({
+        attributes: [
+          {
+            key: ATTRIBUTES.LATITUDE.type,
+            value: { stringValue: SpanType.Prompt },
+          },
+        ],
+      })
+
+      const callsBefore = publisherSpy.mock.calls.length
+
+      await processSpansBulk({
+        spans: [createSpanData(promptSpan, apiKey, workspace)],
+        apiKey,
+        workspace,
+      })
+
+      expect(publisherSpy).toHaveBeenCalledTimes(callsBefore + 1)
+      expect(publisherSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'spanCreated',
+          data: expect.objectContaining({
+            spanId: promptSpan.spanId,
+            traceId: promptSpan.traceId,
+            spanType: SpanType.Prompt,
+            isConversationRoot: true,
+          }),
+        }),
+      )
+    })
+
+    it('publishes spanCreated with isConversationRoot false for child Prompt spans', async () => {
+      const parentSpan = createOtlpSpan()
+      const childPromptSpan = createOtlpSpan({
+        parentSpanId: parentSpan.spanId,
+        traceId: parentSpan.traceId,
+        attributes: [
+          {
+            key: ATTRIBUTES.LATITUDE.type,
+            value: { stringValue: SpanType.Prompt },
+          },
+        ],
+      })
+
+      const callsBefore = publisherSpy.mock.calls.length
+
+      await processSpansBulk({
+        spans: [
+          createSpanData(parentSpan, apiKey, workspace),
+          createSpanData(childPromptSpan, apiKey, workspace),
+        ],
+        apiKey,
+        workspace,
+      })
+
+      expect(publisherSpy).toHaveBeenCalledTimes(callsBefore + 2)
+      expect(publisherSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'spanCreated',
+          data: expect.objectContaining({
+            spanId: childPromptSpan.spanId,
+            spanType: SpanType.Prompt,
+            isConversationRoot: false,
           }),
         }),
       )

@@ -5,10 +5,7 @@ import { webhooks } from '../../../schema/models/webhooks'
 import { Events, LatitudeEvent } from '../../../events/events'
 import { queues } from '../../queues'
 
-export const WEBHOOK_EVENTS: Array<Events> = [
-  'commitPublished',
-  'documentLogCreated',
-]
+export const WEBHOOK_EVENTS: Array<Events> = ['commitPublished', 'spanCreated']
 
 export async function processWebhookJob({
   data: event,
@@ -20,6 +17,14 @@ export async function processWebhookJob({
   }
   if (!WEBHOOK_EVENTS.includes(event.type as Events)) {
     return // Skip silently as this is an expected condition
+  }
+
+  // Only process spanCreated events that are conversation roots (completed prompt runs)
+  if (
+    event.type === 'spanCreated' &&
+    !('isConversationRoot' in event.data && event.data.isConversationRoot)
+  ) {
+    return // Skip non-root spans
   }
 
   // Get all active webhooks for the workspace

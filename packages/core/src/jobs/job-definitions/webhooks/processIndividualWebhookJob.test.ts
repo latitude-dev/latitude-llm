@@ -3,14 +3,13 @@ import { Job } from 'bullmq'
 import { processIndividualWebhookJob } from './processIndividualWebhookJob'
 import * as factories from '../../../tests/factories'
 import { type Commit } from '../../../schema/models/types/Commit'
-import { CommitPublishedEvent } from '../../../events/events'
+import { CommitPublishedEvent, SpanCreatedEvent } from '../../../events/events'
 import {
   createWebhookDelivery,
   sendSignedWebhook,
 } from '../../../services/webhooks'
 import { Result } from './../../../lib/Result'
-import { Message } from '@latitude-data/constants/messages'
-import { Providers } from '@latitude-data/constants'
+import { Providers, SpanType } from '@latitude-data/constants'
 
 // Mock the services
 vi.mock('../../../services/webhooks', () => ({
@@ -51,6 +50,7 @@ describe('processIndividualWebhookJob', () => {
           updatedAt: new Date(),
         } as Commit,
         userEmail: 'test@example.com',
+        changedDocuments: [{ path: 'test/doc', changeType: 'created' }],
       },
     }
 
@@ -121,6 +121,7 @@ describe('processIndividualWebhookJob', () => {
           updatedAt: new Date(),
         } as Commit,
         userEmail: 'test@example.com',
+        changedDocuments: [{ path: 'test/doc', changeType: 'updated' }],
       },
     }
 
@@ -166,6 +167,7 @@ describe('processIndividualWebhookJob', () => {
           updatedAt: new Date(),
         } as Commit,
         userEmail: 'test@example.com',
+        changedDocuments: [{ path: 'test/doc', changeType: 'created' }],
       },
     }
 
@@ -236,6 +238,7 @@ describe('processIndividualWebhookJob', () => {
           updatedAt: new Date(),
         } as Commit,
         userEmail: 'test@example.com',
+        changedDocuments: [{ path: 'test/doc', changeType: 'deleted' }],
       },
     }
 
@@ -284,20 +287,19 @@ describe('processIndividualWebhookJob', () => {
     })
   })
 
-  it('processes documentLogCreated event type', async () => {
-    // Create a workspace and webhook
-    // Create a project with a document
+  it('processes spanCreated event type', async () => {
     const prompt = factories.helpers.createPrompt({
       provider: 'openai',
       model: 'gpt-4o',
     })
-    const { workspace, commit, documents } = await factories.createProject({
-      providers: [{ type: Providers.OpenAI, name: 'openai' }],
-      name: 'Default Project',
-      documents: {
-        foo: prompt,
-      },
-    })
+    const { workspace, project, commit, documents } =
+      await factories.createProject({
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        name: 'Default Project',
+        documents: {
+          foo: prompt,
+        },
+      })
 
     const document = documents[0]!
     const webhook = await factories.createWebhook({
@@ -307,53 +309,27 @@ describe('processIndividualWebhookJob', () => {
       projectIds: [],
     })
 
-    // Create a document log with the factory
-    const { documentLog } = await factories.createDocumentLog({
-      document,
-      commit,
-      parameters: { test: 'value' },
-      skipProviderLogs: true,
+    const { apiKey } = await factories.createApiKey({ workspace })
+    const span = await factories.createSpan({
+      workspaceId: workspace.id,
+      apiKeyId: apiKey.id,
+      projectId: project.id,
+      type: SpanType.Prompt,
+      parentId: undefined,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
     })
 
-    // Create a provider log for the document log
-    const provider = await factories.createProviderApiKey({
-      workspace,
-      type: Providers.OpenAI,
-      name: 'wat',
-      user: await factories.createUser(),
-    })
-
-    const messages = [
-      {
-        role: 'user',
-        content: [{ type: 'text', text: 'Hello, how are you?' }],
-      },
-      {
-        role: 'assistant',
-        content: [
-          { type: 'text', text: 'I am doing well, thank you for asking!' },
-        ],
-      },
-    ]
-
-    await factories.createProviderLog({
-      documentLogUuid: documentLog.uuid,
-      providerId: provider.id,
-      providerType: Providers.OpenAI,
-      workspace,
-      messages: messages as unknown as Message[],
-      responseText: 'I am doing well, thank you for asking!',
-      model: 'gpt-4',
-      duration: 1000,
-      tokens: 50,
-    })
-
-    // Create a documentLogCreated event
-    const event = {
-      type: 'documentLogCreated',
+    const event: SpanCreatedEvent = {
+      type: 'spanCreated',
       data: {
-        id: documentLog.id,
         workspaceId: workspace.id,
+        apiKeyId: apiKey.id,
+        spanId: span.id,
+        traceId: span.traceId,
+        documentUuid: span.documentUuid ?? undefined,
+        spanType: SpanType.Prompt,
+        isConversationRoot: true,
       },
     }
 
@@ -377,22 +353,19 @@ describe('processIndividualWebhookJob', () => {
     // Process the webhook job
     await processIndividualWebhookJob(mockJob)
 
-    // Verify webhook was sent with the correct payload including messages
+    // Verify webhook was sent with the correct payload
+    // Note: eventType is 'documentLogCreated' for backward compatibility
     expect(sendSignedWebhook).toHaveBeenCalledWith({
       url: webhook.url,
       secret: webhook.secret,
       payload: {
-        eventType: event.type,
+        eventType: 'documentLogCreated',
         payload: expect.objectContaining({
           prompt: expect.any(Object),
-          uuid: documentLog.uuid,
-          parameters: { test: 'value' },
-          customIdentifier: null,
-          duration: expect.any(Number),
-          source: expect.any(String),
-          commitId: commit.id,
-          messages: messages,
-          response: expect.any(String),
+          uuid: span.documentLogUuid,
+          duration: span.duration,
+          source: span.source,
+          commitUuid: span.commitUuid,
         }),
       },
     })
@@ -434,6 +407,7 @@ describe('processIndividualWebhookJob', () => {
           updatedAt: new Date(),
         } as Commit,
         userEmail: 'test@example.com',
+        changedDocuments: [{ path: 'test/doc', changeType: 'updated' }],
       },
     }
 
@@ -498,6 +472,7 @@ describe('processIndividualWebhookJob', () => {
           updatedAt: new Date(),
         } as Commit,
         userEmail: 'test@example.com',
+        changedDocuments: [],
       },
     }
 

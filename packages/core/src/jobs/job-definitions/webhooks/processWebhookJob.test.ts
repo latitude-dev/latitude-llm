@@ -2,11 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { processWebhookJob } from './processWebhookJob'
 import * as factories from '../../../tests/factories'
 import { type Commit } from '../../../schema/models/types/Commit'
-import { Providers } from '@latitude-data/constants'
-import {
-  CommitPublishedEvent,
-  DocumentLogCreatedEvent,
-} from '../../../events/events'
+import { Providers, SpanType } from '@latitude-data/constants'
+import { CommitPublishedEvent, SpanCreatedEvent } from '../../../events/events'
 
 describe('processWebhookJob', () => {
   const mocks = vi.hoisted(() => ({
@@ -62,6 +59,7 @@ describe('processWebhookJob', () => {
           updatedAt: new Date(),
         } as Commit,
         userEmail: 'test@example.com',
+        changedDocuments: [{ path: 'test/doc', changeType: 'created' }],
       },
     }
 
@@ -105,6 +103,7 @@ describe('processWebhookJob', () => {
           updatedAt: new Date(),
         } as Commit,
         userEmail: 'test@example.com',
+        changedDocuments: [],
       },
     }
 
@@ -147,9 +146,8 @@ describe('processWebhookJob', () => {
     expect(mocks.webhooksQueue).not.toHaveBeenCalled()
   })
 
-  it('enqueues jobs for documentLogCreated events', async () => {
-    // Create workspace, project, commit, and document using the project factory
-    const { workspace, commit, documents } = await factories.createProject({
+  it('enqueues jobs for spanCreated events when isConversationRoot is true', async () => {
+    const { workspace, project } = await factories.createProject({
       providers: [{ name: 'openai', type: Providers.OpenAI }],
       documents: {
         subagent: factories.helpers.createPrompt({
@@ -160,7 +158,6 @@ describe('processWebhookJob', () => {
         }),
       },
     })
-    const document = documents[0] // Get the created document
 
     const webhook = await factories.createWebhook({
       workspaceId: workspace.id,
@@ -169,17 +166,25 @@ describe('processWebhookJob', () => {
       projectIds: [], // No filter
     })
 
-    // Create a document log linked to the document and commit
-    const { documentLog } = await factories.createDocumentLog({
-      document: document!, // Pass the actual document object
-      commit: commit, // Pass the actual commit object
+    const { apiKey } = await factories.createApiKey({ workspace })
+    const span = await factories.createSpan({
+      workspaceId: workspace.id,
+      apiKeyId: apiKey.id,
+      projectId: project.id,
+      type: SpanType.Prompt,
+      parentId: undefined, // Root span
     })
 
-    const event: DocumentLogCreatedEvent = {
-      type: 'documentLogCreated',
+    const event: SpanCreatedEvent = {
+      type: 'spanCreated',
       data: {
-        ...documentLog,
         workspaceId: workspace.id,
+        apiKeyId: apiKey.id,
+        spanId: span.id,
+        traceId: span.traceId,
+        documentUuid: span.documentUuid ?? undefined,
+        spanType: SpanType.Prompt,
+        isConversationRoot: true,
       },
     }
 
@@ -197,5 +202,53 @@ describe('processWebhookJob', () => {
         webhookId: webhook.id,
       },
     )
+  })
+
+  it('skips spanCreated events when isConversationRoot is false', async () => {
+    const { workspace, project } = await factories.createProject({
+      providers: [{ name: 'openai', type: Providers.OpenAI }],
+      documents: {
+        subagent: factories.helpers.createPrompt({
+          provider: 'openai',
+        }),
+      },
+    })
+
+    await factories.createWebhook({
+      workspaceId: workspace.id,
+      url: 'https://example.com/webhook',
+      isActive: true,
+      projectIds: [],
+    })
+
+    const { apiKey } = await factories.createApiKey({ workspace })
+    const span = await factories.createSpan({
+      workspaceId: workspace.id,
+      apiKeyId: apiKey.id,
+      projectId: project.id,
+      type: SpanType.Completion,
+      parentId: 'some-parent-id', // Not a root span
+    })
+
+    const event: SpanCreatedEvent = {
+      type: 'spanCreated',
+      data: {
+        workspaceId: workspace.id,
+        apiKeyId: apiKey.id,
+        spanId: span.id,
+        traceId: span.traceId,
+        documentUuid: span.documentUuid ?? undefined,
+        spanType: SpanType.Completion,
+        isConversationRoot: false,
+      },
+    }
+
+    mocks.webhooksQueue.mockClear()
+
+    // Process the webhook job
+    await processWebhookJob({ data: event })
+
+    // Verify no jobs were enqueued because isConversationRoot is false
+    expect(mocks.webhooksQueue).not.toHaveBeenCalled()
   })
 })

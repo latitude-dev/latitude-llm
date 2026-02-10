@@ -16,7 +16,7 @@ import {
   SpanStatus,
   SpanType,
 } from '../../../../constants'
-import { publisher } from '../../../../events/publisher'
+import { publishSpanCreated } from '../../publishSpanCreated'
 import { diskFactory, DiskWrapper } from '../../../../lib/disk'
 import { LatitudeError, UnprocessableEntityError } from '../../../../lib/errors'
 import { Result, TypedResult } from '../../../../lib/Result'
@@ -369,17 +369,15 @@ export async function processSpansBulk(
       disk,
     )
 
-    // Publish events for all spans
     const eventPromises = insertedSpans.map((span) =>
-      publisher.publishLater({
-        type: 'spanCreated',
-        data: {
-          spanId: span.id,
-          traceId: span.traceId,
-          apiKeyId: apiKey.id,
-          workspaceId: workspace.id,
-          documentUuid: span.documentUuid,
-        },
+      publishSpanCreated({
+        spanId: span.id,
+        traceId: span.traceId,
+        apiKeyId: apiKey.id,
+        workspaceId: workspace.id,
+        documentUuid: span.documentUuid,
+        spanType: span.type,
+        parentId: span.parentId,
       }),
     )
     await Promise.all(eventPromises)

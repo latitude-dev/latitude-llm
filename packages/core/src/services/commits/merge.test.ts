@@ -1,14 +1,29 @@
 import { eq } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { database } from '../../client'
-import { Providers } from '@latitude-data/constants'
+import { ModifiedDocumentType, Providers } from '@latitude-data/constants'
 import { findHeadCommit } from '../../data-access/commits'
 import { documentVersions } from '../../schema/models/documentVersions'
-import { createNewDocument, updateDocument } from '../documents'
+import {
+  createNewDocument,
+  updateDocument,
+  destroyDocument,
+} from '../documents'
 import { mergeCommit } from './merge'
+import * as publisherModule from '../../events/publisher'
+import { waitForTransactionCallbacks } from '../../tests/helpers'
+
+vi.spyOn(publisherModule.publisher, 'publishLater').mockResolvedValue(undefined)
 
 describe('mergeCommit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(publisherModule.publisher.publishLater).mockResolvedValue(
+      undefined,
+    )
+  })
+
   it('merges a commit', async (ctx) => {
     const { project, workspace, user, providers } =
       await ctx.factories.createProject()
@@ -170,5 +185,257 @@ describe('mergeCommit', () => {
 
     const mergedCommit2 = await mergeCommit(commit2).then((r) => r.unwrap())
     expect(mergedCommit2.version).toBe(2)
+  })
+
+  describe('commitPublished event', () => {
+    it('publishes event with created document', async (ctx) => {
+      const { project, workspace, user, providers } =
+        await ctx.factories.createProject()
+      const { commit } = await ctx.factories.createDraft({ project, user })
+
+      await createNewDocument({
+        user,
+        workspace,
+        commit,
+        path: 'new-doc',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+        }),
+      })
+
+      vi.mocked(publisherModule.publisher.publishLater).mockClear()
+      const result = await mergeCommit(commit)
+
+      expect(result.ok).toBe(true)
+
+      await waitForTransactionCallbacks()
+
+      const calls = vi.mocked(publisherModule.publisher.publishLater).mock.calls
+      const commitPublishedCall = calls.find(
+        (call) => call[0].type === 'commitPublished',
+      )
+      expect(commitPublishedCall).toBeDefined()
+      expect(commitPublishedCall![0].data.changedDocuments).toEqual([
+        { path: 'new-doc', changeType: ModifiedDocumentType.Created },
+      ])
+    })
+
+    it('publishes event with updated document', async (ctx) => {
+      const { project, user, documents, providers } =
+        await ctx.factories.createProject({
+          providers: [{ type: Providers.OpenAI, name: 'openai' }],
+          documents: {
+            'existing-doc': ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+              content: 'original content',
+            }),
+          },
+        })
+
+      const { commit } = await ctx.factories.createDraft({ project, user })
+
+      await updateDocument({
+        commit,
+        document: documents[0]!,
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'updated content',
+        }),
+      })
+
+      vi.mocked(publisherModule.publisher.publishLater).mockClear()
+      await mergeCommit(commit).then((r) => r.unwrap())
+      await waitForTransactionCallbacks()
+
+      const calls = vi.mocked(publisherModule.publisher.publishLater).mock.calls
+      const commitPublishedCall = calls.find(
+        (call) => call[0].type === 'commitPublished',
+      )
+      expect(commitPublishedCall).toBeDefined()
+      expect(commitPublishedCall![0].data.changedDocuments).toEqual([
+        { path: 'existing-doc', changeType: ModifiedDocumentType.Updated },
+      ])
+    })
+
+    it('publishes event with deleted document', async (ctx) => {
+      const { project, user, workspace, documents } =
+        await ctx.factories.createProject({
+          providers: [{ type: Providers.OpenAI, name: 'openai' }],
+          documents: {
+            'to-delete': ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+            }),
+          },
+        })
+
+      const { commit } = await ctx.factories.createDraft({ project, user })
+
+      const destroyResult = await destroyDocument({
+        document: documents[0]!,
+        commit,
+        workspace,
+      })
+      expect(destroyResult.ok).toBe(true)
+
+      vi.mocked(publisherModule.publisher.publishLater).mockClear()
+      const mergeResult = await mergeCommit(commit)
+      expect(mergeResult.ok).toBe(true)
+      await waitForTransactionCallbacks()
+
+      const calls = vi.mocked(publisherModule.publisher.publishLater).mock.calls
+      const commitPublishedCall = calls.find(
+        (call) => call[0].type === 'commitPublished',
+      )
+      expect(commitPublishedCall).toBeDefined()
+      expect(commitPublishedCall![0].data.changedDocuments).toEqual([
+        { path: 'to-delete', changeType: ModifiedDocumentType.Deleted },
+      ])
+    })
+
+    it('publishes event with renamed document (updated path)', async (ctx) => {
+      const { project, user, workspace, documents, providers } =
+        await ctx.factories.createProject({
+          providers: [{ type: Providers.OpenAI, name: 'openai' }],
+          documents: {
+            'old-path': ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+            }),
+          },
+        })
+
+      const { commit } = await ctx.factories.createDraft({ project, user })
+
+      await destroyDocument({ document: documents[0]!, commit, workspace })
+      await createNewDocument({
+        user,
+        workspace,
+        commit,
+        path: 'new-path',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+        }),
+      })
+
+      vi.mocked(publisherModule.publisher.publishLater).mockClear()
+      await mergeCommit(commit).then((r) => r.unwrap())
+      await waitForTransactionCallbacks()
+
+      const calls = vi.mocked(publisherModule.publisher.publishLater).mock.calls
+      const commitPublishedCall = calls.find(
+        (call) => call[0].type === 'commitPublished',
+      )
+      expect(commitPublishedCall).toBeDefined()
+      const changedDocs = commitPublishedCall![0].data.changedDocuments
+      expect(changedDocs).toHaveLength(2)
+      expect(changedDocs).toContainEqual({
+        path: 'old-path',
+        changeType: ModifiedDocumentType.Deleted,
+      })
+      expect(changedDocs).toContainEqual({
+        path: 'new-path',
+        changeType: ModifiedDocumentType.Created,
+      })
+    })
+
+    it('publishes event with multiple document changes', async (ctx) => {
+      const { project, user, workspace, documents, providers } =
+        await ctx.factories.createProject({
+          providers: [{ type: Providers.OpenAI, name: 'openai' }],
+          documents: {
+            'doc-to-update': ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+              content: 'original',
+            }),
+            'doc-to-delete': ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+            }),
+          },
+        })
+
+      const { commit } = await ctx.factories.createDraft({ project, user })
+
+      await createNewDocument({
+        user,
+        workspace,
+        commit,
+        path: 'new-doc',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+        }),
+      })
+
+      await updateDocument({
+        commit,
+        document: documents.find((d) => d.path === 'doc-to-update')!,
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'updated',
+        }),
+      })
+
+      await destroyDocument({
+        document: documents.find((d) => d.path === 'doc-to-delete')!,
+        commit,
+        workspace,
+      })
+
+      vi.mocked(publisherModule.publisher.publishLater).mockClear()
+      await mergeCommit(commit).then((r) => r.unwrap())
+      await waitForTransactionCallbacks()
+
+      const calls = vi.mocked(publisherModule.publisher.publishLater).mock.calls
+      const commitPublishedCall = calls.find(
+        (call) => call[0].type === 'commitPublished',
+      )
+      expect(commitPublishedCall).toBeDefined()
+      const changedDocs = commitPublishedCall![0].data.changedDocuments
+      expect(changedDocs).toHaveLength(3)
+      expect(changedDocs).toContainEqual({
+        path: 'new-doc',
+        changeType: ModifiedDocumentType.Created,
+      })
+      expect(changedDocs).toContainEqual({
+        path: 'doc-to-update',
+        changeType: ModifiedDocumentType.Updated,
+      })
+      expect(changedDocs).toContainEqual({
+        path: 'doc-to-delete',
+        changeType: ModifiedDocumentType.Deleted,
+      })
+    })
+
+    it('publishes commitMerged event alongside commitPublished', async (ctx) => {
+      const { project, workspace, user, providers } =
+        await ctx.factories.createProject()
+      const { commit } = await ctx.factories.createDraft({ project, user })
+
+      await createNewDocument({
+        user,
+        workspace,
+        commit,
+        path: 'foo',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+        }),
+      })
+
+      vi.mocked(publisherModule.publisher.publishLater).mockClear()
+      const mergedCommit = await mergeCommit(commit).then((r) => r.unwrap())
+      await waitForTransactionCallbacks()
+
+      const calls = vi.mocked(publisherModule.publisher.publishLater).mock.calls
+      const commitMergedCall = calls.find(
+        (call) => call[0].type === 'commitMerged',
+      )
+      const commitPublishedCall = calls.find(
+        (call) => call[0].type === 'commitPublished',
+      )
+
+      expect(commitMergedCall).toBeDefined()
+      expect(commitPublishedCall).toBeDefined()
+      expect(commitPublishedCall![0].data.commit.id).toBe(mergedCommit.id)
+      expect(commitPublishedCall![0].data.workspaceId).toBe(workspace.id)
+      expect(commitPublishedCall![0].data.userEmail).toBe(user.email)
+    })
   })
 })
