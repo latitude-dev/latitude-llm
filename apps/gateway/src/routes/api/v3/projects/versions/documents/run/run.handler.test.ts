@@ -51,6 +51,7 @@ const mocks = vi.hoisted(() => ({
   enqueueRun: vi.fn(),
   isFeatureEnabledByName: vi.fn(),
   resolveAbTestRouting: vi.fn(),
+  createRequestAbortSignal: vi.fn(),
   queues: {
     defaultQueue: {
       jobs: {
@@ -103,6 +104,10 @@ vi.mock(
     resolveAbTestRouting: mocks.resolveAbTestRouting,
   }),
 )
+
+vi.mock('$/common/createRequestAbortSignal', () => ({
+  createRequestAbortSignal: mocks.createRequestAbortSignal,
+}))
 
 let route: string
 let body: string
@@ -188,6 +193,11 @@ describe('POST /run', () => {
         effectiveCommit: commit,
         effectiveDocument: document,
         effectiveSource: LogSources.API,
+      })
+
+      // By default, return a non-aborted signal
+      mocks.createRequestAbortSignal.mockImplementation(() => {
+        return new AbortController().signal
       })
     })
 
@@ -559,6 +569,11 @@ describe('POST /run', () => {
         effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
+
+      // By default, return a non-aborted signal
+      mocks.createRequestAbortSignal.mockImplementation(() => {
+        return new AbortController().signal
+      })
     })
 
     it('uses source from __internal', async () => {
@@ -623,6 +638,50 @@ describe('POST /run', () => {
       )
     })
 
+
+
+    it('returns 499 when request is aborted and no final response is produced', async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveDocument: document,
+        effectiveSource: LogSources.API,
+      })
+
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            // Simulate an empty final response (seen in Datadog) when the client disconnects
+            // before any content is produced.
+            response: undefined as any,
+            provider: provider,
+          }),
+        }),
+      )
+
+      const ac = new AbortController()
+      ac.abort()
+
+      // Mock createRequestAbortSignal to return the aborted signal for this test
+      mocks.createRequestAbortSignal.mockReturnValue(ac.signal)
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body,
+        headers,
+        signal: ac.signal,
+      })
+
+      expect(res.status).toBe(499)
+    })
     it('returns response', async () => {
       const documentLogUuid = generateUUIDIdentifier()
       const usage = {

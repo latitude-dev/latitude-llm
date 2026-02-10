@@ -273,8 +273,17 @@ async function handleForegroundRun({
     throw e
   })
 
-  if (!finalResponse.response)
+  // Even when getFinalResponse resolves, an upstream error might still be pending.
+  // Await it to avoid reporting a misleading empty-response error.
+  const pendingError = await error
+  if (pendingError) throw pendingError
+
+  if (!finalResponse.response) {
+    // If the client disconnected, avoid surfacing this as an application error.
+    if (abortSignal.aborted) return c.body(null, 499 as any)
+
     throw new LatitudeError('Stream ended with no error and no content')
+  }
 
   const body = runPresenter({
     response: finalResponse.response,
