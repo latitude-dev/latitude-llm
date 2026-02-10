@@ -1,15 +1,7 @@
-import {
-  and,
-  desc,
-  eq,
-  getTableColumns,
-  isNull,
-  lt,
-  notInArray,
-} from 'drizzle-orm'
+import { and, desc, eq, isNull, lt } from 'drizzle-orm'
 import { SimulatedUserGoalSource } from '@latitude-data/constants/simulation'
 import { database } from '../../../client'
-import { EvaluationV2, LogSources } from '../../../constants'
+import { EvaluationV2, SpanType } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { NotFoundError } from '../../../lib/errors'
@@ -20,9 +12,9 @@ import {
   DocumentVersionsRepository,
   EvaluationsV2Repository,
   ProjectsRepository,
+  SpanMetadatasRepository,
 } from '../../../repositories'
-import { commits } from '../../../schema/models/commits'
-import { documentLogs } from '../../../schema/models/documentLogs'
+import { spans } from '../../../schema/models/spans'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type Dataset } from '../../../schema/models/types/Dataset'
 import { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
@@ -107,41 +99,55 @@ async function getExperimentRows(
   })
 }
 
-async function getExperimentLogsRows(
+async function getExperimentSpansRows(
   {
+    workspace,
     experiment,
     document,
     count,
   }: {
+    workspace: Workspace
     experiment: Experiment
     document: DocumentVersion
     count: number
   },
   db = database,
 ): Promise<ExperimentRow[]> {
-  // Fetch logs created before this experiment, excluding experiment logs
-  const logs = await db
-    .select(getTableColumns(documentLogs))
-    .from(documentLogs)
-    .innerJoin(
-      commits,
-      and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
-    )
+  const spanResults = await db
+    .select({
+      id: spans.id,
+      traceId: spans.traceId,
+    })
+    .from(spans)
     .where(
       and(
-        eq(documentLogs.documentUuid, document.documentUuid),
-        lt(documentLogs.createdAt, experiment.createdAt),
-        notInArray(documentLogs.source, [LogSources.Experiment]),
+        eq(spans.workspaceId, workspace.id),
+        eq(spans.documentUuid, document.documentUuid),
+        lt(spans.startedAt, experiment.createdAt),
+        isNull(spans.experimentUuid),
+        eq(spans.type, SpanType.Prompt),
       ),
     )
-    .orderBy(desc(documentLogs.createdAt))
+    .orderBy(desc(spans.startedAt))
     .limit(count)
 
-  return logs.map((log) => ({
-    uuid: generateUUIDIdentifier(),
-    parameters: log.parameters,
-    datasetRowId: undefined,
-  }))
+  if (spanResults.length === 0) return []
+
+  const metadataRepo = new SpanMetadatasRepository(workspace.id)
+  const metadatas = await metadataRepo.getBatch<SpanType.Prompt>(
+    spanResults.map((s) => ({ traceId: s.traceId, spanId: s.id })),
+  )
+
+  return spanResults.map((span) => {
+    const key = SpanMetadatasRepository.buildKey(span)
+    const metadata = metadatas.get(key)
+
+    return {
+      uuid: generateUUIDIdentifier(),
+      parameters: metadata?.parameters ?? {},
+      datasetRowId: undefined,
+    }
+  })
 }
 
 export async function getExperimentJobPayload(
@@ -219,8 +225,9 @@ export async function getExperimentJobPayload(
 
     if (requirementsResult.error) return requirementsResult
 
-    const rows = await getExperimentLogsRows(
+    const rows = await getExperimentSpansRows(
       {
+        workspace,
         experiment,
         document,
         count: parametersSource.count,

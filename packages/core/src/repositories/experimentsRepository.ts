@@ -1,29 +1,26 @@
 import {
   and,
   count,
+  countDistinct,
   desc,
   eq,
   getTableColumns,
   inArray,
-  isNull,
   sql,
   sum,
 } from 'drizzle-orm'
 
-import { ExperimentScores } from '@latitude-data/constants'
+import { ExperimentScores, SpanType } from '@latitude-data/constants'
 import { omit } from 'lodash-es'
-import { ErrorableEntity } from '../constants'
 import { LatitudeError, NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { PromisedResult } from '../lib/Transaction'
-import { documentLogs } from '../schema/models/documentLogs'
 import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
 import { experiments } from '../schema/models/experiments'
-import { providerLogs } from '../schema/models/providerLogs'
-import { runErrors } from '../schema/models/runErrors'
+import { spans } from '../schema/models/spans'
 import {
   ExperimentDto,
-  ExperimentLogsMetadata,
+  ExperimentRunMetadata,
   type Experiment,
 } from '../schema/models/types/Experiment'
 import Repository from './repositoryV2'
@@ -277,107 +274,59 @@ export class ExperimentsRepository extends Repository<Experiment> {
     )
   }
 
-  async getLogsMetadata(
+  async getRunMetadata(
     uuid: string,
-  ): PromisedResult<ExperimentLogsMetadata, LatitudeError> {
-    const experimentsCte = this.db.$with('experiments_cte').as(
-      this.db
-        .select({ id: experiments.id })
-        .from(experiments)
-        .where(and(this.scopeFilter, eq(experiments.uuid, uuid))),
-    )
+  ): PromisedResult<ExperimentRunMetadata, LatitudeError> {
+    const experimentTraceIds = this.db
+      .selectDistinct({ traceId: spans.traceId })
+      .from(spans)
+      .where(
+        and(
+          eq(spans.workspaceId, this.workspaceId),
+          eq(spans.experimentUuid, uuid),
+        ),
+      )
 
-    const documentLogStats = this.db.$with('document_log_stats').as(
-      this.db
-        .with(experimentsCte)
-        .select({
-          experimentId: documentLogs.experimentId,
-          logsCount: count(documentLogs.id).mapWith(Number).as('logs_count'),
-          totalDuration: sum(documentLogs.duration)
-            .mapWith(Number)
-            .as('total_duration'),
-        })
-        .from(documentLogs)
-        .leftJoin(
-          runErrors,
-          and(
-            eq(runErrors.errorableUuid, documentLogs.uuid),
-            eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
-          ),
-        )
-        .innerJoin(
-          experimentsCte,
-          eq(documentLogs.experimentId, experimentsCte.id),
-        )
-        .where(isNull(runErrors.id))
-        .groupBy(documentLogs.experimentId),
-    )
-
-    const providerLogStats = this.db.$with('provider_log_stats').as(
-      this.db
-        .with(experimentsCte)
-        .select({
-          experimentId: documentLogs.experimentId,
-          totalCost: sum(providerLogs.costInMillicents)
-            .mapWith(Number)
-            .as('total_cost'),
-          totalTokens: sum(providerLogs.tokens)
-            .mapWith(Number)
-            .as('total_tokens'),
-        })
-        .from(documentLogs)
-        .innerJoin(
-          providerLogs,
-          eq(providerLogs.documentLogUuid, documentLogs.uuid),
-        )
-        .leftJoin(
-          runErrors,
-          and(
-            eq(runErrors.errorableUuid, documentLogs.uuid),
-            eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
-          ),
-        )
-        .innerJoin(
-          experimentsCte,
-          eq(documentLogs.experimentId, experimentsCte.id),
-        )
-        .where(isNull(runErrors.id))
-        .groupBy(documentLogs.experimentId),
-    )
-
-    const [row] = await this.db
-      .with(experimentsCte, documentLogStats, providerLogStats)
+    const [runStats] = await this.db
       .select({
-        id: experimentsCte.id,
-        count: documentLogStats.logsCount,
-        totalDuration: documentLogStats.totalDuration,
-        totalCost: providerLogStats.totalCost,
-        totalTokens: providerLogStats.totalTokens,
+        count: countDistinct(spans.traceId).mapWith(Number),
+        totalDuration: sum(spans.duration).mapWith(Number),
       })
-      .from(experimentsCte)
-      .leftJoin(
-        documentLogStats,
-        eq(documentLogStats.experimentId, experimentsCte.id),
-      )
-      .leftJoin(
-        providerLogStats,
-        eq(providerLogStats.experimentId, experimentsCte.id),
+      .from(spans)
+      .where(
+        and(
+          eq(spans.workspaceId, this.workspaceId),
+          inArray(spans.traceId, experimentTraceIds),
+          inArray(spans.type, [SpanType.Prompt, SpanType.Chat]),
+        ),
       )
 
-    if (!row) {
-      return Result.ok({
-        count: 0,
-        totalCost: 0,
-        totalTokens: 0,
-        totalDuration: 0,
+    const [completionStats] = await this.db
+      .select({
+        totalCost: sum(spans.cost).mapWith(Number),
+        totalTokens: sql<number>`
+          COALESCE(SUM(
+            COALESCE(${spans.tokensPrompt}, 0) +
+            COALESCE(${spans.tokensCached}, 0) +
+            COALESCE(${spans.tokensReasoning}, 0) +
+            COALESCE(${spans.tokensCompletion}, 0)
+          ), 0)
+        `.mapWith(Number),
       })
-    }
+      .from(spans)
+      .where(
+        and(
+          eq(spans.workspaceId, this.workspaceId),
+          inArray(spans.traceId, experimentTraceIds),
+          eq(spans.type, SpanType.Completion),
+        ),
+      )
 
     return Result.ok({
-      count: row.count,
-      totalCost: row.totalCost,
-      totalDuration: row.totalDuration,
-      totalTokens: row.totalTokens,
+      count: runStats?.count ?? 0,
+      totalCost: completionStats?.totalCost ?? 0,
+      totalDuration: runStats?.totalDuration ?? 0,
+      totalTokens: completionStats?.totalTokens ?? 0,
     })
   }
 

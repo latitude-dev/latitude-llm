@@ -160,6 +160,20 @@ export type LatteProjectChangesArgs = {
   changes: LatteChange[]
 }
 
+export type DocumentRunMetrics = {
+  runUsage: {
+    inputTokens: number
+    outputTokens: number
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+    reasoningTokens: number
+    cachedInputTokens: number
+  }
+  runCost: number
+  duration: number
+}
+
 type DocumentRunStatusArgs = {
   event: DocumentRunStatusEvent['type']
   workspaceId: number
@@ -167,6 +181,8 @@ type DocumentRunStatusArgs = {
   documentUuid: string
   commitUuid: string
   run: ActiveRun
+  metrics?: DocumentRunMetrics
+  experimentId?: number
 }
 
 type SpanCreatedArgs = {

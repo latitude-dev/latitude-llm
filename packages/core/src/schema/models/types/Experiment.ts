@@ -16,7 +16,7 @@ export type ExperimentDto = Experiment & {
   results: TrackedProgress
 }
 
-export type ExperimentLogsMetadata = {
+export type ExperimentRunMetadata = {
   totalCost: number
   totalTokens: number
   totalDuration: number
@@ -24,5 +24,5 @@ export type ExperimentLogsMetadata = {
 }
 export type ExperimentWithScores = ExperimentDto & {
   scores: ExperimentScores
-  logsMetadata: ExperimentLogsMetadata
+  runMetadata: ExperimentRunMetadata
 }

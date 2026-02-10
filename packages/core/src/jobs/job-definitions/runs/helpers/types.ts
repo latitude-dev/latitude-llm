@@ -1,8 +1,18 @@
 import { LogSources } from '@latitude-data/constants'
+import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants/ai'
 import { SimulationSettings } from '@latitude-data/constants/simulation'
+import { LanguageModelUsage as LanguageModelUsageType } from '../../../../constants'
 import { OkType } from '../../../../lib/Result'
-import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtCommit'
 import { DeploymentTest } from '../../../../schema/models/types/DeploymentTest'
+import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtCommit'
+
+export type RunMetrics = {
+  runUsage: LanguageModelUsage
+  runCost: number
+  duration: number
+}
+
+export type { LanguageModelUsageType }
 
 /**
  * Input data for the background run job

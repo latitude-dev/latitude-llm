@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { resolveAgentAsToolDefinition } from './agentsAsTools'
 import { ToolSource } from '@latitude-data/constants/toolSources'
 import { ToolManifest } from '@latitude-data/constants/tools'
 import { StreamManager } from '../../../../lib/streamManager'
@@ -9,6 +8,12 @@ import { createDocumentVersion } from '../../../../tests/factories/documents'
 import { createDraft } from '../../../../tests/factories/commits'
 import { jsonSchema } from 'ai'
 import { Commit } from '../../../../schema/models/types/Commit'
+import { Result } from '../../../../lib/Result'
+import { resolveAgentAsToolDefinition } from './agentsAsTools'
+import { BACKGROUND } from '../../../../telemetry'
+import * as commitsModule from '../../../commits'
+
+vi.spyOn(commitsModule, 'runDocumentAtCommit')
 
 describe('resolveAgentAsToolDefinition', () => {
   let workspace: Workspace
@@ -497,6 +502,336 @@ describe('resolveAgentAsToolDefinition', () => {
       })
 
       expect(result.ok).toBe(true)
+    })
+  })
+
+  describe('execute function behavior', () => {
+    const createMockUsage = (multiplier: number = 1) => ({
+      inputTokens: 100 * multiplier,
+      outputTokens: 50 * multiplier,
+      promptTokens: 100 * multiplier,
+      completionTokens: 50 * multiplier,
+      totalTokens: 150 * multiplier,
+      reasoningTokens: 10 * multiplier,
+      cachedInputTokens: 5 * multiplier,
+    })
+
+    it('propagates runUsage from sub-agent to parent streamManager', async () => {
+      const { documentVersion: agent } = await createDocumentVersion({
+        workspace,
+        user,
+        commit,
+        path: 'agents/usage-agent',
+        content: '---\nname: Usage Agent\n---\nContent',
+      })
+
+      const mockUsage = createMockUsage(2)
+      vi.mocked(commitsModule.runDocumentAtCommit).mockResolvedValue(
+        Result.ok({
+          response: Promise.resolve({
+            streamType: 'text',
+            text: 'Sub-agent response',
+          }),
+          stream: new ReadableStream(),
+          error: Promise.resolve(undefined),
+          runUsage: Promise.resolve(mockUsage),
+          runCost: Promise.resolve(0.02),
+        }) as any,
+      )
+
+      const incrementRunUsageMock = vi.fn()
+      const incrementRunCostMock = vi.fn()
+
+      const toolManifest: ToolManifest<ToolSource.Agent> = {
+        definition: {
+          description: 'Usage agent',
+          inputSchema: jsonSchema({ type: 'object', properties: {} }),
+        },
+        sourceData: {
+          source: ToolSource.Agent,
+          agentPath: 'agents/usage-agent',
+          documentUuid: agent.documentUuid,
+        },
+      }
+
+      const streamManager = {
+        workspace,
+        $context: BACKGROUND({ workspaceId: workspace.id }),
+        promptSource: { commit },
+        tools: {},
+        abortSignal: undefined,
+        simulationSettings: undefined,
+        source: 'test',
+        controller: undefined,
+        incrementRunUsage: incrementRunUsageMock,
+        incrementRunCost: incrementRunCostMock,
+      } as unknown as StreamManager
+
+      const result = await resolveAgentAsToolDefinition({
+        toolName: 'usage_agent',
+        toolManifest,
+        streamManager,
+      })
+
+      expect(result.ok).toBe(true)
+      const tool = result.value!
+
+      await tool.execute!({}, { toolCallId: 'call-123' } as any)
+
+      expect(incrementRunUsageMock).toHaveBeenCalledWith(mockUsage)
+    })
+
+    it('propagates runCost from sub-agent to parent streamManager', async () => {
+      const { documentVersion: agent } = await createDocumentVersion({
+        workspace,
+        user,
+        commit,
+        path: 'agents/cost-agent',
+        content: '---\nname: Cost Agent\n---\nContent',
+      })
+
+      const mockCost = 0.05
+      vi.mocked(commitsModule.runDocumentAtCommit).mockResolvedValue(
+        Result.ok({
+          response: Promise.resolve({ streamType: 'text', text: 'Response' }),
+          stream: new ReadableStream(),
+          error: Promise.resolve(undefined),
+          runUsage: Promise.resolve(createMockUsage()),
+          runCost: Promise.resolve(mockCost),
+        }) as any,
+      )
+
+      const incrementRunUsageMock = vi.fn()
+      const incrementRunCostMock = vi.fn()
+
+      const toolManifest: ToolManifest<ToolSource.Agent> = {
+        definition: {
+          description: 'Cost agent',
+          inputSchema: jsonSchema({ type: 'object', properties: {} }),
+        },
+        sourceData: {
+          source: ToolSource.Agent,
+          agentPath: 'agents/cost-agent',
+          documentUuid: agent.documentUuid,
+        },
+      }
+
+      const streamManager = {
+        workspace,
+        $context: BACKGROUND({ workspaceId: workspace.id }),
+        promptSource: { commit },
+        tools: {},
+        abortSignal: undefined,
+        simulationSettings: undefined,
+        source: 'test',
+        controller: undefined,
+        incrementRunUsage: incrementRunUsageMock,
+        incrementRunCost: incrementRunCostMock,
+      } as unknown as StreamManager
+
+      const result = await resolveAgentAsToolDefinition({
+        toolName: 'cost_agent',
+        toolManifest,
+        streamManager,
+      })
+
+      expect(result.ok).toBe(true)
+      const tool = result.value!
+
+      await tool.execute!({}, { toolCallId: 'call-456' } as any)
+
+      expect(incrementRunCostMock).toHaveBeenCalledWith(mockCost)
+    })
+
+    it('returns text response from sub-agent', async () => {
+      const { documentVersion: agent } = await createDocumentVersion({
+        workspace,
+        user,
+        commit,
+        path: 'agents/text-response',
+        content: '---\nname: Text Response\n---\nContent',
+      })
+
+      vi.mocked(commitsModule.runDocumentAtCommit).mockResolvedValue(
+        Result.ok({
+          response: Promise.resolve({
+            streamType: 'text',
+            text: 'Hello from sub-agent',
+          }),
+          stream: new ReadableStream(),
+          error: Promise.resolve(undefined),
+          runUsage: Promise.resolve(createMockUsage()),
+          runCost: Promise.resolve(0.01),
+        }) as any,
+      )
+
+      const toolManifest: ToolManifest<ToolSource.Agent> = {
+        definition: {
+          description: 'Text response agent',
+          inputSchema: jsonSchema({ type: 'object', properties: {} }),
+        },
+        sourceData: {
+          source: ToolSource.Agent,
+          agentPath: 'agents/text-response',
+          documentUuid: agent.documentUuid,
+        },
+      }
+
+      const streamManager = {
+        workspace,
+        $context: BACKGROUND({ workspaceId: workspace.id }),
+        promptSource: { commit },
+        tools: {},
+        abortSignal: undefined,
+        simulationSettings: undefined,
+        source: 'test',
+        controller: undefined,
+        incrementRunUsage: vi.fn(),
+        incrementRunCost: vi.fn(),
+      } as unknown as StreamManager
+
+      const result = await resolveAgentAsToolDefinition({
+        toolName: 'text_response',
+        toolManifest,
+        streamManager,
+      })
+
+      const tool = result.value!
+      const executeResult = await tool.execute!({}, {
+        toolCallId: 'call-789',
+      } as any)
+
+      expect(executeResult).toEqual({
+        value: 'Hello from sub-agent',
+        isError: false,
+      })
+    })
+
+    it('returns object response from sub-agent', async () => {
+      const { documentVersion: agent } = await createDocumentVersion({
+        workspace,
+        user,
+        commit,
+        path: 'agents/object-response',
+        content: '---\nname: Object Response\n---\nContent',
+      })
+
+      const responseObject = { status: 'success', data: [1, 2, 3] }
+      vi.mocked(commitsModule.runDocumentAtCommit).mockResolvedValue(
+        Result.ok({
+          response: Promise.resolve({
+            streamType: 'object',
+            object: responseObject,
+          }),
+          stream: new ReadableStream(),
+          error: Promise.resolve(undefined),
+          runUsage: Promise.resolve(createMockUsage()),
+          runCost: Promise.resolve(0.01),
+        }) as any,
+      )
+
+      const toolManifest: ToolManifest<ToolSource.Agent> = {
+        definition: {
+          description: 'Object response agent',
+          inputSchema: jsonSchema({ type: 'object', properties: {} }),
+        },
+        sourceData: {
+          source: ToolSource.Agent,
+          agentPath: 'agents/object-response',
+          documentUuid: agent.documentUuid,
+        },
+      }
+
+      const streamManager = {
+        workspace,
+        $context: BACKGROUND({ workspaceId: workspace.id }),
+        promptSource: { commit },
+        tools: {},
+        abortSignal: undefined,
+        simulationSettings: undefined,
+        source: 'test',
+        controller: undefined,
+        incrementRunUsage: vi.fn(),
+        incrementRunCost: vi.fn(),
+      } as unknown as StreamManager
+
+      const result = await resolveAgentAsToolDefinition({
+        toolName: 'object_response',
+        toolManifest,
+        streamManager,
+      })
+
+      const tool = result.value!
+      const executeResult = await tool.execute!({}, {
+        toolCallId: 'call-obj',
+      } as any)
+
+      expect(executeResult).toEqual({
+        value: responseObject,
+        isError: false,
+      })
+    })
+
+    it('returns error result when sub-agent fails', async () => {
+      const { documentVersion: agent } = await createDocumentVersion({
+        workspace,
+        user,
+        commit,
+        path: 'agents/error-agent',
+        content: '---\nname: Error Agent\n---\nContent',
+      })
+
+      const errorMessage = 'Sub-agent execution failed'
+      vi.mocked(commitsModule.runDocumentAtCommit).mockResolvedValue(
+        Result.ok({
+          response: Promise.resolve(undefined),
+          stream: new ReadableStream(),
+          error: Promise.resolve(new Error(errorMessage)),
+          runUsage: Promise.resolve(createMockUsage()),
+          runCost: Promise.resolve(0),
+        }) as any,
+      )
+
+      const toolManifest: ToolManifest<ToolSource.Agent> = {
+        definition: {
+          description: 'Error agent',
+          inputSchema: jsonSchema({ type: 'object', properties: {} }),
+        },
+        sourceData: {
+          source: ToolSource.Agent,
+          agentPath: 'agents/error-agent',
+          documentUuid: agent.documentUuid,
+        },
+      }
+
+      const streamManager = {
+        workspace,
+        $context: BACKGROUND({ workspaceId: workspace.id }),
+        promptSource: { commit },
+        tools: {},
+        abortSignal: undefined,
+        simulationSettings: undefined,
+        source: 'test',
+        controller: undefined,
+        incrementRunUsage: vi.fn(),
+        incrementRunCost: vi.fn(),
+      } as unknown as StreamManager
+
+      const result = await resolveAgentAsToolDefinition({
+        toolName: 'error_agent',
+        toolManifest,
+        streamManager,
+      })
+
+      const tool = result.value!
+      const executeResult = await tool.execute!({}, {
+        toolCallId: 'call-err',
+      } as any)
+
+      expect(executeResult).toEqual({
+        value: errorMessage,
+        isError: true,
+      })
     })
   })
 })

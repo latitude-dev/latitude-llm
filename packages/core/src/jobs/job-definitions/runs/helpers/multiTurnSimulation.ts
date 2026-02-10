@@ -6,14 +6,15 @@ import {
 } from '@latitude-data/constants/simulation'
 import { RedisStream } from '../../../../lib/redisStream'
 import { Result } from '../../../../lib/Result'
+import { incrementTokens } from '../../../../lib/streamManager'
+import { PromisedResult } from '../../../../lib/Transaction'
 import { WorkspaceDto } from '../../../../schema/models/types/Workspace'
 import { addMessages } from '../../../../services/documentLogs/addMessages'
 import { ToolHandler } from '../../../../services/documents/tools/clientTools/handlers'
 import { generateSimulatedUserAction } from '../../../../services/simulation/simulateUserResponse'
 import { captureException } from '../../../../utils/datadogCapture'
 import { forwardStreamEvents } from './streamManagement'
-import { RunIdentifiers } from './types'
-import { PromisedResult } from '../../../../lib/Transaction'
+import { LanguageModelUsageType, RunIdentifiers, RunMetrics } from './types'
 
 /**
  * Determines if multi-turn simulation should be run based on the simulation settings
@@ -49,6 +50,7 @@ type ExecuteSingleTurnArgs = RunIdentifiers & {
 type TurnResult = {
   shouldContinue: boolean
   messages: Message[]
+  metrics: RunMetrics
 }
 
 /**
@@ -90,8 +92,22 @@ async function executeSingleTurn({
 
   const userAction = userActionResult.value
 
+  const emptyMetrics: RunMetrics = {
+    runUsage: {
+      inputTokens: 0,
+      outputTokens: 0,
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      reasoningTokens: 0,
+      cachedInputTokens: 0,
+    },
+    runCost: 0,
+    duration: 0,
+  }
+
   if (userAction.action === 'end') {
-    return Result.ok({ shouldContinue: false, messages })
+    return Result.ok({ shouldContinue: false, messages, metrics: emptyMetrics })
   }
 
   const addMessagesResult = await addMessages({
@@ -126,11 +142,17 @@ async function executeSingleTurn({
     readStream: result.stream,
   })
 
-  const updatedMessages = await result.messages
+  const [updatedMessages, runUsage, runCost, duration] = await Promise.all([
+    result.messages,
+    result.runUsage,
+    result.runCost,
+    result.duration,
+  ])
 
   return Result.ok({
     shouldContinue: true,
     messages: updatedMessages,
+    metrics: { runUsage, runCost, duration },
   })
 }
 
@@ -154,6 +176,8 @@ type SimulateUserResponsesArgs = RunIdentifiers & {
  * 1. Generates a simulated user response based on conversation context
  * 2. Sends the response to the document and gets the assistant's reply
  * 3. Forwards the stream events to Redis for client consumption
+ *
+ * Returns aggregated metrics from all simulation turns.
  */
 export async function simulateUserResponses({
   initialMessages,
@@ -169,16 +193,31 @@ export async function simulateUserResponses({
   documentUuid,
   commitUuid,
   runUuid,
-}: SimulateUserResponsesArgs): PromisedResult<undefined, Error> {
+}: SimulateUserResponsesArgs): PromisedResult<RunMetrics, Error> {
+  const emptyMetrics: RunMetrics = {
+    runUsage: {
+      inputTokens: 0,
+      outputTokens: 0,
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      reasoningTokens: 0,
+      cachedInputTokens: 0,
+    },
+    runCost: 0,
+    duration: 0,
+  }
+
   if (!shouldRunMultiTurnSimulation(simulationSettings)) {
-    return Result.ok(undefined)
+    return Result.ok(emptyMetrics)
   }
 
   const maxTurns = calculateMaxTurns(simulationSettings.maxTurns)
-  if (maxTurns <= 1) return Result.ok(undefined)
+  if (maxTurns <= 1) return Result.ok(emptyMetrics)
 
   let messages: Message[] = initialMessages
   let currentTurn = 2
+  let aggregatedMetrics: RunMetrics = { ...emptyMetrics }
 
   while (currentTurn <= maxTurns) {
     if (abortSignal?.aborted) break
@@ -202,7 +241,21 @@ export async function simulateUserResponses({
     })
 
     if (!Result.isOk(turnResult)) return turnResult
-    const { shouldContinue, messages: updatedMessages } = turnResult.unwrap()
+
+    const {
+      shouldContinue,
+      messages: updatedMessages,
+      metrics,
+    } = turnResult.unwrap()
+
+    aggregatedMetrics = {
+      runUsage: incrementTokens({
+        prev: aggregatedMetrics.runUsage as LanguageModelUsageType,
+        next: metrics.runUsage as LanguageModelUsageType,
+      }),
+      runCost: aggregatedMetrics.runCost + metrics.runCost,
+      duration: aggregatedMetrics.duration + metrics.duration,
+    }
 
     if (!shouldContinue) break
 
@@ -210,5 +263,5 @@ export async function simulateUserResponses({
     currentTurn++
   }
 
-  return Result.ok(undefined)
+  return Result.ok(aggregatedMetrics)
 }

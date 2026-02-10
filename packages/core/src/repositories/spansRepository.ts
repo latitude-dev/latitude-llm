@@ -586,6 +586,10 @@ export class SpanMetadatasRepository {
     this.disk = disk
   }
 
+  static buildKey(span: { traceId: string; id: string }) {
+    return `${span.traceId}:${span.id}`
+  }
+
   async get<T extends SpanType = SpanType>({
     spanId,
     traceId,
@@ -639,7 +643,7 @@ export class SpanMetadatasRepository {
       spanIdentifiers.map(async ({ traceId, spanId }) => {
         const result = await this.get<T>({ traceId, spanId })
         return {
-          key: `${traceId}:${spanId}`,
+          key: SpanMetadatasRepository.buildKey({ traceId, id: spanId }),
           metadata: result.ok ? result.value : undefined,
         }
       }),

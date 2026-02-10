@@ -16,7 +16,7 @@ import { DocumentVersion } from '@latitude-data/core/schema/models/types/Documen
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 const EMPTY_ARRAY: [] = []
 
-export type BestLogsMetadata = {
+export type BestRunMetadata = {
   cost: string[]
   duration: string[]
   tokens: string[]
@@ -55,9 +55,9 @@ function getExperimentUuidsWithBestScore(
   ).experimentUuids
 }
 
-function getExperimentUuidsWithBestLogsMetadata(
+function getExperimentUuidsWithBestRunMetadata(
   experimentsWithScores: (ExperimentWithScores | undefined)[],
-): BestLogsMetadata {
+): BestRunMetadata {
   const results = experimentsWithScores.reduce(
     (
       acc: {
@@ -67,14 +67,14 @@ function getExperimentUuidsWithBestLogsMetadata(
       },
       experiment,
     ) => {
-      const logsMetadata = experiment?.logsMetadata
-      if (!logsMetadata) return acc
-      if (!logsMetadata.count) return acc // Invalid logsMetadata
-      if (logsMetadata.count === 0) return acc // Invalid logsMetadata
+      const runMetadata = experiment?.runMetadata
+      if (!runMetadata) return acc
+      if (!runMetadata.count) return acc
+      if (runMetadata.count === 0) return acc
 
-      const cost = logsMetadata.totalCost / logsMetadata.count
-      const tokens = logsMetadata.totalTokens / logsMetadata.count
-      const duration = logsMetadata.totalDuration / logsMetadata.count
+      const cost = runMetadata.totalCost / runMetadata.count
+      const tokens = runMetadata.totalTokens / runMetadata.count
+      const duration = runMetadata.totalDuration / runMetadata.count
 
       // Evaluate cost
       if (cost < acc.cost.bestValue) {
@@ -238,9 +238,8 @@ export function useExperimentComparison(
       setExperimentsWithScores((prev) => {
         const prevExperiment = prev[index]
         prev[index] = {
-          // If the experiment is not loaded, we create it with empty scores and logsMetadata
           scores: {},
-          logsMetadata: {
+          runMetadata: {
             count: 0,
             totalCost: 0,
             totalTokens: 0,
@@ -305,7 +304,7 @@ export function useExperimentComparison(
     },
   })
 
-  const [bestLogsMetadata, setBestLogsMetadata] = useState<BestLogsMetadata>({
+  const [bestRunMetadata, setBestRunMetadata] = useState<BestRunMetadata>({
     cost: [],
     duration: [],
     tokens: [],
@@ -313,34 +312,35 @@ export function useExperimentComparison(
 
   useEffect(() => {
     if (!experimentsWithScores) return
-    setBestLogsMetadata(
-      getExperimentUuidsWithBestLogsMetadata(experimentsWithScores),
+    setBestRunMetadata(
+      getExperimentUuidsWithBestRunMetadata(experimentsWithScores),
     )
   }, [experimentsWithScores])
 
   useSockets({
-    event: 'documentLogCreated',
-    onMessage: (message: EventArgs<'documentLogCreated'>) => {
-      const { documentLogWithMetadata } = message
-      if (!documentLogWithMetadata) return
+    event: 'documentRunStatus',
+    onMessage: (message: EventArgs<'documentRunStatus'>) => {
+      if (!message) return
+      if (message.event !== 'documentRunEnded') return
+
+      const { metrics, experimentId } = message
+      if (!metrics || !experimentId) return
 
       let alreadyRegistered = false
       setExperimentsWithScores((prev) => {
-        // Prevent StrictMode double rendering
         if (alreadyRegistered) return prev
         alreadyRegistered = true
 
         if (!prev) return prev
 
-        // Find the experiment that was updated
         const prevExperimentIdx = prev.findIndex(
-          (exp) => exp?.id === documentLogWithMetadata.experimentId,
+          (exp) => exp?.id === experimentId,
         )
 
         if (prevExperimentIdx === -1) return prev
 
         const prevExperiment = prev[prevExperimentIdx]!
-        const prevLogsMetadata = prevExperiment.logsMetadata ?? {
+        const prevRunMetadata = prevExperiment.runMetadata ?? {
           count: 0,
           totalCost: 0,
           totalTokens: 0,
@@ -348,20 +348,14 @@ export function useExperimentComparison(
         }
 
         prev[prevExperimentIdx] = {
-          // Update any values from the experiments
           ...prevExperiment,
-          logsMetadata: {
-            ...prevExperiment.logsMetadata,
-            count: prevLogsMetadata.count + 1,
-            totalCost:
-              prevLogsMetadata.totalCost +
-              (documentLogWithMetadata.costInMillicents ?? 0),
+          runMetadata: {
+            ...prevExperiment.runMetadata,
+            count: prevRunMetadata.count + 1,
+            totalCost: prevRunMetadata.totalCost + metrics.runCost,
             totalTokens:
-              prevLogsMetadata.totalTokens +
-              (documentLogWithMetadata.tokens ?? 0),
-            totalDuration:
-              prevLogsMetadata.totalDuration +
-              (documentLogWithMetadata.duration ?? 0),
+              prevRunMetadata.totalTokens + metrics.runUsage.totalTokens,
+            totalDuration: prevRunMetadata.totalDuration + metrics.duration,
           },
         }
 
@@ -373,7 +367,7 @@ export function useExperimentComparison(
   return {
     experiments: experimentsWithScores,
     evaluations: evaluationsWithBestExperiments,
-    bestLogsMetadata,
+    bestRunMetadata,
     isLoading: isLoading || isLoadingEvaluations,
   }
 }

@@ -4,7 +4,7 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import {
-  BestLogsMetadata,
+  BestRunMetadata,
   EvaluationWithBestExperiment,
 } from '$/stores/experimentComparison'
 import { DocumentVersion } from '@latitude-data/constants'
@@ -22,8 +22,8 @@ import {
   ExperimentEvaluationScoresPlaceholder,
 } from './EvaluationScores'
 import {
-  ExperimentLogsMetadata,
-  ExperimentLogsMetadataPlaceholder,
+  ExperimentRunMetadata,
+  ExperimentRunMetadataPlaceholder,
 } from './LogsMetadata'
 import { ExperimentPrompt } from './Prompt'
 
@@ -45,7 +45,7 @@ export function ExperimentItemPlaceholder({
     >
       <Skeleton height='h4' className='w-[85%]' />
       <ExperimentPrompt experiment={undefined} />
-      <ExperimentLogsMetadataPlaceholder />
+      <ExperimentRunMetadataPlaceholder />
       <ExperimentEvaluationScoresPlaceholder
         evaluationCount={evaluationCount}
       />
@@ -56,7 +56,7 @@ export function ExperimentItemPlaceholder({
 export function ExperimentItem({
   experiment,
   evaluations,
-  bestLogsMetadata,
+  bestRunMetadata,
   isFirst,
   isLast,
   isSamePrompt,
@@ -65,7 +65,7 @@ export function ExperimentItem({
 }: {
   experiment?: ExperimentWithScores
   evaluations?: EvaluationWithBestExperiment[]
-  bestLogsMetadata: BestLogsMetadata
+  bestRunMetadata: BestRunMetadata
   isFirst: boolean
   isLast: boolean
   isSamePrompt: boolean
@@ -141,9 +141,9 @@ export function ExperimentItem({
         onCompare={isFirst ? undefined : onCompare}
         isSamePrompt={isSamePrompt}
       />
-      <ExperimentLogsMetadata
+      <ExperimentRunMetadata
         experiment={experiment}
-        bestLogsMetadata={bestLogsMetadata}
+        bestRunMetadata={bestRunMetadata}
       />
       <ExperimentEvaluationScores
         experiment={experiment}

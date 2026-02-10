@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { Providers } from '@latitude-data/constants'
+import { Providers, SpanType } from '@latitude-data/constants'
 import { EvaluationV2 } from '../constants'
 import { NotFoundError } from '../lib/errors'
 import { type Commit } from '../schema/models/types/Commit'
@@ -549,6 +549,361 @@ describe('ExperimentsRepository', () => {
         document.documentUuid,
       )
       expect(countFromOther).toBe(0)
+    })
+
+    it('getRunMetadata does not return metadata from experiments in other workspaces', async () => {
+      const experiment = await createExperiment({
+        name: 'experiment1',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const traceId = randomUUID().replace(/-/g, '')
+      await factories.createSpan({
+        traceId,
+        workspaceId: workspace.id,
+        experimentUuid: experiment.uuid,
+        type: SpanType.Prompt,
+        duration: 1000,
+      })
+      await factories.createSpan({
+        traceId,
+        workspaceId: workspace.id,
+        experimentUuid: experiment.uuid,
+        type: SpanType.Completion,
+        cost: 100,
+        tokensPrompt: 50,
+        tokensCompletion: 25,
+      })
+
+      const { workspace: otherWorkspace } = await factories.createWorkspace()
+      const otherRepo = new ExperimentsRepository(otherWorkspace.id)
+
+      const resultFromOwner = await repo.getRunMetadata(experiment.uuid)
+      expect(resultFromOwner.ok).toBe(true)
+      const metadata = resultFromOwner.unwrap()
+      expect(metadata.count).toBe(1)
+      expect(metadata.totalCost).toBe(100)
+
+      const resultFromOther = await otherRepo.getRunMetadata(experiment.uuid)
+      expect(resultFromOther.ok).toBe(true)
+      const otherMetadata = resultFromOther.unwrap()
+      expect(otherMetadata.count).toBe(0)
+      expect(otherMetadata.totalCost).toBe(0)
+    })
+  })
+
+  describe('getRunMetadata', () => {
+    it('returns aggregated run metadata from spans', async () => {
+      const experiment = await createExperiment({
+        name: 'experiment1',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const traceId1 = randomUUID().replace(/-/g, '')
+      const traceId2 = randomUUID().replace(/-/g, '')
+
+      await factories.createSpan({
+        traceId: traceId1,
+        workspaceId: workspace.id,
+        experimentUuid: experiment.uuid,
+        type: SpanType.Prompt,
+        duration: 1000,
+      })
+      await factories.createSpan({
+        traceId: traceId1,
+        workspaceId: workspace.id,
+        experimentUuid: experiment.uuid,
+        type: SpanType.Completion,
+        cost: 100,
+        tokensPrompt: 50,
+        tokensCached: 10,
+        tokensReasoning: 5,
+        tokensCompletion: 25,
+      })
+
+      await factories.createSpan({
+        traceId: traceId2,
+        workspaceId: workspace.id,
+        experimentUuid: experiment.uuid,
+        type: SpanType.Prompt,
+        duration: 2000,
+      })
+      await factories.createSpan({
+        traceId: traceId2,
+        workspaceId: workspace.id,
+        experimentUuid: experiment.uuid,
+        type: SpanType.Completion,
+        cost: 200,
+        tokensPrompt: 100,
+        tokensCached: 20,
+        tokensReasoning: 10,
+        tokensCompletion: 50,
+      })
+
+      const result = await repo.getRunMetadata(experiment.uuid)
+
+      expect(result.ok).toBe(true)
+      const metadata = result.unwrap()
+      expect(metadata.count).toBe(2)
+      expect(metadata.totalDuration).toBe(3000)
+      expect(metadata.totalCost).toBe(300)
+      expect(metadata.totalTokens).toBe(50 + 10 + 5 + 25 + 100 + 20 + 10 + 50)
+    })
+
+    it('returns zero values when no spans exist for experiment', async () => {
+      const experiment = await createExperiment({
+        name: 'experiment1',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const result = await repo.getRunMetadata(experiment.uuid)
+
+      expect(result.ok).toBe(true)
+      const metadata = result.unwrap()
+      expect(metadata.count).toBe(0)
+      expect(metadata.totalDuration).toBe(0)
+      expect(metadata.totalCost).toBe(0)
+      expect(metadata.totalTokens).toBe(0)
+    })
+
+    it('counts Chat spans in addition to Prompt spans for run count and duration', async () => {
+      const experiment = await createExperiment({
+        name: 'experiment1',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const traceId1 = randomUUID().replace(/-/g, '')
+      const traceId2 = randomUUID().replace(/-/g, '')
+
+      await factories.createSpan({
+        traceId: traceId1,
+        workspaceId: workspace.id,
+        experimentUuid: experiment.uuid,
+        type: SpanType.Prompt,
+        duration: 1000,
+      })
+
+      await factories.createSpan({
+        traceId: traceId2,
+        workspaceId: workspace.id,
+        experimentUuid: experiment.uuid,
+        type: SpanType.Chat,
+        duration: 2000,
+      })
+
+      const result = await repo.getRunMetadata(experiment.uuid)
+
+      expect(result.ok).toBe(true)
+      const metadata = result.unwrap()
+      expect(metadata.count).toBe(2)
+      expect(metadata.totalDuration).toBe(3000)
+    })
+
+    it('only includes spans from the specified experiment', async () => {
+      const experiment1 = await createExperiment({
+        name: 'experiment1',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const experiment2 = await createExperiment({
+        name: 'experiment2',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const traceId1 = randomUUID().replace(/-/g, '')
+      await factories.createSpan({
+        traceId: traceId1,
+        workspaceId: workspace.id,
+        experimentUuid: experiment1.uuid,
+        type: SpanType.Prompt,
+        duration: 1000,
+      })
+      await factories.createSpan({
+        traceId: traceId1,
+        workspaceId: workspace.id,
+        experimentUuid: experiment1.uuid,
+        type: SpanType.Completion,
+        cost: 100,
+        tokensPrompt: 50,
+        tokensCompletion: 25,
+      })
+
+      const traceId2 = randomUUID().replace(/-/g, '')
+      await factories.createSpan({
+        traceId: traceId2,
+        workspaceId: workspace.id,
+        experimentUuid: experiment2.uuid,
+        type: SpanType.Prompt,
+        duration: 5000,
+      })
+      await factories.createSpan({
+        traceId: traceId2,
+        workspaceId: workspace.id,
+        experimentUuid: experiment2.uuid,
+        type: SpanType.Completion,
+        cost: 500,
+        tokensPrompt: 200,
+        tokensCompletion: 100,
+      })
+
+      const result1 = await repo.getRunMetadata(experiment1.uuid)
+      expect(result1.ok).toBe(true)
+      const metadata1 = result1.unwrap()
+      expect(metadata1.count).toBe(1)
+      expect(metadata1.totalDuration).toBe(1000)
+      expect(metadata1.totalCost).toBe(100)
+      expect(metadata1.totalTokens).toBe(75)
+
+      const result2 = await repo.getRunMetadata(experiment2.uuid)
+      expect(result2.ok).toBe(true)
+      const metadata2 = result2.unwrap()
+      expect(metadata2.count).toBe(1)
+      expect(metadata2.totalDuration).toBe(5000)
+      expect(metadata2.totalCost).toBe(500)
+      expect(metadata2.totalTokens).toBe(300)
+    })
+
+    it('handles multiple completion spans per trace', async () => {
+      const experiment = await createExperiment({
+        name: 'experiment1',
+        workspace,
+        document,
+        commit,
+        parametersPopulation: {
+          source: 'dataset',
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow: 0,
+          toRow: 1,
+        },
+        evaluations,
+        simulationSettings: {
+          simulateToolResponses: true,
+        },
+      }).then((r) => r.unwrap())
+
+      const traceId = randomUUID().replace(/-/g, '')
+
+      await factories.createSpan({
+        traceId,
+        workspaceId: workspace.id,
+        experimentUuid: experiment.uuid,
+        type: SpanType.Prompt,
+        duration: 3000,
+      })
+
+      await factories.createSpan({
+        traceId,
+        workspaceId: workspace.id,
+        experimentUuid: experiment.uuid,
+        type: SpanType.Completion,
+        cost: 100,
+        tokensPrompt: 50,
+        tokensCompletion: 25,
+      })
+      await factories.createSpan({
+        traceId,
+        workspaceId: workspace.id,
+        experimentUuid: experiment.uuid,
+        type: SpanType.Completion,
+        cost: 150,
+        tokensPrompt: 60,
+        tokensCompletion: 30,
+      })
+
+      const result = await repo.getRunMetadata(experiment.uuid)
+
+      expect(result.ok).toBe(true)
+      const metadata = result.unwrap()
+      expect(metadata.count).toBe(1)
+      expect(metadata.totalDuration).toBe(3000)
+      expect(metadata.totalCost).toBe(250)
+      expect(metadata.totalTokens).toBe(50 + 25 + 60 + 30)
     })
   })
 })

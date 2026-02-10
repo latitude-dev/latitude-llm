@@ -1,11 +1,11 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
-import { BestLogsMetadata } from '$/stores/experimentComparison'
+import { BestRunMetadata } from '$/stores/experimentComparison'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
 
-function ExperimentLogMetadataItem({
+function ExperimentRunMetadataItem({
   label,
   value,
   isBest = false,
@@ -31,59 +31,58 @@ function ExperimentLogMetadataItem({
   )
 }
 
-export function ExperimentLogsMetadata({
+export function ExperimentRunMetadata({
   experiment,
-  bestLogsMetadata,
+  bestRunMetadata,
 }: {
   experiment: ExperimentWithScores
-  bestLogsMetadata: BestLogsMetadata
+  bestRunMetadata: BestRunMetadata
 }) {
   return (
     <div className='flex flex-row items-center gap-4'>
-      <ExperimentLogMetadataItem
+      <ExperimentRunMetadataItem
         label='Duration'
         value={
-          experiment.logsMetadata.count > 0
+          experiment.runMetadata.count > 0
             ? formatDuration(
-                experiment.logsMetadata.totalDuration /
-                  experiment.logsMetadata.count,
+                experiment.runMetadata.totalDuration /
+                  experiment.runMetadata.count,
               )
             : '—'
         }
-        isBest={bestLogsMetadata.duration.includes(experiment.uuid)}
-        onlyOneBest={bestLogsMetadata.duration.length === 1}
+        isBest={bestRunMetadata.duration.includes(experiment.uuid)}
+        onlyOneBest={bestRunMetadata.duration.length === 1}
       />
-      <ExperimentLogMetadataItem
+      <ExperimentRunMetadataItem
         label='Tokens'
         value={
-          experiment.logsMetadata.count > 0
+          experiment.runMetadata.count > 0
             ? Math.floor(
-                experiment.logsMetadata.totalTokens /
-                  experiment.logsMetadata.count,
+                experiment.runMetadata.totalTokens /
+                  experiment.runMetadata.count,
               ).toString()
             : '—'
         }
-        isBest={bestLogsMetadata.tokens.includes(experiment.uuid)}
-        onlyOneBest={bestLogsMetadata.tokens.length === 1}
+        isBest={bestRunMetadata.tokens.includes(experiment.uuid)}
+        onlyOneBest={bestRunMetadata.tokens.length === 1}
       />
-      <ExperimentLogMetadataItem
+      <ExperimentRunMetadataItem
         label='Cost'
         value={
-          experiment.logsMetadata.count > 0
+          experiment.runMetadata.count > 0
             ? formatCostInMillicents(
-                experiment.logsMetadata.totalCost /
-                  experiment.logsMetadata.count,
+                experiment.runMetadata.totalCost / experiment.runMetadata.count,
               )
             : '—'
         }
-        isBest={bestLogsMetadata.cost.includes(experiment.uuid)}
-        onlyOneBest={bestLogsMetadata.cost.length === 1}
+        isBest={bestRunMetadata.cost.includes(experiment.uuid)}
+        onlyOneBest={bestRunMetadata.cost.length === 1}
       />
     </div>
   )
 }
 
-export function ExperimentLogsMetadataPlaceholder() {
+export function ExperimentRunMetadataPlaceholder() {
   return (
     <div className='flex flex-row items-center gap-4'>
       <div className='flex flex-col w-full gap-2 items-center p-4 rounded-md bg-muted animate-pulse'>
