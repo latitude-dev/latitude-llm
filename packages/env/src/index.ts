@@ -308,7 +308,7 @@ export const env = createEnv({
     CLICKHOUSE_DB: z
       .string()
       .optional()
-      .default('latitude_analytics_development'),
+      .default('latitude_development'),
     CLICKHOUSE_USER: z.string().optional().default('latitude'),
     CLICKHOUSE_PASSWORD: z.string().optional().default('secret'),
     CLICKHOUSE_CLUSTER_ENABLED: z.string().optional().default('false'),

@@ -6,7 +6,11 @@ ROOT_DIR="$(cd "$CORE_DIR/../.." && pwd)"
 
 _SAVED_CLUSTER_ENABLED="${CLICKHOUSE_CLUSTER_ENABLED:-}"
 _SAVED_DB="${CLICKHOUSE_DB:-}"
-[ -f "$ROOT_DIR/.env" ] && source "$ROOT_DIR/.env"
+if [ -f "$ROOT_DIR/.env" ]; then
+  set -a
+  eval "$(grep -v '^#' "$ROOT_DIR/.env" | grep -E '^[A-Za-z_][A-Za-z_0-9]*=' | sed 's/[[:space:]]*#.*//')"
+  set +a
+fi
 [ -n "$_SAVED_CLUSTER_ENABLED" ] && CLICKHOUSE_CLUSTER_ENABLED="$_SAVED_CLUSTER_ENABLED"
 [ -n "$_SAVED_DB" ] && CLICKHOUSE_DB="$_SAVED_DB"
 
