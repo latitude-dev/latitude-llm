@@ -51,6 +51,7 @@ const mocks = vi.hoisted(() => ({
   enqueueRun: vi.fn(),
   isFeatureEnabledByName: vi.fn(),
   resolveAbTestRouting: vi.fn(),
+  createRequestAbortSignal: vi.fn(),
   queues: {
     defaultQueue: {
       jobs: {
@@ -103,6 +104,10 @@ vi.mock(
     resolveAbTestRouting: mocks.resolveAbTestRouting,
   }),
 )
+
+vi.mock('$/common/createRequestAbortSignal', () => ({
+  createRequestAbortSignal: mocks.createRequestAbortSignal,
+}))
 
 let route: string
 let body: string
@@ -188,6 +193,11 @@ describe('POST /run', () => {
         effectiveCommit: commit,
         effectiveDocument: document,
         effectiveSource: LogSources.API,
+      })
+
+      // By default, return a non-aborted signal
+      mocks.createRequestAbortSignal.mockImplementation(() => {
+        return new AbortController().signal
       })
     })
 
@@ -559,6 +569,11 @@ describe('POST /run', () => {
         effectiveDocument: document,
         effectiveSource: LogSources.API,
       })
+
+      // By default, return a non-aborted signal
+      mocks.createRequestAbortSignal.mockImplementation(() => {
+        return new AbortController().signal
+      })
     })
 
     it('uses source from __internal', async () => {
@@ -654,6 +669,9 @@ describe('POST /run', () => {
 
       const ac = new AbortController()
       ac.abort()
+
+      // Mock createRequestAbortSignal to return the aborted signal for this test
+      mocks.createRequestAbortSignal.mockReturnValue(ac.signal)
 
       const res = await app.request(route, {
         method: 'POST',
