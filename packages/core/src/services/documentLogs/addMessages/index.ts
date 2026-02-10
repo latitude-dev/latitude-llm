@@ -1,6 +1,7 @@
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { type Message } from '@latitude-data/constants/messages'
+import { SimulationSettings } from '@latitude-data/constants/simulation'
 import { LogSources } from '../../../constants'
 import { isRetryableError } from '../../../lib/isRetryableError'
 import { Result } from '../../../lib/Result'
@@ -36,6 +37,7 @@ type AddMessagesArgs = {
   abortSignal?: AbortSignal
   context?: TelemetryContext
   testDeploymentId?: number
+  simulationSettings?: SimulationSettings
 }
 
 export async function addMessages(
@@ -48,6 +50,7 @@ export async function addMessages(
     tools = {},
     mcpHeaders,
     context = BACKGROUND({ workspaceId: workspace.id }),
+    simulationSettings,
   }: AddMessagesArgs,
   telemetry: LatitudeTelemetry = realTelemetry,
 ) {
@@ -103,6 +106,7 @@ export async function addMessages(
     tools,
     mcpHeaders,
     abortSignal,
+    simulationSettings,
   })
 
   const { start, ...streamResult } = streamManager.prepare()

@@ -5,9 +5,9 @@ import {
   SimulationSettings,
 } from '@latitude-data/constants/simulation'
 import { RedisStream } from '../../../../lib/redisStream'
+import { PromisedResult } from '../../../../lib/Transaction'
 import { Result } from '../../../../lib/Result'
 import { incrementTokens } from '../../../../lib/streamManager'
-import { PromisedResult } from '../../../../lib/Transaction'
 import { WorkspaceDto } from '../../../../schema/models/types/Workspace'
 import { addMessages } from '../../../../services/documentLogs/addMessages'
 import { ToolHandler } from '../../../../services/documents/tools/clientTools/handlers'
@@ -39,6 +39,7 @@ type ExecuteSingleTurnArgs = RunIdentifiers & {
   currentTurn: number
   maxTurns: number
   simulationInstructions?: string
+  simulationSettings?: SimulationSettings
   workspace: WorkspaceDto
   documentLogUuid: string
   tools: Record<string, ToolHandler>
@@ -62,6 +63,7 @@ type TurnResult = {
  */
 async function executeSingleTurn({
   simulationInstructions,
+  simulationSettings,
   currentTurn,
   maxTurns,
   messages,
@@ -123,6 +125,7 @@ async function executeSingleTurn({
     tools,
     mcpHeaders,
     abortSignal,
+    simulationSettings,
   })
 
   if (!Result.isOk(addMessagesResult)) {
@@ -224,6 +227,7 @@ export async function simulateUserResponses({
 
     const turnResult = await executeSingleTurn({
       simulationInstructions: simulationSettings.simulatedUserGoal,
+      simulationSettings,
       currentTurn,
       maxTurns,
       messages,

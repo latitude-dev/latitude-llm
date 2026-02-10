@@ -373,6 +373,7 @@ describe('multiTurnSimulation', () => {
         tools: {},
         mcpHeaders,
         abortSignal: undefined,
+        simulationSettings: { maxTurns: 3 },
       })
     })
 
