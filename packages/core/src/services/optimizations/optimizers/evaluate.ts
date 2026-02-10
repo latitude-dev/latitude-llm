@@ -1,13 +1,19 @@
+import { Message } from '@latitude-data/constants/messages'
+import {
+  MAX_SIMULATION_TURNS,
+  SimulationSettings,
+} from '@latitude-data/constants/simulation'
 import { database } from '../../../client'
 import {
   EvaluationMetric,
   EvaluationResultSuccessValue,
   EvaluationType,
   EvaluationV2,
+  isMainSpan,
   LogSources,
+  MainSpanType,
   Span,
   SpanMetadata,
-  SpanType,
   SpanWithDetails,
 } from '../../../constants'
 import { AbortedError, UnprocessableEntityError } from '../../../lib/errors'
@@ -29,8 +35,14 @@ import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { BACKGROUND } from '../../../telemetry'
 import { runDocumentAtCommit } from '../../commits/runDocumentAtCommit'
 import { scanDocumentContent } from '../../documents'
+import { addMessages } from '../../documentLogs/addMessages'
 import { runEvaluationV2 } from '../../evaluationsV2/run'
+import {
+  getTriggerTarget,
+  selectSpansForTrigger,
+} from '../../evaluationsV2/triggers'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
+import { generateSimulatedUserAction } from '../../simulation/simulateUserResponse'
 import { OptimizerEvaluateArgs } from './index'
 import { LearnableTrajectory } from './shared'
 
@@ -110,36 +122,55 @@ export async function evaluateFactory<
     } else if ('_tjr' in running.value) {
       return Result.ok(running.value)
     }
-    const { uuid, messages, duration, usage } = running.value
+    const { uuid, messages, duration, usage, turnsExecuted } = running.value
 
-    const waiting = await waitTrace({
+    const waiting = await waitForMainSpans({
       logUuid: uuid,
+      expectedCount: turnsExecuted,
       workspace: workspace,
       abortSignal: abortSignal,
     })
     if (waiting.error) {
       return Result.error(waiting.error)
     }
-    const { span } = waiting.value
 
-    const evaluating = await evaluatePrompt(
-      {
-        prompt: prompt,
-        example: example,
-        span: span,
-        evaluation: evaluation,
-        optimization: optimization,
-        document: document,
-        commit: commit,
-        workspace: workspace,
-        abortSignal: abortSignal,
-      },
-      db,
-    )
-    if (evaluating.error) {
-      return Result.error(evaluating.error)
+    const triggerTarget = getTriggerTarget(evaluation.configuration.trigger)
+    const selectedSpans = selectSpansForTrigger(waiting.value, triggerTarget)
+
+    const evaluationResults: {
+      score: number
+      feedback: string
+      passed: boolean
+    }[] = []
+    for (const rawSpan of selectedSpans) {
+      const enriching = await enrichSpanWithMetadata(rawSpan, workspace)
+      if (enriching.error) {
+        return Result.error(enriching.error)
+      }
+
+      const evaluating = await evaluatePrompt(
+        {
+          prompt: prompt,
+          example: example,
+          span: enriching.value,
+          evaluation: evaluation,
+          optimization: optimization,
+          document: document,
+          commit: commit,
+          workspace: workspace,
+          abortSignal: abortSignal,
+        },
+        db,
+      )
+      if (evaluating.error) {
+        return Result.error(evaluating.error)
+      }
+
+      evaluationResults.push(evaluating.value)
     }
-    const { score, feedback, passed } = evaluating.value
+
+    const { score, feedback, passed } =
+      aggregateEvaluationResults(evaluationResults)
 
     return Result.ok(
       LearnableTrajectory(example, {
@@ -343,11 +374,45 @@ ${error.message}
   }
 
   const uuid = run.uuid
-  const messages = await run.messages
+  let messages = await run.messages
   const duration = await run.duration
   const usage = await run.runUsage
 
-  return Result.ok({ uuid, messages, duration, usage })
+  let turnsExecuted = 1
+  const simulationSettings = optimization.configuration.simulation
+  if (shouldRunMultiTurnSimulation(simulationSettings)) {
+    const simulating = await simulateConversation({
+      workspace: workspace,
+      documentLogUuid: uuid,
+      simulationSettings: simulationSettings,
+      initialMessages: messages,
+      abortSignal: abortSignal,
+    })
+    if (simulating.error) {
+      if (isAbortError(simulating.error)) {
+        return Result.error(simulating.error)
+      }
+
+      if (isRetryableError(simulating.error)) {
+        return Result.error(simulating.error)
+      }
+
+      const feedback = `
+The optimized prompt had an error during multi-turn simulation.
+The error is:
+\`\`\`
+${simulating.error.message}
+\`\`\`
+`.trim()
+
+      return Result.ok(LearnableTrajectory(example, { feedback }))
+    }
+
+    messages = simulating.value.messages
+    turnsExecuted = simulating.value.turnsExecuted
+  }
+
+  return Result.ok({ uuid, messages, duration, usage, turnsExecuted })
 }
 
 async function evaluatePrompt<
@@ -362,7 +427,7 @@ async function evaluatePrompt<
   }: {
     prompt: string
     example: DatasetRow
-    span: SpanWithDetails<SpanType.Prompt>
+    span: SpanWithDetails<MainSpanType>
     evaluation: EvaluationV2<T, M>
     optimization: Optimization
     document: DocumentVersion
@@ -426,20 +491,18 @@ const TRACE_POLLING_INIT_DELAY = 500 // 500ms
 const TRACE_POLLING_MAX_DELAY = 2 * 1000 // 2 seconds
 const TRACE_POLLING_MAX_ATTEMPTS = 10 // ~20 seconds
 
-async function waitTrace(
-  {
-    logUuid,
-    workspace,
-    abortSignal,
-  }: {
-    logUuid: string
-    workspace: WorkspaceDto
-    abortSignal?: AbortSignal
-  },
-  _ = database,
-) {
+async function waitForMainSpans({
+  logUuid,
+  expectedCount,
+  workspace,
+  abortSignal,
+}: {
+  logUuid: string
+  expectedCount: number
+  workspace: WorkspaceDto
+  abortSignal?: AbortSignal
+}) {
   const spansRepository = new SpansRepository(workspace.id)
-  const metadatasRepository = new SpanMetadatasRepository(workspace.id)
 
   for (let attempt = 0; attempt < TRACE_POLLING_MAX_ATTEMPTS; attempt++) {
     if (abortSignal?.aborted) {
@@ -451,33 +514,60 @@ async function waitTrace(
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
 
-    const traceId = await spansRepository.getLastTraceByLogUuid(logUuid)
-    if (!traceId) continue
-
-    const listing = await spansRepository.list({ traceId })
-    if (listing.error) {
-      return Result.error(listing.error)
+    const allSpans = await spansRepository.listByDocumentLogUuid(logUuid)
+    const mainSpans = allSpans.filter(isMainSpan)
+    if (mainSpans.length >= expectedCount) {
+      return Result.ok(mainSpans)
     }
-    const trace = listing.value
-
-    const span = trace.find(
-      (span) => span.type === SpanType.Prompt,
-    ) as Span<SpanType.Prompt>
-    if (!span) continue
-
-    const getting = await metadatasRepository.get({ spanId: span.id, traceId: span.traceId }) // prettier-ignore
-    if (getting.error) {
-      return Result.error(getting.error)
-    }
-    const metadata = getting.value as SpanMetadata<SpanType.Prompt>
-    if (!metadata) continue
-
-    return Result.ok({ span: { ...span, metadata } })
   }
 
   return Result.error(
-    new UnprocessableEntityError('Trace did not appear within timeout'),
+    new UnprocessableEntityError(
+      'Expected main spans did not appear within timeout',
+    ),
   )
+}
+
+async function enrichSpanWithMetadata(
+  span: Span,
+  workspace: WorkspaceDto,
+) {
+  const metadatasRepository = new SpanMetadatasRepository(workspace.id)
+  const getting = await metadatasRepository.get({
+    spanId: span.id,
+    traceId: span.traceId,
+  })
+  if (getting.error) return Result.error(getting.error)
+
+  const metadata = getting.value as SpanMetadata<MainSpanType>
+  if (!metadata) {
+    return Result.error(
+      new UnprocessableEntityError(
+        `Metadata not found for span ${span.id}`,
+      ),
+    )
+  }
+
+  return Result.ok({ ...span, metadata } as SpanWithDetails<MainSpanType>)
+}
+
+function aggregateEvaluationResults(
+  results: { score: number; feedback: string; passed: boolean }[],
+) {
+  if (results.length === 0) {
+    return { score: 0, feedback: 'No spans were evaluated.', passed: false }
+  }
+
+  if (results.length === 1) return results[0]!
+
+  const score =
+    results.reduce((sum, r) => sum + r.score, 0) / results.length
+  const passed = results.every((r) => r.passed)
+  const feedback = results
+    .map((r, i) => `[Turn ${i + 1}]\n${r.feedback}`)
+    .join('\n\n')
+
+  return { score, feedback, passed }
 }
 
 function calculateExponentialBackoff(attempt: number): number {
@@ -485,4 +575,81 @@ function calculateExponentialBackoff(attempt: number): number {
   const cappedDelay = Math.min(exponentialDelay, TRACE_POLLING_MAX_DELAY)
   const jitter = cappedDelay * 0.1 * (Math.random() - 0.5) * 2
   return cappedDelay + jitter
+}
+
+function shouldRunMultiTurnSimulation(
+  simulationSettings?: SimulationSettings,
+): simulationSettings is SimulationSettings {
+  return Boolean(
+    simulationSettings?.maxTurns && simulationSettings.maxTurns > 1,
+  )
+}
+
+async function simulateConversation({
+  workspace,
+  documentLogUuid,
+  simulationSettings,
+  initialMessages,
+  abortSignal,
+}: {
+  workspace: WorkspaceDto
+  documentLogUuid: string
+  simulationSettings: SimulationSettings
+  initialMessages: Message[]
+  abortSignal?: AbortSignal
+}) {
+  const maxTurns = Math.min(
+    simulationSettings.maxTurns ?? 1,
+    MAX_SIMULATION_TURNS,
+  )
+
+  let messages = initialMessages
+  let turnsExecuted = 1
+  let currentTurn = 2
+
+  while (currentTurn <= maxTurns) {
+    if (abortSignal?.aborted) break
+
+    const userActionResult = await generateSimulatedUserAction({
+      messages,
+      simulationInstructions: simulationSettings.simulatedUserGoal,
+      currentTurn,
+      maxTurns,
+      abortSignal,
+    })
+    if (userActionResult.error) {
+      return Result.error(userActionResult.error)
+    }
+
+    const userAction = userActionResult.value
+    if (userAction.action === 'end') break
+
+    const addResult = await addMessages({
+      workspace,
+      documentLogUuid,
+      messages: [
+        {
+          role: 'user' as const,
+          content: [{ type: 'text' as const, text: userAction.message }],
+        },
+      ],
+      source: LogSources.Optimization,
+      abortSignal,
+    })
+    if (addResult.error) {
+      return Result.error(addResult.error)
+    }
+
+    const turnResult = addResult.value
+    const turnError = await turnResult.error
+    if (turnError) {
+      return Result.error(turnError)
+    }
+
+    messages = await turnResult.messages
+    turnsExecuted++
+    currentTurn++
+  }
+
+  return Result.ok({ messages, turnsExecuted })
 }
