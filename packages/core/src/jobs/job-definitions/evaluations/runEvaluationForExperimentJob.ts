@@ -1,16 +1,15 @@
 import { DelayedError, Job } from 'bullmq'
-import {
-  EvaluationTriggerTarget,
-  isMainSpan,
-  Span,
-  TriggerConfiguration,
-} from '../../../constants'
+import { isMainSpan } from '../../../constants'
 import { SpansRepository } from '../../../repositories/spansRepository'
 import {
   CommitsRepository,
   EvaluationsV2Repository,
   ExperimentsRepository,
 } from '../../../repositories'
+import {
+  getTriggerTarget,
+  selectSpansForTrigger,
+} from '../../../services/evaluationsV2/triggers'
 import { updateExperimentStatus } from '../../../services/experiments/updateStatus'
 import { captureException } from '../../../utils/datadogCapture'
 import { queues } from '../../queues'
@@ -33,29 +32,6 @@ export type RunEvaluationForExperimentJobData = {
 
 const INITIAL_DELAY_MS = 1000
 const MAX_ATTEMPTS = 120
-
-function getTriggerTarget(
-  trigger?: TriggerConfiguration,
-): EvaluationTriggerTarget {
-  return trigger?.target ?? 'every'
-}
-
-function selectSpansForTrigger(
-  spans: Span[],
-  triggerTarget: EvaluationTriggerTarget,
-): Span[] {
-  if (spans.length === 0) return []
-
-  switch (triggerTarget) {
-    case 'first':
-      return [spans[0]!]
-    case 'last':
-      return [spans[spans.length - 1]!]
-    case 'every':
-    default:
-      return spans
-  }
-}
 
 export async function runEvaluationForExperimentJob(
   job: Job<RunEvaluationForExperimentJobData>,

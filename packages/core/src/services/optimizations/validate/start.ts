@@ -139,12 +139,10 @@ export async function startValidateOptimization(
     toRow: testrows, // Note: 1-based index
   }
 
-  const simulation = {
-    simulateToolResponses:
-      optimization.configuration.simulation?.simulateToolResponses ?? true,
-    simulatedTools: optimization.configuration.simulation?.simulatedTools ?? [], // Note: empty array means all tools are simulated
-    toolSimulationInstructions:
-      optimization.configuration.simulation?.toolSimulationInstructions ?? '',
+  const simulation = optimization.configuration.simulation ?? {
+    simulateToolResponses: true,
+    simulatedTools: [], // Note: empty array means all tools are simulated
+    toolSimulationInstructions: '',
   }
 
   const creatingex = await transaction.call(async (tx) => {
