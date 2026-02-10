@@ -5,6 +5,7 @@ import { rateLimitMiddleware } from '$/middlewares/rateLimit'
 import errorHandlerMiddleware from '$/middlewares/errorHandler'
 import { inflightRequestsMiddleware } from '$/middlewares/inflightRequests'
 import { overCapacityMiddleware } from '$/middlewares/overCapacity'
+import { createTrialCheckMiddleware } from '$/middlewares/trialCheck'
 
 import createApp from '$/openApi/createApp'
 import configureOpenAPI from '$/openApi/configureOpenAPI'
@@ -32,6 +33,7 @@ configureWebhookRoutes(app)
 
 app.use(rateLimitMiddleware())
 app.use(authMiddleware())
+app.use(createTrialCheckMiddleware(app))
 
 if (env.AWS_ACCESS_KEY && env.AWS_ACCESS_SECRET) {
   app.use(overCapacityMiddleware())

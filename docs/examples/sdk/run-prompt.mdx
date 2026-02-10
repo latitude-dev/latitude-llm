@@ -48,10 +48,13 @@ async function run() {
     },
   })
 
-  const result = await sdk.prompts.run('drink_water_bug', {
+  const result = await sdk.prompts.run('onboarding', {
     // Get messages as streaming
     stream: false,
-    background: true,
+    background: false,
+    parameters: {
+      phrase: 'I get a very good feeling about this new project.',
+    },
 
     // To get streaming you can use `onEvent`
     onEvent: (event) => {

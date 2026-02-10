@@ -8,9 +8,9 @@ import { type WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { SubscriptionPlan, isPayingOrTrialing } from '../../../plans'
 import { Result } from '../../../lib/Result'
 import { applyAgentRule, validateChain } from './index'
-import { checkPayingOrTrial } from '../checkPayingOrTrial'
+import { checkPayingOrTrial } from '../../../lib/checkPayingOrTrial'
 import * as checkFreeProviderQuotaModule from '../checkFreeProviderQuota'
-import * as checkPayingOrTrialModule from '../checkPayingOrTrial'
+import * as checkPayingOrTrialModule from '../../../lib/checkPayingOrTrial'
 
 describe('validateChain - Plan Limits', () => {
   let workspace: WorkspaceDto
@@ -68,7 +68,7 @@ describe('validateChain - Plan Limits', () => {
     ).mockImplementation(mockCheckFreeProviderQuota)
 
     // Mock checkPayingOrTrial by default to allow requests
-    mockCheckPayingOrTrial = vi.fn().mockResolvedValue(Result.nil())
+    mockCheckPayingOrTrial = vi.fn().mockReturnValue(Result.nil())
     vi.spyOn(checkPayingOrTrialModule, 'checkPayingOrTrial').mockImplementation(
       mockCheckPayingOrTrial,
     )
@@ -129,7 +129,7 @@ describe('validateChain - Plan Limits', () => {
 
     mockCheckPayingOrTrial = vi.fn().mockImplementation(() => {
       callOrder.push('checkPayingOrTrial')
-      return Promise.resolve(Result.nil())
+      return Result.nil()
     })
     vi.spyOn(checkPayingOrTrialModule, 'checkPayingOrTrial').mockImplementation(
       mockCheckPayingOrTrial,
@@ -169,7 +169,7 @@ describe('validateChain - Plan Limits', () => {
   it('Returns PaymentRequiredError when trial has ended', async () => {
     mockCheckPayingOrTrial = vi
       .fn()
-      .mockResolvedValue(
+      .mockReturnValue(
         Result.error(
           new PaymentRequiredError(
             'Your trial has ended. Please upgrade to continue using Latitude.',
@@ -239,7 +239,7 @@ describe('checkPayingOrTrial - direct tests', () => {
     vi.restoreAllMocks()
   })
 
-  it('allows requests for paying plans', async () => {
+  it('allows requests for paying plans', () => {
     const subscription = {
       id: 1,
       workspaceId: 1,
@@ -250,12 +250,12 @@ describe('checkPayingOrTrial - direct tests', () => {
       updatedAt: new Date(),
     }
 
-    const result = await checkPayingOrTrial({ subscription })
+    const result = checkPayingOrTrial({ subscription })
 
     expect(result.ok).toBe(true)
   })
 
-  it('allows requests for free plans in active trial', async () => {
+  it('allows requests for free plans in active trial', () => {
     const subscription = {
       id: 1,
       workspaceId: 1,
@@ -266,12 +266,12 @@ describe('checkPayingOrTrial - direct tests', () => {
       updatedAt: new Date(),
     }
 
-    const result = await checkPayingOrTrial({ subscription })
+    const result = checkPayingOrTrial({ subscription })
 
     expect(result.ok).toBe(true)
   })
 
-  it('rejects requests for free plans with ended trial', async () => {
+  it('rejects requests for free plans with ended trial', () => {
     const subscription = {
       id: 1,
       workspaceId: 1,
@@ -282,7 +282,7 @@ describe('checkPayingOrTrial - direct tests', () => {
       updatedAt: new Date(),
     }
 
-    const result = await checkPayingOrTrial({ subscription })
+    const result = checkPayingOrTrial({ subscription })
 
     expect(result.ok).toBe(false)
     expect(result.error).toBeInstanceOf(PaymentRequiredError)

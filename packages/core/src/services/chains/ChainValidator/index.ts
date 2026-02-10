@@ -18,9 +18,9 @@ import { type WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { Result, TypedResult } from '../../../lib/Result'
 import { Output } from '../../../lib/streamManager/step/streamAIResponse'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
-import { checkPayingOrTrial } from '../checkPayingOrTrial'
 import { CachedApiKeys } from '../run'
 import { DocumentType } from '@latitude-data/constants'
+import { checkPayingOrTrial } from '../../../lib/checkPayingOrTrial'
 
 const DEFAULT_AGENT_MAX_STEPS = 20
 
@@ -93,9 +93,9 @@ export const validateChain = async ({
 
     const provider = findProvider(config.provider, providersMap).unwrap()
 
-    await checkPayingOrTrial({
+    checkPayingOrTrial({
       subscription: workspace.currentSubscription,
-    }).then((r) => r.unwrap())
+    }).unwrap()
 
     await checkFreeProviderQuota({
       workspace,
