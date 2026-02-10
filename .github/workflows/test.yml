@@ -93,7 +93,7 @@ jobs:
         env:
           NODE_ENV: test
           DATABASE_URL: postgres://latitude:secret@localhost:5432/latitude_test
-        run: cd packages/core && vitest run --pool=threads --shard=${{ matrix.shard }}/4
+        run: cd packages/core && pnpm vitest run --pool=threads --shard=${{ matrix.shard }}/4
 
   test-web:
     runs-on: ubuntu-latest
