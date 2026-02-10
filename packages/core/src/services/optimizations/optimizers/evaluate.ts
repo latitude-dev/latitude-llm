@@ -389,23 +389,9 @@ ${error.message}
       abortSignal: abortSignal,
     })
     if (simulating.error) {
-      if (isAbortError(simulating.error)) {
-        return Result.error(simulating.error)
-      }
-
-      if (isRetryableError(simulating.error)) {
-        return Result.error(simulating.error)
-      }
-
-      const feedback = `
-The optimized prompt had an error during multi-turn simulation.
-The error is:
-\`\`\`
-${simulating.error.message}
-\`\`\`
-`.trim()
-
-      return Result.ok(LearnableTrajectory(example, { feedback }))
+      // Note: all post-first turn simulation errors are not
+      // learnable, they are not configuration/template errors
+      return Result.error(simulating.error)
     }
 
     messages = simulating.value.messages
