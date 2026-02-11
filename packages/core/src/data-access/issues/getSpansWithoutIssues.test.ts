@@ -1,4 +1,11 @@
-import { SpanStatus, SpanType } from '@latitude-data/constants'
+import {
+  EvaluationType,
+  HumanEvaluationBinaryConfiguration,
+  HumanEvaluationMetric,
+  LogSources,
+  SpanStatus,
+  SpanType,
+} from '@latitude-data/constants'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { database } from '../../client'
@@ -18,6 +25,7 @@ import {
   createExperiment,
   createIssue,
   createIssueEvaluationResult,
+  createOptimization,
   createProject,
   createSpan,
 } from '../../tests/factories'
@@ -910,37 +918,183 @@ describe('getSpansWithoutIssues', () => {
     })
   })
 
-  describe('includeExperiments filtering', () => {
-    it('includes spans with experiment when includeExperiments is true (default)', async () => {
+  describe('optimization-related span filtering', () => {
+    it('excludes spans with source optimization', async () => {
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-optimization',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+        source: LogSources.Optimization,
+      })
+
+      const normalSpan = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-normal',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+        source: LogSources.API,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(normalSpan.id)
+    })
+
+    it('excludes experiment spans linked to an optimization via baselineExperimentId', async () => {
       const evaluation = await createEvaluationV2({
         workspace,
         document,
         commit,
       })
 
-      const { experiment } = await createExperiment({
+      const { experiment: baselineExperiment } = await createExperiment({
         workspace,
+        user,
         document,
         commit,
         evaluations: [evaluation],
+      })
+
+      await createOptimization({
+        workspace,
+        project,
+        document,
+        baseline: { commit, experiment: baselineExperiment },
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-baseline-exp',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+        source: LogSources.Experiment,
+        experimentUuid: baselineExperiment.uuid,
+      })
+
+      const normalSpan = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-normal',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+        source: LogSources.API,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(normalSpan.id)
+    })
+
+    it('excludes experiment spans linked to an optimization via optimizedExperimentId', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const { experiment: optimizedExperiment } = await createExperiment({
+        workspace,
         user,
+        document,
+        commit,
+        evaluations: [evaluation],
       })
 
-      const spanWithExperiment = await createSpan({
+      await createOptimization({
+        workspace,
+        project,
+        document,
+        baseline: { commit },
+        optimized: { experiment: optimizedExperiment },
+      })
+
+      await createSpan({
         workspaceId: workspace.id,
-        traceId: 'trace-experiment',
+        traceId: 'trace-optimized-exp',
         documentUuid: document.documentUuid,
         commitUuid: commit.uuid,
         type: SpanType.Prompt,
-        experimentUuid: experiment.uuid,
+        source: LogSources.Experiment,
+        experimentUuid: optimizedExperiment.uuid,
       })
 
-      const spanWithoutExperiment = await createSpan({
+      const normalSpan = await createSpan({
         workspaceId: workspace.id,
-        traceId: 'trace-no-experiment',
+        traceId: 'trace-normal',
         documentUuid: document.documentUuid,
         commitUuid: commit.uuid,
         type: SpanType.Prompt,
+        source: LogSources.API,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(normalSpan.id)
+    })
+
+    it('includes experiment spans not linked to any optimization', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const { experiment: standaloneExperiment } = await createExperiment({
+        workspace,
+        user,
+        document,
+        commit,
+        evaluations: [evaluation],
+      })
+
+      const experimentSpan = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-standalone-exp',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+        source: LogSources.Experiment,
+        experimentUuid: standaloneExperiment.uuid,
+      })
+
+      const normalSpan = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-normal',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+        source: LogSources.API,
       })
 
       const result = await getSpansWithoutIssues({
@@ -954,88 +1108,25 @@ describe('getSpansWithoutIssues', () => {
       expect(result.ok).toBe(true)
       const { spans } = result.unwrap()
       expect(spans).toHaveLength(2)
-
       const spanIds = spans.map((s) => s.id)
-      expect(spanIds).toContain(spanWithExperiment.id)
-      expect(spanIds).toContain(spanWithoutExperiment.id)
+      expect(spanIds).toContain(experimentSpan.id)
+      expect(spanIds).toContain(normalSpan.id)
     })
 
-    it('excludes spans with experiment when includeExperiments is false', async () => {
-      const evaluation = await createEvaluationV2({
-        workspace,
-        document,
-        commit,
-      })
-
-      const { experiment } = await createExperiment({
-        workspace,
-        document,
-        commit,
-        evaluations: [evaluation],
-        user,
-      })
-
+    it('returns empty when all spans are from optimizations', async () => {
       await createSpan({
         workspaceId: workspace.id,
-        traceId: 'trace-experiment',
+        traceId: 'trace-opt',
         documentUuid: document.documentUuid,
         commitUuid: commit.uuid,
         type: SpanType.Prompt,
-        experimentUuid: experiment.uuid,
-      })
-
-      const spanWithoutExperiment = await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-no-experiment',
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
+        source: LogSources.Optimization,
       })
 
       const result = await getSpansWithoutIssues({
         workspace,
         commit,
         document,
-        includeExperiments: false,
-        cursor: null,
-        limit: 10,
-      })
-
-      expect(result.ok).toBe(true)
-      const { spans } = result.unwrap()
-      expect(spans).toHaveLength(1)
-      expect(spans[0]!.id).toBe(spanWithoutExperiment.id)
-    })
-
-    it('returns empty when all spans are from experiments and includeExperiments is false', async () => {
-      const evaluation = await createEvaluationV2({
-        workspace,
-        document,
-        commit,
-      })
-
-      const { experiment } = await createExperiment({
-        workspace,
-        document,
-        commit,
-        evaluations: [evaluation],
-        user,
-      })
-
-      await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-experiment',
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-        experimentUuid: experiment.uuid,
-      })
-
-      const result = await getSpansWithoutIssues({
-        workspace,
-        commit,
-        document,
-        includeExperiments: false,
         cursor: null,
         limit: 10,
       })
@@ -1346,6 +1437,325 @@ describe('getSpansWithoutIssues', () => {
         commit,
         document,
         excludeFailedResults: true,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(0)
+    })
+  })
+
+  describe('requirePassedResults filtering', () => {
+    it('only returns spans with at least one passed evaluation result', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const spanWithPassedResult = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-passed',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      const spanWithFailedResult = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-failed',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-no-result',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: spanWithPassedResult,
+        hasPassed: true,
+        error: null,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: spanWithFailedResult,
+        hasPassed: false,
+        error: null,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        requirePassedResults: true,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(spanWithPassedResult.id)
+    })
+
+    it('returns all spans when requirePassedResults is false (default)', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const spanWithPassedResult = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-passed',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-no-result',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: spanWithPassedResult,
+        hasPassed: true,
+        error: null,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(2)
+    })
+
+    it('returns empty when no spans have passed results', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const span = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-failed',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span,
+        hasPassed: false,
+        error: null,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        requirePassedResults: true,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(0)
+    })
+  })
+
+  describe('requirePassedAnnotations filtering', () => {
+    it('only returns spans with at least one passed human evaluation result', async () => {
+      const binaryConfig: HumanEvaluationBinaryConfiguration = {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+      }
+
+      const ruleEvaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const humanEvaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+        type: EvaluationType.Human,
+        metric: HumanEvaluationMetric.Binary,
+        configuration: binaryConfig,
+      })
+
+      const spanWithHumanPassed = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-human-passed',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      const spanWithRulePassed = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-rule-passed',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-no-result',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation: humanEvaluation,
+        commit,
+        span: spanWithHumanPassed,
+        hasPassed: true,
+        error: null,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation: ruleEvaluation,
+        commit,
+        span: spanWithRulePassed,
+        hasPassed: true,
+        error: null,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        requirePassedAnnotations: true,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(spanWithHumanPassed.id)
+    })
+
+    it('excludes spans where human annotation did not pass', async () => {
+      const binaryConfig: HumanEvaluationBinaryConfiguration = {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+      }
+
+      const humanEvaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+        type: EvaluationType.Human,
+        metric: HumanEvaluationMetric.Binary,
+        configuration: binaryConfig,
+      })
+
+      const span = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-human-failed',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation: humanEvaluation,
+        commit,
+        span,
+        hasPassed: false,
+        error: null,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        requirePassedAnnotations: true,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(0)
+    })
+
+    it('returns empty when only rule evaluations exist', async () => {
+      const ruleEvaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const span = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-rule-only',
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createEvaluationResultV2({
+        workspace,
+        evaluation: ruleEvaluation,
+        commit,
+        span,
+        hasPassed: true,
+        error: null,
+      })
+
+      const result = await getSpansWithoutIssues({
+        workspace,
+        commit,
+        document,
+        requirePassedAnnotations: true,
         cursor: null,
         limit: 10,
       })

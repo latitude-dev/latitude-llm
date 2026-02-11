@@ -1,8 +1,7 @@
-import { SpanType } from '@latitude-data/constants'
+import { LogSources, SpanType } from '@latitude-data/constants'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { database } from '../../client'
-import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { commits } from '../../schema/models/commits'
 import type { Commit } from '../../schema/models/types/Commit'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -14,8 +13,10 @@ import {
   createCommit,
   createEvaluationResultV2,
   createEvaluationV2,
+  createExperiment,
   createIssue,
   createIssueEvaluationResult,
+  createOptimization,
   createProject,
   createSpan,
 } from '../../tests/factories'
@@ -77,7 +78,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span1,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       await createIssueEvaluationResult({
@@ -115,7 +116,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span2,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       // Try to associate workspace2's evaluation result with workspace1's issue
@@ -196,7 +197,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span1,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       const evalResult2 = await createEvaluationResultV2({
@@ -206,7 +207,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span2,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       const evalResult3 = await createEvaluationResultV2({
@@ -216,7 +217,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span3,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       // Associate all evaluation results with the issue
@@ -308,7 +309,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span1,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       const evalResult2 = await createEvaluationResultV2({
@@ -318,7 +319,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span2,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       const evalResultDraft = await createEvaluationResultV2({
@@ -328,7 +329,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...spanDraft,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       // Associate all with issue
@@ -409,7 +410,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span1,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       const evalResult2 = await createEvaluationResultV2({
@@ -419,7 +420,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span2,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       // Associate with issue
@@ -492,7 +493,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span1,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       const evalResult2 = await createEvaluationResultV2({
@@ -502,7 +503,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span2,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       // Associate span1 with issue1
@@ -578,7 +579,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span1,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       // Create evaluation result with span references (different span)
@@ -589,7 +590,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span2,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       // Manually set evaluatedSpanId to null to simulate missing span reference
@@ -652,7 +653,7 @@ describe('getSpansByIssue', () => {
           span: {
             ...span,
             type: SpanType.Prompt,
-          } as any,
+          },
           createdAt: new Date(Date.now() + i * 1000), // Ensure different timestamps
         })
 
@@ -760,7 +761,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span1,
           type: SpanType.Prompt,
-        } as any,
+        },
         createdAt: new Date('2024-01-01'),
       })
 
@@ -771,7 +772,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span2,
           type: SpanType.Prompt,
-        } as any,
+        },
         createdAt: new Date('2024-01-03'),
       })
 
@@ -782,7 +783,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span3,
           type: SpanType.Prompt,
-        } as any,
+        },
         createdAt: new Date('2024-01-02'),
       })
 
@@ -851,7 +852,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span,
           type: SpanType.Prompt,
-        } as any,
+        },
         createdAt: new Date('2024-01-01T10:00:00Z'),
       })
 
@@ -862,7 +863,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span,
           type: SpanType.Prompt,
-        } as any,
+        },
         createdAt: new Date('2024-01-02T10:00:00Z'),
       })
 
@@ -894,45 +895,257 @@ describe('getSpansByIssue', () => {
     })
   })
 
-  describe('includeExperiments filtering', () => {
-    it('includes spans with experimentUuid when includeExperiments is true (default)', async () => {
-      const experimentUuid = generateUUIDIdentifier()
-
+  describe('optimization-related span filtering', () => {
+    it('excludes spans with source optimization', async () => {
       const evaluation = await createEvaluationV2({
         workspace,
         document,
         commit,
       })
 
-      const spanWithExperiment = await createSpan({
+      const optimizationSpan = await createSpan({
         workspaceId: workspace.id,
-        traceId: 'trace-experiment',
-        experimentUuid: experimentUuid,
+        traceId: 'trace-optimization',
+        source: LogSources.Optimization,
       })
 
-      const spanWithoutExperiment = await createSpan({
+      const normalSpan = await createSpan({
         workspaceId: workspace.id,
-        traceId: 'trace-no-experiment',
+        traceId: 'trace-normal',
+        source: LogSources.API,
       })
 
       const evalResult1 = await createEvaluationResultV2({
         workspace,
         evaluation,
         commit,
-        span: {
-          ...spanWithExperiment,
-          type: SpanType.Prompt,
-        } as any,
+        span: { ...optimizationSpan, type: SpanType.Prompt },
       })
 
       const evalResult2 = await createEvaluationResultV2({
         workspace,
         evaluation,
         commit,
-        span: {
-          ...spanWithoutExperiment,
-          type: SpanType.Prompt,
-        } as any,
+        span: { ...normalSpan, type: SpanType.Prompt },
+      })
+
+      await createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: evalResult1,
+      })
+
+      await createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: evalResult2,
+      })
+
+      const result = await getSpansByIssue({
+        workspace,
+        commit,
+        issue,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(normalSpan.id)
+    })
+
+    it('excludes experiment spans linked to an optimization via baselineExperimentId', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const { experiment: baselineExperiment } = await createExperiment({
+        workspace,
+        user,
+        document,
+        commit,
+        evaluations: [evaluation],
+      })
+
+      await createOptimization({
+        workspace,
+        project,
+        document,
+        baseline: { commit, experiment: baselineExperiment },
+      })
+
+      const experimentSpan = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-baseline-exp',
+        source: LogSources.Experiment,
+        experimentUuid: baselineExperiment.uuid,
+      })
+
+      const normalSpan = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-normal',
+        source: LogSources.API,
+      })
+
+      const evalResult1 = await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: { ...experimentSpan, type: SpanType.Prompt },
+      })
+
+      const evalResult2 = await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: { ...normalSpan, type: SpanType.Prompt },
+      })
+
+      await createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: evalResult1,
+      })
+
+      await createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: evalResult2,
+      })
+
+      const result = await getSpansByIssue({
+        workspace,
+        commit,
+        issue,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(normalSpan.id)
+    })
+
+    it('excludes experiment spans linked to an optimization via optimizedExperimentId', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const { experiment: optimizedExperiment } = await createExperiment({
+        workspace,
+        user,
+        document,
+        commit,
+        evaluations: [evaluation],
+      })
+
+      await createOptimization({
+        workspace,
+        project,
+        document,
+        baseline: { commit },
+        optimized: { experiment: optimizedExperiment },
+      })
+
+      const experimentSpan = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-optimized-exp',
+        source: LogSources.Experiment,
+        experimentUuid: optimizedExperiment.uuid,
+      })
+
+      const normalSpan = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-normal',
+        source: LogSources.API,
+      })
+
+      const evalResult1 = await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: { ...experimentSpan, type: SpanType.Prompt },
+      })
+
+      const evalResult2 = await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: { ...normalSpan, type: SpanType.Prompt },
+      })
+
+      await createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: evalResult1,
+      })
+
+      await createIssueEvaluationResult({
+        workspace,
+        issue,
+        evaluationResult: evalResult2,
+      })
+
+      const result = await getSpansByIssue({
+        workspace,
+        commit,
+        issue,
+        cursor: null,
+        limit: 10,
+      })
+
+      expect(result.ok).toBe(true)
+      const { spans } = result.unwrap()
+      expect(spans).toHaveLength(1)
+      expect(spans[0]!.id).toBe(normalSpan.id)
+    })
+
+    it('includes experiment spans not linked to any optimization', async () => {
+      const evaluation = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+      })
+
+      const { experiment: standaloneExperiment } = await createExperiment({
+        workspace,
+        user,
+        document,
+        commit,
+        evaluations: [evaluation],
+      })
+
+      const experimentSpan = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-standalone-exp',
+        source: LogSources.Experiment,
+        experimentUuid: standaloneExperiment.uuid,
+      })
+
+      const normalSpan = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-normal',
+        source: LogSources.API,
+      })
+
+      const evalResult1 = await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: { ...experimentSpan, type: SpanType.Prompt },
+      })
+
+      const evalResult2 = await createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span: { ...normalSpan, type: SpanType.Prompt },
       })
 
       await createIssueEvaluationResult({
@@ -958,102 +1171,29 @@ describe('getSpansByIssue', () => {
       expect(result.ok).toBe(true)
       const { spans } = result.unwrap()
       expect(spans).toHaveLength(2)
-
       const spanIds = spans.map((s) => s.id)
-      expect(spanIds).toContain(spanWithExperiment.id)
-      expect(spanIds).toContain(spanWithoutExperiment.id)
+      expect(spanIds).toContain(experimentSpan.id)
+      expect(spanIds).toContain(normalSpan.id)
     })
 
-    it('excludes spans with experimentUuid when includeExperiments is false', async () => {
-      const experimentUuid = generateUUIDIdentifier()
-
+    it('returns empty when all spans are from optimizations', async () => {
       const evaluation = await createEvaluationV2({
         workspace,
         document,
         commit,
       })
 
-      const spanWithExperiment = await createSpan({
+      const optimizationSpan = await createSpan({
         workspaceId: workspace.id,
-        traceId: 'trace-experiment',
-        experimentUuid: experimentUuid,
-      })
-
-      const spanWithoutExperiment = await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-no-experiment',
-      })
-
-      const evalResult1 = await createEvaluationResultV2({
-        workspace,
-        evaluation,
-        commit,
-        span: {
-          ...spanWithExperiment,
-          type: SpanType.Prompt,
-        } as any,
-      })
-
-      const evalResult2 = await createEvaluationResultV2({
-        workspace,
-        evaluation,
-        commit,
-        span: {
-          ...spanWithoutExperiment,
-          type: SpanType.Prompt,
-        } as any,
-      })
-
-      await createIssueEvaluationResult({
-        workspace,
-        issue,
-        evaluationResult: evalResult1,
-      })
-
-      await createIssueEvaluationResult({
-        workspace,
-        issue,
-        evaluationResult: evalResult2,
-      })
-
-      const result = await getSpansByIssue({
-        workspace,
-        commit,
-        issue,
-        includeExperiments: false,
-        cursor: null,
-        limit: 10,
-      })
-
-      expect(result.ok).toBe(true)
-      const { spans } = result.unwrap()
-      expect(spans).toHaveLength(1)
-      expect(spans[0]!.id).toBe(spanWithoutExperiment.id)
-    })
-
-    it('returns empty when all spans have experimentUuid and includeExperiments is false', async () => {
-      const experimentUuid = generateUUIDIdentifier()
-
-      const evaluation = await createEvaluationV2({
-        workspace,
-        document,
-        commit,
-      })
-
-      const spanWithExperiment = await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-experiment',
-        experimentUuid: experimentUuid,
+        traceId: 'trace-opt',
+        source: LogSources.Optimization,
       })
 
       const evalResult = await createEvaluationResultV2({
         workspace,
         evaluation,
         commit,
-        span: {
-          ...spanWithExperiment,
-          type: SpanType.Prompt,
-        } as any,
+        span: { ...optimizationSpan, type: SpanType.Prompt },
       })
 
       await createIssueEvaluationResult({
@@ -1066,7 +1206,6 @@ describe('getSpansByIssue', () => {
         workspace,
         commit,
         issue,
-        includeExperiments: false,
         cursor: null,
         limit: 10,
       })
@@ -1074,117 +1213,6 @@ describe('getSpansByIssue', () => {
       expect(result.ok).toBe(true)
       const { spans } = result.unwrap()
       expect(spans).toHaveLength(0)
-    })
-
-    it('correctly deduplicates experiment spans with multiple evaluation results', async () => {
-      const experimentUuid = generateUUIDIdentifier()
-
-      const evaluation = await createEvaluationV2({
-        workspace,
-        document,
-        commit,
-      })
-
-      const evaluation2 = await createEvaluationV2({
-        workspace,
-        document,
-        commit,
-      })
-
-      const experimentSpan = await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-xp',
-        id: 'span-xp',
-        experimentUuid: experimentUuid,
-      })
-
-      const nonExperimentSpan = await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-nexp',
-        id: 'span-nexp',
-      })
-
-      const evalResult1 = await createEvaluationResultV2({
-        workspace,
-        evaluation,
-        commit,
-        span: {
-          ...experimentSpan,
-          type: SpanType.Prompt,
-        } as any,
-        createdAt: new Date('2024-01-01'),
-      })
-
-      const evalResult2 = await createEvaluationResultV2({
-        workspace,
-        evaluation: evaluation2,
-        commit,
-        span: {
-          ...experimentSpan,
-          type: SpanType.Prompt,
-        } as any,
-        createdAt: new Date('2024-01-02'),
-      })
-
-      const evalResult3 = await createEvaluationResultV2({
-        workspace,
-        evaluation,
-        commit,
-        span: {
-          ...nonExperimentSpan,
-          type: SpanType.Prompt,
-        } as any,
-        createdAt: new Date('2024-01-03'),
-      })
-
-      await createIssueEvaluationResult({
-        workspace,
-        issue,
-        evaluationResult: evalResult1,
-      })
-
-      await createIssueEvaluationResult({
-        workspace,
-        issue,
-        evaluationResult: evalResult2,
-      })
-
-      await createIssueEvaluationResult({
-        workspace,
-        issue,
-        evaluationResult: evalResult3,
-      })
-
-      const resultWithExperiments = await getSpansByIssue({
-        workspace,
-        commit,
-        issue,
-        includeExperiments: true,
-        cursor: null,
-        limit: 10,
-      })
-
-      expect(resultWithExperiments.ok).toBe(true)
-      const { spans: spansWithExperiments } = resultWithExperiments.unwrap()
-      expect(spansWithExperiments).toHaveLength(2)
-      const spanIdsWithExperiments = spansWithExperiments.map((s) => s.id)
-      expect(spanIdsWithExperiments).toContain(experimentSpan.id)
-      expect(spanIdsWithExperiments).toContain(nonExperimentSpan.id)
-
-      const resultWithoutExperiments = await getSpansByIssue({
-        workspace,
-        commit,
-        issue,
-        includeExperiments: false,
-        cursor: null,
-        limit: 10,
-      })
-
-      expect(resultWithoutExperiments.ok).toBe(true)
-      const { spans: spansWithoutExperiments } =
-        resultWithoutExperiments.unwrap()
-      expect(spansWithoutExperiments).toHaveLength(1)
-      expect(spansWithoutExperiments[0]!.id).toBe(nonExperimentSpan.id)
     })
   })
 
@@ -1240,7 +1268,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span1,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       await createIssueEvaluationResult({
@@ -1275,7 +1303,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span2,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       await createIssueEvaluationResult({
@@ -1297,7 +1325,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span3,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       await createIssueEvaluationResult({
@@ -1330,7 +1358,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span4,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       await createIssueEvaluationResult({
@@ -1352,7 +1380,7 @@ describe('getSpansByIssue', () => {
         span: {
           ...span5,
           type: SpanType.Prompt,
-        } as any,
+        },
       })
 
       await createIssueEvaluationResult({

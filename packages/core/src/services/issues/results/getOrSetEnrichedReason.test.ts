@@ -1,28 +1,28 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import * as env from '@latitude-data/env'
 import {
   CompletionSpanMetadata,
   EvaluationType,
   HumanEvaluationMetric,
   HumanEvaluationResultMetadata,
   Providers,
-  SpanType,
   SPAN_METADATA_STORAGE_KEY,
+  SpanType,
 } from '@latitude-data/constants'
-import { Message } from '@latitude-data/constants/messages'
 import { BadRequestError } from '@latitude-data/constants/errors'
+import { Message } from '@latitude-data/constants/messages'
+import * as env from '@latitude-data/env'
+import { eq } from 'drizzle-orm'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { cache as redis } from '../../../cache'
 import { database } from '../../../client'
+import { diskFactory } from '../../../lib/disk'
 import { Result } from '../../../lib/Result'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import * as factories from '../../../tests/factories'
-import { getOrSetEnrichedReason } from './getOrSetEnrichedReason'
 import * as copilotModule from '../../copilot'
-import { eq } from 'drizzle-orm'
-import { diskFactory } from '../../../lib/disk'
-import { cache as redis } from '../../../cache'
+import { getOrSetEnrichedReason } from './getOrSetEnrichedReason'
 
 vi.mock('../../copilot', () => ({
   runCopilot: vi.fn(),
@@ -282,11 +282,8 @@ describe('getOrSetEnrichedReason', () => {
         evaluation,
       })
 
-      // When metadata is null, resultReason returns undefined, so the function
-      // will return undefined (or handle it gracefully)
       expect(enrichedReasonResult.ok).toBe(true)
-      // resultReason for Human Binary returns result.metadata.reason, which is undefined when metadata is null
-      expect(enrichedReasonResult.value).toBeUndefined()
+      expect(enrichedReasonResult.value).toBe('No reason reported')
       expect(mockRunCopilot).not.toHaveBeenCalled()
       expect(mockRunCopilot).not.toHaveBeenCalled()
     })

@@ -25,50 +25,53 @@ import { CommitsRepository } from '../../repositories'
 import { commits } from '../../schema/models/commits'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { experiments } from '../../schema/models/experiments'
-import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
 import { optimizations } from '../../schema/models/optimizations'
 import { spans } from '../../schema/models/spans'
 import { Commit } from '../../schema/models/types/Commit'
-import { Issue } from '../../schema/models/types/Issue'
+import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { Cursor } from '../../schema/types'
 
 /**
- * Fetches spans associated with an issue through evaluation results,
- * filtered by specific commits.
+ * Fetches spans that have evaluation results from a specific evaluation,
+ * filtered by whether the result passed or failed.
  *
  * Automatically excludes optimization-related spans:
  * - Spans with source 'optimization'
  * - Spans with source 'experiment' where the experiment is linked
  *   to an optimization (via baselineExperimentId or optimizedExperimentId)
  *
+ * @param evaluationUuid - The UUID of the evaluation to filter results by.
+ * @param passed - When true, returns spans with hasPassed IS TRUE.
+ *   When false, returns spans with hasPassed IS NOT TRUE.
  * @param spanTypes - Array of span types to include. Defaults to all main span types.
  */
-export async function getSpansByIssue(
+export async function getSpansByEvaluation(
   {
     workspace,
     commit,
-    issue,
+    document,
+    evaluationUuid,
+    passed,
     spanTypes = Array.from(MAIN_SPAN_TYPES) as MainSpanType[],
     cursor,
     limit = 25,
   }: {
     workspace: Workspace
     commit: Commit
-    issue: Issue
+    document: DocumentVersion
+    evaluationUuid: string
+    passed: boolean
     spanTypes?: MainSpanType[]
     cursor: Cursor<Date, number> | null
     limit?: number
   },
   db = database,
 ) {
-  // Get the commit history starting from the specified commit
-  // This includes the commit itself and all its ancestors
   const commitsRepo = new CommitsRepository(workspace.id, db)
   const commitHistory = await commitsRepo.getCommitsHistory({ commit })
   const commitIds = commitHistory.map((c) => c.id)
 
-  // Early return if no commits found (shouldn't happen, but defensive check)
   if (commitIds.length === 0) {
     return Result.ok({
       spans: [] as Span<MainSpanType>[],
@@ -76,8 +79,10 @@ export async function getSpansByIssue(
     })
   }
 
-  // CTE to get row number for each deduped eval result for cursor-based pagination
-  // First, collect all deduped results ordered by latest eval date
+  const passedCondition = passed
+    ? sql`${evaluationResultsV2.hasPassed} IS TRUE`
+    : sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`
+
   const rankedEvalResults = db
     .select({
       spanId: evaluationResultsV2.evaluatedSpanId,
@@ -87,20 +92,17 @@ export async function getSpansByIssue(
       ),
       latestEvalId: max(evaluationResultsV2.id).as('latestEvalId'),
     })
-    .from(issueEvaluationResults)
-    .innerJoin(
-      evaluationResultsV2,
-      eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
-    )
+    .from(evaluationResultsV2)
     .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
     .where(
       and(
-        eq(issueEvaluationResults.workspaceId, workspace.id),
-        eq(issueEvaluationResults.issueId, issue.id),
+        eq(evaluationResultsV2.workspaceId, workspace.id),
+        eq(evaluationResultsV2.evaluationUuid, evaluationUuid),
         isNotNull(evaluationResultsV2.evaluatedSpanId),
         isNotNull(evaluationResultsV2.evaluatedTraceId),
         isNull(commits.deletedAt),
         inArray(evaluationResultsV2.commitId, commitIds),
+        passedCondition,
       ),
     )
     .groupBy(
@@ -113,12 +115,10 @@ export async function getSpansByIssue(
     )
     .as('rankedEvalResults')
 
-  // Apply cursor filter to the ranked results
   const cursorConditions = cursor
     ? sql`(${rankedEvalResults.latestEvaluatedAt}, ${rankedEvalResults.latestEvalId}) < (${cursor.value}, ${cursor.id})`
     : undefined
 
-  // Subquery: experiment UUIDs linked to optimizations
   const optimizationExperimentUuids = db
     .select({ uuid: experiments.uuid })
     .from(experiments)
@@ -130,7 +130,6 @@ export async function getSpansByIssue(
       ),
     )
 
-  // Second query: Join with span data and apply pagination
   const spansColumns = getTableColumns(spans)
   const rows = await db
     .select({
@@ -149,6 +148,7 @@ export async function getSpansByIssue(
     .where(
       and(
         eq(spans.workspaceId, workspace.id),
+        eq(spans.documentUuid, document.documentUuid),
         inArray(spans.type, spanTypes),
         eq(spans.status, SpanStatus.Ok),
         ne(spans.source, LogSources.Optimization),
@@ -166,11 +166,9 @@ export async function getSpansByIssue(
     )
     .limit(limit + 1)
 
-  // Check if there's a next page by fetching one extra row
   const hasMore = rows.length > limit
   const paginatedSpans = hasMore ? rows.slice(0, limit) : rows
 
-  // Generate cursor for next page from the last item
   const lastItem =
     paginatedSpans.length > 0 ? paginatedSpans[paginatedSpans.length - 1] : null
   const next: Cursor<Date, number> | null =

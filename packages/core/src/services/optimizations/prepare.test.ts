@@ -1,13 +1,16 @@
 import { Providers, SpanType, SpanWithDetails } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
+import * as getSpansByEvaluationModule from '../../data-access/evaluations/getSpansByEvaluation'
 import * as getSpansByIssueModule from '../../data-access/issues/getSpansByIssue'
 import * as getSpansWithoutIssuesModule from '../../data-access/issues/getSpansWithoutIssues'
+import * as getSpansByDocumentModule from '../../data-access/spans/getSpansByDocument'
 import { publisher } from '../../events/publisher'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import {
   DatasetRowsRepository,
   DatasetsRepository,
+  EvaluationsV2Repository,
   IssuesRepository,
   SpanMetadatasRepository,
 } from '../../repositories'
@@ -21,6 +24,9 @@ import { User } from '../../schema/models/types/User'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { prepareOptimization } from './prepare'
+
+const originalListAtCommitByDocument =
+  EvaluationsV2Repository.prototype.listAtCommitByDocument
 
 const mocks = vi.hoisted(() => ({
   optimizationsQueue: vi.fn(),
@@ -226,6 +232,9 @@ describe('prepareOptimization', () => {
   })
 
   describe('dataset generation from spans', () => {
+    let evaluationsV2RepositoryMock: MockInstance
+    let getSpansByDocumentMock: MockInstance
+    let getSpansByEvaluationMock: MockInstance
     let getSpansByIssueMock: MockInstance
     let getSpansWithoutIssuesMock: MockInstance
     let issuesRepositoryMock: MockInstance
@@ -307,6 +316,26 @@ describe('prepareOptimization', () => {
       commitWithParams = c
       documentWithParams = documents[0]!
 
+      evaluationsV2RepositoryMock = vi
+        .spyOn(EvaluationsV2Repository.prototype, 'listAtCommitByDocument')
+        .mockImplementation(async function (
+          this: EvaluationsV2Repository,
+          ...args: Parameters<EvaluationsV2Repository['listAtCommitByDocument']>
+        ) {
+          const result = await originalListAtCommitByDocument.apply(this, args)
+          if (result.error) return result
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return Result.ok(result.value.map((e: any) => ({ ...e, issueId: 1 })))
+        })
+
+      getSpansByDocumentMock = vi
+        .spyOn(getSpansByDocumentModule, 'getSpansByDocument')
+        .mockResolvedValue(Result.ok({ spans: [], next: null }))
+
+      getSpansByEvaluationMock = vi
+        .spyOn(getSpansByEvaluationModule, 'getSpansByEvaluation')
+        .mockResolvedValue(Result.ok({ spans: [], next: null }))
+
       getSpansByIssueMock = vi
         .spyOn(getSpansByIssueModule, 'getSpansByIssue')
         .mockResolvedValue(Result.ok({ spans: [], next: null }))
@@ -345,16 +374,14 @@ describe('prepareOptimization', () => {
           workspace,
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError(
-        new UnprocessableEntityError(
-          'At least 2 negative examples are required',
-        ),
+        new UnprocessableEntityError('At least 4 examples are required'),
       )
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
       expect(publisherMock).not.toHaveBeenCalled()
     })
 
-    it('fails when only one negative example found', async () => {
+    it('fails when not enough total examples found', async () => {
       const mockIssue = createMockIssue(1)
       issuesRepositoryMock.mockResolvedValue([mockIssue])
 
@@ -394,16 +421,14 @@ describe('prepareOptimization', () => {
           workspace: workspaceWithParams,
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError(
-        new UnprocessableEntityError(
-          'At least 2 negative examples are required',
-        ),
+        new UnprocessableEntityError('At least 4 examples are required'),
       )
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
       expect(publisherMock).not.toHaveBeenCalled()
     })
 
-    it('fails when only one positive example found', async () => {
+    it('fails when total examples below minimum even with some positives', async () => {
       const mockIssue = createMockIssue(1)
       issuesRepositoryMock.mockResolvedValue([mockIssue])
 
@@ -443,9 +468,7 @@ describe('prepareOptimization', () => {
           workspace: workspaceWithParams,
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError(
-        new UnprocessableEntityError(
-          'At least 2 positive examples are required',
-        ),
+        new UnprocessableEntityError('At least 4 examples are required'),
       )
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
@@ -813,7 +836,7 @@ describe('prepareOptimization', () => {
       expect(testColNames).toContain('inputParam')
     })
 
-    it('calls getSpansWithoutIssues with excludeFailedResults true for positive examples', async () => {
+    it('first tries to collect positive spans with passed annotations', async () => {
       const mockIssue = createMockIssue(1)
       issuesRepositoryMock.mockResolvedValue([mockIssue])
 
@@ -858,56 +881,7 @@ describe('prepareOptimization', () => {
       expect(getSpansWithoutIssuesMock).toHaveBeenCalledWith(
         expect.objectContaining({
           excludeFailedResults: true,
-          includeExperiments: false,
-        }),
-      )
-    })
-
-    it('calls getSpansByIssue with includeExperiments false for negative examples', async () => {
-      const mockIssue = createMockIssue(1)
-      issuesRepositoryMock.mockResolvedValue([mockIssue])
-
-      const negativeSpans = [
-        createMockSpan('span-neg-1', 'trace-neg-1', {
-          inputParam: 'negative1',
-        }),
-        createMockSpan('span-neg-2', 'trace-neg-2', {
-          inputParam: 'negative2',
-        }),
-      ]
-
-      const positiveSpans = [
-        createMockSpan('span-pos-1', 'trace-pos-1', {
-          inputParam: 'positive1',
-        }),
-        createMockSpan('span-pos-2', 'trace-pos-2', {
-          inputParam: 'positive2',
-        }),
-      ]
-
-      getSpansByIssueMock.mockResolvedValue(
-        Result.ok({ spans: negativeSpans, next: null }),
-      )
-
-      getSpansWithoutIssuesMock.mockResolvedValue(
-        Result.ok({ spans: positiveSpans, next: null }),
-      )
-
-      const optimization = await factories.createOptimization({
-        baseline: { commit: commitWithParams },
-        document: documentWithParams,
-        project: projectWithParams,
-        workspace: workspaceWithParams,
-      })
-
-      await prepareOptimization({
-        optimization,
-        workspace: workspaceWithParams,
-      }).then((r) => r.unwrap())
-
-      expect(getSpansByIssueMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          includeExperiments: false,
+          requirePassedAnnotations: true,
         }),
       )
     })
@@ -983,7 +957,7 @@ describe('prepareOptimization', () => {
       ).toBeGreaterThanOrEqual(2)
     })
 
-    it('falls back to including failed results when not enough positive spans found', async () => {
+    it('falls back through 4 tiers when not enough positive spans found', async () => {
       const mockIssue = createMockIssue(1)
       issuesRepositoryMock.mockResolvedValue([mockIssue])
 
@@ -1000,10 +974,19 @@ describe('prepareOptimization', () => {
         Result.ok({ spans: negativeSpans, next: null }),
       )
 
-      const callArgs: { excludeFailedResults: boolean }[] = []
+      type CallArgs = {
+        excludeFailedResults: boolean
+        requirePassedResults: boolean
+        requirePassedAnnotations: boolean
+      }
+      const callArgs: CallArgs[] = []
       let callCount = 0
-      getSpansWithoutIssuesMock.mockImplementation(async (args) => {
-        callArgs.push({ excludeFailedResults: args.excludeFailedResults })
+      getSpansWithoutIssuesMock.mockImplementation(async (args: CallArgs) => {
+        callArgs.push({
+          excludeFailedResults: args.excludeFailedResults,
+          requirePassedResults: args.requirePassedResults,
+          requirePassedAnnotations: args.requirePassedAnnotations,
+        })
         callCount++
 
         if (callCount === 1) {
@@ -1045,12 +1028,784 @@ describe('prepareOptimization', () => {
 
       expect(result.optimization.preparedAt).not.toBeNull()
 
-      expect(callArgs[0]!.excludeFailedResults).toBe(true)
-
-      const fallbackCalls = callArgs.filter(
-        (c) => c.excludeFailedResults === false,
+      // Tier 1: passed annotations + exclude failed
+      expect(callArgs[0]).toEqual(
+        expect.objectContaining({
+          excludeFailedResults: true,
+          requirePassedAnnotations: true,
+        }),
       )
-      expect(fallbackCalls.length).toBeGreaterThan(0)
+
+      // Verify later tiers were attempted
+      const tier2Calls = callArgs.filter(
+        (c) =>
+          c.excludeFailedResults === true &&
+          c.requirePassedResults === true &&
+          c.requirePassedAnnotations === false,
+      )
+      const tier3Calls = callArgs.filter(
+        (c) =>
+          c.excludeFailedResults === true &&
+          c.requirePassedResults === false &&
+          c.requirePassedAnnotations === false,
+      )
+      const tier4Calls = callArgs.filter(
+        (c) =>
+          c.excludeFailedResults === false &&
+          c.requirePassedResults === false &&
+          c.requirePassedAnnotations === false,
+      )
+
+      expect(
+        tier2Calls.length + tier3Calls.length + tier4Calls.length,
+      ).toBeGreaterThan(0)
+    })
+
+    it('falls back to evaluation results when evaluation has no linked issues', async () => {
+      evaluationsV2RepositoryMock.mockRestore()
+
+      const negativeSpans = [
+        createMockSpan('span-neg-1', 'trace-neg-1', {
+          inputParam: 'negative1',
+        }),
+        createMockSpan('span-neg-2', 'trace-neg-2', {
+          inputParam: 'negative2',
+        }),
+      ]
+
+      const positiveSpans = [
+        createMockSpan('span-pos-1', 'trace-pos-1', {
+          inputParam: 'positive1',
+        }),
+        createMockSpan('span-pos-2', 'trace-pos-2', {
+          inputParam: 'positive2',
+        }),
+      ]
+
+      getSpansByEvaluationMock.mockResolvedValue(
+        Result.ok({ spans: negativeSpans, next: null }),
+      )
+
+      getSpansWithoutIssuesMock.mockResolvedValue(
+        Result.ok({ spans: positiveSpans, next: null }),
+      )
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit: commitWithParams },
+        document: documentWithParams,
+        project: projectWithParams,
+        workspace: workspaceWithParams,
+      })
+
+      const result = await prepareOptimization({
+        optimization,
+        workspace: workspaceWithParams,
+      }).then((r) => r.unwrap())
+
+      expect(result.optimization.preparedAt).not.toBeNull()
+      expect(getSpansByIssueMock).not.toHaveBeenCalled()
+      expect(getSpansByEvaluationMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          evaluationUuid: optimization.evaluationUuid,
+          passed: false,
+        }),
+      )
+    })
+
+    it('falls back to evaluation results after issues when not enough spans from issues', async () => {
+      const mockIssue = createMockIssue(1)
+      issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+      const issueSpans = [
+        createMockSpan('span-neg-1', 'trace-neg-1', {
+          inputParam: 'negative1',
+        }),
+      ]
+
+      const evalSpans = [
+        createMockSpan('span-neg-2', 'trace-neg-2', {
+          inputParam: 'negative2',
+        }),
+      ]
+
+      const positiveSpans = [
+        createMockSpan('span-pos-1', 'trace-pos-1', {
+          inputParam: 'positive1',
+        }),
+        createMockSpan('span-pos-2', 'trace-pos-2', {
+          inputParam: 'positive2',
+        }),
+      ]
+
+      getSpansByIssueMock.mockResolvedValue(
+        Result.ok({ spans: issueSpans, next: null }),
+      )
+
+      getSpansByEvaluationMock.mockResolvedValue(
+        Result.ok({ spans: evalSpans, next: null }),
+      )
+
+      getSpansWithoutIssuesMock.mockResolvedValue(
+        Result.ok({ spans: positiveSpans, next: null }),
+      )
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit: commitWithParams },
+        document: documentWithParams,
+        project: projectWithParams,
+        workspace: workspaceWithParams,
+      })
+
+      const result = await prepareOptimization({
+        optimization,
+        workspace: workspaceWithParams,
+      }).then((r) => r.unwrap())
+
+      expect(result.optimization.preparedAt).not.toBeNull()
+      expect(getSpansByIssueMock).toHaveBeenCalled()
+      expect(getSpansByEvaluationMock).toHaveBeenCalled()
+    })
+
+    describe('negative examples tier behavior', () => {
+      it('tries tracked issues first when linked issues exist', async () => {
+        const trackedIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([trackedIssue])
+
+        const issueCallArgs: number[] = []
+        getSpansByIssueMock.mockImplementation(
+          async (args: { issue: { id: number } }) => {
+            issueCallArgs.push(args.issue.id)
+            return Result.ok({ spans: [], next: null })
+          },
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: [], next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).catch(() => {})
+
+        expect(issueCallArgs[0]).toBe(trackedIssue.id)
+      })
+
+      it('falls back to other issues when tracked issues return nothing', async () => {
+        const trackedIssue = createMockIssue(1)
+        const otherIssue = createMockIssue(2)
+        issuesRepositoryMock.mockResolvedValue([trackedIssue, otherIssue])
+
+        const issueCallArgs: number[] = []
+        getSpansByIssueMock.mockImplementation(
+          async (args: { issue: { id: number } }) => {
+            issueCallArgs.push(args.issue.id)
+            if (args.issue.id === 2) {
+              return Result.ok({
+                spans: [
+                  createMockSpan('span-other', 'trace-other', {
+                    inputParam: 'other1',
+                  }),
+                ],
+                next: null,
+              })
+            }
+            return Result.ok({ spans: [], next: null })
+          },
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: [], next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).catch(() => {})
+
+        expect(issueCallArgs).toContain(trackedIssue.id)
+        expect(issueCallArgs).toContain(otherIssue.id)
+      })
+
+      it('cascades through all 4 tiers when linked issues exist but are insufficient', async () => {
+        const trackedIssue = createMockIssue(1)
+        const otherIssue = createMockIssue(2)
+        issuesRepositoryMock.mockResolvedValue([trackedIssue, otherIssue])
+
+        const extraEval = await factories.createEvaluationV2({
+          workspace: workspaceWithParams,
+          document: documentWithParams,
+          commit: commitWithParams,
+        })
+
+        getSpansByIssueMock.mockResolvedValue(
+          Result.ok({ spans: [], next: null }),
+        )
+
+        const evalCallArgs: string[] = []
+        getSpansByEvaluationMock.mockImplementation(
+          async (args: { evaluationUuid: string }) => {
+            evalCallArgs.push(args.evaluationUuid)
+            return Result.ok({
+              spans: [
+                createMockSpan(
+                  `span-eval-${evalCallArgs.length}`,
+                  `trace-eval-${evalCallArgs.length}`,
+                  { inputParam: `eval${evalCallArgs.length}` },
+                ),
+              ],
+              next: null,
+            })
+          },
+        )
+
+        const positiveSpans = [
+          createMockSpan('span-pos-1', 'trace-pos-1', {
+            inputParam: 'positive1',
+          }),
+          createMockSpan('span-pos-2', 'trace-pos-2', {
+            inputParam: 'positive2',
+          }),
+        ]
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: positiveSpans, next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).catch(() => {})
+
+        // Tier 1+2: Issues were tried (returned empty)
+        expect(getSpansByIssueMock).toHaveBeenCalled()
+
+        // Tier 3: Selected evaluation was tried
+        expect(evalCallArgs).toContain(optimization.evaluationUuid)
+
+        // Tier 4: Other evaluation was tried
+        expect(evalCallArgs).toContain(extraEval.uuid)
+      })
+
+      it('uses only evaluation tiers when no linked issues exist', async () => {
+        evaluationsV2RepositoryMock.mockRestore()
+
+        const extraEval = await factories.createEvaluationV2({
+          workspace: workspaceWithParams,
+          document: documentWithParams,
+          commit: commitWithParams,
+        })
+
+        const evalCallArgs: string[] = []
+        getSpansByEvaluationMock.mockImplementation(
+          async (args: { evaluationUuid: string }) => {
+            evalCallArgs.push(args.evaluationUuid)
+            return Result.ok({
+              spans: [
+                createMockSpan(
+                  `span-eval-${evalCallArgs.length}`,
+                  `trace-eval-${evalCallArgs.length}`,
+                  { inputParam: `eval${evalCallArgs.length}` },
+                ),
+              ],
+              next: null,
+            })
+          },
+        )
+
+        const positiveSpans = [
+          createMockSpan('span-pos-1', 'trace-pos-1', {
+            inputParam: 'positive1',
+          }),
+          createMockSpan('span-pos-2', 'trace-pos-2', {
+            inputParam: 'positive2',
+          }),
+        ]
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: positiveSpans, next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).catch(() => {})
+
+        // Issue-based collection was skipped entirely
+        expect(getSpansByIssueMock).not.toHaveBeenCalled()
+
+        // Selected evaluation was tried first
+        expect(evalCallArgs[0]).toBe(optimization.evaluationUuid)
+
+        // Other evaluations were also tried
+        expect(evalCallArgs).toContain(extraEval.uuid)
+      })
+
+      it('excludes selected evaluation from other evaluations tier', async () => {
+        evaluationsV2RepositoryMock.mockRestore()
+
+        const extraEval1 = await factories.createEvaluationV2({
+          workspace: workspaceWithParams,
+          document: documentWithParams,
+          commit: commitWithParams,
+        })
+
+        const extraEval2 = await factories.createEvaluationV2({
+          workspace: workspaceWithParams,
+          document: documentWithParams,
+          commit: commitWithParams,
+        })
+
+        const evalCallArgs: string[] = []
+        getSpansByEvaluationMock.mockImplementation(
+          async (args: { evaluationUuid: string }) => {
+            evalCallArgs.push(args.evaluationUuid)
+            return Result.ok({ spans: [], next: null })
+          },
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: [], next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).catch(() => {})
+
+        // The selected evaluation should appear exactly once (Tier 3)
+        const selectedEvalCalls = evalCallArgs.filter(
+          (uuid) => uuid === optimization.evaluationUuid,
+        )
+        expect(selectedEvalCalls).toHaveLength(1)
+
+        // Other evaluations should appear but NOT the selected one in Tier 4
+        const otherEvalCalls = evalCallArgs.slice(1)
+        expect(otherEvalCalls).not.toContain(optimization.evaluationUuid)
+        expect(
+          otherEvalCalls.includes(extraEval1.uuid) ||
+            otherEvalCalls.includes(extraEval2.uuid),
+        ).toBe(true)
+      })
+
+      it('tries selected evaluation before other evaluations', async () => {
+        evaluationsV2RepositoryMock.mockRestore()
+
+        await factories.createEvaluationV2({
+          workspace: workspaceWithParams,
+          document: documentWithParams,
+          commit: commitWithParams,
+        })
+
+        const evalCallArgs: string[] = []
+        getSpansByEvaluationMock.mockImplementation(
+          async (args: { evaluationUuid: string }) => {
+            evalCallArgs.push(args.evaluationUuid)
+            return Result.ok({ spans: [], next: null })
+          },
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: [], next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).catch(() => {})
+
+        // First call must be the selected evaluation (Tier 3 before Tier 4)
+        expect(evalCallArgs.length).toBeGreaterThanOrEqual(2)
+        expect(evalCallArgs[0]).toBe(optimization.evaluationUuid)
+        expect(evalCallArgs[1]).not.toBe(optimization.evaluationUuid)
+      })
+    })
+
+    describe('getExamples fallback tier', () => {
+      it('fills negative and positive slots from document spans when both are insufficient', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        getSpansByIssueMock.mockResolvedValue(
+          Result.ok({
+            spans: [
+              createMockSpan('span-neg-1', 'trace-neg-1', {
+                inputParam: 'negative1',
+              }),
+            ],
+            next: null,
+          }),
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({
+            spans: [
+              createMockSpan('span-pos-1', 'trace-pos-1', {
+                inputParam: 'positive1',
+              }),
+            ],
+            next: null,
+          }),
+        )
+
+        const fallbackSpans = [
+          createMockSpan('span-fb-1', 'trace-fb-1', {
+            inputParam: 'fallback1',
+          }),
+          createMockSpan('span-fb-2', 'trace-fb-2', {
+            inputParam: 'fallback2',
+          }),
+        ]
+
+        getSpansByDocumentMock.mockResolvedValue(
+          Result.ok({ spans: fallbackSpans, next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        const result = await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).then((r) => r.unwrap())
+
+        expect(result.optimization.preparedAt).not.toBeNull()
+        expect(getSpansByDocumentMock).toHaveBeenCalled()
+      })
+
+      it('is not called when negatives and positives are already sufficient', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        const negativeSpans = Array.from({ length: 125 }, (_, i) =>
+          createMockSpan(`span-neg-${i}`, `trace-neg-${i}`, {
+            inputParam: `neg_${i}`,
+          }),
+        )
+
+        const positiveSpans = Array.from({ length: 125 }, (_, i) =>
+          createMockSpan(`span-pos-${i}`, `trace-pos-${i}`, {
+            inputParam: `pos_${i}`,
+          }),
+        )
+
+        getSpansByIssueMock.mockResolvedValue(
+          Result.ok({ spans: negativeSpans, next: null }),
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: positiveSpans, next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).then((r) => r.unwrap())
+
+        expect(getSpansByDocumentMock).not.toHaveBeenCalled()
+      })
+
+      it('only fills positive slots when negatives are sufficient', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        const negativeSpans = Array.from({ length: 125 }, (_, i) =>
+          createMockSpan(`span-neg-${i}`, `trace-neg-${i}`, {
+            inputParam: `neg_${i}`,
+          }),
+        )
+
+        getSpansByIssueMock.mockResolvedValue(
+          Result.ok({ spans: negativeSpans, next: null }),
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({
+            spans: [
+              createMockSpan('span-pos-1', 'trace-pos-1', {
+                inputParam: 'positive1',
+              }),
+            ],
+            next: null,
+          }),
+        )
+
+        const fallbackSpans = [
+          createMockSpan('span-fb-1', 'trace-fb-1', {
+            inputParam: 'fallback1',
+          }),
+        ]
+
+        getSpansByDocumentMock.mockResolvedValue(
+          Result.ok({ spans: fallbackSpans, next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).catch(() => {})
+
+        expect(getSpansByDocumentMock).toHaveBeenCalled()
+      })
+
+      it('only fills negative slots when positives are sufficient', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        getSpansByIssueMock.mockResolvedValue(
+          Result.ok({
+            spans: [
+              createMockSpan('span-neg-1', 'trace-neg-1', {
+                inputParam: 'negative1',
+              }),
+            ],
+            next: null,
+          }),
+        )
+
+        const positiveSpans = Array.from({ length: 125 }, (_, i) =>
+          createMockSpan(`span-pos-${i}`, `trace-pos-${i}`, {
+            inputParam: `pos_${i}`,
+          }),
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: positiveSpans, next: null }),
+        )
+
+        const fallbackSpans = [
+          createMockSpan('span-fb-1', 'trace-fb-1', {
+            inputParam: 'fallback1',
+          }),
+        ]
+
+        getSpansByDocumentMock.mockResolvedValue(
+          Result.ok({ spans: fallbackSpans, next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).catch(() => {})
+
+        expect(getSpansByDocumentMock).toHaveBeenCalled()
+      })
+
+      it('does not duplicate spans already seen by negative or positive collectors', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        const sharedSpan = createMockSpan('span-shared', 'trace-shared', {
+          inputParam: 'shared_value',
+        })
+
+        getSpansByIssueMock.mockResolvedValue(
+          Result.ok({
+            spans: [sharedSpan],
+            next: null,
+          }),
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({
+            spans: [
+              createMockSpan('span-pos-1', 'trace-pos-1', {
+                inputParam: 'positive1',
+              }),
+            ],
+            next: null,
+          }),
+        )
+
+        getSpansByDocumentMock.mockResolvedValue(
+          Result.ok({
+            spans: [
+              sharedSpan,
+              createMockSpan('span-fb-new', 'trace-fb-new', {
+                inputParam: 'fallback_new',
+              }),
+            ],
+            next: null,
+          }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).catch(() => {})
+
+        expect(getSpansByDocumentMock).toHaveBeenCalled()
+      })
+
+      it('rejects spans with duplicate parameter values across collectors', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        getSpansByIssueMock.mockResolvedValue(
+          Result.ok({
+            spans: [
+              createMockSpan('span-neg-1', 'trace-neg-1', {
+                inputParam: 'same_value',
+              }),
+              createMockSpan('span-neg-2', 'trace-neg-2', {
+                inputParam: 'same_value',
+              }),
+            ],
+            next: null,
+          }),
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({
+            spans: [
+              createMockSpan('span-pos-dup', 'trace-pos-dup', {
+                inputParam: 'same_value',
+              }),
+              createMockSpan('span-pos-1', 'trace-pos-1', {
+                inputParam: 'positive1',
+              }),
+            ],
+            next: null,
+          }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await expect(
+          prepareOptimization({
+            optimization,
+            workspace: workspaceWithParams,
+          }).then((r) => r.unwrap()),
+        ).rejects.toThrowError(
+          new UnprocessableEntityError('At least 4 examples are required'),
+        )
+      })
+
+      it('distributes fallback spans to whichever bucket has the larger deficit', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        getSpansByIssueMock.mockResolvedValue(
+          Result.ok({ spans: [], next: null }),
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({
+            spans: [
+              createMockSpan('span-pos-1', 'trace-pos-1', {
+                inputParam: 'positive1',
+              }),
+              createMockSpan('span-pos-2', 'trace-pos-2', {
+                inputParam: 'positive2',
+              }),
+            ],
+            next: null,
+          }),
+        )
+
+        const fallbackSpans = Array.from({ length: 4 }, (_, i) =>
+          createMockSpan(`span-fb-${i}`, `trace-fb-${i}`, {
+            inputParam: `fallback_${i}`,
+          }),
+        )
+
+        getSpansByDocumentMock.mockResolvedValue(
+          Result.ok({ spans: fallbackSpans, next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).catch(() => {})
+
+        expect(getSpansByDocumentMock).toHaveBeenCalled()
+      })
     })
 
     it('stops searching after maxSearches limit is reached', async () => {
@@ -1094,7 +1849,7 @@ describe('prepareOptimization', () => {
         }).then((r) => r.unwrap()),
       ).rejects.toThrowError()
 
-      expect(searchCount).toBeLessThanOrEqual(3)
+      expect(searchCount).toBeLessThanOrEqual(4 * 3)
     })
   })
 })

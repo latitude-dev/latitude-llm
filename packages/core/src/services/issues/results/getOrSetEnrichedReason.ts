@@ -7,19 +7,19 @@ import {
   HumanEvaluationMetric,
   HumanEvaluationResultMetadata,
 } from '@latitude-data/constants'
-import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
-import { Result } from '../../../lib/Result'
-import { env } from '@latitude-data/env'
-import { runCopilot } from '../../copilot'
-import z from 'zod'
-import Transaction from '../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
-import { updateEvaluationResultV2 } from '../../evaluationsV2/results/update'
-import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { findCommitById } from '../../../data-access/commits'
-import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
-import { adaptCompletionSpanMessagesToLegacy } from '../../tracing/spans/fetching/findCompletionSpanFromTrace'
 import { Message } from '@latitude-data/constants/messages'
+import { env } from '@latitude-data/env'
+import z from 'zod'
+import { findCommitById } from '../../../data-access/commits'
+import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
+import { Result } from '../../../lib/Result'
+import Transaction from '../../../lib/Transaction'
+import { runCopilot } from '../../copilot'
+import { updateEvaluationResultV2 } from '../../evaluationsV2/results/update'
+import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
+import { adaptCompletionSpanMessagesToLegacy } from '../../tracing/spans/fetching/findCompletionSpanFromTrace'
+import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
 
 /**
  * Builds a reason for an evaluation result, optionally generalizing it based on selected contexts.
@@ -50,11 +50,13 @@ export async function getOrSetEnrichedReason<
   evaluation: EvaluationV2<T, M>
   transaction?: Transaction
 }) {
-  if (
-    result.metadata &&
-    'enrichedReason' in result.metadata &&
-    result.metadata.enrichedReason
-  ) {
+  // Note: this should not happen because this function is
+  // called after we validate the result has reasoning
+  if (!result.metadata) {
+    return Result.ok('No reason reported')
+  }
+
+  if ('enrichedReason' in result.metadata && result.metadata.enrichedReason) {
     return Result.ok(result.metadata.enrichedReason)
   }
 
@@ -63,11 +65,8 @@ export async function getOrSetEnrichedReason<
     result as EvaluationResultSuccessValue<T, M>,
   )!
 
-  // If there is no selected context no need to generalize
-  if (!result.metadata || !('selectedContexts' in result.metadata)) {
-    return Result.ok(initialReason)
-  }
   if (
+    !('selectedContexts' in result.metadata) ||
     !result.metadata.selectedContexts ||
     result.metadata.selectedContexts.length === 0
   ) {
