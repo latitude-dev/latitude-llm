@@ -259,6 +259,15 @@ ORDER BY day ASC;
 7. Flip read flag for production once metrics stay healthy for agreed window.
 8. Disable Postgres writes, schedule removal of spans table and indexes.
 
+### 8.3 Phase 2: Full-Text Search for Span IO
+
+- Add a dedicated `telemetry.spans_text` table keyed by `(workspace_id, started_at, trace_id, span_id)`.
+- Populate `input_text` and `output_text` from completion span metadata during ingest.
+- Cap stored text size (e.g. 16-64KB per field) and drop non-text payloads.
+- Add token-based skip indexes (e.g. `tokenbf_v1`) for keyword search; avoid n-gram indexes unless substring search is required.
+- Keep the main spans table lean; join search results to spans by `(workspace_id, trace_id, span_id)`.
+- Apply a separate TTL/storage policy for `spans_text` if needed to control costs.
+
 ## 9. Retention Semantics
 
 - Free tier: rows expire at `started_at + 30 days`.

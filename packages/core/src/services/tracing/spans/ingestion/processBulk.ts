@@ -380,6 +380,7 @@ export async function processSpansBulk(
       const chEnabled = await isFeatureEnabledByName(
         workspace.id,
         'clickhouse-spans-write',
+        tx,
       )
       if (chEnabled.ok && chEnabled.value) {
         const subscriptionResult = await findWorkspaceSubscription({
