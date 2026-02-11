@@ -189,6 +189,7 @@ describe('POST /projects/:projectId/versions/:versionUuid/documents/logs', () =>
       expect(promptSpan!.source).toBe(LogSources.API)
       expect(promptSpan!.documentUuid).toBe(responseBody.documentUuid)
       expect(promptSpan!.commitUuid).toBe(commitUuid)
+      expect(promptSpan!.projectId).toBe(projectId)
 
       const completionSpanResult = await spansRepo.get({
         spanId: responseBody.completionSpan.id,

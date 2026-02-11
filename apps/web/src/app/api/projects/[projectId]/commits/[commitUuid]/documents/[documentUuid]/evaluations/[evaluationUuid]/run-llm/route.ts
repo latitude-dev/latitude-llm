@@ -133,6 +133,7 @@ export const POST = errorHandler(
           workspace,
           evaluation,
           parameters,
+          projectId,
         }).then((r) => r.unwrap())
 
         // Create a TransformStream to handle the streaming response
