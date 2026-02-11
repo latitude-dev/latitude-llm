@@ -143,9 +143,7 @@ function mockEvaluationSequence(
   })
 }
 
-function mockSpansAndMetadata(
-  spans: ReturnType<typeof createMockSpan>[],
-) {
+function mockSpansAndMetadata(spans: ReturnType<typeof createMockSpan>[]) {
   mocks.listByDocumentLogUuid.mockResolvedValue(spans)
   mocks.metadataGet.mockImplementation(
     async ({ spanId }: { spanId: string }) => {
@@ -213,9 +211,21 @@ describe('evaluateFactory', () => {
       mockEvaluation(80, true)
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
-        createMockSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
-        createMockSpan('span-3', SpanType.Prompt, new Date('2024-01-01T00:02:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
+        createMockSpan(
+          'span-3',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:02:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -246,9 +256,21 @@ describe('evaluateFactory', () => {
       mockEvaluation(90, true)
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
-        createMockSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
-        createMockSpan('span-3', SpanType.Prompt, new Date('2024-01-01T00:02:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
+        createMockSpan(
+          'span-3',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:02:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -283,9 +305,21 @@ describe('evaluateFactory', () => {
       ])
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
-        createMockSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
-        createMockSpan('span-3', SpanType.Prompt, new Date('2024-01-01T00:02:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
+        createMockSpan(
+          'span-3',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:02:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -316,8 +350,16 @@ describe('evaluateFactory', () => {
       ])
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
-        createMockSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -348,10 +390,26 @@ describe('evaluateFactory', () => {
       ])
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
-        createMockSpan('tool-span', SpanType.Tool, new Date('2024-01-01T00:00:30Z')),
-        createMockSpan('completion-span', SpanType.Completion, new Date('2024-01-01T00:00:45Z')),
-        createMockSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'tool-span',
+          SpanType.Tool,
+          new Date('2024-01-01T00:00:30Z'),
+        ),
+        createMockSpan(
+          'completion-span',
+          SpanType.Completion,
+          new Date('2024-01-01T00:00:45Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -385,9 +443,21 @@ describe('evaluateFactory', () => {
       ])
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
-        createMockSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
-        createMockSpan('span-3', SpanType.Prompt, new Date('2024-01-01T00:02:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
+        createMockSpan(
+          'span-3',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:02:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -419,8 +489,16 @@ describe('evaluateFactory', () => {
       ])
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
-        createMockSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -451,8 +529,16 @@ describe('evaluateFactory', () => {
       ])
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
-        createMockSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -481,8 +567,16 @@ describe('evaluateFactory', () => {
       mockEvaluation(85, true)
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
-        createMockSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -534,14 +628,25 @@ describe('evaluateFactory', () => {
         error: Promise.resolve(null),
         messages: Promise.resolve([
           { role: 'user', content: [{ type: 'text', text: 'Turn 2 message' }] },
-          { role: 'assistant', content: [{ type: 'text', text: 'Response 2' }] },
+          {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Response 2' }],
+          },
         ]),
       }
       mocks.addMessages.mockResolvedValue(Result.ok(addMessagesResult))
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
-        createMockSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -581,16 +686,30 @@ describe('evaluateFactory', () => {
       const addMessagesResult = {
         error: Promise.resolve(null),
         messages: Promise.resolve([
-          { role: 'assistant', content: [{ type: 'text', text: 'Response 1' }] },
+          {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Response 1' }],
+          },
           { role: 'user', content: [{ type: 'text', text: 'Turn 2 message' }] },
-          { role: 'assistant', content: [{ type: 'text', text: 'Response 2' }] },
+          {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Response 2' }],
+          },
         ]),
       }
       mocks.addMessages.mockResolvedValue(Result.ok(addMessagesResult))
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
-        createMockSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -630,7 +749,11 @@ describe('evaluateFactory', () => {
       mockEvaluation(80, true)
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -659,7 +782,11 @@ describe('evaluateFactory', () => {
       mockEvaluation(80, true)
 
       const spans = [
-        createMockSpan('span-1', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
       ]
       mockSpansAndMetadata(spans)
 
@@ -753,7 +880,11 @@ describe('evaluateFactory', () => {
         mockEvaluation(75, true)
 
         const spans = [
-          createMockSpan('only-span', SpanType.Prompt, new Date('2024-01-01T00:00:00Z')),
+          createMockSpan(
+            'only-span',
+            SpanType.Prompt,
+            new Date('2024-01-01T00:00:00Z'),
+          ),
         ]
         mockSpansAndMetadata(spans)
 

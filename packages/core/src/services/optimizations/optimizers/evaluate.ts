@@ -514,10 +514,7 @@ async function waitForMainSpans({
   )
 }
 
-async function enrichSpanWithMetadata(
-  span: Span,
-  workspace: WorkspaceDto,
-) {
+async function enrichSpanWithMetadata(span: Span, workspace: WorkspaceDto) {
   const metadatasRepository = new SpanMetadatasRepository(workspace.id)
   const getting = await metadatasRepository.get({
     spanId: span.id,
@@ -528,9 +525,7 @@ async function enrichSpanWithMetadata(
   const metadata = getting.value as SpanMetadata<MainSpanType>
   if (!metadata) {
     return Result.error(
-      new UnprocessableEntityError(
-        `Metadata not found for span ${span.id}`,
-      ),
+      new UnprocessableEntityError(`Metadata not found for span ${span.id}`),
     )
   }
 
@@ -546,8 +541,7 @@ function aggregateEvaluationResults(
 
   if (results.length === 1) return results[0]!
 
-  const score =
-    results.reduce((sum, r) => sum + r.score, 0) / results.length
+  const score = results.reduce((sum, r) => sum + r.score, 0) / results.length
   const passed = results.every((r) => r.passed)
   const feedback = results
     .map((r, i) => `[Turn ${i + 1}]\n${r.feedback}`)

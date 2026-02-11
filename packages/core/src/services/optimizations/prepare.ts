@@ -11,8 +11,10 @@ import {
   SpanType,
   SpanWithDetails,
 } from '../../constants'
+import { getSpansByEvaluation } from '../../data-access/evaluations/getSpansByEvaluation'
 import { getSpansByIssue } from '../../data-access/issues/getSpansByIssue'
 import { getSpansWithoutIssues } from '../../data-access/issues/getSpansWithoutIssues'
+import { getSpansByDocument } from '../../data-access/spans/getSpansByDocument'
 import { publisher } from '../../events/publisher'
 import { executeOptimizationJobKey } from '../../jobs/job-definitions/optimizations/executeOptimizationJob'
 import { queues } from '../../jobs/queues'
@@ -131,13 +133,22 @@ export async function prepareOptimization(
 
     const seenSpans = new Set<string>()
     const seenParameters = new Set<string>()
+    const metadatasRepository = new SpanMetadatasRepository(workspace.id)
+
+    const validateSpan = createSpanValidator({
+      parametersHash,
+      seenSpans,
+      seenParameters,
+      metadatasRepository,
+    })
 
     const gettingne = await getNegativeExamples({
       trackedIssues: issues.tracked,
       otherIssues: issues.other,
-      parametersHash: parametersHash,
-      seenSpans: seenSpans,
-      seenParameters: seenParameters,
+      evaluation: issues.evaluation,
+      evaluations: issues.evaluations,
+      document: document,
+      validateSpan: validateSpan,
       baselineCommit: baselineCommit,
       optimization: optimization,
       workspace: workspace,
@@ -145,12 +156,10 @@ export async function prepareOptimization(
     if (gettingne.error) {
       return Result.error(gettingne.error)
     }
-    const negatives = gettingne.value
+    let negatives = gettingne.value
 
     const gettingpo = await getPositiveExamples({
-      parametersHash: parametersHash,
-      seenSpans: seenSpans,
-      seenParameters: seenParameters,
+      validateSpan: validateSpan,
       baselineCommit: baselineCommit,
       document: document,
       optimization: optimization,
@@ -159,7 +168,21 @@ export async function prepareOptimization(
     if (gettingpo.error) {
       return Result.error(gettingpo.error)
     }
-    const positives = gettingpo.value
+    let positives = gettingpo.value
+
+    const gettingex = await getExamples({
+      negatives: negatives,
+      positives: positives,
+      validateSpan: validateSpan,
+      baselineCommit: baselineCommit,
+      document: document,
+      workspace: workspace,
+    })
+    if (gettingex.error) {
+      return Result.error(gettingex.error)
+    }
+    negatives = gettingex.value.negatives
+    positives = gettingex.value.positives
 
     // Note: this cannot be inside the same transaction as the parent, because
     // of limitations of the transaction class. When this finishes it will
@@ -281,28 +304,66 @@ async function getIssueCandidates({
 
   const other = issues.filter((i) => !tracked.includes(i))
 
-  return Result.ok({ tracked, other })
+  return Result.ok({ tracked, other, evaluation, evaluations })
 }
 
 const SPANS_BATCH_SIZE = 100
 const SPANS_MAX_SEARCH = 3 // Try to search at most 3 times to get enough spans
 
-// BONUS(AO/OPT): If no spans by issue are found, we can try getting spans
-// with negative evaluation results, prioritizing the selected evaluation
-async function getNegativeExamples({
-  trackedIssues,
-  otherIssues,
+type SpanValidator = (
+  span: Span<SpanType.Prompt>,
+) => Promise<SpanWithDetails<SpanType.Prompt> | null>
+
+function createSpanValidator({
   parametersHash,
   seenSpans,
   seenParameters,
+  metadatasRepository,
+}: {
+  parametersHash: string
+  seenSpans: Set<string>
+  seenParameters: Set<string>
+  metadatasRepository: SpanMetadatasRepository
+}): SpanValidator {
+  return async function validateSpan(span: Span<SpanType.Prompt>) {
+    const spanhash = hashSpan(span)
+    if (seenSpans.has(spanhash)) return null
+
+    const gettingmd = await metadatasRepository.get<SpanType.Prompt>({
+      traceId: span.traceId,
+      spanId: span.id,
+    })
+    if (gettingmd.error) return null
+    const metadata = gettingmd.value
+
+    if (!metadata) return null
+
+    const { hash, keyhash } = hashObject(metadata.parameters ?? {})
+    if (keyhash !== parametersHash) return null
+    if (seenParameters.has(hash)) return null
+
+    seenSpans.add(spanhash)
+    seenParameters.add(hash)
+    return { ...span, metadata } as SpanWithDetails<SpanType.Prompt>
+  }
+}
+
+async function getNegativeExamples({
+  trackedIssues,
+  otherIssues,
+  evaluation,
+  evaluations,
+  document,
+  validateSpan,
   baselineCommit,
   workspace,
 }: {
   trackedIssues: Issue[]
   otherIssues: Issue[]
-  parametersHash: string
-  seenSpans: Set<string>
-  seenParameters: Set<string>
+  evaluation: EvaluationV2
+  evaluations: EvaluationV2[]
+  document: DocumentVersion
+  validateSpan: SpanValidator
   baselineCommit: Commit
   optimization: Optimization
   workspace: Workspace
@@ -310,8 +371,9 @@ async function getNegativeExamples({
   const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
 
-  const metadatasRepository = new SpanMetadatasRepository(workspace.id)
-  async function collectNegativeSpans(issue: Issue, target: number) {
+  const result: Record<string, SpanWithDetails<SpanType.Prompt>[]> = {}
+
+  async function collectSpansByIssue(issue: Issue, target: number) {
     const validSpans: SpanWithDetails<SpanType.Prompt>[] = []
     let cursor: Cursor<Date, number> | null = null
     let searches = 0
@@ -321,8 +383,7 @@ async function getNegativeExamples({
 
       const gettingsp = await getSpansByIssue({
         issue: issue,
-        includeExperiments: false, // Note: exclude experiments to not get duplicates from optimization runs
-        spanTypes: [SpanType.Prompt], // Note: optimizer only supports prompt spans
+        spanTypes: [SpanType.Prompt],
         commit: baselineCommit,
         workspace: workspace,
         cursor: cursor,
@@ -336,26 +397,45 @@ async function getNegativeExamples({
 
       for (const span of spans) {
         if (validSpans.length >= target) break
+        const validated = await validateSpan(span)
+        if (validated) validSpans.push(validated)
+      }
 
-        const spanhash = hashSpan(span)
-        if (seenSpans.has(spanhash)) continue
+      if (!next) break
+      cursor = next
+    }
 
-        const gettingmd = await metadatasRepository.get<SpanType.Prompt>({
-          traceId: span.traceId,
-          spanId: span.id,
-        })
-        if (gettingmd.error) continue
-        const metadata = gettingmd.value
+    return validSpans
+  }
 
-        if (!metadata) continue
+  async function collectSpansByEvaluation(evalUuid: string, target: number) {
+    const validSpans: SpanWithDetails<SpanType.Prompt>[] = []
+    let cursor: Cursor<Date, number> | null = null
+    let searches = 0
 
-        const { hash, keyhash } = hashObject(metadata.parameters ?? {})
-        if (keyhash !== parametersHash) continue
-        if (seenParameters.has(hash)) continue
+    while (validSpans.length < target && searches < maxSearches) {
+      searches++
 
-        seenSpans.add(spanhash)
-        seenParameters.add(hash)
-        validSpans.push({ ...span, metadata })
+      const gettingsp = await getSpansByEvaluation({
+        evaluationUuid: evalUuid,
+        passed: false,
+        spanTypes: [SpanType.Prompt],
+        commit: baselineCommit,
+        document: document,
+        workspace: workspace,
+        cursor: cursor,
+        limit: SPANS_BATCH_SIZE,
+      })
+      if (gettingsp.error) break
+      const { spans: rawSpans, next } = gettingsp.value
+
+      if (rawSpans.length === 0) break
+      const spans = rawSpans as Span<SpanType.Prompt>[]
+
+      for (const span of spans) {
+        if (validSpans.length >= target) break
+        const validated = await validateSpan(span)
+        if (validated) validSpans.push(validated)
       }
 
       if (!next) break
@@ -366,9 +446,16 @@ async function getNegativeExamples({
   }
 
   let collected = 0
+  function addSpans(key: string, spans: SpanWithDetails<SpanType.Prompt>[]) {
+    if (spans.length > 0) {
+      result[key] = [...(result[key] ?? []), ...spans]
+      collected += spans.length
+    }
+  }
+
+  // -- Issue-based collection (round-robin) --
   const capableIssues = new Set<number>()
-  const result: Record<number, SpanWithDetails<SpanType.Prompt>[]> = {}
-  async function roundRobin(issues: Issue[]) {
+  async function issueRoundRobin(issues: Issue[]) {
     const deficit = halfLimit - collected
 
     for (const issue of issues) {
@@ -379,11 +466,8 @@ async function getNegativeExamples({
       const target = Math.max(0, Math.min(part, remaining))
       if (target < 1) continue
 
-      const spans = await collectNegativeSpans(issue, target)
-      if (spans.length > 0) {
-        result[issue.id] = [...(result[issue.id] ?? []), ...spans]
-        collected += spans.length
-      }
+      const spans = await collectSpansByIssue(issue, target)
+      addSpans(String(issue.id), spans)
 
       if (spans.length >= target) {
         capableIssues.add(issue.id)
@@ -393,37 +477,88 @@ async function getNegativeExamples({
     }
   }
 
-  await roundRobin(trackedIssues)
+  // -- Evaluation-based collection (round-robin) --
+  const capableEvals = new Set<string>()
+  async function evaluationRoundRobin(evalUuids: string[]) {
+    const deficit = halfLimit - collected
 
-  while (collected < halfLimit) {
-    if (capableIssues.size === 0) break
+    for (const evalUuid of evalUuids) {
+      if (collected >= halfLimit) break
 
-    const retriedIssues = Array.from(capableIssues).map(
-      (id) => trackedIssues.find((i) => i.id === id)!,
-    )
-    await roundRobin(retriedIssues)
+      const part = Math.ceil(deficit / evalUuids.length)
+      const remaining = halfLimit - collected
+      const target = Math.max(0, Math.min(part, remaining))
+      if (target < 1) continue
+
+      const spans = await collectSpansByEvaluation(evalUuid, target)
+      addSpans(evalUuid, spans)
+
+      if (spans.length >= target) {
+        capableEvals.add(evalUuid)
+      } else {
+        capableEvals.delete(evalUuid)
+      }
+    }
   }
 
+  if (trackedIssues.length > 0) {
+    // Tier 1: Tracked issues (round-robin with retry)
+    await issueRoundRobin(trackedIssues)
+
+    while (collected < halfLimit) {
+      if (capableIssues.size === 0) break
+      const retriedIssues = Array.from(capableIssues).map(
+        (id) => trackedIssues.find((i) => i.id === id)!,
+      )
+      await issueRoundRobin(retriedIssues)
+    }
+
+    // Tier 2: Other issues (round-robin with retry)
+    if (collected < halfLimit) {
+      await issueRoundRobin(otherIssues)
+
+      while (collected < halfLimit) {
+        if (capableIssues.size === 0) break
+        const retriedIssues = Array.from(capableIssues).map(
+          (id) => otherIssues.find((i) => i.id === id)!,
+        )
+        await issueRoundRobin(retriedIssues)
+      }
+    }
+  }
+
+  // Tier 3 (or 1 if no linked issues): Failed results from the selected evaluation (trivial round-robin)
   if (collected < halfLimit) {
-    await roundRobin(otherIssues)
+    await evaluationRoundRobin([evaluation.uuid])
+  }
+
+  // Tier 4 (or 2 if no linked issues): Failed results from all document evaluations (round-robin with retry)
+  if (collected < halfLimit) {
+    const otherEvalUuids = evaluations
+      .filter((e) => e.uuid !== evaluation.uuid)
+      .map((e) => e.uuid)
+
+    if (otherEvalUuids.length > 0) {
+      await evaluationRoundRobin(otherEvalUuids)
+
+      while (collected < halfLimit) {
+        if (capableEvals.size === 0) break
+        const retriedEvals = Array.from(capableEvals)
+        await evaluationRoundRobin(retriedEvals)
+      }
+    }
   }
 
   return Result.ok(result)
 }
 
-// BONUS(AO/OPT): Try to prioritize spans with positive hitls
-// or evaluation results, then fallback to the current logic
 async function getPositiveExamples({
-  parametersHash,
-  seenSpans,
-  seenParameters,
+  validateSpan,
   document,
   baselineCommit,
   workspace,
 }: {
-  parametersHash: string
-  seenSpans: Set<string>
-  seenParameters: Set<string>
+  validateSpan: SpanValidator
   baselineCommit: Commit
   document: DocumentVersion
   optimization: Optimization
@@ -432,10 +567,17 @@ async function getPositiveExamples({
   const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
 
-  const metadatasRepository = new SpanMetadatasRepository(workspace.id)
   const result: SpanWithDetails<SpanType.Prompt>[] = []
 
-  async function collectPositiveSpans(excludeFailedResults: boolean) {
+  async function collectPositiveSpans({
+    excludeFailedResults,
+    requirePassedResults,
+    requirePassedAnnotations,
+  }: {
+    excludeFailedResults: boolean
+    requirePassedResults: boolean
+    requirePassedAnnotations: boolean
+  }) {
     let cursor: Cursor<Date, string> | null = null
     let searches = 0
 
@@ -443,9 +585,10 @@ async function getPositiveExamples({
       searches++
 
       const gettingsp = await getSpansWithoutIssues({
-        includeExperiments: false, // Note: exclude experiments to not get duplicates from optimization runs
-        excludeFailedResults: excludeFailedResults,
-        spanTypes: [SpanType.Prompt], // Note: optimizer only supports prompt spans
+        excludeFailedResults,
+        requirePassedResults,
+        requirePassedAnnotations,
+        spanTypes: [SpanType.Prompt],
         commit: baselineCommit,
         document: document,
         workspace: workspace,
@@ -461,25 +604,8 @@ async function getPositiveExamples({
       for (const span of spans) {
         if (result.length >= halfLimit) break
 
-        const spanhash = hashSpan(span)
-        if (seenSpans.has(spanhash)) continue
-
-        const gettingmd = await metadatasRepository.get<SpanType.Prompt>({
-          traceId: span.traceId,
-          spanId: span.id,
-        })
-        if (gettingmd.error) continue
-        const metadata = gettingmd.value
-
-        if (!metadata) continue
-
-        const { hash, keyhash } = hashObject(metadata.parameters ?? {})
-        if (keyhash !== parametersHash) continue
-        if (seenParameters.has(hash)) continue
-
-        seenSpans.add(spanhash)
-        seenParameters.add(hash)
-        result.push({ ...span, metadata })
+        const validated = await validateSpan(span)
+        if (validated) result.push(validated)
       }
 
       if (!next) break
@@ -487,13 +613,134 @@ async function getPositiveExamples({
     }
   }
 
-  await collectPositiveSpans(true)
+  // Tier 1: Spans with passed human annotations, excluding failed results
+  await collectPositiveSpans({
+    excludeFailedResults: true,
+    requirePassedResults: true,
+    requirePassedAnnotations: true,
+  })
 
+  // Tier 2: Spans with any passed result, excluding failed results
   if (result.length < halfLimit) {
-    await collectPositiveSpans(false)
+    await collectPositiveSpans({
+      excludeFailedResults: true,
+      requirePassedResults: true,
+      requirePassedAnnotations: false,
+    })
+  }
+
+  // Tier 3: Spans without failed results (no passed requirement)
+  if (result.length < halfLimit) {
+    await collectPositiveSpans({
+      excludeFailedResults: true,
+      requirePassedResults: false,
+      requirePassedAnnotations: false,
+    })
+  }
+
+  // Tier 4: Any span without issues (last resort)
+  if (result.length < halfLimit) {
+    await collectPositiveSpans({
+      excludeFailedResults: false,
+      requirePassedResults: false,
+      requirePassedAnnotations: false,
+    })
   }
 
   return Result.ok(result)
+}
+
+async function getExamples({
+  negatives,
+  positives,
+  validateSpan,
+  baselineCommit,
+  document,
+  workspace,
+}: {
+  negatives: Record<string, SpanWithDetails<SpanType.Prompt>[]>
+  positives: SpanWithDetails<SpanType.Prompt>[]
+  validateSpan: SpanValidator
+  baselineCommit: Commit
+  document: DocumentVersion
+  workspace: Workspace
+}) {
+  const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
+  const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
+
+  let negativesLength = 0
+  for (const list of Object.values(negatives)) {
+    negativesLength += list.length
+  }
+
+  const negativeNeeded = Math.max(0, halfLimit - negativesLength)
+  const positiveNeeded = Math.max(0, halfLimit - positives.length)
+
+  if (negativeNeeded <= 0 && positiveNeeded <= 0) {
+    return Result.ok({ negatives, positives })
+  }
+
+  const additionalNegatives: SpanWithDetails<SpanType.Prompt>[] = []
+  const additionalPositives: SpanWithDetails<SpanType.Prompt>[] = []
+
+  let cursor: Cursor<Date, string> | null = null
+  let searches = 0
+
+  while (
+    (additionalNegatives.length < negativeNeeded ||
+      additionalPositives.length < positiveNeeded) &&
+    searches < maxSearches
+  ) {
+    searches++
+
+    const gettingsp = await getSpansByDocument({
+      spanTypes: [SpanType.Prompt],
+      commit: baselineCommit,
+      document: document,
+      workspace: workspace,
+      cursor: cursor,
+      limit: SPANS_BATCH_SIZE,
+    })
+    if (gettingsp.error) break
+    const { spans: rawSpans, next } = gettingsp.value
+
+    if (rawSpans.length === 0) break
+    const spans = rawSpans as Span<SpanType.Prompt>[]
+
+    for (const span of spans) {
+      if (
+        additionalNegatives.length >= negativeNeeded &&
+        additionalPositives.length >= positiveNeeded
+      ) {
+        break
+      }
+
+      const validated = await validateSpan(span)
+      if (!validated) continue
+
+      const negRemaining = negativeNeeded - additionalNegatives.length
+      const posRemaining = positiveNeeded - additionalPositives.length
+
+      if (negRemaining >= posRemaining) {
+        additionalNegatives.push(validated)
+      } else {
+        additionalPositives.push(validated)
+      }
+    }
+
+    if (!next) break
+    cursor = next
+  }
+
+  if (additionalNegatives.length > 0) {
+    negatives['__fallback__'] = additionalNegatives
+  }
+
+  if (additionalPositives.length > 0) {
+    positives = [...positives, ...additionalPositives]
+  }
+
+  return Result.ok({ negatives, positives })
 }
 
 async function buildDatasetColumns({
@@ -550,8 +797,6 @@ async function buildDatasetRows({
   return Result.ok(rows)
 }
 
-// BONUS(AO/OPT): If we dont hage enough negatives or positives,
-// just get the last n spans that are not from optimizations
 async function createDatasets(
   {
     parameters,
@@ -562,7 +807,7 @@ async function createDatasets(
     workspace,
   }: {
     parameters: string[]
-    negatives: Record<number, SpanWithDetails<SpanType.Prompt>[]>
+    negatives: Record<string, SpanWithDetails<SpanType.Prompt>[]>
     positives: SpanWithDetails<SpanType.Prompt>[]
     baselineCommit: Commit
     optimization: Optimization
@@ -570,42 +815,29 @@ async function createDatasets(
   },
   transaction = new Transaction(),
 ) {
-  let negativesLength = 0
-  for (const list of Object.values(negativesMap)) {
-    negativesLength += list.length
-  }
-
-  if (negativesLength < OPTIMIZATION_MIN_ROWS / 2) {
-    return Result.error(
-      new UnprocessableEntityError(
-        `At least ${OPTIMIZATION_MIN_ROWS / 2} negative examples are required`,
-      ),
-    )
-  }
-
-  if (positives.length < OPTIMIZATION_MIN_ROWS / 2) {
-    return Result.error(
-      new UnprocessableEntityError(
-        `At least ${OPTIMIZATION_MIN_ROWS / 2} positive examples are required`,
-      ),
-    )
-  }
-
-  const halfLimit = Math.floor(
-    Math.min(negativesLength, positives.length, OPTIMIZATION_TARGET_ROWS / 2),
-  )
-  const split = Math.floor(halfLimit * OPTIMIZATION_TESTSET_SPLIT)
+  const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
 
   const negatives = interleaveList(negativesMap, halfLimit, true)
-  positives = [...positives].sort(() => Math.random() - 0.5).slice(0, halfLimit)
+  positives = positives.sort(() => Math.random() - 0.5).slice(0, halfLimit)
+  if (negatives.length + positives.length < OPTIMIZATION_MIN_ROWS) {
+    return Result.error(
+      new UnprocessableEntityError(
+        `At least ${OPTIMIZATION_MIN_ROWS} examples are required`,
+      ),
+    )
+  }
+
+  const nSplit = Math.floor(negatives.length * OPTIMIZATION_TESTSET_SPLIT)
+  const pSplit = Math.floor(positives.length * OPTIMIZATION_TESTSET_SPLIT)
+  const mSplit = Math.floor(OPTIMIZATION_MAX_ROWS * OPTIMIZATION_TESTSET_SPLIT)
 
   // prettier-ignore
-  const trainsplit = [...negatives.slice(0, split), ...positives.slice(0, split)]
-    .sort(() => Math.random() - 0.5).slice(0, OPTIMIZATION_MAX_ROWS / 2)
+  const trainsplit = [...negatives.slice(0, nSplit), ...positives.slice(0, pSplit)]
+    .sort(() => Math.random() - 0.5).slice(0, mSplit)
 
   // prettier-ignore
-  const testsplit = [...negatives.slice(split), ...positives.slice(split)]
-    .sort(() => Math.random() - 0.5).slice(0, OPTIMIZATION_MAX_ROWS / 2)
+  const testsplit = [...negatives.slice(nSplit), ...positives.slice(pSplit)]
+    .sort(() => Math.random() - 0.5).slice(0, OPTIMIZATION_MAX_ROWS - mSplit)
 
   const buildingco = await buildDatasetColumns({ parameters, optimization })
   if (buildingco.error) {

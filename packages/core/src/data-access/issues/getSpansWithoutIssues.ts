@@ -4,13 +4,16 @@ import {
   eq,
   getTableColumns,
   inArray,
-  isNotNull,
   isNull,
+  ne,
+  notInArray,
   or,
   sql,
 } from 'drizzle-orm'
 import { database } from '../../client'
 import {
+  EvaluationType,
+  LogSources,
   MAIN_SPAN_TYPES,
   MainSpanType,
   Span,
@@ -19,21 +22,30 @@ import {
 import { Result } from '../../lib/Result'
 import { CommitsRepository } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
+import { experiments } from '../../schema/models/experiments'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
 import { issues } from '../../schema/models/issues'
+import { optimizations } from '../../schema/models/optimizations'
 import { spans } from '../../schema/models/spans'
 import { Commit } from '../../schema/models/types/Commit'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { Cursor } from '../../schema/types'
 
-// BONUS(AO/OPT): Should we only return spans without issues and at least one positive HITL result?
-// BONUS(AO/OPT): Instead of filtering all experiments, only filter experiments from optimizations?
-
 /**
  * Fetches spans that have no issues associated through evaluation results,
  * filtered by document and commit history.
  *
+ * Automatically excludes optimization-related spans:
+ * - Spans with source 'optimization'
+ * - Spans with source 'experiment' where the experiment is linked
+ *   to an optimization (via baselineExperimentId or optimizedExperimentId)
+ *
+ * @param excludeFailedResults - When true, excludes spans with failed or errored evaluation results.
+ * @param requirePassedResults - When true, only returns spans with at least one
+ *   evaluation result where hasPassed IS TRUE.
+ * @param requirePassedAnnotations - When true, implies requirePassedResults and
+ *   only returns spans with at least one human evaluation result where hasPassed IS TRUE.
  * @param spanTypes - Array of span types to include. Defaults to all main span types.
  *                    Pass [SpanType.Prompt] for optimizer use cases.
  */
@@ -42,8 +54,9 @@ export async function getSpansWithoutIssues(
     workspace,
     commit,
     document,
-    includeExperiments = true,
     excludeFailedResults = false,
+    requirePassedResults = false,
+    requirePassedAnnotations = false,
     spanTypes = Array.from(MAIN_SPAN_TYPES) as MainSpanType[],
     cursor,
     limit = 25,
@@ -51,8 +64,9 @@ export async function getSpansWithoutIssues(
     workspace: Workspace
     commit: Commit
     document: DocumentVersion
-    includeExperiments?: boolean
     excludeFailedResults?: boolean
+    requirePassedResults?: boolean
+    requirePassedAnnotations?: boolean
     spanTypes?: MainSpanType[]
     cursor: Cursor<Date, string> | null
     limit?: number
@@ -108,13 +122,40 @@ export async function getSpansWithoutIssues(
       and(
         eq(evaluationResultsV2.workspaceId, workspace.id),
         inArray(evaluationResultsV2.commitId, commitIds),
-        or(
-          isNotNull(evaluationResultsV2.error),
-          sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
-        ),
+        sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
       ),
     )
     .as('spansWithFailedResults')
+
+  const optimizationExperimentUuids = db
+    .select({ uuid: experiments.uuid })
+    .from(experiments)
+    .innerJoin(
+      optimizations,
+      or(
+        eq(experiments.id, optimizations.baselineExperimentId),
+        eq(experiments.id, optimizations.optimizedExperimentId),
+      ),
+    )
+
+  const effectiveRequirePassedResults =
+    requirePassedResults || requirePassedAnnotations
+
+  const spansWithPassedResults = db
+    .selectDistinct({
+      spanId: evaluationResultsV2.evaluatedSpanId,
+      traceId: evaluationResultsV2.evaluatedTraceId,
+    })
+    .from(evaluationResultsV2)
+    .where(
+      and(
+        eq(evaluationResultsV2.workspaceId, workspace.id),
+        inArray(evaluationResultsV2.commitId, commitIds),
+        sql`${evaluationResultsV2.hasPassed} IS TRUE`,
+        ...(requirePassedAnnotations ? [eq(evaluationResultsV2.type, EvaluationType.Human)] : []), // prettier-ignore
+      ),
+    )
+    .as('spansWithPassedResults')
 
   let query = db
     .select(spansColumns)
@@ -137,6 +178,16 @@ export async function getSpansWithoutIssues(
     )
   }
 
+  if (effectiveRequirePassedResults) {
+    query = query.innerJoin(
+      spansWithPassedResults,
+      and(
+        eq(spans.id, spansWithPassedResults.spanId),
+        eq(spans.traceId, spansWithPassedResults.traceId),
+      ),
+    )
+  }
+
   const rows = await query
     .where(
       and(
@@ -147,7 +198,12 @@ export async function getSpansWithoutIssues(
         inArray(spans.commitUuid, commitUuids),
         isNull(spansWithActiveIssues.spanId),
         ...(excludeFailedResults ? [isNull(spansWithFailedResults.spanId)] : []), // prettier-ignore
-        ...(!includeExperiments ? [isNull(spans.experimentUuid)] : []),
+        ne(spans.source, LogSources.Optimization),
+        or(
+          ne(spans.source, LogSources.Experiment),
+          isNull(spans.experimentUuid),
+          notInArray(spans.experimentUuid, optimizationExperimentUuids),
+        ),
         cursorConditions,
       ),
     )

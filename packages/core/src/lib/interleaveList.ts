@@ -17,7 +17,7 @@
  * @returns A balanced interleaved array of items
  */
 export function interleaveList<T>(
-  maplist: Record<number, T[]>,
+  maplist: Record<string | number, T[]>,
   limit: number = Infinity,
   random: boolean = true,
 ): T[] {
