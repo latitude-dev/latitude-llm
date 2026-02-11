@@ -1,0 +1,573 @@
+---
+title: Ingest traces
+description: Learn how to backfill historical LLM traces to Latitude using manual instrumentation
+---
+
+## Overview
+
+Use the Telemetry SDK's manual instrumentation to backfill historical LLM logs into Latitude's traces database. This is useful when you have existing logs from LLM calls and want to import them with their original timestamps and structure.
+
+## Span Types
+
+The example demonstrates creating several span types:
+
+- **Prompt span**: The root span representing a prompt execution
+- **Completion span**: A child span representing the LLM completion
+- **Tool spans**: Child spans representing tool/function calls made by the model
+
+## Timestamp Support
+
+For backfilling historical data, you can specify exact timestamps:
+
+- `startTime`: When the span started (Date object in TypeScript, Unix timestamp in Python)
+- `endTime`: When the span ended (passed to the `end()` method)
+
+This allows traces to show accurate durations based on your original log data.
+
+## Span Attributes
+
+### Prompt Span
+- `documentLogUuid`: A unique identifier for this log entry (UUID v4)
+- `promptUuid`: The path of the prompt in your project
+- `projectId`: Your Latitude project ID
+- `versionUuid`: The version UUID (use "live" for the published version)
+- `template`: The prompt template content
+- `parameters`: Parameters used to render the template
+- `source`: The source of the log (use `LogSources.API`)
+- `startTime`: When the prompt execution started
+
+### Completion Span
+- `provider`: The LLM provider name (e.g., "openai", "anthropic")
+- `model`: The model name (e.g., "gpt-4o-mini")
+- `input`: The input messages array
+- `startTime`: When the LLM call started
+- `output`: The output messages array (when ending)
+- `tokens`: Token usage information
+- `finishReason`: The completion finish reason
+- `endTime`: When the LLM call completed
+
+### Tool Span
+- `name`: The tool/function name
+- `call.id`: The unique call ID
+- `call.arguments`: The arguments passed to the tool
+- `startTime`: When the tool execution started
+- `result.value`: The tool result (when ending)
+- `result.isError`: Whether the tool call failed
+- `endTime`: When the tool execution completed
+
+## Prompt
+
+In this example, the specific prompt content is not important—you just need to have prompts created in a Latitude project with matching paths.
+
+<CodeGroup>
+```markdown example
+---
+provider: openai
+model: gpt-4o-mini
+---
+
+Tell me a joke about {{topic}}
+```
+</CodeGroup>
+
+## Code
+
+The example simulates a fake logs database with multiple entries including:
+- Simple completions without tools
+- Completions with single tool calls (e.g., weather lookup)
+- Completions with multiple tool calls (e.g., search + save)
+
+<CodeGroup>
+````typescript Typescript
+import { LatitudeTelemetry } from '@latitude-data/telemetry'
+import { LogSources } from '@latitude-data/sdk'
+import { faker } from '@faker-js/faker'
+import { v4 as uuid } from 'uuid'
+
+type ToolCall = {
+  id: string
+  name: string
+  arguments: Record<string, unknown>
+  result: unknown
+  startedAt: Date
+  completedAt: Date
+}
+
+type LogEntry = {
+  id: string
+  path: string
+  createdAt: Date
+  completedAt: Date
+  messages: Array<{ role: string; content: string }>
+  response: string
+  model: string
+  provider: string
+  promptTokens: number
+  completionTokens: number
+  toolCalls?: ToolCall[]
+}
+
+// Fake logs database - simulating historical LLM calls
+const FAKE_LOGS_DB: LogEntry[] = [
+  // Simple completion without tools
+  {
+    id: uuid(),
+    path: 'customer-support/greeting',
+    createdAt: faker.date.recent({ days: 7 }),
+    completedAt: new Date(),
+    messages: [
+      { role: 'user', content: faker.lorem.sentence() },
+    ],
+    response: faker.lorem.paragraph(),
+    model: 'gpt-4o-mini',
+    provider: 'openai',
+    promptTokens: faker.number.int({ min: 10, max: 100 }),
+    completionTokens: faker.number.int({ min: 20, max: 200 }),
+  },
+  // Completion with tool calls (weather lookup)
+  {
+    id: uuid(),
+    path: 'assistant/weather',
+    createdAt: faker.date.recent({ days: 3 }),
+    completedAt: new Date(),
+    messages: [
+      { role: 'user', content: `What's the weather in ${faker.location.city()}?` },
+    ],
+    response: `The current weather is ${faker.number.int({ min: 15, max: 35 })}°C with ${faker.helpers.arrayElement(['sunny skies', 'partly cloudy', 'light rain', 'overcast'])}`,
+    model: 'gpt-4o',
+    provider: 'openai',
+    promptTokens: faker.number.int({ min: 50, max: 150 }),
+    completionTokens: faker.number.int({ min: 30, max: 100 }),
+    toolCalls: [
+      {
+        id: `call_${faker.string.alphanumeric(24)}`,
+        name: 'get_weather',
+        arguments: {
+          location: faker.location.city(),
+          units: 'celsius',
+        },
+        result: {
+          temperature: faker.number.int({ min: 15, max: 35 }),
+          condition: faker.helpers.arrayElement(['sunny', 'cloudy', 'rainy']),
+          humidity: faker.number.int({ min: 30, max: 90 }),
+        },
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    ],
+  },
+  // Completion with multiple tool calls (search + database)
+  {
+    id: uuid(),
+    path: 'assistant/research',
+    createdAt: faker.date.recent({ days: 1 }),
+    completedAt: new Date(),
+    messages: [
+      { role: 'user', content: `Find information about ${faker.company.name()} and save it to my notes` },
+    ],
+    response: faker.lorem.paragraphs(2),
+    model: 'claude-3-5-sonnet-20241022',
+    provider: 'anthropic',
+    promptTokens: faker.number.int({ min: 100, max: 300 }),
+    completionTokens: faker.number.int({ min: 150, max: 400 }),
+    toolCalls: [
+      {
+        id: `call_${faker.string.alphanumeric(24)}`,
+        name: 'web_search',
+        arguments: {
+          query: faker.company.name(),
+          max_results: 5,
+        },
+        result: {
+          results: [
+            { title: faker.lorem.sentence(), url: faker.internet.url(), snippet: faker.lorem.paragraph() },
+            { title: faker.lorem.sentence(), url: faker.internet.url(), snippet: faker.lorem.paragraph() },
+          ],
+        },
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+      {
+        id: `call_${faker.string.alphanumeric(24)}`,
+        name: 'save_note',
+        arguments: {
+          title: faker.lorem.sentence(),
+          content: faker.lorem.paragraph(),
+          tags: [faker.lorem.word(), faker.lorem.word()],
+        },
+        result: {
+          noteId: faker.string.uuid(),
+          savedAt: faker.date.recent().toISOString(),
+        },
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    ],
+  },
+]
+
+// Fix timestamps to have proper durations
+FAKE_LOGS_DB.forEach((log) => {
+  const baseDuration = faker.number.int({ min: 500, max: 3000 })
+  log.completedAt = new Date(log.createdAt.getTime() + baseDuration)
+
+  if (log.toolCalls) {
+    let toolOffset = 50
+    log.toolCalls.forEach((tool) => {
+      const toolDuration = faker.number.int({ min: 100, max: 500 })
+      tool.startedAt = new Date(log.createdAt.getTime() + toolOffset)
+      tool.completedAt = new Date(tool.startedAt.getTime() + toolDuration)
+      toolOffset += toolDuration + 20
+    })
+  }
+})
+
+const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, {
+  disableBatch: true,
+})
+
+async function ingestLog(log: LogEntry, projectId: number) {
+  console.log(`\nIngesting log: ${log.id}`)
+  console.log(`  Path: ${log.path}`)
+  console.log(`  Provider: ${log.provider}/${log.model}`)
+  console.log(`  Duration: ${log.completedAt.getTime() - log.createdAt.getTime()}ms`)
+  if (log.toolCalls?.length) {
+    console.log(`  Tool calls: ${log.toolCalls.map((t) => t.name).join(', ')}`)
+  }
+
+  // Create prompt span
+  const promptSpan = telemetry.span.prompt({
+    documentLogUuid: log.id,
+    promptUuid: log.path,
+    projectId,
+    versionUuid: 'live',
+    template: `User message: {{message}}`,
+    parameters: { message: log.messages[0]?.content },
+    source: LogSources.API,
+    startTime: log.createdAt,
+  })
+
+  // Create completion span
+  const completionSpan = telemetry.span.completion(
+    {
+      provider: log.provider,
+      model: log.model,
+      input: log.messages,
+      startTime: log.createdAt,
+    },
+    promptSpan.context,
+  )
+
+  // Create tool spans if present
+  if (log.toolCalls) {
+    for (const toolCall of log.toolCalls) {
+      const toolSpan = telemetry.span.tool(
+        {
+          name: toolCall.name,
+          call: {
+            id: toolCall.id,
+            arguments: toolCall.arguments,
+          },
+          startTime: toolCall.startedAt,
+        },
+        completionSpan.context,
+      )
+
+      toolSpan.end({
+        result: {
+          value: toolCall.result,
+          isError: false,
+        },
+        endTime: toolCall.completedAt,
+      })
+    }
+  }
+
+  // End completion span
+  completionSpan.end({
+    output: [{ role: 'assistant', content: log.response }],
+    tokens: {
+      prompt: log.promptTokens,
+      completion: log.completionTokens,
+    },
+    finishReason: 'stop',
+    endTime: log.completedAt,
+  })
+
+  // End prompt span
+  promptSpan.end({
+    endTime: new Date(log.completedAt.getTime() + 5),
+  })
+}
+
+async function run() {
+  const projectId = Number(process.env.PROJECT_ID)
+
+  console.log('='.repeat(50))
+  console.log('Backfilling historical logs to Latitude')
+  console.log(`Total logs to ingest: ${FAKE_LOGS_DB.length}`)
+  console.log('='.repeat(50))
+
+  for (const log of FAKE_LOGS_DB) {
+    await ingestLog(log, projectId)
+  }
+
+  await telemetry.flush()
+
+  console.log('\n' + '='.repeat(50))
+  console.log('All traces backfilled successfully!')
+  console.log('='.repeat(50))
+}
+
+run()
+````
+````python Python
+import os
+import random
+import string
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+from latitude_telemetry import (
+    EndCompletionSpanOptions,
+    EndSpanOptions,
+    EndToolSpanOptions,
+    LogSources,
+    PromptSpanOptions,
+    StartCompletionSpanOptions,
+    StartToolSpanOptions,
+    Telemetry,
+    TelemetryOptions,
+    TokenUsage,
+    ToolCallInfo,
+    ToolResultInfo,
+)
+
+
+@dataclass
+class ToolCall:
+    id: str
+    name: str
+    arguments: dict[str, Any]
+    result: Any
+    started_at: datetime
+    completed_at: datetime
+
+
+@dataclass
+class LogEntry:
+    id: str
+    path: str
+    created_at: datetime
+    completed_at: datetime
+    messages: list[dict[str, str]]
+    response: str
+    model: str
+    provider: str
+    prompt_tokens: int
+    completion_tokens: int
+    tool_calls: list[ToolCall] = field(default_factory=list)
+
+
+def random_id(length: int = 24) -> str:
+    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
+
+
+def random_date_recent(days: int = 7) -> datetime:
+    now = datetime.now(timezone.utc)
+    offset = timedelta(seconds=random.randint(0, days * 24 * 3600))
+    return now - offset
+
+
+def random_sentence() -> str:
+    words = ["lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit"]
+    return " ".join(random.choices(words, k=random.randint(5, 12))).capitalize() + "."
+
+
+def random_paragraph() -> str:
+    return " ".join(random_sentence() for _ in range(random.randint(3, 6)))
+
+
+# Fake logs database - simulating historical LLM calls
+FAKE_LOGS_DB: list[LogEntry] = [
+    # Simple completion without tools
+    LogEntry(
+        id=str(uuid.uuid4()),
+        path="customer-support/greeting",
+        created_at=random_date_recent(days=7),
+        completed_at=datetime.now(timezone.utc),
+        messages=[{"role": "user", "content": random_sentence()}],
+        response=random_paragraph(),
+        model="gpt-4o-mini",
+        provider="openai",
+        prompt_tokens=random.randint(10, 100),
+        completion_tokens=random.randint(20, 200),
+    ),
+    # Completion with tool calls (weather lookup)
+    LogEntry(
+        id=str(uuid.uuid4()),
+        path="assistant/weather",
+        created_at=random_date_recent(days=3),
+        completed_at=datetime.now(timezone.utc),
+        messages=[{"role": "user", "content": f"What's the weather in {random.choice(['Paris', 'London', 'Tokyo', 'New York'])}?"}],
+        response=f"The current weather is {random.randint(15, 35)}°C with {random.choice(['sunny skies', 'partly cloudy', 'light rain'])}",
+        model="gpt-4o",
+        provider="openai",
+        prompt_tokens=random.randint(50, 150),
+        completion_tokens=random.randint(30, 100),
+        tool_calls=[
+            ToolCall(
+                id=f"call_{random_id()}",
+                name="get_weather",
+                arguments={"location": random.choice(["Paris", "London", "Tokyo"]), "units": "celsius"},
+                result={"temperature": random.randint(15, 35), "condition": random.choice(["sunny", "cloudy", "rainy"]), "humidity": random.randint(30, 90)},
+                started_at=datetime.now(timezone.utc),
+                completed_at=datetime.now(timezone.utc),
+            ),
+        ],
+    ),
+    # Completion with multiple tool calls (search + database)
+    LogEntry(
+        id=str(uuid.uuid4()),
+        path="assistant/research",
+        created_at=random_date_recent(days=1),
+        completed_at=datetime.now(timezone.utc),
+        messages=[{"role": "user", "content": f"Find information about Acme Corp and save it to my notes"}],
+        response=random_paragraph() + " " + random_paragraph(),
+        model="claude-3-5-sonnet-20241022",
+        provider="anthropic",
+        prompt_tokens=random.randint(100, 300),
+        completion_tokens=random.randint(150, 400),
+        tool_calls=[
+            ToolCall(
+                id=f"call_{random_id()}",
+                name="web_search",
+                arguments={"query": "Acme Corp", "max_results": 5},
+                result={"results": [{"title": random_sentence(), "url": "https://example.com", "snippet": random_paragraph()}]},
+                started_at=datetime.now(timezone.utc),
+                completed_at=datetime.now(timezone.utc),
+            ),
+            ToolCall(
+                id=f"call_{random_id()}",
+                name="save_note",
+                arguments={"title": random_sentence(), "content": random_paragraph(), "tags": ["research", "company"]},
+                result={"noteId": str(uuid.uuid4()), "savedAt": datetime.now(timezone.utc).isoformat()},
+                started_at=datetime.now(timezone.utc),
+                completed_at=datetime.now(timezone.utc),
+            ),
+        ],
+    ),
+]
+
+# Fix timestamps to have proper durations
+for log in FAKE_LOGS_DB:
+    base_duration = random.randint(500, 3000)
+    log.completed_at = log.created_at + timedelta(milliseconds=base_duration)
+
+    if log.tool_calls:
+        tool_offset = 50
+        for tool in log.tool_calls:
+            tool_duration = random.randint(100, 500)
+            tool.started_at = log.created_at + timedelta(milliseconds=tool_offset)
+            tool.completed_at = tool.started_at + timedelta(milliseconds=tool_duration)
+            tool_offset += tool_duration + 20
+
+
+telemetry = Telemetry(
+    os.environ["LATITUDE_API_KEY"],
+    TelemetryOptions(disable_batch=True),
+)
+
+
+def ingest_log(log: LogEntry, project_id: int):
+    duration_ms = (log.completed_at - log.created_at).total_seconds() * 1000
+    print(f"\nIngesting log: {log.id}")
+    print(f"  Path: {log.path}")
+    print(f"  Provider: {log.provider}/{log.model}")
+    print(f"  Duration: {duration_ms:.0f}ms")
+    if log.tool_calls:
+        print(f"  Tool calls: {', '.join(t.name for t in log.tool_calls)}")
+
+    # Create prompt span
+    prompt_span = telemetry.span.prompt(
+        PromptSpanOptions(
+            documentLogUuid=log.id,
+            promptUuid=log.path,
+            projectId=project_id,
+            versionUuid="live",
+            template="User message: {{message}}",
+            parameters={"message": log.messages[0]["content"] if log.messages else ""},
+            source=LogSources.API,
+            startTime=log.created_at.timestamp(),
+        )
+    )
+
+    # Create completion span
+    completion_span = telemetry.span.completion(
+        StartCompletionSpanOptions(
+            provider=log.provider,
+            model=log.model,
+            input=log.messages,
+            startTime=log.created_at.timestamp(),
+        ),
+        prompt_span.context,
+    )
+
+    # Create tool spans if present
+    for tool_call in log.tool_calls:
+        tool_span = telemetry.span.tool(
+            StartToolSpanOptions(
+                name=tool_call.name,
+                call=ToolCallInfo(id=tool_call.id, arguments=tool_call.arguments),
+                startTime=tool_call.started_at.timestamp(),
+            ),
+            completion_span.context,
+        )
+
+        tool_span.end(
+            EndToolSpanOptions(
+                result=ToolResultInfo(value=tool_call.result, isError=False),
+                endTime=tool_call.completed_at.timestamp(),
+            )
+        )
+
+    # End completion span
+    completion_span.end(
+        EndCompletionSpanOptions(
+            output=[{"role": "assistant", "content": log.response}],
+            tokens=TokenUsage(prompt=log.prompt_tokens, completion=log.completion_tokens),
+            finishReason="stop",
+            endTime=log.completed_at.timestamp(),
+        )
+    )
+
+    # End prompt span
+    prompt_span.end(
+        EndSpanOptions(endTime=log.completed_at.timestamp() + 0.005)
+    )
+
+
+def run():
+    project_id = int(os.environ["PROJECT_ID"])
+
+    print("=" * 50)
+    print("Backfilling historical logs to Latitude")
+    print(f"Total logs to ingest: {len(FAKE_LOGS_DB)}")
+    print("=" * 50)
+
+    for log in FAKE_LOGS_DB:
+        ingest_log(log, project_id)
+
+    telemetry.flush()
+
+    print("\n" + "=" * 50)
+    print("All traces backfilled successfully!")
+    print("=" * 50)
+
+
+if __name__ == "__main__":
+    run()
+````
+</CodeGroup>

@@ -21,10 +21,12 @@ const translator = new Translator({
 export type StartSpanOptions = {
   name?: string
   attributes?: otel.Attributes
+  startTime?: Date | number
 }
 
 export type EndSpanOptions = {
   attributes?: otel.Attributes
+  endTime?: Date | number
 }
 
 export type ErrorOptions = {
@@ -226,6 +228,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
           ...(start.attributes || {}),
         },
         kind: otel.SpanKind.CLIENT,
+        startTime: start.startTime,
       },
       ctx,
     )
@@ -239,7 +242,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
         span.setAttributes(end.attributes || {})
         span.setStatus({ code: otel.SpanStatusCode.OK })
-        span.end()
+        span.end(end.endTime)
       },
       fail: (error: Error, options?: ErrorOptions) => {
         this.error(span, error, options)
@@ -301,6 +304,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
               end.result.isError,
             ...(end.attributes || {}),
           },
+          endTime: end.endTime,
         })
       },
     }
@@ -430,6 +434,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
             ],
             ...(end.attributes || {}),
           },
+          endTime: end.endTime,
         })
       },
     }
@@ -529,6 +534,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
             [ATTRIBUTES.OPENTELEMETRY.HTTP.response.body]: finalBody,
             ...(end.attributes || {}),
           },
+          endTime: end.endTime,
         })
       },
     }

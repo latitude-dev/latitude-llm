@@ -1,0 +1,6 @@
+---
+provider: openai
+model: gpt-4o-mini
+---
+
+Tell me a joke about {{topic}}

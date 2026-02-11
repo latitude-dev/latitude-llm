@@ -17,7 +17,7 @@
     "ts:sdk:run_prompt_with_tools": "npm run run:ts -- ./src/sdk/run-prompt-with-tools/example.ts",
     "ts:sdk:render_chain": "npm run run:ts -- ./src/sdk/render-chain/example.ts",
     "ts:sdk:pause_tools": "npm run run:ts -- ./src/sdk/pause-tools/example.ts",
-    "ts:sdk:create_log": "npm run run:ts -- ./src/sdk/create-log/example.ts",
+    "ts:sdk:ingest_trace": "npm run run:ts -- ./src/sdk/ingest-trace/example.ts",
     "ts:sdk:annotate_log": "npm run run:ts -- ./src/sdk/annotate-log/example.ts",
     "ts:sdk:rag_retrieval": "npm run run:ts -- ./src/sdk/rag-retrieval/example.ts",
     "run:py": "PYTHONPATH=src dotenv -e .env -- .venv/bin/python",
@@ -29,7 +29,7 @@
     "py:sdk:run_prompt_with_tools": "npm run run:py -- ./src/sdk/run-prompt-with-tools/example.py",
     "py:sdk:render_chain": "npm run run:py -- ./src/sdk/render-chain/example.py",
     "py:sdk:pause_tools": "npm run run:py -- ./src/sdk/pause-tools/example.py",
-    "py:sdk:create_log": "npm run run:py -- ./src/sdk/create-log/example.py",
+    "py:sdk:ingest_trace": "npm run run:py -- ./src/sdk/ingest-trace/example.py",
     "py:sdk:annotate_log": "npm run run:py -- ./src/sdk/annotate-log/example.py",
     "ts:cases:customer_support": "npm run run:ts -- ./src/cases/customer-support-email/example.ts",
     "ts:cases:content_moderation": "npm run run:ts -- ./src/cases/content-moderation-system/example.ts"
@@ -38,15 +38,19 @@
     "@ai-sdk/openai": "^1.0.8",
     "@anthropic-ai/sdk": "^0.32.1",
     "@latitude-data/sdk": "5.3.1",
+    "@latitude-data/telemetry": "file:../packages/telemetry/typescript",
     "@pinecone-database/pinecone": "^6.0.1",
     "@vercel/otel": "^1.10.0",
     "ai": "^4.0.18",
     "dotenv": "^16.5.0",
     "dotenv-cli": "^8.0.0",
     "openai": "^4.68.4",
+    "@faker-js/faker": "^9.0.0",
+    "uuid": "^9.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/uuid": "^9.0.0",
     "tsx": "^4.20.6"
   }
 }

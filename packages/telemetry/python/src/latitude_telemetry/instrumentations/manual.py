@@ -40,6 +40,7 @@ class StartSpanOptions:
 
     name: str | None = None
     attributes: Dict[str, Any] | None = None
+    startTime: int | float | None = None
 
 
 @dataclass
@@ -47,6 +48,7 @@ class EndSpanOptions:
     """Options for ending a span."""
 
     attributes: Dict[str, Any] | None = None
+    endTime: int | float | None = None
 
 
 @dataclass
@@ -359,6 +361,7 @@ class ManualInstrumentation(BaseInstrumentation):
             context=ctx,
             kind=OtelSpanKind.CLIENT,
             attributes=attributes,
+            start_time=int(start.startTime * 1e9) if start.startTime else None,
         )
 
         new_ctx = trace.set_span_in_context(span, ctx)
@@ -368,7 +371,8 @@ class ManualInstrumentation(BaseInstrumentation):
             if end_opts.attributes:
                 span.set_attributes(end_opts.attributes)
             span.set_status(StatusCode.OK)
-            span.end()
+            end_time_ns = int(end_opts.endTime * 1e9) if end_opts.endTime else None
+            span.end(end_time=end_time_ns)
 
         def fail_span(error: Exception, err_options: ErrorOptions | None = None) -> None:
             self._error(span, error, err_options)
@@ -411,7 +415,7 @@ class ManualInstrumentation(BaseInstrumentation):
             if end_options.attributes:
                 end_attrs.update(end_options.attributes)
 
-            span_handle.end(EndSpanOptions(attributes=end_attrs))
+            span_handle.end(EndSpanOptions(attributes=end_attrs, endTime=end_options.endTime))
 
         return ToolSpanHandle(
             context=span_handle.context,
@@ -604,7 +608,7 @@ class ManualInstrumentation(BaseInstrumentation):
             if end_opts.attributes:
                 end_attrs.update(end_opts.attributes)
 
-            span_handle.end(EndSpanOptions(attributes=end_attrs))
+            span_handle.end(EndSpanOptions(attributes=end_attrs, endTime=end_opts.endTime))
 
         return CompletionSpanHandle(
             context=span_handle.context,
@@ -683,7 +687,7 @@ class ManualInstrumentation(BaseInstrumentation):
             if end_options.attributes:
                 end_attrs.update(end_options.attributes)
 
-            span_handle.end(EndSpanOptions(attributes=end_attrs))
+            span_handle.end(EndSpanOptions(attributes=end_attrs, endTime=end_options.endTime))
 
         return HttpSpanHandle(
             context=span_handle.context,

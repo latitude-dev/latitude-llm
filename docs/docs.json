@@ -293,7 +293,8 @@
               "examples/sdk/annotate-log",
               "examples/sdk/pause-tools",
               "examples/sdk/rag-retrieval",
-              "examples/sdk/render-chain"
+              "examples/sdk/render-chain",
+              "examples/sdk/ingest-trace"
             ]
           },
           {
