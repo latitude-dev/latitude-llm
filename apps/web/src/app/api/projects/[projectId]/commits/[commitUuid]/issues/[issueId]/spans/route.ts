@@ -5,8 +5,8 @@ import { getSpansByIssue } from '@latitude-data/core/data-access/issues/getSpans
 import {
   CommitsRepository,
   IssuesRepository,
-  ProjectsRepository,
 } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Cursor } from '@latitude-data/core/schema/types'
 import { NextRequest, NextResponse } from 'next/server'
@@ -65,8 +65,7 @@ export const GET = errorHandler(
           }
         : null
 
-      const projectsRepo = new ProjectsRepository(workspace.id)
-      const project = await projectsRepo.find(projectId).then((r) => r.unwrap())
+      const project = await findProjectById({ workspaceId: workspace.id, id: projectId }).then((r) => r.unwrap())
       const commitsRepo = new CommitsRepository(workspace.id)
       const commit = await commitsRepo
         .getCommitByUuid({

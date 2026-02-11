@@ -11,9 +11,9 @@ import {
   DatasetsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
-  ProjectsRepository,
   SpanMetadatasRepository,
 } from '../../../repositories'
+import { findProjectById } from '../../../queries/projects/findById'
 import { spans } from '../../../schema/models/spans'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type Dataset } from '../../../schema/models/types/Dataset'
@@ -173,8 +173,9 @@ export async function getExperimentJobPayload(
   if (commitResult.error) return commitResult
   const commit = commitResult.unwrap()
 
-  const projectResult = await new ProjectsRepository(workspace.id, db).find(
-    commit.projectId,
+  const projectResult = await findProjectById(
+    { workspaceId: workspace.id, id: commit.projectId },
+    db,
   )
   if (projectResult.error) return projectResult
   const project = projectResult.unwrap()

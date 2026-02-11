@@ -1,7 +1,7 @@
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { NotFoundError } from '../../../lib/errors'
-import { ProjectsRepository } from '../../../repositories'
+import { findProjectById } from '../../../queries/projects/findById'
 import {
   ensureAgentName,
   generateAgentDetails,
@@ -23,8 +23,7 @@ export const generateProjectNameJob = async (
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
-  const repository = new ProjectsRepository(workspace.id)
-  const project = await repository.find(projectId).then((r) => r.unwrap())
+  const project = await findProjectById({ workspaceId: workspace.id, id: projectId }).then((r) => r.unwrap())
   if (project.deletedAt) return
 
   let details = await generateAgentDetails({ prompt }).then((r) => r.unwrap())

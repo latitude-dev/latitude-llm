@@ -1,7 +1,7 @@
 import { type Project } from '../../../schema/models/types/Project'
 import { type User } from '../../../schema/models/types/User'
 import { type Workspace } from '../../../schema/models/types/Workspace'
-import { ProjectsRepository } from '../../../repositories'
+import { findAllProjects } from '../../../queries/projects/findAll'
 import { createProject } from '../../projects'
 
 function forkProjectName({
@@ -37,8 +37,7 @@ export async function createForkProject({
   workspace: Workspace
   user: User
 }) {
-  const repo = new ProjectsRepository(workspace.id)
-  const projectsResult = await repo.findAll()
+  const projectsResult = await findAllProjects({ workspaceId: workspace.id })
   const projects = projectsResult.unwrap()
 
   const name = forkProjectName({ title, prefix, projects })

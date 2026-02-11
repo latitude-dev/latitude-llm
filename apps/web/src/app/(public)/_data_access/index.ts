@@ -1,7 +1,7 @@
 import { cache } from 'react'
 
 import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
-import { unsafelyGetUser } from '@latitude-data/core/data-access/users'
+import { unsafelyFindUserById } from '@latitude-data/core/queries/users/findById'
 import { unsafelyFindMembershipByToken } from '@latitude-data/core/data-access/memberships'
 import { Result } from '@latitude-data/core/lib/Result'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
@@ -16,7 +16,7 @@ export const findWorkspaceCache = cache(async (id: number) => {
 })
 
 export const findUserCache = cache(async (id: string) => {
-  return await unsafelyGetUser(id)
+  return await unsafelyFindUserById({ id })
 })
 
 export const findSharedDocumentCached = cache(

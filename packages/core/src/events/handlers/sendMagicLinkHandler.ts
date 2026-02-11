@@ -1,4 +1,4 @@
-import { unsafelyGetUser } from '../../data-access/users'
+import { unsafelyFindUserById } from '../../queries/users/findById'
 import { NotFoundError } from '../../lib/errors'
 import { MagicLinkMailer } from '../../mailer/mailers/magicLinks/MagicLinkMailer'
 import { MagicLinkTokenCreated } from '../events'
@@ -8,7 +8,7 @@ export async function sendMagicLinkJob({
 }: {
   data: MagicLinkTokenCreated
 }) {
-  const user = await unsafelyGetUser(event.data.userId)
+  const user = await unsafelyFindUserById({ id: event.data.userId })
   if (!user) throw new NotFoundError('User not found')
 
   const mailer = new MagicLinkMailer(

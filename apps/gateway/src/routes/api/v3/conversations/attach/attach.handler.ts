@@ -6,7 +6,7 @@ import { unsafelyFindActiveRun } from '@latitude-data/core/data-access/runs'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
-import { ProjectsRepository } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { attachRun } from '@latitude-data/core/services/runs/attach'
 import { streamSSE } from 'hono/streaming'
 import { AttachRoute } from './attach.route'
@@ -26,9 +26,7 @@ export const attachHandler: AppRouteHandler<AttachRoute> = async (ctx) => {
     )
   }
 
-  const repository = new ProjectsRepository(workspace.id)
-  const project = await repository
-    .getProjectById(run.projectId)
+  const project = await findProjectById({ workspaceId: workspace.id, id: run.projectId })
     .then((r) => r.unwrap())
 
   const args = { run, project, workspace }

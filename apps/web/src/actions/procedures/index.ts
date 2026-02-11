@@ -24,9 +24,9 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
-  ProjectsRepository,
   DatasetsRepository,
 } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { getDataFromSession } from '$/data-access'
 import { flattenErrors } from '@latitude-data/core/lib/zodUtils'
 
@@ -162,9 +162,7 @@ export const withProjectSchema = z.object({
 export const withProject = authProcedure.use(
   async ({ next, ctx, clientInput }) => {
     const { projectId } = validateSchema(withProjectSchema, clientInput)
-    const projectScope = new ProjectsRepository(ctx.workspace.id)
-    const project = await projectScope
-      .getProjectById(Number(projectId))
+    const project = await findProjectById({ workspaceId: ctx.workspace.id, id: Number(projectId) })
       .then((r) => r.unwrap())
 
     return next({ ctx: { ...ctx, project } })

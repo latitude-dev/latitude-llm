@@ -12,19 +12,19 @@ import { Result, TypedResult } from '../../../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  ProjectsRepository,
 } from '../../../../repositories'
+import { findProjectById } from '../../../../queries/projects/findById'
 import { ExternalSpanSpecification } from './external'
 import { SpanBackendSpecification, SpanProcessArgs } from '../shared'
 import { DocumentVersion } from '../../../../schema/models/types/DocumentVersion'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { Workspace } from '../../../../schema/models/types/Workspace'
 import { Commit } from '../../../../schema/models/types/Commit'
-import { findFirstUserInWorkspace } from '../../../../data-access/users'
 import { createNewDocument } from '../../../documents'
 import { createCommit, mergeCommit } from '../../../commits'
 import { generateUUIDIdentifier } from '../../../../lib/generateUUID'
 import { omit } from 'lodash-es'
+import { findFirstUserInWorkspace } from '../../../../queries/users/findFirstInWorkspace'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.UnresolvedExternal]
 
@@ -79,13 +79,15 @@ async function getResolvedData(
 
   // If commit is HEAD and prompt is not found, create and merge a new version containing the new prompt.
   if (isHead) {
-    const projectRepo = new ProjectsRepository(workspace.id, db)
-    const projectResult = await projectRepo.getProjectById(commit.projectId)
+    const projectResult = await findProjectById(
+      { workspaceId: workspace.id, id: commit.projectId },
+      db,
+    )
     if (!Result.isOk(projectResult)) return projectResult
     const project = projectResult.unwrap()
     const newDraftResult = await createCommit({
       project,
-      user: await findFirstUserInWorkspace(workspace),
+      user: await findFirstUserInWorkspace({ workspaceId: workspace.id }),
       data: { title: `Generated prompt from telemetry: '${path}'` },
     })
     if (!Result.isOk(newDraftResult)) return newDraftResult

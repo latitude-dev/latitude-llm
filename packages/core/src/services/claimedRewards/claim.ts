@@ -6,7 +6,7 @@ import {
 } from '../../constants'
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { unsafelyFindUserByEmail } from '../../data-access/users'
+import { unsafelyFindUserByEmail } from '../../queries/users/findByEmail'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -49,7 +49,7 @@ export async function claimReward(
           return Result.error(new BadRequestError('User already invited'))
         }
 
-        const invited = await unsafelyFindUserByEmail(reference, tx)
+        const invited = await unsafelyFindUserByEmail({ email: reference }, tx)
         if (invited) {
           return Result.error(new BadRequestError('User already exists'))
         }

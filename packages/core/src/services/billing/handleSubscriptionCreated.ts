@@ -14,9 +14,9 @@ import {
   getFirstUserAsBillingActor,
   getStripeCustomerId,
 } from './utils'
-import { findFirstUserInWorkspace } from '../../data-access/users'
 import { findWorkspaceFromStripeCheckoutSession } from './findWorkspaceFromCheckoutSession'
 import { handleSubscriptionUpdated } from './handleSubscriptionUpdated'
+import { findFirstUserInWorkspace } from '../../queries/users/findFirstInWorkspace'
 
 /**
  * Handles `customer.subscription.created` webhook events.
@@ -64,8 +64,8 @@ export async function handleSubscriptionCreated(
         )
       }
 
-      const user = await getFirstUserAsBillingActor(workspaceRecord).then((r) =>
-        r.unwrap(),
+      const user = await getFirstUserAsBillingActor(workspaceRecord, tx).then(
+        (r) => r.unwrap(),
       )
       const workspace = await assignStripeCustomerId(
         {
@@ -103,7 +103,11 @@ export async function handleSubscriptionCreated(
       })
     },
     async ({ workspace, subscription }) => {
-      const firstUser = await findFirstUserInWorkspace(workspace)
+      const firstUser = await findFirstUserInWorkspace({
+        workspaceId: workspace.id,
+      })
+      if (!firstUser) return
+
       publisher.publishLater({
         type: 'subscriptionUpdated',
         data: { workspace, subscription, userEmail: firstUser.email },

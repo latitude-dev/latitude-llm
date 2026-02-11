@@ -8,7 +8,7 @@ import { commits } from '../../../schema/models/commits'
 import { Workspace } from '../../../schema/models/types/Workspace'
 import { getDateRangeOrLastWeekRange } from '../utils'
 import { AnnotationStats } from '@latitude-data/emails/WeeklyEmailMailTypes'
-import { ProjectsRepository } from '../../../repositories'
+import { findFirstProject } from '../../../queries/projects/findFirst'
 
 async function getAllTimesAnnotationsCount(
   { workspace }: { workspace: Workspace },
@@ -133,8 +133,8 @@ export async function getAnnotationsData(
   const hasAnnotations = allTimesAnnotationsCount > 0
 
   if (!hasAnnotations) {
-    const projects = new ProjectsRepository(workspace.id, db)
-    const firstProject = await projects.findFirst().then((r) => r.unwrap())
+    const firstProjectResult = await findFirstProject({ workspaceId: workspace.id }, db)
+    const firstProject = firstProjectResult.ok ? firstProjectResult.value : undefined
 
     return {
       hasAnnotations: false,

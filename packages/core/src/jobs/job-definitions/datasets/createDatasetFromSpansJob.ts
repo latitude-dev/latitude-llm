@@ -2,7 +2,7 @@ import { Job } from 'bullmq'
 
 import { SpanType } from '../../../constants'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { unsafelyGetUser } from '../../../data-access/users'
+import { unsafelyFindUserById } from '../../../queries/users/findById'
 import { NotFoundError } from '../../../lib/errors'
 import {
   DocumentVersionsRepository,
@@ -126,7 +126,7 @@ export const createDatasetFromSpansJob = async (
       throw new NotFoundError(`Workspace not found ${workspaceId}`)
     }
 
-    const user = await unsafelyGetUser(userId)
+    const user = await unsafelyFindUserById({ id: userId })
     if (!user) {
       throw new NotFoundError(`User not found ${userId}`)
     }

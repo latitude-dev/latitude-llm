@@ -5,7 +5,7 @@ import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
 import { isCloneActionUrl } from '@latitude-data/constants'
-import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access/users'
+import { unsafelyFindUserByEmail } from '@latitude-data/core/queries/users/findByEmail'
 
 import { errorHandlingProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
@@ -22,7 +22,7 @@ export const setupAction = errorHandlingProcedure
         .pipe(z.email())
         .refine(
           async (email) => {
-            const existingUser = await unsafelyFindUserByEmail(email)
+            const existingUser = await unsafelyFindUserByEmail({ email })
             return !existingUser
           },
           { error: 'Email is already in use' },

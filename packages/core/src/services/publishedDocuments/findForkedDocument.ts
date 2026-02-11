@@ -3,8 +3,8 @@ import { Result } from '../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  ProjectsRepository,
 } from '../../repositories'
+import { findProjectById } from '../../queries/projects/findById'
 
 export async function findForkedDocument({
   workspace,
@@ -17,8 +17,7 @@ export async function findForkedDocument({
   commitUuid: string
   documentUuid: string
 }) {
-  const repo = new ProjectsRepository(workspace.id)
-  const resultProject = await repo.find(Number(projectId))
+  const resultProject = await findProjectById({ workspaceId: workspace.id, id: Number(projectId) })
 
   if (resultProject.error) return resultProject
 

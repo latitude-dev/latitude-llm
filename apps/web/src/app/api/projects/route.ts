@@ -1,4 +1,3 @@
-import { projectsScope } from '@latitude-data/core/queries/projects/scope'
 import { findAllActiveProjects } from '@latitude-data/core/queries/projects/findAllActive'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { authHandler } from '$/middlewares/authHandler'
@@ -15,8 +14,9 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const projects = projectsScope(workspace.id)
-      const result = await findAllActiveProjects(projects)
+      const result = await findAllActiveProjects({
+        workspaceId: workspace.id,
+      })
 
       return NextResponse.json(result.unwrap(), { status: 200 })
     },

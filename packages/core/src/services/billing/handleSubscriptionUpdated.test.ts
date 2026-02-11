@@ -41,7 +41,7 @@ vi.mock('../../events/publisher', () => ({
   },
 }))
 
-vi.mock('../../data-access/users', () => ({
+vi.mock('../../queries/users/findFirstInWorkspace', () => ({
   findFirstUserInWorkspace: mocks.findFirstUserInWorkspace,
 }))
 

@@ -10,9 +10,9 @@ import {
   DatasetsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
-  ProjectsRepository,
-  UsersRepository,
 } from '../../repositories'
+import { findProjectById } from '../../queries/projects/findById'
+import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
 import { optimizations } from '../../schema/models/optimizations'
 import { Optimization } from '../../schema/models/types/Optimization'
 import {
@@ -70,8 +70,7 @@ export async function executeOptimization(
     )
   }
 
-  const projectsRepository = new ProjectsRepository(workspace.id)
-  const gettingpj = await projectsRepository.find(optimization.projectId)
+  const gettingpj = await findProjectById({ workspaceId: workspace.id, id: optimization.projectId })
   if (gettingpj.error) {
     return Result.error(gettingpj.error)
   }
@@ -96,8 +95,7 @@ export async function executeOptimization(
   }
   const document = gettingdo.value
 
-  const userRepository = new UsersRepository(workspace.id)
-  const finding = await userRepository.find(baselineCommit.userId)
+  const finding = await findWorkspaceUserById({ workspaceId: workspace.id, id: baselineCommit.userId })
   if (finding.error) {
     return Result.error(finding.error)
   }

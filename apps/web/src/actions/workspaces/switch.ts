@@ -1,7 +1,7 @@
 'use server'
 
 import { WorkspacesRepository } from '@latitude-data/core/repositories'
-import { unsafelyGetUser } from '@latitude-data/core/data-access/users'
+import { unsafelyFindUserById } from '@latitude-data/core/queries/users/findById'
 import { z } from 'zod'
 import { setSession } from '$/services/auth/setSession'
 import { authProcedure } from '../procedures'
@@ -26,7 +26,7 @@ export const switchWorkspaceAction = authProcedure
       .then((r) => r.unwrap())
 
     // Get the current user
-    const user = await unsafelyGetUser(userId)
+    const user = await unsafelyFindUserById({ id: userId })
     if (!user) {
       throw new Error('User not found')
     }

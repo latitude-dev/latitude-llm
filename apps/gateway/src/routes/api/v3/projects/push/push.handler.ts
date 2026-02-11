@@ -1,10 +1,8 @@
 import { Context } from 'hono'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { AppRouteHandler } from '$/openApi/types'
-import {
-  CommitsRepository,
-  ProjectsRepository,
-} from '@latitude-data/core/repositories'
+import { CommitsRepository } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { persistPushChanges } from '@latitude-data/core/services/commits/persistPushChanges'
 import { pushRoute } from './push.route'
 
@@ -27,8 +25,7 @@ export const pushHandler: AppRouteHandler<typeof pushRoute> = async (
   }
 
   // Verify project exists and belongs to workspace
-  const projectsRepository = new ProjectsRepository(workspace.id)
-  const projectResult = await projectsRepository.find(Number(projectId))
+  const projectResult = await findProjectById({ workspaceId: workspace.id, id: Number(projectId) })
   if (projectResult.error) {
     throw new NotFoundError('Project not found')
   }

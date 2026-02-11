@@ -4,19 +4,16 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { getData } from './getData'
 
 const mocks = vi.hoisted(() => ({
-  getProjectById: vi.fn(),
+  findProjectById: vi.fn(),
   getCommitByUuid: vi.fn(),
   getDocumentByPath: vi.fn(),
 }))
 
-vi.mock('@latitude-data/core/repositories', () => {
-  class ProjectsRepository {
-    constructor(_workspaceId: number) {
-      void _workspaceId
-    }
-    getProjectById = mocks.getProjectById
-  }
+vi.mock('@latitude-data/core/queries/projects/findById', () => ({
+  findProjectById: mocks.findProjectById,
+}))
 
+vi.mock('@latitude-data/core/repositories', () => {
   class CommitsRepository {
     constructor(_workspaceId: number) {
       void _workspaceId
@@ -32,7 +29,6 @@ vi.mock('@latitude-data/core/repositories', () => {
   }
 
   return {
-    ProjectsRepository,
     CommitsRepository,
     DocumentVersionsRepository,
     ProviderApiKeysRepository: class {},
@@ -41,7 +37,7 @@ vi.mock('@latitude-data/core/repositories', () => {
 
 describe('getData', () => {
   it('returns BadRequestError for malformed version uuid without hitting DB', async () => {
-    mocks.getProjectById.mockResolvedValueOnce(Result.ok({ id: 123 }))
+    mocks.findProjectById.mockResolvedValueOnce(Result.ok({ id: 123 }))
 
     const res = await getData({
       workspace: { id: 1 } as any,

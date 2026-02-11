@@ -2,12 +2,19 @@ import { eq } from 'drizzle-orm'
 
 import { type User } from '../../schema/models/types/User'
 import { users } from '../../schema/models/users'
-import { type UsersScope } from './scope'
+import { unscopedQuery } from '../scope'
+import { tt } from './columns'
 
-export async function unsafelyFindUserById(
-  scope: UsersScope,
-  id: string,
-): Promise<User | null> {
-  const rows = await scope.where(eq(users.id, id)).limit(1)
-  return (rows[0] as User) ?? null
-}
+export const unsafelyFindUserById = unscopedQuery(
+  async function unsafelyFindUserById(
+    { id }: { id: string },
+    db,
+  ): Promise<User | null> {
+    const rows = await db
+      .select(tt)
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1)
+    return (rows[0] as User) ?? null
+  },
+)

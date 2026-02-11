@@ -1,5 +1,5 @@
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
-import { unsafelyGetUser } from '../../data-access/users'
+import { unsafelyFindUserById } from '../../queries/users/findById'
 import { ExportReadyMailer } from '../../mailer/mailers/exports/ExportReadyMailer'
 import { EventHandler, ExportReadyEvent } from '../events'
 
@@ -10,7 +10,7 @@ export const notifyClientOfExportReady: EventHandler<
   ExportReadyEvent
 > = async ({ data }) => {
   const { workspaceId, userId, uuid } = data.data
-  const user = await unsafelyGetUser(userId)
+  const user = await unsafelyFindUserById({ id: userId })
   if (!user) return
 
   const workspace = await unsafelyFindWorkspace(Number(workspaceId))

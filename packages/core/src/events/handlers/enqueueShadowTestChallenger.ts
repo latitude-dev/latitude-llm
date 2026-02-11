@@ -5,7 +5,7 @@ import {
   DocumentVersionsRepository,
   DeploymentTestsRepository,
 } from '../../repositories'
-import { ProjectsRepository } from '../../repositories'
+import { findProjectById } from '../../queries/projects/findById'
 import { Result } from '../../lib/Result'
 import { captureException } from '../../utils/datadogCapture'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
@@ -66,14 +66,13 @@ export async function enqueueShadowTestChallengerHandler({
 
   // Fetch necessary data
   const workspace = await unsafelyFindWorkspace(workspaceId)
-  const projectsRepo = new ProjectsRepository(workspaceId)
   const documentsRepo = new DocumentVersionsRepository(workspaceId)
 
   // Fetch challenger commit, project, and document for shadow test
   const [challengerCommitResult, projectResult, documentResult] =
     await Promise.all([
       commitsRepo.getCommitById(shadowTest.challengerCommitId),
-      projectsRepo.getProjectById(projectId),
+      findProjectById({ workspaceId, id: projectId }),
       documentsRepo.getDocumentByUuid({ commitUuid, documentUuid }),
     ])
 

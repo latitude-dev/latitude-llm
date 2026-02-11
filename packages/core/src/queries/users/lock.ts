@@ -4,21 +4,25 @@ import { databaseErrorCodes, UnprocessableEntityError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import { memberships } from '../../schema/models/memberships'
 import { users } from '../../schema/models/users'
-import { type WorkspaceUsersScope } from './scope'
+import { scopedQuery } from '../scope'
 
-export async function lockUser(
-  scope: WorkspaceUsersScope,
-  { id, wait }: { id: string; wait?: boolean },
+export const lockUser = scopedQuery(async function lockUser(
+  {
+    workspaceId,
+    id,
+    wait,
+  }: { workspaceId: number; id: string; wait?: boolean },
+  db,
 ): Promise<TypedResult<undefined>> {
   const shouldWait = wait !== false
 
   try {
-    await scope.db.execute(sql<boolean>`
+    await db.execute(sql<boolean>`
       SELECT TRUE
       FROM ${users}
       INNER JOIN ${memberships} ON ${memberships.userId} = ${users.id}
       WHERE (
-        ${memberships.workspaceId} = ${scope.workspaceId} AND
+        ${memberships.workspaceId} = ${workspaceId} AND
         ${users.id} = ${id}
       ) LIMIT 1 FOR NO KEY UPDATE ${sql.raw(!shouldWait ? 'NOWAIT' : '')};
         `)
@@ -32,4 +36,4 @@ export async function lockUser(
   }
 
   return Result.nil()
-}
+})

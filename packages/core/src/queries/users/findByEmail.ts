@@ -2,24 +2,33 @@ import { eq } from 'drizzle-orm'
 
 import { type User } from '../../schema/models/types/User'
 import { users } from '../../schema/models/users'
-import { type UsersScope } from './scope'
+import { unscopedQuery } from '../scope'
+import { tt } from './columns'
 
-export async function unsafelyFindUserByEmail(
-  scope: UsersScope,
-  email: string,
-): Promise<User | null> {
-  const rows = await scope.where(eq(users.email, email)).limit(1)
-  return (rows[0] as User) ?? null
-}
+export const unsafelyFindUserByEmail = unscopedQuery(
+  async function unsafelyFindUserByEmail(
+    { email }: { email: string },
+    db,
+  ): Promise<User | null> {
+    const rows = await db
+      .select(tt)
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1)
+    return (rows[0] as User) ?? null
+  },
+)
 
-export async function unsafelyFindUserIdByEmail(
-  scope: UsersScope,
-  email: string,
-): Promise<{ id: string; email: string } | undefined> {
-  const rows = await scope.db
-    .select({ id: users.id, email: users.email })
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1)
-  return rows[0]
-}
+export const unsafelyFindUserIdByEmail = unscopedQuery(
+  async function unsafelyFindUserIdByEmail(
+    { email }: { email: string },
+    db,
+  ): Promise<{ id: string; email: string } | undefined> {
+    const rows = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1)
+    return rows[0]
+  },
+)

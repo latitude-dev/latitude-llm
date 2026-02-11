@@ -8,7 +8,7 @@ import { SubscriptionPlan } from '../../../plans'
 import { subscriptions } from '../../../schema/models/subscriptions'
 import { createWorkspace as createWorkspaceFactory } from '../../../tests/factories'
 import { publisher } from '../../../events/publisher'
-import * as usersDataAccess from '../../../data-access/users'
+import * as usersQueries from '../../../queries/users/findFirstInWorkspace'
 import { User } from '../../../schema/models/types/User'
 import type { ProcessCancelledSubscriptionsJobData } from './processCancelledSubscriptionsJob'
 import { processCancelledSubscriptionsJob } from './processCancelledSubscriptionsJob'
@@ -43,7 +43,7 @@ describe('processCancelledSubscriptionsJob', () => {
     vi.mocked(publisher.publishLater).mockImplementation(() =>
       Promise.resolve(),
     )
-    vi.spyOn(usersDataAccess, 'findFirstUserInWorkspace').mockResolvedValue({
+    vi.spyOn(usersQueries, 'findFirstUserInWorkspace').mockResolvedValue({
       id: 'mock-user-id',
       email: 'mock@example.com',
       name: 'Mock User',

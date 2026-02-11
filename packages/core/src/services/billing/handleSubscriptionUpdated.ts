@@ -16,7 +16,7 @@ import {
   findTargetPlan,
   getStripeCustomerId,
 } from './utils'
-import { findFirstUserInWorkspace } from '../../data-access/users'
+import { findFirstUserInWorkspace } from '../../queries/users/findFirstInWorkspace'
 
 /**
  * Handles `customer.subscription.updated` webhook events for active subscriptions.
@@ -88,7 +88,11 @@ export async function handleSubscriptionUpdated(
       })
     },
     async ({ workspace, subscription }) => {
-      const firstUser = await findFirstUserInWorkspace(workspace)
+      const firstUser = await findFirstUserInWorkspace({
+        workspaceId: workspace.id,
+      })
+      if (!firstUser) return
+
       publisher.publishLater({
         type: 'subscriptionUpdated',
         data: { workspace, subscription, userEmail: firstUser.email },

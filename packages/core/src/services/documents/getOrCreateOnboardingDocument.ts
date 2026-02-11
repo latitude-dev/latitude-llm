@@ -2,8 +2,8 @@ import { Result } from '../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  ProjectsRepository,
 } from '../../repositories'
+import { findFirstProject } from '../../queries/projects/findFirst'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { User } from '../../schema/models/types/User'
 import { createProject } from '../projects/create'
@@ -22,8 +22,7 @@ export async function getOrCreateOnboardingDocument(
   transaction = new Transaction(),
 ) {
   return transaction.call(async (tx) => {
-    const projectsRepo = new ProjectsRepository(workspace.id, tx)
-    const projectResult = await projectsRepo.getFirstProject()
+    const projectResult = await findFirstProject({ workspaceId: workspace.id }, tx)
 
     let project = projectResult.ok ? projectResult.value : null
     let commit = null

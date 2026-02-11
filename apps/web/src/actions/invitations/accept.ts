@@ -2,7 +2,7 @@
 
 import { z } from 'zod'
 import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
-import { unsafelyGetUser } from '@latitude-data/core/data-access/users'
+import { unsafelyFindUserById } from '@latitude-data/core/queries/users/findById'
 import { unsafelyFindMembershipByToken } from '@latitude-data/core/data-access/memberships'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { acceptInvitation } from '@latitude-data/core/services/invitations/accept'
@@ -26,7 +26,7 @@ export const acceptInvitationAction = errorHandlingProcedure
     const workspace = await unsafelyFindWorkspace(membership.workspaceId)
     if (!workspace) throw new NotFoundError('Workspace not found')
 
-    const user = await unsafelyGetUser(membership.userId)
+    const user = await unsafelyFindUserById({ id: membership.userId })
     if (!user) throw new NotFoundError('User not found')
 
     await acceptInvitation({ membership, user })

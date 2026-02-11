@@ -1,7 +1,7 @@
 import { type Commit } from '../../../schema/models/types/Commit'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
-import { ProjectsRepository } from '../../../repositories'
+import { findProjectById } from '../../../queries/projects/findById'
 import { buildCommitsScope } from '../../../repositories/commitsRepository/utils/buildCommitsScope'
 import { getHeadCommitForProject } from '../../../repositories/commitsRepository/utils/getHeadCommit'
 import { DocumentVersionsRepository } from '../../../repositories/documentVersionsRepository'
@@ -10,8 +10,7 @@ async function getProjectFromCommit(
   { commit, workspaceId }: { commit: Commit; workspaceId: number },
   tx = database,
 ) {
-  const projectsScope = new ProjectsRepository(workspaceId, tx)
-  const projectResult = await projectsScope.getProjectById(commit.projectId)
+  const projectResult = await findProjectById({ workspaceId, id: commit.projectId }, tx)
 
   if (projectResult.error) return projectResult
 

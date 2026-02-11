@@ -3,13 +3,13 @@ import { faker } from '@faker-js/faker'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { unsafelyGetUser } from '../../data-access/users'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { createProject as createProjectFn } from '../../services/projects'
 import { createDraft } from './commits'
 import { flattenDocumentStructure, ICreateProject } from './projects'
 import { createWorkspace } from './workspaces'
+import { unsafelyFindUserById } from '../../queries/users/findById'
 
 export async function createProject(projectData: Partial<ICreateProject> = {}) {
   const workspaceData = projectData.workspace ?? {}
@@ -17,7 +17,9 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
   let workspace: Workspace
 
   if ('id' in workspaceData) {
-    user = (await unsafelyGetUser(workspaceData.creatorId!)) as User
+    user = (await unsafelyFindUserById({
+      id: workspaceData.creatorId!,
+    }))!
     workspace = workspaceData as Workspace
   } else {
     const newWorkspace = await createWorkspace(workspaceData)

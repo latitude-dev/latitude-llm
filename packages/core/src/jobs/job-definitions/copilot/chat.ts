@@ -3,11 +3,9 @@ import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { clearCancelJobFlag, isJobCancelled } from '../../../lib/cancelJobs'
 import { LatitudeError } from '../../../lib/errors'
-import {
-  ProjectsRepository,
-  SpansRepository,
-  UsersRepository,
-} from '../../../repositories'
+import { SpansRepository } from '../../../repositories'
+import { findProjectById } from '../../../queries/projects/findById'
+import { findWorkspaceUserById } from '../../../queries/users/findInWorkspace'
 import {
   addMessageToExistingLatte,
   runNewLatte,
@@ -64,18 +62,16 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
   try {
     const workspace = await unsafelyFindWorkspace(workspaceId).then((w) => w!)
 
-    const projectRepo = new ProjectsRepository(workspace.id)
-    const projectResult = await projectRepo.find(projectId)
+    const projectResult = await findProjectById({ workspaceId: workspace.id, id: projectId })
     if (projectResult.error) {
-      await emitError({ workspaceId, threadUuid, error: projectResult.error })
+      await emitError({ workspaceId, threadUuid, error: projectResult.error as LatitudeError })
       return projectResult
     }
     const project = projectResult.value
 
-    const usersScope = new UsersRepository(workspace.id)
-    const userResult = await usersScope.find(userId)
+    const userResult = await findWorkspaceUserById({ workspaceId: workspace.id, id: userId })
 
-    if (!userResult.ok) {
+    if (userResult.error) {
       await emitError({
         workspaceId,
         threadUuid,

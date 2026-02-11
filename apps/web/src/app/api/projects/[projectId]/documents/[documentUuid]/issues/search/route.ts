@@ -2,11 +2,11 @@ import { z } from 'zod'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import {
-  ProjectsRepository,
   IssuesRepository,
   DocumentVersionsRepository,
   CommitsRepository,
 } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 import { IssueGroup } from '@latitude-data/constants/issues'
@@ -46,8 +46,7 @@ export const GET = errorHandler(
       const title = query.get('query')
       const commitUuid = query.get('commitUuid')
       const groupParam = query.get('group')
-      const projectsRepo = new ProjectsRepository(workspace.id)
-      const project = await projectsRepo.find(projectId).then((r) => r.unwrap())
+      const project = await findProjectById({ workspaceId: workspace.id, id: projectId }).then((r) => r.unwrap())
       const commitsRepo = new CommitsRepository(workspace.id)
       const commit = await commitsRepo
         .getCommitByUuid({ uuid: commitUuid! })

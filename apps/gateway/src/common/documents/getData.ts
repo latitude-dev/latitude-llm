@@ -4,9 +4,9 @@ import { validate as isValidUuid } from 'uuid'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  ProjectsRepository,
   ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { Providers } from '@latitude-data/constants'
 import { getDocumentMetadata } from '@latitude-data/core/services/documents/scan'
 import { documentPresenterWithProviderAndMetadata } from '$/presenters/documentPresenter'
@@ -21,7 +21,6 @@ async function getProjectByVersionData({
   projectId: number
   commitUuid: string
 }) {
-  const projectsScope = new ProjectsRepository(workspace.id)
   const commitsScope = new CommitsRepository(workspace.id)
 
   const pid = Number(projectId)
@@ -29,7 +28,7 @@ async function getProjectByVersionData({
     return Result.error(new BadRequestError(`Invalid project id ${projectId}`))
   }
 
-  const projectResult = await projectsScope.getProjectById(pid)
+  const projectResult = await findProjectById({ workspaceId: workspace.id, id: pid })
   if (projectResult.error) return projectResult
   const project = projectResult.value
 

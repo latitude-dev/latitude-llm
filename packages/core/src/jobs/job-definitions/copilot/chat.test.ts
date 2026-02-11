@@ -2,13 +2,9 @@ import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as dataAccess from '../../../data-access/workspaces'
-import * as dataAccessProjects from '../../../data-access/projects'
-import {
-  CommitsRepository,
-  ProjectsRepository,
-  SpansRepository,
-  UsersRepository,
-} from '../../../repositories'
+import { SpansRepository } from '../../../repositories'
+import * as findProjectByIdModule from '../../../queries/projects/findById'
+import * as findWorkspaceUserByIdModule from '../../../queries/users/findInWorkspace'
 import * as addMessageLatte from '../../../services/copilot/latte/addMessage'
 import * as chatHelpers from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
@@ -46,20 +42,17 @@ describe('runLatteJob', () => {
     vi.spyOn(dataAccess, 'unsafelyFindWorkspace').mockResolvedValue(
       workspace as any,
     )
-    vi.spyOn(dataAccessProjects, 'unsafelyFindProject').mockResolvedValue(
-      project as any,
-    )
-    vi.spyOn(UsersRepository.prototype, 'find').mockResolvedValue({
+    vi.spyOn(findProjectByIdModule, 'findProjectById').mockResolvedValue({
       ok: true,
-      unwrap: () => user,
-    } as any)
-    vi.spyOn(CommitsRepository.prototype, 'find').mockResolvedValue({
-      ok: true,
-      unwrap: () => commit,
-    } as any)
-    vi.spyOn(ProjectsRepository.prototype, 'find').mockResolvedValue({
-      ok: true,
+      error: undefined,
+      value: project,
       unwrap: () => project,
+    } as any)
+    vi.spyOn(findWorkspaceUserByIdModule, 'findWorkspaceUserById').mockResolvedValue({
+      ok: true,
+      error: undefined,
+      value: user,
+      unwrap: () => user,
     } as any)
     vi.spyOn(chatHelpers, 'getCopilotDocument').mockResolvedValue({
       ok: true,
@@ -87,8 +80,6 @@ describe('runLatteJob', () => {
   })
 
   it('returns the copilotResult if getCopilotDocument fails', async () => {
-    const commitOk = { ok: true, unwrap: () => commit }
-    ;(CommitsRepository.prototype.find as any).mockResolvedValueOnce(commitOk)
     const copilotErr = { ok: false, error: new Error('copilot fail') }
     ;(chatHelpers.getCopilotDocument as any).mockResolvedValueOnce(copilotErr)
 
@@ -99,8 +90,8 @@ describe('runLatteJob', () => {
   })
 
   it('returns the userResult if user lookup fails', async () => {
-    const userErr = { ok: false, error: new Error('user not found') }
-    ;(UsersRepository.prototype.find as any).mockResolvedValueOnce(userErr)
+    const userErr = { ok: false, error: new Error('user not found'), value: undefined, unwrap: () => { throw new Error('user not found') } }
+    ;(findWorkspaceUserByIdModule.findWorkspaceUserById as any).mockResolvedValueOnce(userErr)
 
     const result = await runLatteJob(mockJob)
     expect(result).toBe(userErr)
@@ -112,8 +103,6 @@ describe('runLatteJob', () => {
     ;(
       SpansRepository.prototype.findByDocumentLogUuid as any
     ).mockResolvedValueOnce(undefined)
-    const projectOk = { ok: true, value: project }
-    ;(ProjectsRepository.prototype.find as any).mockResolvedValueOnce(projectOk)
 
     await runLatteJob(mockJob)
 
@@ -138,8 +127,6 @@ describe('runLatteJob', () => {
     ;(
       SpansRepository.prototype.findByDocumentLogUuid as any
     ).mockResolvedValueOnce({ id: 'span-123', traceId: 'trace-123' })
-    const projectOk = { ok: true, value: project }
-    ;(ProjectsRepository.prototype.find as any).mockResolvedValueOnce(projectOk)
     await runLatteJob(mockJob)
 
     expect(addMessageLatte.addMessageToExistingLatte).toHaveBeenCalledWith({

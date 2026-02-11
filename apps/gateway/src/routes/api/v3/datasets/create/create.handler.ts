@@ -1,6 +1,6 @@
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { createDataset } from '@latitude-data/core/services/datasets/create'
-import { findFirstUserInWorkspace } from '@latitude-data/core/data-access/users'
+import { findFirstUserInWorkspace } from '@latitude-data/core/queries/users/findFirstInWorkspace'
 import { type Column } from '@latitude-data/core/schema/models/datasets'
 import { AppRouteHandler } from '$/openApi/types'
 import { createDatasetRoute } from './create.route'
@@ -15,7 +15,7 @@ export const createDatasetHandler: AppRouteHandler<
     columns: Column[]
   }
 
-  const user = await findFirstUserInWorkspace(workspace)
+  const user = await findFirstUserInWorkspace({ workspaceId: workspace.id })
   if (!user) {
     throw new NotFoundError('User not found in workspace')
   }

@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { withAdmin } from '../../procedures'
 import { updateUser } from '@latitude-data/core/services/users/update'
-import { unsafelyGetUserByEmail } from '@latitude-data/core/data-access/users'
+import { unsafelyFindUserByEmail } from '@latitude-data/core/queries/users/findByEmail'
 import { NotFoundError } from '@latitude-data/constants/errors'
 
 export const updateUserAction = withAdmin
@@ -15,7 +15,9 @@ export const updateUserAction = withAdmin
     }),
   )
   .action(async ({ parsedInput }) => {
-    const user = await unsafelyGetUserByEmail(parsedInput.userEmail)
+    const user = await unsafelyFindUserByEmail({
+      email: parsedInput.userEmail,
+    })
 
     if (!user) {
       throw new NotFoundError(`Not found user with email: ${parsedInput.email}`)

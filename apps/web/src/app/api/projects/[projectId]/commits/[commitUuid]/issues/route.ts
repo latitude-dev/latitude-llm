@@ -2,10 +2,10 @@ import { z } from 'zod'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import {
-  ProjectsRepository,
   IssuesRepository,
+  CommitsRepository,
 } from '@latitude-data/core/repositories'
-import { CommitsRepository } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 import { parseIssuesQueryParams } from '@latitude-data/constants/issues'
@@ -36,8 +36,7 @@ export const GET = errorHandler(
       })
       const query = request.nextUrl.searchParams
       const parsed = parseIssuesQueryParams({ params: query })
-      const projectsRepo = new ProjectsRepository(workspace.id)
-      const project = await projectsRepo.find(projectId).then((r) => r.unwrap())
+      const project = await findProjectById({ workspaceId: workspace.id, id: projectId }).then((r) => r.unwrap())
       const commitsRepo = new CommitsRepository(workspace.id)
       const commit = await commitsRepo
         .getCommitByUuid({

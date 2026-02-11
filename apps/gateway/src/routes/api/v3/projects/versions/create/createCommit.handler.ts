@@ -1,9 +1,9 @@
-import { ProjectsRepository } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { AppRouteHandler } from '$/openApi/types'
 import { CreateCommitRoute } from './createCommit.route'
 import { createCommit } from '@latitude-data/core/services/commits/create'
-import { findFirstUserInWorkspace } from '@latitude-data/core/data-access/users'
+import { findFirstUserInWorkspace } from '@latitude-data/core/queries/users/findFirstInWorkspace'
 
 // @ts-expect-error: broken types
 export const createCommitHandler: AppRouteHandler<CreateCommitRoute> = async (
@@ -16,12 +16,12 @@ export const createCommitHandler: AppRouteHandler<CreateCommitRoute> = async (
   }
 
   const { name } = c.req.valid('json')
-  const projectsRepo = new ProjectsRepository(workspace.id)
-  const project = await projectsRepo
-    .getProjectById(Number(projectId))
-    .then((r) => r.unwrap())
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: Number(projectId),
+  }).then((r) => r.unwrap())
 
-  const user = await findFirstUserInWorkspace(workspace)
+  const user = await findFirstUserInWorkspace({ workspaceId: workspace.id })
   if (!user) {
     throw new NotFoundError('User not found in this workspace')
   }

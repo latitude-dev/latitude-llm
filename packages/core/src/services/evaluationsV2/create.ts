@@ -10,7 +10,8 @@ import { compactObject } from '../../lib/compactObject'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { IssuesRepository, ProjectsRepository } from '../../repositories'
+import { IssuesRepository } from '../../repositories'
+import { findProjectById } from '../../queries/projects/findById'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -47,8 +48,7 @@ export async function createEvaluationV2<
     let issue: Issue | null = null
     if (issueId) {
       const issuesRepository = new IssuesRepository(workspace.id, tx)
-      const projectRepository = new ProjectsRepository(workspace.id, tx)
-      const projectResult = await projectRepository.find(commit.projectId)
+      const projectResult = await findProjectById({ workspaceId: workspace.id, id: commit.projectId }, tx)
       if (!Result.isOk(projectResult)) {
         return projectResult
       }
