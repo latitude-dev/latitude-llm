@@ -56,7 +56,7 @@ export function TriggerConfiguration<
   disabled?: boolean
 }) {
   const configuration = settings.configuration
-  const triggerTarget = configuration.trigger?.target ?? 'every'
+  const triggerTarget = configuration.trigger?.target ?? 'last'
 
   const liveEvaluationOnLastResponse =
     evaluateLiveLogs && triggerTarget === 'last'
