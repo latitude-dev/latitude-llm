@@ -9,7 +9,6 @@ import {
 } from '@latitude-data/core/constants'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import {
-  createDocumentLog,
   createEvaluationV2,
   createProject,
   createSpan,
@@ -91,18 +90,11 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
       workspaceId: workspace.id,
     }).then((r) => r.unwrap())
 
-    const { documentLog } = await createDocumentLog({
-      document: documents[0]!,
-      commit,
-      parameters: { name: 'World' },
-      source: LogSources.API,
-      skipProviderLogs: true,
-    })
-
+    const documentLogUuid = generateUUIDIdentifier()
     // Create a prompt span (parent)
     const promptSpan = await createSpan({
       workspaceId: workspace.id,
-      documentLogUuid: documentLog.uuid,
+      documentLogUuid,
       documentUuid: documents[0]!.documentUuid,
       commitUuid: commit.uuid,
       source: LogSources.API,
@@ -112,7 +104,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
     // Create a completion span (child of the prompt span)
     await createSpan({
       workspaceId: workspace.id,
-      documentLogUuid: documentLog.uuid,
+      documentLogUuid,
       documentUuid: documents[0]!.documentUuid,
       commitUuid: commit.uuid,
       source: LogSources.API,

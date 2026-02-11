@@ -5,7 +5,7 @@ import { ROUTES } from '$/routes'
 import { createRoute, z } from '@hono/zod-openapi'
 import { LogSources } from '@latitude-data/core/constants'
 
-const documentLogSchema = z.object({
+const spanLogSchema = z.object({
   id: z.number(),
   uuid: z.string(),
   commitId: z.number(),
@@ -62,7 +62,7 @@ function createLogRouteFactory({
       [http.Status.OK]: {
         description: 'The document log was created successfully',
         content: {
-          [http.MediaTypes.JSON]: { schema: documentLogSchema },
+          [http.MediaTypes.JSON]: { schema: spanLogSchema },
         },
       },
     },

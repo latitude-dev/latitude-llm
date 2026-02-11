@@ -8,12 +8,12 @@ import {
 import { addDays, format } from 'date-fns'
 import { orderBy } from 'lodash-es'
 import { type Commit } from '../../../schema/models/types/Commit'
-import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import * as factories from '../../../tests/factories'
 import { createMembership } from '../../memberships/create'
 import { generateWorkspaceFixtures, type WorkspaceInfo } from './fixtures'
 import { GetUsageOverview, GetUsageOverviewRow } from './getUsageOverview'
+import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 
 async function createMember({
   workspace,
@@ -31,25 +31,6 @@ async function createMember({
     createdAt: membershipCreatedAt,
   }).then((r) => r.unwrap())
   return user
-}
-
-async function createDocumentLog({
-  commit,
-  document,
-  info,
-  isFirst,
-}: {
-  commit: Commit
-  document: DocumentVersion
-  info: WorkspaceInfo['logs'][0]
-  isFirst: boolean
-}) {
-  return await factories.createDocumentLog({
-    commit,
-    document,
-    createdAt: info.createdAt,
-    skipProviderLogs: !isFirst,
-  })
 }
 
 async function createResultV2({
@@ -106,31 +87,21 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
 
   const document = documents[0]!
 
-  const documentLogs = await Promise.all(
-    workspaceInfo.logs.map(async (info, index) => {
-      const { documentLog, providerLogs } = await createDocumentLog({
-        commit,
-        document,
-        info,
-        isFirst: index === 0,
-      })
-      const span = await factories.createSpan({
+  const spans = await Promise.all(
+    workspaceInfo.spans.map(async (spanInfo) => {
+      return factories.createSpan({
         workspaceId: workspace.id,
-        documentLogUuid: documentLog.uuid,
+        documentLogUuid: generateUUIDIdentifier(),
         type: SpanType.Prompt,
         commitUuid: commit.uuid,
-        createdAt: documentLog.createdAt,
+        createdAt: spanInfo.createdAt,
       })
-
-      return { documentLog, span, providerLogs }
     }),
   )
   let evaluationResultsV2: EvaluationResultV2[] = []
 
-  const log = documentLogs[0]!
-  if (log) {
-    const { span } = log
-
+  const span = spans[0]!
+  if (span) {
     evaluationResultsV2 = await Promise.all(
       workspaceInfo.resultsV2.map(async (info) => {
         const evaluation = await factories.createEvaluationV2({
@@ -155,7 +126,7 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
     workspace,
     subcription: workspace.currentSubscription,
     projectId: project.id,
-    documentLogs,
+    spans,
     evaluationResultsV2,
     membersCount: workspaceInfo.memberEmails.length + 1,
     emails: orderBy([creator, ...remainderMembers], (u) => u.createdAt, 'desc')
@@ -164,7 +135,7 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
   }
 }
 
-// @ts-ignore
+// @ts-expect-error: this is a helper type to build the expected data for the tests
 type ExpectedRowData = Omit<GetUsageOverviewRow, 'id', 'currentMonthRuns'> & {
   id: string
 }
@@ -190,7 +161,7 @@ async function createWorkspaces({
       },
       info: {
         fixture: w.originalInfo,
-        logs: w.documentLogs,
+        spans: w.spans,
         evaluationResultsV2: w.evaluationResultsV2,
       },
     }

@@ -10,7 +10,6 @@ import { DatasetRow } from './models/types/DatasetRow'
 import { type DocumentVersion } from './models/types/DocumentVersion'
 import { ExperimentDto } from './models/types/Experiment'
 import { Optimization } from './models/types/Optimization'
-import { ProviderLog } from './models/types/ProviderLog'
 import { type Session as BaseSession } from './models/types/Session'
 import { type User } from './models/types/User'
 
@@ -19,11 +18,6 @@ export type Session = BaseSession & {
 }
 
 export type Cursor<V = string, I = string> = { value: V; id: I }
-
-export type ProviderLogDto = Omit<
-  ProviderLog,
-  'responseText' | 'responseObject'
-> & { response: string }
 
 export interface AverageResultAndCostOverCommit extends Commit {
   results: number
@@ -52,7 +46,6 @@ export type EvaluationResultV2WithDetails<
   commit: Commit
   dataset?: Dataset
   evaluatedRow?: DatasetRow
-  evaluatedLog?: ProviderLogDto
 }
 
 type EvaluationV2BaseStats = {

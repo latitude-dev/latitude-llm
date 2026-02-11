@@ -10,7 +10,7 @@ import { RedisStream } from '../../../../lib/redisStream'
 import { WorkspaceDto } from '../../../../schema/models/types/Workspace'
 import { ToolHandler } from '../../../../services/documents/tools/clientTools/handlers'
 import * as simulateUserResponseModule from '../../../../services/simulation/simulateUserResponse'
-import * as addMessagesModule from '../../../../services/documentLogs/addMessages'
+import * as addMessagesModule from '../../../../services/addMessages'
 import * as streamManagementModule from './streamManagement'
 import * as datadogModule from '../../../../utils/datadogCapture'
 import {
@@ -19,7 +19,7 @@ import {
 } from './multiTurnSimulation'
 
 vi.mock('../../../../services/simulation/simulateUserResponse')
-vi.mock('../../../../services/documentLogs/addMessages')
+vi.mock('../../../../services/addMessages')
 vi.mock('./streamManagement')
 vi.mock('../../../../utils/datadogCapture')
 

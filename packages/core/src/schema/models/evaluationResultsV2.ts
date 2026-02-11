@@ -20,7 +20,7 @@ import { commits } from './commits'
 import { datasetRows } from './datasetRows'
 import { datasets } from './datasets'
 import { experiments } from './experiments'
-import { providerLogs } from './providerLogs'
+import { providerLogs } from '../legacyModels/providerLogs'
 import { workspaces } from './workspaces'
 
 export const evaluationResultsV2 = latitudeSchema.table(
@@ -49,6 +49,7 @@ export const evaluationResultsV2 = latitudeSchema.table(
       () => datasetRows.id,
       { onDelete: 'set null' },
     ),
+    // FIXME: feel free to remove when no occurences of providerLogs.id are left in the codebase.
     evaluatedLogId: bigint('evaluated_log_id', { mode: 'number' }).references(
       () => providerLogs.id,
       { onDelete: 'cascade' },

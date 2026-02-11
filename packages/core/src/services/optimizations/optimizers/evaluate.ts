@@ -35,7 +35,7 @@ import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { BACKGROUND } from '../../../telemetry'
 import { runDocumentAtCommit } from '../../commits/runDocumentAtCommit'
 import { scanDocumentContent } from '../../documents'
-import { addMessages } from '../../documentLogs/addMessages'
+import { addMessages } from '../../addMessages'
 import { runEvaluationV2 } from '../../evaluationsV2/run'
 import {
   getTriggerTarget,

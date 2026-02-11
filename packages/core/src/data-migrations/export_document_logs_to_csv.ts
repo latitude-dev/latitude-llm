@@ -1,6 +1,6 @@
 import { database } from '../client'
-import { documentLogs } from '../schema/models/documentLogs'
-import { providerLogs } from '../schema/models/providerLogs'
+import { documentLogs } from '../schema/legacyModels/documentLogs'
+import { providerLogs } from '../schema/legacyModels/providerLogs'
 import { and, eq, lt, desc, sql } from 'drizzle-orm'
 import { createWriteStream } from 'fs'
 // @ts-expect-error - No types for fast-csv

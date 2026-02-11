@@ -18,8 +18,8 @@ import { PartialConfig } from '../../services/ai'
 import { latitudeSchema } from '../db-schema'
 import { apiKeys } from '../models/apiKeys'
 import { timestamps } from '../schemaHelpers'
-import { providerApiKeys } from './providerApiKeys'
-import { workspaces } from './workspaces'
+import { providerApiKeys } from '../models/providerApiKeys'
+import { workspaces } from '../models/workspaces'
 import { ChainStepResponse, StreamType } from '@latitude-data/constants'
 
 export const logSourcesEnum = latitudeSchema.enum(

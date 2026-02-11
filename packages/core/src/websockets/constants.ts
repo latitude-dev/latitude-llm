@@ -24,7 +24,7 @@ import type { DocumentTrigger } from '../schema/models/types/DocumentTrigger'
 import type { DocumentTriggerEvent } from '../schema/models/types/DocumentTriggerEvent'
 import type { ExperimentDto } from '../schema/models/types/Experiment'
 import type { Project } from '../schema/models/types/Project'
-import type { OptimizationWithDetails, ProviderLogDto } from '../schema/types'
+import type { OptimizationWithDetails } from '../schema/types'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -83,7 +83,6 @@ type EvaluationResultV2CreatedArgs = {
   result: EvaluationResultV2
   evaluation: EvaluationV2
   commit: Commit
-  providerLog: ProviderLogDto
   dataset?: Dataset
   datasetRow?: DatasetRow
 }

@@ -7,7 +7,6 @@ import type { Message } from '@latitude-data/constants/messages'
 import { env } from '@latitude-data/env'
 import type { ConfigurableProp, ConfigurePropOptions } from '@pipedream/sdk'
 import { parseISO } from 'date-fns'
-import { ProviderLogDto } from './schema/types'
 import {
   DEFAULT_PAGINATION_SIZE,
   type CsvData,
@@ -72,29 +71,6 @@ export function buildAllMessagesFromResponse<T extends StreamType>({
   const messages = buildMessagesFromResponse({ response })
 
   return [...previousMessages, ...messages]
-}
-
-export function buildConversation(providerLog: ProviderLogDto) {
-  const messages: Message[] = [...(providerLog.messages ?? [])]
-
-  if (providerLog.output) {
-    messages.push(...(providerLog.output as Message[]))
-    return messages
-  }
-
-  const message = buildResponseMessage({
-    type: 'text',
-    data: {
-      text: providerLog.response,
-      reasoning: providerLog.responseReasoning ?? undefined,
-      toolCalls: providerLog.toolCalls ?? undefined,
-    },
-  })
-  if (message) {
-    messages.push(message)
-  }
-
-  return messages
 }
 
 export function formatMessage(message: Message) {

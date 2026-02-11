@@ -38,7 +38,6 @@ import { datasetRows } from '../schema/models/datasetRows'
 import { datasets } from '../schema/models/datasets'
 import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
 import { issueEvaluationResults } from '../schema/models/issueEvaluationResults'
-import { providerLogs } from '../schema/models/providerLogs'
 import { Commit } from '../schema/models/types/Commit'
 import { Issue } from '../schema/models/types/Issue'
 import { Workspace } from '../schema/models/types/Workspace'
@@ -157,35 +156,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       )
       .limit(1)
       .then((r) => r[0])) as EvaluationResultV2 | undefined
-  }
-
-  async findByEvaluatedLogAndEvaluation({
-    evaluatedLogId,
-    evaluationUuid,
-  }: {
-    evaluatedLogId: number
-    evaluationUuid: string
-  }) {
-    const result = await this.scope
-      .where(
-        and(
-          this.scopeFilter,
-          eq(evaluationResultsV2.evaluatedLogId, evaluatedLogId),
-          eq(evaluationResultsV2.evaluationUuid, evaluationUuid),
-        ),
-      )
-      .limit(1)
-      .then((r) => r[0])
-
-    if (!result) {
-      return Result.error(
-        new NotFoundError(
-          `Record with evaluatedLogId ${evaluatedLogId} and evaluationUuid ${evaluationUuid} not found in ${this.scope._.tableName}`,
-        ),
-      )
-    }
-
-    return Result.ok<EvaluationResultV2>(result as EvaluationResultV2)
   }
 
   private listByEvaluationFilter({
@@ -586,71 +556,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       )
 
     return results as (EvaluationResultV2 & { joinedIssueId: number })[]
-  }
-
-  async listByDocumentLogs({
-    projectId,
-    documentUuid,
-    documentLogUuids,
-  }: {
-    projectId?: number
-    documentUuid: string
-    documentLogUuids: string[]
-  }) {
-    documentLogUuids = [...new Set(documentLogUuids)].filter(Boolean)
-    if (!documentLogUuids.length) {
-      return Result.ok<Record<string, ResultWithEvaluationV2[]>>({})
-    }
-
-    const results = await this.db
-      .select({
-        ...tt,
-        commitUuid: commits.uuid,
-        documentLogUuid: providerLogs.documentLogUuid,
-      })
-      .from(evaluationResultsV2)
-      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
-      .innerJoin(
-        providerLogs,
-        eq(providerLogs.id, evaluationResultsV2.evaluatedLogId),
-      )
-      .where(
-        and(
-          this.scopeFilter,
-          isNull(commits.deletedAt),
-          isNotNull(providerLogs.documentLogUuid),
-          inArray(providerLogs.documentLogUuid, documentLogUuids),
-        ),
-      )
-      .orderBy(
-        desc(evaluationResultsV2.createdAt),
-        desc(evaluationResultsV2.id),
-      )
-
-    const evaluationsByCommit = await this.getEvaluationsByCommit({
-      projectId: projectId!,
-      documentUuid,
-      results: results as (Omit<EvaluationResultV2, 'score'> & {
-        commitUuid: string
-      })[],
-    })
-
-    const resultsByDocumentLog: Record<string, ResultWithEvaluationV2[]> = {}
-    for (const result of results) {
-      const evaluation = evaluationsByCommit[result.commitUuid]!.find(
-        (e) => e.uuid === result.evaluationUuid,
-      )
-      if (!evaluation) continue
-
-      resultsByDocumentLog[result.documentLogUuid!] = [
-        ...(resultsByDocumentLog[result.documentLogUuid!] ?? []),
-        { result, evaluation } as ResultWithEvaluationV2,
-      ]
-    }
-
-    return Result.ok<Record<string, ResultWithEvaluationV2[]>>(
-      resultsByDocumentLog,
-    )
   }
 
   async listBySpanTrace({

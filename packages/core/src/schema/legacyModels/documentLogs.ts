@@ -11,9 +11,9 @@ import { LogSources } from '@latitude-data/constants'
 import { sql } from 'drizzle-orm'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { commits } from './commits'
-import { experiments } from './experiments'
-import { workspaces } from './workspaces'
+import { commits } from '../models/commits'
+import { experiments } from '../models/experiments'
+import { workspaces } from '../models/workspaces'
 import { logSourcesEnum } from './providerLogs'
 
 export const documentLogs = latitudeSchema.table(
