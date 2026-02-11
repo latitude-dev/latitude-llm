@@ -284,106 +284,108 @@ export async function processSpansBulk(
   if (processedSpans.length === 0) return Result.nil()
 
   // Bulk insert spans and save metadata
-  return await transaction.call(async (tx) => {
-    // Prepare bulk insert data
-    const insertData = processedSpans.map((processed) => {
-      let metadata
-      if (processed.type === SpanType.Completion) {
-        metadata = processed.metadata as CompletionSpanMetadata
-      }
+  return await transaction.call(
+    async (tx) => {
+      // Prepare bulk insert data
+      const insertData = processedSpans.map((processed) => {
+        let metadata
+        if (processed.type === SpanType.Completion) {
+          metadata = processed.metadata as CompletionSpanMetadata
+        }
 
-      return {
-        id: processed.id,
-        traceId: processed.traceId,
-        parentId: processed.parentId,
-        workspaceId: workspace.id,
-        apiKeyId: apiKey.id,
-        name: processed.name,
-        kind: processed.kind,
-        type: processed.type,
-        status: processed.status,
-        message: processed.message,
-        duration: processed.duration,
-        startedAt: processed.startedAt,
-        endedAt: processed.endedAt,
-        source:
-          'source' in processed.metadata
-            ? processed.metadata.source
-            : undefined,
+        return {
+          id: processed.id,
+          traceId: processed.traceId,
+          parentId: processed.parentId,
+          workspaceId: workspace.id,
+          apiKeyId: apiKey.id,
+          name: processed.name,
+          kind: processed.kind,
+          type: processed.type,
+          status: processed.status,
+          message: processed.message,
+          duration: processed.duration,
+          startedAt: processed.startedAt,
+          endedAt: processed.endedAt,
+          source:
+            'source' in processed.metadata
+              ? processed.metadata.source
+              : undefined,
 
-        // Tokens
-        tokensPrompt: metadata?.tokens?.prompt,
-        tokensCompletion: metadata?.tokens?.completion,
-        tokensCached: metadata?.tokens?.cached,
-        tokensReasoning: metadata?.tokens?.reasoning,
+          // Tokens
+          tokensPrompt: metadata?.tokens?.prompt,
+          tokensCompletion: metadata?.tokens?.completion,
+          tokensCached: metadata?.tokens?.cached,
+          tokensReasoning: metadata?.tokens?.reasoning,
 
-        // Cost
-        model: metadata?.model,
-        cost: metadata?.cost,
+          // Cost
+          model: metadata?.model,
+          cost: metadata?.cost,
 
-        // References
-        documentLogUuid:
-          'documentLogUuid' in processed.metadata
-            ? (processed.metadata.documentLogUuid as string)
-            : undefined,
-        documentUuid:
-          'promptUuid' in processed.metadata
-            ? (processed.metadata.promptUuid as string)
-            : undefined,
-        commitUuid:
-          'versionUuid' in processed.metadata
-            ? (processed.metadata.versionUuid as string)
-            : undefined,
-        experimentUuid:
-          'experimentUuid' in processed.metadata
-            ? (processed.metadata.experimentUuid as string)
-            : undefined,
-        testDeploymentId:
-          'testDeploymentId' in processed.metadata
-            ? (processed.metadata.testDeploymentId as number)
-            : undefined,
-        projectId:
-          'projectId' in processed.metadata
-            ? (processed.metadata.projectId as number)
-            : undefined,
-        previousSpanId:
-          'previousSpanId' in processed.metadata
-            ? (processed.metadata.previousSpanId as string)
-            : undefined,
-      }
-    })
+          // References
+          documentLogUuid:
+            'documentLogUuid' in processed.metadata
+              ? (processed.metadata.documentLogUuid as string)
+              : undefined,
+          documentUuid:
+            'promptUuid' in processed.metadata
+              ? (processed.metadata.promptUuid as string)
+              : undefined,
+          commitUuid:
+            'versionUuid' in processed.metadata
+              ? (processed.metadata.versionUuid as string)
+              : undefined,
+          experimentUuid:
+            'experimentUuid' in processed.metadata
+              ? (processed.metadata.experimentUuid as string)
+              : undefined,
+          testDeploymentId:
+            'testDeploymentId' in processed.metadata
+              ? (processed.metadata.testDeploymentId as number)
+              : undefined,
+          projectId:
+            'projectId' in processed.metadata
+              ? (processed.metadata.projectId as number)
+              : undefined,
+          previousSpanId:
+            'previousSpanId' in processed.metadata
+              ? (processed.metadata.previousSpanId as string)
+              : undefined,
+        }
+      })
 
-    // Bulk insert spans
-    const insertedSpans = await tx
-      .insert(spans)
-      .values(insertData)
-      .returning()
-      .then((r) => r as Span[])
+      // Bulk insert spans
+      const insertedSpans = await tx
+        .insert(spans)
+        .values(insertData)
+        .returning()
+        .then((r) => r as Span[])
 
-    // Bulk save metadata using batch operations
-    await saveMetadataBatch(
-      {
-        metadatas: processedSpans.map((p) => p.metadata),
-        workspace,
-      },
-      disk,
-    )
+      // Bulk save metadata using batch operations
+      await saveMetadataBatch(
+        {
+          metadatas: processedSpans.map((p) => p.metadata),
+          workspace,
+        },
+        disk,
+      )
 
-    const eventPromises = insertedSpans.map((span) =>
-      publishSpanCreated({
-        spanId: span.id,
-        traceId: span.traceId,
-        apiKeyId: apiKey.id,
-        workspaceId: workspace.id,
-        documentUuid: span.documentUuid,
-        spanType: span.type,
-        parentId: span.parentId,
-      }),
-    )
-    await Promise.all(eventPromises)
-
-    return Result.ok({ spans: insertedSpans })
-  })
+      return Result.ok({ spans: insertedSpans })
+    },
+    ({ spans: insertedSpans }) => {
+      insertedSpans.forEach((span) =>
+        publishSpanCreated({
+          spanId: span.id,
+          traceId: span.traceId,
+          apiKeyId: apiKey.id,
+          workspaceId: workspace.id,
+          documentUuid: span.documentUuid,
+          spanType: span.type,
+          parentId: span.parentId,
+        }),
+      )
+    },
+  )
 }
 
 async function getExistingBatch(
