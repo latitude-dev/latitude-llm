@@ -25,6 +25,7 @@ describe('buildStreamEvaluationRun', () => {
   let workspace: WorkspaceDto
   let provider: ProviderApiKey
   let evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Custom>
+  let projectId: number
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -35,6 +36,7 @@ describe('buildStreamEvaluationRun', () => {
       documents,
       commit,
       providers,
+      project,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: { prompt: 'prompt' },
@@ -42,6 +44,7 @@ describe('buildStreamEvaluationRun', () => {
 
     workspace = w
     provider = providers[0]!
+    projectId = project.id
 
     evaluation = await factories.createEvaluationV2({
       document: documents[0]!,
@@ -126,6 +129,7 @@ Evaluate the response: {{ actualOutput }}`,
         actualOutput: 'test output',
         conversation: 'test conversation',
       },
+      projectId,
     })
 
     expect(result.ok).toBe(true)
@@ -142,6 +146,7 @@ Evaluate the response: {{ actualOutput }}`,
         actualOutput: 'test output',
         conversation: 'test conversation',
       },
+      projectId,
     })
 
     expect(result.ok).toBe(true)
@@ -170,6 +175,7 @@ Evaluate the response: {{ actualOutput }}`,
       workspace: workspace,
       evaluation: evaluation,
       parameters: parameters,
+      projectId,
       telemetry: mockTelemetry,
     })
 
@@ -179,6 +185,7 @@ Evaluate the response: {{ actualOutput }}`,
         template: evaluation.configuration.prompt,
         parameters: parameters,
         source: LogSources.Evaluation,
+        projectId,
       }),
       expect.anything(),
     )

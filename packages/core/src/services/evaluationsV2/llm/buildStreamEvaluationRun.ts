@@ -74,11 +74,13 @@ export async function buildStreamEvaluationRun({
   workspace,
   evaluation,
   parameters,
+  projectId,
   telemetry = realTelemetry,
 }: {
   workspace: WorkspaceDto
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
   parameters: Record<string, unknown>
+  projectId: number
   telemetry?: LatitudeTelemetry
 }): Promise<TypedResult<{ streamHandler: StreamHandler }, Error>> {
   const resultUuid = generateUUIDIdentifier()
@@ -107,6 +109,7 @@ export async function buildStreamEvaluationRun({
       template: evaluation.configuration.prompt,
       parameters: parameters,
       source: LogSources.Evaluation,
+      projectId,
     },
     BACKGROUND({ workspaceId: workspace.id }),
   )

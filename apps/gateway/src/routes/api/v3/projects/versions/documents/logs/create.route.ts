@@ -38,10 +38,12 @@ function createLogRouteFactory({
   tags: string[]
 }) {
   return createRoute({
+    deprecated: true,
     path,
     operationId: 'createDocumentLog',
     method: http.Methods.POST,
-    description: 'Create a prompt log',
+    description:
+      'Create a prompt log. Deprecated: Use the traces ingest endpoint instead.',
     tags,
     request: {
       params: documentParamsSchema,
