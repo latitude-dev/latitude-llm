@@ -38,7 +38,7 @@ const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
 function getTriggerConfig(evaluation: EvaluationV2): TriggerConfiguration {
   return (
     evaluation.configuration.trigger ?? {
-      target: 'every',
+      target: 'last',
       lastInteractionDebounce: DEFAULT_LAST_INTERACTION_DEBOUNCE_SECONDS,
       sampleRate: DEFAULT_EVALUATION_SAMPLE_RATE,
     }
