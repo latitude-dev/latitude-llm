@@ -5,6 +5,7 @@ import {
   ChainEventTypes,
   Providers,
 } from '@latitude-data/constants'
+import { emptyCostBreakdown } from '@latitude-data/constants/costs'
 import { Result } from '../../../lib/Result'
 import { LatitudeError } from '../../../lib/errors'
 import * as factories from '../../../tests/factories'
@@ -247,8 +248,8 @@ describe('backgroundRunJob', () => {
             reasoningTokens: 0,
             cachedInputTokens: 0,
           }),
-          logCost: Promise.resolve(0),
-          runCost: Promise.resolve(0),
+          logCost: Promise.resolve(emptyCostBreakdown()),
+          runCost: Promise.resolve(emptyCostBreakdown()),
         }),
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
@@ -308,8 +309,8 @@ describe('backgroundRunJob', () => {
             reasoningTokens: 0,
             cachedInputTokens: 0,
           }),
-          logCost: Promise.resolve(0),
-          runCost: Promise.resolve(0),
+          logCost: Promise.resolve(emptyCostBreakdown()),
+          runCost: Promise.resolve(emptyCostBreakdown()),
         }),
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
@@ -381,8 +382,8 @@ describe('backgroundRunJob', () => {
             reasoningTokens: 0,
             cachedInputTokens: 0,
           }),
-          logCost: Promise.resolve(0),
-          runCost: Promise.resolve(0),
+          logCost: Promise.resolve(emptyCostBreakdown()),
+          runCost: Promise.resolve(emptyCostBreakdown()),
         }),
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(
@@ -443,8 +444,8 @@ describe('backgroundRunJob', () => {
             reasoningTokens: 0,
             cachedInputTokens: 0,
           }),
-          logCost: Promise.resolve(0),
-          runCost: Promise.resolve(0),
+          logCost: Promise.resolve(emptyCostBreakdown()),
+          runCost: Promise.resolve(emptyCostBreakdown()),
         }),
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
@@ -530,8 +531,8 @@ describe('backgroundRunJob', () => {
             reasoningTokens: 0,
             cachedInputTokens: 0,
           }),
-          logCost: Promise.resolve(0),
-          runCost: Promise.resolve(0),
+          logCost: Promise.resolve(emptyCostBreakdown()),
+          runCost: Promise.resolve(emptyCostBreakdown()),
         }),
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
@@ -583,7 +584,18 @@ describe('backgroundRunJob', () => {
         reasoningTokens: 10,
         cachedInputTokens: 5,
       }
-      const expectedCost = 0.005
+      const expectedCost = {
+        'openai/gpt-4': {
+          input: {
+            prompt: { tokens: 100, cost: 0.003 },
+            cached: { tokens: 0 },
+          },
+          output: {
+            reasoning: { tokens: 0 },
+            completion: { tokens: 50, cost: 0.002 },
+          },
+        },
+      }
       const expectedDuration = 1500
 
       vi.mocked(helpersModule.getJobDocumentData).mockResolvedValue(
@@ -684,8 +696,8 @@ describe('backgroundRunJob', () => {
             reasoningTokens: 0,
             cachedInputTokens: 0,
           }),
-          logCost: Promise.resolve(0),
-          runCost: Promise.resolve(0),
+          logCost: Promise.resolve(emptyCostBreakdown()),
+          runCost: Promise.resolve(emptyCostBreakdown()),
         }),
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))

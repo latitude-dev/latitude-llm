@@ -215,7 +215,18 @@ describe('notifyClientOfRunStatusByDocument', () => {
         reasoningTokens: 10,
         cachedInputTokens: 5,
       },
-      runCost: 0.01,
+      runCost: {
+        'openai/gpt-4': {
+          input: {
+            prompt: { tokens: 100, cost: 0.004 },
+            cached: { tokens: 0 },
+          },
+          output: {
+            reasoning: { tokens: 0 },
+            completion: { tokens: 50, cost: 0.006 },
+          },
+        },
+      },
       duration: 1500,
     }
     const eventData = {
@@ -288,7 +299,18 @@ describe('notifyClientOfRunStatusByDocument', () => {
         reasoningTokens: 20,
         cachedInputTokens: 10,
       },
-      runCost: 0.025,
+      runCost: {
+        'openai/gpt-4': {
+          input: {
+            prompt: { tokens: 200, cost: 0.01 },
+            cached: { tokens: 0 },
+          },
+          output: {
+            reasoning: { tokens: 0 },
+            completion: { tokens: 100, cost: 0.015 },
+          },
+        },
+      },
       duration: 2500,
     }
     const eventData = {

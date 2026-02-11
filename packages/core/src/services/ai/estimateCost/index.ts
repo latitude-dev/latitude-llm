@@ -3,6 +3,11 @@ import {
   LegacyVercelSDKVersion4Usage as LanguageModelUsage,
 } from '@latitude-data/constants'
 import {
+  CostBreakdown,
+  costBreakdownKey,
+  emptyCostBreakdown,
+} from '@latitude-data/constants/costs'
+import {
   getBundledModelsDevData,
   findModelsDevModel,
   getModelsDevPricing,
@@ -178,4 +183,81 @@ export function estimateCost({
   })
 
   return inputCost + outputCost
+}
+
+export function estimateCostBreakdown({
+  usage,
+  provider,
+  model,
+}: {
+  usage: LanguageModelUsage
+  provider: Providers
+  model: string
+}): CostBreakdown {
+  const costPer1M = getCostPer1M({ provider, model })
+  const costSpec = costPer1M.cost
+
+  const promptTokens = isNaN(usage.promptTokens) ? 0 : usage.promptTokens
+  const cachedTokens = isNaN(usage.cachedInputTokens)
+    ? 0
+    : usage.cachedInputTokens
+  const reasoningTokens = isNaN(usage.reasoningTokens)
+    ? 0
+    : usage.reasoningTokens
+  const completionTokens = isNaN(usage.completionTokens)
+    ? 0
+    : usage.completionTokens
+
+  const totalInput = promptTokens + cachedTokens
+  const totalOutput = reasoningTokens + completionTokens
+
+  const totalInputCost = computeCost({
+    costSpec,
+    tokens: totalInput,
+    tokenType: 'input',
+  })
+  const totalOutputCost = computeCost({
+    costSpec,
+    tokens: totalOutput,
+    tokenType: 'output',
+  })
+
+  const key = costBreakdownKey(provider, model)
+  const breakdown = emptyCostBreakdown()
+  breakdown[key] = {
+    input: {
+      prompt: {
+        tokens: promptTokens,
+        cost:
+          totalInput > 0
+            ? totalInputCost * (promptTokens / totalInput)
+            : undefined,
+      },
+      cached: {
+        tokens: cachedTokens,
+        cost:
+          totalInput > 0
+            ? totalInputCost * (cachedTokens / totalInput)
+            : undefined,
+      },
+    },
+    output: {
+      reasoning: {
+        tokens: reasoningTokens,
+        cost:
+          totalOutput > 0
+            ? totalOutputCost * (reasoningTokens / totalOutput)
+            : undefined,
+      },
+      completion: {
+        tokens: completionTokens,
+        cost:
+          totalOutput > 0
+            ? totalOutputCost * (completionTokens / totalOutput)
+            : undefined,
+      },
+    },
+  }
+
+  return breakdown
 }

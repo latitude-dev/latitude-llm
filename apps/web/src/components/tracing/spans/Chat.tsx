@@ -1,9 +1,15 @@
-import { MetadataItem } from '$/components/MetadataItem'
+import { MetadataItem, MetadataItemTooltip } from '$/components/MetadataItem'
+import { CostBreakdownDisplay } from '$/components/CostBreakdownDisplay'
 import {
   CompletionSpanMetadata,
   SPAN_SPECIFICATIONS,
   SpanType,
 } from '@latitude-data/constants'
+import {
+  CostBreakdown,
+  emptyCostBreakdown,
+  mergeCostBreakdown,
+} from '@latitude-data/constants/costs'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import {
@@ -11,6 +17,7 @@ import {
   SPAN_COLORS,
   SpanFrontendSpecification,
 } from './shared'
+import { buildSpanCostBreakdown } from './costBreakdownFromSpan'
 import { useTrace } from '$/stores/traces'
 import { findAllSpansOfType } from '@latitude-data/core/services/tracing/spans/fetching/findAllSpansOfType'
 import { findLastSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findLastSpanOfType'
@@ -45,7 +52,8 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Chat>) {
 
     type AggregatedData = {
       finishReason?: CompletionSpanMetadata['finishReason']
-      cost: number
+      costMillicents: number
+      costBreakdown: CostBreakdown
       tokens: {
         prompt: number
         cached: number
@@ -59,9 +67,12 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Chat>) {
         const metadata = span.metadata as CompletionSpanMetadata | undefined
         if (!metadata) return acc
 
+        const spanBreakdown = buildSpanCostBreakdown(metadata)
+
         return {
           finishReason: metadata.finishReason,
-          cost: acc.cost + (metadata.cost || 0),
+          costMillicents: acc.costMillicents + (metadata.cost || 0),
+          costBreakdown: mergeCostBreakdown(acc.costBreakdown, spanBreakdown),
           tokens: {
             prompt: acc.tokens.prompt + (metadata.tokens?.prompt || 0),
             cached: acc.tokens.cached + (metadata.tokens?.cached || 0),
@@ -73,7 +84,8 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Chat>) {
       },
       {
         finishReason: undefined,
-        cost: 0,
+        costMillicents: 0,
+        costBreakdown: emptyCostBreakdown(),
         tokens: { prompt: 0, cached: 0, reasoning: 0, completion: 0 },
       },
     )
@@ -111,11 +123,28 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Chat>) {
                   </Text.H5>
                 </MetadataItem>
               )}
-              <MetadataItem
-                label='Cost'
-                value={formatCostInMillicents(aggregatedMetadata.cost!)}
-                tooltip="We estimate the cost based on the token usage and your provider's pricing. Actual cost may vary."
-              />
+              {Object.keys(aggregatedMetadata.costBreakdown).length > 0 ? (
+                <MetadataItemTooltip
+                  label='Cost'
+                  trigger={
+                    <Text.H5 align='right' color='foregroundMuted'>
+                      {formatCostInMillicents(aggregatedMetadata.costMillicents)}
+                    </Text.H5>
+                  }
+                  tooltipContent={
+                    <CostBreakdownDisplay
+                      breakdown={aggregatedMetadata.costBreakdown}
+                      color='background'
+                    />
+                  }
+                />
+              ) : (
+                <MetadataItem
+                  label='Cost'
+                  value={formatCostInMillicents(aggregatedMetadata.costMillicents)}
+                  tooltip="We estimate the cost based on the token usage and your provider's pricing. Actual cost may vary."
+                />
+              )}
               <MetadataItem
                 label='Tokens'
                 value={(

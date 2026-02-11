@@ -15,7 +15,8 @@ import {
   ToolCall,
   ToolMessage,
 } from '@latitude-data/constants/messages'
-import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
+import { estimateCostBreakdown } from '@latitude-data/core/services/ai/estimateCost/index'
+import { CostBreakdown, totalCost } from '@latitude-data/constants/costs'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'
@@ -82,24 +83,26 @@ export function usePlaygroundChat({
   const durationAccRef = useRef<number>(0)
 
   const { data: providers } = useProviderApiKeys()
-  const cost = useMemo(() => {
+  const costBreakdown = useMemo<CostBreakdown | undefined>(() => {
     const p = providers?.find((p) => p.name === provider)
     const m = model || p?.defaultModel
-    if (!p || !m) {
-      return undefined
-    }
+    if (!p || !m) return undefined
 
     try {
-      const estimatedCost = estimateCost({
+      return estimateCostBreakdown({
         usage,
         provider: p.provider,
         model: m,
       })
-      return Math.ceil(estimatedCost * 100_000)
     } catch {
       return undefined
     }
   }, [providers, provider, model, usage])
+
+  const cost = useMemo(() => {
+    if (!costBreakdown) return undefined
+    return Math.ceil(totalCost(costBreakdown) * 100_000)
+  }, [costBreakdown])
 
   const incrementUsage = useCallback(
     (incr: {
@@ -577,6 +580,7 @@ export function usePlaygroundChat({
       model,
       duration,
       cost,
+      costBreakdown,
       reset,
     }),
     [
@@ -600,6 +604,7 @@ export function usePlaygroundChat({
       model,
       duration,
       cost,
+      costBreakdown,
       reset,
     ],
   )

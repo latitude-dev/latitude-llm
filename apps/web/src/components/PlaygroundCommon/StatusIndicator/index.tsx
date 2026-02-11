@@ -1,7 +1,9 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
+import { CostBreakdownDisplay } from '$/components/CostBreakdownDisplay'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { formatCount } from '@latitude-data/constants/formatCount'
 import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
+import { CostBreakdown } from '@latitude-data/constants/costs'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
@@ -42,6 +44,7 @@ export function StatusIndicator({
           <StatusInfo
             usage={playground.usage}
             cost={playground.cost}
+            costBreakdown={playground.costBreakdown}
             duration={playground.duration}
           />
         </>
@@ -150,10 +153,12 @@ function StatusInfo({
     cachedInputTokens,
   },
   cost,
+  costBreakdown,
   duration,
 }: {
   usage: LanguageModelUsage
   cost: number | undefined
+  costBreakdown: CostBreakdown | undefined
   duration: number
 }) {
   return (
@@ -185,20 +190,26 @@ function StatusInfo({
     >
       <div className='flex flex-col justify-between'>
         <div className='flex flex-col justify-between gap-y-2 divide-y divider-background'>
-          <div className='w-full flex flex-col'>
-            <StatusInfoItem label='Prompt' value={promptTokens} />
-            <StatusInfoItem label='Cached' value={cachedInputTokens} />
-            <StatusInfoItem label='Reasoning' value={reasoningTokens} />
-            <StatusInfoItem label='Completion' value={completionTokens} />
-          </div>
+          {costBreakdown ? (
+            <CostBreakdownDisplay
+              breakdown={costBreakdown}
+              color='background'
+            />
+          ) : (
+            <div className='w-full flex flex-col'>
+              <StatusInfoItem label='Prompt' value={promptTokens} />
+              <StatusInfoItem label='Cached' value={cachedInputTokens} />
+              <StatusInfoItem label='Reasoning' value={reasoningTokens} />
+              <StatusInfoItem label='Completion' value={completionTokens} />
+              {cost !== undefined && (
+                <StatusInfoItem
+                  label='Cost'
+                  value={formatCostInMillicents(cost)}
+                />
+              )}
+            </div>
+          )}
           <div className='pt-2'>
-            <StatusInfoItem label='Tokens' value={totalTokens} />
-            {cost !== undefined && (
-              <StatusInfoItem
-                label='Cost'
-                value={formatCostInMillicents(cost)}
-              />
-            )}
             <StatusInfoItem label='Duration' value={formatDuration(duration)} />
             <StatusInfoItem
               label='Tok/Sec'

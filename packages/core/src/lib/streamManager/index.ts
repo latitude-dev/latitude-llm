@@ -15,11 +15,16 @@ import type { SimulationSettings } from '@latitude-data/constants/simulation'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { FinishReason } from 'ai'
 import { omit } from 'lodash-es'
+import {
+  CostBreakdown,
+  emptyCostBreakdown,
+  mergeCostBreakdown,
+} from '@latitude-data/constants/costs'
 import { LogSources, PromptSource } from '../../constants'
 import { IntegrationDto } from '../../schema/models/types/Integration'
 import { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
-import { estimateCost } from '../../services/ai/estimateCost'
+import { estimateCostBreakdown } from '../../services/ai/estimateCost'
 import { ValidatedChainStep } from '../../services/chains/ChainValidator'
 import { ToolHandler } from '../../services/documents/tools/clientTools/handlers'
 import {
@@ -121,13 +126,13 @@ export abstract class StreamManager {
   /**
    * `logCost` tracks only the cost of the main agent in this interaction (excludes sub-agents).
    */
-  private logCost: number = 0
+  private logCost: CostBreakdown = emptyCostBreakdown()
   /**
    * `runCost` tracks all costs of this prompt and of all their sub-agents in this interaction.
    */
-  private runCost: number = 0
-  private resolveLogCost?: (cost: number) => void
-  private resolveRunCost?: (cost: number) => void
+  private runCost: CostBreakdown = emptyCostBreakdown()
+  private resolveLogCost?: (cost: CostBreakdown) => void
+  private resolveRunCost?: (cost: CostBreakdown) => void
   private response: ChainStepResponse<StreamType> | undefined
   private finishReason?: FinishReason
   private resolveMessages?: (messages: Message[]) => void
@@ -434,8 +439,10 @@ export abstract class StreamManager {
       createPromiseWithResolver<LanguageModelUsage>()
     const [runUsage, resolveRunUsage] =
       createPromiseWithResolver<LanguageModelUsage>()
-    const [logCost, resolveLogCost] = createPromiseWithResolver<number>()
-    const [runCost, resolveRunCost] = createPromiseWithResolver<number>()
+    const [logCost, resolveLogCost] =
+      createPromiseWithResolver<CostBreakdown>()
+    const [runCost, resolveRunCost] =
+      createPromiseWithResolver<CostBreakdown>()
     const [provider, resolveProvider] = createPromiseWithResolver<
       ProviderApiKey | undefined
     >()
@@ -474,26 +481,26 @@ export abstract class StreamManager {
 
   protected incrementLogCost(usage: LanguageModelUsage) {
     if (!this.provider || !this.model) return
-    const cost = estimateCost({
+    const breakdown = estimateCostBreakdown({
       provider: this.provider.provider,
       model: this.model,
       usage,
     })
-    this.logCost += cost
+    this.logCost = mergeCostBreakdown(this.logCost, breakdown)
   }
 
   protected incrementRunCostFromUsage(usage: LanguageModelUsage) {
     if (!this.provider || !this.model) return
-    const cost = estimateCost({
+    const breakdown = estimateCostBreakdown({
       provider: this.provider.provider,
       model: this.model,
       usage,
     })
-    this.runCost += cost
+    this.runCost = mergeCostBreakdown(this.runCost, breakdown)
   }
 
-  incrementRunCost(cost: number) {
-    this.runCost += cost
+  incrementRunCost(cost: CostBreakdown) {
+    this.runCost = mergeCostBreakdown(this.runCost, cost)
   }
 
   protected async updateStateFromResponse({

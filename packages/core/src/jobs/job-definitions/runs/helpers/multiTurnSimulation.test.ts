@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  emptyCostBreakdown,
+  totalCost,
+} from '@latitude-data/constants/costs'
 import { Message } from '@latitude-data/constants/messages'
 import {
   MAX_SIMULATION_TURNS,
@@ -37,7 +41,7 @@ const createEmptyMockMetrics = () => ({
     reasoningTokens: 0,
     cachedInputTokens: 0,
   }),
-  runCost: Promise.resolve(0),
+  runCost: Promise.resolve(emptyCostBreakdown()),
   duration: Promise.resolve(0),
 })
 
@@ -522,7 +526,18 @@ describe('multiTurnSimulation', () => {
           reasoningTokens: 10 * multiplier,
           cachedInputTokens: 5 * multiplier,
         }),
-        runCost: Promise.resolve(0.01 * multiplier),
+        runCost: Promise.resolve({
+          [`openai/gpt-4`]: {
+            input: {
+              prompt: { tokens: 100 * multiplier, cost: 0.004 * multiplier },
+              cached: { tokens: 0 },
+            },
+            output: {
+              reasoning: { tokens: 0 },
+              completion: { tokens: 50 * multiplier, cost: 0.006 * multiplier },
+            },
+          },
+        }),
         duration: Promise.resolve(1000 * multiplier),
       })
 
@@ -535,7 +550,7 @@ describe('multiTurnSimulation', () => {
         expect(Result.isOk(result)).toBe(true)
         const metrics = result.unwrap()
         expect(metrics.runUsage.totalTokens).toBe(0)
-        expect(metrics.runCost).toBe(0)
+        expect(totalCost(metrics.runCost)).toBe(0)
         expect(metrics.duration).toBe(0)
       })
 
@@ -549,7 +564,7 @@ describe('multiTurnSimulation', () => {
         expect(Result.isOk(result)).toBe(true)
         const metrics = result.unwrap()
         expect(metrics.runUsage.totalTokens).toBe(0)
-        expect(metrics.runCost).toBe(0)
+        expect(totalCost(metrics.runCost)).toBe(0)
         expect(metrics.duration).toBe(0)
       })
 
@@ -581,7 +596,7 @@ describe('multiTurnSimulation', () => {
         expect(Result.isOk(result)).toBe(true)
         const metrics = result.unwrap()
         expect(metrics.runUsage.totalTokens).toBe(150)
-        expect(metrics.runCost).toBeCloseTo(0.01)
+        expect(totalCost(metrics.runCost)).toBeCloseTo(0.01)
         expect(metrics.duration).toBe(1000)
       })
 
@@ -618,7 +633,7 @@ describe('multiTurnSimulation', () => {
         expect(Result.isOk(result)).toBe(true)
         const metrics = result.unwrap()
         expect(metrics.runUsage.totalTokens).toBe(150 + 300 + 450)
-        expect(metrics.runCost).toBeCloseTo(0.01 + 0.02 + 0.03)
+        expect(totalCost(metrics.runCost)).toBeCloseTo(0.01 + 0.02 + 0.03)
         expect(metrics.duration).toBe(1000 + 2000 + 3000)
       })
 
@@ -653,7 +668,7 @@ describe('multiTurnSimulation', () => {
         expect(Result.isOk(result)).toBe(true)
         const metrics = result.unwrap()
         expect(metrics.runUsage.totalTokens).toBe(150)
-        expect(metrics.runCost).toBeCloseTo(0.01)
+        expect(totalCost(metrics.runCost)).toBeCloseTo(0.01)
         expect(metrics.duration).toBe(1000)
       })
 
