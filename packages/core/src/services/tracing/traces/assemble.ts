@@ -10,11 +10,13 @@ import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
-import { type Workspace } from '../../../schema/models/types/Workspace'
 import { findAllSpansOfType } from '../spans/fetching/findAllSpansOfType'
 import { findCompletionSpanFromTrace } from '../spans/fetching/findCompletionSpanFromTrace'
 import { findCompletionSpanForSpan } from '../spans/fetching/findCompletionSpanForSpan'
 import { findSpanById } from '../spans/fetching/findSpanById'
+import { Workspace } from '../../../schema/models/types/Workspace'
+
+type WorkspaceRef = Pick<Workspace, 'id'>
 
 /**
  * Assembles a trace structure without fetching span metadata.
@@ -26,7 +28,7 @@ export async function assembleTraceStructure(
     workspace,
   }: {
     traceId: string
-    workspace: Workspace
+    workspace: WorkspaceRef
   },
   db = database,
 ) {
@@ -84,7 +86,7 @@ export async function assembleTraceStructure(
  *
  * @param params - Trace lookup parameters.
  * @param params.traceId - Trace identifier to assemble.
- * @param params.workspace - Workspace owning the trace.
+ * @param params.workspace - Workspace owning the trace (only id is required).
  * @param params.spanId - Span used to scope the main completion selection.
  * @param db - Database connection override.
  * @returns Result with the assembled trace and optional main completion span.
@@ -96,7 +98,7 @@ export async function assembleTraceWithMessages(
     spanId,
   }: {
     traceId: string
-    workspace: Workspace
+    workspace: WorkspaceRef
     spanId?: string
   },
   db = database,

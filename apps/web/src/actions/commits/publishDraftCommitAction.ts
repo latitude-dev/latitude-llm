@@ -1,6 +1,5 @@
 'use server'
 
-import { publisher } from '@latitude-data/core/events/publisher'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { updateAndMergeCommit } from '@latitude-data/core/services/commits/updateAndMerge'
 import { z } from 'zod'
@@ -24,7 +23,7 @@ export const publishDraftCommitAction = withProject
       .getCommitById(commitId)
       .then((r) => r.unwrap())
 
-    const merged = await updateAndMergeCommit({
+    return updateAndMergeCommit({
       commit,
       workspace,
       data: {
@@ -32,15 +31,4 @@ export const publishDraftCommitAction = withProject
         description,
       },
     }).then((r) => r.unwrap())
-
-    publisher.publishLater({
-      type: 'commitPublished',
-      data: {
-        commit: merged,
-        userEmail: ctx.user.email,
-        workspaceId: ctx.workspace.id,
-      },
-    })
-
-    return merged
   })

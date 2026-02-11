@@ -145,9 +145,7 @@ async function resolveEffectiveCommit({
   const liveCommit = await commitsRepo.getHeadCommit(commit.projectId)
   if (!liveCommit) {
     return Result.error(
-      new NotFoundError(
-        `Live commit not found in project ${commit.projectId}`,
-      ),
+      new NotFoundError(`Live commit not found in project ${commit.projectId}`),
     )
   }
 

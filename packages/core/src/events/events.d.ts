@@ -3,6 +3,8 @@ import {
   AlignmentMetricMetadata,
 } from '@latitude-data/constants/evaluations'
 import { ExperimentVariant } from '@latitude-data/constants/experiments'
+import { ModifiedDocumentType } from '@latitude-data/constants/history'
+import { SpanType } from '@latitude-data/constants/tracing'
 import { type Commit } from '../schema/models/types/Commit'
 import { type Dataset } from '../schema/models/types/Dataset'
 import { type DatasetRow } from '../schema/models/types/DatasetRow'
@@ -278,12 +280,18 @@ export type UserInvitedEvent = LatitudeEventGeneric<
   }
 >
 
+export type CommitPublishedDocumentChange = {
+  path: string
+  changeType: ModifiedDocumentType
+}
+
 export type CommitPublishedEvent = LatitudeEventGeneric<
   'commitPublished',
   {
     commit: Commit
     userEmail: string
     workspaceId: number
+    changedDocuments: CommitPublishedDocumentChange[]
   }
 >
 
@@ -518,6 +526,8 @@ export type SpanCreatedEvent = LatitudeEventGeneric<
     spanId: string
     traceId: string
     documentUuid: string | undefined
+    spanType: SpanType
+    isConversationRoot: boolean
   }
 >
 

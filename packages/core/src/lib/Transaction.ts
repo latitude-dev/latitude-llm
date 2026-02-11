@@ -86,7 +86,9 @@ export default class Transaction {
         if (isDeadlock && attempt < maxAttempts) {
           // small exponential backoff with a bit of jitter
           const base = 50
-          const backoffMs = Math.round(base * 2 ** (attempt - 1) + Math.random() * 50)
+          const backoffMs = Math.round(
+            base * 2 ** (attempt - 1) + Math.random() * 50,
+          )
           await new Promise((r) => setTimeout(r, backoffMs))
           continue
         }

@@ -12,7 +12,7 @@ import {
 } from '@latitude-data/core/constants'
 import { cache as redis } from '@latitude-data/core/cache'
 import { diskFactory } from '@latitude-data/core/lib/disk'
-import { publisher } from '@latitude-data/core/events/publisher'
+import { publishSpanCreated } from '@latitude-data/core/services/tracing/publishSpanCreated'
 import { AppRouteHandler } from '$/openApi/types'
 import { CreateLogRoute } from './create.route'
 import { getData } from '$/common/documents/getData'
@@ -246,15 +246,14 @@ async function createSpansFromLogData({
     .then((r) => r.unwrap())
   await cache.del(completionMetadataKey)
 
-  await publisher.publishLater({
-    type: 'spanCreated',
-    data: {
-      spanId: promptSpanId,
-      traceId,
-      apiKeyId: apiKey.id,
-      workspaceId: workspace.id,
-      documentUuid: document.documentUuid,
-    },
+  await publishSpanCreated({
+    spanId: promptSpanId,
+    traceId,
+    apiKeyId: apiKey.id,
+    workspaceId: workspace.id,
+    documentUuid: document.documentUuid,
+    spanType: SpanType.Prompt,
+    parentId: null,
   })
 
   return {

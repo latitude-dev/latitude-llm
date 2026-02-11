@@ -11,8 +11,7 @@ import {
 import { Events, LatitudeEvent } from '../../../events/events'
 import { processWebhookPayload } from './utils/processWebhookPayload'
 import { WEBHOOK_EVENTS } from './processWebhookJob'
-import { findCommitById } from '../../../data-access/commits'
-import { DocumentLogsRepository } from '../../../repositories'
+import { SpansRepository } from '../../../repositories'
 import { NotFoundError } from '@latitude-data/constants/errors'
 
 export type ProcessIndividualWebhookJobData = {
@@ -101,15 +100,15 @@ async function fetchProjectIdFromEvent(event: LatitudeEvent) {
   switch (event.type) {
     case 'commitPublished':
       return event.data.commit.projectId
-    case 'documentLogCreated': {
-      const { id, workspaceId } = event.data
-      const repo = new DocumentLogsRepository(workspaceId)
-      const log = await repo.find(id).then((r) => r.unwrap())
+    case 'spanCreated': {
+      const { spanId, traceId, workspaceId } = event.data
+      const repo = new SpansRepository(workspaceId)
+      const spanResult = await repo.get({ spanId, traceId })
+      if (!spanResult.ok || !spanResult.value) {
+        throw new NotFoundError('Span not found')
+      }
 
-      const commit = await findCommitById(log.commitId)
-      if (!commit) throw new NotFoundError('Commit not found')
-
-      return commit.projectId
+      return spanResult.value.projectId
     }
     default:
       return
