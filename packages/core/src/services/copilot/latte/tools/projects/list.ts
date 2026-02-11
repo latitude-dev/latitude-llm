@@ -1,13 +1,9 @@
 import { Result } from '../../../../../lib/Result'
-import { ProjectsRepository } from '../../../../../repositories'
+import { findAllProjects } from '../../../../../queries/projects/findAll'
 import { defineLatteTool } from '../types'
 
 const listProjects = defineLatteTool(async (_args, { workspace }) => {
-  const projectsScope = new ProjectsRepository(workspace.id)
-  const projectsResult = await projectsScope.findAll()
-  if (!projectsResult.ok) return projectsResult
-
-  const projects = projectsResult.unwrap()
+  const projects = await findAllProjects({ workspaceId: workspace.id })
   return Result.ok(
     projects.map((project) => ({
       id: project.id,

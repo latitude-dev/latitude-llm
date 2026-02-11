@@ -15,9 +15,11 @@ import {
   DocumentVersionsRepository,
   EvaluationsV2Repository,
   OptimizationsRepository,
-  ProjectsRepository,
   ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories/index'
+import { findFirstProject } from '@latitude-data/core/queries/projects/findFirst'
+import { findAllActiveProjects } from '@latitude-data/core/queries/projects/findAllActive'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
 
@@ -26,9 +28,8 @@ import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
 export const getFirstProjectCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
-    const projectsScope = new ProjectsRepository(workspaceId)
-    const result = await projectsScope.getFirstProject()
-    const project = result.unwrap()
+    const project = await findFirstProject({ workspaceId })
+    if (!project) throw new NotFoundError('Project not found')
 
     return project
   },
@@ -36,11 +37,7 @@ export const getFirstProjectCached = cache(
 
 export const getActiveProjectsCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
-    const projectsScope = new ProjectsRepository(workspaceId)
-    const result = await projectsScope.findAllActive()
-    const projects = result.unwrap()
-
-    return projects
+    return await findAllActiveProjects({ workspaceId })
   },
 )
 
@@ -52,9 +49,8 @@ export const findProjectCached = cache(
     projectId: number
     workspaceId: number
   }) => {
-    const projectsScope = new ProjectsRepository(workspaceId)
-    const result = await projectsScope.getProjectById(projectId)
-    const project = result.unwrap()
+    const project = await findProjectById({ workspaceId, id: projectId })
+    if (!project) throw new NotFoundError('Project not found')
 
     return project
   },
@@ -93,10 +89,11 @@ export const findCommitsWithDocumentChangesCached = cache(
     documentUuid: string
   }) => {
     const { workspace } = await getCurrentUserOrRedirect()
-    const projectsScope = new ProjectsRepository(workspace.id)
-    const project = await projectsScope
-      .getProjectById(projectId)
-      .then((r) => r.unwrap())
+    const project = await findProjectById({
+      workspaceId: workspace.id,
+      id: projectId,
+    })
+    if (!project) throw new NotFoundError('Project not found')
     const commitsScope = new CommitsRepository(workspace.id)
     const commits = await commitsScope.getCommitsWithDocumentChanges({
       project,

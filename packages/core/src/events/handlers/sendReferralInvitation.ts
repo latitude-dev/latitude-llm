@@ -1,7 +1,5 @@
-import {
-  unsafelyFindUserByEmail,
-  unsafelyGetUser,
-} from '../../data-access/users'
+import { unsafelyFindUserByEmail } from '../../queries/users/findByEmail'
+import { unsafelyFindUserById } from '../../queries/users/findById'
 import { ReferralMailer } from '../../mailer/mailers/invitations/ReferralMailer'
 import { SendReferralInvitationEvent } from '../events'
 import { NotFoundError } from '@latitude-data/constants/errors'
@@ -11,10 +9,10 @@ export const sendReferralInvitationJob = async ({
 }: {
   data: SendReferralInvitationEvent
 }) => {
-  const invitee = await unsafelyGetUser(event.data.userId)
+  const invitee = await unsafelyFindUserById({ id: event.data.userId })
   if (!invitee) throw new NotFoundError('Invitee user not found')
 
-  const invited = await unsafelyFindUserByEmail(event.data.email)
+  const invited = await unsafelyFindUserByEmail({ email: event.data.email })
   if (invited) return // Should never happen
 
   const mailer = new ReferralMailer(

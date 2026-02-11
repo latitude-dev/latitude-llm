@@ -20,7 +20,7 @@ Before writing any code, load the `coding-standards` skill (`/coding-standards`)
 - `pnpm lint` - Lint all packages
 - `pnpm prettier` - Format code
 - `pnpm tc` - Type check all packages
-- `pnpm test` - Run all tests
+- `pnpm test` - Run all tests. NEVER run this command against the whole repo, only against packages you are working on, and one at a time, otherwise the host machine will run out of memory.
 
 ## Code Style
 
@@ -73,7 +73,7 @@ Before writing tests, load the `testing` skill (`/testing`) for detailed pattern
 
 - Server actions use `authProcedure` pattern
 - Input validation with Zod schemas
-- Actions fetch model instances using repositories before calling services
+- Actions fetch model instances using scoped queries before calling services
 - **Admin-only actions**: Place under `actions/admin/` directory for backoffice functionality
 - Example pattern:
 
@@ -197,7 +197,15 @@ Destructive database migrations (dropping tables, columns, or other schema eleme
 - pnpm --filter @latitude-data/core db:migrate
 ```
 
+### SCOPED QUERIES
+
+NOTE: WE ARE CURRENTLY MIGRATING ALL REPOSITORIES TO SCOPED QUERIES.
+
+All database read operations are executed via scoped queries. Scoped queries are defined in `packages/core/src/repositories/queries.ts` and are scoped to a workspace. In the queries folder you can also declare unscoped queries that are used in cases where tenancy checks aren't required.
+
 ### Repository Pattern (`packages/core/src/repositories/`)
+
+NOTE: THIS PATTERN IS DEPRECATED AND YOU SHOULD NOT USE IT. USE SCOPED QUERIES INSTEAD.
 
 - For workspace-scoped entities: extend `RepositoryLegacy<T, U>`
 - For global entities: create standalone repository classes
@@ -375,7 +383,7 @@ When implementing new features, follow this order:
 
 1. **Database Schema**: Create tables, generate migration
 2. **Services**: Implement business logic with Result pattern
-3. **Repositories**: Create data access layer
+3. **Queries**: Queries are the read data layer with the db
 4. **Actions**: Create server actions with validation (use `actions/admin/` for backoffice features)
 5. **API Routes**: Expose endpoints with proper auth
 6. **Stores**: Create SWR hooks with optimistic updates

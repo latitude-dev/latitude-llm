@@ -22,7 +22,7 @@ import { DocumentVersion } from '@latitude-data/core/schema/models/types/Documen
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { DeploymentTest } from '@latitude-data/core/schema/models/types/DeploymentTest'
-import { findFirstUserInWorkspace } from '@latitude-data/core/data-access/users'
+import { findFirstUserInWorkspace } from '@latitude-data/core/queries/users/findFirstInWorkspace'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { publisher } from '@latitude-data/core/events/publisher'
 
@@ -340,7 +340,7 @@ async function publishDocumentRunRequestedEvent({
   document: DocumentVersion
   parameters: Record<string, any>
 }) {
-  const user = await findFirstUserInWorkspace(workspace)
+  const user = await findFirstUserInWorkspace({ workspaceId: workspace.id })
 
   const commitsScope = new CommitsRepository(workspace.id)
   const headCommit = await commitsScope.getHeadCommit(project.id)

@@ -10,11 +10,8 @@ import {
 } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import {
-  CommitsRepository,
-  IssuesRepository,
-  ProjectsRepository,
-} from '../../../repositories'
+import { CommitsRepository, IssuesRepository } from '../../../repositories'
+import { findProjectById } from '../../../queries/projects/findById'
 import { hasUnprocessedSpans } from '../../../data-access/issues/hasUnprocessedSpans'
 import { captureException } from '../../../utils/datadogCapture'
 
@@ -59,10 +56,11 @@ export async function dailyAlignmentMetricUpdateJob(
       if (!Result.isOk(commitResult)) continue
       const commit = commitResult.unwrap()
 
-      const projectRepository = new ProjectsRepository(workspace.id)
-      const projectResult = await projectRepository.find(commit.projectId)
-      if (!Result.isOk(projectResult)) continue
-      const project = projectResult.unwrap()
+      const project = await findProjectById({
+        workspaceId: workspace.id,
+        id: commit.projectId,
+      })
+      if (!project) continue
 
       const issueRepository = new IssuesRepository(workspace.id)
       const issue = await issueRepository.findById({

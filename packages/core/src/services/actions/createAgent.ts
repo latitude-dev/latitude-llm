@@ -12,7 +12,7 @@ import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { ProjectsRepository } from '../../repositories'
+import { findAllActiveProjects } from '../../queries/projects/findAllActive'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { runCopilot } from '../copilot'
 import { createProject } from '../projects/create'
@@ -141,13 +141,10 @@ export async function ensureAgentName(
   },
   db = database,
 ) {
-  const repository = new ProjectsRepository(workspace.id, db)
-
-  const finding = await repository.findAllActive()
-  if (finding.error) {
-    return Result.error(finding.error as Error)
-  }
-  const projects = finding.unwrap()
+  const projects = await findAllActiveProjects(
+    { workspaceId: workspace.id },
+    db,
+  )
 
   const existing = projects.filter((project) =>
     project.name.startsWith(name),

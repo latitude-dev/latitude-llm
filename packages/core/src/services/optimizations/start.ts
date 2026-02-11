@@ -18,7 +18,8 @@ import { BadRequestError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { DatasetRowsRepository, UsersRepository } from '../../repositories'
+import { DatasetRowsRepository } from '../../repositories'
+import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
 import { DatasetRowData } from '../../schema/models/datasetRows'
 import { Column } from '../../schema/models/datasets'
 import { optimizations } from '../../schema/models/optimizations'
@@ -322,8 +323,11 @@ async function splitDataset(
     )
   }
 
-  const userRepository = new UsersRepository(workspace.id)
-  const finding = await userRepository.find(dataset.authorId)
+  if (!dataset.authorId) {
+    return Result.error(new BadRequestError('Dataset has no author'))
+  }
+
+  const finding = await findWorkspaceUserById({ workspaceId: workspace.id, id: dataset.authorId })
   if (finding.error) {
     return Result.error(finding.error)
   }

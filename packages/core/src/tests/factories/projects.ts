@@ -21,9 +21,9 @@ import {
   defaultProviderFakeData,
 } from './providerApiKeys'
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
-import { unsafelyGetUser } from '../../data-access/users'
 import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
 import { ApiKey } from '../../schema/models/types/ApiKey'
+import { unsafelyFindUserById } from '../../queries/users/findById'
 
 export type IDocumentStructure = { [key: string]: string | IDocumentStructure }
 
@@ -76,7 +76,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
   let apiKeys: ApiKey[] = []
 
   if ('id' in workspaceData) {
-    user = (await unsafelyGetUser(workspaceData.creatorId!)) as User
+    user = (await unsafelyFindUserById({ id: workspaceData.creatorId! }))!
     workspace = workspaceData as WorkspaceDto
   } else {
     const newWorkspace = await createWorkspace(workspaceData)

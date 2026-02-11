@@ -4,8 +4,8 @@ import { Result } from '../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  ProjectsRepository,
 } from '../../repositories'
+import { findFirstProject } from '../../queries/projects/findFirst'
 
 export async function findOnboardingDocument(
   workspaceId: number,
@@ -13,12 +13,10 @@ export async function findOnboardingDocument(
 ) {
   try {
     // Get the first project in the workspace
-    const projectsRepo = new ProjectsRepository(workspaceId, db)
-    const projectResult = await projectsRepo.getFirstProject()
-    if (projectResult.error) {
-      return Result.error(projectResult.error)
+    const project = await findFirstProject({ workspaceId }, db)
+    if (!project) {
+      return Result.error(new NotFoundError('Project not found'))
     }
-    const project = projectResult.value
 
     // Get the first commit in the project
     const commitsRepo = new CommitsRepository(workspaceId, db)

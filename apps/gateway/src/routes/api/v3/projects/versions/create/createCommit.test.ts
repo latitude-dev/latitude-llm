@@ -1,8 +1,7 @@
 import app from '$/routes/app'
-import { NotFoundError } from '@latitude-data/constants/errors'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import { createProject } from '@latitude-data/core/factories'
-import { ProjectsRepository } from '@latitude-data/core/repositories'
+import * as findProjectByIdModule from '@latitude-data/core/queries/projects/findById'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 describe('POST /projects/:projectId/versions', () => {
@@ -77,18 +76,9 @@ describe('POST /projects/:projectId/versions', () => {
     })
 
     it('fails when project ID is invalid', async () => {
-      // Mock ProjectsRepository.getProjectById to throw for invalid project
-      vi.spyOn(
-        ProjectsRepository.prototype,
-        'getProjectById',
-        // @ts-expect-error: mocking
-      ).mockImplementationOnce(() => {
-        return Promise.resolve({
-          unwrap: () => {
-            throw new NotFoundError('Project not found')
-          },
-        })
-      })
+      vi.spyOn(findProjectByIdModule, 'findProjectById').mockResolvedValueOnce(
+        undefined,
+      )
 
       const response = await app.request(`/api/v3/projects/999999/versions`, {
         method: 'POST',

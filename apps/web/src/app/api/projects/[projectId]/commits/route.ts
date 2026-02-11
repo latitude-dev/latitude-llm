@@ -1,7 +1,5 @@
-import {
-  CommitsRepository,
-  ProjectsRepository,
-} from '@latitude-data/core/repositories'
+import { CommitsRepository } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
@@ -36,11 +34,11 @@ export const GET = errorHandler(
 
       const searchParams = req.nextUrl.searchParams
       const status = searchParams.get('status') as CommitStatus | undefined
-      const projectsScope = new ProjectsRepository(workspace.id)
-      const result = await projectsScope.find(projectId)
-      if (result.error) throw new NotFoundError('Project not found')
-
-      const project = result.value!
+      const project = await findProjectById({
+        workspaceId: workspace.id,
+        id: projectId,
+      })
+      if (!project) throw new NotFoundError('Project not found')
       const repo = new CommitsRepository(workspace.id)
       const { rows } = await paginateQuery({
         dynamicQuery: repo

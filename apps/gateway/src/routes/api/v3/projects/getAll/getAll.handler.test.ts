@@ -1,7 +1,7 @@
 import app from '$/routes/app'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import { createProject } from '@latitude-data/core/factories'
-import { ProjectsRepository } from '@latitude-data/core/repositories'
+import { findAllActiveProjects } from '@latitude-data/core/queries/projects/findAllActive'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 
@@ -34,10 +34,7 @@ describe('GET /projects', () => {
         },
       }
 
-      // Get the existing projects for this workspace
-      const projectsRepository = new ProjectsRepository(workspace.id)
-      const projectsResult = await projectsRepository.findAllActive()
-      projects = projectsResult.unwrap()
+      projects = await findAllActiveProjects({ workspaceId: workspace.id })
     })
 
     it('gets all projects for a workspace', async () => {

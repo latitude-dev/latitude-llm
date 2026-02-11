@@ -6,9 +6,9 @@ import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
 import { createWorkspace as createWorkspaceFactory } from '../../tests/factories'
 import { computeQuota } from '../grants/quota'
 import { handleSubscriptionCreated } from './handleSubscriptionCreated'
+import * as userDataAccess from '../../queries/users/findFirstInWorkspace'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { publisher } from '../../events/publisher'
-import * as usersDataAccess from '../../data-access/users'
 import { User } from '../../schema/models/types/User'
 
 vi.mock('../../events/publisher', () => ({
@@ -58,7 +58,7 @@ describe('handleSubscriptionCreated', () => {
     vi.mocked(publisher.publishLater).mockImplementation(() =>
       Promise.resolve(),
     )
-    vi.spyOn(usersDataAccess, 'findFirstUserInWorkspace').mockResolvedValue({
+    vi.spyOn(userDataAccess, 'findFirstUserInWorkspace').mockResolvedValue({
       id: 'mock-user-id',
       email: 'mock@example.com',
       name: 'Mock User',

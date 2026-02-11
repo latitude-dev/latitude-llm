@@ -6,7 +6,7 @@ import { ROUTES } from '$/services/routes'
 import { isLatitudeUrl } from '@latitude-data/constants'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { unsafelyFindMagicLinkByToken } from '@latitude-data/core/data-access/magicLinkTokens'
-import { unsafelyGetUser } from '@latitude-data/core/data-access/users'
+import { unsafelyFindUserById } from '@latitude-data/core/queries/users/findById'
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
 import { z } from 'zod'
 import { errorHandlingProcedure } from '../procedures'
@@ -33,7 +33,7 @@ export const confirmMagicLinkTokenAction = errorHandlingProcedure
       )
     }
 
-    const user = await unsafelyGetUser(magicLinkToken.userId)
+    const user = await unsafelyFindUserById({ id: magicLinkToken.userId })
     if (!user) throw new NotFoundError('User not found')
 
     await confirmMagicLinkToken(parsedInput.token).then((r) => r.unwrap())

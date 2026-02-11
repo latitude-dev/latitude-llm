@@ -1,6 +1,6 @@
 import { database, utils } from '@latitude-data/core/client'
 import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
-import { unsafelyGetUser } from '@latitude-data/core/data-access/users'
+import { unsafelyFindUserById } from '@latitude-data/core/queries/users/findById'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import type { PromisedResult } from '@latitude-data/core/lib/Transaction'
@@ -105,7 +105,7 @@ export async function getDataFromSession(session?: Session | null) {
     }
   }
 
-  const user = await unsafelyGetUser(session.userId)
+  const user = await unsafelyFindUserById({ id: session.userId })
   const workspace = await unsafelyFindWorkspace(session.currentWorkspaceId)
 
   const plan = workspace?.currentSubscription?.plan

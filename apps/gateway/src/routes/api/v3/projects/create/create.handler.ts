@@ -1,5 +1,5 @@
 import { createProject } from '@latitude-data/core/services/projects/create'
-import { findFirstUserInWorkspace } from '@latitude-data/core/data-access/users'
+import { findFirstUserInWorkspace } from '@latitude-data/core/queries/users/findFirstInWorkspace'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { AppRouteHandler } from '$/openApi/types'
 import { createRoute } from './create.route'
@@ -10,7 +10,7 @@ export const createHandler: AppRouteHandler<typeof createRoute> = async (c) => {
 
   const { name } = c.req.valid('json')
 
-  const user = await findFirstUserInWorkspace(workspace)
+  const user = await findFirstUserInWorkspace({ workspaceId: workspace.id })
   if (!user) {
     throw new NotFoundError('User not found in workspace')
   }

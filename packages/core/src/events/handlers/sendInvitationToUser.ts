@@ -1,4 +1,4 @@
-import { unsafelyGetUser } from '../../data-access/users'
+import { unsafelyFindUserById } from '../../queries/users/findById'
 import { NotFoundError } from '../../lib/errors'
 import { InvitationMailer } from '../../mailer/mailers/invitations/InvitationMailer'
 import { MembershipCreatedEvent } from '../events'
@@ -10,10 +10,10 @@ export const sendInvitationToUserJob = async ({
 }) => {
   if (event.data.confirmedAt || !event.data.authorId) return
 
-  const invited = await unsafelyGetUser(event.data.userId)
+  const invited = await unsafelyFindUserById({ id: event.data.userId })
   if (!invited) throw new NotFoundError('Invited user not found')
 
-  const invitee = await unsafelyGetUser(event.data.authorId)
+  const invitee = await unsafelyFindUserById({ id: event.data.authorId })
   if (!invitee) throw new NotFoundError('Invitee user not found')
 
   const mailer = new InvitationMailer(

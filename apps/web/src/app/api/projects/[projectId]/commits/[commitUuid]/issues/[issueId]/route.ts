@@ -1,10 +1,9 @@
 import { z } from 'zod'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import {
-  ProjectsRepository,
-  IssuesRepository,
-} from '@latitude-data/core/repositories'
+import { IssuesRepository } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -35,8 +34,11 @@ export const GET = errorHandler(
         commitUuid: params.commitUuid,
         issueId: params.issueId,
       })
-      const projectsRepo = new ProjectsRepository(workspace.id)
-      const project = await projectsRepo.find(projectId).then((r) => r.unwrap())
+      const project = await findProjectById({
+        workspaceId: workspace.id,
+        id: projectId,
+      })
+      if (!project) throw new NotFoundError('Project not found')
       const issuesRepo = new IssuesRepository(workspace.id)
       const issue = await issuesRepo.findById({
         project,

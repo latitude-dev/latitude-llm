@@ -3,8 +3,8 @@ import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  ProjectsRepository,
 } from '../../repositories'
+import { findProjectById } from '../../queries/projects/findById'
 import { Result } from '../../lib/Result'
 
 export async function getJobDocumentData({
@@ -38,10 +38,8 @@ export async function getJobDocumentData({
   if (documentResult.error) return documentResult
   const document = documentResult.unwrap()
 
-  const projectsRepo = new ProjectsRepository(workspaceId)
-  const projectResult = await projectsRepo.find(projectId)
-  if (!Result.isOk(projectResult)) return projectResult
-  const project = projectResult.unwrap()
+  const project = await findProjectById({ workspaceId, id: projectId })
+  if (!project) return Result.error(new NotFoundError('Project not found'))
 
   return Result.ok({ workspace, commit, document, project })
 }

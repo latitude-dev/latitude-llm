@@ -3,8 +3,8 @@ import {
   CommitsRepository,
   EvaluationsV2Repository,
   IssuesRepository,
-  ProjectsRepository,
 } from '../../../repositories'
+import { findProjectById } from '../../../queries/projects/findById'
 import { Result } from '../../../lib/Result'
 import { NotFoundError } from '../../../lib/errors'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
@@ -39,10 +39,11 @@ export async function updateEvaluationAlignmentJob(
   if (!Result.isOk(commitResult)) throw new NotFoundError('Commit not found')
   const commit = commitResult.unwrap()
 
-  const projectRepository = new ProjectsRepository(workspace.id)
-  const projectResult = await projectRepository.find(commit.projectId)
-  if (!Result.isOk(projectResult)) throw new NotFoundError('Project not found')
-  const project = projectResult.unwrap()
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: commit.projectId,
+  })
+  if (!project) throw new NotFoundError('Project not found')
 
   const evaluationRepository = new EvaluationsV2Repository(workspaceId)
   const evaluationResult = await evaluationRepository.getAtCommitByDocument({

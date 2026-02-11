@@ -5,7 +5,8 @@ import {
   DocumentVersionsRepository,
   DeploymentTestsRepository,
 } from '../../repositories'
-import { ProjectsRepository } from '../../repositories'
+import { findProjectById } from '../../queries/projects/findById'
+import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { captureException } from '../../utils/datadogCapture'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
@@ -66,23 +67,21 @@ export async function enqueueShadowTestChallengerHandler({
 
   // Fetch necessary data
   const workspace = await unsafelyFindWorkspace(workspaceId)
-  const projectsRepo = new ProjectsRepository(workspaceId)
   const documentsRepo = new DocumentVersionsRepository(workspaceId)
 
   // Fetch challenger commit, project, and document for shadow test
-  const [challengerCommitResult, projectResult, documentResult] =
-    await Promise.all([
-      commitsRepo.getCommitById(shadowTest.challengerCommitId),
-      projectsRepo.getProjectById(projectId),
-      documentsRepo.getDocumentByUuid({ commitUuid, documentUuid }),
-    ])
+  const [challengerCommitResult, project, documentResult] = await Promise.all([
+    commitsRepo.getCommitById(shadowTest.challengerCommitId),
+    findProjectById({ workspaceId, id: projectId }),
+    documentsRepo.getDocumentByUuid({ commitUuid, documentUuid }),
+  ])
 
   if (!Result.isOk(challengerCommitResult)) {
     captureException(challengerCommitResult.error)
     return
   }
-  if (!Result.isOk(projectResult)) {
-    captureException(projectResult.error)
+  if (!project) {
+    captureException(new NotFoundError('Project not found'))
     return
   }
   if (!Result.isOk(documentResult)) {
@@ -91,7 +90,6 @@ export async function enqueueShadowTestChallengerHandler({
   }
 
   const challengerCommit = challengerCommitResult.unwrap()
-  const project = projectResult.unwrap()
   const document = documentResult.unwrap()
   const result = await enqueueRun({
     workspace,

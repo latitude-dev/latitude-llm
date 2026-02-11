@@ -1,5 +1,5 @@
 import { createProviderApiKey } from '@latitude-data/core/services/providerApiKeys/create'
-import { findFirstUserInWorkspace } from '@latitude-data/core/data-access/users'
+import { findFirstUserInWorkspace } from '@latitude-data/core/queries/users/findFirstInWorkspace'
 import { Providers } from '@latitude-data/constants'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { type ProviderConfiguration } from '@latitude-data/core/schema/models/providerApiKeys'
@@ -22,7 +22,7 @@ export const createProviderApiKeyHandler: AppRouteHandler<
       configuration?: ProviderConfiguration<Providers>
     }
 
-  const user = await findFirstUserInWorkspace(workspace)
+  const user = await findFirstUserInWorkspace({ workspaceId: workspace.id })
   if (!user) {
     throw new NotFoundError('User not found in workspace')
   }

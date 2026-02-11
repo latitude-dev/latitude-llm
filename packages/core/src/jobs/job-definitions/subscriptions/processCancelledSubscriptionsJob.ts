@@ -2,7 +2,7 @@ import { Job } from 'bullmq'
 import { and, eq, isNotNull, lte } from 'drizzle-orm'
 import { BillingError } from '@latitude-data/constants/errors'
 import { database } from '../../../client'
-import { findFirstUserInWorkspace } from '../../../data-access/users'
+import { findFirstUserInWorkspace } from '../../../queries/users/findFirstInWorkspace'
 import { publisher } from '../../../events/publisher'
 import Transaction from '../../../lib/Transaction'
 import { SubscriptionPlan } from '../../../plans'
@@ -57,7 +57,9 @@ export async function processCancelledSubscriptionsJob(
           )
         },
         async ({ workspace: updatedWorkspace, subscription }) => {
-          const firstUser = await findFirstUserInWorkspace(updatedWorkspace)
+          const firstUser = await findFirstUserInWorkspace({
+            workspaceId: updatedWorkspace.id,
+          })
           publisher.publishLater({
             type: 'subscriptionUpdated',
             data: {

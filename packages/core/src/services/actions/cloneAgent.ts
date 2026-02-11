@@ -4,7 +4,7 @@ import {
   ActionType,
   cloneAgentActionBackendParametersSchema,
 } from '../../constants'
-import { unsafelyFindProject } from '../../data-access/projects'
+import { unsafelyFindProject } from '../../queries/projects/unsafelyFindProject'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -81,7 +81,10 @@ async function getSampleAgent(
     )
   }
 
-  const project = await unsafelyFindProject(env.SAMPLE_AGENTS_PROJECT_ID, db)
+  const project = await unsafelyFindProject(
+    { projectId: env.SAMPLE_AGENTS_PROJECT_ID },
+    db,
+  )
   if (!project) {
     return Result.error(
       new UnprocessableEntityError('Sample Agents project not found'),

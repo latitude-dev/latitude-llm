@@ -27,10 +27,10 @@ import {
   DocumentVersionsRepository,
   EvaluationsV2Repository,
   IssuesRepository,
-  ProjectsRepository,
   SpanMetadatasRepository,
-  UsersRepository,
 } from '../../repositories'
+import { findProjectById } from '../../queries/projects/findById'
+import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
 import { DatasetRowData } from '../../schema/models/datasetRows'
 import { Column } from '../../schema/models/datasets'
 import { optimizations } from '../../schema/models/optimizations'
@@ -85,12 +85,13 @@ export async function prepareOptimization(
     }
     testset = gettingts.value
   } else {
-    const projectsRepository = new ProjectsRepository(workspace.id)
-    const gettingpj = await projectsRepository.find(optimization.projectId)
-    if (gettingpj.error) {
-      return Result.error(gettingpj.error)
+    const project = await findProjectById({
+      workspaceId: workspace.id,
+      id: optimization.projectId,
+    })
+    if (!project) {
+      return Result.error(new NotFoundError('Project not found'))
     }
-    const project = gettingpj.value
 
     const commitsRepository = new CommitsRepository(workspace.id)
     const gettingco = await commitsRepository.getCommitById(
@@ -648,8 +649,10 @@ async function createDatasets(
     )
   }
 
-  const userRepository = new UsersRepository(workspace.id)
-  const finding = await userRepository.find(baselineCommit.userId)
+  const finding = await findWorkspaceUserById({
+    workspaceId: workspace.id,
+    id: baselineCommit.userId,
+  })
   if (finding.error) {
     return Result.error(finding.error)
   }

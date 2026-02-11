@@ -7,7 +7,7 @@ import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { createWorkspace as createWorkspaceFactory } from '../../tests/factories'
 import { handleSubscriptionCancelled } from './handleSubscriptionCancelled'
 import { publisher } from '../../events/publisher'
-import * as usersDataAccess from '../../data-access/users'
+import * as usersQueries from '../../queries/users/findFirstInWorkspace'
 import { User } from '../../schema/models/types/User'
 import { Result } from '../../lib/Result'
 
@@ -60,7 +60,7 @@ describe('handleSubscriptionCancelled', () => {
     vi.mocked(publisher.publishLater).mockImplementation(() =>
       Promise.resolve(),
     )
-    vi.spyOn(usersDataAccess, 'findFirstUserInWorkspace').mockResolvedValue({
+    vi.spyOn(usersQueries, 'findFirstUserInWorkspace').mockResolvedValue({
       id: 'mock-user-id',
       email: 'mock@example.com',
       name: 'Mock User',

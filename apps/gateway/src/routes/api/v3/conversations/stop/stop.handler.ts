@@ -1,7 +1,7 @@
 import { AppRouteHandler } from '$/openApi/types'
 import { unsafelyFindActiveRun } from '@latitude-data/core/data-access/runs'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { ProjectsRepository } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { StopRoute } from './stop.route'
 import { stopRunByDocument } from '@latitude-data/core/services/runs/active/byDocument/stop'
 
@@ -18,10 +18,13 @@ export const stopHandler: AppRouteHandler<StopRoute> = async (ctx) => {
     )
   }
 
-  const repository = new ProjectsRepository(workspace.id)
-  const project = await repository
-    .getProjectById(run.projectId)
-    .then((r) => r.unwrap())
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: run.projectId,
+  })
+  if (!project) {
+    throw new NotFoundError('Project not found')
+  }
 
   await stopRunByDocument({
     run,

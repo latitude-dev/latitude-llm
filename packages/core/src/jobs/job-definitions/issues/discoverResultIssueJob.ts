@@ -10,9 +10,9 @@ import {
   EvaluationsV2Repository,
   IssueEvaluationResultsRepository,
   IssuesRepository,
-  ProjectsRepository,
   SpansRepository,
 } from '../../../repositories'
+import { findProjectById } from '../../../queries/projects/findById'
 import { assignEvaluationResultV2ToIssue } from '../../../services/evaluationsV2/results/assign'
 import { updateEvaluationV2 } from '../../../services/evaluationsV2/update'
 import { discoverIssue } from '../../../services/issues/discover'
@@ -59,10 +59,13 @@ export const discoverResultIssueJob = async (
     .getCommitById(result.commitId)
     .then((r) => r.unwrap())
 
-  const projectsRepository = new ProjectsRepository(workspace.id)
-  const project = await projectsRepository
-    .getProjectById(commit.projectId)
-    .then((r) => r.unwrap())
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: commit.projectId,
+  })
+  if (!project) {
+    throw new NotFoundError('Project not found')
+  }
 
   const spansRepository = new SpansRepository(workspace.id)
   const span = await spansRepository

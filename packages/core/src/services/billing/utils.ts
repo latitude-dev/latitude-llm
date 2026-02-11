@@ -2,8 +2,9 @@ import Stripe from 'stripe'
 import { BillingError } from '@latitude-data/constants/errors'
 import { STRIPE_PLANS, SubscriptionPlans } from '../../plans'
 import { Workspace } from '../../schema/models/types/Workspace'
-import { findFirstUserInWorkspace } from '../../data-access/users'
+import { findFirstUserInWorkspace } from '../../queries/users/findFirstInWorkspace'
 import { Result } from '../../lib/Result'
+import { database } from '../../client'
 
 /**
  * Extracts the Stripe customer ID from various customer representations.
@@ -57,8 +58,16 @@ export function findTargetPlan(stripeSubscription: Stripe.Subscription) {
   return plan
 }
 
-export async function getFirstUserAsBillingActor(workspace: Workspace) {
-  const user = await findFirstUserInWorkspace(workspace)
+export async function getFirstUserAsBillingActor(
+  workspace: Workspace,
+  db = database,
+) {
+  const user = await findFirstUserInWorkspace(
+    {
+      workspaceId: workspace.id,
+    },
+    db,
+  )
 
   if (!user) {
     return Result.error(

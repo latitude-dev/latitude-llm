@@ -2,11 +2,11 @@ import { documentPresenter } from '$/presenters/documentPresenter'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  ProjectsRepository,
 } from '@latitude-data/core/repositories'
+import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { createNewDocumentUnsafe } from '@latitude-data/core/services/documents/createUnsafe'
 import { updateDocumentUnsafe } from '@latitude-data/core/services/documents/updateUnsafe'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { BadRequestError, NotFoundError } from '@latitude-data/core/lib/errors'
 
 import type { CreateOrUpdateDocumentRoute } from './createOrUpdate.route'
 import { AppRouteHandler } from '$/openApi/types'
@@ -22,13 +22,16 @@ export const createOrUpdateDocumentHandler: AppRouteHandler<
   const { projectId, versionUuid } = c.req.valid('param')
   const { path, prompt, force } = c.req.valid('json')
 
-  const projectsScope = new ProjectsRepository(workspace.id)
   const commitsScope = new CommitsRepository(workspace.id)
   const docsScope = new DocumentVersionsRepository(workspace.id)
 
-  const project = await projectsScope
-    .getProjectById(Number(projectId!))
-    .then((r) => r.unwrap())
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: Number(projectId!),
+  })
+  if (!project) {
+    throw new NotFoundError('Project not found')
+  }
 
   const commit = await commitsScope
     .getCommitByUuid({
