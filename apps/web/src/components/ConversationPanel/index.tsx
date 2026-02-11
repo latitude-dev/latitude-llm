@@ -1,4 +1,5 @@
-import { forwardRef, useMemo } from 'react'
+import { forwardRef, useMemo, useState } from 'react'
+import DebugToggle from '$/components/DebugToggle'
 import { MetadataInfoTabs } from '../MetadataInfoTabs'
 import { MetadataItem } from '$/components/MetadataItem'
 import { MessageList } from '$/components/ChatWrapper'
@@ -15,6 +16,7 @@ import {
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { format } from 'date-fns'
 import { ConversationEvaluations } from './ConversationEvaluations'
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 
 const CONVERSATION_TABS = [
   { label: 'Metadata', value: 'metadata' },
@@ -226,6 +228,7 @@ function ConversationMessages({
   messages: any[]
   isLoading: boolean
 }) {
+  const [debugMode, setDebugMode] = useState(false)
   if (isLoading) {
     return <LoadingText alignX='center' />
   }
@@ -240,7 +243,10 @@ function ConversationMessages({
 
   return (
     <div className='flex flex-col gap-4'>
-      <MessageList debugMode messages={messages} />
+      <ClientOnly className='flex flex-row items-end justify-end w-full'>
+        <DebugToggle enabled={debugMode} setEnabled={setDebugMode} />
+      </ClientOnly>
+      <MessageList debugMode={debugMode} messages={messages} />
     </div>
   )
 }
