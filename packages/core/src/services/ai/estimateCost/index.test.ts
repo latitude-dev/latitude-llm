@@ -3,7 +3,12 @@ import {
   Providers,
   LegacyVercelSDKVersion4Usage,
 } from '@latitude-data/constants'
-import { estimateCost, getCostPer1M } from './index'
+import {
+  computeCost,
+  estimateCost,
+  estimateCostBreakdown,
+  getCostPer1M,
+} from './index'
 import * as modelsDev from './modelsDev'
 
 // Mock the modelsDev module
@@ -179,6 +184,105 @@ describe('estimateCost integration', () => {
       expect(costPer1M.cost).toEqual({
         input: 0,
         output: 0,
+      })
+    })
+  })
+
+  describe('estimateCostBreakdown', () => {
+    it('returns a full cost breakdown by token category', () => {
+      const provider = Providers.OpenAI
+      const model = 'gpt-4o'
+      const usage = createUsage({
+        promptTokens: 2_000_000,
+        cachedInputTokens: 1_000_000,
+        reasoningTokens: 3_000_000,
+        completionTokens: 500_000,
+      })
+      const costSpec = getCostPer1M({ provider, model }).cost
+
+      const breakdown = estimateCostBreakdown({
+        provider,
+        model,
+        usage,
+      })
+
+      expect(breakdown).toEqual({
+        'openai/gpt-4o': {
+          input: {
+            prompt: {
+              tokens: 2_000_000,
+              cost: computeCost({
+                costSpec,
+                tokens: usage.promptTokens,
+                tokenType: 'input',
+              }),
+            },
+            cached: {
+              tokens: 1_000_000,
+              cost: computeCost({
+                costSpec,
+                tokens: usage.cachedInputTokens,
+                tokenType: 'cacheRead',
+              }),
+            },
+          },
+          output: {
+            reasoning: {
+              tokens: 3_000_000,
+              cost: computeCost({
+                costSpec,
+                tokens: usage.reasoningTokens,
+                tokenType: 'reasoning',
+              }),
+            },
+            completion: {
+              tokens: 500_000,
+              cost: computeCost({
+                costSpec,
+                tokens: usage.completionTokens,
+                tokenType: 'output',
+              }),
+            },
+          },
+        },
+      })
+    })
+
+    it('converts NaN token counts to zero in each category', () => {
+      const breakdown = estimateCostBreakdown({
+        provider: Providers.OpenAI,
+        model: 'gpt-4o',
+        usage: createUsage({
+          promptTokens: NaN,
+          cachedInputTokens: 500_000,
+          reasoningTokens: 250_000,
+          completionTokens: NaN,
+        }),
+      })
+
+      expect(breakdown).toEqual({
+        'openai/gpt-4o': {
+          input: {
+            prompt: {
+              tokens: 0,
+              cost: 0,
+            },
+            cached: {
+              tokens: 500_000,
+              cost: expect.any(Number),
+            },
+          },
+          output: {
+            reasoning: {
+              tokens: 250_000,
+              cost: expect.any(Number),
+            },
+            completion: {
+              tokens: 0,
+              cost: 0,
+            },
+          },
+        },
       })
     })
   })

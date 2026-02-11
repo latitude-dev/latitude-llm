@@ -92,6 +92,8 @@ export class DefaultStreamManager
         })
 
       this.updateStateFromResponse({
+        provider: this.provider.provider,
+        model: this.config.model,
         response,
         messages,
         tokenUsage,

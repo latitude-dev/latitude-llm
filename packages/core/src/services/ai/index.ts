@@ -192,6 +192,7 @@ export async function ai({
 }
 
 export { estimateCost, getCostPer1M } from './estimateCost'
+export type { ModelCost, ModelCostPer1M } from './estimateCost'
 export type { PartialConfig } from './helpers'
 export {
   amazonBedrockConfigurationSchema,

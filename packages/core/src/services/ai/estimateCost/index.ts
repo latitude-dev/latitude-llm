@@ -2,6 +2,7 @@ import {
   Providers,
   LegacyVercelSDKVersion4Usage as LanguageModelUsage,
 } from '@latitude-data/constants'
+import { CostBreakdown, costBreakdownKey } from '@latitude-data/constants/costs'
 import {
   getBundledModelsDevData,
   findModelsDevModel,
@@ -9,11 +10,13 @@ import {
 } from './modelsDev'
 
 export type ModelCost = {
+  cacheRead?: number
   input: number
+  reasoning?: number
   output: number
   tokensRangeStart?: number
 }
-type ModelCostPer1M = {
+export type ModelCostPer1M = {
   cost: ModelCost | ModelCost[]
   costImplemented: boolean
 }
@@ -79,6 +82,8 @@ function getCostFromModelsDev(
       cost: {
         input: pricing.input,
         output: pricing.output,
+        reasoning: pricing.reasoning,
+        cacheRead: pricing.cacheRead,
       },
       costImplemented: true,
     }
@@ -101,14 +106,28 @@ export function getCostPer1M({
   return getCostFromModelsDev(provider, model)
 }
 
-function computeCost({
+function getCostPerToken({
+  tokenType,
+  modelCost,
+}: {
+  tokenType: 'input' | 'output' | 'reasoning' | 'cacheRead'
+  modelCost: ModelCost
+}): number {
+  if (tokenType === 'input') return modelCost.input
+  if (tokenType === 'output') return modelCost.output
+  if (tokenType === 'reasoning') return modelCost.reasoning ?? modelCost.output
+  if (tokenType === 'cacheRead') return modelCost.cacheRead ?? modelCost.input
+  return 0
+}
+
+export function computeCost({
   costSpec,
   tokens,
   tokenType,
 }: {
   costSpec: ModelCost | ModelCost[]
   tokens: number
-  tokenType: 'input' | 'output'
+  tokenType: 'input' | 'output' | 'reasoning' | 'cacheRead'
 }): number {
   const tiers: ModelCost[] = Array.isArray(costSpec) ? costSpec : [costSpec]
   const sortedTiers = tiers
@@ -134,11 +153,16 @@ function computeCost({
     // (For example, if tokens = 200_000, tierStart = 0 and tierEnd = 128_000,
     // then tokensInTier = 128_000. In the next tier, tokensInTier = 200_000 - 128_000.)
     const tokensInTier = Math.min(tokens, tierEnd) - tierStart
+    const costPerToken = getCostPerToken({ tokenType, modelCost: cost })
 
-    totalCost += (cost[tokenType] * tokensInTier) / 1_000_000
+    totalCost += (costPerToken * tokensInTier) / 1_000_000
   }
 
   return totalCost
+}
+
+function toValidNumber(value: number): number {
+  return isNaN(value) ? 0 : value
 }
 
 /**
@@ -158,24 +182,97 @@ export function estimateCost({
   provider: Providers
   model: string
 }): number {
-  const { promptTokens, completionTokens } = usage
+  const { cachedInputTokens, promptTokens, reasoningTokens, completionTokens } =
+    usage
   const costPer1M = getCostPer1M({ provider, model })
   const costSpec = costPer1M.cost
 
-  // Guard against NaN token counts.
-  const validInputTokens = isNaN(promptTokens) ? 0 : promptTokens
-  const validOutputTokens = isNaN(completionTokens) ? 0 : completionTokens
-
   const inputCost = computeCost({
     costSpec,
-    tokens: validInputTokens,
+    tokens: toValidNumber(promptTokens),
     tokenType: 'input',
+  })
+  const cacheReadCost = computeCost({
+    costSpec,
+    tokens: toValidNumber(cachedInputTokens),
+    tokenType: 'cacheRead',
+  })
+  const reasoningCost = computeCost({
+    costSpec,
+    tokens: toValidNumber(reasoningTokens),
+    tokenType: 'reasoning',
   })
   const outputCost = computeCost({
     costSpec,
-    tokens: validOutputTokens,
+    tokens: toValidNumber(completionTokens),
     tokenType: 'output',
   })
 
-  return inputCost + outputCost
+  return inputCost + cacheReadCost + reasoningCost + outputCost
+}
+
+export function estimateCostBreakdown({
+  usage,
+  provider,
+  model,
+}: {
+  usage: LanguageModelUsage
+  provider: Providers
+  model: string
+}): CostBreakdown {
+  const costPer1M = getCostPer1M({ provider, model })
+  const costSpec = costPer1M.cost
+
+  const promptTokens = toValidNumber(usage.promptTokens)
+  const cachedTokens = toValidNumber(usage.cachedInputTokens)
+  const reasoningTokens = toValidNumber(usage.reasoningTokens)
+  const completionTokens = toValidNumber(usage.completionTokens)
+
+  const promptCost = computeCost({
+    costSpec,
+    tokens: promptTokens,
+    tokenType: 'input',
+  })
+  const cachedCost = computeCost({
+    costSpec,
+    tokens: cachedTokens,
+    tokenType: 'cacheRead',
+  })
+  const reasoningCost = computeCost({
+    costSpec,
+    tokens: reasoningTokens,
+    tokenType: 'reasoning',
+  })
+  const completionCost = computeCost({
+    costSpec,
+    tokens: completionTokens,
+    tokenType: 'output',
+  })
+
+  const key = costBreakdownKey(provider, model)
+
+  return {
+    [key]: {
+      input: {
+        prompt: {
+          tokens: promptTokens,
+          cost: promptCost,
+        },
+        cached: {
+          tokens: cachedTokens,
+          cost: cachedCost,
+        },
+      },
+      output: {
+        reasoning: {
+          tokens: reasoningTokens,
+          cost: reasoningCost,
+        },
+        completion: {
+          tokens: completionTokens,
+          cost: completionCost,
+        },
+      },
+    },
+  }
 }

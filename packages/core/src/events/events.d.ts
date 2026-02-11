@@ -2,6 +2,7 @@ import {
   ActiveEvaluation,
   AlignmentMetricMetadata,
 } from '@latitude-data/constants/evaluations'
+import { CostBreakdown } from '@latitude-data/constants/costs'
 import { ExperimentVariant } from '@latitude-data/constants/experiments'
 import { ModifiedDocumentType } from '@latitude-data/constants/history'
 import { SpanType } from '@latitude-data/constants/tracing'
@@ -617,7 +618,7 @@ type DocumentRunMetrics = {
     reasoningTokens: number
     cachedInputTokens: number
   }
-  runCost: number
+  runCost: CostBreakdown
   duration: number
 }
 

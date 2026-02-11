@@ -1,5 +1,6 @@
 import { LogSources, Message } from '@latitude-data/constants'
 import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants/ai'
+import { CostBreakdown } from '@latitude-data/constants/costs'
 import { SimulationSettings } from '@latitude-data/constants/simulation'
 import { LanguageModelUsage as LanguageModelUsageType } from '../../../../constants'
 import { OkType } from '../../../../lib/Result'
@@ -8,7 +9,7 @@ import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtC
 
 export type RunMetrics = {
   runUsage: LanguageModelUsage
-  runCost: number
+  runCost: CostBreakdown
   duration: number
 }
 

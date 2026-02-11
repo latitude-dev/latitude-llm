@@ -1,4 +1,5 @@
 import { ChainEventTypes, LogSources } from '@latitude-data/constants'
+import { mergeCostBreakdown } from '@latitude-data/constants/costs'
 import { Job } from 'bullmq'
 import { publisher } from '../../../events/publisher'
 import { RedisStream } from '../../../lib/redisStream'
@@ -83,7 +84,7 @@ function aggregateMetrics(iterations: RunMetrics[]): RunMetrics {
   return iterations.reduce(
     (acc, curr) => ({
       runUsage: incrementTokens({ prev: acc.runUsage, next: curr.runUsage }),
-      runCost: acc.runCost + curr.runCost,
+      runCost: mergeCostBreakdown(acc.runCost, curr.runCost),
       duration: acc.duration + curr.duration,
     }),
     {
@@ -96,7 +97,7 @@ function aggregateMetrics(iterations: RunMetrics[]): RunMetrics {
         reasoningTokens: 0,
         cachedInputTokens: 0,
       },
-      runCost: 0,
+      runCost: {},
       duration: 0,
     },
   )

@@ -14,6 +14,7 @@ import {
   LatteUsage,
   Span,
 } from '../constants'
+import { CostBreakdown } from '@latitude-data/constants/costs'
 import { Conversation } from '../data-access/conversations/fetchConversation'
 
 import { DocumentRunStatusEvent, EvaluationStatusEvent } from '../events/events'
@@ -169,7 +170,7 @@ export type DocumentRunMetrics = {
     reasoningTokens: number
     cachedInputTokens: number
   }
-  runCost: number
+  runCost: CostBreakdown
   duration: number
 }
 

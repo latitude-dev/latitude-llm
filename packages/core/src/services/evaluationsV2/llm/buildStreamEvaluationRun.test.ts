@@ -110,8 +110,8 @@ Evaluate the response: {{ actualOutput }}`,
         duration: Promise.resolve(1000),
         logUsage: Promise.resolve(mockUsage),
         runUsage: Promise.resolve(mockUsage),
-        logCost: Promise.resolve(0),
-        runCost: Promise.resolve(0),
+        logCost: Promise.resolve({}),
+        runCost: Promise.resolve({}),
         stream: new ReadableStream<ChainEvent>({
           start(controller) {
             controller.close()

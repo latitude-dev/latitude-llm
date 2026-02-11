@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { CostBreakdown } from '@latitude-data/constants/costs'
 import { ToolSource } from '@latitude-data/constants/toolSources'
 import { ToolManifest } from '@latitude-data/constants/tools'
 import { StreamManager } from '../../../../lib/streamManager'
@@ -535,7 +536,18 @@ describe('resolveAgentAsToolDefinition', () => {
           stream: new ReadableStream(),
           error: Promise.resolve(undefined),
           runUsage: Promise.resolve(mockUsage),
-          runCost: Promise.resolve(0.02),
+          runCost: Promise.resolve({
+            'openai/gpt-4': {
+              input: {
+                prompt: { tokens: 100, cost: 0.008 },
+                cached: { tokens: 0 },
+              },
+              output: {
+                reasoning: { tokens: 0 },
+                completion: { tokens: 50, cost: 0.012 },
+              },
+            },
+          } as CostBreakdown),
         }) as any,
       )
 
@@ -590,7 +602,18 @@ describe('resolveAgentAsToolDefinition', () => {
         content: '---\nname: Cost Agent\n---\nContent',
       })
 
-      const mockCost = 0.05
+      const mockCost: CostBreakdown = {
+        'anthropic/claude-sonnet-3-5': {
+          input: {
+            prompt: { tokens: 200, cost: 0.02 },
+            cached: { tokens: 0 },
+          },
+          output: {
+            reasoning: { tokens: 0 },
+            completion: { tokens: 100, cost: 0.03 },
+          },
+        },
+      }
       vi.mocked(commitsModule.runDocumentAtCommit).mockResolvedValue(
         Result.ok({
           response: Promise.resolve({ streamType: 'text', text: 'Response' }),
@@ -661,7 +684,7 @@ describe('resolveAgentAsToolDefinition', () => {
           stream: new ReadableStream(),
           error: Promise.resolve(undefined),
           runUsage: Promise.resolve(createMockUsage()),
-          runCost: Promise.resolve(0.01),
+          runCost: Promise.resolve({}),
         }) as any,
       )
 
@@ -726,7 +749,7 @@ describe('resolveAgentAsToolDefinition', () => {
           stream: new ReadableStream(),
           error: Promise.resolve(undefined),
           runUsage: Promise.resolve(createMockUsage()),
-          runCost: Promise.resolve(0.01),
+          runCost: Promise.resolve({}),
         }) as any,
       )
 
@@ -788,7 +811,7 @@ describe('resolveAgentAsToolDefinition', () => {
           stream: new ReadableStream(),
           error: Promise.resolve(new Error(errorMessage)),
           runUsage: Promise.resolve(createMockUsage()),
-          runCost: Promise.resolve(0),
+          runCost: Promise.resolve({}),
         }) as any,
       )
 

@@ -40,6 +40,7 @@ export type ModelsDevModel = {
     input?: number
     output?: number
     cacheRead?: number
+    reasoning?: number
   }
 }
 
@@ -63,6 +64,7 @@ type RawModelsDevModel = {
     input?: number
     output?: number
     cache_read?: number
+    reasoning?: number
   }
   limit?: {
     context?: number
@@ -130,6 +132,7 @@ function parseBundledModelsDevData(data: unknown): ModelsDevModel[] {
                 input: cost.input,
                 output: cost.output,
                 cacheRead: cost.cache_read,
+                reasoning: cost.reasoning,
               }
             : undefined,
       })
@@ -144,6 +147,7 @@ function parseBundledModelsDevData(data: unknown): ModelsDevModel[] {
  * Always uses the local bundled data, no network calls
  */
 export function getBundledModelsDevData(): ModelsDevModel[] {
+  // TODO: Let's add a singleton here, no need to re-read and re-parse the whole JSON file every time
   return parseBundledModelsDevData(modelsDevJson)
 }
 
@@ -162,9 +166,12 @@ export function findModelsDevModel(
  * Gets pricing from a models.dev model entry
  * Returns null if pricing is not available
  */
-export function getModelsDevPricing(
-  model: ModelsDevModel,
-): { input: number; output: number } | null {
+export function getModelsDevPricing(model: ModelsDevModel): {
+  input: number
+  output: number
+  reasoning?: number
+  cacheRead?: number
+} | null {
   if (!model.pricing || !model.pricing.input || !model.pricing.output) {
     return null
   }
@@ -172,6 +179,8 @@ export function getModelsDevPricing(
   return {
     input: model.pricing.input,
     output: model.pricing.output,
+    reasoning: model.pricing.reasoning,
+    cacheRead: model.pricing.cacheRead,
   }
 }
 

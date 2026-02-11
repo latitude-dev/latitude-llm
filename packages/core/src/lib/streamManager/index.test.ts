@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Providers } from '@latitude-data/constants'
 import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants/ai'
+import {
+  CostBreakdown,
+  totalCost,
+  totalInputTokens,
+} from '@latitude-data/constants/costs'
 import { LogSources } from '../../constants'
 import { incrementTokens, StreamManager, StreamManagerProps } from './index'
 import * as estimateCostModule from '../../services/ai/estimateCost'
 
-vi.spyOn(estimateCostModule, 'estimateCost')
+vi.spyOn(estimateCostModule, 'estimateCostBreakdown')
 
 class TestStreamManager extends StreamManager {
   async step() {}
@@ -151,11 +156,26 @@ describe('StreamManager', () => {
   })
 
   describe('cost tracking', () => {
+    const mockBreakdown: CostBreakdown = {
+      'openai/gpt-4': {
+        input: {
+          prompt: { tokens: 100, cost: 0.003 },
+          cached: { tokens: 0 },
+        },
+        output: {
+          reasoning: { tokens: 0 },
+          completion: { tokens: 50, cost: 0.007 },
+        },
+      },
+    }
+
     beforeEach(() => {
-      vi.mocked(estimateCostModule.estimateCost).mockReturnValue(0.01)
+      vi.mocked(estimateCostModule.estimateCostBreakdown).mockReturnValue(
+        mockBreakdown,
+      )
     })
 
-    it('incrementLogCost calculates cost using estimateCost', async () => {
+    it('incrementLogCost calculates cost using estimateCostBreakdown', async () => {
       const provider = { provider: Providers.OpenAI } as any
       const config = { model: 'gpt-4' } as any
       const usage = createUsage()
@@ -163,30 +183,24 @@ describe('StreamManager', () => {
       const { logCost } = streamManager.prepare()
       streamManager.$startStream()
       await streamManager.$startProviderStep({ config, provider })
-      streamManager.$incrementLogCost(usage)
-      streamManager.$endStream()
-
-      expect(estimateCostModule.estimateCost).toHaveBeenCalledWith({
+      streamManager.$incrementLogCost({
         provider: Providers.OpenAI,
         model: 'gpt-4',
         usage,
       })
-      await expect(logCost).resolves.toBeCloseTo(0.01)
-    })
-
-    it('incrementLogCost does nothing without provider/model', async () => {
-      const usage = createUsage()
-
-      const { logCost } = streamManager.prepare()
-      streamManager.$startStream()
-      streamManager.$incrementLogCost(usage)
       streamManager.$endStream()
 
-      expect(estimateCostModule.estimateCost).not.toHaveBeenCalled()
-      await expect(logCost).resolves.toBe(0)
+      expect(estimateCostModule.estimateCostBreakdown).toHaveBeenCalledWith({
+        provider: Providers.OpenAI,
+        model: 'gpt-4',
+        usage,
+      })
+      const resolved = await logCost
+      expect(totalCost(resolved)).toBeCloseTo(0.01)
+      expect(resolved).toEqual(mockBreakdown)
     })
 
-    it('incrementRunCostFromUsage calculates cost using estimateCost', async () => {
+    it('incrementRunCostFromUsage calculates cost using estimateCostBreakdown', async () => {
       const provider = { provider: Providers.OpenAI } as any
       const config = { model: 'gpt-4' } as any
       const usage = createUsage()
@@ -194,53 +208,132 @@ describe('StreamManager', () => {
       const { runCost } = streamManager.prepare()
       streamManager.$startStream()
       await streamManager.$startProviderStep({ config, provider })
-      streamManager.$incrementRunCostFromUsage(usage)
-      streamManager.$endStream()
-
-      expect(estimateCostModule.estimateCost).toHaveBeenCalledWith({
+      streamManager.$incrementRunCostFromUsage({
         provider: Providers.OpenAI,
         model: 'gpt-4',
         usage,
       })
-      await expect(runCost).resolves.toBeCloseTo(0.01)
-    })
-
-    it('incrementRunCost adds pre-computed cost directly', async () => {
-      const { runCost } = streamManager.prepare()
-      streamManager.$startStream()
-      streamManager.incrementRunCost(0.05)
-      streamManager.incrementRunCost(0.03)
       streamManager.$endStream()
 
-      await expect(runCost).resolves.toBeCloseTo(0.08)
+      expect(estimateCostModule.estimateCostBreakdown).toHaveBeenCalledWith({
+        provider: Providers.OpenAI,
+        model: 'gpt-4',
+        usage,
+      })
+      const resolved = await runCost
+      expect(totalCost(resolved)).toBeCloseTo(0.01)
+    })
+
+    it('incrementRunCost adds pre-computed breakdown directly', async () => {
+      const breakdown1: CostBreakdown = {
+        'openai/gpt-4': {
+          input: {
+            prompt: { tokens: 100, cost: 0.02 },
+            cached: { tokens: 0 },
+          },
+          output: {
+            reasoning: { tokens: 0 },
+            completion: { tokens: 50, cost: 0.03 },
+          },
+        },
+      }
+      const breakdown2: CostBreakdown = {
+        'anthropic/claude-sonnet-3-5': {
+          input: {
+            prompt: { tokens: 80, cost: 0.01 },
+            cached: { tokens: 0 },
+          },
+          output: {
+            reasoning: { tokens: 0 },
+            completion: { tokens: 40, cost: 0.02 },
+          },
+        },
+      }
+
+      const { runCost } = streamManager.prepare()
+      streamManager.$startStream()
+      streamManager.incrementRunCost(breakdown1)
+      streamManager.incrementRunCost(breakdown2)
+      streamManager.$endStream()
+
+      const resolved = await runCost
+      expect(totalCost(resolved)).toBeCloseTo(0.08)
+      expect(resolved['openai/gpt-4']).toEqual(breakdown1['openai/gpt-4'])
+      expect(resolved['anthropic/claude-sonnet-3-5']).toEqual(
+        breakdown2['anthropic/claude-sonnet-3-5'],
+      )
     })
 
     it('accumulates costs from multiple calls', async () => {
-      vi.mocked(estimateCostModule.estimateCost).mockReturnValue(0.01)
-
       const provider = { provider: Providers.OpenAI } as any
       const config = { model: 'gpt-4' } as any
+
+      const subAgentBreakdown: CostBreakdown = {
+        'anthropic/claude-sonnet-3-5': {
+          input: {
+            prompt: { tokens: 200, cost: 0.02 },
+            cached: { tokens: 0 },
+          },
+          output: {
+            reasoning: { tokens: 0 },
+            completion: { tokens: 100, cost: 0.03 },
+          },
+        },
+      }
 
       const { logCost, runCost } = streamManager.prepare()
       streamManager.$startStream()
       await streamManager.$startProviderStep({ config, provider })
 
-      streamManager.$incrementLogCost(createUsage())
-      streamManager.$incrementLogCost(createUsage())
+      streamManager.$incrementLogCost({
+        provider: Providers.OpenAI,
+        model: 'gpt-4',
+        usage: createUsage(),
+      })
+      streamManager.$incrementLogCost({
+        provider: Providers.OpenAI,
+        model: 'gpt-4',
+        usage: createUsage(),
+      })
 
-      streamManager.$incrementRunCostFromUsage(createUsage())
-      streamManager.incrementRunCost(0.05)
+      streamManager.$incrementRunCostFromUsage({
+        provider: Providers.OpenAI,
+        model: 'gpt-4',
+        usage: createUsage(),
+      })
+      streamManager.incrementRunCost(subAgentBreakdown)
 
       streamManager.$endStream()
 
-      await expect(logCost).resolves.toBeCloseTo(0.02)
-      await expect(runCost).resolves.toBeCloseTo(0.06)
+      const resolvedLogCost = await logCost
+      expect(totalCost(resolvedLogCost)).toBeCloseTo(0.02)
+
+      const resolvedRunCost = await runCost
+      expect(totalCost(resolvedRunCost)).toBeCloseTo(0.06)
+      expect(resolvedRunCost['anthropic/claude-sonnet-3-5']).toEqual(
+        subAgentBreakdown['anthropic/claude-sonnet-3-5'],
+      )
     })
   })
 
   describe('updateStateFromResponse', () => {
+    const mockBreakdown: CostBreakdown = {
+      'openai/gpt-4': {
+        input: {
+          prompt: { tokens: 100, cost: 0.003 },
+          cached: { tokens: 0 },
+        },
+        output: {
+          reasoning: { tokens: 0 },
+          completion: { tokens: 50, cost: 0.007 },
+        },
+      },
+    }
+
     beforeEach(() => {
-      vi.mocked(estimateCostModule.estimateCost).mockReturnValue(0.01)
+      vi.mocked(estimateCostModule.estimateCostBreakdown).mockReturnValue(
+        mockBreakdown,
+      )
     })
 
     it('updates all state including usage and cost', async () => {
@@ -256,6 +349,8 @@ describe('StreamManager', () => {
         response: { text: 'Hello' } as any,
         messages: [{ role: 'assistant', content: 'Hello' }] as any,
         tokenUsage: usage,
+        provider: Providers.OpenAI,
+        model: 'gpt-4',
         finishReason: 'stop',
       })
 
@@ -263,8 +358,10 @@ describe('StreamManager', () => {
 
       await expect(logUsage).resolves.toEqual(usage)
       await expect(runUsage).resolves.toEqual(usage)
-      await expect(logCost).resolves.toBeCloseTo(0.01)
-      await expect(runCost).resolves.toBeCloseTo(0.01)
+      const resolvedLogCost = await logCost
+      const resolvedRunCost = await runCost
+      expect(totalCost(resolvedLogCost)).toBeCloseTo(0.01)
+      expect(totalCost(resolvedRunCost)).toBeCloseTo(0.01)
     })
 
     it('accumulates across multiple updateStateFromResponse calls', async () => {
@@ -279,6 +376,8 @@ describe('StreamManager', () => {
         response: { text: 'Hello' } as any,
         messages: [{ role: 'assistant', content: 'Hello' }] as any,
         tokenUsage: createUsage(1),
+        provider: Providers.OpenAI,
+        model: 'gpt-4',
         finishReason: 'stop',
       })
 
@@ -286,6 +385,8 @@ describe('StreamManager', () => {
         response: { text: 'World' } as any,
         messages: [{ role: 'assistant', content: 'World' }] as any,
         tokenUsage: createUsage(2),
+        provider: Providers.OpenAI,
+        model: 'gpt-4',
         finishReason: 'stop',
       })
 
@@ -303,19 +404,61 @@ describe('StreamManager', () => {
 
       await expect(logUsage).resolves.toEqual(expectedUsage)
       await expect(runUsage).resolves.toEqual(expectedUsage)
-      await expect(logCost).resolves.toBeCloseTo(0.02)
-      await expect(runCost).resolves.toBeCloseTo(0.02)
+      const resolvedLogCost = await logCost
+      const resolvedRunCost = await runCost
+      expect(totalCost(resolvedLogCost)).toBeCloseTo(0.02)
+      expect(totalCost(resolvedRunCost)).toBeCloseTo(0.02)
     })
   })
 
   describe('sub-agent aggregation', () => {
+    const mockBreakdown: CostBreakdown = {
+      'openai/gpt-4': {
+        input: {
+          prompt: { tokens: 100, cost: 0.003 },
+          cached: { tokens: 0 },
+        },
+        output: {
+          reasoning: { tokens: 0 },
+          completion: { tokens: 50, cost: 0.007 },
+        },
+      },
+    }
+
     beforeEach(() => {
-      vi.mocked(estimateCostModule.estimateCost).mockReturnValue(0.01)
+      vi.mocked(estimateCostModule.estimateCostBreakdown).mockReturnValue(
+        mockBreakdown,
+      )
     })
 
     it('runCost includes both own cost and sub-agent costs', async () => {
       const provider = { provider: Providers.OpenAI } as any
       const config = { model: 'gpt-4' } as any
+
+      const subAgent1: CostBreakdown = {
+        'anthropic/claude-sonnet-3-5': {
+          input: {
+            prompt: { tokens: 200, cost: 0.02 },
+            cached: { tokens: 0 },
+          },
+          output: {
+            reasoning: { tokens: 0 },
+            completion: { tokens: 100, cost: 0.03 },
+          },
+        },
+      }
+      const subAgent2: CostBreakdown = {
+        'anthropic/claude-sonnet-3-5': {
+          input: {
+            prompt: { tokens: 150, cost: 0.01 },
+            cached: { tokens: 0 },
+          },
+          output: {
+            reasoning: { tokens: 0 },
+            completion: { tokens: 80, cost: 0.02 },
+          },
+        },
+      }
 
       const { logCost, runCost } = streamManager.prepare()
       streamManager.$startStream()
@@ -325,16 +468,26 @@ describe('StreamManager', () => {
         response: { text: 'Hello' } as any,
         messages: [{ role: 'assistant', content: 'Hello' }] as any,
         tokenUsage: createUsage(),
+        provider: Providers.OpenAI,
+        model: 'gpt-4',
         finishReason: 'stop',
       })
 
-      streamManager.incrementRunCost(0.05)
-      streamManager.incrementRunCost(0.03)
+      streamManager.incrementRunCost(subAgent1)
+      streamManager.incrementRunCost(subAgent2)
 
       streamManager.$endStream()
 
-      await expect(logCost).resolves.toBeCloseTo(0.01)
-      await expect(runCost).resolves.toBeCloseTo(0.09)
+      const resolvedLogCost = await logCost
+      expect(totalCost(resolvedLogCost)).toBeCloseTo(0.01)
+
+      const resolvedRunCost = await runCost
+      expect(totalCost(resolvedRunCost)).toBeCloseTo(0.09)
+      expect(resolvedRunCost['openai/gpt-4']).toBeDefined()
+      expect(resolvedRunCost['anthropic/claude-sonnet-3-5']).toBeDefined()
+      expect(
+        totalInputTokens(resolvedRunCost['anthropic/claude-sonnet-3-5']!),
+      ).toBe(350)
     })
 
     it('runUsage includes both own usage and sub-agent usage', async () => {
@@ -349,6 +502,8 @@ describe('StreamManager', () => {
         response: { text: 'Hello' } as any,
         messages: [{ role: 'assistant', content: 'Hello' }] as any,
         tokenUsage: createUsage(1),
+        provider: Providers.OpenAI,
+        model: 'gpt-4',
         finishReason: 'stop',
       })
 
@@ -373,6 +528,31 @@ describe('StreamManager', () => {
       const provider = { provider: Providers.OpenAI } as any
       const config = { model: 'gpt-4' } as any
 
+      const subAgent1: CostBreakdown = {
+        'anthropic/claude-sonnet-3-5': {
+          input: {
+            prompt: { tokens: 200, cost: 0.008 },
+            cached: { tokens: 0 },
+          },
+          output: {
+            reasoning: { tokens: 0 },
+            completion: { tokens: 100, cost: 0.012 },
+          },
+        },
+      }
+      const subAgent2: CostBreakdown = {
+        'google/gemini-pro': {
+          input: {
+            prompt: { tokens: 100, cost: 0.004 },
+            cached: { tokens: 0 },
+          },
+          output: {
+            reasoning: { tokens: 0 },
+            completion: { tokens: 50, cost: 0.006 },
+          },
+        },
+      }
+
       const { logUsage, runUsage, logCost, runCost } = streamManager.prepare()
       streamManager.$startStream()
       await streamManager.$startProviderStep({ config, provider })
@@ -383,19 +563,22 @@ describe('StreamManager', () => {
           { role: 'assistant', content: 'Main agent response' },
         ] as any,
         tokenUsage: createUsage(1),
+        provider: Providers.OpenAI,
+        model: 'gpt-4',
         finishReason: 'stop',
       })
 
       streamManager.incrementRunUsage(createUsage(2))
-      streamManager.incrementRunCost(0.02)
+      streamManager.incrementRunCost(subAgent1)
 
       streamManager.incrementRunUsage(createUsage(1))
-      streamManager.incrementRunCost(0.01)
+      streamManager.incrementRunCost(subAgent2)
 
       streamManager.$endStream()
 
       await expect(logUsage).resolves.toEqual(createUsage(1))
-      await expect(logCost).resolves.toBeCloseTo(0.01)
+      const resolvedLogCost = await logCost
+      expect(totalCost(resolvedLogCost)).toBeCloseTo(0.01)
 
       await expect(runUsage).resolves.toEqual({
         inputTokens: 400,
@@ -406,7 +589,13 @@ describe('StreamManager', () => {
         reasoningTokens: 40,
         cachedInputTokens: 20,
       })
-      await expect(runCost).resolves.toBeCloseTo(0.04)
+
+      const resolvedRunCost = await runCost
+      expect(totalCost(resolvedRunCost)).toBeCloseTo(0.04)
+      expect(Object.keys(resolvedRunCost)).toHaveLength(3)
+      expect(resolvedRunCost['openai/gpt-4']).toBeDefined()
+      expect(resolvedRunCost['anthropic/claude-sonnet-3-5']).toBeDefined()
+      expect(resolvedRunCost['google/gemini-pro']).toBeDefined()
     })
   })
 })

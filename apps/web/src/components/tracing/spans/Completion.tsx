@@ -3,14 +3,16 @@ import {
   Message as MessageComponent,
   MessageList,
 } from '$/components/ChatWrapper'
-import { MetadataItem } from '$/components/MetadataItem'
+import { CostBreakdownDisplay } from '$/components/CostBreakdownDisplay'
+import { MetadataItem, MetadataItemTooltip } from '$/components/MetadataItem'
 import { Message } from '@latitude-data/constants/messages'
+import { buildCompletionCostBreakdown } from './shared/aggregateCompletionSpans'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   DetailsPanelProps,
   SPAN_COLORS,
@@ -118,6 +120,14 @@ function MessagesDetails({
 }
 
 function DetailsPanel({ span }: DetailsPanelProps<SpanType.Completion>) {
+  const costBreakdown = useMemo(() => {
+    const metadata = span.metadata
+    if (!metadata?.cost || !metadata.provider || !metadata.model) return null
+
+    const breakdown = buildCompletionCostBreakdown(metadata)
+    return Object.keys(breakdown).length > 0 ? breakdown : null
+  }, [span.metadata])
+
   return (
     <>
       {!!span.metadata && (
@@ -163,13 +173,28 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Completion>) {
               }
             />
           )}
-          {!!span.metadata.cost && (
+          {!!span.metadata.cost && costBreakdown ? (
+            <MetadataItemTooltip
+              label='Cost'
+              trigger={
+                <Text.H5 align='right' color='foregroundMuted'>
+                  {formatCostInMillicents(span.metadata.cost)}
+                </Text.H5>
+              }
+              tooltipContent={
+                <CostBreakdownDisplay
+                  breakdown={costBreakdown}
+                  color='background'
+                />
+              }
+            />
+          ) : span.metadata.cost ? (
             <MetadataItem
               label='Cost'
               value={formatCostInMillicents(span.metadata.cost)}
               tooltip="We estimate the cost based on the token usage and your provider's pricing. Actual cost may vary."
             />
-          )}
+          ) : null}
           {!!span.metadata.finishReason && (
             <MetadataItem
               label='Finish reason'
