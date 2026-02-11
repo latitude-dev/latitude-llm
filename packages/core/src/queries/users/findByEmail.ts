@@ -3,7 +3,6 @@ import { eq } from 'drizzle-orm'
 import { type User } from '../../schema/models/types/User'
 import { users } from '../../schema/models/users'
 import { unscopedQuery } from '../scope'
-import { tt } from './columns'
 
 export const unsafelyFindUserByEmail = unscopedQuery(
   async function unsafelyFindUserByEmail(
@@ -11,7 +10,7 @@ export const unsafelyFindUserByEmail = unscopedQuery(
     db,
   ): Promise<User | null> {
     const rows = await db
-      .select(tt)
+      .select()
       .from(users)
       .where(eq(users.email, email))
       .limit(1)
@@ -29,6 +28,7 @@ export const unsafelyFindUserIdByEmail = unscopedQuery(
       .from(users)
       .where(eq(users.email, email))
       .limit(1)
+
     return rows[0]
   },
 )
