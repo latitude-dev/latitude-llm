@@ -9,7 +9,10 @@ import {
   unsafelyGetFirstApiKeyByWorkspaceId,
 } from '../../data-access/apiKeys'
 import { Result, TypedResult } from '../../lib/Result'
-import { CommitsRepository, ProjectsRepository } from '../../repositories'
+import { CommitsRepository } from '../../repositories'
+import { projectsScope } from '../../queries/projects/scope'
+import { findProjectById } from '../../queries/projects/findById'
+import { findProjectByName } from '../../queries/projects/findByName'
 import { type Project } from '../../schema/models/types/Project'
 import { type WorkspaceDto } from '../../schema/models/types/Workspace'
 import { Commit } from '../../schema/models/types/Commit'
@@ -48,8 +51,8 @@ export async function getCopilotData(
       return Result.error(new Error('Copilot workspace not found'))
     }
 
-    const projectsRepository = new ProjectsRepository(workspace.id, db)
-    const projectResult = await projectsRepository.getProjectByName(projectName)
+    const projects = projectsScope(workspace.id, db)
+    const projectResult = await findProjectByName(projects, projectName)
     if (projectResult.error) {
       return Result.error(new Error('Copilot project not found'))
     }
@@ -108,8 +111,8 @@ export async function getCopilotData(
     return Result.error(new Error('Copilot workspace not found'))
   }
 
-  const projectsRepository = new ProjectsRepository(workspace.id, db)
-  const projectResult = await projectsRepository.getProjectById(projectId)
+  const projects = projectsScope(workspace.id, db)
+  const projectResult = await findProjectById(projects, projectId)
   if (projectResult.error) {
     return Result.error(new Error('Copilot project not found'))
   }

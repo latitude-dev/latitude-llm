@@ -1,52 +1,40 @@
-import { memberships } from '../schema/models/memberships'
-import { users } from '../schema/models/users'
-import { asc, eq, getTableColumns } from 'drizzle-orm'
-
 import { type User } from '../schema/models/types/User'
 import { type Workspace } from '../schema/models/types/Workspace'
 import { WorkspaceDto } from '../schema/models/types/Workspace'
-import { database } from '../client'
+import { database, Database } from '../client'
+import { workspaceUsersScope, usersScope } from '../queries/users/scope'
+import { findFirstUserInWorkspace as _findFirstUserInWorkspace } from '../queries/users/findFirstInWorkspace'
+import { unsafelyFindUserById } from '../queries/users/findById'
+import {
+  unsafelyFindUserByEmail as _unsafelyFindUserByEmail,
+  unsafelyFindUserIdByEmail,
+} from '../queries/users/findByEmail'
 
+/** @deprecated Use `findFirstUserInWorkspace` from `queries/users/findFirstInWorkspace` */
 export async function findFirstUserInWorkspace(
   workspace: WorkspaceDto | Workspace,
 ) {
-  const results = await database
-    .select(getTableColumns(users))
-    .from(users)
-    .innerJoin(memberships, eq(users.id, memberships.userId))
-    .where(eq(memberships.workspaceId, workspace.id))
-    .orderBy(asc(users.createdAt))
-    .limit(1)
-
-  return results[0]
+  const scope = workspaceUsersScope(workspace.id)
+  return _findFirstUserInWorkspace(scope)
 }
 
+/** @deprecated Use `unsafelyFindUserById` from `queries/users/findById` */
 export function unsafelyGetUser(id?: string) {
-  return database
-    .select()
-    .from(users)
-    .where(eq(users.id, id ?? ''))
-    .limit(1)
-    .then((rows) => rows[0] || null) as Promise<User | null>
+  const scope = usersScope()
+  return unsafelyFindUserById(scope, id ?? '') as Promise<User | null>
 }
 
+/** @deprecated Use `unsafelyFindUserByEmail` from `queries/users/findByEmail` */
 export function unsafelyGetUserByEmail(email?: string) {
-  return database
-    .select()
-    .from(users)
-    .where(eq(users.email, email ?? ''))
-    .limit(1)
-    .then((rows) => rows[0] || null) as Promise<User | null>
+  const scope = usersScope()
+  return _unsafelyFindUserByEmail(scope, email ?? '') as Promise<User | null>
 }
 
-export async function unsafelyFindUserByEmail(email: string, db = database) {
-  return db
-    .select({
-      id: users.id,
-      email: users.email,
-    })
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1)
-    .then((rows) => rows[0])
+/** @deprecated Use `unsafelyFindUserIdByEmail` from `queries/users/findByEmail` */
+export async function unsafelyFindUserByEmail(
+  email: string,
+  db: Database = database,
+) {
+  const scope = usersScope(db)
+  return unsafelyFindUserIdByEmail(scope, email)
 }

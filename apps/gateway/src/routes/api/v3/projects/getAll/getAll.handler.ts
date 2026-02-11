@@ -1,11 +1,11 @@
 import { Context } from 'hono'
-import { ProjectsRepository } from '@latitude-data/core/repositories'
+import { projectsScope } from '@latitude-data/core/queries/projects/scope'
+import { findAllActiveProjects } from '@latitude-data/core/queries/projects/findAllActive'
 
 export const getAllHandler = async (c: Context) => {
   const workspace = c.get('workspace')
-  const projectsRepository = new ProjectsRepository(workspace.id)
-  const projectsResult = await projectsRepository.findAllActive()
-  const projects = projectsResult.unwrap()
+  const projects = projectsScope(workspace.id)
+  const result = await findAllActiveProjects(projects)
 
-  return c.json(projects, 200)
+  return c.json(result.unwrap(), 200)
 }

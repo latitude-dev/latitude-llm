@@ -100,6 +100,12 @@
     "./utils/*": {
       "import": "./src/utils/*.ts"
     },
+    "./queries": {
+      "import": "./src/queries/index.ts"
+    },
+    "./queries/*": {
+      "import": "./src/queries/*.ts"
+    },
     "./telemetry": {
       "import": "./src/telemetry/index.ts"
     }

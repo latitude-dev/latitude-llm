@@ -1,17 +1,18 @@
-import { and, desc, eq, getTableColumns, isNull } from 'drizzle-orm'
+import { eq, getTableColumns } from 'drizzle-orm'
 
 import { type Project } from '../schema/models/types/Project'
-import { NotFoundError } from '../lib/errors'
-import { Result } from '../lib/Result'
-import { commits } from '../schema/models/commits'
-import { documentVersions } from '../schema/models/documentVersions'
 import { projects } from '../schema/models/projects'
+import { projectsScope } from '../queries/projects/scope'
+import { findProjectById } from '../queries/projects/findById'
+import { findProjectByName } from '../queries/projects/findByName'
+import { findProjectByDocumentUuid } from '../queries/projects/findByDocumentUuid'
+import { findFirstProject } from '../queries/projects/findFirst'
+import { findAllActiveProjects } from '../queries/projects/findAllActive'
 import RepositoryLegacy from './repository'
-
-const NOT_FOUND_MSG = 'Project not found'
 
 const tt = getTableColumns(projects)
 
+/** @deprecated Use query functions from `queries/projects/` instead */
 export class ProjectsRepository extends RepositoryLegacy<typeof tt, Project> {
   get scope() {
     return this.db
@@ -21,65 +22,27 @@ export class ProjectsRepository extends RepositoryLegacy<typeof tt, Project> {
       .as('projectsScope')
   }
 
+  private get _scope() {
+    return projectsScope(this.workspaceId, this.db)
+  }
+
   async getProjectById(id: number) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.id, id))
-    const project = result[0]
-
-    if (!project) {
-      return Result.error(new NotFoundError(NOT_FOUND_MSG))
-    }
-
-    return Result.ok(project)
+    return findProjectById(this._scope, id)
   }
 
   async getProjectByName(name: string) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.name, name))
-    const project = result[0]
-
-    if (!project) {
-      return Result.error(new NotFoundError(NOT_FOUND_MSG))
-    }
-
-    return Result.ok(project)
+    return findProjectByName(this._scope, name)
   }
 
   async getProjectByDocumentUuid(documentUuid: string) {
-    const results = await this.db
-      .select(this.scope._.selectedFields)
-      .from(this.scope)
-      .innerJoin(commits, eq(commits.projectId, this.scope.id))
-      .innerJoin(documentVersions, eq(documentVersions.commitId, commits.id))
-      .where(and(eq(documentVersions.documentUuid, documentUuid)))
-      .limit(1)
-
-    if (results.length === 0) {
-      return Result.error(new NotFoundError(NOT_FOUND_MSG))
-    }
-
-    return Result.ok(results[0]!)
+    return findProjectByDocumentUuid(this._scope, documentUuid)
   }
 
   async getFirstProject() {
-    const result = await this.db.select().from(this.scope).limit(1)
-    const project = result[0]
-    if (!project) return Result.error(new NotFoundError(NOT_FOUND_MSG))
-
-    return Result.ok(project)
+    return findFirstProject(this._scope)
   }
 
   async findAllActive() {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(isNull(this.scope.deletedAt))
-      .orderBy(desc(this.scope.lastEditedAt), desc(this.scope.id))
-
-    return Result.ok(result)
+    return findAllActiveProjects(this._scope)
   }
 }

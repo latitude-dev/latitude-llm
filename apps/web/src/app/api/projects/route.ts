@@ -1,4 +1,5 @@
-import { ProjectsRepository } from '@latitude-data/core/repositories'
+import { projectsScope } from '@latitude-data/core/queries/projects/scope'
+import { findAllActiveProjects } from '@latitude-data/core/queries/projects/findAllActive'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
@@ -14,10 +15,10 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const scope = new ProjectsRepository(workspace.id)
-      const projects = await scope.findAllActive().then((r) => r.unwrap())
+      const projects = projectsScope(workspace.id)
+      const result = await findAllActiveProjects(projects)
 
-      return NextResponse.json(projects, { status: 200 })
+      return NextResponse.json(result.unwrap(), { status: 200 })
     },
   ),
 )
