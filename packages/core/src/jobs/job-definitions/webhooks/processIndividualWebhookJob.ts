@@ -12,7 +12,6 @@ import { Events, LatitudeEvent } from '../../../events/events'
 import { processWebhookPayload } from './utils/processWebhookPayload'
 import { WEBHOOK_EVENTS } from './processWebhookJob'
 import { SpansRepository } from '../../../repositories'
-import { NotFoundError } from '@latitude-data/constants/errors'
 
 export type ProcessIndividualWebhookJobData = {
   event: typeof events.$inferSelect
@@ -34,20 +33,15 @@ export const processIndividualWebhookJob = async (
     throw new Error(`Webhook not found or inactive: ${webhookId}`)
   }
 
-  // Extract projectId from the event
+  // Extract projectId from the event (best-effort)
   const projectId = await fetchProjectIdFromEvent(event as LatitudeEvent)
-  if (!projectId) {
-    throw new Error(`No project id found in event ${event.type}`)
-  }
 
-  // Check if the webhook has project filters and if the event's projectId matches
-  if (
-    webhook.projectIds &&
-    webhook.projectIds.length > 0 &&
-    !webhook.projectIds.includes(projectId)
-  ) {
-    // Skip this webhook as it doesn't match the project filter
-    return
+  // Check if the webhook has project filters and if the event's projectId matches.
+  // If we cannot resolve a projectId (e.g., related record already deleted), skip
+  // filtered webhooks to avoid pointless retries/noise.
+  if (webhook.projectIds && webhook.projectIds.length > 0) {
+    if (!projectId) return
+    if (!webhook.projectIds.includes(projectId)) return
   }
 
   // Create webhook payload
@@ -104,9 +98,10 @@ async function fetchProjectIdFromEvent(event: LatitudeEvent) {
       const { spanId, traceId, workspaceId } = event.data
       const repo = new SpansRepository(workspaceId)
       const spanResult = await repo.get({ spanId, traceId })
-      if (!spanResult.ok || !spanResult.value) {
-        throw new NotFoundError('Span not found')
-      }
+
+      // The originating record may have been deleted between event creation and
+      // webhook processing; treat as non-fatal (no projectId).
+      if (!spanResult.ok || !spanResult.value) return
 
       return spanResult.value.projectId
     }
