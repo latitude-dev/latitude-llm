@@ -20,7 +20,7 @@ Before writing any code, load the `coding-standards` skill (`/coding-standards`)
 - `pnpm lint` - Lint all packages
 - `pnpm prettier` - Format code
 - `pnpm tc` - Type check all packages
-- `pnpm test` - Run all tests
+- `pnpm test` - Run all tests. NEVER run this command against the whole repo, only against packages you are working on, and one at a time, otherwise the host machine will run out of memory.
 
 ## Code Style
 
