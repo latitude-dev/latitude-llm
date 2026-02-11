@@ -141,11 +141,10 @@ export async function ensureAgentName(
   },
   db = database,
 ) {
-  const finding = await findAllActiveProjects({ workspaceId: workspace.id }, db)
-  if (finding.error) {
-    return Result.error(finding.error as Error)
-  }
-  const projects = finding.unwrap()
+  const projects = await findAllActiveProjects(
+    { workspaceId: workspace.id },
+    db,
+  )
 
   const existing = projects.filter((project) =>
     project.name.startsWith(name),

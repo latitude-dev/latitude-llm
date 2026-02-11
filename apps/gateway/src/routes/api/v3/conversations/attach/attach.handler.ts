@@ -26,8 +26,13 @@ export const attachHandler: AppRouteHandler<AttachRoute> = async (ctx) => {
     )
   }
 
-  const project = await findProjectById({ workspaceId: workspace.id, id: run.projectId })
-    .then((r) => r.unwrap())
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: run.projectId,
+  })
+  if (!project) {
+    throw new NotFoundError('Project not found')
+  }
 
   const args = { run, project, workspace }
   if (stream) return handleStreamingMode(ctx, args)

@@ -14,11 +14,11 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const result = await findAllActiveProjects({
+      const projects = await findAllActiveProjects({
         workspaceId: workspace.id,
       })
 
-      return NextResponse.json(result.unwrap(), { status: 200 })
+      return NextResponse.json(projects, { status: 200 })
     },
   ),
 )

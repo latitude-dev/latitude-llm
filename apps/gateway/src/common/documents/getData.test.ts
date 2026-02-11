@@ -1,6 +1,4 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Result } from '@latitude-data/core/lib/Result'
-
 import { getData } from './getData'
 
 const mocks = vi.hoisted(() => ({
@@ -37,7 +35,7 @@ vi.mock('@latitude-data/core/repositories', () => {
 
 describe('getData', () => {
   it('returns BadRequestError for malformed version uuid without hitting DB', async () => {
-    mocks.findProjectById.mockResolvedValueOnce(Result.ok({ id: 123 }))
+    mocks.findProjectById.mockResolvedValueOnce({ id: 123 })
 
     const res = await getData({
       workspace: { id: 1 } as any,

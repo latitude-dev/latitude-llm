@@ -50,14 +50,13 @@ export async function getCopilotData(
       return Result.error(new Error('Copilot workspace not found'))
     }
 
-    const projectResult = await findProjectByName(
+    const project = await findProjectByName(
       { workspaceId: workspace.id, name: projectName },
       db,
     )
-    if (projectResult.error) {
+    if (!project) {
       return Result.error(new Error('Copilot project not found'))
     }
-    const project = projectResult.unwrap()
 
     const commitsRepository = new CommitsRepository(workspace.id, db)
     const commit = await commitsRepository.getHeadCommit(project.id)
@@ -112,11 +111,11 @@ export async function getCopilotData(
     return Result.error(new Error('Copilot workspace not found'))
   }
 
-  const projectResult = await findProjectById(
+  const project = await findProjectById(
     { workspaceId: workspace.id, id: projectId },
     db,
   )
-  if (projectResult.error) {
+  if (!project) {
     return Result.error(new Error('Copilot project not found'))
   }
 
@@ -133,7 +132,7 @@ export async function getCopilotData(
 
   return Result.ok({
     workspace,
-    project: projectResult.value,
+    project,
     commit,
     apiKeyToken,
   })

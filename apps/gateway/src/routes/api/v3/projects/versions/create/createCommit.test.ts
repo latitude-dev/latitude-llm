@@ -1,5 +1,4 @@
 import app from '$/routes/app'
-import { NotFoundError } from '@latitude-data/constants/errors'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import { createProject } from '@latitude-data/core/factories'
 import * as findProjectByIdModule from '@latitude-data/core/queries/projects/findById'
@@ -77,12 +76,9 @@ describe('POST /projects/:projectId/versions', () => {
     })
 
     it('fails when project ID is invalid', async () => {
-      vi.spyOn(findProjectByIdModule, 'findProjectById').mockResolvedValueOnce({
-        ok: false,
-        error: new NotFoundError('Project not found'),
-        value: undefined,
-        unwrap: () => { throw new NotFoundError('Project not found') },
-      } as any)
+      vi.spyOn(findProjectByIdModule, 'findProjectById').mockResolvedValueOnce(
+        undefined,
+      )
 
       const response = await app.request(`/api/v3/projects/999999/versions`, {
         method: 'POST',

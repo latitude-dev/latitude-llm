@@ -85,11 +85,13 @@ export async function prepareOptimization(
     }
     testset = gettingts.value
   } else {
-    const gettingpj = await findProjectById({ workspaceId: workspace.id, id: optimization.projectId })
-    if (gettingpj.error) {
-      return Result.error(gettingpj.error)
+    const project = await findProjectById({
+      workspaceId: workspace.id,
+      id: optimization.projectId,
+    })
+    if (!project) {
+      return Result.error(new NotFoundError('Project not found'))
     }
-    const project = gettingpj.value
 
     const commitsRepository = new CommitsRepository(workspace.id)
     const gettingco = await commitsRepository.getCommitById(
@@ -647,7 +649,10 @@ async function createDatasets(
     )
   }
 
-  const finding = await findWorkspaceUserById({ workspaceId: workspace.id, id: baselineCommit.userId })
+  const finding = await findWorkspaceUserById({
+    workspaceId: workspace.id,
+    id: baselineCommit.userId,
+  })
   if (finding.error) {
     return Result.error(finding.error)
   }

@@ -3,7 +3,7 @@ import { findAllActiveProjects } from '@latitude-data/core/queries/projects/find
 
 export const getAllHandler = async (c: Context) => {
   const workspace = c.get('workspace')
-  const result = await findAllActiveProjects({ workspaceId: workspace.id })
+  const projects = await findAllActiveProjects({ workspaceId: workspace.id })
 
-  return c.json(result.unwrap(), 200)
+  return c.json(projects, 200)
 }

@@ -1,33 +1,31 @@
 import { and, eq } from 'drizzle-orm'
 
 import { type Project } from '../../schema/models/types/Project'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { commits } from '../../schema/models/commits'
 import { documentVersions } from '../../schema/models/documentVersions'
 import { projects } from '../../schema/models/projects'
-import { scopedQuery } from '../scope'
+import { unscopedQuery } from '../scope'
 import { tt } from './columns'
-import { tenancyFilter } from './filters'
 
-export const findProjectByDocumentUuid = scopedQuery(
-  async function findProjectByDocumentUuid(
-    {
-      workspaceId,
-      documentUuid,
-    }: { workspaceId: number; documentUuid: string },
+export const findProjectFromDocument = unscopedQuery(
+  async function findProjectFromDocument(
+    { document }: { document: DocumentVersion },
     db,
   ): Promise<Project | undefined> {
-    const results = await db
+    const result = await db
       .select(tt)
       .from(projects)
       .innerJoin(commits, eq(commits.projectId, projects.id))
       .innerJoin(documentVersions, eq(documentVersions.commitId, commits.id))
       .where(
         and(
-          tenancyFilter(workspaceId),
-          eq(documentVersions.documentUuid, documentUuid),
+          eq(documentVersions.documentUuid, document.documentUuid),
+          eq(commits.id, document.commitId),
         ),
       )
       .limit(1)
-    return results[0] as Project | undefined
+
+    return result[0] as Project | undefined
   },
 )

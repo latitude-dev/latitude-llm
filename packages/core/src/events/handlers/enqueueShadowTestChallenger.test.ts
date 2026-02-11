@@ -1,6 +1,7 @@
 import { LogSources, Providers } from '@latitude-data/constants'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Result } from '../../lib/Result'
+import { NotFoundError } from '../../lib/errors'
 import {
   CommitsRepository,
   DeploymentTestsRepository,
@@ -273,7 +274,9 @@ describe('enqueueShadowTestChallengerHandler', () => {
     it('should handle error when fetching challenger commit fails', async () => {
       const error = new Error('Failed to get challenger commit')
       mockCommitsRepo.getCommitById.mockResolvedValue(Result.error(error))
-      vi.mocked(findProjectByIdModule.findProjectById).mockResolvedValue(Result.ok(project) as any)
+      vi.mocked(findProjectByIdModule.findProjectById).mockResolvedValue(
+        project as any,
+      )
       mockDocumentsRepo.getDocumentByUuid.mockResolvedValue(Result.ok(document))
 
       const event = createEvent()
@@ -287,14 +290,15 @@ describe('enqueueShadowTestChallengerHandler', () => {
       mockCommitsRepo.getCommitById.mockResolvedValue(
         Result.ok(challengerCommit),
       )
-      const error = new Error('Failed to get project')
-      vi.mocked(findProjectByIdModule.findProjectById).mockResolvedValue(Result.error(error) as any)
+      vi.mocked(findProjectByIdModule.findProjectById).mockResolvedValue(
+        undefined,
+      )
       mockDocumentsRepo.getDocumentByUuid.mockResolvedValue(Result.ok(document))
 
       const event = createEvent()
       await enqueueShadowTestChallengerHandler({ data: event })
 
-      expect(captureException).toHaveBeenCalledWith(error)
+      expect(captureException).toHaveBeenCalledWith(expect.any(NotFoundError))
       expect(enqueueRun).not.toHaveBeenCalled()
     })
 
@@ -302,7 +306,9 @@ describe('enqueueShadowTestChallengerHandler', () => {
       mockCommitsRepo.getCommitById.mockResolvedValue(
         Result.ok(challengerCommit),
       )
-      vi.mocked(findProjectByIdModule.findProjectById).mockResolvedValue(Result.ok(project) as any)
+      vi.mocked(findProjectByIdModule.findProjectById).mockResolvedValue(
+        project as any,
+      )
       const error = new Error('Failed to get document')
       mockDocumentsRepo.getDocumentByUuid.mockResolvedValue(Result.error(error))
 
@@ -324,7 +330,9 @@ describe('enqueueShadowTestChallengerHandler', () => {
       mockCommitsRepo.getCommitById.mockResolvedValue(
         Result.ok(challengerCommit),
       )
-      vi.mocked(findProjectByIdModule.findProjectById).mockResolvedValue(Result.ok(project) as any)
+      vi.mocked(findProjectByIdModule.findProjectById).mockResolvedValue(
+        project as any,
+      )
       mockDocumentsRepo.getDocumentByUuid.mockResolvedValue(Result.ok(document))
       vi.mocked(routeRequest).mockReturnValue('challenger')
       // @ts-expect-error: mockResolvedValue is not typed correctly

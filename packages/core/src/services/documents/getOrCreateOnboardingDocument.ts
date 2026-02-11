@@ -22,9 +22,7 @@ export async function getOrCreateOnboardingDocument(
   transaction = new Transaction(),
 ) {
   return transaction.call(async (tx) => {
-    const projectResult = await findFirstProject({ workspaceId: workspace.id }, tx)
-
-    let project = projectResult.ok ? projectResult.value : null
+    let project = await findFirstProject({ workspaceId: workspace.id }, tx)
     let commit = null
 
     if (!project) {

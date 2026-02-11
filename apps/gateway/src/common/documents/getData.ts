@@ -1,4 +1,4 @@
-import { BadRequestError } from '@latitude-data/constants/errors'
+import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import { validate as isValidUuid } from 'uuid'
 import {
@@ -28,9 +28,10 @@ async function getProjectByVersionData({
     return Result.error(new BadRequestError(`Invalid project id ${projectId}`))
   }
 
-  const projectResult = await findProjectById({ workspaceId: workspace.id, id: pid })
-  if (projectResult.error) return projectResult
-  const project = projectResult.value
+  const project = await findProjectById({ workspaceId: workspace.id, id: pid })
+  if (!project) {
+    return Result.error(new NotFoundError('Project not found'))
+  }
 
   // 'live' is accepted in some routes as a special identifier.
   // Anything else must be a UUID to avoid Drizzle/pg throwing on malformed values.

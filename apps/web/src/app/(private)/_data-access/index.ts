@@ -30,8 +30,8 @@ import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
 export const getFirstProjectCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
-    const result = await findFirstProject({ workspaceId })
-    const project = result.unwrap()
+    const project = await findFirstProject({ workspaceId })
+    if (!project) throw new NotFoundError('Project not found')
 
     return project
   },
@@ -39,10 +39,7 @@ export const getFirstProjectCached = cache(
 
 export const getActiveProjectsCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
-    const result = await findAllActiveProjects({ workspaceId })
-    const projects = result.unwrap()
-
-    return projects
+    return await findAllActiveProjects({ workspaceId })
   },
 )
 
@@ -54,8 +51,8 @@ export const findProjectCached = cache(
     projectId: number
     workspaceId: number
   }) => {
-    const result = await findProjectById({ workspaceId, id: projectId })
-    const project = result.unwrap()
+    const project = await findProjectById({ workspaceId, id: projectId })
+    if (!project) throw new NotFoundError('Project not found')
 
     return project
   },
@@ -94,8 +91,11 @@ export const findCommitsWithDocumentChangesCached = cache(
     documentUuid: string
   }) => {
     const { workspace } = await getCurrentUserOrRedirect()
-    const project = await findProjectById({ workspaceId: workspace.id, id: projectId })
-      .then((r) => r.unwrap())
+    const project = await findProjectById({
+      workspaceId: workspace.id,
+      id: projectId,
+    })
+    if (!project) throw new NotFoundError('Project not found')
     const commitsScope = new CommitsRepository(workspace.id)
     const commits = await commitsScope.getCommitsWithDocumentChanges({
       project,

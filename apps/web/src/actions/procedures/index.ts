@@ -16,6 +16,7 @@ import { cache } from '@latitude-data/core/cache'
 import {
   LatitudeError,
   LatitudeErrorDetails,
+  NotFoundError,
   RateLimitError,
   UnauthorizedError,
   UnprocessableEntityError,
@@ -162,8 +163,11 @@ export const withProjectSchema = z.object({
 export const withProject = authProcedure.use(
   async ({ next, ctx, clientInput }) => {
     const { projectId } = validateSchema(withProjectSchema, clientInput)
-    const project = await findProjectById({ workspaceId: ctx.workspace.id, id: Number(projectId) })
-      .then((r) => r.unwrap())
+    const project = await findProjectById({
+      workspaceId: ctx.workspace.id,
+      id: Number(projectId),
+    })
+    if (!project) throw new NotFoundError('Project not found')
 
     return next({ ctx: { ...ctx, project } })
   },

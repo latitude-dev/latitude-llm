@@ -37,8 +37,7 @@ export async function createForkProject({
   workspace: Workspace
   user: User
 }) {
-  const projectsResult = await findAllProjects({ workspaceId: workspace.id })
-  const projects = projectsResult.unwrap()
+  const projects = await findAllProjects({ workspaceId: workspace.id })
 
   const name = forkProjectName({ title, prefix, projects })
   return createProject({ name, workspace, user })

@@ -34,10 +34,11 @@ export const GET = errorHandler(
 
       const searchParams = req.nextUrl.searchParams
       const status = searchParams.get('status') as CommitStatus | undefined
-      const result = await findProjectById({ workspaceId: workspace.id, id: projectId })
-      if (result.error) throw new NotFoundError('Project not found')
-
-      const project = result.value!
+      const project = await findProjectById({
+        workspaceId: workspace.id,
+        id: projectId,
+      })
+      if (!project) throw new NotFoundError('Project not found')
       const repo = new CommitsRepository(workspace.id)
       const { rows } = await paginateQuery({
         dynamicQuery: repo

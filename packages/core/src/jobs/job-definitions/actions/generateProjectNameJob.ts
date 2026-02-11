@@ -23,7 +23,11 @@ export const generateProjectNameJob = async (
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
-  const project = await findProjectById({ workspaceId: workspace.id, id: projectId }).then((r) => r.unwrap())
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: projectId,
+  })
+  if (!project) throw new NotFoundError('Project not found')
   if (project.deletedAt) return
 
   let details = await generateAgentDetails({ prompt }).then((r) => r.unwrap())

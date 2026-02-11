@@ -8,7 +8,7 @@ import {
 } from '@latitude-data/core/repositories'
 import { AnnotateRoute } from './annotate.route'
 import { annotateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/annotate'
-import { findProjectFromDocument } from '@latitude-data/core/data-access/projects'
+import { findProjectFromDocument } from '@latitude-data/core/queries/projects/findProjectFromDocument'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { serializeEvaluationResultV2 } from './serializeEvaluationResultV2'
 import {
@@ -61,7 +61,7 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
     throw new NotFoundError('Could not find prompt for this log')
   }
 
-  const project = await findProjectFromDocument(document)
+  const project = await findProjectFromDocument({ document })
   if (!project) {
     throw new NotFoundError('Could not find project for this document')
   }

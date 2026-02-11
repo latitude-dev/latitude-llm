@@ -133,8 +133,10 @@ export async function getAnnotationsData(
   const hasAnnotations = allTimesAnnotationsCount > 0
 
   if (!hasAnnotations) {
-    const firstProjectResult = await findFirstProject({ workspaceId: workspace.id }, db)
-    const firstProject = firstProjectResult.ok ? firstProjectResult.value : undefined
+    const firstProject = await findFirstProject(
+      { workspaceId: workspace.id },
+      db,
+    )
 
     return {
       hasAnnotations: false,

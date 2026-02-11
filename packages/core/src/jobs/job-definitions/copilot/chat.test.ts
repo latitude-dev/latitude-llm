@@ -42,13 +42,13 @@ describe('runLatteJob', () => {
     vi.spyOn(dataAccess, 'unsafelyFindWorkspace').mockResolvedValue(
       workspace as any,
     )
-    vi.spyOn(findProjectByIdModule, 'findProjectById').mockResolvedValue({
-      ok: true,
-      error: undefined,
-      value: project,
-      unwrap: () => project,
-    } as any)
-    vi.spyOn(findWorkspaceUserByIdModule, 'findWorkspaceUserById').mockResolvedValue({
+    vi.spyOn(findProjectByIdModule, 'findProjectById').mockResolvedValue(
+      project as any,
+    )
+    vi.spyOn(
+      findWorkspaceUserByIdModule,
+      'findWorkspaceUserById',
+    ).mockResolvedValue({
       ok: true,
       error: undefined,
       value: user,
@@ -90,8 +90,17 @@ describe('runLatteJob', () => {
   })
 
   it('returns the userResult if user lookup fails', async () => {
-    const userErr = { ok: false, error: new Error('user not found'), value: undefined, unwrap: () => { throw new Error('user not found') } }
-    ;(findWorkspaceUserByIdModule.findWorkspaceUserById as any).mockResolvedValueOnce(userErr)
+    const userErr = {
+      ok: false,
+      error: new Error('user not found'),
+      value: undefined,
+      unwrap: () => {
+        throw new Error('user not found')
+      },
+    }
+    ;(
+      findWorkspaceUserByIdModule.findWorkspaceUserById as any
+    ).mockResolvedValueOnce(userErr)
 
     const result = await runLatteJob(mockJob)
     expect(result).toBe(userErr)

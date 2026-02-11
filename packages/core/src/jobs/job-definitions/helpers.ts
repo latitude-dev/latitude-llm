@@ -38,9 +38,8 @@ export async function getJobDocumentData({
   if (documentResult.error) return documentResult
   const document = documentResult.unwrap()
 
-  const projectResult = await findProjectById({ workspaceId, id: projectId })
-  if (!Result.isOk(projectResult)) return projectResult
-  const project = projectResult.unwrap()
+  const project = await findProjectById({ workspaceId, id: projectId })
+  if (!project) return Result.error(new NotFoundError('Project not found'))
 
   return Result.ok({ workspace, commit, document, project })
 }

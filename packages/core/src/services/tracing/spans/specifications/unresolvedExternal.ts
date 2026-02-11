@@ -9,6 +9,7 @@ import {
   ATTRIBUTES,
 } from '../../../../constants'
 import { Result, TypedResult } from '../../../../lib/Result'
+import { NotFoundError } from '../../../../lib/errors'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -79,12 +80,11 @@ async function getResolvedData(
 
   // If commit is HEAD and prompt is not found, create and merge a new version containing the new prompt.
   if (isHead) {
-    const projectResult = await findProjectById(
+    const project = await findProjectById(
       { workspaceId: workspace.id, id: commit.projectId },
       db,
     )
-    if (!Result.isOk(projectResult)) return projectResult
-    const project = projectResult.unwrap()
+    if (!project) return Result.error(new NotFoundError('Project not found'))
     const newDraftResult = await createCommit({
       project,
       user: await findFirstUserInWorkspace({ workspaceId: workspace.id }),

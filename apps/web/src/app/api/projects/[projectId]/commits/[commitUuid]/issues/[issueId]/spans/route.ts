@@ -7,6 +7,7 @@ import {
   IssuesRepository,
 } from '@latitude-data/core/repositories'
 import { findProjectById } from '@latitude-data/core/queries/projects/findById'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Cursor } from '@latitude-data/core/schema/types'
 import { NextRequest, NextResponse } from 'next/server'
@@ -65,7 +66,11 @@ export const GET = errorHandler(
           }
         : null
 
-      const project = await findProjectById({ workspaceId: workspace.id, id: projectId }).then((r) => r.unwrap())
+      const project = await findProjectById({
+        workspaceId: workspace.id,
+        id: projectId,
+      })
+      if (!project) throw new NotFoundError('Project not found')
       const commitsRepo = new CommitsRepository(workspace.id)
       const commit = await commitsRepo
         .getCommitByUuid({

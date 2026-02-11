@@ -1,4 +1,5 @@
 import { type Workspace } from '../../schema/models/types/Workspace'
+import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import {
   CommitsRepository,
@@ -17,11 +18,13 @@ export async function findForkedDocument({
   commitUuid: string
   documentUuid: string
 }) {
-  const resultProject = await findProjectById({ workspaceId: workspace.id, id: Number(projectId) })
-
-  if (resultProject.error) return resultProject
-
-  const project = resultProject.value
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: Number(projectId),
+  })
+  if (!project) {
+    return Result.error(new NotFoundError('Project not found'))
+  }
 
   const commitsRepo = new CommitsRepository(workspace.id)
   const commitsResult = await commitsRepo.getCommitByUuid({

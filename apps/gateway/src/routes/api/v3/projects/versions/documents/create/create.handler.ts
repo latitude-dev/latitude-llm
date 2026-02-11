@@ -2,6 +2,7 @@ import { documentPresenter } from '$/presenters/documentPresenter'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { createNewDocument } from '@latitude-data/core/services/documents/create'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 
 import type { CreateDocumentRoute } from './create.route'
 import { AppRouteHandler } from '$/openApi/types'
@@ -17,8 +18,13 @@ export const createDocumentHandler: AppRouteHandler<
 
   const commitsScope = new CommitsRepository(workspace.id)
 
-  const project = await findProjectById({ workspaceId: workspace.id, id: Number(projectId!) })
-    .then((r) => r.unwrap())
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: Number(projectId!),
+  })
+  if (!project) {
+    throw new NotFoundError('Project not found')
+  }
 
   const commit = await commitsScope
     .getCommitByUuid({

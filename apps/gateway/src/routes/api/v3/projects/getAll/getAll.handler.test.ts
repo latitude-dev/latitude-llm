@@ -34,8 +34,7 @@ describe('GET /projects', () => {
         },
       }
 
-      const projectsResult = await findAllActiveProjects({ workspaceId: workspace.id })
-      projects = projectsResult.unwrap()
+      projects = await findAllActiveProjects({ workspaceId: workspace.id })
     })
 
     it('gets all projects for a workspace', async () => {

@@ -59,8 +59,13 @@ export const discoverResultIssueJob = async (
     .getCommitById(result.commitId)
     .then((r) => r.unwrap())
 
-  const project = await findProjectById({ workspaceId: workspace.id, id: commit.projectId })
-    .then((r) => r.unwrap())
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: commit.projectId,
+  })
+  if (!project) {
+    throw new NotFoundError('Project not found')
+  }
 
   const spansRepository = new SpansRepository(workspace.id)
   const span = await spansRepository

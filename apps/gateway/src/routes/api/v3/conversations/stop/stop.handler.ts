@@ -18,8 +18,13 @@ export const stopHandler: AppRouteHandler<StopRoute> = async (ctx) => {
     )
   }
 
-  const project = await findProjectById({ workspaceId: workspace.id, id: run.projectId })
-    .then((r) => r.unwrap())
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: run.projectId,
+  })
+  if (!project) {
+    throw new NotFoundError('Project not found')
+  }
 
   await stopRunByDocument({
     run,

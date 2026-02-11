@@ -10,7 +10,7 @@ import {
 import { publisher } from '../../events/publisher'
 import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 import { compactObject } from '../../lib/compactObject'
-import { BadRequestError } from '../../lib/errors'
+import { BadRequestError, NotFoundError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import {
@@ -92,11 +92,13 @@ export async function updateEvaluationV2<
       let issue: Issue | null = null
       if (issueId) {
         const issuesRepository = new IssuesRepository(workspace.id, tx)
-        const projectResult = await findProjectById({ workspaceId: workspace.id, id: commit.projectId }, tx)
-        if (!Result.isOk(projectResult)) {
-          return projectResult
+        const project = await findProjectById(
+          { workspaceId: workspace.id, id: commit.projectId },
+          tx,
+        )
+        if (!project) {
+          return Result.error(new NotFoundError('Project not found'))
         }
-        const project = projectResult.unwrap()
         issue = await issuesRepository.findById({
           project,
           issueId,

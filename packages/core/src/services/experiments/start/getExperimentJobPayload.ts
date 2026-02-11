@@ -173,12 +173,13 @@ export async function getExperimentJobPayload(
   if (commitResult.error) return commitResult
   const commit = commitResult.unwrap()
 
-  const projectResult = await findProjectById(
+  const project = await findProjectById(
     { workspaceId: workspace.id, id: commit.projectId },
     db,
   )
-  if (projectResult.error) return projectResult
-  const project = projectResult.unwrap()
+  if (!project) {
+    return Result.error(new NotFoundError('Project not found'))
+  }
 
   const documentScope = new DocumentVersionsRepository(workspace.id, db)
   const documentResult = await documentScope.getDocumentAtCommit({

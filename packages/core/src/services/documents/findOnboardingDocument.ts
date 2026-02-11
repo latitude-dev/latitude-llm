@@ -13,11 +13,10 @@ export async function findOnboardingDocument(
 ) {
   try {
     // Get the first project in the workspace
-    const projectResult = await findFirstProject({ workspaceId }, db)
-    if (projectResult.error) {
-      return Result.error(projectResult.error)
+    const project = await findFirstProject({ workspaceId }, db)
+    if (!project) {
+      return Result.error(new NotFoundError('Project not found'))
     }
-    const project = projectResult.value
 
     // Get the first commit in the project
     const commitsRepo = new CommitsRepository(workspaceId, db)

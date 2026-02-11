@@ -25,11 +25,13 @@ export const pushHandler: AppRouteHandler<typeof pushRoute> = async (
   }
 
   // Verify project exists and belongs to workspace
-  const projectResult = await findProjectById({ workspaceId: workspace.id, id: Number(projectId) })
-  if (projectResult.error) {
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: Number(projectId),
+  })
+  if (!project) {
     throw new NotFoundError('Project not found')
   }
-  const project = projectResult.value
 
   // Get the commit
   const commitsRepository = new CommitsRepository(workspace.id)

@@ -39,9 +39,11 @@ export async function updateEvaluationAlignmentJob(
   if (!Result.isOk(commitResult)) throw new NotFoundError('Commit not found')
   const commit = commitResult.unwrap()
 
-  const projectResult = await findProjectById({ workspaceId: workspace.id, id: commit.projectId })
-  if (!Result.isOk(projectResult)) throw new NotFoundError('Project not found')
-  const project = projectResult.unwrap()
+  const project = await findProjectById({
+    workspaceId: workspace.id,
+    id: commit.projectId,
+  })
+  if (!project) throw new NotFoundError('Project not found')
 
   const evaluationRepository = new EvaluationsV2Repository(workspaceId)
   const evaluationResult = await evaluationRepository.getAtCommitByDocument({

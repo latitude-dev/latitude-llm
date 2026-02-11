@@ -19,7 +19,10 @@ export const createCommitHandler: AppRouteHandler<CreateCommitRoute> = async (
   const project = await findProjectById({
     workspaceId: workspace.id,
     id: Number(projectId),
-  }).then((r) => r.unwrap())
+  })
+  if (!project) {
+    throw new NotFoundError('Project not found')
+  }
 
   const user = await findFirstUserInWorkspace({ workspaceId: workspace.id })
   if (!user) {
