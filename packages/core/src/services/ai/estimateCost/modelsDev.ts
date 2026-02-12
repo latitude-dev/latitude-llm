@@ -1,4 +1,5 @@
 // Import bundled models.dev data
+import { formatCount } from '@latitude-data/constants/formatCount'
 import modelsDevJson from '../../../assets/models.dev.json'
 
 export type ModelModality = 'text' | 'image' | 'audio' | 'video' | 'pdf'
@@ -186,4 +187,57 @@ export function getModelsDevForProvider(
   return modelsData.filter(
     (m) => m.provider.toLowerCase() === providerName.toLowerCase(),
   )
+}
+
+export function getModelsDevForModel(
+  provider: string,
+  model: string,
+): ModelsDevModel | undefined {
+  const models = getModelsDevForProvider(provider)
+  return models.find((m) => m.id.toLowerCase() === model.toLowerCase())
+}
+
+export function formatModelsDevModel(model: ModelsDevModel) {
+  const lines: string[] = [`${model.name} (${model.id})`]
+
+  if (model.modalities) {
+    const input = model.modalities.input?.join(', ')
+    const output = model.modalities.output?.join(', ')
+    if (input) lines.push(`Input modalities: ${input}`)
+    if (output) lines.push(`Output modalities: ${output}`)
+  }
+
+  const features: string[] = []
+  if (model.supportsTemperature) features.push('temperature')
+  else lines.push('Temperature not supported')
+  if (model.toolCall) features.push('tool calling')
+  if (model.reasoning) features.push('reasoning')
+  if (model.structuredOutput) features.push('structured output')
+  if (model.attachment) features.push('attachments')
+  if (features.length) lines.push(`Supported features: ${features.join(', ')}`)
+
+  if (model.contextLimit || model.outputLimit) {
+    const parts: string[] = []
+    if (model.contextLimit) parts.push(`input: ${formatCount(model.contextLimit)}`) // prettier-ignore
+    if (model.outputLimit) parts.push(`output: ${formatCount(model.outputLimit)}`) // prettier-ignore
+    if (parts.length) lines.push(`Context window: ${parts.join(', ')}`)
+  }
+
+  if (model.pricing) {
+    const parts: string[] = []
+    if (model.pricing.input !== undefined) parts.push(`input: ${formatPrice(model.pricing.input)}`) // prettier-ignore
+    if (model.pricing.output !== undefined) parts.push(`output: ${formatPrice(model.pricing.output)}`) // prettier-ignore
+    if (model.pricing.cacheRead !== undefined) parts.push(`cached: ${formatPrice(model.pricing.cacheRead)}`) // prettier-ignore
+    if (parts.length) lines.push(`Pricing (per 1M tokens): ${parts.join(', ')}`)
+  }
+
+  if (model.knowledgeCutoff) lines.push(`Knowledge cutoff: ${model.knowledgeCutoff}`) // prettier-ignore
+
+  return lines.join('\n')
+}
+
+function formatPrice(price: number): string {
+  if (price === 0) return '$0'
+  if (price < 0.01) return `$${price.toFixed(3)}`
+  return `$${price.toFixed(2)}`
 }
