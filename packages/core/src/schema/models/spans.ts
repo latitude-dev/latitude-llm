@@ -21,6 +21,7 @@ export const spans = latitudeSchema.table(
     traceId: varchar('trace_id', { length: 32 }).notNull(),
     documentLogUuid: uuid('document_log_uuid'),
     parentId: varchar('parent_id', { length: 16 }),
+    // FIXME: remove this column when no occurences of it are left in the codebase.
     previousTraceId: varchar('previous_trace_id', { length: 32 }),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()

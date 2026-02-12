@@ -68,7 +68,6 @@ export async function addMessages(
     commit,
     provider,
     globalConfig,
-    previousSpan,
     previousMessages,
   } = dataResult.unwrap()
   const effectiveContext = context ?? BACKGROUND({ workspaceId: workspace.id })
@@ -77,7 +76,6 @@ export async function addMessages(
       documentLogUuid,
       versionUuid: commit.uuid,
       promptUuid: document.documentUuid,
-      previousTraceId: previousSpan?.traceId ?? '',
       name: document.path.split('/').at(-1),
       source,
     },

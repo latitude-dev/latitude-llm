@@ -18,11 +18,11 @@ type BackfillToolCall = {
 
 type BackfillLog = {
   conversationId: string
-  previousTraceId?: string
   path: string
   provider: string
   model: string
-  input: Array<{ role: string; content: string }>
+  system?: string                                    // Optional system prompt (for Anthropic, etc.)
+  input: Array<{ role: string; content: string }>    // Messages in any provider format (auto-detected by Rosetta)
   output: string
   promptTokens?: number
   completionTokens?: number
@@ -38,10 +38,8 @@ type ManualTracesParams = {
 }
 
 type ManualTracesResult = {
-  traces: Array<{
-    conversationId: string
-    traceId: string
-  }>
+  queued: number
+  conversations: number
 }
 
 // ============================================================
@@ -70,7 +68,6 @@ const singleTurnLogs: BackfillLog[] = [
 const conversationId = uuid()
 
 const multiTurnLogs: BackfillLog[] = [
-  // Turn 1 - no previousTraceId
   {
     conversationId,
     path: 'assistant/weather',
@@ -93,7 +90,6 @@ const multiTurnLogs: BackfillLog[] = [
     startedAt: new Date('2025-02-10T11:00:00Z'),
     completedAt: new Date('2025-02-10T11:00:01.200Z'),
   },
-  // Turn 2 - previousTraceId will be set by gateway (same conversationId, ordered by startedAt)
   {
     conversationId,
     path: 'assistant/weather',
@@ -152,12 +148,13 @@ const mixedLogs: BackfillLog[] = [
     startedAt: new Date('2025-02-10T09:00:00Z'),
     completedAt: new Date('2025-02-10T09:00:00.800Z'),
   },
-  // Conversation 2, Turn 1
+  // Conversation 2, Turn 1 (Anthropic with system prompt)
   {
     conversationId: conversation2Id,
     path: 'support/technical',
     provider: 'anthropic',
     model: 'claude-3-5-sonnet-20241022',
+    system: 'You are a helpful technical support agent. Be concise and helpful.',
     input: [{ role: 'user', content: 'My API calls are failing' }],
     output: 'Let me help you debug that. What error are you seeing?',
     promptTokens: 12,
@@ -223,20 +220,7 @@ async function run() {
     spans: allSpans,
   })
 
-  console.log(`\n✓ Ingested ${result.traces.length} traces`)
-
-  // Group results by conversationId for display
-  const byConversation = new Map<string, string[]>()
-  result.traces.forEach((t) => {
-    const traces = byConversation.get(t.conversationId) || []
-    traces.push(t.traceId)
-    byConversation.set(t.conversationId, traces)
-  })
-
-  console.log(`\nConversations created: ${byConversation.size}`)
-  byConversation.forEach((traceIds, convId) => {
-    console.log(`  ${convId}: ${traceIds.length} turn(s)`)
-  })
+  console.log(`\n✓ Queued ${result.queued} spans across ${result.conversations} conversations`)
 
   console.log('\n' + '='.repeat(50))
   console.log('Done!')

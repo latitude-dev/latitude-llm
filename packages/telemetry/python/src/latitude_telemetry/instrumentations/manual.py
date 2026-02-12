@@ -176,7 +176,6 @@ class ChatSpanOptions(StartSpanOptions):
     """Options for a chat span."""
 
     documentLogUuid: str = ""
-    previousTraceId: str = ""
     source: LogSources | None = None
 
 
@@ -726,7 +725,6 @@ class ManualInstrumentation(BaseInstrumentation):
         """Create a chat continuation span."""
         attributes: Dict[str, Any] = {
             ATTRIBUTES.LATITUDE.documentLogUuid: options.documentLogUuid,
-            ATTRIBUTES.LATITUDE.previousTraceId: options.previousTraceId,
         }
         if options.source:
             attributes[ATTRIBUTES.LATITUDE.source] = options.source.value

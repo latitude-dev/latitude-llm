@@ -101,7 +101,6 @@ export type PromptSpanOptions = StartSpanOptions & {
 
 export type ChatSpanOptions = StartSpanOptions & {
   documentLogUuid: string
-  previousTraceId: string
   source?: LogSources
   versionUuid?: string // Alias for commitUuid
   promptUuid?: string // Alias for documentUuid
@@ -591,7 +590,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
     ctx: otel.Context,
     {
       documentLogUuid,
-      previousTraceId,
       source,
       name,
       versionUuid,
@@ -601,7 +599,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
   ) {
     const attributes = {
       [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
-      [ATTRIBUTES.LATITUDE.previousTraceId]: previousTraceId,
       ...(versionUuid && { [ATTRIBUTES.LATITUDE.commitUuid]: versionUuid }),
       ...(promptUuid && { [ATTRIBUTES.LATITUDE.documentUuid]: promptUuid }),
       ...(source && { [ATTRIBUTES.LATITUDE.source]: source }),

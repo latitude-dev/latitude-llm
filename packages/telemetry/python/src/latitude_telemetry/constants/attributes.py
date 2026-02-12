@@ -84,7 +84,6 @@ class _LatitudeAttributes:
     source = "latitude.source"
     externalId = "latitude.external_id"
     testDeploymentId = "latitude.test_deployment_id"
-    previousTraceId = "latitude.previous_trace_id"
     internal = "latitude.internal"
 
     request = _LatitudeRequestAttributes()

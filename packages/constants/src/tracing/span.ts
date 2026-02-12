@@ -165,7 +165,6 @@ export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
 
 export type ChatSpanMetadata = BaseSpanMetadata<SpanType.Chat> & {
   documentLogUuid: string
-  previousTraceId: string
   source: LogSources
 }
 
@@ -262,7 +261,6 @@ export type Span<T extends SpanType = SpanType> = {
   commitUuid?: string
   experimentUuid?: string
   testDeploymentId?: number
-  previousTraceId?: string
 
   source?: LogSources
 

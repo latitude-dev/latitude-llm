@@ -93,15 +93,6 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Chat>) {
               </Text.H5>
             </ClickToCopy>
           </MetadataItem>
-          {span.metadata.previousTraceId && (
-            <MetadataItem label='Previous Trace ID'>
-              <ClickToCopy copyValue={span.metadata.previousTraceId}>
-                <Text.H5 align='right' color='foregroundMuted'>
-                  {span.metadata.previousTraceId.slice(0, 8)}
-                </Text.H5>
-              </ClickToCopy>
-            </MetadataItem>
-          )}
           {aggregatedMetadata && (
             <>
               {aggregatedMetadata.finishReason && (
