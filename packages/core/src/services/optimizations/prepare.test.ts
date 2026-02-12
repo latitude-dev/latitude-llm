@@ -1,4 +1,9 @@
-import { Providers, SpanType, SpanWithDetails } from '@latitude-data/constants'
+import {
+  OPTIMIZATION_MAX_ROWS,
+  Providers,
+  SpanType,
+  SpanWithDetails,
+} from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import * as getSpansByEvaluationModule from '../../data-access/evaluations/getSpansByEvaluation'
 import * as getSpansByIssueModule from '../../data-access/issues/getSpansByIssue'
@@ -373,9 +378,7 @@ describe('prepareOptimization', () => {
           optimization,
           workspace,
         }).then((r) => r.unwrap()),
-      ).rejects.toThrowError(
-        new UnprocessableEntityError('At least 4 examples are required'),
-      )
+      ).rejects.toThrowError(/At least 4 different examples are required/)
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
       expect(publisherMock).not.toHaveBeenCalled()
@@ -420,9 +423,7 @@ describe('prepareOptimization', () => {
           optimization,
           workspace: workspaceWithParams,
         }).then((r) => r.unwrap()),
-      ).rejects.toThrowError(
-        new UnprocessableEntityError('At least 4 examples are required'),
-      )
+      ).rejects.toThrowError(/At least 4 different examples are required/)
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
       expect(publisherMock).not.toHaveBeenCalled()
@@ -467,9 +468,7 @@ describe('prepareOptimization', () => {
           optimization,
           workspace: workspaceWithParams,
         }).then((r) => r.unwrap()),
-      ).rejects.toThrowError(
-        new UnprocessableEntityError('At least 4 examples are required'),
-      )
+      ).rejects.toThrowError(/At least 4 different examples are required/)
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
       expect(publisherMock).not.toHaveBeenCalled()
@@ -1523,13 +1522,15 @@ describe('prepareOptimization', () => {
         const mockIssue = createMockIssue(1)
         issuesRepositoryMock.mockResolvedValue([mockIssue])
 
-        const negativeSpans = Array.from({ length: 125 }, (_, i) =>
+        const halfLimit = Math.floor(OPTIMIZATION_MAX_ROWS / 2)
+
+        const negativeSpans = Array.from({ length: halfLimit }, (_, i) =>
           createMockSpan(`span-neg-${i}`, `trace-neg-${i}`, {
             inputParam: `neg_${i}`,
           }),
         )
 
-        const positiveSpans = Array.from({ length: 125 }, (_, i) =>
+        const positiveSpans = Array.from({ length: halfLimit }, (_, i) =>
           createMockSpan(`span-pos-${i}`, `trace-pos-${i}`, {
             inputParam: `pos_${i}`,
           }),
@@ -1755,9 +1756,7 @@ describe('prepareOptimization', () => {
             optimization,
             workspace: workspaceWithParams,
           }).then((r) => r.unwrap()),
-        ).rejects.toThrowError(
-          new UnprocessableEntityError('At least 4 examples are required'),
-        )
+        ).rejects.toThrowError(/At least 4 different examples are required/)
       })
 
       it('distributes fallback spans to whichever bucket has the larger deficit', async () => {
@@ -1805,6 +1804,181 @@ describe('prepareOptimization', () => {
         }).catch(() => {})
 
         expect(getSpansByDocumentMock).toHaveBeenCalled()
+      })
+    })
+
+    describe('dataset.target configuration', () => {
+      it('limits curated examples to target when set', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        const target = 10
+
+        const negativeSpans = Array.from({ length: 50 }, (_, i) =>
+          createMockSpan(`span-neg-${i}`, `trace-neg-${i}`, {
+            inputParam: `neg_${i}`,
+          }),
+        )
+
+        const positiveSpans = Array.from({ length: 50 }, (_, i) =>
+          createMockSpan(`span-pos-${i}`, `trace-pos-${i}`, {
+            inputParam: `pos_${i}`,
+          }),
+        )
+
+        getSpansByIssueMock.mockResolvedValue(
+          Result.ok({ spans: negativeSpans, next: null }),
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: positiveSpans, next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+          configuration: {
+            dataset: { target },
+            scope: { instructions: true },
+          },
+        })
+
+        const result = await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).then((r) => r.unwrap())
+
+        const rowsRepository = new DatasetRowsRepository(workspaceWithParams.id)
+        const trainCount = await rowsRepository.getCountByDataset(
+          result.optimization.trainsetId!,
+        )
+        const testCount = await rowsRepository.getCountByDataset(
+          result.optimization.testsetId!,
+        )
+
+        expect(trainCount! + testCount!).toBeLessThanOrEqual(target)
+      })
+
+      it('defaults to OPTIMIZATION_MAX_ROWS when target is not set', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        const halfMax = Math.floor(OPTIMIZATION_MAX_ROWS / 2)
+
+        const negativeSpans = Array.from({ length: halfMax + 50 }, (_, i) =>
+          createMockSpan(`span-neg-${i}`, `trace-neg-${i}`, {
+            inputParam: `neg_${i}`,
+          }),
+        )
+
+        const positiveSpans = Array.from({ length: halfMax + 50 }, (_, i) =>
+          createMockSpan(`span-pos-${i}`, `trace-pos-${i}`, {
+            inputParam: `pos_${i}`,
+          }),
+        )
+
+        getSpansByIssueMock.mockResolvedValue(
+          Result.ok({ spans: negativeSpans, next: null }),
+        )
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: positiveSpans, next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        const result = await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+        }).then((r) => r.unwrap())
+
+        const rowsRepository = new DatasetRowsRepository(workspaceWithParams.id)
+        const trainCount = await rowsRepository.getCountByDataset(
+          result.optimization.trainsetId!,
+        )
+        const testCount = await rowsRepository.getCountByDataset(
+          result.optimization.testsetId!,
+        )
+
+        expect(trainCount! + testCount!).toBeLessThanOrEqual(
+          OPTIMIZATION_MAX_ROWS,
+        )
+      })
+
+      it('curates more examples with a larger target', async () => {
+        const mockIssue = createMockIssue(1)
+
+        async function runWithTarget(target: number, suffix: string) {
+          spanMetadataStore.clear()
+
+          const negSpans = Array.from({ length: 300 }, (_, i) =>
+            createMockSpan(
+              `span-neg-${suffix}-${i}`,
+              `trace-neg-${suffix}-${i}`,
+              {
+                inputParam: `neg_${suffix}_${i}`,
+              },
+            ),
+          )
+
+          const posSpans = Array.from({ length: 300 }, (_, i) =>
+            createMockSpan(
+              `span-pos-${suffix}-${i}`,
+              `trace-pos-${suffix}-${i}`,
+              {
+                inputParam: `pos_${suffix}_${i}`,
+              },
+            ),
+          )
+
+          issuesRepositoryMock.mockResolvedValue([mockIssue])
+          getSpansByIssueMock.mockResolvedValue(
+            Result.ok({ spans: negSpans, next: null }),
+          )
+          getSpansWithoutIssuesMock.mockResolvedValue(
+            Result.ok({ spans: posSpans, next: null }),
+          )
+
+          const optimization = await factories.createOptimization({
+            baseline: { commit: commitWithParams },
+            document: documentWithParams,
+            project: projectWithParams,
+            workspace: workspaceWithParams,
+            configuration: {
+              dataset: { target },
+              scope: { instructions: true },
+            },
+          })
+
+          const result = await prepareOptimization({
+            optimization,
+            workspace: workspaceWithParams,
+          }).then((r) => r.unwrap())
+
+          const rowsRepository = new DatasetRowsRepository(
+            workspaceWithParams.id,
+          )
+          const trainCount = await rowsRepository.getCountByDataset(
+            result.optimization.trainsetId!,
+          )
+          const testCount = await rowsRepository.getCountByDataset(
+            result.optimization.testsetId!,
+          )
+
+          return trainCount! + testCount!
+        }
+
+        const smallTotal = await runWithTarget(10, 'small')
+        const largeTotal = await runWithTarget(100, 'large')
+
+        expect(largeTotal).toBeGreaterThan(smallTotal)
       })
     })
 

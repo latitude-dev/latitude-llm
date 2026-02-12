@@ -16,7 +16,6 @@ import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Slider } from '@latitude-data/web-ui/atoms/Slider'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 const TRIGGER_TARGET_OPTIONS: Record<
   EvaluationTriggerTarget,
@@ -136,39 +135,32 @@ export function TriggerConfiguration<
         description='Percentage of eligible responses to evaluate. Set to 100% to evaluate all responses'
         layout='horizontal'
       >
-        <div className='flex flex-col gap-2 w-full'>
-          <div className='flex items-center justify-between'>
-            <Text.H6 color='foregroundMuted'>0%</Text.H6>
-            <Text.H5M color='primary'>
-              {configuration.trigger?.sampleRate ??
-                DEFAULT_EVALUATION_SAMPLE_RATE}
-              %
-            </Text.H5M>
-            <Text.H6 color='foregroundMuted'>100%</Text.H6>
-          </div>
-          <Slider
-            value={[
-              configuration.trigger?.sampleRate ??
-                DEFAULT_EVALUATION_SAMPLE_RATE,
-            ]}
-            onValueChange={(value) => {
-              setSettings({
-                ...settings,
-                configuration: {
-                  ...configuration,
-                  trigger: {
-                    ...configuration.trigger,
-                    sampleRate: value[0],
-                  },
+        <Slider
+          value={[
+            configuration.trigger?.sampleRate ?? DEFAULT_EVALUATION_SAMPLE_RATE,
+          ]}
+          onValueChange={(value) => {
+            setSettings({
+              ...settings,
+              configuration: {
+                ...configuration,
+                trigger: {
+                  ...configuration.trigger,
+                  sampleRate: value[0],
                 },
-              })
-            }}
-            min={MIN_EVALUATION_SAMPLE_RATE}
-            max={MAX_EVALUATION_SAMPLE_RATE}
-            step={1}
-            disabled={disabled}
-          />
-        </div>
+              },
+            })
+          }}
+          min={MIN_EVALUATION_SAMPLE_RATE}
+          max={MAX_EVALUATION_SAMPLE_RATE}
+          step={1}
+          disabled={disabled}
+          legend={{
+            min: `${MIN_EVALUATION_SAMPLE_RATE}%`,
+            value: `${configuration.trigger?.sampleRate ?? DEFAULT_EVALUATION_SAMPLE_RATE}%`,
+            max: `${MAX_EVALUATION_SAMPLE_RATE}%`,
+          }}
+        />
       </FormFieldGroup>
     </FormWrapper>
   )

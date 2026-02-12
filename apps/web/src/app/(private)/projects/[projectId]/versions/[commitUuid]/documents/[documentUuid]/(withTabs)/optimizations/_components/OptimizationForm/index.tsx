@@ -151,6 +151,13 @@ export function OptimizationForm({
               <DatasetSelector
                 value={datasetId}
                 onChange={setDatasetId}
+                target={configuration.dataset?.target}
+                onTargetChange={(value) =>
+                  setConfiguration({
+                    ...configuration,
+                    dataset: { ...configuration.dataset, target: value },
+                  })
+                }
                 errors={errors}
                 disabled={disabled}
               />

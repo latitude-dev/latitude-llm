@@ -31,8 +31,8 @@ export const LAST_INTERACTION_DEBOUNCE_MIN_SECONDS = 30
 export const LAST_INTERACTION_DEBOUNCE_MAX_SECONDS = 60 * 60 * 24 // 1 day
 
 export const DEFAULT_EVALUATION_SAMPLE_RATE = 100
-export const MIN_EVALUATION_SAMPLE_RATE = 1
-export const MAX_EVALUATION_SAMPLE_RATE = 100
+export const MIN_EVALUATION_SAMPLE_RATE = 0 // 0%
+export const MAX_EVALUATION_SAMPLE_RATE = 100 // 100%
 
 const triggerConfiguration = z.object({
   target: z.enum(EVALUATION_TRIGGER_TARGETS),
