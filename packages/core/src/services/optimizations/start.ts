@@ -327,7 +327,10 @@ async function splitDataset(
     return Result.error(new BadRequestError('Dataset has no author'))
   }
 
-  const finding = await findWorkspaceUserById({ workspaceId: workspace.id, id: dataset.authorId })
+  const finding = await findWorkspaceUserById({
+    workspaceId: workspace.id,
+    id: dataset.authorId,
+  })
   if (finding.error) {
     return Result.error(finding.error)
   }

@@ -305,10 +305,7 @@ export const env = createEnv({
       .string()
       .optional()
       .default('clickhouse://localhost:9000'),
-    CLICKHOUSE_DB: z
-      .string()
-      .optional()
-      .default('latitude_development'),
+    CLICKHOUSE_DB: z.string().optional().default('latitude_development'),
     CLICKHOUSE_USER: z.string().optional().default('latitude'),
     CLICKHOUSE_PASSWORD: z.string().optional().default('secret'),
     CLICKHOUSE_CLUSTER_ENABLED: z.string().optional().default('false'),
