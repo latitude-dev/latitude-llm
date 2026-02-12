@@ -53,6 +53,7 @@ export async function removeResultFromIssue<
     result: { result, evaluation },
     issue: issue,
     skipBelongsCheck: true,
+    skipPassedCheck: true,
   })
   if (validating.error) {
     return Result.error(validating.error)
@@ -104,6 +105,7 @@ export async function removeResultFromIssue<
           result: { result, evaluation },
           issue: issue,
           skipBelongsCheck: true,
+          skipPassedCheck: true,
         },
         tx,
       )
