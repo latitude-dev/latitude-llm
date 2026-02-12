@@ -383,9 +383,12 @@ export async function processSpansBulk(
         tx,
       )
       if (chEnabled.ok && chEnabled.value) {
-        const subscriptionResult = await findWorkspaceSubscription({
-          workspace,
-        })
+        const subscriptionResult = await findWorkspaceSubscription(
+          {
+            workspace,
+          },
+          tx,
+        )
         const retentionDays =
           subscriptionResult.ok && subscriptionResult.value
             ? SubscriptionPlans[subscriptionResult.value.plan].retention_period

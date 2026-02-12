@@ -40,6 +40,8 @@ on:
 jobs:
   run-migrations:
     runs-on: ubuntu-latest
+    env:
+      CLICKHOUSE_MIGRATION_URL: ${{ secrets.CLICKHOUSE_MIGRATION_URL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -112,14 +114,14 @@ jobs:
 
       - name: Cache golang-migrate
         id: cache-migrate
-        if: ${{ secrets.CLICKHOUSE_MIGRATION_URL != '' }}
+        if: ${{ env.CLICKHOUSE_MIGRATION_URL != '' }}
         uses: actions/cache@v3
         with:
           path: ~/bin/migrate
           key: ${{ runner.os }}-golang-migrate-v4.18.1
 
       - name: Install golang-migrate
-        if: ${{ secrets.CLICKHOUSE_MIGRATION_URL != '' && steps.cache-migrate.outputs.cache-hit != 'true' }}
+        if: ${{ env.CLICKHOUSE_MIGRATION_URL != '' && steps.cache-migrate.outputs.cache-hit != 'true' }}
         run: |
           mkdir -p ~/bin
           curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
@@ -127,11 +129,11 @@ jobs:
           chmod +x ~/bin/migrate
 
       - name: Add migrate to PATH
-        if: ${{ secrets.CLICKHOUSE_MIGRATION_URL != '' }}
+        if: ${{ env.CLICKHOUSE_MIGRATION_URL != '' }}
         run: echo "$HOME/bin" >> $GITHUB_PATH
 
       - name: Run ClickHouse migrations
-        if: ${{ secrets.CLICKHOUSE_MIGRATION_URL != '' }}
+        if: ${{ env.CLICKHOUSE_MIGRATION_URL != '' }}
         working-directory: packages/core
         run: pnpm ch:up
         env:

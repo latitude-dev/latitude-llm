@@ -2,7 +2,11 @@ import { clickhouseClient } from '../client/clickhouse'
 import { Result, TypedResult } from '../lib/Result'
 import { captureException } from '../utils/datadogCapture'
 
-export function toClickHouseDateTime(date: Date): string {
+export function toClickHouseDateTime(value: Date | string | number): string {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid date value: ${String(value)}`)
+  }
   return date.toISOString().replace('T', ' ').replace('Z', '')
 }
 
