@@ -4,22 +4,23 @@ import {
   OPTIMIZATION_MIN_ROWS,
 } from '@latitude-data/constants'
 import { formatCount } from '@latitude-data/constants/formatCount'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 import { FormField } from '@latitude-data/web-ui/atoms/FormField'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Slider } from '@latitude-data/web-ui/atoms/Slider'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 
 export function DatasetSelector({
-  value,
-  onChange,
+  datasetId,
+  onDatasetChange,
   target,
   onTargetChange,
   errors,
   disabled,
 }: {
-  value?: number
-  onChange: (value?: number) => void
+  datasetId?: number
+  onDatasetChange: (dataset?: Dataset) => void
   target?: number
   onTargetChange: (value?: number) => void
   errors?: Record<string, string[]>
@@ -30,6 +31,14 @@ export function DatasetSelector({
     pageSize: '10000', // No pagination
   })
 
+  const selectedDataset = useMemo(
+    () => datasets?.find((d) => d.id === datasetId),
+    [datasets, datasetId],
+  )
+  useEffect(() => {
+    onDatasetChange(selectedDataset)
+  }, [selectedDataset, onDatasetChange])
+
   const options = useMemo(() => {
     return (
       datasets?.map((dataset) => ({
@@ -38,6 +47,16 @@ export function DatasetSelector({
       })) ?? []
     )
   }, [datasets])
+
+  const handleChange = useCallback(
+    (val: string | undefined) => {
+      const dataset = val
+        ? datasets?.find((d) => d.id === Number(val))
+        : undefined
+      onDatasetChange(dataset)
+    },
+    [datasets, onDatasetChange],
+  )
 
   const targetValue = target ?? OPTIMIZATION_MAX_ROWS
 
@@ -58,27 +77,27 @@ export function DatasetSelector({
     <FormFieldGroup
       label='Dataset'
       tooltip={
-        !!value &&
+        !!datasetId &&
         `We will use the first ${OPTIMIZATION_MAX_ROWS} rows. ${disclosure}`
       }
       layout='vertical'
       group
     >
       <Select
-        value={value ? String(value) : undefined}
+        value={datasetId ? String(datasetId) : undefined}
         name='datasetId'
         description='The dataset used to train and test the optimization on. If not provided, one will be automatically curated from your recent traces'
         placeholder='Auto-curate dataset'
         placeholderIcon='sparkles'
         options={options}
-        onChange={(val) => onChange(val ? Number(val) : undefined)}
+        onChange={handleChange}
         errors={errors?.['datasetId']}
         loading={isLoading}
         disabled={disabled || isLoading}
         searchable
         removable
       />
-      {!value && (
+      {!datasetId && (
         <FormField
           label='Curation target'
           description={`We will try to curate up to ${targetValue} high-quality traces. ${disclosure}`}
