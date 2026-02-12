@@ -5,14 +5,14 @@ import { queues } from '../../jobs/queues'
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
+import { findProjectById } from '../../queries/projects/findById'
+import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
 import {
   CommitsRepository,
   DatasetsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
 } from '../../repositories'
-import { findProjectById } from '../../queries/projects/findById'
-import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
 import { optimizations } from '../../schema/models/optimizations'
 import { Optimization } from '../../schema/models/types/Optimization'
 import {
@@ -157,6 +157,7 @@ export async function executeOptimization(
     propose: await proposeFactory({
       optimization: optimization,
       document: document,
+      commit: baselineCommit,
       workspace: workspace,
     }),
     evaluation: evaluation,

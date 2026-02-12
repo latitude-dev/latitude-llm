@@ -6,10 +6,17 @@ import { database } from '../../../client'
 import { Message, MessageContent } from '../../../constants'
 import { hashObject } from '../../../lib/hashObject'
 import { Result } from '../../../lib/Result'
+import { Commit } from '../../../schema/models/types/Commit'
 import { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { Optimization } from '../../../schema/models/types/Optimization'
 import { Workspace } from '../../../schema/models/types/Workspace'
+import {
+  formatModelsDevModel,
+  getModelsDevForModel,
+} from '../../ai/estimateCost/modelsDev'
 import { runCopilot } from '../../copilot'
+import { scanDocumentContent } from '../../documents'
+import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { OptimizerProposeArgs } from './index'
 import { Trajectory } from './shared'
 
@@ -55,23 +62,43 @@ function sanitizeTrajectory(trajectory: Trajectory) {
 export async function proposeFactory({
   optimization,
   document,
+  commit,
+  workspace,
 }: {
   optimization: Optimization
   document: DocumentVersion
+  commit: Commit
   workspace: Workspace
 }) {
   if (!env.COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH) {
     throw new Error('COPILOT_PROMPT_OPTIMIZATION_PROPOSER_PATH is not set')
   }
 
+  const providers = await buildProvidersMap({ workspaceId: workspace.id })
+
   return async function (
     { prompt, context, abortSignal }: OptimizerProposeArgs, // TODO(AO/OPT): Implement cancellation
     _ = database,
   ) {
+    const scanning = await scanDocumentContent({
+      document: { ...document, content: prompt },
+      commit: commit,
+    })
+    const provider = scanning.value?.config?.provider as string | undefined
+    const model = scanning.value?.config?.model as string | undefined
+
+    let modelInfo = undefined
+    if (provider && model && providers.has(provider)) {
+      const providerId = providers.get(provider)!.provider
+      const modelData = getModelsDevForModel(providerId, model)
+      if (modelData) modelInfo = formatModelsDevModel(modelData)
+    }
+
     const trajectories = context.map(sanitizeTrajectory)
 
     const parameters = {
       path: document.path,
+      model: modelInfo,
       prompt: prompt,
       trajectories: trajectories,
       scope: optimization.configuration.scope,
