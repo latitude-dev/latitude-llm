@@ -47,6 +47,7 @@ const GLOBAL_FEATURES = [
   'optimizations',
   'clickhouse-spans-write',
   'clickhouse-spans-read',
+  'clickhouse-evaluation-results-write',
 ]
 
 /**

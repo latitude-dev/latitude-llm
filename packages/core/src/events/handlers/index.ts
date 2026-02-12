@@ -9,6 +9,10 @@ import { enqueueShadowTestChallengerHandler } from './enqueueShadowTestChallenge
 import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { generateDetailsForMergedIssue } from './generateDetailsForMergedIssue'
 import { handleEvaluationResultV2Updated } from './handleEvaluationResultV2Updated'
+import {
+  writeEvaluationResultV2CreatedToClickhouse,
+  writeEvaluationResultV2UpdatedToClickhouse,
+} from './writeEvaluationResultV2ToClickhouse'
 import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTriggerCreated'
 import { notifyClientOfDocumentTriggerDeleted } from './notifyClientOfDocumentTriggerDeleted'
 import { notifyClientOfDocumentTriggerEventCreated } from './notifyClientOfDocumentTriggerEventCreated'
@@ -69,8 +73,12 @@ export const EventHandlers: IEventsHandlers = {
   evaluationResultV2Created: [
     assignIssueToEvaluationResultV2Job,
     notifyClientOfEvaluationResultV2Created,
+    writeEvaluationResultV2CreatedToClickhouse,
   ],
-  evaluationResultV2Updated: [handleEvaluationResultV2Updated],
+  evaluationResultV2Updated: [
+    handleEvaluationResultV2Updated,
+    writeEvaluationResultV2UpdatedToClickhouse,
+  ],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],
   spanCreated: [
     evaluateLiveLogJob,
