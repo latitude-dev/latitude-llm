@@ -27,7 +27,7 @@ export type SpanRow = {
 
   provider: string
   model: string | null
-  cost: number
+  cost: number | null
   tokens_prompt: number | null
   tokens_cached: number | null
   tokens_reasoning: number | null

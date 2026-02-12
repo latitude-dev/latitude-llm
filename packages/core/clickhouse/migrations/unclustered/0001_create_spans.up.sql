@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS spans (
 
   provider LowCardinality(String) DEFAULT '',
   model Nullable(String),
-  cost Int64 DEFAULT 0,
+  cost Nullable(Int64) DEFAULT NULL,
   tokens_prompt Nullable(UInt32),
   tokens_cached Nullable(UInt32),
   tokens_reasoning Nullable(UInt32),
@@ -36,7 +36,9 @@ CREATE TABLE IF NOT EXISTS spans (
 
   INDEX idx_trace_id trace_id TYPE bloom_filter(0.001) GRANULARITY 1,
   INDEX idx_document_uuid document_uuid TYPE bloom_filter(0.01) GRANULARITY 1,
-  INDEX idx_commit_uuid commit_uuid TYPE bloom_filter(0.01) GRANULARITY 1
+  INDEX idx_commit_uuid commit_uuid TYPE bloom_filter(0.01) GRANULARITY 1,
+  INDEX idx_document_log_uuid document_log_uuid TYPE bloom_filter(0.01) GRANULARITY 1,
+  INDEX idx_project_id project_id TYPE bloom_filter(0.01) GRANULARITY 1
 )
 ENGINE = ReplacingMergeTree(ingested_at)
 PARTITION BY toYYYYMM(started_at)
