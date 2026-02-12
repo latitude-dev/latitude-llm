@@ -1,6 +1,7 @@
 import { type User } from '../../schema/models/types/User'
-import { type Workspace } from '../../schema/models/types/Workspace'
+import { type WorkspaceDto } from '../../schema/models/types/Workspace'
 import { Providers } from '@latitude-data/constants'
+import { env } from '@latitude-data/env'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -36,10 +37,16 @@ export default async function setupService(
     title?: UserTitle
   },
   transaction = new Transaction(),
-): PromisedResult<{ user: User; workspace: Workspace }> {
+): PromisedResult<{ user: User; workspace: WorkspaceDto }> {
   return transaction.call(async () => {
     const user = await createUser(
-      { email, name, confirmedAt: new Date(), title },
+      {
+        email,
+        name,
+        confirmedAt: new Date(),
+        title,
+        admin: env.LATITUDE_ENTERPRISE_MODE === true,
+      },
       transaction,
     ).then((r) => r.unwrap())
     const workspace = await createWorkspace(
