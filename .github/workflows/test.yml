@@ -14,6 +14,12 @@ on:
 jobs:
   test-core:
     runs-on: ubuntu-latest
+    env:
+      CLICKHOUSE_URL: http://localhost:8123
+      CLICKHOUSE_DB: latitude_test
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ''
+      CLICKHOUSE_CLUSTER_ENABLED: 'false'
     strategy:
       fail-fast: false
       matrix:
@@ -25,6 +31,15 @@ jobs:
         image: redis
         ports:
           - '6379:6379'
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_DB: latitude_test
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: ''
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+        ports:
+          - '8123:8123'
       postgres:
         image: postgres
         env:
@@ -82,6 +97,9 @@ jobs:
 
       - name: Wait for PostgreSQL to start
         run: until pg_isready -h localhost -p 5432; do sleep 1; done
+
+      - name: Wait for ClickHouse to start
+        run: until curl -fsS http://localhost:8123/ping >/dev/null; do sleep 1; done
 
       - name: Run Server migrations
         env:
@@ -97,6 +115,12 @@ jobs:
 
   test-web:
     runs-on: ubuntu-latest
+    env:
+      CLICKHOUSE_URL: http://localhost:8123
+      CLICKHOUSE_DB: latitude_test
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ''
+      CLICKHOUSE_CLUSTER_ENABLED: 'false'
     strategy:
       matrix:
         node-version: [22.x]
@@ -106,6 +130,15 @@ jobs:
         image: redis
         ports:
           - '6379:6379'
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_DB: latitude_test
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: ''
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+        ports:
+          - '8123:8123'
       postgres:
         image: postgres
         env:
@@ -163,6 +196,9 @@ jobs:
 
       - name: Wait for PostgreSQL to start
         run: until pg_isready -h localhost -p 5432; do sleep 1; done
+
+      - name: Wait for ClickHouse to start
+        run: until curl -fsS http://localhost:8123/ping >/dev/null; do sleep 1; done
 
       - name: Run database migrations
         env:
@@ -177,6 +213,12 @@ jobs:
 
   test-gateway:
     runs-on: ubuntu-latest
+    env:
+      CLICKHOUSE_URL: http://localhost:8123
+      CLICKHOUSE_DB: latitude_test
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ''
+      CLICKHOUSE_CLUSTER_ENABLED: 'false'
     strategy:
       matrix:
         node-version: [22.x]
@@ -186,6 +228,15 @@ jobs:
         image: redis
         ports:
           - '6379:6379'
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_DB: latitude_test
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: ''
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+        ports:
+          - '8123:8123'
       postgres:
         image: postgres
         env:
@@ -244,6 +295,9 @@ jobs:
       - name: Wait for PostgreSQL to start
         run: until pg_isready -h localhost -p 5432; do sleep 1; done
 
+      - name: Wait for ClickHouse to start
+        run: until curl -fsS http://localhost:8123/ping >/dev/null; do sleep 1; done
+
       - name: Run database migrations
         env:
           NODE_ENV: test
@@ -257,6 +311,12 @@ jobs:
 
   test-rest:
     runs-on: ubuntu-latest
+    env:
+      CLICKHOUSE_URL: http://localhost:8123
+      CLICKHOUSE_DB: latitude_test
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ''
+      CLICKHOUSE_CLUSTER_ENABLED: 'false'
     strategy:
       matrix:
         node-version: [22.x]
@@ -267,6 +327,15 @@ jobs:
         image: redis
         ports:
           - '6379:6379'
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_DB: latitude_test
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: ''
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+        ports:
+          - '8123:8123'
       postgres:
         image: postgres
         env:
@@ -347,6 +416,9 @@ jobs:
 
       - name: Wait for PostgreSQL to start
         run: until pg_isready -h localhost -p 5432; do sleep 1; done
+
+      - name: Wait for ClickHouse to start
+        run: until curl -fsS http://localhost:8123/ping >/dev/null; do sleep 1; done
 
       - name: Run database migrations
         env:
