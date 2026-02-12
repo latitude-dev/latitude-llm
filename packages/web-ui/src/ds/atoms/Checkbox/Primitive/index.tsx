@@ -27,10 +27,8 @@ const CheckboxAtom = forwardRef<
       'data-[state=indeterminate]:text-primary data-[state=indeterminate]:border-primary',
       'data-[state=indeterminate]:text-primary focus-visible:border-primary',
 
-      // Dark mode
-      'dark:border-foreground dark:data-[state=checked]:bg-background',
-      'dark:data-[state=checked]:text-foreground dark:focus-visible:ring-foreground',
-      'dark:data-[state=indeterminate]:text-foreground',
+      // Dark mode (unchecked border only)
+      'dark:data-[state=unchecked]:border-muted-foreground',
 
       // Disabled
       'disabled:cursor-not-allowed disabled:opacity-20',

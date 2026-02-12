@@ -51,7 +51,7 @@ const buttonContainerVariants = cva(
         variant: 'outlineDestructive',
         fanciness: 'fancy',
         className:
-          'shadow-[inset_0px_0px_0px_1px_hsl(var(--destructive)_/_0.5)] dark:shadow-[inset_0px_0px_0px_1px_hsl(var(--foreground))]',
+          'shadow-[inset_0px_0px_0px_1px_hsl(var(--destructive)_/_0.5)]',
       },
       {
         variant: 'latte',
@@ -150,7 +150,7 @@ const buttonVariants = cva(
         variant: 'outlineDestructive',
         fanciness: 'fancy',
         className:
-          'bg-white/90 dark:bg-transparent shadow-[inset_0px_0px_0px_1px_hsl(var(--destructive)_/_0.5)] dark:shadow-[inset_0px_0px_0px_1px_hsl(var(--foreground))]',
+          'bg-white/90 dark:bg-transparent shadow-[inset_0px_0px_0px_1px_hsl(var(--destructive)_/_0.5)]',
       },
       {
         fanciness: 'fancy',
@@ -179,12 +179,12 @@ const textColorVariants = ({
   if (variant === 'secondary') return 'secondaryForeground'
   if (variant === 'link') return 'accentForeground'
   if (variant === 'linkOutline') return 'accentForeground'
-  if (variant === 'linkDestructive') return 'destructive'
+  if (variant === 'linkDestructive') return 'destructiveMutedForeground'
   if (variant === 'shiny') return 'accentForeground'
   if (variant === 'latte') return 'latteInputForeground'
   if (variant === 'primaryMuted') return 'primary'
-  if (variant === 'outlineDestructive') return 'destructive'
-  if (variant === 'destructiveMuted') return 'destructiveMutedForeground'
+  if (variant === 'outlineDestructive') return 'destructiveMutedForeground'
+  if (variant === 'destructiveMuted') return 'destructive'
   if (variant === 'successMuted') return 'successMutedForeground'
   return 'foreground'
 }
@@ -312,6 +312,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
 
   const iconPlacement = iconProps?.placement || 'left'
   const fanciness = fancy ? 'fancy' : 'default'
+  const resolvedIconColor =
+    textColor ?? iconProps?.color ?? textColorVariants({ variant })
   const buttonStyles = useButtonStyles({
     variant,
     size,
@@ -349,11 +351,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             {iconProps && iconPlacement === 'left' ? (
               <Icon
                 {...iconProps}
-                color={
-                  textColor ??
-                  iconProps?.color ??
-                  textColorVariants({ variant })
-                }
+                color={resolvedIconColor}
                 className={cn('flex-shrink-0', iconProps.className)}
               />
             ) : null}
@@ -383,6 +381,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             {iconProps && iconPlacement === 'right' ? (
               <Icon
                 {...iconProps}
+                color={resolvedIconColor}
                 className={cn('flex-shrink-0', iconProps.className)}
               />
             ) : null}

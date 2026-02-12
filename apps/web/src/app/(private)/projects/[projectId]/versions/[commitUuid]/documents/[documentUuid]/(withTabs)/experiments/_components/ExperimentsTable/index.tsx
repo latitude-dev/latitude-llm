@@ -158,7 +158,7 @@ export function ExperimentsTable({
         {experiments.map((experiment) => {
           const { isRunning } = getStatus(experiment)
           const isSelected = selectedExperiments.includes(experiment.uuid)
-          const textColor = isSelected ? 'primary' : 'foreground'
+          const textColor = isSelected ? 'accentForeground' : 'foreground'
 
           const experimentCommit = commits?.find(
             (c) => c.id === experiment.commitId,
