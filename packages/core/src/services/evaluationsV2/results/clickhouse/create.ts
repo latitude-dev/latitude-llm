@@ -1,6 +1,6 @@
 import { insertRows } from '../../../../clickhouse/insert'
 import { TypedResult } from '../../../../lib/Result'
-import { EVALUATION_RESULTS_V2_TABLE } from '../../../../clickhouse/models/evaluationResultsV2'
+import { EVALUATION_RESULTS_V2_TABLE } from '../../../../models/clickhouse/evaluationResultsV2'
 import { buildEvaluationResultV2Row } from './buildRow'
 import { EvaluationResultV2, EvaluationV2 } from '../../../../constants'
 import { type Commit } from '../../../../schema/models/types/Commit'

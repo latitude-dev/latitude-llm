@@ -2,7 +2,7 @@ import { clickhouseClient } from '../../../client/clickhouse'
 import {
   EVALUATION_RESULTS_V2_TABLE,
   EvaluationResultV2Row,
-} from '../../../clickhouse/models/evaluationResultsV2'
+} from '../../../models/clickhouse/evaluationResultsV2'
 import { scopedQuery } from '../../scope'
 
 /**
