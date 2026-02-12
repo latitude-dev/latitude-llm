@@ -10,7 +10,7 @@ import { type Commit } from '../../../../schema/models/types/Commit'
 /**
  * Builds a ClickHouse row for evaluation results.
  */
-export function buildEvaluationResultV2Row({
+export function buildEvaluationResultRow({
   result,
   evaluation,
   commit,

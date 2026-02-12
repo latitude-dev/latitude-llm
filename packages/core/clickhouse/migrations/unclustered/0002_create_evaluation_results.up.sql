@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS evaluation_results (
   tokens Nullable(Int64),
   cost Nullable(Int64),
 
-  metadata Nullable(String),
-  error Nullable(String),
+  metadata Nullable(String) CODEC(ZSTD(3)),
+  error Nullable(String) CODEC(ZSTD(3)),
 
   created_at DateTime64(3, 'UTC'),
   updated_at DateTime64(3, 'UTC'),

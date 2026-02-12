@@ -4,14 +4,14 @@ import {
   EVALUATION_RESULTS_TABLE,
   EvaluationResultV2Row,
 } from '../../../../models/clickhouse/evaluationResults'
-import { buildEvaluationResultV2Row } from './buildRow'
+import { buildEvaluationResultRow } from './buildRow'
 import { EvaluationResultV2, EvaluationV2 } from '../../../../constants'
 import { type Commit } from '../../../../schema/models/types/Commit'
 
 /**
  * Updates an evaluation result row in ClickHouse.
  */
-export async function updateEvaluationResultV2InClickhouse({
+export async function updateEvaluationResult({
   existingRow,
   result,
   evaluation,
@@ -22,7 +22,7 @@ export async function updateEvaluationResultV2InClickhouse({
   evaluation: EvaluationV2
   commit: Commit
 }): Promise<TypedResult<undefined>> {
-  const row = buildEvaluationResultV2Row({
+  const row = buildEvaluationResultRow({
     result,
     evaluation,
     commit,

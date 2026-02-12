@@ -8,7 +8,7 @@ import { scopedQuery } from '../../scope'
 /**
  * Finds the latest evaluation result row by UUID in ClickHouse.
  */
-export const findEvaluationResultV2RowByUuid = scopedQuery(
+export const findEvaluationResultByUuid = scopedQuery(
   async function findEvaluationResultV2RowByUuid(
     { workspaceId, uuid }: { workspaceId: number; uuid: string },
     _db,

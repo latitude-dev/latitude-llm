@@ -5,9 +5,9 @@ import {
   EvaluationResultV2CreatedEvent,
   EvaluationResultV2UpdatedEvent,
 } from '../events'
-import { createEvaluationResultV2InClickhouse } from '../../services/evaluationsV2/results/clickhouse/create'
-import { updateEvaluationResultV2InClickhouse } from '../../services/evaluationsV2/results/clickhouse/update'
-import { findEvaluationResultV2RowByUuid } from '../../queries/clickhouse/evaluationResultsV2/findByUuid'
+import { createEvaluationResult } from '../../services/evaluationsV2/results/clickhouse/create'
+import { updateEvaluationResult } from '../../services/evaluationsV2/results/clickhouse/update'
+import { findEvaluationResultByUuid } from '../../queries/clickhouse/evaluationResultsV2/findByUuid'
 
 /**
  * Writes evaluation result rows into ClickHouse on create events.
@@ -24,7 +24,21 @@ export const writeEvaluationResultV2CreatedToClickhouse = async ({
   )
   if (!enabled.ok || !enabled.value) return
 
-  await createEvaluationResultV2InClickhouse({ result, evaluation, commit })
+  const createResult = await createEvaluationResult({
+    result,
+    evaluation,
+    commit,
+  })
+  if (createResult.error) {
+    captureException(createResult.error, {
+      workspaceId,
+      evaluationUuid: evaluation.uuid,
+      resultUuid: result.uuid,
+      commitId: result.commitId,
+      action: 'create',
+    })
+    return
+  }
 }
 
 /**
@@ -49,21 +63,55 @@ export const writeEvaluationResultV2UpdatedToClickhouse = async ({
     return
   }
 
-  const existingRow = await findEvaluationResultV2RowByUuid({
-    workspaceId,
-    uuid: result.uuid,
-  })
+  let existingRow: Awaited<ReturnType<typeof findEvaluationResultByUuid>>
+  try {
+    existingRow = await findEvaluationResultByUuid({
+      workspaceId,
+      uuid: result.uuid,
+    })
+  } catch (error) {
+    captureException(error as Error, {
+      workspaceId,
+      evaluationUuid: evaluation.uuid,
+      resultUuid: result.uuid,
+      action: 'find-existing-row',
+    })
+    return
+  }
   const commit = commitResult.value
 
   if (!existingRow) {
-    await createEvaluationResultV2InClickhouse({ result, evaluation, commit })
+    const createResult = await createEvaluationResult({
+      result,
+      evaluation,
+      commit,
+    })
+    if (createResult.error) {
+      captureException(createResult.error, {
+        workspaceId,
+        evaluationUuid: evaluation.uuid,
+        resultUuid: result.uuid,
+        commitId: result.commitId,
+        action: 'fallback-create',
+      })
+    }
     return
   }
 
-  await updateEvaluationResultV2InClickhouse({
+  const updateResult = await updateEvaluationResult({
     existingRow,
     result,
     evaluation,
     commit,
   })
+  if (updateResult.error) {
+    captureException(updateResult.error, {
+      workspaceId,
+      evaluationUuid: evaluation.uuid,
+      resultUuid: result.uuid,
+      commitId: result.commitId,
+      action: 'update',
+    })
+    return
+  }
 }
