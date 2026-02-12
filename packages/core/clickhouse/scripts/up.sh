@@ -15,27 +15,19 @@ fi
 [ -n "$_SAVED_DB" ] && CLICKHOUSE_DB="$_SAVED_DB"
 
 if [ -z "${CLICKHOUSE_URL}" ]; then
-  echo "Error: CLICKHOUSE_URL is not configured."
-  echo "Please set CLICKHOUSE_URL in your environment variables."
-  exit 1
+  export CLICKHOUSE_URL="http://localhost:8123"
 fi
 
 if [ -z "${CLICKHOUSE_MIGRATION_URL}" ]; then
-  echo "Error: CLICKHOUSE_MIGRATION_URL is not configured."
-  echo "Please set CLICKHOUSE_MIGRATION_URL in your environment variables."
-  exit 1
+  export CLICKHOUSE_MIGRATION_URL="clickhouse://localhost:9000"
 fi
 
 if [ -z "${CLICKHOUSE_USER}" ]; then
-  echo "Error: CLICKHOUSE_USER is not set."
-  echo "Please set CLICKHOUSE_USER in your environment variables."
-  exit 1
+  export CLICKHOUSE_USER="latitude"
 fi
 
 if [ -z "${CLICKHOUSE_PASSWORD}" ]; then
-  echo "Error: CLICKHOUSE_PASSWORD is not set."
-  echo "Please set CLICKHOUSE_PASSWORD in your environment variables."
-  exit 1
+  export CLICKHOUSE_PASSWORD="secret"
 fi
 
 if ! command -v migrate &>/dev/null; then
@@ -46,7 +38,7 @@ if ! command -v migrate &>/dev/null; then
 fi
 
 if [ -z "${CLICKHOUSE_DB}" ]; then
-  export CLICKHOUSE_DB="default"
+  export CLICKHOUSE_DB="latitude_test"
 fi
 
 if [ -z "${CLICKHOUSE_CLUSTER_NAME}" ]; then

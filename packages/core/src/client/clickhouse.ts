@@ -6,10 +6,10 @@ let _clientKey: string | undefined
 
 function readClickhouseConfig() {
   return {
-    url: process.env.CLICKHOUSE_URL ?? env.CLICKHOUSE_URL,
-    database: process.env.CLICKHOUSE_DB ?? env.CLICKHOUSE_DB,
-    username: process.env.CLICKHOUSE_USER ?? env.CLICKHOUSE_USER,
-    password: process.env.CLICKHOUSE_PASSWORD ?? env.CLICKHOUSE_PASSWORD,
+    url: env.CLICKHOUSE_URL,
+    database: env.CLICKHOUSE_DB,
+    username: env.CLICKHOUSE_USER,
+    password: env.CLICKHOUSE_PASSWORD,
   }
 }
 

@@ -14,12 +14,6 @@ on:
 jobs:
   test-core:
     runs-on: ubuntu-latest
-    env:
-      CLICKHOUSE_URL: http://localhost:8123
-      CLICKHOUSE_DB: latitude_test
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: ''
-      CLICKHOUSE_CLUSTER_ENABLED: 'false'
     strategy:
       fail-fast: false
       matrix:
@@ -33,11 +27,6 @@ jobs:
           - '6379:6379'
       clickhouse:
         image: clickhouse/clickhouse-server:24.8
-        env:
-          CLICKHOUSE_DB: latitude_test
-          CLICKHOUSE_USER: default
-          CLICKHOUSE_PASSWORD: ''
-          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
         ports:
           - '8123:8123'
       postgres:
@@ -100,6 +89,22 @@ jobs:
 
       - name: Wait for ClickHouse to start
         run: until curl -fsS http://localhost:8123/ping >/dev/null; do sleep 1; done
+
+      - name: Create ClickHouse test database
+        run: curl -fsS "http://localhost:8123/?query=CREATE%20DATABASE%20IF%20NOT%20EXISTS%20latitude_test"
+
+      - name: Install golang-migrate
+        run: |
+          mkdir -p ~/bin
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+          mv migrate ~/bin/migrate
+          chmod +x ~/bin/migrate
+
+      - name: Add migrate to PATH
+        run: echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Run ClickHouse migrations
+        run: cd packages/core && pnpm ch:up
 
       - name: Run Server migrations
         env:
@@ -115,12 +120,6 @@ jobs:
 
   test-web:
     runs-on: ubuntu-latest
-    env:
-      CLICKHOUSE_URL: http://localhost:8123
-      CLICKHOUSE_DB: latitude_test
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: ''
-      CLICKHOUSE_CLUSTER_ENABLED: 'false'
     strategy:
       matrix:
         node-version: [22.x]
@@ -132,11 +131,6 @@ jobs:
           - '6379:6379'
       clickhouse:
         image: clickhouse/clickhouse-server:24.8
-        env:
-          CLICKHOUSE_DB: latitude_test
-          CLICKHOUSE_USER: default
-          CLICKHOUSE_PASSWORD: ''
-          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
         ports:
           - '8123:8123'
       postgres:
@@ -199,6 +193,22 @@ jobs:
 
       - name: Wait for ClickHouse to start
         run: until curl -fsS http://localhost:8123/ping >/dev/null; do sleep 1; done
+
+      - name: Create ClickHouse test database
+        run: curl -fsS "http://localhost:8123/?query=CREATE%20DATABASE%20IF%20NOT%20EXISTS%20latitude_test"
+
+      - name: Install golang-migrate
+        run: |
+          mkdir -p ~/bin
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+          mv migrate ~/bin/migrate
+          chmod +x ~/bin/migrate
+
+      - name: Add migrate to PATH
+        run: echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Run ClickHouse migrations
+        run: cd packages/core && pnpm ch:up
 
       - name: Run database migrations
         env:
@@ -213,12 +223,6 @@ jobs:
 
   test-gateway:
     runs-on: ubuntu-latest
-    env:
-      CLICKHOUSE_URL: http://localhost:8123
-      CLICKHOUSE_DB: latitude_test
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: ''
-      CLICKHOUSE_CLUSTER_ENABLED: 'false'
     strategy:
       matrix:
         node-version: [22.x]
@@ -230,11 +234,6 @@ jobs:
           - '6379:6379'
       clickhouse:
         image: clickhouse/clickhouse-server:24.8
-        env:
-          CLICKHOUSE_DB: latitude_test
-          CLICKHOUSE_USER: default
-          CLICKHOUSE_PASSWORD: ''
-          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
         ports:
           - '8123:8123'
       postgres:
@@ -298,6 +297,22 @@ jobs:
       - name: Wait for ClickHouse to start
         run: until curl -fsS http://localhost:8123/ping >/dev/null; do sleep 1; done
 
+      - name: Create ClickHouse test database
+        run: curl -fsS "http://localhost:8123/?query=CREATE%20DATABASE%20IF%20NOT%20EXISTS%20latitude_test"
+
+      - name: Install golang-migrate
+        run: |
+          mkdir -p ~/bin
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+          mv migrate ~/bin/migrate
+          chmod +x ~/bin/migrate
+
+      - name: Add migrate to PATH
+        run: echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Run ClickHouse migrations
+        run: cd packages/core && pnpm ch:up
+
       - name: Run database migrations
         env:
           NODE_ENV: test
@@ -311,12 +326,6 @@ jobs:
 
   test-rest:
     runs-on: ubuntu-latest
-    env:
-      CLICKHOUSE_URL: http://localhost:8123
-      CLICKHOUSE_DB: latitude_test
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: ''
-      CLICKHOUSE_CLUSTER_ENABLED: 'false'
     strategy:
       matrix:
         node-version: [22.x]
@@ -329,11 +338,6 @@ jobs:
           - '6379:6379'
       clickhouse:
         image: clickhouse/clickhouse-server:24.8
-        env:
-          CLICKHOUSE_DB: latitude_test
-          CLICKHOUSE_USER: default
-          CLICKHOUSE_PASSWORD: ''
-          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
         ports:
           - '8123:8123'
       postgres:
@@ -419,6 +423,22 @@ jobs:
 
       - name: Wait for ClickHouse to start
         run: until curl -fsS http://localhost:8123/ping >/dev/null; do sleep 1; done
+
+      - name: Create ClickHouse test database
+        run: curl -fsS "http://localhost:8123/?query=CREATE%20DATABASE%20IF%20NOT%20EXISTS%20latitude_test"
+
+      - name: Install golang-migrate
+        run: |
+          mkdir -p ~/bin
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+          mv migrate ~/bin/migrate
+          chmod +x ~/bin/migrate
+
+      - name: Add migrate to PATH
+        run: echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Run ClickHouse migrations
+        run: cd packages/core && pnpm ch:up
 
       - name: Run database migrations
         env:

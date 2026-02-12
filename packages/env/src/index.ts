@@ -6,6 +6,12 @@ import dotenv, { type DotenvPopulateInput } from 'dotenv'
 import z from 'zod'
 
 const environment = process.env.NODE_ENV || 'development'
+const isTestEnvironment = environment === 'test'
+const defaultClickhouseDb = isTestEnvironment
+  ? 'latitude_test'
+  : 'latitude_development'
+const defaultClickhouseUser = 'latitude'
+const defaultClickhousePassword = 'secret'
 const UPLOADS_PATH = 'uploads'
 
 if (environment === 'development' || environment === 'test') {
@@ -66,6 +72,14 @@ if (environment === 'development' || environment === 'test') {
       COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH: 'generator',
       ENGINE_PATH: 'apps/engine',
       ENGINE_PYTHON: 'python3',
+      CLICKHOUSE_URL: 'http://localhost:8123',
+      CLICKHOUSE_MIGRATION_URL: 'clickhouse://localhost:9000',
+      CLICKHOUSE_DB: defaultClickhouseDb,
+      CLICKHOUSE_USER: defaultClickhouseUser,
+      CLICKHOUSE_PASSWORD: defaultClickhousePassword,
+      CLICKHOUSE_CLUSTER_ENABLED: 'false',
+      CLICKHOUSE_CLUSTER_NAME: 'default',
+      CLICKHOUSE_MIGRATION_SSL: 'false',
     },
     { path: pathToEnv },
   )
@@ -75,7 +89,8 @@ if (environment === 'development' || environment === 'test') {
 
 export const env = createEnv({
   skipValidation:
-    process.env.BUILDING_CONTAINER == 'true' || process.env.NODE_ENV === 'test',
+    process.env.BUILDING_CONTAINER === 'true' ||
+    process.env.NODE_ENV === 'test',
   server: {
     NODE_ENV: z.string(),
 
@@ -305,9 +320,12 @@ export const env = createEnv({
       .string()
       .optional()
       .default('clickhouse://localhost:9000'),
-    CLICKHOUSE_DB: z.string().optional().default('latitude_development'),
-    CLICKHOUSE_USER: z.string().optional().default('latitude'),
-    CLICKHOUSE_PASSWORD: z.string().optional().default('secret'),
+    CLICKHOUSE_DB: z.string().optional().default(defaultClickhouseDb),
+    CLICKHOUSE_USER: z.string().optional().default(defaultClickhouseUser),
+    CLICKHOUSE_PASSWORD: z
+      .string()
+      .optional()
+      .default(defaultClickhousePassword),
     CLICKHOUSE_CLUSTER_ENABLED: z.string().optional().default('false'),
     CLICKHOUSE_CLUSTER_NAME: z.string().optional().default('default'),
     CLICKHOUSE_MIGRATION_SSL: z.string().optional().default('false'),
