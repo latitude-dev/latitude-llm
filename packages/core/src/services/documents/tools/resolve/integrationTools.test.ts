@@ -21,7 +21,7 @@ describe('resolveIntegrationToolDefinition', () => {
   })
 
   describe('resolving integration tools', () => {
-    it('calls MCP with short tool name when toolName is composite (integration/tool)', async () => {
+    it('calls MCP with tool name from sourceData', async () => {
       const mockIntegration = {
         id: 1,
         name: 'my-integration',
@@ -52,6 +52,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 1,
+          toolName: 'my_tool',
           toolLabel: 'My Tool',
         },
       }
@@ -63,7 +64,7 @@ describe('resolveIntegrationToolDefinition', () => {
       } as unknown as StreamManager
 
       const result = await resolveIntegrationToolDefinition({
-        toolName: 'my-integration/my_tool',
+        toolName: 'my-integration_my_tool',
         toolManifest,
         streamManager,
       })
@@ -108,6 +109,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 1,
+          toolName: 'test_tool',
           toolLabel: 'Test Tool',
         },
       }
@@ -151,6 +153,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 999,
+          toolName: 'missing_tool',
           toolLabel: 'Missing Tool',
         },
       }
@@ -209,6 +212,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 1,
+          toolName: 'complex_tool',
           toolLabel: 'Complex Tool',
           imageUrl: 'https://example.com/icon.png',
         },
@@ -256,6 +260,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 1,
+          toolName: 'image_tool',
           toolLabel: 'Image Tool',
           imageUrl: 'https://example.com/logo.png',
         },
@@ -302,6 +307,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 1,
+          toolName: 'pipedream_tool',
           toolLabel: 'Pipedream Tool',
         },
       }
@@ -351,6 +357,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 1,
+          toolName: 'tool',
           toolLabel: 'Tool',
         },
       }
@@ -396,6 +403,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 123,
+          toolName: 'tool',
           toolLabel: 'Tool',
         },
       }
@@ -444,6 +452,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 1,
+          toolName: 'no_params',
           toolLabel: 'No Params',
         },
       }
@@ -487,6 +496,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 1,
+          toolName: 'tool',
           toolLabel: '',
         },
       }
@@ -527,6 +537,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 1,
+          toolName: 'tool',
           toolLabel: 'Tool',
         },
       }
@@ -574,6 +585,7 @@ describe('resolveIntegrationToolDefinition', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 1,
+          toolName: 'tool',
           toolLabel: 'Tool',
         },
       }

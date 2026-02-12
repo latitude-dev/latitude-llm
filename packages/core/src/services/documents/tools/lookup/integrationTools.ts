@@ -64,6 +64,7 @@ async function lookupToolsByIntegration({
           sourceData: {
             source: ToolSource.Integration,
             integrationId: integration.id,
+            toolName: toolDefinition.name,
             toolLabel: toolDefinition.displayName,
             imageUrl:
               integration.type === IntegrationType.Pipedream

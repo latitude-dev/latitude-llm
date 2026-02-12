@@ -113,13 +113,13 @@ describe('lookupIntegrationTools', () => {
       const result = await lookupIntegrationTools({ config, workspace })
 
       expect(result.ok).toBe(true)
-      expect(result.value!['my-integration/search']).toBeDefined()
-      expect(result.value!['my-integration/search']!.sourceData.source).toBe(
+      expect(result.value!['my-integration_search']).toBeDefined()
+      expect(result.value!['my-integration_search']!.sourceData.source).toBe(
         ToolSource.Integration,
       )
-      expect(result.value!['my-integration/search']!.sourceData.integrationId).toBe(1)
-      expect(result.value!['my-integration/search']!.sourceData.toolLabel).toBe('Search Tool')
-      expect(result.value!['my-integration/search']!.sourceData.imageUrl).toBe(
+      expect(result.value!['my-integration_search']!.sourceData.integrationId).toBe(1)
+      expect(result.value!['my-integration_search']!.sourceData.toolLabel).toBe('Search Tool')
+      expect(result.value!['my-integration_search']!.sourceData.imageUrl).toBe(
         'https://example.com/image.png',
       )
     })
@@ -166,8 +166,8 @@ describe('lookupIntegrationTools', () => {
 
       expect(result.ok).toBe(true)
       expect(Object.keys(result.value!).length).toBe(2)
-      expect(result.value!['my-integration/search']).toBeDefined()
-      expect(result.value!['my-integration/fetch']).toBeDefined()
+      expect(result.value!['my-integration_search']).toBeDefined()
+      expect(result.value!['my-integration_fetch']).toBeDefined()
     })
 
     it('looks up multiple tools from same integration', async () => {
@@ -212,8 +212,8 @@ describe('lookupIntegrationTools', () => {
 
       expect(result.ok).toBe(true)
       expect(Object.keys(result.value!).length).toBe(2)
-      expect(result.value!['my-integration/search']).toBeDefined()
-      expect(result.value!['my-integration/fetch']).toBeDefined()
+      expect(result.value!['my-integration_search']).toBeDefined()
+      expect(result.value!['my-integration_fetch']).toBeDefined()
     })
 
     it('looks up two integrations with same tool name under unique keys', async () => {
@@ -264,11 +264,11 @@ describe('lookupIntegrationTools', () => {
 
       expect(result.ok).toBe(true)
       expect(Object.keys(result.value!).sort()).toEqual([
-        'gmail_personal/create_draft',
-        'gmail_work/create_draft',
+        'gmail_personal_create_draft',
+        'gmail_work_create_draft',
       ])
-      expect(result.value!['gmail_personal/create_draft']!.sourceData.integrationId).toBe(1)
-      expect(result.value!['gmail_work/create_draft']!.sourceData.integrationId).toBe(2)
+      expect(result.value!['gmail_personal_create_draft']!.sourceData.integrationId).toBe(1)
+      expect(result.value!['gmail_work_create_draft']!.sourceData.integrationId).toBe(2)
     })
 
     it('looks up tools from multiple integrations', async () => {
@@ -333,8 +333,8 @@ describe('lookupIntegrationTools', () => {
 
       expect(result.ok).toBe(true)
       expect(Object.keys(result.value!).length).toBe(2)
-      expect(result.value!['integration1/tool1']).toBeDefined()
-      expect(result.value!['integration2/tool2']).toBeDefined()
+      expect(result.value!['integration1_tool1']).toBeDefined()
+      expect(result.value!['integration2_tool2']).toBeDefined()
     })
 
     it('returns error when tool id is invalid (missing integration name)', async () => {
@@ -454,7 +454,7 @@ describe('lookupIntegrationTools', () => {
 
       expect(result.ok).toBe(true)
       expect(Object.keys(result.value!).length).toBe(1)
-      expect(result.value!['my-integration/tool']).toBeDefined()
+      expect(result.value!['my-integration_tool']).toBeDefined()
     })
   })
 
@@ -504,7 +504,7 @@ describe('lookupIntegrationTools', () => {
       const result = await lookupIntegrationTools({ config, workspace })
 
       expect(result.ok).toBe(true)
-      const manifest = result.value!['test-integration/testTool']
+      const manifest = result.value!['test-integration_testTool']
       expect(manifest).toMatchObject({
         definition: {
           description: 'A test tool',
@@ -555,7 +555,7 @@ describe('lookupIntegrationTools', () => {
       const result = await lookupIntegrationTools({ config, workspace })
 
       expect(result.ok).toBe(true)
-      const manifest = result.value!['my-integration/tool']
+      const manifest = result.value!['my-integration_tool']
       expect(manifest!.sourceData.imageUrl).toBeUndefined()
     })
 

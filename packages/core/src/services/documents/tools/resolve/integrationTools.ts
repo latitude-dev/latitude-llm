@@ -28,10 +28,6 @@ export async function resolveIntegrationToolDefinition({
   if (integrationResult.error) return integrationResult
   const integration = integrationResult.unwrap()
 
-  const shortToolName = toolName.includes('_')
-    ? toolName.split('_').slice(1).join('_')
-    : toolName
-
   return Result.ok({
     ...toolManifest.definition,
     execute: async (args, toolCall) => {
@@ -63,7 +59,7 @@ export async function resolveIntegrationToolDefinition({
       try {
         const value = await callIntegrationTool({
           integration,
-          toolName: shortToolName,
+          toolName: toolManifest.sourceData.toolName,
           args,
           streamManager,
         }).then((r) => r.unwrap())

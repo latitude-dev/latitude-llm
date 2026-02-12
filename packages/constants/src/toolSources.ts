@@ -29,6 +29,7 @@ type AgentAsToolSourceData = BaseToolSourceData<ToolSource.Agent> & {
 
 type IntegrationToolSourceData = BaseToolSourceData<ToolSource.Integration> & {
   integrationId: number
+  toolName: string
   toolLabel?: string // Human-readable tool label
   imageUrl?: string // For Pipedream integrations
 }
