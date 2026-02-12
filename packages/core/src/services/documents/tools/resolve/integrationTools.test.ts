@@ -9,6 +9,7 @@ import { IntegrationType } from '@latitude-data/constants'
 import { jsonSchema } from 'ai'
 import * as integrationsModule from '../../../../repositories/integrationsRepository'
 import * as callToolModule from '../../../../services/integrations/McpClient/callTool'
+import * as telemetryModule from '../../../../telemetry'
 import { Result } from '../../../../lib/Result'
 
 describe('resolveIntegrationToolDefinition', () => {
@@ -38,6 +39,10 @@ describe('resolveIntegrationToolDefinition', () => {
       const callIntegrationToolMock = vi
         .spyOn(callToolModule, 'callIntegrationTool')
         .mockResolvedValue(Result.ok('result') as any)
+
+      vi.spyOn(telemetryModule.telemetry.span, 'tool').mockReturnValue({
+        end: vi.fn(),
+      } as any)
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {
