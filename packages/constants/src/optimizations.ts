@@ -13,6 +13,11 @@ export const OptimizationBudgetSchema = z.object({
 export type OptimizationBudget = z.infer<typeof OptimizationBudgetSchema>
 
 export const OptimizationConfigurationSchema = z.object({
+  dataset: z
+    .object({
+      target: z.number().min(0).optional(),
+    })
+    .optional(),
   parameters: z
     .record(
       z.string(),
@@ -46,7 +51,6 @@ export const OPTIMIZATION_DEFAULT_ERROR = 'Optimization cancelled'
 export const OPTIMIZATION_CANCELLED_ERROR = 'Optimization cancelled by user'
 
 export const OPTIMIZATION_MIN_ROWS = 4
-export const OPTIMIZATION_TARGET_ROWS = 250 // Note: algorithms need a sufficient amount of data to generalize and converge to avoid noise and bias
 export const OPTIMIZATION_MAX_ROWS = 1000
 
 export const OPTIMIZATION_TESTSET_SPLIT = 0.7 // 70% trainset, 30% testset

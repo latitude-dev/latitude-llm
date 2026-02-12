@@ -1,5 +1,6 @@
 import {
   OPTIMIZATION_MAX_ROWS,
+  OPTIMIZATION_MIN_ROWS,
   OPTIMIZATION_TESTSET_SPLIT,
   Providers,
 } from '@latitude-data/constants'
@@ -400,7 +401,9 @@ value1
         workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Token budget must be a number between 0 and 100M'),
+      new BadRequestError(
+        'Token budget must be a number between 0 and 100 million tokens',
+      ),
     )
 
     expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
@@ -422,11 +425,145 @@ value1
         workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Token budget must be a number between 0 and 100M'),
+      new BadRequestError(
+        'Token budget must be a number between 0 and 100 million tokens',
+      ),
     )
 
     expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
     expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when dataset.target is below minimum', async () => {
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: { instructions: true },
+          dataset: { target: OPTIMIZATION_MIN_ROWS - 1 },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError(
+        `Dataset curation target must be a number between ${OPTIMIZATION_MIN_ROWS} and ${OPTIMIZATION_MAX_ROWS} rows`,
+      ),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('fails when dataset.target exceeds maximum', async () => {
+    await expect(
+      startOptimization({
+        evaluation,
+        configuration: {
+          scope: { instructions: true },
+          dataset: { target: OPTIMIZATION_MAX_ROWS + 1 },
+        },
+        document,
+        baselineCommit: commit,
+        project,
+        workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError(
+        `Dataset curation target must be a number between ${OPTIMIZATION_MIN_ROWS} and ${OPTIMIZATION_MAX_ROWS} rows`,
+      ),
+    )
+
+    expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+    expect(publisherMock).not.toHaveBeenCalled()
+  })
+
+  it('succeeds with valid dataset.target', async () => {
+    const result = await startOptimization({
+      evaluation,
+      configuration: {
+        scope: { instructions: true },
+        dataset: { target: 50 },
+      },
+      document,
+      baselineCommit: commit,
+      project,
+      workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result.optimization).toBeDefined()
+    expect(result.optimization.configuration.dataset?.target).toBe(50)
+
+    expect(mocks.optimizationsQueue).toHaveBeenCalledTimes(1)
+    expect(publisherMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears dataset.target when a dataset is provided', async () => {
+    const {
+      workspace: w2,
+      project: p2,
+      documents: docsWithParams,
+      commit: commitWithParams,
+      user: u2,
+    } = await factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        prompt: factories.helpers.createPrompt({
+          provider: 'openai',
+          model: 'gpt-4o',
+          content: 'Hello {{inputParam}}!',
+        }),
+      },
+    })
+
+    const docWithParams = docsWithParams[0]!
+    const evalForDoc = await factories.createEvaluationV2({
+      document: docWithParams,
+      commit: commitWithParams,
+      workspace: w2,
+      type: EvaluationType.Rule,
+      metric: RuleEvaluationMetric.RegularExpression,
+      configuration: {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
+        pattern: '.*',
+      },
+    })
+
+    const { dataset } = await factories.createDataset({
+      workspace: w2,
+      author: u2,
+      fileContent: `
+inputParam
+value1
+value2
+value3
+value4
+`.trim(),
+    })
+
+    const result = await startOptimization({
+      evaluation: evalForDoc,
+      dataset,
+      configuration: {
+        scope: { instructions: true },
+        dataset: { target: 50 },
+      },
+      document: docWithParams,
+      baselineCommit: commitWithParams,
+      project: p2,
+      workspace: w2,
+    }).then((r) => r.unwrap())
+
+    expect(result.optimization.configuration.dataset?.target).toBeUndefined()
   })
 
   it('succeeds with valid budget configuration', async () => {
@@ -673,9 +810,7 @@ value1
           project: projectWithParams,
           workspace: workspaceWithParams,
         }).then((r) => r.unwrap()),
-      ).rejects.toThrowError(
-        new BadRequestError('At least 4 dataset rows are required'),
-      )
+      ).rejects.toThrowError(/At least 4 dataset rows are required/)
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
       expect(publisherMock).not.toHaveBeenCalled()
@@ -706,9 +841,7 @@ value2
           project: projectWithParams,
           workspace: workspaceWithParams,
         }).then((r) => r.unwrap()),
-      ).rejects.toThrowError(
-        new BadRequestError('At least 4 dataset rows are required'),
-      )
+      ).rejects.toThrowError(/At least 4 dataset rows are required/)
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
       expect(publisherMock).not.toHaveBeenCalled()
@@ -740,9 +873,7 @@ value3
           project: projectWithParams,
           workspace: workspaceWithParams,
         }).then((r) => r.unwrap()),
-      ).rejects.toThrowError(
-        new BadRequestError('At least 4 dataset rows are required'),
-      )
+      ).rejects.toThrowError(/At least 4 dataset rows are required/)
 
       expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
       expect(publisherMock).not.toHaveBeenCalled()

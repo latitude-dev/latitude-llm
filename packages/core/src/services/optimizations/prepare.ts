@@ -5,7 +5,6 @@ import {
   EvaluationV2,
   OPTIMIZATION_MAX_ROWS,
   OPTIMIZATION_MIN_ROWS,
-  OPTIMIZATION_TARGET_ROWS,
   OPTIMIZATION_TESTSET_SPLIT,
   Span,
   SpanType,
@@ -23,6 +22,8 @@ import { hashObject } from '../../lib/hashObject'
 import { interleaveList } from '../../lib/interleaveList'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
+import { findProjectById } from '../../queries/projects/findById'
+import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
 import {
   CommitsRepository,
   DatasetsRepository,
@@ -31,8 +32,6 @@ import {
   IssuesRepository,
   SpanMetadatasRepository,
 } from '../../repositories'
-import { findProjectById } from '../../queries/projects/findById'
-import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
 import { DatasetRowData } from '../../schema/models/datasetRows'
 import { Column } from '../../schema/models/datasets'
 import { optimizations } from '../../schema/models/optimizations'
@@ -176,6 +175,7 @@ export async function prepareOptimization(
       validateSpan: validateSpan,
       baselineCommit: baselineCommit,
       document: document,
+      optimization: optimization,
       workspace: workspace,
     })
     if (gettingex.error) {
@@ -356,6 +356,7 @@ async function getNegativeExamples({
   document,
   validateSpan,
   baselineCommit,
+  optimization,
   workspace,
 }: {
   trackedIssues: Issue[]
@@ -368,7 +369,7 @@ async function getNegativeExamples({
   optimization: Optimization
   workspace: Workspace
 }) {
-  const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
+  const halfLimit = Math.floor((optimization.configuration.dataset?.target ?? OPTIMIZATION_MAX_ROWS ) / 2) // prettier-ignore
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
 
   const result: Record<string, SpanWithDetails<SpanType.Prompt>[]> = {}
@@ -556,6 +557,7 @@ async function getPositiveExamples({
   validateSpan,
   document,
   baselineCommit,
+  optimization,
   workspace,
 }: {
   validateSpan: SpanValidator
@@ -564,7 +566,7 @@ async function getPositiveExamples({
   optimization: Optimization
   workspace: Workspace
 }) {
-  const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
+  const halfLimit = Math.floor((optimization.configuration.dataset?.target ?? OPTIMIZATION_MAX_ROWS ) / 2) // prettier-ignore
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
 
   const result: SpanWithDetails<SpanType.Prompt>[] = []
@@ -656,6 +658,7 @@ async function getExamples({
   validateSpan,
   baselineCommit,
   document,
+  optimization,
   workspace,
 }: {
   negatives: Record<string, SpanWithDetails<SpanType.Prompt>[]>
@@ -663,9 +666,10 @@ async function getExamples({
   validateSpan: SpanValidator
   baselineCommit: Commit
   document: DocumentVersion
+  optimization: Optimization
   workspace: Workspace
 }) {
-  const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
+  const halfLimit = Math.floor((optimization.configuration.dataset?.target ?? OPTIMIZATION_MAX_ROWS ) / 2) // prettier-ignore
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
 
   let negativesLength = 0
@@ -815,14 +819,14 @@ async function createDatasets(
   },
   transaction = new Transaction(),
 ) {
-  const halfLimit = Math.floor(OPTIMIZATION_TARGET_ROWS / 2)
+  const halfLimit = Math.floor((optimization.configuration.dataset?.target ?? OPTIMIZATION_MAX_ROWS ) / 2) // prettier-ignore
 
   const negatives = interleaveList(negativesMap, halfLimit, true)
   positives = positives.sort(() => Math.random() - 0.5).slice(0, halfLimit)
   if (negatives.length + positives.length < OPTIMIZATION_MIN_ROWS) {
     return Result.error(
       new UnprocessableEntityError(
-        `At least ${OPTIMIZATION_MIN_ROWS} examples are required`,
+        `At least ${OPTIMIZATION_MIN_ROWS} different examples are required. ${negatives.length} negative and ${positives.length} positive examples curated so far`,
       ),
     )
   }

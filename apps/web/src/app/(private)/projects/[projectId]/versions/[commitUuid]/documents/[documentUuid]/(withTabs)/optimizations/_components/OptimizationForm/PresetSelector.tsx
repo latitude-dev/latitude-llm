@@ -10,6 +10,9 @@ export const OPTIMIZATION_PRESETS = {
     duration: '~5 min',
     cost: 'Lower cost',
     configuration: {
+      dataset: {
+        target: 50, // 50 examples
+      },
       budget: {
         time: 5 * 60, // 5 minutes
         tokens: 100_000, // 100k tokens
@@ -23,6 +26,9 @@ export const OPTIMIZATION_PRESETS = {
     duration: '~15 min',
     cost: 'Medium cost',
     configuration: {
+      dataset: {
+        target: 250, // 250 examples
+      },
       budget: {
         time: 15 * 60, // 15 minutes
         tokens: 10_000_000, // 10M tokens
@@ -36,6 +42,9 @@ export const OPTIMIZATION_PRESETS = {
     duration: '~1 hour',
     cost: 'Higher cost',
     configuration: {
+      dataset: {
+        target: 750, // 750 examples
+      },
       budget: {
         time: 60 * 60, // 1 hour
         tokens: 50_000_000, // 50M tokens

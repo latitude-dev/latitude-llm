@@ -18,8 +18,8 @@ import { BadRequestError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { DatasetRowsRepository } from '../../repositories'
 import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
+import { DatasetRowsRepository } from '../../repositories'
 import { DatasetRowData } from '../../schema/models/datasetRows'
 import { Column } from '../../schema/models/datasets'
 import { optimizations } from '../../schema/models/optimizations'
@@ -199,6 +199,22 @@ async function validateConfiguration({
   parameters: string[]
   dataset?: Dataset
 }) {
+  if (dataset && configuration.dataset?.target !== undefined) {
+    configuration.dataset.target = undefined
+  }
+
+  if (
+    configuration.dataset?.target !== undefined &&
+    (configuration.dataset?.target < OPTIMIZATION_MIN_ROWS ||
+      configuration.dataset?.target > OPTIMIZATION_MAX_ROWS)
+  ) {
+    return Result.error(
+      new BadRequestError(
+        `Dataset curation target must be a number between ${OPTIMIZATION_MIN_ROWS} and ${OPTIMIZATION_MAX_ROWS} rows`,
+      ),
+    )
+  }
+
   if (configuration.parameters) {
     configuration.parameters = pick(configuration.parameters, parameters)
   }
@@ -238,7 +254,9 @@ async function validateConfiguration({
       configuration.budget?.tokens > OPTIMIZATION_MAX_TOKENS)
   ) {
     return Result.error(
-      new BadRequestError('Token budget must be a number between 0 and 100M'),
+      new BadRequestError(
+        'Token budget must be a number between 0 and 100 million tokens',
+      ),
     )
   }
 
@@ -304,7 +322,7 @@ async function splitDataset(
   if (rows < OPTIMIZATION_MIN_ROWS) {
     return Result.error(
       new BadRequestError(
-        `At least ${OPTIMIZATION_MIN_ROWS} dataset rows are required`,
+        `At least ${OPTIMIZATION_MIN_ROWS} dataset rows are required. Dataset ${dataset.name} has only ${rows} rows`,
       ),
     )
   }
@@ -327,7 +345,10 @@ async function splitDataset(
     return Result.error(new BadRequestError('Dataset has no author'))
   }
 
-  const finding = await findWorkspaceUserById({ workspaceId: workspace.id, id: dataset.authorId })
+  const finding = await findWorkspaceUserById({
+    workspaceId: workspace.id,
+    id: dataset.authorId,
+  })
   if (finding.error) {
     return Result.error(finding.error)
   }

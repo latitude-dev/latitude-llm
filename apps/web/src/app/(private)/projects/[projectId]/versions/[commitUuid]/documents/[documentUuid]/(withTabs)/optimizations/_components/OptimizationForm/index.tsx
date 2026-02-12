@@ -3,11 +3,14 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useMetadata } from '$/hooks/useMetadata'
+import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import {
+  OPTIMIZATION_MAX_ROWS,
   OPTIMIZATION_MAX_TIME,
   OPTIMIZATION_MAX_TOKENS,
   OptimizationConfiguration,
 } from '@latitude-data/constants'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
@@ -107,14 +110,28 @@ export function OptimizationForm({
     [configuration, setConfiguration],
   )
 
+  const [selectedDataset, setSelectedDataset] = useState<Dataset>()
+  const { data: datasetRowCount } = useDatasetRowsCount({
+    dataset: selectedDataset,
+  })
+
+  const effectiveRowCount = useMemo(() => {
+    if (datasetId != null && datasetRowCount != null) {
+      return Math.min(datasetRowCount, OPTIMIZATION_MAX_ROWS)
+    }
+    return configuration.dataset?.target ?? OPTIMIZATION_MAX_ROWS
+  }, [datasetId, datasetRowCount, configuration.dataset?.target])
+
   const showBudgetWarning = useMemo(() => {
     const time = configuration.budget?.time ?? 0
     const tokens = configuration.budget?.tokens ?? 0
+    const t = effectiveRowCount / OPTIMIZATION_MAX_ROWS
+    const factor = (t * t) / (t * t + (1 - t) * (1 - t))
     return (
-      (time > 0 && time < OPTIMIZATION_MAX_TIME * 0.1) ||
-      (tokens > 0 && tokens < OPTIMIZATION_MAX_TOKENS * 0.1)
+      (time > 0 && time < OPTIMIZATION_MAX_TIME * factor) ||
+      (tokens > 0 && tokens < OPTIMIZATION_MAX_TOKENS * factor)
     )
-  }, [configuration.budget])
+  }, [configuration.budget, effectiveRowCount])
 
   return (
     <form className='min-w-0' id='optimizationForm'>
@@ -149,8 +166,18 @@ export function OptimizationForm({
           expandedContent={
             <FormWrapper>
               <DatasetSelector
-                value={datasetId}
-                onChange={setDatasetId}
+                datasetId={datasetId}
+                onDatasetChange={(dataset) => {
+                  setDatasetId(dataset?.id)
+                  setSelectedDataset(dataset)
+                }}
+                target={configuration.dataset?.target}
+                onTargetChange={(value) =>
+                  setConfiguration({
+                    ...configuration,
+                    dataset: { ...configuration.dataset, target: value },
+                  })
+                }
                 errors={errors}
                 disabled={disabled}
               />
