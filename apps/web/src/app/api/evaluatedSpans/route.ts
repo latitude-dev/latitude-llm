@@ -4,7 +4,6 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import {
   CommitsRepository,
-  SpansRepository,
 } from '@latitude-data/core/repositories'
 import {
   Span,
@@ -14,6 +13,7 @@ import {
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { buildEvaluatedSpan } from '@latitude-data/core/data-access/evaluations/buildEvaluatedSpan'
 import { OkType } from '@latitude-data/core/lib/Result'
+import { findSpansByDocumentAndCommitLimited } from '@latitude-data/core/queries/spans/findByDocumentAndCommitLimited'
 
 const searchParamsSchema = z.object({
   projectId: z.string().transform((val) => Number(val)),
@@ -62,18 +62,16 @@ export const GET = errorHandler(
 
       const commits = await commitsRepo.getCommitsHistory({ commit })
       const commitUuids = commits.map((c) => c.uuid)
-      const repo = new SpansRepository(workspace.id)
-      const result = await repo
-        .findByDocumentAndCommitLimited({
-          documentUuid: parsedParams.documentUuid,
-          commitUuids,
-          types: LIVE_EVALUABLE_SPAN_TYPES,
-          from: fromCursor
-            ? { startedAt: fromCursor.value, id: fromCursor.id }
-            : undefined,
-          limit: 1,
-        })
-        .then((r) => r.value)
+      const result = await findSpansByDocumentAndCommitLimited({
+        workspaceId: workspace.id,
+        documentUuid: parsedParams.documentUuid,
+        commitUuids,
+        types: LIVE_EVALUABLE_SPAN_TYPES,
+        from: fromCursor
+          ? { startedAt: fromCursor.value, id: fromCursor.id }
+          : undefined,
+        limit: 1,
+      })
 
       const span = result.items[0]
 

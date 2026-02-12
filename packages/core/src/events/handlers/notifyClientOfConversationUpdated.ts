@@ -1,7 +1,7 @@
 import { isMainSpan } from '../../constants'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { fetchConversation } from '../../data-access/conversations/fetchConversation'
-import { SpansRepository } from '../../repositories'
+import { findSpan } from '../../queries/spans/findSpan'
 import { WebsocketClient } from '../../websockets/workers'
 import type { SpanCreatedEvent } from '../events'
 
@@ -17,11 +17,7 @@ export const notifyClientOfConversationUpdated = async ({
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) return
 
-  const repo = new SpansRepository(workspaceId)
-  const result = await repo.get({ spanId, traceId })
-  if (!result.ok) return
-
-  const span = result.value
+  const span = await findSpan({ workspaceId, spanId, traceId })
   if (!span || !isMainSpan(span)) return
   if (!span.documentLogUuid) return
 

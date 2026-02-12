@@ -1,8 +1,9 @@
 import { SpanMetadata, SpanType } from '@latitude-data/constants'
 import {
   SpanMetadatasRepository,
-  SpansRepository,
 } from '../../../../repositories'
+import { findSpan } from '../../../../queries/spans/findSpan'
+import { unsafelyFindSpansByParentAndType } from '../../../../queries/spans/unsafelyFindByParentAndType'
 import { DatasetRowData } from '../../../../schema/models/datasetRows'
 import { Column } from '../../../../schema/models/datasets'
 import { Workspace } from '../../../../schema/models/types/Workspace'
@@ -32,17 +33,20 @@ async function findSpans({
   workspace: Workspace
   spanIdentifiers: SpanIdentifier[]
 }) {
-  const repo = new SpansRepository(workspace.id)
-  const spans: Span[] = []
+  const foundSpans: Span[] = []
 
   for (const { traceId, spanId } of spanIdentifiers) {
-    const result = await repo.get({ traceId, spanId })
-    if (result.ok) {
-      spans.push(result.value!)
+    const span = await findSpan({
+      workspaceId: workspace.id,
+      traceId,
+      spanId,
+    })
+    if (span) {
+      foundSpans.push(span)
     }
   }
 
-  return spans.filter((span) => span.type === SpanType.Prompt)
+  return foundSpans.filter((span) => span.type === SpanType.Prompt)
 }
 
 async function findSpanMetadatas({
@@ -69,24 +73,20 @@ async function findSpanMetadatas({
 }
 
 async function findCompletionSpans({
-  workspace,
   spans,
 }: {
   workspace: Workspace
   spans: Span[]
 }) {
-  const repo = new SpansRepository(workspace.id)
   const completionSpans = new Map<string, Span<SpanType.Completion>>()
 
   for (const span of spans) {
-    // Find completion span that is a child of this prompt span
-    const children = await repo.findByParentAndType({
+    const children = await unsafelyFindSpansByParentAndType({
       parentId: span.id,
       type: SpanType.Completion,
     })
 
     if (children.length > 0) {
-      // Get the first completion span (there should typically be one)
       const completionSpan = children[0]! as Span<SpanType.Completion>
       completionSpans.set(`${span.traceId}:${span.id}`, completionSpan)
     }

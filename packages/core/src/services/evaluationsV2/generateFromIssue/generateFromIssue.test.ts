@@ -24,8 +24,8 @@ import * as getSpanMessagesByIssueDocument from '../../../data-access/issues/get
 import {
   CommitsRepository,
   EvaluationResultsV2Repository,
-  SpansRepository,
 } from '../../../repositories'
+import { findSpansBySpanAndTraceIds } from '../../../queries/spans/findBySpanAndTraceIds'
 import * as assembleModule from '../../tracing/traces/assemble'
 import * as adaptModule from '../../tracing/spans/fetching/findCompletionSpanFromTrace'
 
@@ -52,11 +52,14 @@ vi.mock('../../../repositories', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../repositories')>()
   return {
     ...actual,
-    SpansRepository: vi.fn(),
     CommitsRepository: vi.fn(),
     EvaluationResultsV2Repository: vi.fn(),
   }
 })
+
+vi.mock('../../../queries/spans/findBySpanAndTraceIds', () => ({
+  findSpansBySpanAndTraceIds: vi.fn(),
+}))
 
 vi.mock('../../tracing/traces/assemble', () => ({
   assembleTraceWithMessages: vi.fn(),
@@ -79,7 +82,9 @@ describe('generateFromIssue', () => {
     getSpanMessagesByIssueDocument.getSpanMessagesByIssueDocument,
   )
 
-  const mockSpansRepositoryFindBySpanAndTraceIds = vi.fn()
+  const mockFindSpansBySpanAndTraceIds = vi.mocked(
+    findSpansBySpanAndTraceIds,
+  )
   const mockCommitsRepositoryGetCommitsHistory = vi.fn()
   const mockEvaluationResultsV2RepositoryListBySpanAndEvaluations = vi.fn()
   const mockAssembleTraceWithMessages = vi.mocked(
@@ -160,15 +165,7 @@ describe('generateFromIssue', () => {
       Result.ok([{ messages, reason: '' }]),
     )
 
-    mockSpansRepositoryFindBySpanAndTraceIds.mockResolvedValue(
-      Result.ok([] as any),
-    )
-    vi.mocked(SpansRepository).mockImplementation(
-      () =>
-        ({
-          findBySpanAndTraceIds: mockSpansRepositoryFindBySpanAndTraceIds,
-        }) as unknown as SpansRepository,
-    )
+    mockFindSpansBySpanAndTraceIds.mockResolvedValue([] as any)
 
     mockCommitsRepositoryGetCommitsHistory.mockResolvedValue([commit])
     vi.mocked(CommitsRepository).mockImplementation(
@@ -354,12 +351,12 @@ describe('generateFromIssue', () => {
       },
     ] as Message[]
 
-    mockSpansRepositoryFindBySpanAndTraceIds
+    mockFindSpansBySpanAndTraceIds
       .mockResolvedValueOnce(
-        Result.ok([{ id: 'span-1', traceId: 'trace-1' }] as any),
+        [{ id: 'span-1', traceId: 'trace-1' }] as any,
       )
       .mockResolvedValueOnce(
-        Result.ok([{ id: 'span-2', traceId: 'trace-2' }] as any),
+        [{ id: 'span-2', traceId: 'trace-2' }] as any,
       )
 
     mockAssembleTraceWithMessages
@@ -392,7 +389,7 @@ describe('generateFromIssue', () => {
     })
 
     expect(Result.isOk(result)).toBe(true)
-    expect(mockSpansRepositoryFindBySpanAndTraceIds).toHaveBeenCalledTimes(2)
+    expect(mockFindSpansBySpanAndTraceIds).toHaveBeenCalledTimes(2)
 
     expect(mockRunCopilot).toHaveBeenCalledWith({
       path: '/copilot/evaluations/generator',

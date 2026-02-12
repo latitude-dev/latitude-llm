@@ -4,7 +4,7 @@ import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { SpansRepository } from '@latitude-data/core/repositories'
+import { findSpanIdentifiersByDocumentLogUuids } from '@latitude-data/core/queries/spans/findByDocumentLogUuid'
 
 export const GET = errorHandler(
   authHandler(
@@ -42,9 +42,11 @@ export const GET = errorHandler(
         )
       }
 
-      const spansRepo = new SpansRepository(workspace.id)
       const spanIdentifiers =
-        await spansRepo.getSpanIdentifiersByDocumentLogUuids(documentLogUuids)
+        await findSpanIdentifiersByDocumentLogUuids({
+          workspaceId: workspace.id,
+          documentLogUuids,
+        })
 
       if (spanIdentifiers.length === 0) {
         return NextResponse.json(

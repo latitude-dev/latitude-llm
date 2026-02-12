@@ -3,8 +3,8 @@ import { Result } from '../../lib/Result'
 import {
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
-  SpansRepository,
 } from '../../repositories'
+import { findTraceIdsByLogUuid } from '../../queries/spans/findTraceIdsByLogUuid'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { ResultWithEvaluationV2 } from '../../schema/types'
 
@@ -18,8 +18,10 @@ export async function getResultsForConversation(
   },
   db = database,
 ) {
-  const spansRepository = new SpansRepository(workspace.id, db)
-  const traceIds = await spansRepository.listTraceIdsByLogUuid(conversationId)
+  const traceIds = await findTraceIdsByLogUuid(
+    { workspaceId: workspace.id, logUuid: conversationId },
+    db,
+  )
 
   if (traceIds.length === 0) {
     return Result.ok<ResultWithEvaluationV2[]>([])

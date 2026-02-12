@@ -6,7 +6,7 @@ import { withDocument, withDocumentSchema } from '../procedures'
 import { queues } from '@latitude-data/core/queues'
 import { findOrCreateDataset } from '@latitude-data/core/services/datasets/findOrCreate'
 import { updateDatasetFromSpans } from '@latitude-data/core/services/datasets/updateFromSpans'
-import { SpansRepository } from '@latitude-data/core/repositories'
+import { findSpanIdentifiersByDocumentLogUuids } from '@latitude-data/core/queries/spans/findByDocumentLogUuid'
 
 const MAX_SYNC_SPANS_BATCH_SIZE = 25
 
@@ -20,20 +20,20 @@ export const createDatasetFromSpansAction = withDocument
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
-    const spansRepo = new SpansRepository(ctx.workspace.id)
-
     const selectedSpanIdentifiers =
       parsedInput.selectedDocumentLogUuids.length > 0
-        ? await spansRepo.getSpanIdentifiersByDocumentLogUuids(
-            parsedInput.selectedDocumentLogUuids,
-          )
+        ? await findSpanIdentifiersByDocumentLogUuids({
+            workspaceId: ctx.workspace.id,
+            documentLogUuids: parsedInput.selectedDocumentLogUuids,
+          })
         : []
 
     const excludedSpanIdentifiers =
       parsedInput.excludedDocumentLogUuids.length > 0
-        ? await spansRepo.getSpanIdentifiersByDocumentLogUuids(
-            parsedInput.excludedDocumentLogUuids,
-          )
+        ? await findSpanIdentifiersByDocumentLogUuids({
+            workspaceId: ctx.workspace.id,
+            documentLogUuids: parsedInput.excludedDocumentLogUuids,
+          })
         : []
 
     if (

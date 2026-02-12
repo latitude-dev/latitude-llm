@@ -9,8 +9,8 @@ import { Result, TypedResult } from '../../../../lib/Result'
 import {
   DocumentVersionsRepository,
   SpanMetadatasRepository,
-  SpansRepository,
 } from '../../../../repositories'
+import { findSpan } from '../../../../queries/spans/findSpan'
 import { assembleTraceWithMessages } from '../../../../services/tracing/traces/assemble'
 import { WebhookPayload } from '../../../../services/webhooks/types'
 
@@ -23,12 +23,10 @@ export async function processSpanCreated({
   traceId: string
   workspaceId: number
 }): Promise<TypedResult<WebhookPayload, Error>> {
-  const spansRepo = new SpansRepository(workspaceId)
-  const spanResult = await spansRepo.get({ spanId, traceId })
-  if (!spanResult.ok || !spanResult.value) {
+  const span = await findSpan({ workspaceId, spanId, traceId })
+  if (!span) {
     return Result.error(new Error('Span not found'))
   }
-  const span = spanResult.value
 
   const metadataRepo = new SpanMetadatasRepository(workspaceId)
   const metadataResult = await metadataRepo.get<SpanType.Prompt>({

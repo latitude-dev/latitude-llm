@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { SpansRepository } from './spansRepository'
 import { Providers, SpanType } from '@latitude-data/constants'
 import * as factories from '../tests/factories'
 import { Commit } from '../schema/models/types/Commit'
@@ -7,8 +6,11 @@ import { DocumentVersion } from '../schema/models/types/DocumentVersion'
 import { WorkspaceDto } from '../schema/models/types/Workspace'
 import { ApiKey } from '../schema/models/types/ApiKey'
 import { faker } from '@faker-js/faker'
+import { findFirstMainSpanByDocumentLogUuid } from '../queries/spans/findMainSpanByDocumentLogUuid'
+import { isFirstMainSpanInConversation } from '../queries/spans/findMainSpanByDocumentLogUuid'
+import { findLastMainSpanByDocumentLogUuid } from '../queries/spans/findMainSpanByDocumentLogUuid'
 
-describe('SpansRepository', () => {
+describe('spans queries', () => {
   let workspace: WorkspaceDto
   let commit: Commit
   let document: DocumentVersion
@@ -75,9 +77,10 @@ describe('SpansRepository', () => {
         startedAt: new Date('2024-01-01T00:02:00Z'),
       })
 
-      const repo = new SpansRepository(workspace.id)
-      const firstSpan =
-        await repo.findFirstMainSpanByDocumentLogUuid(documentLogUuid)
+      const firstSpan = await findFirstMainSpanByDocumentLogUuid({
+        workspaceId: workspace.id,
+        documentLogUuid,
+      })
 
       expect(firstSpan).toBeDefined()
       expect(firstSpan?.id).toBe('span-1')
@@ -111,19 +114,20 @@ describe('SpansRepository', () => {
         startedAt: new Date('2024-01-01T00:01:00Z'),
       })
 
-      const repo = new SpansRepository(workspace.id)
-      const firstSpan =
-        await repo.findFirstMainSpanByDocumentLogUuid(documentLogUuid)
+      const firstSpan = await findFirstMainSpanByDocumentLogUuid({
+        workspaceId: workspace.id,
+        documentLogUuid,
+      })
 
       expect(firstSpan).toBeDefined()
       expect(firstSpan?.id).toBe('span-prompt')
     })
 
     it('should return undefined for non-existent documentLogUuid', async () => {
-      const repo = new SpansRepository(workspace.id)
-      const firstSpan = await repo.findFirstMainSpanByDocumentLogUuid(
-        faker.string.uuid(),
-      )
+      const firstSpan = await findFirstMainSpanByDocumentLogUuid({
+        workspaceId: workspace.id,
+        documentLogUuid: faker.string.uuid(),
+      })
 
       expect(firstSpan).toBeUndefined()
     })
@@ -157,12 +161,12 @@ describe('SpansRepository', () => {
         startedAt: new Date('2024-01-01T00:01:00Z'),
       })
 
-      const repo = new SpansRepository(workspace.id)
-      const isFirst = await repo.isFirstMainSpanInConversation(
+      const isFirst = await isFirstMainSpanInConversation({
+        workspaceId: workspace.id,
         documentLogUuid,
-        'first-span',
-        'first-trace',
-      )
+        spanId: 'first-span',
+        traceId: 'first-trace',
+      })
 
       expect(isFirst).toBe(true)
     })
@@ -194,12 +198,12 @@ describe('SpansRepository', () => {
         startedAt: new Date('2024-01-01T00:01:00Z'),
       })
 
-      const repo = new SpansRepository(workspace.id)
-      const isFirst = await repo.isFirstMainSpanInConversation(
+      const isFirst = await isFirstMainSpanInConversation({
+        workspaceId: workspace.id,
         documentLogUuid,
-        'second-span',
-        'second-trace',
-      )
+        spanId: 'second-span',
+        traceId: 'second-trace',
+      })
 
       expect(isFirst).toBe(false)
     })
@@ -219,23 +223,23 @@ describe('SpansRepository', () => {
         startedAt: new Date('2024-01-01T00:00:00Z'),
       })
 
-      const repo = new SpansRepository(workspace.id)
-      const isFirst = await repo.isFirstMainSpanInConversation(
+      const isFirst = await isFirstMainSpanInConversation({
+        workspaceId: workspace.id,
         documentLogUuid,
-        'non-existent-span',
-        'non-existent-trace',
-      )
+        spanId: 'non-existent-span',
+        traceId: 'non-existent-trace',
+      })
 
       expect(isFirst).toBe(false)
     })
 
     it('should return false when documentLogUuid has no spans', async () => {
-      const repo = new SpansRepository(workspace.id)
-      const isFirst = await repo.isFirstMainSpanInConversation(
-        faker.string.uuid(),
-        'any-span',
-        'any-trace',
-      )
+      const isFirst = await isFirstMainSpanInConversation({
+        workspaceId: workspace.id,
+        documentLogUuid: faker.string.uuid(),
+        spanId: 'any-span',
+        traceId: 'any-trace',
+      })
 
       expect(isFirst).toBe(false)
     })
@@ -281,9 +285,10 @@ describe('SpansRepository', () => {
         startedAt: new Date('2024-01-01T00:01:00Z'),
       })
 
-      const repo = new SpansRepository(workspace.id)
-      const lastSpan =
-        await repo.findLastMainSpanByDocumentLogUuid(documentLogUuid)
+      const lastSpan = await findLastMainSpanByDocumentLogUuid({
+        workspaceId: workspace.id,
+        documentLogUuid,
+      })
 
       expect(lastSpan).toBeDefined()
       expect(lastSpan?.id).toBe('span-3')

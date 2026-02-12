@@ -50,7 +50,7 @@ import { CommitsRepository } from './commitsRepository'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import { IssueEvaluationResultsRepository } from './issueEvaluationResultsRepository'
 import Repository from './repositoryV2'
-import { SpansRepository } from './spansRepository'
+import { findTraceIdsByLogUuid } from '../queries/spans/findTraceIdsByLogUuid'
 
 const tt = getTableColumns(evaluationResultsV2)
 
@@ -643,9 +643,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     spanId: string
     documentLogUuid: string
   }) {
-    const spansRepository = new SpansRepository(this.workspaceId, this.db)
-    const traceIds =
-      await spansRepository.listTraceIdsByLogUuid(documentLogUuid)
+    const traceIds = await findTraceIdsByLogUuid(
+      { workspaceId: this.workspaceId, logUuid: documentLogUuid },
+      this.db,
+    )
 
     if (traceIds.length === 0) {
       return Result.ok<ResultWithEvaluationV2[]>([])

@@ -7,7 +7,7 @@ import {
   helpers,
 } from '@latitude-data/core/factories'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
-import { SpansRepository } from '@latitude-data/core/repositories'
+import { findSpan } from '@latitude-data/core/queries/spans/findSpan'
 import {
   SpanType,
   SpanKind,
@@ -175,12 +175,11 @@ describe('POST /projects/:projectId/versions/:versionUuid/documents/logs', () =>
       })
 
       // Verify spans were created in the database
-      const spansRepo = new SpansRepository(workspaceId)
-      const promptSpanResult = await spansRepo.get({
+      const promptSpan = await findSpan({
+        workspaceId,
         spanId: responseBody.promptSpan.id,
         traceId: responseBody.promptSpan.traceId,
       })
-      const promptSpan = promptSpanResult.unwrap()
       expect(promptSpan).toBeDefined()
       expect(promptSpan!.type).toBe(SpanType.Prompt)
       expect(promptSpan!.kind).toBe(SpanKind.Client)
@@ -191,11 +190,11 @@ describe('POST /projects/:projectId/versions/:versionUuid/documents/logs', () =>
       expect(promptSpan!.commitUuid).toBe(commitUuid)
       expect(promptSpan!.projectId).toBe(projectId)
 
-      const completionSpanResult = await spansRepo.get({
+      const completionSpan = await findSpan({
+        workspaceId,
         spanId: responseBody.completionSpan.id,
         traceId: responseBody.completionSpan.traceId,
       })
-      const completionSpan = completionSpanResult.unwrap()
       expect(completionSpan).toBeDefined()
       expect(completionSpan!.type).toBe(SpanType.Completion)
       expect(completionSpan!.kind).toBe(SpanKind.Client)
@@ -258,20 +257,19 @@ describe('POST /projects/:projectId/versions/:versionUuid/documents/logs', () =>
       })
 
       // Verify spans were created
-      const spansRepo = new SpansRepository(workspaceId)
-      const promptSpanResult = await spansRepo.get({
+      const promptSpan = await findSpan({
+        workspaceId,
         spanId: responseBody.promptSpan.id,
         traceId: responseBody.promptSpan.traceId,
       })
-      const promptSpan = promptSpanResult.unwrap()
       expect(promptSpan).toBeDefined()
       expect(promptSpan!.type).toBe(SpanType.Prompt)
 
-      const completionSpanResult = await spansRepo.get({
+      const completionSpan = await findSpan({
+        workspaceId,
         spanId: responseBody.completionSpan.id,
         traceId: responseBody.completionSpan.traceId,
       })
-      const completionSpan = completionSpanResult.unwrap()
       expect(completionSpan).toBeDefined()
       expect(completionSpan!.type).toBe(SpanType.Completion)
     })

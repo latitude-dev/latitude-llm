@@ -25,7 +25,14 @@ vi.mock('../../repositories', () => ({
   CommitsRepository: vi.fn(),
   EvaluationsV2Repository: vi.fn(),
   SpanMetadatasRepository: vi.fn(),
-  SpansRepository: vi.fn(),
+}))
+
+vi.mock('../../queries/spans/findSpan', () => ({
+  findSpan: vi.fn(),
+}))
+
+vi.mock('../../queries/spans/findMainSpanByDocumentLogUuid', () => ({
+  isFirstMainSpanInConversation: vi.fn(),
 }))
 
 vi.mock('../../services/evaluationsV2/specifications', () => ({
@@ -46,8 +53,9 @@ import {
   CommitsRepository,
   EvaluationsV2Repository,
   SpanMetadatasRepository,
-  SpansRepository,
 } from '../../repositories'
+import { findSpan } from '../../queries/spans/findSpan'
+import { isFirstMainSpanInConversation } from '../../queries/spans/findMainSpanByDocumentLogUuid'
 import { getEvaluationMetricSpecification } from '../../services/evaluationsV2/specifications'
 import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatureEnabledByName'
 import { Result } from '../../lib/Result'
@@ -85,8 +93,6 @@ describe('evaluateLiveLogJob', () => {
     getJob: vi.fn(),
   }
 
-  const mockSpansRepositoryGet = vi.fn()
-  const mockSpansRepositoryIsFirstMainSpanInConversation = vi.fn()
   const mockSpanMetadatasRepositoryGet = vi.fn()
   const mockCommitsRepositoryGetCommitByUuid = vi.fn()
   const mockEvaluationsV2RepositoryListAtCommitByDocument = vi.fn()
@@ -145,14 +151,6 @@ describe('evaluateLiveLogJob', () => {
       evaluationsQueue: mockEvaluationsQueue,
     } as any)
 
-    vi.mocked(SpansRepository).mockImplementation(
-      () =>
-        ({
-          get: mockSpansRepositoryGet,
-          isFirstMainSpanInConversation:
-            mockSpansRepositoryIsFirstMainSpanInConversation,
-        }) as unknown as SpansRepository,
-    )
     vi.mocked(SpanMetadatasRepository).mockImplementation(
       () =>
         ({
@@ -173,7 +171,7 @@ describe('evaluateLiveLogJob', () => {
         }) as unknown as EvaluationsV2Repository,
     )
 
-    mockSpansRepositoryGet.mockResolvedValue(Result.ok(mockSpan))
+    vi.mocked(findSpan).mockResolvedValue(mockSpan as any)
     mockSpanMetadatasRepositoryGet.mockResolvedValue(
       Result.ok(mockSpanMetadata),
     )
@@ -263,13 +261,18 @@ describe('evaluateLiveLogJob', () => {
       mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
         Result.ok([evaluation]),
       )
-      mockSpansRepositoryIsFirstMainSpanInConversation.mockResolvedValue(true)
+      vi.mocked(isFirstMainSpanInConversation).mockResolvedValue(true)
 
       await evaluateLiveLogJob(createEvent())
 
       expect(
-        mockSpansRepositoryIsFirstMainSpanInConversation,
-      ).toHaveBeenCalledWith('log-uuid', 'span-1', 'trace-1')
+        vi.mocked(isFirstMainSpanInConversation),
+      ).toHaveBeenCalledWith({
+        workspaceId: 1,
+        documentLogUuid: 'log-uuid',
+        spanId: 'span-1',
+        traceId: 'trace-1',
+      })
       expect(mockEvaluationsQueue.add).toHaveBeenCalledWith(
         'runEvaluationV2Job',
         expect.objectContaining({
@@ -295,13 +298,18 @@ describe('evaluateLiveLogJob', () => {
       mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
         Result.ok([evaluation]),
       )
-      mockSpansRepositoryIsFirstMainSpanInConversation.mockResolvedValue(false)
+      vi.mocked(isFirstMainSpanInConversation).mockResolvedValue(false)
 
       await evaluateLiveLogJob(createEvent())
 
       expect(
-        mockSpansRepositoryIsFirstMainSpanInConversation,
-      ).toHaveBeenCalledWith('log-uuid', 'span-1', 'trace-1')
+        vi.mocked(isFirstMainSpanInConversation),
+      ).toHaveBeenCalledWith({
+        workspaceId: 1,
+        documentLogUuid: 'log-uuid',
+        spanId: 'span-1',
+        traceId: 'trace-1',
+      })
       expect(mockEvaluationsQueue.add).not.toHaveBeenCalled()
     })
   })
@@ -451,7 +459,7 @@ describe('evaluateLiveLogJob', () => {
       mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
         Result.ok([everyEvaluation, firstEvaluation, lastEvaluation]),
       )
-      mockSpansRepositoryIsFirstMainSpanInConversation.mockResolvedValue(true)
+      vi.mocked(isFirstMainSpanInConversation).mockResolvedValue(true)
       mockEvaluationsQueue.getJob.mockResolvedValue(null)
 
       await evaluateLiveLogJob(createEvent())
@@ -658,12 +666,12 @@ describe('evaluateLiveLogJob', () => {
       mockEvaluationsV2RepositoryListAtCommitByDocument.mockResolvedValue(
         Result.ok([evaluation]),
       )
-      mockSpansRepositoryIsFirstMainSpanInConversation.mockResolvedValue(true)
+      vi.mocked(isFirstMainSpanInConversation).mockResolvedValue(true)
 
       await evaluateLiveLogJob(createEvent())
 
       expect(
-        mockSpansRepositoryIsFirstMainSpanInConversation,
+        vi.mocked(isFirstMainSpanInConversation),
       ).toHaveBeenCalled()
       expect(mockEvaluationsQueue.add).not.toHaveBeenCalled()
     })
@@ -696,7 +704,7 @@ describe('evaluateLiveLogJob', () => {
   describe('edge cases', () => {
     it('should return early if span has no documentLogUuid', async () => {
       const spanWithoutDocLogUuid = { ...mockSpan, documentLogUuid: null }
-      mockSpansRepositoryGet.mockResolvedValue(Result.ok(spanWithoutDocLogUuid))
+      vi.mocked(findSpan).mockResolvedValue(spanWithoutDocLogUuid as any)
 
       await evaluateLiveLogJob(createEvent())
 
@@ -726,7 +734,7 @@ describe('evaluateLiveLogJob', () => {
       await evaluateLiveLogJob(createEvent())
 
       expect(
-        mockSpansRepositoryIsFirstMainSpanInConversation,
+        vi.mocked(isFirstMainSpanInConversation),
       ).not.toHaveBeenCalled()
     })
   })

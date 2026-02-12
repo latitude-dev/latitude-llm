@@ -11,7 +11,9 @@ import {
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { diskFactory } from '../../../lib/disk'
 import { NotFoundError } from '../../../lib/errors'
-import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
+import { SpanMetadatasRepository } from '../../../repositories'
+import { findSpansByDocumentAndCommitLimited } from '../../../queries/spans/findByDocumentAndCommitLimited'
+import { findCompletionSpansByParentIds } from '../../../queries/spans/findCompletionsByParentIds'
 import { findByUuid } from '../../../data-access/exports/findByUuid'
 import { markExportReady } from '../../../services/exports/markExportReady'
 import { queues } from '../../queues'
@@ -85,14 +87,14 @@ type NormalizedExportSpansFilters = Omit<
 }
 
 async function* iterateSpans({
-  repo,
+  workspaceId,
   documentUuid,
   filters,
   excludedIds,
   selectionMode,
   selectedSpanIds,
 }: {
-  repo: SpansRepository
+  workspaceId: number
   documentUuid: string
   filters: NormalizedExportSpansFilters
   excludedIds: Set<string>
@@ -102,7 +104,8 @@ async function* iterateSpans({
   let cursor: { startedAt: string; id: string } | undefined
 
   while (true) {
-    const result = await repo.findByDocumentAndCommitLimited({
+    const { items, next } = await findSpansByDocumentAndCommitLimited({
+      workspaceId,
       documentUuid,
       commitUuids: filters.commitUuids,
       experimentUuids: filters.experimentUuids,
@@ -112,12 +115,6 @@ async function* iterateSpans({
       limit: BATCH_SIZE,
       from: cursor,
     })
-
-    if (result.error) {
-      throw result.error
-    }
-
-    const { items, next } = result.value!
 
     for (const span of items) {
       const spanKey = `${span.traceId}:${span.id}`
@@ -161,23 +158,20 @@ function normalizeCreatedAt(
 
 async function buildRowsForBatch({
   spans,
-  repo,
+  workspaceId,
   metadataRepo,
   fixedColumnsByName,
 }: {
   spans: Span[]
-  repo: SpansRepository
+  workspaceId: number
   metadataRepo: SpanMetadatasRepository
   fixedColumnsByName: FixedColumnsByName
 }): Promise<DatasetRowData[]> {
   const parentIds = spans.map((s) => ({ traceId: s.traceId, spanId: s.id }))
-  const completionsResult = await repo.findCompletionsByParentIds(parentIds)
-
-  if (completionsResult.error) {
-    throw completionsResult.error
-  }
-
-  const completionsByParent = completionsResult.value!
+  const completionsByParent = await findCompletionSpansByParentIds({
+    workspaceId,
+    parentIds,
+  })
 
   const completionSpans = Array.from(completionsByParent.values())
   const completionMetadatas = await metadataRepo.getBatch<SpanType.Completion>(
@@ -334,7 +328,6 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
       throw new NotFoundError(`Export not found ${exportUuid}`)
     }
 
-    const repo = new SpansRepository(workspaceId)
     const metadataRepo = new SpanMetadatasRepository(workspaceId)
     const disk = diskFactory('private')
 
@@ -363,7 +356,7 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
     let batch: Span[] = []
 
     for await (const span of iterateSpans({
-      repo,
+      workspaceId,
       documentUuid,
       filters: normalizedFilters,
       excludedIds,
@@ -375,7 +368,7 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
       if (batch.length >= BATCH_SIZE) {
         const rows = await buildRowsForBatch({
           spans: batch,
-          repo,
+          workspaceId,
           metadataRepo,
           fixedColumnsByName,
         })
@@ -395,7 +388,7 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
     if (batch.length > 0) {
       const rows = await buildRowsForBatch({
         spans: batch,
-        repo,
+        workspaceId,
         metadataRepo,
         fixedColumnsByName,
       })

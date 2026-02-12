@@ -3,8 +3,8 @@ import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import {
   EvaluationResultsV2Repository,
-  SpansRepository,
 } from '../../repositories'
+import { findSpansByEvaluationResults } from '../../queries/spans/findByEvaluationResults'
 import { Commit } from '../../schema/models/types/Commit'
 import { Issue } from '../../schema/models/types/Issue'
 import { Workspace } from '../../schema/models/types/Workspace'
@@ -63,9 +63,10 @@ export async function getHITLSpansByIssue(
     })
   }
 
-  const spansRepository = new SpansRepository(workspace.id, db)
-  const orderedSpans =
-    await spansRepository.findByEvaluationResults(paginatedResults)
+  const orderedSpans = await findSpansByEvaluationResults(
+    { workspaceId: workspace.id, evaluationResults: paginatedResults },
+    db,
+  )
 
   return Result.ok({
     spans: orderedSpans as Span<MainSpanType>[],

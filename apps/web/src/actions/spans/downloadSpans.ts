@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { withDocument, withDocumentSchema } from '../procedures'
 import { downloadSpans } from '@latitude-data/core/services/spans/downloadSpans'
 import { spansFiltersSchema } from '$/lib/schemas/filters'
-import { SpansRepository } from '@latitude-data/core/repositories'
+import { findSpanIdentifiersByDocumentLogUuids } from '@latitude-data/core/queries/spans/findByDocumentLogUuid'
 
 export const downloadSpansAction = withDocument
   .inputSchema(
@@ -17,20 +17,20 @@ export const downloadSpansAction = withDocument
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
-    const spansRepo = new SpansRepository(ctx.workspace.id)
-
     const selectedSpanIdentifiers =
       parsedInput.selectedDocumentLogUuids.length > 0
-        ? await spansRepo.getSpanIdentifiersByDocumentLogUuids(
-            parsedInput.selectedDocumentLogUuids,
-          )
+        ? await findSpanIdentifiersByDocumentLogUuids({
+            workspaceId: ctx.workspace.id,
+            documentLogUuids: parsedInput.selectedDocumentLogUuids,
+          })
         : []
 
     const excludedSpanIdentifiers =
       parsedInput.excludedDocumentLogUuids.length > 0
-        ? await spansRepo.getSpanIdentifiersByDocumentLogUuids(
-            parsedInput.excludedDocumentLogUuids,
-          )
+        ? await findSpanIdentifiersByDocumentLogUuids({
+            workspaceId: ctx.workspace.id,
+            documentLogUuids: parsedInput.excludedDocumentLogUuids,
+          })
         : []
 
     return downloadSpans({

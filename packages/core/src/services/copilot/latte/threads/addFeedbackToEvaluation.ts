@@ -13,8 +13,8 @@ import {
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
   SpanMetadatasRepository,
-  SpansRepository,
 } from '../../../../repositories'
+import { findSpan } from '../../../../queries/spans/findSpan'
 import { annotateEvaluationV2 } from '../../../evaluationsV2/annotate'
 import { getCopilotDocument } from '../helpers'
 
@@ -74,14 +74,15 @@ export async function addFeedbackToEvaluationResult(
   const evalResult = evalResultResult.unwrap()
   if (!evalResult.evaluatedTraceId || !evalResult.evaluatedSpanId) return
 
-  const spansRepo = new SpansRepository(latteWorkspace.id, db)
   const spanMetadataRepo = new SpanMetadatasRepository(latteWorkspace.id)
-  const span = await spansRepo
-    .get({
+  const span = await findSpan(
+    {
+      workspaceId: latteWorkspace.id,
       traceId: evalResult.evaluatedTraceId,
       spanId: evalResult.evaluatedSpanId,
-    })
-    .then((r) => r.unwrap())
+    },
+    db,
+  )
   const metadata = await spanMetadataRepo
     .get({
       traceId: evalResult.evaluatedTraceId,

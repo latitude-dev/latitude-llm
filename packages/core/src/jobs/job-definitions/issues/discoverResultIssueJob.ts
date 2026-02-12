@@ -10,8 +10,8 @@ import {
   EvaluationsV2Repository,
   IssueEvaluationResultsRepository,
   IssuesRepository,
-  SpansRepository,
 } from '../../../repositories'
+import { findSpan } from '../../../queries/spans/findSpan'
 import { findProjectById } from '../../../queries/projects/findById'
 import { assignEvaluationResultV2ToIssue } from '../../../services/evaluationsV2/results/assign'
 import { updateEvaluationV2 } from '../../../services/evaluationsV2/update'
@@ -67,11 +67,11 @@ export const discoverResultIssueJob = async (
     throw new NotFoundError('Project not found')
   }
 
-  const spansRepository = new SpansRepository(workspace.id)
-  const span = await spansRepository
-    .get({ spanId: result.evaluatedSpanId!, traceId: result.evaluatedTraceId! })
-    .then((r) => r.unwrap())
-
+  const span = await findSpan({
+    workspaceId: workspace.id,
+    spanId: result.evaluatedSpanId!,
+    traceId: result.evaluatedTraceId!,
+  })
   if (!span) {
     throw new NotFoundError(
       `Span not found for spanId: ${result.evaluatedSpanId} and traceId: ${result.evaluatedTraceId}`,

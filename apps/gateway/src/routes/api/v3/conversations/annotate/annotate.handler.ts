@@ -4,8 +4,8 @@ import {
   DocumentVersionsRepository,
   EvaluationsV2Repository,
   SpanMetadatasRepository,
-  SpansRepository,
 } from '@latitude-data/core/repositories'
+import { findLastMainSpanByDocumentLogUuid } from '@latitude-data/core/queries/spans/findMainSpanByDocumentLogUuid'
 import { AnnotateRoute } from './annotate.route'
 import { annotateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/annotate'
 import { findProjectFromDocument } from '@latitude-data/core/queries/projects/findProjectFromDocument'
@@ -29,10 +29,11 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
   const { conversationUuid, evaluationUuid } = c.req.valid('param')
   const workspace = c.get('workspace')
   const evaluationsRepo = new EvaluationsV2Repository(workspace.id)
-  const spansRepo = new SpansRepository(workspace.id)
   const spanMetadataRepo = new SpanMetadatasRepository(workspace.id)
-  const span =
-    await spansRepo.findLastMainSpanByDocumentLogUuid(conversationUuid)
+  const span = await findLastMainSpanByDocumentLogUuid({
+    workspaceId: workspace.id,
+    documentLogUuid: conversationUuid,
+  })
   if (!span) {
     throw new NotFoundError('Could not find span with uuid ${conversationUuid}')
   }

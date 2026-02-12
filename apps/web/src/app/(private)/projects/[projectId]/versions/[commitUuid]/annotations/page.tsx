@@ -10,7 +10,7 @@ import { AnnotationsPage as ClientAnnotationsPage } from './_components/Annotati
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { mapSourceGroupToLogSources } from '@latitude-data/core/services/runs/mapSourceGroupToLogSources'
-import { SpansRepository } from '@latitude-data/core/repositories'
+import { findSpansByProjectLimited } from '@latitude-data/core/queries/spans/findByProjectLimited'
 
 export default async function AnnotationsPage({
   params,
@@ -31,15 +31,13 @@ export default async function AnnotationsPage({
 
   const projectId = Number(_projectId)
   const logSources = mapSourceGroupToLogSources(sourceGroup as RunSourceGroup)
-  const spansRepo = new SpansRepository(workspace.id)
-  const result = await spansRepo
-    .findByProjectLimited({
-      projectId,
-      types: Array.from(MAIN_SPAN_TYPES),
-      source: logSources,
-      limit: DEFAULT_PAGINATION_SIZE,
-    })
-    .then((r) => r.unwrap())
+  const result = await findSpansByProjectLimited({
+    workspaceId: workspace.id,
+    projectId,
+    types: Array.from(MAIN_SPAN_TYPES),
+    source: logSources,
+    limit: DEFAULT_PAGINATION_SIZE,
+  })
 
   return (
     <ClientAnnotationsPage

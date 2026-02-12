@@ -13,7 +13,7 @@ import {
 import { getSpansByEvaluation } from '../../data-access/evaluations/getSpansByEvaluation'
 import { getSpansByIssue } from '../../data-access/issues/getSpansByIssue'
 import { getSpansWithoutIssues } from '../../data-access/issues/getSpansWithoutIssues'
-import { getSpansByDocument } from '../../data-access/spans/getSpansByDocument'
+import { getSpansByDocument } from '../../queries/spans/getSpansByDocument'
 import { publisher } from '../../events/publisher'
 import { executeOptimizationJobKey } from '../../jobs/job-definitions/optimizations/executeOptimizationJob'
 import { queues } from '../../jobs/queues'
@@ -697,16 +697,14 @@ async function getExamples({
   ) {
     searches++
 
-    const gettingsp = await getSpansByDocument({
+    const { spans: rawSpans, next } = await getSpansByDocument({
+      workspaceId: workspace.id,
       spanTypes: [SpanType.Prompt],
       commit: baselineCommit,
       document: document,
-      workspace: workspace,
       cursor: cursor,
       limit: SPANS_BATCH_SIZE,
     })
-    if (gettingsp.error) break
-    const { spans: rawSpans, next } = gettingsp.value
 
     if (rawSpans.length === 0) break
     const spans = rawSpans as Span<SpanType.Prompt>[]

@@ -2,8 +2,8 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import {
   SpanMetadatasRepository,
-  SpansRepository,
 } from '@latitude-data/core/repositories'
+import { findSpanByDocumentLogUuidAndSpanId } from '@latitude-data/core/queries/spans/findSpanByDocumentLogUuidAndSpanId'
 import { notFound } from 'next/navigation'
 import { NextRequest, NextResponse } from 'next/server'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
@@ -25,11 +25,11 @@ export const GET = errorHandler(
     ) => {
       const { conversationId: documentLogUuid, spanId } = params
 
-      const spansRepository = new SpansRepository(workspace.id)
-      const span = await spansRepository
-        .getByDocumentLogUuidAndSpanId({ documentLogUuid, spanId })
-        .then((r) => r.unwrap())
-
+      const span = await findSpanByDocumentLogUuidAndSpanId({
+        workspaceId: workspace.id,
+        documentLogUuid,
+        spanId,
+      })
       if (!span) return notFound()
 
       const metadatasRepository = new SpanMetadatasRepository(workspace.id)

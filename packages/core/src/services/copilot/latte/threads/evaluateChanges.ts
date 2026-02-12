@@ -4,8 +4,8 @@ import { Result } from '../../../../lib/Result'
 import {
   EvaluationsV2Repository,
   SpanMetadatasRepository,
-  SpansRepository,
 } from '../../../../repositories'
+import { unsafelyFindSpanByDocumentLogUuid } from '../../../../queries/spans/findByDocumentLogUuid'
 import { annotateEvaluationV2 } from '../../../evaluationsV2/annotate'
 import { getCopilotDocument } from '../helpers'
 import {
@@ -47,9 +47,8 @@ export async function evaluateLatteThreadChanges(
     document: latteDocument,
   } = latteData.unwrap()
 
-  const spansRepo = new SpansRepository(latteWorkspace.id, db)
   const metadataRepo = new SpanMetadatasRepository(latteWorkspace.id)
-  const span = await spansRepo.findByDocumentLogUuid(threadUuid)
+  const span = await unsafelyFindSpanByDocumentLogUuid({ documentLogUuid: threadUuid })
   if (!span) {
     return Result.error(
       new NotFoundError(`Span not found with threadUuid ${threadUuid}`),

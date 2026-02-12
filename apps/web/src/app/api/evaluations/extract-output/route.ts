@@ -8,8 +8,8 @@ import {
 import {
   EvaluationsV2Repository,
   SpanMetadatasRepository,
-  SpansRepository,
 } from '@latitude-data/core/repositories'
+import { findLastTraceIdByLogUuid } from '@latitude-data/core/queries/spans/findTraceIdsByLogUuid'
 import { Message } from '@latitude-data/constants/messages'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { extractActualOutput } from '@latitude-data/core/services/evaluationsV2/outputs/extract'
@@ -61,9 +61,10 @@ export const GET = errorHandler(
           documentUuid: searchParams.get('documentUuid'),
         })
 
-      const spansRepository = new SpansRepository(workspace.id)
-      const traceId =
-        await spansRepository.getLastTraceByLogUuid(documentLogUuid)
+      const traceId = await findLastTraceIdByLogUuid({
+        workspaceId: workspace.id,
+        logUuid: documentLogUuid,
+      })
 
       if (!traceId) {
         return NextResponse.json(

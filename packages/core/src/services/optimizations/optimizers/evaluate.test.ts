@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SpanType } from '../../../constants'
+import { Span, SpanType } from '../../../constants'
 import { Result } from '../../../lib/Result'
+import { findAllSpansByDocumentLogUuid } from '../../../queries/spans/findByDocumentLogUuid'
 import { evaluateFactory } from './evaluate'
 
 const mocks = vi.hoisted(() => ({
@@ -10,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   getEvaluationMetricSpecification: vi.fn(),
   generateSimulatedUserAction: vi.fn(),
   addMessages: vi.fn(),
-  listByDocumentLogUuid: vi.fn(),
   metadataGet: vi.fn(),
 }))
 
@@ -38,10 +38,11 @@ vi.mock('../../addMessages', () => ({
   addMessages: mocks.addMessages,
 }))
 
+vi.mock('../../../queries/spans/findByDocumentLogUuid', () => ({
+  findAllSpansByDocumentLogUuid: vi.fn(),
+}))
+
 vi.mock('../../../repositories/spansRepository', () => ({
-  SpansRepository: vi.fn().mockImplementation(() => ({
-    listByDocumentLogUuid: mocks.listByDocumentLogUuid,
-  })),
   SpanMetadatasRepository: vi.fn().mockImplementation(() => ({
     get: mocks.metadataGet,
   })),
@@ -144,7 +145,7 @@ function mockEvaluationSequence(
 }
 
 function mockSpansAndMetadata(spans: ReturnType<typeof createMockSpan>[]) {
-  mocks.listByDocumentLogUuid.mockResolvedValue(spans)
+  vi.mocked(findAllSpansByDocumentLogUuid).mockResolvedValue(spans as Span[])
   mocks.metadataGet.mockImplementation(
     async ({ spanId }: { spanId: string }) => {
       const span = spans.find((s) => s.id === spanId)
@@ -842,7 +843,7 @@ describe('evaluateFactory', () => {
       const evaluation = createEvaluation('last')
       mockRunDocumentAtCommit()
 
-      mocks.listByDocumentLogUuid.mockResolvedValue([])
+      vi.mocked(findAllSpansByDocumentLogUuid).mockResolvedValue([])
 
       const evaluate = await evaluateFactory({
         columns: [],

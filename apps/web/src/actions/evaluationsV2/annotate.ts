@@ -1,8 +1,8 @@
 'use server'
 import {
   SpanMetadatasRepository,
-  SpansRepository,
 } from '@latitude-data/core/repositories'
+import { findSpan } from '@latitude-data/core/queries/spans/findSpan'
 import { annotateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/annotate'
 import { z } from 'zod'
 import {
@@ -25,14 +25,12 @@ export const annotateEvaluationV2Action = withEvaluation
     }),
   )
   .action(async ({ ctx, parsedInput }) => {
-    const spansRepo = new SpansRepository(ctx.workspace.id)
     const spansMetadataRepo = new SpanMetadatasRepository(ctx.workspace.id)
-    const span = await spansRepo
-      .get({
-        traceId: parsedInput.traceId,
-        spanId: parsedInput.spanId,
-      })
-      .then((r) => r.value)
+    const span = await findSpan({
+      workspaceId: ctx.workspace.id,
+      traceId: parsedInput.traceId,
+      spanId: parsedInput.spanId,
+    })
     if (!span) throw new NotFoundError('Span not found')
     if (!MAIN_SPAN_TYPES.has(span.type)) {
       throw new BadRequestError('Span is not of type prompt')

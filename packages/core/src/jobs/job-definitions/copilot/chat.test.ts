@@ -2,14 +2,18 @@ import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as dataAccess from '../../../data-access/workspaces'
-import { SpansRepository } from '../../../repositories'
 import * as findProjectByIdModule from '../../../queries/projects/findById'
+import { unsafelyFindSpanByDocumentLogUuid } from '../../../queries/spans/findByDocumentLogUuid'
 import * as findWorkspaceUserByIdModule from '../../../queries/users/findInWorkspace'
 import * as addMessageLatte from '../../../services/copilot/latte/addMessage'
 import * as chatHelpers from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
 import { runLatteJob } from './chat'
 import { type Project } from '../../../schema/models/types/Project'
+
+vi.mock('../../../queries/spans/findByDocumentLogUuid', () => ({
+  unsafelyFindSpanByDocumentLogUuid: vi.fn(),
+}))
 
 describe('runLatteJob', () => {
   let mockJob: Job<any>
@@ -62,10 +66,7 @@ describe('runLatteJob', () => {
         document: { uuid: 'doc-123' },
       }),
     } as any)
-    vi.spyOn(
-      SpansRepository.prototype,
-      'findByDocumentLogUuid',
-    ).mockResolvedValue(undefined)
+    vi.mocked(unsafelyFindSpanByDocumentLogUuid).mockResolvedValue(undefined)
     vi.spyOn(WebsocketClient, 'sendEvent').mockResolvedValue({
       emit: vi.fn(),
     } as any)
@@ -109,9 +110,9 @@ describe('runLatteJob', () => {
   })
 
   it('creates a new chat when no span exists', async () => {
-    ;(
-      SpansRepository.prototype.findByDocumentLogUuid as any
-    ).mockResolvedValueOnce(undefined)
+    vi.mocked(unsafelyFindSpanByDocumentLogUuid).mockResolvedValueOnce(
+      undefined,
+    )
 
     await runLatteJob(mockJob)
 
@@ -133,9 +134,10 @@ describe('runLatteJob', () => {
   })
 
   it('appends a message when a span already exists', async () => {
-    ;(
-      SpansRepository.prototype.findByDocumentLogUuid as any
-    ).mockResolvedValueOnce({ id: 'span-123', traceId: 'trace-123' })
+    vi.mocked(unsafelyFindSpanByDocumentLogUuid).mockResolvedValueOnce({
+      id: 'span-123',
+      traceId: 'trace-123',
+    } as any)
     await runLatteJob(mockJob)
 
     expect(addMessageLatte.addMessageToExistingLatte).toHaveBeenCalledWith({

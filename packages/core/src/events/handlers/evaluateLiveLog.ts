@@ -21,8 +21,9 @@ import {
   CommitsRepository,
   EvaluationsV2Repository,
   SpanMetadatasRepository,
-  SpansRepository,
 } from '../../repositories'
+import { findSpan } from '../../queries/spans/findSpan'
+import { isFirstMainSpanInConversation } from '../../queries/spans/findMainSpanByDocumentLogUuid'
 import { getEvaluationMetricSpecification } from '../../services/evaluationsV2/specifications'
 import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatureEnabledByName'
 import { captureException } from '../../utils/datadogCapture'
@@ -58,9 +59,8 @@ export const evaluateLiveLogJob = async ({
   data: SpanCreatedEvent
 }) => {
   const { spanId, traceId, workspaceId } = event.data
-  const repo = new SpansRepository(workspaceId)
   const metadataRepo = new SpanMetadatasRepository(workspaceId)
-  const span = await repo.get({ spanId, traceId }).then((r) => r.value)
+  const span = await findSpan({ workspaceId, spanId, traceId })
   if (!span) return
   if (!LIVE_EVALUABLE_SPAN_TYPES.includes(span.type)) return
 
@@ -133,11 +133,12 @@ export const evaluateLiveLogJob = async ({
     const triggerConfig = getTriggerConfig(evaluation)
 
     if (triggerConfig.target === 'first') {
-      const isFirst = await repo.isFirstMainSpanInConversation(
-        span.documentLogUuid,
-        span.id,
-        span.traceId,
-      )
+      const isFirst = await isFirstMainSpanInConversation({
+        workspaceId,
+        documentLogUuid: span.documentLogUuid,
+        spanId: span.id,
+        traceId: span.traceId,
+      })
       if (!isFirst) continue
     }
 

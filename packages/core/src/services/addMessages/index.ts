@@ -2,15 +2,15 @@ import { NotFoundError } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { type Message } from '@latitude-data/constants/messages'
 import { SimulationSettings } from '@latitude-data/constants/simulation'
-import { LogSources } from '../../constants'
+import { LogSources, Span } from '../../constants'
 import { isRetryableError } from '../../lib/isRetryableError'
 import { Result } from '../../lib/Result'
 import { DefaultStreamManager } from '../../lib/streamManager/defaultStreamManager'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  SpansRepository,
 } from '../../repositories'
+import { findLastMainSpanByDocumentLogUuid } from '../../queries/spans/findMainSpanByDocumentLogUuid'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import {
   BACKGROUND,
@@ -134,9 +134,11 @@ async function retrieveData({
   workspace: WorkspaceDto
   documentLogUuid: string
 }) {
-  const spansRepo = new SpansRepository(workspace.id)
   const previousSpan = documentLogUuid
-    ? await spansRepo.findLastMainSpanByDocumentLogUuid(documentLogUuid)
+    ? await findLastMainSpanByDocumentLogUuid({
+        workspaceId: workspace.id,
+        documentLogUuid,
+      })
     : undefined
 
   const cacheResult = await readConversationCache({
@@ -247,9 +249,7 @@ async function getMessagesFromSpan({
   span,
 }: {
   workspace: WorkspaceDto
-  span: Awaited<
-    ReturnType<SpansRepository['findLastMainSpanByDocumentLogUuid']>
-  >
+  span: Span | undefined
 }) {
   if (!span?.traceId) return []
 

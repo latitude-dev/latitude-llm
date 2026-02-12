@@ -5,8 +5,8 @@ import {
   CommitsRepository,
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
-  SpansRepository,
 } from '@latitude-data/core/repositories'
+import { findSpansBySpanAndTraceIds } from '../../../queries/spans/findBySpanAndTraceIds'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
@@ -212,13 +212,10 @@ export async function getSpansFromSpanAndTraceIdPairs({
   commit: Commit
   evaluations: EvaluationV2[]
 }) {
-  const spanRepository = new SpansRepository(workspace.id)
-  const spansResult =
-    await spanRepository.findBySpanAndTraceIds(spanAndTraceIdPairs)
-  if (!Result.isOk(spansResult)) {
-    return spansResult
-  }
-  const spans = spansResult.unwrap()
+  const spans = await findSpansBySpanAndTraceIds({
+    workspaceId: workspace.id,
+    spanTraceIdPairs: spanAndTraceIdPairs,
+  })
 
   const evaluationResultsRepository = new EvaluationResultsV2Repository(
     workspace.id,

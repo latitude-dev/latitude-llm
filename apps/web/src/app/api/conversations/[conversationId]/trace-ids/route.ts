@@ -1,6 +1,6 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { SpansRepository } from '@latitude-data/core/repositories'
+import { findTraceIdsByLogUuid } from '@latitude-data/core/queries/spans/findTraceIdsByLogUuid'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -19,8 +19,10 @@ export const GET = errorHandler(
       },
     ) => {
       const { conversationId } = params
-      const repository = new SpansRepository(workspace.id)
-      const traceIds = await repository.listTraceIdsByLogUuid(conversationId)
+      const traceIds = await findTraceIdsByLogUuid({
+        workspaceId: workspace.id,
+        logUuid: conversationId,
+      })
 
       return NextResponse.json(traceIds, { status: 200 })
     },

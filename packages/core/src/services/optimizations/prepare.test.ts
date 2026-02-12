@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import * as getSpansByEvaluationModule from '../../data-access/evaluations/getSpansByEvaluation'
 import * as getSpansByIssueModule from '../../data-access/issues/getSpansByIssue'
 import * as getSpansWithoutIssuesModule from '../../data-access/issues/getSpansWithoutIssues'
-import * as getSpansByDocumentModule from '../../data-access/spans/getSpansByDocument'
+import * as getSpansByDocumentModule from '../../queries/spans/getSpansByDocument'
 import { publisher } from '../../events/publisher'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -335,7 +335,7 @@ describe('prepareOptimization', () => {
 
       getSpansByDocumentMock = vi
         .spyOn(getSpansByDocumentModule, 'getSpansByDocument')
-        .mockResolvedValue(Result.ok({ spans: [], next: null }))
+        .mockResolvedValue({ spans: [], next: null })
 
       getSpansByEvaluationMock = vi
         .spyOn(getSpansByEvaluationModule, 'getSpansByEvaluation')
@@ -1499,7 +1499,7 @@ describe('prepareOptimization', () => {
         ]
 
         getSpansByDocumentMock.mockResolvedValue(
-          Result.ok({ spans: fallbackSpans, next: null }),
+          { spans: fallbackSpans, next: null },
         )
 
         const optimization = await factories.createOptimization({
@@ -1591,7 +1591,7 @@ describe('prepareOptimization', () => {
         ]
 
         getSpansByDocumentMock.mockResolvedValue(
-          Result.ok({ spans: fallbackSpans, next: null }),
+          { spans: fallbackSpans, next: null },
         )
 
         const optimization = await factories.createOptimization({
@@ -1641,7 +1641,7 @@ describe('prepareOptimization', () => {
         ]
 
         getSpansByDocumentMock.mockResolvedValue(
-          Result.ok({ spans: fallbackSpans, next: null }),
+          { spans: fallbackSpans, next: null },
         )
 
         const optimization = await factories.createOptimization({
@@ -1788,7 +1788,7 @@ describe('prepareOptimization', () => {
         )
 
         getSpansByDocumentMock.mockResolvedValue(
-          Result.ok({ spans: fallbackSpans, next: null }),
+          { spans: fallbackSpans, next: null },
         )
 
         const optimization = await factories.createOptimization({

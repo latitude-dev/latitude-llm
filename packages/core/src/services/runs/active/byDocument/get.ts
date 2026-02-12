@@ -11,7 +11,8 @@ import { NotFoundError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { spanToRun } from '../../spanToRun'
-import { SpansRepository } from '../../../../repositories'
+import { findLastTraceIdByLogUuid } from '../../../../queries/spans/findTraceIdsByLogUuid'
+import { findAllSpansByTraceId } from '../../../../queries/spans/findAllByTraceId'
 
 /**
  * Gets a run by UUID from document-scoped storage.
@@ -30,21 +31,17 @@ export async function getRunByDocument({
   runUuid: string
   cache?: Cache
 }): PromisedResult<Run, Error> {
-  // First check database for completed runs
-  const spansRepo = new SpansRepository(workspaceId)
-  const traceId = await spansRepo.getLastTraceByLogUuid(runUuid)
+  const traceId = await findLastTraceIdByLogUuid({ workspaceId, logUuid: runUuid })
   if (traceId) {
-    const spans = await spansRepo.list({ traceId }).then((r) => r.value)
-    if (spans) {
-      const mainSpan = spans.find(isMainSpan)
-      if (mainSpan) {
-        const run = await spanToRun({
-          workspaceId,
-          span: mainSpan as Span<MainSpanType>,
-        })
+    const spansList = await findAllSpansByTraceId({ workspaceId, traceId })
+    const mainSpan = spansList.find(isMainSpan)
+    if (mainSpan) {
+      const run = await spanToRun({
+        workspaceId,
+        span: mainSpan as Span<MainSpanType>,
+      })
 
-        return Result.ok(run)
-      }
+      return Result.ok(run)
     }
   }
 

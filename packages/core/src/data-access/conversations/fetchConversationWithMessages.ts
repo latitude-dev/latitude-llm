@@ -1,7 +1,8 @@
 import { Message } from '@latitude-data/constants/messages'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { SpanMetadatasRepository, SpansRepository } from '../../repositories'
+import { SpanMetadatasRepository } from '../../repositories'
+import { findTraceIdsByLogUuid } from '../../queries/spans/findTraceIdsByLogUuid'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { assembleTraceWithMessages } from '../../services/tracing/traces/assemble'
 import {
@@ -57,8 +58,10 @@ export async function fetchConversationWithMessages(
 
   const conversation = conversationResult.value
 
-  const repository = new SpansRepository(workspace.id, db)
-  const traceIds = await repository.listTraceIdsByLogUuid(documentLogUuid)
+  const traceIds = await findTraceIdsByLogUuid(
+    { workspaceId: workspace.id, logUuid: documentLogUuid },
+    db,
+  )
 
   if (traceIds.length === 0) {
     return Result.ok<ConversationWithMessages>({

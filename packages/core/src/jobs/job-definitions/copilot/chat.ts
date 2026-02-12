@@ -4,7 +4,7 @@ import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { clearCancelJobFlag, isJobCancelled } from '../../../lib/cancelJobs'
 import { LatitudeError, NotFoundError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { SpansRepository } from '../../../repositories'
+import { unsafelyFindSpanByDocumentLogUuid } from '../../../queries/spans/findByDocumentLogUuid'
 import { findProjectById } from '../../../queries/projects/findById'
 import { findWorkspaceUserById } from '../../../queries/users/findInWorkspace'
 import {
@@ -104,8 +104,9 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
       document: copilotDocument,
     } = copilotResult.unwrap()
 
-    const spansRepo = new SpansRepository(copilotWorkspace.id)
-    const existingSpan = await spansRepo.findByDocumentLogUuid(threadUuid)
+    const existingSpan = await unsafelyFindSpanByDocumentLogUuid({
+      documentLogUuid: threadUuid,
+    })
     if (!existingSpan) {
       const runResult = await runNewLatte({
         copilotWorkspace,

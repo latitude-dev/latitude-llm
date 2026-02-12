@@ -9,7 +9,8 @@ import {
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
+import { SpanMetadatasRepository } from '../../../repositories'
+import { findAllSpansByTraceId } from '../../../queries/spans/findAllByTraceId'
 import { findAllSpansOfType } from '../spans/fetching/findAllSpansOfType'
 import { findCompletionSpanFromTrace } from '../spans/fetching/findCompletionSpanFromTrace'
 import { findCompletionSpanForSpan } from '../spans/fetching/findCompletionSpanForSpan'
@@ -32,11 +33,10 @@ export async function assembleTraceStructure(
   },
   db = database,
 ) {
-  const repository = new SpansRepository(workspace.id, db)
-  const listing = await repository.list({ traceId })
-  if (listing.error) return Result.error(listing.error)
-
-  const spans = listing.value
+  const spans = await findAllSpansByTraceId(
+    { workspaceId: workspace.id, traceId },
+    db,
+  )
   if (spans.length < 1) {
     return Result.error(
       new UnprocessableEntityError('Cannot assemble an empty trace'),

@@ -24,8 +24,8 @@ import { isRetryableError } from '../../../lib/isRetryableError'
 import { Result } from '../../../lib/Result'
 import {
   SpanMetadatasRepository,
-  SpansRepository,
 } from '../../../repositories/spansRepository'
+import { findAllSpansByDocumentLogUuid } from '../../../queries/spans/findByDocumentLogUuid'
 import { Column } from '../../../schema/models/datasets'
 import { Commit } from '../../../schema/models/types/Commit'
 import { DatasetRow } from '../../../schema/models/types/DatasetRow'
@@ -488,8 +488,6 @@ async function waitForMainSpans({
   workspace: WorkspaceDto
   abortSignal?: AbortSignal
 }) {
-  const spansRepository = new SpansRepository(workspace.id)
-
   for (let attempt = 0; attempt < TRACE_POLLING_MAX_ATTEMPTS; attempt++) {
     if (abortSignal?.aborted) {
       return Result.error(new AbortedError())
@@ -500,7 +498,10 @@ async function waitForMainSpans({
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
 
-    const allSpans = await spansRepository.listByDocumentLogUuid(logUuid)
+    const allSpans = await findAllSpansByDocumentLogUuid({
+      workspaceId: workspace.id,
+      documentLogUuid: logUuid,
+    })
     const mainSpans = allSpans.filter(isMainSpan)
     if (mainSpans.length >= expectedCount) {
       return Result.ok(mainSpans)

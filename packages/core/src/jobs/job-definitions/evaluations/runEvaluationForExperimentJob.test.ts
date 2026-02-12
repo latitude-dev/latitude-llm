@@ -23,8 +23,12 @@ vi.mock('../../../repositories', () => ({
   ExperimentsRepository: vi.fn(),
 }))
 
-vi.mock('../../../repositories/spansRepository', () => ({
-  SpansRepository: vi.fn(),
+vi.mock('../../../queries/spans/findByDocumentLogUuid', () => ({
+  findAllSpansByDocumentLogUuid: vi.fn(),
+}))
+
+vi.mock('../../../queries/spans/findTraceIdsByLogUuid', () => ({
+  findLastTraceIdByLogUuid: vi.fn(),
 }))
 
 vi.mock('../../../services/experiments/updateStatus', () => ({
@@ -41,7 +45,8 @@ import {
   EvaluationsV2Repository,
   ExperimentsRepository,
 } from '../../../repositories'
-import { SpansRepository } from '../../../repositories/spansRepository'
+import { findAllSpansByDocumentLogUuid } from '../../../queries/spans/findByDocumentLogUuid'
+import { findLastTraceIdByLogUuid } from '../../../queries/spans/findTraceIdsByLogUuid'
 
 describe('runEvaluationForExperimentJob', () => {
   const mockEvaluationsQueue = {
@@ -51,9 +56,6 @@ describe('runEvaluationForExperimentJob', () => {
   const mockExperimentsRepositoryFindByUuid = vi.fn()
   const mockCommitsRepositoryGetCommitById = vi.fn()
   const mockEvaluationsV2RepositoryGetAtCommitByDocument = vi.fn()
-  const mockSpansRepositoryListByDocumentLogUuid = vi.fn()
-  const mockSpansRepositoryGetLastTraceByLogUuid = vi.fn()
-
   const mockExperiment = {
     uuid: 'exp-uuid',
     documentUuid: 'doc-uuid',
@@ -153,14 +155,6 @@ describe('runEvaluationForExperimentJob', () => {
             mockEvaluationsV2RepositoryGetAtCommitByDocument,
         }) as unknown as EvaluationsV2Repository,
     )
-    vi.mocked(SpansRepository).mockImplementation(
-      () =>
-        ({
-          listByDocumentLogUuid: mockSpansRepositoryListByDocumentLogUuid,
-          getLastTraceByLogUuid: mockSpansRepositoryGetLastTraceByLogUuid,
-        }) as unknown as SpansRepository,
-    )
-
     mockExperimentsRepositoryFindByUuid.mockResolvedValue(
       Result.ok(mockExperiment),
     )
@@ -179,7 +173,7 @@ describe('runEvaluationForExperimentJob', () => {
         createSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
         createSpan('span-3', SpanType.Prompt, new Date('2024-01-01T00:02:00Z')),
       ]
-      mockSpansRepositoryListByDocumentLogUuid.mockResolvedValue(spans)
+      vi.mocked(findAllSpansByDocumentLogUuid).mockResolvedValue(spans)
 
       const job = createMockJob(createJobData())
       await runEvaluationForExperimentJob(job)
@@ -198,7 +192,7 @@ describe('runEvaluationForExperimentJob', () => {
         createSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
         createSpan('span-3', SpanType.Prompt, new Date('2024-01-01T00:02:00Z')),
       ]
-      mockSpansRepositoryListByDocumentLogUuid.mockResolvedValue(spans)
+      vi.mocked(findAllSpansByDocumentLogUuid).mockResolvedValue(spans)
 
       const job = createMockJob(createJobData())
       await runEvaluationForExperimentJob(job)
@@ -232,7 +226,7 @@ describe('runEvaluationForExperimentJob', () => {
         createSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
         createSpan('span-3', SpanType.Prompt, new Date('2024-01-01T00:02:00Z')),
       ]
-      mockSpansRepositoryListByDocumentLogUuid.mockResolvedValue(spans)
+      vi.mocked(findAllSpansByDocumentLogUuid).mockResolvedValue(spans)
 
       const job = createMockJob(createJobData())
       await runEvaluationForExperimentJob(job)
@@ -268,7 +262,7 @@ describe('runEvaluationForExperimentJob', () => {
         createSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
         createSpan('span-3', SpanType.Prompt, new Date('2024-01-01T00:02:00Z')),
       ]
-      mockSpansRepositoryListByDocumentLogUuid.mockResolvedValue(spans)
+      vi.mocked(findAllSpansByDocumentLogUuid).mockResolvedValue(spans)
 
       const job = createMockJob(createJobData())
       await runEvaluationForExperimentJob(job)
@@ -306,7 +300,7 @@ describe('runEvaluationForExperimentJob', () => {
         ),
         createSpan('span-2', SpanType.Prompt, new Date('2024-01-01T00:01:00Z')),
       ]
-      mockSpansRepositoryListByDocumentLogUuid.mockResolvedValue(spans)
+      vi.mocked(findAllSpansByDocumentLogUuid).mockResolvedValue(spans)
 
       const job = createMockJob(createJobData())
       await runEvaluationForExperimentJob(job)
@@ -345,8 +339,8 @@ describe('runEvaluationForExperimentJob', () => {
       mockEvaluationsV2RepositoryGetAtCommitByDocument.mockResolvedValue(
         Result.ok(evaluation),
       )
-      mockSpansRepositoryListByDocumentLogUuid.mockResolvedValue([])
-      mockSpansRepositoryGetLastTraceByLogUuid.mockResolvedValue(null)
+      vi.mocked(findAllSpansByDocumentLogUuid).mockResolvedValue([])
+      vi.mocked(findLastTraceIdByLogUuid).mockResolvedValue(undefined)
 
       const job = createMockJob(createJobData())
 
@@ -363,7 +357,7 @@ describe('runEvaluationForExperimentJob', () => {
         SpanType.Prompt,
         new Date('2024-01-01T00:00:00Z'),
       )
-      mockSpansRepositoryListByDocumentLogUuid.mockResolvedValue([singleSpan])
+      vi.mocked(findAllSpansByDocumentLogUuid).mockResolvedValue([singleSpan])
 
       for (const target of ['first', 'every', 'last'] as const) {
         vi.clearAllMocks()
@@ -373,7 +367,7 @@ describe('runEvaluationForExperimentJob', () => {
         mockCommitsRepositoryGetCommitById.mockResolvedValue(
           Result.ok(mockCommit),
         )
-        mockSpansRepositoryListByDocumentLogUuid.mockResolvedValue([singleSpan])
+        vi.mocked(findAllSpansByDocumentLogUuid).mockResolvedValue([singleSpan])
 
         const evaluation = createEvaluation(target)
         mockEvaluationsV2RepositoryGetAtCommitByDocument.mockResolvedValue(

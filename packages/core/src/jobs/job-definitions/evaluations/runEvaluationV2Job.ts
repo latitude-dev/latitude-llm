@@ -10,8 +10,8 @@ import {
   EvaluationsV2Repository,
   ExperimentsRepository,
   SpanMetadatasRepository,
-  SpansRepository,
 } from '../../../repositories'
+import { findSpan } from '../../../queries/spans/findSpan'
 import { runEvaluationV2 } from '../../../services/evaluationsV2/run'
 import { updateExperimentStatus } from '../../../services/experiments/updateStatus'
 import { captureException } from '../../../utils/datadogCapture'
@@ -70,9 +70,8 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     if (experiment.finishedAt) return
   }
 
-  const spansRepo = new SpansRepository(workspace.id)
   const spansMetadataRepo = new SpanMetadatasRepository(workspace.id)
-  const span = await spansRepo.get({ traceId, spanId }).then((r) => r.unwrap())
+  const span = await findSpan({ workspaceId: workspace.id, spanId, traceId })
 
   try {
     const commitsRepository = new CommitsRepository(workspace.id)

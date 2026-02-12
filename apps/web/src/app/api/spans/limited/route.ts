@@ -2,7 +2,6 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import {
   CommitsRepository,
-  SpansRepository,
 } from '@latitude-data/core/repositories'
 import { LogSources, MAIN_SPAN_TYPES, SpanType } from '@latitude-data/constants'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
@@ -11,6 +10,9 @@ import { z } from 'zod'
 import { parseSpansFilters } from '$/lib/schemas/filters'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
+import { findLastMainSpanByDocumentLogUuid } from '@latitude-data/core/queries/spans/findMainSpanByDocumentLogUuid'
+import { findSpansByDocumentAndCommitLimited } from '@latitude-data/core/queries/spans/findByDocumentAndCommitLimited'
+import { findSpansByProjectLimited } from '@latitude-data/core/queries/spans/findByProjectLimited'
 
 const searchParamsSchema = z.object({
   projectId: z.string(),
@@ -58,13 +60,12 @@ export const GET = errorHandler(
         : null
 
       let spansResult
-      const spansRepository = new SpansRepository(workspace.id)
 
       if (filters.documentLogUuid) {
-        const spansRepository = new SpansRepository(workspace.id)
-        const span = await spansRepository.findLastMainSpanByDocumentLogUuid(
-          filters.documentLogUuid,
-        )
+        const span = await findLastMainSpanByDocumentLogUuid({
+          workspaceId: workspace.id,
+          documentLogUuid: filters.documentLogUuid,
+        })
         spansResult = {
           items: span ? [span] : span,
           count: 1,
@@ -88,33 +89,30 @@ export const GET = errorHandler(
             currentCommit,
             commitsRepo,
           })
-          result = await spansRepository
-            .findByDocumentAndCommitLimited({
-              documentUuid,
-              types,
-              from: fromCursor
-                ? { startedAt: fromCursor.value, id: fromCursor.id }
-                : undefined,
-              limit: parsedParams.limit,
-              commitUuids,
-              experimentUuids: filters.experimentUuids,
-              createdAt: filters.createdAt,
-            })
-            .then((r) => r.unwrap())
+          result = await findSpansByDocumentAndCommitLimited({
+            workspaceId: workspace.id,
+            documentUuid,
+            types,
+            from: fromCursor
+              ? { startedAt: fromCursor.value, id: fromCursor.id }
+              : undefined,
+            limit: parsedParams.limit,
+            commitUuids,
+            experimentUuids: filters.experimentUuids,
+            createdAt: filters.createdAt,
+          })
         } else {
-          // Project-level query (commitUuid optional)
-          result = await spansRepository
-            .findByProjectLimited({
-              projectId: Number(projectId),
-              types,
-              limit: parsedParams.limit,
-              source: parsedParams.source?.split(',') as LogSources[],
-              from: fromCursor
-                ? { startedAt: fromCursor.value, id: fromCursor.id }
-                : undefined,
-              createdAt: filters.createdAt,
-            })
-            .then((r) => r.unwrap())
+          result = await findSpansByProjectLimited({
+            workspaceId: workspace.id,
+            projectId: Number(projectId),
+            types,
+            limit: parsedParams.limit,
+            source: parsedParams.source?.split(',') as LogSources[],
+            from: fromCursor
+              ? { startedAt: fromCursor.value, id: fromCursor.id }
+              : undefined,
+            createdAt: filters.createdAt,
+          })
         }
 
         spansResult = {

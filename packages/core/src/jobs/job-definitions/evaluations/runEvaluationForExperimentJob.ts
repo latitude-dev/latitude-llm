@@ -1,11 +1,12 @@
 import { DelayedError, Job } from 'bullmq'
 import { isMainSpan } from '../../../constants'
-import { SpansRepository } from '../../../repositories/spansRepository'
 import {
   CommitsRepository,
   EvaluationsV2Repository,
   ExperimentsRepository,
 } from '../../../repositories'
+import { findAllSpansByDocumentLogUuid } from '../../../queries/spans/findByDocumentLogUuid'
+import { findLastTraceIdByLogUuid } from '../../../queries/spans/findTraceIdsByLogUuid'
 import {
   getTriggerTarget,
   selectSpansForTrigger,
@@ -69,13 +70,17 @@ export async function runEvaluationForExperimentJob(
 
   const triggerTarget = getTriggerTarget(evaluation.configuration.trigger)
 
-  const spansRepo = new SpansRepository(workspaceId)
-
-  const allSpans = await spansRepo.listByDocumentLogUuid(conversationUuid)
+  const allSpans = await findAllSpansByDocumentLogUuid({
+    workspaceId,
+    documentLogUuid: conversationUuid,
+  })
   const mainSpans = allSpans.filter(isMainSpan)
 
   if (mainSpans.length === 0) {
-    const traceId = await spansRepo.getLastTraceByLogUuid(conversationUuid)
+    const traceId = await findLastTraceIdByLogUuid({
+      workspaceId,
+      logUuid: conversationUuid,
+    })
     if (!traceId) {
       if (shouldRetry(job.attemptsStarted)) {
         const delay = calculateExponentialBackoff(job.attemptsStarted)

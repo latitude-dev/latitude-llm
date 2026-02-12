@@ -1,6 +1,6 @@
 import { LogSources, RunSourceGroup, RUN_SOURCES } from '../../../constants'
 import { Result } from '../../../lib/Result'
-import { SpansRepository } from '../../../repositories'
+import { countSpansByProjectAndSource } from '../../../queries/spans/countByProjectAndSource'
 import { PromisedResult } from '../../../lib/Transaction'
 
 export async function countCompletedRunsBySource({
@@ -12,20 +12,16 @@ export async function countCompletedRunsBySource({
   projectId: number
   sourceGroup?: RunSourceGroup
 }): PromisedResult<Record<LogSources, number>, Error> {
-  // Determine which sources to include based on sourceGroup
   const sourcesToInclude =
     sourceGroup !== undefined
       ? RUN_SOURCES[sourceGroup]
       : Object.values(LogSources)
 
-  // Use the repository's exact count method
-  const spansRepo = new SpansRepository(workspaceId)
-  const countsBySource = await spansRepo
-    .countByProjectAndSource({
-      projectId,
-      source: sourcesToInclude,
-    })
-    .then((r) => r.unwrap())
+  const countsBySource = await countSpansByProjectAndSource({
+    workspaceId,
+    projectId,
+    source: sourcesToInclude,
+  })
 
   return Result.ok<Record<LogSources, number>>(countsBySource)
 }

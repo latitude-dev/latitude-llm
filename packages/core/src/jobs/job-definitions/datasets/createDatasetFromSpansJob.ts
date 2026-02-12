@@ -6,8 +6,8 @@ import { unsafelyFindUserById } from '../../../queries/users/findById'
 import { NotFoundError } from '../../../lib/errors'
 import {
   DocumentVersionsRepository,
-  SpansRepository,
 } from '../../../repositories'
+import { findSpansByDocumentAndCommitLimited } from '../../../queries/spans/findByDocumentAndCommitLimited'
 import { findOrCreateDataset } from '../../../services/datasets/findOrCreate'
 import { updateDatasetFromSpans } from '../../../services/datasets/updateFromSpans'
 import { queues } from '../../queues'
@@ -46,13 +46,13 @@ const FETCH_BATCH_SIZE = 500
 const PROCESS_BATCH_SIZE = 100
 
 async function* iterateSpanBatches({
-  repo,
+  workspaceId,
   documentUuid,
   excludedIds,
   selectionMode,
   selectedSpanIds,
 }: {
-  repo: SpansRepository
+  workspaceId: number
   documentUuid: string
   excludedIds: Set<string>
   selectionMode: 'ALL' | 'ALL_EXCEPT' | 'PARTIAL'
@@ -62,18 +62,13 @@ async function* iterateSpanBatches({
   let batch: Array<{ traceId: string; spanId: string }> = []
 
   while (true) {
-    const result = await repo.findByDocumentAndCommitLimited({
+    const { items, next } = await findSpansByDocumentAndCommitLimited({
+      workspaceId,
       documentUuid,
       types: [SpanType.Prompt],
       limit: FETCH_BATCH_SIZE,
       from: cursor,
     })
-
-    if (result.error) {
-      throw result.error
-    }
-
-    const { items, next } = result.value!
 
     for (const span of items) {
       const spanKey = `${span.traceId}:${span.id}`
@@ -144,8 +139,6 @@ export const createDatasetFromSpansJob = async (
       workspace,
     }).then((r) => r.unwrap())
 
-    const repo = new SpansRepository(workspaceId)
-
     const excludedIds = new Set(
       excludedSpanIdentifiers.map((id) => `${id.traceId}:${id.spanId}`),
     )
@@ -160,7 +153,7 @@ export const createDatasetFromSpansJob = async (
     let hasProcessedAny = false
 
     for await (const spanIdentifiers of iterateSpanBatches({
-      repo,
+      workspaceId,
       documentUuid: document.documentUuid,
       excludedIds,
       selectionMode,

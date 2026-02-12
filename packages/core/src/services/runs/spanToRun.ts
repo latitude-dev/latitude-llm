@@ -16,8 +16,8 @@ import {
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
   SpanMetadatasRepository,
-  SpansRepository,
 } from '../../repositories'
+import { unsafelyFindSpansByParentAndType } from '../../queries/spans/unsafelyFindByParentAndType'
 import { getEvaluationMetricSpecification } from '../evaluationsV2/specifications'
 
 /**
@@ -31,11 +31,11 @@ export async function spanToRun({
   span: Span<MainSpanType>
 }): Promise<CompletedRun> {
   let caption = 'Run finished successfully without any response'
-  const spansRepo = new SpansRepository(workspaceId)
   const spanMetadataRepo = new SpanMetadatasRepository(workspaceId)
-  const completionSpan = await spansRepo
-    .findByParentAndType({ parentId: span.id, type: SpanType.Completion })
-    .then((r) => r[0])
+  const completionSpan = await unsafelyFindSpansByParentAndType({
+    parentId: span.id,
+    type: SpanType.Completion,
+  }).then((r) => r[0])
   if (completionSpan) {
     const completionSpanMetadata = (await spanMetadataRepo
       .get({ spanId: completionSpan.id, traceId: completionSpan.traceId })

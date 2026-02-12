@@ -21,7 +21,7 @@ import { diskFactory, DiskWrapper } from '../../../../lib/disk'
 import { LatitudeError, UnprocessableEntityError } from '../../../../lib/errors'
 import { Result, TypedResult } from '../../../../lib/Result'
 import Transaction from '../../../../lib/Transaction'
-import { SpansRepository } from '../../../../repositories'
+import { findSpan } from '../../../../queries/spans/findSpan'
 import { spans } from '../../../../schema/models/spans'
 import { type ApiKey } from '../../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
@@ -435,25 +435,18 @@ async function getExistingBatch(
     return []
   }
 
-  const spansRepository = new SpansRepository(workspace.id, db)
-
-  // Use a more efficient batch query with IN clause
   const conditions = spanIds.map(({ spanId, traceId }) => ({
     spanId,
     traceId,
   }))
 
-  // For now, we'll use individual queries but in a more optimized way
-  // In the future, we could implement a proper batch query method in the repository
   const existingSpans: Span[] = []
 
-  // Process in chunks to avoid overwhelming the database
   const chunkSize = 50
   for (let i = 0; i < conditions.length; i += chunkSize) {
     const chunk = conditions.slice(i, i + chunkSize)
     const chunkPromises = chunk.map(async ({ spanId, traceId }) => {
-      const finding = await spansRepository.get({ spanId, traceId })
-      return finding.error ? null : finding.value
+      return findSpan({ workspaceId: workspace.id, spanId, traceId }, db)
     })
 
     const chunkResults = await Promise.all(chunkPromises)

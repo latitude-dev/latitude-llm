@@ -4,7 +4,7 @@ import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { SpansRepository } from '@latitude-data/core/repositories'
+import { findSpanIdentifiersByDocumentLogUuids } from '@latitude-data/core/queries/spans/findByDocumentLogUuid'
 
 export const POST = errorHandler(
   authHandler(
@@ -28,9 +28,11 @@ export const POST = errorHandler(
         throw new BadRequestError('No conversations provided')
       }
 
-      const spansRepo = new SpansRepository(workspace.id)
       const spanIdentifiers =
-        await spansRepo.getSpanIdentifiersByDocumentLogUuids(documentLogUuids)
+        await findSpanIdentifiersByDocumentLogUuids({
+          workspaceId: workspace.id,
+          documentLogUuids,
+        })
 
       if (!spanIdentifiers.length) {
         throw new BadRequestError(
