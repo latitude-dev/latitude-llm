@@ -12,11 +12,13 @@ import { DatasetRowsRepository } from '../../../repositories'
 import { DatasetRow } from '../../../schema/models/types/DatasetRow'
 import { EngineClient } from '../../engine'
 import { OptimizerArgs } from './index'
-import { Trajectory, TRAJECTORY_ID } from './shared'
+import { PROMPT_HASH, Trajectory, TRAJECTORY_ID } from './shared'
 
 const componentSchema = z.string() // <doc_path>
 
-const systemSchema = z.record(componentSchema, z.string()) // { <doc_path>: <prompt> }
+const partialPromptSchema = z.string() // <prompt_hash>
+
+const systemSchema = z.record(componentSchema, partialPromptSchema) // { <doc_path>: <prompt_hash> }
 
 const partialExampleSchema = z.object({
   id: z.string(), // <workspace_id>::<dataset_id>::<row_id>
@@ -59,18 +61,15 @@ const gepaEvaluateResultSchema = partialOutputSchema
 
 const gepaProposeParamsSchema = z.object({
   component: componentSchema,
-  prompt: z.string(),
+  prompt: partialPromptSchema,
   context: z.array(partialTrajectorySchema),
 })
 
 const gepaProposeResultSchema = z.object({
-  prompt: z.string(),
+  prompt: partialPromptSchema,
 })
 
-type Cache = Record<string, { example: DatasetRow; trajectory?: Trajectory }>
-
 // BONUS(AO/OPT): Implement multi-document optimization
-// BONUS(AO/OPT): Do not pass the full system but a partial one with ids for performance
 export async function gepaOptimizer(
   {
     evaluate,
@@ -84,9 +83,13 @@ export async function gepaOptimizer(
   }: OptimizerArgs<OptimizationEngine.Gepa>,
   db = database,
 ) {
-  const cache: Cache = {}
+  const examples: Record<string, DatasetRow> = {}
+  const trajectories: Record<string, Trajectory> = {}
+  const prompts: Record<string, string> = {}
 
-  const baseline = { [document.path]: optimization.baselinePrompt }
+  const hash = PROMPT_HASH(optimization.baselinePrompt)
+  prompts[hash] = optimization.baselinePrompt
+  const baseline = { [document.path]: hash }
 
   const rowsRepository = new DatasetRowsRepository(workspace.id, db)
 
@@ -94,7 +97,7 @@ export async function gepaOptimizer(
   const trainples = []
   for (const row of trainrows) {
     const id = TRAJECTORY_ID(row)
-    cache[id] = { example: row }
+    examples[id] = row
     trainples.push({ id })
   }
 
@@ -102,7 +105,7 @@ export async function gepaOptimizer(
   const valples = []
   for (const row of valrows) {
     const id = TRAJECTORY_ID(row)
-    cache[id] = { example: row }
+    examples[id] = row
     valples.push({ id })
   }
 
@@ -113,8 +116,8 @@ export async function gepaOptimizer(
     gepaEvaluateParamsSchema,
     gepaEvaluateResultSchema,
     async (params) => {
-      const prompt = params.candidate[document.path]
-      const example = cache[params.example.id]!.example
+      const prompt = prompts[params.candidate[document.path]!]!
+      const example = examples[params.example.id]!
 
       const trajectory = await evaluate({
         prompt: prompt,
@@ -122,10 +125,10 @@ export async function gepaOptimizer(
         abortSignal: abortSignal,
       }).then((r) => r.unwrap())
 
-      cache[params.example.id]!.trajectory = trajectory
+      trajectories[trajectory.id] = trajectory
 
       // Note: we just pass a partial trajectory for performance
-      // as the algorithm does not need the full one
+      // as the algorithm does not inspect or need the full one
       return {
         id: trajectory.id,
         usage: trajectory.usage,
@@ -140,18 +143,24 @@ export async function gepaOptimizer(
     gepaProposeParamsSchema,
     gepaProposeResultSchema,
     async (params) => {
+      const prompt = prompts[params.prompt]!
       const context = params.context
-        .map((t) => cache[t.id]!.trajectory)
+        .map((t) => trajectories[t.id])
         .filter((t) => t !== undefined)
 
-      const prompt = await propose({
-        prompt: params.prompt,
+      const proposed = await propose({
+        prompt: prompt,
         context: context,
         abortSignal: abortSignal,
       }).then((r) => r.unwrap())
 
+      const hash = PROMPT_HASH(proposed)
+      prompts[hash] = proposed
+
+      // Note: we just pass a partial prompt for performance
+      // as the algorithm does not inspect or need the full one
       return {
-        prompt: prompt,
+        prompt: hash,
       }
     },
   )
@@ -174,7 +183,7 @@ export async function gepaOptimizer(
       gepaOptimizeResultSchema,
     )
 
-    const prompt = result.optimized[document.path] ?? ''
+    const prompt = prompts[result.optimized[document.path]!] ?? ''
 
     return Result.ok(prompt)
   } catch (error) {
