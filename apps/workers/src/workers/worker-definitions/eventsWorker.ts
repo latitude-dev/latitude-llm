@@ -25,6 +25,10 @@ const eventHandlersJobMappings = {
   notifyClientOfExportReady: jobs.notifyClientOfExportReady,
   notifyClientOfEvaluationResultV2Created:
     jobs.notifyClientOfEvaluationResultV2Created,
+  writeEvaluationResultV2CreatedToClickhouse:
+    jobs.writeEvaluationResultV2CreatedToClickhouse,
+  writeEvaluationResultV2UpdatedToClickhouse:
+    jobs.writeEvaluationResultV2UpdatedToClickhouse,
   undeployDocumentTriggerJob: jobs.undeployDocumentTriggerJob,
   notifyClientOfDocumentTriggerCreated:
     jobs.notifyClientOfDocumentTriggerCreated,

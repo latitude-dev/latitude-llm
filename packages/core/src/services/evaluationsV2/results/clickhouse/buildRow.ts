@@ -3,38 +3,23 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '../../../../constants'
-import {
-  EVALUATION_RESULTS_V2_TABLE,
-  EvaluationResultV2Row,
-} from '../../../../clickhouse/models/evaluationResultsV2'
-import { insertRows, toClickHouseDateTime } from '../../../../clickhouse/insert'
+import { toClickHouseDateTime } from '../../../../clickhouse/insert'
+import { EvaluationResultV2Row } from '../../../../clickhouse/models/evaluationResultsV2'
 import { type Commit } from '../../../../schema/models/types/Commit'
-import { TypedResult } from '../../../../lib/Result'
 
 /**
- * Inserts a single evaluation result row into ClickHouse.
+ * Builds a ClickHouse row for evaluation results.
  */
-export async function insertEvaluationResultV2Row({
+export function buildEvaluationResultV2Row({
   result,
   evaluation,
   commit,
+  existingRow,
 }: {
   result: EvaluationResultV2
   evaluation: EvaluationV2
   commit: Commit
-}): Promise<TypedResult<undefined>> {
-  const row = toRow({ result, evaluation, commit })
-  return insertRows(EVALUATION_RESULTS_V2_TABLE, [row])
-}
-
-function toRow({
-  result,
-  evaluation,
-  commit,
-}: {
-  result: EvaluationResultV2
-  evaluation: EvaluationV2
-  commit: Commit
+  existingRow?: EvaluationResultV2Row
 }): EvaluationResultV2Row {
   const { provider, model } = getProviderAndModel(evaluation)
   const metadata = serializeJson(result.metadata)
@@ -47,10 +32,12 @@ function toRow({
     evaluation.type === EvaluationType.Llm
       ? getMetadataNumber(result.metadata, 'cost')
       : null
+  const evaluatedLogId =
+    getEvaluatedLogId(result) ?? existingRow?.evaluated_log_id ?? null
 
   return {
-    id: result.id,
-    uuid: result.uuid,
+    id: existingRow?.id ?? result.id,
+    uuid: existingRow?.uuid ?? result.uuid,
     workspace_id: result.workspaceId,
     project_id: commit.projectId,
     commit_id: commit.id,
@@ -65,7 +52,7 @@ function toRow({
     experiment_id: result.experimentId ?? null,
     dataset_id: result.datasetId ?? null,
     evaluated_row_id: result.evaluatedRowId ?? null,
-    evaluated_log_id: getEvaluatedLogId(result),
+    evaluated_log_id: evaluatedLogId,
     evaluated_span_id: result.evaluatedSpanId ?? null,
     evaluated_trace_id: result.evaluatedTraceId ?? null,
     score: result.score ?? null,
@@ -75,7 +62,8 @@ function toRow({
     cost,
     metadata,
     error,
-    created_at: toClickHouseDateTime(result.createdAt),
+    created_at:
+      existingRow?.created_at ?? toClickHouseDateTime(result.createdAt),
     updated_at: toClickHouseDateTime(result.updatedAt),
   }
 }

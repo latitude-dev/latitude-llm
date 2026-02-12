@@ -5,10 +5,12 @@ import {
   EvaluationResultV2CreatedEvent,
   EvaluationResultV2UpdatedEvent,
 } from '../events'
-import { insertEvaluationResultV2Row } from '../../services/evaluationsV2/results/clickhouse/insert'
+import { createEvaluationResultV2InClickhouse } from '../../services/evaluationsV2/results/clickhouse/create'
+import { updateEvaluationResultV2InClickhouse } from '../../services/evaluationsV2/results/clickhouse/update'
+import { findEvaluationResultV2RowByUuid } from '../../queries/clickhouse/evaluationResultsV2/findByUuid'
 
 /**
- * Inserts evaluation result rows into ClickHouse on create events.
+ * Writes evaluation result rows into ClickHouse on create events.
  */
 export const writeEvaluationResultV2CreatedToClickhouse = async ({
   data: event,
@@ -22,11 +24,11 @@ export const writeEvaluationResultV2CreatedToClickhouse = async ({
   )
   if (!enabled.ok || !enabled.value) return
 
-  await insertEvaluationResultV2Row({ result, evaluation, commit })
+  await createEvaluationResultV2InClickhouse({ result, evaluation, commit })
 }
 
 /**
- * Inserts evaluation result rows into ClickHouse on update events.
+ * Writes evaluation result rows into ClickHouse on update events.
  */
 export const writeEvaluationResultV2UpdatedToClickhouse = async ({
   data: event,
@@ -47,9 +49,21 @@ export const writeEvaluationResultV2UpdatedToClickhouse = async ({
     return
   }
 
-  await insertEvaluationResultV2Row({
+  const existingRow = await findEvaluationResultV2RowByUuid({
+    workspaceId,
+    uuid: result.uuid,
+  })
+  const commit = commitResult.value
+
+  if (!existingRow) {
+    await createEvaluationResultV2InClickhouse({ result, evaluation, commit })
+    return
+  }
+
+  await updateEvaluationResultV2InClickhouse({
+    existingRow,
     result,
     evaluation,
-    commit: commitResult.value,
+    commit,
   })
 }
