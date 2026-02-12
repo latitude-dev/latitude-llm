@@ -129,6 +129,32 @@ describe('createDatasetFromFile', () => {
     )
   })
 
+  it('allows creating a dataset with the same name as a soft-deleted one', async () => {
+    const { destroyDataset } = await import('./destroy')
+    const { dataset: existingDs } = await factories.createDataset({
+      disk,
+      workspace,
+      author: user,
+      name: 'Soft Deleted Dataset',
+    })
+
+    await destroyDataset({ dataset: existingDs })
+
+    const result = await createDatasetFromFile({
+      author: user,
+      workspace,
+      disk,
+      data: {
+        name: existingDs.name,
+        file,
+        csvDelimiter: ',',
+      },
+    })
+
+    expect(result.error).toBeUndefined()
+    expect(result.value?.dataset.name).toBe('Soft Deleted Dataset')
+  })
+
   it('handles CSV with no headers', async () => {
     const { file: wrongFile } = await createTestCsvFile({
       fileContent: '1,2',
