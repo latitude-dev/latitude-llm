@@ -4,6 +4,7 @@ import {
   Message,
   OPTIMIZATION_SCORE_SCALE,
 } from '../../../constants'
+import { hashContent } from '../../../lib/hashContent'
 import { DatasetRow } from '../../../schema/models/types/DatasetRow'
 
 export type Trajectory = {
@@ -46,3 +47,5 @@ const TRAJECTORY_SCORE = (score: number) =>
     Math.max((score / 100) * OPTIMIZATION_SCORE_SCALE, 0),
     OPTIMIZATION_SCORE_SCALE,
   )
+
+export const PROMPT_HASH = (prompt: string) => hashContent(prompt)

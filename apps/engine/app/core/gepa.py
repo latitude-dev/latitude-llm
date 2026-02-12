@@ -14,7 +14,8 @@ from app.rpc.server import RpcServer
 from app.util import Model, StrEnum
 
 type Component = str  # <doc_path>
-type System = dict[Component, str]  # { <doc_path>: <prompt> }
+type Prompt = str  # <prompt_hash>
+type System = dict[Component, Prompt]  # { <doc_path>: <prompt_hash> }
 
 
 class Example(Model):
@@ -59,12 +60,12 @@ GepaEvaluateResult = Output
 
 class GepaProposeParams(Model):
     component: Component
-    prompt: str
+    prompt: Prompt
     context: list[Trajectory]
 
 
 class GepaProposeResult(Model):
-    prompt: str
+    prompt: Prompt
 
 
 async def handle_gepa_optimize(server: RpcServer, params: GepaOptimizeParams) -> GepaOptimizeResult:

@@ -17,7 +17,7 @@ from app.rpc.protocol import (
 )
 from app.util import Model
 
-ENGINE_READ_LIMIT = 16 * 1024 * 1024  # 16MB limit for large system of prompts
+ENGINE_READ_LIMIT = 1 * 1024 * 1024  # 1MB limit (prompts are passed as hashes)
 
 type Handler[P: Model, R: Model] = Callable[["RpcServer", P], Awaitable[R]]
 type ResponseModel[R: Model] = type[R]
