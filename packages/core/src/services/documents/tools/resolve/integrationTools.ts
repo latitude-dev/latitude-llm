@@ -28,8 +28,8 @@ export async function resolveIntegrationToolDefinition({
   if (integrationResult.error) return integrationResult
   const integration = integrationResult.unwrap()
 
-  const shortToolName = toolName.includes('/')
-    ? toolName.split('/').slice(1).join('/')
+  const shortToolName = toolName.includes('_')
+    ? toolName.split('_').slice(1).join('_')
     : toolName
 
   return Result.ok({
