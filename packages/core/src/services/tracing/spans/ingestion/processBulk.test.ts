@@ -6,6 +6,9 @@ import {
 } from '@opentelemetry/semantic-conventions/incubating'
 import { type ApiKey } from '../../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
+import { Result } from '../../../../lib/Result'
+import { findSpanByTraceAndSpanId } from '../../../../queries/clickhouse/spans/findByTraceAndSpanId'
+import * as workspaceFeaturesService from '../../../workspaceFeatures/isFeatureEnabledByName'
 import * as factories from '../../../../tests/factories'
 import { processSpansBulk } from './processBulk'
 
@@ -19,10 +22,6 @@ vi.mock('../../../cache', () => ({
   cache: vi.fn().mockResolvedValue({
     del: vi.fn().mockResolvedValue(undefined),
   }),
-}))
-
-vi.mock('../clickhouse/bulkCreate', () => ({
-  bulkCreate: vi.fn(),
 }))
 
 const publisherSpy = vi.spyOn(
@@ -92,6 +91,41 @@ function createSpanData(
 let workspace: Workspace
 let apiKey: ApiKey
 
+async function waitForClickhouseSpan({
+  workspaceId,
+  traceId,
+  spanId,
+}: {
+  workspaceId: number
+  traceId: string
+  spanId: string
+}) {
+  const retries = 30
+  const delayMs = 100
+
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    const row = await findSpanByTraceAndSpanId({
+      workspaceId,
+      traceId,
+      spanId,
+    })
+    if (row) return row
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+  }
+
+  return null
+}
+
+function normalizeFixedString(value: string | null | undefined) {
+  if (!value) return value
+  let normalized = value
+  while (normalized.endsWith('\u0000')) {
+    normalized = normalized.slice(0, -1)
+  }
+
+  return normalized
+}
+
 describe('processSpansBulk', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -99,10 +133,17 @@ describe('processSpansBulk', () => {
     workspace = ws
     const { apiKey: key } = await factories.createApiKey({ workspace })
     apiKey = key
+    vi.spyOn(
+      workspaceFeaturesService,
+      'isFeatureEnabledByName',
+    ).mockResolvedValue(Result.ok(false))
   })
 
   describe('ingesting telemetry data', () => {
     it('persists spans and returns them', async () => {
+      vi.mocked(
+        workspaceFeaturesService.isFeatureEnabledByName,
+      ).mockResolvedValue(Result.ok(true))
       const span = createOtlpSpan()
       const result = await processSpansBulk({
         spans: [createSpanData(span, apiKey, workspace)],
@@ -114,7 +155,15 @@ describe('processSpansBulk', () => {
       expect(result.value?.spans).toHaveLength(1)
       expect(result.value?.spans[0]?.id).toBe(span.spanId)
       expect(result.value?.spans[0]?.traceId).toBe(span.traceId)
-    })
+
+      const clickhouseRow = await waitForClickhouseSpan({
+        workspaceId: workspace.id,
+        traceId: span.traceId,
+        spanId: span.spanId,
+      })
+      expect(normalizeFixedString(clickhouseRow?.span_id)).toBe(span.spanId)
+      expect(normalizeFixedString(clickhouseRow?.trace_id)).toBe(span.traceId)
+    }, 15000)
 
     it('associates spans with the correct workspace and API key', async () => {
       const span = createOtlpSpan()

@@ -14,7 +14,9 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const rows = await findAllWorkspaceUsers({ workspaceId: workspace.id }).then((r) => r.unwrap())
+      const rows = await findAllWorkspaceUsers({
+        workspaceId: workspace.id,
+      }).then((r) => r.unwrap())
 
       return NextResponse.json(rows, { status: 200 })
     },
