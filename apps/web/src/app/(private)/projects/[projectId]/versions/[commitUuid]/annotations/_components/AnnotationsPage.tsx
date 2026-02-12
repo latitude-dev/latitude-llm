@@ -10,9 +10,9 @@ import {
   EvaluationType,
   EvaluationV2,
   MAIN_SPAN_TYPES,
+  MainSpanType,
   RunSourceGroup,
   Span,
-  SpanType,
   SpanWithDetails,
 } from '@latitude-data/constants'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
@@ -161,7 +161,7 @@ export function AnnotationsPage({
           selectedSpan ? (
             <AnnotationsPanel
               key={selectedSpan.id}
-              span={selectedSpan as SpanWithDetails<SpanType.Prompt>}
+              span={selectedSpan as SpanWithDetails<MainSpanType>}
               onAnnotate={onAnnotate}
             />
           ) : (

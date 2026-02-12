@@ -44,6 +44,7 @@ export function AnnotationsPanel({
     () =>
       findFirstSpanOfType(trace?.children ?? [], [
         SpanType.Prompt,
+        SpanType.Chat,
         SpanType.External,
       ]),
     [trace?.children],

@@ -10,6 +10,7 @@ import {
   AssembledSpan,
   AssembledTrace,
   isMainSpan,
+  MainSpanType,
   SpanType,
   SpanWithDetails,
 } from '@latitude-data/constants'
@@ -90,9 +91,9 @@ function TraceMetadata({
 
   return (
     <div className='flex flex-col gap-4'>
-      {span.type === SpanType.Prompt ? (
+      {isMainSpan(span) ? (
         <AnnotationsProvider
-          span={span as SpanWithDetails<SpanType.Prompt>}
+          span={span as SpanWithDetails<MainSpanType>}
           commit={commit}
           project={project}
         >
@@ -140,11 +141,16 @@ function TraceMessages({ span }: { span?: SpanWithDetails }) {
     )
   }
 
+  const annotationSpan =
+    span && isMainSpan(span)
+      ? (span as SpanWithDetails<MainSpanType>)
+      : undefined
+
   return (
     <AnnotationsProvider
       project={project}
       commit={commit}
-      span={span}
+      span={annotationSpan}
       messages={messages}
     >
       <div className='flex flex-col gap-4'>

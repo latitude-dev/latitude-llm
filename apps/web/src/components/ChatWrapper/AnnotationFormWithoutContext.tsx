@@ -5,7 +5,7 @@ import {
   EvaluationType,
   EvaluationV2,
   HumanEvaluationMetric,
-  SpanType,
+  MainSpanType,
   SpanWithDetails,
 } from '@latitude-data/constants'
 import { useAnnotations } from './AnnotationsContext'
@@ -58,7 +58,7 @@ export function AnnotationFormWithoutContext() {
           key={item.result?.uuid ?? `new-${index}`}
           evaluation={item.evaluation}
           result={item.result}
-          span={span as SpanWithDetails<SpanType.Prompt>}
+          span={span as SpanWithDetails<MainSpanType>}
           onAnnotate={handleAnnotate}
         />
       ))}
