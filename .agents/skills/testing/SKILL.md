@@ -4,7 +4,7 @@ description: Testing guidelines and patterns for Latitude LLM. Use when writing,
 license: MIT
 metadata:
   author: latitude
-  version: "1.0.0"
+  version: '1.0.0'
 ---
 
 # Testing
@@ -14,6 +14,7 @@ Guidelines and patterns for writing tests in Latitude LLM.
 ## When to Apply
 
 Reference these guidelines when:
+
 - Writing new tests for services, repositories, or components
 - Setting up mocks for external dependencies
 - Testing Result pattern responses
@@ -22,14 +23,17 @@ Reference these guidelines when:
 
 ## Quick Reference
 
+- Write few tests, mostly integration, a few unit tests
+- Integeration tests mostly at the boundaris: @apps/web/.../actions, @apps/web/.../api/..., @apps/gateway, @apps/workers
 - Use factories extensively, minimize mocks for integration tests
 - Tests located alongside source files with `.test.ts` extension
 - To run tests for a specific package, `cd` into the package directory and run:
   - `pnpm test -- "path/to/file.test.ts"` - Run a specific test file
   - `pnpm test -- "path/to/directory"` - Run all tests in a directory
   - `pnpm test` - Run all tests in the package
+- Never run the full test suite, always scope by package or file
 
-## Unit Test Patterns
+## Test Patterns
 
 When writing unit tests for services that depend on external modules (disk, cache, database):
 
@@ -94,6 +98,7 @@ expect(result.error?.message).toBe('Expected error message')
 ### 5. Test edge cases and error paths
 
 Include tests for:
+
 - Missing data (cache miss, file not found)
 - Expired/stale entries
 - External service failures (disk errors, cache errors)
