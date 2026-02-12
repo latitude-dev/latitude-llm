@@ -1,4 +1,4 @@
-import { differenceInMilliseconds } from 'date-fns'
+import { addDays, differenceInMilliseconds } from 'date-fns'
 import { cache as redis } from '../../../../cache'
 import { database } from '../../../../client'
 import {
@@ -27,12 +27,19 @@ import { type ApiKey } from '../../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
 import { convertTimestamp } from '../shared'
 import { SPAN_SPECIFICATIONS } from '../specifications'
+import { isFeatureEnabledByName } from '../../../workspaceFeatures/isFeatureEnabledByName'
+import { findWorkspaceSubscription } from '../../../subscriptions/data-access/find'
+import {
+  DEFAULT_RETENTION_PERIOD_DAYS,
+  SubscriptionPlans,
+} from '../../../../plans'
 import { captureException } from '../../../../utils/datadogCapture'
 import {
   convertSpanAttributes,
   convertSpanStatus,
   extractSpanType,
 } from './process'
+import { bulkCreate as bulkCreateClickHouseSpans } from '../clickhouse/bulkCreate'
 
 export async function processSpansBulk(
   {
@@ -369,6 +376,32 @@ export async function processSpansBulk(
         },
         disk,
       )
+
+      const chEnabled = await isFeatureEnabledByName(
+        workspace.id,
+        'clickhouse-spans-write',
+        tx,
+      )
+      if (chEnabled.ok && chEnabled.value) {
+        const subscriptionResult = await findWorkspaceSubscription({
+          workspace,
+        })
+        const retentionDays =
+          subscriptionResult.ok && subscriptionResult.value
+            ? SubscriptionPlans[subscriptionResult.value.plan].retention_period
+            : DEFAULT_RETENTION_PERIOD_DAYS
+        const now = new Date()
+        const retentionExpiresAt = addDays(now, retentionDays)
+
+        bulkCreateClickHouseSpans(
+          processedSpans.map((s) => ({
+            ...s,
+            workspaceId: workspace.id,
+            apiKeyId: apiKey.id,
+            retentionExpiresAt,
+          })),
+        )
+      }
 
       return Result.ok({ spans: insertedSpans })
     },

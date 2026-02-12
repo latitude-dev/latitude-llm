@@ -21,6 +21,10 @@ vi.mock('../../../cache', () => ({
   }),
 }))
 
+vi.mock('../clickhouse/bulkCreate', () => ({
+  bulkCreate: vi.fn(),
+}))
+
 const publisherSpy = vi.spyOn(
   await import('../../../../events/publisher').then((f) => f.publisher),
   'publishLater',

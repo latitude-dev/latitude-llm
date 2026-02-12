@@ -6,7 +6,11 @@ ROOT_DIR="$(cd "$CORE_DIR/../.." && pwd)"
 
 _SAVED_CLUSTER_ENABLED="${CLICKHOUSE_CLUSTER_ENABLED:-}"
 _SAVED_DB="${CLICKHOUSE_DB:-}"
-[ -f "$ROOT_DIR/.env" ] && source "$ROOT_DIR/.env"
+if [ -f "$ROOT_DIR/.env" ]; then
+  set -a
+  eval "$(grep -v '^#' "$ROOT_DIR/.env" | grep -E '^[A-Za-z_][A-Za-z_0-9]*=' | sed 's/[[:space:]]*#.*//')"
+  set +a
+fi
 [ -n "$_SAVED_CLUSTER_ENABLED" ] && CLICKHOUSE_CLUSTER_ENABLED="$_SAVED_CLUSTER_ENABLED"
 [ -n "$_SAVED_DB" ] && CLICKHOUSE_DB="$_SAVED_DB"
 
@@ -34,20 +38,19 @@ if [ -z "${CLICKHOUSE_PASSWORD}" ]; then
   exit 1
 fi
 
-if ! command -v migrate &> /dev/null
-then
-    echo "Error: golang-migrate is not installed or not in PATH."
-    echo "Please install golang-migrate via 'brew install golang-migrate' to run this script."
-    echo "Visit https://github.com/golang-migrate/migrate for more installation instructions."
-    exit 1
+if ! command -v migrate &>/dev/null; then
+  echo "Error: golang-migrate is not installed or not in PATH."
+  echo "Please install golang-migrate via 'brew install golang-migrate' to run this script."
+  echo "Visit https://github.com/golang-migrate/migrate for more installation instructions."
+  exit 1
 fi
 
 if [ -z "${CLICKHOUSE_DB}" ]; then
-    export CLICKHOUSE_DB="default"
+  export CLICKHOUSE_DB="default"
 fi
 
 if [ -z "${CLICKHOUSE_CLUSTER_NAME}" ]; then
-    export CLICKHOUSE_CLUSTER_NAME="default"
+  export CLICKHOUSE_CLUSTER_NAME="default"
 fi
 
 if [ "$CLICKHOUSE_CLUSTER_ENABLED" == "true" ]; then
@@ -61,17 +64,17 @@ if [ "$CLICKHOUSE_CLUSTER_ENABLED" == "false" ] || [ -z "$CLICKHOUSE_CLUSTER_ENA
   MIGRATIONS_DIR="$CORE_DIR/clickhouse/migrations/unclustered"
 
   if [ "$CLICKHOUSE_MIGRATION_SSL" = true ]; then
-      DATABASE_URL="${CLICKHOUSE_MIGRATION_URL}?username=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}&x-multi-statement=true&secure=true&skip_verify=true&x-migrations-table-engine=MergeTree"
+    DATABASE_URL="${CLICKHOUSE_MIGRATION_URL}?username=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}&x-multi-statement=true&secure=true&skip_verify=true&x-migrations-table-engine=MergeTree"
   else
-      DATABASE_URL="${CLICKHOUSE_MIGRATION_URL}?username=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}&x-multi-statement=true&x-migrations-table-engine=MergeTree"
+    DATABASE_URL="${CLICKHOUSE_MIGRATION_URL}?username=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}&x-multi-statement=true&x-migrations-table-engine=MergeTree"
   fi
 else
   MIGRATIONS_DIR="$CORE_DIR/clickhouse/migrations/clustered"
 
   if [ "$CLICKHOUSE_MIGRATION_SSL" = true ]; then
-      DATABASE_URL="${CLICKHOUSE_MIGRATION_URL}?username=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}&x-multi-statement=true&secure=true&skip_verify=true&x-cluster-name=${CLICKHOUSE_CLUSTER_NAME}&x-migrations-table-engine=ReplicatedMergeTree"
+    DATABASE_URL="${CLICKHOUSE_MIGRATION_URL}?username=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}&x-multi-statement=true&secure=true&skip_verify=true&x-cluster-name=${CLICKHOUSE_CLUSTER_NAME}&x-migrations-table-engine=ReplicatedMergeTree"
   else
-      DATABASE_URL="${CLICKHOUSE_MIGRATION_URL}?username=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}&x-multi-statement=true&x-cluster-name=${CLICKHOUSE_CLUSTER_NAME}&x-migrations-table-engine=ReplicatedMergeTree"
+    DATABASE_URL="${CLICKHOUSE_MIGRATION_URL}?username=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}&x-multi-statement=true&x-cluster-name=${CLICKHOUSE_CLUSTER_NAME}&x-migrations-table-engine=ReplicatedMergeTree"
   fi
 fi
 

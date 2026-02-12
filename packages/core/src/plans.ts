@@ -15,6 +15,7 @@ export enum SubscriptionPlan {
 
 const NO_STRIPE_PRICE = 'NO_STRIPE_PRICE'
 const ONE_HUNDRED_YEARS_IN_DAYS = 36500
+export const DEFAULT_RETENTION_PERIOD_DAYS = 30
 
 export const SubscriptionPlans = {
   [SubscriptionPlan.HobbyV1]: {

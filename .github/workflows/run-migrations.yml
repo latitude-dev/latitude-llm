@@ -24,6 +24,18 @@ on:
         required: true
       DB_PORT:
         required: true
+      CLICKHOUSE_MIGRATION_URL:
+        required: false
+      CLICKHOUSE_URL:
+        required: false
+      CLICKHOUSE_DB:
+        required: false
+      CLICKHOUSE_USER:
+        required: false
+      CLICKHOUSE_PASSWORD:
+        required: false
+      CLICKHOUSE_MIGRATION_SSL:
+        required: false
 
 jobs:
   run-migrations:
@@ -97,6 +109,39 @@ jobs:
         env:
           DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}
           NODE_ENV: production
+
+      - name: Cache golang-migrate
+        id: cache-migrate
+        if: ${{ secrets.CLICKHOUSE_MIGRATION_URL != '' }}
+        uses: actions/cache@v3
+        with:
+          path: ~/bin/migrate
+          key: ${{ runner.os }}-golang-migrate-v4.18.1
+
+      - name: Install golang-migrate
+        if: ${{ secrets.CLICKHOUSE_MIGRATION_URL != '' && steps.cache-migrate.outputs.cache-hit != 'true' }}
+        run: |
+          mkdir -p ~/bin
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+          mv migrate ~/bin/migrate
+          chmod +x ~/bin/migrate
+
+      - name: Add migrate to PATH
+        if: ${{ secrets.CLICKHOUSE_MIGRATION_URL != '' }}
+        run: echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Run ClickHouse migrations
+        if: ${{ secrets.CLICKHOUSE_MIGRATION_URL != '' }}
+        working-directory: packages/core
+        run: pnpm ch:up
+        env:
+          CLICKHOUSE_MIGRATION_URL: ${{ secrets.CLICKHOUSE_MIGRATION_URL }}
+          CLICKHOUSE_URL: ${{ secrets.CLICKHOUSE_URL }}
+          CLICKHOUSE_DB: ${{ secrets.CLICKHOUSE_DB }}
+          CLICKHOUSE_USER: ${{ secrets.CLICKHOUSE_USER }}
+          CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+          CLICKHOUSE_MIGRATION_SSL: ${{ secrets.CLICKHOUSE_MIGRATION_SSL }}
+          CLICKHOUSE_CLUSTER_ENABLED: 'false'
 
       - name: Cleanup SSH tunnel
         if: always()

@@ -192,7 +192,7 @@ pnpm --filter @latitude-data/core ch:reset
 
 ## Test Database
 
-A separate test database (`latitude_analytics_test`) is available to avoid losing development data when running tests.
+A separate test database (`latitude_test`) is available to avoid losing development data when running tests.
 
 ### Test Commands
 

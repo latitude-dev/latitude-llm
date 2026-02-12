@@ -53,7 +53,7 @@ services:
     env_file:
       - .env
     environment:
-      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-latitude_analytics_development}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-latitude_development}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-latitude}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-secret}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
