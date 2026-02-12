@@ -8,6 +8,7 @@ import { Workspace } from '../../../../schema/models/types/Workspace'
 import { IntegrationType } from '@latitude-data/constants'
 import { jsonSchema } from 'ai'
 import * as integrationsModule from '../../../../repositories/integrationsRepository'
+import * as callToolModule from '../../../../services/integrations/McpClient/callTool'
 import { Result } from '../../../../lib/Result'
 
 describe('resolveIntegrationToolDefinition', () => {
@@ -19,6 +20,61 @@ describe('resolveIntegrationToolDefinition', () => {
   })
 
   describe('resolving integration tools', () => {
+    it('calls MCP with short tool name when toolName is composite (integration/tool)', async () => {
+      const mockIntegration = {
+        id: 1,
+        name: 'my-integration',
+        type: IntegrationType.Pipedream,
+        workspaceId: workspace.id,
+      }
+
+      vi.spyOn(integrationsModule, 'IntegrationsRepository').mockImplementation(
+        () =>
+          ({
+            find: vi.fn().mockResolvedValue(Result.ok(mockIntegration)),
+          }) as any,
+      )
+
+      const callIntegrationToolMock = vi
+        .spyOn(callToolModule, 'callIntegrationTool')
+        .mockResolvedValue(Result.ok('result') as any)
+
+      const toolManifest: ToolManifest<ToolSource.Integration> = {
+        definition: {
+          description: 'Tool',
+          inputSchema: jsonSchema({ type: 'object', properties: {} }),
+        },
+        sourceData: {
+          source: ToolSource.Integration,
+          integrationId: 1,
+          toolLabel: 'My Tool',
+        },
+      }
+
+      const streamManager = {
+        workspace,
+        $context: {},
+        $completion: { context: {} },
+      } as unknown as StreamManager
+
+      const result = await resolveIntegrationToolDefinition({
+        toolName: 'my-integration/my_tool',
+        toolManifest,
+        streamManager,
+      })
+
+      expect(result.ok).toBe(true)
+      const tool = result.value!
+      await tool.execute!({}, { toolCallId: 'call-1' } as any)
+
+      expect(callIntegrationToolMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolName: 'my_tool',
+          integration: mockIntegration,
+        }),
+      )
+    })
+
     it('resolves integration tool with execute function', async () => {
       const mockIntegration = {
         id: 1,

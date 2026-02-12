@@ -122,10 +122,10 @@ export async function lookupIntegrationTools({
     }
 
     if (toolName === '*') {
-      // All tools from integration
-      Object.assign(resolvedTools, integrationToolsDict)
+      for (const [name, tool] of Object.entries(integrationToolsDict)) {
+        resolvedTools[toolId.replace('*', name)] = tool
+      }
     } else {
-      // Single tool from integration
       const tool = integrationToolsDict[toolName]
       if (!tool) {
         return Result.error(
@@ -135,7 +135,7 @@ export async function lookupIntegrationTools({
         )
       }
 
-      resolvedTools[toolName] = tool
+      resolvedTools[toolId] = tool
     }
   }
 
