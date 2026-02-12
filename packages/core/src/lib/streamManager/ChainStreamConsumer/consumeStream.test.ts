@@ -473,6 +473,7 @@ describe('consumeStream', () => {
         sourceData: {
           source: ToolSource.Integration,
           integrationId: 42,
+          toolName: 'integrationTool',
           toolLabel: 'My Integration',
           imageUrl: 'https://example.com/image.png',
         },
@@ -508,6 +509,7 @@ describe('consumeStream', () => {
         _sourceData: {
           source: ToolSource.Integration,
           integrationId: 42,
+          toolName: 'integrationTool',
           toolLabel: 'My Integration',
           imageUrl: 'https://example.com/image.png',
         },

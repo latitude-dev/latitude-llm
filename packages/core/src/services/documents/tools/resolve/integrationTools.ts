@@ -59,7 +59,7 @@ export async function resolveIntegrationToolDefinition({
       try {
         const value = await callIntegrationTool({
           integration,
-          toolName,
+          toolName: toolManifest.sourceData.toolName,
           args,
           streamManager,
         }).then((r) => r.unwrap())

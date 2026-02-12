@@ -64,6 +64,7 @@ async function lookupToolsByIntegration({
           sourceData: {
             source: ToolSource.Integration,
             integrationId: integration.id,
+            toolName: toolDefinition.name,
             toolLabel: toolDefinition.displayName,
             imageUrl:
               integration.type === IntegrationType.Pipedream
@@ -122,10 +123,10 @@ export async function lookupIntegrationTools({
     }
 
     if (toolName === '*') {
-      // All tools from integration
-      Object.assign(resolvedTools, integrationToolsDict)
+      for (const [name, tool] of Object.entries(integrationToolsDict)) {
+        resolvedTools[`${integrationName}_${name}`] = tool
+      }
     } else {
-      // Single tool from integration
       const tool = integrationToolsDict[toolName]
       if (!tool) {
         return Result.error(
@@ -135,7 +136,7 @@ export async function lookupIntegrationTools({
         )
       }
 
-      resolvedTools[toolName] = tool
+      resolvedTools[`${integrationName}_${toolName}`] = tool
     }
   }
 
