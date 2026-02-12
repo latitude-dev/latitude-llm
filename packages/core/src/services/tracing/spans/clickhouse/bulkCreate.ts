@@ -30,7 +30,7 @@ function extractCompletionFields(metadata: SpanMetadata) {
   return {
     provider: m.provider ?? '',
     model: m.model ?? null,
-    cost: m.cost ?? 0,
+    cost: m.cost ?? null,
     tokens_prompt: m.tokens?.prompt ?? null,
     tokens_cached: m.tokens?.cached ?? null,
     tokens_reasoning: m.tokens?.reasoning ?? null,
@@ -38,10 +38,7 @@ function extractCompletionFields(metadata: SpanMetadata) {
   }
 }
 
-function metadataField<T>(
-  metadata: SpanMetadata,
-  key: string,
-): T | null {
+function metadataField<T>(metadata: SpanMetadata, key: string): T | null {
   if (!(key in metadata)) return null
   return ((metadata as Record<string, unknown>)[key] as T) ?? null
 }
@@ -50,7 +47,15 @@ function toRow(span: SpanInput): SpanRow {
   const isCompletion = span.type === SpanType.Completion
   const completion = isCompletion
     ? extractCompletionFields(span.metadata)
-    : { provider: '', model: null, cost: 0, tokens_prompt: null, tokens_cached: null, tokens_reasoning: null, tokens_completion: null }
+    : {
+        provider: '',
+        model: null,
+        cost: null,
+        tokens_prompt: null,
+        tokens_cached: null,
+        tokens_reasoning: null,
+        tokens_completion: null,
+      }
 
   return {
     workspace_id: span.workspaceId,
@@ -64,7 +69,10 @@ function toRow(span: SpanInput): SpanRow {
     commit_uuid: metadataField<string>(span.metadata, 'versionUuid'),
     experiment_uuid: metadataField<string>(span.metadata, 'experimentUuid'),
     project_id: metadataField<number>(span.metadata, 'projectId'),
-    test_deployment_id: metadataField<number>(span.metadata, 'testDeploymentId'),
+    test_deployment_id: metadataField<number>(
+      span.metadata,
+      'testDeploymentId',
+    ),
     name: span.name,
     kind: span.kind,
     type: span.type,
