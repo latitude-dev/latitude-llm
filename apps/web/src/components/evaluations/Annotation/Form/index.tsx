@@ -123,7 +123,7 @@ export function AnnotationForm<
       commit={commit}
       span={span}
       evaluation={evaluation}
-      documentUuid={span.documentUuid ?? ''}
+      documentUuid={evaluation.documentUuid}
       result={result}
       onSubmit={wrappedOnSubmit}
       isSubmitting={isSubmitting}

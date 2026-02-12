@@ -43,7 +43,7 @@ export function useAnnotationForm<
     commit,
     document: {
       commitId: commit.id,
-      documentUuid: span.documentUuid!,
+      documentUuid: evaluation.documentUuid,
     },
   })
   const { mutate } = useEvaluationResultsV2BySpans({
@@ -51,7 +51,7 @@ export function useAnnotationForm<
     commit,
     document: {
       commitId: commit.id,
-      documentUuid: span.documentUuid!,
+      documentUuid: evaluation.documentUuid,
     },
     spanId: span.id,
     documentLogUuid: span.documentLogUuid,
@@ -62,7 +62,7 @@ export function useAnnotationForm<
 
       startTransition(async () => {
         const [updatedResult, errors] = await annotateEvaluation({
-          documentUuid: span.documentUuid!,
+          documentUuid: evaluation.documentUuid,
           evaluationUuid: evaluation.uuid,
           spanId: span.id,
           traceId: span.traceId,
