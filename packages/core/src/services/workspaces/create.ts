@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm'
+import { env } from '@latitude-data/env'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { type User } from '../../schema/models/types/User'
 import { publisher } from '../../events/publisher'
@@ -8,6 +9,13 @@ import { SubscriptionPlan } from '../../plans'
 import { workspaces } from '../../schema/models/workspaces'
 import { createSubscription } from '../subscriptions/create'
 import { issueSubscriptionGrants } from '../subscriptions/grants'
+
+function getDefaultSubscriptionPlan(): SubscriptionPlan {
+  if (env.LATITUDE_ENTERPRISE_MODE) {
+    return SubscriptionPlan.EnterpriseV1
+  }
+  return SubscriptionPlan.HobbyV3
+}
 
 export async function createWorkspace(
   {
@@ -46,7 +54,7 @@ export async function createWorkspace(
       const subscription = await createSubscription(
         {
           workspace,
-          plan: subscriptionPlan ?? SubscriptionPlan.HobbyV3,
+          plan: subscriptionPlan ?? getDefaultSubscriptionPlan(),
           createdAt,
         },
         transaction,
