@@ -92,13 +92,16 @@ export function ToolCardWrapper({
   }, [messageIndex, contentBlockIndex, getAnnotationsForBlock, span])
 
   const evaluation = evaluations[0]
-  const canAnnotate =
-    !blockAnnotations.length &&
-    evaluation &&
-    messageIndex !== undefined &&
-    contentBlockIndex !== undefined &&
+  const isAnnotatableSpan =
     span !== undefined &&
-    isMainSpan(span)
+    isMainSpan(span) &&
+    messageIndex !== undefined &&
+    contentBlockIndex !== undefined
+
+  const hasAnnotations = blockAnnotations.length > 0
+  const canAddNewAnnotation = !hasAnnotations && evaluation && isAnnotatableSpan
+  const shouldShowAnnotationSection = hasAnnotations || canAddNewAnnotation
+
   return (
     <div
       className={cn(
@@ -107,7 +110,7 @@ export function ToolCardWrapper({
       )}
     >
       {children}
-      {canAnnotate ? (
+      {shouldShowAnnotationSection && isAnnotatableSpan ? (
         <div className='flex flex-col gap-y-4 border-t pt-4 px-4 pb-4'>
           {blockAnnotations.map((annotation: AnnotatedTextRange) => (
             <AnnotationForm
@@ -118,7 +121,7 @@ export function ToolCardWrapper({
               initialExpanded={false}
             />
           ))}
-          {canAnnotate ? (
+          {canAddNewAnnotation ? (
             <AnnotationForm
               evaluation={evaluation}
               span={span as SpanWithDetails<MainSpanType>}
