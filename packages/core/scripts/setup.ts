@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, ne } from 'drizzle-orm'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
@@ -8,6 +8,7 @@ import { workspaces } from '../src/schema/models/workspaces'
 import { projects } from '../src/schema/models/projects'
 import { commits } from '../src/schema/models/commits'
 import { providerApiKeys } from '../src/schema/models/providerApiKeys'
+import { subscriptions } from '../src/schema/models/subscriptions'
 import { createUser } from '../src/services/users/createUser'
 import { createWorkspace } from '../src/services/workspaces/create'
 import { createProject } from '../src/services/projects/create'
@@ -16,6 +17,7 @@ import { createApiKey } from '../src/services/apiKeys/create'
 import { createProviderApiKey } from '../src/services/providerApiKeys/create'
 import { createFeature } from '../src/services/features/create'
 import { toggleFeatureGlobally } from '../src/services/features/toggleGlobally'
+import { changeWorkspacePlan } from '../src/services/workspaces/changePlan'
 import { FeaturesRepository } from '../src/repositories'
 import { unsafelyFindWorkspace } from '../src/data-access/workspaces'
 import {
@@ -30,6 +32,7 @@ import { type Commit } from '../src/schema/models/types/Commit'
 import { type User } from '../src/schema/models/types/User'
 import { type Workspace } from '../src/schema/models/types/Workspace'
 import { type Feature } from '../src/schema/models/types/Feature'
+import { SubscriptionPlan } from '../src/plans'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -79,6 +82,66 @@ function getAllPromptlFiles(
   return files
 }
 
+async function migrateExistingUsersToAdmins() {
+  console.log('\n--- Migrating existing users to admins ---')
+
+  const nonAdminUsers = await database
+    .select()
+    .from(users)
+    .where(eq(users.admin, false))
+
+  if (nonAdminUsers.length === 0) {
+    console.log('✓ All users are already admins')
+    return
+  }
+
+  console.log(`Found ${nonAdminUsers.length} non-admin users to migrate`)
+
+  await database.update(users).set({ admin: true }).where(eq(users.admin, false))
+
+  console.log(`✓ Migrated ${nonAdminUsers.length} users to admins`)
+}
+
+async function migrateExistingWorkspacesToEnterprise() {
+  console.log('\n--- Migrating existing workspaces to enterprise plan ---')
+
+  const workspacesWithNonEnterprise = await database
+    .select({
+      workspace: workspaces,
+      subscription: subscriptions,
+    })
+    .from(workspaces)
+    .innerJoin(subscriptions, eq(workspaces.currentSubscriptionId, subscriptions.id))
+    .where(ne(subscriptions.plan, SubscriptionPlan.EnterpriseV1))
+
+  if (workspacesWithNonEnterprise.length === 0) {
+    console.log('✓ All workspaces are already on enterprise plan')
+    return
+  }
+
+  console.log(
+    `Found ${workspacesWithNonEnterprise.length} workspaces to migrate to enterprise plan`,
+  )
+
+  for (const { workspace } of workspacesWithNonEnterprise) {
+    const fullWorkspace = await unsafelyFindWorkspace(workspace.id)
+    if (!fullWorkspace) {
+      console.log(`  ✗ Failed to load workspace ${workspace.id}`)
+      continue
+    }
+
+    const result = await changeWorkspacePlan(fullWorkspace, SubscriptionPlan.EnterpriseV1)
+    if (result.error) {
+      console.log(`  ✗ Failed to migrate workspace ${workspace.name}: ${result.error.message}`)
+      continue
+    }
+
+    console.log(`  ✓ Migrated workspace: ${workspace.name}`)
+  }
+
+  console.log(`✓ Workspace migration complete`)
+}
+
 async function main() {
   if (process.env.LATITUDE_ENTERPRISE_MODE !== 'true') {
     console.log('Skipping setup in non-enterprise mode')
@@ -86,6 +149,9 @@ async function main() {
   }
 
   console.log('Starting setup...')
+
+  await migrateExistingUsersToAdmins()
+  await migrateExistingWorkspacesToEnterprise()
 
   // 1. Find or create user
   console.log(`Checking for user: ${REFERENCE_EMAIL}`)
@@ -102,6 +168,7 @@ async function main() {
       email: REFERENCE_EMAIL,
       name: 'Gerard',
       confirmedAt: new Date(),
+      admin: true,
     })
     if (result.error) throw result.error
     user = result.value

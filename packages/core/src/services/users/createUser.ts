@@ -11,11 +11,13 @@ export async function createUser(
     name,
     confirmedAt,
     title,
+    admin = false,
   }: {
     email: string
     name: string
     confirmedAt?: Date
     title?: UserTitle
+    admin?: boolean
   },
   transaction = new Transaction(),
 ) {
@@ -27,6 +29,7 @@ export async function createUser(
         name,
         confirmedAt,
         title,
+        admin,
       })
       .returning()
 
