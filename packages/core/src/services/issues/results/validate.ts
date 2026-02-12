@@ -20,11 +20,13 @@ export async function validateResultForIssue<
     issue,
     skipBelongsCheck = false,
     skipReasonCheck = false,
+    skipPassedCheck = false,
   }: {
     result: ResultWithEvaluationV2<T, M>
     issue?: Issue
     skipBelongsCheck?: boolean
     skipReasonCheck?: boolean
+    skipPassedCheck?: boolean
   },
   db = database,
 ) {
@@ -36,7 +38,7 @@ export async function validateResultForIssue<
     )
   }
 
-  if (result.hasPassed) {
+  if (result.hasPassed && !skipPassedCheck) {
     return Result.error(
       new UnprocessableEntityError('Cannot use a result that has passed'),
     )
