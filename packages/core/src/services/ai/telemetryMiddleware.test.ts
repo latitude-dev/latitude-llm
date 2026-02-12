@@ -466,6 +466,7 @@ describe('createTelemetryMiddleware', () => {
           sourceData: {
             source: ToolSource.Integration,
             integrationId: 42,
+            toolName: 'searchTool',
             toolLabel: 'Search',
             imageUrl: 'https://example.com/icon.png',
           },
