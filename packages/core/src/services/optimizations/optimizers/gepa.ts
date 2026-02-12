@@ -125,10 +125,10 @@ export async function gepaOptimizer(
         abortSignal: abortSignal,
       }).then((r) => r.unwrap())
 
-      trajectories[params.example.id] = trajectory
+      trajectories[trajectory.id] = trajectory
 
       // Note: we just pass a partial trajectory for performance
-      // as the algorithm does not need the full one
+      // as the algorithm does not inspect or need the full one
       return {
         id: trajectory.id,
         usage: trajectory.usage,
@@ -157,6 +157,8 @@ export async function gepaOptimizer(
       const hash = PROMPT_HASH(proposed)
       prompts[hash] = proposed
 
+      // Note: we just pass a partial prompt for performance
+      // as the algorithm does not inspect or need the full one
       return {
         prompt: hash,
       }
@@ -181,8 +183,7 @@ export async function gepaOptimizer(
       gepaOptimizeResultSchema,
     )
 
-    const optimized = result.optimized[document.path]
-    const prompt = optimized ? (prompts[optimized] ?? '') : ''
+    const prompt = prompts[result.optimized[document.path]!] ?? ''
 
     return Result.ok(prompt)
   } catch (error) {
