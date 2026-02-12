@@ -156,14 +156,18 @@ export function extractSpanType(
     }
   }
 
+  // Fallback: If we have system instructions, input messages, or output messages, it's likely a completion
+  const genAiSystemInstructions = attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI.systemInstructions] // prettier-ignore
+  const genAiInput = attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI.input.messages] // prettier-ignore
+  const genAiOutput = attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI.output.messages] // prettier-ignore
+  if (genAiSystemInstructions || genAiInput || genAiOutput) {
+    return Result.ok(SpanType.Completion)
+  }
+
   // Fallback: If we have gen_ai.system and gen_ai.request.model, it's likely a completion
   // This handles instrumentations like Bedrock that don't set an explicit operation type
-  const genAiSystem =
-    attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system] ||
-    attributes['gen_ai.system']
-  const genAiRequestModel =
-    attributes[ATTRIBUTES.LATITUDE.request.model] ||
-    attributes['gen_ai.request.model']
+  const genAiSystem = attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system] // prettier-ignore
+  const genAiRequestModel = attributes[ATTRIBUTES.LATITUDE.request.model]
   if (genAiSystem && genAiRequestModel) {
     return Result.ok(SpanType.Completion)
   }
