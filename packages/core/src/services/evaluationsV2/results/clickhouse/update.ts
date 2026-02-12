@@ -1,9 +1,9 @@
 import { insertRows } from '../../../../clickhouse/insert'
 import { TypedResult } from '../../../../lib/Result'
 import {
-  EVALUATION_RESULTS_V2_TABLE,
+  EVALUATION_RESULTS_TABLE,
   EvaluationResultV2Row,
-} from '../../../../models/clickhouse/evaluationResultsV2'
+} from '../../../../models/clickhouse/evaluationResults'
 import { buildEvaluationResultV2Row } from './buildRow'
 import { EvaluationResultV2, EvaluationV2 } from '../../../../constants'
 import { type Commit } from '../../../../schema/models/types/Commit'
@@ -28,5 +28,5 @@ export async function updateEvaluationResultV2InClickhouse({
     commit,
     existingRow,
   })
-  return insertRows(EVALUATION_RESULTS_V2_TABLE, [row])
+  return insertRows(EVALUATION_RESULTS_TABLE, [row])
 }

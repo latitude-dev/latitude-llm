@@ -1,8 +1,8 @@
 import { clickhouseClient } from '../../../client/clickhouse'
 import {
-  EVALUATION_RESULTS_V2_TABLE,
+  EVALUATION_RESULTS_TABLE,
   EvaluationResultV2Row,
-} from '../../../models/clickhouse/evaluationResultsV2'
+} from '../../../models/clickhouse/evaluationResults'
 import { scopedQuery } from '../../scope'
 
 /**
@@ -16,7 +16,7 @@ export const findEvaluationResultV2RowByUuid = scopedQuery(
     const result = await clickhouseClient().query({
       query: `
         SELECT *
-        FROM ${EVALUATION_RESULTS_V2_TABLE}
+        FROM ${EVALUATION_RESULTS_TABLE}
         WHERE workspace_id = {workspaceId: UInt64}
           AND uuid = {uuid: UUID}
         ORDER BY updated_at DESC

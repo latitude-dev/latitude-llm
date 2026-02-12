@@ -1,4 +1,4 @@
-export const EVALUATION_RESULTS_V2_TABLE = 'evaluation_results_v2' as const
+export const EVALUATION_RESULTS_TABLE = 'evaluation_results' as const
 
 export type EvaluationResultV2Row = {
   id: number

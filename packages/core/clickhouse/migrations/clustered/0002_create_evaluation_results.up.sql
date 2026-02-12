@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS evaluation_results_v2 (
+CREATE TABLE IF NOT EXISTS evaluation_results ON CLUSTER default (
   id UInt64,
   uuid UUID,
   workspace_id UInt64,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS evaluation_results_v2 (
   created_date Date MATERIALIZED toDate(created_at),
   has_error UInt8 MATERIALIZED if(isNull(error), 0, 1)
 )
-ENGINE = ReplacingMergeTree(updated_at)
+ENGINE = ReplicatedReplacingMergeTree(updated_at)
 PARTITION BY toYYYYMM(created_at)
 ORDER BY (workspace_id, created_at, evaluation_uuid, id)
 SETTINGS index_granularity = 8192;

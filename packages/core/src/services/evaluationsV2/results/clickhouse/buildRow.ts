@@ -4,7 +4,7 @@ import {
   EvaluationV2,
 } from '../../../../constants'
 import { toClickHouseDateTime } from '../../../../clickhouse/insert'
-import { EvaluationResultV2Row } from '../../../../models/clickhouse/evaluationResultsV2'
+import { EvaluationResultV2Row } from '../../../../models/clickhouse/evaluationResults'
 import { type Commit } from '../../../../schema/models/types/Commit'
 
 /**
