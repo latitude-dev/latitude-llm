@@ -63,8 +63,8 @@ export function DatasetSelector({
               className='flex flex-row items-center gap-1 hover:underline'
               href={ROUTES.datasets.root({ modal: 'new' })}
             >
-              <Text.H5 color='primary'>Upload dataset</Text.H5>
-              <Icon color='primary' name='externalLink' />
+              <Text.H5 color='accentForeground'>Upload dataset</Text.H5>
+              <Icon color='accentForeground' name='externalLink' />
             </Link>
             <Text.H6M>or</Text.H6M>
           </>
@@ -81,8 +81,8 @@ export function DatasetSelector({
               backUrl: window.location.href,
             })}
           >
-            <Text.H5 color='primary'>Generate dataset</Text.H5>
-            <Icon color='primary' name='externalLink' />
+            <Text.H5 color='accentForeground'>Generate dataset</Text.H5>
+            <Icon color='accentForeground' name='externalLink' />
           </Link>
         )}
       </div>

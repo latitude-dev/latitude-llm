@@ -148,7 +148,7 @@ export function EvaluationTableItem({
           )}
           {evaluation.uuid === annotationsEvaluation?.uuid && (
             <Tooltip
-              trigger={<Icon name='thumbsUp' color='primary' />}
+              trigger={<Icon name='thumbsUp' color='accentForeground' />}
               align='center'
               side='top'
               maxWidth='max-w-[400px]'
@@ -158,7 +158,7 @@ export function EvaluationTableItem({
           )}
           {evaluation.uuid === document.mainEvaluationUuid && (
             <Tooltip
-              trigger={<Icon name='shieldAlert' color='primary' />}
+              trigger={<Icon name='shieldAlert' color='accentForeground' />}
               align='center'
               side='top'
               maxWidth='max-w-[400px]'

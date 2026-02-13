@@ -105,7 +105,7 @@ function InnerIndicator({
       <>
         <Separator orientation='vertical' className='self-stretch h-auto' />
         <Button variant='ghost' size='none' onClick={stopStreaming}>
-          <Text.H6M color='destructive'>Stop run</Text.H6M>
+          <Text.H6M color='destructiveMutedForeground'>Stop run</Text.H6M>
         </Button>
       </>
     )
@@ -123,7 +123,7 @@ function InnerIndicator({
             sideOffset={20}
             trigger={
               <Button variant='ghost' size='none' onClick={resetChat}>
-                <Text.H6M color='destructive'>New chat</Text.H6M>
+                <Text.H6M color='destructiveMutedForeground'>New chat</Text.H6M>
               </Button>
             }
           >
@@ -131,7 +131,7 @@ function InnerIndicator({
           </Tooltip>
         ) : (
           <Button variant='ghost' size='none' onClick={resetChat}>
-            <Text.H6M color='primary'>New chat</Text.H6M>
+            <Text.H6M color='accentForeground'>New chat</Text.H6M>
           </Button>
         )}
       </>

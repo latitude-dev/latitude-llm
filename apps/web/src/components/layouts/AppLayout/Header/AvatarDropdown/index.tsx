@@ -110,7 +110,7 @@ export default function AvatarDropdown({
         {
           label: 'Logout',
           icon: 'logOut',
-          color: 'destructive',
+          color: 'destructiveMutedForeground',
           onClick: onClickLogout,
         },
       ].filter(Boolean) as DropdownItemProps[],

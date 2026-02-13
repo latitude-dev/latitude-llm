@@ -171,8 +171,10 @@ const buttonVariants = cva(
 
 const textColorVariants = ({
   variant,
+  roundy,
 }: {
   variant: ButtonProps['variant']
+  roundy?: ButtonProps['roundy']
 }): TextColor => {
   if (variant === 'destructive') return 'destructiveForeground'
   if (variant === 'default') return 'white'
@@ -312,8 +314,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
 
   const iconPlacement = iconProps?.placement || 'left'
   const fanciness = fancy ? 'fancy' : 'default'
-  const resolvedIconColor =
-    textColor ?? iconProps?.color ?? textColorVariants({ variant })
+  const computedTextColor = textColorVariants({ variant, roundy })
+  const resolvedTextColor = textColor ?? computedTextColor
+  const resolvedIconColor = resolvedTextColor ?? iconProps?.color
   const buttonStyles = useButtonStyles({
     variant,
     size,
@@ -357,10 +360,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             ) : null}
 
             {typeof children === 'string' ? (
-              <Text.H5B
-                noWrap
-                color={textColor ?? textColorVariants({ variant })}
-              >
+              <Text.H5B noWrap ellipsis={ellipsis} color={resolvedTextColor}>
                 {children}
               </Text.H5B>
             ) : children ? (
