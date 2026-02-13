@@ -8,7 +8,6 @@ import {
   OptimizationEngine,
 } from '../../../constants'
 import { Result } from '../../../lib/Result'
-import { DatasetRowsRepository } from '../../../repositories'
 import { DatasetRow } from '../../../schema/models/types/DatasetRow'
 import { EngineClient } from '../../engine'
 import { OptimizerArgs } from './index'
@@ -78,10 +77,9 @@ export async function gepaOptimizer(
     valset,
     optimization,
     document,
-    workspace,
     abortSignal,
   }: OptimizerArgs<OptimizationEngine.Gepa>,
-  db = database,
+  _ = database,
 ) {
   const examples: Record<string, DatasetRow> = {}
   const trajectories: Record<string, Trajectory> = {}
@@ -91,19 +89,15 @@ export async function gepaOptimizer(
   prompts[hash] = optimization.baselinePrompt
   const baseline = { [document.path]: hash }
 
-  const rowsRepository = new DatasetRowsRepository(workspace.id, db)
-
-  const trainrows = await rowsRepository.findAllByDataset(trainset.id)
   const trainples = []
-  for (const row of trainrows) {
+  for (const row of trainset) {
     const id = TRAJECTORY_ID(row)
     examples[id] = row
     trainples.push({ id })
   }
 
-  const valrows = await rowsRepository.findAllByDataset(valset.id)
   const valples = []
-  for (const row of valrows) {
+  for (const row of valset) {
     const id = TRAJECTORY_ID(row)
     examples[id] = row
     valples.push({ id })

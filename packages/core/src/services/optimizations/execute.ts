@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm'
+import { OPTIMIZATION_VALSET_SPLIT } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { validateOptimizationJobKey } from '../../jobs/job-definitions/optimizations/validateOptimizationJob'
 import { queues } from '../../jobs/queues'
@@ -9,6 +10,7 @@ import { findProjectById } from '../../queries/projects/findById'
 import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
 import {
   CommitsRepository,
+  DatasetRowsRepository,
   DatasetsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
@@ -135,6 +137,13 @@ export async function executeOptimization(
     .map((c) => ({ ...c, datasetId: trainset.id }))
     .concat(testset.columns.map((c) => ({ ...c, datasetId: testset.id })))
 
+  const rowsRepository = new DatasetRowsRepository(workspace.id)
+  const trainrows = await rowsRepository.findAllByDataset(trainset.id)
+  const testrows = await rowsRepository.findAllByDataset(testset.id)
+
+  const split = Math.floor(testrows.length * OPTIMIZATION_VALSET_SPLIT)
+  const valrows = testrows.sort(() => Math.random() - 0.5).slice(split)
+
   const optimize = OPTIMIZATION_ENGINES[optimization.engine]
   if (!optimize) {
     return Result.error(
@@ -161,8 +170,8 @@ export async function executeOptimization(
       workspace: workspace,
     }),
     evaluation: evaluation,
-    trainset: trainset,
-    valset: testset, // BONUS(AO/OPT): Only use a small subset of the testset
+    trainset: trainrows,
+    valset: valrows,
     optimization: optimization,
     document: document,
     commit: baselineCommit,

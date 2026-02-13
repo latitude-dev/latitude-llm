@@ -1,10 +1,17 @@
-import { OptimizationEngine, Providers } from '@latitude-data/constants'
+import {
+  OPTIMIZATION_VALSET_SPLIT,
+  OptimizationEngine,
+  Providers,
+} from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { EvaluationType, RuleEvaluationMetric } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import { DocumentVersionsRepository } from '../../repositories'
+import {
+  DatasetRowsRepository,
+  DocumentVersionsRepository,
+} from '../../repositories'
 import { Commit } from '../../schema/models/types/Commit'
 import { Dataset } from '../../schema/models/types/Dataset'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -370,18 +377,32 @@ describe('executeOptimization', () => {
       workspace,
     }).then((r) => r.unwrap())
 
+    const rowsRepository = new DatasetRowsRepository(workspace.id)
+    const trainrows = await rowsRepository.findAllByDataset(trainset.id)
+    const testrows = await rowsRepository.findAllByDataset(testset.id)
+    const expectedValsetLength =
+      testrows.length - Math.floor(testrows.length * OPTIMIZATION_VALSET_SPLIT)
+
     expect(optimizerMock).toHaveBeenCalledTimes(1)
     expect(optimizerMock).toHaveBeenCalledWith(
       expect.objectContaining({
         evaluate: expect.any(Function),
         propose: expect.any(Function),
         evaluation: expect.objectContaining({ uuid: evaluation.uuid }),
-        trainset: expect.objectContaining({ id: trainset.id }),
-        valset: expect.objectContaining({ id: testset.id }),
+        trainset: expect.arrayContaining([
+          expect.objectContaining({ datasetId: trainset.id }),
+        ]),
+        valset: expect.arrayContaining([
+          expect.objectContaining({ datasetId: testset.id }),
+        ]),
         optimization: expect.objectContaining({ id: optimization.id }),
         workspace: expect.objectContaining({ id: workspace.id }),
       }),
     )
+
+    const calledArgs = optimizerMock.mock.calls[0]![0]!
+    expect(calledArgs.trainset).toHaveLength(trainrows.length)
+    expect(calledArgs.valset).toHaveLength(expectedValsetLength)
   })
 
   describe('when document only exists in a draft', () => {
