@@ -83,30 +83,10 @@ function TraceMetadata({
   isLoading: boolean
   documentLogUuid: string
 }) {
-  const { commit } = useCurrentCommit()
-  const { project } = useCurrentProject()
-
   if (isLoading) return <LoadingText alignX='center' />
   if (!span) return null
 
-  return (
-    <div className='flex flex-col gap-4'>
-      {isMainSpan(span) ? (
-        <AnnotationsProvider
-          span={span as SpanWithDetails<MainSpanType>}
-          commit={commit}
-          project={project}
-        >
-          <div className='flex flex-col gap-4'>
-            <DetailsPanel span={span} documentLogUuid={documentLogUuid} />
-            <AnnotationFormWithoutContext />
-          </div>
-        </AnnotationsProvider>
-      ) : (
-        <DetailsPanel span={span} documentLogUuid={documentLogUuid} />
-      )}
-    </div>
-  )
+  return <DetailsPanel span={span} documentLogUuid={documentLogUuid} />
 }
 
 function TraceMessages({ span }: { span?: SpanWithDetails }) {
