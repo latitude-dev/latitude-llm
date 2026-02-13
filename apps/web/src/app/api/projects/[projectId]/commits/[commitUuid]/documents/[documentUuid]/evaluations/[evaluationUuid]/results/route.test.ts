@@ -128,7 +128,7 @@ describe('GET handler for evaluation results', () => {
         baseDocument.documentUuid,
         draftA.id,
       )
-      const docInDraftB = await findDocumentInCommit(
+      const _docInDraftB = await findDocumentInCommit(
         baseDocument.documentUuid,
         draftB.id,
       )
