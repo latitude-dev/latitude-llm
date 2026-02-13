@@ -33,7 +33,10 @@ import {
   DEFAULT_RETENTION_PERIOD_DAYS,
   SubscriptionPlans,
 } from '../../../../plans'
-import { captureException } from '../../../../utils/datadogCapture'
+import {
+  captureException,
+  captureMessage,
+} from '../../../../utils/datadogCapture'
 import {
   convertSpanAttributes,
   convertSpanStatus,
@@ -226,7 +229,7 @@ export async function processSpansBulk(
       )
       continue
     }
-    if (extractingse.value != undefined) {
+    if (extractingse.value !== undefined && extractingse.value !== null) {
       status = SpanStatus.Error
       message = extractingse.value?.slice(0, 256) || undefined
     }
@@ -295,7 +298,7 @@ export async function processSpansBulk(
     async (tx) => {
       // Prepare bulk insert data
       const insertData = processedSpans.map((processed) => {
-        let metadata
+        let metadata: CompletionSpanMetadata | undefined
         if (processed.type === SpanType.Completion) {
           metadata = processed.metadata as CompletionSpanMetadata
         }
@@ -382,6 +385,18 @@ export async function processSpansBulk(
         'clickhouse-spans-write',
         tx,
       )
+      if (chEnabled.error) {
+        captureException(
+          new LatitudeError('Failed to resolve clickhouse-spans-write feature'),
+          {
+            workspaceId: workspace.id,
+            apiKeyId: apiKey.id,
+            spansCount: processedSpans.length,
+            error: String(chEnabled.error),
+          },
+        )
+      }
+
       if (chEnabled.ok && chEnabled.value) {
         const subscriptionResult = await findWorkspaceSubscription(
           {
@@ -389,6 +404,20 @@ export async function processSpansBulk(
           },
           tx,
         )
+        if (subscriptionResult.error) {
+          captureException(
+            new LatitudeError(
+              'Failed to resolve workspace subscription for spans',
+            ),
+            {
+              workspaceId: workspace.id,
+              apiKeyId: apiKey.id,
+              spansCount: processedSpans.length,
+              error: String(subscriptionResult.error),
+            },
+          )
+        }
+
         const retentionDays =
           subscriptionResult.ok && subscriptionResult.value
             ? SubscriptionPlans[subscriptionResult.value.plan].retention_period
@@ -396,14 +425,47 @@ export async function processSpansBulk(
         const now = new Date()
         const retentionExpiresAt = addDays(now, retentionDays)
 
-        bulkCreateClickHouseSpans(
-          processedSpans.map((s) => ({
-            ...s,
-            workspaceId: workspace.id,
-            apiKeyId: apiKey.id,
-            retentionExpiresAt,
-          })),
-        )
+        const spansForClickHouse = processedSpans.map((s) => ({
+          ...s,
+          workspaceId: workspace.id,
+          apiKeyId: apiKey.id,
+          retentionExpiresAt,
+        }))
+
+        void bulkCreateClickHouseSpans(spansForClickHouse)
+          .then((clickhouseResult) => {
+            if (clickhouseResult.error) {
+              captureException(
+                new LatitudeError('ClickHouse bulk span insertion failed'),
+                {
+                  workspaceId: workspace.id,
+                  apiKeyId: apiKey.id,
+                  spansCount: spansForClickHouse.length,
+                  error: String(clickhouseResult.error),
+                },
+              )
+              return
+            }
+
+            captureMessage('ClickHouse bulk span insertion succeeded', 'info', {
+              workspaceId: workspace.id,
+              apiKeyId: apiKey.id,
+              spansCount: spansForClickHouse.length,
+            })
+          })
+          .catch((error) => {
+            captureException(
+              new LatitudeError(
+                'ClickHouse bulk span insertion threw an error',
+              ),
+              {
+                workspaceId: workspace.id,
+                apiKeyId: apiKey.id,
+                spansCount: spansForClickHouse.length,
+                error: String(error),
+              },
+            )
+          })
       }
 
       return Result.ok({ spans: insertedSpans })
