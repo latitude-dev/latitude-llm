@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -147,6 +147,10 @@ export async function mergeCommit(
   // Phase 3: finalize merge in a new short transaction
   return transaction.call<Commit>(
     async (tx) => {
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(${sql.raw(String(commit.projectId))})`,
+      )
+
       const lastMergedCommit = await tx
         .select()
         .from(commits)
