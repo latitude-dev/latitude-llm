@@ -22,6 +22,14 @@ Before writing any code, load the `coding-standards` skill (`/coding-standards`)
 - `pnpm tc` - Type check all packages
 - `pnpm test` - Run all tests. NEVER run this command against the whole repo, only against packages you are working on, and one at a time, otherwise the host machine will run out of memory.
 
+### Running Tests
+
+To run tests for a specific package, `cd` into the package directory first and use `npx vitest` directly. Do NOT use `pnpm --filter` for running tests, as it fails due to permission issues.
+
+```bash
+cd packages/core && npx vitest run src/path/to/test.ts --no-coverage
+```
+
 ## Code Style
 
 - Use TypeScript for all code, prefer types over interfaces

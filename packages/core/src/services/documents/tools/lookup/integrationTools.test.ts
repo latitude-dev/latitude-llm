@@ -117,8 +117,12 @@ describe('lookupIntegrationTools', () => {
       expect(result.value!['my-integration_search']!.sourceData.source).toBe(
         ToolSource.Integration,
       )
-      expect(result.value!['my-integration_search']!.sourceData.integrationId).toBe(1)
-      expect(result.value!['my-integration_search']!.sourceData.toolLabel).toBe('Search Tool')
+      expect(
+        result.value!['my-integration_search']!.sourceData.integrationId,
+      ).toBe(1)
+      expect(result.value!['my-integration_search']!.sourceData.toolLabel).toBe(
+        'Search Tool',
+      )
       expect(result.value!['my-integration_search']!.sourceData.imageUrl).toBe(
         'https://example.com/image.png',
       )
@@ -267,8 +271,12 @@ describe('lookupIntegrationTools', () => {
         'gmail_personal_create_draft',
         'gmail_work_create_draft',
       ])
-      expect(result.value!['gmail_personal_create_draft']!.sourceData.integrationId).toBe(1)
-      expect(result.value!['gmail_work_create_draft']!.sourceData.integrationId).toBe(2)
+      expect(
+        result.value!['gmail_personal_create_draft']!.sourceData.integrationId,
+      ).toBe(1)
+      expect(
+        result.value!['gmail_work_create_draft']!.sourceData.integrationId,
+      ).toBe(2)
     })
 
     it('looks up tools from multiple integrations', async () => {

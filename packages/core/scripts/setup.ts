@@ -98,7 +98,10 @@ async function migrateExistingUsersToAdmins() {
 
   console.log(`Found ${nonAdminUsers.length} non-admin users to migrate`)
 
-  await database.update(users).set({ admin: true }).where(eq(users.admin, false))
+  await database
+    .update(users)
+    .set({ admin: true })
+    .where(eq(users.admin, false))
 
   console.log(`✓ Migrated ${nonAdminUsers.length} users to admins`)
 }
@@ -112,7 +115,10 @@ async function migrateExistingWorkspacesToEnterprise() {
       subscription: subscriptions,
     })
     .from(workspaces)
-    .innerJoin(subscriptions, eq(workspaces.currentSubscriptionId, subscriptions.id))
+    .innerJoin(
+      subscriptions,
+      eq(workspaces.currentSubscriptionId, subscriptions.id),
+    )
     .where(ne(subscriptions.plan, SubscriptionPlan.EnterpriseV1))
 
   if (workspacesWithNonEnterprise.length === 0) {
@@ -131,9 +137,14 @@ async function migrateExistingWorkspacesToEnterprise() {
       continue
     }
 
-    const result = await changeWorkspacePlan(fullWorkspace, SubscriptionPlan.EnterpriseV1)
+    const result = await changeWorkspacePlan(
+      fullWorkspace,
+      SubscriptionPlan.EnterpriseV1,
+    )
     if (result.error) {
-      console.log(`  ✗ Failed to migrate workspace ${workspace.name}: ${result.error.message}`)
+      console.log(
+        `  ✗ Failed to migrate workspace ${workspace.name}: ${result.error.message}`,
+      )
       continue
     }
 
