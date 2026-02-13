@@ -2,17 +2,20 @@
 
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
-import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
-import { cloneDeep } from 'lodash-es'
-import { redirect } from 'next/navigation'
-import { EvaluationPage as ClientEvaluationPage } from './_components/EvaluationPage'
 import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
 import {
   EvaluationResultsV2Search,
   evaluationResultsV2SearchFromQueryParams,
   evaluationResultsV2SearchToQueryParams,
 } from '@latitude-data/core/helpers'
+import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
+import {
+  CommitsRepository,
+  EvaluationResultsV2Repository,
+} from '@latitude-data/core/repositories'
+import { cloneDeep } from 'lodash-es'
+import { redirect } from 'next/navigation'
+import { EvaluationPage as ClientEvaluationPage } from './_components/EvaluationPage'
 
 const DEFAULT_SEARCH: EvaluationResultsV2Search = {
   filters: {},
@@ -49,6 +52,18 @@ export default async function EvaluationPage({
   }
 
   const { workspace } = await getCurrentUserOrRedirect()
+
+  if (search.filters?.commitIds === undefined) {
+    const commitsRepository = new CommitsRepository(workspace.id)
+    const commit = await commitsRepository
+      .getCommitByUuid({ projectId: Number(projectId), uuid: commitUuid })
+      .then((r) => r.unwrap())
+
+    search.filters = {
+      ...search.filters,
+      commitIds: [commit.id],
+    }
+  }
 
   const repository = new EvaluationResultsV2Repository(workspace.id)
 
