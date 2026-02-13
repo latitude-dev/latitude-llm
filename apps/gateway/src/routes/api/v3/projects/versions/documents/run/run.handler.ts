@@ -103,7 +103,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       tools,
       mcpHeaders,
       userMessage,
-      messages,
+      messages: messages as Message[] | undefined,
       source: effectiveSource,
       abTest,
     })
@@ -122,7 +122,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     tools,
     mcpHeaders,
     userMessage: userMessage || undefined,
-    messages,
+    messages: messages as Message[] | undefined,
   })
 }
 
