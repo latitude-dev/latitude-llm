@@ -11,7 +11,7 @@ export default function LatitudeLogo(props: LucideProps) {
       />
       <path
         d='M19.9998 13.9941C19.9578 14.864 19.8043 15.7039 19.5547 16.5007L0.445068 16.5007C0.19543 15.7039 0.0420302 14.864 0 13.9941L19.9998 13.9941Z'
-        fill='#030712'
+        fill='hsl(var(--foreground))'
       />
       <path
         fillRule='evenodd'

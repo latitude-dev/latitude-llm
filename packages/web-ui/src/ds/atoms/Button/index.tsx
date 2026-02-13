@@ -184,9 +184,9 @@ const textColorVariants = ({
   if (variant === 'linkDestructive') return 'destructiveMutedForeground'
   if (variant === 'shiny') return 'accentForeground'
   if (variant === 'latte') return 'latteInputForeground'
-  if (variant === 'primaryMuted') return 'primary'
+  if (variant === 'primaryMuted') return 'accentForeground'
   if (variant === 'outlineDestructive') return 'destructiveMutedForeground'
-  if (variant === 'destructiveMuted') return 'destructive'
+  if (variant === 'destructiveMuted') return 'destructiveMutedForeground'
   if (variant === 'successMuted') return 'successMutedForeground'
   return 'foreground'
 }
