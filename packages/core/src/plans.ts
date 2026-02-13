@@ -51,7 +51,7 @@ export const SubscriptionPlans = {
   [SubscriptionPlan.HobbyV3]: {
     name: 'Hobby',
     credits: 10_000, // runs
-    users: 2,
+    users: 'unlimited' as const,
     retention_period: 30, // days
     rate_limit: 10, // per second
     latte_credits: 30,
