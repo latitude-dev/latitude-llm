@@ -68,12 +68,21 @@ export async function backfillEvaluationResultsToClickhouseJob(
       )
     }
 
-    const batch = await database
-      .select()
+    const idSubquery = database
+      .select({ id: evaluationResultsV2.id })
       .from(evaluationResultsV2)
       .where(and(...conditions))
       .orderBy(evaluationResultsV2.createdAt, evaluationResultsV2.id)
       .limit(batchSize)
+      .as('id_subquery')
+
+    const batchRaw = await database
+      .select()
+      .from(evaluationResultsV2)
+      .innerJoin(idSubquery, eq(evaluationResultsV2.id, idSubquery.id))
+      .orderBy(evaluationResultsV2.createdAt, evaluationResultsV2.id)
+
+    const batch = batchRaw.map((r) => r.evaluation_results_v2)
 
     if (batch.length === 0) {
       await clearCursor(JOB_NAME, workspaceId)
@@ -91,27 +100,21 @@ export async function backfillEvaluationResultsToClickhouseJob(
     const commitIds = [...new Set(batch.map((r) => r.commitId))]
 
     const [commitsData, evalsData] = await Promise.all([
-      database
-        .select()
-        .from(commits)
-        .where(inArray(commits.id, commitIds)),
+      database.select().from(commits).where(inArray(commits.id, commitIds)),
       database
         .select()
         .from(evaluationVersions)
         .where(
           and(
             inArray(evaluationVersions.commitId, commitIds),
-            inArray(
-              evaluationVersions.evaluationUuid,
-              [...new Set(batch.map((r) => r.evaluationUuid))],
-            ),
+            inArray(evaluationVersions.evaluationUuid, [
+              ...new Set(batch.map((r) => r.evaluationUuid)),
+            ]),
           ),
         ),
     ])
 
-    const commitsMap = new Map(
-      commitsData.map((c) => [c.id, c as Commit]),
-    )
+    const commitsMap = new Map(commitsData.map((c) => [c.id, c as Commit]))
     const evalsMap = new Map(
       evalsData.map((ev) => [`${ev.evaluationUuid}:${ev.commitId}`, ev]),
     )
