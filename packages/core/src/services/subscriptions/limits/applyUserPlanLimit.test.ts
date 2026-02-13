@@ -17,13 +17,13 @@ describe('applyUserPlanLimit', () => {
   let creatorUser: User
 
   beforeEach(async () => {
-    // Create a test workspace with HobbyV3 plan (2 users limit)
+    // Create a test workspace with HobbyV2 plan (1 user limit)
     const result = await createWorkspace({
-      subscriptionPlan: SubscriptionPlan.HobbyV3,
+      subscriptionPlan: SubscriptionPlan.HobbyV2,
     })
     const subscription = await createSubscription({
       workspaceId: result.workspace.id,
-      plan: SubscriptionPlan.HobbyV3,
+      plan: SubscriptionPlan.HobbyV2,
     })
 
     workspace = {
@@ -72,10 +72,8 @@ describe('applyUserPlanLimit', () => {
   })
 
   it('returns PaymentRequiredError when users reach limit', async () => {
-    // Arrange - for HobbyV3, limit is 2 users, and creator already counts as 1
-    // So having exactly 2 users (the creator and a new user) should trigger the error
-    const user = await createUser()
-    await createMembership({ user, workspace, author: creatorUser })
+    // HobbyV2 has a limit of 1 user. The creator already counts as 1,
+    // so having exactly 1 user should trigger the error (1 >= 1).
 
     // Act
     const result = await applyUserPlanLimit({ workspace })
@@ -89,11 +87,9 @@ describe('applyUserPlanLimit', () => {
   })
 
   it('returns PaymentRequiredError when users exceed limit', async () => {
-    // Arrange - create 3 additional users (creator + 2 = 3 users > limit of 2 for HobbyV3)
+    // HobbyV2 has a limit of 1 user. Creator + 1 additional = 2 users > limit of 1.
     const user = await createUser()
     await createMembership({ user, workspace, author: creatorUser })
-    const user2 = await createUser()
-    await createMembership({ user: user2, workspace, author: creatorUser })
 
     // Act
     const result = await applyUserPlanLimit({ workspace })
