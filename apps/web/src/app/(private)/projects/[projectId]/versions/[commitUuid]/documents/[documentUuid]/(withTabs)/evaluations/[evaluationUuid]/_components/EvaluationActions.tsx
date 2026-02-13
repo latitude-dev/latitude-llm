@@ -305,6 +305,13 @@ function EditEvaluation<
             description='Only options can be updated in a published commit. Create a draft to edit the evaluation.'
           />
         )}
+        {isMainEvaluation && (
+          <Alert
+            variant='warning'
+            title='This evaluation is managed by the system and cannot be edited'
+            description='We automatically combine all evaluations that are monitoring active issues'
+          />
+        )}
         <EvaluationV2Form
           mode='update'
           uuid={evaluation.uuid}
@@ -318,13 +325,6 @@ function EditEvaluation<
           commit={commit}
           disabled={isUpdatingEvaluation || isMainEvaluation}
         />
-        {isMainEvaluation && (
-          <Alert
-            variant='warning'
-            title='This evaluation is automatically managed by the system and cannot be edited.'
-            description='This evaluation is automatically managed by the system and cannot be edited.'
-          />
-        )}
       </ConfirmModal>
     </>
   )

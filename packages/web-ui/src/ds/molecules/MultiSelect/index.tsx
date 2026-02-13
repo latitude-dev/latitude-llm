@@ -2,8 +2,8 @@ import {
   forwardRef,
   KeyboardEvent,
   ReactNode,
-  useState,
   useCallback,
+  useState,
 } from 'react'
 import { cn } from '../../../lib/utils'
 import { Badge } from '../../atoms/Badge'
@@ -16,9 +16,9 @@ import {
   CommandItem,
   CommandList,
 } from '../../atoms/Command'
+import { Icon, IconName } from '../../atoms/Icons'
 import { Popover } from '../../atoms/Popover'
 import { Text } from '../../atoms/Text'
-import { Icon, IconName } from '../../atoms/Icons'
 
 type MultiSelectOption = {
   label: string
@@ -119,7 +119,11 @@ const DefaultMultiSelectTrigger = forwardRef<
                   >
                     <div className='flex flex-row items-center gap-x-1'>
                       <Text.H6>{option?.label ?? 'Unknown'}</Text.H6>
-                      <div className='cursor-pointer'>
+                      <div
+                        className={cn('cursor-pointer', {
+                          'cursor-not-allowed': disabled,
+                        })}
+                      >
                         <Icon name='close' size='small' />
                       </div>
                     </div>
@@ -140,7 +144,11 @@ const DefaultMultiSelectTrigger = forwardRef<
                 >
                   <div className='flex items-center gap-2'>
                     <Text.H6>{`+ ${selectedValues.length - maxCount} more`}</Text.H6>
-                    <div className='cursor-pointer'>
+                    <div
+                      className={cn('cursor-pointer', {
+                        'cursor-not-allowed': disabled,
+                      })}
+                    >
                       <Icon name='close' size='small' />
                     </div>
                   </div>
@@ -149,7 +157,9 @@ const DefaultMultiSelectTrigger = forwardRef<
             </div>
             <div className='flex items-center gap-2'>
               <div
-                className='cursor-pointer text-muted-foreground'
+                className={cn('cursor-pointer text-muted-foreground', {
+                  'cursor-not-allowed': disabled,
+                })}
                 onClick={(event) => {
                   if (disabled) return
                   event.stopPropagation()
@@ -158,7 +168,11 @@ const DefaultMultiSelectTrigger = forwardRef<
               >
                 <Icon name='close' color='foregroundMuted' />
               </div>
-              <div className='cursor-pointer text-muted-foreground'>
+              <div
+                className={cn('cursor-pointer text-muted-foreground', {
+                  'cursor-not-allowed': disabled,
+                })}
+              >
                 <Icon
                   name='chevronsUpDown'
                   size='normal'
@@ -305,7 +319,7 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
         onOpenChange={handleOpenChange}
         modal={modalPopover}
       >
-        <Popover.Trigger asChild>
+        <Popover.Trigger className='disabled:opacity-50' asChild>
           {trigger || (
             <DefaultMultiSelectTrigger
               ref={ref}

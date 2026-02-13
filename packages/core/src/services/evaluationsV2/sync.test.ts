@@ -71,11 +71,15 @@ describe('syncDefaultCompositeTarget', () => {
     }
   })
 
-  async function createLlmEvaluation(issueId?: number) {
+  async function createLlmEvaluation({
+    issueId,
+    name,
+  }: { issueId?: number; name?: string } = {}) {
     return factories.createEvaluationV2({
       document,
       commit,
       workspace,
+      name,
       type: EvaluationType.Llm,
       metric: LlmEvaluationMetric.Binary,
       configuration: {
@@ -128,7 +132,7 @@ describe('syncDefaultCompositeTarget', () => {
 
   describe('when no issue-linked evaluations exist', () => {
     it('does nothing when no composite exists', async () => {
-      await createLlmEvaluation() // evaluation without issue
+      await createLlmEvaluation()
       mocks.publisher.mockClear()
 
       const result = await syncDefaultCompositeTarget({
@@ -146,13 +150,11 @@ describe('syncDefaultCompositeTarget', () => {
 
     it('deletes composite when it exists but no issue-linked evaluations remain', async () => {
       // First create an issue-linked evaluation to get a composite
-      await createLlmEvaluation(issue.id)
+      await createLlmEvaluation({ issueId: issue.id })
       let doc = await getDocument()
       const compositeUuid = doc.mainEvaluationUuid!
       expect(compositeUuid).toBeDefined()
 
-      // Now simulate removing the issue link by updating the evaluation
-      // We need to delete the issue-linked evaluation for this test
       const evalVersion = await database
         .select()
         .from(evaluationVersions)
@@ -191,7 +193,7 @@ describe('syncDefaultCompositeTarget', () => {
 
   describe('when issue-linked evaluations exist', () => {
     it('creates composite when none exists', async () => {
-      const evaluation = await createLlmEvaluation(issue.id)
+      const evaluation = await createLlmEvaluation({ issueId: issue.id })
       const doc = await getDocument()
       const compositeUuid = doc.mainEvaluationUuid!
 
@@ -210,7 +212,7 @@ describe('syncDefaultCompositeTarget', () => {
     })
 
     it('updates composite to include all issue-linked evaluations', async () => {
-      const evaluation1 = await createLlmEvaluation(issue.id)
+      const evaluation1 = await createLlmEvaluation({ issueId: issue.id })
       let doc = await getDocument()
       const compositeUuid = doc.mainEvaluationUuid!
 
@@ -219,7 +221,7 @@ describe('syncDefaultCompositeTarget', () => {
         workspace,
         project,
       })
-      const evaluation2 = await createLlmEvaluation(issue2.id)
+      const evaluation2 = await createLlmEvaluation({ issueId: issue2.id })
 
       doc = await getDocument()
 
@@ -234,9 +236,9 @@ describe('syncDefaultCompositeTarget', () => {
     })
 
     it('only includes issue-linked evaluations in composite', async () => {
-      const evaluation1 = await createLlmEvaluation(issue.id)
-      await createLlmEvaluation() // no issue
-      await createLlmEvaluation() // no issue
+      const evaluation1 = await createLlmEvaluation({ issueId: issue.id })
+      await createLlmEvaluation()
+      await createLlmEvaluation()
 
       const doc = await getDocument()
       const compositeUuid = doc.mainEvaluationUuid!
@@ -251,7 +253,7 @@ describe('syncDefaultCompositeTarget', () => {
 
   describe('when syncing removes evaluations from composite', () => {
     it('removes evaluation from composite when it loses issue and others remain', async () => {
-      const evaluation1 = await createLlmEvaluation(issue.id)
+      const evaluation1 = await createLlmEvaluation({ issueId: issue.id })
       let doc = await getDocument()
 
       const { issue: issue2 } = await factories.createIssue({
@@ -259,14 +261,12 @@ describe('syncDefaultCompositeTarget', () => {
         workspace,
         project,
       })
-      const evaluation2 = await createLlmEvaluation(issue2.id)
+      const evaluation2 = await createLlmEvaluation({ issueId: issue2.id })
 
       doc = await getDocument()
       const compositeUuid = doc.mainEvaluationUuid!
       const composite = await getCompositeEvaluation(compositeUuid)
       expect(composite?.configuration.evaluationUuids).toHaveLength(2)
-
-      // Remove issue from evaluation1 by updating the database directly
       const evalVersion = await database
         .select()
         .from(evaluationVersions)
@@ -309,11 +309,9 @@ describe('syncDefaultCompositeTarget', () => {
 
   describe('composite configuration is always reset', () => {
     it('resets composite configuration to default values on sync', async () => {
-      const evaluation = await createLlmEvaluation(issue.id)
+      const evaluation = await createLlmEvaluation({ issueId: issue.id })
       const doc = await getDocument()
       const compositeUuid = doc.mainEvaluationUuid!
-
-      // Manually modify the composite configuration
       const compositeVersion = await database
         .select()
         .from(evaluationVersions)
@@ -361,6 +359,95 @@ describe('syncDefaultCompositeTarget', () => {
     })
   })
 
+  describe('composite name generation', () => {
+    it('uses "Performance" when no conflicting name exists', async () => {
+      await createLlmEvaluation({ issueId: issue.id })
+      const doc = await getDocument()
+      const compositeUuid = doc.mainEvaluationUuid!
+
+      const composite = await getCompositeEvaluation(compositeUuid)
+      expect(composite?.name).toBe('Performance')
+    })
+
+    it('uses "Performance (1)" when a user evaluation is named "Performance"', async () => {
+      await createLlmEvaluation({ name: 'Performance' })
+      await createLlmEvaluation({ issueId: issue.id })
+
+      const doc = await getDocument()
+      const compositeUuid = doc.mainEvaluationUuid!
+
+      const composite = await getCompositeEvaluation(compositeUuid)
+      expect(composite?.name).toBe('Performance (1)')
+    })
+
+    it('uses "Performance (2)" when both "Performance" and "Performance (1)" are taken', async () => {
+      await createLlmEvaluation({ name: 'Performance' })
+      await createLlmEvaluation({ name: 'Performance (1)' })
+      await createLlmEvaluation({ issueId: issue.id })
+
+      const doc = await getDocument()
+      const compositeUuid = doc.mainEvaluationUuid!
+
+      const composite = await getCompositeEvaluation(compositeUuid)
+      expect(composite?.name).toBe('Performance (2)')
+    })
+
+    it('resets name to "Performance" on sync when conflict is gone', async () => {
+      await createLlmEvaluation({ name: 'Performance' })
+      await createLlmEvaluation({ issueId: issue.id })
+
+      let doc = await getDocument()
+      const compositeUuid = doc.mainEvaluationUuid!
+      let composite = await getCompositeEvaluation(compositeUuid)
+      expect(composite?.name).toBe('Performance (1)')
+
+      const conflicting = await database
+        .select()
+        .from(evaluationVersions)
+        .where(
+          and(
+            eq(evaluationVersions.commitId, commit.id),
+            eq(evaluationVersions.name, 'Performance'),
+            eq(evaluationVersions.type, EvaluationType.Llm),
+          ),
+        )
+        .then((r) => r[0]!)
+
+      await database
+        .update(evaluationVersions)
+        .set({ name: 'Renamed' })
+        .where(eq(evaluationVersions.id, conflicting.id))
+
+      doc = await getDocument()
+      mocks.publisher.mockClear()
+
+      await syncDefaultCompositeTarget({ document: doc, commit, workspace })
+
+      composite = await getCompositeEvaluation(compositeUuid)
+      expect(composite?.name).toBe('Performance')
+    })
+
+    it('keeps "Performance" when composite already has that name and no conflict exists', async () => {
+      await createLlmEvaluation({ issueId: issue.id })
+      let doc = await getDocument()
+      const compositeUuid = doc.mainEvaluationUuid!
+
+      let composite = await getCompositeEvaluation(compositeUuid)
+      expect(composite?.name).toBe('Performance')
+
+      const { issue: issue2 } = await factories.createIssue({
+        document,
+        workspace,
+        project,
+      })
+      await createLlmEvaluation({ issueId: issue2.id })
+
+      doc = await getDocument()
+      composite = await getCompositeEvaluation(compositeUuid)
+      expect(composite?.name).toBe('Performance')
+    })
+  })
+
   describe('when commit is merged', () => {
     let mergedWorkspace: Workspace
     let mergedProject: Project
@@ -399,11 +486,15 @@ describe('syncDefaultCompositeTarget', () => {
       mergedIssue = i
     })
 
-    async function createMergedLlmEvaluation(issueId?: number) {
+    async function createMergedLlmEvaluation({
+      issueId,
+      name,
+    }: { issueId?: number; name?: string } = {}) {
       return factories.createEvaluationV2({
         document: mergedDocument,
         commit: mergedCommit,
         workspace: mergedWorkspace,
+        name,
         type: EvaluationType.Llm,
         metric: LlmEvaluationMetric.Binary,
         configuration: {
@@ -455,7 +546,9 @@ describe('syncDefaultCompositeTarget', () => {
     }
 
     it('creates composite on merged commit when issue-linked evaluation exists', async () => {
-      const evaluation = await createMergedLlmEvaluation(mergedIssue.id)
+      const evaluation = await createMergedLlmEvaluation({
+        issueId: mergedIssue.id,
+      })
       const doc = await getMergedDocument()
       const compositeUuid = doc.mainEvaluationUuid!
 
@@ -474,7 +567,9 @@ describe('syncDefaultCompositeTarget', () => {
     })
 
     it('updates composite on merged commit when new issue-linked evaluation is added', async () => {
-      const evaluation1 = await createMergedLlmEvaluation(mergedIssue.id)
+      const evaluation1 = await createMergedLlmEvaluation({
+        issueId: mergedIssue.id,
+      })
       let doc = await getMergedDocument()
 
       const { issue: issue2 } = await factories.createIssue({
@@ -482,7 +577,9 @@ describe('syncDefaultCompositeTarget', () => {
         workspace: mergedWorkspace,
         project: mergedProject,
       })
-      const evaluation2 = await createMergedLlmEvaluation(issue2.id)
+      const evaluation2 = await createMergedLlmEvaluation({
+        issueId: issue2.id,
+      })
 
       doc = await getMergedDocument()
       const compositeUuid = doc.mainEvaluationUuid!
@@ -497,11 +594,9 @@ describe('syncDefaultCompositeTarget', () => {
     })
 
     it('deletes composite on merged commit when last issue-linked evaluation loses issue', async () => {
-      await createMergedLlmEvaluation(mergedIssue.id)
+      await createMergedLlmEvaluation({ issueId: mergedIssue.id })
       let doc = await getMergedDocument()
       const compositeUuid = doc.mainEvaluationUuid!
-
-      // Remove issue from the evaluation
       const evalVersion = await database
         .select()
         .from(evaluationVersions)

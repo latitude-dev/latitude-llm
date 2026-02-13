@@ -52,45 +52,53 @@ const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> &
     AdditionalSliderProps
->(({ className, showMiddleRange, legend: legendProp, ...props }, ref) => {
-  const legend = legendProp ? resolveLegend(legendProp, props) : null
+>(
+  (
+    { className, showMiddleRange, legend: legendProp, disabled, ...props },
+    ref,
+  ) => {
+    const legend = legendProp ? resolveLegend(legendProp, props) : null
 
-  return (
-    <div className='flex flex-col gap-2 w-full'>
-      {legend && (
-        <div className='relative flex items-center justify-between min-h-5'>
-          <span className='shrink-0'>
-            <LegendLabel>{legend.min}</LegendLabel>
-          </span>
-          {legend.value !== undefined && (
-            <span className='absolute left-1/2 -translate-x-1/2'>
-              <LegendValue>{legend.value}</LegendValue>
-            </span>
-          )}
-          <span className='shrink-0'>
-            <LegendLabel>{legend.max}</LegendLabel>
-          </span>
-        </div>
-      )}
-      <SliderPrimitive.Root
-        ref={ref}
-        className={cn(
-          'relative flex w-full touch-none select-none items-center',
-          className,
-        )}
-        {...props}
+    return (
+      <div
+        className={cn('flex flex-col gap-2 w-full', { 'opacity-50': disabled })}
       >
-        {showMiddleRange && (
-          <div className='absolute h-4 w-0.5 bg-muted-foreground left-1/2 transform -translate-x-1/2 opacity-50 rounded-full' />
+        {legend && (
+          <div className='relative flex items-center justify-between min-h-5'>
+            <span className='shrink-0'>
+              <LegendLabel>{legend.min}</LegendLabel>
+            </span>
+            {legend.value !== undefined && (
+              <span className='absolute left-1/2 -translate-x-1/2'>
+                <LegendValue>{legend.value}</LegendValue>
+              </span>
+            )}
+            <span className='shrink-0'>
+              <LegendLabel>{legend.max}</LegendLabel>
+            </span>
+          </div>
         )}
-        <SliderPrimitive.Track className='relative h-2 w-full grow overflow-hidden rounded-full bg-muted'>
-          <SliderPrimitive.Range className='absolute h-full bg-primary' />
-        </SliderPrimitive.Track>
-        <SliderPrimitive.Thumb className='cursor-pointer block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50' />
-      </SliderPrimitive.Root>
-    </div>
-  )
-})
+        <SliderPrimitive.Root
+          ref={ref}
+          disabled={disabled}
+          className={cn(
+            'relative flex w-full touch-none select-none items-center data-[disabled]:cursor-not-allowed',
+            className,
+          )}
+          {...props}
+        >
+          {showMiddleRange && (
+            <div className='absolute h-4 w-0.5 bg-muted-foreground left-1/2 transform -translate-x-1/2 opacity-50 rounded-full' />
+          )}
+          <SliderPrimitive.Track className='relative h-2 w-full grow overflow-hidden rounded-full bg-muted'>
+            <SliderPrimitive.Range className='absolute h-full bg-primary' />
+          </SliderPrimitive.Track>
+          <SliderPrimitive.Thumb className='cursor-pointer block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[disabled]:pointer-events-none data-[disabled]:opacity-50' />
+        </SliderPrimitive.Root>
+      </div>
+    )
+  },
+)
 Slider.displayName = SliderPrimitive.Root.displayName
 
 export { Slider }

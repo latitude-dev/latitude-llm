@@ -1,4 +1,3 @@
-import { Database } from '../../client'
 import {
   CompositeEvaluationMetric,
   EvaluationSettings,
@@ -29,39 +28,22 @@ type CompositeSettings = EvaluationSettings<
   CompositeEvaluationMetric.Average
 >
 
-async function getCompositeTarget({
-  document,
-  commit,
-  workspace,
-  db,
-}: {
-  document: DocumentVersion
-  commit: Commit
-  workspace: Workspace
-  db: Database
-}): PromisedResult<CompositeTarget | undefined> {
-  if (!document.mainEvaluationUuid) {
-    return Result.ok(undefined)
-  }
+const COMPOSITE_BASE_NAME = 'Performance'
 
-  const repository = new EvaluationsV2Repository(workspace.id, db)
-  const result = await repository.getAtCommitByDocument({
-    projectId: commit.projectId,
-    commitUuid: commit.uuid,
-    documentUuid: document.documentUuid,
-    evaluationUuid: document.mainEvaluationUuid,
-  })
+function generateCompositeName(existingNames: Set<string>): string {
+  if (!existingNames.has(COMPOSITE_BASE_NAME)) return COMPOSITE_BASE_NAME
 
-  if (result.error) return Result.error(result.error)
-
-  return Result.ok(result.value as CompositeTarget | undefined)
+  let n = 1
+  while (existingNames.has(`${COMPOSITE_BASE_NAME} (${n})`)) n++
+  return `${COMPOSITE_BASE_NAME} (${n})`
 }
 
 function generateCompositeEvaluationSettings(
   evaluations: EvaluationV2[],
+  name: string,
 ): CompositeSettings {
   return {
-    name: 'Performance',
+    name,
     description: 'Measures the overall performance',
     type: EvaluationType.Composite,
     metric: CompositeEvaluationMetric.Average,
@@ -86,11 +68,13 @@ async function createCompositeEvaluation(
     document,
     commit,
     workspace,
+    name,
   }: {
     evaluations: EvaluationV2[]
     document: DocumentVersion
     commit: Commit
     workspace: Workspace
+    name: string
   },
   transaction: Transaction,
 ): PromisedResult<CompositeTarget> {
@@ -99,7 +83,7 @@ async function createCompositeEvaluation(
       {
         document,
         commit,
-        settings: generateCompositeEvaluationSettings(evaluations),
+        settings: generateCompositeEvaluationSettings(evaluations, name),
         options: {
           evaluateLiveLogs: false,
         },
@@ -126,11 +110,13 @@ async function updateCompositeEvaluation(
     evaluations,
     commit,
     workspace,
+    name,
   }: {
     compositeEvaluation: CompositeTarget
     evaluations: EvaluationV2[]
     commit: Commit
     workspace: Workspace
+    name: string
   },
   transaction: Transaction,
 ): PromisedResult<CompositeTarget> {
@@ -140,7 +126,7 @@ async function updateCompositeEvaluation(
         evaluation: compositeEvaluation,
         commit,
         workspace,
-        settings: generateCompositeEvaluationSettings(evaluations),
+        settings: generateCompositeEvaluationSettings(evaluations, name),
         force: true,
       },
       transaction,
@@ -217,44 +203,31 @@ export async function syncDefaultCompositeTarget(
     if (documentResult.error) return documentResult
     const document = documentResult.unwrap()
 
-    // Get the default composite evaluation for the document
-    const compositeEvalResult = await getCompositeTarget({
-      document,
-      commit,
-      workspace,
-      db: tx,
-    })
-
-    if (compositeEvalResult.error) return compositeEvalResult
-    const compositeEvaluation = compositeEvalResult.unwrap()
-
-    // Get the issue-related evaluations for the document
     const evaluationsScope = new EvaluationsV2Repository(workspace.id, tx)
     const evaluationsResult = await evaluationsScope.listAtCommitByDocument({
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
     })
     if (evaluationsResult.error) return evaluationsResult
-    const evaluations = evaluationsResult.unwrap()
+    let evaluations = evaluationsResult.unwrap()
 
-    const issueRelatedEvaluations = evaluations.filter(
-      (evaluation) => evaluation.issueId !== null,
-    )
+    const compositeEvaluation = evaluations.find(
+      (e) => e.uuid === document.mainEvaluationUuid,
+    ) as CompositeTarget | undefined
 
-    if (issueRelatedEvaluations.length === 0) {
-      if (!compositeEvaluation) {
-        // No issue evaluations and no composite eval, there is nothing to do.
-        return Result.nil()
-      }
+    evaluations = evaluations.filter((e) => e.uuid !== document.mainEvaluationUuid) // prettier-ignore
+    const issueEvaluations = evaluations.filter((e) => e.issueId !== null)
+
+    const existingNames = new Set(evaluations.map((e) => e.name))
+    const name = generateCompositeName(existingNames)
+
+    if (issueEvaluations.length === 0) {
+      // No issue evaluations and no composite eval, there is nothing to do.
+      if (!compositeEvaluation) return Result.nil()
 
       // There is a composite eval, but no longer any issue evaluations, so we need to delete it.
       return deleteCompositeEvaluation(
-        {
-          target: compositeEvaluation,
-          document,
-          commit,
-          workspace,
-        },
+        { target: compositeEvaluation, document, commit, workspace },
         transaction,
       )
     }
@@ -262,10 +235,11 @@ export async function syncDefaultCompositeTarget(
     if (!compositeEvaluation) {
       return createCompositeEvaluation(
         {
-          evaluations: issueRelatedEvaluations,
+          evaluations: issueEvaluations,
           document,
           commit,
           workspace,
+          name,
         },
         transaction,
       )
@@ -274,9 +248,10 @@ export async function syncDefaultCompositeTarget(
     return updateCompositeEvaluation(
       {
         compositeEvaluation,
-        evaluations: issueRelatedEvaluations,
+        evaluations: issueEvaluations,
         commit,
         workspace,
+        name,
       },
       transaction,
     )

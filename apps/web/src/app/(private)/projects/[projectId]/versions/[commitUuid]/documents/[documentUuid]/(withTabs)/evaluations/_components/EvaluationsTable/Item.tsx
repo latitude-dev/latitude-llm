@@ -163,9 +163,8 @@ export function EvaluationTableItem({
               side='top'
               maxWidth='max-w-[400px]'
             >
-              This evaluation is automatically managed by the system and
-              contains a combination of all evaluations that are tracking and
-              monitoring active issues.
+              This evaluation is managed by the system and combines all
+              evaluations that are tracking and monitoring active issues
             </Tooltip>
           )}
         </div>
