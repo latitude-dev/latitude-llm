@@ -157,12 +157,12 @@ export function TriggerHeader({
 
   const isLoading = isLoadingIntegrations || isLoadingDocuments
 
-  if (isLoading) return <LoadingTriggerHeader />
+  if (isLoading || !document) return <LoadingTriggerHeader />
   return (
     <LoadedTriggerHeader
       trigger={trigger}
       commit={commit}
-      document={document!}
+      document={document}
       integrations={integrations!}
     />
   )
