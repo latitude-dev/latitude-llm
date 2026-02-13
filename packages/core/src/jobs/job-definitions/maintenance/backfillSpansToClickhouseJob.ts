@@ -13,6 +13,7 @@ import {
   SubscriptionPlans,
 } from '../../../plans'
 import { queues } from '../../queues'
+import { saveCursor, loadCursor, clearCursor } from '../../utils/backfillCursor'
 import { captureException } from '../../../utils/datadogCapture'
 import { LatitudeError } from '../../../lib/errors'
 
@@ -25,16 +26,23 @@ export type BackfillSpansToClickhouseJobData = {
 
 const DEFAULT_BATCH_SIZE = 1000
 const BACKFILL_LOOKBACK_DAYS = 30
+const JOB_NAME = 'backfillSpansToClickhouse'
+
+type CursorState = { startedAtCursor: string; spanIdCursor: string }
 
 export async function backfillSpansToClickhouseJob(
   job: Job<BackfillSpansToClickhouseJobData>,
 ) {
-  const {
-    workspaceId,
-    batchSize = DEFAULT_BATCH_SIZE,
-    startedAtCursor,
-    spanIdCursor,
-  } = job.data
+  const { workspaceId, batchSize = DEFAULT_BATCH_SIZE } = job.data
+
+  let { startedAtCursor, spanIdCursor } = job.data
+  if (!startedAtCursor || !spanIdCursor) {
+    const saved = await loadCursor<CursorState>(JOB_NAME, workspaceId)
+    if (saved) {
+      startedAtCursor = saved.startedAtCursor
+      spanIdCursor = saved.spanIdCursor
+    }
+  }
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) return
@@ -67,7 +75,10 @@ export async function backfillSpansToClickhouseJob(
     .orderBy(spans.startedAt, spans.id)
     .limit(batchSize)
 
-  if (batch.length === 0) return
+  if (batch.length === 0) {
+    await clearCursor(JOB_NAME, workspaceId)
+    return
+  }
 
   const rows: SpanRow[] = batch.map((span) => {
     const isCompletion = span.type === SpanType.Completion
@@ -116,18 +127,25 @@ export async function backfillSpansToClickhouseJob(
     throw result.error
   }
 
+  const lastSpan = batch[batch.length - 1]!
+  const nextCursor: CursorState = {
+    startedAtCursor: lastSpan.startedAt.toISOString(),
+    spanIdCursor: lastSpan.id,
+  }
+  await saveCursor(JOB_NAME, workspaceId, nextCursor)
+
   if (batch.length === batchSize) {
-    const lastSpan = batch[batch.length - 1]!
     const { maintenanceQueue } = await queues()
     await maintenanceQueue.add(
       'backfillSpansToClickhouseJob',
       {
         workspaceId,
         batchSize,
-        startedAtCursor: lastSpan.startedAt.toISOString(),
-        spanIdCursor: lastSpan.id,
+        ...nextCursor,
       },
       { attempts: 3 },
     )
+  } else {
+    await clearCursor(JOB_NAME, workspaceId)
   }
 }

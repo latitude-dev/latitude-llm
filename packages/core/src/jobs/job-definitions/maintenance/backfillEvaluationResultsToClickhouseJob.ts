@@ -12,6 +12,7 @@ import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import { evaluationVersions } from '../../../schema/models/evaluationVersions'
 import { commits } from '../../../schema/models/commits'
 import { queues } from '../../queues'
+import { saveCursor, loadCursor, clearCursor } from '../../utils/backfillCursor'
 import { captureException } from '../../../utils/datadogCapture'
 import { LatitudeError } from '../../../lib/errors'
 import type { EvaluationResultV2, EvaluationV2 } from '../../../constants'
@@ -26,16 +27,23 @@ export type BackfillEvaluationResultsToClickhouseJobData = {
 
 const DEFAULT_BATCH_SIZE = 1000
 const BACKFILL_LOOKBACK_DAYS = 30
+const JOB_NAME = 'backfillEvaluationResultsToClickhouse'
+
+type CursorState = { createdAtCursor: string; idCursor: number }
 
 export async function backfillEvaluationResultsToClickhouseJob(
   job: Job<BackfillEvaluationResultsToClickhouseJobData>,
 ) {
-  const {
-    workspaceId,
-    batchSize = DEFAULT_BATCH_SIZE,
-    createdAtCursor,
-    idCursor,
-  } = job.data
+  const { workspaceId, batchSize = DEFAULT_BATCH_SIZE } = job.data
+
+  let { createdAtCursor, idCursor } = job.data
+  if (!createdAtCursor || idCursor === undefined) {
+    const saved = await loadCursor<CursorState>(JOB_NAME, workspaceId)
+    if (saved) {
+      createdAtCursor = saved.createdAtCursor
+      idCursor = saved.idCursor
+    }
+  }
 
   const yesterday = new Date('2026-02-12T00:00:00.000Z')
   const lookbackStart = subDays(yesterday, BACKFILL_LOOKBACK_DAYS)
@@ -73,7 +81,10 @@ export async function backfillEvaluationResultsToClickhouseJob(
     .orderBy(evaluationResultsV2.createdAt, evaluationResultsV2.id)
     .limit(batchSize)
 
-  if (batch.length === 0) return
+  if (batch.length === 0) {
+    await clearCursor(JOB_NAME, workspaceId)
+    return
+  }
 
   const rows: EvaluationResultV2Row[] = batch.map((row) => {
     const result = row.result as unknown as EvaluationResultV2
@@ -113,18 +124,25 @@ export async function backfillEvaluationResultsToClickhouseJob(
     throw insertResult.error
   }
 
+  const lastResult = batch[batch.length - 1]!.result
+  const nextCursor: CursorState = {
+    createdAtCursor: lastResult.createdAt.toISOString(),
+    idCursor: lastResult.id,
+  }
+  await saveCursor(JOB_NAME, workspaceId, nextCursor)
+
   if (batch.length === batchSize) {
-    const lastResult = batch[batch.length - 1]!.result
     const { maintenanceQueue } = await queues()
     await maintenanceQueue.add(
       'backfillEvaluationResultsToClickhouseJob',
       {
         workspaceId,
         batchSize,
-        createdAtCursor: lastResult.createdAt.toISOString(),
-        idCursor: lastResult.id,
+        ...nextCursor,
       },
       { attempts: 3 },
     )
+  } else {
+    await clearCursor(JOB_NAME, workspaceId)
   }
 }
