@@ -2,6 +2,7 @@ import { Job } from 'bullmq'
 import { and, eq, gte, inArray, lt, sql } from 'drizzle-orm'
 import { subDays } from 'date-fns'
 import { database } from '../../../client'
+import { clickhouseClient } from '../../../client/clickhouse'
 import { insertRows } from '../../../clickhouse/insert'
 import {
   EVALUATION_RESULTS_TABLE,
@@ -115,8 +116,25 @@ export async function backfillEvaluationResultsToClickhouseJob(
       evalsData.map((ev) => [`${ev.evaluationUuid}:${ev.commitId}`, ev]),
     )
 
+    const batchIds = batch.map((r) => r.id)
+    const existingResult = await clickhouseClient().query({
+      query: `
+        SELECT id
+        FROM ${EVALUATION_RESULTS_TABLE} FINAL
+        WHERE workspace_id = {workspaceId: UInt64}
+          AND id IN ({ids: Array(UInt64)})
+      `,
+      format: 'JSONEachRow',
+      query_params: { workspaceId, ids: batchIds },
+    })
+    const existingIds = new Set(
+      (await existingResult.json<{ id: number }>()).map((r) => r.id),
+    )
+
+    const newResults = batch.filter((r) => !existingIds.has(r.id))
+
     const rows: EvaluationResultV2Row[] = []
-    for (const resultRow of batch) {
+    for (const resultRow of newResults) {
       const result = resultRow as unknown as EvaluationResultV2
       const commit = commitsMap.get(resultRow.commitId)
       const ev = evalsMap.get(
@@ -155,25 +173,31 @@ export async function backfillEvaluationResultsToClickhouseJob(
       rows.push(buildEvaluationResultRow({ result, evaluation, commit }))
     }
 
-    const insertResult = await insertRows(EVALUATION_RESULTS_TABLE, rows)
-    if (insertResult.error) {
-      await logger.error(`ClickHouse insertion failed`, {
-        workspaceId,
-        error: String(insertResult.error),
-      })
-      captureException(
-        new LatitudeError(
-          'Backfill: ClickHouse evaluation result insertion failed',
-        ),
-        { workspaceId, batchSize, error: String(insertResult.error) },
-      )
-      throw insertResult.error
-    }
+    if (rows.length > 0) {
+      const insertResult = await insertRows(EVALUATION_RESULTS_TABLE, rows)
+      if (insertResult.error) {
+        await logger.error(`ClickHouse insertion failed`, {
+          workspaceId,
+          error: String(insertResult.error),
+        })
+        captureException(
+          new LatitudeError(
+            'Backfill: ClickHouse evaluation result insertion failed',
+          ),
+          { workspaceId, batchSize, error: String(insertResult.error) },
+        )
+        throw insertResult.error
+      }
 
-    await logger.info(`Inserted ${rows.length} eval results into ClickHouse`, {
-      workspaceId,
-      count: rows.length,
-    })
+      await logger.info(
+        `Inserted ${rows.length} eval results into ClickHouse`,
+        { workspaceId, count: rows.length, skipped: existingIds.size },
+      )
+    } else {
+      await logger.info(
+        `All ${batch.length} eval results already exist in ClickHouse, skipping insert`,
+      )
+    }
 
     const lastResult = batch[batch.length - 1]!
     const nextCursor: CursorState = {

@@ -2,6 +2,7 @@ import { Job } from 'bullmq'
 import { and, eq, gte, lt, sql } from 'drizzle-orm'
 import { addDays, subDays } from 'date-fns'
 import { database } from '../../../client'
+import { clickhouseClient } from '../../../client/clickhouse'
 import { toClickHouseDateTime, insertRows } from '../../../clickhouse/insert'
 import { SpanRow, SPANS_TABLE } from '../../../clickhouse/models/spans'
 import { spans } from '../../../schema/models/spans'
@@ -100,7 +101,31 @@ export async function backfillSpansToClickhouseJob(
       count: batch.length,
     })
 
-    const rows: SpanRow[] = batch.map((span) => {
+    const spanIds = batch.map((s) => s.id)
+    const existingResult = await clickhouseClient().query({
+      query: `
+        SELECT span_id
+        FROM ${SPANS_TABLE} FINAL
+        WHERE workspace_id = {workspaceId: UInt64}
+          AND span_id IN ({spanIds: Array(String)})
+      `,
+      format: 'JSONEachRow',
+      query_params: { workspaceId, spanIds },
+    })
+    const existingSpanIds = new Set(
+      (await existingResult.json<{ span_id: string }>()).map(
+        (r) => r.span_id,
+      ),
+    )
+
+    const newSpans = batch.filter((s) => !existingSpanIds.has(s.id))
+    if (newSpans.length === 0) {
+      await logger.info(
+        `All ${batch.length} spans already exist in ClickHouse, skipping insert`,
+      )
+    }
+
+    const rows: SpanRow[] = newSpans.map((span) => {
       const isCompletion = span.type === SpanType.Completion
       return {
         workspace_id: span.workspaceId,
@@ -138,23 +163,26 @@ export async function backfillSpansToClickhouseJob(
       }
     })
 
-    const result = await insertRows(SPANS_TABLE, rows)
-    if (result.error) {
-      await logger.error(`ClickHouse insertion failed`, {
-        workspaceId,
-        error: String(result.error),
-      })
-      captureException(
-        new LatitudeError('Backfill: ClickHouse span insertion failed'),
-        { workspaceId, batchSize, error: String(result.error) },
-      )
-      throw result.error
-    }
+    if (rows.length > 0) {
+      const result = await insertRows(SPANS_TABLE, rows)
+      if (result.error) {
+        await logger.error(`ClickHouse insertion failed`, {
+          workspaceId,
+          error: String(result.error),
+        })
+        captureException(
+          new LatitudeError('Backfill: ClickHouse span insertion failed'),
+          { workspaceId, batchSize, error: String(result.error) },
+        )
+        throw result.error
+      }
 
-    await logger.info(`Inserted ${rows.length} spans into ClickHouse`, {
-      workspaceId,
-      count: rows.length,
-    })
+      await logger.info(`Inserted ${rows.length} spans into ClickHouse`, {
+        workspaceId,
+        count: rows.length,
+        skipped: existingSpanIds.size,
+      })
+    }
 
     const lastSpan = batch[batch.length - 1]!
     const nextCursor: CursorState = {
