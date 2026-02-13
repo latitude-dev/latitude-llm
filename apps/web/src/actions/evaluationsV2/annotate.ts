@@ -35,7 +35,9 @@ export const annotateEvaluationV2Action = withEvaluation
       .then((r) => r.value)
     if (!span) throw new NotFoundError('Span not found')
     if (!MAIN_SPAN_TYPES.has(span.type)) {
-      throw new BadRequestError('Span is not of type prompt')
+      throw new BadRequestError(
+        `Span type '${span.type}' is not annotatable. Only prompt, chat, and external spans can be annotated`,
+      )
     }
 
     const metadata = await spansMetadataRepo
