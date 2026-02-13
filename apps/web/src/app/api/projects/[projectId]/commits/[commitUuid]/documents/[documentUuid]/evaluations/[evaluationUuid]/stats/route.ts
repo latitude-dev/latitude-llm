@@ -1,11 +1,16 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
+import {
+  CommitsRepository,
+  EvaluationResultsV2Repository,
+} from '@latitude-data/core/repositories'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { evaluationResultsV2SearchFromQueryParams } from '@latitude-data/core/helpers'
 
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { resolveCommitFilterFromUrl } from '../resolveCommitFilterFromUrl'
+
 export const GET = errorHandler(
   authHandler(
     async (
@@ -28,6 +33,17 @@ export const GET = errorHandler(
         Object.fromEntries(request.nextUrl.searchParams.entries()),
       )
 
+      const commitsRepository = new CommitsRepository(workspace.id)
+      const commit = await commitsRepository
+        .getCommitByUuid({ uuid: commitUuid, projectId: Number(projectId) })
+        .then((r) => r.unwrap())
+
+      const resolvedSearch = await resolveCommitFilterFromUrl({
+        commitsRepository,
+        commit,
+        search,
+      })
+
       const repository = new EvaluationResultsV2Repository(workspace.id)
       const stats = await repository
         .statsByEvaluation({
@@ -35,7 +51,7 @@ export const GET = errorHandler(
           commitUuid: commitUuid,
           documentUuid: documentUuid,
           evaluationUuid: evaluationUuid,
-          params: search,
+          params: resolvedSearch,
         })
         .then((r) => r.unwrap())
 
