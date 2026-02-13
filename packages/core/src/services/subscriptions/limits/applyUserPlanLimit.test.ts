@@ -17,13 +17,13 @@ describe('applyUserPlanLimit', () => {
   let creatorUser: User
 
   beforeEach(async () => {
-    // Create a test workspace with HobbyV3 plan (2 users limit)
+    // Create a test workspace with HobbyV2 plan (1 user limit)
     const result = await createWorkspace({
-      subscriptionPlan: SubscriptionPlan.HobbyV3,
+      subscriptionPlan: SubscriptionPlan.HobbyV2,
     })
     const subscription = await createSubscription({
       workspaceId: result.workspace.id,
-      plan: SubscriptionPlan.HobbyV3,
+      plan: SubscriptionPlan.HobbyV2,
     })
 
     workspace = {
@@ -72,8 +72,8 @@ describe('applyUserPlanLimit', () => {
   })
 
   it('returns PaymentRequiredError when users reach limit', async () => {
-    // Arrange - for HobbyV3, limit is 2 users, and creator already counts as 1
-    // So having exactly 2 users (the creator and a new user) should trigger the error
+    // Arrange - for HobbyV2, limit is 1 user, and creator already counts as 1
+    // So having exactly 1 user (the creator) should trigger the error when trying to add another
     const user = await createUser()
     await createMembership({ user, workspace, author: creatorUser })
 
@@ -89,7 +89,7 @@ describe('applyUserPlanLimit', () => {
   })
 
   it('returns PaymentRequiredError when users exceed limit', async () => {
-    // Arrange - create 3 additional users (creator + 2 = 3 users > limit of 2 for HobbyV3)
+    // Arrange - create 2 additional users (creator + 2 = 3 users > limit of 1 for HobbyV2)
     const user = await createUser()
     await createMembership({ user, workspace, author: creatorUser })
     const user2 = await createUser()
@@ -107,7 +107,7 @@ describe('applyUserPlanLimit', () => {
   })
 
   describe('different subscription plans', () => {
-    it.each(FREE_PLANS.filter((plan) => plan !== SubscriptionPlan.HobbyV3))(
+    it.each(FREE_PLANS.filter((plan) => plan !== SubscriptionPlan.HobbyV2 && plan !== SubscriptionPlan.HobbyV3))(
       'works with free plan: %s',
       async (plan) => {
         // Arrange
