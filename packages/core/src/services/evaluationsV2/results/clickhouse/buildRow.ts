@@ -4,7 +4,7 @@ import {
   EvaluationV2,
 } from '../../../../constants'
 import { toClickHouseDateTime } from '../../../../clickhouse/insert'
-import { EvaluationResultV2Row } from '../../../../models/clickhouse/evaluationResults'
+import { EvaluationResultV2Row } from '../../../../schema/models/clickhouse/evaluationResults'
 import { type Commit } from '../../../../schema/models/types/Commit'
 
 /**
@@ -32,19 +32,14 @@ export function buildEvaluationResultRow({
     evaluation.type === EvaluationType.Llm
       ? getMetadataNumber(result.metadata, 'cost')
       : null
-  const evaluatedLogId =
-    getEvaluatedLogId(result) ?? existingRow?.evaluated_log_id ?? null
-
   return {
     id: existingRow?.id ?? result.id,
     uuid: existingRow?.uuid ?? result.uuid,
     workspace_id: result.workspaceId,
     project_id: commit.projectId,
-    commit_id: commit.id,
     commit_uuid: commit.uuid,
     document_uuid: evaluation.documentUuid,
     evaluation_uuid: evaluation.uuid,
-    evaluation_name: evaluation.name,
     type: evaluation.type ?? null,
     metric: evaluation.metric ?? null,
     model,
@@ -52,7 +47,7 @@ export function buildEvaluationResultRow({
     experiment_id: result.experimentId ?? null,
     dataset_id: result.datasetId ?? null,
     evaluated_row_id: result.evaluatedRowId ?? null,
-    evaluated_log_id: evaluatedLogId,
+    evaluated_log_uuid: existingRow?.evaluated_log_uuid ?? null,
     evaluated_span_id: result.evaluatedSpanId ?? null,
     evaluated_trace_id: result.evaluatedTraceId ?? null,
     score: result.score ?? null,
@@ -100,13 +95,6 @@ function getMetadataNumber(
   if (!metadata || typeof metadata !== 'object') return null
   const value = (metadata as Record<string, unknown>)[key]
   return typeof value === 'number' ? value : null
-}
-
-function getEvaluatedLogId(result: EvaluationResultV2): number | null {
-  const value = (
-    result as EvaluationResultV2 & { evaluatedLogId?: number | null }
-  ).evaluatedLogId
-  return value ?? null
 }
 
 function toNullableUInt8(value: boolean | null | undefined): number | null {

@@ -3,7 +3,7 @@ import { TypedResult } from '../../../../lib/Result'
 import {
   EVALUATION_RESULTS_TABLE,
   EvaluationResultV2Row,
-} from '../../../../models/clickhouse/evaluationResults'
+} from '../../../../schema/models/clickhouse/evaluationResults'
 import { buildEvaluationResultRow } from './buildRow'
 import { EvaluationResultV2, EvaluationV2 } from '../../../../constants'
 import { type Commit } from '../../../../schema/models/types/Commit'

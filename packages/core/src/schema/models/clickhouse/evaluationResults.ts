@@ -5,11 +5,9 @@ export type EvaluationResultV2Row = {
   uuid: string
   workspace_id: number
   project_id: number
-  commit_id: number
   commit_uuid: string
   document_uuid: string
   evaluation_uuid: string
-  evaluation_name: string
   type: string | null
   metric: string | null
   model: string | null
@@ -17,7 +15,7 @@ export type EvaluationResultV2Row = {
   experiment_id: number | null
   dataset_id: number | null
   evaluated_row_id: number | null
-  evaluated_log_id: number | null
+  evaluated_log_uuid: string | null
   evaluated_span_id: string | null
   evaluated_trace_id: string | null
   score: number | null

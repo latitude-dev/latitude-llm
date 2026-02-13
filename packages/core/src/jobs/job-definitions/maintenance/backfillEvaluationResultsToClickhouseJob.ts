@@ -1,12 +1,12 @@
 import { Job } from 'bullmq'
-import { and, eq, gte, lt, sql } from 'drizzle-orm'
+import { and, eq, gte, inArray, lt, sql } from 'drizzle-orm'
 import { subDays } from 'date-fns'
 import { database } from '../../../client'
 import { insertRows } from '../../../clickhouse/insert'
 import {
   EVALUATION_RESULTS_TABLE,
   EvaluationResultV2Row,
-} from '../../../models/clickhouse/evaluationResults'
+} from '../../../schema/models/clickhouse/evaluationResults'
 import { buildEvaluationResultRow } from '../../../services/evaluationsV2/results/clickhouse/buildRow'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import { evaluationVersions } from '../../../schema/models/evaluationVersions'
@@ -68,23 +68,8 @@ export async function backfillEvaluationResultsToClickhouseJob(
     }
 
     const batch = await database
-      .select({
-        result: evaluationResultsV2,
-        evaluation: evaluationVersions,
-        commit: commits,
-      })
+      .select()
       .from(evaluationResultsV2)
-      .innerJoin(
-        evaluationVersions,
-        and(
-          eq(
-            evaluationVersions.evaluationUuid,
-            evaluationResultsV2.evaluationUuid,
-          ),
-          eq(evaluationVersions.commitId, evaluationResultsV2.commitId),
-        ),
-      )
-      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .where(and(...conditions))
       .orderBy(evaluationResultsV2.createdAt, evaluationResultsV2.id)
       .limit(batchSize)
@@ -102,9 +87,51 @@ export async function backfillEvaluationResultsToClickhouseJob(
       count: batch.length,
     })
 
-    const rows: EvaluationResultV2Row[] = batch.map((row) => {
-      const result = row.result as unknown as EvaluationResultV2
-      const ev = row.evaluation
+    const commitIds = [...new Set(batch.map((r) => r.commitId))]
+
+    const [commitsData, evalsData] = await Promise.all([
+      database
+        .select()
+        .from(commits)
+        .where(inArray(commits.id, commitIds)),
+      database
+        .select()
+        .from(evaluationVersions)
+        .where(
+          and(
+            inArray(evaluationVersions.commitId, commitIds),
+            inArray(
+              evaluationVersions.evaluationUuid,
+              [...new Set(batch.map((r) => r.evaluationUuid))],
+            ),
+          ),
+        ),
+    ])
+
+    const commitsMap = new Map(
+      commitsData.map((c) => [c.id, c as Commit]),
+    )
+    const evalsMap = new Map(
+      evalsData.map((ev) => [`${ev.evaluationUuid}:${ev.commitId}`, ev]),
+    )
+
+    const rows: EvaluationResultV2Row[] = []
+    for (const resultRow of batch) {
+      const result = resultRow as unknown as EvaluationResultV2
+      const commit = commitsMap.get(resultRow.commitId)
+      const ev = evalsMap.get(
+        `${resultRow.evaluationUuid}:${resultRow.commitId}`,
+      )
+
+      if (!commit || !ev) {
+        captureException(
+          new LatitudeError(
+            `Backfill: missing ${!commit ? 'commit' : 'evaluation'} for result ${resultRow.id}`,
+          ),
+        )
+        continue
+      }
+
       const evaluation: EvaluationV2 = {
         uuid: ev.evaluationUuid,
         versionId: ev.id,
@@ -124,10 +151,9 @@ export async function backfillEvaluationResultsToClickhouseJob(
         deletedAt: ev.deletedAt,
         ignoredAt: ev.ignoredAt,
       }
-      const commit = row.commit as Commit
 
-      return buildEvaluationResultRow({ result, evaluation, commit })
-    })
+      rows.push(buildEvaluationResultRow({ result, evaluation, commit }))
+    }
 
     const insertResult = await insertRows(EVALUATION_RESULTS_TABLE, rows)
     if (insertResult.error) {
@@ -149,7 +175,7 @@ export async function backfillEvaluationResultsToClickhouseJob(
       count: rows.length,
     })
 
-    const lastResult = batch[batch.length - 1]!.result
+    const lastResult = batch[batch.length - 1]!
     const nextCursor: CursorState = {
       createdAtCursor: lastResult.createdAt.toISOString(),
       idCursor: lastResult.id,
