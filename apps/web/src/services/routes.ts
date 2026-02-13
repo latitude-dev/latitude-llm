@@ -27,6 +27,7 @@ export enum BackofficeRoutes {
   integrations = 'integrations',
   triggers = 'triggers',
   workers = 'workers',
+  maintenance = 'maintenance',
   errorTests = 'errorTests',
 }
 
@@ -77,6 +78,9 @@ export const ROUTES = {
     },
     [BackofficeRoutes.workers]: {
       root: `${BACKOFFICE_ROOT}/workers`,
+    },
+    [BackofficeRoutes.maintenance]: {
+      root: `${BACKOFFICE_ROOT}/maintenance`,
     },
     [BackofficeRoutes.errorTests]: {
       root: `${BACKOFFICE_ROOT}/error-tests`,

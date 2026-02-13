@@ -349,6 +349,12 @@ export const API_ROUTES = {
         root: `/api/admin/workers/workspace/${workspaceId}`,
       }),
     },
+    maintenance: {
+      root: '/api/admin/maintenance',
+      detail: (jobId: string) => ({
+        logs: `/api/admin/maintenance/jobs/${jobId}/logs`,
+      }),
+    },
   },
   conversations: {
     root: '/api/conversations',

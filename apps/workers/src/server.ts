@@ -61,7 +61,7 @@ app.use('/admin/queues', serverAdapter.getRouter())
 console.log('Workers started')
 
 const port = env.WORKERS_PORT || 3002
-const host = env.WORKERS_HOST || 'localhost'
+const host = env.WORKERS_HOST || '0.0.0.0'
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
