@@ -5,13 +5,14 @@ const HOURS = MINUTES * 60
 export function formatDuration(
   duration?: number | null,
   milliseconds: boolean = true,
+  decimals: number = 3,
 ) {
   if (duration === undefined || duration === null) {
     return '-'
   }
 
   if (duration < MINUTES && milliseconds) {
-    return `${(duration / SECONDS).toFixed(3)}s`
+    return `${(duration / SECONDS).toFixed(decimals)}s`
   }
 
   const hours = Math.floor(duration / HOURS)

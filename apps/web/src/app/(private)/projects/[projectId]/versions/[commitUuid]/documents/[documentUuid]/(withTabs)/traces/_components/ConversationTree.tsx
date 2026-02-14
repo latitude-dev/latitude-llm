@@ -68,7 +68,7 @@ function getAllDescendantIds(span: AssembledSpan): string[] {
       s.children.forEach(collect)
     }
   }
-  collect(span)
+  span.children.forEach(collect)
   return ids
 }
 
@@ -76,34 +76,25 @@ const TreeItem = memo(
   <T extends SpanType>({
     span,
     indentation,
-    isLast,
     isSelected,
     selectedSpan,
     selectSpan,
     collapsedSpans,
     toggleCollapsed,
     setCollapsedSpans,
-    startOnIndex = 1,
   }: {
     span: AssembledSpan<T>
     indentation: IndentType[]
-    isLast: boolean
     isSelected: boolean
     selectedSpan?: AssembledSpan
     selectSpan: (span?: AssembledSpan) => void
     collapsedSpans: Set<string>
     toggleCollapsed: (spanId: string) => void
     setCollapsedSpans: ReactStateDispatch<Set<string>>
-    startOnIndex?: number
   }) => {
     const specification = SPAN_SPECIFICATIONS[span.type]
     const isExpanded = !collapsedSpans.has(span.id)
     const hasChildren = span.children.length > 0
-
-    const currentIndentation = useMemo(
-      () => [...indentation, { isLast }],
-      [indentation, isLast],
-    )
 
     const colorScheme = useMemo(() => {
       if (isSelected) {
@@ -203,7 +194,7 @@ const TreeItem = memo(
             <IndentationBar
               indentation={indentation}
               hasChildren={isExpanded && hasChildren}
-              startOnIndex={startOnIndex}
+              startOnIndex={0}
             />
             {span.children.length > 0 ? (
               <Button
@@ -214,18 +205,17 @@ const TreeItem = memo(
                   color: isSelected ? 'accentForeground' : 'foregroundMuted',
                   className: 'flex-shrink-0',
                 }}
-                className='w-4 h-7'
                 onClick={handleChevronClick}
               />
-            ) : (
-              <div className='-ml-1.5' />
-            )}
-            <Icon
-              name={specification.icon}
-              size='small'
-              color={colorScheme.icon as TextColor}
-              className='flex-shrink-0'
-            />
+            ) : null}
+            <div className='w-3 flex items-center justify-center'>
+              <Icon
+                name={specification.icon}
+                size='small'
+                color={colorScheme.icon as TextColor}
+                className='flex-shrink-0 ml-1'
+              />
+            </div>
             <Text.H6
               color={colorScheme.text as TextColor}
               weight={isSelected || !isExpanded ? 'semibold' : 'normal'}
@@ -245,21 +235,23 @@ const TreeItem = memo(
           )}
         </div>
         {isExpanded &&
-          span.children.map((child, index) => (
-            <TreeItem
-              key={`${child.traceId}-${child.id}`}
-              span={child}
-              indentation={currentIndentation}
-              isLast={index === span.children.length - 1}
-              isSelected={selectedSpan?.id === child.id}
-              selectedSpan={selectedSpan}
-              selectSpan={selectSpan}
-              collapsedSpans={collapsedSpans}
-              toggleCollapsed={toggleCollapsed}
-              setCollapsedSpans={setCollapsedSpans}
-              startOnIndex={startOnIndex}
-            />
-          ))}
+          span.children.map((child, index) => {
+            const isLastItem = index === span.children.length - 1
+            const childIndentation = [...indentation, { isLast: isLastItem }]
+            return (
+              <TreeItem
+                key={`${child.traceId}-${child.id}`}
+                span={child}
+                indentation={childIndentation}
+                isSelected={selectedSpan?.id === child.id}
+                selectedSpan={selectedSpan}
+                selectSpan={selectSpan}
+                collapsedSpans={collapsedSpans}
+                toggleCollapsed={toggleCollapsed}
+                setCollapsedSpans={setCollapsedSpans}
+              />
+            )
+          })}
       </div>
     )
   },
@@ -366,7 +358,6 @@ export function ConversationTree({
   setCollapsedSpans,
 }: {
   sections: TraceSection[]
-  width: number
   minWidth: number
   selectedSpan?: AssembledSpan
   selectSpan: (span?: AssembledSpan) => void
@@ -399,19 +390,17 @@ export function ConversationTree({
 
           return (
             <div key={section.trace.id}>
-              {section.trace.children.map((span, index) => (
+              {section.trace.children.map((span) => (
                 <TreeItem
                   key={`${span.traceId}-${span.id}`}
                   span={span}
                   indentation={baseIndentation}
-                  isLast={index === section.trace.children.length - 1}
                   isSelected={selectedSpan?.id === span.id}
                   selectedSpan={selectedSpan}
                   selectSpan={selectSpan}
                   collapsedSpans={collapsedSpans}
                   toggleCollapsed={toggleCollapsed}
                   setCollapsedSpans={setCollapsedSpans}
-                  startOnIndex={showConversationItem ? 0 : 1}
                 />
               ))}
             </div>
