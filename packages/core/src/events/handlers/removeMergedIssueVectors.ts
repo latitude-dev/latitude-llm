@@ -1,5 +1,5 @@
 import { env } from '@latitude-data/env'
-import { IssuesRepository } from '../../repositories'
+import { findIssue } from '../../queries/issues/findById'
 import { Issue } from '../../schema/models/types/Issue'
 import {
   getIssuesCollection,
@@ -21,22 +21,17 @@ export const removeMergedIssueVectors: EventHandler<IssueMergedEvent> = async ({
 
   const { workspaceId, mergedIds } = event.data
 
-  const repo = new IssuesRepository(workspaceId)
-
-  // Fetch the issues to get their project info and document UUID
-  const issues: Issue[] = []
+  const foundIssues: Issue[] = []
   for (const id of mergedIds) {
     try {
-      const result = await repo.find(id)
-      if (result.ok && result.value) {
-        issues.push(result.value)
-      }
+      const issue = await findIssue({ workspaceId, id })
+      foundIssues.push(issue)
     } catch (_) {
       // Continue if issue not found
     }
   }
 
-  for (const issue of issues) {
+  for (const issue of foundIssues) {
     try {
       const tenantName = ISSUES_COLLECTION_TENANT_NAME(issue.workspaceId, issue.projectId, issue.documentUuid) // prettier-ignore
       const collection = await getIssuesCollection({ tenantName })

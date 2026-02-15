@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { IntegrationsRepository } from '@latitude-data/core/repositories'
+import { findIntegrationByName } from '@latitude-data/core/queries/integrations/findByName'
 import { listTools } from '@latitude-data/core/services/integrations/index'
 import { LATITUDE_TOOLS } from '@latitude-data/core/services/latitudeTools/tools'
 
@@ -41,10 +41,10 @@ export const GET = errorHandler(
         )
       }
 
-      const integrationsScope = new IntegrationsRepository(workspace.id)
-      const integration = await integrationsScope
-        .findByName(params.integrationName)
-        .then((r) => r.unwrap())
+      const integration = await findIntegrationByName({
+        workspaceId: workspace.id,
+        name: params.integrationName,
+      })
 
       const result = await listTools(integration)
 

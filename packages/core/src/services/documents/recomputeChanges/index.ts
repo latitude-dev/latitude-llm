@@ -14,9 +14,9 @@ import { Result, TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import {
   CommitsRepository,
-  IntegrationsRepository,
   ProviderApiKeysRepository,
 } from '../../../repositories'
+import { findAllIntegrations } from '../../../queries/integrations/findAll'
 import { documentVersions } from '../../../schema/models/documentVersions'
 import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
 import { canInheritDocumentRelations } from '../inheritRelations'
@@ -239,9 +239,10 @@ export async function recomputeChanges(
       tx,
     )
 
-    const integrationsScope = new IntegrationsRepository(workspace.id, tx)
-    const integrations = await integrationsScope.findAll()
-    if (integrations.error) return Result.error(integrations.error)
+    const allIntegrations = await findAllIntegrations(
+      { workspaceId: workspace.id },
+      tx,
+    )
     if (agentToolsMapResult.error)
       return Result.error(agentToolsMapResult.error)
 
@@ -251,7 +252,7 @@ export async function recomputeChanges(
         newDocuments: draftDocuments,
         providers: providersResult.value,
         agentToolsMap: agentToolsMapResult.value,
-        integrationNames: integrations.value.map((i) => i.name),
+        integrationNames: allIntegrations.map((i) => i.name),
       })
 
     const newDraftDocuments = (

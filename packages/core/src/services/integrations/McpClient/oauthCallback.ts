@@ -1,4 +1,4 @@
-import { IntegrationsRepository } from '../../../repositories'
+import { findIntegrationById } from '../../../queries/integrations/findById'
 import { IntegrationType } from '@latitude-data/constants'
 import { getMcpOAuthCredentials, McpOAuthProvider } from './oauthProvider'
 import { Result, TypedResult } from '../../../lib/Result'
@@ -117,16 +117,14 @@ export async function handleOAuthCallback(
 
   const { integrationId, workspaceId } = stateData
 
-  const integrationsRepo = new IntegrationsRepository(workspaceId)
-  const integrationResult = await integrationsRepo.find(integrationId)
-
-  if (!integrationResult.ok) {
-    return Result.error(new NotFoundError('Integration not found'))
-  }
-
-  const integration = integrationResult.value
-  if (!integration) {
-    return Result.error(new NotFoundError('Integration not found'))
+  let integration
+  try {
+    integration = await findIntegrationById({ workspaceId, id: integrationId })
+  } catch (e) {
+    if (e instanceof NotFoundError) {
+      return Result.error(new NotFoundError('Integration not found'))
+    }
+    throw e
   }
 
   if (integration.type !== IntegrationType.ExternalMCP) {

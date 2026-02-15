@@ -11,7 +11,9 @@ import { mergeCommonIssuesJobKey } from '../../../jobs/job-definitions/issues/me
 import { queues } from '../../../jobs/queues'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
-import { CommitsRepository, IssuesRepository } from '../../../repositories'
+import { CommitsRepository } from '../../../repositories'
+import { lockIssue } from '../../../queries/issues/lock'
+import { findIssue } from '../../../queries/issues/findById'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
@@ -74,13 +76,16 @@ export async function addResultToIssue<
 
   return await transaction.call(
     async (tx) => {
-      const issuesRepository = new IssuesRepository(workspace.id, tx)
-      const locking = await issuesRepository.lock({ id: issue.id })
+      const locking = await lockIssue(
+        { workspaceId: workspace.id, id: issue.id },
+        tx,
+      )
       if (!Result.isOk(locking)) return locking
 
-      const refreshing = await issuesRepository.find(issue.id)
-      if (!Result.isOk(refreshing)) return refreshing
-      issue = refreshing.value
+      issue = await findIssue(
+        { workspaceId: workspace.id, id: issue.id },
+        tx,
+      )
       issueWasNew = isEqual(issue.createdAt, issue.updatedAt)
 
       // Note: revalidating the fresh issue after locking

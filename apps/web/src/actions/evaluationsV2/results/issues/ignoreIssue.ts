@@ -1,6 +1,6 @@
 'use server'
 
-import { IssuesRepository } from '@latitude-data/core/repositories'
+import { findIssue } from '@latitude-data/core/queries/issues/findById'
 import { ignoreIssue } from '@latitude-data/core/services/issues/ignore'
 import { z } from 'zod'
 import { withCommit, withCommitSchema } from '$/actions/procedures'
@@ -12,9 +12,10 @@ export const ignoreIssueAction = withCommit
     }),
   )
   .action(async ({ ctx, parsedInput }) => {
-    const issue = await new IssuesRepository(ctx.workspace.id)
-      .find(parsedInput.issueId)
-      .then((r) => r.unwrap())
+    const issue = await findIssue({
+      workspaceId: ctx.workspace.id,
+      id: parsedInput.issueId,
+    })
 
     const response = await ignoreIssue({
       issue,

@@ -8,11 +8,11 @@ import {
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
-  IssueEvaluationResultsRepository,
-  IssuesRepository,
   SpansRepository,
 } from '../../../repositories'
 import { findProjectById } from '../../../queries/projects/findById'
+import { findLastActiveAssignedIssue } from '../../../queries/issueEvaluationResults/findLastActiveAssignedIssue'
+import { findIssueByUuid } from '../../../queries/issues/findByUuid'
 import { assignEvaluationResultV2ToIssue } from '../../../services/evaluationsV2/results/assign'
 import { updateEvaluationV2 } from '../../../services/evaluationsV2/update'
 import { discoverIssue } from '../../../services/issues/discover'
@@ -44,12 +44,9 @@ export const discoverResultIssueJob = async (
   const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
   const result = await resultsRepository.find(resultId).then((r) => r.unwrap())
 
-  // Check if result already belongs to an issue via intermediate table
-  const issueEvalResultsRepo = new IssueEvaluationResultsRepository(
-    workspace.id,
-  )
-  const exists = await issueEvalResultsRepo.findLastActiveAssignedIssue({
-    result,
+  const exists = await findLastActiveAssignedIssue({
+    workspaceId: workspace.id,
+    resultId: result.id,
   })
 
   if (exists) return
@@ -126,10 +123,10 @@ export const discoverResultIssueJob = async (
     }
     newIssue = generating.value
   } else {
-    const issuesRepository = new IssuesRepository(workspace.id)
-    existingIssue = await issuesRepository
-      .findByUuid(candidate.uuid)
-      .then((r) => r.unwrap())
+    existingIssue = await findIssueByUuid({
+      workspaceId: workspace.id,
+      uuid: candidate.uuid,
+    })
   }
 
   const { issue: updatedIssue } = await assignEvaluationResultV2ToIssue({

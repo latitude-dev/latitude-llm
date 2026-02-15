@@ -2,7 +2,8 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { Database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { CommitsRepository, IssuesRepository } from '../../repositories'
+import { CommitsRepository } from '../../repositories'
+import { findIssue } from '../../queries/issues/findById'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
 import { issueHistograms } from '../../schema/models/issueHistograms'
@@ -56,7 +57,6 @@ async function deleteHistogramsAndUpdateEscalation({
   db: Database
   transaction: Transaction
 }) {
-  const issuesRepo = new IssuesRepository(workspaceId, db)
   const affectedIssues = await db
     .select({ id: issues.id })
     .from(issues)
@@ -82,7 +82,7 @@ async function deleteHistogramsAndUpdateEscalation({
     )
 
   for (const { id } of affectedIssues) {
-    const issue = await issuesRepo.find(id).then((r) => r.unwrap())
+    const issue = await findIssue({ workspaceId, id }, db)
     await updateEscalatingIssue({ issue }, transaction).then((r) => r.unwrap())
   }
 }

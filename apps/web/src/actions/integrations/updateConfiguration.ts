@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
 import { pipedreamIntegrationConfigurationSchema } from '@latitude-data/core/services/integrations/helpers/schema'
-import { IntegrationsRepository } from '@latitude-data/core/repositories'
+import { findIntegrationByName } from '@latitude-data/core/queries/integrations/findByName'
 import { updateIntegrationConfiguration } from '@latitude-data/core/services/integrations/updateConfiguration'
 
 export const updateIntegrationConfigurationAction = authProcedure
@@ -18,10 +18,10 @@ export const updateIntegrationConfigurationAction = authProcedure
     const { integrationName, configuration } = parsedInput
     const { workspace } = ctx
 
-    const integrationsScope = new IntegrationsRepository(workspace.id)
-    const integrationResult =
-      await integrationsScope.findByName(integrationName)
-    const integration = integrationResult.unwrap()
+    const integration = await findIntegrationByName({
+      workspaceId: workspace.id,
+      name: integrationName,
+    })
 
     const result = await updateIntegrationConfiguration({
       integration,

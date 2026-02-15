@@ -4,7 +4,7 @@ import { type Workspace } from '../../../schema/models/types/Workspace'
 import { IntegrationDto } from '../../../schema/models/types/Integration'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { IntegrationsRepository } from '../../../repositories'
+import { findAllIntegrations } from '../../../queries/integrations/findAll'
 import {
   PipedreamIntegrationConfiguration,
   UnconfiguredPipedreamIntegrationConfiguration,
@@ -120,10 +120,9 @@ export async function cloneIntegrations({
   targetWorkspace: Workspace
   targetUser: User
 }): PromisedResult<IntegrationMapping> {
-  const targetIntegrationsRepo = new IntegrationsRepository(targetWorkspace.id)
-  const targetIntegrationsResult = await targetIntegrationsRepo.findAll()
-  if (!Result.isOk(targetIntegrationsResult)) return targetIntegrationsResult
-  const targetIntegrations = targetIntegrationsResult.unwrap()
+  const targetIntegrations = await findAllIntegrations({
+    workspaceId: targetWorkspace.id,
+  })
 
   const integrationMapping: IntegrationMapping = {
     name: {},

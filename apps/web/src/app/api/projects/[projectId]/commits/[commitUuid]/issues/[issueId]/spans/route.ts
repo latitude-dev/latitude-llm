@@ -1,12 +1,10 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { Span, SpanType } from '@latitude-data/constants'
-import { getSpansByIssue } from '@latitude-data/core/data-access/issues/getSpansByIssue'
-import {
-  CommitsRepository,
-  IssuesRepository,
-} from '@latitude-data/core/repositories'
+import { getSpansByIssue } from '@latitude-data/core/queries/issues/getSpansByIssue'
+import { CommitsRepository } from '@latitude-data/core/repositories'
 import { findProjectById } from '@latitude-data/core/queries/projects/findById'
+import { findIssueById } from '@latitude-data/core/queries/issues/findById'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Cursor } from '@latitude-data/core/schema/types'
@@ -79,8 +77,8 @@ export const GET = errorHandler(
         })
         .then((r) => r.unwrap())
 
-      const issuesRepo = new IssuesRepository(workspace.id)
-      const issue = await issuesRepo.findById({
+      const issue = await findIssueById({
+        workspaceId: workspace.id,
         project,
         issueId,
       })

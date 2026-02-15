@@ -1,6 +1,6 @@
 'use server'
 
-import { IssuesRepository } from '@latitude-data/core/repositories'
+import { findIssue } from '@latitude-data/core/queries/issues/findById'
 import { resolveIssue } from '@latitude-data/core/services/issues/resolve'
 import { z } from 'zod'
 import { withCommit, withCommitSchema } from '$/actions/procedures'
@@ -13,9 +13,10 @@ export const resolveIssueAction = withCommit
     }),
   )
   .action(async ({ ctx, parsedInput }) => {
-    const issue = await new IssuesRepository(ctx.workspace.id)
-      .find(parsedInput.issueId)
-      .then((r) => r.unwrap())
+    const issue = await findIssue({
+      workspaceId: ctx.workspace.id,
+      id: parsedInput.issueId,
+    })
 
     const response = await resolveIssue({
       issue,

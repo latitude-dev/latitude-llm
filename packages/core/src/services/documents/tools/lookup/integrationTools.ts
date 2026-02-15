@@ -10,7 +10,7 @@ import {
   ResolvedToolsDict,
   ToolManifestDict,
 } from '@latitude-data/constants/tools'
-import { IntegrationsRepository } from '../../../../repositories'
+import { findIntegrationByName } from '../../../../queries/integrations/findByName'
 import { listTools } from '../../../../services/integrations'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { IntegrationType } from '@latitude-data/constants'
@@ -30,7 +30,6 @@ async function lookupToolsByIntegration({
   toolIds: string[]
   workspace: Workspace
 }): PromisedResult<ToolManifestDictByIntegration, LatitudeError> {
-  const integrationsScope = new IntegrationsRepository(workspace.id)
   const lookedUpDicts: ToolManifestDictByIntegration = {}
 
   for (const toolId of toolIds) {
@@ -40,14 +39,21 @@ async function lookupToolsByIntegration({
     }
 
     if (integrationName in lookedUpDicts) {
-      // Integration already looked up
       continue
     }
 
-    const integrationResult =
-      await integrationsScope.findByName(integrationName)
-    if (integrationResult.error) return integrationResult
-    const integration = integrationResult.unwrap()
+    let integration
+    try {
+      integration = await findIntegrationByName({
+        workspaceId: workspace.id,
+        name: integrationName,
+      })
+    } catch (e) {
+      if (e instanceof NotFoundError) {
+        return Result.error(e)
+      }
+      return Result.error(e as LatitudeError)
+    }
 
     const toolsResult = await listTools(integration)
     if (toolsResult.error) return toolsResult

@@ -18,7 +18,8 @@ import * as endActiveEvaluationModule from '../../../services/evaluationsV2/acti
 import * as failActiveEvaluationModule from '../../../services/evaluationsV2/active/fail'
 import { captureException } from '../../../utils/datadogCapture'
 import * as unsafelyFindWorkspaceModule from '../../../data-access/workspaces'
-import { CommitsRepository, IssuesRepository } from '../../../repositories'
+import { CommitsRepository } from '../../../repositories'
+import * as findIssueModule from '../../../queries/issues/findById'
 
 // Mock dependencies
 vi.mock(
@@ -53,9 +54,12 @@ vi.mock('../../../repositories', async (importOriginal) => {
   return {
     ...actual,
     CommitsRepository: vi.fn(),
-    IssuesRepository: vi.fn(),
   }
 })
+
+vi.mock('../../../queries/issues/findById', () => ({
+  findIssue: vi.fn(),
+}))
 
 describe('generateEvaluationV2FromIssueJob', () => {
   const mockGenerateEvaluationFromIssue = vi.mocked(
@@ -74,7 +78,6 @@ describe('generateEvaluationV2FromIssueJob', () => {
     unsafelyFindWorkspaceModule.unsafelyFindWorkspace,
   )
   const mockCommitsRepositoryGetCommitById = vi.fn()
-  const mockIssuesRepositoryFind = vi.fn()
 
   let workspace: WorkspaceDto
   let commit: Commit
@@ -142,13 +145,7 @@ describe('generateEvaluationV2FromIssueJob', () => {
           getCommitById: mockCommitsRepositoryGetCommitById,
         }) as unknown as CommitsRepository,
     )
-    mockIssuesRepositoryFind.mockResolvedValue(Result.ok(issue))
-    vi.mocked(IssuesRepository).mockImplementation(
-      () =>
-        ({
-          find: mockIssuesRepositoryFind,
-        }) as unknown as IssuesRepository,
-    )
+    vi.mocked(findIssueModule.findIssue).mockResolvedValue(issue)
 
     const mockValidationFlowJob = {
       id: 'test-validation-flow-job-id',
@@ -388,8 +385,8 @@ describe('generateEvaluationV2FromIssueJob', () => {
     })
 
     it('should throw error if issue not found', async () => {
-      mockIssuesRepositoryFind.mockResolvedValue(
-        Result.error(new NotFoundError('Issue not found')),
+      vi.mocked(findIssueModule.findIssue).mockRejectedValue(
+        new NotFoundError('Issue not found'),
       )
       jobData = createMockJob(buildJobData({ issueId: 999 }))
 

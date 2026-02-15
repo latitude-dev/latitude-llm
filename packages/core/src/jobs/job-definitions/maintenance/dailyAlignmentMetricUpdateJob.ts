@@ -10,9 +10,10 @@ import {
 } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { CommitsRepository, IssuesRepository } from '../../../repositories'
+import { CommitsRepository } from '../../../repositories'
+import { findIssueById } from '../../../queries/issues/findById'
 import { findProjectById } from '../../../queries/projects/findById'
-import { hasUnprocessedSpans } from '../../../data-access/issues/hasUnprocessedSpans'
+import { hasUnprocessedSpans } from '../../../queries/issues/hasUnprocessedSpans'
 import { captureException } from '../../../utils/datadogCapture'
 
 export type DailyAlignmentMetricUpdateJobData = Record<string, never>
@@ -62,10 +63,10 @@ export async function dailyAlignmentMetricUpdateJob(
       })
       if (!project) continue
 
-      const issueRepository = new IssuesRepository(workspace.id)
-      const issue = await issueRepository.findById({
-        project,
+      const issue = await findIssueById({
+        workspaceId: workspace.id,
         issueId: evaluation.issueId!,
+        project,
       })
       if (!issue) continue
 

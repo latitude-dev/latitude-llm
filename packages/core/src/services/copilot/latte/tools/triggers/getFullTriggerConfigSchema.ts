@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { defineLatteTool } from '../types'
 import { Result } from '../../../../../lib/Result'
 import { getPipedreamClient } from '../../../../integrations/pipedream/apps'
-import { IntegrationsRepository } from '../../../../../repositories'
+import { findIntegrationById } from '../../../../../queries/integrations/findById'
 import { ConfigurablePropWithRemoteOptions } from '../../../../../constants'
 import { PipedreamIntegration } from '../../../../../schema/models/types/Integration'
 import { fetchFullConfigSchema } from './fetchFullConfigSchema'
@@ -17,14 +17,15 @@ export const getFullTriggerConfigSchema = defineLatteTool(
     if (!Result.isOk(pipedreamResult)) return pipedreamResult
     const pipedream = pipedreamResult.unwrap()
 
-    const integrationScope = new IntegrationsRepository(workspace.id)
-    const integrationResult = await integrationScope.find(integrationId)
-
-    if (!Result.isOk(integrationResult)) {
-      return Result.error(integrationResult.error)
+    let integration: PipedreamIntegration
+    try {
+      integration = await findIntegrationById({
+        workspaceId: workspace.id,
+        id: integrationId,
+      }) as PipedreamIntegration
+    } catch (e) {
+      return Result.error(e as Error)
     }
-
-    const integration = integrationResult.unwrap() as PipedreamIntegration
 
     return await fetchFullConfigSchema({
       pipedream,

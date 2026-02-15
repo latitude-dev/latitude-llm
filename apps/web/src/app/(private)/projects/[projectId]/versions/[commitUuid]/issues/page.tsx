@@ -4,8 +4,9 @@ import {
   findProjectCached,
 } from '$/app/(private)/_data-access'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { IssuesRepository } from '@latitude-data/core/repositories'
-import { OkType } from '@latitude-data/core/lib/Result'
+import { getAbsoluteIssuesCount } from '@latitude-data/core/queries/issues/getAbsoluteIssuesCount'
+import { findIssueWithStats } from '@latitude-data/core/queries/issues/findWithStats'
+import { fetchIssuesFiltered } from '@latitude-data/core/queries/issues/fetchIssuesFiltered'
 import {
   buildIssuesCacheKey,
   convertIssuesParamsToQueryParams,
@@ -16,7 +17,7 @@ import { SWRProvider } from '$/components/Providers/SWRProvider'
 import { LockedIssuesDashboard } from './_components/LockedIssuesDashboard'
 
 export type IssuesServerResponse = Awaited<
-  OkType<IssuesRepository['fetchIssuesFiltered']>
+  ReturnType<typeof fetchIssuesFiltered>
 >
 type IssueWithStats = IssuesServerResponse['issues'][0]
 
@@ -35,9 +36,11 @@ export default async function IssuesPageRoute({
     workspaceId: session.workspace.id,
     projectId: Number(projectId),
   })
-  const issuesRepo = new IssuesRepository(session.workspace.id)
 
-  const absoluteCount = await issuesRepo.getAbsoluteIssuesCount({ project })
+  const absoluteCount = await getAbsoluteIssuesCount({
+    workspaceId: session.workspace.id,
+    project,
+  })
   if (absoluteCount === 0) {
     return (
       <LockedIssuesDashboard
@@ -53,7 +56,11 @@ export default async function IssuesPageRoute({
   })
   const issueId = Number(String(queryParams.issueId))
   if (issueId) {
-    selectedIssue = await issuesRepo.findWithStats({ project, issueId })
+    selectedIssue = await findIssueWithStats({
+      workspaceId: session.workspace.id,
+      project,
+      issueId,
+    })
   }
 
   const parsedParams = parseIssuesQueryParams({
@@ -66,12 +73,11 @@ export default async function IssuesPageRoute({
     sorting: parsedParams.sorting,
     page: parsedParams.page,
   }
-  const serverResponse = await issuesRepo
-    .fetchIssuesFiltered({
-      ...args,
-      limit: parsedParams.limit,
-    })
-    .then((r) => r.unwrap())
+  const serverResponse = await fetchIssuesFiltered({
+    workspaceId: session.workspace.id,
+    ...args,
+    limit: parsedParams.limit,
+  })
 
   const key = buildIssuesCacheKey({
     projectId: project.id,

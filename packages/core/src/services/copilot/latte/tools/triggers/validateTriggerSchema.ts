@@ -7,8 +7,8 @@ import { getPipedreamClient } from '../../../../integrations/pipedream/apps'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  IntegrationsRepository,
 } from '../../../../../repositories'
+import { findIntegrationById } from '../../../../../queries/integrations/findById'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { HEAD_COMMIT } from '@latitude-data/constants'
 import { validateLattesChoices } from './configValidator'
@@ -41,14 +41,15 @@ export const validateTriggerSchema = defineLatteTool(
     if (!pipedreamResult.ok) return pipedreamResult
     const pipedream = pipedreamResult.unwrap()
 
-    const integrationScope = new IntegrationsRepository(workspace.id)
-    const integrationResult = await integrationScope.find(integrationId)
-
-    if (!Result.isOk(integrationResult)) {
-      return Result.error(integrationResult.error)
+    let integration: PipedreamIntegration
+    try {
+      integration = (await findIntegrationById({
+        workspaceId: workspace.id,
+        id: integrationId,
+      })) as PipedreamIntegration
+    } catch (error) {
+      return Result.error(error as Error)
     }
-
-    const integration = integrationResult.unwrap() as PipedreamIntegration
 
     const validatedSchema = await validateLattesChoices({
       // TODO - find way to validate payload parameters also

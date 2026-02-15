@@ -377,13 +377,13 @@ describe('reassignResultFromIssue', () => {
       mockAdd.mockRestore()
     })
 
-    it('handles errors from IssuesRepository when fetching current issue', async () => {
+    it('handles errors from findIssue when fetching current issue', async () => {
       // Association already created in beforeEach
-      // Mock the IssuesRepository.find to fail
-      const { IssuesRepository } = await import('../../../repositories')
+      // Mock findIssue to fail
+      const findIssueModule = await import('../../../queries/issues/findById')
       const findSpy = vi
-        .spyOn(IssuesRepository.prototype, 'find')
-        .mockResolvedValue(Result.error(new NotFoundError('Issue not found')))
+        .spyOn(findIssueModule, 'findIssue')
+        .mockRejectedValue(new NotFoundError('Issue not found'))
 
       const result = await reassignResultFromIssue({
         workspace,

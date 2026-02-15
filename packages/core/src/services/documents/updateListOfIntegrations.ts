@@ -2,7 +2,7 @@ import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSch
 import { and, eq } from 'drizzle-orm'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { IntegrationsRepository } from '../../repositories'
+import { findAllIntegrations } from '../../queries/integrations/findAll'
 import { documentIntegrationReferences } from '../../schema/models/documentIntegrationReferences'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
@@ -76,9 +76,10 @@ export async function updateListOfIntegrations(
         ),
       )
 
-    const integrationsScope = new IntegrationsRepository(workspace.id, tx)
-    const integrationsResult = await integrationsScope.findAll()
-    const allIntegrations = integrationsResult.unwrap()
+    const allIntegrations = await findAllIntegrations(
+      { workspaceId: workspace.id },
+      tx,
+    )
     const includedIntegrations = allIntegrations.filter((integration) =>
       integrationNames.includes(integration.name),
     )

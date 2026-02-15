@@ -19,9 +19,9 @@ import { PromisedResult } from '../../../lib/Transaction'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  IntegrationsRepository,
   ProviderApiKeysRepository,
 } from '../../../repositories'
+import { findAllIntegrations } from '../../../queries/integrations/findAll'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -240,12 +240,10 @@ export async function scanDocuments(
   }
   const providers = providersResult.unwrap()
 
-  const integrationsScope = new IntegrationsRepository(workspace.id, db)
-  const integrationsResult = await integrationsScope.findAll()
-  if (!integrationsResult.ok) {
-    return Result.error(integrationsResult.error!)
-  }
-  const integrations = integrationsResult.unwrap()
+  const integrations = await findAllIntegrations(
+    { workspaceId: workspace.id },
+    db,
+  )
 
   const agentsToolMapResult = await buildAgentsToolsMap(
     {

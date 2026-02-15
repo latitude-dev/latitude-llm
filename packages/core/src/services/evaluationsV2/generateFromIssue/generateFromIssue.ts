@@ -1,4 +1,4 @@
-import { getSpanMessagesAndEvaluationResultsByIssue } from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
+import { getSpanMessagesAndEvaluationResultsByIssue } from '@latitude-data/core/queries/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import {
@@ -19,7 +19,7 @@ import {
   EvaluationV2,
   LlmEvaluationBinarySpecification,
 } from '../../../constants'
-import { getSpanMessagesByIssueDocument } from '../../../data-access/issues/getSpanMessagesByIssueDocument'
+import { getSpanMessagesByIssueDocument } from '../../../queries/issues/getSpanMessagesByIssueDocument'
 import {
   buildSpanMessagesWithReasons,
   SpanMessagesWithReason,

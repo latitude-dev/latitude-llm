@@ -6,10 +6,8 @@ import {
 } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
-import {
-  IssueEvaluationResultsRepository,
-  IssuesRepository,
-} from '../../../repositories'
+import { findLastActiveAssignedIssue } from '../../../queries/issueEvaluationResults/findLastActiveAssignedIssue'
+import { findIssue } from '../../../queries/issues/findById'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { addResultToIssue } from '../../issues/results/add'
@@ -41,24 +39,16 @@ export async function reassignResultFromIssue<
   transaction = new Transaction(),
 ) {
   return await transaction.call(async (tx) => {
-    const issueEvalResultsRepo = new IssueEvaluationResultsRepository(
-      workspace.id,
+    const existingAssociation = await findLastActiveAssignedIssue(
+      { workspaceId: workspace.id, resultId: result.id },
       tx,
     )
-    const existingAssociation =
-      await issueEvalResultsRepo.findLastActiveAssignedIssue({
-        result,
-      })
 
     if (existingAssociation) {
-      // Result is already assigned to an issue, need to remove it first
-      const issuesRepository = new IssuesRepository(workspace.id, tx)
-      const currentIssueResult = await issuesRepository.find(
-        existingAssociation.issueId,
+      const currentIssue = await findIssue(
+        { workspaceId: workspace.id, id: existingAssociation.issueId },
+        tx,
       )
-      if (!Result.isOk(currentIssueResult)) return currentIssueResult
-
-      const currentIssue = currentIssueResult.value
 
       const removing = await removeResultFromIssue(
         {

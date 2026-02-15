@@ -1,7 +1,7 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { IntegrationsRepository } from '@latitude-data/core/repositories'
+import { findIntegrationByName } from '@latitude-data/core/queries/integrations/findByName'
 import { listIntegrationReferences } from '@latitude-data/core/services/integrations/references'
 
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
@@ -23,10 +23,10 @@ export const GET = errorHandler(
         return NextResponse.json({ ok: true, data: [] }, { status: 200 })
       }
 
-      const integrationsScope = new IntegrationsRepository(workspace.id)
-      const integration = await integrationsScope
-        .findByName(params.integrationName)
-        .then((r) => r.unwrap())
+      const integration = await findIntegrationByName({
+        workspaceId: workspace.id,
+        name: params.integrationName,
+      })
 
       const result = await listIntegrationReferences(integration)
 

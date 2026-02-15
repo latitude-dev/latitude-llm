@@ -48,7 +48,7 @@ import {
 } from '../schema/types'
 import { CommitsRepository } from './commitsRepository'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
-import { IssueEvaluationResultsRepository } from './issueEvaluationResultsRepository'
+import { findLastActiveAssignedIssue } from '../queries/issueEvaluationResults/findLastActiveAssignedIssue'
 import Repository from './repositoryV2'
 import { SpansRepository } from './spansRepository'
 
@@ -597,12 +597,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       })[],
     })
 
-    // Fetch active issues for all results and add issueId to result
-    const issueEvalResultsRepo = new IssueEvaluationResultsRepository(
-      this.workspaceId,
-      this.db,
-    )
-
     const resultsWithEvaluations: ResultWithEvaluationV2[] = []
     for (const result of results) {
       const evaluation = evaluationsByCommit[result.commitUuid]!.find(
@@ -610,14 +604,14 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       )
       if (!evaluation) continue
 
-      // Find the active issue for this result
-      const activeAssignment =
-        await issueEvalResultsRepo.findLastActiveAssignedIssue({
-          result: result as EvaluationResultV2,
-        })
+      const activeAssignment = await findLastActiveAssignedIssue(
+        {
+          workspaceId: this.workspaceId,
+          resultId: (result as EvaluationResultV2).id,
+        },
+        this.db,
+      )
 
-      // TODO(AO): Remove issueId from result
-      // Add issueId to result for backward compatibility
       const resultWithIssue = {
         ...result,
         issueId: activeAssignment?.issueId ?? null,
@@ -679,11 +673,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       })[],
     })
 
-    const issueEvalResultsRepo = new IssueEvaluationResultsRepository(
-      this.workspaceId,
-      this.db,
-    )
-
     const resultsWithEvaluations: ResultWithEvaluationV2[] = []
     for (const result of results) {
       const evaluation = evaluationsByCommit[result.commitUuid]!.find(
@@ -691,10 +680,13 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       )
       if (!evaluation) continue
 
-      const activeAssignment =
-        await issueEvalResultsRepo.findLastActiveAssignedIssue({
-          result: result as EvaluationResultV2,
-        })
+      const activeAssignment = await findLastActiveAssignedIssue(
+        {
+          workspaceId: this.workspaceId,
+          resultId: (result as EvaluationResultV2).id,
+        },
+        this.db,
+      )
 
       const resultWithIssue = {
         ...result,
