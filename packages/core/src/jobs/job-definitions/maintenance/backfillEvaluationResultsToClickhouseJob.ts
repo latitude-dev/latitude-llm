@@ -27,7 +27,7 @@ export type BackfillEvaluationResultsToClickhouseJobData = {
   idCursor?: number
 }
 
-const DEFAULT_BATCH_SIZE = 1000
+const DEFAULT_BATCH_SIZE = 100
 const BACKFILL_LOOKBACK_DAYS = 30
 const JOB_NAME = 'backfillEvaluationResultsToClickhouse'
 

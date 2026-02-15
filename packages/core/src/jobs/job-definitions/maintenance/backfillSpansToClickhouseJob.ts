@@ -26,7 +26,7 @@ export type BackfillSpansToClickhouseJobData = {
   spanIdCursor?: string
 }
 
-const DEFAULT_BATCH_SIZE = 1000
+const DEFAULT_BATCH_SIZE = 100
 const BACKFILL_LOOKBACK_DAYS = 30
 const JOB_NAME = 'backfillSpansToClickhouse'
 
@@ -113,9 +113,7 @@ export async function backfillSpansToClickhouseJob(
       query_params: { workspaceId, spanIds },
     })
     const existingSpanIds = new Set(
-      (await existingResult.json<{ span_id: string }>()).map(
-        (r) => r.span_id,
-      ),
+      (await existingResult.json<{ span_id: string }>()).map((r) => r.span_id),
     )
 
     const newSpans = batch.filter((s) => !existingSpanIds.has(s.id))
