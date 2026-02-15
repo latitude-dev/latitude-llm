@@ -101,7 +101,7 @@ export const fetchIssuesFiltered = scopedQuery(
       .offset(offset)
 
     const totalCount = await fetchIssuesCount(
-      { workspaceId, project, commit, commitIds, filters, where: whereConditions },
+      { workspaceId, project, commitIds, filters, where: whereConditions },
       db,
     )
 
@@ -118,14 +118,12 @@ async function fetchIssuesCount(
   {
     workspaceId,
     project,
-    commit,
     commitIds,
     filters,
     where,
   }: {
     workspaceId: number
     project: Project
-    commit: Commit
     commitIds: number[]
     filters: IssueFilters
     where: SQL[]
