@@ -184,10 +184,7 @@ export function useConversationsStore(
   )
 }
 
-export type {
-  Conversation,
-  SerializedConversationResponse as ConversationsPaginationResult,
-}
+export type { Conversation }
 export { deserializeConversation }
 export { getConversationKey, useConversation } from './useConversation'
 export { useConversationEvaluations } from './useConversationEvaluations'

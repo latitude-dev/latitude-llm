@@ -65,5 +65,3 @@ export function useLogHistoryParams({
     clearUrlSelection,
   }
 }
-
-export type UseLogHistoryParams = ReturnType<typeof useLogHistoryParams>

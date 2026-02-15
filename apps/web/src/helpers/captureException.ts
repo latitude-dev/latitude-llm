@@ -48,33 +48,3 @@ export const captureException = (error: Error, tags?: Record<string, any>) => {
   )
 }
 
-export const captureMessage = (
-  message: string,
-  level: 'info' | 'warning' | 'error' = 'info',
-  tags?: Record<string, any>,
-) => {
-  if (env.NODE_ENV !== 'test') {
-    console.log(`[${level}] ${message}`)
-  }
-
-  // Add message to the current span
-  const span = tracer.scope().active()
-  if (span) {
-    span.log({
-      event: level,
-      message,
-      ...tags,
-    })
-  }
-
-  // Send to DataDog logs
-  console.log(
-    JSON.stringify({
-      level,
-      message,
-      timestamp: new Date().toISOString(),
-      service: 'latitude-llm-web',
-      ...tags,
-    }),
-  )
-}

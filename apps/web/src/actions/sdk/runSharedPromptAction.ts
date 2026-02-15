@@ -1,7 +1,6 @@
 'use server'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { type ChainEventDto } from '@latitude-data/sdk'
-import { RunDocumentResponse } from '$/actions/sdk/runDocumentAction'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { findSharedDocumentCached } from '$/app/(public)/_data_access'
 import { createStreamableValue } from '@ai-sdk/rsc'
@@ -11,10 +10,6 @@ type RunSharedPromptActionProps = {
   publishedDocumentUuid: string
   parameters: Record<string, unknown>
 }
-
-export type RunDocumentActionFn = (
-  _: RunSharedPromptActionProps,
-) => RunDocumentResponse
 
 export async function runSharedPromptAction({
   publishedDocumentUuid,

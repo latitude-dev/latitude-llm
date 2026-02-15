@@ -15,14 +15,3 @@ export const PUBLIC_ROOT_PATHS = {
   share: '/share',
 }
 
-export function isPublicPath(pathname: string) {
-  const publicPaths = [
-    PUBLIC_ROOT_PATHS.setup,
-    PUBLIC_ROOT_PATHS.login,
-    PUBLIC_ROOT_PATHS.magicLinks,
-    PUBLIC_ROOT_PATHS.invitations,
-    PUBLIC_ROOT_PATHS.share,
-  ]
-
-  return publicPaths.some((publicPath) => pathname.startsWith(publicPath))
-}

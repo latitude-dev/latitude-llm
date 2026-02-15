@@ -16,7 +16,8 @@
     "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name '.turbo' -type d -prune -exec rm -rf '{}' +",
     "catchup": "pnpm i --ignore-scripts && pnpm build --filter=\"./packages/**/*\" && pnpm --filter \"@latitude-data/web\" workers:build && pnpm --filter \"@latitude-data/core\" db:migrate",
     "console": "clear && ./bin/console.ts",
-    "backgroundRun:stressTest": "pnpm --filter @latitude-data/core backgroundRun:stressTest"
+    "backgroundRun:stressTest": "pnpm --filter @latitude-data/core backgroundRun:stressTest",
+    "knip": "knip"
   },
   "devDependencies": {
     "@babel/parser": "^7.28.4",
@@ -27,6 +28,7 @@
     "concurrently": "^9.1.2",
     "eslint": "^9.18.0",
     "glob": "^11.0.1",
+    "knip": "^5.83.1",
     "mintlify": "4.1.98",
     "prettier": "^3.5.3",
     "recast": "^0.23.11",

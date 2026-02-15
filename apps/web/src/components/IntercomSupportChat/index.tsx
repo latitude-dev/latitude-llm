@@ -2,7 +2,6 @@
 
 import React, {
   createContext,
-  useContext,
   useEffect,
   useState,
   ReactNode,
@@ -65,11 +64,4 @@ export function IntercomProvider({
       {children}
     </IntercomContext.Provider>
   )
-}
-
-export function useIntercom(): IntercomContextValue {
-  const ctx = useContext(IntercomContext)
-  if (!ctx)
-    throw new Error('useIntercom must be used within an IntercomProvider')
-  return ctx
 }
