@@ -78,6 +78,10 @@ export default defineConfig([
     rules: COMMON_RULES,
   },
   {
+    files: ['apps/temporal-workers/**/*.ts'],
+    rules: COMMON_RULES,
+  },
+  {
     files: ['packages/web-ui/**/*.{ts,tsx}'],
     rules: COMMON_RULES,
   },
@@ -106,4 +110,3 @@ export default defineConfig([
     rules: COMMON_RULES,
   },
 ])
-

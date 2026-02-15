@@ -9,6 +9,11 @@ services:
     volumes:
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER:-latitude}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -71,11 +76,41 @@ services:
         soft: 262144
         hard: 262144
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:8123/ping']
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    restart: always
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-latitude}
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:-secret}
+      - POSTGRES_SEEDS=db
+      - DBNAME=temporal
+      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/dynamicconfig/development.yaml
+    ports:
+      - '7233:7233'
+    volumes:
+      - ./docker/temporal/dynamicconfig:/etc/temporal/dynamicconfig
+    depends_on:
+      db:
+        condition: service_healthy
+
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    restart: always
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - '8088:8080'
+    depends_on:
+      - temporal
 
   web:
     image: ghcr.io/latitude-dev/web:latest
@@ -119,6 +154,21 @@ services:
       - db
       - redis
       - weaviate
+
+  temporal-workers:
+    image: ghcr.io/latitude-dev/temporal-workers:latest
+    restart: on-failure
+    env_file:
+      - .env
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    volumes:
+      - shared-storage:/app/storage/files
+      - shared-storage:/app/apps/web/public/files
+    depends_on:
+      - temporal
+      - db
+      - redis
 
   websockets:
     image: ghcr.io/latitude-dev/websockets:latest

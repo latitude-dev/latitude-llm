@@ -1,0 +1,35 @@
+{
+  "name": "@latitude-data/temporal-workers",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Latitude Temporal Workers for workflow orchestration",
+  "private": true,
+  "scripts": {
+    "build": "tsup --config tsup.config.ts",
+    "dev": "tsx watch src/server",
+    "dev:log": "NODE_DEBUG=latitude:debug tsx watch src/server",
+    "dev:debug": "tsx watch --inspect-brk src/server",
+    "lint": "eslint src/",
+    "start": "node -r module-alias/register ./dist --env=production",
+    "tc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@latitude-data/core": "workspace:^",
+    "@latitude-data/env": "workspace:^",
+    "@latitude-data/telemetry": "workspace:*",
+    "@temporalio/activity": "^1.11.6",
+    "@temporalio/client": "^1.11.6",
+    "@temporalio/worker": "^1.11.6",
+    "@temporalio/workflow": "^1.11.6",
+    "dd-trace": "catalog:",
+    "express": "4.21.2"
+  },
+  "devDependencies": {
+    "@latitude-data/eslint-config": "workspace:^",
+    "@latitude-data/typescript-config": "workspace:^",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.5.1",
+    "tsup": "^8.2.4",
+    "tsx": "^4.16.2"
+  }
+}

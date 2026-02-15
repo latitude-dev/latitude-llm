@@ -111,6 +111,21 @@
     },
     "./telemetry": {
       "import": "./src/telemetry/index.ts"
+    },
+    "./temporal/connection-client": {
+      "import": "./src/temporal/connection-client.ts"
+    },
+    "./temporal/connection-worker": {
+      "import": "./src/temporal/connection-worker.ts"
+    },
+    "./temporal/workflows": {
+      "import": "./src/temporal/workflows/index.ts"
+    },
+    "./temporal/activities/handlers": {
+      "import": "./src/temporal/activities/handlers.ts"
+    },
+    "./temporal/queues": {
+      "import": "./src/temporal/queues.ts"
     }
   },
   "scripts": {
@@ -185,6 +200,11 @@
     "ai": "catalog:",
     "ajv": "8.17.1",
     "argon2": "0.44.0",
+    "@temporalio/activity": "^1.11.6",
+    "@temporalio/client": "^1.11.6",
+    "@temporalio/common": "^1.11.6",
+    "@temporalio/worker": "^1.11.6",
+    "@temporalio/workflow": "^1.11.6",
     "bullmq": "catalog:",
     "compute-cosine-similarity": "1.1.0",
     "cron-parser": "5.3.0",

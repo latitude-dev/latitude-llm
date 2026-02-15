@@ -1,0 +1,13 @@
+{
+  "extends": "@latitude-data/typescript-config/base.json",
+  "compilerOptions": {
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "types": ["node"],
+    "jsx": "preserve"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

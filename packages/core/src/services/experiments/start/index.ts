@@ -13,6 +13,8 @@ import { enqueueRun } from '../../runs/enqueue'
 import { LogSources } from '@latitude-data/constants'
 import { SimulationSettings } from '@latitude-data/constants/simulation'
 import { initializeExperimentStatus } from '../updateStatus'
+import { isFeatureEnabledByName } from '../../workspaceFeatures/isFeatureEnabledByName'
+import { startExperimentWithTemporal } from '../startWithTemporal'
 
 function buildRowSimulationSettings(
   baseSettings: SimulationSettings | undefined,
@@ -46,6 +48,34 @@ export async function startExperiment(
     workspace: Workspace
   },
   transaction = new Transaction(),
+): PromisedResult<Experiment, LatitudeError> {
+  const temporalEnabled = await isFeatureEnabledByName(
+    workspace.id,
+    'temporalJobs',
+  )
+
+  if (Result.isOk(temporalEnabled) && temporalEnabled.unwrap()) {
+    return startExperimentWithTemporal(
+      { experimentUuid, workspace },
+      transaction,
+    )
+  }
+
+  return startExperimentWithBullMQ(
+    { experimentUuid, workspace },
+    transaction,
+  )
+}
+
+async function startExperimentWithBullMQ(
+  {
+    experimentUuid,
+    workspace,
+  }: {
+    experimentUuid: string
+    workspace: Workspace
+  },
+  transaction: Transaction,
 ): PromisedResult<Experiment, LatitudeError> {
   const updateResult = await transaction.call(async (tx) => {
     const result = await tx
