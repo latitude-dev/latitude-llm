@@ -2,9 +2,9 @@ import { Job } from 'bullmq'
 import {
   CommitsRepository,
   EvaluationsV2Repository,
-  IssuesRepository,
 } from '../../../repositories'
 import { findProjectById } from '../../../queries/projects/findById'
+import { findIssueById } from '../../../queries/issues/findById'
 import { Result } from '../../../lib/Result'
 import { NotFoundError } from '../../../lib/errors'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
@@ -55,10 +55,10 @@ export async function updateEvaluationAlignmentJob(
   if (!Result.isOk(evaluationResult)) throw new NotFoundError('Evaluation not found') // prettier-ignore
   const evaluation = evaluationResult.unwrap()
 
-  const issueRepository = new IssuesRepository(workspace.id)
-  const issue = await issueRepository.findById({
-    project,
+  const issue = await findIssueById({
+    workspaceId: workspace.id,
     issueId,
+    project,
   })
   if (!issue) throw new NotFoundError('Issue not found')
 

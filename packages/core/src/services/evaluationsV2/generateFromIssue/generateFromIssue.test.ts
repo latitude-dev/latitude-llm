@@ -18,9 +18,9 @@ import type { Issue } from '@latitude-data/core/schema/models/types/Issue'
 import type { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-import * as getSpanMessagesAndEvaluationResultsByIssue from '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue'
+import * as getSpanMessagesAndEvaluationResultsByIssue from '@latitude-data/core/queries/issues/getSpanMessagesAndEvaluationResultsByIssue'
 import { Message } from '@latitude-data/constants/messages'
-import * as getSpanMessagesByIssueDocument from '../../../data-access/issues/getSpanMessagesByIssueDocument'
+import * as getSpanMessagesByIssueDocument from '../../../queries/issues/getSpanMessagesByIssueDocument'
 import {
   CommitsRepository,
   EvaluationResultsV2Repository,
@@ -34,7 +34,7 @@ vi.mock('../../copilot', () => ({
 }))
 
 vi.mock(
-  '@latitude-data/core/data-access/issues/getSpanMessagesAndEvaluationResultsByIssue',
+  '@latitude-data/core/queries/issues/getSpanMessagesAndEvaluationResultsByIssue',
   () => ({
     getSpanMessagesAndEvaluationResultsByIssue: vi.fn(),
     getReasonFromEvaluationResult: vi.fn(() => ''),
@@ -42,7 +42,7 @@ vi.mock(
 )
 
 vi.mock(
-  '@latitude-data/core/data-access/issues/getSpanMessagesByIssueDocument',
+  '../../../queries/issues/getSpanMessagesByIssueDocument',
   () => ({
     getSpanMessagesByIssueDocument: vi.fn(),
   }),

@@ -8,7 +8,7 @@ import { IntegrationDto } from '../../../../schema/models/types/Integration'
 import { listModelsForProvider } from '../../../ai/providers/models'
 import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
 import { PromisedResult } from '../../../../lib/Transaction'
-import { IntegrationsRepository } from '../../../../repositories'
+import { findIntegrationById } from '../../../../queries/integrations/findById'
 import { Result } from '../../../../lib/Result'
 import { env } from '@latitude-data/env'
 import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
@@ -130,7 +130,6 @@ async function triggerDocumentPresenter({
   workspaceId: number
 }): PromisedResult<string[]> {
   const documentTriggerNames: string[] = []
-  const integrationScope = new IntegrationsRepository(workspaceId)
 
   for (const trigger of triggers) {
     switch (trigger.triggerType) {
@@ -143,14 +142,16 @@ async function triggerDocumentPresenter({
         break
 
       case DocumentTriggerType.Integration: {
-        const integration = await integrationScope.find(
-          (trigger.configuration as IntegrationTriggerConfiguration)
-            .integrationId,
-        )
-        if (!integration.ok) {
-          return Result.error(integration.error!)
+        try {
+          const integration = await findIntegrationById({
+            workspaceId,
+            id: (trigger.configuration as IntegrationTriggerConfiguration)
+              .integrationId,
+          })
+          documentTriggerNames.push(integration.name)
+        } catch (e) {
+          return Result.error(e as Error)
         }
-        documentTriggerNames.push(integration.unwrap().name)
         break
       }
     }

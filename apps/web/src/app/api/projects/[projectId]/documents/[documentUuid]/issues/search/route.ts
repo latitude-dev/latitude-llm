@@ -2,18 +2,18 @@ import { z } from 'zod'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import {
-  IssuesRepository,
   DocumentVersionsRepository,
   CommitsRepository,
 } from '@latitude-data/core/repositories'
 import { findProjectById } from '@latitude-data/core/queries/projects/findById'
+import { findIssuesByTitleAndStatuses } from '@latitude-data/core/queries/issues/findByTitleAndStatuses'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 import { IssueGroup } from '@latitude-data/constants/issues'
 
 export type SearchIssueResponse = Awaited<
-  ReturnType<IssuesRepository['findByTitleAndStatuses']>
+  ReturnType<typeof findIssuesByTitleAndStatuses>
 >
 
 const paramsSchema = z.object({
@@ -63,8 +63,8 @@ export const GET = errorHandler(
           projectId,
         })
         .then((r) => r.unwrap())
-      const issuesRepo = new IssuesRepository(workspace.id)
-      const result = await issuesRepo.findByTitleAndStatuses({
+      const result = await findIssuesByTitleAndStatuses({
+        workspaceId: workspace.id,
         project,
         commit,
         document,

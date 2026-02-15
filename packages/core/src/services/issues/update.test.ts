@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { IssuesRepository } from '../../repositories'
+import { findIssue } from '../../queries/issues/findById'
 import { issues } from '../../schema/models/issues'
 import { createIssue } from '../../tests/factories/issues'
 import { createProject } from '../../tests/factories/projects'
@@ -544,7 +544,7 @@ describe('updateIssue', () => {
   })
 
   describe('repository integration', () => {
-    it('issue can be retrieved with IssuesRepository after update', async () => {
+    it('issue can be retrieved after update', async () => {
       const { workspace } = await createWorkspace({ features: ['issues'] })
       const projectResult = await createProject({
         workspace,
@@ -584,9 +584,7 @@ describe('updateIssue', () => {
         description: 'Updated Description',
       })
 
-      // Retrieve via repository
-      const repo = new IssuesRepository(workspace.id)
-      const retrieved = await repo.find(issue.id).then((r) => r.unwrap())
+      const retrieved = await findIssue({ workspaceId: workspace.id, id: issue.id })
 
       expect(retrieved.title).toBe('Updated via Service')
     })

@@ -1,11 +1,9 @@
 import { z } from 'zod'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import {
-  IssuesRepository,
-  CommitsRepository,
-} from '@latitude-data/core/repositories'
+import { CommitsRepository } from '@latitude-data/core/repositories'
 import { findProjectById } from '@latitude-data/core/queries/projects/findById'
+import { fetchIssuesFiltered } from '@latitude-data/core/queries/issues/fetchIssuesFiltered'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
@@ -49,17 +47,15 @@ export const GET = errorHandler(
           uuid: commitUuid,
         })
         .then((r) => r.unwrap())
-      const issuesRepo = new IssuesRepository(workspace.id)
-      const result = await issuesRepo
-        .fetchIssuesFiltered({
-          project,
-          commit,
-          filters: parsed.filters,
-          sorting: parsed.sorting,
-          page: parsed.page,
-          limit: parsed.limit,
-        })
-        .then((r) => r.unwrap())
+      const result = await fetchIssuesFiltered({
+        workspaceId: workspace.id,
+        project,
+        commit,
+        filters: parsed.filters,
+        sorting: parsed.sorting,
+        page: parsed.page,
+        limit: parsed.limit,
+      })
 
       return NextResponse.json(result, { status: 200 })
     },

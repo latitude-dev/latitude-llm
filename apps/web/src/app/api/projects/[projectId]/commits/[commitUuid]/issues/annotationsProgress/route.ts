@@ -1,6 +1,6 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { getAnnotationsProgress } from '@latitude-data/core/data-access/issues/getAnnotationsProgress'
+import { getAnnotationsProgress } from '@latitude-data/core/queries/issues/getAnnotationsProgress'
 import { OkType } from '@latitude-data/core/lib/Result'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'

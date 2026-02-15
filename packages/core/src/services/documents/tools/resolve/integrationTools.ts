@@ -3,7 +3,7 @@ import { LatitudeError } from '../../../../lib/errors'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { Result } from '../../../../lib/Result'
 import { ToolManifest } from '@latitude-data/constants/tools'
-import { IntegrationsRepository } from '../../../../repositories'
+import { findIntegrationById } from '../../../../queries/integrations/findById'
 import { callIntegrationTool } from '../../../../services/integrations/McpClient/callTool'
 import { StreamManager } from '../../../../lib/streamManager'
 import { telemetry } from '../../../../telemetry'
@@ -19,14 +19,15 @@ export async function resolveIntegrationToolDefinition({
   toolManifest: ToolManifest<ToolSource.Integration>
   streamManager: StreamManager
 }): PromisedResult<Tool, LatitudeError> {
-  const integrationScope = new IntegrationsRepository(
-    streamManager.workspace.id,
-  )
-  const integrationResult = await integrationScope.find(
-    toolManifest.sourceData.integrationId,
-  )
-  if (integrationResult.error) return integrationResult
-  const integration = integrationResult.unwrap()
+  let integration
+  try {
+    integration = await findIntegrationById({
+      workspaceId: streamManager.workspace.id,
+      id: toolManifest.sourceData.integrationId,
+    })
+  } catch (e) {
+    return Result.error(e as LatitudeError)
+  }
 
   return Result.ok({
     ...toolManifest.definition,

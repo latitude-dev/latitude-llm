@@ -10,7 +10,9 @@ import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { UnprocessableEntityError } from '../../lib/errors'
-import { EvaluationsV2Repository, IssuesRepository } from '../../repositories'
+import { EvaluationsV2Repository } from '../../repositories'
+import { lockIssue } from '../../queries/issues/lock'
+import { findIssue } from '../../queries/issues/findById'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
 import { issueHistograms } from '../../schema/models/issueHistograms'
@@ -113,16 +115,16 @@ export async function mergeIssues(
 
   return await transaction.call(
     async (tx) => {
-      const issuesRepository = new IssuesRepository(workspace.id, tx)
       const idsToLock = [winner.id, ...mergedIssues.map((item) => item.id)]
       for (const id of idsToLock) {
-        const locking = await issuesRepository.lock({ id })
+        const locking = await lockIssue({ workspaceId: workspace.id, id }, tx)
         if (!Result.isOk(locking)) return locking
       }
 
-      const refreshing = await issuesRepository.find(winner.id)
-      if (!Result.isOk(refreshing)) return refreshing
-      const refreshedWinner = refreshing.value
+      const refreshedWinner = await findIssue(
+        { workspaceId: workspace.id, id: winner.id },
+        tx,
+      )
       if (refreshedWinner.mergedAt) {
         return Result.error(
           new UnprocessableEntityError('Winning issue already merged'),
@@ -131,16 +133,18 @@ export async function mergeIssues(
 
       const refreshedMergedIssues: Issue[] = []
       for (const merged of mergedIssues) {
-        const refreshed = await issuesRepository.find(merged.id)
-        if (!Result.isOk(refreshed)) return refreshed
+        const refreshed = await findIssue(
+          { workspaceId: workspace.id, id: merged.id },
+          tx,
+        )
 
-        if (refreshed.value.mergedAt) {
+        if (refreshed.mergedAt) {
           return Result.error(
             new UnprocessableEntityError('Issue already merged'),
           )
         }
 
-        refreshedMergedIssues.push(refreshed.value)
+        refreshedMergedIssues.push(refreshed)
       }
 
       const timestamp = new Date()

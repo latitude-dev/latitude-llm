@@ -11,8 +11,8 @@ import {
   SpanWithDetails,
 } from '../../constants'
 import { getSpansByEvaluation } from '../../data-access/evaluations/getSpansByEvaluation'
-import { getSpansByIssue } from '../../data-access/issues/getSpansByIssue'
-import { getSpansWithoutIssues } from '../../data-access/issues/getSpansWithoutIssues'
+import { getSpansByIssue } from '../../queries/issues/getSpansByIssue'
+import { getSpansWithoutIssues } from '../../queries/issues/getSpansWithoutIssues'
 import { getSpansByDocument } from '../../data-access/spans/getSpansByDocument'
 import { publisher } from '../../events/publisher'
 import { executeOptimizationJobKey } from '../../jobs/job-definitions/optimizations/executeOptimizationJob'
@@ -29,9 +29,9 @@ import {
   DatasetsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
-  IssuesRepository,
   SpanMetadatasRepository,
 } from '../../repositories'
+import { findActiveIssuesByDocument } from '../../queries/issues/findActiveByDocument'
 import { DatasetRowData } from '../../schema/models/datasetRows'
 import { Column } from '../../schema/models/datasets'
 import { optimizations } from '../../schema/models/optimizations'
@@ -260,8 +260,8 @@ async function getIssueCandidates({
   optimization: Optimization
   workspace: Workspace
 }) {
-  const issuesRepository = new IssuesRepository(workspace.id)
-  const issues = await issuesRepository.findActiveByDocument({
+  const issues = await findActiveIssuesByDocument({
+    workspaceId: workspace.id,
     project: project,
     commit: baselineCommit,
     document: document,

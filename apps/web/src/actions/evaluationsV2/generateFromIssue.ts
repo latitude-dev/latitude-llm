@@ -12,7 +12,7 @@ import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { createActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/create'
 import { deleteActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/delete'
 import { publisher } from '@latitude-data/core/events/publisher'
-import { IssuesRepository } from '@latitude-data/core/repositories'
+import { findIssue } from '@latitude-data/core/queries/issues/findById'
 import { isIssueActive } from '@latitude-data/core/services/issues/shared'
 
 export const generateEvaluationV2FromIssueAction = withDocument
@@ -32,8 +32,7 @@ export const generateEvaluationV2FromIssueAction = withDocument
       CLOUD_MESSAGES.generateEvaluationIssueUsingCopilot,
     ).unwrap()
 
-    const issuesRepository = new IssuesRepository(workspace.id)
-    const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
+    const issue = await findIssue({ workspaceId: workspace.id, id: issueId })
 
     if (!isIssueActive(issue)) {
       throw new BadRequestError(

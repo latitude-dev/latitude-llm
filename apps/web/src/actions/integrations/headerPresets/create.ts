@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { authProcedure } from '../../procedures'
 import { createIntegrationHeaderPreset } from '@latitude-data/core/services/integrations/headerPresets/create'
-import { IntegrationsRepository } from '@latitude-data/core/repositories'
+import { findIntegrationById } from '@latitude-data/core/queries/integrations/findById'
 
 const inputSchema = z.object({
   integrationId: z.number(),
@@ -14,10 +14,10 @@ const inputSchema = z.object({
 export const createIntegrationHeaderPresetAction = authProcedure
   .inputSchema(inputSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const integrationsRepo = new IntegrationsRepository(ctx.workspace.id)
-    await integrationsRepo
-      .find(parsedInput.integrationId)
-      .then((r) => r.unwrap())
+    await findIntegrationById({
+      workspaceId: ctx.workspace.id,
+      id: parsedInput.integrationId,
+    })
 
     const result = await createIntegrationHeaderPreset({
       integrationId: parsedInput.integrationId,

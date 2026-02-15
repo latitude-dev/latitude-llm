@@ -10,8 +10,8 @@ import { Result } from '../../../lib/Result'
 import {
   DocumentTriggersRepository,
   DocumentVersionsRepository,
-  IntegrationsRepository,
 } from '../../../repositories'
+import { findAllIntegrations } from '../../../queries/integrations/findAll'
 import { getDocumentMetadata } from '../scan'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { ImportProps } from './types'
@@ -105,12 +105,10 @@ export async function getImports(
     }
     const allDocuments = allDocumentsResult.unwrap()
 
-    const integrationsRepo = new IntegrationsRepository(workspace.id, tx)
-    const allIntegrationsResult = await integrationsRepo.findAll()
-    if (allIntegrationsResult.error) {
-      return Result.error(allIntegrationsResult.error)
-    }
-    const allIntegrations = allIntegrationsResult.unwrap()
+    const allIntegrations = await findAllIntegrations(
+      { workspaceId: workspace.id },
+      tx,
+    )
 
     const agents = new Set<DocumentVersion>()
     const snippets = new Set<DocumentVersion>()
