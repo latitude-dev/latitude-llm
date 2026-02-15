@@ -35,12 +35,12 @@ function LockedIssuesHeader({
       <div className='flex flex-col items-center gap-2'>
         <Text.H3M>Your project does not have any issues</Text.H3M>
         <Text.H5 color='foregroundMuted' align='center'>
-          Annotate logs to discover issues and automate the evaluation process
+          Annotate traces to discover issues and automate the evaluation process
         </Text.H5>
       </div>
       <div className='flex items-center justify-center gap-x-2'>
         <Link href={runsRoute}>
-          <Button fancy>Annotate logs</Button>
+          <Button fancy>Annotate traces</Button>
         </Link>
         <Button fancy variant='outline' onClick={onOpen}>
           Learn more
