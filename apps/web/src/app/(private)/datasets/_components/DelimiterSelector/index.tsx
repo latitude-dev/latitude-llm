@@ -32,7 +32,6 @@ const DELIMITERS = [
   },
   { value: DelimiterEnum.Custom, label: 'Custom' },
 ]
-export const DELIMITER_KEYS = DELIMITERS.map(({ value }) => value)
 
 export default function DelimiterSelector({
   delimiterInputName,

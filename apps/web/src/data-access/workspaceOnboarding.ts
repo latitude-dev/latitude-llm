@@ -3,7 +3,6 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { getOrCreateOnboardingDocument } from '@latitude-data/core/services/documents/getOrCreateOnboardingDocument'
 import { notFound } from 'next/navigation'
 import { Result } from '@latitude-data/core/lib/Result'
-import { findOnboardingDataset } from '@latitude-data/core/services/datasets/findOnboardingDataset'
 
 /**
  * Get the current workspace onboarding status
@@ -66,17 +65,3 @@ export async function getOnboardingResources() {
   return { workspace, documents, project, commit }
 }
 
-/**
- * Get the onboarding dataset (if it exists)
- */
-export async function getOnboardingDataset() {
-  const { workspace } = await getCurrentUserOrRedirect()
-  if (!workspace?.id) {
-    return notFound()
-  }
-  const datasetResult = await findOnboardingDataset(workspace.id)
-  if (!Result.isOk(datasetResult)) {
-    return notFound()
-  }
-  return datasetResult.unwrap()
-}

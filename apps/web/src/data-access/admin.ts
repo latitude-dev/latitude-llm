@@ -432,12 +432,6 @@ export async function findPayingWorkspacesForAdmin(
   }
 }
 
-export type WorkspaceSearchResult = {
-  id: number
-  name: string
-  createdAt: Date
-}
-
 export async function searchWorkspacesForAdmin(query: string, db = database) {
   const searchTerm = `%${query}%`
 
@@ -507,11 +501,6 @@ export type ProjectSearchResult = {
   workspaceId: number
   createdAt: Date
 }
-
-export type UnifiedSearchResult =
-  | UserSearchResult
-  | WorkspaceUnifiedSearchResult
-  | ProjectSearchResult
 
 export type UnifiedSearchResponse = {
   users: UserSearchResult[]

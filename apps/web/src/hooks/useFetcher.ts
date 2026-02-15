@@ -210,5 +210,3 @@ function buildRoute(route: string, searchParams?: ISearchParams) {
   const params = new URLSearchParams(searchParams)
   return route.toString() + '?' + params.toString()
 }
-
-export type UseFetcherArgs = Parameters<typeof useFetcher>

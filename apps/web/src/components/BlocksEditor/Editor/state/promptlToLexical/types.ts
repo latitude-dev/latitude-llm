@@ -10,10 +10,7 @@ import type { Fragment, IParser } from 'promptl-ai'
 
 type ElementTag = IParser.ElementTag
 type TemplateNode = IParser.TemplateNode
-type IfBlock = IParser.IfBlock
-type ForBlock = IParser.ForBlock
 type MustacheTag = IParser.MustacheTag
-type Text = IParser.Text
 
 export const BLOCK_EDITOR_TYPE = {
   ROOT: 'root', // Native Lexical type
@@ -123,10 +120,7 @@ export interface BlockRootNode
 
 export type {
   ElementTag,
-  ForBlock,
   Fragment,
-  IfBlock,
   MustacheTag,
   TemplateNode,
-  Text,
 }

@@ -7,7 +7,7 @@ import ToolSpanSpecification from './Tool'
 import PromptSpanSpecification from './Prompt'
 import UnknownSpanSpecification from './Unknown'
 import { SpanFrontendSpecification } from './shared'
-import { Span, SpanType } from '@latitude-data/core/constants'
+import { SpanType } from '@latitude-data/core/constants'
 
 // prettier-ignore
 export const SPAN_SPECIFICATIONS: {
@@ -25,10 +25,4 @@ export const SPAN_SPECIFICATIONS: {
   [SpanType.Http]: HttpSpanSpecification,
   
   [SpanType.Unknown]: UnknownSpanSpecification,
-}
-
-export function getSpanSpecification<T extends SpanType = SpanType>(
-  span: Span<T>,
-) {
-  return SPAN_SPECIFICATIONS[span.type]
 }
