@@ -25,6 +25,8 @@ export type WorkspaceWithDetails = {
   createdAt: Date
   isBigAccount: boolean
   stripeCustomerId: string | null
+  promptManagerEnabled: boolean
+  agentBuilderEnabled: boolean
   subscription: OkType<typeof findWorkspaceSubscription>
   subscriptions: Subscription[]
   quotas: {

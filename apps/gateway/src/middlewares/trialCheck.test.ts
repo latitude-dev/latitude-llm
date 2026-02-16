@@ -33,6 +33,8 @@ function createMockWorkspace(
     defaultProviderId: null,
     stripeCustomerId: null,
     isBigAccount: false,
+    promptManagerEnabled: true,
+    agentBuilderEnabled: true,
     hasBillingPortal: false,
     currentSubscription: {
       id: 1,

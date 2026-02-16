@@ -12,6 +12,7 @@ import { isOnboardingCompleted } from '$/data-access/workspaceOnboarding'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { env } from '@latitude-data/env'
+import { computeProductAccess } from '@latitude-data/core/services/productAccess/computeProductAccess'
 import { redirect } from 'next/navigation'
 
 import { CSPostHogProvider, IdentifyUser } from '../providers'
@@ -46,6 +47,7 @@ export default async function PrivateLayout({
     ? { paymentUrl: env.LATITUDE_CLOUD_PAYMENT_URL }
     : undefined
   const isCloud = !!env.LATITUDE_CLOUD
+  const productAccess = computeProductAccess(workspace)
 
   return (
     <CSPostHogProvider>
@@ -60,6 +62,7 @@ export default async function PrivateLayout({
               currentUser={user}
               workspace={workspace}
               subscriptionPlan={subscriptionPlan}
+              productAccess={productAccess}
             >
               <LatitudeWebsocketsProvider
                 workspace={workspace}
