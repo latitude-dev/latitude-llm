@@ -53,7 +53,9 @@ export async function fetchConversations({
   filters,
   from,
   limit = 25,
+  createdAt,
 }: FetchConversationsParams): Promise<FetchConversationsResult> {
+  const effectiveCreatedAt = createdAt ?? filters.createdAt
   const params: Record<string, unknown> = {
     workspaceId,
     documentUuid,
@@ -82,18 +84,20 @@ export async function fetchConversations({
     )
   }
 
-  if (filters.createdAt?.from) {
-    params.createdAtFrom = toClickHouseDateTime(filters.createdAt.from)
+  if (effectiveCreatedAt?.from) {
+    params.createdAtFrom = toClickHouseDateTime(effectiveCreatedAt.from)
     conditions.push(`started_at >= {createdAtFrom: DateTime64(6, 'UTC')}`)
   }
 
-  if (filters.createdAt?.to) {
-    params.createdAtTo = toClickHouseDateTime(filters.createdAt.to)
+  if (effectiveCreatedAt?.to) {
+    params.createdAtTo = toClickHouseDateTime(effectiveCreatedAt.to)
     conditions.push(`started_at <= {createdAtTo: DateTime64(6, 'UTC')}`)
   }
 
   if (from) {
-    params.cursorStartedAt = toClickHouseDateTime(new Date(from.startedAt))
+    params.cursorStartedAt = from.startedAt.includes('T')
+      ? toClickHouseDateTime(from.startedAt)
+      : from.startedAt
     params.cursorDocumentLogUuid = from.documentLogUuid
     conditions.push(
       `(started_at, document_log_uuid) < ({cursorStartedAt: DateTime64(6, 'UTC')}, {cursorDocumentLogUuid: UUID})`,
