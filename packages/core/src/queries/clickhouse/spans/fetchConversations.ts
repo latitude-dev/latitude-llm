@@ -115,12 +115,12 @@ export async function fetchConversations({
         ) AS total_tokens,
         sum(duration_ms) FILTER (WHERE type IN ('prompt', 'chat', 'external')) AS total_duration,
         sum(cost) AS total_cost,
-        min(started_at) AS started_at,
-        max(ended_at) AS ended_at,
+        min(started_at) AS conversation_started_at,
+        max(ended_at) AS conversation_ended_at,
         max(started_at) AS latest_started_at,
-        anyLast(source) AS source,
-        anyLast(commit_uuid) AS commit_uuid,
-        anyLast(experiment_uuid) AS experiment_uuid
+        anyLast(source) AS latest_source,
+        anyLast(commit_uuid) AS latest_commit_uuid,
+        anyLast(experiment_uuid) AS latest_experiment_uuid
       FROM ${SPANS_TABLE}
       WHERE ${conditions.join(' AND ')}
       GROUP BY document_log_uuid
@@ -138,12 +138,12 @@ export async function fetchConversations({
     total_tokens: string
     total_duration: string
     total_cost: string
-    started_at: string
-    ended_at: string
+    conversation_started_at: string
+    conversation_ended_at: string
     latest_started_at: string
-    source: string
-    commit_uuid: string
-    experiment_uuid: string | null
+    latest_source: string
+    latest_commit_uuid: string
+    latest_experiment_uuid: string | null
   }>()
 
   const hasMore = rows.length > limit
@@ -156,12 +156,12 @@ export async function fetchConversations({
     totalTokens: Number(row.total_tokens),
     totalDuration: Number(row.total_duration),
     totalCost: Number(row.total_cost),
-    startedAt: row.started_at,
-    endedAt: row.ended_at,
+    startedAt: row.conversation_started_at,
+    endedAt: row.conversation_ended_at,
     latestStartedAt: row.latest_started_at,
-    source: row.source as LogSources | null,
-    commitUuid: row.commit_uuid,
-    experimentUuid: row.experiment_uuid,
+    source: row.latest_source as LogSources | null,
+    commitUuid: row.latest_commit_uuid,
+    experimentUuid: row.latest_experiment_uuid,
   }))
 
   const lastItem = items.length > 0 ? items[items.length - 1] : null
