@@ -11,6 +11,7 @@ import {
 import { Message } from '@latitude-data/constants/messages'
 import { cache as redis } from '../../cache'
 import { diskFactory } from '../../lib/disk'
+import { compressString } from '../../lib/disk/compression'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { createSpan } from './spans'
 
@@ -73,7 +74,8 @@ async function storeMetadata({
 }) {
   const disk = diskFactory('private')
   const key = SPAN_METADATA_STORAGE_KEY(workspaceId, traceId, spanId)
-  await disk.put(key, JSON.stringify(metadata))
+  const compressed = await compressString(JSON.stringify(metadata))
+  await disk.putBuffer(key, compressed)
 
   const cache = await redis()
   await cache.del(key)
