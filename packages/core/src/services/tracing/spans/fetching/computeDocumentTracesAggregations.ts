@@ -5,10 +5,8 @@ import { spans } from '../../../../schema/models/spans'
 import { TracesAggregations } from '../../../../schema/models/types/Span'
 import { DatabaseError } from 'pg'
 import { SpanType } from '@latitude-data/constants'
-import { isFeatureEnabledByName } from '../../../workspaceFeatures/isFeatureEnabledByName'
+import { isClickHouseSpansReadEnabled } from '../../../workspaceFeatures/isClickHouseSpansReadEnabled'
 import { computeDocumentTracesAggregations as chComputeDocumentTracesAggregations } from '../../../../queries/clickhouse/spans/computeDocumentTracesAggregations'
-
-const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 export async function computeDocumentTracesAggregations(
   {
@@ -22,13 +20,10 @@ export async function computeDocumentTracesAggregations(
   },
   db = database,
 ) {
-  const clickhouseEnabledResult = await isFeatureEnabledByName(
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
     workspaceId,
-    CLICKHOUSE_SPANS_READ_FLAG,
     db,
   )
-  const shouldUseClickHouse =
-    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
 
   if (shouldUseClickHouse) {
     const result = await chComputeDocumentTracesAggregations({

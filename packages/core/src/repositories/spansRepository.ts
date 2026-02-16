@@ -60,12 +60,10 @@ import {
 import { findByEvaluationResults as chFindByEvaluationResults } from '../queries/clickhouse/spans/findByEvaluationResults'
 import { countByProjectAndSource as chCountByProjectAndSource } from '../queries/clickhouse/spans/countByProjectAndSource'
 import { Database, database } from '../client'
-import { isFeatureEnabledByName } from '../services/workspaceFeatures/isFeatureEnabledByName'
+import { isClickHouseSpansReadEnabled } from '../services/workspaceFeatures/isClickHouseSpansReadEnabled'
 import { captureException } from '../utils/datadogCapture'
 
 const tt = getTableColumns(spans)
-
-const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 export class SpansRepository extends Repository<Span> {
   private clickHouseOverride: boolean | undefined
@@ -83,12 +81,10 @@ export class SpansRepository extends Repository<Span> {
     if (this.clickHouseOverride !== undefined) return this.clickHouseOverride
 
     try {
-      const result = await isFeatureEnabledByName(
+      this.clickHouseOverride = await isClickHouseSpansReadEnabled(
         this.workspaceId,
-        CLICKHOUSE_SPANS_READ_FLAG,
         this.db,
       )
-      this.clickHouseOverride = result.ok ? result.value : false
     } catch (error) {
       captureException(error as Error)
       this.clickHouseOverride = false

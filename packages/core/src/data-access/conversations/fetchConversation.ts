@@ -5,10 +5,8 @@ import { OkType, Result } from '../../lib/Result'
 import { spans } from '../../schema/models/spans'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { conversationAggregateFields } from './shared'
-import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatureEnabledByName'
+import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
 import { fetchConversation as chFetchConversation } from '../../queries/clickhouse/spans/fetchConversation'
-
-const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 export type Conversation = OkType<typeof fetchConversation>
 
@@ -24,13 +22,10 @@ export async function fetchConversation(
   },
   db = database,
 ) {
-  const clickhouseEnabledResult = await isFeatureEnabledByName(
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
     workspace.id,
-    CLICKHOUSE_SPANS_READ_FLAG,
     db,
   )
-  const shouldUseClickHouse =
-    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
 
   if (shouldUseClickHouse) {
     const result = await chFetchConversation({

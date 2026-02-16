@@ -27,7 +27,7 @@ import { Commit } from '../../schema/models/types/Commit'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { Cursor } from '../../schema/types'
-import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatureEnabledByName'
+import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
 import { getSpansByDocument as chGetSpansByDocument } from '../../queries/clickhouse/spans/getByDocument'
 
 /**
@@ -58,13 +58,10 @@ export async function getSpansByDocument(
   },
   db = database,
 ) {
-  const clickhouseEnabledResult = await isFeatureEnabledByName(
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
     workspace.id,
-    'clickhouse-spans-read',
     db,
   )
-  const shouldUseClickHouse =
-    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
 
   const commitsRepo = new CommitsRepository(workspace.id, db)
   const commitHistory = await commitsRepo.getCommitsHistory({ commit })

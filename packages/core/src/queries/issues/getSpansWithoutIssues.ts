@@ -31,7 +31,7 @@ import { Commit } from '../../schema/models/types/Commit'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { Cursor } from '../../schema/types'
-import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatureEnabledByName'
+import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
 import {
   getSpansWithoutIssues as chGetSpansWithoutIssues,
   getSpansWithActiveIssues as chGetSpansWithActiveIssues,
@@ -39,8 +39,23 @@ import {
   getSpansWithPassedResults as chGetSpansWithPassedResults,
 } from '../../queries/clickhouse/spans/getSpansWithoutIssues'
 
-const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
-
+/**
+ * Fetches spans that have no issues associated through evaluation results,
+ * filtered by document and commit history.
+ *
+ * Automatically excludes optimization-related spans:
+ * - Spans with source 'optimization'
+ * - Spans with source 'experiment' where the experiment is linked
+ *   to an optimization (via baselineExperimentId or optimizedExperimentId)
+ *
+ * @param excludeFailedResults - When true, excludes spans with failed or errored evaluation results.
+ * @param requirePassedResults - When true, only returns spans with at least one
+ *   evaluation result where hasPassed IS TRUE.
+ * @param requirePassedAnnotations - When true, implies requirePassedResults and
+ *   only returns spans with at least one human evaluation result where hasPassed IS TRUE.
+ * @param spanTypes - Array of span types to include. Defaults to all main span types.
+ *                    Pass [SpanType.Prompt] for optimizer use cases.
+ */
 export async function getSpansWithoutIssues(
   {
     workspace,
@@ -77,13 +92,10 @@ export async function getSpansWithoutIssues(
     })
   }
 
-  const clickhouseEnabledResult = await isFeatureEnabledByName(
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
     workspace.id,
-    CLICKHOUSE_SPANS_READ_FLAG,
     db,
   )
-  const shouldUseClickHouse =
-    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
 
   // Get optimization experiment UUIDs (still from PostgreSQL)
   const optimizationExperimentUuids = await db

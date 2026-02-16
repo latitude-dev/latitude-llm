@@ -15,11 +15,11 @@ import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatureEnabledByName'
+import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
 import { getSpansCountForAnnotationsProgress as chGetSpansCountForAnnotationsProgress } from '../../queries/clickhouse/spans/getAnnotationsProgress'
 
-const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
-
+// These are the log sources we consider for annotations progress by default
+// We don't consider Experiment logs as they don't move the centroid
 const DEFAULT_LOG_SOURCES = [
   ...RUN_SOURCES[RunSourceGroup.Production],
   LogSources.Playground,
@@ -129,12 +129,10 @@ export async function getAnnotationsProgress(
 
   const { commitUuids, commitIds } = commitsResult.value
 
-  const clickhouseEnabledResult = await isFeatureEnabledByName(
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
     workspace.id,
-    CLICKHOUSE_SPANS_READ_FLAG,
+    db,
   )
-  const shouldUseClickHouse =
-    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
 
   let totalRuns: number
 

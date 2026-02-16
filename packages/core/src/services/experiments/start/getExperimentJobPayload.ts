@@ -23,10 +23,8 @@ import { Project } from '../../../schema/models/types/Project'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { getRowsFromRange } from '../../datasetRows/getRowsFromRange'
 import { assertEvaluationRequirements } from '../assertRequirements'
-import { isFeatureEnabledByName } from '../../workspaceFeatures/isFeatureEnabledByName'
+import { isClickHouseSpansReadEnabled } from '../../workspaceFeatures/isClickHouseSpansReadEnabled'
 import { getExperimentPromptSpansBefore } from '../../../queries/clickhouse/spans/getExperimentPromptSpansBefore'
-
-const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 export type ExperimentRow = {
   uuid: string
@@ -117,13 +115,10 @@ async function getExperimentSpansRows(
   },
   db = database,
 ): Promise<ExperimentRow[]> {
-  const clickhouseEnabledResult = await isFeatureEnabledByName(
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
     workspace.id,
-    CLICKHOUSE_SPANS_READ_FLAG,
     db,
   )
-  const shouldUseClickHouse =
-    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
 
   const spanResults = shouldUseClickHouse
     ? await getExperimentPromptSpansBefore({

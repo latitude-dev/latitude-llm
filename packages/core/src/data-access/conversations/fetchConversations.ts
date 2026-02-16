@@ -21,10 +21,8 @@ import {
   shouldFallbackToAllTime,
 } from '../../services/spans/defaultCreatedAtWindow'
 import { conversationAggregateFields } from './shared'
-import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatureEnabledByName'
+import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
 import { fetchConversations as chFetchConversations } from '../../queries/clickhouse/spans/fetchConversations'
-
-const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 export type ConversationFilters = {
   commitUuids: string[]
@@ -190,13 +188,10 @@ export async function fetchConversations(
   }: FetchConversationsParams,
   db = database,
 ) {
-  const clickhouseEnabledResult = await isFeatureEnabledByName(
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
     workspace.id,
-    CLICKHOUSE_SPANS_READ_FLAG,
     db,
   )
-  const shouldUseClickHouse =
-    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
 
   if (shouldUseClickHouse) {
     const normalizedCreatedAt = normalizeCreatedAtRange(filters.createdAt)

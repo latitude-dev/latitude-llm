@@ -10,9 +10,8 @@ import { features } from '../../../schema/models/features'
 import { spans } from '../../../schema/models/spans'
 import { workspaceFeatures } from '../../../schema/models/workspaceFeatures'
 import { workspaces } from '../../../schema/models/workspaces'
+import { CLICKHOUSE_SPANS_READ_FLAG } from '../../workspaceFeatures/flags'
 import { workspaceUsageInfoCTE } from './workspaceUsageInfoQuery'
-
-const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 type UsageOverviewBaseRow = {
   workspaceId: number
