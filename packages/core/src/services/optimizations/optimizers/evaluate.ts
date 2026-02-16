@@ -440,7 +440,6 @@ async function evaluatePrompt<
     datasetRow: example,
     commit: commit,
     workspace: workspace,
-    dry: true, // BONUS(AO/OPT): Decide whether we should persist evaluation results from optimizations
   })
   if (evaluating.error) {
     // BONUS(AO/OPT): Exponential backoff on rate limit errors

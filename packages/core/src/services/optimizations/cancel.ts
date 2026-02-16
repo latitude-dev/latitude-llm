@@ -53,8 +53,6 @@ export async function cancelOptimization(
     await stopExperiments({ optimization, workspace })
   }
 
-  // BONUS(AO/OPT): Should we delete all related entities too?
-
   return await transaction.call(async () => {
     const ending = await endOptimization(
       {

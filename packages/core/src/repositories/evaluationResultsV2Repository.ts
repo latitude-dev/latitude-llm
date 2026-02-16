@@ -27,6 +27,7 @@ import {
   ISSUE_GENERATION_MAX_RESULTS,
   ISSUE_GENERATION_RECENCY_DAYS,
   ISSUE_GENERATION_RECENCY_RATIO,
+  LogSources,
   Span,
 } from '../constants'
 import { EvaluationResultsV2Search } from '../helpers'
@@ -51,6 +52,7 @@ import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import { findLastActiveAssignedIssue } from '../queries/issueEvaluationResults/findLastActiveAssignedIssue'
 import Repository from './repositoryV2'
 import { SpansRepository } from './spansRepository'
+import { spans } from '../schema/models/spans'
 
 const tt = getTableColumns(evaluationResultsV2)
 
@@ -997,5 +999,26 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         ),
       ),
     )
+  }
+
+  async isFromOptimization(
+    result: Pick<EvaluationResultV2, 'evaluatedTraceId' | 'evaluatedSpanId'>,
+  ) {
+    if (!result.evaluatedSpanId || !result.evaluatedTraceId) return false
+
+    const span = await this.db
+      .select({ source: spans.source })
+      .from(spans)
+      .where(
+        and(
+          eq(spans.traceId, result.evaluatedTraceId),
+          eq(spans.id, result.evaluatedSpanId),
+          eq(spans.workspaceId, this.workspaceId),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0])
+
+    return span?.source === LogSources.Optimization
   }
 }

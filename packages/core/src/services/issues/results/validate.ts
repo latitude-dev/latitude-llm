@@ -7,6 +7,7 @@ import {
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { findLastActiveAssignedIssue } from '../../../queries/issueEvaluationResults/findLastActiveAssignedIssue'
+import { EvaluationResultsV2Repository } from '../../../repositories/evaluationResultsV2Repository'
 import { type Issue } from '../../../schema/models/types/Issue'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
@@ -59,13 +60,6 @@ export async function validateResultForIssue<
     }
   }
 
-  // TODO(AO): Review why do we want to allow results from experiments to be added to issues?
-  // if (result.experimentId) {
-  //   return Result.error(
-  //     new UnprocessableEntityError('Cannot use a result from an experiment'),
-  //   )
-  // }
-
   if (evaluation.type === EvaluationType.Composite) {
     return Result.error(
       new UnprocessableEntityError(
@@ -87,6 +81,21 @@ export async function validateResultForIssue<
   if (issue && issue.mergedAt) {
     return Result.error(
       new UnprocessableEntityError('Cannot use an issue that has been merged'),
+    )
+  }
+
+  // TODO(AO): Review why do we want to allow results from experiments to be added to issues?
+  // if (result.experimentId) {
+  //   return Result.error(
+  //     new UnprocessableEntityError('Cannot use a result from an experiment'),
+  //   )
+  // }
+
+  const repository = new EvaluationResultsV2Repository(result.workspaceId, db)
+  const isFromOptimization = await repository.isFromOptimization(result)
+  if (isFromOptimization) {
+    return Result.error(
+      new UnprocessableEntityError('Cannot use a result from an optimization'),
     )
   }
 

@@ -1,6 +1,7 @@
 import {
   EvaluationType,
   EvaluationV2,
+  LogSources,
   Providers,
   SpanType,
 } from '@latitude-data/constants'
@@ -482,6 +483,64 @@ describe('validateResultForIssue', () => {
       // Should pass when no issue is provided
       const result = await validateResultForIssue({
         result: { result: evaluationResult, evaluation },
+      })
+
+      expect(result.ok).toBe(true)
+    })
+  })
+
+  describe('optimization result validation', () => {
+    it('fails when result is from an optimization', async () => {
+      const span = await factories.createSpan({
+        workspaceId: workspace.id,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+        source: LogSources.Optimization,
+      })
+
+      const evaluationResult = await factories.createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span,
+        score: 0,
+        normalizedScore: 0,
+        hasPassed: false,
+      })
+
+      const result = await validateResultForIssue({
+        result: { result: evaluationResult, evaluation },
+        issue,
+      })
+
+      expect(result.ok).toBe(false)
+      expect(result.error).toBeInstanceOf(UnprocessableEntityError)
+      expect(result.error?.message).toBe(
+        'Cannot use a result from an optimization',
+      )
+    })
+
+    it('passes when result is not from an optimization', async () => {
+      const span = await factories.createSpan({
+        workspaceId: workspace.id,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+        source: LogSources.API,
+      })
+
+      const evaluationResult = await factories.createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span,
+        score: 0,
+        normalizedScore: 0,
+        hasPassed: false,
+      })
+
+      const result = await validateResultForIssue({
+        result: { result: evaluationResult, evaluation },
+        issue,
       })
 
       expect(result.ok).toBe(true)
