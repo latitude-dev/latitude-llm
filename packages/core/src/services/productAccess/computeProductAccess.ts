@@ -9,6 +9,7 @@ export function computeProductAccess(workspace: {
 }): ProductAccess {
   return {
     promptManagement: workspace.promptManagerEnabled,
-    agentBuilder: workspace.agentBuilderEnabled && workspace.promptManagerEnabled,
+    agentBuilder:
+      workspace.agentBuilderEnabled && workspace.promptManagerEnabled,
   }
 }
