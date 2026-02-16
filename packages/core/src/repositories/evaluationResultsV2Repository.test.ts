@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Providers } from '@latitude-data/constants'
+import { LogSources, Providers } from '@latitude-data/constants'
 
 import { type Workspace } from '../schema/models/types/Workspace'
 import * as factories from '../tests/factories'
@@ -965,6 +965,92 @@ describe('EvaluationResultsV2Repository', () => {
       expect(hasNextPage).toBe(false)
       // Verify they are different spans
       expect(results[0]?.evaluatedSpanId).not.toBe(results[1]?.evaluatedSpanId)
+    })
+  })
+
+  describe('isFromOptimization', () => {
+    it('returns true when the evaluated span source is Optimization', async () => {
+      const { commit, documents } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          prompt: factories.helpers.createPrompt({ provider: 'openai' }),
+        },
+      })
+
+      const document = documents[0]!
+      const evaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+      })
+
+      const span = await factories.createSpan({
+        workspaceId: workspace.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+        source: LogSources.Optimization,
+      })
+
+      const result = await factories.createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span,
+      })
+
+      const isOptimization = await repository.isFromOptimization(result)
+      expect(isOptimization).toBe(true)
+    })
+
+    it('returns false when the evaluated span source is not Optimization', async () => {
+      const { commit, documents } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          prompt: factories.helpers.createPrompt({ provider: 'openai' }),
+        },
+      })
+
+      const document = documents[0]!
+      const evaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+      })
+
+      const span = await factories.createSpan({
+        workspaceId: workspace.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+        source: LogSources.API,
+      })
+
+      const result = await factories.createEvaluationResultV2({
+        workspace,
+        evaluation,
+        commit,
+        span,
+      })
+
+      const isOptimization = await repository.isFromOptimization(result)
+      expect(isOptimization).toBe(false)
+    })
+
+    it('returns false when evaluatedSpanId is null', async () => {
+      const isOptimization = await repository.isFromOptimization({
+        evaluatedSpanId: null,
+        evaluatedTraceId: 'some-trace-id',
+      })
+      expect(isOptimization).toBe(false)
+    })
+
+    it('returns false when evaluatedTraceId is null', async () => {
+      const isOptimization = await repository.isFromOptimization({
+        evaluatedSpanId: 'some-span-id',
+        evaluatedTraceId: null,
+      })
+      expect(isOptimization).toBe(false)
     })
   })
 

@@ -31,8 +31,6 @@ export async function endValidateOptimization(
     )
   }
 
-  // BONUS(AO/OPT): Remove optimized commit if it is not better?
-
   const updating = await transaction.call(
     async (tx) => {
       const now = new Date()
