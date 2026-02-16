@@ -70,6 +70,12 @@ export function AnnotationPopover<
         sideOffset={8}
         className={cn('w-96 p-0', 'animate-in fade-in slide-in-from-top-2')}
         onOpenAutoFocus={(e) => e.preventDefault()}
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement | null
+          if (target?.closest('[role="dialog"]')) {
+            e.preventDefault()
+          }
+        }}
         data-selection-popover
         onMouseDown={(e) => {
           e.stopPropagation()

@@ -167,7 +167,9 @@ async function generalizeReason({
 }) {
   if (!env.COPILOT_PROMPT_ANNOTATION_GENERALIZER_PATH) {
     return Result.error(
-      new Error('COPILOT_PROMPT_ANNOTATION_GENERALIZER_PATH is not set'),
+      new BadRequestError(
+        'Issue enrichment is not configured: COPILOT_PROMPT_ANNOTATION_GENERALIZER_PATH is not set',
+      ),
     )
   }
 

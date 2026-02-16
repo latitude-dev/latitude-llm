@@ -35,6 +35,7 @@ export function useIssue(
         description: string
       }
     }) => void
+    onCreateIssueError?: (_args: { message: string }) => void
   },
   swrConfig?: SWRConfiguration<Issue, any>,
 ) {
@@ -56,7 +57,9 @@ export function useIssue(
     useLatitudeAction(unAssignIssueAction, { onSuccess: onIssueUnAssigned })
 
   const { execute: createIssue, isPending: isCreatingIssue } =
-    useLatitudeAction(createIssueAction, { onSuccess: onIssueAssigned })
+    useLatitudeAction(createIssueAction, {
+      onSuccess: onIssueAssigned,
+    })
 
   const { execute: generateIssue, isPending: isGeneratingIssue } =
     useLatitudeAction(generateIssueAction, { onSuccess: onIssueGenerated })

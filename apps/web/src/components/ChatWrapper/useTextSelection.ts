@@ -438,6 +438,9 @@ export function useTextSelection(messages: Message[]) {
       const isInsidePopover = element.closest('[data-selection-popover]')
       if (isInsidePopover) return
 
+      const isInsideDialog = element.closest('[role="dialog"]')
+      if (isInsideDialog) return
+
       if (containerRef.current && !containerRef.current.contains(element)) {
         clearSelection()
       }

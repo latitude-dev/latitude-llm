@@ -12,6 +12,7 @@ import { updateEvaluationResultInstance } from '../updateEvaluationResultInstanc
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useIssue } from '$/stores/issues/issue'
 import { useOnce } from '$/hooks/useMount'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 
 export function NewIssueModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState<string | undefined>(undefined)
@@ -24,6 +25,7 @@ export function NewIssueModal({ onClose }: { onClose: () => void }) {
   })
   const { project } = useCurrentProject()
   const { span, evaluation, result, commit } = use(AnnotationContext)
+  const { toast } = useToast()
   const { mutate: mutateResults } = useEvaluationResultsV2BySpans({
     project,
     commit,
@@ -67,7 +69,6 @@ export function NewIssueModal({ onClose }: { onClose: () => void }) {
       const formData = new FormData(e.currentTarget)
       const title = formData.get('title')?.toString() ?? ''
       const description = formData.get('description')?.toString() ?? ''
-
       const [_, actionErrors] = await createIssue({
         projectId: project.id,
         commitUuid: commit.uuid,
@@ -90,16 +91,23 @@ export function NewIssueModal({ onClose }: { onClose: () => void }) {
     [createIssue, evaluation, project.id, commit.uuid, result, onClose],
   )
 
-  useOnce(() => {
+  useOnce(async () => {
     if (!result) return
 
-    generateIssue({
+    const [, error] = await generateIssue({
       projectId: project.id,
       commitUuid: commit.uuid,
       documentUuid: evaluation.documentUuid,
       evaluationUuid: evaluation.uuid,
       evaluationResultUuid: result.uuid,
     })
+
+    if (error) {
+      toast({
+        description: error.message,
+        variant: 'destructive',
+      })
+    }
   })
 
   if (isGeneratingIssue) {
