@@ -18,13 +18,24 @@ export const getByDocumentLogUuidAndSpanId = scopedQuery(
     },
     _db,
   ): Promise<TypedResult<Span | undefined>> {
+    // Transitional resilience: some historical non-main spans were ingested with
+    // NULL document_log_uuid. Prefer direct document_log_uuid matching, but also
+    // allow spans whose trace belongs to the conversation until backfill is complete.
     const result = await clickhouseClient().query({
       query: `
       SELECT *
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
-        AND document_log_uuid = {documentLogUuid: UUID}
         AND span_id = {spanId: String}
+        AND (
+          document_log_uuid = {documentLogUuid: UUID}
+          OR trace_id IN (
+            SELECT DISTINCT trace_id
+            FROM ${SPANS_TABLE}
+            WHERE workspace_id = {workspaceId: UInt64}
+              AND document_log_uuid = {documentLogUuid: UUID}
+          )
+        )
       ORDER BY ingested_at DESC
       LIMIT 1
     `,
