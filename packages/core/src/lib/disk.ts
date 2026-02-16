@@ -52,6 +52,28 @@ export class DiskWrapper {
     return this.disk.get(key)
   }
 
+  async getBuffer(key: string): Promise<Buffer> {
+    const stream = await this.disk.getStream(key)
+    const chunks: Buffer[] = []
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+    }
+    return Buffer.concat(chunks)
+  }
+
+  async putBuffer(key: string, contents: Buffer, options?: WriteOptions) {
+    try {
+      const stream = Readable.from(contents)
+      await this.disk.putStream(key, stream, {
+        ...options,
+        contentLength: contents.length,
+      })
+      return Result.nil()
+    } catch (e) {
+      return Result.error(e as Error)
+    }
+  }
+
   async put(key: string, contents: string, options?: WriteOptions) {
     try {
       const byteLength = Buffer.byteLength(contents, 'utf8')

@@ -26,6 +26,7 @@ import {
   SpanType,
 } from '../constants'
 import { diskFactory, DiskWrapper } from '../lib/disk'
+import { decompressToString } from '../lib/disk/compression'
 import { Result } from '../lib/Result'
 import {
   applyDefaultSpansCreatedAtRange,
@@ -795,7 +796,10 @@ export class SpanMetadatasRepository {
 
     try {
       let payload = fresh ? undefined : await cache.get(key)
-      if (!payload) payload = await this.disk.get(key)
+      if (!payload) {
+        const raw = await this.disk.getBuffer(key)
+        payload = await decompressToString(raw)
+      }
 
       const metadata = JSON.parse(payload)
 

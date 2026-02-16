@@ -12,6 +12,7 @@ import {
 } from '@latitude-data/core/constants'
 import { cache as redis } from '@latitude-data/core/cache'
 import { diskFactory } from '@latitude-data/core/lib/disk'
+import { compressString } from '@latitude-data/core/lib/disk/compression'
 import { publishSpanCreated } from '@latitude-data/core/services/tracing/publishSpanCreated'
 import { AppRouteHandler } from '$/openApi/types'
 import { CreateLogRoute } from './create.route'
@@ -232,8 +233,11 @@ async function createSpansFromLogData({
     traceId,
     promptSpanId,
   )
+  const compressedPromptMetadata = await compressString(
+    JSON.stringify(promptMetadata),
+  )
   await disk
-    .put(promptMetadataKey, JSON.stringify(promptMetadata))
+    .putBuffer(promptMetadataKey, compressedPromptMetadata)
     .then((r) => r.unwrap())
   await cache.del(promptMetadataKey)
 
@@ -242,8 +246,11 @@ async function createSpansFromLogData({
     traceId,
     completionSpanId,
   )
+  const compressedCompletionMetadata = await compressString(
+    JSON.stringify(completionMetadata),
+  )
   await disk
-    .put(completionMetadataKey, JSON.stringify(completionMetadata))
+    .putBuffer(completionMetadataKey, compressedCompletionMetadata)
     .then((r) => r.unwrap())
   await cache.del(completionMetadataKey)
 

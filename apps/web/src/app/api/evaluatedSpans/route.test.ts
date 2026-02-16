@@ -11,6 +11,7 @@ import {
   SpanType,
 } from '@latitude-data/constants'
 import { diskFactory } from '@latitude-data/core/lib/disk'
+import { compressString } from '@latitude-data/core/lib/disk/compression'
 import { cache as redis } from '@latitude-data/core/cache'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
@@ -142,7 +143,8 @@ describe('GET handler for evaluatedSpans', () => {
       completionSpan.traceId,
       completionSpan.id,
     )
-    await disk.put(metadataKey, JSON.stringify(completionMetadata))
+    const compressed = await compressString(JSON.stringify(completionMetadata))
+    await disk.putBuffer(metadataKey, compressed)
 
     const cache = await redis()
     await cache.del(metadataKey)

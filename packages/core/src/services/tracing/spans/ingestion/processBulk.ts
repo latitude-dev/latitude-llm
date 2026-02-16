@@ -18,6 +18,7 @@ import {
 } from '../../../../constants'
 import { publishSpanCreated } from '../../publishSpanCreated'
 import { diskFactory, DiskWrapper } from '../../../../lib/disk'
+import { compressString } from '../../../../lib/disk/compression'
 import { LatitudeError, UnprocessableEntityError } from '../../../../lib/errors'
 import { Result, TypedResult } from '../../../../lib/Result'
 import Transaction from '../../../../lib/Transaction'
@@ -553,7 +554,8 @@ async function saveMetadataBatch(
     const promise = (async () => {
       try {
         const payload = JSON.stringify(metadata)
-        await disk.put(key, payload).then((r) => r.unwrap())
+        const compressed = await compressString(payload)
+        await disk.putBuffer(key, compressed).then((r) => r.unwrap())
         await cache.del(key)
       } catch (error) {
         captureException(new LatitudeError(`Error saving metadata:, ${error}`))
