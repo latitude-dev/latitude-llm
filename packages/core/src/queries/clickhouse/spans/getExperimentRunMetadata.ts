@@ -22,7 +22,7 @@ export async function getExperimentRunMetadata({
         SELECT DISTINCT trace_id
         FROM ${SPANS_TABLE}
         WHERE workspace_id = {workspaceId: UInt64}
-          AND experiment_uuid = {experimentUuid: String}
+          AND experiment_uuid = {experimentUuid: UUID}
       )
       SELECT
         countDistinctIf(trace_id, type IN ({runTypes: Array(String)})) AS trace_count,

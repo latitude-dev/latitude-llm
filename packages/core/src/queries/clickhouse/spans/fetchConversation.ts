@@ -40,13 +40,13 @@ export async function fetchConversation({
 
   const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
-    `document_log_uuid = {documentLogUuid: String}`,
+    `document_log_uuid = {documentLogUuid: UUID}`,
     `type IN ({mainSpanTypes: Array(String)})`,
   ]
 
   if (documentUuid) {
     params.documentUuid = documentUuid
-    conditions.push(`document_uuid = {documentUuid: String}`)
+    conditions.push(`document_uuid = {documentUuid: UUID}`)
   }
 
   const result = await clickhouseClient().query({

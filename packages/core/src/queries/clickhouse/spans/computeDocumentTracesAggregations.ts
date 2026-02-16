@@ -14,74 +14,73 @@ export async function computeDocumentTracesAggregations({
   const params: Record<string, unknown> = {
     workspaceId,
     documentUuid,
+    completionType: 'completion',
   }
 
-  const countConditions = [
+  const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
-    `document_uuid = {documentUuid: String}`,
-  ]
-
-  const aggregationConditions = [
-    `workspace_id = {workspaceId: UInt64}`,
-    `document_uuid = {documentUuid: String}`,
-    `type = 'completion'`,
+    `document_uuid = {documentUuid: UUID}`,
   ]
 
   if (commitUuid) {
     params.commitUuid = commitUuid
-    countConditions.push(`commit_uuid = {commitUuid: String}`)
-    aggregationConditions.push(`commit_uuid = {commitUuid: String}`)
+    conditions.push(`commit_uuid = {commitUuid: UUID}`)
   }
 
-  // Query for total count of distinct traces
-  const countResult = await clickhouseClient().query({
-    query: `
-      SELECT count(DISTINCT trace_id) AS total_count
-      FROM ${SPANS_TABLE}
-      WHERE ${countConditions.join(' AND ')}
-    `,
-    format: 'JSONEachRow',
-    query_params: params,
-  })
-
-  const countRows = await countResult.json<{ total_count: string }>()
-  const totalCount = Number(countRows[0]?.total_count ?? 0)
-
-  // Query for aggregations with median calculations using quantile(0.5)
+  // Query all metrics in a single pass
   const aggregationResult = await clickhouseClient().query({
     query: `
       SELECT
+        countDistinct(trace_id) AS total_count,
         coalesce(
-          sum(
+          sumIf(
             coalesce(tokens_prompt, 0) +
             coalesce(tokens_cached, 0) +
             coalesce(tokens_reasoning, 0) +
-            coalesce(tokens_completion, 0)
+            coalesce(tokens_completion, 0),
+            type = {completionType: String}
           ),
           0
         ) AS total_tokens,
-        coalesce(sum(cost), 0) AS total_cost_in_millicents,
         coalesce(
-          avg(
+          sumIf(cost, type = {completionType: String}),
+          0
+        ) AS total_cost_in_millicents,
+        coalesce(
+          avgIf(
             coalesce(tokens_prompt, 0) +
             coalesce(tokens_cached, 0) +
             coalesce(tokens_reasoning, 0) +
-            coalesce(tokens_completion, 0)
+            coalesce(tokens_completion, 0),
+            type = {completionType: String}
           ),
           0
         ) AS average_tokens,
-        coalesce(avg(cost), 0) AS average_cost_in_millicents,
-        coalesce(quantile(0.5)(cost), 0) AS median_cost_in_millicents,
-        coalesce(avg(duration_ms), 0) AS average_duration,
-        coalesce(quantile(0.5)(duration_ms), 0) AS median_duration
+        coalesce(
+          avgIf(cost, type = {completionType: String}),
+          0
+        ) AS average_cost_in_millicents,
+        coalesce(
+          quantileIf(0.5)(cost, type = {completionType: String}),
+          0
+        ) AS median_cost_in_millicents,
+        coalesce(
+          avgIf(duration_ms, type = {completionType: String}),
+          0
+        ) AS average_duration,
+        coalesce(
+          quantileIf(0.5)(duration_ms, type = {completionType: String}),
+          0
+        ) AS median_duration
       FROM ${SPANS_TABLE}
-      WHERE ${aggregationConditions.join(' AND ')}
+      WHERE ${conditions.join(' AND ')}
     `,
     format: 'JSONEachRow',
     query_params: params,
   })
 
   const aggRows = await aggregationResult.json<{
+    total_count: string
     total_tokens: string
     total_cost_in_millicents: string
     average_tokens: string
@@ -92,6 +91,7 @@ export async function computeDocumentTracesAggregations({
   }>()
 
   const row = aggRows[0] ?? {
+    total_count: '0',
     total_tokens: '0',
     total_cost_in_millicents: '0',
     average_tokens: '0',
@@ -102,7 +102,7 @@ export async function computeDocumentTracesAggregations({
   }
 
   return {
-    totalCount,
+    totalCount: Number(row.total_count),
     totalTokens: Number(row.total_tokens),
     totalCostInMillicents: Number(row.total_cost_in_millicents),
     averageTokens: Number(row.average_tokens),

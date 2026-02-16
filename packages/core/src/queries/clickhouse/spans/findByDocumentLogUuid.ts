@@ -15,7 +15,7 @@ export async function getLastTraceByLogUuid({
       SELECT trace_id
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
-        AND document_log_uuid = {logUuid: String}
+        AND document_log_uuid = {logUuid: UUID}
       ORDER BY started_at DESC
       LIMIT 1
     `,
@@ -39,7 +39,7 @@ export async function listTraceIdsByLogUuid({
       SELECT DISTINCT trace_id
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
-        AND document_log_uuid = {logUuid: String}
+        AND document_log_uuid = {logUuid: UUID}
       ORDER BY trace_id ASC
     `,
     format: 'JSONEachRow',
@@ -64,7 +64,7 @@ export async function findByDocumentLogUuids({
       SELECT *
       FROM ${SPANS_TABLE} FINAL
       WHERE workspace_id = {workspaceId: UInt64}
-        AND document_log_uuid IN ({documentLogUuids: Array(String)})
+        AND document_log_uuid IN ({documentLogUuids: Array(UUID)})
     `,
     format: 'JSONEachRow',
     query_params: { workspaceId, documentLogUuids },
@@ -86,7 +86,7 @@ export async function findByDocumentLogUuid({
       SELECT *
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
-        AND document_log_uuid = {documentLogUuid: String}
+        AND document_log_uuid = {documentLogUuid: UUID}
       ORDER BY ingested_at DESC
       LIMIT 1
     `,
@@ -111,7 +111,7 @@ export async function listByDocumentLogUuid({
       SELECT *
       FROM ${SPANS_TABLE} FINAL
       WHERE workspace_id = {workspaceId: UInt64}
-        AND document_log_uuid = {documentLogUuid: String}
+        AND document_log_uuid = {documentLogUuid: UUID}
       ORDER BY started_at ASC, span_id ASC
     `,
     format: 'JSONEachRow',
@@ -136,7 +136,7 @@ export async function findLastMainSpanByDocumentLogUuid({
       SELECT *
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
-        AND document_log_uuid = {documentLogUuid: String}
+        AND document_log_uuid = {documentLogUuid: UUID}
         AND type IN ({mainTypes: Array(String)})
       ORDER BY started_at DESC
       LIMIT 1
@@ -164,7 +164,7 @@ export async function findFirstMainSpanByDocumentLogUuid({
       SELECT *
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
-        AND document_log_uuid = {documentLogUuid: String}
+        AND document_log_uuid = {documentLogUuid: UUID}
         AND type IN ({mainTypes: Array(String)})
       ORDER BY started_at ASC
       LIMIT 1
@@ -192,7 +192,7 @@ export async function getSpanIdentifiersByDocumentLogUuids({
       SELECT trace_id, span_id
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
-        AND document_log_uuid IN ({documentLogUuids: Array(String)})
+        AND document_log_uuid IN ({documentLogUuids: Array(UUID)})
     `,
     format: 'JSONEachRow',
     query_params: { workspaceId, documentLogUuids },

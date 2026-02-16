@@ -43,7 +43,7 @@ function buildWhereClause(
   }
 
   if (filters.experimentUuids && filters.experimentUuids.length > 0) {
-    conditions.push(`experiment_uuid IN ({experimentUuids: Array(String)})`)
+    conditions.push(`experiment_uuid IN ({experimentUuids: Array(UUID)})`)
     params.experimentUuids = filters.experimentUuids
   }
 
@@ -200,12 +200,12 @@ export async function findByDocumentAndCommitLimited({
 }) {
   const baseConditions = [
     `workspace_id = {workspaceId: UInt64}`,
-    `document_uuid = {documentUuid: String}`,
+    `document_uuid = {documentUuid: UUID}`,
   ]
   const baseParams: Record<string, unknown> = { workspaceId, documentUuid }
 
   if (commitUuids && commitUuids.length > 0) {
-    baseConditions.push(`commit_uuid IN ({commitUuids: Array(String)})`)
+    baseConditions.push(`commit_uuid IN ({commitUuids: Array(UUID)})`)
     baseParams.commitUuids = commitUuids
   }
 

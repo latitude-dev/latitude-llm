@@ -21,7 +21,7 @@ export async function getSpansCountForAnnotationsProgress({
       SELECT count() AS total_count
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
-        AND commit_uuid IN ({commitUuids: Array(String)})
+        AND commit_uuid IN ({commitUuids: Array(UUID)})
         AND (source IN ({logSources: Array(String)}) OR source IS NULL)
         AND started_at >= {fromDate: DateTime64(6, 'UTC')}
     `,

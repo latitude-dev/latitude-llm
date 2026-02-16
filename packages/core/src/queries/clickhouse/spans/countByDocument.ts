@@ -35,8 +35,8 @@ export async function countDistinctTracesByDocument({
       SELECT count(DISTINCT trace_id) AS cnt
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
-        AND document_uuid = {documentUuid: String}
-        AND commit_uuid IN ({commitUuids: Array(String)})
+        AND document_uuid = {documentUuid: UUID}
+        AND commit_uuid IN ({commitUuids: Array(UUID)})
         ${sourceFilter}
     `,
     format: 'JSONEachRow',

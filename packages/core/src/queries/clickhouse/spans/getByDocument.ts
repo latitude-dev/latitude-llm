@@ -43,10 +43,10 @@ export async function getSpansByDocument({
 
   const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
-    `document_uuid = {documentUuid: String}`,
+    `document_uuid = {documentUuid: UUID}`,
     `type IN ({spanTypes: Array(String)})`,
     `status = {okStatus: String}`,
-    `commit_uuid IN ({commitUuids: Array(String)})`,
+    `commit_uuid IN ({commitUuids: Array(UUID)})`,
     `source != {optimizationSource: String}`,
   ]
 
@@ -58,7 +58,7 @@ export async function getSpansByDocument({
   if (optimizationExperimentUuids.length > 0) {
     params.optimizationExperimentUuids = optimizationExperimentUuids
     experimentConditions.push(
-      `experiment_uuid NOT IN ({optimizationExperimentUuids: Array(String)})`,
+      `experiment_uuid NOT IN ({optimizationExperimentUuids: Array(UUID)})`,
     )
   }
 
