@@ -9,6 +9,7 @@ import {
 import { SessionProvider } from '$/components/Providers/SessionProvider'
 import { isOnboardingCompleted } from '$/data-access'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import { computeProductAccess } from '@latitude-data/core/services/productAccess/computeProductAccess'
 import { env } from '@latitude-data/env'
 import { ReactNode } from 'react'
 import { WorkspaceProvider } from '../providers/WorkspaceProvider'
@@ -21,6 +22,7 @@ export default async function OnboardingLayout({
 }) {
   const { workspace, user, subscriptionPlan } = await getCurrentUserOrRedirect()
   const isCompleted = await isOnboardingCompleted()
+  const productAccess = computeProductAccess(workspace)
 
   return (
     <>
@@ -36,6 +38,7 @@ export default async function OnboardingLayout({
               currentUser={user}
               workspace={workspace}
               subscriptionPlan={subscriptionPlan}
+              productAccess={productAccess}
             >
               <LatitudeWebsocketsProvider
                 workspace={workspace}

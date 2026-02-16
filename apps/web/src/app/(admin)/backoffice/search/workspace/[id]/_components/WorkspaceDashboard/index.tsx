@@ -29,6 +29,7 @@ import { WorkspaceWorkersUsage } from '../WorkspaceWorkersUsage'
 import { ChangeTrialEndDateButton } from '../ChangeTrialEndDateButton'
 import { SubscriptionRow } from '$/components/Subscriptions/SubscriptionRow'
 import { useRecentSearches } from '$/app/(admin)/backoffice/search/_hooks/useRecentSearches'
+import { ProductAccessToggles } from '../ProductAccessToggles'
 
 type Props = {
   workspace: WorkspaceWithDetails
@@ -635,6 +636,12 @@ export function WorkspaceDashboard({ workspace }: Props) {
                 <BigAccountBanner
                   workspaceId={workspace.id}
                   isBigAccount={workspace.isBigAccount}
+                />
+
+                <ProductAccessToggles
+                  workspaceId={workspace.id}
+                  promptManagerEnabled={workspace.promptManagerEnabled}
+                  agentBuilderEnabled={workspace.agentBuilderEnabled}
                 />
 
                 <div className='flex flex-row items-center justify-between p-4 bg-muted/30 rounded-lg'>

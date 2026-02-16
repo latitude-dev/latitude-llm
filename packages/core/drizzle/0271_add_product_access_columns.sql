@@ -1,0 +1,2 @@
+ALTER TABLE "latitude"."workspaces" ADD COLUMN "prompt_manager_enabled" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "latitude"."workspaces" ADD COLUMN "agent_builder_enabled" boolean DEFAULT true NOT NULL;

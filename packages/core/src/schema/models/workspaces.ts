@@ -31,5 +31,7 @@ export const workspaces = latitudeSchema.table('workspaces', {
   }),
   stripeCustomerId: varchar('stripe_customer_id', { length: 256 }),
   isBigAccount: boolean('is_big_account').notNull().default(false),
+  promptManagerEnabled: boolean('prompt_manager_enabled').notNull().default(true),
+  agentBuilderEnabled: boolean('agent_builder_enabled').notNull().default(true),
   ...timestamps(),
 })
