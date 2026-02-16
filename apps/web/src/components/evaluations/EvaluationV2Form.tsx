@@ -17,12 +17,13 @@ import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
 import { useEffect, useMemo, useState } from 'react'
-import { EVALUATION_SPECIFICATIONS } from './index'
 import { LinkedIssueSelect } from './ConfigurationForm/LinkedIssueSelect'
 import { LiveEvaluationToggle } from './ConfigurationForm/LiveEvaluationToggle'
 import { OutputConfiguration } from './ConfigurationForm/OutputConfiguration'
+import { SamplingRate } from './ConfigurationForm/SamplingRate'
 import { ScoringDirection } from './ConfigurationForm/ScoringDirection'
 import { TriggerConfiguration } from './ConfigurationForm/TriggerConfiguration'
+import { EVALUATION_SPECIFICATIONS } from './index'
 
 /**
  * This can be improved by passing specific schemas per type/metric
@@ -251,15 +252,17 @@ export default function EvaluationV2Form<
             description='You will be able to manually evaluate responses in the runs/logs dashboard or via the API/SDK'
           />
         )}
-
-        <TriggerConfiguration
-          settings={settings}
-          setSettings={setSettings}
-          evaluateLiveLogs={!!options.evaluateLiveLogs}
-          errors={errors}
-          disabled={isDisabled}
-        />
-
+        {(!!metricSpecification?.supportsLiveEvaluation ||
+          !!metricSpecification?.supportsBatchEvaluation) && (
+          <TriggerConfiguration
+            settings={settings}
+            setSettings={setSettings}
+            specification={metricSpecification}
+            evaluateLiveLogs={!!options.evaluateLiveLogs}
+            errors={errors}
+            disabled={isDisabled}
+          />
+        )}
         {settings.type !== EvaluationType.Composite && (
           <CollapsibleBox
             title='Advanced configuration'
@@ -288,6 +291,14 @@ export default function EvaluationV2Form<
                     disabled={isDisabled}
                   />
                 )}
+                {metricSpecification?.supportsLiveEvaluation &&
+                  options.evaluateLiveLogs && (
+                    <SamplingRate
+                      settings={settings}
+                      setSettings={setSettings}
+                      disabled={isDisabled}
+                    />
+                  )}
                 <ScoringDirection
                   configuration={settings.configuration}
                   setConfiguration={(value) =>

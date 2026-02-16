@@ -40,6 +40,9 @@ const DEFAULT_EVALUATION_SETTINGS = {
     expectedOutput: {
       parsingFormat: 'string' as const,
     },
+    trigger: {
+      target: 'every' as const,
+    },
     caseInsensitive: false,
   },
 }
@@ -61,6 +64,9 @@ const DEFAULT_COMPOSITE_SETTINGS = {
     },
     expectedOutput: {
       parsingFormat: 'string' as const,
+    },
+    trigger: {
+      target: 'every' as const,
     },
     evaluationUuids: [],
     minThreshold: 75,
