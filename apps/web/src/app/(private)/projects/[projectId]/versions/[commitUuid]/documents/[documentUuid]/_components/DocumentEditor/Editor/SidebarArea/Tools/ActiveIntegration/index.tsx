@@ -46,7 +46,7 @@ export function ActiveIntegration({
   onRemove,
 }: {
   integration: IActiveIntegration
-  onRemove: (integrationName: string) => void
+  onRemove?: (integrationName: string) => void
 }) {
   const { addIntegrationTool, removeIntegrationTool } = use(ToolsContext)
   const toggleIntegration = useSidebarStore((state) => state.toggleIntegration)
@@ -220,7 +220,7 @@ export function ActiveIntegration({
 
           <CustomMcpHeadersButton integration={integration} />
 
-          {!isClientTools && (
+          {!isClientTools && onRemove && (
             <DropdownMenu
               options={[
                 {

@@ -3,6 +3,7 @@ import { useParams } from 'next/navigation'
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
+import { useProductAccess } from '$/components/Providers/SessionProvider'
 import { ResolvedMetadata } from '$/workers/readMetadata'
 import { SectionLoader } from './Section'
 import { SidebarHeader } from './SidebarHeader'
@@ -11,6 +12,7 @@ import { ToolsSidebarSection } from './Tools'
 import { SubAgentsSidebarSection } from './SubAgents'
 import { usePromptConfigData } from './hooks/usePromptConfigData'
 import { useSidebarStore } from './hooks/useSidebarStore'
+import { cn } from '@latitude-data/web-ui/utils'
 
 function SidebarLoader() {
   return (
@@ -48,9 +50,9 @@ export function DocumentEditorSidebarArea({
   const reset = useSidebarStore((state) => state.reset)
   const { metadata } = useMetadata()
   const isLatitudeProvider = useIsLatitudeProvider({ metadata })
+  const { agentBuilder } = useProductAccess()
   const data = useSidebarData({ metadata })
 
-  // Reset store when document changes or component unmounts
   useEffect(() => {
     return () => {
       reset()
@@ -58,24 +60,30 @@ export function DocumentEditorSidebarArea({
   }, [documentUuid, reset])
 
   return (
-    <div className='w-full relative flex flex-col gap-y-6 min-h-0 '>
+    <div className='w-full relative flex flex-col gap-y-6'>
       <SidebarHeader metadata={metadata} />
       <FreeRunsBanner
         isLatitudeProvider={isLatitudeProvider}
         freeRunsCount={freeRunsCount}
       />
-      <div className='flex flex-col gap-y-6 min-w-0 custom-scrollbar scrollable-indicator'>
+      <div
+        className={cn('flex flex-col gap-y-6 min-w-0', {
+          'custom-scrollbar scrollable-indicator': agentBuilder,
+        })}
+      >
         {data.isLoading ? (
           <SidebarLoader />
         ) : (
           <>
-            <TriggersSidebarSection
-              triggers={data.triggersData.triggers}
-              integrations={data.triggersData.integrations}
-              document={data.triggersData.document}
-            />
-            <ToolsSidebarSection />
-            <SubAgentsSidebarSection />
+            {agentBuilder && (
+              <TriggersSidebarSection
+                triggers={data.triggersData.triggers}
+                integrations={data.triggersData.integrations}
+                document={data.triggersData.document}
+              />
+            )}
+            <ToolsSidebarSection agentBuilder={agentBuilder} />
+            {agentBuilder && <SubAgentsSidebarSection />}
           </>
         )}
       </div>

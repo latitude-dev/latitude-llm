@@ -1,6 +1,7 @@
 import { ROUTES } from '$/services/routes'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 type GetCommitUrlParams = {
   commits: Commit[]
@@ -8,7 +9,8 @@ type GetCommitUrlParams = {
   lastSeenCommitUuid: string | undefined
   lastSeenDocumentUuid?: string | undefined
   PROJECT_ROUTE: typeof ROUTES.projects.detail
-  latteEnabled?: boolean
+  agentBuilder: boolean
+  documents: DocumentVersion[]
 }
 
 export function getRedirectUrl({
@@ -17,6 +19,8 @@ export function getRedirectUrl({
   lastSeenCommitUuid,
   lastSeenDocumentUuid,
   PROJECT_ROUTE,
+  agentBuilder,
+  documents,
 }: GetCommitUrlParams): string {
   const url = getCommitUrl({
     commits,
@@ -25,11 +29,20 @@ export function getRedirectUrl({
     PROJECT_ROUTE,
   })
 
-  if (!lastSeenDocumentUuid) {
-    return url.home.root
+  if (agentBuilder) {
+    if (!lastSeenDocumentUuid) {
+      return url.home.root
+    }
+    return url.documents.detail({ uuid: lastSeenDocumentUuid }).root
   }
 
-  return url.documents.detail({ uuid: lastSeenDocumentUuid }).root
+  const firstDocument = documents[0]
+  if (firstDocument) {
+    return url.documents.detail({ uuid: firstDocument.documentUuid }).root
+  }
+
+  // TODO: Replace with /traces project level when ready
+  return url.issues.root
 }
 
 function getCommitUrl({
@@ -37,7 +50,10 @@ function getCommitUrl({
   projectId,
   lastSeenCommitUuid,
   PROJECT_ROUTE,
-}: Omit<GetCommitUrlParams, 'lastSeenDocumentUuid'>) {
+}: Omit<
+  GetCommitUrlParams,
+  'lastSeenDocumentUuid' | 'agentBuilder' | 'documents'
+>) {
   const headCommit = commits.find((c) => c.mergedAt)
   const firstCommit = commits[0]
 
