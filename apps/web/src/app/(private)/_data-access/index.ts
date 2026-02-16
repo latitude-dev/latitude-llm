@@ -17,7 +17,6 @@ import {
   OptimizationsRepository,
   ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories/index'
-import { findFirstProject } from '@latitude-data/core/queries/projects/findFirst'
 import { findAllActiveProjects } from '@latitude-data/core/queries/projects/findAllActive'
 import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
@@ -25,15 +24,6 @@ import { notFound } from 'next/navigation'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-
-export const getFirstProjectCached = cache(
-  async ({ workspaceId }: { workspaceId: number }) => {
-    const project = await findFirstProject({ workspaceId })
-    if (!project) throw new NotFoundError('Project not found')
-
-    return project
-  },
-)
 
 export const getActiveProjectsCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
@@ -134,21 +124,6 @@ export const getDocumentByUuidCached = cache(
   },
 )
 
-export const getDocumentByPathCached = cache(
-  async ({ commit, path }: { commit: Commit; path: string }) => {
-    const { workspace } = await getCurrentUserOrRedirect()
-    const docsScope = new DocumentVersionsRepository(workspace!.id)
-    const documents = await docsScope
-      .getDocumentsAtCommit(commit)
-      .then((r) => r.unwrap())
-
-    const document = documents.find((d) => d.path === path)
-    if (!document) throw new NotFoundError('Document not found')
-
-    return document
-  },
-)
-
 export const getDocumentsAtCommitCached = cache(
   async ({ commit }: { commit: Commit }) => {
     const { workspace } = await getCurrentUserOrRedirect()
@@ -170,25 +145,6 @@ export const getHeadCommitCached = cache(
   }) => {
     const commitsScope = new CommitsRepository(workspace.id)
     return await commitsScope.getHeadCommit(projectId)
-  },
-)
-
-export const getDocumentByIdCached = cache(async (id: number) => {
-  const { workspace } = await getCurrentUserOrRedirect()
-  const docsScope = new DocumentVersionsRepository(workspace.id)
-  const result = await docsScope.getDocumentById(id)
-  const document = result.unwrap()
-
-  return document
-})
-
-export const getDocumentsFromMergedCommitsCache = cache(
-  async (workspaceId: number) => {
-    const docsScope = new DocumentVersionsRepository(workspaceId)
-    const result = await docsScope.getDocumentsFromMergedCommits()
-    const documents = result.unwrap()
-
-    return documents
   },
 )
 
@@ -292,20 +248,6 @@ export const getApiKeysCached = cache(async () => {
   const { workspace } = await getCurrentUserOrRedirect()
   const scope = new ApiKeysRepository(workspace.id)
   const result = await scope.findAll()
-  return result.unwrap()
-})
-
-export const getProviderApiKeyByNameCached = cache(async (name: string) => {
-  const { workspace } = await getCurrentUserOrRedirect()
-  const scope = new ProviderApiKeysRepository(workspace.id)
-  const result = await scope.findByName(name)
-  return result.unwrap()
-})
-
-export const getProviderApiKeyByIdCached = cache(async (id: number) => {
-  const { workspace } = await getCurrentUserOrRedirect()
-  const scope = new ProviderApiKeysRepository(workspace.id)
-  const result = await scope.find(id)
   return result.unwrap()
 })
 

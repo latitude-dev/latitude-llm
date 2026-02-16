@@ -17,11 +17,9 @@ import useDeploymentTests from '$/stores/deploymentTests'
 import { ACTIVE_DEPLOYMENT_STATUSES } from '@latitude-data/core/schema/models/types/DeploymentTest'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { User } from '@latitude-data/core/schema/models/types/User'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import type { CommitTestInfo } from '../ActiveCommitsList'
 import { ConfigureTestModal } from './ConfigureTestModal'
-export type SimpleUser = Omit<User, 'encryptedPassword'>
 
 export enum BadgeType {
   Head = 'head',

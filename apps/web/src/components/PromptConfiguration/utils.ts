@@ -144,4 +144,3 @@ export const useLatitudeAgentsConfig = ({
   }
 }
 
-export type UseLatitudeAgentsConfig = ReturnType<typeof useLatitudeAgentsConfig>

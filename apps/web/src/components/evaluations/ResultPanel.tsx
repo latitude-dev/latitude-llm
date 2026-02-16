@@ -320,21 +320,6 @@ export function ResultPanelMetadata<
   )
 }
 
-export function ResultPanelLoading() {
-  return (
-    <div className='flex flex-col gap-4'>
-      <MetadataItem label='Result uuid' loading />
-      <MetadataItem label='Timestamp' loading />
-      <MetadataItem label='Version' loading />
-      <MetadataItem label='Actual output' loading />
-      <MetadataItem label='Expected output' loading />
-      <MetadataItem label='Result' loading />
-      <MetadataItem label='Reasoning' loading />
-      <MetadataItem label='Parameters' loading />
-    </div>
-  )
-}
-
 export function ResultPanel<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,

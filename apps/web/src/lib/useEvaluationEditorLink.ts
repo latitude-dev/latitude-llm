@@ -1,7 +1,6 @@
 import { useCallback } from 'react'
 import { ROUTES } from '$/services/routes'
 
-export const LOG_UUID_PARAM = 'logUuid'
 export function useEvaluationEditorLink({
   projectId,
   commitUuid,

@@ -1,7 +1,7 @@
 'use client'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
-import { createContext, ReactNode, useContext } from 'react'
+import { createContext, ReactNode } from 'react'
 
 interface IWorkspaceContextType {
   workspace: Workspace
@@ -22,14 +22,4 @@ const WorkspaceProvider = ({
   )
 }
 
-const useCurrentWorkspace = () => {
-  const context = useContext(WorkspaceContext)
-  if (!context) {
-    throw new Error(
-      'useCurrentWorkspace must be used within a WorkspaceProvider',
-    )
-  }
-  return context
-}
-
-export { WorkspaceProvider, useCurrentWorkspace, type IWorkspaceContextType }
+export { WorkspaceProvider, type IWorkspaceContextType }

@@ -14,10 +14,6 @@ export const clientToolResultBodySchema = z.object({
   isError: z.boolean().default(false),
 })
 
-export type ClientToolResultBodySchema = z.infer<
-  typeof clientToolResultBodySchema
->
-
 export const clientToolResultRoute = createRoute({
   method: http.Methods.POST,
   path: ROUTES.api.v3.tools.results,

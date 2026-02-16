@@ -4,10 +4,6 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
-// TODO: Migrate chat (old share document to be a document trigger)
-// This requires a data migration although not sure how much people are using it
-export type TriggerIntegrationType = DocumentTriggerType | 'Chat'
-
 export type SelectedIntegration = {
   slug: string
   type: DocumentTriggerType
@@ -24,13 +20,6 @@ export type EditTriggerProps<T extends DocumentTriggerType> = {
 
 export type RunTriggerProps = {
   trigger: DocumentTrigger
-  parameters: Record<string, unknown>
-  userMessage?: string
-  aiParameters?: boolean
-}
-
-export type RunDocumentProps = {
-  document: DocumentVersion
   parameters: Record<string, unknown>
   userMessage?: string
   aiParameters?: boolean

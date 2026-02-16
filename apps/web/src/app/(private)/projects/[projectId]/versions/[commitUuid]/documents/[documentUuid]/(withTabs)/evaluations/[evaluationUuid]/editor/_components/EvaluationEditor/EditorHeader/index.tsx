@@ -13,8 +13,6 @@ import { PromptIntegrations } from './PromptIntegrations'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 
-export type IProviderByName = Record<string, ProviderApiKey>
-
 export const EvaluationEditorHeader = memo(
   ({
     title,
