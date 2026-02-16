@@ -1,3 +1,4 @@
+import LabelIndicator from '$/components/RunExperimentModal/ExperimentForm/_components/LabelIndicator'
 import useDatasets from '$/stores/datasets'
 import {
   OPTIMIZATION_MAX_ROWS,
@@ -16,6 +17,9 @@ export function DatasetSelector({
   onDatasetChange,
   target,
   onTargetChange,
+  label,
+  onLabelChange,
+  requiresExpectedOutput,
   errors,
   disabled,
 }: {
@@ -23,6 +27,9 @@ export function DatasetSelector({
   onDatasetChange: (dataset?: Dataset) => void
   target?: number
   onTargetChange: (value?: number) => void
+  label?: string
+  onLabelChange: (value?: string) => void
+  requiresExpectedOutput: boolean
   errors?: Record<string, string[]>
   disabled?: boolean
 }) {
@@ -54,8 +61,9 @@ export function DatasetSelector({
         ? datasets?.find((d) => d.id === Number(val))
         : undefined
       onDatasetChange(dataset)
+      onLabelChange(undefined)
     },
-    [datasets, onDatasetChange],
+    [datasets, onDatasetChange, onLabelChange],
   )
 
   const targetValue = target ?? OPTIMIZATION_MAX_ROWS
@@ -68,6 +76,22 @@ export function DatasetSelector({
       }
     },
     [onTargetChange],
+  )
+
+  const labelOptions = useMemo(() => {
+    if (!selectedDataset) return []
+    return selectedDataset.columns.map((column) => ({
+      value: column.name,
+      label: column.name,
+      icon: column.role === 'label' ? LabelIndicator() : undefined,
+    }))
+  }, [selectedDataset])
+
+  const handleLabelChange = useCallback(
+    (val: string) => {
+      onLabelChange(val || undefined)
+    },
+    [onLabelChange],
   )
 
   const disclosure =
@@ -97,10 +121,25 @@ export function DatasetSelector({
         searchable
         removable
       />
-      {!datasetId && (
+      {requiresExpectedOutput && !!datasetId && (
+        <Select
+          value={label ?? ''}
+          name='datasetLabel'
+          label='Expected output'
+          description='The dataset column containing the expected output to evaluate against'
+          placeholder='Select column'
+          options={labelOptions}
+          onChange={handleLabelChange}
+          errors={errors?.['dataset.label']}
+          disabled={disabled}
+          required
+        />
+      )}
+      {!requiresExpectedOutput && !datasetId && (
         <FormField
           label='Curation target'
           description={`We will try to curate up to ${targetValue} high-quality traces. ${disclosure}`}
+          errors={errors?.['dataset.target']}
         >
           <Slider
             legend={formatCount}

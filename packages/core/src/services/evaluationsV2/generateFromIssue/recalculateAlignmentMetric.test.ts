@@ -409,7 +409,6 @@ describe('recalculateAlignmentMetric', () => {
     vi.spyOn(
       getEqualAmountsModule,
       'getEqualAmountsOfPositiveAndNegativeExamples',
-       
     ).mockResolvedValue(
       Result.error(new Error('Failed to get examples from database')) as any,
     )

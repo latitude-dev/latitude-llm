@@ -49,7 +49,6 @@ describe('cloneIntegrations', () => {
     })
 
     if (!result.ok) {
-       
       console.error('cloneIntegrations error:', result.error)
     }
     expect(result.ok).toBe(true)
@@ -91,7 +90,6 @@ describe('cloneIntegrations', () => {
     })
 
     if (!result.ok) {
-       
       console.error('cloneIntegrations error:', result.error)
     }
     expect(result.ok).toBe(true)

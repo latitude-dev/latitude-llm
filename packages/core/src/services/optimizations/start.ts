@@ -2,6 +2,7 @@ import { env } from '@latitude-data/env'
 import { pick } from 'lodash-es'
 import {
   CLOUD_MESSAGES,
+  EvaluationMetricSpecification,
   EvaluationV2,
   OPTIMIZATION_MAX_ROWS,
   OPTIMIZATION_MAX_TIME,
@@ -92,17 +93,6 @@ export async function startOptimization(
 
   const engine = OptimizationEngine.Gepa
 
-  const validating = await validateConfiguration({
-    engine: engine,
-    configuration: configuration,
-    parameters: [...parameters],
-    dataset: dataset,
-  })
-  if (validating.error) {
-    return Result.error(validating.error)
-  }
-  configuration = validating.value
-
   const specification = getEvaluationMetricSpecification(evaluation)
   if (!specification.supportsBatchEvaluation) {
     return Result.error(
@@ -112,14 +102,17 @@ export async function startOptimization(
     )
   }
 
-  // BONUS(AO/OPT): Implement optimization for labeled datasets
-  if (specification.requiresExpectedOutput) {
-    return Result.error(
-      new BadRequestError(
-        'Cannot optimize for an evaluation that requires an expected output',
-      ),
-    )
+  const validating = await validateConfiguration({
+    engine: engine,
+    configuration: configuration,
+    parameters: [...parameters],
+    dataset: dataset,
+    specification: specification,
+  })
+  if (validating.error) {
+    return Result.error(validating.error)
   }
+  configuration = validating.value
 
   let trainset: Dataset | undefined
   let testset: Dataset | undefined
@@ -193,11 +186,13 @@ async function validateConfiguration({
   configuration,
   parameters,
   dataset,
+  specification,
 }: {
   engine: OptimizationEngine
   configuration: OptimizationConfiguration
   parameters: string[]
   dataset?: Dataset
+  specification: EvaluationMetricSpecification
 }) {
   if (dataset && configuration.dataset?.target !== undefined) {
     configuration.dataset.target = undefined
@@ -213,6 +208,26 @@ async function validateConfiguration({
         `Dataset curation target must be a number between ${OPTIMIZATION_MIN_ROWS} and ${OPTIMIZATION_MAX_ROWS} rows`,
       ),
     )
+  }
+
+  if (specification.requiresExpectedOutput) {
+    if (!dataset) {
+      return Result.error(
+        new BadRequestError(
+          'A dataset is required for evaluations that require expected output',
+        ),
+      )
+    }
+
+    if (!dataset.columns.find((c) => c.name === configuration.dataset?.label)) {
+      return Result.error(
+        new BadRequestError(
+          'A dataset label is required for evaluations that require expected output',
+        ),
+      )
+    }
+  } else if (configuration.dataset?.label !== undefined) {
+    configuration.dataset.label = undefined
   }
 
   if (configuration.parameters) {

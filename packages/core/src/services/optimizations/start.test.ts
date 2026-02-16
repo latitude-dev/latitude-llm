@@ -1246,4 +1246,274 @@ value4
       expect(trainCount! + testCount!).toBe(OPTIMIZATION_MAX_ROWS)
     })
   })
+
+  describe('expected output evaluations', () => {
+    let userForExpected: User
+    let documentForExpected: DocumentVersion
+    let commitForExpected: Commit
+    let projectForExpected: Project
+    let workspaceForExpected: WorkspaceDto
+    let exactMatchEvaluation: EvaluationV2<
+      EvaluationType.Rule,
+      RuleEvaluationMetric.ExactMatch
+    >
+
+    beforeEach(async () => {
+      vi.clearAllMocks()
+
+      vi.spyOn(envModule, 'env', 'get').mockReturnValue({
+        ...envModule.env,
+        LATITUDE_CLOUD: true,
+      })
+
+      vi.spyOn(featureModule, 'isFeatureEnabledByName').mockResolvedValue(
+        Result.ok(true),
+      )
+
+      const {
+        workspace: w,
+        project: p,
+        commit: c,
+        documents,
+        user: u,
+      } = await factories.createProject({
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          prompt: factories.helpers.createPrompt({
+            provider: 'openai',
+            model: 'gpt-4o',
+            content: 'Hello {{inputParam}}!',
+          }),
+        },
+      })
+
+      workspaceForExpected = w
+      projectForExpected = p
+      commitForExpected = c
+      documentForExpected = documents[0]!
+      userForExpected = u
+
+      exactMatchEvaluation = await factories.createEvaluationV2({
+        document: documentForExpected,
+        commit: commitForExpected,
+        workspace: workspaceForExpected,
+        type: EvaluationType.Rule,
+        metric: RuleEvaluationMetric.ExactMatch,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          expectedOutput: {
+            parsingFormat: 'string',
+          },
+          caseInsensitive: false,
+        },
+      })
+
+      publisherMock = vi.mocked(publisher.publishLater)
+    })
+
+    it('fails when evaluation requires expected output but no dataset is provided', async () => {
+      await expect(
+        startOptimization({
+          evaluation: exactMatchEvaluation,
+          configuration: {
+            scope: { instructions: true },
+          },
+          document: documentForExpected,
+          baselineCommit: commitForExpected,
+          project: projectForExpected,
+          workspace: workspaceForExpected,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError(
+        new BadRequestError(
+          'A dataset is required for evaluations that require expected output',
+        ),
+      )
+
+      expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+      expect(publisherMock).not.toHaveBeenCalled()
+    })
+
+    it('fails when evaluation requires expected output but no dataset.label is set', async () => {
+      const { dataset } = await factories.createDataset({
+        workspace: workspaceForExpected,
+        author: userForExpected,
+        fileContent: `
+inputParam,expectedOutput
+value1,expected1
+value2,expected2
+value3,expected3
+value4,expected4
+`.trim(),
+      })
+
+      await expect(
+        startOptimization({
+          evaluation: exactMatchEvaluation,
+          dataset,
+          configuration: {
+            scope: { instructions: true },
+          },
+          document: documentForExpected,
+          baselineCommit: commitForExpected,
+          project: projectForExpected,
+          workspace: workspaceForExpected,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError(
+        new BadRequestError(
+          'A dataset label is required for evaluations that require expected output',
+        ),
+      )
+
+      expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+      expect(publisherMock).not.toHaveBeenCalled()
+    })
+
+    it('fails when evaluation requires expected output but dataset.label is not a real column', async () => {
+      const { dataset } = await factories.createDataset({
+        workspace: workspaceForExpected,
+        author: userForExpected,
+        fileContent: `
+inputParam,expectedOutput
+value1,expected1
+value2,expected2
+value3,expected3
+value4,expected4
+`.trim(),
+      })
+
+      await expect(
+        startOptimization({
+          evaluation: exactMatchEvaluation,
+          dataset,
+          configuration: {
+            scope: { instructions: true },
+            dataset: { label: 'nonExistentColumn' },
+          },
+          document: documentForExpected,
+          baselineCommit: commitForExpected,
+          project: projectForExpected,
+          workspace: workspaceForExpected,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError(
+        new BadRequestError(
+          'A dataset label is required for evaluations that require expected output',
+        ),
+      )
+
+      expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+      expect(publisherMock).not.toHaveBeenCalled()
+    })
+
+    it('succeeds when evaluation requires expected output with dataset and valid label', async () => {
+      const { dataset } = await factories.createDataset({
+        workspace: workspaceForExpected,
+        author: userForExpected,
+        fileContent: `
+inputParam,expectedOutput
+value1,expected1
+value2,expected2
+value3,expected3
+value4,expected4
+`.trim(),
+      })
+
+      const result = await startOptimization({
+        evaluation: exactMatchEvaluation,
+        dataset,
+        configuration: {
+          scope: { instructions: true },
+          dataset: { label: 'expectedOutput' },
+        },
+        document: documentForExpected,
+        baselineCommit: commitForExpected,
+        project: projectForExpected,
+        workspace: workspaceForExpected,
+      }).then((r) => r.unwrap())
+
+      expect(result.optimization).toBeDefined()
+      expect(result.optimization.trainsetId).not.toBeNull()
+      expect(result.optimization.testsetId).not.toBeNull()
+      expect(result.optimization.configuration.dataset?.label).toBe(
+        'expectedOutput',
+      )
+
+      expect(mocks.optimizationsQueue).toHaveBeenCalledTimes(1)
+      expect(publisherMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('preserves label column in trainset and testset after splitting', async () => {
+      const { dataset } = await factories.createDataset({
+        workspace: workspaceForExpected,
+        author: userForExpected,
+        fileContent: `
+inputParam,expectedOutput
+value1,expected1
+value2,expected2
+value3,expected3
+value4,expected4
+`.trim(),
+      })
+
+      const result = await startOptimization({
+        evaluation: exactMatchEvaluation,
+        dataset,
+        configuration: {
+          scope: { instructions: true },
+          dataset: { label: 'expectedOutput' },
+        },
+        document: documentForExpected,
+        baselineCommit: commitForExpected,
+        project: projectForExpected,
+        workspace: workspaceForExpected,
+      }).then((r) => r.unwrap())
+
+      const datasetsRepository = new DatasetsRepository(workspaceForExpected.id)
+
+      const trainset = await datasetsRepository
+        .find(result.optimization.trainsetId!)
+        .then((r) => r.unwrap())
+      const testset = await datasetsRepository
+        .find(result.optimization.testsetId!)
+        .then((r) => r.unwrap())
+
+      expect(
+        trainset.columns.find((c) => c.name === 'expectedOutput'),
+      ).toBeDefined()
+      expect(
+        testset.columns.find((c) => c.name === 'expectedOutput'),
+      ).toBeDefined()
+
+      const rowsRepository = new DatasetRowsRepository(workspaceForExpected.id)
+
+      const trainRows = await rowsRepository.findByDatasetWithOffsetAndLimit({
+        datasetId: result.optimization.trainsetId!,
+        offset: 0,
+        limit: 100,
+      })
+      const testRows = await rowsRepository.findByDatasetWithOffsetAndLimit({
+        datasetId: result.optimization.testsetId!,
+        offset: 0,
+        limit: 100,
+      })
+
+      const allExpectedValues = [
+        ...trainRows.map((r) => {
+          const col = trainset.columns.find((c) => c.name === 'expectedOutput')!
+          return r.rowData[col.identifier] as string
+        }),
+        ...testRows.map((r) => {
+          const col = testset.columns.find((c) => c.name === 'expectedOutput')!
+          return r.rowData[col.identifier] as string
+        }),
+      ]
+
+      expect(allExpectedValues.sort()).toEqual(
+        ['expected1', 'expected2', 'expected3', 'expected4'].sort(),
+      )
+    })
+  })
 })

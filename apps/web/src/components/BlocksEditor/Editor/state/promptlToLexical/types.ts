@@ -118,9 +118,4 @@ export interface BlockRootNode
   readOnly?: boolean
 }
 
-export type {
-  ElementTag,
-  Fragment,
-  MustacheTag,
-  TemplateNode,
-}
+export type { ElementTag, Fragment, MustacheTag, TemplateNode }

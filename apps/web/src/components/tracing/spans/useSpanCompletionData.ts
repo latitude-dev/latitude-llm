@@ -1,9 +1,6 @@
 import { useMemo } from 'react'
 import { useTrace } from '$/stores/traces'
-import {
-  CompletionSpanMetadata,
-  SpanType,
-} from '@latitude-data/constants'
+import { CompletionSpanMetadata, SpanType } from '@latitude-data/constants'
 import { findAllSpansOfType } from '@latitude-data/core/services/tracing/spans/fetching/findAllSpansOfType'
 import { findLastSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findLastSpanOfType'
 import { findSpanById } from '@latitude-data/core/services/tracing/spans/fetching/findSpanById'
@@ -44,7 +41,8 @@ export function useSpanCompletionData({
   }, [assembledSpan])
 
   const completionSpans = useMemo(
-    () => findAllSpansOfType(assembledSpan?.children ?? [], SpanType.Completion),
+    () =>
+      findAllSpansOfType(assembledSpan?.children ?? [], SpanType.Completion),
     [assembledSpan],
   )
 
