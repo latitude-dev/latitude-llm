@@ -30,13 +30,13 @@ export async function computeDocumentTracesDailyCount({
 
   const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
-    `document_uuid = {documentUuid: String}`,
+    `document_uuid = {documentUuid: UUID}`,
     `started_at >= {startDate: DateTime64(6, 'UTC')}`,
   ]
 
   if (commitUuid) {
     params.commitUuid = commitUuid
-    conditions.push(`commit_uuid = {commitUuid: String}`)
+    conditions.push(`commit_uuid = {commitUuid: UUID}`)
   }
 
   const result = await clickhouseClient().query({

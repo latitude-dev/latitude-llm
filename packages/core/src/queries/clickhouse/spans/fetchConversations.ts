@@ -64,15 +64,15 @@ export async function fetchConversations({
 
   const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
-    `document_uuid = {documentUuid: String}`,
-    `commit_uuid IN ({commitUuids: Array(String)})`,
+    `document_uuid = {documentUuid: UUID}`,
+    `commit_uuid IN ({commitUuids: Array(UUID)})`,
     `type IN ({mainSpanTypes: Array(String)})`,
     `document_log_uuid IS NOT NULL`,
   ]
 
   if (filters.experimentUuids && filters.experimentUuids.length > 0) {
     params.experimentUuids = filters.experimentUuids
-    conditions.push(`experiment_uuid IN ({experimentUuids: Array(String)})`)
+    conditions.push(`experiment_uuid IN ({experimentUuids: Array(UUID)})`)
   }
 
   if (filters.testDeploymentIds && filters.testDeploymentIds.length > 0) {
@@ -93,10 +93,10 @@ export async function fetchConversations({
   }
 
   if (from) {
-    params.cursorStartedAt = from.startedAt
+    params.cursorStartedAt = toClickHouseDateTime(new Date(from.startedAt))
     params.cursorDocumentLogUuid = from.documentLogUuid
     conditions.push(
-      `(started_at, document_log_uuid) < ({cursorStartedAt: DateTime64(6, 'UTC')}, {cursorDocumentLogUuid: String})`,
+      `(started_at, document_log_uuid) < ({cursorStartedAt: DateTime64(6, 'UTC')}, {cursorDocumentLogUuid: UUID})`,
     )
   }
 

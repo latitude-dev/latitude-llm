@@ -88,8 +88,8 @@ export default async function AdminPage({
                         </ServerSideTableCell>
                         <ServerSideTableCell className='w-40'>
                           <Text.H6 color='foregroundMuted'>
-                            {usage.latestTraceAt
-                              ? formatDistanceToNow(usage.latestTraceAt, {
+                            {usage.latestRunAt
+                              ? formatDistanceToNow(usage.latestRunAt, {
                                   addSuffix: true,
                                 })
                               : '-'}

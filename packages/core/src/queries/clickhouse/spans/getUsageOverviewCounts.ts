@@ -55,6 +55,7 @@ export async function getUsageOverviewCounts({
         ) AS last_two_months_count
       FROM ${SPANS_TABLE}
       WHERE status != {errorStatus: String}
+        AND started_at >= {lastTwoMonthsBoundary: DateTime64(6, 'UTC')}
       ${workspaceFilter}
       GROUP BY workspace_id
     `,

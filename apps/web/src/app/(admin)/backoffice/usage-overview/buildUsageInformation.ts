@@ -54,8 +54,8 @@ function getEmailsList(emails: string | null) {
 export function buildUsageInformation(usage: GetUsageOverviewRow) {
   const plan = getPlanFromSubscriptionSlug(usage.subscriptionPlan)
   const trend = getTrendIndicator({
-    tracesTwoMonthsAgo: usage.lastTwoMonthsTraces,
-    tracesLast30Days: usage.lastMonthTraces,
+    tracesTwoMonthsAgo: usage.lastTwoMonthsRuns,
+    tracesLast30Days: usage.lastMonthRuns,
     plan,
   })
 

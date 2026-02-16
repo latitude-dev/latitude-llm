@@ -6,8 +6,8 @@ export function UsageCell({
 }: {
   usageOverview: GetUsageOverviewRow
 }) {
-  const lastMonth = usageOverview.lastMonthTraces ?? 0
-  const prevMonth = usageOverview.lastTwoMonthsTraces ?? 0
+  const lastMonth = usageOverview.lastMonthRuns ?? 0
+  const prevMonth = usageOverview.lastTwoMonthsRuns ?? 0
 
   return (
     <div className='flex flex-col gap-1'>
