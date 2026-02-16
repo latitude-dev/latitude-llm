@@ -19,6 +19,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   diskPut: vi.fn(),
+  diskPutBuffer: vi.fn(),
   cacheDel: vi.fn(),
 }))
 
@@ -28,6 +29,7 @@ vi.mock('@latitude-data/core/lib/disk', async (importOriginal) => {
     ...original,
     diskFactory: () => ({
       put: mocks.diskPut,
+      putBuffer: mocks.diskPutBuffer,
     }),
   }
 })
@@ -95,6 +97,7 @@ describe('POST /projects/:projectId/versions/:versionUuid/documents/logs', () =>
 
       // Mock disk operations to return success
       mocks.diskPut.mockResolvedValue(Result.nil())
+      mocks.diskPutBuffer.mockResolvedValue(Result.nil())
       mocks.cacheDel.mockResolvedValue(undefined)
 
       const { workspace, user, project, providers } = await createProject({
@@ -206,11 +209,11 @@ describe('POST /projects/:projectId/versions/:versionUuid/documents/logs', () =>
       expect(completionSpan!.commitUuid).toBe(commitUuid)
 
       // Verify metadata was saved (mocked)
-      expect(mocks.diskPut).toHaveBeenCalledTimes(2)
+      expect(mocks.diskPutBuffer).toHaveBeenCalledTimes(2)
       expect(mocks.cacheDel).toHaveBeenCalledTimes(3)
 
       // Verify the metadata keys contain the correct span IDs
-      const diskPutCalls = mocks.diskPut.mock.calls
+      const diskPutCalls = mocks.diskPutBuffer.mock.calls
       expect(
         diskPutCalls.some((call) => call[0].includes(promptSpan!.id)),
       ).toBe(true)
