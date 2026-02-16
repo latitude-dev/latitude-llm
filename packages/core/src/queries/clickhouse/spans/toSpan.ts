@@ -1,4 +1,10 @@
-import { LogSources, Span, SpanKind, SpanStatus, SpanType } from '@latitude-data/constants'
+import {
+  LogSources,
+  Span,
+  SpanKind,
+  SpanStatus,
+  SpanType,
+} from '@latitude-data/constants'
 import { SpanRow } from '../../../clickhouse/models/spans'
 
 function parseDate(value: string): Date {

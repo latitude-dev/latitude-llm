@@ -43,9 +43,7 @@ function buildWhereClause(
   }
 
   if (filters.experimentUuids && filters.experimentUuids.length > 0) {
-    conditions.push(
-      `experiment_uuid IN ({experimentUuids: Array(String)})`,
-    )
+    conditions.push(`experiment_uuid IN ({experimentUuids: Array(String)})`)
     params.experimentUuids = filters.experimentUuids
   }
 
@@ -56,14 +54,10 @@ function buildWhereClause(
     params.createdAtFrom = toClickHouseDateTime(filters.createdAt.from)
     params.createdAtTo = toClickHouseDateTime(filters.createdAt.to)
   } else if (filters.createdAt?.from) {
-    conditions.push(
-      `started_at >= {createdAtFrom: DateTime64(6, 'UTC')}`,
-    )
+    conditions.push(`started_at >= {createdAtFrom: DateTime64(6, 'UTC')}`)
     params.createdAtFrom = toClickHouseDateTime(filters.createdAt.from)
   } else if (filters.createdAt?.to) {
-    conditions.push(
-      `started_at <= {createdAtTo: DateTime64(6, 'UTC')}`,
-    )
+    conditions.push(`started_at <= {createdAtTo: DateTime64(6, 'UTC')}`)
     params.createdAtTo = toClickHouseDateTime(filters.createdAt.to)
   }
 
