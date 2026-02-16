@@ -5,8 +5,9 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { AssembledSpan, AssembledTrace } from '@latitude-data/core/constants'
 import { useConversation } from '$/stores/conversations'
-import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { TimelineScale } from '$/components/tracing/traces/Timeline/Scale'
+import { use, useCallback, useMemo, useState } from 'react'
+import { TimelineScale } from '$/components/tracing/traces/TimelineScale'
+import { useTickMarks } from '$/components/tracing/traces/TimelineScale/useTickMarks'
 import {
   TraceSpanSelectionActionsContext,
   TraceSpanSelectionStateContext,
@@ -15,7 +16,7 @@ import { ConversationTree } from './ConversationTree'
 import { ConversationGraph } from './ConversationGraph'
 
 const TREE_MIN_WIDTH = 125
-const GRAPH_MIN_WIDTH = 450
+const GRAPH_MIN_WIDTH = 750
 
 export function ConversationTimeline({
   documentLogUuid,
@@ -112,30 +113,8 @@ function UnifiedTimeline({
     return { selectedSpan, totalSpans, sections, totalDuration }
   }, [traces, selection.spanId])
 
-  const treeRef = useRef<HTMLDivElement>(null)
-  const [treeWidth, setTreeWidth] = useState(0)
-  const graphRef = useRef<HTMLDivElement>(null)
-  const [graphWidth, setGraphWidth] = useState(0)
-
-  const updateWidth = useCallback(() => {
-    if (!treeRef.current || !graphRef.current) return
-
-    const treeRect = treeRef.current.getBoundingClientRect()
-    const graphRect = graphRef.current.getBoundingClientRect()
-    setTreeWidth(Math.max(treeRect.width, TREE_MIN_WIDTH) - 0.5)
-    setGraphWidth(Math.max(graphRect.width, GRAPH_MIN_WIDTH) + 0.5)
-  }, [setTreeWidth, setGraphWidth])
-
-  useEffect(() => {
-    if (!treeRef.current || !graphRef.current) return
-
-    const resizeObserver = new ResizeObserver(updateWidth)
-    resizeObserver.observe(treeRef.current)
-    resizeObserver.observe(graphRef.current)
-    return () => resizeObserver.disconnect()
-  }, [updateWidth])
-
   const [collapsedSpans, setCollapsedSpans] = useState<Set<string>>(new Set())
+  const tickMarks = useTickMarks({ duration: totalDuration, width: 0 })
   const toggleCollapsed = useCallback(
     (spanId: string) =>
       setCollapsedSpans((prev) => {
@@ -186,12 +165,11 @@ function UnifiedTimeline({
         initialPercentage={33}
         minSize={TREE_MIN_WIDTH}
         firstPane={
-          <div ref={treeRef} className='w-full h-full overflow-hidden'>
+          <div className='w-full h-full overflow-hidden'>
             <ConversationTree
               sections={sections}
-              width={treeWidth}
-              minWidth={TREE_MIN_WIDTH}
               selectedSpan={selectedSpan ?? undefined}
+              minWidth={TREE_MIN_WIDTH}
               selectSpan={selectSpan}
               collapsedSpans={collapsedSpans}
               toggleCollapsed={toggleCollapsed}
@@ -204,42 +182,34 @@ function UnifiedTimeline({
           </div>
         }
         secondPane={
-          <div ref={graphRef} className='w-full h-full overflow-hidden'>
-            <ConversationGraph
-              sections={sections}
-              totalDuration={totalDuration}
-              width={graphWidth}
-              minWidth={GRAPH_MIN_WIDTH}
-              selectedSpan={selectedSpan ?? undefined}
-              selectSpan={selectSpan}
-              collapsedSpans={collapsedSpans}
-              toggleCollapsed={toggleCollapsed}
-              setCollapsedSpans={setCollapsedSpans}
-              showConversationSpacer={sections.length > 1}
-              isConversationCollapsed={isConversationCollapsed}
-              isConversationSelected={isConversationSelected}
-              onSelectConversation={onSelectConversation}
-              toggleCollapseAll={toggleCollapseAll}
-            />
+          <div className='w-full h-full overflow-x-auto'>
+            <div
+              className='flex flex-col h-full'
+              style={{ minWidth: `${GRAPH_MIN_WIDTH}px` }}
+            >
+              <div className='flex-1 min-h-0'>
+                <ConversationGraph
+                  sections={sections}
+                  totalDuration={totalDuration}
+                  minWidth={GRAPH_MIN_WIDTH}
+                  selectedSpan={selectedSpan ?? undefined}
+                  selectSpan={selectSpan}
+                  collapsedSpans={collapsedSpans}
+                  toggleCollapsed={toggleCollapsed}
+                  setCollapsedSpans={setCollapsedSpans}
+                  showConversationSpacer={sections.length > 1}
+                  isConversationCollapsed={isConversationCollapsed}
+                  isConversationSelected={isConversationSelected}
+                  tickMarks={tickMarks}
+                />
+              </div>
+              <div className='relative h-8 bg-secondary border-t border-border pb-2 flex-shrink-0'>
+                <TimelineScale tickMarks={tickMarks} />
+              </div>
+            </div>
           </div>
         }
       />
-      <div className='w-full h-8 flex items-center justify-center sticky bottom-0'>
-        <div
-          className='w-full h-full bg-transparent'
-          style={{ width: treeWidth }}
-        />
-        <div
-          className='w-full h-full bg-secondary border-t border-l border-border pb-2'
-          style={{ width: graphWidth }}
-        >
-          <TimelineScale
-            duration={totalDuration}
-            width={graphWidth}
-            minWidth={GRAPH_MIN_WIDTH}
-          />
-        </div>
-      </div>
     </div>
   )
 }
