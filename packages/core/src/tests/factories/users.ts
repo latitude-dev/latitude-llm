@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import { database } from '../../client'
 import { users } from '../../schema/models/users'
 import { createUser as createUserFn } from '../../services/users/createUser'
+import { LatitudeGoal } from '@latitude-data/constants/users'
 
 function makeRandomUserData() {
   return {
@@ -16,6 +17,8 @@ export type ICreateUser = {
   name?: string
   email?: string
   createdAt?: Date
+  latitudeGoal?: LatitudeGoal
+  latitudeGoalOther?: string
 }
 
 export async function createUser(userData: Partial<ICreateUser> = {}) {

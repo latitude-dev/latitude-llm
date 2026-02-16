@@ -6,9 +6,11 @@ import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { SubscriptionPlan } from '../../../plans'
 import { subscriptions } from '../../../schema/models/subscriptions'
-import { createWorkspace } from '../../../tests/factories'
+import { workspaces } from '../../../schema/models/workspaces'
+import { createUser, createWorkspace } from '../../../tests/factories'
 import type { NotifyWorkspacesFinishingFreeTrialJobData } from './notifyWorkspacesFinishingFreeTrialJob'
 import { notifyWorkspacesFinishingFreeTrialJob } from './notifyWorkspacesFinishingFreeTrialJob'
+import { LatitudeGoal } from '@latitude-data/constants/users'
 
 vi.mock('../../../events/publisher', () => ({
   publisher: {
@@ -40,8 +42,15 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
 
   describe('publishes workspaceFinishingFreeTrial for workspaces in 10-day window', () => {
     it('publishes event for workspace whose trial ends exactly 10 days from now', async () => {
+      const creator = await createUser({
+        email: 'test@test.com',
+        name: 'Test User',
+        latitudeGoal: LatitudeGoal.ObservingTraces,
+      })
+
       const { workspace, userData } = await createWorkspace({
         subscriptionPlan: SubscriptionPlan.HobbyV3,
+        creator,
       })
       const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
       await setTrialEndsAt(workspace.currentSubscriptionId!, trialEndInTenDays)
@@ -52,9 +61,8 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
       expect(publisher.publishLater).toHaveBeenCalledWith({
         type: 'workspaceFinishingFreeTrial',
         data: {
-          workspaceId: workspace.id,
-          workspaceName: workspace.name,
           userEmail: userData.email,
+          userGoal: LatitudeGoal.ObservingTraces,
         },
       })
     })
@@ -80,17 +88,40 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
       expect(publisher.publishLater).toHaveBeenCalledWith({
         type: 'workspaceFinishingFreeTrial',
         data: {
-          workspaceId: workspace1.id,
-          workspaceName: 'Workspace One',
           userEmail: userData1.email,
+          userGoal: null,
         },
       })
       expect(publisher.publishLater).toHaveBeenCalledWith({
         type: 'workspaceFinishingFreeTrial',
         data: {
-          workspaceId: workspace2.id,
-          workspaceName: 'Workspace Two',
           userEmail: userData2.email,
+          userGoal: null,
+        },
+      })
+    })
+
+    it('sends userGoal as latitudeGoalOther when latitudeGoal is empty', async () => {
+      const creator = await createUser({
+        email: 'test@test.com',
+        name: 'Test User',
+        latitudeGoalOther: 'My custom goal',
+      })
+
+      const { workspace, userData } = await createWorkspace({
+        creator,
+        subscriptionPlan: SubscriptionPlan.HobbyV3,
+      })
+      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEndInTenDays)
+
+      await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
+
+      expect(publisher.publishLater).toHaveBeenCalledWith({
+        type: 'workspaceFinishingFreeTrial',
+        data: {
+          userEmail: userData.email,
+          userGoal: 'My custom goal',
         },
       })
     })
@@ -125,6 +156,22 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
     })
 
     it('does not publish when no workspaces have trial in 10-day window', async () => {
+      await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
+
+      expect(publisher.publishLater).not.toHaveBeenCalled()
+    })
+
+    it('does not publish when workspace has no creator', async () => {
+      const { workspace } = await createWorkspace({
+        subscriptionPlan: SubscriptionPlan.HobbyV3,
+      })
+      await database
+        .update(workspaces)
+        .set({ creatorId: null })
+        .where(eq(workspaces.id, workspace.id))
+      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEndInTenDays)
+
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
       expect(publisher.publishLater).not.toHaveBeenCalled()

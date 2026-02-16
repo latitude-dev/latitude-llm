@@ -1,7 +1,7 @@
 import { addDays, startOfDay } from 'date-fns'
 import { Job } from 'bullmq'
 import { and, eq, gte, inArray, isNotNull, lt } from 'drizzle-orm'
-import { findFirstUserInWorkspace } from '../../../queries/users/findFirstInWorkspace'
+import { findWorkspaceCreator } from '../../../queries/users/findWorkspaceCreator'
 import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { FREE_PLANS } from '../../../plans'
@@ -40,17 +40,16 @@ export const notifyWorkspacesFinishingFreeTrialJob = async (
     )
 
   for (const row of workspacesFinishingTrial) {
-    const firstUser = await findFirstUserInWorkspace({
-      workspaceId: row.workspace.id,
-    })
-    if (!firstUser) continue
+    const creator = await findWorkspaceCreator({ workspace: row.workspace })
+    if (!creator) continue
+
+    const userGoal = creator.latitudeGoal ?? creator.latitudeGoalOther ?? null
 
     await publisher.publishLater({
       type: 'workspaceFinishingFreeTrial',
       data: {
-        workspaceId: row.workspace.id,
-        workspaceName: row.workspace.name,
-        userEmail: firstUser.email,
+        userEmail: creator.email,
+        userGoal: userGoal,
       },
     })
   }

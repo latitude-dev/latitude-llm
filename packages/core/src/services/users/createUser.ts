@@ -3,7 +3,7 @@ import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { users } from '../../schema/models/users'
-import { UserTitle } from '@latitude-data/constants/users'
+import { LatitudeGoal, UserTitle } from '@latitude-data/constants/users'
 
 export async function createUser(
   {
@@ -12,12 +12,16 @@ export async function createUser(
     confirmedAt,
     title,
     admin = false,
+    latitudeGoal,
+    latitudeGoalOther,
   }: {
     email: string
     name: string
     confirmedAt?: Date
     title?: UserTitle
     admin?: boolean
+    latitudeGoal?: LatitudeGoal
+    latitudeGoalOther?: string
   },
   transaction = new Transaction(),
 ) {
@@ -30,6 +34,8 @@ export async function createUser(
         confirmedAt,
         title,
         admin,
+        latitudeGoal,
+        latitudeGoalOther,
       })
       .returning()
 
