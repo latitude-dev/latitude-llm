@@ -1,7 +1,8 @@
 import { Span } from '@latitude-data/constants'
+import { clickhouseClient } from '../../../client/clickhouse'
+import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
 import { Result, TypedResult } from '../../../lib/Result'
-import { listTraceIdsByLogUuid } from './findByDocumentLogUuid'
-import { getSpan } from './get'
+import { spanRowToSpan } from './toSpan'
 
 export async function getByDocumentLogUuidAndSpanId({
   workspaceId,
@@ -12,16 +13,21 @@ export async function getByDocumentLogUuidAndSpanId({
   documentLogUuid: string
   spanId: string
 }): Promise<TypedResult<Span | undefined>> {
-  const traceIds = await listTraceIdsByLogUuid({
-    workspaceId,
-    logUuid: documentLogUuid,
+  const result = await clickhouseClient().query({
+    query: `
+      SELECT *
+      FROM ${SPANS_TABLE}
+      WHERE workspace_id = {workspaceId: UInt64}
+        AND document_log_uuid = {documentLogUuid: UUID}
+        AND span_id = {spanId: String}
+      ORDER BY ingested_at DESC
+      LIMIT 1
+    `,
+    format: 'JSONEachRow',
+    query_params: { workspaceId, documentLogUuid, spanId },
   })
-  if (traceIds.length === 0) return Result.nil()
 
-  for (const traceId of traceIds) {
-    const result = await getSpan({ workspaceId, spanId, traceId })
-    if (result.ok && result.value) return result
-  }
-
-  return Result.nil()
+  const rows = await result.json<SpanRow>()
+  if (rows.length === 0) return Result.nil()
+  return Result.ok(spanRowToSpan(rows[0]!))
 }
