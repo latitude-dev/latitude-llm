@@ -60,7 +60,7 @@ function formatOptimizations(value: number | 'unlimited'): string {
 function buildTeamPlanFeatures(plan: PlanConfig): PlanFeature[] {
   return [
     {
-      text: `${formatNumber(plan.credits)} runs/month`,
+      text: `${formatNumber(plan.credits)} traces/month`,
       icon: 'checkClean',
       iconColor: 'primary',
     },
@@ -217,7 +217,7 @@ export function buildPlanOptions({
           iconColor: 'accentForeground',
         },
         {
-          text: `${formatNumber(SCALE_V1.credits)} runs/month`,
+          text: `${formatNumber(SCALE_V1.credits)} traces/month`,
           icon: 'checkClean',
           iconColor: 'primary',
         },

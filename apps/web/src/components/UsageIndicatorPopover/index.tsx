@@ -31,19 +31,19 @@ export function SubscriptionBadge({
   )
 }
 
-function runsDescription({ ratio, max }: { ratio: number; max: Quota }) {
+function tracesDescription({ ratio, max }: { ratio: number; max: Quota }) {
   if (max === 'unlimited') {
-    return 'Your plan includes unlimited runs. Enjoy!'
+    return 'Your plan includes unlimited traces. Enjoy!'
   }
 
   if (ratio <= 0) {
-    return "You've reached the maximum number of runs. Your app will continue working, the Latitude limit reached means you'll no longer be able to run tests, view new logs or evaluation results."
+    return "You've reached the maximum number of traces. Your app will continue working, the Latitude limit reached means you'll no longer be able to run tests, view new logs or evaluation results."
   }
   if (ratio < 0.25) {
-    return "You're running low on runs in your current plan. Your app will continue working, the Latitude limit reached means you'll no longer be able to run tests, view new logs or evaluation results."
+    return "You're running low on traces in your current plan. Your app will continue working, the Latitude limit reached means you'll no longer be able to run tests, view new logs or evaluation results."
   }
 
-  return `Your plan includes ${max} runs. You can upgrade your plan to get more runs.`
+  return `Your plan includes ${max} traces. You can upgrade your plan to get more traces.`
 }
 
 function membersDescription({
@@ -162,8 +162,8 @@ export function UsageIndicatorPopover({
         : undefined,
     [workspaceUsage],
   )
-  const runsText = useMemo(
-    () => (workspaceUsage ? runsDescription({ ratio, max }) : undefined),
+  const tracesText = useMemo(
+    () => (workspaceUsage ? tracesDescription({ ratio, max }) : undefined),
     [workspaceUsage, ratio, max],
   )
   const isFree = FREE_PLANS.includes(subscription.plan)
@@ -233,7 +233,7 @@ export function UsageIndicatorPopover({
                       {workspaceUsage?.max === 'unlimited'
                         ? 'unlimited'
                         : workspaceUsage?.max}{' '}
-                      runs
+                      traces
                     </Text.H4>
                     <div className='w-full flex items-center justify-end'>
                       <SubscriptionBadge subscription={subscription} />
@@ -241,8 +241,8 @@ export function UsageIndicatorPopover({
                   </div>
                 </LoadingText>
               </div>
-              {runsText ? (
-                <Text.H6 display='block'>{runsText}</Text.H6>
+              {tracesText ? (
+                <Text.H6 display='block'>{tracesText}</Text.H6>
               ) : (
                 <div className='w-full flex flex-col gap-1'>
                   <Skeleton className='w-full h-3 animate-pulse' />

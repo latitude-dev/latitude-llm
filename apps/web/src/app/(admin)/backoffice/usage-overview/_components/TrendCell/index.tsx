@@ -20,11 +20,11 @@ export function TrendCell({ trend }: { trend: UsageTrend }) {
           </div>
         }
       >
-        {trend.twoMonthsAgoRuns <= 0 && trend.last30daysRuns <= 0
-          ? 'No runs'
-          : `${trend.twoMonthsAgoRuns} runs 2 months ago  / ${trend.last30daysRuns} runs last 30 days`}
+        {trend.twoMonthsAgoTraces <= 0 && trend.last30daysTraces <= 0
+          ? 'No traces'
+          : `${trend.twoMonthsAgoTraces} traces 2 months ago  / ${trend.last30daysTraces} traces last 30 days`}
       </Tooltip>
-      <Text.H6>{trend.last30daysRuns}</Text.H6>
+      <Text.H6>{trend.last30daysTraces}</Text.H6>
     </div>
   )
 }
