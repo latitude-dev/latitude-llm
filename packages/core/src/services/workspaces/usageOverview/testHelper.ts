@@ -156,7 +156,7 @@ async function createWorkspaces({
           w.subcription.createdAt,
           'yyyy-MM-dd HH:mm:ss',
         ),
-        numOfMembers: w.membersCount.toString(),
+        numOfMembers: w.membersCount,
         emails: w.emails,
       },
       info: {
