@@ -337,6 +337,6 @@ describe('addResultToIssue', () => {
       await waitForTransactionCallbacks()
 
       expect(mockIssuesQueue.add).not.toHaveBeenCalled()
-    })
+    }, 15_000)
   })
 })

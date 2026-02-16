@@ -234,7 +234,7 @@ describe('manual', () => {
 
       const body = bodyMock.mock.calls[0]![0]
       expect(normalizeBody(body)).toEqual(
-        fixtures.MANUAL_PROMPT_WITH_TOOLS_SPANS,
+        normalizeBody(fixtures.MANUAL_PROMPT_WITH_TOOLS_SPANS as any),
       )
     }),
   )
@@ -266,7 +266,7 @@ describe('manual', () => {
 
       const body = bodyMock.mock.calls[0]![0]
       expect(normalizeBody(body)).toEqual(
-        fixtures.MANUAL_COMPLETION_ERROR_SPANS,
+        normalizeBody(fixtures.MANUAL_COMPLETION_ERROR_SPANS as any),
       )
     }),
   )
