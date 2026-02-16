@@ -45,13 +45,19 @@ describe('manual', () => {
 
       const sdk = new LatitudeTelemetry('fake-api-key')
 
-      const prompt = sdk.span.prompt({
-        documentLogUuid: 'fake-doc-log-uuid',
-        promptUuid: 'fake-prompt-uuid',
-        template:
-          '---\nprovider: openai\nmodel: gpt-4o\ntemperature: 0.5\n---\nYou are helpful.\n<user>{{question}}</user>',
-        parameters: { question: 'What is the weather?' },
+      const ctx = sdk.context.setAttributes(sdk.context.active(), {
+        'latitude.documentLogUuid': 'fake-doc-log-uuid',
+        'latitude.documentUuid': 'fake-prompt-uuid',
       })
+
+      const prompt = sdk.span.prompt(
+        {
+          template:
+            '---\nprovider: openai\nmodel: gpt-4o\ntemperature: 0.5\n---\nYou are helpful.\n<user>{{question}}</user>',
+          parameters: { question: 'What is the weather?' },
+        },
+        ctx,
+      )
 
       const completion1 = sdk.span.completion(
         {

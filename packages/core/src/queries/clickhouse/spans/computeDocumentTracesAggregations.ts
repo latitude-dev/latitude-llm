@@ -1,3 +1,4 @@
+import { SpanType } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE } from '../../../clickhouse/models/spans'
 import { TracesAggregations } from '../../../schema/models/types/Span'
@@ -14,7 +15,7 @@ export async function computeDocumentTracesAggregations({
   const params: Record<string, unknown> = {
     workspaceId,
     documentUuid,
-    completionType: 'completion',
+    completionType: SpanType.Completion,
   }
 
   const conditions = [
@@ -46,31 +47,44 @@ export async function computeDocumentTracesAggregations({
           sumIf(cost, type = {completionType: String}),
           0
         ) AS total_cost_in_millicents,
-        coalesce(
+        if(
+          isNaN(
+            avgIf(
+              coalesce(tokens_prompt, 0) +
+              coalesce(tokens_cached, 0) +
+              coalesce(tokens_reasoning, 0) +
+              coalesce(tokens_completion, 0),
+              type = {completionType: String}
+            )
+          ),
+          0,
           avgIf(
             coalesce(tokens_prompt, 0) +
             coalesce(tokens_cached, 0) +
             coalesce(tokens_reasoning, 0) +
             coalesce(tokens_completion, 0),
             type = {completionType: String}
-          ),
-          0
+          )
         ) AS average_tokens,
-        coalesce(
-          avgIf(cost, type = {completionType: String}),
-          0
+        if(
+          isNaN(avgIf(cost, type = {completionType: String})),
+          0,
+          avgIf(cost, type = {completionType: String})
         ) AS average_cost_in_millicents,
-        coalesce(
-          quantileIf(0.5)(cost, type = {completionType: String}),
-          0
+        if(
+          isNaN(quantileIf(0.5)(cost, type = {completionType: String})),
+          0,
+          quantileIf(0.5)(cost, type = {completionType: String})
         ) AS median_cost_in_millicents,
-        coalesce(
-          avgIf(duration_ms, type = {completionType: String}),
-          0
+        if(
+          isNaN(avgIf(duration_ms, type = {completionType: String})),
+          0,
+          avgIf(duration_ms, type = {completionType: String})
         ) AS average_duration,
-        coalesce(
-          quantileIf(0.5)(duration_ms, type = {completionType: String}),
-          0
+        if(
+          isNaN(quantileIf(0.5)(duration_ms, type = {completionType: String})),
+          0,
+          quantileIf(0.5)(duration_ms, type = {completionType: String})
         ) AS median_duration
       FROM ${SPANS_TABLE}
       WHERE ${conditions.join(' AND ')}

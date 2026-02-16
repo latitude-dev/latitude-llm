@@ -102,16 +102,22 @@ export async function buildStreamEvaluationRun({
   if (result.error) return result
 
   const { runArgs } = result.unwrap()
+  const ctx = telemetry.context.setAttributes(
+    BACKGROUND({ workspaceId: workspace.id }),
+    {
+      'latitude.documentLogUuid': resultUuid,
+      'latitude.documentUuid': evaluation.uuid,
+      'latitude.source': LogSources.Evaluation,
+      'latitude.projectId': String(projectId),
+    },
+  )
+
   const $prompt = telemetry.span.prompt(
     {
-      documentLogUuid: resultUuid,
-      promptUuid: evaluation.uuid,
       template: evaluation.configuration.prompt,
       parameters: parameters,
-      source: LogSources.Evaluation,
-      projectId,
     },
-    BACKGROUND({ workspaceId: workspace.id }),
+    ctx,
   )
   const { stream } = runChain({ context: $prompt.context, ...runArgs })
   const streamHandler = buildStreamHandler(stream, $prompt)

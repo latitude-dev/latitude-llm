@@ -137,87 +137,105 @@ export type BaseSpanMetadata<T extends SpanType = SpanType> = {
   links: SpanLink[]
 }
 
-export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
-  name: string
-  call: {
-    id: string
-    arguments: Record<string, unknown>
-  }
-  // Fields below are optional if the span had an error
-  result?: {
-    value: unknown
-    isError: boolean
-  }
-}
-
-export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
-  documentLogUuid: string
-  experimentUuid: string
-  externalId: string
-  parameters: Record<string, unknown>
-  projectId: number
-  promptUuid: string
-  source: LogSources
-  template: string
-  testDeploymentId?: number
-  versionUuid: string
-}
-
-export type ChatSpanMetadata = BaseSpanMetadata<SpanType.Chat> & {
-  documentLogUuid: string
-  previousTraceId: string
-  source: LogSources
-}
-
-export type ExternalSpanMetadata = BaseSpanMetadata<SpanType.External> & {
-  promptUuid: string
-  documentLogUuid: string
-  source: LogSources
+export type SpanReferenceMetadata = {
+  source?: LogSources
+  documentLogUuid?: string
+  promptUuid?: string
   versionUuid?: string
-  externalId?: string
-  name?: string
+  experimentUuid?: string
+  projectId?: number
+  testDeploymentId?: number
+  previousTraceId?: string
 }
 
-export type UnresolvedExternalSpanMetadata =
-  BaseSpanMetadata<SpanType.UnresolvedExternal> & {
-    promptPath: string
+export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> &
+  SpanReferenceMetadata & {
+    name: string
+    call: {
+      id: string
+      arguments: Record<string, unknown>
+    }
+    // Fields below are optional if the span had an error
+    result?: {
+      value: unknown
+      isError: boolean
+    }
+  }
+
+export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> &
+  SpanReferenceMetadata & {
+    documentLogUuid: string
+    experimentUuid: string
+    externalId: string
+    parameters: Record<string, unknown>
     projectId: number
+    promptUuid: string
+    source: LogSources
+    template: string
+    testDeploymentId?: number
+    versionUuid: string
+  }
+
+export type ChatSpanMetadata = BaseSpanMetadata<SpanType.Chat> &
+  SpanReferenceMetadata & {
+    documentLogUuid: string
+    previousTraceId: string
+    source: LogSources
+  }
+
+export type ExternalSpanMetadata = BaseSpanMetadata<SpanType.External> &
+  SpanReferenceMetadata & {
+    promptUuid: string
+    documentLogUuid: string
+    source: LogSources
     versionUuid?: string
     externalId?: string
     name?: string
   }
 
-export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
-  provider: string
-  model: string
-  configuration: Record<string, unknown>
-  input: Message[]
-  // Fields below are optional if the span had an error
-  output?: Message[]
-  tokens?: {
-    prompt: number
-    cached: number
-    reasoning: number
-    completion: number
-  }
-  cost?: number // Enriched when ingested
-  finishReason?: FinishReason
-}
+export type UnresolvedExternalSpanMetadata =
+  BaseSpanMetadata<SpanType.UnresolvedExternal> &
+    SpanReferenceMetadata & {
+      promptPath: string
+      projectId: number
+      versionUuid?: string
+      externalId?: string
+      name?: string
+    }
 
-export type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
-  request: {
-    method: string
-    url: string
-    headers: Record<string, string>
-    body: string | Record<string, unknown>
+export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> &
+  SpanReferenceMetadata & {
+    provider: string
+    model: string
+    configuration: Record<string, unknown>
+    input: Message[]
+    // Fields below are optional if the span had an error
+    output?: Message[]
+    tokens?: {
+      prompt: number
+      cached: number
+      reasoning: number
+      completion: number
+    }
+    cost?: number // Enriched when ingested
+    finishReason?: FinishReason
   }
-  // Fields below are optional if the span had an error
-  response?: {
-    status: number
-    headers: Record<string, string>
-    body: string | Record<string, unknown>
+
+export type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> &
+  SpanReferenceMetadata & {
+    request: {
+      method: string
+      url: string
+      headers: Record<string, string>
+      body: string | Record<string, unknown>
+    }
+    // Fields below are optional if the span had an error
+    response?: {
+      status: number
+      headers: Record<string, string>
+      body: string | Record<string, unknown>
+    }
   }
-}
 
 // prettier-ignore
 export type SpanMetadata<T extends SpanType = SpanType> =
@@ -227,9 +245,9 @@ export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.External ? ExternalSpanMetadata :
   T extends SpanType.UnresolvedExternal ? UnresolvedExternalSpanMetadata :
   T extends SpanType.Completion ? CompletionSpanMetadata :
-  T extends SpanType.Embedding ? BaseSpanMetadata<T> :
+  T extends SpanType.Embedding ? BaseSpanMetadata<T> & SpanReferenceMetadata :
   T extends SpanType.Http ? HttpSpanMetadata :
-  T extends SpanType.Unknown ? BaseSpanMetadata<T> :
+  T extends SpanType.Unknown ? BaseSpanMetadata<T> & SpanReferenceMetadata :
   never;
 
 export const SPAN_METADATA_STORAGE_KEY = (

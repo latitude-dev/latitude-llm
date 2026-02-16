@@ -72,16 +72,32 @@ export async function addMessages(
     previousMessages,
   } = dataResult.unwrap()
   const effectiveContext = context ?? BACKGROUND({ workspaceId: workspace.id })
+
+  // Set trace-level attributes in baggage so all child spans inherit them
+  const attributes: Record<string, string> = {
+    'latitude.documentLogUuid': documentLogUuid,
+    'latitude.documentUuid': document.documentUuid,
+    'latitude.commitUuid': commit.uuid,
+  }
+  if (previousSpan?.traceId) {
+    attributes['latitude.previousTraceId'] = previousSpan.traceId
+  }
+  if (source) {
+    attributes['latitude.source'] = source
+  }
+  if (previousSpan?.traceId) {
+    attributes['latitude.previousTraceId'] = previousSpan.traceId
+  }
+  const ctxWithAttributes = telemetry.context.setAttributes(
+    effectiveContext,
+    attributes,
+  )
+
   const $chat = telemetry.span.chat(
     {
-      documentLogUuid,
-      versionUuid: commit.uuid,
-      promptUuid: document.documentUuid,
-      previousTraceId: previousSpan?.traceId ?? '',
       name: document.path.split('/').at(-1),
-      source,
     },
-    effectiveContext,
+    ctxWithAttributes,
   )
 
   const conversation = {

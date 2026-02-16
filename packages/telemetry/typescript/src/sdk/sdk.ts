@@ -14,6 +14,7 @@ import {
   StartSpanOptions,
   StartToolSpanOptions,
 } from '$telemetry/instrumentations'
+import { toSnakeCase } from '$telemetry/utils'
 import { DEFAULT_REDACT_SPAN_PROCESSOR } from '$telemetry/sdk/redact'
 import {
   DOCUMENT_PATH_REGEXP,
@@ -127,6 +128,62 @@ class ContextManager {
     ...args: A
   ): ReturnType<F> {
     return context.with(ctx, fn, thisArg, ...args)
+  }
+
+  /**
+   * Sets custom attributes in the OpenTelemetry baggage that will be
+   * automatically propagated to all child spans in the trace.
+   *
+   * This is useful for setting trace-level metadata that should be
+   * inherited by all spans without manually passing them to each span.
+   *
+   * Example:
+   * ```typescript
+   * const ctx = telemetry.context.setAttributes(
+   *   telemetry.context.active(),
+   *   {
+   *     'latitude.documentLogUuid': 'uuid-123',
+   *     'latitude.documentUuid': 'prompt-456',
+   *     'latitude.commitUuid': 'commit-789',
+   *     'latitude.projectId': '123',
+   *     'custom.attribute': 'value'
+   *   }
+   * )
+   *
+   * // Latitude keys are normalized to snake_case in baggage:
+   * // latitude.document_log_uuid, latitude.document_uuid, ...
+   *
+   * // Use context.with() to make the context active
+   * // All spans created within this context will automatically
+   * // inherit the baggage attributes without explicitly passing ctx
+   * telemetry.context.with(ctx, () => {
+   *   telemetry.span.tool({ name: 'my-tool', call: { id: '1', arguments: {} } })
+   *   // ... other spans
+   * })
+   * ```
+   */
+  setAttributes(
+    ctx: TelemetryContext,
+    attributes: Record<string, string>,
+  ): TelemetryContext {
+    const baggage = propagation.getBaggage(ctx) || propagation.createBaggage({})
+
+    const newBaggage = Object.entries(attributes).reduce(
+      (bag, [key, value]) =>
+        bag.setEntry(this.normalizeBaggageKey(key), { value }),
+      baggage,
+    )
+
+    return propagation.setBaggage(ctx, newBaggage)
+  }
+
+  private normalizeBaggageKey(key: string): string {
+    if (!key.startsWith('latitude.')) return key
+
+    const [namespace, ...path] = key.split('.')
+    if (!namespace || path.length === 0) return key
+
+    return [namespace, ...path.map(toSnakeCase)].join('.')
   }
 }
 
