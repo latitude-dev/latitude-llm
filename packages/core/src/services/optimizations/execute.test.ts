@@ -6,7 +6,7 @@ import {
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { EvaluationType, RuleEvaluationMetric } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { UnprocessableEntityError } from '../../lib/errors'
+import { AbortedError, UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import {
   DatasetRowsRepository,
@@ -483,6 +483,110 @@ describe('executeOptimization', () => {
 
       expect(forkedDocs).toHaveLength(1)
       expect(forkedDocs[0]!.documentUuid).toBe(draftDocument.documentUuid)
+    })
+  })
+
+  describe('cancellation', () => {
+    it('throws AbortedError when signal is already aborted before optimizer call', async () => {
+      const evaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+        type: EvaluationType.Rule,
+        metric: RuleEvaluationMetric.RegularExpression,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          expectedOutput: {
+            parsingFormat: 'string',
+          },
+          pattern: '.*',
+        },
+      })
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit },
+        evaluation,
+        document,
+        project,
+        workspace,
+        trainset,
+        testset,
+      })
+
+      const preparedOptimization = {
+        ...optimization,
+        preparedAt: new Date(),
+      } as Optimization
+
+      const abortController = new AbortController()
+      abortController.abort()
+
+      await expect(
+        executeOptimization({
+          optimization: preparedOptimization,
+          workspace,
+          abortSignal: abortController.signal,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError(AbortedError)
+
+      expect(optimizerMock).not.toHaveBeenCalled()
+      expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+      expect(publisherMock).not.toHaveBeenCalled()
+    })
+
+    it('passes abortSignal to the optimizer', async () => {
+      const evaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+        type: EvaluationType.Rule,
+        metric: RuleEvaluationMetric.RegularExpression,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          expectedOutput: {
+            parsingFormat: 'string',
+          },
+          pattern: '.*',
+        },
+      })
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit },
+        evaluation,
+        document,
+        project,
+        workspace,
+        trainset,
+        testset,
+      })
+
+      const preparedOptimization = {
+        ...optimization,
+        preparedAt: new Date(),
+      } as Optimization
+
+      const abortController = new AbortController()
+
+      await executeOptimization({
+        optimization: preparedOptimization,
+        workspace,
+        abortSignal: abortController.signal,
+      }).then((r) => r.unwrap())
+
+      expect(optimizerMock).toHaveBeenCalledTimes(1)
+      expect(optimizerMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          abortSignal: abortController.signal,
+        }),
+      )
     })
   })
 })

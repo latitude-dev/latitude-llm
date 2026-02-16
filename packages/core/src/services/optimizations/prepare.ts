@@ -11,8 +11,6 @@ import {
   SpanWithDetails,
 } from '../../constants'
 import { getSpansByEvaluation } from '../../data-access/evaluations/getSpansByEvaluation'
-import { getSpansByIssue } from '../../queries/issues/getSpansByIssue'
-import { getSpansWithoutIssues } from '../../queries/issues/getSpansWithoutIssues'
 import { getSpansByDocument } from '../../data-access/spans/getSpansByDocument'
 import { publisher } from '../../events/publisher'
 import { executeOptimizationJobKey } from '../../jobs/job-definitions/optimizations/executeOptimizationJob'
@@ -22,6 +20,9 @@ import { hashObject } from '../../lib/hashObject'
 import { interleaveList } from '../../lib/interleaveList'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
+import { findActiveIssuesByDocument } from '../../queries/issues/findActiveByDocument'
+import { getSpansByIssue } from '../../queries/issues/getSpansByIssue'
+import { getSpansWithoutIssues } from '../../queries/issues/getSpansWithoutIssues'
 import { findProjectById } from '../../queries/projects/findById'
 import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
 import {
@@ -31,7 +32,6 @@ import {
   EvaluationsV2Repository,
   SpanMetadatasRepository,
 } from '../../repositories'
-import { findActiveIssuesByDocument } from '../../queries/issues/findActiveByDocument'
 import { DatasetRowData } from '../../schema/models/datasetRows'
 import { Column } from '../../schema/models/datasets'
 import { optimizations } from '../../schema/models/optimizations'
@@ -45,19 +45,22 @@ import { Cursor } from '../../schema/types'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
 import { createDataset } from '../datasets/create'
 import { buildColumns, nanoidHashAlgorithm } from '../datasets/utils'
-import { maskParameter } from './shared'
+import { maskParameter, raiseForAborted } from './shared'
 
 export async function prepareOptimization(
   {
     optimization,
     workspace,
+    abortSignal,
   }: {
     optimization: Optimization
     workspace: Workspace
-    abortSignal?: AbortSignal // TODO(AO/OPT): Implement cancellation
+    abortSignal?: AbortSignal
   },
   transaction = new Transaction(),
 ) {
+  raiseForAborted(abortSignal)
+
   if (optimization.preparedAt) {
     return Result.error(
       new UnprocessableEntityError('Optimization already prepared'),
@@ -151,6 +154,7 @@ export async function prepareOptimization(
       baselineCommit: baselineCommit,
       optimization: optimization,
       workspace: workspace,
+      abortSignal: abortSignal,
     })
     if (gettingne.error) {
       return Result.error(gettingne.error)
@@ -163,6 +167,7 @@ export async function prepareOptimization(
       document: document,
       optimization: optimization,
       workspace: workspace,
+      abortSignal: abortSignal,
     })
     if (gettingpo.error) {
       return Result.error(gettingpo.error)
@@ -177,6 +182,7 @@ export async function prepareOptimization(
       document: document,
       optimization: optimization,
       workspace: workspace,
+      abortSignal: abortSignal,
     })
     if (gettingex.error) {
       return Result.error(gettingex.error)
@@ -195,6 +201,7 @@ export async function prepareOptimization(
       baselineCommit: baselineCommit,
       optimization: optimization,
       workspace: workspace,
+      abortSignal: abortSignal,
     })
     if (creating.error) {
       return Result.error(creating.error)
@@ -358,6 +365,7 @@ async function getNegativeExamples({
   baselineCommit,
   optimization,
   workspace,
+  abortSignal,
 }: {
   trackedIssues: Issue[]
   otherIssues: Issue[]
@@ -368,6 +376,7 @@ async function getNegativeExamples({
   baselineCommit: Commit
   optimization: Optimization
   workspace: Workspace
+  abortSignal?: AbortSignal
 }) {
   const halfLimit = Math.floor((optimization.configuration.dataset?.target ?? OPTIMIZATION_MAX_ROWS ) / 2) // prettier-ignore
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
@@ -380,6 +389,8 @@ async function getNegativeExamples({
     let searches = 0
 
     while (validSpans.length < target && searches < maxSearches) {
+      raiseForAborted(abortSignal)
+
       searches++
 
       const gettingsp = await getSpansByIssue({
@@ -415,6 +426,8 @@ async function getNegativeExamples({
     let searches = 0
 
     while (validSpans.length < target && searches < maxSearches) {
+      raiseForAborted(abortSignal)
+
       searches++
 
       const gettingsp = await getSpansByEvaluation({
@@ -460,6 +473,8 @@ async function getNegativeExamples({
     const deficit = halfLimit - collected
 
     for (const issue of issues) {
+      raiseForAborted(abortSignal)
+
       if (collected >= halfLimit) break
 
       const part = Math.ceil(deficit / issues.length)
@@ -484,6 +499,8 @@ async function getNegativeExamples({
     const deficit = halfLimit - collected
 
     for (const evalUuid of evalUuids) {
+      raiseForAborted(abortSignal)
+
       if (collected >= halfLimit) break
 
       const part = Math.ceil(deficit / evalUuids.length)
@@ -507,6 +524,8 @@ async function getNegativeExamples({
     await issueRoundRobin(trackedIssues)
 
     while (collected < halfLimit) {
+      raiseForAborted(abortSignal)
+
       if (capableIssues.size === 0) break
       const retriedIssues = Array.from(capableIssues).map(
         (id) => trackedIssues.find((i) => i.id === id)!,
@@ -519,6 +538,8 @@ async function getNegativeExamples({
       await issueRoundRobin(otherIssues)
 
       while (collected < halfLimit) {
+        raiseForAborted(abortSignal)
+
         if (capableIssues.size === 0) break
         const retriedIssues = Array.from(capableIssues).map(
           (id) => otherIssues.find((i) => i.id === id)!,
@@ -543,6 +564,8 @@ async function getNegativeExamples({
       await evaluationRoundRobin(otherEvalUuids)
 
       while (collected < halfLimit) {
+        raiseForAborted(abortSignal)
+
         if (capableEvals.size === 0) break
         const retriedEvals = Array.from(capableEvals)
         await evaluationRoundRobin(retriedEvals)
@@ -559,12 +582,14 @@ async function getPositiveExamples({
   baselineCommit,
   optimization,
   workspace,
+  abortSignal,
 }: {
   validateSpan: SpanValidator
   baselineCommit: Commit
   document: DocumentVersion
   optimization: Optimization
   workspace: Workspace
+  abortSignal?: AbortSignal
 }) {
   const halfLimit = Math.floor((optimization.configuration.dataset?.target ?? OPTIMIZATION_MAX_ROWS ) / 2) // prettier-ignore
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
@@ -584,6 +609,8 @@ async function getPositiveExamples({
     let searches = 0
 
     while (result.length < halfLimit && searches < maxSearches) {
+      raiseForAborted(abortSignal)
+
       searches++
 
       const gettingsp = await getSpansWithoutIssues({
@@ -660,6 +687,7 @@ async function getExamples({
   document,
   optimization,
   workspace,
+  abortSignal,
 }: {
   negatives: Record<string, SpanWithDetails<SpanType.Prompt>[]>
   positives: SpanWithDetails<SpanType.Prompt>[]
@@ -668,6 +696,7 @@ async function getExamples({
   document: DocumentVersion
   optimization: Optimization
   workspace: Workspace
+  abortSignal?: AbortSignal
 }) {
   const halfLimit = Math.floor((optimization.configuration.dataset?.target ?? OPTIMIZATION_MAX_ROWS ) / 2) // prettier-ignore
   const maxSearches = Math.ceil(halfLimit / SPANS_BATCH_SIZE) * SPANS_MAX_SEARCH // prettier-ignore
@@ -695,6 +724,8 @@ async function getExamples({
       additionalPositives.length < positiveNeeded) &&
     searches < maxSearches
   ) {
+    raiseForAborted(abortSignal)
+
     searches++
 
     const gettingsp = await getSpansByDocument({
@@ -809,6 +840,7 @@ async function createDatasets(
     baselineCommit,
     optimization,
     workspace,
+    abortSignal,
   }: {
     parameters: string[]
     negatives: Record<string, SpanWithDetails<SpanType.Prompt>[]>
@@ -816,9 +848,12 @@ async function createDatasets(
     baselineCommit: Commit
     optimization: Optimization
     workspace: Workspace
+    abortSignal?: AbortSignal
   },
   transaction = new Transaction(),
 ) {
+  raiseForAborted(abortSignal)
+
   const halfLimit = Math.floor((optimization.configuration.dataset?.target ?? OPTIMIZATION_MAX_ROWS ) / 2) // prettier-ignore
 
   const negatives = interleaveList(negativesMap, halfLimit, true)

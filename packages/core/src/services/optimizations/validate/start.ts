@@ -15,18 +15,22 @@ import { Optimization } from '../../../schema/models/types/Optimization'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { createExperiment } from '../../experiments/create'
 import { startExperiment } from '../../experiments/start'
+import { raiseForAborted } from '../shared'
 
 export async function startValidateOptimization(
   {
     optimization,
     workspace,
+    abortSignal,
   }: {
     optimization: Optimization
     workspace: Workspace
-    abortSignal?: AbortSignal // TODO(AO/OPT): Implement cancellation
+    abortSignal?: AbortSignal
   },
   transaction = new Transaction(),
 ) {
+  raiseForAborted(abortSignal)
+
   if (optimization.validatedAt) {
     return Result.error(
       new UnprocessableEntityError('Optimization already validated'),
@@ -203,6 +207,8 @@ export async function startValidateOptimization(
   }
   optimization = creatingex.value.optimization
   const experiments = creatingex.value.experiments
+
+  raiseForAborted(abortSignal)
 
   // Note: this cannot be inside the transaction because the
   // enqueued task may not see the created experiment

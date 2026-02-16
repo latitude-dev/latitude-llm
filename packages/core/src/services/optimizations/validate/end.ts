@@ -7,18 +7,22 @@ import { optimizations } from '../../../schema/models/optimizations'
 import { Optimization } from '../../../schema/models/types/Optimization'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { endOptimization } from '../end'
+import { raiseForAborted } from '../shared'
 
 export async function endValidateOptimization(
   {
     optimization,
     workspace,
+    abortSignal,
   }: {
     optimization: Optimization
     workspace: Workspace
-    abortSignal?: AbortSignal // TODO(AO/OPT): Implement cancellation
+    abortSignal?: AbortSignal
   },
   transaction = new Transaction(),
 ) {
+  raiseForAborted(abortSignal)
+
   if (optimization.validatedAt) {
     return Result.error(
       new UnprocessableEntityError('Optimization already validated'),
