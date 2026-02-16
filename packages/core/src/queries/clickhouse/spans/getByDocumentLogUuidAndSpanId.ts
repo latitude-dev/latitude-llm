@@ -12,7 +12,10 @@ export async function getByDocumentLogUuidAndSpanId({
   documentLogUuid: string
   spanId: string
 }): Promise<TypedResult<Span | undefined>> {
-  const traceIds = await listTraceIdsByLogUuid({ workspaceId, logUuid: documentLogUuid })
+  const traceIds = await listTraceIdsByLogUuid({
+    workspaceId,
+    logUuid: documentLogUuid,
+  })
   if (traceIds.length === 0) return Result.nil()
 
   for (const traceId of traceIds) {
