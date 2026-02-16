@@ -64,4 +64,3 @@ export async function getOnboardingResources() {
 
   return { workspace, documents, project, commit }
 }
-

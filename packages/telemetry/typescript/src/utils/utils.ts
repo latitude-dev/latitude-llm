@@ -15,4 +15,3 @@ export function toKebabCase(input: string) {
     .replace(/^-+|-+$/g, '')
     .toLowerCase()
 }
-
