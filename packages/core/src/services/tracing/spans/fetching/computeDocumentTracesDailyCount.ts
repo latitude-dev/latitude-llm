@@ -4,6 +4,10 @@ import { database } from '../../../../client'
 import { Result } from '../../../../lib/Result'
 import { spans } from '../../../../schema/models/spans'
 import { DatabaseError } from 'pg'
+import { isFeatureEnabledByName } from '../../../workspaceFeatures/isFeatureEnabledByName'
+import { computeDocumentTracesDailyCount as chComputeDocumentTracesDailyCount } from '../../../../queries/clickhouse/spans/computeDocumentTracesDailyCount'
+
+const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 export type DailyCount = {
   date: string
@@ -12,16 +16,36 @@ export type DailyCount = {
 
 export async function computeDocumentTracesDailyCount(
   {
+    workspaceId,
     documentUuid,
     commitUuid,
     days = 30,
   }: {
+    workspaceId: number
     documentUuid: string
     commitUuid?: string
     days?: number
   },
   db = database,
 ) {
+  const clickhouseEnabledResult = await isFeatureEnabledByName(
+    workspaceId,
+    CLICKHOUSE_SPANS_READ_FLAG,
+    db,
+  )
+  const shouldUseClickHouse =
+    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
+
+  if (shouldUseClickHouse) {
+    const result = await chComputeDocumentTracesDailyCount({
+      workspaceId,
+      documentUuid,
+      commitUuid,
+      days,
+    })
+    return Result.ok(result)
+  }
+
   const now = new Date()
 
   try {
