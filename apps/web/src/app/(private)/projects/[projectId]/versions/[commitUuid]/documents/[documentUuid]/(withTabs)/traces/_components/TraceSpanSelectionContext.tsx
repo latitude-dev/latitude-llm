@@ -94,6 +94,10 @@ export function buildTraceUrl({
   }
   if (span.documentLogUuid) {
     filters.documentLogUuid = span.documentLogUuid
+    params.set(
+      TRACE_SPAN_SELECTION_PARAM_KEYS.expandedDocumentLogUuid,
+      span.documentLogUuid,
+    )
   }
   params.set('filters', JSON.stringify(filters))
   return (
@@ -200,6 +204,7 @@ function initialSelectionState(): SelectionState {
   const directExpandedDocumentLogUuid = params.get(expandedDocumentLogUuidParam)
   let initialDocumentLogUuid = directDocumentLogUuid
   let initialSpanId = directSpanId
+  let initialExpandedDocumentLogUuid = directExpandedDocumentLogUuid
 
   if (!initialDocumentLogUuid || !initialSpanId) {
     const filtersParam = params.get('filters')
@@ -208,13 +213,15 @@ function initialSelectionState(): SelectionState {
       initialDocumentLogUuid =
         initialDocumentLogUuid || filters.documentLogUuid || null
       initialSpanId = initialSpanId || filters.spanId || null
+      initialExpandedDocumentLogUuid =
+        initialExpandedDocumentLogUuid || filters.documentLogUuid || null
     }
   }
   return {
     documentLogUuid: initialDocumentLogUuid,
     spanId: initialSpanId,
     activeRunUuid: directActiveRunUuid,
-    expandedDocumentLogUuid: directExpandedDocumentLogUuid,
+    expandedDocumentLogUuid: initialExpandedDocumentLogUuid,
   }
 }
 
