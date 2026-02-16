@@ -9,6 +9,8 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { getEvaluationTypeSpecification } from '$/components/evaluations'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { ConfusionMatrixTooltipContent } from '$/components/ConfusionMatrix'
+import { calculateMCC } from '$/helpers/evaluation-generation/calculateMCC'
 
 export function formatDocumentPath(path: string): string {
   const cleanPath = path.replace(/\.promptl$/, '')
@@ -55,6 +57,40 @@ function DocumentPath({
   )
 }
 
+function AutomatedEvaluationBadge({
+  evaluation,
+}: {
+  evaluation: EvaluationV2
+}) {
+  const typeSpec = getEvaluationTypeSpecification(evaluation)
+  const confusionMatrix = evaluation.alignmentMetricMetadata?.confusionMatrix
+  const mcc = confusionMatrix ? calculateMCC({ confusionMatrix }) : null
+
+  return (
+    <Tooltip
+      asChild
+      align='center'
+      side='bottom'
+      trigger={
+        <div className='flex flex-row items-center gap-1 bg-primary-muted p-1 rounded-md'>
+          <Icon name='wandSparkles' color='primary' size='small' />
+          {mcc !== null && <Text.H6M color='primary'>{mcc}%</Text.H6M>}
+        </div>
+      }
+    >
+      <div className='flex flex-col gap-2'>
+        <Text.H5 color='background'>
+          Issue detection automated by an {typeSpec?.name} evaluation
+        </Text.H5>
+        <div className='w-full h-px bg-muted' />
+        {confusionMatrix && (
+          <ConfusionMatrixTooltipContent confusionMatrix={confusionMatrix} />
+        )}
+      </div>
+    </Tooltip>
+  )
+}
+
 export function IssuesTitle({
   project,
   commit,
@@ -72,26 +108,11 @@ export function IssuesTitle({
     [evaluations, issue.id],
   )
 
-  const typeSpec = evaluation
-    ? getEvaluationTypeSpecification(evaluation)
-    : null
-
   return (
     <div className='flex flex-col justify-start items-start gap-y-1 py-4'>
       <div className='flex flex-row items-center gap-x-1'>
         <Text.H5>{issue.title}</Text.H5>
-        {evaluation ? (
-          <Tooltip
-            asChild
-            trigger={
-              <div className='flex flex-row items-center bg-primary-muted p-1 rounded-md'>
-                <Icon name='wandSparkles' color='primary' size='small' />
-              </div>
-            }
-          >
-            Issue detection automated by an {typeSpec?.name} evaluation
-          </Tooltip>
-        ) : null}
+        {evaluation && <AutomatedEvaluationBadge evaluation={evaluation} />}
       </div>
       <div className='flex items-center gap-x-2'>
         <StatusBadges statuses={statuses} />
