@@ -6,25 +6,25 @@ import { SubscriptionPlanData } from '@latitude-data/core/plans'
 const TOLERANCE_PERCENT = 0.05
 export type UsageTrend = {
   icon: IconName
-  last30daysRuns: number
-  twoMonthsAgoRuns: number
+  last30daysTraces: number
+  twoMonthsAgoTraces: number
 }
 
 function getTrendIndicator({
-  runsTwoMonthsAgo,
-  runsLast30Days,
+  tracesTwoMonthsAgo,
+  tracesLast30Days,
 }: {
-  runsTwoMonthsAgo: number
-  runsLast30Days: number
+  tracesTwoMonthsAgo: number
+  tracesLast30Days: number
   plan: SubscriptionPlanData
 }): UsageTrend {
-  const smallerValue = Math.min(runsTwoMonthsAgo, runsLast30Days)
+  const smallerValue = Math.min(tracesTwoMonthsAgo, tracesLast30Days)
   const tolerance = smallerValue * TOLERANCE_PERCENT
-  const diff = runsLast30Days - runsTwoMonthsAgo
+  const diff = tracesLast30Days - tracesTwoMonthsAgo
 
   const commonProps = {
-    last30daysRuns: runsLast30Days,
-    twoMonthsAgoRuns: runsTwoMonthsAgo,
+    last30daysTraces: tracesLast30Days,
+    twoMonthsAgoTraces: tracesTwoMonthsAgo,
   }
 
   if (Math.abs(diff) < tolerance || diff === 0) {
@@ -54,8 +54,8 @@ function getEmailsList(emails: string | null) {
 export function buildUsageInformation(usage: GetUsageOverviewRow) {
   const plan = getPlanFromSubscriptionSlug(usage.subscriptionPlan)
   const trend = getTrendIndicator({
-    runsTwoMonthsAgo: usage.lastTwoMonthsRuns,
-    runsLast30Days: usage.lastMonthRuns,
+    tracesTwoMonthsAgo: usage.lastTwoMonthsTraces,
+    tracesLast30Days: usage.lastMonthTraces,
     plan,
   })
 

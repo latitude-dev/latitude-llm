@@ -12,7 +12,7 @@ import { spans } from '../../../schema/models/spans'
  *
  * This complex query aggregates workspace usage metrics including:
  * - Basic workspace info (ID, name, subscription plan, member count, emails)
- * - Activity metrics (last month and last two months run counts)
+ * - Activity metrics (last month and last two months trace counts)
  * - Latest activity timestamp across spans and evaluation results
  *
  * The query uses CTEs (Common Table Expressions) to:
@@ -20,7 +20,7 @@ import { spans } from '../../../schema/models/spans'
  * 2. Count successful evaluation results from the last 2 months (excluding errors)
  * 3. Combine with workspace usage info and aggregate totals
  *
- * Results are ordered by activity level (last month runs desc) and member count,
+ * Results are ordered by activity level (last month traces desc) and member count,
  * then paginated based on provided page/size parameters.
  *
  * @param page - Page number for pagination (1-based)
@@ -123,18 +123,18 @@ export async function getUsageOverview(
         'num_of_members',
       ),
       emails: max(workspaceUsageInfoCTE.emails),
-      lastMonthRuns: sql<number>`SUM(
+      lastMonthTraces: sql<number>`SUM(
         COALESCE(${spansCTE.lastMonthCount}, 0) +
         COALESCE(${evaluationResultsV2CTE.lastMonthCount}, 0)
-      )`.as('last_month_runs'),
-      lastTwoMonthsRuns: sql<number>`SUM(
+      )`.as('last_month_traces'),
+      lastTwoMonthsTraces: sql<number>`SUM(
         COALESCE(${spansCTE.lastTwoMonthsCount}, 0) +
         COALESCE(${evaluationResultsV2CTE.lastTwoMonthsCount}, 0)
-      )`.as('last_two_months_runs'),
-      latestRunAt: sql<Date | string>`GREATEST(
+      )`.as('last_two_months_traces'),
+      latestTraceAt: sql<Date | string>`GREATEST(
         ${spansCTE.latestCreatedAt},
         ${evaluationResultsV2CTE.latestCreatedAt}
-      )`.as('latest_run_at'),
+      )`.as('latest_trace_at'),
     })
     .from(workspaces)
     .leftJoin(
@@ -146,9 +146,9 @@ export async function getUsageOverview(
       evaluationResultsV2CTE,
       eq(evaluationResultsV2CTE.workspaceId, workspaces.id),
     )
-    .groupBy(workspaces.id, sql`latest_run_at`)
+    .groupBy(workspaces.id, sql`latest_trace_at`)
     .orderBy(
-      desc(sql<number>`last_month_runs`),
+      desc(sql<number>`last_month_traces`),
       desc(sql<number>`num_of_members`),
     )
     .limit(pageSize)

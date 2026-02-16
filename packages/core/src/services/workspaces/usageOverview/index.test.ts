@@ -23,7 +23,7 @@ describe('getUsageOverview', () => {
     vi.unstubAllEnvs()
   })
 
-  it('returns all workspaces ordered by usage of runs', async () => {
+  it('returns all workspaces ordered by usage of traces', async () => {
     const result = await getUsageOverview({
       page: 1,
       pageSize: 10,
@@ -34,16 +34,16 @@ describe('getUsageOverview', () => {
       {
         ...data.workspaces.workspaceA.expectedData,
         emails: expect.any(String), // TODO: fix troll tests
-        lastMonthRuns: '4',
-        lastTwoMonthsRuns: '1',
-        latestRunAt: expect.any(String),
+        lastMonthTraces: '4',
+        lastTwoMonthsTraces: '1',
+        latestTraceAt: expect.any(String),
       },
       {
         ...data.workspaces.workspaceB.expectedData,
         emails: expect.any(String),
-        lastMonthRuns: '3',
-        lastTwoMonthsRuns: '2',
-        latestRunAt: expect.any(String),
+        lastMonthTraces: '3',
+        lastTwoMonthsTraces: '2',
+        latestTraceAt: expect.any(String),
       },
     ])
   })
@@ -65,17 +65,17 @@ describe('getUsageOverview', () => {
       {
         ...data.workspaces.workspaceA.expectedData,
         emails: expect.any(String),
-        lastMonthRuns: '4',
-        lastTwoMonthsRuns: '1',
-        latestRunAt: expect.any(String),
+        lastMonthTraces: '4',
+        lastTwoMonthsTraces: '1',
+        latestTraceAt: expect.any(String),
       },
       {
         ...data.workspaces.workspaceB.expectedData,
         emails: expect.any(String),
         name: data.workspaces.workspaceB.expectedData.name,
-        lastMonthRuns: '3',
-        lastTwoMonthsRuns: '2',
-        latestRunAt: expect.any(String),
+        lastMonthTraces: '3',
+        lastTwoMonthsTraces: '2',
+        latestTraceAt: expect.any(String),
       },
     ])
   })
@@ -107,17 +107,17 @@ describe('getUsageOverview', () => {
       {
         ...data.workspaces.workspaceA.expectedData,
         emails: expect.any(String),
-        lastMonthRuns: '4',
-        lastTwoMonthsRuns: '1',
-        latestRunAt: expect.any(String),
+        lastMonthTraces: '4',
+        lastTwoMonthsTraces: '1',
+        latestTraceAt: expect.any(String),
       },
       {
         ...data.workspaces.workspaceB.expectedData,
         emails: expect.any(String),
         subscriptionCreatedAt: '2024-07-19 00:00:00',
-        lastMonthRuns: '2',
-        lastTwoMonthsRuns: '1',
-        latestRunAt: expect.any(String),
+        lastMonthTraces: '2',
+        lastTwoMonthsTraces: '1',
+        latestTraceAt: expect.any(String),
       },
     ])
   })

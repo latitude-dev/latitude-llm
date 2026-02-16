@@ -54,11 +54,11 @@ export default async function AdminPage({
     <div className='w-full max-w-[1250px] m-auto px-4 py-8 pt-0 flex flex-col gap-8'>
       <TableWithHeader
         title='Usage overview by workspace'
-        description='List of workspaces by usage ordered by the most usage in the current month. The workspaces with more runs in their current period are listed first.'
+        description='List of workspaces by usage ordered by the most usage in the current month. The workspaces with more traces in their current period are listed first.'
         table={
           <>
             {workspacesUsage.length <= 0 ? (
-              <TableBlankSlate description='There are no more Workspaces with runs to show' />
+              <TableBlankSlate description='There are no more Workspaces with traces to show' />
             ) : (
               <Table
                 externalFooter={
@@ -68,7 +68,7 @@ export default async function AdminPage({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Trend</TableHead>
-                    <TableHead>Last run</TableHead>
+                    <TableHead>Last trace</TableHead>
                     <TableHead>Workspace</TableHead>
                     <TableHead>Subscription</TableHead>
                     <TableHead>Usage</TableHead>
@@ -88,8 +88,8 @@ export default async function AdminPage({
                         </ServerSideTableCell>
                         <ServerSideTableCell className='w-40'>
                           <Text.H6 color='foregroundMuted'>
-                            {usage.latestRunAt
-                              ? formatDistanceToNow(usage.latestRunAt, {
+                            {usage.latestTraceAt
+                              ? formatDistanceToNow(usage.latestTraceAt, {
                                   addSuffix: true,
                                 })
                               : '-'}
