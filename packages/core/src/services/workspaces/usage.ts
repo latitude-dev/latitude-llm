@@ -20,6 +20,10 @@ import {
 import { computeQuota } from '../grants/quota'
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 import { spans } from '../../schema/models/spans'
+import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'
+import { countMainTypesSince } from '../../queries/clickhouse/spans/countMainTypesSince'
+
+const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 /**
  * Handle both old cache format (object) and new cache format (number)
@@ -63,17 +67,30 @@ async function computeUsageFromDatabase(
     db,
   )
 
-  const spansCount = await db
-    .select({ count: count() })
-    .from(spans)
-    .where(
-      and(
-        inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),
-        eq(spans.workspaceId, workspace.id),
-        gte(spans.startedAt, latestRenewalDate),
-      ),
-    )
-    .then((r) => r[0]!.count)
+  const clickhouseEnabledResult = await isFeatureEnabledByName(
+    workspace.id,
+    CLICKHOUSE_SPANS_READ_FLAG,
+    db,
+  )
+  const shouldUseClickHouse =
+    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
+
+  const spansCount = shouldUseClickHouse
+    ? await countMainTypesSince({
+        workspaceId: workspace.id,
+        since: latestRenewalDate,
+      })
+    : await db
+        .select({ count: count() })
+        .from(spans)
+        .where(
+          and(
+            inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),
+            eq(spans.workspaceId, workspace.id),
+            gte(spans.startedAt, latestRenewalDate),
+          ),
+        )
+        .then((r) => r[0]!.count)
 
   const evaluationResultsV2Count = await evaluationResultsV2Scope
     .countSinceDate(latestRenewalDate)

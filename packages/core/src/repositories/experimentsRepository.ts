@@ -24,6 +24,10 @@ import {
   type Experiment,
 } from '../schema/models/types/Experiment'
 import Repository from './repositoryV2'
+import { isFeatureEnabledByName } from '../services/workspaceFeatures/isFeatureEnabledByName'
+import { getExperimentRunMetadata as chGetExperimentRunMetadata } from '../queries/clickhouse/spans/getExperimentRunMetadata'
+
+const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 export class ExperimentsRepository extends Repository<Experiment> {
   get scopeFilter() {
@@ -277,6 +281,23 @@ export class ExperimentsRepository extends Repository<Experiment> {
   async getRunMetadata(
     uuid: string,
   ): PromisedResult<ExperimentRunMetadata, LatitudeError> {
+    const clickhouseEnabledResult = await isFeatureEnabledByName(
+      this.workspaceId,
+      CLICKHOUSE_SPANS_READ_FLAG,
+      this.db,
+    )
+    const shouldUseClickHouse =
+      clickhouseEnabledResult.ok && clickhouseEnabledResult.value
+
+    if (shouldUseClickHouse) {
+      const metadata = await chGetExperimentRunMetadata({
+        workspaceId: this.workspaceId,
+        experimentUuid: uuid,
+      })
+
+      return Result.ok(metadata)
+    }
+
     const experimentTraceIds = this.db
       .selectDistinct({ traceId: spans.traceId })
       .from(spans)

@@ -23,6 +23,10 @@ import { Project } from '../../../schema/models/types/Project'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { getRowsFromRange } from '../../datasetRows/getRowsFromRange'
 import { assertEvaluationRequirements } from '../assertRequirements'
+import { isFeatureEnabledByName } from '../../workspaceFeatures/isFeatureEnabledByName'
+import { getExperimentPromptSpansBefore } from '../../../queries/clickhouse/spans/getExperimentPromptSpansBefore'
+
+const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 export type ExperimentRow = {
   uuid: string
@@ -113,23 +117,40 @@ async function getExperimentSpansRows(
   },
   db = database,
 ): Promise<ExperimentRow[]> {
-  const spanResults = await db
-    .select({
-      id: spans.id,
-      traceId: spans.traceId,
-    })
-    .from(spans)
-    .where(
-      and(
-        eq(spans.workspaceId, workspace.id),
-        eq(spans.documentUuid, document.documentUuid),
-        lt(spans.startedAt, experiment.createdAt),
-        isNull(spans.experimentUuid),
-        eq(spans.type, SpanType.Prompt),
-      ),
-    )
-    .orderBy(desc(spans.startedAt))
-    .limit(count)
+  const clickhouseEnabledResult = await isFeatureEnabledByName(
+    workspace.id,
+    CLICKHOUSE_SPANS_READ_FLAG,
+    db,
+  )
+  const shouldUseClickHouse =
+    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
+
+  const spanResults = shouldUseClickHouse
+    ? await getExperimentPromptSpansBefore({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        before: experiment.createdAt,
+        limit: count,
+      }).then((rows) =>
+        rows.map((row) => ({ id: row.span_id, traceId: row.trace_id })),
+      )
+    : await db
+        .select({
+          id: spans.id,
+          traceId: spans.traceId,
+        })
+        .from(spans)
+        .where(
+          and(
+            eq(spans.workspaceId, workspace.id),
+            eq(spans.documentUuid, document.documentUuid),
+            lt(spans.startedAt, experiment.createdAt),
+            isNull(spans.experimentUuid),
+            eq(spans.type, SpanType.Prompt),
+          ),
+        )
+        .orderBy(desc(spans.startedAt))
+        .limit(count)
 
   if (spanResults.length === 0) return []
 

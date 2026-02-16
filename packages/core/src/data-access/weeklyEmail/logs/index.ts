@@ -4,6 +4,7 @@ import {
   countDistinct,
   desc,
   eq,
+  inArray,
   isNotNull,
   sql,
 } from 'drizzle-orm'
@@ -16,6 +17,13 @@ import { Workspace } from '../../../schema/models/types/Workspace'
 import { SureDateRange } from '../../../constants'
 import { getDateRangeOrLastWeekRange } from '../utils'
 import { hasProductionTraces } from '../../traces/hasProductionTraces'
+import { isFeatureEnabledByName } from '../../../services/workspaceFeatures/isFeatureEnabledByName'
+import {
+  getGlobalLogsStats as chGetGlobalLogsStats,
+  getTopProjectsLogsStats as chGetTopProjectsLogsStats,
+} from '../../../queries/clickhouse/spans/weeklyEmailLogs'
+
+const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 async function getGlobalLogsStats(
   {
@@ -26,7 +34,22 @@ async function getGlobalLogsStats(
     range: SureDateRange
   },
   db = database,
+  useClickHouse = false,
 ) {
+  if (useClickHouse) {
+    const stats = await chGetGlobalLogsStats({
+      workspaceId: workspace.id,
+      from: range.from,
+      to: range.to,
+    })
+
+    return {
+      logsCount: stats.logsCount,
+      tokensSpent: stats.tokensSpent,
+      tokensCost: stats.totalCostInMillicents / 100000,
+    }
+  }
+
   const logsCountResult = await db
     .select({ count: countDistinct(spans.traceId) })
     .from(spans)
@@ -71,7 +94,42 @@ async function getTopProjectsLogsStats(
     projectsLimit: number
   },
   db = database,
+  useClickHouse = false,
 ) {
+  if (useClickHouse) {
+    const stats = await chGetTopProjectsLogsStats({
+      workspaceId: workspace.id,
+      from: range.from,
+      to: range.to,
+      projectsLimit,
+    })
+
+    if (stats.length === 0) return []
+
+    const namesByProjectId = await db
+      .select({ id: projects.id, name: projects.name })
+      .from(projects)
+      .where(
+        and(
+          eq(projects.workspaceId, workspace.id),
+          inArray(
+            projects.id,
+            stats.map((stat) => stat.projectId),
+          ),
+        ),
+      )
+      .then((rows) => new Map(rows.map((row) => [row.id, row.name])))
+
+    return stats.map((stat) => ({
+      projectId: stat.projectId,
+      projectName:
+        namesByProjectId.get(stat.projectId) ?? `Project ${stat.projectId}`,
+      logsCount: stat.logsCount,
+      tokensSpent: stat.tokensSpent,
+      tokensCost: stat.totalCostInMillicents / 100000,
+    }))
+  }
+
   // Pre-filter spans by date range in subqueries for better performance
   const spansInRangeSubquery = db
     .select({
@@ -133,6 +191,14 @@ export async function getLogsData(
   },
   db = database,
 ): Promise<LogStats> {
+  const clickhouseEnabledResult = await isFeatureEnabledByName(
+    workspace.id,
+    CLICKHOUSE_SPANS_READ_FLAG,
+    db,
+  )
+  const shouldUseClickHouse =
+    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
+
   const usedInProduction = await hasProductionTraces(
     { workspaceId: workspace.id },
     db,
@@ -140,10 +206,15 @@ export async function getLogsData(
 
   const range = getDateRangeOrLastWeekRange(dateRange)
 
-  const globalStats = await getGlobalLogsStats({ workspace, range }, db)
+  const globalStats = await getGlobalLogsStats(
+    { workspace, range },
+    db,
+    shouldUseClickHouse,
+  )
   const topProjects = await getTopProjectsLogsStats(
     { workspace, range, projectsLimit },
     db,
+    shouldUseClickHouse,
   )
 
   return {
