@@ -125,8 +125,8 @@ export async function getSpansWithoutIssues({
 
 export async function getSpansWithActiveIssues({
   workspaceId,
-  documentUuid,
-  commitUuids,
+  documentUuid: _documentUuid,
+  commitUuids: _commitUuids,
   evaluationResultIds,
 }: {
   workspaceId: number

@@ -370,9 +370,10 @@ class ManualInstrumentation(BaseInstrumentation):
     def tool(self, ctx: Context, options: StartToolSpanOptions) -> ToolSpanHandle:
         """Create a tool execution span."""
         json_arguments = self._safe_json(options.call.arguments if options.call else {})
+        name = options.name or "tool"
 
         attributes: Dict[str, Any] = {
-            ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.name: options.name,
+            ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.name: name,
             ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.type: "function",
         }
         if options.call:
@@ -383,9 +384,9 @@ class ManualInstrumentation(BaseInstrumentation):
 
         span_handle = self._span(
             ctx,
-            options.name,
+            name,
             SpanType.Tool,
-            StartSpanOptions(name=options.name, attributes=attributes),
+            StartSpanOptions(name=name, attributes=attributes),
         )
 
         def end_tool(end_options: EndToolSpanOptions) -> None:
@@ -696,6 +697,7 @@ class ManualInstrumentation(BaseInstrumentation):
 
     def chat(self, ctx: Context, options: ChatSpanOptions) -> SpanHandle:
         """Create a chat continuation span."""
+        attributes: Dict[str, Any] = {}
         if options.attributes:
             attributes.update(options.attributes)
 
