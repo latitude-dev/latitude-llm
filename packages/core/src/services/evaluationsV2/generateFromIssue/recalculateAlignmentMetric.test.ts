@@ -409,7 +409,7 @@ describe('recalculateAlignmentMetric', () => {
     vi.spyOn(
       getEqualAmountsModule,
       'getEqualAmountsOfPositiveAndNegativeExamples',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
     ).mockResolvedValue(
       Result.error(new Error('Failed to get examples from database')) as any,
     )

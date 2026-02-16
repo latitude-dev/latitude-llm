@@ -1,6 +1,6 @@
-import { and, desc, eq, gte, inArray, isNull, max, not, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, isNull, max, sql } from 'drizzle-orm'
 import { database } from '../../../client'
-import { MAIN_SPAN_TYPES, SpanStatus } from '../../../constants'
+import { MAIN_SPAN_TYPES } from '../../../constants'
 import { SubscriptionPlan } from '../../../plans'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import { workspaces } from '../../../schema/models/workspaces'

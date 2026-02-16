@@ -1,10 +1,11 @@
 import { IntegrationType } from '@latitude-data/constants'
 import type { IntegrationDto } from '../../schema/models/types/Integration'
-import { BadRequestError } from '../../lib/errors'
+import { BadRequestError, NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { integrations } from '../../schema/models/integrations'
 import { eq } from 'drizzle-orm'
+import { findIntegrationByName } from '../../queries/integrations/findByName'
 import {
   ExternalMcpIntegrationConfiguration,
   HostedMcpIntegrationConfigurationForm,
@@ -29,6 +30,28 @@ type ConfigurationFormTypeMap = {
 
 type ConfigurationFormType<T extends IntegrationType> =
   T extends keyof ConfigurationFormTypeMap ? ConfigurationFormTypeMap[T] : never
+
+async function validateIntegrationNameUnique({
+  workspace,
+  name,
+}: {
+  workspace: Workspace
+  name: string
+}): PromisedResult<undefined> {
+  try {
+    await findIntegrationByName({ workspaceId: workspace.id, name })
+
+    return Result.error(
+      new BadRequestError('An integration with this name already exists'),
+    )
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return Result.nil()
+    }
+
+    return Result.error(error as Error)
+  }
+}
 
 async function obtainIntegrationComponents<T extends IntegrationType>({
   type,
@@ -80,6 +103,14 @@ export async function createIntegration<p extends IntegrationType>(
     return Result.error(
       new BadRequestError('Cannot create a Latitude integration'),
     )
+  }
+
+  const uniqueNameResult = await validateIntegrationNameUnique({
+    workspace,
+    name,
+  })
+  if (!uniqueNameResult.ok) {
+    return Result.error(uniqueNameResult.error!)
   }
 
   const componentsResult = await obtainIntegrationComponents({

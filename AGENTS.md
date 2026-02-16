@@ -83,6 +83,7 @@ Before writing tests, load the `testing` skill (`/testing`) for detailed pattern
 - Server actions use `authProcedure` pattern
 - Input validation with Zod schemas
 - Actions fetch model instances using scoped queries before calling services
+- Keep app boundaries thin: actions, API routes, jobs, and event handlers should contain almost no business logic and delegate domain checks/decisions to services
 - **Admin-only actions**: Place under `actions/admin/` directory for backoffice functionality
 - Example pattern:
 

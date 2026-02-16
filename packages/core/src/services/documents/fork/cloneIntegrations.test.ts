@@ -49,7 +49,7 @@ describe('cloneIntegrations', () => {
     })
 
     if (!result.ok) {
-      // eslint-disable-next-line no-console
+       
       console.error('cloneIntegrations error:', result.error)
     }
     expect(result.ok).toBe(true)
@@ -91,7 +91,7 @@ describe('cloneIntegrations', () => {
     })
 
     if (!result.ok) {
-      // eslint-disable-next-line no-console
+       
       console.error('cloneIntegrations error:', result.error)
     }
     expect(result.ok).toBe(true)
