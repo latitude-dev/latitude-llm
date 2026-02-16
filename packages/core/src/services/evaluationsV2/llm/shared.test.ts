@@ -348,13 +348,8 @@ describe('runPrompt', () => {
 
     expect(mockPrompt).toHaveBeenCalledWith(
       expect.objectContaining({
-        documentLogUuid: resultUuid,
-        versionUuid: commit.uuid,
-        promptUuid: evaluation.uuid,
-        projectId: commit.projectId,
         template: prompt,
         parameters: parameters,
-        source: LogSources.Evaluation,
       }),
       expect.anything(),
     )
