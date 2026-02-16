@@ -1,17 +1,10 @@
 import { MetadataItem } from '$/components/MetadataItem'
-import {
-  CompletionSpanMetadata,
-  SPAN_SPECIFICATIONS,
-  SpanType,
-} from '@latitude-data/constants'
+import { SPAN_SPECIFICATIONS, SpanType } from '@latitude-data/constants'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { DetailsPanelProps, SPAN_COLORS } from './shared'
-import { useTrace } from '$/stores/traces'
-import { findAllSpansOfType } from '@latitude-data/core/services/tracing/spans/fetching/findAllSpansOfType'
-import { findLastSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findLastSpanOfType'
-import { useMemo } from 'react'
+import { useSpanCompletionData } from './useSpanCompletionData'
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { MessageList } from '$/components/ChatWrapper'
 import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SpanParameters'
@@ -25,61 +18,10 @@ export default {
 }
 
 function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
-  const { data: trace } = useTrace({ traceId: span.traceId })
-
-  const completionSpan = useMemo(() => {
-    if (!trace) return undefined
-
-    return findLastSpanOfType({
-      children: trace.children,
-      spanType: SpanType.Completion,
-    })
-  }, [trace])
-  const completionSpans = useMemo(
-    () => findAllSpansOfType(trace?.children ?? [], SpanType.Completion),
-    [trace],
-  )
-  const aggregatedMetadata = useMemo(() => {
-    if (!completionSpans.length) return undefined
-
-    type AggregatedData = {
-      finishReason?: CompletionSpanMetadata['finishReason']
-      cost: number
-      tokens: {
-        prompt: number
-        cached: number
-        reasoning: number
-        completion: number
-      }
-    }
-
-    return completionSpans.reduce<AggregatedData>(
-      (acc, span) => {
-        const metadata = span.metadata as CompletionSpanMetadata | undefined
-        if (!metadata) return acc
-
-        return {
-          finishReason: metadata.finishReason,
-          cost: acc.cost + (metadata.cost || 0),
-          tokens: {
-            prompt: acc.tokens.prompt + (metadata.tokens?.prompt || 0),
-            cached: acc.tokens.cached + (metadata.tokens?.cached || 0),
-            reasoning: acc.tokens.reasoning + (metadata.tokens?.reasoning || 0),
-            completion:
-              acc.tokens.completion + (metadata.tokens?.completion || 0),
-          },
-        }
-      },
-      {
-        finishReason: undefined,
-        cost: 0,
-        tokens: { prompt: 0, cached: 0, reasoning: 0, completion: 0 },
-      },
-    )
-  }, [completionSpans])
-  const completionSpanMetadata = completionSpan?.metadata as
-    | CompletionSpanMetadata
-    | undefined
+  const { aggregatedMetadata, completionSpanMetadata } = useSpanCompletionData({
+    traceId: span.traceId,
+    spanId: span.id,
+  })
 
   return (
     <>
