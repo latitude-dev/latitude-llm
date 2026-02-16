@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:15.8
-    restart: always
+    restart: "no"
     env_file:
       - .env
     ports:
@@ -12,13 +12,13 @@ services:
 
   redis:
     image: redis:7-alpine
-    restart: always
+    restart: "no"
     ports:
       - '6379:6379'
 
   redisinsight:
     image: redis/redisinsight:latest
-    restart: always
+    restart: "no"
     env_file:
       - .env
     ports:
@@ -31,7 +31,7 @@ services:
   weaviate:
     image: cr.weaviate.io/semitechnologies/weaviate:1.33.4
     command: ['--host', '0.0.0.0', '--port', '8099', '--scheme', 'http']
-    restart: always
+    restart: "no"
     env_file:
       - .env
     ports:
@@ -42,14 +42,14 @@ services:
 
   mailpit:
     image: axllent/mailpit:latest
-    restart: always
+    restart: "no"
     ports:
       - '8025:8025'
       - '1025:1025'
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.8-alpine
-    restart: always
+    restart: "no"
     env_file:
       - .env
     environment:
@@ -79,7 +79,7 @@ services:
 
   web:
     image: ghcr.io/latitude-dev/web:latest
-    restart: on-failure
+    restart: "no"
     env_file:
       - .env
     ports:
@@ -94,7 +94,7 @@ services:
 
   gateway:
     image: ghcr.io/latitude-dev/gateway:latest
-    restart: on-failure
+    restart: "no"
     env_file:
       - .env
     ports:
@@ -109,7 +109,7 @@ services:
 
   workers:
     image: ghcr.io/latitude-dev/workers:latest
-    restart: on-failure
+    restart: "no"
     env_file:
       - .env
     volumes:
@@ -122,7 +122,7 @@ services:
 
   websockets:
     image: ghcr.io/latitude-dev/websockets:latest
-    restart: on-failure
+    restart: "no"
     env_file:
       - .env
     ports:

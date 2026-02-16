@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:15.8
-    restart: always
+    restart: "no"
     env_file:
       - .env
     ports:
@@ -12,14 +12,14 @@ services:
 
   redis:
     image: redis:7-alpine
-    restart: always
+    restart: "no"
     ports:
       - '6379:6379'
 
   weaviate:
     image: cr.weaviate.io/semitechnologies/weaviate:1.33.4
     command: ['--host', '0.0.0.0', '--port', '8099', '--scheme', 'http']
-    restart: always
+    restart: "no"
     env_file:
       - .env
     ports:
@@ -30,7 +30,7 @@ services:
 
   mailpit:
     image: axllent/mailpit:latest
-    restart: always
+    restart: "no"
     ports:
       - '8025:8025'
       - '1025:1025'
@@ -51,7 +51,7 @@ services:
         AWS_REGION: ${AWS_REGION:-}
         S3_BUCKET: ${S3_BUCKET:-}
         BUILD_ID: ${BUILD_ID:-}
-    restart: on-failure
+    restart: "no"
     env_file:
       - .env
     ports:
@@ -71,7 +71,7 @@ services:
       args:
         PROJECT: '@latitude-data/gateway'
         PROJECT_PATH: 'apps/gateway'
-    restart: on-failure
+    restart: "no"
     env_file:
       - .env
     ports:
@@ -91,7 +91,7 @@ services:
       args:
         PROJECT: '@latitude-data/workers'
         PROJECT_PATH: 'apps/workers'
-    restart: on-failure
+    restart: "no"
     env_file:
       - .env
     volumes:
@@ -109,7 +109,7 @@ services:
       args:
         PROJECT: '@latitude-data/websockets-server'
         PROJECT_PATH: 'apps/websockets'
-    restart: on-failure
+    restart: "no"
     env_file:
       - .env
     ports:

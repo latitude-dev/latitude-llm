@@ -3,7 +3,7 @@ version: '3.9'
 services:
   traefik:
     image: traefik:v2.9
-    restart: always
+    restart: "no"
     command:
       - --api=true
       - --api.dashboard=true
