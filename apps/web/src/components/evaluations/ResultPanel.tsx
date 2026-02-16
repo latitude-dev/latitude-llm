@@ -419,7 +419,7 @@ export function ResultPanel<
                       placement: 'right',
                     }}
                   >
-                    Check evaluated log
+                    Check evaluated trace
                   </Button>
                 </Link>
               </div>
