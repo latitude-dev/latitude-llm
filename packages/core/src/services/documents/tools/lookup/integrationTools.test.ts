@@ -95,7 +95,10 @@ describe('lookupIntegrationTools', () => {
         },
       ]
 
-      vi.spyOn(findIntegrationByNameModule, 'findIntegrationByName').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByNameModule,
+        'findIntegrationByName',
+      ).mockResolvedValue(mockIntegration as any)
 
       vi.spyOn(listToolsModule, 'listTools').mockResolvedValue(
         Result.ok(mockToolDefinitions) as any,
@@ -146,7 +149,10 @@ describe('lookupIntegrationTools', () => {
         },
       ]
 
-      vi.spyOn(findIntegrationByNameModule, 'findIntegrationByName').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByNameModule,
+        'findIntegrationByName',
+      ).mockResolvedValue(mockIntegration as any)
 
       vi.spyOn(listToolsModule, 'listTools').mockResolvedValue(
         Result.ok(mockToolDefinitions) as any,
@@ -187,7 +193,10 @@ describe('lookupIntegrationTools', () => {
         },
       ]
 
-      vi.spyOn(findIntegrationByNameModule, 'findIntegrationByName').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByNameModule,
+        'findIntegrationByName',
+      ).mockResolvedValue(mockIntegration as any)
 
       vi.spyOn(listToolsModule, 'listTools').mockResolvedValue(
         Result.ok(mockToolDefinitions) as any,
@@ -229,7 +238,10 @@ describe('lookupIntegrationTools', () => {
         },
       ]
 
-      vi.spyOn(findIntegrationByNameModule, 'findIntegrationByName').mockImplementation(({ name }: any) => {
+      vi.spyOn(
+        findIntegrationByNameModule,
+        'findIntegrationByName',
+      ).mockImplementation(({ name }: any) => {
         if (name === 'gmail_personal') {
           return Promise.resolve(mockIntegration1 as any)
         }
@@ -292,7 +304,10 @@ describe('lookupIntegrationTools', () => {
         },
       ]
 
-      vi.spyOn(findIntegrationByNameModule, 'findIntegrationByName').mockImplementation(({ name }: any) => {
+      vi.spyOn(
+        findIntegrationByNameModule,
+        'findIntegrationByName',
+      ).mockImplementation(({ name }: any) => {
         if (name === 'integration1') {
           return Promise.resolve(mockIntegration1 as any)
         }
@@ -343,7 +358,10 @@ describe('lookupIntegrationTools', () => {
     })
 
     it('returns error when integration not found', async () => {
-      vi.spyOn(findIntegrationByNameModule, 'findIntegrationByName').mockRejectedValue(new Error('Not found'))
+      vi.spyOn(
+        findIntegrationByNameModule,
+        'findIntegrationByName',
+      ).mockRejectedValue(new Error('Not found'))
 
       const config: Pick<LatitudePromptConfig, 'tools'> = {
         tools: ['non-existent/tool'],
@@ -371,7 +389,10 @@ describe('lookupIntegrationTools', () => {
         },
       ]
 
-      vi.spyOn(findIntegrationByNameModule, 'findIntegrationByName').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByNameModule,
+        'findIntegrationByName',
+      ).mockResolvedValue(mockIntegration as any)
 
       vi.spyOn(listToolsModule, 'listTools').mockResolvedValue(
         Result.ok(mockToolDefinitions) as any,
@@ -410,7 +431,10 @@ describe('lookupIntegrationTools', () => {
         },
       ]
 
-      vi.spyOn(findIntegrationByNameModule, 'findIntegrationByName').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByNameModule,
+        'findIntegrationByName',
+      ).mockResolvedValue(mockIntegration as any)
 
       vi.spyOn(listToolsModule, 'listTools').mockResolvedValue(
         Result.ok(mockToolDefinitions) as any,
@@ -452,7 +476,10 @@ describe('lookupIntegrationTools', () => {
         },
       ]
 
-      vi.spyOn(findIntegrationByNameModule, 'findIntegrationByName').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByNameModule,
+        'findIntegrationByName',
+      ).mockResolvedValue(mockIntegration as any)
 
       vi.spyOn(listToolsModule, 'listTools').mockResolvedValue(
         Result.ok(mockToolDefinitions) as any,
@@ -498,7 +525,10 @@ describe('lookupIntegrationTools', () => {
         },
       ]
 
-      vi.spyOn(findIntegrationByNameModule, 'findIntegrationByName').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByNameModule,
+        'findIntegrationByName',
+      ).mockResolvedValue(mockIntegration as any)
 
       vi.spyOn(listToolsModule, 'listTools').mockResolvedValue(
         Result.ok(mockToolDefinitions) as any,

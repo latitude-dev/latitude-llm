@@ -151,9 +151,7 @@ export async function getSpansByIssue(
   const paginatedSpans = hasMore ? rows.slice(0, limit) : rows
 
   const lastItem =
-    paginatedSpans.length > 0
-      ? paginatedSpans[paginatedSpans.length - 1]
-      : null
+    paginatedSpans.length > 0 ? paginatedSpans[paginatedSpans.length - 1] : null
   const next: Cursor<Date, number> | null =
     hasMore && lastItem && lastItem.latestEvaluatedAt && lastItem.latestEvalId
       ? {

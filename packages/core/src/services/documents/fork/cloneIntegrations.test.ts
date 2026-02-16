@@ -58,7 +58,9 @@ describe('cloneIntegrations', () => {
     expect(Object.keys(mapping.name)).toHaveLength(originIntegrations.length)
 
     // All mapped integrations exist in target
-    const targetAll = await findAllIntegrations({ workspaceId: targetWorkspace.id })
+    const targetAll = await findAllIntegrations({
+      workspaceId: targetWorkspace.id,
+    })
     for (const origin of originIntegrations) {
       const mapped = mapping.name[origin.name]
       expect(mapped).toBeTruthy()
@@ -174,7 +176,9 @@ describe('cloneIntegrations', () => {
     expect(mapped.type).toBe(IntegrationType.ExternalMCP)
     expect(mapped.name).toBe('shared_1')
 
-    const targetAll = await findAllIntegrations({ workspaceId: targetWorkspace.id })
+    const targetAll = await findAllIntegrations({
+      workspaceId: targetWorkspace.id,
+    })
     const names = targetAll.map((i) => i.name)
     expect(names).toContain('shared')
     expect(names).toContain('shared_1')

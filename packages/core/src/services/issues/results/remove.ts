@@ -94,10 +94,7 @@ export async function removeResultFromIssue<
         return Result.error(locking.error)
       }
 
-      issue = await findIssue(
-        { workspaceId: workspace.id, id: issue.id },
-        tx,
-      )
+      issue = await findIssue({ workspaceId: workspace.id, id: issue.id }, tx)
 
       // Note: revalidating the fresh issue after locking
       const validating = await validateResultForIssue(

@@ -113,9 +113,7 @@ export async function backfillSpansToClickhouseJob(
       query_params: { workspaceId, spanIds },
     })
     const existingSpanIds = new Set(
-      (await existingResult.json<{ span_id: string }>()).map(
-        (r) => r.span_id,
-      ),
+      (await existingResult.json<{ span_id: string }>()).map((r) => r.span_id),
     )
 
     const newSpans = batch.filter((s) => !existingSpanIds.has(s.id))

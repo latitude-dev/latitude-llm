@@ -31,10 +31,7 @@ export const lockIssue = scopedQuery(async function lockIssue(
   } catch (err) {
     const error = err as Error
 
-    if (
-      'code' in error &&
-      error.code === databaseErrorCodes.lockNotAvailable
-    ) {
+    if ('code' in error && error.code === databaseErrorCodes.lockNotAvailable) {
       return Result.error(
         new UnprocessableEntityError('Cannot obtain lock on issue'),
       )

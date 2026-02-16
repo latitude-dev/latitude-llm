@@ -584,7 +584,10 @@ describe('updateIssue', () => {
         description: 'Updated Description',
       })
 
-      const retrieved = await findIssue({ workspaceId: workspace.id, id: issue.id })
+      const retrieved = await findIssue({
+        workspaceId: workspace.id,
+        id: issue.id,
+      })
 
       expect(retrieved.title).toBe('Updated via Service')
     })

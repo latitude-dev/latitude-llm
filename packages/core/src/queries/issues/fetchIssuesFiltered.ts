@@ -5,16 +5,7 @@ import {
   IssueSort,
   SafeIssuesParams,
 } from '@latitude-data/constants/issues'
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  sql,
-  SQL,
-} from 'drizzle-orm'
+import { and, asc, desc, eq, ilike, inArray, sql, SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 
 import { CommitsRepository } from '../../repositories/commitsRepository'

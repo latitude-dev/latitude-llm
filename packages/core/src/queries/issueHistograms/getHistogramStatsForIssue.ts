@@ -1,6 +1,4 @@
-import {
-  HISTOGRAM_SUBQUERY_ALIAS,
-} from '@latitude-data/constants/issues'
+import { HISTOGRAM_SUBQUERY_ALIAS } from '@latitude-data/constants/issues'
 import { and, eq } from 'drizzle-orm'
 
 import { Database } from '../../client'

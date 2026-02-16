@@ -1,5 +1,8 @@
 import type { Job } from 'bullmq'
-import { JobLogger, createLogReader as createGenericLogReader } from './jobLogger'
+import {
+  JobLogger,
+  createLogReader as createGenericLogReader,
+} from './jobLogger'
 
 const NAMESPACE = 'maintenance:job'
 

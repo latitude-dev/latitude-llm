@@ -94,7 +94,10 @@ export async function destroyPipedreamTrigger(
   const integrationResult = await transaction.call(async (tx) => {
     try {
       const found = await findIntegrationById(
-        { workspaceId: workspace.id, id: documentTrigger.configuration.integrationId },
+        {
+          workspaceId: workspace.id,
+          id: documentTrigger.configuration.integrationId,
+        },
         tx,
       )
       return Result.ok(found)

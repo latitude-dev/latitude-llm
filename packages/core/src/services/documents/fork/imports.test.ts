@@ -453,9 +453,7 @@ Agent 2 content:
 
     // Mock the integrations query to fail
     const mockError = new Error('Integrations repository error')
-    const findAllModule = await import(
-      '../../../queries/integrations/findAll'
-    )
+    const findAllModule = await import('../../../queries/integrations/findAll')
     vi.spyOn(findAllModule, 'findAllIntegrations').mockRejectedValue(mockError)
 
     const result = await getImports({

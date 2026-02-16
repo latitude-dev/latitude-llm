@@ -51,9 +51,7 @@ export function getHistogramStatsSubquery(
   ]
 
   if (filters.documentUuid) {
-    whereConditions.push(
-      eq(issueHistograms.documentUuid, filters.documentUuid),
-    )
+    whereConditions.push(eq(issueHistograms.documentUuid, filters.documentUuid))
   }
 
   const baseQuery = db
@@ -66,7 +64,5 @@ export function getHistogramStatsSubquery(
     return baseQuery.as(HISTOGRAM_SUBQUERY_ALIAS)
   }
 
-  return baseQuery
-    .having(and(...havingConditions))
-    .as(HISTOGRAM_SUBQUERY_ALIAS)
+  return baseQuery.having(and(...havingConditions)).as(HISTOGRAM_SUBQUERY_ALIAS)
 }

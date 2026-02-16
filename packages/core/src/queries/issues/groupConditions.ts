@@ -75,10 +75,9 @@ export function issuesWithStatsSelect({
     firstOccurredAt: subquery.firstOccurredAt,
     lastSeenDate: subquery.lastSeenDate,
     lastOccurredAt: subquery.lastOccurredAt,
-    isNew:
-      sql<boolean>`(${issues.createdAt} >= NOW() - INTERVAL '7 days')`.as(
-        'isNew',
-      ),
+    isNew: sql<boolean>`(${issues.createdAt} >= NOW() - INTERVAL '7 days')`.as(
+      'isNew',
+    ),
     isResolved: sql<boolean>`(${issues.resolvedAt} IS NOT NULL)`.as(
       'isResolved',
     ),

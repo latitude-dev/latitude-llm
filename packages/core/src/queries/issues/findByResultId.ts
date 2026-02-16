@@ -32,9 +32,7 @@ export const findIssueByResultId = scopedQuery(
     )
 
     if (!issue) {
-      throw new NotFoundError(
-        `Issue with id ${membership.issueId} not found`,
-      )
+      throw new NotFoundError(`Issue with id ${membership.issueId} not found`)
     }
 
     return issue

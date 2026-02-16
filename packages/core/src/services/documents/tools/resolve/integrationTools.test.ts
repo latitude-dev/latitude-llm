@@ -29,7 +29,10 @@ describe('resolveIntegrationToolDefinition', () => {
         workspaceId: workspace.id,
       }
 
-      vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(mockIntegration as any)
 
       const callIntegrationToolMock = vi
         .spyOn(callToolModule, 'callIntegrationTool')
@@ -84,7 +87,10 @@ describe('resolveIntegrationToolDefinition', () => {
         workspaceId: workspace.id,
       }
 
-      vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(mockIntegration as any)
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {
@@ -126,7 +132,10 @@ describe('resolveIntegrationToolDefinition', () => {
     })
 
     it('returns error when integration not found', async () => {
-      vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockRejectedValue(new Error('Not found'))
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockRejectedValue(new Error('Not found'))
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {
@@ -167,7 +176,10 @@ describe('resolveIntegrationToolDefinition', () => {
         workspaceId: workspace.id,
       }
 
-      vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(mockIntegration as any)
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {
@@ -223,7 +235,10 @@ describe('resolveIntegrationToolDefinition', () => {
         workspaceId: workspace.id,
       }
 
-      vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(mockIntegration as any)
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {
@@ -265,7 +280,10 @@ describe('resolveIntegrationToolDefinition', () => {
         workspaceId: workspace.id,
       }
 
-      vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(mockIntegration as any)
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {
@@ -306,7 +324,9 @@ describe('resolveIntegrationToolDefinition', () => {
         workspaceId: workspace.id,
       }
 
-      const findMock = vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockResolvedValue(mockIntegration as any)
+      const findMock = vi
+        .spyOn(findIntegrationByIdModule, 'findIntegrationById')
+        .mockResolvedValue(mockIntegration as any)
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {
@@ -343,12 +363,14 @@ describe('resolveIntegrationToolDefinition', () => {
     })
 
     it('uses correct integrationId from manifest', async () => {
-      const findMock = vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockResolvedValue({
-        id: 123,
-        name: 'specific-integration',
-        type: IntegrationType.Pipedream,
-        workspaceId: workspace.id,
-      } as any)
+      const findMock = vi
+        .spyOn(findIntegrationByIdModule, 'findIntegrationById')
+        .mockResolvedValue({
+          id: 123,
+          name: 'specific-integration',
+          type: IntegrationType.Pipedream,
+          workspaceId: workspace.id,
+        } as any)
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {
@@ -394,7 +416,10 @@ describe('resolveIntegrationToolDefinition', () => {
         workspaceId: workspace.id,
       }
 
-      vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(mockIntegration as any)
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {
@@ -436,7 +461,10 @@ describe('resolveIntegrationToolDefinition', () => {
         workspaceId: workspace.id,
       }
 
-      vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(mockIntegration as any)
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {
@@ -468,7 +496,10 @@ describe('resolveIntegrationToolDefinition', () => {
     })
 
     it('handles integration repository errors', async () => {
-      vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockRejectedValue(new Error('Database connection failed'))
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockRejectedValue(new Error('Database connection failed'))
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {
@@ -511,7 +542,10 @@ describe('resolveIntegrationToolDefinition', () => {
         workspaceId: workspace.id,
       }
 
-      vi.spyOn(findIntegrationByIdModule, 'findIntegrationById').mockResolvedValue(mockIntegration as any)
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(mockIntegration as any)
 
       const toolManifest: ToolManifest<ToolSource.Integration> = {
         definition: {

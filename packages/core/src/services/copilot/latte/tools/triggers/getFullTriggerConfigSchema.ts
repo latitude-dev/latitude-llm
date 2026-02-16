@@ -19,10 +19,10 @@ export const getFullTriggerConfigSchema = defineLatteTool(
 
     let integration: PipedreamIntegration
     try {
-      integration = await findIntegrationById({
+      integration = (await findIntegrationById({
         workspaceId: workspace.id,
         id: integrationId,
-      }) as PipedreamIntegration
+      })) as PipedreamIntegration
     } catch (e) {
       return Result.error(e as Error)
     }

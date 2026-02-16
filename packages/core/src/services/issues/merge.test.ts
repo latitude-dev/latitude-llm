@@ -169,7 +169,10 @@ describe('mergeIssues', () => {
     expect(winnerIssue.updatedAt.getTime()).toBeGreaterThan(now.getTime())
 
     // Verify merged issue is marked as merged and points to winner
-    const mergedIssue = await findIssue({ workspaceId: workspace.id, id: other.id })
+    const mergedIssue = await findIssue({
+      workspaceId: workspace.id,
+      id: other.id,
+    })
     expect(mergedIssue.mergedAt).not.toBeNull()
     expect(mergedIssue.mergedToIssueId).toBe(winner.id)
 

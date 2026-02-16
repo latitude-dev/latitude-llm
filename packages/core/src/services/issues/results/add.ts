@@ -82,10 +82,7 @@ export async function addResultToIssue<
       )
       if (!Result.isOk(locking)) return locking
 
-      issue = await findIssue(
-        { workspaceId: workspace.id, id: issue.id },
-        tx,
-      )
+      issue = await findIssue({ workspaceId: workspace.id, id: issue.id }, tx)
       issueWasNew = isEqual(issue.createdAt, issue.updatedAt)
 
       // Note: revalidating the fresh issue after locking

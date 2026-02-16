@@ -21,9 +21,7 @@ export const findIntegrationHeaderPresetById = scopedQuery(
       .limit(1)
 
     if (!result[0]) {
-      throw new NotFoundError(
-        `IntegrationHeaderPreset with id ${id} not found`,
-      )
+      throw new NotFoundError(`IntegrationHeaderPreset with id ${id} not found`)
     }
 
     return result[0] as IntegrationHeaderPreset

@@ -17,7 +17,9 @@ export const hasOccurrences = scopedQuery(async function hasOccurrences(
   const result = await db
     .select({ exists: sql<boolean>`TRUE` })
     .from(issueHistograms)
-    .where(and(tenancyFilter(workspaceId), eq(issueHistograms.issueId, issueId)))
+    .where(
+      and(tenancyFilter(workspaceId), eq(issueHistograms.issueId, issueId)),
+    )
     .limit(1)
     .then((r) => r[0])
 

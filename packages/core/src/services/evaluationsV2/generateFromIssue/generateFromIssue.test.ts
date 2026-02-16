@@ -41,12 +41,9 @@ vi.mock(
   }),
 )
 
-vi.mock(
-  '../../../queries/issues/getSpanMessagesByIssueDocument',
-  () => ({
-    getSpanMessagesByIssueDocument: vi.fn(),
-  }),
-)
+vi.mock('../../../queries/issues/getSpanMessagesByIssueDocument', () => ({
+  getSpanMessagesByIssueDocument: vi.fn(),
+}))
 
 vi.mock('../../../repositories', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../repositories')>()
