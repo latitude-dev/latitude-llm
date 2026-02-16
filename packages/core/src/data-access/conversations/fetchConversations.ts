@@ -21,6 +21,10 @@ import {
   shouldFallbackToAllTime,
 } from '../../services/spans/defaultCreatedAtWindow'
 import { conversationAggregateFields } from './shared'
+import { isFeatureEnabledByName } from '../../services/workspaceFeatures/isFeatureEnabledByName'
+import { fetchConversations as chFetchConversations } from '../../queries/clickhouse/spans/fetchConversations'
+
+const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 export type ConversationFilters = {
   commitUuids: string[]
@@ -186,6 +190,58 @@ export async function fetchConversations(
   }: FetchConversationsParams,
   db = database,
 ) {
+  const clickhouseEnabledResult = await isFeatureEnabledByName(
+    workspace.id,
+    CLICKHOUSE_SPANS_READ_FLAG,
+    db,
+  )
+  const shouldUseClickHouse =
+    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
+
+  if (shouldUseClickHouse) {
+    const normalizedCreatedAt = normalizeCreatedAtRange(filters.createdAt)
+    const defaultCreatedAt = applyDefaultSpansCreatedAtRange({
+      createdAt: normalizedCreatedAt,
+      hasCursor: Boolean(from),
+    })
+
+    const queryParams = {
+      workspaceId: workspace.id,
+      documentUuid,
+      filters,
+      from,
+      limit,
+    }
+
+    const firstPage = await chFetchConversations({
+      ...queryParams,
+      createdAt: defaultCreatedAt,
+    })
+
+    if (
+      !shouldFallbackToAllTime({
+        hasCursor: Boolean(from),
+        normalizedCreatedAt,
+        itemCount: firstPage.items.length,
+      })
+    ) {
+      return Result.ok<FetchConversationsResult>({
+        ...firstPage,
+        didFallbackToAllTime: undefined,
+      })
+    }
+
+    const allTime = await chFetchConversations({
+      ...queryParams,
+      createdAt: undefined,
+    })
+
+    return Result.ok<FetchConversationsResult>({
+      ...allTime,
+      didFallbackToAllTime: true,
+    })
+  }
+
   const normalizedCreatedAt = normalizeCreatedAtRange(filters.createdAt)
   const defaultCreatedAt = applyDefaultSpansCreatedAtRange({
     createdAt: normalizedCreatedAt,
