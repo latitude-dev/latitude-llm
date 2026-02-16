@@ -136,8 +136,6 @@ export async function getSpansWithoutIssues(
         evaluationResultIds.length > 0
           ? chGetSpansWithActiveIssues({
               workspaceId: workspace.id,
-              documentUuid: document.documentUuid,
-              commitUuids,
               evaluationResultIds,
             })
           : Promise.resolve({

@@ -8,7 +8,8 @@ import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { Cursor } from '../../../schema/types'
-import { spanRowToSpan } from './toSpan'
+import { buildExperimentExclusionCondition } from './buildExperimentExclusionCondition'
+import { paginateSpanRows } from './paginateSpanRows'
 
 export async function getSpansWithoutIssues({
   workspaceId,
@@ -58,7 +59,6 @@ export async function getSpansWithoutIssues({
     `source != {optimizationSource: String}`,
   ]
 
-  // Exclude spans with active issues
   if (excludedSpanIds && excludedSpanIds.length > 0) {
     params.excludedSpanIds = excludedSpanIds
     conditions.push(`span_id NOT IN ({excludedSpanIds: Array(String)})`)
@@ -69,22 +69,10 @@ export async function getSpansWithoutIssues({
     conditions.push(`trace_id NOT IN ({excludedTraceIds: Array(String)})`)
   }
 
-  // Exclude optimization experiment spans
-  const experimentConditions = [
-    `source != {experimentSource: String}`,
-    `experiment_uuid IS NULL`,
-  ]
+  conditions.push(
+    buildExperimentExclusionCondition(optimizationExperimentUuids, params),
+  )
 
-  if (optimizationExperimentUuids.length > 0) {
-    params.optimizationExperimentUuids = optimizationExperimentUuids
-    experimentConditions.push(
-      `experiment_uuid NOT IN ({optimizationExperimentUuids: Array(UUID)})`,
-    )
-  }
-
-  conditions.push(`(${experimentConditions.join(' OR ')})`)
-
-  // Cursor pagination
   if (cursor) {
     params.cursorStartedAt = toClickHouseDateTime(cursor.value)
     params.cursorId = cursor.id
@@ -106,32 +94,14 @@ export async function getSpansWithoutIssues({
   })
 
   const rows = await result.json<SpanRow>()
-  const hasMore = rows.length > limit
-  const items = hasMore ? rows.slice(0, limit) : rows
-
-  const spans = items.map((row) => spanRowToSpan(row) as Span<MainSpanType>)
-
-  const lastItem = spans.length > 0 ? spans[spans.length - 1] : null
-  const next =
-    hasMore && lastItem
-      ? {
-          value: lastItem.startedAt,
-          id: lastItem.id,
-        }
-      : null
-
-  return { spans, next }
+  return paginateSpanRows(rows, limit)
 }
 
 export async function getSpansWithActiveIssues({
   workspaceId,
-  documentUuid: _documentUuid,
-  commitUuids: _commitUuids,
   evaluationResultIds,
 }: {
   workspaceId: number
-  documentUuid: string
-  commitUuids: string[]
   evaluationResultIds: number[]
 }): Promise<{ spanIds: string[]; traceIds: string[] }> {
   if (evaluationResultIds.length === 0) {

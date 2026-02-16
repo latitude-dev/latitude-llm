@@ -7,7 +7,8 @@ import {
 import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
-import { spanRowToSpan } from './toSpan'
+import { buildExperimentExclusionCondition } from './buildExperimentExclusionCondition'
+import { paginateSpanRows } from './paginateSpanRows'
 
 export async function getSpansByDocument({
   workspaceId,
@@ -48,21 +49,8 @@ export async function getSpansByDocument({
     `status = {okStatus: String}`,
     `commit_uuid IN ({commitUuids: Array(UUID)})`,
     `source != {optimizationSource: String}`,
+    buildExperimentExclusionCondition(optimizationExperimentUuids, params),
   ]
-
-  const experimentConditions = [
-    `source != {experimentSource: String}`,
-    `experiment_uuid IS NULL`,
-  ]
-
-  if (optimizationExperimentUuids.length > 0) {
-    params.optimizationExperimentUuids = optimizationExperimentUuids
-    experimentConditions.push(
-      `experiment_uuid NOT IN ({optimizationExperimentUuids: Array(UUID)})`,
-    )
-  }
-
-  conditions.push(`(${experimentConditions.join(' OR ')})`)
 
   if (cursor) {
     params.cursorStartedAt = toClickHouseDateTime(cursor.value)
@@ -85,17 +73,5 @@ export async function getSpansByDocument({
   })
 
   const rows = await result.json<SpanRow>()
-  const hasMore = rows.length > limit
-  const items = hasMore ? rows.slice(0, limit) : rows
-  const spans = items.map((row) => spanRowToSpan(row) as Span<MainSpanType>)
-
-  const next =
-    hasMore && spans.length > 0
-      ? {
-          value: spans[spans.length - 1]!.startedAt,
-          id: spans[spans.length - 1]!.id,
-        }
-      : null
-
-  return { spans, next }
+  return paginateSpanRows(rows, limit)
 }
