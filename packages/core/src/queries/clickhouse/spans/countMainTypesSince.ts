@@ -12,7 +12,7 @@ export async function countMainTypesSince({
 }) {
   const result = await clickhouseClient().query({
     query: `
-      SELECT count() AS cnt
+      SELECT countDistinct(trace_id) AS cnt
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
         AND type IN ({spanTypes: Array(String)})

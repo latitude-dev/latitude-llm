@@ -3,7 +3,7 @@ import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
 import { spanRowToSpan } from './toSpan'
 
-export async function findBySpanAndTraceIds({
+export async function findBySpanAndTraceIdPairs({
   workspaceId,
   pairs,
 }: {

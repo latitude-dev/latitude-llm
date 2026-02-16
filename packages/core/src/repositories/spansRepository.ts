@@ -35,8 +35,8 @@ import {
 import { spans } from '../schema/models/spans'
 import Repository from './repositoryV2'
 import { EvaluationResultV2 } from '@latitude-data/constants'
-import { getSpan as chGetSpan } from '../queries/clickhouse/spans/get'
-import { listSpans as chListSpans } from '../queries/clickhouse/spans/list'
+import { findSpan as chFindSpan } from '../queries/clickhouse/spans/get'
+import { findSpans as chFindSpans } from '../queries/clickhouse/spans/list'
 import {
   findByDocumentAndCommitLimited as chFindByDocumentAndCommitLimited,
   findByProjectLimited as chFindByProjectLimited,
@@ -53,7 +53,7 @@ import {
 } from '../queries/clickhouse/spans/findByDocumentLogUuid'
 import { getByDocumentLogUuidAndSpanId as chGetByDocumentLogUuidAndSpanId } from '../queries/clickhouse/spans/getByDocumentLogUuidAndSpanId'
 import {
-  findBySpanAndTraceIds as chFindBySpanAndTraceIds,
+  findBySpanAndTraceIdPairs as chFindBySpanAndTraceIdPairs,
   findByParentAndType as chFindByParentAndType,
   findCompletionsByParentIds as chFindCompletionsByParentIds,
 } from '../queries/clickhouse/spans/findBySpanAndTraceIds'
@@ -224,7 +224,7 @@ export class SpansRepository extends Repository<Span> {
 
   async get({ spanId, traceId }: { spanId: string; traceId: string }) {
     if (await this.shouldUseClickHouse()) {
-      return chGetSpan({ workspaceId: this.workspaceId, spanId, traceId })
+      return chFindSpan({ workspaceId: this.workspaceId, spanId, traceId })
     }
 
     const result = await this.scope
@@ -273,7 +273,7 @@ export class SpansRepository extends Repository<Span> {
 
   async list({ traceId }: { traceId: string }) {
     if (await this.shouldUseClickHouse()) {
-      return chListSpans({ workspaceId: this.workspaceId, traceId })
+      return chFindSpans({ workspaceId: this.workspaceId, traceId })
     }
 
     const result = await this.db
@@ -597,7 +597,7 @@ export class SpansRepository extends Repository<Span> {
   ) {
     if (await this.shouldUseClickHouse()) {
       return Result.ok<Span[]>(
-        await chFindBySpanAndTraceIds({
+        await chFindBySpanAndTraceIdPairs({
           workspaceId: this.workspaceId,
           pairs: spanTraceIdPairs,
         }),

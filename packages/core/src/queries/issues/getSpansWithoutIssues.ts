@@ -122,19 +122,7 @@ export async function getSpansWithoutIssues(
         and(
           eq(issueEvaluationResults.workspaceId, workspace.id),
           eq(issues.documentUuid, document.documentUuid),
-          inArray(
-            issueEvaluationResults.issueId,
-            db
-              .select({ id: issues.id })
-              .from(issues)
-              .where(
-                and(
-                  eq(issues.workspaceId, workspace.id),
-                  eq(issues.documentUuid, document.documentUuid),
-                  isNull(issues.ignoredAt),
-                ),
-              ),
-          ),
+          isNull(issues.ignoredAt),
         ),
       )
 
@@ -149,7 +137,7 @@ export async function getSpansWithoutIssues(
           ? chGetSpansWithActiveIssues({
               workspaceId: workspace.id,
               documentUuid: document.documentUuid,
-              commitIds,
+              commitUuids,
               evaluationResultIds,
             })
           : Promise.resolve({
@@ -160,7 +148,7 @@ export async function getSpansWithoutIssues(
           ? chGetSpansWithFailedResults({
               workspaceId: workspace.id,
               documentUuid: document.documentUuid,
-              commitIds,
+              commitUuids,
             })
           : Promise.resolve({
               spanIds: [] as string[],
@@ -170,7 +158,7 @@ export async function getSpansWithoutIssues(
           ? chGetSpansWithPassedResults({
               workspaceId: workspace.id,
               documentUuid: document.documentUuid,
-              commitIds,
+              commitUuids,
               requireHumanEvaluation: requirePassedAnnotations,
             })
           : Promise.resolve({

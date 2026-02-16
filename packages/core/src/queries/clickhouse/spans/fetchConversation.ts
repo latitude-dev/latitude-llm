@@ -1,12 +1,6 @@
-import { LogSources, SpanType } from '@latitude-data/constants'
+import { LogSources } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE } from '../../../clickhouse/models/spans'
-
-const MAIN_SPAN_TYPE_VALUES = [
-  SpanType.Prompt,
-  SpanType.Chat,
-  SpanType.External,
-]
 
 export type ConversationItem = {
   documentLogUuid: string | null
@@ -35,13 +29,11 @@ export async function fetchConversation({
   const params: Record<string, unknown> = {
     workspaceId,
     documentLogUuid,
-    mainSpanTypes: MAIN_SPAN_TYPE_VALUES,
   }
 
   const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
     `document_log_uuid = {documentLogUuid: UUID}`,
-    `type IN ({mainSpanTypes: Array(String)})`,
   ]
 
   if (documentUuid) {

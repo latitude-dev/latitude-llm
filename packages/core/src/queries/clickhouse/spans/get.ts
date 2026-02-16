@@ -4,7 +4,7 @@ import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
 import { Result, TypedResult } from '../../../lib/Result'
 import { spanRowToSpan } from './toSpan'
 
-export async function getSpan({
+export async function findSpan({
   workspaceId,
   spanId,
   traceId,

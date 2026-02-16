@@ -3,7 +3,7 @@ import { SPANS_TABLE } from '../../../clickhouse/models/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { LogSources } from '@latitude-data/constants'
 
-export async function getSpansCountForAnnotationsProgress({
+export async function countSpansForAnnotations({
   workspaceId,
   commitUuids,
   logSources,

@@ -6,20 +6,15 @@ import {
   SpanType,
 } from '@latitude-data/constants'
 import { SpanRow } from '../../../clickhouse/models/spans'
-
-function parseDate(value: string): Date {
-  if (value.includes('T') || value.includes('Z')) return new Date(value)
-  return new Date(value.replace(' ', 'T') + 'Z')
-}
-
-function orUndefined<T>(value: T | null): T | undefined {
-  return value ?? undefined
-}
+import {
+  orUndefined,
+  parseClickHouseDate,
+} from '../../../lib/typeConversions'
 
 export function spanRowToSpan(row: SpanRow): Span {
-  const startedAt = parseDate(row.started_at)
-  const endedAt = parseDate(row.ended_at)
-  const ingestedAt = parseDate(row.ingested_at)
+  const startedAt = parseClickHouseDate(row.started_at)
+  const endedAt = parseClickHouseDate(row.ended_at)
+  const ingestedAt = parseClickHouseDate(row.ingested_at)
 
   return {
     id: row.span_id,

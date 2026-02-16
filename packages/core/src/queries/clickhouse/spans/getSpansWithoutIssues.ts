@@ -126,19 +126,19 @@ export async function getSpansWithoutIssues({
 export async function getSpansWithActiveIssues({
   workspaceId,
   documentUuid,
-  commitIds,
+  commitUuids,
   evaluationResultIds,
 }: {
   workspaceId: number
   documentUuid: string
-  commitIds: number[]
+  commitUuids: string[]
   evaluationResultIds: number[]
 }): Promise<{ spanIds: string[]; traceIds: string[] }> {
   if (evaluationResultIds.length === 0) {
     return { spanIds: [], traceIds: [] }
   }
 
-  // Query ClickHouse evaluation_results table to get span/trace IDs
+  // When filtering by specific evaluation result IDs, we don't need other filters
   const result = await clickhouseClient().query({
     query: `
       SELECT DISTINCT
@@ -146,16 +146,12 @@ export async function getSpansWithActiveIssues({
         evaluated_trace_id
       FROM evaluation_results
       WHERE workspace_id = {workspaceId: UInt64}
-        AND document_uuid = {documentUuid: UUID}
-        AND commit_id IN ({commitIds: Array(UInt64)})
         AND evaluated_span_id IS NOT NULL
         AND id IN ({evaluationResultIds: Array(UInt64)})
     `,
     format: 'JSONEachRow',
     query_params: {
       workspaceId,
-      documentUuid,
-      commitIds,
       evaluationResultIds,
     },
   })
@@ -174,13 +170,13 @@ export async function getSpansWithActiveIssues({
 export async function getSpansWithFailedResults({
   workspaceId,
   documentUuid,
-  commitIds,
+  commitUuids,
 }: {
   workspaceId: number
   documentUuid: string
-  commitIds: number[]
+  commitUuids: string[]
 }): Promise<{ spanIds: string[]; traceIds: string[] }> {
-  if (commitIds.length === 0) {
+  if (commitUuids.length === 0) {
     return { spanIds: [], traceIds: [] }
   }
 
@@ -192,7 +188,7 @@ export async function getSpansWithFailedResults({
       FROM evaluation_results
       WHERE workspace_id = {workspaceId: UInt64}
         AND document_uuid = {documentUuid: UUID}
-        AND commit_id IN ({commitIds: Array(UInt64)})
+        AND commit_uuid IN ({commitUuids: Array(UUID)})
         AND evaluated_span_id IS NOT NULL
         AND has_passed = 0
     `,
@@ -200,7 +196,7 @@ export async function getSpansWithFailedResults({
     query_params: {
       workspaceId,
       documentUuid,
-      commitIds,
+      commitUuids,
     },
   })
 
@@ -218,22 +214,22 @@ export async function getSpansWithFailedResults({
 export async function getSpansWithPassedResults({
   workspaceId,
   documentUuid,
-  commitIds,
+  commitUuids,
   requireHumanEvaluation,
 }: {
   workspaceId: number
   documentUuid: string
-  commitIds: number[]
+  commitUuids: string[]
   requireHumanEvaluation: boolean
 }): Promise<{ spanIds: string[]; traceIds: string[] }> {
-  if (commitIds.length === 0) {
+  if (commitUuids.length === 0) {
     return { spanIds: [], traceIds: [] }
   }
 
   const params: Record<string, unknown> = {
     workspaceId,
     documentUuid,
-    commitIds,
+    commitUuids,
   }
 
   let typeCondition = ''
@@ -250,7 +246,7 @@ export async function getSpansWithPassedResults({
       FROM evaluation_results
       WHERE workspace_id = {workspaceId: UInt64}
         AND document_uuid = {documentUuid: UUID}
-        AND commit_id IN ({commitIds: Array(UInt64)})
+        AND commit_uuid IN ({commitUuids: Array(UUID)})
         AND evaluated_span_id IS NOT NULL
         AND has_passed = 1
         ${typeCondition}

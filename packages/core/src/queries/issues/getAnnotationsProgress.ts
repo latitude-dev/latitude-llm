@@ -16,7 +16,7 @@ import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
-import { getSpansCountForAnnotationsProgress as chGetSpansCountForAnnotationsProgress } from '../../queries/clickhouse/spans/getAnnotationsProgress'
+import { countSpansForAnnotations as chCountSpansForAnnotations } from '../../queries/clickhouse/spans/getAnnotationsProgress'
 
 // These are the log sources we consider for annotations progress by default
 // We don't consider Experiment logs as they don't move the centroid
@@ -137,7 +137,7 @@ export async function getAnnotationsProgress(
   let totalRuns: number
 
   if (shouldUseClickHouse) {
-    totalRuns = await chGetSpansCountForAnnotationsProgress({
+    totalRuns = await chCountSpansForAnnotations({
       workspaceId: workspace.id,
       commitUuids,
       logSources,

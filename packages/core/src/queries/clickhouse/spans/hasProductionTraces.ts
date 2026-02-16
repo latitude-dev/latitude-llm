@@ -1,8 +1,4 @@
-import {
-  MAIN_SPAN_TYPES,
-  RUN_SOURCES,
-  RunSourceGroup,
-} from '@latitude-data/constants'
+import { RUN_SOURCES, RunSourceGroup } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE } from '../../../clickhouse/models/spans'
 
@@ -13,10 +9,10 @@ export async function hasProductionTraces({
   workspaceId: number
   projectId?: number
 }) {
+  const productionSource = RUN_SOURCES[RunSourceGroup.Production][0]! // Production has only one source
   const queryParams: Record<string, unknown> = {
     workspaceId,
-    spanTypes: Array.from(MAIN_SPAN_TYPES),
-    sources: RUN_SOURCES[RunSourceGroup.Production],
+    source: productionSource,
   }
 
   const projectFilter =
@@ -29,8 +25,7 @@ export async function hasProductionTraces({
       SELECT 1 AS exists
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
-        AND type IN ({spanTypes: Array(String)})
-        AND source IN ({sources: Array(String)})
+        AND source = {source: String}
         ${projectFilter}
       LIMIT 1
     `,
