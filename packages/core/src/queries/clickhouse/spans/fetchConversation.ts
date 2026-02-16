@@ -1,6 +1,7 @@
 import { LogSources } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { scopedQuery } from '../../scope'
 
 export type ConversationItem = {
   documentLogUuid: string | null
@@ -17,15 +18,18 @@ export type ConversationItem = {
   experimentUuid: string | null
 }
 
-export async function fetchConversation({
-  workspaceId,
-  documentLogUuid,
-  documentUuid,
-}: {
-  workspaceId: number
-  documentLogUuid: string
-  documentUuid?: string
-}): Promise<ConversationItem | null> {
+export const fetchConversation = scopedQuery(async function fetchConversation(
+  {
+    workspaceId,
+    documentLogUuid,
+    documentUuid,
+  }: {
+    workspaceId: number
+    documentLogUuid: string
+    documentUuid?: string
+  },
+  _db,
+): Promise<ConversationItem | null> {
   const params: Record<string, unknown> = {
     workspaceId,
     documentLogUuid,
@@ -105,4 +109,4 @@ export async function fetchConversation({
     commitUuid: row.latest_commit_uuid,
     experimentUuid: row.latest_experiment_uuid,
   }
-}
+})

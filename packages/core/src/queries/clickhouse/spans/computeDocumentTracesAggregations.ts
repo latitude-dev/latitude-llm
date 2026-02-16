@@ -2,35 +2,40 @@ import { SpanType } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE } from '../../../clickhouse/models/spans'
 import { TracesAggregations } from '../../../schema/models/types/Span'
+import { scopedQuery } from '../../scope'
 
-export async function computeDocumentTracesAggregations({
-  workspaceId,
-  documentUuid,
-  commitUuid,
-}: {
-  workspaceId: number
-  documentUuid: string
-  commitUuid?: string
-}): Promise<TracesAggregations> {
-  const params: Record<string, unknown> = {
-    workspaceId,
-    documentUuid,
-    completionType: SpanType.Completion,
-  }
+export const computeDocumentTracesAggregations = scopedQuery(
+  async function computeDocumentTracesAggregations(
+    {
+      workspaceId,
+      documentUuid,
+      commitUuid,
+    }: {
+      workspaceId: number
+      documentUuid: string
+      commitUuid?: string
+    },
+    _db,
+  ): Promise<TracesAggregations> {
+    const params: Record<string, unknown> = {
+      workspaceId,
+      documentUuid,
+      completionType: SpanType.Completion,
+    }
 
-  const conditions = [
-    `workspace_id = {workspaceId: UInt64}`,
-    `document_uuid = {documentUuid: UUID}`,
-  ]
+    const conditions = [
+      `workspace_id = {workspaceId: UInt64}`,
+      `document_uuid = {documentUuid: UUID}`,
+    ]
 
-  if (commitUuid) {
-    params.commitUuid = commitUuid
-    conditions.push(`commit_uuid = {commitUuid: UUID}`)
-  }
+    if (commitUuid) {
+      params.commitUuid = commitUuid
+      conditions.push(`commit_uuid = {commitUuid: UUID}`)
+    }
 
-  // Query all metrics in a single pass
-  const aggregationResult = await clickhouseClient().query({
-    query: `
+    // Query all metrics in a single pass
+    const aggregationResult = await clickhouseClient().query({
+      query: `
       SELECT
         countDistinct(trace_id) AS total_count,
         coalesce(
@@ -89,40 +94,41 @@ export async function computeDocumentTracesAggregations({
       FROM ${SPANS_TABLE}
       WHERE ${conditions.join(' AND ')}
     `,
-    format: 'JSONEachRow',
-    query_params: params,
-  })
+      format: 'JSONEachRow',
+      query_params: params,
+    })
 
-  const aggRows = await aggregationResult.json<{
-    total_count: string
-    total_tokens: string
-    total_cost_in_millicents: string
-    average_tokens: string
-    average_cost_in_millicents: string
-    median_cost_in_millicents: string
-    average_duration: string
-    median_duration: string
-  }>()
+    const aggRows = await aggregationResult.json<{
+      total_count: string
+      total_tokens: string
+      total_cost_in_millicents: string
+      average_tokens: string
+      average_cost_in_millicents: string
+      median_cost_in_millicents: string
+      average_duration: string
+      median_duration: string
+    }>()
 
-  const row = aggRows[0] ?? {
-    total_count: '0',
-    total_tokens: '0',
-    total_cost_in_millicents: '0',
-    average_tokens: '0',
-    average_cost_in_millicents: '0',
-    median_cost_in_millicents: '0',
-    average_duration: '0',
-    median_duration: '0',
-  }
+    const row = aggRows[0] ?? {
+      total_count: '0',
+      total_tokens: '0',
+      total_cost_in_millicents: '0',
+      average_tokens: '0',
+      average_cost_in_millicents: '0',
+      median_cost_in_millicents: '0',
+      average_duration: '0',
+      median_duration: '0',
+    }
 
-  return {
-    totalCount: Number(row.total_count),
-    totalTokens: Number(row.total_tokens),
-    totalCostInMillicents: Number(row.total_cost_in_millicents),
-    averageTokens: Number(row.average_tokens),
-    averageCostInMillicents: Number(row.average_cost_in_millicents),
-    medianCostInMillicents: Number(row.median_cost_in_millicents),
-    averageDuration: Number(row.average_duration),
-    medianDuration: Number(row.median_duration),
-  }
-}
+    return {
+      totalCount: Number(row.total_count),
+      totalTokens: Number(row.total_tokens),
+      totalCostInMillicents: Number(row.total_cost_in_millicents),
+      averageTokens: Number(row.average_tokens),
+      averageCostInMillicents: Number(row.average_cost_in_millicents),
+      medianCostInMillicents: Number(row.median_cost_in_millicents),
+      averageDuration: Number(row.average_duration),
+      medianDuration: Number(row.median_duration),
+    }
+  },
+)

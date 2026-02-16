@@ -2,15 +2,19 @@ import { Span } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
 import { Result, TypedResult } from '../../../lib/Result'
+import { scopedQuery } from '../../scope'
 import { spanRowToSpan } from './toSpan'
 
-export async function findSpans({
-  workspaceId,
-  traceId,
-}: {
-  workspaceId: number
-  traceId: string
-}): Promise<TypedResult<Span[]>> {
+export const findSpans = scopedQuery(async function findSpans(
+  {
+    workspaceId,
+    traceId,
+  }: {
+    workspaceId: number
+    traceId: string
+  },
+  _db,
+): Promise<TypedResult<Span[]>> {
   const result = await clickhouseClient().query({
     query: `
       SELECT *
@@ -25,4 +29,4 @@ export async function findSpans({
 
   const rows = await result.json<SpanRow>()
   return Result.ok(rows.map(spanRowToSpan))
-}
+})

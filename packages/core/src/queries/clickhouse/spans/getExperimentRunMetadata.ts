@@ -1,6 +1,7 @@
 import { SpanType } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { scopedQuery } from '../../scope'
 
 export type ExperimentRunMetadataResult = {
   count: number
@@ -9,15 +10,19 @@ export type ExperimentRunMetadataResult = {
   totalTokens: number
 }
 
-export async function getExperimentRunMetadata({
-  workspaceId,
-  experimentUuid,
-}: {
-  workspaceId: number
-  experimentUuid: string
-}): Promise<ExperimentRunMetadataResult> {
-  const result = await clickhouseClient().query({
-    query: `
+export const getExperimentRunMetadata = scopedQuery(
+  async function getExperimentRunMetadata(
+    {
+      workspaceId,
+      experimentUuid,
+    }: {
+      workspaceId: number
+      experimentUuid: string
+    },
+    _db,
+  ): Promise<ExperimentRunMetadataResult> {
+    const result = await clickhouseClient().query({
+      query: `
       WITH experiment_trace_ids AS (
         SELECT DISTINCT trace_id
         FROM ${SPANS_TABLE}
@@ -42,27 +47,28 @@ export async function getExperimentRunMetadata({
       WHERE workspace_id = {workspaceId: UInt64}
         AND trace_id IN (SELECT trace_id FROM experiment_trace_ids)
     `,
-    format: 'JSONEachRow',
-    query_params: {
-      workspaceId,
-      experimentUuid,
-      runTypes: [SpanType.Prompt, SpanType.Chat],
-      completionType: SpanType.Completion,
-    },
-  })
+      format: 'JSONEachRow',
+      query_params: {
+        workspaceId,
+        experimentUuid,
+        runTypes: [SpanType.Prompt, SpanType.Chat],
+        completionType: SpanType.Completion,
+      },
+    })
 
-  const rows = await result.json<{
-    trace_count: string
-    total_duration: string
-    total_cost: string
-    total_tokens: string
-  }>()
+    const rows = await result.json<{
+      trace_count: string
+      total_duration: string
+      total_cost: string
+      total_tokens: string
+    }>()
 
-  const row = rows[0]
-  return {
-    count: Number(row?.trace_count ?? 0),
-    totalDuration: Number(row?.total_duration ?? 0),
-    totalCost: Number(row?.total_cost ?? 0),
-    totalTokens: Number(row?.total_tokens ?? 0),
-  }
-}
+    const row = rows[0]
+    return {
+      count: Number(row?.trace_count ?? 0),
+      totalDuration: Number(row?.total_duration ?? 0),
+      totalCost: Number(row?.total_cost ?? 0),
+      totalTokens: Number(row?.total_tokens ?? 0),
+    }
+  },
+)

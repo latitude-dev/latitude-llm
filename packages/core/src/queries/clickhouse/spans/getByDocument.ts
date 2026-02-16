@@ -7,26 +7,30 @@ import {
 import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
+import { scopedQuery } from '../../scope'
 import { buildExperimentExclusionCondition } from './buildExperimentExclusionCondition'
 import { paginateSpanRows } from './paginateSpanRows'
 
-export async function getSpansByDocument({
-  workspaceId,
-  documentUuid,
-  spanTypes,
-  commitUuids,
-  optimizationExperimentUuids,
-  cursor,
-  limit,
-}: {
-  workspaceId: number
-  documentUuid: string
-  spanTypes: MainSpanType[]
-  commitUuids: string[]
-  optimizationExperimentUuids: string[]
-  cursor: { value: Date; id: string } | null
-  limit: number
-}) {
+export const getSpansByDocument = scopedQuery(async function getSpansByDocument(
+  {
+    workspaceId,
+    documentUuid,
+    spanTypes,
+    commitUuids,
+    optimizationExperimentUuids,
+    cursor,
+    limit,
+  }: {
+    workspaceId: number
+    documentUuid: string
+    spanTypes: MainSpanType[]
+    commitUuids: string[]
+    optimizationExperimentUuids: string[]
+    cursor: { value: Date; id: string } | null
+    limit: number
+  },
+  _db,
+) {
   if (commitUuids.length === 0) {
     return { spans: [] as Span<MainSpanType>[], next: null }
   }
@@ -74,4 +78,4 @@ export async function getSpansByDocument({
 
   const rows = await result.json<SpanRow>()
   return paginateSpanRows(rows, limit)
-}
+})

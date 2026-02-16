@@ -8,6 +8,7 @@ import {
   normalizeCreatedAtRange,
   shouldFallbackToAllTime,
 } from '../../../services/spans/defaultCreatedAtWindow'
+import { scopedQuery } from '../../scope'
 import { spanRowToSpan } from './toSpan'
 
 type LimitedQueryParams = {
@@ -75,18 +76,21 @@ function buildWhereClause(
   }
 }
 
-async function executeLimitedQuery({
-  workspaceId,
-  baseConditions,
-  baseParams,
-  filters,
-  from,
-  limit,
-}: LimitedQueryParams & {
-  baseConditions: string[]
-  baseParams: Record<string, unknown>
-  filters: FilterParams
-}): Promise<{ items: Span[]; next: { startedAt: string; id: string } | null }> {
+const executeLimitedQuery = scopedQuery(async function executeLimitedQuery(
+  {
+    workspaceId,
+    baseConditions,
+    baseParams,
+    filters,
+    from,
+    limit,
+  }: LimitedQueryParams & {
+    baseConditions: string[]
+    baseParams: Record<string, unknown>
+    filters: FilterParams
+  },
+  _db,
+): Promise<{ items: Span[]; next: { startedAt: string; id: string } | null }> {
   const { where, params } = buildWhereClause(
     baseConditions,
     baseParams,
@@ -96,12 +100,12 @@ async function executeLimitedQuery({
 
   const result = await clickhouseClient().query({
     query: `
-      SELECT *
-      FROM ${SPANS_TABLE}
-      ${where}
-      ORDER BY started_at DESC, span_id DESC
-      LIMIT {fetchLimit: UInt32}
-    `,
+        SELECT *
+        FROM ${SPANS_TABLE}
+        ${where}
+        ORDER BY started_at DESC, span_id DESC
+        LIMIT {fetchLimit: UInt32}
+      `,
     format: 'JSONEachRow',
     query_params: { workspaceId, ...params, fetchLimit: limit + 1 },
   })
@@ -120,7 +124,7 @@ async function executeLimitedQuery({
       : null
 
   return { items: spans, next }
-}
+})
 
 async function executeWithDefaultCreatedAtAndFallback({
   workspaceId,
@@ -175,88 +179,98 @@ async function executeWithDefaultCreatedAtAndFallback({
   return { ...allTime, didFallbackToAllTime: true }
 }
 
-export async function findByDocumentAndCommitLimited({
-  workspaceId,
-  documentUuid,
-  types,
-  from,
-  limit,
-  commitUuids,
-  experimentUuids,
-  source,
-  testDeploymentIds,
-  createdAt,
-}: {
-  workspaceId: number
-  documentUuid: string
-  types?: SpanType[]
-  from?: { startedAt: string; id: string }
-  limit: number
-  commitUuids?: string[]
-  experimentUuids?: string[]
-  source?: LogSources[]
-  testDeploymentIds?: number[]
-  createdAt?: CreatedAtRange
-}) {
-  const baseConditions = [
-    `workspace_id = {workspaceId: UInt64}`,
-    `document_uuid = {documentUuid: UUID}`,
-  ]
-  const baseParams: Record<string, unknown> = { workspaceId, documentUuid }
+export const findByDocumentAndCommitLimited = scopedQuery(
+  async function findByDocumentAndCommitLimited(
+    {
+      workspaceId,
+      documentUuid,
+      types,
+      from,
+      limit,
+      commitUuids,
+      experimentUuids,
+      source,
+      testDeploymentIds,
+      createdAt,
+    }: {
+      workspaceId: number
+      documentUuid: string
+      types?: SpanType[]
+      from?: { startedAt: string; id: string }
+      limit: number
+      commitUuids?: string[]
+      experimentUuids?: string[]
+      source?: LogSources[]
+      testDeploymentIds?: number[]
+      createdAt?: CreatedAtRange
+    },
+    _db,
+  ) {
+    const baseConditions = [
+      `workspace_id = {workspaceId: UInt64}`,
+      `document_uuid = {documentUuid: UUID}`,
+    ]
+    const baseParams: Record<string, unknown> = { workspaceId, documentUuid }
 
-  if (commitUuids && commitUuids.length > 0) {
-    baseConditions.push(`commit_uuid IN ({commitUuids: Array(UUID)})`)
-    baseParams.commitUuids = commitUuids
-  }
+    if (commitUuids && commitUuids.length > 0) {
+      baseConditions.push(`commit_uuid IN ({commitUuids: Array(UUID)})`)
+      baseParams.commitUuids = commitUuids
+    }
 
-  if (testDeploymentIds && testDeploymentIds.length > 0) {
-    baseConditions.push(
-      `test_deployment_id IN ({testDeploymentIds: Array(UInt64)})`,
-    )
-    baseParams.testDeploymentIds = testDeploymentIds
-  }
+    if (testDeploymentIds && testDeploymentIds.length > 0) {
+      baseConditions.push(
+        `test_deployment_id IN ({testDeploymentIds: Array(UInt64)})`,
+      )
+      baseParams.testDeploymentIds = testDeploymentIds
+    }
 
-  return executeWithDefaultCreatedAtAndFallback({
-    workspaceId,
-    baseConditions,
-    baseParams,
-    filters: { types, source, experimentUuids, createdAt },
-    from,
-    limit,
-  })
-}
+    return executeWithDefaultCreatedAtAndFallback({
+      workspaceId,
+      baseConditions,
+      baseParams,
+      filters: { types, source, experimentUuids, createdAt },
+      from,
+      limit,
+    })
+  },
+)
 
-export async function findByProjectLimited({
-  workspaceId,
-  projectId,
-  types,
-  from,
-  source,
-  limit,
-  experimentUuids,
-  createdAt,
-}: {
-  workspaceId: number
-  projectId: number
-  types?: SpanType[]
-  from?: { startedAt: string; id: string }
-  source?: LogSources[]
-  limit: number
-  experimentUuids?: string[]
-  createdAt?: CreatedAtRange
-}) {
-  const baseConditions = [
-    `workspace_id = {workspaceId: UInt64}`,
-    `project_id = {projectId: UInt64}`,
-  ]
-  const baseParams: Record<string, unknown> = { workspaceId, projectId }
+export const findByProjectLimited = scopedQuery(
+  async function findByProjectLimited(
+    {
+      workspaceId,
+      projectId,
+      types,
+      from,
+      source,
+      limit,
+      experimentUuids,
+      createdAt,
+    }: {
+      workspaceId: number
+      projectId: number
+      types?: SpanType[]
+      from?: { startedAt: string; id: string }
+      source?: LogSources[]
+      limit: number
+      experimentUuids?: string[]
+      createdAt?: CreatedAtRange
+    },
+    _db,
+  ) {
+    const baseConditions = [
+      `workspace_id = {workspaceId: UInt64}`,
+      `project_id = {projectId: UInt64}`,
+    ]
+    const baseParams: Record<string, unknown> = { workspaceId, projectId }
 
-  return executeWithDefaultCreatedAtAndFallback({
-    workspaceId,
-    baseConditions,
-    baseParams,
-    filters: { types, source, experimentUuids, createdAt },
-    from,
-    limit,
-  })
-}
+    return executeWithDefaultCreatedAtAndFallback({
+      workspaceId,
+      baseConditions,
+      baseParams,
+      filters: { types, source, experimentUuids, createdAt },
+      from,
+      limit,
+    })
+  },
+)

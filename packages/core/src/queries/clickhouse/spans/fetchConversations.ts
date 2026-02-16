@@ -3,6 +3,7 @@ import { clickhouseClient } from '../../../client/clickhouse'
 import { SPANS_TABLE } from '../../../clickhouse/models/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { CreatedAtRange } from '../../../services/spans/defaultCreatedAtWindow'
+import { scopedQuery } from '../../scope'
 
 const MAIN_SPAN_TYPE_VALUES = [
   SpanType.Prompt,
@@ -47,14 +48,17 @@ export type FetchConversationsResult = {
   didFallbackToAllTime?: boolean
 }
 
-export async function fetchConversations({
-  workspaceId,
-  documentUuid,
-  filters,
-  from,
-  limit = 25,
-  createdAt,
-}: FetchConversationsParams): Promise<FetchConversationsResult> {
+export const fetchConversations = scopedQuery(async function fetchConversations(
+  {
+    workspaceId,
+    documentUuid,
+    filters,
+    from,
+    limit = 25,
+    createdAt,
+  }: FetchConversationsParams,
+  _db,
+): Promise<FetchConversationsResult> {
   const effectiveCreatedAt = createdAt ?? filters.createdAt
   const params: Record<string, unknown> = {
     workspaceId,
@@ -178,4 +182,4 @@ export async function fetchConversations({
       : null
 
   return { items: conversations, next, didFallbackToAllTime: undefined }
-}
+})
