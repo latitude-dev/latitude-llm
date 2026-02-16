@@ -17,13 +17,11 @@ import { Workspace } from '../../../schema/models/types/Workspace'
 import { SureDateRange } from '../../../constants'
 import { getDateRangeOrLastWeekRange } from '../utils'
 import { hasProductionTraces } from '../../traces/hasProductionTraces'
-import { isFeatureEnabledByName } from '../../../services/workspaceFeatures/isFeatureEnabledByName'
+import { isClickHouseSpansReadEnabled } from '../../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
 import {
   getGlobalLogsStats as chGetGlobalLogsStats,
   getTopProjectsLogsStats as chGetTopProjectsLogsStats,
 } from '../../../queries/clickhouse/spans/weeklyEmailLogs'
-
-const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
 
 async function getGlobalLogsStats(
   {
@@ -191,13 +189,10 @@ export async function getLogsData(
   },
   db = database,
 ): Promise<LogStats> {
-  const clickhouseEnabledResult = await isFeatureEnabledByName(
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
     workspace.id,
-    CLICKHOUSE_SPANS_READ_FLAG,
     db,
   )
-  const shouldUseClickHouse =
-    clickhouseEnabledResult.ok && clickhouseEnabledResult.value
 
   const usedInProduction = await hasProductionTraces(
     { workspaceId: workspace.id },
