@@ -382,7 +382,7 @@ describe('getOrSetEnrichedReason', () => {
 
       expect(enrichedReasonResult.ok).toBe(false)
       expect(enrichedReasonResult.error?.message).toBe(
-        'COPILOT_PROMPT_ANNOTATION_GENERALIZER_PATH is not set',
+        'Issue enrichment is not configured: COPILOT_PROMPT_ANNOTATION_GENERALIZER_PATH is not set',
       )
     })
 

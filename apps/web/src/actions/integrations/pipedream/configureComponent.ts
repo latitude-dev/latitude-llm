@@ -2,7 +2,7 @@
 
 import { z } from 'zod'
 import { authProcedure } from '../../procedures'
-import { IntegrationsRepository } from '@latitude-data/core/repositories'
+import { findIntegrationByName } from '@latitude-data/core/queries/integrations/findByName'
 import { IntegrationType } from '@latitude-data/constants'
 import { configureComponent } from '@latitude-data/core/services/integrations/pipedream/components/configureComponent'
 
@@ -16,11 +16,10 @@ export const configurePipedreamComponentAction = authProcedure
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
-    const integrationScope = new IntegrationsRepository(ctx.workspace.id)
-    const integrationResult = await integrationScope.findByName(
-      parsedInput.integrationName,
-    )
-    const integration = integrationResult.unwrap()
+    const integration = await findIntegrationByName({
+      workspaceId: ctx.workspace.id,
+      name: parsedInput.integrationName,
+    })
 
     if (integration.type !== IntegrationType.Pipedream) {
       throw new Error('Integration is not a Pipedream integration')

@@ -106,7 +106,7 @@ export function AnnotationsPanel({
                   placement: 'right',
                 }}
               >
-                See complete log
+                See complete trace
               </Button>
             </Link>
           </div>

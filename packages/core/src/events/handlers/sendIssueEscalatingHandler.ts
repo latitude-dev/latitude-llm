@@ -4,9 +4,11 @@ import { env } from '@latitude-data/env'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { IssueEscalatingMailer } from '../../mailer/mailers/issues/IssueEscalatingMailer'
-import { IssuesRepository, IssueHistogramsRepository } from '../../repositories'
+import { findIssue } from '../../queries/issues/findById'
+import { findHistogramForIssue } from '../../queries/issueHistograms/findHistogramForIssue'
 import { updateEscalatingIssue } from '../../services/issues/updateEscalating'
 import { IssueIncrementedEvent } from '../events'
+import { Issue } from '../../schema/models/types/Issue'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { users } from '../../schema/models/users'
 import { database } from '../../client'
@@ -41,7 +43,7 @@ async function sendEmail({
   batchSize = BATCH_SIZE,
 }: {
   workspace: Workspace
-  issue: NonNullable<Awaited<ReturnType<IssuesRepository['find']>>['value']>
+  issue: Issue
   commitUuid: string
   projectId: number
   batchSize?: number
@@ -52,8 +54,8 @@ async function sendEmail({
 
   if (members.length === 0) return
 
-  const histogramsRepo = new IssueHistogramsRepository(workspace.id)
-  const histogramResult = await histogramsRepo.findHistogramForIssue({
+  const histogramResult = await findHistogramForIssue({
+    workspaceId: workspace.id,
     issueId: issue.id,
     commitUuid: commitUuid,
     projectId: projectId,
@@ -120,8 +122,7 @@ export async function sendIssueEscalatingHandler({
       'Workspace not found sending issue escalation email',
     )
 
-  const issuesRepo = new IssuesRepository(workspaceId)
-  const issue = await issuesRepo.find(issueId).then((r) => r.unwrap())
+  const issue = await findIssue({ workspaceId, id: issueId })
 
   const previousEscalatingAt = issue.escalatingAt
   const updateResult = await updateEscalatingIssue({ issue })

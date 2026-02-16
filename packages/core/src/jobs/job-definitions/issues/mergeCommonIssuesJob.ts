@@ -1,7 +1,7 @@
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { NotFoundError, UnprocessableEntityError } from '../../../lib/errors'
-import { IssuesRepository } from '../../../repositories'
+import { findIssue } from '../../../queries/issues/findById'
 import { mergeIssues } from '../../../services/issues/merge'
 import { isIssueActive } from '../../../services/issues/shared'
 
@@ -25,8 +25,7 @@ export const mergeCommonIssuesJob = async (
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
-  const issuesRepository = new IssuesRepository(workspace.id)
-  const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
+  const issue = await findIssue({ workspaceId: workspace.id, id: issueId })
 
   if (!isIssueActive(issue)) return
 

@@ -58,8 +58,8 @@ describe('GET handler for evaluation results', () => {
   let baseDocument: DocumentVersion
 
   beforeEach(async () => {
-    const { user, workspace, documents, project, commit } =
-      await createProject({
+    const { user, workspace, documents, project, commit } = await createProject(
+      {
         providers: [{ type: Providers.OpenAI, name: 'openai' }],
         documents: {
           foo: {
@@ -69,7 +69,8 @@ describe('GET handler for evaluation results', () => {
             }),
           },
         },
-      })
+      },
+    )
 
     mockUser = user
     mockWorkspace = workspace

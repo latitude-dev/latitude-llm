@@ -6,8 +6,8 @@ import {
 } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import * as getSpansByEvaluationModule from '../../data-access/evaluations/getSpansByEvaluation'
-import * as getSpansByIssueModule from '../../data-access/issues/getSpansByIssue'
-import * as getSpansWithoutIssuesModule from '../../data-access/issues/getSpansWithoutIssues'
+import * as getSpansByIssueModule from '../../queries/issues/getSpansByIssue'
+import * as getSpansWithoutIssuesModule from '../../queries/issues/getSpansWithoutIssues'
 import * as getSpansByDocumentModule from '../../data-access/spans/getSpansByDocument'
 import { publisher } from '../../events/publisher'
 import { UnprocessableEntityError } from '../../lib/errors'
@@ -16,9 +16,9 @@ import {
   DatasetRowsRepository,
   DatasetsRepository,
   EvaluationsV2Repository,
-  IssuesRepository,
   SpanMetadatasRepository,
 } from '../../repositories'
+import * as findActiveByDocumentModule from '../../queries/issues/findActiveByDocument'
 import { Commit } from '../../schema/models/types/Commit'
 import { Dataset } from '../../schema/models/types/Dataset'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -350,7 +350,7 @@ describe('prepareOptimization', () => {
         .mockResolvedValue(Result.ok({ spans: [], next: null }))
 
       issuesRepositoryMock = vi
-        .spyOn(IssuesRepository.prototype, 'findActiveByDocument')
+        .spyOn(findActiveByDocumentModule, 'findActiveIssuesByDocument')
         .mockResolvedValue([])
 
       spanMetadatasGetMock = vi

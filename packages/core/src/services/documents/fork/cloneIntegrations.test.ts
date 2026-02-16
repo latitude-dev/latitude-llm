@@ -6,7 +6,7 @@ import { type Workspace } from '../../../schema/models/types/Workspace'
 import { IntegrationDto } from '../../../schema/models/types/Integration'
 import * as factories from '../../../tests/factories'
 import { cloneIntegrations } from './cloneIntegrations'
-import { IntegrationsRepository } from '../../../repositories'
+import { findAllIntegrations } from '../../../queries/integrations/findAll'
 import { Result } from '../../../lib/Result'
 
 vi.mock('../../../services/integrations/pipedream/apps', () => {
@@ -21,7 +21,6 @@ describe('cloneIntegrations', () => {
   let originWorkspace: Workspace
   let targetWorkspace: Workspace
   let targetUser: User
-  let targetIntegrationsRepo: IntegrationsRepository
 
   beforeEach(async () => {
     const { workspace: originWsp } = await factories.createWorkspace()
@@ -30,8 +29,6 @@ describe('cloneIntegrations', () => {
     const { workspace: targetWsp, userData } = await factories.createWorkspace()
     targetWorkspace = targetWsp
     targetUser = userData
-
-    targetIntegrationsRepo = new IntegrationsRepository(targetWorkspace.id)
   })
 
   it('creates new integrations when target workspace has none', async () => {
@@ -52,7 +49,7 @@ describe('cloneIntegrations', () => {
     })
 
     if (!result.ok) {
-      // eslint-disable-next-line no-console
+       
       console.error('cloneIntegrations error:', result.error)
     }
     expect(result.ok).toBe(true)
@@ -61,9 +58,9 @@ describe('cloneIntegrations', () => {
     expect(Object.keys(mapping.name)).toHaveLength(originIntegrations.length)
 
     // All mapped integrations exist in target
-    const targetAll = await targetIntegrationsRepo
-      .findAll()
-      .then((r) => r.unwrap())
+    const targetAll = await findAllIntegrations({
+      workspaceId: targetWorkspace.id,
+    })
     for (const origin of originIntegrations) {
       const mapped = mapping.name[origin.name]
       expect(mapped).toBeTruthy()
@@ -94,7 +91,7 @@ describe('cloneIntegrations', () => {
     })
 
     if (!result.ok) {
-      // eslint-disable-next-line no-console
+       
       console.error('cloneIntegrations error:', result.error)
     }
     expect(result.ok).toBe(true)
@@ -179,9 +176,9 @@ describe('cloneIntegrations', () => {
     expect(mapped.type).toBe(IntegrationType.ExternalMCP)
     expect(mapped.name).toBe('shared_1')
 
-    const targetAll = await targetIntegrationsRepo
-      .findAll()
-      .then((r) => r.unwrap())
+    const targetAll = await findAllIntegrations({
+      workspaceId: targetWorkspace.id,
+    })
     const names = targetAll.map((i) => i.name)
     expect(names).toContain('shared')
     expect(names).toContain('shared_1')

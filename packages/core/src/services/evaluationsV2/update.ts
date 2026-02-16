@@ -13,11 +13,9 @@ import { compactObject } from '../../lib/compactObject'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import {
-  DocumentVersionsRepository,
-  IssuesRepository,
-} from '../../repositories'
+import { DocumentVersionsRepository } from '../../repositories'
 import { findProjectById } from '../../queries/projects/findById'
+import { findIssueById } from '../../queries/issues/findById'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { Issue } from '../../schema/models/types/Issue'
@@ -91,7 +89,6 @@ export async function updateEvaluationV2<
 
       let issue: Issue | null = null
       if (issueId) {
-        const issuesRepository = new IssuesRepository(workspace.id, tx)
         const project = await findProjectById(
           { workspaceId: workspace.id, id: commit.projectId },
           tx,
@@ -99,10 +96,11 @@ export async function updateEvaluationV2<
         if (!project) {
           return Result.error(new NotFoundError('Project not found'))
         }
-        issue = await issuesRepository.findById({
-          project,
-          issueId,
-        })
+        issue =
+          (await findIssueById(
+            { workspaceId: workspace.id, issueId, project },
+            tx,
+          )) ?? null
         if (!issue) {
           return Result.error(new BadRequestError('Issue not found'))
         }

@@ -234,9 +234,34 @@ Infrastructure (remove once unused):
 
 ## First Migration Batch (Adjusted)
 
-1. spans + runs
-2. issues + evaluationResultsV2
-3. integrations + integrationHeaderPresets
+1. spans + runs (deferred)
+2. issues + evaluationResultsV2 (issues: DONE, evaluationResultsV2: deferred)
+3. integrations + integrationHeaderPresets (DONE)
+
+## Migration Status
+
+### Completed
+
+| Legacy File | Query Module | Status |
+|---|---|---|
+| `issuesRepository.ts` | `queries/issues/*` | Migrated and removed |
+| `issueEvaluationResultsRepository.ts` | `queries/issueEvaluationResults/*` | Migrated and removed |
+| `issueHistogramsRepository.ts` | `queries/issueHistograms/*` | Migrated and removed |
+| `integrationsRepository.ts` | `queries/integrations/*` | Migrated and removed |
+| `integrationHeaderPresetsRepository.ts` | `queries/integrationHeaderPresets/*` | Migrated and removed |
+| `data-access/issues/*` | `queries/issues/*` | Moved and removed |
+| `data-access/integrations/headerPresets/list.ts` | `queries/integrationHeaderPresets/*` | Migrated and removed |
+| `projectsRepository.ts` (prior work) | `queries/projects/*` | Migrated and removed |
+| `usersRepository.ts` (prior work) | `queries/users/*` | Migrated and removed |
+
+### Deferred
+
+| Legacy File | Reason |
+|---|---|
+| `spansRepository.ts` | Skipped per request |
+| `evaluationResultsV2Repository.ts` | Skipped per request |
+| `commitsRepository/` | Not in current batch |
+| All other repositories | Not in current batch |
 
 ## Guidelines
 

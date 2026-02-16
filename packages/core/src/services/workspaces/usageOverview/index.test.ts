@@ -73,7 +73,7 @@ describe('getUsageOverview', () => {
         ...data.workspaces.workspaceB.expectedData,
         emails: expect.any(String),
         name: data.workspaces.workspaceB.expectedData.name,
-        lastMonthRuns: '2',
+        lastMonthRuns: '3',
         lastTwoMonthsRuns: '2',
         latestRunAt: expect.any(String),
       },

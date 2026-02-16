@@ -10,7 +10,7 @@ import { PipedreamIntegration } from '../../../../../schema/models/types/Integra
 import { Result } from '../../../../../lib/Result'
 import { validateTriggerSchema } from './validateTriggerSchema'
 import { LatteToolContext } from '../types'
-import { IntegrationsRepository } from '../../../../../repositories'
+import * as findIntegrationByIdModule from '../../../../../queries/integrations/findById'
 import {
   BadRequestError,
   NotFoundError,
@@ -153,9 +153,10 @@ describe('validateTriggerSchema', () => {
       }
 
       // Mock successful integration retrieval
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(integration)
 
       // Act
       const result = await validateTriggerSchema(params, context)
@@ -185,9 +186,10 @@ describe('validateTriggerSchema', () => {
       }
 
       // Mock successful integration retrieval
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(integration)
 
       // Act
       const result = await validateTriggerSchema(params, context)
@@ -290,9 +292,10 @@ describe('validateTriggerSchema', () => {
       }
 
       const integrationError = new NotFoundError('Integration not found')
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.error(integrationError),
-      )
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockRejectedValue(integrationError)
 
       // Act
       const result = await validateTriggerSchema(params, context)
@@ -321,9 +324,10 @@ describe('validateTriggerSchema', () => {
       const validationError = new Error('Invalid configuration choices')
       mockValidateLattesChoices.mockResolvedValue(Result.error(validationError))
 
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(integration)
 
       // Act
       const result = await validateTriggerSchema(params, context)
@@ -348,9 +352,10 @@ describe('validateTriggerSchema', () => {
         },
       }
 
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(integration)
 
       // Act
       const result = await validateTriggerSchema(params, context)
@@ -373,9 +378,10 @@ describe('validateTriggerSchema', () => {
         },
       }
 
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
+      vi.spyOn(
+        findIntegrationByIdModule,
+        'findIntegrationById',
+      ).mockResolvedValue(integration)
 
       // Act
       await validateTriggerSchema(params, context)

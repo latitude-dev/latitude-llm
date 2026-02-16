@@ -7,7 +7,7 @@ import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { discoverResultIssueJobKey } from '../../jobs/job-definitions/issues/discoverResultIssueJob'
 import { queues } from '../../jobs/queues'
 import { NotFoundError } from '../../lib/errors'
-import { IssuesRepository } from '../../repositories'
+import { findIssue } from '../../queries/issues/findById'
 import { assignEvaluationResultV2ToIssue } from '../../services/evaluationsV2/results/assign'
 import { validateResultForIssue } from '../../services/issues/results/validate'
 import { EvaluationResultV2CreatedEvent } from '../events'
@@ -24,10 +24,10 @@ export const assignIssueToEvaluationResultV2Job = async ({
 
   let issue
   if (evaluation.issueId) {
-    const issuesRepository = new IssuesRepository(workspace.id)
-    issue = await issuesRepository
-      .find(evaluation.issueId)
-      .then((r) => r.unwrap())
+    issue = await findIssue({
+      workspaceId: workspace.id,
+      id: evaluation.issueId,
+    })
   }
 
   const validation = await validateResultForIssue({

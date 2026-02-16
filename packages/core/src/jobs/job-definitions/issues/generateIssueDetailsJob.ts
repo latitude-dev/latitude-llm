@@ -7,8 +7,8 @@ import {
   CommitsRepository,
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
-  IssuesRepository,
 } from '../../../repositories'
+import { findIssue } from '../../../queries/issues/findById'
 import { generateIssue } from '../../../services/issues/generate'
 import { isIssueActive } from '../../../services/issues/shared'
 import { updateIssue } from '../../../services/issues/update'
@@ -36,8 +36,7 @@ export const generateIssueDetailsJob = async (
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
-  const issuesRepository = new IssuesRepository(workspace.id)
-  const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
+  const issue = await findIssue({ workspaceId: workspace.id, id: issueId })
 
   if (!isIssueActive(issue)) return
 

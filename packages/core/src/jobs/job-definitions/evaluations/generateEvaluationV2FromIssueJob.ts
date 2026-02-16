@@ -1,10 +1,8 @@
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
-import {
-  CommitsRepository,
-  IssuesRepository,
-} from '@latitude-data/core/repositories'
+import { CommitsRepository } from '@latitude-data/core/repositories'
+import { findIssue } from '@latitude-data/core/queries/issues/findById'
 import { captureException } from '@latitude-data/core/utils/datadogCapture'
 import { startActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/start'
 import { failActiveEvaluation } from '@latitude-data/core/services/evaluationsV2/active/fail'
@@ -77,8 +75,7 @@ export const generateEvaluationV2FromIssueJob = async (
       throw new Error(`Max attempts to generate evaluation from issue reached`)
     }
 
-    const issuesRepository = new IssuesRepository(workspace.id)
-    const issue = await issuesRepository.find(issueId).then((r) => r.unwrap())
+    const issue = await findIssue({ workspaceId: workspace.id, id: issueId })
 
     if (generationAttempt == 1) {
       await startActiveEvaluation({

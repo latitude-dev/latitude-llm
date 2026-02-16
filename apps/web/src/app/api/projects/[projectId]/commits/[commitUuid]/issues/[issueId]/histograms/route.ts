@@ -1,12 +1,12 @@
 import { z } from 'zod'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { IssueHistogramsRepository } from '@latitude-data/core/repositories'
+import { findHistogramForIssue } from '@latitude-data/core/queries/issueHistograms/findHistogramForIssue'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 
 export type MiniHistogramResponse = Awaited<
-  ReturnType<IssueHistogramsRepository['findHistogramForIssue']>
+  ReturnType<typeof findHistogramForIssue>
 >
 
 const paramsSchema = z.object({
@@ -37,8 +37,8 @@ export const GET = errorHandler(
         issueId: params.issueId,
       })
 
-      const histogramsRepo = new IssueHistogramsRepository(workspace.id)
-      const histogramData = await histogramsRepo.findHistogramForIssue({
+      const histogramData = await findHistogramForIssue({
+        workspaceId: workspace.id,
         issueId,
         commitUuid,
         projectId,

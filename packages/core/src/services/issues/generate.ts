@@ -8,7 +8,7 @@ import {
   EvaluationType,
   ISSUE_GENERATION_CACHE_KEY,
 } from '../../constants'
-import { UnprocessableEntityError } from '../../lib/errors'
+import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { hashObject } from '../../lib/hashObject'
 import { Result } from '../../lib/Result'
 import { type ResultWithEvaluationV2 } from '../../schema/types'
@@ -33,12 +33,14 @@ export async function generateIssue(
   db = database,
 ) {
   if (!env.LATITUDE_CLOUD) {
-    return Result.error(new Error(CLOUD_MESSAGES.issueDiscovery))
+    return Result.error(new BadRequestError(CLOUD_MESSAGES.issueDiscovery))
   }
 
   if (!env.COPILOT_PROMPT_ISSUE_DETAILS_GENERATOR_PATH) {
     return Result.error(
-      new Error('COPILOT_PROMPT_ISSUE_DETAILS_GENERATOR_PATH is not set'),
+      new BadRequestError(
+        'Issue generation is not configured: COPILOT_PROMPT_ISSUE_DETAILS_GENERATOR_PATH is not set',
+      ),
     )
   }
 

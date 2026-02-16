@@ -7,7 +7,7 @@ import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'
 import { deployPipedreamTrigger } from '../../integrations/pipedream/triggers'
-import { IntegrationsRepository } from '../../../repositories'
+import { findIntegrationById } from '../../../queries/integrations/findById'
 import { publisher } from '../../../events/publisher'
 
 import {
@@ -43,8 +43,15 @@ export async function deployIntegrationTrigger(
   triggerStatus: DocumentTriggerStatus
 }> {
   const integrationResult = await transaction.call(async (tx) => {
-    const integrationsScope = new IntegrationsRepository(workspace.id, tx)
-    return integrationsScope.find(configuration.integrationId)
+    try {
+      const found = await findIntegrationById(
+        { workspaceId: workspace.id, id: configuration.integrationId },
+        tx,
+      )
+      return Result.ok(found)
+    } catch (e) {
+      return Result.error(e as Error)
+    }
   })
   if (!Result.isOk(integrationResult)) return integrationResult
   const integration = integrationResult.unwrap()
@@ -117,8 +124,18 @@ export async function undeployIntegrationTrigger(
   transaction = new Transaction(),
 ): PromisedResult<undefined> {
   const integrationResult = await transaction.call(async (tx) => {
-    const integrationsScope = new IntegrationsRepository(workspace.id, tx)
-    return integrationsScope.find(documentTrigger.configuration.integrationId)
+    try {
+      const found = await findIntegrationById(
+        {
+          workspaceId: workspace.id,
+          id: documentTrigger.configuration.integrationId,
+        },
+        tx,
+      )
+      return Result.ok(found)
+    } catch (e) {
+      return Result.error(e as Error)
+    }
   })
   if (!Result.isOk(integrationResult)) return integrationResult
   const integration = integrationResult.unwrap()

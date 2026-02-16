@@ -2,8 +2,8 @@ import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Result } from '@latitude-data/core/lib/Result'
 import { Issue } from '../../../schema/models/types/Issue'
-import { getHITLSpansByIssue } from '../../../data-access/issues/getHITLSpansByIssue'
-import { getHITLSpansByDocument } from '../../../data-access/issues/getHITLSpansByDocument'
+import { getHITLSpansByIssue } from '../../../queries/issues/getHITLSpansByIssue'
+import { getHITLSpansByDocument } from '../../../queries/issues/getHITLSpansByDocument'
 import { database } from '../../../client'
 
 const MAX_COMPARISON_ANNOTATIONS = 100

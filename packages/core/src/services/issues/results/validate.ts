@@ -6,7 +6,7 @@ import {
 } from '../../../constants'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { IssueEvaluationResultsRepository } from '../../../repositories'
+import { findLastActiveAssignedIssue } from '../../../queries/issueEvaluationResults/findLastActiveAssignedIssue'
 import { type Issue } from '../../../schema/models/types/Issue'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
 import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
@@ -45,14 +45,10 @@ export async function validateResultForIssue<
   }
 
   if (!skipBelongsCheck) {
-    // Check if result already belongs to an issue via intermediate table
-    const repository = new IssueEvaluationResultsRepository(
-      result.workspaceId,
+    const activeAssignedIssue = await findLastActiveAssignedIssue(
+      { workspaceId: result.workspaceId, resultId: result.id },
       db,
     )
-    const activeAssignedIssue = await repository.findLastActiveAssignedIssue({
-      result,
-    })
 
     if (activeAssignedIssue) {
       return Result.error(

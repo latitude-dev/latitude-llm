@@ -5,7 +5,7 @@ import { type Workspace } from '../../schema/models/types/Workspace'
 import { database } from '../../client'
 import { IntegrationConfiguration } from '../../services/integrations/helpers/schema'
 import { integrations } from '../../schema/models/integrations'
-import { IntegrationsRepository } from '../../repositories'
+import { findIntegrationById } from '../../queries/integrations/findById'
 import { DatabaseError } from 'pg'
 
 export type ICreateIntegration = {
@@ -33,10 +33,10 @@ export async function createIntegration({
       .returning()
       .then((r) => r[0]!)
 
-    const integrationsRepo = new IntegrationsRepository(workspace.id, database)
-
-    const result = await integrationsRepo.find(res.id)
-    return result.unwrap()
+    return findIntegrationById(
+      { workspaceId: workspace.id, id: res.id },
+      database,
+    )
   } catch (e) {
     if ('cause' in (e as Error)) {
       throw (e as DatabaseError).cause

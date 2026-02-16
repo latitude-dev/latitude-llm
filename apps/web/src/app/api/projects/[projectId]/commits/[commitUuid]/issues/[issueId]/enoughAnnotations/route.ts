@@ -3,7 +3,7 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
-import { getEvaluationResultsToGenerateEvaluationForIssue } from '@latitude-data/core/data-access/issues/getEvaluationResultsToGenerateEvaluation'
+import { getEvaluationResultsToGenerateEvaluationForIssue } from '@latitude-data/core/queries/issues/getEvaluationResultsToGenerateEvaluation'
 
 const paramsSchema = z.object({
   projectId: z.coerce.number(),

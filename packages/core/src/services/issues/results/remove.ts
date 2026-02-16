@@ -11,11 +11,10 @@ import { mergeCommonIssuesJobKey } from '../../../jobs/job-definitions/issues/me
 import { queues } from '../../../jobs/queues'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
-import {
-  CommitsRepository,
-  IssueHistogramsRepository,
-  IssuesRepository,
-} from '../../../repositories'
+import { CommitsRepository } from '../../../repositories'
+import { lockIssue } from '../../../queries/issues/lock'
+import { findIssue } from '../../../queries/issues/findById'
+import { hasOccurrences } from '../../../queries/issueHistograms/hasOccurrences'
 import { Issue } from '../../../schema/models/types/Issue'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { type ResultWithEvaluationV2 } from '../../../schema/types'
@@ -87,17 +86,15 @@ export async function removeResultFromIssue<
 
   return await transaction.call(
     async (tx) => {
-      const issuesRepository = new IssuesRepository(workspace.id, tx)
-      const locking = await issuesRepository.lock({ id: issue.id })
+      const locking = await lockIssue(
+        { workspaceId: workspace.id, id: issue.id },
+        tx,
+      )
       if (locking.error) {
         return Result.error(locking.error)
       }
 
-      const refreshing = await issuesRepository.find(issue.id)
-      if (refreshing.error) {
-        return Result.error(refreshing.error)
-      }
-      issue = refreshing.value
+      issue = await findIssue({ workspaceId: workspace.id, id: issue.id }, tx)
 
       // Note: revalidating the fresh issue after locking
       const validating = await validateResultForIssue(
@@ -148,17 +145,11 @@ export async function removeResultFromIssue<
       }
       const histogram = decrementing.value.histogram
 
-      const histogramsRepository = new IssueHistogramsRepository(
-        workspace.id,
+      const hasAny = await hasOccurrences(
+        { workspaceId: workspace.id, issueId: issue.id },
         tx,
       )
-      const searching = await histogramsRepository.hasOccurrences({
-        issueId: issue.id,
-      })
-      if (searching.error) {
-        return Result.error(searching.error)
-      }
-      issueWasLast = !searching.value
+      issueWasLast = !hasAny
 
       if (issueWasLast) {
         const deleting = await deleteIssue({ issue }, transaction)

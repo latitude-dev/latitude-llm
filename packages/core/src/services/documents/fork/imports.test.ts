@@ -448,23 +448,13 @@ Agent 2 content:
     vi.restoreAllMocks()
   })
 
-  it('handles error when integrations repository fails', async () => {
+  it('handles error when integrations query fails', async () => {
     const mainDoc = documents.find((d) => d.path === 'main')!
 
-    // Mock the integrations repository to fail
+    // Mock the integrations query to fail
     const mockError = new Error('Integrations repository error')
-    vi.spyOn(
-      await import('../../../repositories/integrationsRepository'),
-      'IntegrationsRepository',
-    ).mockImplementation(
-      () =>
-        ({
-          findAll: vi.fn().mockResolvedValue({
-            error: mockError,
-            ok: false,
-          }),
-        }) as any,
-    )
+    const findAllModule = await import('../../../queries/integrations/findAll')
+    vi.spyOn(findAllModule, 'findAllIntegrations').mockRejectedValue(mockError)
 
     const result = await getImports({
       workspace,

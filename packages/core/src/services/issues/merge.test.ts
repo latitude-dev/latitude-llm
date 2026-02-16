@@ -3,7 +3,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { database } from '../../client'
-import { IssuesRepository } from '../../repositories'
+import { findIssue } from '../../queries/issues/findById'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { issueHistograms } from '../../schema/models/issueHistograms'
 import { issues } from '../../schema/models/issues'
@@ -169,10 +169,10 @@ describe('mergeIssues', () => {
     expect(winnerIssue.updatedAt.getTime()).toBeGreaterThan(now.getTime())
 
     // Verify merged issue is marked as merged and points to winner
-    const issuesRepository = new IssuesRepository(workspace.id)
-    const mergedIssue = await issuesRepository
-      .find(other.id)
-      .then((r) => r.unwrap())
+    const mergedIssue = await findIssue({
+      workspaceId: workspace.id,
+      id: other.id,
+    })
     expect(mergedIssue.mergedAt).not.toBeNull()
     expect(mergedIssue.mergedToIssueId).toBe(winner.id)
 

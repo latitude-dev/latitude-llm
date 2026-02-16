@@ -1,11 +1,9 @@
 import { EvaluationType, EvaluationV2 } from '../../constants'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
-import {
-  EvaluationResultsV2Repository,
-  IssueEvaluationResultsRepository,
-  IssuesRepository,
-} from '../../repositories'
+import { EvaluationResultsV2Repository } from '../../repositories'
+import { findLastActiveAssignedIssue } from '../../queries/issueEvaluationResults/findLastActiveAssignedIssue'
+import { findIssue } from '../../queries/issues/findById'
 import { assignEvaluationResultV2ToIssue } from '../../services/evaluationsV2/results/assign'
 import { unassignEvaluationResultV2FromIssue } from '../../services/evaluationsV2/results/unassign'
 import { validateResultForIssue } from '../../services/issues/results/validate'
@@ -31,20 +29,17 @@ async function unassignResultFromIssueOnPass({
   result: EvaluationResultV2
   evaluation: EvaluationV2
 }) {
-  const issueEvaluationResultsRepository = new IssueEvaluationResultsRepository(
-    workspace.id,
-  )
-  const issueAssignment =
-    await issueEvaluationResultsRepository.findLastActiveAssignedIssue({
-      result,
-    })
+  const issueAssignment = await findLastActiveAssignedIssue({
+    workspaceId: workspace.id,
+    resultId: result.id,
+  })
 
   if (!issueAssignment) return
 
-  const issuesRepository = new IssuesRepository(workspace.id)
-  const issue = await issuesRepository
-    .find(issueAssignment.issueId)
-    .then((r) => r.unwrap())
+  const issue = await findIssue({
+    workspaceId: workspace.id,
+    id: issueAssignment.issueId,
+  })
 
   // Get the full result with evaluation for unassignment
   const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
@@ -74,10 +69,10 @@ async function assignResultToIssueOnFail({
 }) {
   let issue
   if (evaluation.issueId) {
-    const issuesRepository = new IssuesRepository(workspace.id)
-    issue = await issuesRepository
-      .find(evaluation.issueId)
-      .then((r) => r.unwrap())
+    issue = await findIssue({
+      workspaceId: workspace.id,
+      id: evaluation.issueId,
+    })
   }
 
   const validation = await validateResultForIssue({

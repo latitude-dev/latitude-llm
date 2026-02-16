@@ -1,6 +1,6 @@
-import { and, desc, eq, gte, isNull, max, not, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, isNull, max, sql } from 'drizzle-orm'
 import { database } from '../../../client'
-import { SpanStatus } from '../../../constants'
+import { MAIN_SPAN_TYPES } from '../../../constants'
 import { SubscriptionPlan } from '../../../plans'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import { workspaces } from '../../../schema/models/workspaces'
@@ -68,7 +68,7 @@ export async function getUsageOverview(
         `.as('last_two_months_logs_count'),
       })
       .from(spans)
-      .where(not(eq(spans.status, SpanStatus.Error)))
+      .where(and(inArray(spans.type, Array.from(MAIN_SPAN_TYPES))))
       .groupBy(spans.workspaceId),
   )
 
