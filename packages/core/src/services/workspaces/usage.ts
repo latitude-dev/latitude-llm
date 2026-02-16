@@ -21,7 +21,7 @@ import { computeQuota } from '../grants/quota'
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 import { spans } from '../../schema/models/spans'
 import { isClickHouseSpansReadEnabled } from '../workspaceFeatures/isClickHouseSpansReadEnabled'
-import { countMainTypesSince } from '../../queries/clickhouse/spans/countMainTypesSince'
+import { countDistinctTracesSince } from '../../queries/clickhouse/spans/countDistinctTracesSince'
 
 /**
  * Handle both old cache format (object) and new cache format (number)
@@ -71,7 +71,7 @@ async function computeUsageFromDatabase(
   )
 
   const spansCount = shouldUseClickHouse
-    ? await countMainTypesSince({
+    ? await countDistinctTracesSince({
         workspaceId: workspace.id,
         since: latestRenewalDate,
       })

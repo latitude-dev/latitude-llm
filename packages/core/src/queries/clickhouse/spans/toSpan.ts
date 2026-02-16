@@ -6,10 +6,7 @@ import {
   SpanType,
 } from '@latitude-data/constants'
 import { SpanRow } from '../../../clickhouse/models/spans'
-import {
-  orUndefined,
-  parseClickHouseDate,
-} from '../../../lib/typeConversions'
+import { orUndefined, parseClickHouseDate } from '../../../lib/typeConversions'
 
 export function spanRowToSpan(row: SpanRow): Span {
   const startedAt = parseClickHouseDate(row.started_at)
