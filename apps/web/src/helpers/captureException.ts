@@ -47,4 +47,3 @@ export const captureException = (error: Error, tags?: Record<string, any>) => {
     }),
   )
 }
-

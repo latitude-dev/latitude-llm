@@ -7,7 +7,7 @@ import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 
 export function EvaluationSelector({
   project,
@@ -15,6 +15,7 @@ export function EvaluationSelector({
   document,
   value,
   onChange,
+  onRequiresExpectedOutputChange,
   errors,
   disabled,
 }: {
@@ -23,6 +24,7 @@ export function EvaluationSelector({
   document: DocumentVersion
   value?: string
   onChange: (value?: string) => void
+  onRequiresExpectedOutputChange: (requiresExpectedOutput: boolean) => void
   errors?: Record<string, string[]>
   disabled?: boolean
 }) {
@@ -44,12 +46,26 @@ export function EvaluationSelector({
     onChange(defaultEvaluation.uuid)
   }, [value, defaultEvaluation, onChange])
 
+  useEffect(() => {
+    if (!value) {
+      onRequiresExpectedOutputChange(false)
+      return
+    }
+    const evaluation = evaluations.find((e) => e.uuid === value)
+    if (!evaluation) {
+      onRequiresExpectedOutputChange(false)
+      return
+    }
+    const spec = getEvaluationMetricSpecification(evaluation)
+    onRequiresExpectedOutputChange(spec.requiresExpectedOutput)
+  }, [value, evaluations, onRequiresExpectedOutputChange])
+
   const options = useMemo(() => {
     return evaluations
       .filter((evaluation) => {
         if (evaluation.deletedAt) return false
         const spec = getEvaluationMetricSpecification(evaluation)
-        return spec.supportsBatchEvaluation && !spec.requiresExpectedOutput
+        return spec.supportsBatchEvaluation
       })
       .map((evaluation) => {
         const spec = getEvaluationMetricSpecification(evaluation)
@@ -83,12 +99,19 @@ export function EvaluationSelector({
       })
   }, [evaluations, defaultEvaluation?.uuid])
 
+  const handleChange = useCallback(
+    (val: string) => {
+      onChange(val || undefined)
+    },
+    [onChange],
+  )
+
   if (options.length < 1) {
     return (
       <Alert
         variant='destructive'
         title='No evaluations available'
-        description='There are no evaluations available to steer the optimization algorithm. Only evaluations that do not require an expected output are supported'
+        description='There are no evaluations available to steer the optimization algorithm'
       />
     )
   }
@@ -98,10 +121,10 @@ export function EvaluationSelector({
       value={value ?? ''}
       name='evaluationUuid'
       label='Evaluation'
-      description='The evaluation used to steer the optimization algorithm. Only evaluations that do not require an expected output are supported'
+      description='The evaluation used to steer the optimization algorithm'
       placeholder='Select an evaluation'
       options={options}
-      onChange={(val) => onChange(val || undefined)}
+      onChange={handleChange}
       errors={errors?.['evaluationUuid']}
       loading={isLoading}
       disabled={disabled || isLoading}

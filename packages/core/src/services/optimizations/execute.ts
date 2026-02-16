@@ -133,10 +133,6 @@ export async function executeOptimization(
   }
   const testset = gettingts.value
 
-  const columns = trainset.columns
-    .map((c) => ({ ...c, datasetId: trainset.id }))
-    .concat(testset.columns.map((c) => ({ ...c, datasetId: testset.id })))
-
   const rowsRepository = new DatasetRowsRepository(workspace.id)
   const trainrows = await rowsRepository.findAllByDataset(trainset.id)
   const testrows = await rowsRepository.findAllByDataset(testset.id)
@@ -156,8 +152,9 @@ export async function executeOptimization(
   // BONUS(AO/OPT): Implement checkpointing saving for fault tolerance (in gepa run_dir can be used)
   const optimizing = await optimize({
     evaluate: await evaluateFactory({
-      columns: columns,
       evaluation: evaluation,
+      trainset: trainset,
+      valset: testset,
       optimization: optimization,
       document: document,
       commit: baselineCommit,

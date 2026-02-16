@@ -15,6 +15,7 @@ import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { StandardSchemaV1 } from '@standard-schema/spec'
+import merge from 'lodash-es/merge'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { BudgetSelector } from './BudgetSelector'
 import { DatasetSelector } from './DatasetSelector'
@@ -86,15 +87,7 @@ export function OptimizationForm({
     ) as OptimizationPresetKey[]
     for (const key of presetKeys) {
       const preset = OPTIMIZATION_PRESETS[key]
-      const presetConfig = preset.configuration
-      let matches = true
-      for (const [field, value] of Object.entries(presetConfig)) {
-        if ((configuration as Record<string, unknown>)[field] !== value) {
-          matches = false
-          break
-        }
-      }
-      if (matches) return key
+      if (presetMatches(configuration, preset.configuration)) return key
     }
     return 'custom'
   }, [configuration])
@@ -102,14 +95,12 @@ export function OptimizationForm({
   const handlePresetChange = useCallback(
     (presetKey: OptimizationPresetKey) => {
       const preset = OPTIMIZATION_PRESETS[presetKey]
-      setConfiguration({
-        ...configuration,
-        ...preset.configuration,
-      })
+      setConfiguration(merge({}, configuration, preset.configuration))
     },
     [configuration, setConfiguration],
   )
 
+  const [requiresExpectedOutput, setRequiresExpectedOutput] = useState(false)
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
   const { data: datasetRowCount } = useDatasetRowsCount({
     dataset: selectedDataset,
@@ -133,6 +124,12 @@ export function OptimizationForm({
     )
   }, [configuration.budget, effectiveRowCount])
 
+  const showDatasetWarning = useMemo(() => {
+    return (
+      requiresExpectedOutput && (!datasetId || !configuration.dataset?.label)
+    )
+  }, [requiresExpectedOutput, datasetId, configuration.dataset?.label])
+
   return (
     <form className='min-w-0' id='optimizationForm'>
       <FormWrapper>
@@ -154,9 +151,17 @@ export function OptimizationForm({
           document={document}
           value={evaluationUuid}
           onChange={setEvaluationUuid}
+          onRequiresExpectedOutputChange={setRequiresExpectedOutput}
           errors={errors}
           disabled={disabled}
         />
+        {showDatasetWarning && (
+          <Alert
+            variant='warning'
+            title='This evaluation requires an expected output'
+            description='A labeled dataset must be configured for the optimization to run'
+          />
+        )}
         <CollapsibleBox
           title='Advanced configuration'
           icon='settings'
@@ -178,6 +183,14 @@ export function OptimizationForm({
                     dataset: { ...configuration.dataset, target: value },
                   })
                 }
+                label={configuration.dataset?.label}
+                onLabelChange={(value) =>
+                  setConfiguration({
+                    ...configuration,
+                    dataset: { ...configuration.dataset, label: value },
+                  })
+                }
+                requiresExpectedOutput={requiresExpectedOutput}
                 errors={errors}
                 disabled={disabled}
               />
@@ -224,4 +237,31 @@ export function OptimizationForm({
       </FormWrapper>
     </form>
   )
+}
+
+function presetMatches(
+  configuration: Record<string, unknown>,
+  preset: Record<string, unknown>,
+): boolean {
+  for (const [key, presetValue] of Object.entries(preset)) {
+    const configValue = configuration[key]
+    if (
+      typeof presetValue === 'object' &&
+      presetValue !== null &&
+      typeof configValue === 'object' &&
+      configValue !== null
+    ) {
+      if (
+        !presetMatches(
+          configValue as Record<string, unknown>,
+          presetValue as Record<string, unknown>,
+        )
+      ) {
+        return false
+      }
+    } else if (configValue !== presetValue) {
+      return false
+    }
+  }
+  return true
 }

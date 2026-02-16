@@ -347,7 +347,6 @@ model: gpt-4o
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         userMessages.forEach((msg: any) => {
           if (
-             
             msg.content.some(
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (content: any) =>
@@ -395,7 +394,6 @@ model: gpt-4o
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         userMessages.forEach((msg: any) => {
           if (
-             
             msg.content.some(
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (content: any) =>

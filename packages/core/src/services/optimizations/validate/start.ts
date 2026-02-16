@@ -133,7 +133,11 @@ export async function startValidateOptimization(
   const population = {
     source: 'dataset' as const,
     dataset: testset,
-    datasetLabels: {},
+    datasetLabels: {
+      ...(optimization.configuration.dataset?.label && {
+        [optimization.evaluationUuid]: optimization.configuration.dataset.label,
+      }),
+    },
     parametersMap: testcols,
     fromRow: 1, // Note: 1-based index
     toRow: testrows, // Note: 1-based index

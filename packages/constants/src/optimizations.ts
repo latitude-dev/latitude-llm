@@ -15,7 +15,8 @@ export type OptimizationBudget = z.infer<typeof OptimizationBudgetSchema>
 export const OptimizationConfigurationSchema = z.object({
   dataset: z
     .object({
-      target: z.number().min(0).optional(),
+      target: z.number().min(0).optional(), // Note: number of rows to curate when not provided by the user
+      label: z.string().optional(), // Note: expected output column when using a labeled evaluation
     })
     .optional(),
   parameters: z

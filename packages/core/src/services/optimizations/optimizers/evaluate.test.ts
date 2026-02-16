@@ -173,6 +173,13 @@ const baseOptimization = {
   configuration: {},
 } as any
 
+const emptyDataset = { id: 0, columns: [] } as any
+
+const baseDataset = {
+  id: 1,
+  columns: [{ identifier: 'col-1', name: 'expectedOutput' }],
+} as any
+
 const baseExample = {
   id: 1,
   datasetId: 1,
@@ -230,7 +237,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: baseOptimization,
         document: baseDocument,
@@ -275,7 +283,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: baseOptimization,
         document: baseDocument,
@@ -324,7 +333,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: baseOptimization,
         document: baseDocument,
@@ -364,7 +374,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: baseOptimization,
         document: baseDocument,
@@ -414,7 +425,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: baseOptimization,
         document: baseDocument,
@@ -462,7 +474,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: baseOptimization,
         document: baseDocument,
@@ -503,7 +516,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: baseOptimization,
         document: baseDocument,
@@ -543,7 +557,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: baseOptimization,
         document: baseDocument,
@@ -581,7 +596,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: baseOptimization,
         document: baseDocument,
@@ -651,7 +667,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: simulationOptimization,
         document: baseDocument,
@@ -714,7 +731,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: simulationOptimization,
         document: baseDocument,
@@ -758,7 +776,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: noSimulationOpt,
         document: baseDocument,
@@ -791,7 +810,8 @@ describe('evaluateFactory', () => {
       mockSpansAndMetadata(spans)
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: baseOptimization,
         document: baseDocument,
@@ -817,7 +837,8 @@ describe('evaluateFactory', () => {
       )
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: simulationOptimization,
         document: baseDocument,
@@ -845,7 +866,8 @@ describe('evaluateFactory', () => {
       mocks.listByDocumentLogUuid.mockResolvedValue([])
 
       const evaluate = await evaluateFactory({
-        columns: [],
+        trainset: emptyDataset,
+        valset: emptyDataset,
         evaluation,
         optimization: baseOptimization,
         document: baseDocument,
@@ -890,7 +912,8 @@ describe('evaluateFactory', () => {
 
         const evaluation = createEvaluation(target)
         const evaluate = await evaluateFactory({
-          columns: [],
+          trainset: emptyDataset,
+          valset: emptyDataset,
           evaluation,
           optimization: baseOptimization,
           document: baseDocument,
@@ -906,6 +929,145 @@ describe('evaluateFactory', () => {
         expect(result.ok).toBe(true)
         expect(mocks.runEvaluationV2).toHaveBeenCalledTimes(1)
       }
+    })
+  })
+
+  describe('expected output threading', () => {
+    it('passes dataset, datasetLabel, and datasetRow to runEvaluationV2 when label is configured', async () => {
+      const labelOptimization = {
+        ...baseOptimization,
+        configuration: {
+          dataset: { label: 'expectedOutput' },
+        },
+      }
+
+      const evaluation = createEvaluation('first')
+      mockRunDocumentAtCommit()
+      mockEvaluation(80, true)
+
+      const spans = [
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+      ]
+      mockSpansAndMetadata(spans)
+
+      const evaluate = await evaluateFactory({
+        trainset: baseDataset,
+        valset: baseDataset,
+        evaluation,
+        optimization: labelOptimization,
+        document: baseDocument,
+        commit: baseCommit,
+        workspace: baseWorkspace,
+      })
+
+      const result = await evaluate({
+        prompt: baseDocument.content,
+        example: baseExample,
+      })
+
+      expect(result.ok).toBe(true)
+      expect(mocks.runEvaluationV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dataset: baseDataset,
+          datasetLabel: 'expectedOutput',
+          datasetRow: baseExample,
+        }),
+      )
+    })
+
+    it('passes undefined dataset when no label is configured', async () => {
+      const evaluation = createEvaluation('first')
+      mockRunDocumentAtCommit()
+      mockEvaluation(80, true)
+
+      const spans = [
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+      ]
+      mockSpansAndMetadata(spans)
+
+      const evaluate = await evaluateFactory({
+        trainset: emptyDataset,
+        valset: emptyDataset,
+        evaluation,
+        optimization: baseOptimization,
+        document: baseDocument,
+        commit: baseCommit,
+        workspace: baseWorkspace,
+      })
+
+      const result = await evaluate({
+        prompt: baseDocument.content,
+        example: baseExample,
+      })
+
+      expect(result.ok).toBe(true)
+      expect(mocks.runEvaluationV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dataset: emptyDataset,
+          datasetLabel: undefined,
+          datasetRow: baseExample,
+        }),
+      )
+    })
+
+    it('resolves correct dataset from datasets map based on example datasetId', async () => {
+      const labelOptimization = {
+        ...baseOptimization,
+        configuration: {
+          dataset: { label: 'expectedOutput' },
+        },
+      }
+
+      const dataset2 = {
+        id: 2,
+        columns: [{ identifier: 'col-2', name: 'expectedOutput' }],
+      } as any
+      const example2 = { ...baseExample, datasetId: 2 } as any
+
+      const evaluation = createEvaluation('first')
+      mockRunDocumentAtCommit()
+      mockEvaluation(80, true)
+
+      const spans = [
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+      ]
+      mockSpansAndMetadata(spans)
+
+      const evaluate = await evaluateFactory({
+        trainset: baseDataset,
+        valset: dataset2,
+        evaluation,
+        optimization: labelOptimization,
+        document: baseDocument,
+        commit: baseCommit,
+        workspace: baseWorkspace,
+      })
+
+      const result = await evaluate({
+        prompt: baseDocument.content,
+        example: example2,
+      })
+
+      expect(result.ok).toBe(true)
+      expect(mocks.runEvaluationV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dataset: dataset2,
+          datasetLabel: 'expectedOutput',
+          datasetRow: example2,
+        }),
+      )
     })
   })
 })

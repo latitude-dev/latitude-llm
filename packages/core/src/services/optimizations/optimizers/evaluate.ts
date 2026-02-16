@@ -26,22 +26,22 @@ import {
   SpanMetadatasRepository,
   SpansRepository,
 } from '../../../repositories/spansRepository'
-import { Column } from '../../../schema/models/datasets'
 import { Commit } from '../../../schema/models/types/Commit'
+import { type Dataset } from '../../../schema/models/types/Dataset'
 import { DatasetRow } from '../../../schema/models/types/DatasetRow'
 import { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { Optimization } from '../../../schema/models/types/Optimization'
 import { WorkspaceDto } from '../../../schema/models/types/Workspace'
 import { BACKGROUND } from '../../../telemetry'
+import { addMessages } from '../../addMessages'
 import { runDocumentAtCommit } from '../../commits/runDocumentAtCommit'
 import { scanDocumentContent } from '../../documents'
-import { addMessages } from '../../addMessages'
 import { runEvaluationV2 } from '../../evaluationsV2/run'
+import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import {
   getTriggerTarget,
   selectSpansForTrigger,
 } from '../../evaluationsV2/triggers'
-import { getEvaluationMetricSpecification } from '../../evaluationsV2/specifications'
 import { generateSimulatedUserAction } from '../../simulation/simulateUserResponse'
 import { OptimizerEvaluateArgs } from './index'
 import { LearnableTrajectory } from './shared'
@@ -52,15 +52,17 @@ export async function evaluateFactory<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
 >({
-  columns,
   evaluation,
+  trainset,
+  valset,
   optimization,
   document,
   commit,
   workspace,
 }: {
-  columns: (Column & { datasetId: number })[]
   evaluation: EvaluationV2<T, M>
+  trainset: Dataset
+  valset: Dataset
   optimization: Optimization
   document: DocumentVersion
   commit: Commit
@@ -79,6 +81,8 @@ export async function evaluateFactory<
     { prompt, example, abortSignal }: OptimizerEvaluateArgs, // TODO(AO/OPT): Implement cancellation
     db = database,
   ) {
+    const dataset = example.datasetId === trainset.id ? trainset : valset
+
     const validating = await validatePrompt(
       {
         prompt: prompt,
@@ -108,7 +112,7 @@ export async function evaluateFactory<
         prompt: prompt,
         example: example,
         parameters: parameters,
-        columns: columns,
+        dataset: dataset,
         optimization: optimization,
         document: document,
         commit: commit,
@@ -154,6 +158,7 @@ export async function evaluateFactory<
           example: example,
           span: enriching.value,
           evaluation: evaluation,
+          dataset: dataset,
           optimization: optimization,
           document: document,
           commit: commit,
@@ -294,7 +299,7 @@ async function runPrompt(
     prompt,
     example,
     parameters,
-    columns,
+    dataset,
     optimization,
     document,
     commit,
@@ -304,7 +309,7 @@ async function runPrompt(
     prompt: string
     example: DatasetRow
     parameters: Set<string>
-    columns: (Column & { datasetId: number })[]
+    dataset: Dataset
     optimization: Optimization
     document: DocumentVersion
     commit: Commit
@@ -318,8 +323,8 @@ async function runPrompt(
     const column =
       optimization.configuration.parameters?.[parameter]?.column ?? parameter
 
-    const identifier = columns.find(
-      (c) => c.name === column && c.datasetId === example.datasetId,
+    const identifier = dataset.columns.find(
+      (c) => c.name === column,
     )!.identifier
 
     values[parameter] = example.rowData[identifier] ?? undefined
@@ -407,7 +412,10 @@ async function evaluatePrompt<
 >(
   {
     span,
+    example,
     evaluation,
+    dataset,
+    optimization,
     commit,
     workspace,
   }: {
@@ -415,6 +423,7 @@ async function evaluatePrompt<
     example: DatasetRow
     span: SpanWithDetails<MainSpanType>
     evaluation: EvaluationV2<T, M>
+    dataset: Dataset
     optimization: Optimization
     document: DocumentVersion
     commit: Commit
@@ -426,6 +435,9 @@ async function evaluatePrompt<
   const evaluating = await runEvaluationV2({
     evaluation: evaluation,
     span: span,
+    dataset: dataset,
+    datasetLabel: optimization.configuration.dataset?.label,
+    datasetRow: example,
     commit: commit,
     workspace: workspace,
     dry: true, // BONUS(AO/OPT): Decide whether we should persist evaluation results from optimizations

@@ -14,4 +14,3 @@ export const PUBLIC_ROOT_PATHS = {
   invitations: '/invitations',
   share: '/share',
 }
-
