@@ -72,13 +72,6 @@ export async function backfillSpanReferencesJob(
       .where(
         and(
           eq(spans.workspaceId, workspaceId),
-          or(
-            isNull(spans.documentLogUuid),
-            isNull(spans.documentUuid),
-            isNull(spans.commitUuid),
-            isNull(spans.projectId),
-            isNull(spans.source),
-          ),
           traceIdCursor ? gt(spans.traceId, traceIdCursor) : undefined,
         ),
       )
