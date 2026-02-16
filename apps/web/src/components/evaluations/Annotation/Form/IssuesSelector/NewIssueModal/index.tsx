@@ -156,13 +156,15 @@ export function NewIssueModal({ onClose }: { onClose: () => void }) {
         <Input
           name='title'
           label='Title'
-          defaultValue={title}
+          value={title ?? ''}
+          onChange={(e) => setTitle(e.target.value)}
           errors={errors.title}
         />
         <TextArea
           name='description'
           label='Description'
-          defaultValue={description}
+          value={description ?? ''}
+          onChange={(e) => setDescription(e.target.value)}
           errors={errors.description}
         />
       </form>
