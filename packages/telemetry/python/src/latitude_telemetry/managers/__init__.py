@@ -4,7 +4,8 @@ Manager classes for Latitude telemetry.
 
 from typing import Dict, List
 
-from opentelemetry import baggage, context as otel_context
+from opentelemetry import baggage
+from opentelemetry import context as otel_context
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import TracerProvider
 
