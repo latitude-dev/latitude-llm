@@ -46,6 +46,27 @@ export const MAINTENANCE_JOB_REGISTRY: MaintenanceJobDefinition[] = [
     hasLogs: true,
   },
   {
+    name: 'backfillSpanReferencesJob',
+    displayName: 'Backfill Span References',
+    description:
+      'Backfills missing span references across span types and republishes updated rows to ClickHouse.',
+    params: [
+      {
+        name: 'workspaceId',
+        type: 'number',
+        required: true,
+        description: 'The workspace ID to backfill span references for',
+      },
+      {
+        name: 'batchSize',
+        type: 'number',
+        required: false,
+        description: 'Number of trace IDs to process per batch (default: 500)',
+      },
+    ],
+    hasLogs: true,
+  },
+  {
     name: 'backfillEvaluationResultsToClickhouseJob',
     displayName: 'Backfill Eval Results to ClickHouse',
     description:
