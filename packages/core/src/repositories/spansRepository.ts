@@ -60,11 +60,15 @@ import {
 import { findByEvaluationResults as chFindByEvaluationResults } from '../queries/clickhouse/spans/findByEvaluationResults'
 import { countByProjectAndSource as chCountByProjectAndSource } from '../queries/clickhouse/spans/countByProjectAndSource'
 import { Database, database } from '../client'
+import { isFeatureEnabledByName } from '../services/workspaceFeatures/isFeatureEnabledByName'
+import { captureException } from '../utils/datadogCapture'
 
 const tt = getTableColumns(spans)
 
+const CLICKHOUSE_SPANS_READ_FLAG = 'clickhouse-spans-read'
+
 export class SpansRepository extends Repository<Span> {
-  private useClickHouse: boolean
+  private clickHouseOverride: boolean | undefined
 
   constructor(
     workspaceId: number,
@@ -72,7 +76,25 @@ export class SpansRepository extends Repository<Span> {
     options?: { useClickHouse?: boolean },
   ) {
     super(workspaceId, db)
-    this.useClickHouse = options?.useClickHouse ?? false
+    this.clickHouseOverride = options?.useClickHouse
+  }
+
+  private async shouldUseClickHouse(): Promise<boolean> {
+    if (this.clickHouseOverride !== undefined) return this.clickHouseOverride
+
+    try {
+      const result = await isFeatureEnabledByName(
+        this.workspaceId,
+        CLICKHOUSE_SPANS_READ_FLAG,
+        this.db,
+      )
+      this.clickHouseOverride = result.ok ? result.value : false
+    } catch (error) {
+      captureException(error as Error)
+      this.clickHouseOverride = false
+    }
+
+    return this.clickHouseOverride
   }
 
   get scopeFilter() {
@@ -205,7 +227,7 @@ export class SpansRepository extends Repository<Span> {
   }
 
   async get({ spanId, traceId }: { spanId: string; traceId: string }) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chGetSpan({ workspaceId: this.workspaceId, spanId, traceId })
     }
 
@@ -227,7 +249,7 @@ export class SpansRepository extends Repository<Span> {
     documentLogUuid: string
     spanId: string
   }) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chGetByDocumentLogUuidAndSpanId({
         workspaceId: this.workspaceId,
         documentLogUuid,
@@ -254,7 +276,7 @@ export class SpansRepository extends Repository<Span> {
   }
 
   async list({ traceId }: { traceId: string }) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chListSpans({ workspaceId: this.workspaceId, traceId })
     }
 
@@ -268,7 +290,7 @@ export class SpansRepository extends Repository<Span> {
   }
 
   async getLastTraceByLogUuid(logUuid: string) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chGetLastTraceByLogUuid({
         workspaceId: this.workspaceId,
         logUuid,
@@ -285,7 +307,7 @@ export class SpansRepository extends Repository<Span> {
   }
 
   async listTraceIdsByLogUuid(logUuid: string) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chListTraceIdsByLogUuid({
         workspaceId: this.workspaceId,
         logUuid,
@@ -301,7 +323,7 @@ export class SpansRepository extends Repository<Span> {
   }
 
   async findByDocumentLogUuids(documentLogUuids: string[]) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chFindByDocumentLogUuids({
         workspaceId: this.workspaceId,
         documentLogUuids,
@@ -316,7 +338,7 @@ export class SpansRepository extends Repository<Span> {
   }
 
   async getSpanIdentifiersByDocumentLogUuids(documentLogUuids: string[]) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chGetSpanIdentifiersByDocumentLogUuids({
         workspaceId: this.workspaceId,
         documentLogUuids,
@@ -337,7 +359,7 @@ export class SpansRepository extends Repository<Span> {
   }
 
   async findByDocumentLogUuid(documentLogUuid: string) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chFindByDocumentLogUuid({
         workspaceId: this.workspaceId,
         documentLogUuid,
@@ -354,7 +376,7 @@ export class SpansRepository extends Repository<Span> {
   }
 
   async listByDocumentLogUuid(documentLogUuid: string) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chListByDocumentLogUuid({
         workspaceId: this.workspaceId,
         documentLogUuid,
@@ -370,7 +392,7 @@ export class SpansRepository extends Repository<Span> {
   }
 
   async findLastMainSpanByDocumentLogUuid(documentLogUuid: string) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chFindLastMainSpanByDocumentLogUuid({
         workspaceId: this.workspaceId,
         documentLogUuid,
@@ -399,7 +421,7 @@ export class SpansRepository extends Repository<Span> {
   }
 
   async findFirstMainSpanByDocumentLogUuid(documentLogUuid: string) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chFindFirstMainSpanByDocumentLogUuid({
         workspaceId: this.workspaceId,
         documentLogUuid,
@@ -458,7 +480,7 @@ export class SpansRepository extends Repository<Span> {
     testDeploymentIds?: number[]
     createdAt?: { from?: Date; to?: Date }
   }) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       const result = await chFindByDocumentAndCommitLimited({
         workspaceId: this.workspaceId,
         documentUuid,
@@ -521,7 +543,7 @@ export class SpansRepository extends Repository<Span> {
     experimentUuids?: string[]
     createdAt?: { from?: Date; to?: Date }
   }) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       const result = await chFindByProjectLimited({
         workspaceId: this.workspaceId,
         projectId,
@@ -560,7 +582,7 @@ export class SpansRepository extends Repository<Span> {
     parentId: string
     type: SpanType
   }) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chFindByParentAndType({
         workspaceId: this.workspaceId,
         parentId,
@@ -577,7 +599,7 @@ export class SpansRepository extends Repository<Span> {
   async findBySpanAndTraceIds(
     spanTraceIdPairs: Array<{ spanId: string; traceId: string }>,
   ) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return Result.ok<Span[]>(
         await chFindBySpanAndTraceIds({
           workspaceId: this.workspaceId,
@@ -610,7 +632,7 @@ export class SpansRepository extends Repository<Span> {
     projectId: number
     source?: LogSources[]
   }) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       const result = await chCountByProjectAndSource({
         workspaceId: this.workspaceId,
         projectId,
@@ -654,7 +676,7 @@ export class SpansRepository extends Repository<Span> {
       'evaluatedSpanId' | 'evaluatedTraceId'
     >[],
   ) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       return chFindByEvaluationResults({
         workspaceId: this.workspaceId,
         evaluationResults,
@@ -708,7 +730,7 @@ export class SpansRepository extends Repository<Span> {
   async findCompletionsByParentIds(
     parentIds: Array<{ traceId: string; spanId: string }>,
   ) {
-    if (this.useClickHouse) {
+    if (await this.shouldUseClickHouse()) {
       const result = await chFindCompletionsByParentIds({
         workspaceId: this.workspaceId,
         parentIds,

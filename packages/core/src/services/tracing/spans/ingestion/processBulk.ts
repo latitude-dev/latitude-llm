@@ -500,7 +500,9 @@ async function getExistingBatch(
     return []
   }
 
-  const spansRepository = new SpansRepository(workspace.id, db)
+  const spansRepository = new SpansRepository(workspace.id, db, {
+    useClickHouse: false,
+  })
 
   // Use a more efficient batch query with IN clause
   const conditions = spanIds.map(({ spanId, traceId }) => ({
