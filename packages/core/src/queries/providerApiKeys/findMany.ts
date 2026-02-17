@@ -28,16 +28,18 @@ export const findManyProviderApiKeysByIds = scopedQuery(
       return []
     }
 
+    const numericIds = ids.map(Number)
+
     let query = db
       .select(tt)
       .from(providerApiKeys)
       .where(
         and(
           scopeFilter(workspaceId),
-          inArray(providerApiKeys.id, ids),
+          inArray(providerApiKeys.id, numericIds),
         ),
       )
-      .limit(ids.length)
+      .limit(numericIds.length)
 
     if (ordering?.length) {
       query = query.orderBy(...ordering) as typeof query
