@@ -101,7 +101,5 @@ SELECT
   updated_at
 FROM evaluation_results;
 
-RENAME TABLE
-  evaluation_results TO evaluation_results_backup_0005,
-  evaluation_results_rebuild_0005 TO evaluation_results
-ON CLUSTER default;
+RENAME TABLE evaluation_results TO evaluation_results_backup_0005 ON CLUSTER default;
+RENAME TABLE evaluation_results_rebuild_0005 TO evaluation_results ON CLUSTER default;

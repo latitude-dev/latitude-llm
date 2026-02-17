@@ -128,7 +128,5 @@ SELECT
   retention_expires_at
 FROM spans;
 
-RENAME TABLE
-  spans TO spans_backup_0006,
-  spans_rebuild_0006 TO spans
-ON CLUSTER default;
+RENAME TABLE spans TO spans_backup_0006 ON CLUSTER default;
+RENAME TABLE spans_rebuild_0006 TO spans ON CLUSTER default;

@@ -240,6 +240,8 @@ NOTE: THIS PATTERN IS DEPRECATED AND YOU SHOULD NOT USE IT. USE SCOPED QUERIES I
 
 ClickHouse is used for analytics and high-performance data storage. Migrations use [golang-migrate](https://github.com/golang-migrate/migrate).
 
+**Always manage ClickHouse migrations through the `@latitude-data/core` package.json scripts** (`ch:create`, `ch:up`, `ch:down`, `ch:status`, etc.). **Do not create, rename, or register ClickHouse migration files manually.**
+
 #### Migration Commands
 
 - `pnpm --filter @latitude-data/core ch:connect` - Open interactive ClickHouse client
