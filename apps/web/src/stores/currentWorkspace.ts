@@ -27,7 +27,6 @@ export default function useCurrentWorkspace(opts?: SWRConfiguration) {
       if (!data) return
 
       const [workspace, error] = await updateWorkspace({
-        workspaceId: data!.id,
         name: payload.name,
       })
       if (error) {
@@ -59,7 +58,6 @@ export default function useCurrentWorkspace(opts?: SWRConfiguration) {
       if (!data) return
 
       const [workspace, error] = await setDefaultProvider({
-        workspaceId: data!.id,
         defaultProviderId: payload.defaultProviderId,
       })
       if (error) {

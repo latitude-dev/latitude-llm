@@ -51,9 +51,37 @@ describe('useDragEndFile', () => {
     vi.clearAllMocks()
   })
 
+  it('does nothing if promptManagement is disabled', async () => {
+    const { result } = renderHook(() =>
+      useDragEndFile({ promptManagement: false, renamePaths: renamePathsMock }),
+    )
+    const dragNode: DraggableAndDroppableData = {
+      nodeId: 'drag-1',
+      name: 'file.txt',
+      path: '/path/to/file',
+      isFile: true,
+      isRoot: false,
+    }
+    const destinationFolder: DraggableAndDroppableData = {
+      nodeId: 'dest-1',
+      name: 'Documents',
+      path: '/destination',
+      isFile: false,
+      isRoot: false,
+    }
+    const event = createDragEndEvent(dragNode, destinationFolder)
+
+    await act(async () => {
+      await result.current.onDragEnd(event as DragEndEvent)
+    })
+
+    expect(renamePathsMock).not.toHaveBeenCalled()
+    expect(deleteTmpFolderMock).not.toHaveBeenCalled()
+  })
+
   it('does nothing if active drag data is missing', async () => {
     const { result } = renderHook(() =>
-      useDragEndFile({ renamePaths: renamePathsMock }),
+      useDragEndFile({ promptManagement: true, renamePaths: renamePathsMock }),
     )
     const event = createDragEndEvent(undefined, {
       nodeId: 'dest-1',
@@ -73,7 +101,7 @@ describe('useDragEndFile', () => {
 
   it('does nothing if destination folder data is missing', async () => {
     const { result } = renderHook(() =>
-      useDragEndFile({ renamePaths: renamePathsMock }),
+      useDragEndFile({ promptManagement: true, renamePaths: renamePathsMock }),
     )
     const event = createDragEndEvent(
       {
@@ -96,7 +124,7 @@ describe('useDragEndFile', () => {
 
   it('does nothing if the computed paths are equal (for folders)', async () => {
     const { result } = renderHook(() =>
-      useDragEndFile({ renamePaths: renamePathsMock }),
+      useDragEndFile({ promptManagement: true, renamePaths: renamePathsMock }),
     )
 
     const dragNode: DraggableAndDroppableData = {
@@ -126,7 +154,7 @@ describe('useDragEndFile', () => {
 
   it('calls renamePaths and deleteTmpFolder for a valid file move', async () => {
     const { result } = renderHook(() =>
-      useDragEndFile({ renamePaths: renamePathsMock }),
+      useDragEndFile({ promptManagement: true, renamePaths: renamePathsMock }),
     )
     const dragNode: DraggableAndDroppableData = {
       nodeId: 'drag-1',
@@ -159,7 +187,7 @@ describe('useDragEndFile', () => {
 
   it('calls renamePaths and deleteTmpFolder for a valid folder move', async () => {
     const { result } = renderHook(() =>
-      useDragEndFile({ renamePaths: renamePathsMock }),
+      useDragEndFile({ promptManagement: true, renamePaths: renamePathsMock }),
     )
     const dragNode: DraggableAndDroppableData = {
       nodeId: 'drag-2',

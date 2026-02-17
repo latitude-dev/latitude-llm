@@ -17,10 +17,12 @@ import { useCommits } from '$/stores/commitsStore'
 import { useRunningDocuments } from '$/stores/runs/runningDocuments'
 
 export default function ClientFilesTree({
+  promptManagement,
   documents: serverDocuments,
   liveDocuments: serverLiveDocuments,
   currentDocument,
 }: {
+  promptManagement: boolean
   documents: SidebarDocument[]
   liveDocuments?: SidebarDocument[]
   currentDocument: SidebarDocument | undefined
@@ -117,6 +119,7 @@ export default function ClientFilesTree({
   return (
     <>
       <FilesTree
+        promptManagement={promptManagement}
         sidebarLinkContext={sidebarLinkContext}
         isLoading={isLoading}
         isMerged={isMerged}

@@ -1,3 +1,4 @@
+import { useProductAccess } from '$/components/Providers/SessionProvider'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
@@ -20,6 +21,7 @@ export function EvaluationsTableBlankSlate({
   isCreatingEvaluation: boolean
   isGeneratingEvaluation: boolean
 }) {
+  const { promptManagement } = useProductAccess()
   const [openGenerateModal, setOpenGenerateModal] = useState(false)
 
   return (
@@ -40,17 +42,18 @@ export function EvaluationsTableBlankSlate({
           title='How to evaluate your prompts using LLMs and Latitude.so'
         />
       </BlankSlateStep>
-      <BlankSlateStep
-        number={2}
-        title='Generate an evaluation'
-        description='Our AI can craft an evaluation just for this specific prompt, try it out!'
-        className='animate-in fade-in duration-300 max-h-[360px] over overflow-y-auto'
-      >
-        <div className='relative bg-secondary px-4 py-2 rounded-lg border max-h-[272px] overflow-hidden'>
-          <div className='max-h-[272px] overflow-hidden'>
-            <span className='whitespace-pre-wrap text-sm leading-1 text-muted-foreground'>
-              {generatorEnabled
-                ? `
+      {promptManagement && (
+        <BlankSlateStep
+          number={2}
+          title='Generate an evaluation'
+          description='Our AI can craft an evaluation just for this specific prompt, try it out!'
+          className='animate-in fade-in duration-300 max-h-[360px] over overflow-y-auto'
+        >
+          <div className='relative bg-secondary px-4 py-2 rounded-lg border max-h-[272px] overflow-hidden'>
+            <div className='max-h-[272px] overflow-hidden'>
+              <span className='whitespace-pre-wrap text-sm leading-1 text-muted-foreground'>
+                {generatorEnabled
+                  ? `
 ---
   provider: OpenAI
   model: gpt-5.2
@@ -59,7 +62,7 @@ This is just a placeholder for the evaluation prompt because generating it takes
 
 Don't rawdog your prompts!
             `.trim()
-                : `
+                  : `
 ---
   provider: OpenAI
   model: gpt-5.2
@@ -68,29 +71,30 @@ This is just a placeholder for the evaluation prompt because the evaluation gene
 
 Don't rawdog your prompts!
             `.trim()}
-            </span>
+              </span>
+            </div>
+            <div className='absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-secondary to-transparent pointer-events-none'></div>
+            <div className='flex justify-center absolute right-0 bottom-4 w-full'>
+              <Button
+                fancy
+                onClick={() => setOpenGenerateModal(true)}
+                disabled={!generatorEnabled}
+              >
+                Generate the evaluation
+              </Button>
+              <EvaluationsGenerator
+                open={openGenerateModal}
+                setOpen={setOpenGenerateModal}
+                createEvaluation={createEvaluation}
+                generateEvaluation={generateEvaluation}
+                generatorEnabled={generatorEnabled}
+                isCreatingEvaluation={isCreatingEvaluation}
+                isGeneratingEvaluation={isGeneratingEvaluation}
+              />
+            </div>
           </div>
-          <div className='absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-secondary to-transparent pointer-events-none'></div>
-          <div className='flex justify-center absolute right-0 bottom-4 w-full'>
-            <Button
-              fancy
-              onClick={() => setOpenGenerateModal(true)}
-              disabled={!generatorEnabled}
-            >
-              Generate the evaluation
-            </Button>
-            <EvaluationsGenerator
-              open={openGenerateModal}
-              setOpen={setOpenGenerateModal}
-              createEvaluation={createEvaluation}
-              generateEvaluation={generateEvaluation}
-              generatorEnabled={generatorEnabled}
-              isCreatingEvaluation={isCreatingEvaluation}
-              isGeneratingEvaluation={isGeneratingEvaluation}
-            />
-          </div>
-        </div>
-      </BlankSlateStep>
+        </BlankSlateStep>
+      )}
     </BlankSlateWithSteps>
   )
 }

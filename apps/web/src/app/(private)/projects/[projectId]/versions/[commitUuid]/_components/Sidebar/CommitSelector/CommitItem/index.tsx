@@ -1,5 +1,3 @@
-'use client'
-
 import { MouseEvent, useMemo, useState } from 'react'
 import { ROUTES } from '$/services/routes'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
@@ -121,7 +119,7 @@ export function CommitItem({
     if (!selectedSegment) return documentRoute.editor.root
 
     return (
-      documentRoute[selectedSegment as 'editor' | 'logs']?.root ??
+      documentRoute[selectedSegment as 'editor' | 'traces']?.root ??
       documentRoute.editor.root
     )
   }, [project.id, commit, isHead, currentDocument, selectedSegment])

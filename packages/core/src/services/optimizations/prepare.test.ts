@@ -2134,7 +2134,9 @@ describe('prepareOptimization', () => {
         const datasetsRepository = new DatasetsRepository(
           workspaceWithParams.id,
         )
-        const listing = await datasetsRepository.findAll().then((r) => r.unwrap())
+        const listing = await datasetsRepository
+          .findAll()
+          .then((r) => r.unwrap())
         const optimizationDatasets = listing.filter(
           (d) =>
             d.name.includes('Trainset') &&

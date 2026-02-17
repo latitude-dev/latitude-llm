@@ -5,7 +5,9 @@ import {
 } from '$/app/(private)/_data-access'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { parsePage, parsePageSize, parseUuid } from '$/lib/parseUtils'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
+import { computeProductAccess } from '@latitude-data/core/services/productAccess/computeProductAccess'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { Metadata } from 'next'
 import { redirect } from 'next/navigation'
@@ -35,6 +37,17 @@ export default async function OptimizationsPage({
     pageSize: parsePageSize(queryParams.pageSize),
   }
   const optimizationUuid = parseUuid(queryParams.optimizationUuid)
+
+  const { workspace } = await getCurrentUserOrRedirect()
+  const productAccess = computeProductAccess(workspace)
+  if (!productAccess.promptManagement) {
+    return redirect(
+      ROUTES.projects
+        .detail({ id: Number(projectId) })
+        .commits.detail({ uuid: commitUuid })
+        .documents.detail({ uuid: documentUuid }).traces.root,
+    )
+  }
 
   const isEnabled = await isFeatureEnabledCached('optimizations')
   if (!isEnabled) {

@@ -11,6 +11,7 @@ import {
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
+import { workspaces } from '../../schema/models/workspaces'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
@@ -186,6 +187,96 @@ describe('createEvaluationV2', () => {
         evaluation: evaluation,
         workspaceId: workspace.id,
       },
+    })
+  })
+
+  describe('when evaluation requires expected output', () => {
+    it('fails when workspace has promptManagerEnabled disabled', async () => {
+      await database
+        .update(workspaces)
+        .set({ promptManagerEnabled: false })
+        .where(eq(workspaces.id, workspace.id))
+
+      const workspaceWithoutPromptManager = {
+        ...workspace,
+        promptManagerEnabled: false,
+      }
+
+      await expect(
+        createEvaluationV2({
+          document: document,
+          commit: commit,
+          settings: settings,
+          options: options,
+          issueId,
+          workspace: workspaceWithoutPromptManager,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError(
+        new BadRequestError(
+          'This evaluation type requires expected output. Expected output is matched from dataset columns to prompt parameters, and parameters can only be defined when Prompt Manager is enabled.',
+        ),
+      )
+    })
+
+    it('succeeds when workspace has promptManagerEnabled', async () => {
+      mocks.publisher.mockClear()
+
+      const { evaluation } = await createEvaluationV2({
+        document: document,
+        commit: commit,
+        settings: settings,
+        options: options,
+        issueId,
+        workspace: workspace,
+      }).then((r) => r.unwrap())
+
+      expect(evaluation).toEqual(
+        expect.objectContaining({
+          workspaceId: workspace.id,
+          commitId: commit.id,
+          documentUuid: document.documentUuid,
+          ...settings,
+          ...options,
+        }),
+      )
+    })
+
+    it('succeeds for evaluation types that do not require expected output even when promptManagerEnabled is disabled', async () => {
+      mocks.publisher.mockClear()
+
+      await database
+        .update(workspaces)
+        .set({ promptManagerEnabled: false })
+        .where(eq(workspaces.id, workspace.id))
+
+      const workspaceWithoutPromptManager = {
+        ...workspace,
+        promptManagerEnabled: false,
+      }
+
+      const settingsWithoutExpectedOutput: EvaluationSettings<
+        EvaluationType.Llm,
+        LlmEvaluationMetric.Binary
+      > = settingsLLMasJudgeBinary
+
+      const { evaluation } = await createEvaluationV2({
+        document: document,
+        commit: commit,
+        settings: settingsWithoutExpectedOutput,
+        options: options,
+        issueId,
+        workspace: workspaceWithoutPromptManager,
+      }).then((r) => r.unwrap())
+
+      expect(evaluation).toEqual(
+        expect.objectContaining({
+          workspaceId: workspace.id,
+          commitId: commit.id,
+          documentUuid: document.documentUuid,
+          ...settingsWithoutExpectedOutput,
+          ...options,
+        }),
+      )
     })
   })
 })

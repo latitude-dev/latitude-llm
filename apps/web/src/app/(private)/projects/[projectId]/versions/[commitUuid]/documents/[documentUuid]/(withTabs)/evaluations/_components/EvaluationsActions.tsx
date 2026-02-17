@@ -7,9 +7,11 @@ import {
   useCurrentProject,
   type IProjectContextType,
 } from '$/app/providers/ProjectProvider'
+import { useProductAccess } from '$/components/Providers/SessionProvider'
 import EvaluationV2Form, {
   EvaluationV2FormErrors,
 } from '$/components/evaluations/EvaluationV2Form'
+import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
@@ -23,7 +25,7 @@ import {
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { EvaluationsGenerator } from './EvaluationsGenerator'
 
 const DEFAULT_EVALUATION_SETTINGS = {
@@ -93,6 +95,7 @@ export function EvaluationsActions({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
+  const { promptManagement } = useProductAccess()
 
   return (
     <div className='flex flex-row items-center gap-4'>
@@ -103,7 +106,7 @@ export function EvaluationsActions({
         createEvaluation={createEvaluation}
         isCreatingEvaluation={isCreatingEvaluation}
       />
-      {generatorEnabled && (
+      {promptManagement && generatorEnabled && (
         <GenerateEvaluation
           createEvaluation={createEvaluation}
           generateEvaluation={generateEvaluation}
@@ -118,6 +121,7 @@ export function EvaluationsActions({
         document={document}
         createEvaluation={createEvaluation}
         isCreatingEvaluation={isCreatingEvaluation}
+        promptManagement={promptManagement}
       />
     </div>
   )
@@ -165,12 +169,14 @@ function AddEvaluation({
   document,
   createEvaluation,
   isCreatingEvaluation,
+  promptManagement,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
   isCreatingEvaluation: boolean
+  promptManagement: boolean
 }) {
   const navigate = useNavigate()
 
@@ -184,8 +190,20 @@ function AddEvaluation({
   const [issueId, setIssueId] = useState<number | null>(null)
   const [errors, setErrors] = useState<EvaluationV2FormErrors>()
 
+  const metricSpecification = useMemo(() => {
+    const typeSpec = EVALUATION_SPECIFICATIONS[settings.type]
+    const metrics = typeSpec?.metrics as Record<
+      string,
+      { requiresExpectedOutput?: boolean }
+    >
+    return metrics?.[settings.metric]
+  }, [settings.type, settings.metric])
+
+  const requiresExpectedOutputBlocked =
+    !promptManagement && metricSpecification?.requiresExpectedOutput
+
   const onCreate = useCallback(async () => {
-    if (isCreatingEvaluation) return
+    if (isCreatingEvaluation || requiresExpectedOutputBlocked) return
     const [result, errors] = await createEvaluation({
       documentUuid: document.documentUuid,
       settings,
@@ -212,6 +230,7 @@ function AddEvaluation({
     }
   }, [
     isCreatingEvaluation,
+    requiresExpectedOutputBlocked,
     createEvaluation,
     settings,
     options,
@@ -236,6 +255,7 @@ function AddEvaluation({
         Add evaluation
       </TableWithHeader.Button>
       <ConfirmModal
+        dismissible
         size='medium'
         open={openCreateModal}
         title='Create a new evaluation'
@@ -244,7 +264,7 @@ function AddEvaluation({
         onConfirm={onCreate}
         confirm={{
           label: isCreatingEvaluation ? 'Creating...' : 'Create evaluation',
-          disabled: isCreatingEvaluation,
+          disabled: isCreatingEvaluation || requiresExpectedOutputBlocked,
           isConfirming: isCreatingEvaluation,
         }}
         onCancel={() => setOpenCreateModal(false)}

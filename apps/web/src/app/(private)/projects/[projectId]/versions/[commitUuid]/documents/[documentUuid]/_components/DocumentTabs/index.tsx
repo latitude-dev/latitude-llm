@@ -6,6 +6,7 @@ import { ReactNode } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useDeployPrompt } from '../DocumentationModal'
 import { DocumentTabSelector } from './tabs'
+import { useProductAccess } from '$/components/Providers/SessionProvider'
 
 export default function DocumentTabs({
   params,
@@ -15,6 +16,7 @@ export default function DocumentTabs({
   document: DocumentVersion
   children: ReactNode
 }) {
+  const { promptManagement } = useProductAccess()
   const { toggleDocumentation } = useDeployPrompt()
 
   return (
@@ -25,15 +27,17 @@ export default function DocumentTabs({
           commitUuid={params.commitUuid}
           documentUuid={params.documentUuid}
         />
-        <div className='flex flex-row items-center gap-x-4'>
-          <Button
-            variant='ghost'
-            onClick={toggleDocumentation}
-            iconProps={{ name: 'code2', placement: 'right' }}
-          >
-            Deploy this prompt
-          </Button>
-        </div>
+        {promptManagement && (
+          <div className='flex flex-row items-center gap-x-4'>
+            <Button
+              variant='ghost'
+              onClick={toggleDocumentation}
+              iconProps={{ name: 'code2', placement: 'right' }}
+            >
+              Deploy this prompt
+            </Button>
+          </div>
+        )}
       </div>
       <div className='flex-grow min-h-0 flex flex-col w-full relative'>
         {children}

@@ -1,24 +1,15 @@
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { ExperimentsRepository } from '@latitude-data/core/repositories'
-import { ExperimentsPageContent } from './_components/ExperimentsPage'
+import { ReactNode } from 'react'
 import buildMetatags from '$/app/_lib/buildMetatags'
+import { Metadata } from 'next'
 
-export const metadata = buildMetatags({
+export const metadata: Promise<Metadata> = buildMetatags({
   locationDescription: 'Prompt Experiments Page',
 })
 
-export default async function ExperimentsLayout({
-  params,
+export default function ExperimentsLayout({
+  children,
 }: {
-  params: Promise<{
-    documentUuid: string
-  }>
+  children: ReactNode
 }) {
-  const { workspace } = await getCurrentUserOrRedirect()
-  const { documentUuid } = await params
-
-  const experimentsScope = new ExperimentsRepository(workspace.id)
-  const count = await experimentsScope.countByDocumentUuid(documentUuid)
-
-  return <ExperimentsPageContent initialCount={count} />
+  return children
 }

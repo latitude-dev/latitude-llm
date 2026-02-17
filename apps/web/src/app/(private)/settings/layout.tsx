@@ -14,6 +14,7 @@ import WorkspaceName from './_components/WorkspaceName'
 import Integrations from './_components/Integrations'
 import Webhooks from './_components/Webhooks'
 import Promocodes from './_components/Promocodes'
+import ProductFeatures from './_components/ProductFeatures'
 import { CustomerPortalButton } from './_components/CustomerPortalButton'
 
 export const metadata: Promise<Metadata> = buildMetatags({
@@ -34,6 +35,9 @@ export default async function SettingsLayout({
       {children}
       <TitleWithActions title='Workspace' actions={<CustomerPortalButton />} />
       <WorkspaceName />
+      <div id='product-features'>
+        <ProductFeatures />
+      </div>
       <Memberships />
       <WorkspaceApiKeys />
       <ProviderApiKeys />

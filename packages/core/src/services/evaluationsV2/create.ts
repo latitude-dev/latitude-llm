@@ -1,4 +1,5 @@
 import {
+  EVALUATION_SPECIFICATIONS,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -41,6 +42,20 @@ export async function createEvaluationV2<
   },
   transaction = new Transaction(),
 ): Promise<TypedResult<{ evaluation: EvaluationV2<T, M> }>> {
+  const typeSpec = EVALUATION_SPECIFICATIONS[settings.type]
+  const metrics = typeSpec?.metrics as Record<
+    string,
+    { requiresExpectedOutput?: boolean }
+  >
+  const metricSpec = metrics?.[settings.metric]
+  if (metricSpec?.requiresExpectedOutput && !workspace.promptManagerEnabled) {
+    return Result.error(
+      new BadRequestError(
+        'This evaluation type requires expected output. Expected output is matched from dataset columns to prompt parameters, and parameters can only be defined when Prompt Manager is enabled.',
+      ),
+    )
+  }
+
   return await transaction.call(async (tx) => {
     if (!options) options = {}
     options = compactObject(options)

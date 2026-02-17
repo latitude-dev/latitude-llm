@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { ROUTES } from '../../../../services/routes'
 import { getRedirectUrl } from './utils'
@@ -15,12 +14,7 @@ describe('getRedirectUrl', () => {
     { uuid: '3', mergedAt: null },
   ] as Commit[]
 
-  const mockDocuments = [
-    { documentUuid: 'doc-1' },
-    { documentUuid: 'doc-2' },
-  ] as DocumentVersion[]
-
-  describe('when agentBuilder is enabled', () => {
+  describe('when full product (agentBuilder and promptManagement both enabled)', () => {
     it('returns latest commit home URL when lastSeenCommitUuid is HEAD_COMMIT', () => {
       const result = getRedirectUrl({
         commits: mockCommits,
@@ -28,7 +22,7 @@ describe('getRedirectUrl', () => {
         lastSeenCommitUuid: HEAD_COMMIT,
         PROJECT_ROUTE,
         agentBuilder: true,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe('/projects/1/versions/live/home')
     })
@@ -40,7 +34,7 @@ describe('getRedirectUrl', () => {
         lastSeenCommitUuid: 'non-existent',
         PROJECT_ROUTE,
         agentBuilder: true,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe('/projects/1/versions/live/home')
     })
@@ -52,7 +46,7 @@ describe('getRedirectUrl', () => {
         lastSeenCommitUuid: '2',
         PROJECT_ROUTE,
         agentBuilder: true,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe('/projects/1/versions/2/home')
     })
@@ -64,7 +58,7 @@ describe('getRedirectUrl', () => {
         lastSeenCommitUuid: '1',
         PROJECT_ROUTE,
         agentBuilder: true,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe('/projects/1/versions/live/home')
     })
@@ -76,7 +70,7 @@ describe('getRedirectUrl', () => {
         lastSeenCommitUuid: undefined,
         PROJECT_ROUTE,
         agentBuilder: true,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe('/projects/1/versions/live/home')
     })
@@ -89,7 +83,7 @@ describe('getRedirectUrl', () => {
         lastSeenCommitUuid: undefined,
         PROJECT_ROUTE,
         agentBuilder: true,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe('/projects/1/versions/1/home')
     })
@@ -102,7 +96,7 @@ describe('getRedirectUrl', () => {
         lastSeenDocumentUuid: 'fake-document-uuid',
         PROJECT_ROUTE,
         agentBuilder: true,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe('/projects/1/versions/2/documents/fake-document-uuid')
     })
@@ -115,7 +109,7 @@ describe('getRedirectUrl', () => {
         lastSeenDocumentUuid: 'fake-document-uuid',
         PROJECT_ROUTE,
         agentBuilder: true,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe(
         '/projects/1/versions/live/documents/fake-document-uuid',
@@ -130,7 +124,7 @@ describe('getRedirectUrl', () => {
         lastSeenDocumentUuid: 'fake-document-uuid',
         PROJECT_ROUTE,
         agentBuilder: true,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe(
         '/projects/1/versions/live/documents/fake-document-uuid',
@@ -145,7 +139,7 @@ describe('getRedirectUrl', () => {
         lastSeenDocumentUuid: 'fake-document-uuid',
         PROJECT_ROUTE,
         agentBuilder: true,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe(
         '/projects/1/versions/live/documents/fake-document-uuid',
@@ -153,42 +147,30 @@ describe('getRedirectUrl', () => {
     })
   })
 
-  describe('when agentBuilder is disabled', () => {
-    it('returns first document URL when documents exist', () => {
+  describe('when simplified product (agentBuilder disabled)', () => {
+    it('returns issues URL', () => {
       const result = getRedirectUrl({
         commits: mockCommits,
         projectId: 1,
         lastSeenCommitUuid: HEAD_COMMIT,
         PROJECT_ROUTE,
         agentBuilder: false,
-        documents: mockDocuments,
-      })
-      expect(result).toBe('/projects/1/versions/live/documents/doc-1')
-    })
-
-    it('returns issues URL when no documents exist', () => {
-      const result = getRedirectUrl({
-        commits: mockCommits,
-        projectId: 1,
-        lastSeenCommitUuid: HEAD_COMMIT,
-        PROJECT_ROUTE,
-        agentBuilder: false,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe('/projects/1/versions/live/issues')
     })
 
-    it('ignores lastSeenDocumentUuid and returns first document URL', () => {
+    it('ignores lastSeenDocumentUuid and returns issues URL', () => {
       const result = getRedirectUrl({
         commits: mockCommits,
         projectId: 1,
         lastSeenCommitUuid: '2',
-        lastSeenDocumentUuid: 'some-other-document',
+        lastSeenDocumentUuid: 'some-document',
         PROJECT_ROUTE,
         agentBuilder: false,
-        documents: mockDocuments,
+        promptManagement: true,
       })
-      expect(result).toBe('/projects/1/versions/2/documents/doc-1')
+      expect(result).toBe('/projects/1/versions/2/issues')
     })
 
     it('uses correct commit when lastSeenCommitUuid is not merged', () => {
@@ -198,9 +180,9 @@ describe('getRedirectUrl', () => {
         lastSeenCommitUuid: '2',
         PROJECT_ROUTE,
         agentBuilder: false,
-        documents: mockDocuments,
+        promptManagement: true,
       })
-      expect(result).toBe('/projects/1/versions/2/documents/doc-1')
+      expect(result).toBe('/projects/1/versions/2/issues')
     })
 
     it('uses head commit when lastSeenCommitUuid is merged', () => {
@@ -210,12 +192,12 @@ describe('getRedirectUrl', () => {
         lastSeenCommitUuid: '1',
         PROJECT_ROUTE,
         agentBuilder: false,
-        documents: mockDocuments,
+        promptManagement: true,
       })
-      expect(result).toBe('/projects/1/versions/live/documents/doc-1')
+      expect(result).toBe('/projects/1/versions/live/issues')
     })
 
-    it('returns issues URL on first commit when no head commit and no documents', () => {
+    it('returns issues URL on first commit when no head commit', () => {
       const noHeadCommits = [{ uuid: '1', mergedAt: null }] as Commit[]
       const result = getRedirectUrl({
         commits: noHeadCommits,
@@ -223,9 +205,99 @@ describe('getRedirectUrl', () => {
         lastSeenCommitUuid: undefined,
         PROJECT_ROUTE,
         agentBuilder: false,
-        documents: [],
+        promptManagement: true,
       })
       expect(result).toBe('/projects/1/versions/1/issues')
+    })
+  })
+
+  describe('when simplified product (promptManagement disabled)', () => {
+    it('returns issues URL', () => {
+      const result = getRedirectUrl({
+        commits: mockCommits,
+        projectId: 1,
+        lastSeenCommitUuid: HEAD_COMMIT,
+        PROJECT_ROUTE,
+        agentBuilder: true,
+        promptManagement: false,
+      })
+      expect(result).toBe('/projects/1/versions/live/issues')
+    })
+
+    it('ignores lastSeenDocumentUuid and returns issues URL', () => {
+      const result = getRedirectUrl({
+        commits: mockCommits,
+        projectId: 1,
+        lastSeenCommitUuid: '2',
+        lastSeenDocumentUuid: 'some-document',
+        PROJECT_ROUTE,
+        agentBuilder: true,
+        promptManagement: false,
+      })
+      expect(result).toBe('/projects/1/versions/2/issues')
+    })
+
+    it('uses correct commit when lastSeenCommitUuid is not merged', () => {
+      const result = getRedirectUrl({
+        commits: mockCommits,
+        projectId: 1,
+        lastSeenCommitUuid: '2',
+        PROJECT_ROUTE,
+        agentBuilder: true,
+        promptManagement: false,
+      })
+      expect(result).toBe('/projects/1/versions/2/issues')
+    })
+
+    it('uses head commit when lastSeenCommitUuid is merged', () => {
+      const result = getRedirectUrl({
+        commits: mockCommits,
+        projectId: 1,
+        lastSeenCommitUuid: '1',
+        PROJECT_ROUTE,
+        agentBuilder: true,
+        promptManagement: false,
+      })
+      expect(result).toBe('/projects/1/versions/live/issues')
+    })
+
+    it('returns issues URL on first commit when no head commit', () => {
+      const noHeadCommits = [{ uuid: '1', mergedAt: null }] as Commit[]
+      const result = getRedirectUrl({
+        commits: noHeadCommits,
+        projectId: 1,
+        lastSeenCommitUuid: undefined,
+        PROJECT_ROUTE,
+        agentBuilder: true,
+        promptManagement: false,
+      })
+      expect(result).toBe('/projects/1/versions/1/issues')
+    })
+  })
+
+  describe('when simplified product (both disabled)', () => {
+    it('returns issues URL', () => {
+      const result = getRedirectUrl({
+        commits: mockCommits,
+        projectId: 1,
+        lastSeenCommitUuid: HEAD_COMMIT,
+        PROJECT_ROUTE,
+        agentBuilder: false,
+        promptManagement: false,
+      })
+      expect(result).toBe('/projects/1/versions/live/issues')
+    })
+
+    it('returns issues URL on specific commit', () => {
+      const result = getRedirectUrl({
+        commits: mockCommits,
+        projectId: 1,
+        lastSeenCommitUuid: '2',
+        PROJECT_ROUTE,
+        agentBuilder: false,
+        promptManagement: false,
+      })
+      expect(result).toBe('/projects/1/versions/2/issues')
     })
   })
 })

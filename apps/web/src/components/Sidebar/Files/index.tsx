@@ -211,6 +211,7 @@ export type SidebarLinkContext = {
 }
 
 export function FilesTree({
+  promptManagement,
   sidebarLinkContext,
   isLoading,
   isMerged,
@@ -228,6 +229,7 @@ export function FilesTree({
   setMainDocumentUuid,
   isDestroying,
 }: {
+  promptManagement: boolean
   sidebarLinkContext: SidebarLinkContext
   isLoading: boolean
   isMerged: boolean
@@ -307,6 +309,7 @@ export function FilesTree({
   return (
     <ClientOnly>
       <FileTreeProvider
+        promptManagement={promptManagement}
         sidebarLinkContext={sidebarLinkContext}
         isLoading={isLoading}
         isMerged={isMerged}

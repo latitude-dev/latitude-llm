@@ -1,7 +1,6 @@
 import {
   findCommitsByProjectCached,
   findProjectCached,
-  getDocumentsAtCommitCached,
 } from '$/app/(private)/_data-access'
 import { lastSeenCommitCookieName } from '$/helpers/cookies/lastSeenCommit'
 import {
@@ -56,11 +55,6 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
       projectId: project.id,
     })
 
-    const headCommit = commits.find((c) => c.mergedAt) ?? commits[0]
-    const documents = headCommit
-      ? await getDocumentsAtCommitCached({ commit: headCommit })
-      : []
-
     url = getRedirectUrl({
       commits,
       projectId: project.id,
@@ -68,7 +62,7 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
       lastSeenDocumentUuid,
       PROJECT_ROUTE,
       agentBuilder: productAccess.agentBuilder,
-      documents,
+      promptManagement: productAccess.promptManagement,
     })
   } catch (error) {
     if (error instanceof NotFoundError) {
