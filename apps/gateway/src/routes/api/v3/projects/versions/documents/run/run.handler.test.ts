@@ -330,6 +330,79 @@ describe('POST /run', () => {
       })
     })
 
+    it('sends messages to runForegroundDocument', async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            event: StreamEventTypes.Latitude,
+            data: {
+              type: ChainEventTypes.ChainCompleted,
+            },
+          })
+
+          controller.close()
+        },
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveDocument: document,
+        effectiveSource: LogSources.API,
+      })
+
+      mocks.runForegroundDocument.mockReturnValue(
+        Promise.resolve({
+          stream,
+          error: Promise.resolve(undefined),
+          getFinalResponse: async () => ({
+            response: { text: 'Hello', usage: {} },
+            provider: provider,
+          }),
+        }),
+      )
+
+      await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify({
+          path: 'path/to/document',
+          parameters: { foo: 'bar' },
+          stream: true,
+          messages: [
+            {
+              role: 'user',
+              content: [{ type: 'text', text: 'Hello!' }],
+            },
+            {
+              role: 'assistant',
+              content: [{ type: 'text', text: 'Hi there!' }],
+            },
+          ],
+        }),
+        headers,
+      })
+
+      expect(mocks.runForegroundDocument).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspace: expect.objectContaining({ id: workspace.id }),
+          document: expect.anything(),
+          commit: expect.objectContaining({ id: commit.id }),
+          project: expect.objectContaining({ id: project.id }),
+          parameters: { foo: 'bar' },
+          messages: [
+            {
+              role: 'user',
+              content: [{ type: 'text', text: 'Hello!' }],
+            },
+            {
+              role: 'assistant',
+              content: [{ type: 'text', text: 'Hi there!' }],
+            },
+          ],
+        }),
+      )
+    })
+
     it('sends mcpHeaders to runForegroundDocument', async () => {
       const stream = new ReadableStream({
         start(controller) {
@@ -1206,6 +1279,62 @@ describe('POST /run', () => {
             'stripe-mcp': { authorization: 'Bearer sk_test_123' },
             'github-mcp': { 'x-github-token': 'ghp_abc123' },
           },
+        }),
+      )
+    })
+
+    it('passes messages to enqueueRun for background execution', async () => {
+      mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
+        if (featureName === 'api-background-runs') {
+          return Promise.resolve(Result.ok(false))
+        }
+        return Promise.resolve(Result.ok(false))
+      })
+
+      mocks.resolveAbTestRouting.mockResolvedValue({
+        abTest: null,
+        effectiveCommit: commit,
+        effectiveDocument: document,
+        effectiveSource: LogSources.API,
+      })
+
+      mocks.enqueueRun.mockReturnValue(
+        Promise.resolve(
+          Result.ok({
+            run: { uuid: 'test-run-uuid' },
+          }),
+        ),
+      )
+
+      await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify({
+          path: 'path/to/document',
+          parameters: { foo: 'bar' },
+          background: true,
+          messages: [
+            {
+              role: 'user',
+              content: [{ type: 'text', text: 'Hello!' }],
+            },
+          ],
+        }),
+        headers,
+      })
+
+      expect(mocks.enqueueRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspace: expect.objectContaining({ id: workspace.id }),
+          document: expect.anything(),
+          commit: expect.objectContaining({ id: commit.id }),
+          project: expect.objectContaining({ id: project.id }),
+          parameters: { foo: 'bar' },
+          messages: [
+            {
+              role: 'user',
+              content: [{ type: 'text', text: 'Hello!' }],
+            },
+          ],
         }),
       )
     })
