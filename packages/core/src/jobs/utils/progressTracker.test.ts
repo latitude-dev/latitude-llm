@@ -92,6 +92,7 @@ describe('ProgressTracker', () => {
         failed: 0,
         errors: 0,
         totalScore: 0,
+        documentRunsCompleted: 0,
       })
     })
   })
@@ -104,6 +105,7 @@ describe('ProgressTracker', () => {
 
       const progress = await tracker.getProgress()
       expect(progress.completed).toBe(1)
+      expect(progress.documentRunsCompleted).toBe(1)
     })
 
     it('marks run and evaluations as errors when document run fails', async () => {
@@ -114,6 +116,7 @@ describe('ProgressTracker', () => {
       const progress = await tracker.getProgress()
       expect(progress.errors).toBe(3)
       expect(progress.completed).toBe(1)
+      expect(progress.documentRunsCompleted).toBe(1)
     })
 
     it('marks run as error when document run fails with no evaluations', async () => {
@@ -124,6 +127,7 @@ describe('ProgressTracker', () => {
       const progress = await tracker.getProgress()
       expect(progress.errors).toBe(1)
       expect(progress.completed).toBe(1)
+      expect(progress.documentRunsCompleted).toBe(1)
     })
   })
 

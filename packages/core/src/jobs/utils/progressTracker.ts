@@ -9,6 +9,7 @@ export type TrackedProgress = {
   failed: number // Evaluations failed
   errors: number // Evaluations that failed with an error or did not execute due to an error in the document
   totalScore: number
+  documentRunsCompleted: number // Number of document runs that finished (success or failure)
 }
 
 export class ProgressTracker {
@@ -46,6 +47,7 @@ export class ProgressTracker {
     multi.set(this.getKey('errors'), 0)
     multi.set(this.getKey('failed'), 0)
     multi.set(this.getKey('totalScore'), 0)
+    multi.set(this.getKey('documentRunsCompleted'), 0)
 
     if (uuids.length > 0) {
       multi.sadd(this.getKey('runUuids'), ...uuids)
@@ -88,6 +90,8 @@ export class ProgressTracker {
       await redis.incrby(this.getKey('errors'), 1 + evaluationsPerRow)
     }
 
+    await redis.incrby(this.getKey('documentRunsCompleted'), 1)
+
     return this.incrementRow(redis, uuid, incrementCount)
   }
 
@@ -118,17 +122,25 @@ export class ProgressTracker {
 
   async getProgress(): Promise<TrackedProgress> {
     const redis = await this.ensureConnection()
-    const [totalRows, completed, passed, failed, errors, totalScore] =
-      await redis
-        .mget([
-          this.getKey('totalRows'),
-          this.getKey('completed'),
-          this.getKey('passed'),
-          this.getKey('failed'),
-          this.getKey('errors'),
-          this.getKey('totalScore'),
-        ])
-        .then((v) => v.map(Number))
+    const [
+      totalRows,
+      completed,
+      passed,
+      failed,
+      errors,
+      totalScore,
+      documentRunsCompleted,
+    ] = await redis
+      .mget([
+        this.getKey('totalRows'),
+        this.getKey('completed'),
+        this.getKey('passed'),
+        this.getKey('failed'),
+        this.getKey('errors'),
+        this.getKey('totalScore'),
+        this.getKey('documentRunsCompleted'),
+      ])
+      .then((v) => v.map(Number))
 
     return {
       total: totalRows,
@@ -139,6 +151,7 @@ export class ProgressTracker {
       errors,
 
       totalScore,
+      documentRunsCompleted,
     }
   }
 
@@ -160,6 +173,7 @@ export class ProgressTracker {
         this.getKey('errors'),
         this.getKey('failed'),
         this.getKey('totalScore'),
+        this.getKey('documentRunsCompleted'),
         this.getKey('rows'),
         this.getKey('runUuids'),
       ]

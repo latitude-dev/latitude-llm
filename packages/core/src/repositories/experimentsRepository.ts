@@ -379,6 +379,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
         errors: evalErrors,
 
         totalScore,
+        documentRunsCompleted: row.metadata.count,
       },
     }
   }
