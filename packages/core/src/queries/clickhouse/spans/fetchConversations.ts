@@ -71,7 +71,9 @@ export const fetchConversations = scopedQuery(async function fetchConversations(
   const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
     `document_uuid = {documentUuid: UUID}`,
+    `document_uuid_key = {documentUuid: UUID}`,
     `commit_uuid IN ({commitUuids: Array(UUID)})`,
+    `commit_uuid_key IN ({commitUuids: Array(UUID)})`,
     `type IN ({mainSpanTypes: Array(String)})`,
     `document_log_uuid IS NOT NULL`,
   ]

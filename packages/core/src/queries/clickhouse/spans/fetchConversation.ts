@@ -43,6 +43,7 @@ export const fetchConversation = scopedQuery(async function fetchConversation(
   if (documentUuid) {
     params.documentUuid = documentUuid
     conditions.push(`document_uuid = {documentUuid: UUID}`)
+    conditions.push(`document_uuid_key = {documentUuid: UUID}`)
   }
 
   const result = await clickhouseClient().query({

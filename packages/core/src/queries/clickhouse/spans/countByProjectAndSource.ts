@@ -28,6 +28,7 @@ export const countByProjectAndSource = scopedQuery(
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
         AND project_id = {projectId: UInt64}
+        AND project_id_key = {projectId: UInt64}
         AND source IN ({sources: Array(String)})
       GROUP BY source
     `,

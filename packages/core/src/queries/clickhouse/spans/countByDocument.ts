@@ -41,7 +41,9 @@ export const countDistinctTracesByDocument = scopedQuery(
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
         AND document_uuid = {documentUuid: UUID}
+        AND document_uuid_key = {documentUuid: UUID}
         AND commit_uuid IN ({commitUuids: Array(UUID)})
+        AND commit_uuid_key IN ({commitUuids: Array(UUID)})
         ${sourceFilter}
     `,
       format: 'JSONEachRow',

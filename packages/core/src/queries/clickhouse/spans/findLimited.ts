@@ -209,11 +209,13 @@ export const findByDocumentAndCommitLimited = scopedQuery(
     const baseConditions = [
       `workspace_id = {workspaceId: UInt64}`,
       `document_uuid = {documentUuid: UUID}`,
+      `document_uuid_key = {documentUuid: UUID}`,
     ]
     const baseParams: Record<string, unknown> = { workspaceId, documentUuid }
 
     if (commitUuids && commitUuids.length > 0) {
       baseConditions.push(`commit_uuid IN ({commitUuids: Array(UUID)})`)
+      baseConditions.push(`commit_uuid_key IN ({commitUuids: Array(UUID)})`)
       baseParams.commitUuids = commitUuids
     }
 
@@ -261,6 +263,7 @@ export const findByProjectLimited = scopedQuery(
     const baseConditions = [
       `workspace_id = {workspaceId: UInt64}`,
       `project_id = {projectId: UInt64}`,
+      `project_id_key = {projectId: UInt64}`,
     ]
     const baseParams: Record<string, unknown> = { workspaceId, projectId }
 
