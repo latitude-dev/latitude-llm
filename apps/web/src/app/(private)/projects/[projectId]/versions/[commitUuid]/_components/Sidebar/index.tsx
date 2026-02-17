@@ -15,6 +15,7 @@ import {
   CommitsRepository,
   DeploymentTestsRepository,
 } from '@latitude-data/core/repositories/index'
+import { computeProductAccess } from '@latitude-data/core/services/productAccess/computeProductAccess'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
@@ -33,6 +34,7 @@ export default async function Sidebar({
   currentDocument?: DocumentVersion
 }) {
   const { workspace } = await getCurrentUserOrRedirect()
+  const productAccess = computeProductAccess(workspace)
   const documents = await getDocumentsAtCommitCached({ commit })
   const commitsScope = new CommitsRepository(workspace.id)
   const headCommit = await getHeadCommitCached({
@@ -79,19 +81,22 @@ export default async function Sidebar({
     <DocumentSidebar
       banner={<ProductionBanner project={project} />}
       header={
-        <CommitSelector
-          headCommit={headCommit}
-          currentCommit={commit}
-          currentDocument={currentDocument}
-          draftCommits={rows}
-          commitsInActiveTests={commitsInActiveTests}
-          activeTests={activeTests}
-        />
+        productAccess.promptManagement ? (
+          <CommitSelector
+            headCommit={headCommit}
+            currentCommit={commit}
+            currentDocument={currentDocument}
+            draftCommits={rows}
+            commitsInActiveTests={commitsInActiveTests}
+            activeTests={activeTests}
+          />
+        ) : null
       }
       tree={
         <div className='flex flex-col gap-4'>
           <ProjectSection project={project} commit={commit} />
           <ClientFilesTree
+            promptManagement={productAccess.promptManagement}
             currentDocument={currentDocument}
             documents={documents}
             liveDocuments={liveDocuments}

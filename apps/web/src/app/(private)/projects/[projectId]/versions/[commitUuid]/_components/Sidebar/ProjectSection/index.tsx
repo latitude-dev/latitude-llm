@@ -86,7 +86,7 @@ export default function ProjectSection({
   project: Project
   commit: Commit
 }) {
-  const { agentBuilder } = useProductAccess()
+  const { agentBuilder, promptManagement } = useProductAccess()
   const { value: lastRunTab } = useLocalStorage<RunSourceGroup>({
     key: AppLocalStorage.lastRunTab,
     defaultValue: RunSourceGroup.Playground,
@@ -117,7 +117,7 @@ export default function ProjectSection({
             .detail({ id: project.id })
             .commits.detail({ uuid: commit.uuid }).issues.root,
         },
-        {
+        promptManagement && {
           label: 'History',
           route: ROUTES.projects
             .detail({ id: project.id })
@@ -125,7 +125,7 @@ export default function ProjectSection({
           iconName: 'history',
         },
       ].filter(Boolean) as ProjectRoute[],
-    [project, commit, lastRunTab, agentBuilder],
+    [project, commit, lastRunTab, agentBuilder, promptManagement],
   )
 
   return (

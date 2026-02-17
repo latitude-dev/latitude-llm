@@ -1,5 +1,6 @@
 'use client'
 
+import { useProductAccess } from '$/components/Providers/SessionProvider'
 import { TabSelector } from '$/components/TabSelector'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
 import useFeature from '$/stores/useFeature'
@@ -67,6 +68,7 @@ export const DocumentTabSelector = memo(
     }, [projectId, commitUuid, documentUuid])
 
     const { isEnabled: optimizationsEnabled } = useFeature('optimizations')
+    const { promptManagement } = useProductAccess()
 
     // --- Tabs definition ---
     const data = useMemo(() => {
@@ -91,11 +93,6 @@ export const DocumentTabSelector = memo(
           value: DocumentRoutes.experiments,
           route: baseRoute.experiments.root,
         },
-        [DocumentRoutes.logs]: {
-          label: 'Logs',
-          value: DocumentRoutes.logs,
-          route: baseRoute.logs.root,
-        },
         [DocumentRoutes.traces]: {
           label: 'Traces',
           value: DocumentRoutes.traces,
@@ -108,6 +105,16 @@ export const DocumentTabSelector = memo(
         },
       } satisfies Record<TabValue, TabSelectorOption<TabValue>>
 
+      if (!promptManagement) {
+        return {
+          tabs,
+          options: [
+            tabs[DocumentRoutes.traces],
+            tabs[DocumentRoutes.evaluations],
+          ],
+        }
+      }
+
       return {
         tabs,
         options: [
@@ -118,7 +125,7 @@ export const DocumentTabSelector = memo(
           ...(optimizationsEnabled ? [tabs[DocumentRoutes.optimizations]] : []),
         ],
       }
-    }, [baseRoute, optimizationsEnabled])
+    }, [baseRoute, optimizationsEnabled, promptManagement])
 
     const setPreviewState = useCallback(
       (showPreview: boolean) => {

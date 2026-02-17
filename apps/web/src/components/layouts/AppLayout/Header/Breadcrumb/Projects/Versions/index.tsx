@@ -8,10 +8,9 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { BreadcrumbItemSkeleton } from '@latitude-data/web-ui/molecules/Breadcrumb'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { useCommitsFromProject } from '$/stores/commitsStore'
-
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
-
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+
 export function CommitBreadcrumbItems({
   segments,
   projectId,

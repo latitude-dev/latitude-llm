@@ -22,6 +22,7 @@ import { type SidebarLinkContext } from '../index'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 
 type IFilesContext = {
+  promptManagement: boolean
   isLoading: boolean
   isMerged: boolean
   mainDocumentUuid: string | undefined
@@ -40,6 +41,7 @@ type IFilesContext = {
 const FileTreeContext = createContext({} as IFilesContext)
 
 const FileTreeProvider = ({
+  promptManagement,
   isLoading,
   isMerged,
   onMergeCommitClick,
@@ -69,7 +71,7 @@ const FileTreeProvider = ({
     openPaths: state.openPaths,
     togglePath: state.togglePath,
   }))
-  const { onDragEnd } = useDragEndFile({ renamePaths })
+  const { onDragEnd } = useDragEndFile({ promptManagement, renamePaths })
   const onDragOver = useCallback(
     (event: DragOverEvent) => {
       const { over } = event
@@ -97,6 +99,7 @@ const FileTreeProvider = ({
     >
       <FileTreeContext.Provider
         value={{
+          promptManagement,
           isLoading,
           isMerged,
           onMergeCommitClick,

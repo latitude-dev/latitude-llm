@@ -11,16 +11,19 @@ import useProjects from '$/stores/projects'
 
 import { BreadcrumbSelector, BreadcrumbSelectorOption } from '../Selector'
 import { CommitBreadcrumbItems } from './Versions'
+import { useProductAccess } from '$/components/Providers/SessionProvider'
 
 export function ProjectBreadcrumbItems({ segments }: { segments: string[] }) {
   const projectId = Number(segments[0])
-
+  const { promptManagement } = useProductAccess()
   const { data: projects, isLoading } = useProjects()
   const currentProject = useMemo(
     () => projects?.find((project) => project.id === projectId),
     [projects, projectId],
   )
 
+  const showVersions =
+    promptManagement && segments.length > 2 && segments[1] == 'versions'
   const options = useMemo<BreadcrumbSelectorOption[]>(() => {
     if (!projects) return []
     return projects.map((p) => ({
@@ -51,7 +54,7 @@ export function ProjectBreadcrumbItems({ segments }: { segments: string[] }) {
         )}
       </BreadcrumbItem>
 
-      {segments.length > 2 && segments[1] == 'versions' && (
+      {showVersions && (
         <CommitBreadcrumbItems
           segments={segments.slice(2)}
           projectId={projectId}

@@ -13,6 +13,7 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useToggleStates } from './ContentArea/hooks/usePlaygroundLogic'
 import { DocumentEditorSidebarArea } from './SidebarArea'
 import { DocumentParametersProvider } from './V2Playground/DocumentParams/DocumentParametersContext'
+import { useProductAccess } from '$/components/Providers/SessionProvider'
 
 export default function DocumentEditor(props: {
   freeRunsCount?: number
@@ -21,6 +22,7 @@ export default function DocumentEditor(props: {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
+  const { promptManagement } = useProductAccess()
   const [selectedTab, setSelectedTab] = useState<TabValue>(
     props.showPreview ? 'preview' : DocumentRoutes.editor,
   )
@@ -52,17 +54,19 @@ export default function DocumentEditor(props: {
           documentUuid={document.documentUuid}
           onPreviewToggle={onPreviewToggle}
         />
-        <Button
-          variant='ghost'
-          onClick={toggleDocumentation}
-          iconProps={{ name: 'code2', placement: 'right' }}
-          className='truncate font-normal hover:text-primary transition-colors'
-          userSelect={false}
-        >
-          <Text.H5 ellipsis noWrap>
-            Deploy this prompt
-          </Text.H5>
-        </Button>
+        {promptManagement && (
+          <Button
+            variant='ghost'
+            onClick={toggleDocumentation}
+            iconProps={{ name: 'code2', placement: 'right' }}
+            className='truncate font-normal hover:text-primary transition-colors'
+            userSelect={false}
+          >
+            <Text.H5 ellipsis noWrap>
+              Deploy this prompt
+            </Text.H5>
+          </Button>
+        )}
       </div>
       <div className='flex flex-1 gap-x-8 min-h-0'>
         <div className='flex flex-1 h-full'>

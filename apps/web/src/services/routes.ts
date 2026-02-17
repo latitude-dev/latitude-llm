@@ -7,7 +7,6 @@ export type IDatasetSettingsModal = 'new' | 'generate'
 
 export enum DocumentRoutes {
   editor = 'editor',
-  logs = 'logs',
   evaluations = 'evaluations',
   experiments = 'experiments',
   traces = 'traces',
@@ -220,21 +219,6 @@ export const ROUTES = {
                             root: `${root}/editor`,
                           },
                         }
-                      },
-                    },
-                    [DocumentRoutes.logs]: {
-                      root: `${root}/${DocumentRoutes.logs}`,
-                      upload: `${root}/${DocumentRoutes.logs}/upload`,
-                      withFilters: ({
-                        experimentId,
-                      }: {
-                        experimentId?: number
-                      }) => {
-                        const base = `${root}/${DocumentRoutes.logs}`
-                        if (experimentId) {
-                          return `${base}?experimentId=${experimentId}`
-                        }
-                        return base
                       },
                     },
                     [DocumentRoutes.traces]: {

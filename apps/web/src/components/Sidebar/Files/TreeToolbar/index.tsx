@@ -32,8 +32,13 @@ export function TreeToolbar() {
   const { addToRootFolder } = useTempNodes((s) => ({
     addToRootFolder: s.addToRootFolder,
   }))
-  const { isLoading, isMerged, onMergeCommitClick, onCreateAgent } =
-    useFileTreeContext()
+  const {
+    promptManagement,
+    isLoading,
+    isMerged,
+    onMergeCommitClick,
+    onCreateAgent,
+  } = useFileTreeContext()
   const { nodeInput, setNodeInput } = useNodeInput()
   const isFile = nodeInput ? FILE_TYPES.includes(nodeInput) : false
   const icons: IconName[] = nodeInput
@@ -58,39 +63,41 @@ export function TreeToolbar() {
   return (
     <>
       <div className='bg-background sticky top-0 flex flex-row items-center justify-between pl-4 pr-2 z-10'>
-        <Text.H5M>Files</Text.H5M>
-        <div className='flex flex-row space-x-2'>
-          <Tooltip
-            asChild
-            trigger={
-              <Button
-                variant='ghost'
-                size='icon'
-                lookDisabled={isMerged}
-                disabled={isLoading}
-                iconProps={{ name: 'folderPlus' }}
-                onClick={onClick(EntityType.Folder)}
-              />
-            }
-          >
-            New folder
-          </Tooltip>
-          <Tooltip
-            asChild
-            trigger={
-              <Button
-                variant='ghost'
-                size='icon'
-                lookDisabled={isMerged}
-                disabled={isLoading}
-                iconProps={{ name: 'filePlus' }}
-                onClick={onClick(EntityType.Prompt)}
-              />
-            }
-          >
-            New prompt
-          </Tooltip>
-        </div>
+        <Text.H5M>{promptManagement ? 'Files' : 'Traces paths'}</Text.H5M>
+        {promptManagement && (
+          <div className='flex flex-row space-x-2'>
+            <Tooltip
+              asChild
+              trigger={
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  lookDisabled={isMerged}
+                  disabled={isLoading}
+                  iconProps={{ name: 'folderPlus' }}
+                  onClick={onClick(EntityType.Folder)}
+                />
+              }
+            >
+              New folder
+            </Tooltip>
+            <Tooltip
+              asChild
+              trigger={
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  lookDisabled={isMerged}
+                  disabled={isLoading}
+                  iconProps={{ name: 'filePlus' }}
+                  onClick={onClick(EntityType.Prompt)}
+                />
+              }
+            >
+              New prompt
+            </Tooltip>
+          </div>
+        )}
       </div>
       {nodeInput ? (
         <NodeHeaderWrapper

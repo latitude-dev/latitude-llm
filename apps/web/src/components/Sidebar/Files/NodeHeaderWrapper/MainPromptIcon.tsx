@@ -27,6 +27,7 @@ export function MainPromptIcon({
   )
 
   if (!isFile) return null
+  if (isMainDocument === undefined) return null
 
   return (
     <Tooltip

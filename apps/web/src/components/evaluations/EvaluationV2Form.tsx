@@ -1,4 +1,6 @@
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import { useProductAccess } from '$/components/Providers/SessionProvider'
+import { ROUTES } from '$/services/routes'
 import {
   CompositeEvaluationMetric,
   EvaluationMetric,
@@ -16,6 +18,7 @@ import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { LinkedIssueSelect } from './ConfigurationForm/LinkedIssueSelect'
 import { LiveEvaluationToggle } from './ConfigurationForm/LiveEvaluationToggle'
@@ -119,9 +122,12 @@ export default function EvaluationV2Form<
 }) {
   const [expanded, setExpanded] = useState(mode === 'update')
   const errors = useMemo(() => parseActionErrors(actionErrors), [actionErrors])
+  const { promptManagement } = useProductAccess()
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[settings.type]
   const metricSpecification = typeSpecification?.metrics[settings.metric]
+  const requiresExpectedOutputBlocked =
+    !promptManagement && metricSpecification?.requiresExpectedOutput
 
   useEffect(() => {
     if (mode === 'update') return
@@ -240,9 +246,26 @@ export default function EvaluationV2Form<
         )}
         {mode === 'create' && metricSpecification?.requiresExpectedOutput && (
           <Alert
-            variant='default'
+            variant={requiresExpectedOutputBlocked ? 'warning' : 'default'}
             title='This evaluation requires an expected output'
-            description='You will configure the column that contains the expected output when you run a batch evaluation'
+            description={
+              requiresExpectedOutputBlocked ? (
+                <>
+                  Expected output is matched from dataset columns to prompt
+                  parameters, and parameters can only be defined when prompts
+                  are managed in Latitude.{' '}
+                  <Link
+                    href={`${ROUTES.settings.root}#product-features`}
+                    className='underline font-medium'
+                  >
+                    Enable Prompt Manager in settings
+                  </Link>{' '}
+                  to use this evaluation type.
+                </>
+              ) : (
+                'You will configure the column that contains the expected output when you run a batch evaluation'
+              )
+            }
           />
         )}
         {mode === 'create' && metricSpecification?.supportsManualEvaluation && (

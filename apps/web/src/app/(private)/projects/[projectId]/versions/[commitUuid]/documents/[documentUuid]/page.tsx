@@ -6,6 +6,7 @@ import {
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { computeProductAccess } from '@latitude-data/core/services/productAccess/computeProductAccess'
 import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import { redirect } from 'next/navigation'
 import { MetadataProvider } from '$/components/MetadataProvider'
@@ -53,6 +54,16 @@ export default async function DocumentPage({
   const { projectId: pjid, commitUuid, documentUuid } = await params
   const projectId = Number(pjid)
   const { workspace } = await getCurrentUserOrRedirect()
+
+  const productAccess = computeProductAccess(workspace)
+  if (!productAccess.promptManagement) {
+    redirect(
+      ROUTES.projects
+        .detail({ id: projectId })
+        .commits.detail({ uuid: commitUuid })
+        .documents.detail({ uuid: documentUuid }).traces.root,
+    )
+  }
 
   let commit
   try {

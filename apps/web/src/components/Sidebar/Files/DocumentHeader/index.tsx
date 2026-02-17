@@ -53,6 +53,7 @@ export default function DocumentHeader({
   runningCount?: number
 }) {
   const {
+    promptManagement,
     isLoading,
     isMerged,
     onMergeCommitClick,
@@ -69,6 +70,8 @@ export default function DocumentHeader({
   }))
   const onSaveValue = useCallback(
     async ({ path }: { path: string }) => {
+      if (!promptManagement) return
+
       const parentPathParts = node.path.split('/').slice(0, -1)
       const newPathParts = path.split('/')
       const newPath = [...parentPathParts, ...newPathParts].join('/')
@@ -79,7 +82,7 @@ export default function DocumentHeader({
       }
       reset()
     },
-    [reset, onCreateFile, onRenameFile, node],
+    [promptManagement, reset, onCreateFile, onRenameFile, node],
   )
   const setMainDocument = useCallback(
     (asMainDocument: boolean) => {
@@ -122,8 +125,6 @@ export default function DocumentHeader({
         return documentDetails.experiments.root
       case DocumentRoutes.traces:
         return documentDetails.traces.root
-      case DocumentRoutes.logs:
-        return documentDetails.logs.root
       default:
         return documentDetails.root
     }
@@ -136,9 +137,12 @@ export default function DocumentHeader({
     currentPageType,
     isRunning,
   ])
-  const [isEditing, setIsEditing] = useState(node.name === ' ')
-  const actions = useMemo<MenuOption[]>(
-    () => [
+  const [isEditingState, setIsEditing] = useState(node.name === ' ')
+  const isEditing = promptManagement && isEditingState
+  const actions = useMemo<MenuOption[]>(() => {
+    if (!promptManagement) return []
+
+    return [
       {
         label: 'Rename file',
         lookDisabled: isMerged,
@@ -167,9 +171,16 @@ export default function DocumentHeader({
           }
         },
       },
-    ],
-    [node, documentUuid, onDeleteFile, isLoading, isMerged, onMergeCommitClick],
-  )
+    ]
+  }, [
+    promptManagement,
+    node,
+    documentUuid,
+    onDeleteFile,
+    isLoading,
+    isMerged,
+    onMergeCommitClick,
+  ])
   const icon = useMemo<IconName>(() => {
     const docName = node.name
     const docType = node.doc?.documentType
@@ -188,8 +199,10 @@ export default function DocumentHeader({
       draggble={draggble}
       isEditing={isEditing}
       setIsEditing={setIsEditing}
-      isMainDocument={mainDocumentUuid === documentUuid}
-      setMainDocument={setMainDocument}
+      isMainDocument={
+        promptManagement ? mainDocumentUuid === documentUuid : undefined
+      }
+      setMainDocument={promptManagement ? setMainDocument : undefined}
       hasChildren={false}
       actions={actions}
       selected={selected}

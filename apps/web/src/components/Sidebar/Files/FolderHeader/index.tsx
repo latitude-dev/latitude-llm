@@ -30,6 +30,7 @@ export default function FolderHeader({
   runningCount?: number
 }) {
   const {
+    promptManagement,
     isLoading,
     isMerged,
     onMergeCommitClick,
@@ -87,6 +88,8 @@ export default function FolderHeader({
 
   const onSaveValue = useCallback(
     ({ path }: { path: string }) => {
+      if (!promptManagement) return
+
       if (isMerged) {
         onMergeCommitClick()
         return
@@ -100,7 +103,14 @@ export default function FolderHeader({
         updateFolder({ id: node.id, path })
       }
     },
-    [node, updateFolder, isMerged, onMergeCommitClick, onRenameFile],
+    [
+      promptManagement,
+      node,
+      updateFolder,
+      isMerged,
+      onMergeCommitClick,
+      onRenameFile,
+    ],
   )
 
   const fileUploadInputRef = useRef<HTMLInputElement>(null)
@@ -123,9 +133,12 @@ export default function FolderHeader({
     [node, deleteTmpFolder, onUploadFile],
   )
 
-  const [isEditing, setIsEditing] = useState(node.name === ' ')
-  const actions = useMemo<MenuOption[]>(
-    () => [
+  const [isEditingState, setIsEditing] = useState(node.name === ' ')
+  const isEditing = promptManagement && isEditingState
+  const actions = useMemo<MenuOption[]>(() => {
+    if (!promptManagement) return []
+
+    return [
       {
         label: 'Rename folder',
         lookDisabled: isMerged,
@@ -180,19 +193,19 @@ export default function FolderHeader({
           }
         },
       },
-    ],
-    [
-      node,
-      isLoading,
-      isMerged,
-      onMergeCommitClick,
-      onClickFileUploadInput,
-      onDeleteFolder,
-      deleteTmpFolder,
-      setIsEditing,
-      onAddNode,
-    ],
-  )
+    ]
+  }, [
+    promptManagement,
+    node,
+    isLoading,
+    isMerged,
+    onMergeCommitClick,
+    onClickFileUploadInput,
+    onDeleteFolder,
+    deleteTmpFolder,
+    setIsEditing,
+    onAddNode,
+  ])
 
   return (
     <>

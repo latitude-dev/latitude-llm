@@ -4,8 +4,10 @@ import { DragEndEvent } from '@latitude-data/web-ui/hooks/useDnD'
 import { DraggableAndDroppableData } from '../DragOverlayNode'
 
 export function useDragEndFile({
+  promptManagement,
   renamePaths,
 }: {
+  promptManagement: boolean
   renamePaths: (args: { oldPath: string; newPath: string }) => Promise<void>
 }) {
   const { deleteTmpFolder } = useTempNodes((state) => ({
@@ -13,6 +15,8 @@ export function useDragEndFile({
   }))
   const onDragEnd = useCallback(
     async (event: DragEndEvent) => {
+      if (!promptManagement) return
+
       const { active, over } = event
 
       // Skip if the drag is over itself
@@ -34,7 +38,7 @@ export function useDragEndFile({
       await renamePaths({ oldPath, newPath })
       deleteTmpFolder({ id: draggedFolderData.nodeId })
     },
-    [renamePaths, deleteTmpFolder],
+    [promptManagement, renamePaths, deleteTmpFolder],
   )
 
   return { onDragEnd }
