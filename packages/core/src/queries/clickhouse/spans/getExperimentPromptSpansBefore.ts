@@ -24,7 +24,9 @@ export const getExperimentPromptSpansBefore = scopedQuery(
       SELECT span_id, trace_id
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
+        -- TODO(clickhouse): remove non-_key predicate after key-column rollout.
         AND document_uuid = {documentUuid: UUID}
+        AND document_uuid_key = {documentUuid: UUID}
         AND started_at < {before: DateTime64(6, 'UTC')}
         AND experiment_uuid IS NULL
         AND type = {promptType: String}

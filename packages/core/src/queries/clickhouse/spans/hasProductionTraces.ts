@@ -21,7 +21,9 @@ export const hasProductionTraces = scopedQuery(
     }
 
     const projectFilter =
-      projectId !== undefined ? 'AND project_id = {projectId: UInt64}' : ''
+      projectId !== undefined
+        ? 'AND project_id = {projectId: UInt64} AND project_id_key = {projectId: UInt64}' // TODO(clickhouse): remove non-_key predicate after key-column rollout.
+        : ''
 
     if (projectId !== undefined) queryParams.projectId = projectId
 

@@ -27,7 +27,9 @@ export const countByProjectAndSource = scopedQuery(
       SELECT source, count() AS cnt
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
+        -- TODO(clickhouse): remove non-_key predicate after key-column rollout.
         AND project_id = {projectId: UInt64}
+        AND project_id_key = {projectId: UInt64}
         AND source IN ({sources: Array(String)})
       GROUP BY source
     `,

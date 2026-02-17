@@ -40,8 +40,12 @@ export const countDistinctTracesByDocument = scopedQuery(
       SELECT count(DISTINCT trace_id) AS cnt
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
+        -- TODO(clickhouse): remove non-_key predicate after key-column rollout.
         AND document_uuid = {documentUuid: UUID}
+        AND document_uuid_key = {documentUuid: UUID}
+        -- TODO(clickhouse): remove non-_key predicate after key-column rollout.
         AND commit_uuid IN ({commitUuids: Array(UUID)})
+        AND commit_uuid_key IN ({commitUuids: Array(UUID)})
         ${sourceFilter}
     `,
       format: 'JSONEachRow',

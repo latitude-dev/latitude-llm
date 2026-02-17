@@ -25,12 +25,16 @@ export const computeDocumentTracesAggregations = scopedQuery(
 
     const conditions = [
       `workspace_id = {workspaceId: UInt64}`,
+      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
       `document_uuid = {documentUuid: UUID}`,
+      `document_uuid_key = {documentUuid: UUID}`,
     ]
 
     if (commitUuid) {
       params.commitUuid = commitUuid
+      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
       conditions.push(`commit_uuid = {commitUuid: UUID}`)
+      conditions.push(`commit_uuid_key = {commitUuid: UUID}`)
     }
 
     // Query all metrics in a single pass

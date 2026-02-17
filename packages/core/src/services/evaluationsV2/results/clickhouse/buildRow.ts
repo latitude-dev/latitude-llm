@@ -34,7 +34,6 @@ export function buildEvaluationResultRow({
       : null
   return {
     id: existingRow?.id ?? result.id,
-    uuid: existingRow?.uuid ?? result.uuid,
     workspace_id: result.workspaceId,
     project_id: commit.projectId,
     commit_uuid: commit.uuid,

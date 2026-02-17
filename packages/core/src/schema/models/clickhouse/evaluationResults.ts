@@ -2,7 +2,6 @@ export const EVALUATION_RESULTS_TABLE = 'evaluation_results' as const
 
 export type EvaluationResultV2Row = {
   id: number
-  uuid: string
   workspace_id: number
   project_id: number
   commit_uuid: string

@@ -7,7 +7,7 @@ import {
 } from '../events'
 import { createEvaluationResult } from '../../services/evaluationsV2/results/clickhouse/create'
 import { updateEvaluationResult } from '../../services/evaluationsV2/results/clickhouse/update'
-import { findEvaluationResultByUuid } from '../../queries/clickhouse/evaluationResultsV2/findByUuid'
+import { findEvaluationResultById } from '../../queries/clickhouse/evaluationResultsV2/findById'
 
 /**
  * Writes evaluation result rows into ClickHouse on create events.
@@ -63,11 +63,11 @@ export const writeEvaluationResultV2UpdatedToClickhouse = async ({
     return
   }
 
-  let existingRow: Awaited<ReturnType<typeof findEvaluationResultByUuid>>
+  let existingRow: Awaited<ReturnType<typeof findEvaluationResultById>>
   try {
-    existingRow = await findEvaluationResultByUuid({
+    existingRow = await findEvaluationResultById({
       workspaceId,
-      uuid: result.uuid,
+      id: result.id,
     })
   } catch (error) {
     captureException(error as Error, {
