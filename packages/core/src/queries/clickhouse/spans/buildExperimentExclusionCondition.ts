@@ -2,10 +2,11 @@ export function buildExperimentExclusionCondition(
   optimizationExperimentUuids: string[],
   params: Record<string, unknown>,
 ) {
-  const conditions = [
-    `source != {experimentSource: String}`,
-    `experiment_uuid IS NULL`,
-  ]
+  const conditions = [`experiment_uuid IS NULL`]
+
+  if (params.experimentSource) {
+    conditions.push(`source != {experimentSource: String}`)
+  }
 
   if (optimizationExperimentUuids.length > 0) {
     params.optimizationExperimentUuids = optimizationExperimentUuids
