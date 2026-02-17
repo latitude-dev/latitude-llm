@@ -351,6 +351,7 @@ export function CustomMcpHeadersButton({
   return (
     <>
       <Tooltip
+        asChild
         trigger={
           <Button
             variant={hasHeaders ? 'primaryMuted' : 'ghost'}

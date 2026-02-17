@@ -33,6 +33,7 @@ export function SimpleKeysetTablePaginationFooter({
         {isLoading && <Icon name='loader' spin size='small' className='mr-2' />}
         {disabledTooltip ? (
           <Tooltip
+            asChild
             trigger={
               <div className='flex items-center'>
                 <Button
