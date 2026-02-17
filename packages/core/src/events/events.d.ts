@@ -48,10 +48,7 @@ export type Events =
   | 'documentCreated'
   | 'documentsDeleted'
   | 'documentRunRequested'
-  | 'publicDocumentRunRequested'
   | 'chatMessageRequested'
-  | 'sharedChatMessageRequested'
-  | 'forkDocumentRequested'
   | 'copilotSuggestionGenerated'
   | 'copilotSuggestionApplied'
   | 'evaluationV2Created'
@@ -327,13 +324,6 @@ type CommonDataDocumentRunRequestedEvent = {
   parameters: Record<string, unknown>
   workspaceId: number
 }
-export type PublicDocumentRunRequestedEvent = LatitudeEventGeneric<
-  'publicDocumentRunRequested',
-  CommonDataDocumentRunRequestedEvent & {
-    publishedDocumentUuid: string
-  }
->
-
 export type DocumentRunRequestedEvent = LatitudeEventGeneric<
   'documentRunRequested',
   CommonDataDocumentRunRequestedEvent & {
@@ -349,31 +339,6 @@ export type ChatMessageRequestedEvent = LatitudeEventGeneric<
     messages: Message[]
     workspaceId: number
     userEmail: string
-  }
->
-
-export type SharedChatMessageRequestedEvent = LatitudeEventGeneric<
-  'sharedChatMessageRequested',
-  {
-    publishedDocumentUuid: string
-    documentLogUuid: string
-    messages: Message[]
-    workspaceId: number
-  }
->
-
-export type ForkDocumentRequestedEvent = LatitudeEventGeneric<
-  'forkDocumentRequested',
-  {
-    origin: {
-      workspaceId: number
-      commitUuid: string
-      documentUuid: string
-    }
-    destination: {
-      workspaceId: number
-      userEmail: string
-    }
   }
 >
 
@@ -1015,10 +980,7 @@ export type LatitudeEvent =
   | DocumentCreatedEvent
   | DocumentsDeletedEvent
   | DocumentRunRequestedEvent
-  | PublicDocumentRunRequestedEvent
   | ChatMessageRequestedEvent
-  | SharedChatMessageRequestedEvent
-  | ForkDocumentRequestedEvent
   | CopilotSuggestionGenerated
   | CopilotSuggestionApplied
   | EvaluationV2CreatedEvent
@@ -1106,10 +1068,7 @@ export interface IEventsHandlers {
   documentCreated: EventHandler<DocumentCreatedEvent>[]
   documentsDeleted: EventHandler<DocumentsDeletedEvent>[]
   documentRunRequested: EventHandler<DocumentRunRequestedEvent>[]
-  publicDocumentRunRequested: EventHandler<PublicDocumentRunRequestedEvent>[]
   chatMessageRequested: EventHandler<ChatMessageRequestedEvent>[]
-  sharedChatMessageRequested: EventHandler<SharedChatMessageRequestedEvent>[]
-  forkDocumentRequested: EventHandler<ForkDocumentRequestedEvent>[]
   copilotSuggestionGenerated: EventHandler<CopilotSuggestionGenerated>[]
   copilotSuggestionApplied: EventHandler<CopilotSuggestionApplied>[]
   evaluationV2Created: EventHandler<EvaluationV2CreatedEvent>[]

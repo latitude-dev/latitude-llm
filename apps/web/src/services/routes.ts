@@ -322,26 +322,4 @@ export const ROUTES = {
         `${PUBLIC_ROOT_PATHS.magicLinks}/confirm/${token}`,
     },
   },
-  share: {
-    document: (publishedDocumentUuid: string) => {
-      const shareDocRoot = `/share/d/${publishedDocumentUuid}`
-      return {
-        root: shareDocRoot,
-        fork: `${shareDocRoot}/fork`,
-        forked: ({
-          projectId,
-          documentUuid,
-          commitUuid,
-        }: {
-          projectId: number
-          documentUuid: string
-          commitUuid: string
-        }) => {
-          return {
-            root: `${shareDocRoot}/forked/${projectId}?documentUuid=${documentUuid}&commitUuid=${commitUuid}`,
-          }
-        },
-      }
-    },
-  },
 } as const

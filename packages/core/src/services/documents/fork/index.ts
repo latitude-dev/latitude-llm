@@ -2,7 +2,6 @@ import { type Commit } from '../../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type User } from '../../../schema/models/types/User'
 import { type Workspace } from '../../../schema/models/types/Workspace'
-import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib/Result'
 import { cloneDocuments } from './cloneDocuments'
 import { cloneIntegrations } from './cloneIntegrations'
@@ -38,21 +37,6 @@ export async function forkDocument({
     workspace: destination.workspace,
     user: destination.user,
   }).then((r) => r.unwrap())
-
-  publisher.publishLater({
-    type: 'forkDocumentRequested',
-    data: {
-      origin: {
-        workspaceId: origin.workspace.id,
-        commitUuid: origin.commit.uuid,
-        documentUuid: origin.document.documentUuid,
-      },
-      destination: {
-        workspaceId: destination.workspace.id,
-        userEmail: destination.user.email,
-      },
-    },
-  })
 
   const imports = await getImports({
     workspace: origin.workspace,
