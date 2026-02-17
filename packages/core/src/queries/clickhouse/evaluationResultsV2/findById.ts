@@ -6,11 +6,11 @@ import {
 import { scopedQuery } from '../../scope'
 
 /**
- * Finds the latest evaluation result row by UUID in ClickHouse.
+ * Finds the latest evaluation result row by ID in ClickHouse.
  */
-export const findEvaluationResultByUuid = scopedQuery(
-  async function findEvaluationResultV2RowByUuid(
-    { workspaceId, uuid }: { workspaceId: number; uuid: string },
+export const findEvaluationResultById = scopedQuery(
+  async function findEvaluationResultV2RowById(
+    { workspaceId, id }: { workspaceId: number; id: number },
     _db,
   ): Promise<EvaluationResultV2Row | null> {
     const result = await clickhouseClient().query({
@@ -18,12 +18,12 @@ export const findEvaluationResultByUuid = scopedQuery(
         SELECT *
         FROM ${EVALUATION_RESULTS_TABLE}
         WHERE workspace_id = {workspaceId: UInt64}
-          AND uuid = {uuid: UUID}
+          AND id = {id: UInt64}
         ORDER BY updated_at DESC
         LIMIT 1
       `,
       format: 'JSONEachRow',
-      query_params: { workspaceId, uuid },
+      query_params: { workspaceId, id },
     })
 
     const rows = await result.json<EvaluationResultV2Row>()

@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS evaluation_results_rebuild_0005 ON CLUSTER default (
   id UInt64,
-  uuid UUID,
   workspace_id UInt64,
 
   project_id UInt64,
@@ -49,7 +48,6 @@ SETTINGS index_granularity = 8192;
 
 INSERT INTO evaluation_results_rebuild_0005 (
   id,
-  uuid,
   workspace_id,
   project_id,
   commit_uuid,
@@ -77,7 +75,6 @@ INSERT INTO evaluation_results_rebuild_0005 (
 )
 SELECT
   id,
-  uuid,
   workspace_id,
   project_id,
   commit_uuid,
