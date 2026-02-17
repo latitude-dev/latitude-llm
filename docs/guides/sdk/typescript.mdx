@@ -507,6 +507,9 @@ latitude.prompts.run<S extends AssertedStreamType = 'text', Tools extends ToolSp
     background?: Background,
     tools?: ToolCalledFn<Tools>,
     signal?: AbortSignal,
+    messages?: Message[],              // Messages to append after the compiled prompt
+    userMessage?: string,              // Deprecated: use `messages` instead
+    mcpHeaders?: Record<string, Record<string, string>>,
     onEvent?: ({ event, data }: { event: StreamEventTypes, data: ChainEventDto }) => void,
     onFinished?: (data: GenerationResponse<S>) => void,
     onError?: (error: LatitudeApiError) => void

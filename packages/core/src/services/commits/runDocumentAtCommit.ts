@@ -1,3 +1,4 @@
+import type { Message } from '@latitude-data/constants'
 import type { SimulationSettings } from '@latitude-data/constants/simulation'
 import { LogSources } from '../../constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
@@ -32,6 +33,7 @@ export type RunDocumentAtCommitArgs = {
   experiment?: Experiment
   errorableUuid?: string
   userMessage?: string
+  messages?: Message[]
   abortSignal?: AbortSignal
   simulationSettings?: SimulationSettings
   testDeploymentId?: number
@@ -50,6 +52,7 @@ export async function runDocumentAtCommit(
     experiment,
     errorableUuid,
     userMessage,
+    messages,
     abortSignal,
     tools = {},
     mcpHeaders,
@@ -130,6 +133,7 @@ export async function runDocumentAtCommit(
       commit,
     },
     simulationSettings,
+    appendMessages: messages,
   })
 
   return Result.ok({

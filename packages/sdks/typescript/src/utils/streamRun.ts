@@ -26,6 +26,7 @@ export async function streamRun<
     tools,
     customIdentifier,
     userMessage,
+    messages,
     mcpHeaders,
     onEvent,
     onFinished,
@@ -64,6 +65,7 @@ export async function streamRun<
         customIdentifier,
         tools: waitForTools(tools),
         userMessage,
+        messages,
         mcpHeaders,
       },
     })

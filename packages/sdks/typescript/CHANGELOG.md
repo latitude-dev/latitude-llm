@@ -5,7 +5,15 @@ All notable changes to the TypeScript SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.5.0] - 2026-02-17
+
+### Added
+
+- Added `messages` parameter to `prompts.run()` method. This allows appending any kind of messages to the conversation after the compiled prompt. Note: This is not compatible with the `<step>` feature of PromptL.
+
+### Deprecated
+
+- The `userMessage` parameter in `prompts.run()` is now deprecated. Use the `messages` parameter instead. The `userMessage` parameter will be removed in a future version.
 
 ## [5.4.1] - 2026-01-30
 

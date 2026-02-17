@@ -184,6 +184,50 @@ class TestRunPromptSync(TestCase):
         actual_tool_mock.assert_not_awaited()
         other_tool_mock.assert_not_awaited()
 
+    async def test_success_with_messages(self):
+        on_finished_mock = AsyncMock()
+        on_error_mock = AsyncMock()
+        path = "prompt-path"
+        messages = [
+            {"role": "user", "content": [{"type": "text", "text": "Hello!"}]},
+            {"role": "assistant", "content": [{"type": "text", "text": "Hi there!"}]},
+        ]
+        options = RunPromptOptions(
+            on_finished=on_finished_mock,
+            on_error=on_error_mock,
+            parameters={"parameter_1": "value_1"},
+            messages=messages,
+            stream=False,
+            background=False,
+        )
+        endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
+        endpoint_mock = self.gateway_mock.post(endpoint).mock(
+            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE)
+        )
+
+        result = await self.sdk.prompts.run(path, options)
+        request, _ = endpoint_mock.calls.last
+
+        self.assert_requested(
+            request,
+            method="POST",
+            endpoint=endpoint,
+            body={
+                "path": path,
+                "parameters": options.parameters,
+                "messages": [
+                    {"role": "user", "content": [{"type": "text", "text": "Hello!"}]},
+                    {"role": "assistant", "content": [{"type": "text", "text": "Hi there!"}]},
+                ],
+                "stream": options.stream,
+                "background": options.background,
+            },
+        )
+        self.assertEqual(endpoint_mock.call_count, 1)
+        self.assertEqual(result, fixtures.CONVERSATION_FINISHED_RESULT)
+        on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
+        on_error_mock.assert_not_awaited()
+
     async def test_fails_and_retries(self):
         on_event_mock = AsyncMock()
         on_finished_mock = AsyncMock()
@@ -306,6 +350,52 @@ class TestRunPromptSync(TestCase):
 
 
 class TestRunPromptStream(TestCase):
+    async def test_success_with_messages(self):
+        on_event_mock = AsyncMock()
+        on_finished_mock = AsyncMock()
+        on_error_mock = AsyncMock()
+        path = "prompt-path"
+        messages = [
+            {"role": "user", "content": [{"type": "text", "text": "Hello!"}]},
+            {"role": "assistant", "content": [{"type": "text", "text": "Hi there!"}]},
+        ]
+        options = RunPromptOptions(
+            on_event=on_event_mock,
+            on_finished=on_finished_mock,
+            on_error=on_error_mock,
+            parameters={"parameter_1": "value_1"},
+            messages=messages,
+            stream=True,
+            background=False,
+        )
+        endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
+        endpoint_mock = self.gateway_mock.post(endpoint).mock(
+            return_value=self.create_stream(200, fixtures.CONVERSATION_EVENTS_STREAM)
+        )
+
+        result = await self.sdk.prompts.run(path, options)
+        request, _ = endpoint_mock.calls.last
+
+        self.assert_requested(
+            request,
+            method="POST",
+            endpoint=endpoint,
+            body={
+                "path": path,
+                "parameters": options.parameters,
+                "messages": [
+                    {"role": "user", "content": [{"type": "text", "text": "Hello!"}]},
+                    {"role": "assistant", "content": [{"type": "text", "text": "Hi there!"}]},
+                ],
+                "stream": options.stream,
+                "background": options.background,
+            },
+        )
+        self.assertEqual(endpoint_mock.call_count, 1)
+        self.assertEqual(result, fixtures.CONVERSATION_FINISHED_RESULT)
+        on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
+        on_error_mock.assert_not_awaited()
+
     async def test_success_global_options(self):
         on_event_mock = AsyncMock()
         on_finished_mock = AsyncMock()

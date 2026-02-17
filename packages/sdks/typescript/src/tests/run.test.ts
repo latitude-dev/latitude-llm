@@ -237,6 +237,46 @@ describe('/run', () => {
     )
 
     it(
+      'sends messages in request body when provided',
+      server.boundary(async () => {
+        const { mockBody } = mockRequest({
+          server,
+          apiVersion: 'v3',
+          version: 'SOME_UUID',
+          projectId: '123',
+        })
+        await sdk.prompts.run('path/to/document', {
+          projectId,
+          versionUuid: 'SOME_UUID',
+          parameters: { foo: 'bar' },
+          messages: [
+            { role: 'user', content: [{ type: 'text', text: 'Hello!' }] },
+            {
+              role: 'assistant',
+              content: [{ type: 'text', text: 'Hi there!' }],
+            },
+          ],
+          stream: true,
+        })
+        expect(mockBody).toHaveBeenCalledWith({
+          path: 'path/to/document',
+          parameters: { foo: 'bar' },
+          messages: [
+            { role: 'user', content: [{ type: 'text', text: 'Hello!' }] },
+            {
+              role: 'assistant',
+              content: [{ type: 'text', text: 'Hi there!' }],
+            },
+          ],
+          tools: [],
+          stream: true,
+          background: false,
+          __internal: { source: LogSources.API },
+        })
+      }),
+    )
+
+    it(
       'send data onMessage callback',
       server.boundary(async () => {
         const onMessageMock = vi.fn()
@@ -547,6 +587,47 @@ data: ${JSON.stringify({
             'stripe-mcp': { authorization: 'Bearer sk_test_123' },
             'github-mcp': { 'x-github-token': 'ghp_abc123' },
           },
+          tools: [],
+          stream: false,
+          background: false,
+          __internal: { source: LogSources.API },
+        })
+      }),
+    )
+
+    it(
+      'sends messages in request body when provided (non-streaming)',
+      server.boundary(async () => {
+        const { mockBody } = mockRequest({
+          server,
+          apiVersion: 'v3',
+          version: 'SOME_UUID',
+          projectId: '123',
+          fakeResponse: RUN_TEXT_RESPONSE,
+        })
+        await sdk.prompts.run('path/to/document', {
+          projectId,
+          versionUuid: 'SOME_UUID',
+          parameters: { foo: 'bar' },
+          messages: [
+            { role: 'user', content: [{ type: 'text', text: 'Hello!' }] },
+            {
+              role: 'assistant',
+              content: [{ type: 'text', text: 'Hi there!' }],
+            },
+          ],
+          stream: false,
+        })
+        expect(mockBody).toHaveBeenCalledWith({
+          path: 'path/to/document',
+          parameters: { foo: 'bar' },
+          messages: [
+            { role: 'user', content: [{ type: 'text', text: 'Hello!' }] },
+            {
+              role: 'assistant',
+              content: [{ type: 'text', text: 'Hi there!' }],
+            },
+          ],
           tools: [],
           stream: false,
           background: false,

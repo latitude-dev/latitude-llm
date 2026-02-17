@@ -503,6 +503,8 @@ class RunPromptOptions:
     tools: Optional[dict[str, OnToolCall]]
     stream: Optional[bool]
     background: Optional[bool]
+    mcp_headers: Optional[dict[str, dict[str, str]]]
+    messages: Optional[Sequence[MessageLike]]  # Messages to append after the compiled prompt
 
 class FinishedResult:
     uuid: str

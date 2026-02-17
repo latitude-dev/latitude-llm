@@ -414,7 +414,12 @@ Execute a prompt with optional parameters. This endpoint processes your prompt t
   },
   "stream": false,
   "background": false,
-  "userMessage": "Optional user message",
+  "messages": [
+    {
+      "role": "user",
+      "content": [{ "type": "text", "text": "Hello!" }]
+    }
+  ],
   "customIdentifier": "optional-custom-id",
   "tools": ["tool1", "tool2"]
 }
@@ -422,7 +427,8 @@ Execute a prompt with optional parameters. This endpoint processes your prompt t
 
 - `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned.
 - `background`: Optional boolean parameter (defaults to `false`). When set to true, the request is enqueued for background processing and returns immediately with a conversation UUID.
-- `userMessage`: Optional string to start the conversation with a user message.
+- `messages`: Optional array of messages to append to the conversation after the compiled prompt. Messages follow the [PromptL format](/promptl/getting-started/introduction). Note: This is not compatible with the `<step>` feature of PromptL.
+- `userMessage`: **Deprecated.** Use `messages` instead. Optional string to start the conversation with a user message. This parameter will be removed in a future version.
 - `customIdentifier`: Optional string for custom identification of the run.
 - `tools`: Optional array of tool names to enable for this run.
 

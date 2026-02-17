@@ -32,20 +32,25 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
   public providersMap: CachedApiKeys
 
   private chain: Chain
+  private appendMessages?: Message[]
+  private isFirstStep: boolean = true
 
   constructor({
     chain,
     providersMap,
+    appendMessages,
     ...rest
   }: StreamManagerProps & {
     chain: Chain
     providersMap: CachedApiKeys
+    appendMessages?: Message[]
     simulationSettings?: SimulationSettings
   }) {
     super(rest)
 
     this.chain = chain
     this.providersMap = providersMap
+    this.appendMessages = appendMessages
   }
 
   async step(messages?: Message[]): Promise<void> {
@@ -58,7 +63,17 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
       }).then((r) => r.unwrap())
       if (chain.chainCompleted) return this.endStream()
 
-      this.setMessages(chain.messages)
+      // Append extra messages after the chain's messages on the first step
+      // Note: This is not compatible with the <step> feature of PromptL
+      let chainMessages = chain.messages
+      if (this.isFirstStep && this.appendMessages?.length) {
+        chainMessages = [...chain.messages, ...this.appendMessages]
+        this.isFirstStep = false
+      } else {
+        this.isFirstStep = false
+      }
+
+      this.setMessages(chainMessages)
       this.startStep()
       await this.startProviderStep({
         provider: chain.provider,
@@ -85,7 +100,7 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         controller: this.controller!,
         documentLogUuid: this.uuid,
         conversationContext: this.getConversationContext(),
-        messages: chain.messages,
+        messages: chainMessages,
         output: chain.output,
         provider: chain.provider,
         schema: chain.schema,

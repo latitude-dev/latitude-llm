@@ -363,4 +363,67 @@ You are a helpful assistant. Reply with a short acknowledgement.
         assert len(chat_result.response.text) > 0  # type: ignore
         get_weather_mock.assert_called()
 
+    async def test_run_with_messages_non_streaming(self):
+        """Should run a prompt with the messages parameter (non-streaming)"""
+        sdk = await self.setup_sdk()
+
+        result = await sdk.prompts.run(
+            self.simple_prompt_path,
+            options=RunPromptOptions(
+                stream=False,
+                parameters={},
+                messages=[
+                    UserMessage(content=[TextContent(text="Hello, can you acknowledge this message?")]),
+                ],
+            ),
+        )
+
+        assert result is not None
+        assert result.uuid is not None  # type: ignore
+        assert isinstance(result.uuid, str)  # type: ignore
+        assert result.response is not None  # type: ignore
+        assert result.response.text is not None  # type: ignore
+        assert isinstance(result.response.text, str)  # type: ignore
+        assert len(result.response.text) > 0  # type: ignore
+
+    async def test_run_with_messages_streaming(self):
+        """Should run a prompt with the messages parameter (streaming)"""
+        sdk = await self.setup_sdk()
+
+        on_finished_mock = AsyncMock()
+
+        async def on_finished(result: FinishedResult):
+            on_finished_mock(result)
+
+        on_error_mock = AsyncMock()
+
+        async def on_error(error: Exception):
+            on_error_mock(error)
+
+        result = await sdk.prompts.run(
+            self.simple_prompt_path,
+            options=RunPromptOptions(
+                stream=True,
+                parameters={},
+                messages=[
+                    UserMessage(content=[TextContent(text="Hello, can you acknowledge this message?")]),
+                    UserMessage(content=[TextContent(text="And one more message.")]),
+                ],
+                on_finished=on_finished,
+                on_error=on_error,
+            ),
+        )
+
+        assert not on_error_mock.called, f"[DEBUG] Error mock was called: {on_error_mock.call_args}"
+
+        assert result is not None
+        assert result.uuid is not None  # type: ignore
+        assert isinstance(result.uuid, str)  # type: ignore
+        assert result.response is not None  # type: ignore
+        assert result.response.text is not None  # type: ignore
+        assert isinstance(result.response.text, str)  # type: ignore
+        assert len(result.response.text) > 0  # type: ignore
+
+        assert on_finished_mock.called
+
     # TODO(runs): test_run_prompt_background_then_attach_then_stop
