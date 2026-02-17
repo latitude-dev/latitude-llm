@@ -523,6 +523,128 @@ You are a helpful assistant. Reply with a short acknowledgement.
     }
   })
 
+  it('should run prompt with messages parameter (non-streaming)', async () => {
+    log('test:start', 'run-with-messages-non-streaming')
+    try {
+      const runStart = Date.now()
+      const result = await sdk.prompts.run(simplePromptPath, {
+        stream: false,
+        parameters: {},
+        messages: [
+          {
+            role: 'user',
+            content: [{ type: 'text', text: 'Hello, can you acknowledge this message?' }],
+          },
+        ],
+      })
+      log('run-with-messages-non-streaming:result', {
+        durationMs: Date.now() - runStart,
+        uuid: result?.uuid,
+        responseLength: result?.response?.text?.length,
+      })
+
+      expect(result).toBeDefined()
+      expect(result?.uuid).toBeDefined()
+      expect(typeof result?.uuid).toBe('string')
+      expect(result?.response).toBeDefined()
+      expect(result?.response?.text).toBeDefined()
+      expect(typeof result?.response?.text).toBe('string')
+      expect(result?.response?.text.length).toBeGreaterThan(0)
+      log('test:finish', 'run-with-messages-non-streaming')
+    } catch (error) {
+      log('run-with-messages-non-streaming:error', error)
+      if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+        throw new Error(gatewayUnavailableMessage)
+      }
+
+      if (
+        error instanceof Error &&
+        error.message.includes('Failed query') &&
+        apiKey === 'test-api-key'
+      ) {
+        console.warn(
+          '⚠️  Using test API key. Set LATITUDE_API_KEY environment variable with a valid API key for full E2E testing.',
+        )
+        return
+      }
+
+      throw error
+    }
+  })
+
+  it('should run prompt with messages parameter (streaming)', async () => {
+    log('test:start', 'run-with-messages-streaming')
+    try {
+      const onFinishedMock = vi.fn()
+      const onErrorMock = vi.fn()
+      const runStart = Date.now()
+      const result = await sdk.prompts.run(simplePromptPath, {
+        stream: true,
+        parameters: {},
+        messages: [
+          {
+            role: 'user',
+            content: [{ type: 'text', text: 'Hello, can you acknowledge this message?' }],
+          },
+          {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'I acknowledge your message.' }],
+          },
+          {
+            role: 'user',
+            content: [{ type: 'text', text: 'Thank you!' }],
+          },
+        ],
+        onFinished: (data) => {
+          onFinishedMock(data)
+          log('run-with-messages-streaming:onFinished', {
+            uuid: data?.uuid,
+            responseLength: data?.response?.text?.length,
+          })
+        },
+        onError: (err) => {
+          onErrorMock(err)
+          log('run-with-messages-streaming:onError', err)
+        },
+      })
+      log('run-with-messages-streaming:result', {
+        durationMs: Date.now() - runStart,
+        uuid: result?.uuid,
+        responseLength: result?.response?.text?.length,
+      })
+
+      if (apiKey !== 'test-api-key') {
+        expect(onErrorMock).not.toHaveBeenCalled()
+        expect(result).toBeDefined()
+        expect(result?.uuid).toBeDefined()
+        expect(typeof result?.uuid).toBe('string')
+        expect(result?.response).toBeDefined()
+        expect(result?.response?.text).toBeDefined()
+        expect(typeof result?.response?.text).toBe('string')
+        expect(result?.response?.text.length).toBeGreaterThan(0)
+      }
+      log('test:finish', 'run-with-messages-streaming')
+    } catch (error) {
+      log('run-with-messages-streaming:error', error)
+      if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+        throw new Error(gatewayUnavailableMessage)
+      }
+
+      if (
+        error instanceof Error &&
+        error.message.includes('Failed query') &&
+        apiKey === 'test-api-key'
+      ) {
+        console.warn(
+          '⚠️  Using test API key. Set LATITUDE_API_KEY environment variable with a valid API key for full E2E testing.',
+        )
+        return
+      }
+
+      throw error
+    }
+  })
+
   it('should run prompt and continue with chat follow-up', async () => {
     log('test:start', 'run-and-chat-followup')
     try {
