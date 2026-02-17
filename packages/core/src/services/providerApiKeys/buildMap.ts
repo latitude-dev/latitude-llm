@@ -1,7 +1,7 @@
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { database } from '../../client'
 import { getOrSet } from '../../cache'
-import { ProviderApiKeysRepository } from '../../repositories'
+import { findAllProviderApiKeys } from '../../queries/providerApiKeys/findAll'
 
 const PROVIDER_API_KEYS_MAP_CACHE_TTL = 3600 // 1 hour
 
@@ -17,8 +17,7 @@ export async function buildProvidersMap(
   const result = await getOrSet(
     cacheKey,
     async () => {
-      const scope = new ProviderApiKeysRepository(workspaceId, db)
-      const result = await scope.findAll().then((r) => r.unwrap())
+      const result = await findAllProviderApiKeys({ workspaceId }, db)
 
       return result.reduce(
         (acc, apiKey) => {

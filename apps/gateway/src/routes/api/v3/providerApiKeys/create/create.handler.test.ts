@@ -1,5 +1,5 @@
 import app from '$/routes/app'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import { createProject } from '@latitude-data/core/factories'
 import { Providers } from '@latitude-data/constants'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -34,7 +34,7 @@ describe('POST /api/v3/provider-api-keys', () => {
 
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId,
-      }).then((r) => r.unwrap())
+      })
 
       headers = {
         headers: {

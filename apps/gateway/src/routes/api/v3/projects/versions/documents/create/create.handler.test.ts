@@ -1,6 +1,6 @@
 import app from '$/routes/app'
 import { Providers } from '@latitude-data/constants'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import {
   createDraft,
   createProject,
@@ -36,7 +36,7 @@ describe('POST /documents', () => {
       const { workspace, user, project, providers } = await createProject()
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
 
       const { commit: draft } = await createDraft({
         project,
@@ -105,7 +105,7 @@ describe('POST /documents', () => {
       const { workspace, user, project } = await createProject()
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
 
       const { commit: draft } = await createDraft({
         project,
@@ -142,7 +142,7 @@ describe('POST /documents', () => {
       })
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
 
       const path = 'path/to/document'
       const promptContent = helpers.createPrompt({

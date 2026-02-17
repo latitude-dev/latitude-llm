@@ -4,28 +4,37 @@ import { Providers } from '@latitude-data/constants'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { ProviderApiKeysRepository } from '../../repositories'
+import { findProviderApiKeyById } from '../../queries/providerApiKeys/findById'
+import { findAllProviderApiKeys } from '../../queries/providerApiKeys/findAll'
+import { findFirstProviderApiKey } from '../../queries/providerApiKeys/findFirst'
 
 export async function findDefaultProvider(workspace: Workspace, db = database) {
-  const providerScope = new ProviderApiKeysRepository(workspace.id, db)
-
   if (workspace.defaultProviderId) {
-    return Result.ok(
-      await providerScope
-        .find(workspace.defaultProviderId)
-        .then((r) => r.unwrap()),
+    const provider = await findProviderApiKeyById(
+      {
+        workspaceId: workspace.id,
+        id: workspace.defaultProviderId,
+      },
+      db,
     )
+    return Result.ok(provider)
   }
 
-  return Result.ok(await providerScope.findFirst().then((r) => r.unwrap()))
+  const provider = await findFirstProviderApiKey(
+    { workspaceId: workspace.id },
+    db,
+  )
+  return Result.ok(provider)
 }
 
 export async function findDefaultEvaluationProvider(
   workspace: Workspace,
   db = database,
 ) {
-  const providerScope = new ProviderApiKeysRepository(workspace.id, db)
-  let providers = await providerScope.findAll().then((r) => r.unwrap())
+  let providers = await findAllProviderApiKeys(
+    { workspaceId: workspace.id },
+    db,
+  )
 
   if (workspace.defaultProviderId) {
     providers = [

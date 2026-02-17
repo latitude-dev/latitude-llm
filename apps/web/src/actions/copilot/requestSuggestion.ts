@@ -1,10 +1,8 @@
 'use server'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { BadRequestError } from '@latitude-data/constants/errors'
-import {
-  DocumentVersionsRepository,
-  ProviderApiKeysRepository,
-} from '@latitude-data/core/repositories'
+import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
+import { findAllProviderApiKeys } from '@latitude-data/core/queries/providerApiKeys/findAll'
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
 
@@ -45,9 +43,10 @@ export const requestSuggestionAction = authProcedure
       })
       .then((r) => r.unwrap())
 
-    const providersScope = new ProviderApiKeysRepository(ctx.workspace.id)
-    const providers = await providersScope.findAll().then((r) =>
-      r.unwrap().map((p) => ({
+    const providers = await findAllProviderApiKeys({
+      workspaceId: ctx.workspace.id,
+    }).then((list) =>
+      list.map((p) => ({
         name: p.name,
         provider: p.provider,
         models: Object.values(

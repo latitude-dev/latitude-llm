@@ -20,11 +20,8 @@ import { toggleFeatureGlobally } from '../src/services/features/toggleGlobally'
 import { changeWorkspacePlan } from '../src/services/workspaces/changePlan'
 import { FeaturesRepository } from '../src/repositories'
 import { unsafelyFindWorkspace } from '../src/data-access/workspaces'
-import {
-  ApiKeysRepository,
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../src/repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '../src/repositories'
+import { selectFirstApiKey } from '../src/queries/apiKeys/selectFirst'
 import { HEAD_COMMIT, Providers } from '@latitude-data/constants'
 import { createNewDocumentUnsafe } from '../src/services/documents/createUnsafe'
 import { updateDocumentUnsafe } from '../src/services/documents/updateUnsafe'
@@ -263,8 +260,7 @@ async function main() {
     console.log(`✓ Provider API key found: ${ENTERPRISE_PROVIDER_NAME}`)
   }
 
-  const apiKeysRepo = new ApiKeysRepository(workspace.id)
-  const apiKeyResult = await apiKeysRepo.selectFirst().then((r) => r.unwrap())
+  const apiKeyResult = await selectFirstApiKey({ workspaceId: workspace.id })
 
   if (!apiKeyResult) {
     const apiKeyCreated = await createApiKey({ workspace }).then((r) =>

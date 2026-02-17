@@ -1,11 +1,10 @@
 import { Result } from '../../../../../lib/Result'
-import { ProviderApiKeysRepository } from '../../../../../repositories'
+import { findAllProviderApiKeys } from '../../../../../queries/providerApiKeys/findAll'
 import { providerPresenter } from '../presenters'
 import { defineLatteTool } from '../types'
 
 const listProviders = defineLatteTool(async (_, { workspace }) => {
-  const providersScope = new ProviderApiKeysRepository(workspace.id)
-  const providers = await providersScope.findAll().then((r) => r.unwrap())
+  const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
   return Result.ok(providers.map(providerPresenter))
 })
 

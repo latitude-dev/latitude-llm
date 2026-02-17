@@ -1,11 +1,8 @@
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import { validate as isValidUuid } from 'uuid'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-  ProviderApiKeysRepository,
-} from '@latitude-data/core/repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '@latitude-data/core/repositories'
+import { findAllProviderApiKeysByNames } from '@latitude-data/core/queries/providerApiKeys/findAllByNames'
 import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { Providers } from '@latitude-data/constants'
 import { getDocumentMetadata } from '@latitude-data/core/services/documents/scan'
@@ -90,8 +87,10 @@ export async function getAllDocumentsAtCommitWithMetadata({
   const providerNames = docsWithMetadata
     .map((d) => d.metadata?.config?.provider as string)
     .filter((providerName) => !!providerName)
-  const providersScope = new ProviderApiKeysRepository(workspace.id)
-  const allUsedProviders = await providersScope.findAllByNames(providerNames)
+  const allUsedProviders = await findAllProviderApiKeysByNames({
+    workspaceId: workspace.id,
+    names: providerNames,
+  })
   const llmProviders = allUsedProviders.reduce(
     (acc, provider) => {
       acc[provider.name] = provider.provider

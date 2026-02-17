@@ -9,14 +9,14 @@ import {
   LAST_LATTE_THREAD_CACHE_KEY,
 } from '@latitude-data/core/constants'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
   OptimizationsRepository,
-  ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories/index'
+import { findAllApiKeys } from '@latitude-data/core/queries/apiKeys/findAll'
+import { findAllProviderApiKeys } from '@latitude-data/core/queries/providerApiKeys/findAll'
 import { findAllActiveProjects } from '@latitude-data/core/queries/projects/findAllActive'
 import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
@@ -246,16 +246,12 @@ export const positionOptimizationByDocumentCached = cache(
 
 export const getApiKeysCached = cache(async () => {
   const { workspace } = await getCurrentUserOrRedirect()
-  const scope = new ApiKeysRepository(workspace.id)
-  const result = await scope.findAll()
-  return result.unwrap()
+  return findAllApiKeys({ workspaceId: workspace.id })
 })
 
 export const getProviderApiKeysCached = cache(async () => {
   const { workspace } = await getCurrentUserOrRedirect()
-  const scope = new ProviderApiKeysRepository(workspace.id)
-  const result = await scope.findAll()
-  return result.unwrap()
+  return findAllProviderApiKeys({ workspaceId: workspace.id })
 })
 
 export const isFeatureEnabledCached = cache(async (feature: string) => {

@@ -5,14 +5,14 @@ import { rateLimitMiddleware } from './index'
 import errorHandlerMiddleware from '../errorHandler'
 
 // If the token is not even a UUID, we should fail fast and never touch the DB.
-vi.mock('@latitude-data/core/data-access/apiKeys', () => ({
+vi.mock('@latitude-data/core/queries/apiKeys/unsafelyGetApiKeyByToken', () => ({
   unsafelyGetApiKeyByToken: vi.fn(),
 }))
 
 describe('rateLimitMiddleware', () => {
   it('returns 401 for malformed authorization token and does not query the DB', async () => {
     const { unsafelyGetApiKeyByToken } = await import(
-      '@latitude-data/core/data-access/apiKeys'
+      '@latitude-data/core/queries/apiKeys/unsafelyGetApiKeyByToken'
     )
 
     const app = new Hono()

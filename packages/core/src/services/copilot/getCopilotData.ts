@@ -4,10 +4,8 @@ import {
   unsafelyFindWorkspace,
   unsafelyFindWorkspaceByName,
 } from '../../data-access/workspaces'
-import {
-  unsafelyGetApiKeyByToken,
-  unsafelyGetFirstApiKeyByWorkspaceId,
-} from '../../data-access/apiKeys'
+import { unsafelyGetApiKeyByToken } from '../../queries/apiKeys/unsafelyGetApiKeyByToken'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '../../queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import { Result, TypedResult } from '../../lib/Result'
 import { CommitsRepository } from '../../repositories'
 import { findProjectById } from '../../queries/projects/findById'
@@ -64,13 +62,13 @@ export async function getCopilotData(
       return Result.error(new Error('Copilot commit not found'))
     }
 
-    const apiKeyResult = await unsafelyGetFirstApiKeyByWorkspaceId(
-      {
-        workspaceId: workspace.id,
-      },
-      db,
-    )
-    if (apiKeyResult.error) {
+    let apiKey
+    try {
+      apiKey = await unsafelyGetFirstApiKeyByWorkspaceId(
+        { workspaceId: workspace.id },
+        db,
+      )
+    } catch {
       return Result.error(new Error('Copilot api key not found'))
     }
 
@@ -78,7 +76,7 @@ export async function getCopilotData(
       workspace,
       project,
       commit,
-      apiKeyToken: apiKeyResult.value.token,
+      apiKeyToken: apiKey.token,
     })
   }
 
@@ -93,20 +91,14 @@ export async function getCopilotData(
     return Result.error(new Error('COPILOT_PROJECT_ID is not set'))
   }
 
-  const apiKeyResult = await unsafelyGetApiKeyByToken(
-    {
-      token: apiKeyToken,
-    },
-    db,
-  )
-  if (apiKeyResult.error) {
+  let apiKey
+  try {
+    apiKey = await unsafelyGetApiKeyByToken({ token: apiKeyToken }, db)
+  } catch {
     return Result.error(new Error('Copilot api key not found'))
   }
 
-  const workspace = await unsafelyFindWorkspace(
-    apiKeyResult.value.workspaceId,
-    db,
-  )
+  const workspace = await unsafelyFindWorkspace(apiKey.workspaceId, db)
   if (!workspace) {
     return Result.error(new Error('Copilot workspace not found'))
   }

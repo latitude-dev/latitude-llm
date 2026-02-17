@@ -6,10 +6,8 @@ import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
-import {
-  ProviderApiKeysRepository,
-  WorkspacesRepository,
-} from '../../repositories'
+import { WorkspacesRepository } from '../../repositories'
+import { findAllProviderApiKeys } from '../../queries/providerApiKeys/findAll'
 import { providerApiKeys } from '../../schema/models/providerApiKeys'
 import * as factories from '../../tests/factories'
 import { destroyProviderApiKey } from './destroy'
@@ -41,8 +39,7 @@ describe('destroyProviderApiKey', () => {
       new BadRequestError('Cannot delete the Latitude provider API key'),
     )
 
-    const providersScope = new ProviderApiKeysRepository(workspace.id)
-    const providers = await providersScope.findAll().then((r) => r.unwrap())
+    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
     expect(providers.map((p) => p.id)).toContain(provider.id)
   })
 
@@ -73,8 +70,7 @@ describe('destroyProviderApiKey', () => {
 
     expect(workspace.defaultProviderId).toBe(defaultProvider.id)
 
-    const providersScope = new ProviderApiKeysRepository(workspace.id)
-    const providers = await providersScope.findAll().then((r) => r.unwrap())
+    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
 
     expect(providers.map((p) => p.id)).not.toContain(provider.id)
 
@@ -107,8 +103,7 @@ describe('destroyProviderApiKey', () => {
 
     expect(workspace.defaultProviderId).toBeNull()
 
-    const providersScope = new ProviderApiKeysRepository(workspace.id)
-    const providers = await providersScope.findAll().then((r) => r.unwrap())
+    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
 
     expect(providers.map((p) => p.id)).not.toContain(provider.id)
 

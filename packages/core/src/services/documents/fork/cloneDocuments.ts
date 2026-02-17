@@ -9,7 +9,7 @@ import { Providers } from '@latitude-data/constants'
 import { findFirstModelForProvider } from '../../ai/providers/models'
 import { Result } from '../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
-import { ProviderApiKeysRepository } from '../../../repositories'
+import { findAllProviderApiKeys } from '../../../queries/providerApiKeys/findAll'
 import { createNewDocument } from '../create'
 import { getDocumentMetadata } from '../scan'
 import { ImportProps, IntegrationMapping } from './types'
@@ -192,21 +192,15 @@ export async function cloneDocuments(
   transaction = new Transaction(),
 ): PromisedResult<DocumentVersion[]> {
   return transaction.call(async (tx) => {
-    const originProvidersScope = new ProviderApiKeysRepository(
-      originWorkspace.id,
+    const originProviders = await findAllProviderApiKeys(
+      { workspaceId: originWorkspace.id },
       tx,
     )
-    const originProvidersResult = await originProvidersScope.findAll()
-    if (!Result.isOk(originProvidersResult)) return originProvidersResult
-    const originProviders = originProvidersResult.unwrap()
 
-    const targetProvidersScope = new ProviderApiKeysRepository(
-      targetWorkspace.id,
+    const targetProviders = await findAllProviderApiKeys(
+      { workspaceId: targetWorkspace.id },
       tx,
     )
-    const targetProvidersResult = await targetProvidersScope.findAll()
-    if (!Result.isOk(targetProvidersResult)) return targetProvidersResult
-    const targetProviders = targetProvidersResult.unwrap()
 
     const defaultProviderResult = await findDefaultProvider(targetWorkspace, tx)
     if (!Result.isOk(defaultProviderResult)) return defaultProviderResult

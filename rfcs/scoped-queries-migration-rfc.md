@@ -253,6 +253,10 @@ Infrastructure (remove once unused):
 | `data-access/integrations/headerPresets/list.ts` | `queries/integrationHeaderPresets/*` | Migrated and removed |
 | `projectsRepository.ts` (prior work) | `queries/projects/*` | Migrated and removed |
 | `usersRepository.ts` (prior work) | `queries/users/*` | Migrated and removed |
+| `apiKeysRepository.ts` | `queries/apiKeys/*` | Migrated and removed |
+| `providerApiKeysRepository.ts` | `queries/providerApiKeys/*` | Migrated and removed |
+| `latitudeApiKeysRepository.ts` | `queries/apiKeys/findFirst` | Migrated and removed (same table as apiKeys) |
+| `data-access/apiKeys.ts` | `queries/apiKeys/unsafelyGetApiKeyByToken`, `unsafelyGetFirstApiKeyByWorkspaceId` | Migrated and removed |
 
 ### Deferred
 

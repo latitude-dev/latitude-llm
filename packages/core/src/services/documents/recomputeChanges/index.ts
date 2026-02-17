@@ -12,10 +12,8 @@ import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { Result, TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
-import {
-  CommitsRepository,
-  ProviderApiKeysRepository,
-} from '../../../repositories'
+import { CommitsRepository } from '../../../repositories'
+import { findAllProviderApiKeys } from '../../../queries/providerApiKeys/findAll'
 import { findAllIntegrations } from '../../../queries/integrations/findAll'
 import { documentVersions } from '../../../schema/models/documentVersions'
 import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
@@ -227,9 +225,10 @@ export async function recomputeChanges(
       documentsInDrafCommit,
     })
 
-    const providersScope = new ProviderApiKeysRepository(workspace.id, tx)
-    const providersResult = await providersScope.findAll()
-    if (providersResult.error) return Result.error(providersResult.error)
+    const providers = await findAllProviderApiKeys(
+      { workspaceId: workspace.id },
+      tx,
+    )
 
     const agentToolsMapResult = await buildAgentsToolsMap(
       {
@@ -250,7 +249,7 @@ export async function recomputeChanges(
       await resolveDocumentChanges({
         originalDocuments: mergedDocuments,
         newDocuments: draftDocuments,
-        providers: providersResult.value,
+        providers,
         agentToolsMap: agentToolsMapResult.value,
         integrationNames: allIntegrations.map((i) => i.name),
       })

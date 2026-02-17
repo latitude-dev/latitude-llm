@@ -4,7 +4,7 @@ import {
   LatitudeError,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import {
   createProject,
   createTelemetryTrace,

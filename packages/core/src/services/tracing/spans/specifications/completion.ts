@@ -16,7 +16,7 @@ import {
 } from '../../../../constants'
 import { NotFoundError, UnprocessableEntityError } from '../../../../lib/errors'
 import { Result, TypedResult } from '../../../../lib/Result'
-import { ProviderApiKeysRepository } from '../../../../repositories'
+import { findProviderApiKeyByName } from '../../../../queries/providerApiKeys/findByName'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
 import { estimateCost } from '../../../ai/estimateCost'
 import {
@@ -347,8 +347,15 @@ async function enrichCost(
   const inputTokens = tokens.prompt + tokens.cached
   const outputTokens = tokens.reasoning + tokens.completion
 
-  const repository = new ProviderApiKeysRepository(workspace.id, db)
-  const finding = await repository.findByName(provider)
+  let providerKey
+  try {
+    providerKey = await findProviderApiKeyByName(
+      { workspaceId: workspace.id, name: provider },
+      db,
+    )
+  } catch {
+    providerKey = undefined
+  }
 
   const totalTokens =
     inputTokens + outputTokens + tokens.reasoning + tokens.cached
@@ -362,7 +369,7 @@ async function enrichCost(
       reasoningTokens: tokens.reasoning,
       cachedInputTokens: tokens.cached,
     },
-    provider: finding.value?.provider ?? (provider as Providers),
+    provider: providerKey?.provider ?? (provider as Providers),
     model: model,
   })
 

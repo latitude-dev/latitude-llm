@@ -1,4 +1,4 @@
-import { unsafelyGetApiKeyByToken } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetApiKeyByToken } from '@latitude-data/core/queries/apiKeys/unsafelyGetApiKeyByToken'
 import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
 import {
   NotFoundError,
@@ -27,12 +27,13 @@ async function getTokenRateLimit(token: string): Promise<{
     }
   }
 
-  const apiKeyResult = await unsafelyGetApiKeyByToken({ token })
-  if (apiKeyResult.error || !apiKeyResult.value) {
+  let apiKey
+  try {
+    apiKey = await unsafelyGetApiKeyByToken({ token })
+  } catch {
     throw new NotFoundError('API key not found')
   }
 
-  const apiKey = apiKeyResult.value
   const workspaceId = apiKey.workspaceId
 
   const workspace = await unsafelyFindWorkspace(workspaceId)

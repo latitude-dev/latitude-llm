@@ -10,7 +10,8 @@ import {
 import { unsafelyFindWorkspace } from '../../../../data-access/workspaces'
 import { UnprocessableEntityError } from '../../../../lib/errors'
 import { Result, TypedResult } from '../../../../lib/Result'
-import { ApiKeysRepository } from '../../../../repositories'
+import { findApiKeyById } from '../../../../queries/apiKeys/findById'
+import { selectFirstApiKey } from '../../../../queries/apiKeys/selectFirst'
 import { type ApiKey } from '../../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
 import { internalBaggageSchema } from '../../../../telemetry'
@@ -274,21 +275,18 @@ async function getApiKey(
   },
   db = database,
 ) {
-  const repository = new ApiKeysRepository(workspace.id, db)
-
-  let apiKey
-  if (apiKeyId) {
-    const finding = await repository.find(apiKeyId)
-    if (finding.error) {
-      return Result.error(new UnprocessableEntityError('API key not found'))
+  let apiKey: ApiKey | undefined
+  try {
+    if (apiKeyId) {
+      apiKey = await findApiKeyById(
+        { workspaceId: workspace.id, id: apiKeyId },
+        db,
+      )
+    } else {
+      apiKey = await selectFirstApiKey({ workspaceId: workspace.id }, db)
     }
-    apiKey = finding.value
-  } else {
-    const finding = await repository.selectFirst()
-    if (finding.error) {
-      return Result.error(new UnprocessableEntityError('API key not found'))
-    }
-    apiKey = finding.value
+  } catch {
+    return Result.error(new UnprocessableEntityError('API key not found'))
   }
 
   if (!apiKey) {

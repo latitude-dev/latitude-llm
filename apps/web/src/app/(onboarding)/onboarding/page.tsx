@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { getOnboardingResources } from '$/data-access/workspaceOnboarding'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { ApiKeysRepository } from '@latitude-data/core/repositories'
+import { findAllApiKeys } from '@latitude-data/core/queries/apiKeys/findAll'
 import { ROUTES } from '$/services/routes'
 import { OnboardingFlow } from './_components/OnboardingFlow'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -25,8 +25,7 @@ export default async function OnboardingPage() {
     return redirect(ROUTES.dashboard.root)
   }
 
-  const apiKeysRepo = new ApiKeysRepository(workspace.id)
-  const apiKeys = await apiKeysRepo.findAll().then((r) => r.unwrap())
+  const apiKeys = await findAllApiKeys({ workspaceId: workspace.id })
   const firstApiKey = apiKeys[0]
   const firstDocument = documents[0]
 

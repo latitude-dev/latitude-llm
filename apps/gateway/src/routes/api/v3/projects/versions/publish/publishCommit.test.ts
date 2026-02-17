@@ -1,6 +1,6 @@
 import app from '$/routes/app'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import {
   createDraft,
   createProject,
@@ -47,7 +47,7 @@ describe('POST /projects/:projectId/versions/:versionUuid/publish', () => {
       // Set up auth headers
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
 
       headers = {
         Authorization: `Bearer ${apiKey.token}`,
@@ -211,7 +211,7 @@ describe('POST /projects/:projectId/versions/:versionUuid/publish', () => {
       // Set up auth headers for the new workspace
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: result.workspace.id,
-      }).then((r) => r.unwrap())
+      })
 
       const newHeaders = {
         Authorization: `Bearer ${apiKey.token}`,

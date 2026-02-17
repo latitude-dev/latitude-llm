@@ -7,7 +7,7 @@ import {
   LogSources,
   SpanType,
 } from '@latitude-data/core/constants'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import {
   createEvaluationV2,
   createProject,
@@ -88,7 +88,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
     // Get API key for authorization
     const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
       workspaceId: workspace.id,
-    }).then((r) => r.unwrap())
+    })
 
     const documentLogUuid = generateUUIDIdentifier()
     // Create a prompt span (parent)

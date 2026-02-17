@@ -1,4 +1,4 @@
-import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
+import { findProviderApiKeyById } from '@latitude-data/core/queries/providerApiKeys/findById'
 import { updateProviderApiKeyName } from '@latitude-data/core/services/providerApiKeys/updateName'
 import { AppRouteHandler } from '$/openApi/types'
 import { providerApiKeyPresenter } from '@latitude-data/core/services/providerApiKeys/helpers/presenter'
@@ -12,10 +12,10 @@ export const updateProviderApiKeyHandler: AppRouteHandler<
   const { providerApiKeyId } = c.req.valid('param')
   const { name } = c.req.valid('json')
 
-  const providerApiKeysRepository = new ProviderApiKeysRepository(workspace.id)
-  const providerApiKey = await providerApiKeysRepository
-    .find(Number(providerApiKeyId))
-    .then((result) => result.unwrap())
+  const providerApiKey = await findProviderApiKeyById({
+    workspaceId: workspace.id,
+    id: Number(providerApiKeyId),
+  })
 
   const updatedProviderApiKey = await updateProviderApiKeyName({
     providerApiKey,
