@@ -35,7 +35,11 @@ CREATE TABLE IF NOT EXISTS evaluation_results_rebuild_0005 (
   created_at DateTime64(3, 'UTC'),
   updated_at DateTime64(3, 'UTC'),
   created_date Date MATERIALIZED toDate(created_at),
-  has_error UInt8 MATERIALIZED if(isNull(error), 0, 1)
+  has_error UInt8 MATERIALIZED if(isNull(error), 0, 1),
+
+  INDEX idx_evaluated_span_trace (evaluated_span_id, evaluated_trace_id)
+    TYPE bloom_filter(0.001)
+    GRANULARITY 1
 )
 ENGINE = ReplacingMergeTree(updated_at)
 PARTITION BY toYYYYMM(created_at)
