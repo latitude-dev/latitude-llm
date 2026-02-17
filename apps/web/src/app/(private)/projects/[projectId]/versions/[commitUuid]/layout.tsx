@@ -6,7 +6,6 @@ import {
   findCommitsByProjectCached,
   findProjectCached,
   getHeadCommitCached,
-  getLastLatteThreadUuidCached,
 } from '$/app/(private)/_data-access'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
 import {
@@ -15,15 +14,14 @@ import {
 } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { notFound, redirect } from 'next/navigation'
-import { LatteRealtimeUpdatesProvider } from './providers/LatteRealtimeUpdatesProvider'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
-import { LatteLayout } from '$/components/LatteSidebar/LatteLayout'
-import { fetchConversationWithMessages } from '@latitude-data/core/data-access/conversations/fetchConversationWithMessages'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { ProjectProvider } from '$/app/providers/ProjectProvider'
 import { CommitProvider } from '$/app/providers/CommitProvider'
+import { computeProductAccess } from '@latitude-data/core/services/productAccess/computeProductAccess'
+import { LatteWrapper } from './_components/LatteWrapper'
 
 export type CommitPageParams = {
   children: ReactNode
@@ -73,28 +71,18 @@ export default async function CommitLayout({
     throw error
   }
 
-  const lastThreadUuid = await getLastLatteThreadUuidCached({
-    projectId: project.id,
-  })
-  const conversationResult = lastThreadUuid
-    ? await fetchConversationWithMessages({
-        workspace: session.workspace,
-        documentLogUuid: lastThreadUuid,
-      })
-    : undefined
-  const initialMessages = conversationResult?.value?.messages
+  const productAccess = computeProductAccess(session.workspace)
 
   return (
     <ProjectProvider project={project}>
       <CommitProvider project={project} commit={commit} isHead={isHead}>
-        <LatteRealtimeUpdatesProvider>
-          <LatteLayout
-            initialThreadUuid={lastThreadUuid}
-            initialMessages={initialMessages}
-          >
+        {productAccess.agentBuilder ? (
+          <LatteWrapper projectId={project.id} workspace={session.workspace}>
             {children}
-          </LatteLayout>
-        </LatteRealtimeUpdatesProvider>
+          </LatteWrapper>
+        ) : (
+          children
+        )}
       </CommitProvider>
     </ProjectProvider>
   )

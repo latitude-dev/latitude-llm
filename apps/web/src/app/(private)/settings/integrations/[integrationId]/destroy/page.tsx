@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useMemo } from 'react'
+import { use, useEffect, useMemo } from 'react'
 
 import DestroyModal from '$/components/modals/DestroyModal'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -16,6 +16,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import useProjects from '$/stores/projects'
 import { useCommitsFromProject } from '$/stores/commitsStore'
+import { useProductAccess } from '$/components/Providers/SessionProvider'
 
 type IntegrationReferenceGroup = {
   projectId: number
@@ -97,8 +98,15 @@ export default function DestroyIntegration({
 }) {
   const { integrationId } = use(params)
   const navigate = useNavigate()
+  const { agentBuilder } = useProductAccess()
   const { data, destroy, isDestroying } = useIntegrations()
   const integration = data.find((p) => p.id === Number(integrationId))
+
+  useEffect(() => {
+    if (!agentBuilder) {
+      navigate.push(ROUTES.dashboard.root)
+    }
+  }, [agentBuilder, navigate])
 
   const { data: references, isLoading } = useIntegrationReferences(integration)
 

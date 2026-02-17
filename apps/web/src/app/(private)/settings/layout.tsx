@@ -5,6 +5,7 @@ import { Container } from '@latitude-data/web-ui/atoms/Container'
 import { TitleWithActions } from '@latitude-data/web-ui/molecules/TitleWithActions'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { AppTabs } from '$/app/(private)/AppTabs'
+import { getProductAccess } from '$/services/productAccess/getProductAccess'
 
 import Memberships from './_components/Memberships'
 import ProviderApiKeys from './_components/ProviderApiKeys'
@@ -25,6 +26,8 @@ export default async function SettingsLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
+  const productAccess = await getProductAccess()
+
   return (
     <Container>
       <AppTabs />
@@ -34,7 +37,7 @@ export default async function SettingsLayout({
       <Memberships />
       <WorkspaceApiKeys />
       <ProviderApiKeys />
-      <Integrations />
+      {productAccess.agentBuilder && <Integrations />}
       <Webhooks />
       <Promocodes />
     </Container>

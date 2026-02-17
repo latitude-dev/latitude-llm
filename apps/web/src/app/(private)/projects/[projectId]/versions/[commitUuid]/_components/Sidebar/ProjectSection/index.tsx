@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { formatCount } from '@latitude-data/constants/formatCount'
 import { ROUTES } from '$/services/routes'
+import { useProductAccess } from '$/components/Providers/SessionProvider'
 
 import { RunSourceGroup } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
@@ -85,6 +86,7 @@ export default function ProjectSection({
   project: Project
   commit: Commit
 }) {
+  const { agentBuilder } = useProductAccess()
   const { value: lastRunTab } = useLocalStorage<RunSourceGroup>({
     key: AppLocalStorage.lastRunTab,
     defaultValue: RunSourceGroup.Playground,
@@ -93,7 +95,7 @@ export default function ProjectSection({
   const PROJECT_ROUTES = useMemo(
     () =>
       [
-        {
+        agentBuilder && {
           label: 'Home',
           route: ROUTES.projects
             .detail({ id: project.id })
@@ -123,7 +125,7 @@ export default function ProjectSection({
           iconName: 'history',
         },
       ].filter(Boolean) as ProjectRoute[],
-    [project, commit, lastRunTab],
+    [project, commit, lastRunTab, agentBuilder],
   )
 
   return (

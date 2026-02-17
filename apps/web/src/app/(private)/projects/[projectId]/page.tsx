@@ -1,8 +1,7 @@
-'use server'
-
 import {
   findCommitsByProjectCached,
   findProjectCached,
+  getDocumentsAtCommitCached,
 } from '$/app/(private)/_data-access'
 import { lastSeenCommitCookieName } from '$/helpers/cookies/lastSeenCommit'
 import {
@@ -10,6 +9,7 @@ import {
   getCurrentUserOrRedirect,
 } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
+import { computeProductAccess } from '@latitude-data/core/services/productAccess/computeProductAccess'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { cookies } from 'next/headers'
@@ -46,6 +46,8 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
 
   try {
     session = await getCurrentUserOrRedirect()
+    const productAccess = computeProductAccess(session.workspace)
+
     project = await findProjectCached({
       projectId: Number(projectId),
       workspaceId: session.workspace.id,
@@ -54,12 +56,19 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
       projectId: project.id,
     })
 
+    const headCommit = commits.find((c) => c.mergedAt) ?? commits[0]
+    const documents = headCommit
+      ? await getDocumentsAtCommitCached({ commit: headCommit })
+      : []
+
     url = getRedirectUrl({
       commits,
       projectId: project.id,
       lastSeenCommitUuid,
       lastSeenDocumentUuid,
       PROJECT_ROUTE,
+      agentBuilder: productAccess.agentBuilder,
+      documents,
     })
   } catch (error) {
     if (error instanceof NotFoundError) {
