@@ -128,6 +128,7 @@ export function formatConversation(conversation: Message[]) {
   let result = ''
 
   for (const message of conversation) {
+    if (!message) continue
     const speaker = message.role.charAt(0).toUpperCase() + message.role.slice(1)
     result += `${speaker}: ${formatMessage(message)}\n\n`
   }
