@@ -1,4 +1,4 @@
-ALTER TABLE evaluation_results DROP INDEX IF EXISTS idx_evaluated_span_id;
+ALTER TABLE evaluation_results DROP INDEX IF EXISTS idx_evaluated_trace_span;
 ALTER TABLE evaluation_results DROP INDEX IF EXISTS idx_evaluated_trace_id;
 ALTER TABLE evaluation_results DROP INDEX IF EXISTS idx_experiment_id;
 ALTER TABLE evaluation_results DROP INDEX IF EXISTS idx_document_uuid;
