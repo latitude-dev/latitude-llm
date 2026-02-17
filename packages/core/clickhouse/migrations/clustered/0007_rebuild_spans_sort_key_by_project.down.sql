@@ -1,4 +1,2 @@
-RENAME TABLE
-  spans TO spans_rebuild_0006_rollback,
-  spans_backup_0006 TO spans
-ON CLUSTER default;
+RENAME TABLE spans TO spans_rebuild_0006_rollback ON CLUSTER default;
+RENAME TABLE spans_backup_0006 TO spans ON CLUSTER default;

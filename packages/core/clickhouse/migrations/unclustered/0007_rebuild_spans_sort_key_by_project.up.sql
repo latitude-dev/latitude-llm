@@ -128,6 +128,5 @@ SELECT
   retention_expires_at
 FROM spans;
 
-RENAME TABLE
-  spans TO spans_backup_0006,
-  spans_rebuild_0006 TO spans;
+RENAME TABLE spans TO spans_backup_0006;
+RENAME TABLE spans_rebuild_0006 TO spans;
