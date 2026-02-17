@@ -6,7 +6,7 @@ import {
   LatitudeError,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import {
   createDocumentVersion,
   createDraft,
@@ -148,7 +148,7 @@ describe('POST /run', () => {
       workspace = wsp
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
       token = apikey!.token
       const path = 'path/to/document'
       const { commit: cmt } = await createDraft({
@@ -598,7 +598,7 @@ describe('POST /run', () => {
       provider = providers[0]!
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
       token = apikey!.token
       const path = 'path/to/document'
       const { commit: cmt } = await createDraft({
@@ -994,7 +994,7 @@ describe('POST /run', () => {
       workspace = wsp
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
       token = apikey!.token
       const path = 'path/to/document'
       const { commit: cmt } = await createDraft({
@@ -1148,7 +1148,7 @@ describe('POST /run', () => {
       provider = providers[0]!
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
       token = apikey!.token
       const path = 'path/to/document'
       const { commit: cmt } = await createDraft({
@@ -1588,7 +1588,7 @@ describe('POST /run', () => {
 
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
       token = apikey!.token
       const path = 'path/to/document'
       const { commit: cmt } = await createDraft({

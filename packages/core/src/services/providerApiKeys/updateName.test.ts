@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { Providers } from '@latitude-data/constants'
 import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { ProviderApiKeysRepository } from '../../repositories'
+import { findAllProviderApiKeys } from '../../queries/providerApiKeys/findAll'
 import { createProject } from '../../tests/factories'
 import { createProviderApiKey } from './create'
 import { updateProviderApiKeyName } from './updateName'
@@ -43,8 +43,9 @@ describe('updateProviderApiKeyName', () => {
     expect(updatedProvider.provider).toEqual(provider.provider)
     expect(updatedProvider.token).toEqual(provider.token)
 
-    const providersScope = new ProviderApiKeysRepository(workspace.id)
-    const providers = await providersScope.findAll().then((r) => r.unwrap())
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers).toHaveLength(1)
     expect(providers[0]!.name).toEqual('Updated Name')
@@ -71,8 +72,9 @@ describe('updateProviderApiKeyName', () => {
       'Name must be at least 1 characters long',
     )
 
-    const providersScope = new ProviderApiKeysRepository(workspace.id)
-    const providers = await providersScope.findAll().then((r) => r.unwrap())
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers).toHaveLength(1)
     expect(providers[0]!.name).toEqual('Original Name')
@@ -100,8 +102,9 @@ describe('updateProviderApiKeyName', () => {
     expect(updatedProvider.id).toEqual(provider.id)
     expect(updatedProvider.name).toEqual('Updated Name')
 
-    const providersScope = new ProviderApiKeysRepository(workspace.id)
-    const providers = await providersScope.findAll().then((r) => r.unwrap())
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers).toHaveLength(1)
     expect(providers[0]!.name).toEqual('Updated Name')
@@ -128,8 +131,9 @@ describe('updateProviderApiKeyName', () => {
       'Name must be at least 1 characters long',
     )
 
-    const providersScope = new ProviderApiKeysRepository(workspace.id)
-    const providers = await providersScope.findAll().then((r) => r.unwrap())
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers).toHaveLength(1)
     expect(providers[0]!.name).toEqual('Original Name')

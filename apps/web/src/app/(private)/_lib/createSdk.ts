@@ -1,7 +1,7 @@
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { Result } from '@latitude-data/core/lib/Result'
-import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
+import { findFirstApiKey } from '@latitude-data/core/queries/apiKeys/findFirst'
 import { env } from '@latitude-data/env'
 import { Latitude } from '@latitude-data/sdk'
 import { LogSources } from '@latitude-data/core/constants'
@@ -9,8 +9,7 @@ import { LogSources } from '@latitude-data/core/constants'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 // NOTE: this would be a great candidate for a cache function with redis
 async function getLatitudeApiKey(workspace: Workspace) {
-  const repo = new LatitudeApiKeysRepository(workspace.id)
-  const firstApiKey = await repo.findFirst().then((r) => r.unwrap())
+  const firstApiKey = await findFirstApiKey({ workspaceId: workspace.id })
 
   if (!firstApiKey) {
     return Result.error(

@@ -10,7 +10,7 @@ import {
 import { BadRequestError } from '../../../lib/errors'
 import { isRetryableError } from '../../../lib/isRetryableError'
 import { Result } from '../../../lib/Result'
-import { ProviderApiKeysRepository } from '../../../repositories'
+import { findProviderApiKeyByName } from '../../../queries/providerApiKeys/findByName'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { createRunError } from '../../runErrors/create'
 import {
@@ -72,10 +72,13 @@ async function validate<M extends LlmEvaluationMetric>(
       return Result.error(new BadRequestError('Provider is required'))
     }
 
-    const repository = new ProviderApiKeysRepository(workspace.id, db)
-    const getting = await repository.findByName(configuration.provider)
-    if (getting.error) {
-      return Result.error(getting.error)
+    try {
+      await findProviderApiKeyByName(
+        { workspaceId: workspace.id, name: configuration.provider },
+        db,
+      )
+    } catch (error) {
+      return Result.error(error as Error)
     }
 
     configuration.model = configuration.model.trim()

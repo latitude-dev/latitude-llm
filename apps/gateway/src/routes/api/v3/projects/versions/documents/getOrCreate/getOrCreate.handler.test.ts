@@ -1,16 +1,14 @@
 import app from '$/routes/app'
 import { LatitudeErrorCodes } from '@latitude-data/constants/errors'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import {
   createDocumentVersion,
   createDraft,
   createProject,
   helpers,
 } from '@latitude-data/core/factories'
-import {
-  DocumentVersionsRepository,
-  ProviderApiKeysRepository,
-} from '@latitude-data/core/repositories'
+import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
+import { findFirstProviderApiKey } from '@latitude-data/core/queries/providerApiKeys/findFirst'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Project } from '@latitude-data/core/schema/models/types/Project'
@@ -76,7 +74,7 @@ describe('POST /get-or-create', () => {
 
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
 
       route = `/api/v3/projects/${project.id}/versions/${commit.uuid}/documents/get-or-create`
       headers = {
@@ -159,8 +157,9 @@ describe('POST /get-or-create', () => {
     })
 
     it('fails when creating a document on a published version', async () => {
-      const providersScope = new ProviderApiKeysRepository(workspace.id)
-      const provider = await providersScope.findFirst().then((r) => r.unwrap())
+      const provider = await findFirstProviderApiKey({
+        workspaceId: workspace.id,
+      })
 
       await createDocumentVersion({
         workspace,

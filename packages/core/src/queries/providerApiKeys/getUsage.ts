@@ -1,101 +1,19 @@
-import {
-  and,
-  desc,
-  eq,
-  getTableColumns,
-  inArray,
-  isNotNull,
-  isNull,
-  sql,
-  SQL,
-} from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 
-import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
-import { EvaluationType, ProviderApiKeyUsage } from '../constants'
-import { NotFoundError } from '../lib/errors'
-import { Result } from '../lib/Result'
-import { commits } from '../schema/models/commits'
-import { documentVersions } from '../schema/models/documentVersions'
-import { evaluationVersions } from '../schema/models/evaluationVersions'
-import { projects } from '../schema/models/projects'
-import { providerApiKeys } from '../schema/models/providerApiKeys'
-import {
-  serializeProviderApiKey,
-  serializeProviderApiKeys,
-} from '../services/providerApiKeys/helpers/serializeProviderApiKey'
-import Repository, { QueryOptions } from './repositoryV2'
+import { EvaluationType, type ProviderApiKeyUsage } from '../../constants'
+import { commits } from '../../schema/models/commits'
+import { documentVersions } from '../../schema/models/documentVersions'
+import { evaluationVersions } from '../../schema/models/evaluationVersions'
+import { projects } from '../../schema/models/projects'
+import { scopedQuery } from '../scope'
 
-const tt = getTableColumns(providerApiKeys)
-
-export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
-  get scopeFilter() {
-    return and(
-      isNull(providerApiKeys.deletedAt),
-      eq(providerApiKeys.workspaceId, this.workspaceId),
-    )
-  }
-
-  get scope() {
-    return this.db
-      .select(tt)
-      .from(providerApiKeys)
-      .where(this.scopeFilter)
-      .$dynamic()
-  }
-
-  async findAll(opts: QueryOptions = {}) {
-    const result = await super.findAll(opts)
-    if (!Result.isOk(result)) return result
-    return Result.ok(serializeProviderApiKeys(result.value))
-  }
-
-  async find(id: string | number | undefined | null) {
-    const result = await super.find(id)
-    if (!Result.isOk(result)) return result
-    return Result.ok(serializeProviderApiKey(result.value))
-  }
-
-  async findMany(
-    ids: (string | number)[],
-    opts: { ordering?: SQL<unknown>[] } = {},
-  ) {
-    const result = await super.findMany(ids, opts)
-    if (!Result.isOk(result)) return result
-    return Result.ok(serializeProviderApiKeys(result.value))
-  }
-
-  async findFirst() {
-    const result = await super.findFirst()
-    if (!Result.isOk(result)) return result
-    return Result.ok(
-      result.value ? serializeProviderApiKey(result.value) : undefined,
-    )
-  }
-
-  async findByName(name: string) {
-    const result = await this.scope.where(
-      and(this.scopeFilter, eq(providerApiKeys.name, name)),
-    )
-
-    if (!result.length) {
-      return Result.error(
-        new NotFoundError(`ProviderApiKey not found by name: "${name}"`),
-      )
-    }
-
-    return Result.ok(serializeProviderApiKey(result[0]!))
-  }
-
-  async findAllByNames(names: string[]) {
-    const result = await this.scope.where(
-      and(this.scopeFilter, inArray(providerApiKeys.name, names)),
-    )
-    return serializeProviderApiKeys(result)
-  }
-
-  async getUsage(name: string) {
-    const mergedCommits = this.db.$with('merged_commits').as(
-      this.db
+export const getProviderApiKeyUsage = scopedQuery(
+  async function getProviderApiKeyUsage(
+    { workspaceId, name }: { workspaceId: number; name: string },
+    db,
+  ): Promise<ProviderApiKeyUsage> {
+    const mergedCommits = db.$with('merged_commits').as(
+      db
         .select({
           projectId: commits.projectId,
           projectName: projects.name,
@@ -109,17 +27,17 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
         .where(
           and(
             isNull(projects.deletedAt),
-            eq(projects.workspaceId, this.workspaceId),
+            eq(projects.workspaceId, workspaceId),
             isNull(commits.deletedAt),
             isNotNull(commits.mergedAt),
           ),
         ),
     )
 
-    const liveCommits = this.db
+    const liveCommits = db
       .$with('live_commits')
       .as(
-        this.db
+        db
           .with(mergedCommits)
           .selectDistinctOn(
             [mergedCommits.projectId],
@@ -129,8 +47,8 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
           .orderBy(desc(mergedCommits.projectId), desc(mergedCommits.mergedAt)),
       )
 
-    const liveDocuments = this.db.$with('live_documents').as(
-      this.db
+    const liveDocuments = db.$with('live_documents').as(
+      db
         .with(mergedCommits)
         .selectDistinctOn([documentVersions.documentUuid], {
           projectId: mergedCommits.projectId,
@@ -151,10 +69,8 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
         ),
     )
 
-    // TODO: get documents when provider is denormalized in the schema
-
-    const liveEvaluations = this.db.$with('live_evaluations').as(
-      this.db
+    const liveEvaluations = db.$with('live_evaluations').as(
+      db
         .with(mergedCommits)
         .selectDistinctOn([evaluationVersions.evaluationUuid], {
           projectId: mergedCommits.projectId,
@@ -180,7 +96,7 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
         ),
     )
 
-    const evaluations = await this.db
+    const evaluations = await db
       .with(liveCommits, liveDocuments, liveEvaluations)
       .select({
         projectId: liveCommits.projectId,
@@ -211,8 +127,6 @@ export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
       )
       .orderBy(desc(liveEvaluations.updatedAt))
 
-    const items = evaluations
-
-    return Result.ok<ProviderApiKeyUsage>(items)
-  }
-}
+    return evaluations as ProviderApiKeyUsage
+  },
+)

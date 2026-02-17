@@ -1,5 +1,5 @@
 import app from '$/routes/app'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import {
   createDocumentVersion,
   createDraft,
@@ -39,7 +39,7 @@ describe('GET documents', () => {
       const { workspace, user, project, providers } = await createProject()
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
       const path = 'path/to/document'
       const { commit: draft } = await createDraft({
         project,

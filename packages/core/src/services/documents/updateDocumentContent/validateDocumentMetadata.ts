@@ -9,10 +9,8 @@ import { type Commit } from '../../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
-import {
-  DocumentVersionsRepository,
-  ProviderApiKeysRepository,
-} from '../../../repositories'
+import { DocumentVersionsRepository } from '../../../repositories'
+import { findAllProviderApiKeys } from '../../../queries/providerApiKeys/findAll'
 import { listIntegrations } from '../../integrations/list'
 import { getAgentToolName } from '../../agents/helpers'
 
@@ -54,8 +52,9 @@ function buildAgentsToolMap(documents: DocumentVersion[] = []) {
 }
 
 async function getProvderNames({ workspace }: { workspace: Workspace }) {
-  const scope = new ProviderApiKeysRepository(workspace.id)
-  const providers = await scope.findAll().then((r) => r.unwrap())
+  const providers = await findAllProviderApiKeys({
+    workspaceId: workspace.id,
+  })
   return providers.map((provider) => provider.name)
 }
 

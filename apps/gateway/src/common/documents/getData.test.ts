@@ -29,7 +29,6 @@ vi.mock('@latitude-data/core/repositories', () => {
   return {
     CommitsRepository,
     DocumentVersionsRepository,
-    ProviderApiKeysRepository: class {},
   }
 })
 

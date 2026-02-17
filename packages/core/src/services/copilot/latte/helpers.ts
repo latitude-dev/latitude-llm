@@ -19,8 +19,8 @@ import { PromisedResult } from '../../../lib/Transaction'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  ProviderApiKeysRepository,
 } from '../../../repositories'
+import { findAllProviderApiKeys } from '../../../queries/providerApiKeys/findAll'
 import { findAllIntegrations } from '../../../queries/integrations/findAll'
 import {
   ChainEvent,
@@ -233,12 +233,10 @@ export async function scanDocuments(
 ): PromisedResult<{
   [path: string]: ConversationMetadata
 }> {
-  const providersScope = new ProviderApiKeysRepository(workspace.id, db)
-  const providersResult = await providersScope.findAll()
-  if (!providersResult.ok) {
-    return Result.error(providersResult.error!)
-  }
-  const providers = providersResult.unwrap()
+  const providers = await findAllProviderApiKeys(
+    { workspaceId: workspace.id },
+    db,
+  )
 
   const integrations = await findAllIntegrations(
     { workspaceId: workspace.id },

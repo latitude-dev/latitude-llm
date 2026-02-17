@@ -242,26 +242,30 @@ Infrastructure (remove once unused):
 
 ### Completed
 
-| Legacy File | Query Module | Status |
-|---|---|---|
-| `issuesRepository.ts` | `queries/issues/*` | Migrated and removed |
-| `issueEvaluationResultsRepository.ts` | `queries/issueEvaluationResults/*` | Migrated and removed |
-| `issueHistogramsRepository.ts` | `queries/issueHistograms/*` | Migrated and removed |
-| `integrationsRepository.ts` | `queries/integrations/*` | Migrated and removed |
-| `integrationHeaderPresetsRepository.ts` | `queries/integrationHeaderPresets/*` | Migrated and removed |
-| `data-access/issues/*` | `queries/issues/*` | Moved and removed |
-| `data-access/integrations/headerPresets/list.ts` | `queries/integrationHeaderPresets/*` | Migrated and removed |
-| `projectsRepository.ts` (prior work) | `queries/projects/*` | Migrated and removed |
-| `usersRepository.ts` (prior work) | `queries/users/*` | Migrated and removed |
+| Legacy File                                      | Query Module                                                                      | Status                                       |
+| ------------------------------------------------ | --------------------------------------------------------------------------------- | -------------------------------------------- |
+| `issuesRepository.ts`                            | `queries/issues/*`                                                                | Migrated and removed                         |
+| `issueEvaluationResultsRepository.ts`            | `queries/issueEvaluationResults/*`                                                | Migrated and removed                         |
+| `issueHistogramsRepository.ts`                   | `queries/issueHistograms/*`                                                       | Migrated and removed                         |
+| `integrationsRepository.ts`                      | `queries/integrations/*`                                                          | Migrated and removed                         |
+| `integrationHeaderPresetsRepository.ts`          | `queries/integrationHeaderPresets/*`                                              | Migrated and removed                         |
+| `data-access/issues/*`                           | `queries/issues/*`                                                                | Moved and removed                            |
+| `data-access/integrations/headerPresets/list.ts` | `queries/integrationHeaderPresets/*`                                              | Migrated and removed                         |
+| `projectsRepository.ts` (prior work)             | `queries/projects/*`                                                              | Migrated and removed                         |
+| `usersRepository.ts` (prior work)                | `queries/users/*`                                                                 | Migrated and removed                         |
+| `apiKeysRepository.ts`                           | `queries/apiKeys/*`                                                               | Migrated and removed                         |
+| `providerApiKeysRepository.ts`                   | `queries/providerApiKeys/*`                                                       | Migrated and removed                         |
+| `latitudeApiKeysRepository.ts`                   | `queries/apiKeys/findFirst`                                                       | Migrated and removed (same table as apiKeys) |
+| `data-access/apiKeys.ts`                         | `queries/apiKeys/unsafelyGetApiKeyByToken`, `unsafelyGetFirstApiKeyByWorkspaceId` | Migrated and removed                         |
 
 ### Deferred
 
-| Legacy File | Reason |
-|---|---|
-| `spansRepository.ts` | Skipped per request |
-| `evaluationResultsV2Repository.ts` | Skipped per request |
-| `commitsRepository/` | Not in current batch |
-| All other repositories | Not in current batch |
+| Legacy File                        | Reason               |
+| ---------------------------------- | -------------------- |
+| `spansRepository.ts`               | Skipped per request  |
+| `evaluationResultsV2Repository.ts` | Skipped per request  |
+| `commitsRepository/`               | Not in current batch |
+| All other repositories             | Not in current batch |
 
 ## Guidelines
 

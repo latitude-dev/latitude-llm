@@ -4,7 +4,7 @@ import {
   LatitudeError,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import {
   createProject,
   createTelemetryTrace,
@@ -143,11 +143,9 @@ describe('POST /chat', () => {
 
       const project = await createProject()
       workspace = project.workspace
-      const apikey = (
-        await unsafelyGetFirstApiKeyByWorkspaceId({
-          workspaceId: workspace.id,
-        })
-      ).unwrap()
+      const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: workspace.id,
+      })
 
       token = apikey.token
       route = `/api/v3/conversations/${step.documentLogUuid}/chat`
@@ -464,11 +462,9 @@ describe('POST /chat', () => {
       })
       workspace = project.workspace
 
-      const apikey = (
-        await unsafelyGetFirstApiKeyByWorkspaceId({
-          workspaceId: workspace.id,
-        })
-      ).unwrap()
+      const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: workspace.id,
+      })
 
       token = apikey.token
       route = `/api/v3/conversations/${step.documentLogUuid}/chat`

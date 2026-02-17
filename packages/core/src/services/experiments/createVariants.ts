@@ -5,7 +5,7 @@ import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { NotFoundError } from '../../lib/errors'
-import { ProviderApiKeysRepository } from '../../repositories'
+import { findAllProviderApiKeys } from '../../queries/providerApiKeys/findAll'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Dataset } from '../../schema/models/types/Dataset'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -49,8 +49,10 @@ export async function createExperimentVariants(
   transaction = new Transaction(),
 ) {
   return transaction.call<Experiment[]>(async (tx) => {
-    const providersScope = new ProviderApiKeysRepository(workspace.id, tx)
-    const providers = await providersScope.findAll().then((r) => r.unwrap())
+    const providers = await findAllProviderApiKeys(
+      { workspaceId: workspace.id },
+      tx,
+    )
     const nonExistingProvider = inputVariants.find(
       (variant) =>
         !providers.some((provider) => provider.name === variant.provider),

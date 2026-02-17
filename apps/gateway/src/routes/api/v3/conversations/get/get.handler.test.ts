@@ -2,7 +2,7 @@ import app from '$/routes/app'
 import { Message } from '@latitude-data/constants/messages'
 import { LogSources, SpanType } from '@latitude-data/core/constants'
 import { Providers, CompletionSpanMetadata } from '@latitude-data/constants'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import {
   createProject,
   createSpan,
@@ -58,7 +58,7 @@ describe('GET /conversations/:conversationUuid', () => {
 
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
 
       headers = {
         Authorization: `Bearer ${apiKey.token}`,

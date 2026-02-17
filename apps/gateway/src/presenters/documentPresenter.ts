@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi'
 import { ParameterType } from '@latitude-data/constants'
-import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
+import { findProviderApiKeyByName } from '@latitude-data/core/queries/providerApiKeys/findByName'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
 import { ConversationMetadata } from 'promptl-ai'
 import { Providers } from '@latitude-data/constants'
@@ -125,10 +125,14 @@ export async function documentPresenter({
     const providerName = metadata.config.provider as string
 
     if (providerName) {
-      const providersScope = new ProviderApiKeysRepository(workspace.id)
-      const providerResult = await providersScope.findByName(providerName)
-      if (providerResult.ok) {
-        provider = providerResult.unwrap().provider
+      try {
+        const providerKey = await findProviderApiKeyByName({
+          workspaceId: workspace.id,
+          name: providerName,
+        })
+        provider = providerKey.provider
+      } catch {
+        provider = undefined
       }
     }
 

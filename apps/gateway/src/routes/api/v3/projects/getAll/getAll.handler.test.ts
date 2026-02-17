@@ -1,5 +1,5 @@
 import app from '$/routes/app'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/queries/apiKeys/unsafelyGetFirstApiKeyByWorkspaceId'
 import { createProject } from '@latitude-data/core/factories'
 import { findAllActiveProjects } from '@latitude-data/core/queries/projects/findAllActive'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -26,7 +26,7 @@ describe('GET /projects', () => {
       const { workspace } = await createProject()
       const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
-      }).then((r) => r.unwrap())
+      })
 
       headers = {
         headers: {

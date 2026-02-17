@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
+import { selectFirstApiKey } from '@latitude-data/core/queries/apiKeys/selectFirst'
 import { env } from '@latitude-data/env'
 
 export const submitToolResultAction = authProcedure
@@ -18,8 +18,8 @@ export const submitToolResultAction = authProcedure
     const { workspace } = ctx
     const gatewayUrl = buildGatewayUrl()
 
-    const repo = new ApiKeysRepository(workspace.id)
-    const token = await repo.selectFirst().then((r) => r.unwrap()?.token)
+    const firstApiKey = await selectFirstApiKey({ workspaceId: workspace.id })
+    const token = firstApiKey?.token
     if (!token) throw new NotFoundError('No API key found')
 
     const response = await fetch(`${gatewayUrl}/api/v3/tools/results`, {

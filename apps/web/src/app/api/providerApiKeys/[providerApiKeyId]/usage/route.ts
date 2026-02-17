@@ -1,7 +1,8 @@
+import { findProviderApiKeyById } from '@latitude-data/core/queries/providerApiKeys/findById'
+import { getProviderApiKeyUsage } from '@latitude-data/core/queries/providerApiKeys/getUsage'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
-import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
@@ -20,13 +21,14 @@ export const GET = errorHandler(
     ) => {
       const { providerApiKeyId } = params
 
-      const repository = new ProviderApiKeysRepository(workspace.id)
-      const providerApiKey = await repository
-        .find(providerApiKeyId)
-        .then((r) => r.unwrap())
-      const usage = await repository
-        .getUsage(providerApiKey.name)
-        .then((r) => r.unwrap())
+      const providerApiKey = await findProviderApiKeyById({
+        workspaceId: workspace.id,
+        id: providerApiKeyId,
+      })
+      const usage = await getProviderApiKeyUsage({
+        workspaceId: workspace.id,
+        name: providerApiKey.name,
+      })
 
       return NextResponse.json(usage, { status: 200 })
     },

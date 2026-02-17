@@ -1,6 +1,6 @@
 import { Result } from '../../../lib/Result'
 import { BadRequestError } from '../../../lib/errors'
-import { ProviderApiKeysRepository } from '../../../repositories/providerApiKeysRepository'
+import { findProviderApiKeyByName } from '../../../queries/providerApiKeys/findByName'
 import { database } from '../../../client'
 
 export async function validateProviderApiKeyName(
@@ -19,12 +19,12 @@ export async function validateProviderApiKeyName(
       new BadRequestError('Name must be at least 1 characters long'),
     )
   }
-  const scope = new ProviderApiKeysRepository(workspaceId, db)
-  const result = await scope.findByName(trimmedName)
-  if (Result.isOk(result)) {
+  try {
+    await findProviderApiKeyByName({ workspaceId, name: trimmedName }, db)
     return Result.error(
       new BadRequestError('A provider API key with this name already exists'),
     )
+  } catch {
+    return Result.ok(trimmedName)
   }
-  return Result.ok(trimmedName)
 }
