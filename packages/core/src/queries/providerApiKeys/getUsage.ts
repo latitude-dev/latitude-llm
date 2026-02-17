@@ -1,11 +1,4 @@
-import {
-  and,
-  desc,
-  eq,
-  isNotNull,
-  isNull,
-  sql,
-} from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 
 import { EvaluationType, type ProviderApiKeyUsage } from '../../constants'
 import { commits } from '../../schema/models/commits'
@@ -16,10 +9,7 @@ import { scopedQuery } from '../scope'
 
 export const getProviderApiKeyUsage = scopedQuery(
   async function getProviderApiKeyUsage(
-    {
-      workspaceId,
-      name,
-    }: { workspaceId: number; name: string },
+    { workspaceId, name }: { workspaceId: number; name: string },
     db,
   ): Promise<ProviderApiKeyUsage> {
     const mergedCommits = db.$with('merged_commits').as(
@@ -54,10 +44,7 @@ export const getProviderApiKeyUsage = scopedQuery(
             mergedCommits._.selectedFields,
           )
           .from(mergedCommits)
-          .orderBy(
-            desc(mergedCommits.projectId),
-            desc(mergedCommits.mergedAt),
-          ),
+          .orderBy(desc(mergedCommits.projectId), desc(mergedCommits.mergedAt)),
       )
 
     const liveDocuments = db.$with('live_documents').as(

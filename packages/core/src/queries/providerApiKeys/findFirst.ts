@@ -17,8 +17,6 @@ export const findFirstProviderApiKey = scopedQuery(
       .limit(1)
 
     const row = result[0]
-    return row
-      ? serializeProviderApiKey(row as ProviderApiKey)
-      : undefined
+    return row ? serializeProviderApiKey(row as ProviderApiKey) : undefined
   },
 )

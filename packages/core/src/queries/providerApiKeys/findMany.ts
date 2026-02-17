@@ -34,10 +34,7 @@ export const findManyProviderApiKeysByIds = scopedQuery(
       .select(tt)
       .from(providerApiKeys)
       .where(
-        and(
-          scopeFilter(workspaceId),
-          inArray(providerApiKeys.id, numericIds),
-        ),
+        and(scopeFilter(workspaceId), inArray(providerApiKeys.id, numericIds)),
       )
       .limit(numericIds.length)
 

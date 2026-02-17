@@ -20,10 +20,7 @@ export async function validateProviderApiKeyName(
     )
   }
   try {
-    await findProviderApiKeyByName(
-      { workspaceId, name: trimmedName },
-      db,
-    )
+    await findProviderApiKeyByName({ workspaceId, name: trimmedName }, db)
     return Result.error(
       new BadRequestError('A provider API key with this name already exists'),
     )

@@ -46,7 +46,9 @@ describe('createProviderApiKey', () => {
     expect(provider.token).toEqual('fake-token')
     expect(provider.defaultModel).toEqual(null)
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([provider.id])
 
@@ -80,7 +82,9 @@ describe('createProviderApiKey', () => {
     expect(provider.token).toEqual('fake-token')
     expect(provider.defaultModel).toEqual('gpt-4o')
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([provider.id])
 
@@ -109,7 +113,9 @@ describe('createProviderApiKey', () => {
     expect(result.error).toBeInstanceOf(BadRequestError)
     expect(result.error!.message).toEqual('Default model cannot be empty')
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([])
 
@@ -145,7 +151,9 @@ describe('createProviderApiKey', () => {
       secretAccessKey: 'fake-secret-key',
     })
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([provider.id])
 
@@ -176,7 +184,9 @@ describe('createProviderApiKey', () => {
       'AmazonBedrock provider requires configuration',
     )
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([])
 
@@ -201,7 +211,9 @@ describe('createProviderApiKey', () => {
     expect(result.ok).toEqual(false)
     expect(result.error).toBeDefined()
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([])
 
@@ -229,7 +241,9 @@ describe('createProviderApiKey', () => {
     expect(provider.url).toEqual('https://example.com')
     expect(provider.defaultModel).toEqual('llama3.2-8b')
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([provider.id])
 
@@ -258,7 +272,9 @@ describe('createProviderApiKey', () => {
     expect(result.error).toBeInstanceOf(BadRequestError)
     expect(result.error!.message).toEqual('Custom provider requires a URL')
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([])
 
@@ -280,7 +296,9 @@ describe('createProviderApiKey', () => {
       'Name must be at least 1 characters long',
     )
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([])
 
@@ -302,7 +320,9 @@ describe('createProviderApiKey', () => {
       'Name must be at least 1 characters long',
     )
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([])
 
@@ -327,7 +347,9 @@ describe('createProviderApiKey', () => {
     expect(provider.token).toEqual('fake-token')
     expect(provider.defaultModel).toEqual(null)
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([provider.id])
 
@@ -371,7 +393,9 @@ describe('createProviderApiKey', () => {
     expect(provider.token).toEqual('fake-token')
     expect(provider.defaultModel).toEqual(null)
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([provider.id])
 
@@ -411,7 +435,9 @@ describe('createProviderApiKey', () => {
       'A provider API key with this name already exists',
     )
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([oldProvider.id])
 
@@ -444,7 +470,9 @@ describe('createProviderApiKey', () => {
     expect(result.error).toBeInstanceOf(BadRequestError)
     expect(result.error!.message).toEqual('This token is already in use')
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).toEqual([oldProvider.id])
 

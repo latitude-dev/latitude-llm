@@ -10,10 +10,7 @@ import { scopeFilter } from './filters'
 
 export const findProviderApiKeyById = scopedQuery(
   async function findProviderApiKeyById(
-    {
-      workspaceId,
-      id,
-    }: { workspaceId: number; id: number },
+    { workspaceId, id }: { workspaceId: number; id: number },
     db,
   ): Promise<ProviderApiKey> {
     const result = await db

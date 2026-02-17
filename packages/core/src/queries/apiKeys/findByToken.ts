@@ -7,21 +7,19 @@ import { scopedQuery } from '../scope'
 import { tt } from './columns'
 import { scopeFilter } from './filters'
 
-export const findApiKeyByToken = scopedQuery(
-  async function findApiKeyByToken(
-    { workspaceId, token }: { workspaceId: number; token: string },
-    db,
-  ): Promise<ApiKey> {
-    const result = await db
-      .select(tt)
-      .from(apiKeys)
-      .where(and(scopeFilter(workspaceId), eq(apiKeys.token, token)))
-      .limit(1)
+export const findApiKeyByToken = scopedQuery(async function findApiKeyByToken(
+  { workspaceId, token }: { workspaceId: number; token: string },
+  db,
+): Promise<ApiKey> {
+  const result = await db
+    .select(tt)
+    .from(apiKeys)
+    .where(and(scopeFilter(workspaceId), eq(apiKeys.token, token)))
+    .limit(1)
 
-    if (!result[0]) {
-      throw new NotFoundError('API key not found')
-    }
+  if (!result[0]) {
+    throw new NotFoundError('API key not found')
+  }
 
-    return result[0] as ApiKey
-  },
-)
+  return result[0] as ApiKey
+})

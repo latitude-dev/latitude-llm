@@ -16,7 +16,10 @@ import { LatteThreadUpdateArgs } from '../../../websockets/constants'
 import { getCopilotData } from '../getCopilotData'
 
 import { PromisedResult } from '../../../lib/Transaction'
-import { CommitsRepository, DocumentVersionsRepository } from '../../../repositories'
+import {
+  CommitsRepository,
+  DocumentVersionsRepository,
+} from '../../../repositories'
 import { findAllProviderApiKeys } from '../../../queries/providerApiKeys/findAll'
 import { findAllIntegrations } from '../../../queries/integrations/findAll'
 import {

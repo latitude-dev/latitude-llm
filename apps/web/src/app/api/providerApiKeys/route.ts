@@ -16,10 +16,9 @@ export const GET = errorHandler(
       },
     ) => {
       const rows = await findAllProviderApiKeys({ workspaceId: workspace.id })
-      return NextResponse.json(
-        rows.map(providerApiKeyPresenter),
-        { status: 200 },
-      )
+      return NextResponse.json(rows.map(providerApiKeyPresenter), {
+        status: 200,
+      })
     },
   ),
 )

@@ -15,10 +15,7 @@ export const unsafelyGetFirstApiKeyByWorkspaceId = unscopedQuery(
       .select(tt)
       .from(apiKeys)
       .where(
-        and(
-          eq(apiKeys.workspaceId, workspaceId),
-          isNull(apiKeys.deletedAt),
-        ),
+        and(eq(apiKeys.workspaceId, workspaceId), isNull(apiKeys.deletedAt)),
       )
       .limit(1)
 

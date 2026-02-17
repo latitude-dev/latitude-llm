@@ -9,28 +9,19 @@ export type FindAllApiKeysOpts = {
   offset?: number
 }
 
-export const findAllApiKeys = scopedQuery(
-  async function findAllApiKeys(
-    {
-      workspaceId,
-      limit,
-      offset,
-    }: { workspaceId: number } & FindAllApiKeysOpts,
-    db,
-  ): Promise<ApiKey[]> {
-    let query = db
-      .select(tt)
-      .from(apiKeys)
-      .where(scopeFilter(workspaceId))
+export const findAllApiKeys = scopedQuery(async function findAllApiKeys(
+  { workspaceId, limit, offset }: { workspaceId: number } & FindAllApiKeysOpts,
+  db,
+): Promise<ApiKey[]> {
+  let query = db.select(tt).from(apiKeys).where(scopeFilter(workspaceId))
 
-    if (limit !== undefined) {
-      query = query.limit(limit) as typeof query
-    }
-    if (offset !== undefined) {
-      query = query.offset(offset) as typeof query
-    }
+  if (limit !== undefined) {
+    query = query.limit(limit) as typeof query
+  }
+  if (offset !== undefined) {
+    query = query.offset(offset) as typeof query
+  }
 
-    const result = await query
-    return result as ApiKey[]
-  },
-)
+  const result = await query
+  return result as ApiKey[]
+})

@@ -43,7 +43,9 @@ describe('updateProviderApiKeyName', () => {
     expect(updatedProvider.provider).toEqual(provider.provider)
     expect(updatedProvider.token).toEqual(provider.token)
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers).toHaveLength(1)
     expect(providers[0]!.name).toEqual('Updated Name')
@@ -70,7 +72,9 @@ describe('updateProviderApiKeyName', () => {
       'Name must be at least 1 characters long',
     )
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers).toHaveLength(1)
     expect(providers[0]!.name).toEqual('Original Name')
@@ -98,7 +102,9 @@ describe('updateProviderApiKeyName', () => {
     expect(updatedProvider.id).toEqual(provider.id)
     expect(updatedProvider.name).toEqual('Updated Name')
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers).toHaveLength(1)
     expect(providers[0]!.name).toEqual('Updated Name')
@@ -125,7 +131,9 @@ describe('updateProviderApiKeyName', () => {
       'Name must be at least 1 characters long',
     )
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers).toHaveLength(1)
     expect(providers[0]!.name).toEqual('Original Name')

@@ -39,7 +39,9 @@ describe('destroyProviderApiKey', () => {
       new BadRequestError('Cannot delete the Latitude provider API key'),
     )
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
     expect(providers.map((p) => p.id)).toContain(provider.id)
   })
 
@@ -70,7 +72,9 @@ describe('destroyProviderApiKey', () => {
 
     expect(workspace.defaultProviderId).toBe(defaultProvider.id)
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).not.toContain(provider.id)
 
@@ -103,7 +107,9 @@ describe('destroyProviderApiKey', () => {
 
     expect(workspace.defaultProviderId).toBeNull()
 
-    const providers = await findAllProviderApiKeys({ workspaceId: workspace.id })
+    const providers = await findAllProviderApiKeys({
+      workspaceId: workspace.id,
+    })
 
     expect(providers.map((p) => p.id)).not.toContain(provider.id)
 

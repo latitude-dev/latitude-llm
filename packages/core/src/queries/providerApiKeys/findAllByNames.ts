@@ -9,10 +9,7 @@ import { scopeFilter } from './filters'
 
 export const findAllProviderApiKeysByNames = scopedQuery(
   async function findAllProviderApiKeysByNames(
-    {
-      workspaceId,
-      names,
-    }: { workspaceId: number; names: string[] },
+    { workspaceId, names }: { workspaceId: number; names: string[] },
     db,
   ): Promise<ProviderApiKey[]> {
     if (names.length === 0) {
@@ -23,10 +20,7 @@ export const findAllProviderApiKeysByNames = scopedQuery(
       .select(tt)
       .from(providerApiKeys)
       .where(
-        and(
-          scopeFilter(workspaceId),
-          inArray(providerApiKeys.name, names),
-        ),
+        and(scopeFilter(workspaceId), inArray(providerApiKeys.name, names)),
       )
 
     return serializeProviderApiKeys(result as ProviderApiKey[])
