@@ -48,6 +48,7 @@ class RunPromptRequestBody(Model):
     stream: Optional[bool] = None
     background: Optional[bool] = None
     mcp_headers: Optional[Dict[str, Dict[str, str]]] = Field(default=None, alias=str("mcpHeaders"))
+    messages: Optional[List[Message]] = None
 
 
 class ConversationRequestParams(Model):

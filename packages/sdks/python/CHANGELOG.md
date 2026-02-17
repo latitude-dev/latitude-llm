@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.7.0] - 2026-02-17
+
+### Added
+
+- Added `messages` parameter to `prompts.run()` method. This allows appending any kind of messages to the conversation after the compiled prompt. Note: This is not compatible with the `<step>` feature of PromptL.
+
 ## [5.6.1] - 2026-01-30
 
 ### Fixed

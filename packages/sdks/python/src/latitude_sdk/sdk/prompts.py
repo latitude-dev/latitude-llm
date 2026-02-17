@@ -80,6 +80,7 @@ class RunPromptOptions(StreamCallbacks, PromptOptions, Model):
     stream: Optional[bool] = True  # Note: making stream the default
     background: Optional[bool] = None
     mcp_headers: Optional[dict[str, dict[str, str]]] = None
+    messages: Optional[Sequence[MessageLike]] = None
 
 
 RunPromptResult = Union[FinishedResult, BackgroundResult]
@@ -204,6 +205,7 @@ class Prompts:
                     stream=options.stream,
                     background=options.background,
                     mcp_headers=options.mcp_headers,
+                    messages=[_Message.validate_python(m) for m in options.messages] if options.messages else None,
                 ),
                 stream=options.stream,
             ) as response:
