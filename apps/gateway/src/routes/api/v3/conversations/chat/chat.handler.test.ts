@@ -143,11 +143,9 @@ describe('POST /chat', () => {
 
       const project = await createProject()
       workspace = project.workspace
-      const apikey = (
-        await unsafelyGetFirstApiKeyByWorkspaceId({
-          workspaceId: workspace.id,
-        })
-      ).unwrap()
+      const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: workspace.id,
+      })
 
       token = apikey.token
       route = `/api/v3/conversations/${step.documentLogUuid}/chat`
@@ -464,11 +462,9 @@ describe('POST /chat', () => {
       })
       workspace = project.workspace
 
-      const apikey = (
-        await unsafelyGetFirstApiKeyByWorkspaceId({
-          workspaceId: workspace.id,
-        })
-      ).unwrap()
+      const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: workspace.id,
+      })
 
       token = apikey.token
       route = `/api/v3/conversations/${step.documentLogUuid}/chat`

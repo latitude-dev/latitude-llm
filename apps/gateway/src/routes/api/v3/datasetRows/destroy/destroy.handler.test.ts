@@ -57,13 +57,10 @@ describe('DELETE /api/v3/dataset-rows/:rowId', () => {
       expect(data).toHaveProperty('datasetId', datasetId)
 
       // Verify row is deleted
-      const rowsRepo = new DatasetRowsRepository(
-        (
-          await unsafelyGetFirstApiKeyByWorkspaceId({
-            workspaceId: data.workspaceId,
-          })
-        ).unwrap()!.workspaceId,
-      )
+      const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: data.workspaceId,
+      })
+      const rowsRepo = new DatasetRowsRepository(apiKey.workspaceId)
       const rowResult = await rowsRepo.find(rowId)
       expect(rowResult.error).toBeDefined()
     })
