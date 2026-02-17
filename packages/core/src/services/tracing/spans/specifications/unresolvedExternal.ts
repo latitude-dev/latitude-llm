@@ -146,6 +146,8 @@ async function process(
     includeInitialDraft: true,
   })
 
+  if (!Result.isOk(commitResult)) return commitResult
+
   const result = await getResolvedData({
     path: promptPath,
     commit: commitResult.unwrap(),
