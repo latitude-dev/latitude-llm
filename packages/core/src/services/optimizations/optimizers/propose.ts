@@ -17,6 +17,7 @@ import {
 import { runCopilot } from '../../copilot'
 import { scanDocumentContent } from '../../documents'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
+import { raiseForAborted } from '../shared'
 import { OptimizerProposeArgs } from './index'
 import { Trajectory } from './shared'
 
@@ -77,9 +78,11 @@ export async function proposeFactory({
   const providers = await buildProvidersMap({ workspaceId: workspace.id })
 
   return async function (
-    { prompt, context, abortSignal }: OptimizerProposeArgs, // TODO(AO/OPT): Implement cancellation
+    { prompt, context, abortSignal }: OptimizerProposeArgs,
     _ = database,
   ) {
+    raiseForAborted(abortSignal)
+
     const scanning = await scanDocumentContent({
       document: { ...document, content: prompt },
       commit: commit,

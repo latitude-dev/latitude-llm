@@ -29,6 +29,7 @@ import {
   evaluateFactory,
   proposeFactory,
 } from './optimizers'
+import { raiseForAborted } from './shared'
 
 // BONUS(AO/OPT): Implement multi-objective optimization
 // BONUS(AO/OPT): Implement multi-document optimization
@@ -40,10 +41,12 @@ export async function executeOptimization(
   }: {
     optimization: Optimization
     workspace: Workspace
-    abortSignal?: AbortSignal // TODO(AO/OPT): Implement cancellation
+    abortSignal?: AbortSignal
   },
   transaction = new Transaction(),
 ) {
+  raiseForAborted(abortSignal)
+
   if (optimization.executedAt) {
     return Result.error(
       new UnprocessableEntityError('Optimization already executed'),
@@ -148,6 +151,8 @@ export async function executeOptimization(
       ),
     )
   }
+
+  raiseForAborted(abortSignal)
 
   // BONUS(AO/OPT): Implement checkpointing saving for fault tolerance (in gepa run_dir can be used)
   const optimizing = await optimize({

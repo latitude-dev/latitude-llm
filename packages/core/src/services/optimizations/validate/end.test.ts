@@ -1,7 +1,7 @@
 import { Providers } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { publisher } from '../../../events/publisher'
-import { UnprocessableEntityError } from '../../../lib/errors'
+import { AbortedError, UnprocessableEntityError } from '../../../lib/errors'
 import { Commit } from '../../../schema/models/types/Commit'
 import { Dataset } from '../../../schema/models/types/Dataset'
 import { DocumentVersion } from '../../../schema/models/types/DocumentVersion'
@@ -310,5 +310,58 @@ describe('endValidateOptimization', () => {
     expect(result.optimization.finishedAt!.getTime()).toBeLessThanOrEqual(
       afterEnd.getTime(),
     )
+  })
+
+  describe('cancellation', () => {
+    it('throws AbortedError when signal is already aborted', async () => {
+      const { experiment: baselineExperiment } =
+        await factories.createExperiment({
+          document,
+          commit,
+          evaluations: [],
+          user,
+          workspace,
+        })
+      const { experiment: optimizedExperiment } =
+        await factories.createExperiment({
+          document,
+          commit,
+          evaluations: [],
+          user,
+          workspace,
+        })
+
+      const executedOptimization = await factories.createOptimization({
+        baseline: { commit },
+        document,
+        project,
+        workspace,
+        trainset,
+        testset,
+        optimized: {
+          commit: commit,
+          prompt: 'optimized prompt',
+        },
+      })
+
+      const optimizationWithExperiments = {
+        ...executedOptimization,
+        baselineExperimentId: baselineExperiment.id,
+        optimizedExperimentId: optimizedExperiment.id,
+      } as Optimization
+
+      const abortController = new AbortController()
+      abortController.abort()
+
+      await expect(
+        endValidateOptimization({
+          optimization: optimizationWithExperiments,
+          workspace,
+          abortSignal: abortController.signal,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError(AbortedError)
+
+      expect(publisherMock).not.toHaveBeenCalled()
+    })
   })
 })

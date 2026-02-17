@@ -1,7 +1,7 @@
 import { Providers } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { EvaluationType, RuleEvaluationMetric } from '../../../constants'
-import { UnprocessableEntityError } from '../../../lib/errors'
+import { AbortedError, UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { Commit } from '../../../schema/models/types/Commit'
 import { Dataset } from '../../../schema/models/types/Dataset'
@@ -318,5 +318,116 @@ describe('startValidateOptimization', () => {
 
     expect(result.optimization.baselineExperimentId).not.toBeNull()
     expect(result.optimization.optimizedExperimentId).not.toBeNull()
+  })
+
+  describe('cancellation', () => {
+    it('throws AbortedError when signal is already aborted', async () => {
+      const evaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+        type: EvaluationType.Rule,
+        metric: RuleEvaluationMetric.RegularExpression,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          expectedOutput: {
+            parsingFormat: 'string',
+          },
+          pattern: '.*',
+        },
+      })
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit },
+        evaluation,
+        document,
+        project,
+        workspace,
+        trainset,
+        testset,
+        optimized: {
+          commit: optimizedCommit,
+          prompt: document.content,
+        },
+      })
+
+      const executedOptimization = {
+        ...optimization,
+        executedAt: new Date(),
+      } as Optimization
+
+      const abortController = new AbortController()
+      abortController.abort()
+
+      await expect(
+        startValidateOptimization({
+          optimization: executedOptimization,
+          workspace,
+          abortSignal: abortController.signal,
+        }).then((r) => r.unwrap()),
+      ).rejects.toThrowError(AbortedError)
+
+      expect(startExperimentMock).not.toHaveBeenCalled()
+    })
+
+    it('starts both experiments even when signal is aborted during first start', async () => {
+      const evaluation = await factories.createEvaluationV2({
+        document,
+        commit,
+        workspace,
+        type: EvaluationType.Rule,
+        metric: RuleEvaluationMetric.RegularExpression,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          expectedOutput: {
+            parsingFormat: 'string',
+          },
+          pattern: '.*',
+        },
+      })
+
+      const optimization = await factories.createOptimization({
+        baseline: { commit },
+        evaluation,
+        document,
+        project,
+        workspace,
+        trainset,
+        testset,
+        optimized: {
+          commit: optimizedCommit,
+          prompt: document.content,
+        },
+      })
+
+      const executedOptimization = {
+        ...optimization,
+        executedAt: new Date(),
+      } as Optimization
+
+      const abortController = new AbortController()
+
+      startExperimentMock.mockImplementation(async (args: any) => {
+        abortController.abort()
+        return Result.ok({ uuid: args.experimentUuid } as any)
+      })
+
+      const result = await startValidateOptimization({
+        optimization: executedOptimization,
+        workspace,
+        abortSignal: abortController.signal,
+      }).then((r) => r.unwrap())
+
+      expect(result.optimization).toBeDefined()
+      expect(startExperimentMock).toHaveBeenCalledTimes(2)
+    })
   })
 })

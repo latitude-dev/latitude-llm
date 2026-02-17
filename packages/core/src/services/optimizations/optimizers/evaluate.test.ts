@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SpanType } from '../../../constants'
+import { AbortedError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { evaluateFactory } from './evaluate'
 
@@ -1068,6 +1069,37 @@ describe('evaluateFactory', () => {
           datasetRow: example2,
         }),
       )
+    })
+  })
+
+  describe('cancellation', () => {
+    it('throws AbortedError when signal is already aborted', async () => {
+      mockScanDocumentContent()
+
+      const evaluation = createEvaluation()
+      const evaluate = await evaluateFactory({
+        evaluation,
+        trainset: baseDataset,
+        valset: emptyDataset,
+        optimization: baseOptimization,
+        document: baseDocument,
+        commit: baseCommit,
+        workspace: baseWorkspace,
+      })
+
+      const abortController = new AbortController()
+      abortController.abort()
+
+      await expect(
+        evaluate({
+          prompt: baseDocument.content,
+          example: baseExample,
+          abortSignal: abortController.signal,
+        }),
+      ).rejects.toThrowError(AbortedError)
+
+      expect(mocks.runDocumentAtCommit).not.toHaveBeenCalled()
+      expect(mocks.runEvaluationV2).not.toHaveBeenCalled()
     })
   })
 })

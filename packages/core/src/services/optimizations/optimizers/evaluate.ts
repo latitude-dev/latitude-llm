@@ -16,7 +16,7 @@ import {
   SpanMetadata,
   SpanWithDetails,
 } from '../../../constants'
-import { AbortedError, UnprocessableEntityError } from '../../../lib/errors'
+import { UnprocessableEntityError } from '../../../lib/errors'
 import { hashContent } from '../../../lib/hashContent'
 import { hashObject } from '../../../lib/hashObject'
 import { isAbortError } from '../../../lib/isAbortError'
@@ -43,6 +43,7 @@ import {
   selectSpansForTrigger,
 } from '../../evaluationsV2/triggers'
 import { generateSimulatedUserAction } from '../../simulation/simulateUserResponse'
+import { raiseForAborted } from '../shared'
 import { OptimizerEvaluateArgs } from './index'
 import { LearnableTrajectory } from './shared'
 
@@ -78,9 +79,11 @@ export async function evaluateFactory<
   }).then((r) => r.unwrap())
 
   return async function (
-    { prompt, example, abortSignal }: OptimizerEvaluateArgs, // TODO(AO/OPT): Implement cancellation
+    { prompt, example, abortSignal }: OptimizerEvaluateArgs,
     db = database,
   ) {
+    raiseForAborted(abortSignal)
+
     const dataset = example.datasetId === trainset.id ? trainset : valset
 
     const validating = await validatePrompt(
@@ -198,6 +201,7 @@ async function validatePrompt(
     optimization,
     document,
     commit,
+    abortSignal,
   }: {
     prompt: string
     example: DatasetRow
@@ -214,6 +218,8 @@ async function validatePrompt(
   },
   _ = database,
 ) {
+  raiseForAborted(abortSignal)
+
   const scanning = await scanDocumentContent({
     document: { ...document, content: prompt },
     commit: commit,
@@ -318,6 +324,8 @@ async function runPrompt(
   },
   _ = database,
 ) {
+  raiseForAborted(abortSignal)
+
   const values: Record<string, unknown> = {}
   for (const parameter of parameters) {
     const column =
@@ -330,8 +338,6 @@ async function runPrompt(
     values[parameter] = example.rowData[identifier] ?? undefined
   }
 
-  // TODO(AO/OPT): Abort signal seems to not be aborting the run.
-  // Also "Controller is already closed" errors are being thrown.
   const running = await runDocumentAtCommit({
     context: BACKGROUND({ workspaceId: workspace.id }),
     source: LogSources.Optimization,
@@ -418,6 +424,7 @@ async function evaluatePrompt<
     optimization,
     commit,
     workspace,
+    abortSignal,
   }: {
     prompt: string
     example: DatasetRow
@@ -432,6 +439,8 @@ async function evaluatePrompt<
   },
   _ = database,
 ) {
+  raiseForAborted(abortSignal)
+
   const evaluating = await runEvaluationV2({
     evaluation: evaluation,
     span: span,
@@ -502,9 +511,7 @@ async function waitForMainSpans({
   const spansRepository = new SpansRepository(workspace.id)
 
   for (let attempt = 0; attempt < TRACE_POLLING_MAX_ATTEMPTS; attempt++) {
-    if (abortSignal?.aborted) {
-      return Result.error(new AbortedError())
-    }
+    raiseForAborted(abortSignal)
 
     if (attempt > 0) {
       const delay = calculateExponentialBackoff(attempt)
@@ -599,7 +606,7 @@ async function simulateConversation({
   let currentTurn = 2
 
   while (currentTurn <= maxTurns) {
-    if (abortSignal?.aborted) break
+    raiseForAborted(abortSignal)
 
     const userActionResult = await generateSimulatedUserAction({
       messages,

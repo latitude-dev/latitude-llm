@@ -10,7 +10,7 @@ import * as getSpansByIssueModule from '../../queries/issues/getSpansByIssue'
 import * as getSpansWithoutIssuesModule from '../../queries/issues/getSpansWithoutIssues'
 import * as getSpansByDocumentModule from '../../data-access/spans/getSpansByDocument'
 import { publisher } from '../../events/publisher'
-import { UnprocessableEntityError } from '../../lib/errors'
+import { AbortedError, UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import {
   DatasetRowsRepository,
@@ -2024,6 +2024,124 @@ describe('prepareOptimization', () => {
       ).rejects.toThrowError()
 
       expect(searchCount).toBeLessThanOrEqual(4 * 3)
+    })
+
+    describe('cancellation', () => {
+      it('throws AbortedError when signal is already aborted', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        const abortController = new AbortController()
+        abortController.abort()
+
+        await expect(
+          prepareOptimization({
+            optimization,
+            workspace: workspaceWithParams,
+            abortSignal: abortController.signal,
+          }).then((r) => r.unwrap()),
+        ).rejects.toThrowError(AbortedError)
+
+        expect(getSpansByIssueMock).not.toHaveBeenCalled()
+        expect(getSpansWithoutIssuesMock).not.toHaveBeenCalled()
+        expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+        expect(publisherMock).not.toHaveBeenCalled()
+      })
+
+      it('throws AbortedError when signal is aborted during span collection', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        const abortController = new AbortController()
+
+        getSpansByIssueMock.mockImplementation(async () => {
+          abortController.abort()
+          return Result.ok({
+            spans: [
+              createMockSpan('span-neg-1', 'trace-neg-1', {
+                inputParam: 'negative1',
+              }),
+            ],
+            next: { value: new Date(), id: 1 },
+          })
+        })
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: [], next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await expect(
+          prepareOptimization({
+            optimization,
+            workspace: workspaceWithParams,
+            abortSignal: abortController.signal,
+          }).then((r) => r.unwrap()),
+        ).rejects.toThrowError(AbortedError)
+
+        expect(mocks.optimizationsQueue).not.toHaveBeenCalled()
+        expect(publisherMock).not.toHaveBeenCalled()
+      })
+
+      it('does not create datasets when aborted during collection', async () => {
+        const mockIssue = createMockIssue(1)
+        issuesRepositoryMock.mockResolvedValue([mockIssue])
+
+        const abortController = new AbortController()
+
+        getSpansByIssueMock.mockImplementation(async () => {
+          abortController.abort()
+          return Result.ok({
+            spans: [
+              createMockSpan('span-neg-1', 'trace-neg-1', {
+                inputParam: 'negative1',
+              }),
+            ],
+            next: { value: new Date(), id: 1 },
+          })
+        })
+
+        getSpansWithoutIssuesMock.mockResolvedValue(
+          Result.ok({ spans: [], next: null }),
+        )
+
+        const optimization = await factories.createOptimization({
+          baseline: { commit: commitWithParams },
+          document: documentWithParams,
+          project: projectWithParams,
+          workspace: workspaceWithParams,
+        })
+
+        await prepareOptimization({
+          optimization,
+          workspace: workspaceWithParams,
+          abortSignal: abortController.signal,
+        }).catch(() => {})
+
+        const datasetsRepository = new DatasetsRepository(
+          workspaceWithParams.id,
+        )
+        const listing = await datasetsRepository.findAll().then((r) => r.unwrap())
+        const optimizationDatasets = listing.filter(
+          (d) =>
+            d.name.includes('Trainset') &&
+            d.name.includes(optimization.uuid.slice(0, 8)),
+        )
+        expect(optimizationDatasets).toHaveLength(0)
+      })
     })
   })
 })
