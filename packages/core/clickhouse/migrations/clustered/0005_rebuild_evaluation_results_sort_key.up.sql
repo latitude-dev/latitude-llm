@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS evaluation_results_rebuild_0005 ON CLUSTER default (
 )
 ENGINE = ReplicatedReplacingMergeTree(updated_at)
 PARTITION BY toYYYYMM(created_at)
-ORDER BY (workspace_id, evaluation_uuid, created_at, id)
+PRIMARY KEY (workspace_id, project_id, evaluation_uuid, created_at)
+ORDER BY (workspace_id, project_id, evaluation_uuid, created_at, id)
 SETTINGS index_granularity = 8192;
 
 INSERT INTO evaluation_results_rebuild_0005 (

@@ -9,9 +9,11 @@ CREATE TABLE IF NOT EXISTS spans_rebuild_0006 (
   document_log_uuid Nullable(UUID),
   document_uuid Nullable(UUID),
   commit_uuid Nullable(UUID),
+  commit_uuid_key UUID MATERIALIZED ifNull(commit_uuid, toUUID('00000000-0000-0000-0000-000000000000')),
   experiment_uuid Nullable(UUID),
   project_id Nullable(UInt64),
   project_id_key UInt64 MATERIALIZED ifNull(project_id, 0),
+  document_uuid_key UUID MATERIALIZED ifNull(document_uuid, toUUID('00000000-0000-0000-0000-000000000000')),
   test_deployment_id Nullable(UInt64),
 
   name String,
@@ -36,18 +38,29 @@ CREATE TABLE IF NOT EXISTS spans_rebuild_0006 (
   retention_expires_at DateTime64(6, 'UTC') DEFAULT toDateTime64('2100-01-01 00:00:00', 6, 'UTC'),
 
   INDEX idx_trace_id trace_id TYPE bloom_filter(0.001) GRANULARITY 1,
-  INDEX idx_document_uuid document_uuid TYPE bloom_filter(0.01) GRANULARITY 1,
-  INDEX idx_commit_uuid commit_uuid TYPE bloom_filter(0.01) GRANULARITY 1,
   INDEX idx_document_log_uuid document_log_uuid TYPE bloom_filter(0.01) GRANULARITY 1,
-  INDEX idx_project_id project_id TYPE bloom_filter(0.01) GRANULARITY 1,
   INDEX idx_experiment_uuid experiment_uuid TYPE bloom_filter(0.01) GRANULARITY 1,
   INDEX idx_parent_id parent_id TYPE bloom_filter(0.01) GRANULARITY 1,
   INDEX idx_test_deployment_id test_deployment_id TYPE bloom_filter(0.01) GRANULARITY 1
 )
 ENGINE = ReplacingMergeTree(ingested_at)
 PARTITION BY toYYYYMM(started_at)
-PRIMARY KEY (workspace_id, project_id_key, started_at)
-ORDER BY (workspace_id, project_id_key, started_at, trace_id, span_id);
+PRIMARY KEY (
+  workspace_id,
+  project_id_key,
+  commit_uuid_key,
+  document_uuid_key,
+  started_at
+)
+ORDER BY (
+  workspace_id,
+  project_id_key,
+  commit_uuid_key,
+  document_uuid_key,
+  started_at,
+  trace_id,
+  span_id
+);
 
 INSERT INTO spans_rebuild_0006 (
   workspace_id,
