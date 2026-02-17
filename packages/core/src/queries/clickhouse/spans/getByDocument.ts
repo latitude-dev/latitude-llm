@@ -48,10 +48,12 @@ export const getSpansByDocument = scopedQuery(async function getSpansByDocument(
 
   const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
+    // TODO(clickhouse): remove non-_key predicate after key-column rollout.
     `document_uuid = {documentUuid: UUID}`,
     `document_uuid_key = {documentUuid: UUID}`,
     `type IN ({spanTypes: Array(String)})`,
     `status = {okStatus: String}`,
+    // TODO(clickhouse): remove non-_key predicate after key-column rollout.
     `commit_uuid IN ({commitUuids: Array(UUID)})`,
     `commit_uuid_key IN ({commitUuids: Array(UUID)})`,
     `source != {optimizationSource: String}`,

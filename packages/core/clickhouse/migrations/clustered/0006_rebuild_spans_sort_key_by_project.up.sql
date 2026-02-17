@@ -8,12 +8,12 @@ CREATE TABLE IF NOT EXISTS spans_rebuild_0006 ON CLUSTER default (
   api_key_id UInt64,
   document_log_uuid Nullable(UUID),
   document_uuid Nullable(UUID),
+  document_uuid_key UUID MATERIALIZED ifNull(document_uuid, toUUID('00000000-0000-0000-0000-000000000000')),
   commit_uuid Nullable(UUID),
   commit_uuid_key UUID MATERIALIZED ifNull(commit_uuid, toUUID('00000000-0000-0000-0000-000000000000')),
   experiment_uuid Nullable(UUID),
   project_id Nullable(UInt64),
   project_id_key UInt64 MATERIALIZED ifNull(project_id, 0),
-  document_uuid_key UUID MATERIALIZED ifNull(document_uuid, toUUID('00000000-0000-0000-0000-000000000000')),
   test_deployment_id Nullable(UInt64),
 
   name String,

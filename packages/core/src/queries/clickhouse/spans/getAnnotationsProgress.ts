@@ -26,6 +26,7 @@ export const countSpansForAnnotations = scopedQuery(
       SELECT count() AS total_count
       FROM ${SPANS_TABLE}
       WHERE workspace_id = {workspaceId: UInt64}
+        -- TODO(clickhouse): remove non-_key predicate after key-column rollout.
         AND commit_uuid IN ({commitUuids: Array(UUID)})
         AND commit_uuid_key IN ({commitUuids: Array(UUID)})
         AND (source IN ({logSources: Array(String)}) OR source IS NULL)

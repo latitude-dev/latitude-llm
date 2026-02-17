@@ -208,12 +208,14 @@ export const findByDocumentAndCommitLimited = scopedQuery(
   ) {
     const baseConditions = [
       `workspace_id = {workspaceId: UInt64}`,
+      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
       `document_uuid = {documentUuid: UUID}`,
       `document_uuid_key = {documentUuid: UUID}`,
     ]
     const baseParams: Record<string, unknown> = { workspaceId, documentUuid }
 
     if (commitUuids && commitUuids.length > 0) {
+      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
       baseConditions.push(`commit_uuid IN ({commitUuids: Array(UUID)})`)
       baseConditions.push(`commit_uuid_key IN ({commitUuids: Array(UUID)})`)
       baseParams.commitUuids = commitUuids
@@ -262,6 +264,7 @@ export const findByProjectLimited = scopedQuery(
   ) {
     const baseConditions = [
       `workspace_id = {workspaceId: UInt64}`,
+      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
       `project_id = {projectId: UInt64}`,
       `project_id_key = {projectId: UInt64}`,
     ]
