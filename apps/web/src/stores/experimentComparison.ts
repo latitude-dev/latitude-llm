@@ -2,7 +2,7 @@ import { ROUTES } from '$/services/routes'
 import useFetcher from '$/hooks/useFetcher'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useEvaluationsV2 } from './evaluationsV2'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   EventArgs,
   useSockets,
@@ -145,7 +145,9 @@ export function useExperimentComparison(
 
   const refreshIntervalFn = useExperimentPolling<ExperimentWithScores>()
 
-  const { data = undefined, isLoading } = useSWR<ExperimentWithScores[]>(
+  const { data = undefined, isLoading, mutate } = useSWR<
+    ExperimentWithScores[]
+  >(
     [
       'experimentsComparison',
       project.id,
@@ -159,6 +161,24 @@ export function useExperimentComparison(
       refreshInterval: refreshIntervalFn,
     },
   )
+
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debouncedMutate = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      mutate()
+    }, 2000)
+  }, [mutate])
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [])
 
   const { data: evaluations, isLoading: isLoadingEvaluations } =
     useEvaluationsV2({
@@ -234,23 +254,34 @@ export function useExperimentComparison(
       )
       if (index === -1) return
 
-      // Experiment is selected but not loaded, so we can create it
       setExperimentsWithScores((prev) => {
         const prevExperiment = prev[index]
+        const prevRunMetadata = prevExperiment?.runMetadata ?? {
+          count: 0,
+          totalCost: 0,
+          totalTokens: 0,
+          totalDuration: 0,
+        }
+
+        const documentRunsCompleted =
+          updatedExperiment.results?.documentRunsCompleted
+
         prev[index] = {
           scores: {},
+          ...prevExperiment,
+          ...updatedExperiment,
           runMetadata: {
-            count: 0,
-            totalCost: 0,
-            totalTokens: 0,
-            totalDuration: 0,
+            ...prevRunMetadata,
+            ...(documentRunsCompleted != null
+              ? { count: documentRunsCompleted }
+              : {}),
           },
-          ...prevExperiment, // If it did exist, we keep the previous scores
-          ...updatedExperiment, // Update any values from the experiments
         }
 
         return [...prev]
       })
+
+      debouncedMutate()
     },
   })
 
@@ -351,7 +382,6 @@ export function useExperimentComparison(
           ...prevExperiment,
           runMetadata: {
             ...prevExperiment.runMetadata,
-            count: prevRunMetadata.count + 1,
             totalCost: prevRunMetadata.totalCost + metrics.runCost,
             totalTokens:
               prevRunMetadata.totalTokens + metrics.runUsage.totalTokens,
@@ -361,6 +391,8 @@ export function useExperimentComparison(
 
         return prev
       })
+
+      debouncedMutate()
     },
   })
 

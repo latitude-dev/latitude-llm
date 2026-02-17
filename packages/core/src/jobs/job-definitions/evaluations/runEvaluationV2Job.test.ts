@@ -43,11 +43,21 @@ const evaluationFinishedSpy = vi.fn()
 const evaluationErrorSpy = vi.fn()
 
 vi.spyOn(WebsocketClient, 'sendEvent').mockImplementation(vi.fn())
+// @ts-expect-error - mock
 vi.spyOn(progressTracker, 'ProgressTracker').mockImplementation(() => ({
   evaluationFinished: evaluationFinishedSpy,
   evaluationError: evaluationErrorSpy,
-  // @ts-expect-error - mock
-  getProgress: vi.fn(() => Promise.resolve({ completed: 1, total: 1 })),
+  getProgress: vi.fn(() =>
+    Promise.resolve({
+      completed: 1,
+      total: 1,
+      passed: 0,
+      failed: 0,
+      errors: 0,
+      totalScore: 0,
+      documentRunsCompleted: 1,
+    }),
+  ),
   disconnect: vi.fn().mockReturnValue(Promise.resolve()),
   cleanup: vi.fn().mockReturnValue(Promise.resolve()),
 }))
