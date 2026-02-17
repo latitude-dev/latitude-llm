@@ -5,5 +5,5 @@ windows:
       layout: main-horizontal
       panes:
         - pnpm catchup && NODE_OPTIONS=--max_old_space_size=4096 pnpm dev --filter='./apps/*'
-  - docker: docker compose up db redis weaviate mailpit --menu=false
+  - docker: docker compose up db redis mailpit clickhouse --menu=false
   - studio: cd packages/core && pnpm db:studio
