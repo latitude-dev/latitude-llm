@@ -4,8 +4,9 @@ import { ProgressTracker } from '../../jobs/utils/progressTracker'
 import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
+import { ExperimentsRepository } from '../../repositories'
 import { type Experiment } from '../../schema/models/types/Experiment'
-import { WebsocketClient } from '../../websockets/workers'
+import { notifyClientOfExperimentStatus } from '../../events/handlers/notifyClientOfExperimentStatus'
 import { JOB_FINISHED_STATES } from '../runs/shared'
 import { completeExperiment } from './complete'
 
@@ -59,7 +60,7 @@ export async function stopExperiment({
   const updatedExperiment = completeResult.unwrap()
 
   const progressTracker = new ProgressTracker(experiment.uuid)
-  const [progress, runUuids] = await Promise.all([
+  const [, runUuids] = await Promise.all([
     progressTracker.getProgress(),
     progressTracker.getRunUuids(),
   ])
@@ -68,14 +69,15 @@ export async function stopExperiment({
 
   await progressTracker.cleanup()
 
-  WebsocketClient.sendEvent('experimentStatus', {
+  // Fetch the experiment DTO from the repository to ensure consistent data format
+  const experimentsRepository = new ExperimentsRepository(workspaceId)
+  const experimentDto = await experimentsRepository
+    .findByUuid(updatedExperiment.uuid)
+    .then((r) => r.unwrap())
+
+  await notifyClientOfExperimentStatus({
     workspaceId,
-    data: {
-      experiment: {
-        ...updatedExperiment,
-        results: progress,
-      },
-    },
+    experiment: experimentDto,
   })
 
   return Result.ok(updatedExperiment)

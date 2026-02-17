@@ -1,20 +1,22 @@
 import { Providers } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { publisher } from '../../events/publisher'
+import { notifyClientOfExperimentStatus } from '../../events/handlers/notifyClientOfExperimentStatus'
 import { queues } from '../../jobs/queues'
 import { ProgressTracker } from '../../jobs/utils/progressTracker'
+import { ExperimentsRepository } from '../../repositories'
 import type { Commit } from '../../schema/models/types/Commit'
 import type { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import type { User } from '../../schema/models/types/User'
 import type { Workspace } from '../../schema/models/types/Workspace'
 import { createExperiment, createProject, helpers } from '../../tests/factories'
-import { WebsocketClient } from '../../websockets/workers'
 import { completeExperiment } from './complete'
 import { stopExperiment } from './stop'
 
 vi.mock('../../jobs/queues')
 vi.mock('../../events/publisher')
-vi.mock('../../websockets/workers')
+vi.mock('../../events/handlers/notifyClientOfExperimentStatus')
+vi.mock('../../repositories')
 vi.mock('../../jobs/utils/progressTracker')
 
 describe('stopExperiment', () => {
@@ -28,6 +30,9 @@ describe('stopExperiment', () => {
     getProgress: ReturnType<typeof vi.fn>
     getRunUuids: ReturnType<typeof vi.fn>
     cleanup: ReturnType<typeof vi.fn>
+  }
+  let mockExperimentsRepository: {
+    findByUuid: ReturnType<typeof vi.fn>
   }
 
   beforeEach(async () => {
@@ -78,8 +83,37 @@ describe('stopExperiment', () => {
       () => mockProgressTracker as any,
     )
 
+    mockExperimentsRepository = {
+      findByUuid: vi.fn().mockImplementation((uuid: string) =>
+        Promise.resolve({
+          unwrap: () => ({
+            uuid,
+            id: 1,
+            workspaceId: workspace.id,
+            documentUuid: document.documentUuid,
+            commitId: commit.id,
+            name: 'Test Experiment',
+            evaluationUuids: [],
+            metadata: { count: 10 },
+            results: {
+              total: 10,
+              completed: 5,
+              passed: 3,
+              failed: 1,
+              errors: 1,
+              totalScore: 300,
+            },
+            finishedAt: new Date(),
+          }),
+        }),
+      ),
+    }
+    vi.mocked(ExperimentsRepository).mockImplementation(
+      () => mockExperimentsRepository as any,
+    )
+
     vi.mocked(publisher.publish).mockResolvedValue(undefined)
-    vi.mocked(WebsocketClient.sendEvent).mockResolvedValue(undefined)
+    vi.mocked(notifyClientOfExperimentStatus).mockResolvedValue(undefined)
   })
 
   it('returns early if experiment is already finished', async () => {
@@ -120,7 +154,6 @@ describe('stopExperiment', () => {
 
     expect(result.ok).toBe(true)
     expect(result.value?.finishedAt).toBeInstanceOf(Date)
-    expect(mockProgressTracker.getProgress).toHaveBeenCalled()
     expect(mockProgressTracker.getRunUuids).toHaveBeenCalled()
     expect(mockProgressTracker.cleanup).toHaveBeenCalled()
   })
@@ -139,22 +172,23 @@ describe('stopExperiment', () => {
       workspaceId: workspace.id,
     })
 
-    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith('experimentStatus', {
+    expect(mockExperimentsRepository.findByUuid).toHaveBeenCalledWith(
+      experiment.uuid,
+    )
+    expect(notifyClientOfExperimentStatus).toHaveBeenCalledWith({
       workspaceId: workspace.id,
-      data: {
-        experiment: expect.objectContaining({
-          id: experiment.id,
-          finishedAt: expect.any(Date),
-          results: {
-            total: 10,
-            completed: 5,
-            passed: 3,
-            failed: 1,
-            errors: 1,
-            totalScore: 300,
-          },
-        }),
-      },
+      experiment: expect.objectContaining({
+        id: expect.any(Number),
+        finishedAt: expect.any(Date),
+        results: {
+          total: 10,
+          completed: 5,
+          passed: 3,
+          failed: 1,
+          errors: 1,
+          totalScore: 300,
+        },
+      }),
     })
   })
 

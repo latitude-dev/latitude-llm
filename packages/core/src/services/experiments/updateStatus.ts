@@ -2,8 +2,9 @@ import { ProgressTracker } from '../../jobs/utils/progressTracker'
 import { LatitudeError } from '../../lib/errors'
 import { ErrorResult, Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
+import { ExperimentsRepository } from '../../repositories'
 import { type Experiment } from '../../schema/models/types/Experiment'
-import { WebsocketClient } from '../../websockets/workers'
+import { notifyClientOfExperimentStatus } from '../../events/handlers/notifyClientOfExperimentStatus'
 import { completeExperiment } from './complete'
 
 type UpdateExperimentStatusData = {
@@ -34,14 +35,15 @@ export async function updateExperimentStatus(
       experiment = completeResult.unwrap()
     }
 
-    WebsocketClient.sendEvent('experimentStatus', {
+    // Fetch the experiment DTO from the repository to ensure consistent data format
+    const experimentsRepository = new ExperimentsRepository(workspaceId)
+    const experimentDto = await experimentsRepository
+      .findByUuid(experiment.uuid)
+      .then((r) => r.unwrap())
+
+    await notifyClientOfExperimentStatus({
       workspaceId,
-      data: {
-        experiment: {
-          ...experiment,
-          results: progress,
-        },
-      },
+      experiment: experimentDto,
     })
 
     return Result.nil()
@@ -69,16 +71,16 @@ export async function initializeExperimentStatus({
       uuids,
       experiment.evaluationUuids.length,
     )
-    const progress = await progressTracker.getProgress()
 
-    WebsocketClient.sendEvent('experimentStatus', {
+    // Fetch the experiment DTO from the repository to ensure consistent data format
+    const experimentsRepository = new ExperimentsRepository(workspaceId)
+    const experimentDto = await experimentsRepository
+      .findByUuid(experiment.uuid)
+      .then((r) => r.unwrap())
+
+    await notifyClientOfExperimentStatus({
       workspaceId,
-      data: {
-        experiment: {
-          ...experiment,
-          results: progress,
-        },
-      },
+      experiment: experimentDto,
     })
 
     return Result.nil()
