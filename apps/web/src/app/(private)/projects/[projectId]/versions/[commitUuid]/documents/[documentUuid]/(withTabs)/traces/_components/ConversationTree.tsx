@@ -35,6 +35,7 @@ const CollapseButton = memo(
 
     return (
       <Tooltip
+        asChild
         trigger={
           <Button
             variant='ghost'
