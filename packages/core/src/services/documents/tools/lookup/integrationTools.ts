@@ -15,7 +15,7 @@ import { listTools } from '../../../../services/integrations'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { IntegrationType } from '@latitude-data/constants'
 import { ToolSource } from '@latitude-data/constants/toolSources'
-import { getIntegrationToolsFromConfig } from '../../../../services/documents/fork/helpers'
+import { getIntegrationToolsFromConfig } from '../../fork/helpers'
 import { PipedreamIntegrationConfiguration } from '../../../../services/integrations/helpers/schema'
 import { Workspace } from '../../../../schema/models/types/Workspace'
 

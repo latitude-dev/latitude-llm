@@ -220,9 +220,6 @@ export const API_ROUTES = {
             },
           }),
         },
-        publishedDocuments: {
-          root: `${projectRoot}/published-documents`,
-        },
         documents: {
           detail: (documentUuid: string) => {
             const documentRoot = `${projectRoot}/documents/${documentUuid}`
