@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS spans_rebuild_0006 (
   retention_expires_at DateTime64(6, 'UTC') DEFAULT toDateTime64('2100-01-01 00:00:00', 6, 'UTC'),
 
   INDEX idx_trace_id trace_id TYPE bloom_filter(0.001) GRANULARITY 1,
+  INDEX idx_span_trace_ids (span_id, trace_id) TYPE bloom_filter(0.001) GRANULARITY 1,
   INDEX idx_document_log_uuid document_log_uuid TYPE bloom_filter(0.01) GRANULARITY 1,
   INDEX idx_experiment_uuid experiment_uuid TYPE bloom_filter(0.01) GRANULARITY 1,
   INDEX idx_parent_id parent_id TYPE bloom_filter(0.01) GRANULARITY 1,
