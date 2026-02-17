@@ -21,6 +21,8 @@ import {
   shouldFallbackToAllTime,
 } from '../../services/spans/defaultCreatedAtWindow'
 import { conversationAggregateFields } from './shared'
+import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
+import { fetchConversations as chFetchConversations } from '../../queries/clickhouse/spans/fetchConversations'
 
 export type ConversationFilters = {
   commitUuids: string[]
@@ -186,6 +188,55 @@ export async function fetchConversations(
   }: FetchConversationsParams,
   db = database,
 ) {
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
+    workspace.id,
+    db,
+  )
+
+  if (shouldUseClickHouse) {
+    const normalizedCreatedAt = normalizeCreatedAtRange(filters.createdAt)
+    const defaultCreatedAt = applyDefaultSpansCreatedAtRange({
+      createdAt: normalizedCreatedAt,
+      hasCursor: Boolean(from),
+    })
+
+    const queryParams = {
+      workspaceId: workspace.id,
+      documentUuid,
+      filters,
+      from,
+      limit,
+    }
+
+    const firstPage = await chFetchConversations({
+      ...queryParams,
+      createdAt: defaultCreatedAt,
+    })
+
+    if (
+      !shouldFallbackToAllTime({
+        hasCursor: Boolean(from),
+        normalizedCreatedAt,
+        itemCount: firstPage.items.length,
+      })
+    ) {
+      return Result.ok<FetchConversationsResult>({
+        ...firstPage,
+        didFallbackToAllTime: undefined,
+      })
+    }
+
+    const allTime = await chFetchConversations({
+      ...queryParams,
+      createdAt: undefined,
+    })
+
+    return Result.ok<FetchConversationsResult>({
+      ...allTime,
+      didFallbackToAllTime: true,
+    })
+  }
+
   const normalizedCreatedAt = normalizeCreatedAtRange(filters.createdAt)
   const defaultCreatedAt = applyDefaultSpansCreatedAtRange({
     createdAt: normalizedCreatedAt,

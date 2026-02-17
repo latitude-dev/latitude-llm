@@ -181,11 +181,8 @@ Evaluate the response: {{ actualOutput }}`,
 
     expect(mockPrompt).toHaveBeenCalledWith(
       expect.objectContaining({
-        promptUuid: evaluation.uuid,
         template: evaluation.configuration.prompt,
         parameters: parameters,
-        source: LogSources.Evaluation,
-        projectId,
       }),
       expect.anything(),
     )

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-02-16
+
+### Changed
+
+- Added `telemetry.context.setAttributes()` to attach baggage attributes once and propagate trace metadata to child spans through context.
+- Latitude baggage keys are normalized to snake_case automatically (`latitude.documentUuid` -> `latitude.document_uuid`).
+
+### Removed
+
+- Removed prompt/chat/external span option aliases (`documentLogUuid`, `promptUuid`, `versionUuid`, `source`, and related fields) from manual instrumentation options; pass these via `attributes` or `context.setAttributes()` instead.
+
 ## [2.0.2] - 2026-02-09
 
 ### Fixed

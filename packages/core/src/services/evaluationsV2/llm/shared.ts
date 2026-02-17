@@ -205,17 +205,22 @@ export async function runPrompt<
       schema,
     }).then((r) => r.unwrap())
 
+  const ctx = telemetry.context.setAttributes(
+    BACKGROUND({ workspaceId: workspace.id }),
+    {
+      'latitude.documentLogUuid': resultUuid,
+      'latitude.commitUuid': commit.uuid,
+      'latitude.promptUuid': evaluation.uuid,
+      'latitude.projectId': String(commit.projectId),
+      'latitude.source': LogSources.Evaluation,
+    },
+  )
   const $prompt = telemetry.span.prompt(
     {
-      documentLogUuid: resultUuid,
-      versionUuid: commit.uuid,
-      promptUuid: evaluation.uuid,
-      projectId: commit.projectId,
       template: prompt,
       parameters: parameters,
-      source: LogSources.Evaluation,
     },
-    BACKGROUND({ workspaceId: workspace.id }),
+    ctx,
   )
 
   let response

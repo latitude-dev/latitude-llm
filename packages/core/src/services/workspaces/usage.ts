@@ -20,6 +20,8 @@ import {
 import { computeQuota } from '../grants/quota'
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 import { spans } from '../../schema/models/spans'
+import { isClickHouseSpansReadEnabled } from '../workspaceFeatures/isClickHouseSpansReadEnabled'
+import { countDistinctTracesSince } from '../../queries/clickhouse/spans/countDistinctTracesSince'
 
 /**
  * Handle both old cache format (object) and new cache format (number)
@@ -63,17 +65,27 @@ async function computeUsageFromDatabase(
     db,
   )
 
-  const spansCount = await db
-    .select({ count: count() })
-    .from(spans)
-    .where(
-      and(
-        inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),
-        eq(spans.workspaceId, workspace.id),
-        gte(spans.startedAt, latestRenewalDate),
-      ),
-    )
-    .then((r) => r[0]!.count)
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
+    workspace.id,
+    db,
+  )
+
+  const spansCount = shouldUseClickHouse
+    ? await countDistinctTracesSince({
+        workspaceId: workspace.id,
+        since: latestRenewalDate,
+      })
+    : await db
+        .select({ count: count() })
+        .from(spans)
+        .where(
+          and(
+            inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),
+            eq(spans.workspaceId, workspace.id),
+            gte(spans.startedAt, latestRenewalDate),
+          ),
+        )
+        .then((r) => r[0]!.count)
 
   const evaluationResultsV2Count = await evaluationResultsV2Scope
     .countSinceDate(latestRenewalDate)

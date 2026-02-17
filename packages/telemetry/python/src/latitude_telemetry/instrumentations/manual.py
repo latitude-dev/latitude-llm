@@ -18,9 +18,7 @@ from opentelemetry.trace import SpanKind as OtelSpanKind
 
 from latitude_telemetry.constants import (
     ATTRIBUTES,
-    HEAD_COMMIT,
     SPAN_SPECIFICATIONS,
-    LogSources,
     SpanType,
 )
 from latitude_telemetry.instrumentations.base import BaseInstrumentation
@@ -76,7 +74,7 @@ class ToolResultInfo:
 class StartToolSpanOptions:
     """Options for starting a tool span."""
 
-    name: str = ""
+    name: str | None = None
     call: ToolCallInfo | None = None
     attributes: Dict[str, Any] | None = None
 
@@ -99,16 +97,15 @@ class TokenUsage:
 
 
 @dataclass
-class StartCompletionSpanOptions(StartSpanOptions):
+class StartCompletionSpanOptions:
     """Options for starting a completion span."""
 
+    name: str | None = None
     provider: str = ""
     model: str = ""
     configuration: Dict[str, Any] | None = None
     input: List[Dict[str, Any]] | None = None
-    versionUuid: str | None = None
-    promptUuid: str | None = None
-    experimentUuid: str | None = None
+    attributes: Dict[str, Any] | None = None
 
 
 @dataclass
@@ -140,10 +137,12 @@ class HttpResponse:
 
 
 @dataclass
-class StartHttpSpanOptions(StartSpanOptions):
+class StartHttpSpanOptions:
     """Options for starting an HTTP span."""
 
+    name: str | None = None
     request: HttpRequest | None = None
+    attributes: Dict[str, Any] | None = None
 
 
 @dataclass
@@ -154,49 +153,42 @@ class EndHttpSpanOptions(EndSpanOptions):
 
 
 @dataclass
-class PromptSpanOptions(StartSpanOptions):
+class PromptSpanOptions:
     """Options for a prompt span."""
 
-    documentLogUuid: str = ""
-    versionUuid: str | None = None
-    promptUuid: str = ""
-    projectId: int | None = None
-    experimentUuid: str | None = None
-    testDeploymentId: int | None = None
-    externalId: str | None = None
+    name: str | None = None
     template: str = ""
     parameters: Dict[str, Any] | None = None
-    source: LogSources | None = None
+    attributes: Dict[str, Any] | None = None
 
 
 @dataclass
-class ChatSpanOptions(StartSpanOptions):
+class ChatSpanOptions:
     """Options for a chat span."""
 
-    documentLogUuid: str = ""
-    previousTraceId: str = ""
-    source: LogSources | None = None
+    name: str | None = None
+    attributes: Dict[str, Any] | None = None
 
 
 @dataclass
-class ExternalSpanOptions(StartSpanOptions):
+class ExternalSpanOptions:
     """Options for an external span."""
 
-    promptUuid: str = ""
-    documentLogUuid: str = ""
-    source: LogSources | None = None
-    versionUuid: str | None = None
+    name: str | None = None
     externalId: str | None = None
+    attributes: Dict[str, Any] | None = None
 
 
 @dataclass
-class CaptureOptions(StartSpanOptions):
+class CaptureOptions:
     """Options for capture method."""
 
+    name: str | None = None
     path: str = ""
     projectId: int = 0
     versionUuid: str | None = None
     conversationUuid: str | None = None
+    attributes: Dict[str, Any] | None = None
 
 
 @dataclass
@@ -378,9 +370,10 @@ class ManualInstrumentation(BaseInstrumentation):
     def tool(self, ctx: Context, options: StartToolSpanOptions) -> ToolSpanHandle:
         """Create a tool execution span."""
         json_arguments = self._safe_json(options.call.arguments if options.call else {})
+        name = options.name or "tool"
 
         attributes: Dict[str, Any] = {
-            ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.name: options.name,
+            ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.name: name,
             ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.type: "function",
         }
         if options.call:
@@ -391,9 +384,9 @@ class ManualInstrumentation(BaseInstrumentation):
 
         span_handle = self._span(
             ctx,
-            options.name,
+            name,
             SpanType.Tool,
-            StartSpanOptions(attributes=attributes),
+            StartSpanOptions(name=name, attributes=attributes),
         )
 
         def end_tool(end_options: EndToolSpanOptions) -> None:
@@ -560,12 +553,6 @@ class ManualInstrumentation(BaseInstrumentation):
             ATTRIBUTES.LATITUDE.request.messages: json_input,
             **attr_input,
         }
-        if options.versionUuid:
-            attributes[ATTRIBUTES.LATITUDE.commitUuid] = options.versionUuid
-        if options.promptUuid:
-            attributes[ATTRIBUTES.LATITUDE.documentUuid] = options.promptUuid
-        if options.experimentUuid:
-            attributes[ATTRIBUTES.LATITUDE.experimentUuid] = options.experimentUuid
         if options.attributes:
             attributes.update(options.attributes)
 
@@ -574,7 +561,10 @@ class ManualInstrumentation(BaseInstrumentation):
             ctx,
             span_name,
             SpanType.Completion,
-            StartSpanOptions(attributes=attributes),
+            StartSpanOptions(
+                name=options.name,
+                attributes=attributes,
+            ),
         )
 
         def end_completion(end_options: EndCompletionSpanOptions | None = None) -> None:
@@ -660,7 +650,7 @@ class ManualInstrumentation(BaseInstrumentation):
             ctx,
             span_name,
             SpanType.Http,
-            StartSpanOptions(attributes=attributes),
+            StartSpanOptions(name=options.name, attributes=attributes),
         )
 
         def end_http(end_options: EndHttpSpanOptions) -> None:
@@ -698,34 +688,16 @@ class ManualInstrumentation(BaseInstrumentation):
         attributes: Dict[str, Any] = {
             ATTRIBUTES.LATITUDE.request.template: options.template,
             ATTRIBUTES.LATITUDE.request.parameters: json_parameters,
-            ATTRIBUTES.LATITUDE.commitUuid: options.versionUuid or HEAD_COMMIT,
-            ATTRIBUTES.LATITUDE.documentUuid: options.promptUuid,
-            ATTRIBUTES.LATITUDE.documentLogUuid: options.documentLogUuid,
         }
-        if options.projectId is not None:
-            attributes[ATTRIBUTES.LATITUDE.projectId] = options.projectId
-        if options.experimentUuid:
-            attributes[ATTRIBUTES.LATITUDE.experimentUuid] = options.experimentUuid
-        if options.testDeploymentId is not None:
-            attributes[ATTRIBUTES.LATITUDE.testDeploymentId] = options.testDeploymentId
-        if options.externalId:
-            attributes[ATTRIBUTES.LATITUDE.externalId] = options.externalId
-        if options.source:
-            attributes[ATTRIBUTES.LATITUDE.source] = options.source.value
         if options.attributes:
             attributes.update(options.attributes)
 
-        name = options.name or f"prompt-{options.promptUuid}"
+        name = options.name or "prompt"
         return self._span(ctx, name, SpanType.Prompt, StartSpanOptions(attributes=attributes))
 
     def chat(self, ctx: Context, options: ChatSpanOptions) -> SpanHandle:
         """Create a chat continuation span."""
-        attributes: Dict[str, Any] = {
-            ATTRIBUTES.LATITUDE.documentLogUuid: options.documentLogUuid,
-            ATTRIBUTES.LATITUDE.previousTraceId: options.previousTraceId,
-        }
-        if options.source:
-            attributes[ATTRIBUTES.LATITUDE.source] = options.source.value
+        attributes: Dict[str, Any] = {}
         if options.attributes:
             attributes.update(options.attributes)
 
@@ -734,19 +706,13 @@ class ManualInstrumentation(BaseInstrumentation):
 
     def external(self, ctx: Context, options: ExternalSpanOptions) -> SpanHandle:
         """Create an external span."""
-        attributes: Dict[str, Any] = {
-            ATTRIBUTES.LATITUDE.documentUuid: options.promptUuid,
-            ATTRIBUTES.LATITUDE.documentLogUuid: options.documentLogUuid,
-            ATTRIBUTES.LATITUDE.source: (options.source or LogSources.API).value,
-        }
-        if options.versionUuid:
-            attributes[ATTRIBUTES.LATITUDE.commitUuid] = options.versionUuid
+        attributes: Dict[str, Any] = {}
         if options.externalId:
             attributes[ATTRIBUTES.LATITUDE.externalId] = options.externalId
         if options.attributes:
             attributes.update(options.attributes)
 
-        name = options.name or f"external-{options.promptUuid}"
+        name = options.name or "external"
         return self._span(ctx, name, SpanType.External, StartSpanOptions(attributes=attributes))
 
     def unresolved_external(self, ctx: Context, options: CaptureOptions) -> SpanHandle:

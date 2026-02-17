@@ -22,11 +22,6 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               route: ROUTES.backoffice.search.root,
             },
             {
-              label: 'Usage overview',
-              value: BackofficeRoutes.usageOverview,
-              route: ROUTES.backoffice.usageOverview.root,
-            },
-            {
               label: 'Features',
               value: BackofficeRoutes.features,
               route: ROUTES.backoffice.features.root,

@@ -20,7 +20,6 @@ export enum EvaluationRoutes {
 
 export enum BackofficeRoutes {
   search = 'search',
-  usageOverview = 'usageOverview',
   features = 'features',
   promocodes = 'promocodes',
   billing = 'billing',
@@ -57,9 +56,6 @@ export const ROUTES = {
       user: (email: string) =>
         `${BACKOFFICE_ROOT}/search/user/${encodeURIComponent(email)}`,
       project: (id: number) => `${BACKOFFICE_ROOT}/search/project/${id}`,
-    },
-    [BackofficeRoutes.usageOverview]: {
-      root: `${BACKOFFICE_ROOT}/usage-overview`,
     },
     [BackofficeRoutes.features]: {
       root: `${BACKOFFICE_ROOT}/features`,

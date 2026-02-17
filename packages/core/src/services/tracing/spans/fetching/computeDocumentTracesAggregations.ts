@@ -5,17 +5,34 @@ import { spans } from '../../../../schema/models/spans'
 import { TracesAggregations } from '../../../../schema/models/types/Span'
 import { DatabaseError } from 'pg'
 import { SpanType } from '@latitude-data/constants'
+import { isClickHouseSpansReadEnabled } from '../../../workspaceFeatures/isClickHouseSpansReadEnabled'
+import { computeDocumentTracesAggregations as chComputeDocumentTracesAggregations } from '../../../../queries/clickhouse/spans/computeDocumentTracesAggregations'
 
 export async function computeDocumentTracesAggregations(
   {
+    workspaceId,
     documentUuid,
     commitUuid,
   }: {
+    workspaceId: number
     documentUuid: string
     commitUuid?: string
   },
   db = database,
 ) {
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
+    workspaceId,
+    db,
+  )
+
+  if (shouldUseClickHouse) {
+    const result = await chComputeDocumentTracesAggregations({
+      workspaceId,
+      documentUuid,
+      commitUuid,
+    })
+    return Result.ok(result)
+  }
   try {
     const countConditions = [
       eq(spans.documentUuid, documentUuid),

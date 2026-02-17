@@ -5,6 +5,8 @@ import { Workspace } from '../../schema/models/types/Workspace'
 import { Commit } from '../../schema/models/types/Commit'
 import { CommitsRepository } from '../../repositories'
 import { LogSources } from '@latitude-data/constants'
+import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
+import { countDistinctTracesByDocument } from '../../queries/clickhouse/spans/countByDocument'
 
 export async function countTracesByDocument(
   {
@@ -20,8 +22,23 @@ export async function countTracesByDocument(
   },
   db = database,
 ) {
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
+    workspace.id,
+    db,
+  )
+
   const commitsRepo = new CommitsRepository(workspace.id, db)
   const commits = await commitsRepo.getCommitsHistory({ commit })
+
+  if (shouldUseClickHouse) {
+    return countDistinctTracesByDocument({
+      workspaceId: workspace.id,
+      documentUuid,
+      commitUuids: commits.map((c) => c.uuid),
+      logSources,
+    })
+  }
+
   let filters = [
     eq(spans.workspaceId, workspace.id),
     eq(spans.documentUuid, documentUuid),

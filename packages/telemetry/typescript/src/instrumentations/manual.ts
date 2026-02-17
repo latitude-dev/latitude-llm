@@ -2,8 +2,6 @@ import { BaseInstrumentation } from '$telemetry/instrumentations/base'
 import { toKebabCase, toSnakeCase } from '$telemetry/utils'
 import {
   ATTRIBUTES,
-  HEAD_COMMIT,
-  LogSources,
   SPAN_SPECIFICATIONS,
   SpanType,
   TraceContext,
@@ -31,12 +29,13 @@ export type ErrorOptions = {
   attributes?: otel.Attributes
 }
 
-export type StartToolSpanOptions = StartSpanOptions & {
+export type StartToolSpanOptions = {
   name: string
   call: {
     id: string
     arguments: Record<string, unknown>
   }
+  attributes?: otel.Attributes
 }
 
 export type EndToolSpanOptions = EndSpanOptions & {
@@ -46,14 +45,13 @@ export type EndToolSpanOptions = EndSpanOptions & {
   }
 }
 
-export type StartCompletionSpanOptions = StartSpanOptions & {
+export type StartCompletionSpanOptions = {
+  name?: string
   provider: string
   model: string
   configuration?: Record<string, unknown>
   input?: string | Record<string, unknown>[]
-  versionUuid?: string
-  promptUuid?: string
-  experimentUuid?: string
+  attributes?: otel.Attributes
 }
 
 export type EndCompletionSpanOptions = EndSpanOptions & {
@@ -67,13 +65,15 @@ export type EndCompletionSpanOptions = EndSpanOptions & {
   finishReason?: string
 }
 
-export type StartHttpSpanOptions = StartSpanOptions & {
+export type StartHttpSpanOptions = {
+  name?: string
   request: {
     method: string
     url: string
     headers: Record<string, string>
     body: string | Record<string, unknown>
   }
+  attributes?: otel.Attributes
 }
 
 export type EndHttpSpanOptions = EndSpanOptions & {
@@ -84,40 +84,31 @@ export type EndHttpSpanOptions = EndSpanOptions & {
   }
 }
 
-export type PromptSpanOptions = StartSpanOptions & {
-  documentLogUuid: string
-  versionUuid?: string // Alias for commitUuid
-  promptUuid: string // Alias for documentUuid
-  projectId?: number
-  experimentUuid?: string
-  testDeploymentId?: number
-  externalId?: string
+export type PromptSpanOptions = {
+  name?: string
   template: string
   parameters?: Record<string, unknown>
-  source?: LogSources
+  attributes?: otel.Attributes
 }
 
-export type ChatSpanOptions = StartSpanOptions & {
-  documentLogUuid: string
-  previousTraceId: string
-  source?: LogSources
-  versionUuid?: string // Alias for commitUuid
-  promptUuid?: string // Alias for documentUuid
+export type ChatSpanOptions = {
+  name?: string
+  attributes?: otel.Attributes
 }
 
-export type ExternalSpanOptions = StartSpanOptions & {
-  promptUuid: string // Alias for documentUuid
-  documentLogUuid: string
-  source?: LogSources // Defaults to LogSources.API
-  versionUuid?: string // Alias for commitUuid
+export type ExternalSpanOptions = {
+  name?: string
   externalId?: string
+  attributes?: otel.Attributes
 }
 
-export type CaptureOptions = StartSpanOptions & {
+export type CaptureOptions = {
+  name?: string
   path: string // The document path
   projectId: number
   versionUuid?: string // Optional, defaults to HEAD commit
   conversationUuid?: string // Optional, if provided, will be used as the documentLogUuid
+  attributes?: otel.Attributes
 }
 
 export type ManualInstrumentationOptions = {
@@ -267,6 +258,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
 
     const span = this.span(ctx, start.name, SpanType.Tool, {
+      ...start,
       attributes: {
         [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.name]: start.name,
         [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.tool.type]:
@@ -373,6 +365,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       start.name || `${start.provider} / ${start.model}`,
       SpanType.Completion,
       {
+        ...start,
         attributes: {
           [ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system]: start.provider,
           [ATTRIBUTES.LATITUDE.request.configuration]: jsonConfiguration,
@@ -380,9 +373,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
           [ATTRIBUTES.OPENTELEMETRY.GEN_AI.systemInstructions]: jsonSystem,
           [ATTRIBUTES.OPENTELEMETRY.GEN_AI.input.messages]: jsonInput,
           ...(start.attributes || {}),
-          [ATTRIBUTES.LATITUDE.commitUuid]: start.versionUuid,
-          [ATTRIBUTES.LATITUDE.documentUuid]: start.promptUuid,
-          [ATTRIBUTES.LATITUDE.experimentUuid]: start.experimentUuid,
         },
       },
     )
@@ -489,6 +479,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       start.name || `${method} ${start.request.url}`,
       SpanType.Http,
       {
+        ...start,
         attributes: {
           [ATTRIBUTES.OPENTELEMETRY.HTTP.request.method]: method,
           [ATTRIBUTES.OPENTELEMETRY.HTTP.request.url]: start.request.url,
@@ -534,23 +525,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
   }
 
-  prompt(
-    ctx: otel.Context,
-    {
-      documentLogUuid,
-      versionUuid,
-      promptUuid,
-      projectId,
-      experimentUuid,
-      testDeploymentId,
-      externalId,
-      template,
-      parameters,
-      name,
-      source,
-      ...rest
-    }: PromptSpanOptions,
-  ) {
+  prompt(ctx: otel.Context, options: PromptSpanOptions) {
+    const { template, parameters, name, attributes: userAttributes } = options
+
     let jsonParameters = ''
     try {
       jsonParameters = JSON.stringify(parameters || {})
@@ -561,89 +538,43 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const attributes = {
       [ATTRIBUTES.LATITUDE.request.template]: template,
       [ATTRIBUTES.LATITUDE.request.parameters]: jsonParameters,
-      [ATTRIBUTES.LATITUDE.commitUuid]: versionUuid || HEAD_COMMIT,
-      [ATTRIBUTES.LATITUDE.documentUuid]: promptUuid,
-      [ATTRIBUTES.LATITUDE.projectId]: projectId,
-      [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
-      ...(experimentUuid && {
-        [ATTRIBUTES.LATITUDE.experimentUuid]: experimentUuid,
-      }),
-      ...(testDeploymentId && {
-        [ATTRIBUTES.LATITUDE.testDeploymentId]: testDeploymentId,
-      }),
-      ...(externalId && { [ATTRIBUTES.LATITUDE.externalId]: externalId }),
-      ...(source && { [ATTRIBUTES.LATITUDE.source]: source }),
-      ...(rest.attributes || {}),
+      ...(userAttributes || {}),
     }
 
-    return this.span(ctx, name || `prompt-${promptUuid}`, SpanType.Prompt, {
-      attributes,
-    })
+    return this.span(ctx, name || 'prompt', SpanType.Prompt, { attributes })
   }
 
-  chat(
-    ctx: otel.Context,
-    {
-      documentLogUuid,
-      previousTraceId,
-      source,
-      name,
-      versionUuid,
-      promptUuid,
-      ...rest
-    }: ChatSpanOptions,
-  ) {
+  chat(ctx: otel.Context, options: ChatSpanOptions) {
+    const { name, attributes: userAttributes } = options
+
     const attributes = {
-      [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
-      [ATTRIBUTES.LATITUDE.previousTraceId]: previousTraceId,
-      ...(versionUuid && { [ATTRIBUTES.LATITUDE.commitUuid]: versionUuid }),
-      ...(promptUuid && { [ATTRIBUTES.LATITUDE.documentUuid]: promptUuid }),
-      ...(source && { [ATTRIBUTES.LATITUDE.source]: source }),
-      ...(rest.attributes || {}),
+      ...(userAttributes || {}),
     }
 
-    return this.span(ctx, name || `chat-${documentLogUuid}`, SpanType.Chat, {
-      attributes,
-    })
+    return this.span(ctx, name || 'chat', SpanType.Chat, { attributes })
   }
 
-  external(
-    ctx: otel.Context,
-    {
-      promptUuid,
-      documentLogUuid,
-      source,
-      versionUuid,
-      externalId,
-      name,
-      ...rest
-    }: ExternalSpanOptions,
-  ) {
+  external(ctx: otel.Context, options: ExternalSpanOptions) {
+    const { externalId, name, attributes: userAttributes } = options
+
     const attributes = {
-      [ATTRIBUTES.LATITUDE.documentUuid]: promptUuid,
-      [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
-      [ATTRIBUTES.LATITUDE.source]: source ?? LogSources.API,
-      ...(versionUuid && { [ATTRIBUTES.LATITUDE.commitUuid]: versionUuid }),
       ...(externalId && { [ATTRIBUTES.LATITUDE.externalId]: externalId }),
-      ...(rest.attributes || {}),
+      ...(userAttributes || {}),
     }
 
-    return this.span(ctx, name || `external-${promptUuid}`, SpanType.External, {
-      attributes,
-    })
+    return this.span(ctx, name || 'external', SpanType.External, { attributes })
   }
 
-  unresolvedExternal(
-    ctx: otel.Context,
-    {
+  unresolvedExternal(ctx: otel.Context, options: CaptureOptions) {
+    const {
       path,
       projectId,
       versionUuid,
       conversationUuid,
       name,
-      ...rest
-    }: CaptureOptions,
-  ) {
+      attributes: userAttributes,
+    } = options
+
     const attributes = {
       [ATTRIBUTES.LATITUDE.promptPath]: path,
       [ATTRIBUTES.LATITUDE.projectId]: projectId,
@@ -651,7 +582,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       ...(conversationUuid && {
         [ATTRIBUTES.LATITUDE.documentLogUuid]: conversationUuid,
       }),
-      ...(rest.attributes || {}),
+      ...(userAttributes || {}),
     }
 
     return this.span(

@@ -23,6 +23,8 @@ import { Project } from '../../../schema/models/types/Project'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { getRowsFromRange } from '../../datasetRows/getRowsFromRange'
 import { assertEvaluationRequirements } from '../assertRequirements'
+import { isClickHouseSpansReadEnabled } from '../../workspaceFeatures/isClickHouseSpansReadEnabled'
+import { getExperimentPromptSpansBefore } from '../../../queries/clickhouse/spans/getExperimentPromptSpansBefore'
 
 export type ExperimentRow = {
   uuid: string
@@ -113,23 +115,37 @@ async function getExperimentSpansRows(
   },
   db = database,
 ): Promise<ExperimentRow[]> {
-  const spanResults = await db
-    .select({
-      id: spans.id,
-      traceId: spans.traceId,
-    })
-    .from(spans)
-    .where(
-      and(
-        eq(spans.workspaceId, workspace.id),
-        eq(spans.documentUuid, document.documentUuid),
-        lt(spans.startedAt, experiment.createdAt),
-        isNull(spans.experimentUuid),
-        eq(spans.type, SpanType.Prompt),
-      ),
-    )
-    .orderBy(desc(spans.startedAt))
-    .limit(count)
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
+    workspace.id,
+    db,
+  )
+
+  const spanResults = shouldUseClickHouse
+    ? await getExperimentPromptSpansBefore({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        before: experiment.createdAt,
+        limit: count,
+      }).then((rows) =>
+        rows.map((row) => ({ id: row.span_id, traceId: row.trace_id })),
+      )
+    : await db
+        .select({
+          id: spans.id,
+          traceId: spans.traceId,
+        })
+        .from(spans)
+        .where(
+          and(
+            eq(spans.workspaceId, workspace.id),
+            eq(spans.documentUuid, document.documentUuid),
+            lt(spans.startedAt, experiment.createdAt),
+            isNull(spans.experimentUuid),
+            eq(spans.type, SpanType.Prompt),
+          ),
+        )
+        .orderBy(desc(spans.startedAt))
+        .limit(count)
 
   if (spanResults.length === 0) return []
 

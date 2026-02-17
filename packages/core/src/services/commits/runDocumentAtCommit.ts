@@ -59,6 +59,28 @@ export async function runDocumentAtCommit(
   telemetry: LatitudeTelemetry = realTelemetry,
 ) {
   errorableUuid = errorableUuid ?? generateUUIDIdentifier()
+
+  // Set trace-level attributes in baggage so all child spans inherit them
+  const attributes: Record<string, string> = {
+    'latitude.documentLogUuid': errorableUuid,
+    'latitude.documentUuid': document.documentUuid,
+    'latitude.commitUuid': commit.uuid,
+    'latitude.projectId': String(commit.projectId),
+  }
+  if (experiment?.uuid) {
+    attributes['latitude.experimentUuid'] = experiment.uuid
+  }
+  if (testDeploymentId) {
+    attributes['latitude.testDeploymentId'] = String(testDeploymentId)
+  }
+  if (source) {
+    attributes['latitude.source'] = source
+  }
+  if (customIdentifier) {
+    attributes['latitude.customIdentifier'] = customIdentifier
+  }
+  const ctxWithAttributes = telemetry.context.setAttributes(context, attributes)
+
   const providersMap = await buildProvidersMap({
     workspaceId: workspace.id,
   })
@@ -71,19 +93,11 @@ export async function runDocumentAtCommit(
 
   const $prompt = telemetry.span.prompt(
     {
-      documentLogUuid: errorableUuid,
-      experimentUuid: experiment?.uuid,
-      testDeploymentId,
-      externalId: customIdentifier,
       name: document.path.split('/').at(-1),
       parameters: parameters,
-      promptUuid: document.documentUuid,
       template: result.value,
-      versionUuid: commit.uuid,
-      projectId: commit.projectId,
-      source,
     },
-    context,
+    ctxWithAttributes,
   )
 
   const checker = new RunDocumentChecker({

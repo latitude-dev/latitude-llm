@@ -27,6 +27,8 @@ import { Commit } from '../../schema/models/types/Commit'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { Cursor } from '../../schema/types'
+import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
+import { getSpansByDocument as chGetSpansByDocument } from '../../queries/clickhouse/spans/getByDocument'
 
 /**
  * Fetches OK spans from a document, ordered by startedAt descending.
@@ -56,6 +58,11 @@ export async function getSpansByDocument(
   },
   db = database,
 ) {
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
+    workspace.id,
+    db,
+  )
+
   const commitsRepo = new CommitsRepository(workspace.id, db)
   const commitHistory = await commitsRepo.getCommitsHistory({ commit })
   const commitUuids = commitHistory.map((c) => c.uuid)
@@ -83,6 +90,23 @@ export async function getSpansByDocument(
         eq(experiments.id, optimizations.optimizedExperimentId),
       ),
     )
+
+  if (shouldUseClickHouse) {
+    const optimizationExperimentRows = await optimizationExperimentUuids
+    return Result.ok(
+      await chGetSpansByDocument({
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        spanTypes,
+        commitUuids,
+        optimizationExperimentUuids: optimizationExperimentRows.map(
+          (row) => row.uuid,
+        ),
+        cursor,
+        limit,
+      }),
+    )
+  }
 
   const rows = await db
     .select(spansColumns)

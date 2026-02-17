@@ -224,11 +224,9 @@ model: gpt-4o
     })
 
     it('calls telemetry.span.prompt with all required parameters', async () => {
-      const { context, workspace, document, commit, project } = await buildData(
-        {
-          doc1Content: dummyDoc1Content,
-        },
-      )
+      const { context, workspace, document, commit } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
 
       const mockPrompt = vi
         .fn()
@@ -263,18 +261,11 @@ model: gpt-4o
 
       expect(mockPrompt).toHaveBeenCalledWith(
         expect.objectContaining({
-          documentLogUuid: expect.any(String),
           name: document.path.split('/').at(-1),
           parameters,
-          promptUuid: document.documentUuid,
           template: expect.any(String),
-          versionUuid: commit.uuid,
-          projectId: project.id,
-          source: LogSources.API,
-          externalId: customIdentifier,
-          testDeploymentId,
         }),
-        context,
+        expect.anything(),
       )
     })
 

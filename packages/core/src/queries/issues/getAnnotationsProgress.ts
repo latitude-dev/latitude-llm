@@ -15,7 +15,11 @@ import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
+import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
+import { countSpansForAnnotations as chCountSpansForAnnotations } from '../../queries/clickhouse/spans/getAnnotationsProgress'
 
+// These are the log sources we consider for annotations progress by default
+// We don't consider Experiment logs as they don't move the centroid
 const DEFAULT_LOG_SOURCES = [
   ...RUN_SOURCES[RunSourceGroup.Production],
   LogSources.Playground,
@@ -124,19 +128,36 @@ export async function getAnnotationsProgress(
   if (!Result.isOk(commitsResult)) return commitsResult
 
   const { commitUuids, commitIds } = commitsResult.value
-  const conditions = [
-    eq(spans.workspaceId, workspace.id),
-    inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),
-    or(inArray(spans.source, logSources), isNull(spans.source)),
-    inArray(spans.commitUuid, commitUuids),
-    sql`${spans.startedAt} >= ${fromDate}`,
-  ]
 
-  const totalRuns = await db
-    .select({ count: count() })
-    .from(spans)
-    .where(and(...conditions))
-    .then((r) => r[0]['count'])
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
+    workspace.id,
+    db,
+  )
+
+  let totalRuns: number
+
+  if (shouldUseClickHouse) {
+    totalRuns = await chCountSpansForAnnotations({
+      workspaceId: workspace.id,
+      commitUuids,
+      logSources,
+      fromDate,
+    })
+  } else {
+    const conditions = [
+      eq(spans.workspaceId, workspace.id),
+      inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),
+      or(inArray(spans.source, logSources), isNull(spans.source)),
+      inArray(spans.commitUuid, commitUuids),
+      sql`${spans.startedAt} >= ${fromDate}`,
+    ]
+
+    totalRuns = await db
+      .select({ count: count() })
+      .from(spans)
+      .where(and(...conditions))
+      .then((r) => r[0]['count'])
+  }
 
   const currentAnnotations = await getAnnotationsProgressCount({
     workspace,

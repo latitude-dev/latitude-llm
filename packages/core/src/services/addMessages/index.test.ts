@@ -115,10 +115,7 @@ Hello world
 
     expect(mockChat).toHaveBeenCalledWith(
       expect.objectContaining({
-        documentLogUuid,
         name: document.path.split('/').at(-1),
-        source: LogSources.API,
-        previousTraceId: expect.any(String),
       }),
       expect.anything(),
     )

@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { cache as redis } from '../../../cache'
 import { database } from '../../../client'
 import { diskFactory } from '../../../lib/disk'
+import { compressString } from '../../../lib/disk/compression'
 import { Result } from '../../../lib/Result'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import { type Commit } from '../../../schema/models/types/Commit'
@@ -115,7 +116,8 @@ describe('getOrSetEnrichedReason', () => {
       completionSpan.traceId,
       completionSpan.id,
     )
-    await disk.put(metadataKey, JSON.stringify(completionMetadata))
+    const compressed = await compressString(JSON.stringify(completionMetadata))
+    await disk.putBuffer(metadataKey, compressed)
 
     // Clear cache to ensure we read from disk
     const cache = await redis()

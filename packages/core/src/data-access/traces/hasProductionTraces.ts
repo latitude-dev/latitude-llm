@@ -2,6 +2,8 @@ import { and, eq, inArray, sql, SQL } from 'drizzle-orm'
 import { database } from '../../client'
 import { MAIN_SPAN_TYPES, RUN_SOURCES, RunSourceGroup } from '../../constants'
 import { spans } from '../../schema/models/spans'
+import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
+import { hasProductionTraces as chHasProductionTraces } from '../../queries/clickhouse/spans/hasProductionTraces'
 
 export async function hasProductionTraces(
   {
@@ -13,6 +15,15 @@ export async function hasProductionTraces(
   },
   db = database,
 ): Promise<boolean> {
+  const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
+    workspaceId,
+    db,
+  )
+
+  if (shouldUseClickHouse) {
+    return chHasProductionTraces({ workspaceId, projectId })
+  }
+
   const conditions: SQL<unknown>[] = [
     eq(spans.workspaceId, workspaceId),
     inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),

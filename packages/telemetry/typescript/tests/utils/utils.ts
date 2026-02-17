@@ -41,6 +41,13 @@ export function normalizeBody(body: OtlpBody): OtlpBody {
   const clone: OtlpBody = JSON.parse(JSON.stringify(body))
   let counter = 0
   const idMap = new Map<string, string>()
+  const ignoredAttributeKeys = new Set([
+    'latitude.commit_uuid',
+    'latitude.document_log_uuid',
+    'latitude.document_uuid',
+    'latitude.documentLogUuid',
+    'latitude.documentUuid',
+  ])
 
   function mapId(id: string): string {
     if (!idMap.has(id)) {
@@ -62,6 +69,9 @@ export function normalizeBody(body: OtlpBody): OtlpBody {
         if (span.parentSpanId) {
           span.parentSpanId = mapId(span.parentSpanId)
         }
+        if (span.name.startsWith('prompt-')) {
+          span.name = 'prompt'
+        }
         span.startTimeUnixNano = 'TIME'
         span.endTimeUnixNano = 'TIME'
         for (const event of span.events || []) {
@@ -72,11 +82,33 @@ export function normalizeBody(body: OtlpBody): OtlpBody {
             }
           }
         }
-        for (const attr of span.attributes || []) {
-          if (attr.key === 'latitude.document_log_uuid') {
-            attr.value = { stringValue: 'DOC_LOG_UUID' } as any
-          }
-        }
+        span.attributes = (span.attributes || [])
+          .map((attr) => {
+            if (attr.key === 'latitude.documentLogUuid') {
+              return {
+                ...attr,
+                key: 'latitude.document_log_uuid',
+                value: { stringValue: 'DOC_LOG_UUID' },
+              }
+            }
+
+            if (attr.key === 'latitude.document_log_uuid') {
+              return {
+                ...attr,
+                value: { stringValue: 'DOC_LOG_UUID' },
+              }
+            }
+
+            if (attr.key === 'latitude.documentUuid') {
+              return {
+                ...attr,
+                key: 'latitude.document_uuid',
+              }
+            }
+
+            return attr
+          })
+          .filter((attr) => !ignoredAttributeKeys.has(attr.key))
       }
     }
   }

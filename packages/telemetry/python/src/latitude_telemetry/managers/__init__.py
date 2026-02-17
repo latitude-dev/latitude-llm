@@ -2,8 +2,9 @@
 Manager classes for Latitude telemetry.
 """
 
-from typing import List
+from typing import Dict, List
 
+from opentelemetry import baggage
 from opentelemetry import context as otel_context
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import TracerProvider
@@ -86,6 +87,44 @@ class ContextManager:
     def active(self) -> Context:
         """Get the current active context."""
         return get_current_context()
+
+    def set_attributes(self, ctx: Context, attributes: Dict[str, str]) -> Context:
+        """
+        Sets custom attributes in the OpenTelemetry baggage that will be
+        automatically propagated to all child spans in the trace.
+
+        This is useful for setting trace-level metadata that should be
+        inherited by all spans without manually passing them to each span.
+
+        Args:
+            ctx: The context to set attributes in
+            attributes: Dictionary of attribute key-value pairs
+
+        Returns:
+            A new context with the attributes set in baggage
+
+        Example:
+            ctx = telemetry.context.set_attributes(
+                telemetry.context.active(),
+                {
+                    'latitude.document_log_uuid': 'uuid-123',
+                    'latitude.document_uuid': 'prompt-456',
+                    'latitude.commit_uuid': 'commit-789',
+                    'latitude.project_id': '123',
+                    'custom.attribute': 'value'
+                }
+            )
+
+            # All spans created within this context will automatically
+            # inherit the baggage attributes
+            with telemetry.context.with_context(ctx):
+                tool = telemetry.span.tool(StartToolSpanOptions(name='my-tool'))
+                tool.end()
+        """
+        for key, value in attributes.items():
+            ctx = baggage.set_baggage(key, value, ctx)
+
+        return ctx
 
 
 class InstrumentationManager:
