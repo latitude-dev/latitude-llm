@@ -207,7 +207,7 @@
     "loops": "3.3.0",
     "mustache": "4.2.0",
     "nanoid": "5.0.9",
-    "nodemailer": "6.9.14",
+    "nodemailer": "7.0.7",
     "nodemailer-html-to-text": "3.2.0",
     "nodemailer-mailgun-transport": "2.1.5",
     "officeparser": "5.1.1",
