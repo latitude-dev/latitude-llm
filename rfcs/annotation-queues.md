@@ -4,6 +4,10 @@ Status: Draft
 Owners: Core Platform
 Feature Flag: `annotationQueues`
 
+> **Important**: This feature reads `spans` and `evaluation_results` exclusively from **ClickHouse**. 
+> PostgreSQL is only used for annotation queue metadata (queues, members, items).
+> No changes to the PostgreSQL `evaluation_results_v2` table are required.
+
 ## 1. Problem Statement
 
 Teams need a way to organize and distribute trace review work among team members. Currently, there's no structured way to:
@@ -30,11 +34,18 @@ Teams need a way to organize and distribute trace review work among team members
 
 ### 4.1 Data Storage
 
-PostgreSQL for all annotation queue data (not ClickHouse) because:
-- Relational data with foreign keys (queues → members, queues → items)
-- Low write volume (queue management, status updates)
-- ACID transactions needed for status changes
-- ClickHouse is for analytics, not transactional workflows
+**PostgreSQL** for annotation queue metadata:
+- `annotation_queues` - queue definitions, filters, settings
+- `annotation_queue_members` - annotator assignments
+- `annotation_queue_items` - traces in queue with status
+
+Rationale: Relational data with foreign keys, ACID transactions for status changes.
+
+**ClickHouse** for trace and annotation data (read + write):
+- `spans` - trace/span data for display
+- `evaluation_results` - annotations stored as evaluation results (with new columns)
+
+Rationale: High-volume analytics queries, existing evaluation infrastructure.
 
 ### 4.2 High-Level Flow
 
@@ -92,6 +103,7 @@ CREATE TABLE annotation_queues (
   uuid UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
   workspace_id BIGINT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  evaluation_uuid UUID NOT NULL,  -- Links to the Human Evaluation used for annotations
   name VARCHAR(256) NOT NULL,
   description TEXT,
   filters JSONB,           -- Stored dynamic filters
@@ -100,6 +112,41 @@ CREATE TABLE annotation_queues (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 ```
+
+#### Evaluation Linking & Root Document
+
+**How Evaluations Work:**
+- `EvaluationVersions` are linked to `DocumentVersions` (evaluations belong to a specific document)
+- `EvaluationResults` reference a `commitId` and `evaluationUuid`
+- This creates a dependency: to create an evaluation, you need a document
+
+**The Problem:**
+Annotation queues may contain traces that:
+1. Are not linked to any document (external traces via SDK/API)
+2. Come from multiple different documents (when dynamic filters don't include a prompt/document filter)
+3. Have no `documentUuid` in ClickHouse spans
+
+**The Solution: Root Document**
+At project creation or first trace ingestion, create a **root document** in the project:
+- Acts as a catch-all document for project-level evaluations
+- Annotation queue evaluations link to this root document when no specific document filter is applied
+- Path: `latitude_main`
+- Visible in document listings so users can see created evaluations
+
+```
+Project
+  └── latitude_main (root document)
+        └── Annotation Queue Evaluation (Human)
+              └── Evaluation Results (annotations)
+  └── prompts/
+        └── support-bot.promptl
+        └── sales-assistant.promptl
+```
+
+This ensures annotation queues work for:
+- Project-wide trace review (no document filter)
+- External traces without document association
+- Mixed traces from multiple documents
 
 #### `annotation_queue_members`
 
@@ -131,51 +178,85 @@ CREATE TABLE annotation_queue_items (
 );
 ```
 
-#### `trace_annotations`
+### 5.2 Annotations as Evaluation Results
 
-Each message in a trace can have **N annotations** (no limit). The annotation target hierarchy is:
+**Annotations are stored as evaluation results**, not a separate table. This integrates with the existing evaluation system:
+
+- Issue generation works automatically via `evaluationResultV2Created` event
+- Analytics and reporting include annotation data
+- Single source of truth for all evaluation/annotation data
+
+#### How it works
+
+1. **Annotation Queue → Human Evaluation**: Each annotation queue is linked to a Human Evaluation definition
+2. **Annotation → Evaluation Result**: Each annotation creates an `evaluation_result_v2` record
+
+#### Annotation Target Hierarchy
+
+Each message in a trace can have **N annotations** (no limit):
 
 ```
 Trace (trace_id)
   └── Span (span_id) 
         └── Message (message_index within span)
-              └── Annotation 1
-              └── Annotation 2
-              └── ... N annotations
+              └── Evaluation Result (annotation 1)
+              └── Evaluation Result (annotation 2)
+              └── ... N evaluation results
               └── Highlight Annotation (start_offset, end_offset)
-                    └── ... N highlight annotations per selection
+                    └── ... N evaluation results per selection
   └── Global Annotation (no specific target)
-        └── ... N global annotations per trace
+        └── ... N evaluation results per trace
 ```
+
+#### Schema Changes to ClickHouse `evaluation_results`
+
+Add two new columns to the ClickHouse `evaluation_results` table:
 
 ```sql
-CREATE TABLE trace_annotations (
-  id BIGSERIAL PRIMARY KEY,
-  uuid UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-  workspace_id BIGINT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  annotation_queue_item_id BIGINT NOT NULL REFERENCES annotation_queue_items(id) ON DELETE CASCADE,
-  created_by_membership_id BIGINT NOT NULL REFERENCES memberships(id) ON DELETE SET NULL,
-  
-  -- Annotation target (one of these patterns)
-  target_type VARCHAR(32) NOT NULL,  -- 'global' | 'message' | 'highlight'
-  target_span_id VARCHAR(16),        -- For message/highlight annotations (references span in ClickHouse)
-  target_message_index INTEGER,      -- Index within the span's messages array
-  target_start_offset INTEGER,       -- For highlight annotations (character offset)
-  target_end_offset INTEGER,         -- For highlight annotations (character offset)
-  
-  -- Annotation content
-  content TEXT NOT NULL,
-  
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- No unique constraint on (queue_item_id, span_id, message_index) - allows N annotations per message
--- Index for efficient lookups
-CREATE INDEX idx_trace_annotations_target ON trace_annotations(annotation_queue_item_id, target_type, target_span_id, target_message_index);
+ALTER TABLE evaluation_results
+  ADD COLUMN annotation_queue_id Nullable(UInt64),
+  ADD COLUMN annotation_queue_item_id Nullable(UInt64);
 ```
 
-### 5.2 Filter Schema (JSONB)
+Note: No changes to PostgreSQL `evaluation_results_v2`. All annotation queries run against ClickHouse.
+
+#### Extended Metadata Schema
+
+The `metadata` JSONB field stores annotation target information:
+
+```typescript
+type AnnotationQueueResultMetadata = {
+  // Standard human evaluation fields
+  reason?: string
+  
+  // Target specification (for message/highlight annotations)
+  targetType: 'global' | 'message' | 'highlight'
+  targetSpanId?: string        // For message/highlight annotations
+  targetMessageIndex?: number  // Index within span's messages array
+  targetStartOffset?: number   // For highlight annotations (character offset)
+  targetEndOffset?: number     // For highlight annotations (character offset)
+}
+```
+
+#### Querying Annotations
+
+To get all annotations for a queue item (ClickHouse):
+
+```sql
+SELECT * FROM evaluation_results
+WHERE workspace_id = {workspaceId}
+  AND annotation_queue_item_id = {queueItemId}
+ORDER BY created_at ASC;
+```
+
+#### Benefits of This Approach
+
+1. **Issue Generation**: Failed annotations automatically trigger `discoverResultIssueJob`
+2. **Analytics**: All evaluation dashboards include annotation data
+3. **Consistency**: Single evaluation result model for both automated and human evaluations
+4. **Existing UI**: Evaluation result views work for annotations too
+
+### 5.3 Filter Schema (JSONB)
 
 Filters are stored as JSONB in `annotation_queues.filters`:
 
@@ -192,7 +273,7 @@ type FilterProperty =
 type StringComparator = 'equals' | 'contains' | 'does_not_contain'
 type NumberComparator = 'equals' | 'not_equals' | 'less_than' | 'less_than_or_equal' | 'greater_than' | 'greater_than_or_equal' | 'between'
 
-type Filter = 
+type Filter =
   | { property: 'commitUuid' | 'documentUuid' | 'traceId' | 'experimentUuid' | 'spanId'
       comparator: StringComparator
       value: string }
@@ -359,14 +440,7 @@ function shouldIncludeTrace(sampleRate: number): boolean {
 }
 ```
 
-For reproducibility, use trace_id hash:
-
-```typescript
-function shouldIncludeTrace(traceId: string, sampleRate: number): boolean {
-  const hash = hashString(traceId)
-  return (hash % 100) < sampleRate
-}
-```
+Note: Random sampling is sufficient since we only evaluate new traces once and the unique constraint `(annotation_queue_id, trace_id)` prevents duplicates.
 
 ## 8. Routes Structure
 
@@ -382,20 +456,41 @@ function shouldIncludeTrace(traceId: string, sampleRate: number): boolean {
 
 ### 9.1 Core Services (`packages/core/src/services/annotationQueues/`)
 
-- `create.ts` - Create queue with name, description, members, filters
+- `create.ts` - Create queue with name, description, members, filters + creates linked Human Evaluation
 - `update.ts` - Update queue metadata, members, filters
-- `destroy.ts` - Delete queue and all items
+- `destroy.ts` - Delete queue and all items (evaluation results preserved)
 - `addTraces.ts` - Manually add traces to queue
 - `removeTraces.ts` - Remove traces from queue
 - `updateItemStatus.ts` - Mark trace as completed/in_progress
 - `evaluateFilters.ts` - Check if trace matches queue filters
 
-### 9.2 Annotation Services (`packages/core/src/services/traceAnnotations/`)
+### 9.2 Annotation Services
 
-- `create.ts` - Create annotation (global, message, or highlight)
-- `update.ts` - Update annotation content
-- `destroy.ts` - Delete annotation
-- `findByQueueItem.ts` - Get all annotations for a trace
+Annotations use the existing evaluation system via `annotateEvaluationV2`:
+
+```typescript
+// Creating an annotation in a queue
+await annotateEvaluationV2({
+  workspace,
+  commit,
+  evaluation,  // The Human Evaluation linked to the queue
+  span,
+  resultScore,
+  resultMetadata: {
+    reason: 'User annotation content here',
+    annotationQueueId: queue.id,
+    annotationQueueItemId: queueItem.id,
+    targetType: 'message',
+    targetSpanId: span.id,
+    targetMessageIndex: 2,
+  },
+})
+```
+
+This automatically:
+- Creates an `evaluation_result_v2` record
+- Publishes `evaluationResultV2Created` event
+- Triggers issue discovery if the annotation indicates a problem
 
 ### 9.3 Background Jobs
 
@@ -409,10 +504,11 @@ function shouldIncludeTrace(traceId: string, sampleRate: number): boolean {
 ### 10.1 PostgreSQL Queries (`packages/core/src/queries/annotationQueues/`)
 
 - `findByProject.ts` - List queues for a project with stats
-- `findByUuid.ts` - Get single queue with members
+- `findByUuid.ts` - Get single queue with members and linked evaluation
 - `findItems.ts` - Get traces in a queue with pagination
 - `findNextItem.ts` - Get next pending trace (for keyboard navigation)
 - `getProgress.ts` - Get queue completion statistics
+- `findAnnotationsByQueueItem.ts` - Get evaluation results with annotation queue metadata
 
 ### 10.2 ClickHouse Queries (`packages/core/src/queries/clickhouse/`)
 
@@ -425,6 +521,7 @@ function shouldIncludeTrace(traceId: string, sampleRate: number): boolean {
 ### Phase 1: Foundation
 - [ ] Database schema + migrations
 - [ ] Feature flag setup
+- [ ] Root document creation at project level (for document-less evaluations)
 - [ ] Core services (CRUD for queues, items)
 - [ ] PostgreSQL queries
 - [ ] ClickHouse query for project-level traces
@@ -437,11 +534,11 @@ function shouldIncludeTrace(traceId: string, sampleRate: number): boolean {
 - [ ] Queue detail page (basic)
 
 ### Phase 3: Annotations
-- [ ] `trace_annotations` table + services
-- [ ] Global annotations
-- [ ] Message-level annotations
-- [ ] Highlight annotations
-- [ ] Annotations sidebar UI
+- [ ] Extend `EvaluationResultMetadata` type for annotation queue fields
+- [ ] Create annotation queue evaluation on queue creation
+- [ ] Annotation creation via `annotateEvaluationV2` with extended metadata
+- [ ] Query annotations by queue item from evaluation results
+- [ ] Annotations sidebar UI (global, message, highlight)
 
 ### Phase 4: Dynamic Filters
 - [ ] Filter builder UI component
@@ -460,11 +557,16 @@ function shouldIncludeTrace(traceId: string, sampleRate: number): boolean {
 
 1. **Eval Filtering**: How should evaluation results be used as a filter? Need to define the exact schema and comparators for eval-based filtering.
 
-2. **Structured Annotation Types**: Should we support structured annotation types (e.g., ratings, tags, labels) in addition to free-text content? This could be added as optional fields in `trace_annotations`.
+2. **Evaluation Metric for Annotations**: Should annotation queues use Binary (pass/fail) or Rating (1-5 scale) human evaluation metric? Or allow configuration per queue?
 
 3. **Concurrent Annotation**: Multiple annotators can add their own annotations to the same message (N annotations per target). Should we show real-time updates when another annotator adds an annotation?
 
 4. **Filter History**: Should we track filter changes over time to understand which traces were added by which filter version?
+
+5. **Annotation Queue Evaluation Lifecycle**: When a queue is deleted, what happens to its linked evaluation and evaluation results? Options:
+   - Keep evaluation results (orphaned but queryable)
+   - Soft-delete evaluation (preserve history)
+   - Hard-delete all (clean but loses data)
 
 ## 13. Future Considerations
 
