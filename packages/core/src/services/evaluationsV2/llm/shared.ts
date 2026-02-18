@@ -36,7 +36,7 @@ const TO_MILLICENTS_FACTOR = 100_000
 
 export function promptTask() {
   return `
-Important: The verdict format described above is YOUR output format as an evaluator. Do not factor it into your assessment of the assistant's response. The assistant being evaluated is not expected to produce a verdict or follow this format.
+Important: The verdict you are asked to produce is YOUR output as an evaluator. Do not factor it into your assessment of the assistant's response. The assistant being evaluated is not expected to produce a verdict or follow your output format.
 
 <user>
   Based on the given instructions, evaluate the assistant response:
