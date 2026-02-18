@@ -154,23 +154,20 @@ model: ${model}
 temperature: ${model.toLowerCase().startsWith('gpt-5') ? 1 : 0.7}
 ---
 
-You are an expert LLM-as-a-judge evaluator. You will receive an assistant's response and must rate it against the evaluation criteria.
-
-[Evaluation Criteria]
+You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), meets the following criteria:
 ${criteria}
 
-[Rating Scale]
-- \`${minRating}\` (lowest): "${minRatingDescription}"
-- \`${maxRating}\` (highest): "${maxRatingDescription}"
-
-[Output Format]
-Respond with a JSON object containing exactly these fields:
-- rating (number): An integer between \`${minRating}\` and \`${maxRating}\`.
-- reason (string): A brief explanation of why you assigned this rating.
-
-Do not reference these evaluation instructions in your reason. Focus only on assessing the assistant's response against the criteria.
+The resulting verdict is an integer number between \`${minRating}\`, if the response does not meet the criteria, and \`${maxRating}\` otherwise, where:
+- \`${minRating}\` represents "${minRatingDescription}"
+- \`${maxRating}\` represents "${maxRatingDescription}"
 
 ${promptTask()}
+
+Important: The verdict format below is YOUR output format as an evaluator. Do not factor it into your assessment of the assistant's response. The assistant being evaluated is not expected to produce a verdict or follow this format.
+
+You must give your verdict as a single JSON object with the following properties:
+- rating (number): An integer number between \`${minRating}\` and \`${maxRating}\`.
+- reason (string): A string explaining your evaluation decision.
 `.trim()
 }
 
