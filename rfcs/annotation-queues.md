@@ -133,6 +133,21 @@ CREATE TABLE annotation_queue_items (
 
 #### `trace_annotations`
 
+Each message in a trace can have **N annotations** (no limit). The annotation target hierarchy is:
+
+```
+Trace (trace_id)
+  └── Span (span_id) 
+        └── Message (message_index within span)
+              └── Annotation 1
+              └── Annotation 2
+              └── ... N annotations
+              └── Highlight Annotation (start_offset, end_offset)
+                    └── ... N highlight annotations per selection
+  └── Global Annotation (no specific target)
+        └── ... N global annotations per trace
+```
+
 ```sql
 CREATE TABLE trace_annotations (
   id BIGSERIAL PRIMARY KEY,
@@ -143,10 +158,10 @@ CREATE TABLE trace_annotations (
   
   -- Annotation target (one of these patterns)
   target_type VARCHAR(32) NOT NULL,  -- 'global' | 'message' | 'highlight'
-  target_span_id VARCHAR(16),        -- For message annotations
-  target_message_index INTEGER,      -- Index within the span's messages
-  target_start_offset INTEGER,       -- For highlight annotations
-  target_end_offset INTEGER,         -- For highlight annotations
+  target_span_id VARCHAR(16),        -- For message/highlight annotations (references span in ClickHouse)
+  target_message_index INTEGER,      -- Index within the span's messages array
+  target_start_offset INTEGER,       -- For highlight annotations (character offset)
+  target_end_offset INTEGER,         -- For highlight annotations (character offset)
   
   -- Annotation content
   content TEXT NOT NULL,
@@ -154,6 +169,10 @@ CREATE TABLE trace_annotations (
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
+
+-- No unique constraint on (queue_item_id, span_id, message_index) - allows N annotations per message
+-- Index for efficient lookups
+CREATE INDEX idx_trace_annotations_target ON trace_annotations(annotation_queue_item_id, target_type, target_span_id, target_message_index);
 ```
 
 ### 5.2 Filter Schema (JSONB)
@@ -279,11 +298,11 @@ The main annotation interface with a split-pane layout:
    - Lists all annotations for current trace
    - Three types of annotations:
      - **Global**: Conversation-level annotation (form shown directly)
-     - **Message**: Linked to specific message (click scrolls to message)
-     - **Highlight**: Linked to text selection (click scrolls and highlights)
-   - Multiple annotations allowed per message
-   - Multiple global annotations allowed
-   - Edit/Delete actions per annotation
+     - **Message**: Linked to specific span + message index (click scrolls to message)
+     - **Highlight**: Linked to text selection within a message (click scrolls and highlights)
+   - **N annotations per target**: Each message, highlight, or global level can have unlimited annotations
+   - Different annotators can add their own annotations to the same message
+   - Edit/Delete actions per annotation (only own annotations or admin)
 
 3. **Navigation**
    - Previous/Next buttons for queue navigation
@@ -441,9 +460,9 @@ function shouldIncludeTrace(traceId: string, sampleRate: number): boolean {
 
 1. **Eval Filtering**: How should evaluation results be used as a filter? Need to define the exact schema and comparators for eval-based filtering.
 
-2. **Annotation Types**: Should we support more structured annotation types (e.g., ratings, tags) in addition to free-text?
+2. **Structured Annotation Types**: Should we support structured annotation types (e.g., ratings, tags, labels) in addition to free-text content? This could be added as optional fields in `trace_annotations`.
 
-3. **Concurrent Annotation**: How to handle if two annotators try to annotate the same trace simultaneously?
+3. **Concurrent Annotation**: Multiple annotators can add their own annotations to the same message (N annotations per target). Should we show real-time updates when another annotator adds an annotation?
 
 4. **Filter History**: Should we track filter changes over time to understand which traces were added by which filter version?
 
