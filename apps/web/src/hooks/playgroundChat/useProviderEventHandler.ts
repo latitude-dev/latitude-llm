@@ -232,24 +232,34 @@ export function useProviderEventHandler({
       result: any
     }) => {
       setMessages((messages) => {
-        const lastMessage = messages.at(-1)!
-        if (lastMessage.role === 'assistant') {
+        const lastMessage = messages.at(-1)
+        if (!lastMessage) {
           return [
-            ...messages.slice(0, -1),
+            ...messages,
             {
-              ...lastMessage,
-              content: [
-                ...((lastMessage.content as
-                  | MessageContent[]
-                  | ToolRequestContent[]) ?? []),
-                data,
-              ],
+              role: 'assistant',
+              content: [data],
+              toolCalls: [],
             },
           ]
-        } else {
-          // Should not be possible
+        }
+
+        if (lastMessage.role !== 'assistant') {
           throw new Error('Expected assistant message')
         }
+
+        return [
+          ...messages.slice(0, -1),
+          {
+            ...lastMessage,
+            content: [
+              ...((lastMessage.content as
+                | MessageContent[]
+                | ToolRequestContent[]) ?? []),
+              data,
+            ],
+          },
+        ]
       })
       setRunningLatitudeTools((prev) => prev - 1)
     },
@@ -374,19 +384,29 @@ export function useProviderEventHandler({
           } as FileContent)
 
       setMessages((messages) => {
-        const lastMessage = messages.at(-1)!
-        if (lastMessage.role === 'assistant') {
+        const lastMessage = messages.at(-1)
+        if (!lastMessage) {
           return [
-            ...messages.slice(0, -1),
+            ...messages,
             {
-              ...lastMessage,
-              content: [...(lastMessage.content ?? []), content],
-            } as AssistantMessage,
+              role: 'assistant',
+              content: [content],
+              toolCalls: [],
+            },
           ]
-        } else {
-          // Should not be possible
+        }
+
+        if (lastMessage.role !== 'assistant') {
           throw new Error('Expected assistant message')
         }
+
+        return [
+          ...messages.slice(0, -1),
+          {
+            ...lastMessage,
+            content: [...(lastMessage.content ?? []), content],
+          } as AssistantMessage,
+        ]
       })
 
       incrementUsageDelta({
