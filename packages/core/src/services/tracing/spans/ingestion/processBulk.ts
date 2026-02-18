@@ -433,40 +433,24 @@ export async function processSpansBulk(
           retentionExpiresAt,
         }))
 
-        void bulkCreateClickHouseSpans(spansForClickHouse)
-          .then((clickhouseResult) => {
-            if (clickhouseResult.error) {
-              captureException(
-                new LatitudeError('ClickHouse bulk span insertion failed'),
-                {
-                  workspaceId: workspace.id,
-                  apiKeyId: apiKey.id,
-                  spansCount: spansForClickHouse.length,
-                  error: String(clickhouseResult.error),
-                },
-              )
-              return
-            }
-
-            captureMessage('ClickHouse bulk span insertion succeeded', 'info', {
+        const clickhouseResult = await bulkCreateClickHouseSpans(spansForClickHouse)
+        if (clickhouseResult.error) {
+          captureException(
+            new LatitudeError('ClickHouse bulk span insertion failed'),
+            {
               workspaceId: workspace.id,
               apiKeyId: apiKey.id,
               spansCount: spansForClickHouse.length,
-            })
+              error: String(clickhouseResult.error),
+            },
+          )
+        } else {
+          captureMessage('ClickHouse bulk span insertion succeeded', 'info', {
+            workspaceId: workspace.id,
+            apiKeyId: apiKey.id,
+            spansCount: spansForClickHouse.length,
           })
-          .catch((error) => {
-            captureException(
-              new LatitudeError(
-                'ClickHouse bulk span insertion threw an error',
-              ),
-              {
-                workspaceId: workspace.id,
-                apiKeyId: apiKey.id,
-                spansCount: spansForClickHouse.length,
-                error: String(error),
-              },
-            )
-          })
+        }
       }
 
       return Result.ok({ spans: insertedSpans })
