@@ -119,5 +119,4 @@ packages/core/scripts/disposables/*
 PRD.md
 progress.txt
 
-packages/core/scripts/prompts
 packages/cli/prompts
