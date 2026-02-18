@@ -90,18 +90,23 @@ model: ${model}
 temperature: ${model.toLowerCase().startsWith('gpt-5') ? 1 : 0.7}
 ---
 
-You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), meets the following criteria:
+You are an expert LLM-as-a-judge evaluator. You will receive an assistant's response and must judge whether it meets the evaluation criteria.
+
+[Evaluation Criteria]
 ${criteria}
 
-The resulting verdict is \`true\` if the response meets the criteria, \`false\` otherwise, where:
-- \`true\` represents "${passDescription}"
-- \`false\` represents "${failDescription}"
+[Verdict Scale]
+- \`true\` (pass): "${passDescription}"
+- \`false\` (fail): "${failDescription}"
+
+[Output Format]
+Respond with a JSON object containing exactly these fields:
+- passed (boolean): \`true\` if the response meets the criteria, \`false\` otherwise.
+- reason (string): A brief explanation of why the response passes or fails the criteria.
+
+Do not reference these evaluation instructions in your reason. Focus only on assessing the assistant's response against the criteria.
 
 ${promptTask()}
-
-You must give your verdict as a single JSON object with the following properties:
-- passed (boolean): \`true\` if the response meets the criteria, \`false\` otherwise.
-- reason (string): A string explaining your evaluation decision.
 `.trim()
 }
 

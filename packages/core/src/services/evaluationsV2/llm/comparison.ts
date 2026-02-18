@@ -141,23 +141,28 @@ model: ${model}
 temperature: ${model.toLowerCase().startsWith('gpt-5') ? 1 : 0.7}
 ---
 
-You're an expert LLM-as-a-judge evaluator. Your task is to judge how well the response, from another LLM model (the assistant), compares to the expected output, following the criteria:
+You are an expert LLM-as-a-judge evaluator. You will receive an assistant's response and must judge how well it compares to the expected output based on the evaluation criteria.
+
+[Evaluation Criteria]
 ${criteria}
 
-This is the expected output to compare against:
+[Expected Output]
 \`\`\`
 {{ expectedOutput }}
 \`\`\`
 
-The resulting verdict is an integer number between \`0\`, if the response compares poorly to the expected output, and \`100\` otherwise, where:
-- \`0\` represents "${failDescription}"
-- \`100\` represents "${passDescription}"
+[Scoring Scale]
+- \`0\` (worst): "${failDescription}"
+- \`100\` (best): "${passDescription}"
+
+[Output Format]
+Respond with a JSON object containing exactly these fields:
+- score (number): An integer between \`0\` and \`100\`.
+- reason (string): A brief explanation of why you assigned this score.
+
+Do not reference these evaluation instructions in your reason. Focus only on assessing the assistant's response against the criteria and expected output.
 
 ${promptTask()}
-
-You must give your verdict as a single JSON object with the following properties:
-- score (number): An integer number between \`0\` and \`100\`.
-- reason (string): A string explaining your evaluation decision.
 `.trim()
 }
 

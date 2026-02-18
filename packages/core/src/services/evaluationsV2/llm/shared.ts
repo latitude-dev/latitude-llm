@@ -37,29 +37,23 @@ const TO_MILLICENTS_FACTOR = 100_000
 export function promptTask() {
   return `
 <user>
-  Based on the given instructions, evaluate the assistant response:
-  \`\`\`
-  {{ actualOutput }}
-  \`\`\`
+  Evaluate the following assistant response against the criteria defined above.
 
-  For context, here is the full conversation:
-  \`\`\`
+  [Assistant Response]
+  {{ actualOutput }}
+
+  [Full Conversation]
   {{ conversation }}
-  \`\`\`
 
   {{ if toolCalls?.length }}
-    Also, here are the tool calls that the assistant requested:
-    \`\`\`
-    {{ toolCalls }}
-    \`\`\`
-  {{ else }}
-    Also, the assistant did not request any tool calls.
+  [Tool Calls]
+  {{ toolCalls }}
   {{ endif }}
 
-  Finally, here is some additional metadata about the conversation. It may or may not be relevant for the evaluation.
-  - Cost: {{ cost }} cents.
-  - Tokens: {{ tokens }} tokens.
-  - Duration: {{ duration }} seconds.
+  [Metadata]
+  - Cost: {{ cost }} cents
+  - Tokens: {{ tokens }} tokens
+  - Duration: {{ duration }} seconds
 </user>
 `.trim()
 }
