@@ -5,7 +5,6 @@ import { AnnotationsProvider, MessageList } from '$/components/ChatWrapper'
 import {
   HumanEvaluationMetric,
   EvaluationResultV2,
-  SpanType,
   SpanWithDetails,
   EvaluationType,
   MainSpanType,
@@ -15,14 +14,13 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import Link from 'next/link'
-import { useTrace, useTraceWithMessages } from '$/stores/traces'
+import { useTraceWithMessages } from '$/stores/traces'
 import { adaptCompletionSpanMessagesToLegacy } from '@latitude-data/core/services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { Message } from '@latitude-data/constants/messages'
 import { sum } from 'lodash-es'
 import { RunPanelStats } from '$/components/RunPanelStats'
 import { AnnotationFormWithoutContext } from '$/components/ChatWrapper/AnnotationFormWithoutContext'
-import { buildTraceUrl } from '../../../documents/[documentUuid]/(withTabs)/traces/_components/TraceSpanSelectionContext'
-import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findFirstSpanOfType'
+import { buildTraceUrl } from '$/lib/buildTraceUrl'
 
 export function AnnotationsPanel({
   span,
@@ -35,21 +33,10 @@ export function AnnotationsPanel({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { data: trace } = useTrace({ traceId: span.traceId })
   const { completionSpan, isLoading: isLoadingTrace } = useTraceWithMessages({
     traceId: span.traceId,
     spanId: span.id,
   })
-  const mainSpan = useMemo(
-    () =>
-      findFirstSpanOfType(trace?.children ?? [], [
-        SpanType.Prompt,
-        SpanType.Chat,
-        SpanType.External,
-      ]),
-    [trace?.children],
-  )
-  const documentUuid = mainSpan?.documentUuid
   const conversation = useMemo(
     () => adaptCompletionSpanMessagesToLegacy(completionSpan ?? undefined),
     [completionSpan],
@@ -86,13 +73,13 @@ export function AnnotationsPanel({
             isRunning={false}
           />
         )}
-        {documentUuid && (
+        {span.documentUuid && (
           <div className='w-full flex justify-center items-center'>
             <Link
               href={buildTraceUrl({
                 projectId: project.id,
                 commitUuid: commit.uuid,
-                documentUuid,
+                documentUuid: span.documentUuid,
                 span,
               })}
               target='_blank'

@@ -40,7 +40,7 @@ export function RunPanelStats({
       <div className='flex-2 min-w-0 flex flex-row items-center justify-between gap-8 border border-border rounded-xl pt-4 pb-3 px-5'>
         <div className='flex flex-col items-start justify-between gap-1'>
           <Text.H6M color='foregroundMuted'>Time elapsed</Text.H6M>
-          <Text.H3B>{formatDuration(duration, false)}</Text.H3B>
+          <Text.H3B>{formatDuration(duration, true, 3)}</Text.H3B>
         </div>
         <div className='h-full flex items-center justify-center -mt-1'>
           {isRunning && canAbortRun && abortRun && (

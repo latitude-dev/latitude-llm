@@ -533,7 +533,12 @@ You are a helpful assistant. Reply with a short acknowledgement.
         messages: [
           {
             role: 'user',
-            content: [{ type: 'text', text: 'Hello, can you acknowledge this message?' }],
+            content: [
+              {
+                type: 'text',
+                text: 'Hello, can you acknowledge this message?',
+              },
+            ],
           },
         ],
       })
@@ -584,7 +589,12 @@ You are a helpful assistant. Reply with a short acknowledgement.
         messages: [
           {
             role: 'user',
-            content: [{ type: 'text', text: 'Hello, can you acknowledge this message?' }],
+            content: [
+              {
+                type: 'text',
+                text: 'Hello, can you acknowledge this message?',
+              },
+            ],
           },
           {
             role: 'assistant',
