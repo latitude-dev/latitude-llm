@@ -1,12 +1,14 @@
 import { Context } from 'hono'
 import { HttpBindings } from '@hono/node-server'
+import type { Socket } from 'net'
+
+const socketAbortMap = new WeakMap<Socket, AbortSignal>()
 
 /**
  * Creates an AbortSignal that triggers when the client disconnects.
  *
- * Uses the Node.js socket 'close' event to detect when the TCP connection is terminated.
- * This works reliably for both HTTP and HTTPS connections (including behind AWS load balancers
- * that terminate TLS and proxy via HTTP/1.1).
+ * Uses a WeakMap to ensure only one 'close' listener is registered per socket,
+ * preventing listener accumulation on keep-alive connections under high throughput.
  *
  * @example
  * ```typescript
@@ -19,18 +21,18 @@ import { HttpBindings } from '@hono/node-server'
  * ```
  */
 export function createRequestAbortSignal(c: Context): AbortSignal {
-  const abortController = new AbortController()
-
   const bindings = c.env as HttpBindings | undefined
   const socket = bindings?.incoming?.socket
 
-  // In test environments (app.request()), HttpBindings won't be available.
-  // In production with @hono/node-server, the socket is always present.
-  if (!socket) return abortController.signal
+  if (!socket) return new AbortController().signal
 
-  socket.once('close', () => {
-    abortController.abort()
-  })
+  let signal = socketAbortMap.get(socket)
+  if (!signal) {
+    const controller = new AbortController()
+    socket.once('close', () => controller.abort())
+    signal = controller.signal
+    socketAbortMap.set(socket, signal)
+  }
 
-  return abortController.signal
+  return signal
 }
