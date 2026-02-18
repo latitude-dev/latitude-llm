@@ -9,9 +9,9 @@ import {
   useRef,
 } from 'react'
 import { preload } from 'swr'
-import { parseSpansFilters, SpansFilters } from '$/lib/schemas/filters'
-import { AssembledSpan, Span } from '@latitude-data/constants'
-import { ROUTES } from '$/services/routes'
+import { parseSpansFilters } from '$/lib/schemas/filters'
+import { TRACE_SPAN_SELECTION_PARAM_KEYS } from '$/lib/buildTraceUrl'
+import { AssembledSpan } from '@latitude-data/constants'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
@@ -19,17 +19,6 @@ import { executeFetch } from '$/hooks/useFetcher'
 import { Conversation, getConversationKey } from '$/stores/conversations'
 import { getSpanKey } from '$/stores/spans'
 import { getEvaluationResultsV2BySpansKey } from '$/stores/evaluationResultsV2/bySpans'
-
-export const TRACE_SPAN_SELECTION_PARAM_KEYS = {
-  documentLogUuid: 'documentLogUuid',
-  spanId: 'spanId',
-  activeRunUuid: 'activeRunUuid',
-  expandedDocumentLogUuid: 'expandedDocumentLogUuid',
-} as const
-
-export const TRACE_SPAN_SELECTION_PARAMS = Object.values(
-  TRACE_SPAN_SELECTION_PARAM_KEYS,
-)
 
 function preloadTraceData({
   projectId,
@@ -75,38 +64,6 @@ function preloadTraceData({
       }),
     )
   }
-}
-
-export function buildTraceUrl({
-  projectId,
-  commitUuid,
-  documentUuid,
-  span,
-}: {
-  projectId: number
-  commitUuid: string
-  documentUuid: string
-  span: Pick<Span, 'id' | 'documentLogUuid'>
-}) {
-  const params = new URLSearchParams()
-  const filters: SpansFilters = {
-    spanId: span.id,
-  }
-  if (span.documentLogUuid) {
-    filters.documentLogUuid = span.documentLogUuid
-    params.set(
-      TRACE_SPAN_SELECTION_PARAM_KEYS.expandedDocumentLogUuid,
-      span.documentLogUuid,
-    )
-  }
-  params.set('filters', JSON.stringify(filters))
-  return (
-    ROUTES.projects
-      .detail({ id: projectId })
-      .commits.detail({ uuid: commitUuid })
-      .documents.detail({ uuid: documentUuid }).traces.root +
-    `?${params.toString()}`
-  )
 }
 
 function syncUrlWithSelection(selection: SelectionState) {

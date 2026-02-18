@@ -145,9 +145,11 @@ export function useExperimentComparison(
 
   const refreshIntervalFn = useExperimentPolling<ExperimentWithScores>()
 
-  const { data = undefined, isLoading, mutate } = useSWR<
-    ExperimentWithScores[]
-  >(
+  const {
+    data = undefined,
+    isLoading,
+    mutate,
+  } = useSWR<ExperimentWithScores[]>(
     [
       'experimentsComparison',
       project.id,

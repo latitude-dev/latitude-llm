@@ -39,7 +39,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
-import { buildTraceUrl } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/TraceSpanSelectionContext'
+import { buildTraceUrl } from '$/lib/buildTraceUrl'
 
 const DataGrid = dynamic(
   () =>

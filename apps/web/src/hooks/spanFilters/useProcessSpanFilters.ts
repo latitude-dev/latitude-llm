@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 import { z } from 'zod'
 import { SpansFilters } from '$/lib/schemas/filters'
-import { TRACE_SPAN_SELECTION_PARAMS } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/TraceSpanSelectionContext'
+import { TRACE_SPAN_SELECTION_PARAMS } from '$/lib/buildTraceUrl'
 
 const documentLogUuidSchema = z.uuid()
 
