@@ -27,6 +27,10 @@ class Trajectory(Model):
 
 
 class Output(Model):
+    class Usage(Model):
+        conversation: Usage
+        evaluation: Usage
+
     id: str  # <workspace_id>::<dataset_id>::<row_id>
     usage: Usage
     duration: int
@@ -157,7 +161,7 @@ class LatitudeAdapter(GEPAAdapter[Example, Trajectory, Output]):
         for output in outputs:
             scores.append(output.score)
             trajectories.append(Trajectory(id=output.id))
-            self.usage.increment(output.usage.total)
+            self.usage.increment(output.usage.conversation.total + output.usage.evaluation.total)
 
         return EvaluationBatch[Trajectory, Output](
             outputs=outputs,

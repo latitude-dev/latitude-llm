@@ -112,6 +112,7 @@ export type EvaluationMetricSpecification<
   resultMetadata: ZodSchema<EvaluationResultMetadata<T, M>>
   resultError: ZodSchema<EvaluationResultError<T, M>>
   resultReason: (result: EvaluationResultSuccessValue<T, M>) => string | undefined // prettier-ignore
+  resultUsage?: (result: EvaluationResultSuccessValue<T, M>) => number | undefined // prettier-ignore
   requiresExpectedOutput: boolean
   supportsLiveEvaluation: boolean
   supportsBatchEvaluation: boolean

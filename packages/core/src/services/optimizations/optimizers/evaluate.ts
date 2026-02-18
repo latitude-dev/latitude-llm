@@ -5,16 +5,19 @@ import {
 } from '@latitude-data/constants/simulation'
 import { database } from '../../../client'
 import {
+  EMPTY_USAGE,
   EvaluationMetric,
   EvaluationResultSuccessValue,
   EvaluationType,
   EvaluationV2,
   isMainSpan,
+  LanguageModelUsage,
   LogSources,
   MainSpanType,
   Span,
   SpanMetadata,
   SpanWithDetails,
+  sumUsage,
 } from '../../../constants'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { hashContent } from '../../../lib/hashContent'
@@ -46,6 +49,13 @@ import { generateSimulatedUserAction } from '../../simulation/simulateUserRespon
 import { raiseForAborted } from '../shared'
 import { OptimizerEvaluateArgs } from './index'
 import { LearnableTrajectory } from './shared'
+
+type PartialEvaluationResult = {
+  score: number
+  feedback: string
+  passed: boolean
+  usage: LanguageModelUsage
+}
 
 // BONUS(AO/OPT): Implement multi-objective optimization
 // BONUS(AO/OPT): Implement multi-document optimization
@@ -129,11 +139,11 @@ export async function evaluateFactory<
     } else if ('_tjr' in running.value) {
       return Result.ok(running.value)
     }
-    const { uuid, messages, duration, usage, turnsExecuted } = running.value
+    const run = running.value
 
     const waiting = await waitForMainSpans({
-      logUuid: uuid,
-      expectedCount: turnsExecuted,
+      logUuid: run.uuid,
+      expectedCount: run.turnsExecuted,
       workspace: workspace,
       abortSignal: abortSignal,
     })
@@ -144,11 +154,7 @@ export async function evaluateFactory<
     const triggerTarget = getTriggerTarget(evaluation.configuration.trigger)
     const selectedSpans = selectSpansForTrigger(waiting.value, triggerTarget)
 
-    const evaluationResults: {
-      score: number
-      feedback: string
-      passed: boolean
-    }[] = []
+    const evaluationResults: PartialEvaluationResult[] = []
     for (const rawSpan of selectedSpans) {
       const enriching = await enrichSpanWithMetadata(rawSpan, workspace)
       if (enriching.error) {
@@ -177,17 +183,19 @@ export async function evaluateFactory<
       evaluationResults.push(evaluating.value)
     }
 
-    const { score, feedback, passed } =
-      aggregateEvaluationResults(evaluationResults)
+    const evl = aggregateEvaluationResults(evaluationResults)
 
     return Result.ok(
       LearnableTrajectory(example, {
-        trace: messages,
-        usage: usage, // BONUS(AO/OPT): Take into account evaluation usage
-        duration: duration,
-        score: score,
-        feedback: feedback,
-        passed: passed,
+        trace: run.messages,
+        usage: {
+          conversation: run.usage,
+          evaluation: evl.usage,
+        },
+        duration: run.duration,
+        score: evl.score,
+        feedback: evl.feedback,
+        passed: evl.passed,
       }),
     )
   }
@@ -387,7 +395,7 @@ ${error.message}
   const uuid = run.uuid
   let messages = await run.messages
   const duration = await run.duration
-  const usage = await run.runUsage
+  let usage = await run.runUsage
 
   let turnsExecuted = 1
   const simulationSettings = optimization.configuration.simulation
@@ -406,6 +414,7 @@ ${error.message}
     }
 
     messages = simulating.value.messages
+    usage = sumUsage(usage, simulating.value.usage)
     turnsExecuted = simulating.value.turnsExecuted
   }
 
@@ -468,11 +477,18 @@ async function evaluatePrompt<
     )
   }
 
-  // Note: not using enriched reason here because HITL evals are not really used for optimizations
   const specification = getEvaluationMetricSpecification(evaluation)
+
+  // Note: not using enriched reason here because HITL
+  // evals are not really used for optimizations
   const reason = specification.resultReason(
     result as EvaluationResultSuccessValue<T, M>,
   )
+
+  const usage = EMPTY_USAGE()
+  usage.totalTokens += specification.resultUsage?.(
+    result as EvaluationResultSuccessValue<T, M>,
+  ) ?? 0 // prettier-ignore
 
   const feedback = `
 The optimized prompt was evaluated on this specific output:
@@ -490,6 +506,7 @@ ${reason || 'No reason reported'}
     score: result.normalizedScore ?? 0,
     feedback: feedback,
     passed: result.hasPassed ?? false,
+    usage: usage,
   })
 }
 
@@ -550,22 +567,26 @@ async function enrichSpanWithMetadata(span: Span, workspace: WorkspaceDto) {
   return Result.ok({ ...span, metadata } as SpanWithDetails<MainSpanType>)
 }
 
-function aggregateEvaluationResults(
-  results: { score: number; feedback: string; passed: boolean }[],
-) {
+function aggregateEvaluationResults(results: PartialEvaluationResult[]) {
   if (results.length === 0) {
-    return { score: 0, feedback: 'No spans were evaluated.', passed: false }
+    return {
+      score: 0,
+      feedback: 'No trajectories were evaluated.',
+      passed: false,
+      usage: EMPTY_USAGE(),
+    }
   }
 
-  if (results.length === 1) return results[0]!
+  if (results.length === 1) {
+    return results[0]!
+  }
 
   const score = results.reduce((sum, r) => sum + r.score, 0) / results.length
   const passed = results.every((r) => r.passed)
-  const feedback = results
-    .map((r, i) => `[Turn ${i + 1}]\n${r.feedback}`)
-    .join('\n\n')
+  const feedback = results.map((r, i) => `[Turn ${i + 1}]\n${r.feedback}`).join('\n\n') // prettier-ignore
+  const usage = results.reduce((sum, r) => sumUsage(sum, r.usage), EMPTY_USAGE()) // prettier-ignore
 
-  return { score, feedback, passed }
+  return { score, feedback, passed, usage }
 }
 
 function calculateExponentialBackoff(attempt: number): number {
@@ -602,6 +623,7 @@ async function simulateConversation({
   )
 
   let messages = initialMessages
+  let usage = EMPTY_USAGE()
   let turnsExecuted = 1
   let currentTurn = 2
 
@@ -644,11 +666,13 @@ async function simulateConversation({
     if (turnError) {
       return Result.error(turnError)
     }
+    const turnUsage = await turnResult.runUsage
 
     messages = await turnResult.messages
+    usage = sumUsage(usage, turnUsage)
     turnsExecuted++
     currentTurn++
   }
 
-  return Result.ok({ messages, turnsExecuted })
+  return Result.ok({ messages, usage, turnsExecuted })
 }

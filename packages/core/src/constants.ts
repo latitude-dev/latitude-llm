@@ -41,6 +41,7 @@ export {
   LogSources,
   ModifiedDocumentType,
   StreamEventTypes,
+  sumUsage,
   type DocumentLog,
   type DocumentLogWithMetadata,
   type DocumentLogWithMetadataAndError,

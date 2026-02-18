@@ -2,14 +2,15 @@ import {
   OPTIMIZATION_MAX_TIME,
   OPTIMIZATION_MAX_TOKENS,
   OptimizationBudget,
+  Providers,
 } from '@latitude-data/constants'
 import { formatCount } from '@latitude-data/constants/formatCount'
+import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
 import { FormField } from '@latitude-data/web-ui/atoms/FormField'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { Slider } from '@latitude-data/web-ui/atoms/Slider'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 
-// Note: these minimum values are only for the frontend
 const OPTIMIZATION_MIN_TIME = 5 * 60 // 5 minutes
 const OPTIMIZATION_MIN_TOKENS = 100_000 // 100k tokens
 
@@ -32,14 +33,49 @@ function formatTokens(tokens: number): string {
   return formatCount(tokens, { decimalPlaces: 0 })
 }
 
+function formatCost(dollars: number): string {
+  if (dollars < 0.01) return '<$0.01'
+  if (dollars < 100) return `$${dollars.toFixed(2)}`
+  return `$${Math.round(dollars)}`
+}
+
+function estimateTokensCost({
+  provider,
+  model,
+  tokens,
+}: {
+  provider: Providers
+  model: string
+  tokens: number
+}): number | undefined {
+  const cost = estimateCost({
+    provider,
+    model,
+    usage: {
+      inputTokens: 0,
+      outputTokens: tokens,
+      promptTokens: 0,
+      completionTokens: tokens,
+      totalTokens: tokens,
+      reasoningTokens: 0,
+      cachedInputTokens: 0,
+    },
+  })
+  return cost > 0 ? cost : undefined
+}
+
 export function BudgetSelector({
   value,
   onChange,
+  provider,
+  model,
   errors,
   disabled,
 }: {
   value?: OptimizationBudget
   onChange: (value: OptimizationBudget) => void
+  provider?: Providers
+  model?: string
   errors?: Record<string, string[]>
   disabled?: boolean
 }) {
@@ -65,6 +101,21 @@ export function BudgetSelector({
     },
     [value, onChange],
   )
+
+  const tokensLegend = useMemo(() => {
+    const costLabel =
+      provider && model
+        ? estimateTokensCost({ provider, model, tokens: tokensValue })
+        : undefined
+
+    return {
+      min: formatTokens(OPTIMIZATION_MIN_TOKENS),
+      value: costLabel
+        ? `${formatTokens(tokensValue)} (~${formatCost(costLabel)})`
+        : formatTokens(tokensValue),
+      max: formatTokens(OPTIMIZATION_MAX_TOKENS),
+    }
+  }, [provider, model, tokensValue])
 
   return (
     <FormFieldGroup
@@ -94,7 +145,7 @@ export function BudgetSelector({
         errors={errors?.['budget.tokens']}
       >
         <Slider
-          legend={formatTokens}
+          legend={tokensLegend}
           value={[tokensValue]}
           min={OPTIMIZATION_MIN_TOKENS}
           max={OPTIMIZATION_MAX_TOKENS}

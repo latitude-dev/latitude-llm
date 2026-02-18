@@ -20,6 +20,7 @@ const compositeEvaluationResultMetadata = baseEvaluationResultMetadata.extend({
       score: z.number(), // Normalized score
       reason: z.string(),
       passed: z.boolean(),
+      tokens: z.number().optional(), // Optional llm evaluation usage
     }),
   ),
 })
@@ -67,6 +68,16 @@ export const CompositeEvaluationAverageSpecification = {
     reason = reasons.join('\n\n')
 
     return reason
+  },
+  resultUsage: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Composite,
+      CompositeEvaluationMetric.Average
+    >,
+  ) => {
+    return Object.values(result.metadata.results).reduce((acc, result) => {
+      return acc + (result.tokens ?? 0)
+    }, 0)
   },
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
@@ -121,6 +132,16 @@ export const CompositeEvaluationWeightedSpecification = {
 
     return reason
   },
+  resultUsage: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Composite,
+      CompositeEvaluationMetric.Weighted
+    >,
+  ) => {
+    return Object.values(result.metadata.results).reduce((acc, result) => {
+      return acc + (result.tokens ?? 0)
+    }, 0)
+  },
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
@@ -170,6 +191,16 @@ export const CompositeEvaluationCustomSpecification = {
     reason = reasons.join('\n\n')
 
     return reason
+  },
+  resultUsage: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Composite,
+      CompositeEvaluationMetric.Custom
+    >,
+  ) => {
+    return Object.values(result.metadata.results).reduce((acc, result) => {
+      return acc + (result.tokens ?? 0)
+    }, 0)
   },
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,

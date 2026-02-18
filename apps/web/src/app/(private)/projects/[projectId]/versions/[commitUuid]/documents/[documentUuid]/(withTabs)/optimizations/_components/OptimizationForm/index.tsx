@@ -4,6 +4,7 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useMetadata } from '$/hooks/useMetadata'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
   OPTIMIZATION_MAX_ROWS,
   OPTIMIZATION_MAX_TIME,
@@ -69,6 +70,8 @@ export function OptimizationForm({
   const errors = useMemo(() => parseActionErrors(actionErrors), [actionErrors])
 
   const { metadata, updateMetadata } = useMetadata()
+  const { data: providers } = useProviderApiKeys()
+
   useEffect(() => {
     updateMetadata({
       promptlVersion: document.promptlVersion,
@@ -80,6 +83,13 @@ export function OptimizationForm({
   const parameters = useMemo(() => {
     return Array.from(metadata?.parameters ?? [])
   }, [metadata])
+
+  const { provider, model } = useMemo(() => {
+    const providerName = metadata?.config?.provider as string | undefined
+    const model = metadata?.config?.model as string | undefined
+    const matched = providers?.find((p) => p.name === providerName)
+    return { provider: matched?.provider, model: model }
+  }, [metadata?.config, providers])
 
   const currentPreset = useMemo((): OptimizationPresetKey | 'custom' => {
     const presetKeys = Object.keys(
@@ -228,6 +238,8 @@ export function OptimizationForm({
                 onChange={(value) =>
                   setConfiguration({ ...configuration, budget: value })
                 }
+                provider={provider}
+                model={model}
                 errors={errors}
                 disabled={disabled}
               />
