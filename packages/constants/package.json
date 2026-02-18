@@ -23,6 +23,7 @@
     "./dualScope": "./src/dualScope/index.ts",
     "./runs": "./src/runs.ts",
     "./latitudePromptSchema": "./src/latitudePromptSchema/index.ts",
+    "./annotationQueues": "./src/annotationQueues/index.ts",
     "./latte": "./src/latte/index.ts",
     "./formatCount": "./src/formatCount.ts",
     "./promptl": "./src/promptl.ts",
