@@ -5,12 +5,12 @@ import { createRequestAbortSignal } from './createRequestAbortSignal'
 
 function createMockSocket() {
   const emitter = new EventEmitter()
-  return {
-    once: vi.fn((event: string, callback: () => void) => {
-      emitter.once(event, callback)
-    }),
-    emit: (event: string) => emitter.emit(event),
-  }
+  const originalOnce = emitter.once.bind(emitter)
+  const onceSpy = vi.fn((event: string, callback: () => void) => {
+    originalOnce(event, callback)
+  })
+  emitter.once = onceSpy as any
+  return emitter
 }
 
 function createMockContext(
@@ -79,6 +79,28 @@ describe('createRequestAbortSignal', () => {
     socket.emit('close')
 
     expect(abortHandler).toHaveBeenCalledTimes(1)
+  })
+
+  it('reuses the same signal for multiple requests on the same socket', () => {
+    const socket = createMockSocket()
+    const context1 = createMockContext(socket)
+    const context2 = createMockContext(socket)
+
+    const signal1 = createRequestAbortSignal(context1)
+    const signal2 = createRequestAbortSignal(context2)
+
+    expect(signal1).toBe(signal2)
+    expect(socket.once).toHaveBeenCalledTimes(1)
+  })
+
+  it('creates different signals for different sockets', () => {
+    const socket1 = createMockSocket()
+    const socket2 = createMockSocket()
+
+    const signal1 = createRequestAbortSignal(createMockContext(socket1))
+    const signal2 = createRequestAbortSignal(createMockContext(socket2))
+
+    expect(signal1).not.toBe(signal2)
   })
 
   it('handles missing HttpBindings gracefully (test environment)', () => {
