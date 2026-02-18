@@ -1,10 +1,10 @@
 import { findProviderApiKeyById } from '@latitude-data/core/queries/providerApiKeys/findById'
 import { AppRouteHandler } from '$/openApi/types'
 import { providerApiKeyPresenter } from '@latitude-data/core/services/providerApiKeys/helpers/presenter'
-import { getProviderApiKeyRoute } from './get.route'
+import { getProviderApiKeyRouteConfig } from './get.route'
 
 export const getProviderApiKeyHandler: AppRouteHandler<
-  typeof getProviderApiKeyRoute
+  typeof getProviderApiKeyRouteConfig
 > = async (c) => {
   const workspace = c.get('workspace')
   const { providerApiKeyId } = c.req.valid('param')

@@ -2,10 +2,12 @@ import { createProject } from '@latitude-data/core/services/projects/create'
 import { findFirstUserInWorkspace } from '@latitude-data/core/queries/users/findFirstInWorkspace'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { AppRouteHandler } from '$/openApi/types'
-import { createRoute } from './create.route'
+import { createRouteConfig } from './create.route'
 
 // @ts-expect-error: broken types
-export const createHandler: AppRouteHandler<typeof createRoute> = async (c) => {
+export const createHandler: AppRouteHandler<typeof createRouteConfig> = async (
+  c,
+) => {
   const workspace = c.get('workspace')
 
   const { name } = c.req.valid('json')

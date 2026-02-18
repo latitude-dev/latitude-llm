@@ -1,19 +1,18 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
-import { ROUTES } from '$/routes'
-import { createRoute, z } from '@hono/zod-openapi'
+import { defineRouteConfig } from '$/routes/api/helpers'
+import { z } from '@hono/zod-openapi'
 
 export const annotateParamsSchema = z.object({
   conversationUuid: z.string().openapi({ description: 'Conversation UUID' }),
   evaluationUuid: z.string().openapi({ description: 'Evaluation UUID' }),
 })
 
-export const annotateRoute = createRoute({
+export const annotateRouteConfig = defineRouteConfig({
   operationId: 'annotate',
   tags: ['Evaluations'],
   description: 'Annotate a conversation with an existing evaluation',
   method: http.Methods.POST,
-  path: ROUTES.api.v3.conversations.annotate,
   request: {
     params: annotateParamsSchema,
     body: {
@@ -90,4 +89,4 @@ export const annotateRoute = createRoute({
   },
 })
 
-export type AnnotateRoute = typeof annotateRoute
+export type AnnotateRoute = typeof annotateRouteConfig

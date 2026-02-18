@@ -1,8 +1,11 @@
 import { createRouter } from '$/openApi/createApp'
-import { clientToolResultRoute } from './route'
-import { clientToolResultHandler } from './handler'
+import { route } from '$/routes/api/helpers'
+import { API_ROUTES } from '$/api.routes'
+
+import { clientToolResultRouteConfig } from '$/routes/api/v3/tools/results/route'
+import { clientToolResultHandler } from '$/routes/api/v3/tools/results/handler'
 
 export const toolResultsRouter = createRouter().openapi(
-  clientToolResultRoute,
+  route(clientToolResultRouteConfig, API_ROUTES.v3.tools.results),
   clientToolResultHandler,
 )

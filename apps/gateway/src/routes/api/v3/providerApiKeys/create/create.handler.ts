@@ -5,10 +5,10 @@ import { NotFoundError } from '@latitude-data/constants/errors'
 import { type ProviderConfiguration } from '@latitude-data/core/schema/models/providerApiKeys'
 import { AppRouteHandler } from '$/openApi/types'
 import { providerApiKeyPresenter } from '@latitude-data/core/services/providerApiKeys/helpers/presenter'
-import { createProviderApiKeyRoute } from './create.route'
+import { createProviderApiKeyRouteConfig } from './create.route'
 
 export const createProviderApiKeyHandler: AppRouteHandler<
-  typeof createProviderApiKeyRoute
+  typeof createProviderApiKeyRouteConfig
 > = async (c) => {
   const workspace = c.get('workspace')
 

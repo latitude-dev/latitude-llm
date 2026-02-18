@@ -4,16 +4,15 @@ import {
   chainEventDtoSchema,
   runSyncAPIResponseSchema,
 } from '$/openApi/schemas'
-import { ROUTES } from '$/routes'
 import { conversationsParamsSchema } from '$/routes/api/v3/conversations/paramsSchema'
-import { createRoute, z } from '@hono/zod-openapi'
+import { z } from '@hono/zod-openapi'
+import { defineRouteConfig } from '$/routes/api/helpers'
 
-export const attachRoute = createRoute({
+export const attachRouteConfig = defineRouteConfig({
   operationId: 'attachConversation',
   tags: ['Conversations'],
   description: 'Attach to an active conversation',
   method: http.Methods.POST,
-  path: ROUTES.api.v3.conversations.attach,
   request: {
     params: conversationsParamsSchema,
     body: {
@@ -39,4 +38,4 @@ export const attachRoute = createRoute({
   },
 })
 
-export type AttachRoute = typeof attachRoute
+export type AttachRoute = typeof attachRouteConfig

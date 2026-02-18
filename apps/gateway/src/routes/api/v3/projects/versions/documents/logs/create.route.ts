@@ -1,8 +1,8 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import { messageSchema } from '$/openApi/schemas'
-import { ROUTES } from '$/routes'
-import { createRoute, z } from '@hono/zod-openapi'
+import { defineRouteConfig } from '$/routes/api/helpers'
+import { z } from '@hono/zod-openapi'
 import { LogSources } from '@latitude-data/core/constants'
 
 const spanLogSchema = z.object({
@@ -30,50 +30,35 @@ const documentParamsSchema = z.object({
     .openapi({ description: 'The version UUID or "live"' }),
 })
 
-function createLogRouteFactory({
-  path,
-  tags,
-}: {
-  path: string
-  tags: string[]
-}) {
-  return createRoute({
-    deprecated: true,
-    path,
-    operationId: 'createDocumentLog',
-    method: http.Methods.POST,
-    description:
-      'Create a prompt log. Deprecated: Use the traces ingest endpoint instead.',
-    tags,
-    request: {
-      params: documentParamsSchema,
-      body: {
-        content: {
-          [http.MediaTypes.JSON]: {
-            schema: z.object({
-              path: z.string(),
-              messages: z.array(messageSchema),
-              response: z.string().optional(),
-            }),
-          },
-        },
-      },
-    },
-    responses: {
-      ...GENERIC_ERROR_RESPONSES,
-      [http.Status.OK]: {
-        description: 'The document log was created successfully',
-        content: {
-          [http.MediaTypes.JSON]: { schema: spanLogSchema },
-        },
-      },
-    },
-  })
-}
-
-export const createLogRouteV3 = createLogRouteFactory({
-  path: ROUTES.api.v3.projects.documents.logs,
+export const createLogRouteConfig = defineRouteConfig({
+  operationId: 'createDocumentLog',
+  method: http.Methods.POST,
+  description:
+    'Create a prompt log. Deprecated: Use the traces ingest endpoint instead.',
   tags: ['Logs'],
+  request: {
+    params: documentParamsSchema,
+    body: {
+      content: {
+        [http.MediaTypes.JSON]: {
+          schema: z.object({
+            path: z.string(),
+            messages: z.array(messageSchema),
+            response: z.string().optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    ...GENERIC_ERROR_RESPONSES,
+    [http.Status.OK]: {
+      description: 'The document log was created successfully',
+      content: {
+        [http.MediaTypes.JSON]: { schema: spanLogSchema },
+      },
+    },
+  },
 })
 
-export type CreateLogRoute = typeof createLogRouteV3
+export type CreateLogRoute = typeof createLogRouteConfig

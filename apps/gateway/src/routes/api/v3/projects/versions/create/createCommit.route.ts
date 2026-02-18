@@ -1,7 +1,7 @@
-import { createRoute as createOpenAPIRoute, z } from '@hono/zod-openapi'
-import { API_ROUTES } from '$/api.routes'
+import { z } from '@hono/zod-openapi'
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
+import { defineRouteConfig } from '$/routes/api/helpers'
 
 export const CommitSchema = z.object({
   id: z.number(),
@@ -17,9 +17,8 @@ export const CommitSchema = z.object({
   parentCommitUuid: z.string().nullable(),
 })
 
-export const createVersionRoute = createOpenAPIRoute({
+export const createVersionRouteConfig = defineRouteConfig({
   method: http.Methods.POST,
-  path: API_ROUTES.v3.projects.versions.create,
   tags: ['Versions'],
   security: [{ bearerAuth: [] }],
   summary: 'Create project version',
@@ -49,4 +48,4 @@ export const createVersionRoute = createOpenAPIRoute({
   },
 })
 
-export type CreateCommitRoute = typeof createVersionRoute
+export type CreateCommitRoute = typeof createVersionRouteConfig

@@ -4,10 +4,10 @@ import {
 } from '@latitude-data/core/repositories'
 import { deleteManyRows } from '@latitude-data/core/services/datasetRows/deleteManyRows'
 import { AppRouteHandler } from '$/openApi/types'
-import { destroyDatasetRowRoute } from './destroy.route'
+import { destroyDatasetRowRouteConfig } from './destroy.route'
 
 export const destroyDatasetRowHandler: AppRouteHandler<
-  typeof destroyDatasetRowRoute
+  typeof destroyDatasetRowRouteConfig
 > = async (c) => {
   const workspace = c.get('workspace')
   const { rowId } = c.req.valid('param')

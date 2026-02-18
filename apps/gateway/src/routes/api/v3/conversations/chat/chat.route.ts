@@ -6,16 +6,15 @@ import {
   runSyncAPIResponseSchema,
   messageSchema,
 } from '$/openApi/schemas'
-import { ROUTES } from '$/routes'
 import { conversationsParamsSchema } from '$/routes/api/v3/conversations/paramsSchema'
-import { createRoute, z } from '@hono/zod-openapi'
+import { z } from '@hono/zod-openapi'
+import { defineRouteConfig } from '$/routes/api/helpers'
 
-export const chatRoute = createRoute({
+export const chatRouteConfig = defineRouteConfig({
   operationId: 'createChat',
   tags: ['Conversations'],
   description: 'Chat with an existing conversation',
   method: http.Methods.POST,
-  path: ROUTES.api.v3.conversations.chat,
   request: {
     params: conversationsParamsSchema,
     body: {
@@ -54,4 +53,4 @@ export const chatRoute = createRoute({
   },
 })
 
-export type ChatRoute = typeof chatRoute
+export type ChatRoute = typeof chatRouteConfig

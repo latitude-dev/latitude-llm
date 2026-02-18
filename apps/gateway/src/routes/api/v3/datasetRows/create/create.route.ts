@@ -1,11 +1,10 @@
-import { createRoute as createOpenAPIRoute, z } from '@hono/zod-openapi'
-import { API_ROUTES } from '$/api.routes'
+import { z } from '@hono/zod-openapi'
 import { DatasetRowSchema } from '$/openApi/schemas/ai'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
+import { defineRouteConfig } from '$/routes/api/helpers'
 
-export const createDatasetRowRoute = createOpenAPIRoute({
+export const createDatasetRowRouteConfig = defineRouteConfig({
   method: 'post',
-  path: API_ROUTES.v3.datasetRows.create,
   tags: ['Dataset Rows'],
   security: [{ bearerAuth: [] }],
   summary: 'Create a new dataset row',
