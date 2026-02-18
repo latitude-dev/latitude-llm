@@ -34,11 +34,6 @@ function redirectToLogin(currentUrl?: string) {
   )
 }
 
-const ALLOWED_ROUTES_ON_TRIAL_EXPIRED = [
-  ROUTES.choosePricingPlan.root,
-  ROUTES.settings.root,
-]
-
 /**
  * Gets the current authenticated user and workspace data, or redirects to login if not authenticated.
  *
@@ -60,19 +55,11 @@ export const getCurrentUserOrRedirect = cache(async () => {
     return redirectToLogin(currentUrl)
   }
 
-  const { user, workspace, subscriptionPlan, trialEnded } =
+  const { user, workspace, subscriptionPlan } =
     await getDataFromSession(sessionData.session)
 
   if (!user || !workspace) {
     return redirectToLogin(currentUrl)
-  }
-
-  const isOnAllowedRouteOnTrial = ALLOWED_ROUTES_ON_TRIAL_EXPIRED.some(
-    (route) => currentUrl?.startsWith(route),
-  )
-
-  if (trialEnded && !isOnAllowedRouteOnTrial) {
-    return redirect(ROUTES.choosePricingPlan.root)
   }
 
   return {
