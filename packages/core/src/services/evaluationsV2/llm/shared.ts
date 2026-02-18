@@ -36,6 +36,8 @@ const TO_MILLICENTS_FACTOR = 100_000
 
 export function promptTask() {
   return `
+Important: The verdict you are asked to produce is YOUR output as an evaluator. Do not factor it into your assessment of the assistant's response. The assistant being evaluated is not expected to produce a verdict or follow your output format.
+
 <user>
   Based on the given instructions, evaluate the assistant response:
   \`\`\`
@@ -46,15 +48,6 @@ export function promptTask() {
   \`\`\`
   {{ conversation }}
   \`\`\`
-
-  {{ if toolCalls?.length }}
-    Also, here are the tool calls that the assistant requested:
-    \`\`\`
-    {{ toolCalls }}
-    \`\`\`
-  {{ else }}
-    Also, the assistant did not request any tool calls.
-  {{ endif }}
 
   Finally, here is some additional metadata about the conversation. It may or may not be relevant for the evaluation.
   - Cost: {{ cost }} cents.

@@ -220,18 +220,16 @@ export const LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION = `
   - {{ conversation }} (string): The full conversation of the evaluated log
 
   - {{ messages }} (array of objects): All the messages of the conversation
-  - {{ toolCalls }} (array of objects): All the tool calls of the conversation
   - {{ cost }} (number): The cost, in cents, of the evaluated log
   - {{ tokens }} (number): The tokens of the evaluated log
   - {{ duration }} (number): The duration, in seconds, of the evaluated log
 
-  More info on messages and tool calls format in: https://docs.latitude.so/promptl/syntax/messages
+  More info on messages format in: https://docs.latitude.so/promptl/syntax/messages
 
   - {{ prompt }} (string): The prompt of the evaluated log
-  - {{ config }} (object): The configuration of the evaluated log
   - {{ parameters }} (object): The parameters of the evaluated log
 
-  More info on configuration and parameters format in: https://docs.latitude.so/promptl/syntax/configuration
+  More info on parameters format in: https://docs.latitude.so/promptl/syntax/configuration
 */
 `.trim()
 
