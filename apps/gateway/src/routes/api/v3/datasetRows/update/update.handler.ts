@@ -5,10 +5,10 @@ import {
 import { updateDatasetRow } from '@latitude-data/core/services/datasetRows/update'
 import { type DatasetRowData } from '@latitude-data/core/schema/models/datasetRows'
 import { AppRouteHandler } from '$/openApi/types'
-import { updateDatasetRowRoute } from './update.route'
+import { updateDatasetRowRouteConfig } from './update.route'
 
 export const updateDatasetRowHandler: AppRouteHandler<
-  typeof updateDatasetRowRoute
+  typeof updateDatasetRowRouteConfig
 > = async (c) => {
   const workspace = c.get('workspace')
 

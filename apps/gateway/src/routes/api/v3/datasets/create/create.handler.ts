@@ -3,10 +3,10 @@ import { createDataset } from '@latitude-data/core/services/datasets/create'
 import { findFirstUserInWorkspace } from '@latitude-data/core/queries/users/findFirstInWorkspace'
 import { type Column } from '@latitude-data/core/schema/models/datasets'
 import { AppRouteHandler } from '$/openApi/types'
-import { createDatasetRoute } from './create.route'
+import { createDatasetRouteConfig } from './create.route'
 
 export const createDatasetHandler: AppRouteHandler<
-  typeof createDatasetRoute
+  typeof createDatasetRouteConfig
 > = async (c) => {
   const workspace = c.get('workspace')
 

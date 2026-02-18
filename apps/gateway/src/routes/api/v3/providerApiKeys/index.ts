@@ -1,18 +1,48 @@
 import { createRouter } from '$/openApi/createApp'
-import { getAllProviderApiKeysHandler } from './getAll/getAll.handler'
-import { getAllProviderApiKeysRoute } from './getAll/getAll.route'
-import { getProviderApiKeyHandler } from './get/get.handler'
-import { getProviderApiKeyRoute } from './get/get.route'
-import { createProviderApiKeyHandler } from './create/create.handler'
-import { createProviderApiKeyRoute } from './create/create.route'
-import { updateProviderApiKeyHandler } from './update/update.handler'
-import { updateProviderApiKeyRoute } from './update/update.route'
-import { destroyProviderApiKeyHandler } from './destroy/destroy.handler'
-import { destroyProviderApiKeyRoute } from './destroy/destroy.route'
+import { route } from '$/routes/api/helpers'
+import { API_ROUTES } from '$/api.routes'
+
+import { getAllProviderApiKeysHandler } from '$/routes/api/v3/providerApiKeys/getAll/getAll.handler'
+import { getAllProviderApiKeysRouteConfig } from '$/routes/api/v3/providerApiKeys/getAll/getAll.route'
+import { getProviderApiKeyHandler } from '$/routes/api/v3/providerApiKeys/get/get.handler'
+import { getProviderApiKeyRouteConfig } from '$/routes/api/v3/providerApiKeys/get/get.route'
+import { createProviderApiKeyHandler } from '$/routes/api/v3/providerApiKeys/create/create.handler'
+import { createProviderApiKeyRouteConfig } from '$/routes/api/v3/providerApiKeys/create/create.route'
+import { updateProviderApiKeyHandler } from '$/routes/api/v3/providerApiKeys/update/update.handler'
+import { updateProviderApiKeyRouteConfig } from '$/routes/api/v3/providerApiKeys/update/update.route'
+import { destroyProviderApiKeyHandler } from '$/routes/api/v3/providerApiKeys/destroy/destroy.handler'
+import { destroyProviderApiKeyRouteConfig } from '$/routes/api/v3/providerApiKeys/destroy/destroy.route'
 
 export const providerApiKeysRouter = createRouter()
-  .openapi(getAllProviderApiKeysRoute, getAllProviderApiKeysHandler)
-  .openapi(getProviderApiKeyRoute, getProviderApiKeyHandler)
-  .openapi(createProviderApiKeyRoute, createProviderApiKeyHandler)
-  .openapi(updateProviderApiKeyRoute, updateProviderApiKeyHandler)
-  .openapi(destroyProviderApiKeyRoute, destroyProviderApiKeyHandler)
+  .openapi(
+    route(
+      getAllProviderApiKeysRouteConfig,
+      API_ROUTES.v3.providerApiKeys.getAll,
+    ),
+    getAllProviderApiKeysHandler,
+  )
+  .openapi(
+    route(getProviderApiKeyRouteConfig, API_ROUTES.v3.providerApiKeys.get),
+    getProviderApiKeyHandler,
+  )
+  .openapi(
+    route(
+      createProviderApiKeyRouteConfig,
+      API_ROUTES.v3.providerApiKeys.create,
+    ),
+    createProviderApiKeyHandler,
+  )
+  .openapi(
+    route(
+      updateProviderApiKeyRouteConfig,
+      API_ROUTES.v3.providerApiKeys.update,
+    ),
+    updateProviderApiKeyHandler,
+  )
+  .openapi(
+    route(
+      destroyProviderApiKeyRouteConfig,
+      API_ROUTES.v3.providerApiKeys.destroy,
+    ),
+    destroyProviderApiKeyHandler,
+  )

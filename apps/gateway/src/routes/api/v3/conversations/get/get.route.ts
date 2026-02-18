@@ -1,16 +1,14 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import { conversationPresenterSchema } from '$/openApi/schemas/conversations'
-import { ROUTES } from '$/routes'
 import { conversationsParamsSchema } from '$/routes/api/v3/conversations/paramsSchema'
-import { createRoute } from '@hono/zod-openapi'
+import { defineRouteConfig } from '$/routes/api/helpers'
 
-export const getRoute = createRoute({
+export const getRouteConfig = defineRouteConfig({
   operationId: 'getConversation',
   tags: ['Conversations'],
   description: 'Get a conversation',
   method: http.Methods.GET,
-  path: ROUTES.api.v3.conversations.get,
   request: {
     params: conversationsParamsSchema,
   },
@@ -25,4 +23,4 @@ export const getRoute = createRoute({
   },
 })
 
-export type GetRoute = typeof getRoute
+export type GetRoute = typeof getRouteConfig

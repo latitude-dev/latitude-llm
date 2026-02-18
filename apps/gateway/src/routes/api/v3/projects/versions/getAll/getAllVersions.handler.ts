@@ -2,10 +2,10 @@ import { Context } from 'hono'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { AppRouteHandler } from '$/openApi/types'
-import { getAllVersionsRoute } from './getAllVersions.route'
+import { getAllVersionsRouteConfig } from './getAllVersions.route'
 
 export const getAllVersionsHandler: AppRouteHandler<
-  typeof getAllVersionsRoute
+  typeof getAllVersionsRouteConfig
 > = async (c: Context) => {
   const workspace = c.get('workspace')
   const { projectId } = c.req.param()

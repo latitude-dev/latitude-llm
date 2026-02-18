@@ -2,10 +2,10 @@ import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { createDatasetRow } from '@latitude-data/core/services/datasetRows/create'
 import { type DatasetRowData } from '@latitude-data/core/schema/models/datasetRows'
 import { AppRouteHandler } from '$/openApi/types'
-import { createDatasetRowRoute } from './create.route'
+import { createDatasetRowRouteConfig } from './create.route'
 
 export const createDatasetRowHandler: AppRouteHandler<
-  typeof createDatasetRowRoute
+  typeof createDatasetRowRouteConfig
 > = async (c) => {
   const workspace = c.get('workspace')
 

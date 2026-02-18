@@ -4,10 +4,10 @@ import {
 } from '@latitude-data/core/repositories'
 import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
 import { AppRouteHandler } from '$/openApi/types'
-import { getAllDatasetRowsRoute } from './getAll.route'
+import { getAllDatasetRowsRouteConfig } from './getAll.route'
 
 export const getAllDatasetRowsHandler: AppRouteHandler<
-  typeof getAllDatasetRowsRoute
+  typeof getAllDatasetRowsRouteConfig
 > = async (c) => {
   const workspace = c.get('workspace')
   const { datasetId, page, pageSize } = c.req.valid('query')

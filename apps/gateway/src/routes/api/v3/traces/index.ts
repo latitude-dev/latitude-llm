@@ -1,5 +1,11 @@
 import { createRouter } from '$/openApi/createApp'
-import { ingestHandler } from './ingest/ingest.handler'
-import { ingestRoute } from './ingest/ingest.route'
+import { API_ROUTES } from '$/api.routes'
+import { route } from '$/routes/api/helpers'
 
-export const tracesRouter = createRouter().openapi(ingestRoute, ingestHandler)
+import { ingestHandler } from '$/routes/api/v3/traces/ingest/ingest.handler'
+import { ingestRouteConfig } from '$/routes/api/v3/traces/ingest/ingest.route'
+
+export const tracesRouter = createRouter().openapi(
+  route(ingestRouteConfig, API_ROUTES.v3.traces.ingest),
+  ingestHandler,
+)

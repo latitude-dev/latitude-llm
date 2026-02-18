@@ -1,12 +1,11 @@
-import { createRoute as createOpenAPIRoute, z } from '@hono/zod-openapi'
-import { API_ROUTES } from '$/api.routes'
+import { z } from '@hono/zod-openapi'
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import { CommitSchema } from '../create/createCommit.route'
+import { defineRouteConfig } from '$/routes/api/helpers'
 
-export const publishCommitRoute = createOpenAPIRoute({
+export const publishCommitRouteConfig = defineRouteConfig({
   method: http.Methods.POST,
-  path: API_ROUTES.v3.projects.versions.publish,
   tags: ['Versions'],
   security: [{ bearerAuth: [] }],
   summary: 'Publish project version',
@@ -40,4 +39,4 @@ export const publishCommitRoute = createOpenAPIRoute({
   },
 })
 
-export type PublishCommitRoute = typeof publishCommitRoute
+export type PublishCommitRoute = typeof publishCommitRouteConfig

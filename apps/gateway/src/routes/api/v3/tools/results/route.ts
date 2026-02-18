@@ -1,7 +1,6 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
-import { ROUTES } from '$/routes'
-import { createRoute } from '@hono/zod-openapi'
+import { defineRouteConfig } from '$/routes/api/helpers'
 import { z } from '@hono/zod-openapi'
 
 export const clientToolResultBodySchema = z.object({
@@ -14,9 +13,8 @@ export const clientToolResultBodySchema = z.object({
   isError: z.boolean().default(false),
 })
 
-export const clientToolResultRoute = createRoute({
+export const clientToolResultRouteConfig = defineRouteConfig({
   method: http.Methods.POST,
-  path: ROUTES.api.v3.tools.results,
   tags: ['Tools'],
   request: {
     body: {
@@ -30,4 +28,4 @@ export const clientToolResultRoute = createRoute({
   responses: GENERIC_ERROR_RESPONSES,
 })
 
-export type ClientToolResultRoute = typeof clientToolResultRoute
+export type ClientToolResultRoute = typeof clientToolResultRouteConfig

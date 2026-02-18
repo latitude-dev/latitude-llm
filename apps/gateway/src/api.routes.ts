@@ -1,61 +1,61 @@
-export const API_ROUTES = {
-  v3: {
-    tools: {
-      results: `/api/v3/tools/results`,
+const API_VERSIONED_ROUTES = (version: string) => ({
+  tools: {
+    results: `/api/${version}/tools/results`,
+  },
+  projects: {
+    getAll: `/api/${version}/projects`,
+    create: `/api/${version}/projects`,
+    push: `/api/${version}/projects/:projectId/versions/:versionUuid/push`,
+    versions: {
+      get: `/api/${version}/projects/:projectId/versions/:versionUuid`,
+      getAll: `/api/${version}/projects/:projectId/versions`,
+      create: `/api/${version}/projects/:projectId/versions`,
+      publish: `/api/${version}/projects/:projectId/versions/:versionUuid/publish`,
     },
-    projects: {
-      getAll: '/api/v3/projects',
-      create: '/api/v3/projects',
-      push: '/api/v3/projects/:projectId/versions/:versionUuid/push',
-      versions: {
-        get: '/api/v3/projects/:projectId/versions/:versionUuid',
-        getAll: '/api/v3/projects/:projectId/versions',
-        create: '/api/v3/projects/:projectId/versions',
-        publish: '/api/v3/projects/:projectId/versions/:versionUuid/publish',
-      },
-      documents: {
-        get: '/api/v3/projects/:projectId/versions/:versionUuid/documents/:documentPath{.+}',
-        getAll: '/api/v3/projects/:projectId/versions/:versionUuid/documents',
-        create: '/api/v3/projects/:projectId/versions/:versionUuid/documents',
-        createOrUpdate:
-          '/api/v3/projects/:projectId/versions/:versionUuid/documents/create-or-update',
-        getOrCreate:
-          '/api/v3/projects/:projectId/versions/:versionUuid/documents/get-or-create',
-        logs: '/api/v3/projects/:projectId/versions/:versionUuid/documents/logs',
-        run: '/api/v3/projects/:projectId/versions/:versionUuid/documents/run',
-      },
-    },
-    conversations: {
-      chat: '/api/v3/conversations/:conversationUuid/chat',
-      stop: '/api/v3/conversations/:conversationUuid/stop',
-      attach: '/api/v3/conversations/:conversationUuid/attach',
-      annotate:
-        '/api/v3/conversations/:conversationUuid/evaluations/:evaluationUuid/annotate',
-      get: '/api/v3/conversations/:conversationUuid',
-    },
-    traces: {
-      ingest: '/api/v3/traces',
-    },
-    datasets: {
-      getAll: '/api/v3/datasets',
-      get: '/api/v3/datasets/:datasetId',
-      create: '/api/v3/datasets',
-      update: '/api/v3/datasets/:datasetId',
-      destroy: '/api/v3/datasets/:datasetId',
-    },
-    datasetRows: {
-      getAll: '/api/v3/dataset-rows',
-      get: '/api/v3/dataset-rows/:rowId',
-      create: '/api/v3/dataset-rows',
-      update: '/api/v3/dataset-rows/:rowId',
-      destroy: '/api/v3/dataset-rows/:rowId',
-    },
-    providerApiKeys: {
-      getAll: '/api/v3/provider-api-keys',
-      get: '/api/v3/provider-api-keys/:providerApiKeyId',
-      create: '/api/v3/provider-api-keys',
-      update: '/api/v3/provider-api-keys/:providerApiKeyId',
-      destroy: '/api/v3/provider-api-keys/:providerApiKeyId',
+    documents: {
+      get: `/api/${version}/projects/:projectId/versions/:versionUuid/documents/:documentPath{.+}`,
+      getAll: `/api/${version}/projects/:projectId/versions/:versionUuid/documents`,
+      create: `/api/${version}/projects/:projectId/versions/:versionUuid/documents`,
+      createOrUpdate: `/api/${version}/projects/:projectId/versions/:versionUuid/documents/create-or-update`,
+      getOrCreate: `/api/${version}/projects/:projectId/versions/:versionUuid/documents/get-or-create`,
+      logs: `/api/${version}/projects/:projectId/versions/:versionUuid/documents/logs`,
+      run: `/api/${version}/projects/:projectId/versions/:versionUuid/documents/run`,
     },
   },
-}
+  conversations: {
+    chat: `/api/${version}/conversations/:conversationUuid/chat`,
+    stop: `/api/${version}/conversations/:conversationUuid/stop`,
+    attach: `/api/${version}/conversations/:conversationUuid/attach`,
+    annotate: `/api/${version}/conversations/:conversationUuid/evaluations/:evaluationUuid/annotate`,
+    get: `/api/${version}/conversations/:conversationUuid`,
+  },
+  traces: {
+    ingest: `/api/${version}/traces`,
+  },
+  datasets: {
+    getAll: `/api/${version}/datasets`,
+    get: `/api/${version}/datasets/:datasetId`,
+    create: `/api/${version}/datasets`,
+    update: `/api/${version}/datasets/:datasetId`,
+    destroy: `/api/${version}/datasets/:datasetId`,
+  },
+  datasetRows: {
+    getAll: `/api/${version}/dataset-rows`,
+    get: `/api/${version}/dataset-rows/:rowId`,
+    create: `/api/${version}/dataset-rows`,
+    update: `/api/${version}/dataset-rows/:rowId`,
+    destroy: `/api/${version}/dataset-rows/:rowId`,
+  },
+  providerApiKeys: {
+    getAll: `/api/${version}/provider-api-keys`,
+    get: `/api/${version}/provider-api-keys/:providerApiKeyId`,
+    create: `/api/${version}/provider-api-keys`,
+    update: `/api/${version}/provider-api-keys/:providerApiKeyId`,
+    destroy: `/api/${version}/provider-api-keys/:providerApiKeyId`,
+  },
+})
+
+export const API_ROUTES = {
+  v3: API_VERSIONED_ROUTES('v3'),
+  v4: API_VERSIONED_ROUTES('v4'),
+} as const

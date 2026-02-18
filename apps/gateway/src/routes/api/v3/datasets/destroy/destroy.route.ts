@@ -1,11 +1,10 @@
-import { createRoute as createOpenAPIRoute, z } from '@hono/zod-openapi'
-import { API_ROUTES } from '$/api.routes'
+import { z } from '@hono/zod-openapi'
 import { DatasetSchema } from '$/openApi/schemas/ai'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
+import { defineRouteConfig } from '$/routes/api/helpers'
 
-export const destroyDatasetRoute = createOpenAPIRoute({
+export const destroyDatasetRouteConfig = defineRouteConfig({
   method: 'delete',
-  path: API_ROUTES.v3.datasets.destroy,
   tags: ['Datasets'],
   security: [{ bearerAuth: [] }],
   summary: 'Delete a dataset',

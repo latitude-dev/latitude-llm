@@ -1,7 +1,6 @@
-import { createRoute, z } from '@hono/zod-openapi'
-
-import { API_ROUTES } from '$/api.routes'
+import { z } from '@hono/zod-openapi'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
+import { defineRouteConfig } from '$/routes/api/helpers'
 
 const pushParamsSchema = z.object({
   projectId: z.string().openapi({
@@ -58,8 +57,7 @@ const pushResponseSchema = z.object({
   }),
 })
 
-export const pushRoute = createRoute({
-  path: API_ROUTES.v3.projects.push,
+export const pushRouteConfig = defineRouteConfig({
   method: 'post',
   tags: ['Projects'],
   summary: 'Push commit changes',

@@ -7,13 +7,12 @@ import {
   runBackgroundAPIResponseSchema,
   runSyncAPIResponseSchema,
 } from '$/openApi/schemas'
-import { ROUTES } from '$/routes'
-import { createRoute, z } from '@hono/zod-openapi'
+import { defineRouteConfig } from '$/routes/api/helpers'
+import { z } from '@hono/zod-openapi'
 import { documentParamsSchema } from '../paramsSchema'
 
-export const runRoute = createRoute({
+export const runRouteConfig = defineRouteConfig({
   method: http.Methods.POST,
-  path: ROUTES.api.v3.projects.documents.run,
   tags: ['Documents'],
   description: 'Run a prompt',
   request: {
@@ -80,4 +79,4 @@ export const runRoute = createRoute({
   },
 })
 
-export type RunRoute = typeof runRoute
+export type RunRoute = typeof runRouteConfig

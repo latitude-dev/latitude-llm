@@ -1,7 +1,7 @@
-import { createRoute as createOpenAPIRoute, z } from '@hono/zod-openapi'
-import { API_ROUTES } from '$/api.routes'
+import { z } from '@hono/zod-openapi'
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
+import { defineRouteConfig } from '$/routes/api/helpers'
 
 export const VersionSchema = z.object({
   id: z.number(),
@@ -17,9 +17,8 @@ export const VersionSchema = z.object({
   parentCommitUuid: z.string().nullable(),
 })
 
-export const getVersionRoute = createOpenAPIRoute({
+export const getVersionRouteConfig = defineRouteConfig({
   method: http.Methods.GET,
-  path: API_ROUTES.v3.projects.versions.get,
   tags: ['Versions'],
   security: [{ bearerAuth: [] }],
   summary: 'Get project version',

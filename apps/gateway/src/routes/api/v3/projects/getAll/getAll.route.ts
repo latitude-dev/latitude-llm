@@ -1,11 +1,10 @@
-import { createRoute as createOpenAPIRoute, z } from '@hono/zod-openapi'
-import { API_ROUTES } from '$/api.routes'
+import { z } from '@hono/zod-openapi'
 import { ProjectSchema } from '$/openApi/schemas/ai'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
+import { defineRouteConfig } from '$/routes/api/helpers'
 
-export const getAllRoute = createOpenAPIRoute({
+export const getAllRouteConfig = defineRouteConfig({
   method: 'get',
-  path: API_ROUTES.v3.projects.getAll,
   tags: ['Projects'],
   security: [{ bearerAuth: [] }],
   summary: 'Get all projects for a workspace',

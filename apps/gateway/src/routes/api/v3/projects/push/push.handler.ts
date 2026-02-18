@@ -4,10 +4,10 @@ import { AppRouteHandler } from '$/openApi/types'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { findProjectById } from '@latitude-data/core/queries/projects/findById'
 import { persistPushChanges } from '@latitude-data/core/services/commits/persistPushChanges'
-import { pushRoute } from './push.route'
+import { pushRouteConfig } from './push.route'
 
 // @ts-expect-error - TODO: Fix this
-export const pushHandler: AppRouteHandler<typeof pushRoute> = async (
+export const pushHandler: AppRouteHandler<typeof pushRouteConfig> = async (
   c: Context,
 ) => {
   const workspace = c.get('workspace')

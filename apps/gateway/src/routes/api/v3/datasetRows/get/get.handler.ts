@@ -1,9 +1,9 @@
 import { DatasetRowsRepository } from '@latitude-data/core/repositories'
 import { AppRouteHandler } from '$/openApi/types'
-import { getDatasetRowRoute } from './get.route'
+import { getDatasetRowRouteConfig } from './get.route'
 
 export const getDatasetRowHandler: AppRouteHandler<
-  typeof getDatasetRowRoute
+  typeof getDatasetRowRouteConfig
 > = async (c) => {
   const workspace = c.get('workspace')
   const { rowId } = c.req.valid('param')

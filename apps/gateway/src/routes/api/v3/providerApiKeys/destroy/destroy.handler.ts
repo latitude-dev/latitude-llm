@@ -1,10 +1,10 @@
 import { findProviderApiKeyById } from '@latitude-data/core/queries/providerApiKeys/findById'
 import { destroyProviderApiKey } from '@latitude-data/core/services/providerApiKeys/destroy'
 import { AppRouteHandler } from '$/openApi/types'
-import { destroyProviderApiKeyRoute } from './destroy.route'
+import { destroyProviderApiKeyRouteConfig } from './destroy.route'
 
 export const destroyProviderApiKeyHandler: AppRouteHandler<
-  typeof destroyProviderApiKeyRoute
+  typeof destroyProviderApiKeyRouteConfig
 > = async (c) => {
   const workspace = c.get('workspace')
   const { providerApiKeyId } = c.req.valid('param')

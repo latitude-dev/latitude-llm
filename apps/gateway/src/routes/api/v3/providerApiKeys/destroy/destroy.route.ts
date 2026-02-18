@@ -1,11 +1,10 @@
-import { createRoute as createOpenAPIRoute, z } from '@hono/zod-openapi'
-import { API_ROUTES } from '$/api.routes'
+import { z } from '@hono/zod-openapi'
 import { ProviderApiKeySchema } from '$/openApi/schemas/ai'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
+import { defineRouteConfig } from '$/routes/api/helpers'
 
-export const destroyProviderApiKeyRoute = createOpenAPIRoute({
+export const destroyProviderApiKeyRouteConfig = defineRouteConfig({
   method: 'delete',
-  path: API_ROUTES.v3.providerApiKeys.destroy,
   tags: ['Provider API Keys'],
   security: [{ bearerAuth: [] }],
   summary: 'Delete a provider API key',

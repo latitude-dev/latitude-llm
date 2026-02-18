@@ -1,15 +1,13 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
-import { ROUTES } from '$/routes'
+import { defineRouteConfig } from '$/routes/api/helpers'
 import { conversationsParamsSchema } from '$/routes/api/v3/conversations/paramsSchema'
-import { createRoute } from '@hono/zod-openapi'
 
-export const stopRoute = createRoute({
+export const stopRouteConfig = defineRouteConfig({
   operationId: 'stopConversation',
   tags: ['Conversations'],
   description: 'Stop an active conversation',
   method: http.Methods.POST,
-  path: ROUTES.api.v3.conversations.stop,
   request: {
     params: conversationsParamsSchema,
   },
@@ -21,4 +19,4 @@ export const stopRoute = createRoute({
   },
 })
 
-export type StopRoute = typeof stopRoute
+export type StopRoute = typeof stopRouteConfig
