@@ -15,6 +15,7 @@ import { createProject } from '../src/services/projects/create'
 import { createMembership } from '../src/services/memberships/create'
 import { createApiKey } from '../src/services/apiKeys/create'
 import { createProviderApiKey } from '../src/services/providerApiKeys/create'
+import { encryptProviderToken } from '../src/services/providerApiKeys/helpers/tokenEncryption'
 import { createFeature } from '../src/services/features/create'
 import { toggleFeatureGlobally } from '../src/services/features/toggleGlobally'
 import { changeWorkspacePlan } from '../src/services/workspaces/changePlan'
@@ -48,9 +49,6 @@ const GLOBAL_FEATURES = [
   'evaluationGenerator',
   'testing',
   'optimizations',
-  'clickhouse-spans-write',
-  'clickhouse-spans-read',
-  'clickhouse-evaluation-results-write',
 ]
 
 /**
@@ -228,10 +226,13 @@ async function main() {
     }
   }
 
-  const enterpriseToken = process.env.ENTERPRISE_OPENAI_API_KEY
+  const enterpriseToken =
+    process.env.ENTERPRISE_OPENAI_API_KEY ?? 'fake-enterprise-openai-api-key'
 
-  if (!enterpriseToken) {
-    throw new Error('ENTERPRISE_OPENAI_API_KEY is not set')
+  if (!process.env.ENTERPRISE_OPENAI_API_KEY) {
+    console.warn(
+      'ENTERPRISE_OPENAI_API_KEY is not set, using fake-enterprise-openai-api-key',
+    )
   }
 
   const existingProvider = await database
@@ -260,7 +261,15 @@ async function main() {
     if (providerResult.error) throw providerResult.error
     console.log(`✓ Provider API key created: ${ENTERPRISE_PROVIDER_NAME}`)
   } else {
-    console.log(`✓ Provider API key found: ${ENTERPRISE_PROVIDER_NAME}`)
+    await database
+      .update(providerApiKeys)
+      .set({
+        token: encryptProviderToken(enterpriseToken),
+        updatedAt: new Date(),
+      })
+      .where(eq(providerApiKeys.id, existingProvider.id))
+
+    console.log(`✓ Provider API key updated: ${ENTERPRISE_PROVIDER_NAME}`)
   }
 
   const apiKeyResult = await selectFirstApiKey({ workspaceId: workspace.id })
