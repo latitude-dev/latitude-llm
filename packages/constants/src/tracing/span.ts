@@ -128,6 +128,13 @@ export type SpanLink = {
   attributes: Record<string, SpanAttribute>
 }
 
+export type CompletionSpanTokens = {
+  prompt: number
+  cached: number
+  reasoning: number
+  completion: number
+}
+
 export type BaseSpanMetadata<T extends SpanType = SpanType> = {
   traceId: string
   spanId: string
@@ -211,12 +218,7 @@ export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> &
     input: Message[]
     // Fields below are optional if the span had an error
     output?: Message[]
-    tokens?: {
-      prompt: number
-      cached: number
-      reasoning: number
-      completion: number
-    }
+    tokens?: CompletionSpanTokens
     cost?: number // Enriched when ingested
     finishReason?: FinishReason
   }

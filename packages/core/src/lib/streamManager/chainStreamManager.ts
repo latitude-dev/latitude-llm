@@ -110,6 +110,8 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
       })
 
       this.updateStateFromResponse({
+        provider: chain.provider.provider,
+        model: chain.config.model,
         response,
         messages: responseMessages,
         tokenUsage,

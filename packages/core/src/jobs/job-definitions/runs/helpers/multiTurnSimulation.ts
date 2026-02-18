@@ -1,4 +1,5 @@
 import { LogSources } from '@latitude-data/constants'
+import { mergeCostBreakdown } from '@latitude-data/constants/costs'
 import { Message } from '@latitude-data/constants/messages'
 import {
   MAX_SIMULATION_TURNS,
@@ -104,7 +105,7 @@ async function executeSingleTurn({
       reasoningTokens: 0,
       cachedInputTokens: 0,
     },
-    runCost: 0,
+    runCost: {},
     duration: 0,
   }
 
@@ -207,7 +208,7 @@ export async function simulateUserResponses({
       reasoningTokens: 0,
       cachedInputTokens: 0,
     },
-    runCost: 0,
+    runCost: {},
     duration: 0,
   }
 
@@ -257,7 +258,7 @@ export async function simulateUserResponses({
         prev: aggregatedMetrics.runUsage as LanguageModelUsageType,
         next: metrics.runUsage as LanguageModelUsageType,
       }),
-      runCost: aggregatedMetrics.runCost + metrics.runCost,
+      runCost: mergeCostBreakdown(aggregatedMetrics.runCost, metrics.runCost),
       duration: aggregatedMetrics.duration + metrics.duration,
     }
 

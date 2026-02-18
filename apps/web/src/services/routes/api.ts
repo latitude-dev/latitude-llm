@@ -398,4 +398,9 @@ export const API_ROUTES = {
       root: `/api/integrationHeaderPresets/${integrationId}`,
     }),
   },
+  models: {
+    cost: {
+      root: '/api/models/cost',
+    },
+  },
 }

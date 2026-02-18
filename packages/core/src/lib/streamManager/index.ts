@@ -5,6 +5,7 @@ import {
   EMPTY_USAGE,
   LatitudeEventData,
   OmittedLatitudeEventData,
+  Providers,
   StreamEventTypes,
   StreamType,
   VercelConfig,
@@ -15,11 +16,15 @@ import type { SimulationSettings } from '@latitude-data/constants/simulation'
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { FinishReason } from 'ai'
 import { omit } from 'lodash-es'
+import {
+  CostBreakdown,
+  mergeCostBreakdown,
+} from '@latitude-data/constants/costs'
 import { LogSources, PromptSource } from '../../constants'
 import { IntegrationDto } from '../../schema/models/types/Integration'
 import { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
-import { estimateCost } from '../../services/ai/estimateCost'
+import { estimateCostBreakdown } from '../../services/ai/estimateCost'
 import { ValidatedChainStep } from '../../services/chains/ChainValidator'
 import { ToolHandler } from '../../services/documents/tools/clientTools/handlers'
 import {
@@ -122,13 +127,13 @@ export abstract class StreamManager {
   /**
    * `logCost` tracks only the cost of the main agent in this interaction (excludes sub-agents).
    */
-  private logCost: number = 0
+  private logCost: CostBreakdown = {}
   /**
    * `runCost` tracks all costs of this prompt and of all their sub-agents in this interaction.
    */
-  private runCost: number = 0
-  private resolveLogCost?: (cost: number) => void
-  private resolveRunCost?: (cost: number) => void
+  private runCost: CostBreakdown = {}
+  private resolveLogCost?: (cost: CostBreakdown) => void
+  private resolveRunCost?: (cost: CostBreakdown) => void
   private response: ChainStepResponse<StreamType> | undefined
   private finishReason?: FinishReason
   private resolveMessages?: (messages: Message[]) => void
@@ -435,8 +440,8 @@ export abstract class StreamManager {
       createPromiseWithResolver<LanguageModelUsage>()
     const [runUsage, resolveRunUsage] =
       createPromiseWithResolver<LanguageModelUsage>()
-    const [logCost, resolveLogCost] = createPromiseWithResolver<number>()
-    const [runCost, resolveRunCost] = createPromiseWithResolver<number>()
+    const [logCost, resolveLogCost] = createPromiseWithResolver<CostBreakdown>()
+    const [runCost, resolveRunCost] = createPromiseWithResolver<CostBreakdown>()
     const [provider, resolveProvider] = createPromiseWithResolver<
       ProviderApiKey | undefined
     >()
@@ -473,36 +478,46 @@ export abstract class StreamManager {
     this.runUsage = incrementTokens({ prev: this.runUsage, next })
   }
 
-  protected incrementLogCost(usage: LanguageModelUsage) {
-    if (!this.provider || !this.model) return
-    const cost = estimateCost({
-      provider: this.provider.provider,
-      model: this.model,
-      usage,
-    })
-    this.logCost += cost
+  protected incrementLogCost({
+    provider,
+    model,
+    usage,
+  }: {
+    provider: Providers
+    model: string
+    usage: LanguageModelUsage
+  }) {
+    const costBreakdown = estimateCostBreakdown({ provider, model, usage })
+    this.logCost = mergeCostBreakdown(this.logCost, costBreakdown)
   }
 
-  protected incrementRunCostFromUsage(usage: LanguageModelUsage) {
-    if (!this.provider || !this.model) return
-    const cost = estimateCost({
-      provider: this.provider.provider,
-      model: this.model,
-      usage,
-    })
-    this.runCost += cost
+  protected incrementRunCostFromUsage({
+    provider,
+    model,
+    usage,
+  }: {
+    provider: Providers
+    model: string
+    usage: LanguageModelUsage
+  }) {
+    const costBreakdown = estimateCostBreakdown({ provider, model, usage })
+    this.runCost = mergeCostBreakdown(this.runCost, costBreakdown)
   }
 
-  incrementRunCost(cost: number) {
-    this.runCost += cost
+  incrementRunCost(cost: CostBreakdown) {
+    this.runCost = mergeCostBreakdown(this.runCost, cost)
   }
 
   protected async updateStateFromResponse({
+    provider,
+    model,
     response,
     messages,
     tokenUsage,
     finishReason,
   }: {
+    provider: Providers
+    model: string
     response: ChainStepResponse<StreamType>
     messages: Message[]
     tokenUsage: LanguageModelUsage
@@ -513,8 +528,8 @@ export abstract class StreamManager {
     this.finishReason = finishReason
     this.incrementLogUsage(tokenUsage)
     this.incrementRunUsage(tokenUsage)
-    this.incrementLogCost(tokenUsage)
-    this.incrementRunCostFromUsage(tokenUsage)
+    this.incrementLogCost({ provider, model, usage: tokenUsage })
+    this.incrementRunCostFromUsage({ provider, model, usage: tokenUsage })
   }
 
   protected setMessages(messages: Message[]) {

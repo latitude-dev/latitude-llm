@@ -113,7 +113,18 @@ describe('endRun', () => {
           reasoningTokens: 10,
           cachedInputTokens: 5,
         },
-        runCost: 0.0025,
+        runCost: {
+          'openai/gpt-4': {
+            input: {
+              prompt: { tokens: 100, cost: 0.001 },
+              cached: { tokens: 0 },
+            },
+            output: {
+              reasoning: { tokens: 0 },
+              completion: { tokens: 50, cost: 0.0015 },
+            },
+          },
+        },
         duration: 1500,
       }
 
@@ -151,7 +162,18 @@ describe('endRun', () => {
           reasoningTokens: 20,
           cachedInputTokens: 10,
         },
-        runCost: 0.005,
+        runCost: {
+          'openai/gpt-4': {
+            input: {
+              prompt: { tokens: 200, cost: 0.002 },
+              cached: { tokens: 0 },
+            },
+            output: {
+              reasoning: { tokens: 0 },
+              completion: { tokens: 100, cost: 0.003 },
+            },
+          },
+        },
         duration: 2000,
       }
       const experimentId = 99
@@ -215,7 +237,7 @@ describe('endRun', () => {
           reasoningTokens: 0,
           cachedInputTokens: 0,
         },
-        runCost: 0,
+        runCost: {},
         duration: 0,
       }
 

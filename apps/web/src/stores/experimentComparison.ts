@@ -9,6 +9,7 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
 import { EvaluationV2 } from '@latitude-data/core/constants'
+import { totalCost } from '@latitude-data/constants/costs'
 import { useExperimentPolling } from '$/helpers/experimentPolling'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
@@ -384,7 +385,7 @@ export function useExperimentComparison(
           ...prevExperiment,
           runMetadata: {
             ...prevExperiment.runMetadata,
-            totalCost: prevRunMetadata.totalCost + metrics.runCost,
+            totalCost: prevRunMetadata.totalCost + totalCost(metrics.runCost),
             totalTokens:
               prevRunMetadata.totalTokens + metrics.runUsage.totalTokens,
             totalDuration: prevRunMetadata.totalDuration + metrics.duration,
