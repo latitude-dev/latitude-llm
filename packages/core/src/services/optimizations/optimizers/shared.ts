@@ -10,7 +10,10 @@ import { DatasetRow } from '../../../schema/models/types/DatasetRow'
 export type Trajectory = {
   id: string // <workspace_id>::<dataset_id>::<row_id>
   trace: Message[] // BONUS(AO/OPT): To support multi-document optimization we need to use the whole trace including the sub-agents own trajectories
-  usage: LanguageModelUsage
+  usage: {
+    conversation: LanguageModelUsage
+    evaluation: LanguageModelUsage
+  }
   duration: number
   score: number // Normalized score [0,1]
   feedback: string
@@ -31,7 +34,10 @@ export const LearnableTrajectory = (
 ): Trajectory => ({
   id: TRAJECTORY_ID(example),
   trace: trace ?? [],
-  usage: usage ?? EMPTY_USAGE(),
+  usage: usage ?? {
+    conversation: EMPTY_USAGE(),
+    evaluation: EMPTY_USAGE(),
+  },
   duration: duration ?? 0,
   score: TRAJECTORY_SCORE(score ?? 0),
   feedback: feedback ?? '',

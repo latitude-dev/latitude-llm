@@ -44,9 +44,13 @@ export const LlmEvaluationBinarySpecification = {
       EvaluationType.Llm,
       LlmEvaluationMetric.Binary
     >,
-  ) => {
-    return result.metadata.reason
-  },
+  ) => result.metadata.reason,
+  resultUsage: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.Binary
+    >,
+  ) => result.metadata.tokens,
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
@@ -89,9 +93,13 @@ export const LlmEvaluationRatingSpecification = {
       EvaluationType.Llm,
       LlmEvaluationMetric.Rating
     >,
-  ) => {
-    return result.metadata.reason
-  },
+  ) => result.metadata.reason,
+  resultUsage: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.Rating
+    >,
+  ) => result.metadata.tokens,
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
@@ -133,9 +141,13 @@ export const LlmEvaluationComparisonSpecification = {
       EvaluationType.Llm,
       LlmEvaluationMetric.Comparison
     >,
-  ) => {
-    return result.metadata.reason
-  },
+  ) => result.metadata.reason,
+  resultUsage: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.Comparison
+    >,
+  ) => result.metadata.tokens,
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
@@ -176,9 +188,13 @@ export const LlmEvaluationCustomSpecification = {
       EvaluationType.Llm,
       LlmEvaluationMetric.Custom
     >,
-  ) => {
-    return result.metadata.reason
-  },
+  ) => result.metadata.reason,
+  resultUsage: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.Custom
+    >,
+  ) => result.metadata.tokens,
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
@@ -229,9 +245,13 @@ export const LlmEvaluationCustomLabeledSpecification = {
       EvaluationType.Llm,
       LlmEvaluationMetric.CustomLabeled
     >,
-  ) => {
-    return result.metadata.reason
-  },
+  ) => result.metadata.reason,
+  resultUsage: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.CustomLabeled
+    >,
+  ) => result.metadata.tokens,
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,

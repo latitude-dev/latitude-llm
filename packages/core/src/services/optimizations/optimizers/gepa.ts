@@ -29,7 +29,10 @@ const partialTrajectorySchema = z.object({
 
 const partialOutputSchema = z.object({
   id: z.string(), // <workspace_id>::<dataset_id>::<row_id>
-  usage: languageModelUsageSchema,
+  usage: z.object({
+    conversation: languageModelUsageSchema,
+    evaluation: languageModelUsageSchema,
+  }),
   duration: z.number(),
   score: z.number(), // Normalized score [0,1]
 })

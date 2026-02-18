@@ -98,32 +98,38 @@ export function combineScore(
   return score
 }
 
-export function buildResults<
-  T extends EvaluationType = EvaluationType,
-  M extends EvaluationMetric<T> = EvaluationMetric<T>,
->(results: ResultWithEvaluationV2<T, M>[]) {
+export function buildResults(results: ResultWithEvaluationV2[]) {
   const metadatas: CompositeEvaluationCustomResultMetadata['results'] = {}
 
-  for (const { result, evaluation } of results) {
-    if (result.error) {
-      throw new BadRequestError(
-        `Cannot combine scores from sub-evaluations with errors`,
+  // prettier-ignore
+  results.forEach(<
+      T extends EvaluationType = EvaluationType,
+      M extends EvaluationMetric<T> = EvaluationMetric<T>,
+    >({ result, evaluation }: ResultWithEvaluationV2<T, M>) => { 
+      if (result.error) {
+        throw new BadRequestError(
+          `Cannot combine scores from sub-evaluations with errors`,
+        )
+      }
+
+      const specification = getEvaluationMetricSpecification(evaluation)
+      const reason = specification.resultReason(
+        result as EvaluationResultSuccessValue<T, M>,
       )
-    }
+      const usage = specification.resultUsage?.(
+        result as EvaluationResultSuccessValue<T, M>,
+      )
 
-    const specification = getEvaluationMetricSpecification(evaluation)
-    const reason = specification.resultReason(
-      result as EvaluationResultSuccessValue<T, M>,
-    )
-
-    metadatas[evaluation.uuid] = {
-      uuid: result.uuid,
-      name: evaluation.name,
-      score: result.normalizedScore!,
-      reason: reason || 'No reason reported',
-      passed: result.hasPassed!,
-    }
-  }
+      metadatas[evaluation.uuid] = {
+        uuid: result.uuid,
+        name: evaluation.name,
+        score: result.normalizedScore!,
+        reason: reason || 'No reason reported',
+        passed: result.hasPassed!,
+        tokens: usage,
+      }
+    },
+  )
 
   return metadatas
 }

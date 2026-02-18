@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SpanType } from '../../../constants'
+import { EMPTY_USAGE, SpanType } from '../../../constants'
 import { AbortedError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { evaluateFactory } from './evaluate'
@@ -86,6 +86,13 @@ function mockScanDocumentContent() {
   )
 }
 
+const MOCK_RUN_USAGE = {
+  ...EMPTY_USAGE(),
+  promptTokens: 10,
+  completionTokens: 20,
+  totalTokens: 30,
+}
+
 function mockRunDocumentAtCommit(uuid = 'test-log-uuid') {
   mocks.runDocumentAtCommit.mockResolvedValue(
     Result.ok({
@@ -95,11 +102,7 @@ function mockRunDocumentAtCommit(uuid = 'test-log-uuid') {
         { role: 'assistant', content: [{ type: 'text', text: 'response' }] },
       ]),
       duration: Promise.resolve(100),
-      runUsage: Promise.resolve({
-        promptTokens: 10,
-        completionTokens: 20,
-        totalTokens: 30,
-      }),
+      runUsage: Promise.resolve(MOCK_RUN_USAGE),
     }),
   )
 }
@@ -108,24 +111,31 @@ function mockEvaluation(
   score: number,
   passed: boolean,
   reason = 'test reason',
+  tokens = 50,
 ) {
   mocks.runEvaluationV2.mockResolvedValue(
     Result.ok({
       result: {
         normalizedScore: score,
         hasPassed: passed,
-        metadata: { actualOutput: 'test output' },
+        metadata: { actualOutput: 'test output', tokens },
         error: null,
       },
     }),
   )
   mocks.getEvaluationMetricSpecification.mockReturnValue({
     resultReason: () => reason,
+    resultUsage: (r: any) => r.metadata.tokens,
   })
 }
 
 function mockEvaluationSequence(
-  evaluations: { score: number; passed: boolean; reason?: string }[],
+  evaluations: {
+    score: number
+    passed: boolean
+    reason?: string
+    tokens?: number
+  }[],
 ) {
   for (const e of evaluations) {
     mocks.runEvaluationV2.mockResolvedValueOnce(
@@ -133,7 +143,7 @@ function mockEvaluationSequence(
         result: {
           normalizedScore: e.score,
           hasPassed: e.passed,
-          metadata: { actualOutput: 'test output' },
+          metadata: { actualOutput: 'test output', tokens: e.tokens ?? 50 },
           error: null,
         },
       }),
@@ -141,6 +151,7 @@ function mockEvaluationSequence(
   }
   mocks.getEvaluationMetricSpecification.mockReturnValue({
     resultReason: () => 'test reason',
+    resultUsage: (r: any) => r.metadata.tokens,
   })
 }
 
@@ -616,6 +627,302 @@ describe('evaluateFactory', () => {
     })
   })
 
+  describe('usage tracking', () => {
+    it('separates conversation and evaluation usage on trajectory', async () => {
+      const evaluation = createEvaluation('first')
+      mockRunDocumentAtCommit()
+      mockEvaluation(80, true, 'test reason', 100)
+
+      const spans = [
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+      ]
+      mockSpansAndMetadata(spans)
+
+      const evaluate = await evaluateFactory({
+        trainset: emptyDataset,
+        valset: emptyDataset,
+        evaluation,
+        optimization: baseOptimization,
+        document: baseDocument,
+        commit: baseCommit,
+        workspace: baseWorkspace,
+      })
+
+      const result = await evaluate({
+        prompt: baseDocument.content,
+        example: baseExample,
+      })
+
+      expect(result.ok).toBe(true)
+      const trajectory = result.value!
+      expect(trajectory.usage.conversation).toEqual(MOCK_RUN_USAGE)
+      expect(trajectory.usage.evaluation.totalTokens).toBe(100)
+    })
+
+    it('sums evaluation usage across multiple evaluated spans', async () => {
+      const evaluation = createEvaluation('every')
+      mockRunDocumentAtCommit()
+      mockEvaluationSequence([
+        { score: 60, passed: true, tokens: 40 },
+        { score: 80, passed: true, tokens: 60 },
+        { score: 100, passed: true, tokens: 80 },
+      ])
+
+      const spans = [
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
+        createMockSpan(
+          'span-3',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:02:00Z'),
+        ),
+      ]
+      mockSpansAndMetadata(spans)
+
+      const evaluate = await evaluateFactory({
+        trainset: emptyDataset,
+        valset: emptyDataset,
+        evaluation,
+        optimization: baseOptimization,
+        document: baseDocument,
+        commit: baseCommit,
+        workspace: baseWorkspace,
+      })
+
+      const result = await evaluate({
+        prompt: baseDocument.content,
+        example: baseExample,
+      })
+
+      expect(result.ok).toBe(true)
+      const trajectory = result.value!
+      expect(trajectory.usage.conversation).toEqual(MOCK_RUN_USAGE)
+      expect(trajectory.usage.evaluation.totalTokens).toBe(40 + 60 + 80)
+    })
+
+    it('defaults evaluation usage to empty when resultUsage is not defined', async () => {
+      const evaluation = createEvaluation('first')
+      mockRunDocumentAtCommit()
+
+      mocks.runEvaluationV2.mockResolvedValue(
+        Result.ok({
+          result: {
+            normalizedScore: 80,
+            hasPassed: true,
+            metadata: { actualOutput: 'test output' },
+            error: null,
+          },
+        }),
+      )
+      mocks.getEvaluationMetricSpecification.mockReturnValue({
+        resultReason: () => 'test reason',
+      })
+
+      const spans = [
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+      ]
+      mockSpansAndMetadata(spans)
+
+      const evaluate = await evaluateFactory({
+        trainset: emptyDataset,
+        valset: emptyDataset,
+        evaluation,
+        optimization: baseOptimization,
+        document: baseDocument,
+        commit: baseCommit,
+        workspace: baseWorkspace,
+      })
+
+      const result = await evaluate({
+        prompt: baseDocument.content,
+        example: baseExample,
+      })
+
+      expect(result.ok).toBe(true)
+      const trajectory = result.value!
+      expect(trajectory.usage.evaluation.totalTokens).toBe(0)
+    })
+
+    it('defaults both usages to empty on learnable trajectory from validation failure', async () => {
+      mocks.scanDocumentContent
+        .mockResolvedValueOnce(
+          Result.ok({
+            parameters: new Set<string>(),
+            config: { provider: 'openai', model: 'gpt-4o' },
+            instructions: 'test instructions',
+            errors: [],
+          }),
+        )
+        .mockResolvedValueOnce(
+          Result.ok({
+            parameters: new Set<string>(),
+            config: { provider: 'anthropic', model: 'claude-3' },
+            instructions: 'test instructions',
+            errors: [],
+          }),
+        )
+
+      const evaluation = createEvaluation('first')
+      const evaluate = await evaluateFactory({
+        trainset: emptyDataset,
+        valset: emptyDataset,
+        evaluation,
+        optimization: baseOptimization,
+        document: baseDocument,
+        commit: baseCommit,
+        workspace: baseWorkspace,
+      })
+
+      const result = await evaluate({
+        prompt: '---\nprovider: anthropic\nmodel: claude-3\n---\nHello',
+        example: baseExample,
+      })
+
+      expect(result.ok).toBe(true)
+      const trajectory = result.value!
+      expect(trajectory.usage.conversation).toEqual(EMPTY_USAGE())
+      expect(trajectory.usage.evaluation).toEqual(EMPTY_USAGE())
+      expect(trajectory.feedback).toContain(
+        'same provider and model as the baseline',
+      )
+    })
+
+    it('accumulates conversation usage across multi-turn simulation', async () => {
+      const simulationOpt = {
+        ...baseOptimization,
+        configuration: {
+          simulation: {
+            simulateToolResponses: true,
+            simulatedTools: [],
+            toolSimulationInstructions: '',
+            maxTurns: 3,
+            simulatedUserGoal: 'Test the agent',
+          },
+        },
+      }
+
+      const evaluation = createEvaluation('last')
+      mockRunDocumentAtCommit()
+      mockEvaluation(80, true, 'test reason', 50)
+
+      const turn2Usage = {
+        ...EMPTY_USAGE(),
+        promptTokens: 15,
+        completionTokens: 25,
+        totalTokens: 40,
+      }
+      const turn3Usage = {
+        ...EMPTY_USAGE(),
+        promptTokens: 20,
+        completionTokens: 35,
+        totalTokens: 55,
+      }
+
+      mocks.generateSimulatedUserAction
+        .mockResolvedValueOnce(
+          Result.ok({ action: 'continue', message: 'Turn 2' }),
+        )
+        .mockResolvedValueOnce(
+          Result.ok({ action: 'continue', message: 'Turn 3' }),
+        )
+
+      mocks.addMessages
+        .mockResolvedValueOnce(
+          Result.ok({
+            error: Promise.resolve(null),
+            messages: Promise.resolve([
+              {
+                role: 'assistant',
+                content: [{ type: 'text', text: 'Response 2' }],
+              },
+            ]),
+            runUsage: Promise.resolve(turn2Usage),
+          }),
+        )
+        .mockResolvedValueOnce(
+          Result.ok({
+            error: Promise.resolve(null),
+            messages: Promise.resolve([
+              {
+                role: 'assistant',
+                content: [{ type: 'text', text: 'Response 3' }],
+              },
+            ]),
+            runUsage: Promise.resolve(turn3Usage),
+          }),
+        )
+
+      const spans = [
+        createMockSpan(
+          'span-1',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:00:00Z'),
+        ),
+        createMockSpan(
+          'span-2',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:01:00Z'),
+        ),
+        createMockSpan(
+          'span-3',
+          SpanType.Prompt,
+          new Date('2024-01-01T00:02:00Z'),
+        ),
+      ]
+      mockSpansAndMetadata(spans)
+
+      const evaluate = await evaluateFactory({
+        trainset: emptyDataset,
+        valset: emptyDataset,
+        evaluation,
+        optimization: simulationOpt,
+        document: baseDocument,
+        commit: baseCommit,
+        workspace: baseWorkspace,
+      })
+
+      const result = await evaluate({
+        prompt: baseDocument.content,
+        example: baseExample,
+      })
+
+      expect(result.ok).toBe(true)
+      const trajectory = result.value!
+
+      expect(trajectory.usage.conversation.promptTokens).toBe(
+        MOCK_RUN_USAGE.promptTokens +
+          turn2Usage.promptTokens +
+          turn3Usage.promptTokens,
+      )
+      expect(trajectory.usage.conversation.completionTokens).toBe(
+        MOCK_RUN_USAGE.completionTokens +
+          turn2Usage.completionTokens +
+          turn3Usage.completionTokens,
+      )
+      expect(trajectory.usage.conversation.totalTokens).toBe(
+        MOCK_RUN_USAGE.totalTokens +
+          turn2Usage.totalTokens +
+          turn3Usage.totalTokens,
+      )
+    })
+  })
+
   describe('multi-turn simulation', () => {
     const simulationOptimization = {
       ...baseOptimization,
@@ -650,6 +957,12 @@ describe('evaluateFactory', () => {
             content: [{ type: 'text', text: 'Response 2' }],
           },
         ]),
+        runUsage: Promise.resolve({
+          ...EMPTY_USAGE(),
+          promptTokens: 5,
+          completionTokens: 15,
+          totalTokens: 20,
+        }),
       }
       mocks.addMessages.mockResolvedValue(Result.ok(addMessagesResult))
 
@@ -714,6 +1027,12 @@ describe('evaluateFactory', () => {
             content: [{ type: 'text', text: 'Response 2' }],
           },
         ]),
+        runUsage: Promise.resolve({
+          ...EMPTY_USAGE(),
+          promptTokens: 5,
+          completionTokens: 15,
+          totalTokens: 20,
+        }),
       }
       mocks.addMessages.mockResolvedValue(Result.ok(addMessagesResult))
 

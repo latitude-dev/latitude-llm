@@ -2,6 +2,7 @@ import { Message, ToolCall } from '@latitude-data/constants/messages'
 import { FinishReason, TextStreamPart, Tool } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
+import { Providers } from '.'
 import {
   LegacyVercelSDKVersion4Usage as LanguageModelUsage,
   LegacyResponseMessage,
@@ -10,7 +11,6 @@ import {
 import { ParameterType } from './config'
 import { LatitudeEventData } from './events'
 import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
-import { Providers } from '.'
 
 export type PromptSource = {
   commitUuid?: string
@@ -192,15 +192,16 @@ export type ToolResultPayload = {
 
 export * from './ai/vercelSdkV5ToV4'
 
-export const EMPTY_USAGE = () => ({
-  inputTokens: 0,
-  outputTokens: 0,
-  promptTokens: 0,
-  completionTokens: 0,
-  totalTokens: 0,
-  reasoningTokens: 0,
-  cachedInputTokens: 0,
-})
+export const EMPTY_USAGE = () =>
+  ({
+    inputTokens: 0,
+    outputTokens: 0,
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    reasoningTokens: 0,
+    cachedInputTokens: 0,
+  }) satisfies LanguageModelUsage
 
 export const languageModelUsageSchema = z.object({
   inputTokens: z.number(),
@@ -211,3 +212,18 @@ export const languageModelUsageSchema = z.object({
   reasoningTokens: z.number(),
   cachedInputTokens: z.number(),
 })
+
+export function sumUsage(...usages: LanguageModelUsage[]) {
+  return usages.reduce(
+    (acc, usage) => ({
+      inputTokens: acc.inputTokens + usage.inputTokens,
+      outputTokens: acc.outputTokens + usage.outputTokens,
+      promptTokens: acc.promptTokens + usage.promptTokens,
+      completionTokens: acc.completionTokens + usage.completionTokens,
+      totalTokens: acc.totalTokens + usage.totalTokens,
+      reasoningTokens: acc.reasoningTokens + usage.reasoningTokens,
+      cachedInputTokens: acc.cachedInputTokens + usage.cachedInputTokens,
+    }),
+    EMPTY_USAGE(),
+  )
+}
