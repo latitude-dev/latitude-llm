@@ -99,8 +99,6 @@ The resulting verdict is \`true\` if the response meets the criteria, \`false\` 
 
 ${promptTask()}
 
-Important: The verdict format below is YOUR output format as an evaluator. Do not factor it into your assessment of the assistant's response. The assistant being evaluated is not expected to produce a verdict or follow this format.
-
 You must give your verdict as a single JSON object with the following properties:
 - passed (boolean): \`true\` if the response meets the criteria, \`false\` otherwise.
 - reason (string): A string explaining your evaluation decision.

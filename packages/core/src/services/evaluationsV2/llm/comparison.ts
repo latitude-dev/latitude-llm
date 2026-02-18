@@ -155,8 +155,6 @@ The resulting verdict is an integer number between \`0\`, if the response compar
 
 ${promptTask()}
 
-Important: The verdict format below is YOUR output format as an evaluator. Do not factor it into your assessment of the assistant's response. The assistant being evaluated is not expected to produce a verdict or follow this format.
-
 You must give your verdict as a single JSON object with the following properties:
 - score (number): An integer number between \`0\` and \`100\`.
 - reason (string): A string explaining your evaluation decision.
