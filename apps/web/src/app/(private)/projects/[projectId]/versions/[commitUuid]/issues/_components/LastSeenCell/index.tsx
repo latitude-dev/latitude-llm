@@ -26,7 +26,7 @@ export function LastSeenCell({ issue }: { issue: SerializedIssue }) {
   return (
     <Tooltip
       trigger={
-        <Text.H5 align='right' color='foregroundMuted'>
+        <Text.H5 align='right' color='foregroundMuted' suppressHydrationWarning>
           {text}
         </Text.H5>
       }

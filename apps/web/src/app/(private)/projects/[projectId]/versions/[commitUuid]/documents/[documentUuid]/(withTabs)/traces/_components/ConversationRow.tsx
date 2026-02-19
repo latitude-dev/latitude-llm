@@ -54,7 +54,9 @@ export const ConversationRow = memo(function ConversationRow({
           <Checkbox fullWidth={false} checked={isRowSelected} />
         </TableCell>
         <TableCell>
-          <Text.H5 noWrap>{timeAgo({ input: conversation.startedAt })}</Text.H5>
+          <Text.H5 noWrap suppressHydrationWarning>
+            {timeAgo({ input: conversation.startedAt })}
+          </Text.H5>
         </TableCell>
         <TableCell>
           <CommitVersionCell commit={commit} isLoading={isLoadingCommits} />
