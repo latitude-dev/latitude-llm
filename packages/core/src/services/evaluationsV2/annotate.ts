@@ -7,6 +7,7 @@ import {
   EvaluationType,
   EvaluationV2,
   MainSpanType,
+  SpanStatus,
   SpanWithDetails,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
@@ -51,6 +52,12 @@ export async function annotateEvaluationV2<
   },
   transaction = new Transaction(),
 ) {
+  if (span.status === SpanStatus.Error) {
+    return Result.error(
+      new BadRequestError('Cannot annotate a trace that ended with an error'),
+    )
+  }
+
   const resultUuid = existingResultUuid ?? generateUUIDIdentifier()
   const isUpdate = !!existingResultUuid
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
