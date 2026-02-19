@@ -121,8 +121,9 @@ function TraceMessages({ span }: { span?: SpanWithDetails }) {
     )
   }
 
+  const isError = span?.status === 'error'
   const annotationSpan =
-    span && isMainSpan(span)
+    span && isMainSpan(span) && !isError
       ? (span as SpanWithDetails<MainSpanType>)
       : undefined
 
@@ -139,7 +140,7 @@ function TraceMessages({ span }: { span?: SpanWithDetails }) {
           messages={messages}
           parameters={parameters ? Object.keys(parameters) : undefined}
         />
-        <AnnotationFormWithoutContext />
+        {!isError && <AnnotationFormWithoutContext />}
       </div>
     </AnnotationsProvider>
   )

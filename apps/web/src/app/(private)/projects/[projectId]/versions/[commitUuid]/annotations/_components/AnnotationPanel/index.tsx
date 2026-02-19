@@ -103,13 +103,7 @@ export function AnnotationsPanel({
             <div className='flex flex-row items-center justify-between w-full pb-2'>
               <Text.H6M>Messages</Text.H6M>
             </div>
-            <AnnotationsProvider
-              project={project}
-              commit={commit}
-              span={span}
-              messages={conversation as unknown as Message[]}
-              onAnnotate={onAnnotate}
-            >
+            {span.status === 'error' ? (
               <MessageList
                 debugMode
                 messages={conversation as unknown as Message[]}
@@ -120,8 +114,27 @@ export function AnnotationsPanel({
                 }
                 toolContentMap={toolContentMap}
               />
-              <AnnotationFormWithoutContext />
-            </AnnotationsProvider>
+            ) : (
+              <AnnotationsProvider
+                project={project}
+                commit={commit}
+                span={span}
+                messages={conversation as unknown as Message[]}
+                onAnnotate={onAnnotate}
+              >
+                <MessageList
+                  debugMode
+                  messages={conversation as unknown as Message[]}
+                  parameters={
+                    spanMetadata && 'parameters' in spanMetadata
+                      ? Object.keys(spanMetadata.parameters)
+                      : []
+                  }
+                  toolContentMap={toolContentMap}
+                />
+                <AnnotationFormWithoutContext />
+              </AnnotationsProvider>
+            )}
           </div>
         ) : (
           <Text.H5 color='foregroundMuted'>
