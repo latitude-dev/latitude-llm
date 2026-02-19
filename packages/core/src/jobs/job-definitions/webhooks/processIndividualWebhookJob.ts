@@ -101,6 +101,10 @@ async function fetchProjectIdFromEvent(event: LatitudeEvent) {
     case 'commitPublished':
       return event.data.commit.projectId
     case 'spanCreated': {
+      if (event.data.projectId != null) {
+        return event.data.projectId
+      }
+
       const { spanId, traceId, workspaceId } = event.data
       const repo = new SpansRepository(workspaceId)
       const spanResult = await repo.get({ spanId, traceId })

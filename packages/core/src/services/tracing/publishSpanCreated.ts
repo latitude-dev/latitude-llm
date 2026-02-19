@@ -9,6 +9,7 @@ export type PublishSpanCreatedParams = {
   documentUuid: string | undefined
   spanType: SpanType
   parentId?: string | null
+  projectId?: number | null
 }
 
 export function publishSpanCreated({
@@ -19,6 +20,7 @@ export function publishSpanCreated({
   documentUuid,
   spanType,
   parentId,
+  projectId,
 }: PublishSpanCreatedParams) {
   return publisher.publishLater({
     type: 'spanCreated',
@@ -30,6 +32,7 @@ export function publishSpanCreated({
       documentUuid,
       spanType,
       isConversationRoot: spanType === SpanType.Prompt && !parentId,
+      projectId,
     },
   })
 }

@@ -465,6 +465,7 @@ export async function processSpansBulk(
           documentUuid: span.documentUuid,
           spanType: span.type,
           parentId: span.parentId,
+          projectId: span.projectId,
         }),
       )
     },

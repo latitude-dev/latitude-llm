@@ -262,6 +262,7 @@ async function createSpansFromLogData({
     documentUuid: document.documentUuid,
     spanType: SpanType.Prompt,
     parentId: null,
+    projectId: commit.projectId,
   })
 
   return {

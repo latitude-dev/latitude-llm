@@ -480,6 +480,7 @@ export type SpanCreatedEvent = LatitudeEventGeneric<
     documentUuid: string | undefined
     spanType: SpanType
     isConversationRoot: boolean
+    projectId?: number | null
   }
 >
 
