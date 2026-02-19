@@ -55,6 +55,7 @@ export type Common = {
   centered?: boolean
   animate?: boolean
   isItalic?: boolean
+  suppressHydrationWarning?: boolean
 }
 
 export type TextProps = {
@@ -98,6 +99,7 @@ const TextAtom = memo(
       monospace = false,
       centered = false,
       animate = false,
+      suppressHydrationWarning = false,
     },
     ref,
   ) {
@@ -115,6 +117,7 @@ const TextAtom = memo(
     return (
       <Comp
         ref={ref}
+        suppressHydrationWarning={suppressHydrationWarning}
         title={
           ellipsis && typeof children === 'string' && showNativeTitle
             ? children
