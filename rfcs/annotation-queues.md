@@ -11,19 +11,20 @@ Feature Flag: `annotationQueues`
 ## 1. Problem Statement
 
 Teams need a way to organize and distribute conversation review work among team members. Currently, there's no structured way to:
-- Group sessions (multi-turn conversations) for review
-- Assign sessions to specific team members (annotators)
-- Track annotation progress across a queue of sessions
-- Filter and automatically collect sessions matching metric criteria (cost, tokens, duration)
+- Group traces for review
+- Assign traces to specific team members (annotators)
+- Track annotation progress across a queue of traces
+- Filter and automatically collect traces matching metric criteria (cost, tokens, duration)
 
 ## 2. Goals
 
-- Provide a project-level view of all sessions (conversations) with metric-based filtering
-- Enable creation of annotation queues that target sessions by aggregated metrics (cost, tokens, duration, turn count)
-- Support dynamic filtering to auto-populate queues with matching sessions
+- Provide a project-level view of all traces with metric-based filtering
+- Enable creation of annotation queues that target traces by metrics (cost, tokens, duration)
+- Support dynamic filtering to auto-populate queues with matching traces
 - Allow detailed annotation of conversations (message-level, global)
-- Track completion status of sessions in queues
+- Track completion status of traces in queues
 - Generate project-scoped issues from annotations
+- Support multi-turn conversations when `session_id` is provided (expand to show full session)
 
 ## 3. Non-Goals
 
@@ -39,9 +40,9 @@ Annotation queues build on Latitude's telemetry model:
 
 1. **One-line install**: Users enable telemetry without manual `.capture()` or span wrapping
 2. **Automatic observability**: Metrics and traces are captured out of the box
-3. **Session-based grouping**: Traces are grouped by `session_id` to form multi-turn conversations
-   - Users can provide `session_id` in telemetry to group related traces
-   - Traces without `session_id` get a fallback: `session_id = trace_id` (single-turn)
+3. **Optional session grouping**: Users can provide `session_id` in telemetry to group related traces into multi-turn conversations
+   - When a trace has `session_id`, the annotation UI expands to show the full conversation
+   - Traces without `session_id` are displayed as single-turn conversations
 
 ### 4.2 Required Schema Change
 
@@ -77,9 +78,9 @@ Rationale: High-volume analytics queries, existing evaluation infrastructure.
 │  │  Filters: Cost | Tokens | Duration | Time Range                      │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  [ ] Session 1  │ 3 turns │ Cost: $0.12  │ Duration: 45s            │   │
-│  │  [x] Session 2  │ 1 turn  │ Cost: $0.05  │ Duration: 12s            │   │
-│  │  [x] Session 3  │ 5 turns │ Cost: $0.31  │ Duration: 2m             │   │
+│  │  [ ] Trace abc123  │ Cost: $0.12  │ Tokens: 1.2k │ Duration: 45s    │   │
+│  │  [x] Trace def456  │ Cost: $0.05  │ Tokens: 0.8k │ Duration: 12s    │   │
+│  │  [x] Trace ghi789  │ Cost: $0.31  │ Tokens: 3.1k │ Duration: 2m     │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -100,13 +101,13 @@ Rationale: High-volume analytics queries, existing evaluation infrastructure.
 │  │  Annotators: [Alice] [Bob] [x] [+ Add member]                       │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Dynamic Filters (auto-add matching sessions):                       │   │
+│  │  Dynamic Filters (auto-add matching traces):                         │   │
 │  │  ┌─────────────────────────────────────────────────────────────┐    │   │
 │  │  │ [Cost]       [less_than] [0.50]                 [x Remove]  │    │   │
 │  │  │ [Duration]   [greater_than] [30s]               [x Remove]  │    │   │
 │  │  │ [+ Add filter]                                              │    │   │
 │  │  └─────────────────────────────────────────────────────────────┘    │   │
-│  │  Sample Rate: [====|----] 25% of matching sessions                  │   │
+│  │  Sample Rate: [====|----] 25% of matching traces                    │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                          [Cancel] [Create Queue]            │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -185,17 +186,17 @@ CREATE TABLE annotation_queue_items (
   id BIGSERIAL PRIMARY KEY,
   annotation_queue_id BIGINT NOT NULL REFERENCES annotation_queues(id) ON DELETE CASCADE,
   workspace_id BIGINT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  session_id VARCHAR(64) NOT NULL,     -- Groups multi-turn conversations
+  trace_id VARCHAR(64) NOT NULL,       -- Reference to trace in ClickHouse
   status VARCHAR(32) NOT NULL DEFAULT 'pending',  -- pending | in_progress | completed
   completed_at TIMESTAMP,
   completed_by_membership_id BIGINT REFERENCES memberships(id) ON DELETE SET NULL,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(annotation_queue_id, session_id)  -- One queue item per session
+  UNIQUE(annotation_queue_id, trace_id)  -- One queue item per trace
 );
 ```
 
-**Note**: `session_id` is the primary identifier. A session groups multiple traces that form a multi-turn conversation. The full conversation is built by querying all traces with this `session_id`.
+**Note**: `trace_id` is the stored reference. When displaying, we check if the trace has a `session_id` and expand to show the full multi-turn conversation if available.
 
 ### 5.2 Annotations as Evaluation Results
 
@@ -211,32 +212,32 @@ CREATE TABLE annotation_queue_items (
 2. **Annotation → Evaluation Result**: Each annotation creates an `evaluation_result_v2` record
 3. **No Draft Versioning**: The linked evaluation follows a single branch of changes with warnings when editing
 
-#### Session-Based Conversation Model
+#### Conversation Model
 
 **Hierarchy:**
-- **Session** (`session_id`) - Groups multiple traces into a multi-turn conversation
-- **Trace** (`trace_id`) - One request/response cycle within a session
+- **Trace** (`trace_id`) - One request/response cycle (stored in queue items)
+- **Session** (`session_id`) - Optional grouping of traces into multi-turn conversation
 - **Span** (`span_id`) - One operation within a trace (prompt, completion, tool, etc.)
 
 ```
-Session (session_id) - Full multi-turn conversation
-  └── Trace 1 (trace_id) - First user interaction
-        └── Spans (prompt, completion, tools...)
-              └── Messages (from completion span metadata)
-  └── Trace 2 (trace_id) - Follow-up interaction
-        └── Spans...
-  └── Trace N...
+Trace (trace_id) - Stored in annotation_queue_items
+  └── Spans (prompt, completion, tools...)
+        └── Messages (from completion span metadata)
+  └── session_id (optional) - If present, can expand to full conversation
+        └── Other traces with same session_id
 ```
 
-**Annotation queue items reference `session_id`**:
-- The full conversation is built by querying all traces with this session_id
-- Annotations target messages within the assembled conversation
-- No direct link to spans - we build the view from traces
+**Annotation queue items reference `trace_id`**:
+- `trace_id` always exists - no migration needed
+- When displaying, check if trace has `session_id`
+- If `session_id` exists, expand to show full multi-turn conversation
+- If no `session_id`, show just that trace (single-turn)
 
-**Fallback session_id:**
-- Traces without `session_id` get a generated fallback: `session_id = trace_id`
-- This ensures all traces can be grouped, even single-turn ones
-- Existing traces without session_id need backfill (see Open Questions)
+**Benefits of this approach:**
+- Works with existing data immediately
+- No ClickHouse schema changes required as prerequisite
+- Multi-turn conversations work when `session_id` is provided
+- Graceful fallback for traces without `session_id`
 
 #### Schema Changes to ClickHouse `evaluation_results`
 
@@ -289,20 +290,19 @@ ORDER BY created_at ASC;
 
 ### 5.3 Filter Schema (JSONB)
 
-Filters are stored as JSONB in `annotation_queues.filters`. Filters target **sessions** (aggregated from traces).
+Filters are stored as JSONB in `annotation_queues.filters`. Filters target **traces**.
 
 ```typescript
-// Session-level metrics (aggregated across all traces in session)
+// Trace-level metrics (aggregated across all spans in trace)
 type MetricProperty =
-  | 'cost'           // Total cost of session
-  | 'tokens'         // Total tokens in session
-  | 'duration'       // Total duration of session
-  | 'turnCount'      // Number of traces in session
+  | 'cost'           // Total cost of trace
+  | 'tokens'         // Total tokens in trace
+  | 'duration'       // Duration of trace (ms)
 
 type NumberComparator = 'equals' | 'not_equals' | 'less_than' | 'less_than_or_equal' | 'greater_than' | 'greater_than_or_equal' | 'between'
 
 type Filter =
-  | { property: 'cost' | 'tokens' | 'duration' | 'turnCount'; comparator: NumberComparator; value: number | { min: number; max: number } }
+  | { property: 'cost' | 'tokens' | 'duration'; comparator: NumberComparator; value: number | { min: number; max: number } }
 
 type FiltersConfig = {
   filters: Filter[]
@@ -310,13 +310,12 @@ type FiltersConfig = {
 }
 ```
 
-Example stored filters (targeting expensive multi-turn sessions):
+Example stored filters (targeting expensive traces):
 
 ```json
 {
   "filters": [
     { "property": "cost", "comparator": "greater_than", "value": 0.10 },
-    { "property": "turnCount", "comparator": "greater_than", "value": 3 },
     { "property": "duration", "comparator": "less_than", "value": 300000 }
   ],
   "sampleRate": 25
@@ -332,7 +331,7 @@ Filters translate to URL query parameters for shareable links and browser naviga
 /projects/123/traces?cost=0.10&cost_op=gt
 
 # Multiple filters
-/projects/123/traces?cost=0.10&cost_op=gt&turnCount=3&turnCount_op=gt
+/projects/123/traces?cost=0.10&cost_op=gt&duration=60000&duration_op=lt
 
 # Range filter (between)
 /projects/123/traces?tokens_min=100&tokens_max=5000
@@ -343,7 +342,7 @@ Filters translate to URL query parameters for shareable links and browser naviga
 | Filter Type | URL Format | Example |
 |-------------|-----------|---------|
 | Number less_than | `{prop}={value}&{prop}_op=lt` | `cost=0.10&cost_op=lt` |
-| Number greater_than | `{prop}={value}&{prop}_op=gt` | `turnCount=3&turnCount_op=gt` |
+| Number greater_than | `{prop}={value}&{prop}_op=gt` | `duration=60000&duration_op=gt` |
 | Number between | `{prop}_min={min}&{prop}_max={max}` | `tokens_min=100&tokens_max=5000` |
 
 **Operator abbreviations**: `eq`, `neq`, `lt`, `lte`, `gt`, `gte`
@@ -352,25 +351,25 @@ Filters translate to URL query parameters for shareable links and browser naviga
 
 ### 6.1 Project-Level Traces Page (`/projects/[projectId]/traces`)
 
-A new project-level page showing all sessions (conversations) grouped by `session_id`.
+A new project-level page showing all traces.
 
 **Features:**
-- Sessions table with aggregated metrics per session
-- Filter bar for session-level metrics
-- Checkbox selection for sessions
-- Floating action bar when sessions selected → "Add to Annotation Queue"
+- Traces table with aggregated metrics per trace
+- Filter bar for trace-level metrics
+- Checkbox selection for traces
+- Floating action bar when traces selected → "Add to Annotation Queue"
 - Pagination with keyset cursor
 
 **Table Columns:**
 
 | Column | Description |
 |--------|-------------|
-| Session ID | Identifier (truncated, clickable to expand) |
-| Turns | Number of traces in session |
-| Total Cost | Sum of cost across all traces |
-| Total Tokens | Sum of tokens across all traces |
-| Duration | Time from first to last trace |
-| Started At | Timestamp of first trace |
+| Trace ID | Identifier (truncated) |
+| Cost | Total cost of trace |
+| Tokens | Total tokens in trace |
+| Duration | Time from start to end |
+| Started At | Timestamp |
+| Session | Badge if part of multi-turn session |
 
 **Filters:**
 
@@ -379,7 +378,6 @@ A new project-level page showing all sessions (conversations) grouped by `sessio
 | Cost | number | lt, gt, between | Number input / Range slider |
 | Tokens | number | lt, gt, between | Number input / Range slider |
 | Duration | number | lt, gt, between | Number input / Range slider |
-| Turn Count | number | lt, gt, between | Number input |
 
 ### 6.2 Annotation Queues List Page (`/projects/[projectId]/annotation-queues`)
 
@@ -394,7 +392,7 @@ Lists all annotation queues for the project.
 - Created date
 - Actions (Edit, Delete)
 
-**Edit Behavior**: Editing a running queue shows a warning that changes will affect future session matching but not existing items.
+**Edit Behavior**: Editing a running queue shows a warning that changes will affect future trace matching but not existing items.
 
 ### 6.3 Annotation Queue Detail Page (`/projects/[projectId]/annotation-queues/[uuid]`)
 
@@ -403,21 +401,20 @@ The main annotation interface with a split-pane layout:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  Queue: Customer Support Reviews                    Progress: 12/50 (24%)   │
+│  [Session: 3 turns] ← shown if trace has session_id                         │
 ├───────────────────────────────────────────┬─────────────────────────────────┤
 │                                           │                                 │
-│  ── Turn 1 ──────────────────────────────│  Annotations                    │
-│  ┌─────────────────────────────────────┐  │  ─────────────────────────────  │
-│  │ User: How do I reset my password?   │  │                                 │
-│  └─────────────────────────────────────┘  │  📌 Global Annotation           │
-│                                           │  "Overall good conversation..." │
-│  ┌─────────────────────────────────────┐  │  [Edit] [Delete]                │
-│  │ Assistant: To reset your password,  │  │                                 │
+│  ┌─────────────────────────────────────┐  │  Annotations                    │
+│  │ User: How do I reset my password?   │  │  ─────────────────────────────  │
+│  └─────────────────────────────────────┘  │                                 │
+│                                           │  📌 Global Annotation           │
+│  ┌─────────────────────────────────────┐  │  "Overall good response..."     │
+│  │ Assistant: To reset your password,  │  │  [Edit] [Delete]                │
 │  │ please follow these steps:          │◄─┼── 📍 Message #2                 │
 │  │ 1. Go to Settings > Account         │  │  "Step 2 is incorrect..."       │
 │  │ 2. Click "Reset Password"           │  │  [Edit] [Delete]                │
 │  └─────────────────────────────────────┘  │                                 │
 │                                           │                                 │
-│  ── Turn 2 ──────────────────────────────│                                 │
 │  ┌─────────────────────────────────────┐  │                                 │
 │  │ User: Thanks, that worked!          │  │                                 │
 │  └─────────────────────────────────────┘  │                                 │
@@ -427,22 +424,22 @@ The main annotation interface with a split-pane layout:
 │  └─────────────────────────────────────┘  │                                 │
 │                                           │                                 │
 ├───────────────────────────────────────────┴─────────────────────────────────┤
-│  [← Previous]  Session 5 of 50  [Next →]            [Mark as Completed ✓]   │
+│  [← Previous]  Trace 5 of 50  [Next →]              [Mark as Completed ✓]   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Features:**
 
 1. **Conversation Display (Left Pane)**
-   - Full multi-turn conversation assembled from all traces in the session
-   - Visual separation between turns (traces)
+   - If trace has `session_id`: show full multi-turn conversation (all traces in session)
+   - If no `session_id`: show just this trace's conversation
    - Clickable messages to add message-level annotations
    - Visual indicators for annotated messages
 
 2. **Annotations Sidebar (Right Pane)**
-   - Lists all annotations for current session
+   - Lists all annotations for current trace/conversation
    - Two types of annotations:
-     - **Global**: Session-level annotation
+     - **Global**: Trace/conversation-level annotation
      - **Message**: Linked to specific message (click scrolls to message)
    - **N annotations per target**: Unlimited annotations per message
    - Different annotators can add their own annotations
@@ -469,37 +466,35 @@ Appears when user clicks "Add to Annotation Queue" from traces page.
 
 **Filter Builder UI:**
 - Metric filters with comparators and values
-- Preview of matching session count
-- Warning when editing existing queue: "Changes will affect future session matching"
+- Preview of matching trace count
+- Warning when editing existing queue: "Changes will affect future trace matching"
 
 ## 7. Dynamic Filters
 
 ### 7.1 How Dynamic Filters Work
 
-1. **Initial Population**: Sessions matching filters are added when queue is created
-2. **Continuous Population**: A background job monitors new sessions
-3. **Sample Rate**: Only `sampleRate`% of matching sessions are added
-4. **Deduplication**: Sessions already in queue are not re-added
+1. **Initial Population**: Traces matching filters are added when queue is created
+2. **Continuous Population**: A background job monitors new traces
+3. **Sample Rate**: Only `sampleRate`% of matching traces are added
+4. **Deduplication**: Traces already in queue are not re-added
 
 ### 7.2 Filter Evaluation
 
-Filters are evaluated against aggregated session data from ClickHouse:
+Filters are evaluated against trace data from ClickHouse:
 
 ```sql
 SELECT 
-  session_id,
+  trace_id,
   SUM(cost) as total_cost,
   SUM(tokens_prompt + tokens_completion) as total_tokens,
-  MAX(ended_at) - MIN(started_at) as duration,
-  COUNT(DISTINCT trace_id) as turn_count
+  MAX(ended_at) - MIN(started_at) as duration
 FROM spans
 WHERE workspace_id = {workspaceId}
   AND project_id = {projectId}
   AND type IN ('prompt', 'external', 'chat')  -- Main span types
-GROUP BY session_id
+GROUP BY trace_id
 HAVING 
   total_cost > {minCost}
-  AND turn_count > {minTurns}
 ORDER BY MAX(started_at) DESC
 LIMIT {limit}
 ```
@@ -507,12 +502,12 @@ LIMIT {limit}
 ### 7.3 Sample Rate Implementation
 
 ```typescript
-function shouldIncludeSession(sampleRate: number): boolean {
+function shouldIncludeTrace(sampleRate: number): boolean {
   return Math.random() * 100 < sampleRate
 }
 ```
 
-Note: Random sampling is sufficient since we only evaluate new sessions once and the unique constraint `(annotation_queue_id, session_id)` prevents duplicates.
+Note: Random sampling is sufficient since we only evaluate new traces once and the unique constraint `(annotation_queue_id, trace_id)` prevents duplicates.
 
 ## 8. Routes Structure
 
@@ -531,10 +526,10 @@ Note: Random sampling is sufficient since we only evaluate new sessions once and
 - `create.ts` - Create queue + find-or-create project-level evaluation
 - `update.ts` - Update queue metadata, members, filters
 - `destroy.ts` - Delete queue and all items (evaluation and results preserved)
-- `addSessions.ts` - Manually add sessions to queue (by session_id)
-- `removeSessions.ts` - Remove sessions from queue
+- `addTraces.ts` - Manually add traces to queue (by trace_id)
+- `removeTraces.ts` - Remove traces from queue
 - `updateItemStatus.ts` - Mark item as pending/in_progress/completed
-- `evaluateFilters.ts` - Check if session matches queue filters
+- `evaluateFilters.ts` - Check if trace matches queue filters
 
 ### 9.2 Annotation Services
 
@@ -580,11 +575,11 @@ This automatically uses existing infrastructure:
 
 ### 9.3 Background Jobs
 
-- `populateQueueJob.ts` - Process dynamic filters for new sessions
+- `populateQueueJob.ts` - Process dynamic filters for new traces
 - Triggered by `spanCreated` event (for main span types)
 - Checks all queues with filters for the workspace/project
-- Aggregates session metrics from traces
-- Adds matching sessions respecting sample rate
+- Evaluates trace metrics against filters
+- Adds matching traces respecting sample rate
 
 ## 10. Queries
 
@@ -592,26 +587,21 @@ This automatically uses existing infrastructure:
 
 - `findByProject.ts` - List queues for a project with stats
 - `findByUuid.ts` - Get single queue with members and linked evaluation
-- `findItems.ts` - Get queue items (sessions) with pagination
+- `findItems.ts` - Get queue items (traces) with pagination
 - `findNextItem.ts` - Get next pending item (for keyboard navigation)
 - `getProgress.ts` - Get queue completion statistics
 
 ### 10.2 ClickHouse Queries
 
-- `getSessionsByProject.ts` - Fetch sessions with aggregated metrics
-- `getSessionConversation.ts` - Assemble full conversation from session traces
-- `evaluateQueueFilters.ts` - Find sessions matching filter criteria
-- `getAnnotationsBySession.ts` - Get evaluation results for a session
+- `getTracesByProject.ts` - Fetch traces with metrics (optionally grouped by session_id)
+- `getTraceConversation.ts` - Assemble conversation (expand to session if session_id exists)
+- `evaluateQueueFilters.ts` - Find traces matching filter criteria
+- `getAnnotationsByTrace.ts` - Get evaluation results for a trace
 
 ## 11. Implementation Phases
 
 ### Phase 0: Prerequisites
 - [ ] **Make `documentUuid` nullable in `evaluationVersions`** (PostgreSQL migration)
-- [ ] **Add `session_id` column to ClickHouse `spans` table**
-- [ ] Update span ingestion to:
-  - [ ] Accept `session_id` from telemetry
-  - [ ] Generate fallback `session_id = trace_id` when not provided
-- [ ] Backfill existing spans without `session_id` (set `session_id = trace_id`)
 
 ### Phase 1a: PostgreSQL Schema
 - [ ] Feature flag setup (`annotationQueues`)
@@ -625,12 +615,14 @@ This automatically uses existing infrastructure:
 ### Phase 1b: Manual Queue Management (Backoffice)
 - [ ] Backoffice page to list annotation queues
 - [ ] Backoffice page to create/edit annotation queues
-- [ ] Backoffice action to manually add sessions to queues (by session_id)
+- [ ] Backoffice action to manually add traces to queues (by trace_id)
 - [ ] Queue detail page (basic) - list items, show status
 - [ ] **Goal**: Experience the annotation workflow without filters/traces page
 
 ### Phase 2: Annotation Interface
-- [ ] Queue detail page with conversation display (assembled from session traces)
+- [ ] Queue detail page with conversation display
+  - [ ] Assemble conversation from trace spans
+  - [ ] If trace has `session_id`, expand to show full session
 - [ ] Annotation creation (global, message-level)
 - [ ] Store annotations using existing `createEvaluationResultV2`
 - [ ] Annotations sidebar UI
@@ -638,9 +630,9 @@ This automatically uses existing infrastructure:
 - [ ] Navigation (previous/next)
 
 ### Phase 3: Project-Level Traces Page
-- [ ] `/projects/[projectId]/traces` page (grouped by session_id)
-- [ ] Basic filters (cost, tokens, duration, turn count)
-- [ ] Session selection with checkbox
+- [ ] `/projects/[projectId]/traces` page
+- [ ] Basic filters (cost, tokens, duration)
+- [ ] Trace selection with checkbox
 - [ ] "Add to Annotation Queue" modal
 - [ ] Pagination
 
@@ -674,19 +666,12 @@ This automatically uses existing infrastructure:
    - Soft-delete queue (preserve history, hide from UI)
    - Delete queue, keep evaluation (results remain valid)
 
-4. **Session ID Backfill Strategy**: Existing spans don't have `session_id`. Options:
-   - **Option A**: Backfill all existing spans with `session_id = trace_id` (one-time migration)
-   - **Option B**: Only backfill spans in projects that enable annotation queues
-   - **Option C**: Handle NULL session_id in queries (treat as single-turn)
-   
-   **Recommendation**: Option A is cleanest - ensures consistent data model.
+4. **Cross-Project Queues**: Should annotation queues be project-scoped only, or workspace-level?
 
-5. **Session ID Generation for New Traces**: When telemetry doesn't provide `session_id`:
-   - Generate deterministic fallback: `session_id = trace_id`
-   - This ensures every trace belongs to exactly one session
-   - Single-turn conversations = session with one trace
-
-6. **Cross-Project Queues**: Should annotation queues be project-scoped only, or workspace-level?
+5. **Session Expansion Behavior**: When a trace has `session_id`, should we:
+   - Always expand to show full session conversation
+   - Show a toggle to expand/collapse
+   - Let the user choose in queue settings
 
 ## 13. Future Considerations
 
