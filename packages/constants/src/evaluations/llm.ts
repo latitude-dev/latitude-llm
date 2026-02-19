@@ -217,19 +217,14 @@ export const LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION = `
   These are the available variables:
   - {{ actualOutput }} (string): The actual output to evaluate
   - {{ expectedOutput }} (string/undefined): The, optional, expected output to compare against
-  - {{ conversation }} (string): The full conversation of the evaluated log
+  - {{ conversation }} (string): The full conversation of the evaluated trace
 
-  - {{ messages }} (array of objects): All the messages of the conversation
-  - {{ cost }} (number): The cost, in cents, of the evaluated log
-  - {{ tokens }} (number): The tokens of the evaluated log
-  - {{ duration }} (number): The duration, in seconds, of the evaluated log
+  - {{ cost }} (number): The cost, in millicents, of the evaluated trace
+  - {{ tokens }} (object): The token usage of the evaluated trace ({ prompt, cached, reasoning, completion })
+  - {{ duration }} (number): The duration, in milliseconds, of the evaluated trace
 
-  More info on messages format in: https://docs.latitude.so/promptl/syntax/messages
-
-  - {{ prompt }} (string): The prompt of the evaluated log
-  - {{ parameters }} (object): The parameters of the evaluated log
-
-  More info on parameters format in: https://docs.latitude.so/promptl/syntax/configuration
+  - {{ prompt }} (string): The prompt of the evaluated trace
+  - {{ parameters }} (object): The parameters of the evaluated trace
 */
 `.trim()
 
@@ -317,16 +312,11 @@ export const LLM_EVALUATION_PROMPT_PARAMETERS = [
   'actualOutput',
   'expectedOutput',
   'conversation',
-  'cost',
   'tokens',
+  'cost',
   'duration',
-  'config',
-  'toolCalls',
-  'messages',
   'prompt',
   'parameters',
-  'context',
-  'response',
 ] as const
 
 export type LlmEvaluationPromptParameter =

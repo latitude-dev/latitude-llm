@@ -8,7 +8,7 @@ import { DocumentVersion } from '@latitude-data/core/schema/models/types/Documen
 
 import { EVALUATION_EMPTY_INPUTS, EvaluationInputsByDocument } from './types'
 import { getDocState } from './utils'
-import { useEvaluatedLogInputs } from './logInputParamaters'
+import { useEvaluatedLogInputs } from './logInputParameters'
 
 import {
   EvaluationType,

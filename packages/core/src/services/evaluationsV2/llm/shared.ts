@@ -1,4 +1,3 @@
-import type { Message } from '@latitude-data/constants/messages'
 import {
   ChainStepResponse,
   MainSpanType,
@@ -6,6 +5,7 @@ import {
 } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { Message } from '@latitude-data/constants/messages'
 import { Adapters, Chain, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
 import {
@@ -28,9 +28,9 @@ import {
   type LatitudeTelemetry,
   telemetry as realTelemetry,
 } from '../../../telemetry'
+import { estimateCost } from '../../ai'
 import { runChain } from '../../chains/run'
 import { parsePrompt } from '../../documents/parse'
-import { estimateCost } from '../../ai'
 
 const TO_MILLICENTS_FACTOR = 100_000
 
@@ -50,9 +50,13 @@ Important: The verdict you are asked to produce is YOUR output as an evaluator. 
   \`\`\`
 
   Finally, here is some additional metadata about the conversation. It may or may not be relevant for the evaluation.
-  - Cost: {{ cost }} cents.
-  - Tokens: {{ tokens }} tokens.
-  - Duration: {{ duration }} seconds.
+  - Cost: \${{ cost / ${TO_MILLICENTS_FACTOR} }}.
+  - Tokens:
+    - Prompt: {{ tokens.prompt }} tokens.
+    - Cached: {{ tokens.cached }} tokens.
+    - Reasoning: {{ tokens.reasoning }} tokens.
+    - Completion: {{ tokens.completion }} tokens.
+  - Duration: {{ duration / 1000 }} seconds.
 </user>
 `.trim()
 }
@@ -79,9 +83,14 @@ export function buildEvaluationParameters({
       span.metadata && 'template' in span.metadata
         ? span.metadata.template
         : '',
-    cost: completionSpan?.metadata?.cost,
-    tokens: completionSpan?.metadata?.tokens,
-    duration: completionSpan?.duration,
+    cost: completionSpan?.metadata?.cost ?? 0,
+    tokens: completionSpan?.metadata?.tokens ?? {
+      prompt: 0,
+      cached: 0,
+      reasoning: 0,
+      completion: 0,
+    },
+    duration: completionSpan?.duration ?? 0,
     actualOutput,
     ...(expectedOutput !== undefined && { expectedOutput }),
     conversation: formatConversation(conversation),

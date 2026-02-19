@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-import { useEvaluationParameters } from '../../../hooks/useEvaluationParamaters/index'
+import { useEvaluationParameters } from '../../../hooks/useEvaluationParameters/index'
 
 import {
   EvaluationType,

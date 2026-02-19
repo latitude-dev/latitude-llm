@@ -1,7 +1,7 @@
 import { ChangeEvent, useCallback, useEffect, useState } from 'react'
 import { type LlmEvaluationPromptParameter } from '@latitude-data/constants'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { type UseEvaluationParameters } from '../../../../hooks/useEvaluationParamaters'
+import { type UseEvaluationParameters } from '../../../../hooks/useEvaluationParameters'
 import { useDebouncedInput } from '../useDebouncedInput'
 
 export function DebouncedTextArea({
