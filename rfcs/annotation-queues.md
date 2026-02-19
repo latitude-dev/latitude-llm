@@ -52,34 +52,50 @@ Annotation queues build on Latitude's telemetry model:
 
 **Required change for this RFC**: Make `documentUuid` NULLABLE in `evaluationVersions`.
 
-**How commitId works for annotation queues:**
+---
 
-Annotation queue evaluations use the **HEAD commit of the merged branch (main)**:
+**⚠️ OPEN DISCUSSION: How should `commitId` work for annotation queues?**
 
-```typescript
-// When creating an annotation queue
-const headCommit = await getHeadCommit(project)  // HEAD of merged branch
-const evaluation = await findOrCreateEvaluation({
-  commitId: headCommit.id,      // Always use HEAD of main
-  documentUuid: null,            // Project-scoped (nullable)
-  type: 'human',
-  metric: 'rating',
-  // ...
-})
-```
+The current evaluation system assumes:
+1. Evaluations are created on draft branches
+2. Drafts are merged to make evaluations "live"
+3. The "live" commit is what runs in production
 
-**Why this works:**
-- Annotation queues are **project-scoped**, not branch-scoped
-- They don't participate in draft-based versioning (evaluations on draft branches)
-- The evaluation is created once on HEAD and remains there
-- All annotation results reference this single evaluation
+**Questions for team discussion:**
 
-**What happens when new commits are merged?**
-- The evaluation stays on the original HEAD commit
-- This is fine because:
-  - Document-scoped evaluations use commits for versioning (different config per branch)
-  - Project-scoped evaluations (annotation queues) don't need versioning - they're always "current"
-  - The `evaluationUuid` is what links annotations, not the commit
+1. **How do we create a project-level evaluation on a merged commit?**
+   - Option A: Create a draft, add the HITL evaluation, merge it
+   - Option B: Allow creating evaluations directly on merged commits (bypass draft flow)
+   - Option C: Always work with a "draft" version for annotation queues
+
+2. **For telemetry-only users (no prompt manager), versioning is irrelevant:**
+   - There are no documents to version
+   - There's no concept of "live" vs "draft" for their traces
+   - The commit system doesn't map to their mental model
+   - Should we abstract this away entirely for project-level evaluations?
+
+3. **The "live" commit concept doesn't apply to telemetry traces:**
+   - Telemetry traces come from external systems via SDK
+   - They're not associated with a specific commit
+   - Pointing to "live" commit for evaluation results feels artificial
+
+4. **Issue histograms also have commit/document dependency:**
+   - `issueHistograms` table has `documentUuid` (NOT NULL) and `commitId` (NOT NULL)
+   - Issues are project-scoped, but histograms track counts per document per commit
+   - For annotation queue issues (project-scoped, no document), how do we track histograms?
+   - May need to make `documentUuid` and `commitId` nullable in `issueHistograms` too
+
+5. **Possible approaches:**
+   - **Approach A**: Use HEAD of merged branch, accept the mismatch
+   - **Approach B**: Make `commitId` nullable for project-level evaluations (bigger change)
+   - **Approach C**: Create a special "project commit" that never changes
+   - **Approach D**: Rethink - maybe annotation queues shouldn't use `evaluationVersions` at all?
+   - **Approach E**: Make both `documentUuid` and `commitId` nullable across evaluation + issue tables
+
+**Current assumption (to be validated):**
+We use HEAD of merged branch, but this needs team discussion.
+
+---
 
 This is a **prerequisite task** for annotation queues to work.
 
@@ -512,7 +528,7 @@ Appears when user clicks "Add to Annotation Queue" from traces page.
 Filters are evaluated against trace data from ClickHouse:
 
 ```sql
-SELECT 
+SELECT
   trace_id,
   SUM(cost) as total_cost,
   SUM(tokens_prompt + tokens_completion) as total_tokens,
@@ -522,7 +538,7 @@ WHERE workspace_id = {workspaceId}
   AND project_id = {projectId}
   AND type IN ('prompt', 'external', 'chat')  -- Main span types
 GROUP BY trace_id
-HAVING 
+HAVING
   total_cost > {minCost}
 ORDER BY MAX(started_at) DESC
 LIMIT {limit}
@@ -631,8 +647,11 @@ This automatically uses existing infrastructure:
 
 ## 11. Implementation Phases
 
-### Phase 0: Prerequisites
+### Phase 0: Prerequisites (Schema Changes)
 - [ ] **Make `documentUuid` nullable in `evaluationVersions`** (PostgreSQL migration)
+- [ ] **Make `documentUuid` nullable in `issues`** (PostgreSQL migration)
+- [ ] **Make `documentUuid` nullable in `issueHistograms`** (PostgreSQL migration)
+- [ ] **Decide on `commitId` strategy** (see discussion in section 4.2) - may need to make nullable too
 
 ### Phase 1a: PostgreSQL Schema
 - [ ] Feature flag setup (`annotationQueues`)
@@ -684,7 +703,7 @@ This automatically uses existing infrastructure:
 ## 12. Open Questions
 
 1. **Evaluation Metric for Annotations**: ✅ **Resolved** - HITL Rating by default.
-   
+
    When creating an annotation queue, we find-or-create a project-level evaluation:
    - `documentUuid = NULL` (project-scoped)
    - `type = 'human'`, `metric = 'rating'`
@@ -704,10 +723,11 @@ This automatically uses existing infrastructure:
    - Show a toggle to expand/collapse
    - Let the user choose in queue settings
 
-6. **Commit Strategy for Project Evaluations**: We use HEAD of merged branch. Consider:
-   - What if HEAD changes after evaluation is created? (Answer: evaluation stays on original commit, linked by evaluationUuid)
-   - Should we update to new HEAD periodically? (Probably not - adds complexity for no benefit)
-   - What about projects with no merged commits yet? (Use the initial commit)
+6. **Commit Strategy for Project Evaluations**: See detailed discussion in section 4.2. Key questions:
+   - How do we create evaluations on merged commits?
+   - Should `commitId` be nullable for project-level evaluations?
+   - Does the commit system make sense for telemetry-only users?
+   - `issueHistograms` also requires `documentUuid` and `commitId` - need to handle for project-scoped issues
 
 ## 13. Future Considerations
 
