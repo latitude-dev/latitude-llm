@@ -9,7 +9,7 @@ const jobMappings = {
 
 export function startRunsWorker() {
   return createWorker(Queues.runsQueue, jobMappings, {
-    concurrency: 100,
+    concurrency: 25,
     connection: WORKER_CONNECTION_CONFIG,
   })
 }
