@@ -46,11 +46,40 @@ Annotation queues build on Latitude's telemetry model:
 
 ### 4.2 Required Schema Change
 
-**Current state**: `evaluationVersions.documentUuid` is NOT NULL, requiring all evaluations to be document-scoped.
+**Current state**: `evaluationVersions` has two NOT NULL fields that need consideration:
+- `documentUuid` - ties evaluation to a specific document
+- `commitId` - ties evaluation to a specific commit (for branch-based versioning)
 
-**Required change for this RFC**: Make `documentUuid` NULLABLE in `evaluationVersions`. This allows:
-- Project-level evaluations (documentUuid = NULL)
-- Annotation queues to link to evaluations without document association
+**Required change for this RFC**: Make `documentUuid` NULLABLE in `evaluationVersions`.
+
+**How commitId works for annotation queues:**
+
+Annotation queue evaluations use the **HEAD commit of the merged branch (main)**:
+
+```typescript
+// When creating an annotation queue
+const headCommit = await getHeadCommit(project)  // HEAD of merged branch
+const evaluation = await findOrCreateEvaluation({
+  commitId: headCommit.id,      // Always use HEAD of main
+  documentUuid: null,            // Project-scoped (nullable)
+  type: 'human',
+  metric: 'rating',
+  // ...
+})
+```
+
+**Why this works:**
+- Annotation queues are **project-scoped**, not branch-scoped
+- They don't participate in draft-based versioning (evaluations on draft branches)
+- The evaluation is created once on HEAD and remains there
+- All annotation results reference this single evaluation
+
+**What happens when new commits are merged?**
+- The evaluation stays on the original HEAD commit
+- This is fine because:
+  - Document-scoped evaluations use commits for versioning (different config per branch)
+  - Project-scoped evaluations (annotation queues) don't need versioning - they're always "current"
+  - The `evaluationUuid` is what links annotations, not the commit
 
 This is a **prerequisite task** for annotation queues to work.
 
@@ -537,10 +566,12 @@ Annotations use the **existing evaluation system** - no new services needed for 
 
 ```typescript
 // Creating an annotation queue
+const headCommit = await getHeadCommit(project)  // HEAD of merged branch
+
 const evaluation = await findOrCreateProjectEvaluation({
   workspace,
   project,
-  commit,  // Head commit of default branch
+  commitId: headCommit.id,  // Always HEAD of main
   type: 'human',
   metric: 'rating',
   name: `Annotation: ${queueName}`,
@@ -561,7 +592,7 @@ const queue = await createAnnotationQueue({
 await createEvaluationResultV2({
   evaluation,
   span,  // The completion span from the trace
-  commit,
+  commit: headCommit,  // Same HEAD commit
   workspace,
   value: { score, normalizedScore, hasPassed },
   // metadata includes annotation-specific fields
@@ -672,6 +703,11 @@ This automatically uses existing infrastructure:
    - Always expand to show full session conversation
    - Show a toggle to expand/collapse
    - Let the user choose in queue settings
+
+6. **Commit Strategy for Project Evaluations**: We use HEAD of merged branch. Consider:
+   - What if HEAD changes after evaluation is created? (Answer: evaluation stays on original commit, linked by evaluationUuid)
+   - Should we update to new HEAD periodically? (Probably not - adds complexity for no benefit)
+   - What about projects with no merged commits yet? (Use the initial commit)
 
 ## 13. Future Considerations
 
