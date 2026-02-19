@@ -43,8 +43,19 @@ Annotation queues build on Latitude's telemetry model:
    - `tags` - Custom labels for categorization
    - `session_id` - Groups related interactions
    - `user_id` - Identifies the end user
-   - `prompt_path` - Links to prompt manager (if enabled)
-4. **N-dimensional targeting**: Both evaluations and annotation queues target spans across these dimensions
+   - `prompt_path` - Creates a "prompt bucket" concept (works with or without prompt manager)
+
+**Note on prompt_path**: Users can set `prompt_path` as a span attribute to create logical groupings even without enabling the prompt manager. This acts as a "bucket" to organize spans by prompt type (e.g., `/chat/support`, `/onboarding/welcome`).
+
+### 4.2 Required Schema Change
+
+**Current state**: `evaluationVersions.documentUuid` is NOT NULL, requiring all evaluations to be document-scoped.
+
+**Required change for this RFC**: Make `documentUuid` NULLABLE in `evaluationVersions`. This allows:
+- Project-level evaluations (documentUuid = NULL)
+- Annotation queues to link to evaluations without document association
+
+This is a **prerequisite task** for annotation queues to work.
 
 ### 4.2 Data Storage
 
@@ -118,39 +129,56 @@ CREATE TABLE annotation_queues (
   uuid UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
   workspace_id BIGINT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  evaluation_id BIGINT NOT NULL REFERENCES evaluations_v2(id) ON DELETE CASCADE,
   name VARCHAR(256) NOT NULL,
   description TEXT,
-  filters JSONB,           -- Stored dynamic filters (N-dimensional targeting)
+  -- Inline evaluation config (no FK to evaluations_v2)
+  evaluation_config JSONB NOT NULL DEFAULT '{"metric": "binary"}',
+  filters JSONB,           -- Stored dynamic filters
   sample_rate INTEGER DEFAULT 100,  -- 0-100 percentage
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 ```
 
-#### Evaluation Linking
+**evaluation_config schema:**
+```typescript
+type AnnotationQueueEvaluationConfig = {
+  metric: 'binary' | 'rating'
+  ratingScale?: number  // For rating: 1-5, 1-10, etc.
+}
+```
 
-Annotation queues link to project-scoped evaluations. Unlike document-scoped evaluations in the prompt manager, annotation queue evaluations:
+**Why inline config instead of FK to evaluations_v2?**
+- `evaluationVersions` requires `documentUuid` and `commitId` - doesn't work for project-scoped queues
+- Annotation queues have simpler evaluation needs (binary pass/fail or rating)
+- Avoids complex migration to make evaluations document-optional
 
-- Are **project-scoped**: Target spans across the entire project, not tied to a specific document
-- Use **Human Evaluation** type: Annotations are human-provided scores/feedback
-- Have **no draft versioning**: Single branch of changes with warnings when editing a running evaluation
-- Generate **project-scoped issues**: Annotations that indicate problems create issues at the project level
+#### Evaluation Configuration
+
+Annotation queues store their evaluation configuration inline (not via FK to `evaluations_v2`). This allows project-scoped annotation without document dependency.
+
+**Why not link to evaluations_v2?**
+- `evaluationVersions` requires `documentUuid` and `commitId`
+- Annotation queues target traces/spans across the project, not specific documents
+- Simpler model for human annotation use case
+
+**Evaluation types supported:**
+- **Binary** (pass/fail): Simple yes/no annotation
+- **Rating** (1-N scale): Configurable scale (e.g., 1-5 stars)
+
+**Issue generation:**
+- Failed annotations (binary=fail, rating below threshold) generate **project-scoped issues**
+- Issues are linked to the project, not a specific document
 
 ```
 Project
   └── Annotation Queue: "Support QA"
-        └── Human Evaluation (project-scoped)
+        └── evaluation_config: { metric: "rating", ratingScale: 5 }
+        └── Items (traces to review)
               └── Evaluation Results (annotations → project issues)
   └── prompts/ (optional - if prompt manager enabled)
         └── support-bot.promptl
-        └── sales-assistant.promptl
 ```
-
-This design ensures annotation queues work for:
-- Spans from SDK/API telemetry (no prompt manager)
-- Spans with `prompt_path` attribute (prompt manager enabled)
-- Mixed spans across multiple sources
 
 #### `annotation_queue_members`
 
@@ -172,16 +200,18 @@ CREATE TABLE annotation_queue_items (
   id BIGSERIAL PRIMARY KEY,
   annotation_queue_id BIGINT NOT NULL REFERENCES annotation_queues(id) ON DELETE CASCADE,
   workspace_id BIGINT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  span_id VARCHAR(64) NOT NULL,  -- References span in ClickHouse
-  trace_id VARCHAR(64) NOT NULL, -- For grouping related spans
+  trace_id VARCHAR(64) NOT NULL,       -- Primary identifier (conversation)
+  span_id VARCHAR(64),                 -- Optional: specific span within trace
   status VARCHAR(32) NOT NULL DEFAULT 'pending',  -- pending | in_progress | completed
   completed_at TIMESTAMP,
   completed_by_membership_id BIGINT REFERENCES memberships(id) ON DELETE SET NULL,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(annotation_queue_id, span_id)
+  UNIQUE(annotation_queue_id, trace_id)  -- One queue item per trace
 );
 ```
+
+**Note**: `trace_id` is the primary identifier since it represents the full conversation. `span_id` is optional for cases where we want to focus on a specific part of the trace.
 
 ### 5.2 Annotations as Evaluation Results
 
@@ -199,19 +229,34 @@ CREATE TABLE annotation_queue_items (
 
 #### Annotation Target Hierarchy
 
-Each message in a span can have **N annotations** (no limit):
+**Traces vs Spans**:
+- A **trace** (`trace_id`) groups all spans in a conversation/session - it's a virtual grouping, not a physical record
+- A **span** (`span_id`) is one operation in the trace (prompt, completion, tool call, step, etc.)
+- **Completion spans** contain the actual conversation messages in their metadata
+
+Annotations target a **trace** (to capture full conversation context) but reference specific messages within **completion spans**:
 
 ```
-Span (span_id, with attributes: tags, session_id, user_id, prompt_path)
-  └── Message (message_index within span)
-        └── Evaluation Result (annotation 1) → Project Issue
-        └── Evaluation Result (annotation 2)
-        └── ... N evaluation results
-        └── Highlight Annotation (start_offset, end_offset)
-              └── ... N evaluation results per selection
-  └── Global Annotation (no specific target)
-        └── ... N evaluation results per span
+Trace (trace_id) - virtual grouping of spans
+  └── Prompt Span (span_id, type=prompt)
+        └── Completion Span (span_id, type=completion)
+              └── metadata.input/output = conversation messages
+                    └── Message (message_index within completion)
+                          └── Annotation (evaluation_result)
+                          └── Highlight (start_offset, end_offset)
+                                └── Annotation (evaluation_result)
+  └── Global Annotation (trace-level, no specific message)
+        └── Evaluation Result
 ```
+
+**Why trace-level targeting?**
+- Traces represent the full user interaction
+- A trace can have multiple completion spans (multi-turn, tool calls)
+- Annotations should capture the full context, not just one span
+
+**Queue items reference**:
+- `trace_id` (required) - identifies the conversation
+- `span_id` (optional) - can filter to specific spans within trace
 
 #### Schema Changes to ClickHouse `evaluation_results`
 
@@ -317,7 +362,32 @@ Example stored filters (targeting support spans from a specific user):
 }
 ```
 
-This filter schema mirrors how evaluations target spans, ensuring consistency across the platform.
+### 5.4 URL Query String Representation
+
+Filters translate to URL query parameters for shareable links and browser navigation:
+
+```
+# Single filter
+/projects/123/traces?tags=support,billing&tags_op=contains_any
+
+# Multiple filters
+/projects/123/traces?userId=u_12345&userId_op=eq&promptPath=/chat/&promptPath_op=contains&cost=0.10&cost_op=lt
+
+# Range filter (between)
+/projects/123/traces?tokens_min=100&tokens_max=5000
+```
+
+**Query Parameter Schema:**
+
+| Filter Type | URL Format | Example |
+|-------------|-----------|---------|
+| String equals | `{prop}={value}&{prop}_op=eq` | `userId=u_123&userId_op=eq` |
+| String contains | `{prop}={value}&{prop}_op=contains` | `promptPath=/chat/&promptPath_op=contains` |
+| Array contains_any | `{prop}={csv}&{prop}_op=contains_any` | `tags=support,billing&tags_op=contains_any` |
+| Number less_than | `{prop}={value}&{prop}_op=lt` | `cost=0.10&cost_op=lt` |
+| Number between | `{prop}_min={min}&{prop}_max={max}` | `tokens_min=100&tokens_max=5000` |
+
+**Operator abbreviations**: `eq`, `neq`, `contains`, `not_contains`, `contains_any`, `contains_all`, `lt`, `lte`, `gt`, `gte`
 
 ## 6. UI Components
 
@@ -461,15 +531,14 @@ Annotation queues use the same N-dimensional targeting as evaluations:
 Filters are evaluated against ClickHouse spans data using dimension attributes:
 
 ```sql
-SELECT span_id, trace_id
+SELECT DISTINCT trace_id, span_id
 FROM spans
 WHERE workspace_id = {workspaceId}
   AND project_id = {projectId}
-  -- Dimension filters (N-dimensional targeting)
-  AND hasAny(tags, {filterTags})           -- tags filter
+  -- String filters (indexed)
   AND session_id = {sessionId}             -- session filter
   AND user_id = {userId}                   -- user filter
-  AND prompt_path LIKE {promptPathPattern} -- prompt path filter (if prompt manager enabled)
+  AND prompt_path LIKE {promptPathPattern} -- prompt path filter
   -- Metric filters
   AND cost < {maxCost}
   AND total_tokens BETWEEN {minTokens} AND {maxTokens}
@@ -477,17 +546,48 @@ ORDER BY started_at DESC
 LIMIT {limit}
 ```
 
-### 7.3 Sample Rate Implementation
+### 7.3 ClickHouse Array Filtering (Tags)
+
+**Note**: The current ClickHouse `spans` table does NOT have a `tags` column. This would need to be added via migration.
+
+ClickHouse supports efficient array operations:
+
+```sql
+-- Array column definition
+tags Array(String)
+
+-- Contains any (OR): hasAny()
+WHERE hasAny(tags, ['support', 'billing'])
+
+-- Contains all (AND): hasAll()
+WHERE hasAll(tags, ['support', 'billing'])
+
+-- Single tag: has()
+WHERE has(tags, 'support')
+```
+
+**Performance considerations**:
+- `hasAny()` and `hasAll()` are O(n*m) where n=array size, m=filter size
+- For small arrays (typical: 1-10 tags), performance is excellent
+- Add bloom filter index for large-scale filtering:
+  ```sql
+  INDEX idx_tags tags TYPE bloom_filter(0.01) GRANULARITY 1
+  ```
+- Alternative: use `arrayExists()` with lambda for complex predicates
+
+**Recommendation**: Start without tags filtering in Phase 1. Add `tags` column to spans table in a later phase when the use case is validated.
+
+### 7.4 Sample Rate Implementation
 
 ```typescript
-function shouldIncludeSpan(sampleRate: number): boolean {
+function shouldIncludeTrace(sampleRate: number): boolean {
   return Math.random() * 100 < sampleRate
 }
 ```
 
-Note: Random sampling is sufficient since we only evaluate new spans once and the unique constraint `(annotation_queue_id, span_id)` prevents duplicates.
+Note: Random sampling is sufficient since we only evaluate new traces once and the unique constraint `(annotation_queue_id, trace_id)` prevents duplicates.
 
-### 7.4 Consistency with Evaluations
+### 7.5 Consistency with Evaluations (Future)
 
 The filter schema and evaluation logic mirrors how evaluations target spans:
 - Same dimension properties (tags, session_id, user_id, prompt_path)
@@ -510,127 +610,187 @@ This ensures users have a consistent mental model across evaluations and annotat
 
 ### 9.1 Core Services (`packages/core/src/services/annotationQueues/`)
 
-- `create.ts` - Create queue with name, description, members, filters + creates linked project-scoped Human Evaluation
-- `update.ts` - Update queue metadata, members, filters (with warnings for running queues)
-- `destroy.ts` - Delete queue and all items (evaluation results preserved)
-- `addSpans.ts` - Manually add spans to queue
-- `updateItemStatus.ts` - Mark span as completed/in_progress
-- `evaluateFilters.ts` - Check if span matches queue filters (N-dimensional)
+- `create.ts` - Create queue with name, description, members, evaluation config
+- `update.ts` - Update queue metadata, members, filters
+- `destroy.ts` - Delete queue and all items (annotations preserved in ClickHouse)
+- `addTraces.ts` - Manually add traces to queue (by trace_id)
+- `updateItemStatus.ts` - Mark item as pending/in_progress/completed
+- `evaluateFilters.ts` - Check if trace matches queue filters
 
-### 9.2 Annotation Services
+### 9.2 Evaluation Linking to Annotation Queues
 
-Annotations use the existing evaluation system via `annotateEvaluationV2`:
+**Current architecture challenge**: `evaluationVersions` requires `documentUuid` and `commitId`. This doesn't work for project-wide annotation queues that target spans without document association.
+
+**Proposed solution**: Create a new `annotation_queue_evaluations` approach that bypasses document-scoped evaluations:
+
+```typescript
+// Option A: Store evaluation config directly in annotation_queue
+type AnnotationQueueEvaluationConfig = {
+  metric: 'binary' | 'rating'  // Human evaluation metric
+  ratingScale?: number         // For rating metric (e.g., 5)
+  labels?: string[]            // Optional custom labels
+}
+
+// annotation_queues table includes:
+evaluation_config JSONB  // Instead of evaluation_id FK
+```
+
+```typescript
+// Option B: Create project-scoped evaluations (new table)
+CREATE TABLE annotation_queue_evaluations (
+  id BIGSERIAL PRIMARY KEY,
+  annotation_queue_id BIGINT REFERENCES annotation_queues(id),
+  workspace_id BIGINT REFERENCES workspaces(id),
+  project_id BIGINT REFERENCES projects(id),
+  -- No documentUuid, no commitId
+  metric VARCHAR(128) NOT NULL,  -- 'binary' | 'rating'
+  configuration JSONB NOT NULL,
+  ...timestamps()
+);
+```
+
+**Recommendation**: Option A is simpler for MVP. Store evaluation config inline with the queue. We can always migrate to Option B later if we need more flexibility.
+
+### 9.3 Annotation Services
+
+Annotations create evaluation results directly in ClickHouse:
 
 ```typescript
 // Creating an annotation in a queue
-await annotateEvaluationV2({
+await createAnnotationResult({
   workspace,
-  project,      // Project-scoped (no commit/document)
-  evaluation,   // The project-scoped Human Evaluation linked to the queue
-  span,
-  resultScore,
-  resultMetadata: {
+  project,
+  annotationQueue: queue,
+  traceId: queueItem.traceId,
+  spanId: completionSpan.id,  // The completion span with messages
+  score: resultScore,
+  metadata: {
     reason: 'User annotation content here',
     annotationQueueId: queue.id,
     annotationQueueItemId: queueItem.id,
     targetType: 'message',
-    targetSpanId: span.id,
     targetMessageIndex: 2,
   },
 })
 ```
 
 This automatically:
-- Creates an `evaluation_result_v2` record
-- Publishes `evaluationResultV2Created` event
+- Creates an `evaluation_result` record in ClickHouse
+- Publishes `annotationCreated` event (new event type)
 - Triggers **project-scoped issue** discovery if the annotation indicates a problem
 
-### 9.3 Background Jobs
+### 9.4 Background Jobs
 
-- `populateQueueJob.ts` - Process dynamic filters for new spans
-- Triggered by `spanCreated` event
+- `populateQueueJob.ts` - Process dynamic filters for new traces
+- Triggered by `spanCreated` event (for main span types)
 - Checks all queues with filters for the workspace/project
-- Evaluates span attributes against N-dimensional filters
-- Adds matching spans respecting sample rate
+- Evaluates trace against filter criteria
+- Adds matching traces respecting sample rate
 
 ## 10. Queries
 
 ### 10.1 PostgreSQL Queries (`packages/core/src/queries/annotationQueues/`)
 
-- `findByProject.ts` - List queues for a project with stats and active filter badges
-- `findByUuid.ts` - Get single queue with members and linked evaluation
-- `findItems.ts` - Get spans in a queue with pagination
-- `findNextItem.ts` - Get next pending span (for keyboard navigation)
+- `findByProject.ts` - List queues for a project with stats
+- `findByUuid.ts` - Get single queue with members
+- `findItems.ts` - Get queue items (traces) with pagination
+- `findNextItem.ts` - Get next pending item (for keyboard navigation)
 - `getProgress.ts` - Get queue completion statistics
-- `findAnnotationsByQueueItem.ts` - Get evaluation results with annotation queue metadata
+- `findAnnotationsByQueueItem.ts` - Get annotations for a queue item
 
-### 10.2 ClickHouse Queries (`packages/core/src/queries/clickhouse/`)
+### 10.2 ClickHouse Queries
 
-- `getSpansByProject.ts` - Fetch spans by project_id with N-dimensional filters
-- `getSpansByIds.ts` - Fetch span details for queue items
-- `evaluateQueueFilters.ts` - Find spans matching N-dimensional filter criteria
-- `getFilterAutocomplete.ts` - Get known values for dimension autocomplete (tags, session_ids, user_ids, prompt_paths)
+- `getTracesByProject.ts` - Fetch traces by project_id with filters
+- `getTraceDetails.ts` - Fetch full trace with all spans and messages
+- `evaluateQueueFilters.ts` - Find traces matching filter criteria
+- `getAnnotationsByQueue.ts` - Get evaluation results for a queue
 
 ## 11. Implementation Phases
 
-### Phase 1: Foundation
-- [ ] Database schema + migrations (PostgreSQL tables)
-- [ ] Feature flag setup
-- [ ] Project-scoped evaluation support (no document dependency)
-- [ ] Core services (CRUD for queues, items)
-- [ ] PostgreSQL queries
-- [ ] ClickHouse query for project-level spans with dimension attributes
+### Phase 1a: PostgreSQL Schema
+- [ ] Feature flag setup (`annotationQueues`)
+- [ ] PostgreSQL migrations:
+  - [ ] `annotation_queues` table
+  - [ ] `annotation_queue_members` table
+  - [ ] `annotation_queue_items` table
+- [ ] Core services (CRUD for queues, items, members)
+- [ ] PostgreSQL queries for queue management
 
-### Phase 2: Basic UI
-- [ ] Project-level `/traces` page with N-dimensional filters
-- [ ] Span selection with floating action bar
-- [ ] Basic modal (create queue, add spans)
-- [ ] Annotation queues list page with filter badges
-- [ ] Queue detail page (basic)
+### Phase 1b: Manual Queue Management (Backoffice)
+- [ ] Backoffice page to list annotation queues
+- [ ] Backoffice page to create/edit annotation queues
+- [ ] Backoffice action to manually add traces to queues (by trace_id)
+- [ ] Queue detail page (basic) - list items, show status
+- [ ] **Goal**: Experience the annotation workflow without filters/traces page
 
-### Phase 3: Annotations
-- [ ] Extend `EvaluationResultMetadata` type for annotation queue fields
-- [ ] Create project-scoped evaluation on queue creation
-- [ ] Annotation creation via `annotateEvaluationV2` with extended metadata
-- [ ] Query annotations by queue item from evaluation results
-- [ ] Annotations sidebar UI (global, message, highlight)
-- [ ] Project-scoped issue generation from annotations
+### Phase 2: Annotation Interface
+- [ ] Queue detail page with conversation display
+- [ ] Annotation creation (global, message-level)
+- [ ] ClickHouse: Add `annotation_queue_id` column to `evaluation_results`
+- [ ] Store annotations as evaluation results
+- [ ] Annotations sidebar UI
+- [ ] Mark as completed functionality
+- [ ] Navigation (previous/next)
 
-### Phase 4: Dynamic Filters (N-Dimensional)
-- [ ] Filter builder UI component with dimension sections
-- [ ] Autocomplete for known dimension values
-- [ ] Filter storage in queue
-- [ ] N-dimensional filter evaluation logic
+### Phase 3: Project-Level Traces Page
+- [ ] `/projects/[projectId]/traces` page
+- [ ] Basic filters (trace_id, cost, tokens, duration)
+- [ ] Trace selection with checkbox
+- [ ] "Add to Annotation Queue" modal
+- [ ] Pagination
+
+### Phase 4: Dynamic Filters
+- [ ] Filter builder UI component
+- [ ] Filter storage in queue (JSONB)
+- [ ] Filter evaluation logic against ClickHouse
 - [ ] Sample rate implementation
 - [ ] Background job for auto-population via `spanCreated` event
-- [ ] Edit warnings for running queues
 
-### Phase 5: Polish
+### Phase 5: ClickHouse Schema (Optional)
+- [ ] Add dimension columns to `spans` table:
+  - [ ] `tags Array(String)`
+  - [ ] `session_id String`
+  - [ ] `user_id String`
+  - [ ] `prompt_path String`
+- [ ] Add indexes for dimension filtering
+- [ ] Update span ingestion to populate new columns
+- [ ] N-dimensional filter support in traces page
+
+### Phase 6: Polish
 - [ ] Keyboard navigation (←/→)
+- [ ] Highlight annotations (text selection)
 - [ ] Progress tracking UI
-- [ ] Queue statistics by dimension
+- [ ] Queue statistics
 - [ ] Performance optimization
-- [ ] Prompt manager correlation via `prompt_path` attribute
 
 ## 12. Open Questions
 
-1. **Evaluation Metric for Annotations**: Should annotation queues use Binary (pass/fail) or Rating (1-5 scale) human evaluation metric? Or allow configuration per queue?
-   Binary by default. Question for you how are this evaluation created?
+1. **Evaluation Metric for Annotations**: ✅ **Resolved** - Binary by default, configurable per queue.
+   
+   **How evaluations are created**: The evaluation config is stored inline in `annotation_queues.evaluation_config` (JSONB), not as a separate evaluation record. When creating an annotation queue:
+   ```typescript
+   await createAnnotationQueue({
+     name: 'Support QA',
+     projectId: project.id,
+     evaluationConfig: { metric: 'binary' },  // or { metric: 'rating', ratingScale: 5 }
+     // ...
+   })
+   ```
+   Annotations are stored in ClickHouse `evaluation_results` with `annotation_queue_id` to link them back.
 
-2. **Concurrent Annotation**: Multiple annotators can add their own annotations to the same message (N annotations per target). Should we show real-time updates when another annotator adds an annotation?
-   Not a priority for initial implementation. Can be added later if needed.
+2. **Concurrent Annotation**: ✅ **Resolved** - Not a priority for initial implementation.
 
-3. **Annotation Queue Evaluation Lifecycle**: When a queue is deleted, what happens to its linked evaluation and evaluation results? Options:
-   - Keep evaluation results (orphaned but queryable)
-   - Soft-delete evaluation (preserve history)
+3. **Annotation Queue Deletion**: When a queue is deleted, what happens to evaluation results? Options:
+   - Keep evaluation results (orphaned but queryable via `annotation_queue_id`)
+   - Soft-delete queue (preserve history, hide from UI)
    - Hard-delete all (clean but loses data)
 
-4. **Cross-Project Queues**: Should annotation queues be project-scoped only, or should there be workspace-level queues that span multiple projects?
+4. **Cross-Project Queues**: Should annotation queues be project-scoped only, or workspace-level?
 
-5. **Dimension Value Discovery**: How should we populate autocomplete for dimension values (tags, session_ids, user_ids, prompt_paths)? Options:
-   - Query ClickHouse for distinct values (performance considerations)
-   - Cache common values
-   - Allow freeform input with validation
+5. **Dimension Columns in ClickHouse**: Should we add `tags`, `session_id`, `user_id`, `prompt_path` columns to the `spans` table? Current spans table doesn't have these. Options:
+   - Add columns via migration (Phase 5)
+   - Extract from existing `metadata` JSON
+   - Start without dimension filtering, add later
 
 ## 13. Prompt Manager Integration
 
