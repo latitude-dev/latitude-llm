@@ -1,7 +1,7 @@
 import { FinishReason } from 'ai'
+import { Message } from '../messages'
 import { LogSources } from '../models'
 import { AssembledSpan } from './trace'
-import { Message } from '../messages'
 
 export enum SpanKind {
   Internal = 'internal',
@@ -318,7 +318,7 @@ export type SerializedSpanPair = {
 }
 
 export type MainSpanType = SpanType.External | SpanType.Prompt | SpanType.Chat
-export const MAIN_SPAN_TYPES = new Set([
+export const MAIN_SPAN_TYPES: Set<MainSpanType> = new Set([
   SpanType.Prompt,
   SpanType.Chat,
   SpanType.External,
@@ -330,7 +330,7 @@ export type MainSpanMetadata =
   | ExternalSpanMetadata
 
 export function isMainSpan(span: Span | SpanWithDetails | AssembledSpan) {
-  return MAIN_SPAN_TYPES.has(span.type)
+  return MAIN_SPAN_TYPES.has(span.type as MainSpanType)
 }
 
 export function isCompletionSpan(

@@ -1,18 +1,18 @@
 'use server'
+import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
+import {
+  EvaluationResultMetadata,
+  MainSpanType,
+  SpanWithDetails,
+  isMainSpan,
+} from '@latitude-data/core/constants'
 import {
   SpanMetadatasRepository,
   SpansRepository,
 } from '@latitude-data/core/repositories'
 import { annotateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/annotate'
 import { z } from 'zod'
-import {
-  EvaluationResultMetadata,
-  MAIN_SPAN_TYPES,
-  MainSpanType,
-  SpanWithDetails,
-} from '@latitude-data/core/constants'
 import { withEvaluation, withEvaluationSchema } from '../procedures'
-import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 
 export const annotateEvaluationV2Action = withEvaluation
   .inputSchema(
@@ -34,7 +34,7 @@ export const annotateEvaluationV2Action = withEvaluation
       })
       .then((r) => r.value)
     if (!span) throw new NotFoundError('Span not found')
-    if (!MAIN_SPAN_TYPES.has(span.type)) {
+    if (!isMainSpan(span)) {
       throw new BadRequestError(
         `Span type '${span.type}' is not annotatable. Only prompt, chat, and external spans can be annotated`,
       )

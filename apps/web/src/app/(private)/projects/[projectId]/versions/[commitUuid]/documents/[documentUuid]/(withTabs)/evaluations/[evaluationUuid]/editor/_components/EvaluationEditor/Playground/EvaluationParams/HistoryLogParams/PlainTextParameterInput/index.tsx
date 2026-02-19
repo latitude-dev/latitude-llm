@@ -1,5 +1,5 @@
-import { type UseEvaluationParameters } from '../../../../hooks/useEvaluationParamaters'
-import { LogInput } from '../../../../hooks/useEvaluationParamaters/logInputParamaters'
+import { type UseEvaluationParameters } from '../../../../hooks/useEvaluationParameters'
+import { LogInput } from '../../../../hooks/useEvaluationParameters/logInputParameters'
 import { DebouncedTextArea } from '../DebouncedTextArea'
 import { LlmEvaluationPromptParameter } from '@latitude-data/constants'
 import { InputWrapper } from '../InputWrapper'

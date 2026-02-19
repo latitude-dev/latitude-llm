@@ -110,6 +110,9 @@ export async function generateEvaluationV2(
       expectedOutput: {
         parsingFormat: 'string',
       },
+      trigger: {
+        target: 'every',
+      },
       provider: provider.name,
       model: model,
       criteria: result.criteria,

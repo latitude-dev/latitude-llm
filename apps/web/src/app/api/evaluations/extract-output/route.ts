@@ -1,7 +1,9 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
+import { Message } from '@latitude-data/constants/messages'
 import {
   CompletionSpanMetadata,
+  CompletionSpanTokens,
   MAIN_SPAN_TYPES,
   PromptSpanMetadata,
 } from '@latitude-data/core/constants'
@@ -10,11 +12,11 @@ import {
   SpanMetadatasRepository,
   SpansRepository,
 } from '@latitude-data/core/repositories'
-import { Message } from '@latitude-data/constants/messages'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { buildEvaluationParameters } from '@latitude-data/core/services/evaluationsV2/llm/shared'
 import { extractActualOutput } from '@latitude-data/core/services/evaluationsV2/outputs/extract'
-import { assembleTraceWithMessages } from '@latitude-data/core/services/tracing/traces/assemble'
 import { findFirstSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findFirstSpanOfType'
+import { assembleTraceWithMessages } from '@latitude-data/core/services/tracing/traces/assemble'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -22,12 +24,11 @@ export type ExtractOutputResponse =
   | {
       ok: true
       actualOutput: string
-      conversation: Message[]
-      tokens: number
+      conversation: string
+      tokens: CompletionSpanTokens
       cost: number
       duration: number
       prompt: string
-      config: Record<string, unknown>
       parameters: Record<string, unknown>
     }
   | {
@@ -97,6 +98,9 @@ export const GET = errorHandler(
       const promptMetadata = (await metadatasRepository
         .get({ spanId: promptSpan.id, traceId: promptSpan.traceId })
         .then((r) => r.unwrap())) as PromptSpanMetadata | undefined
+      if (promptMetadata) {
+        promptSpan.metadata = promptMetadata
+      }
 
       const completionSpanMetadata =
         completionSpan.metadata as CompletionSpanMetadata
@@ -129,7 +133,6 @@ export const GET = errorHandler(
         conversation,
         configuration: evaluation.configuration.actualOutput,
       })
-
       if (actualOutputResult.error) {
         return NextResponse.json(
           {
@@ -139,29 +142,16 @@ export const GET = errorHandler(
           { status: 200 },
         )
       }
-
       const actualOutput = actualOutputResult.value
 
-      const tokens =
-        (completionSpan.tokensCompletion ?? 0) +
-        (completionSpan.tokensCached ?? 0) +
-        (completionSpan.tokensPrompt ?? 0) +
-        (completionSpan.tokensReasoning ?? 0)
+      const parameters = buildEvaluationParameters({
+        span: promptSpan,
+        completionSpan: completionSpan,
+        actualOutput: actualOutput,
+        conversation: conversation,
+      })
 
-      return NextResponse.json(
-        {
-          ok: true,
-          actualOutput,
-          conversation,
-          tokens,
-          cost: completionSpan.cost ?? 0,
-          duration: promptSpan.duration,
-          prompt: promptMetadata?.template ?? '',
-          config: completionSpanMetadata.configuration ?? {},
-          parameters: promptMetadata?.parameters ?? {},
-        },
-        { status: 200 },
-      )
+      return NextResponse.json({ ok: true, ...parameters }, { status: 200 })
     },
   ),
 )

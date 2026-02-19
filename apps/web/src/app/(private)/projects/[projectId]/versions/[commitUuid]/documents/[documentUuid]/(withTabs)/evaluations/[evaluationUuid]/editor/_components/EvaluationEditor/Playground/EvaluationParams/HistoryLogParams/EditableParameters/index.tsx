@@ -1,6 +1,6 @@
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { useEvaluationParameters } from '../../../../hooks/useEvaluationParamaters'
+import { useEvaluationParameters } from '../../../../hooks/useEvaluationParameters'
 import { PlainTextParameterInput } from '../PlainTextParameterInput'
 import { EditableJsonInput } from '../EditableJsonInput'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
@@ -15,9 +15,7 @@ import {
 import { useMemo } from 'react'
 
 const JSON_FIELDS = [
-  'config',
-  'toolCalls',
-  'messages',
+  'tokens',
   'parameters',
 ] as const satisfies readonly LlmEvaluationPromptParameter[]
 type JsonField = (typeof JSON_FIELDS)[number]

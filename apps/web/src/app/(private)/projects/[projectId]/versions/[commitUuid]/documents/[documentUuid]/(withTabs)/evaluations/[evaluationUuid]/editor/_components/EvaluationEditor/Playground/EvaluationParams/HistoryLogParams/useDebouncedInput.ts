@@ -1,6 +1,6 @@
 import { type LlmEvaluationPromptParameter } from '@latitude-data/constants'
 import { useDebouncedCallback } from 'use-debounce'
-import { type UseEvaluationParameters } from '../../../hooks/useEvaluationParamaters'
+import { type UseEvaluationParameters } from '../../../hooks/useEvaluationParameters'
 
 export function useDebouncedInput({
   setInputs,

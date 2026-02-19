@@ -72,6 +72,9 @@ describe('generateEvaluationV2', () => {
         expectedOutput: {
           parsingFormat: 'string',
         },
+        trigger: {
+          target: 'every',
+        },
         provider: 'openai',
         model: 'gpt-4o',
         criteria: 'criteria',

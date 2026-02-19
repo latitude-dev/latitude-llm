@@ -84,6 +84,10 @@ export function formatMessage(message: Message) {
         switch (content.type) {
           case 'text':
             return content.text
+          case 'reasoning':
+            return content.text ?? 'Thought in private...'
+          case 'redacted-reasoning':
+            return content.data ?? 'Thought in private...'
           case 'image':
             if (typeof content.image === 'string') {
               try {

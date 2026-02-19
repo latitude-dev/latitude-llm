@@ -1,11 +1,10 @@
-import { create } from 'zustand'
+import { ExtractOutputResponse } from '$/app/api/evaluations/extract-output/route'
 import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
-  EvaluatedDocumentLog,
+  CompletionSpanTokens,
   LLM_EVALUATION_PROMPT_PARAMETERS,
 } from '@latitude-data/core/constants'
-import { Message, ToolMessage } from '@latitude-data/constants/messages'
-import { ExtractOutputResponse } from '$/app/api/evaluations/extract-output/route'
+import { create } from 'zustand'
 
 type ExtractedOutputSuccess = Extract<ExtractOutputResponse, { ok: true }>
 
@@ -13,31 +12,7 @@ export type LogInput = {
   value: string
   metadata: { includedInPrompt: boolean }
 }
-type EvaluatedLogParameters = {
-  actualOutput: string
-  conversation: Message[]
-  tools: ToolMessage[]
-  cost: number
-  tokens: number
-  duration: number
-  prompt: string
-  config: Record<string, unknown>
-  parameters: Record<string, unknown>
-}
-
-function typedFilterObject<T extends object>(
-  obj: T,
-  keys: (keyof T)[],
-): Partial<T> {
-  return Object.keys(obj).reduce((acc, key) => {
-    const typedKey = key as keyof T
-    const value = obj[typedKey]
-    if (keys.includes(typedKey) && value !== undefined && value !== null) {
-      acc[typedKey] = value
-    }
-    return acc
-  }, {} as Partial<T>)
-}
+type EvaluatedLogParameters = Omit<ExtractedOutputSuccess, 'ok'>
 
 function safeStringify(value: unknown): string {
   if (value === undefined || value === null) return ''
@@ -73,45 +48,38 @@ function safeParseJson<T>(value: string): T | null {
   }
 }
 
-type ReturnDeserializedInputs = EvaluatedLogParameters & {
+type DeserializedParameters = EvaluatedLogParameters & {
   expectedOutput: string
 }
+
 function deserializeInputs(
   inputs: Record<string, string>,
-): ReturnDeserializedInputs {
-  const result = {} as ReturnDeserializedInputs
+): DeserializedParameters {
+  const result = {} as DeserializedParameters
 
   for (const [key, value] of Object.entries(inputs)) {
     switch (key) {
-      case 'tokens':
-      case 'duration':
       case 'cost':
+      case 'duration':
         result[key] = Number(value)
         break
 
       case 'actualOutput':
       case 'expectedOutput':
       case 'prompt':
+      case 'conversation':
         result[key] = value
         break
 
-      case 'config': {
-        const config = safeParseJson<EvaluatedDocumentLog['config']>(value)
-        if (!config) break
-        result[key] = config as Record<string, unknown>
-        break
-      }
-      case 'parameters': {
-        const parsed = safeParseJson<EvaluatedDocumentLog['parameters']>(value)
+      case 'tokens': {
+        const parsed = safeParseJson<CompletionSpanTokens>(value)
         if (!parsed) break
-
         result[key] = parsed
         break
       }
-      case 'conversation': {
-        const parsed = safeParseJson<Message[]>(value)
+      case 'parameters': {
+        const parsed = safeParseJson<Record<string, unknown>>(value)
         if (!parsed) break
-
         result[key] = parsed
         break
       }
@@ -119,6 +87,20 @@ function deserializeInputs(
   }
 
   return result
+}
+
+function typedFilterObject<T extends object>(
+  obj: T,
+  keys: (keyof T)[],
+): Partial<T> {
+  return Object.keys(obj).reduce((acc, key) => {
+    const typedKey = key as keyof T
+    const value = obj[typedKey]
+    if (keys.includes(typedKey) && value !== undefined && value !== null) {
+      acc[typedKey] = value
+    }
+    return acc
+  }, {} as Partial<T>)
 }
 
 const INITIAL_INPUTS = LLM_EVALUATION_PROMPT_PARAMETERS.reduce(
@@ -154,16 +136,15 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
     metadataParameters: [],
     mapLogParametersToInputs: (data: ExtractedOutputSuccess) => {
       const { metadataParameters, expectedOutput } = get()
-      const conversation = data.conversation as unknown as Message[]
-      const parameters = {
-        conversation,
+      const parameters: EvaluatedLogParameters & {
+        expectedOutput: string
+      } = {
+        conversation: data.conversation,
         tokens: data.tokens,
         actualOutput: data.actualOutput,
-        tools: conversation.filter((m) => m.role === 'tool'),
         cost: data.cost,
         duration: data.duration,
         prompt: data.prompt,
-        config: data.config,
         parameters: data.parameters,
         expectedOutput: expectedOutput.value,
       }
