@@ -55,8 +55,9 @@ export const getCurrentUserOrRedirect = cache(async () => {
     return redirectToLogin(currentUrl)
   }
 
-  const { user, workspace, subscriptionPlan } =
-    await getDataFromSession(sessionData.session)
+  const { user, workspace, subscriptionPlan } = await getDataFromSession(
+    sessionData.session,
+  )
 
   if (!user || !workspace) {
     return redirectToLogin(currentUrl)

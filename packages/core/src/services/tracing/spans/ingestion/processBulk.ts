@@ -433,7 +433,8 @@ export async function processSpansBulk(
           retentionExpiresAt,
         }))
 
-        const clickhouseResult = await bulkCreateClickHouseSpans(spansForClickHouse)
+        const clickhouseResult =
+          await bulkCreateClickHouseSpans(spansForClickHouse)
         if (clickhouseResult.error) {
           captureException(
             new LatitudeError('ClickHouse bulk span insertion failed'),

@@ -272,9 +272,7 @@ const ContentText = memo(
       })
     }, [groups, index, color, TextComponent, renderSegmentWithAnnotations])
 
-    return (
-      <div className='flex flex-col gap-y-1'>{messagesList}</div>
-    )
+    return <div className='flex flex-col gap-y-1'>{messagesList}</div>
   },
 )
 
@@ -325,9 +323,7 @@ export function TextMessageContent<M extends MarkdownSize | 'none'>({
   )
 
   const fullBlockAnnotations = useMemo(() => {
-    return blockAnnotations.filter(
-      (ann) => ann.context.textRange === undefined,
-    )
+    return blockAnnotations.filter((ann) => ann.context.textRange === undefined)
   }, [blockAnnotations])
 
   const content = (() => {

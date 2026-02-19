@@ -102,7 +102,9 @@ export function AnnotationForm<
     result,
   })
 
-  const [isExpanded, setIsExpanded] = useState(!!result || (initialExpanded ?? false))
+  const [isExpanded, setIsExpanded] = useState(
+    !!result || (initialExpanded ?? false),
+  )
   const wrappedOnSubmit = useCallback(
     async ({ score, resultMetadata }: OnSubmitProps<T, M>) => {
       await onSubmit({
