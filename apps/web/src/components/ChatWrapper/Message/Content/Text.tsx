@@ -44,11 +44,7 @@ const ContentText = memo(
     const TextComponent = size === 'small' ? Text.H5 : Text.H4
     const { onAnnotationClick, currentSelection, clickedAnnotation } =
       useAnnotations()
-    const {
-      blockAnnotations: rawBlockAnnotations,
-      evaluation,
-      span,
-    } = useBlockAnnotations({
+    const { blockAnnotations: rawBlockAnnotations } = useBlockAnnotations({
       contentType: 'text',
       messageIndex,
       contentBlockIndex,
@@ -61,12 +57,6 @@ const ContentText = memo(
     const textRangeAnnotations = useMemo(() => {
       return blockAnnotations.filter(
         (ann) => ann.context.textRange !== undefined,
-      )
-    }, [blockAnnotations])
-
-    const fullBlockAnnotations = useMemo(() => {
-      return blockAnnotations.filter(
-        (ann) => ann.context.textRange === undefined,
       )
     }, [blockAnnotations])
 
@@ -283,18 +273,7 @@ const ContentText = memo(
     }, [groups, index, color, TextComponent, renderSegmentWithAnnotations])
 
     return (
-      <div className='flex flex-col gap-4'>
-        <div className='flex flex-col gap-y-1'>{messagesList}</div>
-        <AnnotationSection
-          blockAnnotations={fullBlockAnnotations}
-          evaluation={evaluation}
-          span={span}
-          messageIndex={messageIndex}
-          contentBlockIndex={contentBlockIndex}
-          contentType='text'
-          requireMainSpan
-        />
-      </div>
+      <div className='flex flex-col gap-y-1'>{messagesList}</div>
     )
   },
 )
@@ -330,29 +309,67 @@ export function TextMessageContent<M extends MarkdownSize | 'none'>({
     }
   }, [text])
 
-  if (stringifiedJson) {
-    return <ContentJson json={stringifiedJson} />
-  }
+  const {
+    blockAnnotations: rawBlockAnnotations,
+    evaluation,
+    span,
+  } = useBlockAnnotations({
+    contentType: 'text',
+    messageIndex,
+    contentBlockIndex,
+  })
 
-  if (!debugMode && text && markdownSize !== 'none') {
+  const blockAnnotations = useMemo(
+    () => (text ? rawBlockAnnotations : []),
+    [text, rawBlockAnnotations],
+  )
+
+  const fullBlockAnnotations = useMemo(() => {
+    return blockAnnotations.filter(
+      (ann) => ann.context.textRange === undefined,
+    )
+  }, [blockAnnotations])
+
+  const content = (() => {
+    if (stringifiedJson) {
+      return <ContentJson json={stringifiedJson} />
+    }
+
+    if (!debugMode && text && markdownSize !== 'none') {
+      return (
+        <MarkdownContent
+          text={text}
+          size={markdownSize}
+          color={color as ProseColor}
+        />
+      )
+    }
+
     return (
-      <MarkdownContent
+      <ContentText
+        index={index}
+        color={color}
+        size={size}
         text={text}
-        size={markdownSize}
-        color={color as ProseColor}
+        sourceMap={debugMode ? sourceMap : undefined}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
       />
     )
-  }
+  })()
 
   return (
-    <ContentText
-      index={index}
-      color={color}
-      size={size}
-      text={text}
-      sourceMap={debugMode ? sourceMap : undefined}
-      messageIndex={messageIndex}
-      contentBlockIndex={contentBlockIndex}
-    />
+    <div className='flex flex-col gap-4'>
+      {content}
+      <AnnotationSection
+        blockAnnotations={fullBlockAnnotations}
+        evaluation={evaluation}
+        span={span}
+        messageIndex={messageIndex}
+        contentBlockIndex={contentBlockIndex}
+        contentType='text'
+        requireMainSpan
+      />
+    </div>
   )
 }
