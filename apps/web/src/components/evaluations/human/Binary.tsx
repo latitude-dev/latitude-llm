@@ -166,13 +166,15 @@ function AnnotationForm({
 
   const onThumbsUpClick = useCallback(
     (newThumbsUp: boolean) => {
-      if (newThumbsUp === thumbsUp) return
+      if (newThumbsUp === thumbsUp) {
+        setIsExpanded((prev) => !prev)
+        return
+      }
 
       setThumbsUp(newThumbsUp)
       const newScore = newThumbsUp ? 1 : 0
       setLocalScore(newScore)
 
-      // Expand the form when user interacts
       if (!isExpanded) {
         setIsExpanded(true)
       }
