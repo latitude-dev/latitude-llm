@@ -55,6 +55,7 @@ export default async function EvaluationPage({
   if (search.pagination.resultUuid) {
     const targetPage = await repository
       .findListByEvaluationPosition({
+        projectId: Number(projectId),
         evaluationUuid: evaluationUuid,
         params: search,
       })
@@ -76,6 +77,7 @@ export default async function EvaluationPage({
 
   const results = await repository
     .listByEvaluation({
+      projectId: Number(projectId),
       evaluationUuid: evaluationUuid,
       params: search,
     })

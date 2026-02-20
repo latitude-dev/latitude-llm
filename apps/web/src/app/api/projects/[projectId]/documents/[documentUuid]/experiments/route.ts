@@ -10,10 +10,10 @@ export const GET = errorHandler(
     async (
       req: NextRequest,
       {
-        params: { documentUuid },
+        params: { projectId, documentUuid },
         workspace,
       }: {
-        params: { documentUuid: string }
+        params: { projectId: string; documentUuid: string }
         workspace: Workspace
       },
     ) => {
@@ -22,6 +22,7 @@ export const GET = errorHandler(
 
       const scope = new ExperimentsRepository(workspace.id)
       const experiments = await scope.findByDocumentUuid({
+        projectId: Number(projectId),
         documentUuid,
         page: +page,
         pageSize: +pageSize,

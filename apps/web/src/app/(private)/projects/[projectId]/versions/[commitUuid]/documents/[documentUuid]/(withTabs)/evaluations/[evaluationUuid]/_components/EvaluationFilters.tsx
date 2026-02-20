@@ -13,20 +13,20 @@ export function EvaluationFilters({
   search,
   setSearch,
   isLoading,
-  currentCommitId,
+  currentCommitUuid,
 }: {
   search: EvaluationResultsV2Search
   setSearch: (search: EvaluationResultsV2Search) => void
   isLoading?: boolean
-  currentCommitId: number
+  currentCommitUuid: string
 }) {
   const { data: commits, isLoading: isLoadingCommits } = useCommits()
-  const defaultSelectedCommits = useMemo(
+  const defaultSelectedCommitUuids = useMemo(
     () =>
       commits
-        .filter((c) => !!c.mergedAt || c.id === currentCommitId)
-        .map((c) => c.id),
-    [commits, currentCommitId],
+        .filter((c) => !!c.mergedAt || c.uuid === currentCommitUuid)
+        .map((c) => c.uuid),
+    [commits, currentCommitUuid],
   )
 
   return (
@@ -78,26 +78,28 @@ export function EvaluationFilters({
         disabled={isLoading}
       />
       <CommitFilter
-        selectedCommitsIds={search.filters?.commitIds ?? defaultSelectedCommits}
+        selectedCommitsUuids={
+          search.filters?.commitUuids ?? defaultSelectedCommitUuids
+        }
         onSelectCommits={(value) =>
           setSearch({
             ...search,
             filters: {
               ...(search.filters ?? {}),
-              commitIds: value,
+              commitUuids: value,
             },
           })
         }
         isDefault={
-          !search.filters?.commitIds ||
-          isEqual(search.filters?.commitIds, defaultSelectedCommits)
+          !search.filters?.commitUuids ||
+          isEqual(search.filters?.commitUuids, defaultSelectedCommitUuids)
         }
         reset={() =>
           setSearch({
             ...search,
             filters: {
               ...(search.filters ?? {}),
-              commitIds: defaultSelectedCommits,
+              commitUuids: defaultSelectedCommitUuids,
             },
           })
         }

@@ -50,7 +50,11 @@ export const GET = errorHandler(
 
       const repository = new EvaluationResultsV2Repository(workspace.id)
       const count = await repository
-        .countListByEvaluation({ evaluationUuid, params: resolvedSearch })
+        .countListByEvaluation({
+          projectId: Number(projectId),
+          evaluationUuid,
+          params: resolvedSearch,
+        })
         .then((r) => r.unwrap())
 
       const baseUrl = ROUTES.projects
