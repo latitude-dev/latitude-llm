@@ -85,6 +85,7 @@ export const ConversationRow = memo(function ConversationRow({
           >
             <ConversationTimeline
               documentLogUuid={conversation.documentLogUuid!}
+              commitUuid={conversation.commitUuid}
             />
           </TableCell>
         </TableRow>

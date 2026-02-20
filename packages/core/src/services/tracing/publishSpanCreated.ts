@@ -6,6 +6,7 @@ export type PublishSpanCreatedParams = {
   traceId: string
   apiKeyId: number
   workspaceId: number
+  commitUuid: string | undefined
   documentUuid: string | undefined
   spanType: SpanType
   parentId?: string | null
@@ -21,6 +22,7 @@ export function publishSpanCreated({
   spanType,
   parentId,
   projectId,
+  commitUuid,
 }: PublishSpanCreatedParams) {
   return publisher.publishLater({
     type: 'spanCreated',
@@ -30,6 +32,7 @@ export function publishSpanCreated({
       apiKeyId,
       workspaceId,
       documentUuid,
+      commitUuid,
       spanType,
       isConversationRoot: spanType === SpanType.Prompt && !parentId,
       projectId,

@@ -11,10 +11,12 @@ import { computeDocumentTracesAggregations as chComputeDocumentTracesAggregation
 export async function computeDocumentTracesAggregations(
   {
     workspaceId,
+    projectId,
     documentUuid,
     commitUuid,
   }: {
     workspaceId: number
+    projectId: number
     documentUuid: string
     commitUuid?: string
   },
@@ -28,6 +30,7 @@ export async function computeDocumentTracesAggregations(
   if (shouldUseClickHouse) {
     const result = await chComputeDocumentTracesAggregations({
       workspaceId,
+      projectId,
       documentUuid,
       commitUuid,
     })

@@ -25,12 +25,7 @@ export async function backfillClickhouseJob(
 
     for (const workspaceId of WORKSPACE_IDS) {
       await maintenanceQueue.add(
-        'backfillSpansToClickhouseJob',
-        { workspaceId },
-        { attempts: 1 },
-      )
-      await maintenanceQueue.add(
-        'backfillEvaluationResultsToClickhouseJob',
+        'backfillEvaluationResultsIssueIds',
         { workspaceId },
         { attempts: 1 },
       )

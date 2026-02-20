@@ -13,12 +13,16 @@ export type Conversation = OkType<typeof fetchConversation>
 export async function fetchConversation(
   {
     workspace,
+    projectId,
     documentLogUuid,
     documentUuid,
+    commitUuid,
   }: {
     workspace: Workspace
+    projectId: number
     documentLogUuid: string
     documentUuid?: string
+    commitUuid?: string
   },
   db = database,
 ) {
@@ -30,8 +34,10 @@ export async function fetchConversation(
   if (shouldUseClickHouse) {
     const result = await chFetchConversation({
       workspaceId: workspace.id,
+      projectId,
       documentLogUuid,
       documentUuid,
+      commitUuid,
     })
 
     if (!result) {

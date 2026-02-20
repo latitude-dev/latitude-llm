@@ -33,6 +33,7 @@ export async function countTracesByDocument(
   if (shouldUseClickHouse) {
     return countDistinctTracesByDocument({
       workspaceId: workspace.id,
+      projectId: commit.projectId,
       documentUuid,
       commitUuids: commits.map((c) => c.uuid),
       logSources,

@@ -13,6 +13,7 @@ describe('fetchConversation', () => {
   let workspace: Workspace
   let commit: Commit
   let document: DocumentVersion
+  let projectId: number
 
   beforeEach(async () => {
     const setup = await createProject({
@@ -23,6 +24,7 @@ describe('fetchConversation', () => {
     workspace = setup.workspace
     commit = setup.commit
     document = setup.documents[0]!
+    projectId = setup.project.id
   })
 
   describe('basic functionality', () => {
@@ -40,6 +42,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -53,6 +56,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid: nonExistentUuid,
       })
 
@@ -92,6 +96,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -121,6 +126,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -154,6 +160,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -189,6 +196,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
         documentUuid: document.documentUuid,
       })
@@ -214,6 +222,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
         documentUuid: otherDocumentUuid,
       })
@@ -246,6 +255,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -288,6 +298,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -321,6 +332,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -364,6 +376,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -413,6 +426,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -453,6 +467,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -495,6 +510,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -524,6 +540,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -563,6 +580,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -598,6 +616,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 
@@ -631,6 +650,7 @@ describe('fetchConversation', () => {
 
       const result = await fetchConversation({
         workspace,
+        projectId,
         documentLogUuid,
       })
 

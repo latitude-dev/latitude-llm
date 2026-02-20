@@ -35,6 +35,7 @@ export const GET = errorHandler(
 
       const result = await computeDocumentTracesAggregations({
         workspaceId: workspace.id,
+        projectId: Number(projectId),
         documentUuid: document.documentUuid,
         commitUuid: headCommit?.uuid === commitUuid ? undefined : commitUuid,
       }).then((r) => r.unwrap())

@@ -385,7 +385,7 @@ async function getNegativeExamples({
 
   async function collectSpansByIssue(issue: Issue, target: number) {
     const validSpans: SpanWithDetails<SpanType.Prompt>[] = []
-    let cursor: Cursor<Date, number> | null = null
+    let cursor: Cursor<string, string> | null = null
     let searches = 0
 
     while (validSpans.length < target && searches < maxSearches) {
@@ -398,7 +398,7 @@ async function getNegativeExamples({
         spanTypes: [SpanType.Prompt],
         commit: baselineCommit,
         workspace: workspace,
-        cursor: cursor,
+        cursor,
         limit: SPANS_BATCH_SIZE,
       })
       if (gettingsp.error) break

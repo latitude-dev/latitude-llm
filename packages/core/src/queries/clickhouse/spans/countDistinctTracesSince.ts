@@ -1,5 +1,5 @@
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { scopedQuery } from '../../scope'
 
@@ -12,12 +12,11 @@ export const countDistinctTracesSince = scopedQuery(
       workspaceId: number
       since: Date
     },
-    _db,
   ) {
     const result = await clickhouseClient().query({
       query: `
       SELECT countDistinct(trace_id) AS cnt
-      FROM ${SPANS_TABLE}
+      FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND started_at >= {since: DateTime64(6, 'UTC')}
     `,

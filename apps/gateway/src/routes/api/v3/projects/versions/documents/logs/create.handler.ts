@@ -13,7 +13,19 @@ import {
 import { cache as redis } from '@latitude-data/core/cache'
 import { diskFactory } from '@latitude-data/core/lib/disk'
 import { compressString } from '@latitude-data/core/lib/disk/compression'
+import { LatitudeError } from '@latitude-data/core/lib/errors'
 import { publishSpanCreated } from '@latitude-data/core/services/tracing/publishSpanCreated'
+import { bulkCreate as bulkCreateClickHouseSpans } from '@latitude-data/core/services/tracing/spans/clickhouse/bulkCreate'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
+import { findWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/data-access/find'
+import {
+  DEFAULT_RETENTION_PERIOD_DAYS,
+  SubscriptionPlans,
+} from '@latitude-data/core/plans'
+import {
+  captureException,
+  captureMessage,
+} from '@latitude-data/core/utils/datadogCapture'
 import { AppRouteHandler } from '$/openApi/types'
 import { CreateLogRoute } from './create.route'
 import { getData } from '$/common/documents/getData'
@@ -254,8 +266,92 @@ async function createSpansFromLogData({
     .then((r) => r.unwrap())
   await cache.del(completionMetadataKey)
 
+  const chEnabled = await isFeatureEnabledByName(
+    workspace.id,
+    'clickhouse-spans-write',
+    database,
+  )
+  if (chEnabled.error) {
+    captureException(
+      new LatitudeError('Failed to resolve clickhouse-spans-write feature'),
+      { workspaceId: workspace.id },
+    )
+  }
+
+  if (chEnabled.ok && chEnabled.value) {
+    const subscriptionResult = await findWorkspaceSubscription(
+      { workspace },
+      database,
+    )
+    if (subscriptionResult.error) {
+      captureException(
+        new LatitudeError(
+          'Failed to resolve workspace subscription for spans',
+        ),
+        { workspaceId: workspace.id },
+      )
+    }
+
+    const retentionDays =
+      subscriptionResult.ok && subscriptionResult.value
+        ? SubscriptionPlans[subscriptionResult.value.plan].retention_period
+        : DEFAULT_RETENTION_PERIOD_DAYS
+    const retentionExpiresAt = new Date(
+      Date.now() + retentionDays * 24 * 60 * 60 * 1000,
+    )
+
+    const clickhouseResult = await bulkCreateClickHouseSpans([
+      {
+        id: promptSpanId,
+        traceId,
+        workspaceId: workspace.id,
+        apiKeyId: apiKey.id,
+        name: 'prompt',
+        kind: SpanKind.Client,
+        type: SpanType.Prompt,
+        status: SpanStatus.Ok,
+        duration,
+        startedAt,
+        endedAt: new Date(startedAt.getTime() + 500),
+        metadata: promptMetadata,
+        retentionExpiresAt,
+      },
+      {
+        id: completionSpanId,
+        traceId,
+        parentId: promptSpanId,
+        workspaceId: workspace.id,
+        apiKeyId: apiKey.id,
+        name: 'completion',
+        kind: SpanKind.Client,
+        type: SpanType.Completion,
+        status: SpanStatus.Ok,
+        duration,
+        startedAt: new Date(startedAt.getTime() + 500),
+        endedAt,
+        metadata: completionMetadata,
+        retentionExpiresAt,
+      },
+    ])
+    if (clickhouseResult.error) {
+      captureException(
+        new LatitudeError('ClickHouse bulk span insertion failed'),
+        {
+          workspaceId: workspace.id,
+          error: String(clickhouseResult.error),
+        },
+      )
+    } else {
+      captureMessage('ClickHouse bulk span insertion succeeded', 'info', {
+        workspaceId: workspace.id,
+        spansCount: 2,
+      })
+    }
+  }
+
   await publishSpanCreated({
     spanId: promptSpanId,
+    commitUuid: commit.uuid,
     traceId,
     apiKeyId: apiKey.id,
     workspaceId: workspace.id,

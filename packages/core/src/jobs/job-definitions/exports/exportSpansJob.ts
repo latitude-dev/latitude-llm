@@ -28,6 +28,7 @@ import { captureException } from '../../../utils/datadogCapture'
 export type ExportSpansJobData = {
   exportUuid: string
   workspaceId: number
+  projectId: number
   userId: string
   documentUuid: string
   selectionMode: 'ALL' | 'ALL_EXCEPT' | 'PARTIAL'
@@ -86,6 +87,7 @@ type NormalizedExportSpansFilters = Omit<
 
 async function* iterateSpans({
   repo,
+  projectId,
   documentUuid,
   filters,
   excludedIds,
@@ -93,6 +95,7 @@ async function* iterateSpans({
   selectedSpanIds,
 }: {
   repo: SpansRepository
+  projectId: number
   documentUuid: string
   filters: NormalizedExportSpansFilters
   excludedIds: Set<string>
@@ -103,6 +106,7 @@ async function* iterateSpans({
 
   while (true) {
     const result = await repo.findByDocumentAndCommitLimited({
+      projectId,
       documentUuid,
       commitUuids: filters.commitUuids,
       experimentUuids: filters.experimentUuids,
@@ -317,6 +321,7 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
     const {
       exportUuid,
       workspaceId,
+      projectId,
       documentUuid,
       selectionMode,
       excludedSpanIdentifiers,
@@ -364,6 +369,7 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
 
     for await (const span of iterateSpans({
       repo,
+      projectId,
       documentUuid,
       filters: normalizedFilters,
       excludedIds,

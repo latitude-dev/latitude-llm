@@ -23,7 +23,7 @@ export type ConversationTracesResponse = {
 export const GET = errorHandler(
   authHandler(
     async (
-      _: NextRequest,
+      request: NextRequest,
       {
         params,
         workspace,
@@ -35,10 +35,18 @@ export const GET = errorHandler(
       },
     ) => {
       const { conversationId } = params
+      const projectId = Number(request.nextUrl.searchParams.get('projectId'))
+      const commitUuid =
+        request.nextUrl.searchParams.get('commitUuid') ?? undefined
+      const documentUuid =
+        request.nextUrl.searchParams.get('documentUuid') ?? undefined
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId,
         documentLogUuid: conversationId,
+        commitUuid,
+        documentUuid,
       })
 
       if (!result.ok || !result.value) {

@@ -38,6 +38,7 @@ describe('fetchConversationWithMessages', () => {
     it('returns nil when conversation does not exist', async () => {
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid: generateUUIDIdentifier(),
       })
 
@@ -59,6 +60,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -87,6 +89,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -116,6 +119,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -155,6 +159,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -191,6 +196,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -235,6 +241,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -297,6 +304,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -349,6 +357,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -375,6 +384,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -406,6 +416,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -430,6 +441,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -454,6 +466,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -487,6 +500,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -541,6 +555,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -596,6 +611,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 
@@ -634,6 +650,7 @@ describe('fetchConversationWithMessages', () => {
 
       const result = await fetchConversationWithMessages({
         workspace,
+        projectId: project.id,
         documentLogUuid,
       })
 

@@ -139,6 +139,7 @@ export async function getAnnotationsProgress(
   if (shouldUseClickHouse) {
     totalRuns = await chCountSpansForAnnotations({
       workspaceId: workspace.id,
+      projectId,
       commitUuids,
       logSources,
       fromDate,

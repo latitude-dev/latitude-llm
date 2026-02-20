@@ -147,7 +147,7 @@ describe('processWebhookJob', () => {
   })
 
   it('enqueues jobs for spanCreated events when isConversationRoot is true', async () => {
-    const { workspace, project } = await factories.createProject({
+    const { workspace, project, commit } = await factories.createProject({
       providers: [{ name: 'openai', type: Providers.OpenAI }],
       documents: {
         subagent: factories.helpers.createPrompt({
@@ -179,6 +179,7 @@ describe('processWebhookJob', () => {
       type: 'spanCreated',
       data: {
         workspaceId: workspace.id,
+        commitUuid: commit.uuid,
         apiKeyId: apiKey.id,
         spanId: span.id,
         traceId: span.traceId,
@@ -205,7 +206,7 @@ describe('processWebhookJob', () => {
   })
 
   it('skips spanCreated events when isConversationRoot is false', async () => {
-    const { workspace, project } = await factories.createProject({
+    const { workspace, project, commit } = await factories.createProject({
       providers: [{ name: 'openai', type: Providers.OpenAI }],
       documents: {
         subagent: factories.helpers.createPrompt({
@@ -234,6 +235,7 @@ describe('processWebhookJob', () => {
       type: 'spanCreated',
       data: {
         workspaceId: workspace.id,
+        commitUuid: commit.uuid,
         apiKeyId: apiKey.id,
         spanId: span.id,
         traceId: span.traceId,

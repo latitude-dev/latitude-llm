@@ -1,24 +1,21 @@
 import { MAIN_SPAN_TYPES, Span } from '@latitude-data/constants'
 import { EvaluationResultV2 } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
+import { TABLE_NAME, SpanRow } from '../../../schema/models/clickhouse/spans'
 import { scopedQuery } from '../../scope'
-import { spanRowToSpan } from './toSpan'
+import { mapRow } from './toSpan'
 
 export const findByEvaluationResults = scopedQuery(
-  async function findByEvaluationResults(
-    {
-      workspaceId,
-      evaluationResults,
-    }: {
-      workspaceId: number
-      evaluationResults: Pick<
-        EvaluationResultV2,
-        'evaluatedSpanId' | 'evaluatedTraceId'
-      >[]
-    },
-    _db,
-  ): Promise<Span[]> {
+  async function findByEvaluationResults({
+    workspaceId,
+    evaluationResults,
+  }: {
+    workspaceId: number
+    evaluationResults: Pick<
+      EvaluationResultV2,
+      'evaluatedSpanId' | 'evaluatedTraceId'
+    >[]
+  }): Promise<Span[]> {
     if (evaluationResults.length === 0) return []
 
     const mainTypes = Array.from(MAIN_SPAN_TYPES)
@@ -36,7 +33,7 @@ export const findByEvaluationResults = scopedQuery(
     const result = await clickhouseClient().query({
       query: `
       SELECT *
-      FROM ${SPANS_TABLE} FINAL
+      FROM ${TABLE_NAME} FINAL
       WHERE workspace_id = {workspaceId: UInt64}
         AND (span_id, trace_id) IN (${tuples})
         AND type IN ({mainTypes: Array(String)})
@@ -46,7 +43,7 @@ export const findByEvaluationResults = scopedQuery(
     })
 
     const rows = await result.json<SpanRow>()
-    const allSpans = rows.map(spanRowToSpan)
+    const allSpans = rows.map(mapRow)
 
     const spanMap = new Map<string, Span>()
     for (const span of allSpans) {
